@@ -1,0 +1,1027 @@
+package tui
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/romanesco/cli/internal/installer"
+	"github.com/holdenhewett/romanesco/cli/internal/metadata"
+	"github.com/holdenhewett/romanesco/cli/internal/provider"
+)
+
+type importStep int
+
+const (
+	stepSource      importStep = iota // pick Local Path / Git URL / Create New
+	stepType                          // (local/create) pick content type
+	stepProvider                      // (local + provider-specific only) pick provider
+	stepBrowseStart                   // (local only) pick starting directory
+	stepBrowse                        // (local only) navigate filesystem
+	stepValidate                      // (local only) review selections before import
+	stepPath                          // (local only) custom path text input for browser start
+	stepGitURL                        // (git only) enter git URL
+	stepGitPick                       // (git only) pick item from scanned clone
+	stepConfirm                       // review and execute
+	stepName                          // (create only) enter item name
+)
+
+type importCloneDoneMsg struct {
+	err  error
+	path string // temp dir with cloned repo
+}
+
+type importDoneMsg struct {
+	name string
+	err  error
+}
+
+type validationItem struct {
+	path        string
+	name        string
+	detection   string
+	description string
+	isWarning   bool
+	included    bool
+}
+
+type importModel struct {
+	repoRoot  string
+	providers []provider.Provider
+	step      importStep
+
+	// Source picker (0=local, 1=git, 2=create)
+	sourceCursor int
+
+	// Type picker
+	types      []catalog.ContentType
+	typeCursor int
+
+	// Provider picker (for provider-specific types)
+	providerNames []string
+	provCursor    int
+
+	// Text inputs
+	pathInput textinput.Model // local path
+	urlInput  textinput.Model // git URL
+	nameInput textinput.Model // create new: item name
+
+	// Git clone results
+	clonedItems []catalog.ContentItem
+	clonedPath  string // temp dir to clean up
+	pickCursor  int
+
+	// File browser (local path flow)
+	browser       fileBrowserModel
+	browseCursor  int      // cursor for stepBrowseStart (0=cwd, 1=home, 2=custom)
+	selectedPaths []string // paths selected for batch import
+
+	// Validation results
+	validationItems []validationItem
+	validateCursor  int
+
+	// Resolved import target
+	sourcePath   string
+	contentType  catalog.ContentType
+	providerName string
+	itemName     string
+	isCreate     bool // true if using "Create New" flow
+
+	// Result messaging
+	message      string
+	messageIsErr bool
+
+	width, height int
+}
+
+func newImportModel(providers []provider.Provider, repoRoot string) importModel {
+	pi := textinput.New()
+	pi.Prompt = labelStyle.Render("Path: ")
+	pi.Placeholder = "/path/to/content"
+	pi.CharLimit = 500
+
+	ui := textinput.New()
+	ui.Prompt = labelStyle.Render("URL: ")
+	ui.Placeholder = "https://github.com/user/repo.git"
+	ui.CharLimit = 500
+
+	ni := textinput.New()
+	ni.Prompt = labelStyle.Render("Name: ")
+	ni.Placeholder = "my-new-tool"
+	ni.CharLimit = 100
+
+	return importModel{
+		repoRoot:  repoRoot,
+		providers: providers,
+		types:     catalog.AllContentTypes(),
+		pathInput: pi,
+		urlInput:  ui,
+		nameInput: ni,
+	}
+}
+
+func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
+	switch msg := msg.(type) {
+	case fileBrowserDoneMsg:
+		m.selectedPaths = msg.paths
+		m.validationItems = m.validateSelections(msg.paths)
+		m.validateCursor = 0
+		m.step = stepValidate
+		return m, nil
+
+	case importCloneDoneMsg:
+		if msg.err != nil {
+			os.RemoveAll(msg.path) // clean up failed clone
+			m.message = fmt.Sprintf("Clone failed: %s", msg.err)
+			m.messageIsErr = true
+			m.step = stepGitURL
+			m.urlInput.Focus()
+			return m, nil
+		}
+		m.clonedPath = msg.path
+		// Scan the cloned repo for content
+		cat, err := catalog.Scan(msg.path)
+		if err != nil {
+			m.cleanup()
+			m.message = fmt.Sprintf("Scan failed: %s", err)
+			m.messageIsErr = true
+			m.step = stepGitURL
+			m.urlInput.Focus()
+			return m, nil
+		}
+		if len(cat.Items) == 0 {
+			m.cleanup()
+			m.message = "No content found in cloned repository"
+			m.messageIsErr = true
+			m.step = stepGitURL
+			m.urlInput.Focus()
+			return m, nil
+		}
+		m.clonedItems = cat.Items
+		m.pickCursor = 0
+		m.step = stepGitPick
+		m.message = ""
+		return m, nil
+
+	case tea.KeyMsg:
+		// Clear any previous message on keypress
+		if msg.Type != tea.KeyEsc {
+			m.message = ""
+			m.messageIsErr = false
+		}
+
+		switch m.step {
+		case stepSource:
+			return m.updateSource(msg)
+		case stepType:
+			return m.updateType(msg)
+		case stepProvider:
+			return m.updateProvider(msg)
+		case stepBrowseStart:
+			return m.updateBrowseStart(msg)
+		case stepBrowse:
+			return m.updateBrowse(msg)
+		case stepValidate:
+			return m.updateValidate(msg)
+		case stepPath:
+			return m.updatePath(msg)
+		case stepGitURL:
+			return m.updateGitURL(msg)
+		case stepGitPick:
+			return m.updateGitPick(msg)
+		case stepConfirm:
+			return m.updateConfirm(msg)
+		case stepName:
+			return m.updateName(msg)
+		}
+	}
+	return m, nil
+}
+
+func (m importModel) updateSource(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case key.Matches(msg, keys.Up):
+		if m.sourceCursor > 0 {
+			m.sourceCursor--
+		}
+	case key.Matches(msg, keys.Down):
+		if m.sourceCursor < 2 {
+			m.sourceCursor++
+		}
+	case key.Matches(msg, keys.Enter):
+		switch m.sourceCursor {
+		case 0: // Local path
+			m.isCreate = false
+			m.step = stepType
+			m.typeCursor = 0
+		case 1: // Git URL
+			m.isCreate = false
+			m.step = stepGitURL
+			m.urlInput.SetValue("")
+			m.urlInput.Focus()
+		case 2: // Create New
+			m.isCreate = true
+			m.step = stepType
+			m.typeCursor = 0
+		}
+	}
+	return m, nil
+}
+
+func (m importModel) updateType(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case key.Matches(msg, keys.Back):
+		m.step = stepSource
+	case key.Matches(msg, keys.Up):
+		if m.typeCursor > 0 {
+			m.typeCursor--
+		}
+	case key.Matches(msg, keys.Down):
+		if m.typeCursor < len(m.types)-1 {
+			m.typeCursor++
+		}
+	case key.Matches(msg, keys.Enter):
+		ct := m.types[m.typeCursor]
+		m.contentType = ct
+		if m.isCreate {
+			// Create flow: go to name input (skip provider for all types)
+			m.step = stepName
+			m.nameInput.SetValue("")
+			m.nameInput.Focus()
+		} else if ct.IsUniversal() {
+			// Universal types skip provider selection
+			m.browseCursor = 0
+			m.step = stepBrowseStart
+		} else {
+			// Provider-specific: need to pick provider
+			m.providerNames = m.discoverProviderDirs(ct)
+			if len(m.providerNames) == 0 {
+				m.message = "No provider directories found for " + ct.Label()
+				m.messageIsErr = true
+			} else {
+				m.provCursor = 0
+				m.step = stepProvider
+			}
+		}
+	}
+	return m, nil
+}
+
+func (m importModel) updateProvider(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case key.Matches(msg, keys.Back):
+		m.step = stepType
+	case key.Matches(msg, keys.Up):
+		if m.provCursor > 0 {
+			m.provCursor--
+		}
+	case key.Matches(msg, keys.Down):
+		if m.provCursor < len(m.providerNames)-1 {
+			m.provCursor++
+		}
+	case key.Matches(msg, keys.Enter):
+		m.providerName = m.providerNames[m.provCursor]
+		m.browseCursor = 0
+		m.step = stepBrowseStart
+	}
+	return m, nil
+}
+
+func (m importModel) updateBrowseStart(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case key.Matches(msg, keys.Back):
+		if m.contentType.IsUniversal() {
+			m.step = stepType
+		} else {
+			m.step = stepProvider
+		}
+	case key.Matches(msg, keys.Up):
+		if m.browseCursor > 0 {
+			m.browseCursor--
+		}
+	case key.Matches(msg, keys.Down):
+		if m.browseCursor < 2 {
+			m.browseCursor++
+		}
+	case key.Matches(msg, keys.Enter):
+		switch m.browseCursor {
+		case 0: // Current working directory
+			cwdPath, err := os.Getwd()
+			if err != nil {
+				m.message = "Cannot determine working directory"
+				m.messageIsErr = true
+				return m, nil
+			}
+			m.browser = newFileBrowser(cwdPath, m.contentType)
+			m.browser.width = m.width
+			m.browser.height = m.height
+			m.step = stepBrowse
+		case 1: // Home directory
+			home, err := os.UserHomeDir()
+			if err != nil {
+				m.message = "Cannot determine home directory"
+				m.messageIsErr = true
+				return m, nil
+			}
+			m.browser = newFileBrowser(home, m.contentType)
+			m.browser.width = m.width
+			m.browser.height = m.height
+			m.step = stepBrowse
+		case 2: // Custom path
+			m.pathInput.SetValue("")
+			m.pathInput.Focus()
+			m.step = stepPath
+		}
+	}
+	return m, nil
+}
+
+func (m importModel) updateBrowse(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case msg.Type == tea.KeyEsc:
+		// If selections exist, clear them first
+		if len(m.browser.selected) > 0 {
+			m.browser.selected = make(map[string]bool)
+			return m, nil
+		}
+		// Navigate to parent directory; exit browser only at filesystem root
+		parent := filepath.Dir(m.browser.currentDir)
+		if parent != m.browser.currentDir {
+			m.browser.loadDir(parent)
+			return m, nil
+		}
+		m.step = stepBrowseStart
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.browser, cmd = m.browser.Update(msg)
+	return m, cmd
+}
+
+func (m importModel) updatePath(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case msg.Type == tea.KeyEsc:
+		m.pathInput.Blur()
+		m.step = stepBrowseStart
+		return m, nil
+	case msg.Type == tea.KeyEnter:
+		path := m.pathInput.Value()
+		if path == "" {
+			return m, nil
+		}
+		// Expand ~ prefix
+		expanded, err := expandHome(path)
+		if err != nil {
+			m.message = err.Error()
+			m.messageIsErr = true
+			return m, nil
+		}
+		path = expanded
+		// Validate source exists
+		_, err = os.Stat(path)
+		if err != nil {
+			m.message = fmt.Sprintf("Path not found: %s", path)
+			m.messageIsErr = true
+			return m, nil
+		}
+		m.pathInput.Blur()
+		m.browser = newFileBrowser(path, m.contentType)
+		m.browser.width = m.width
+		m.browser.height = m.height
+		m.step = stepBrowse
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.pathInput, cmd = m.pathInput.Update(msg)
+	return m, cmd
+}
+
+func (m importModel) updateValidate(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case key.Matches(msg, keys.Back):
+		m.step = stepBrowse
+	case key.Matches(msg, keys.Up):
+		if m.validateCursor > 0 {
+			m.validateCursor--
+		}
+	case key.Matches(msg, keys.Down):
+		if m.validateCursor < len(m.validationItems)-1 {
+			m.validateCursor++
+		}
+	case key.Matches(msg, keys.Space):
+		if m.validateCursor >= 0 && m.validateCursor < len(m.validationItems) {
+			m.validationItems[m.validateCursor].included = !m.validationItems[m.validateCursor].included
+		}
+	case key.Matches(msg, keys.Enter):
+		// Collect included paths and proceed to batch import
+		var included []string
+		for _, vi := range m.validationItems {
+			if vi.included {
+				included = append(included, vi.path)
+			}
+		}
+		if len(included) == 0 {
+			m.message = "No items selected for import"
+			m.messageIsErr = true
+			return m, nil
+		}
+		m.selectedPaths = included
+		// For single selection, set sourcePath/itemName for existing confirm flow
+		if len(included) == 1 {
+			m.sourcePath = included[0]
+			m.itemName = filepath.Base(included[0])
+			m.step = stepConfirm
+			return m, nil
+		}
+		// For batch, go directly to import
+		return m, func() tea.Msg {
+			name, err := m.doBatchImport(included)
+			return importDoneMsg{name: name, err: err}
+		}
+	}
+	return m, nil
+}
+
+func (m importModel) updateGitURL(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case msg.Type == tea.KeyEsc:
+		m.urlInput.Blur()
+		m.step = stepSource
+		m.message = ""
+		return m, nil
+	case msg.Type == tea.KeyEnter:
+		url := m.urlInput.Value()
+		if url == "" {
+			return m, nil
+		}
+		if !isValidGitURL(url) {
+			m.message = "Invalid URL. Must start with https://, http://, git://, ssh://, or git@"
+			m.messageIsErr = true
+			return m, nil
+		}
+		m.urlInput.Blur()
+		m.message = "Cloning repository..."
+		m.messageIsErr = false
+		return m, m.startClone(url)
+	}
+	var cmd tea.Cmd
+	m.urlInput, cmd = m.urlInput.Update(msg)
+	return m, cmd
+}
+
+func (m importModel) updateGitPick(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case key.Matches(msg, keys.Back):
+		m.step = stepGitURL
+		m.urlInput.Focus()
+		m.clonedItems = nil
+		m.cleanup()
+	case key.Matches(msg, keys.Up):
+		if m.pickCursor > 0 {
+			m.pickCursor--
+		}
+	case key.Matches(msg, keys.Down):
+		if m.pickCursor < len(m.clonedItems)-1 {
+			m.pickCursor++
+		}
+	case key.Matches(msg, keys.Enter):
+		item := m.clonedItems[m.pickCursor]
+		m.contentType = item.Type
+		m.providerName = item.Provider
+		m.sourcePath = item.Path
+		m.itemName = item.Name
+		m.step = stepConfirm
+	}
+	return m, nil
+}
+
+func (m importModel) updateConfirm(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case key.Matches(msg, keys.Back):
+		if m.isCreate {
+			m.step = stepName
+			m.nameInput.Focus()
+		} else if m.clonedPath != "" {
+			m.step = stepGitPick
+		} else {
+			// Came from browse flow
+			m.step = stepValidate
+		}
+	case key.Matches(msg, keys.Enter):
+		if m.isCreate {
+			return m, func() tea.Msg {
+				name, err := m.doScaffold()
+				return importDoneMsg{name: name, err: err}
+			}
+		}
+		// Run the copy in the Cmd closure so it doesn't block the UI.
+		// m is a value copy, so doImport reads from an immutable snapshot.
+		return m, func() tea.Msg {
+			name, err := m.doImport()
+			return importDoneMsg{name: name, err: err}
+		}
+	}
+	return m, nil
+}
+
+// View renders the current step's UI.
+func (m importModel) View() string {
+	s := titleStyle.Render("Import Content") + "\n"
+
+	switch m.step {
+	case stepSource:
+		s += helpStyle.Render("Choose import source") + "\n\n"
+		options := []string{"Local Path", "Git URL", "Create New"}
+		for i, opt := range options {
+			prefix := "   "
+			style := itemStyle
+			if i == m.sourceCursor {
+				prefix = " ▸ "
+				style = selectedItemStyle
+			}
+			s += prefix + style.Render(opt) + "\n"
+		}
+		s += "\n" + helpStyle.Render("↑↓ navigate • enter select • esc back")
+
+	case stepType:
+		s += helpStyle.Render("Select content type") + "\n\n"
+		for i, ct := range m.types {
+			prefix := "   "
+			style := itemStyle
+			if i == m.typeCursor {
+				prefix = " ▸ "
+				style = selectedItemStyle
+			}
+			label := ct.Label()
+			s += prefix + style.Render(label) + "\n"
+		}
+		s += "\n" + helpStyle.Render("↑↓ navigate • enter select • esc back")
+
+	case stepProvider:
+		s += helpStyle.Render("Select provider for "+m.contentType.Label()) + "\n\n"
+		for i, name := range m.providerNames {
+			prefix := "   "
+			style := itemStyle
+			if i == m.provCursor {
+				prefix = " ▸ "
+				style = selectedItemStyle
+			}
+			s += prefix + style.Render(name) + "\n"
+		}
+		s += "\n" + helpStyle.Render("↑↓ navigate • enter select • esc back")
+
+	case stepBrowseStart:
+		s += helpStyle.Render("Where do you want to browse?") + "\n\n"
+		options := []struct{ label, desc string }{
+			{"Current directory", cwd()},
+			{"Home directory", homeDir()},
+			{"Custom path...", "Enter a path to start from"},
+		}
+		for i, opt := range options {
+			prefix := "   "
+			style := itemStyle
+			if i == m.browseCursor {
+				prefix = " ▸ "
+				style = selectedItemStyle
+			}
+			s += prefix + style.Render(opt.label) + " " + countStyle.Render(opt.desc) + "\n"
+		}
+		s += "\n" + helpStyle.Render("↑↓ navigate • enter select • esc back")
+
+	case stepBrowse:
+		s += m.browser.View()
+
+	case stepPath:
+		s += helpStyle.Render("Enter starting path for browser") + "\n\n"
+		s += m.pathInput.View() + "\n"
+		s += "\n" + helpStyle.Render("enter open browser • esc back")
+
+	case stepValidate:
+		s += m.viewValidate()
+
+	case stepGitURL:
+		s += helpStyle.Render("Enter git repository URL") + "\n\n"
+		s += m.urlInput.View() + "\n"
+		s += "\n" + helpStyle.Render("enter clone • esc back")
+
+	case stepGitPick:
+		s += helpStyle.Render("Select item to import") + "\n\n"
+
+		// Calculate visible window for scrolling
+		visibleRows := m.height - 6 // header + subtitle + blank + footer
+		if visibleRows < 1 {
+			visibleRows = len(m.clonedItems)
+		}
+		offset := 0
+		if m.pickCursor >= visibleRows {
+			offset = m.pickCursor - visibleRows + 1
+		}
+		end := offset + visibleRows
+		if end > len(m.clonedItems) {
+			end = len(m.clonedItems)
+		}
+
+		if offset > 0 {
+			s += helpStyle.Render("  ↑ more items above") + "\n"
+		}
+		for i := offset; i < end; i++ {
+			item := m.clonedItems[i]
+			prefix := "   "
+			style := itemStyle
+			if i == m.pickCursor {
+				prefix = " ▸ "
+				style = selectedItemStyle
+			}
+			label := item.Name
+			typeTag := countStyle.Render("(" + item.Type.Label() + ")")
+			if item.Provider != "" {
+				typeTag = countStyle.Render("(" + item.Type.Label() + "/" + item.Provider + ")")
+			}
+			s += prefix + style.Render(label) + " " + typeTag + "\n"
+		}
+		if end < len(m.clonedItems) {
+			s += helpStyle.Render("  ↓ more items below") + "\n"
+		}
+		s += "\n" + helpStyle.Render("↑↓ navigate • enter select • esc back")
+
+	case stepName:
+		s += helpStyle.Render("Enter a name for your new "+m.contentType.Label()+" item") + "\n\n"
+		s += m.nameInput.View() + "\n"
+		s += "\n" + helpStyle.Render("enter confirm • esc back")
+
+	case stepConfirm:
+		if m.isCreate {
+			s += helpStyle.Render("Confirm creation") + "\n\n"
+			dest := m.destinationPath()
+			s += labelStyle.Render("Item:  ") + valueStyle.Render(m.itemName) + "\n"
+			s += labelStyle.Render("Type:  ") + valueStyle.Render(m.contentType.Label()) + "\n"
+			s += labelStyle.Render("To:    ") + valueStyle.Render(dest) + " " + helpStyle.Render("(local, not git-tracked)") + "\n"
+			s += "\n" + helpStyle.Render("Scaffolds from template with LLM prompt for content creation.")
+			s += "\n\n" + helpStyle.Render("enter create • esc back")
+		} else {
+			s += helpStyle.Render("Confirm import") + "\n\n"
+			dest := m.destinationPath()
+			s += labelStyle.Render("Item:  ") + valueStyle.Render(m.itemName) + "\n"
+			s += labelStyle.Render("Type:  ") + valueStyle.Render(m.contentType.Label()) + "\n"
+			if m.providerName != "" {
+				s += labelStyle.Render("Provider: ") + valueStyle.Render(m.providerName) + "\n"
+			}
+			s += labelStyle.Render("From:  ") + valueStyle.Render(m.sourcePath) + "\n"
+			s += labelStyle.Render("To:    ") + valueStyle.Render(dest) + " " + helpStyle.Render("(local, not git-tracked)") + "\n"
+			s += "\n" + helpStyle.Render("enter import • esc back")
+		}
+	}
+
+	// Status message
+	if m.message != "" {
+		if m.messageIsErr {
+			s += "\n" + errorMsgStyle.Render(m.message)
+		} else {
+			s += "\n" + successMsgStyle.Render(m.message)
+		}
+	}
+
+	return s
+}
+
+// destinationPath computes where the content will be copied to (always my-tools/).
+func (m importModel) destinationPath() string {
+	if m.contentType.IsUniversal() {
+		return filepath.Join(m.repoRoot, "my-tools", string(m.contentType), m.itemName)
+	}
+	return filepath.Join(m.repoRoot, "my-tools", string(m.contentType), m.providerName, m.itemName)
+}
+
+// doImport executes the copy, generates metadata, and returns the item name.
+func (m importModel) doImport() (string, error) {
+	dest := m.destinationPath()
+
+	// Check destination doesn't already exist
+	if _, err := os.Stat(dest); err == nil {
+		return "", fmt.Errorf("destination already exists: %s", dest)
+	}
+
+	if err := installer.CopyContent(m.sourcePath, dest); err != nil {
+		return "", fmt.Errorf("copy failed: %w", err)
+	}
+
+	// Generate .romanesco.yaml metadata
+	now := time.Now()
+	source := m.sourcePath
+	if m.clonedPath != "" {
+		source = m.urlInput.Value()
+	}
+	meta := &metadata.Meta{
+		ID:         metadata.NewID(),
+		Name:       m.itemName,
+		Type:       string(m.contentType),
+		Source:     source,
+		ImportedAt: &now,
+		ImportedBy: gitUsername(),
+	}
+	// For universal types, save in the item directory.
+	// For provider-specific types, save as provider-specific metadata.
+	if m.contentType.IsUniversal() {
+		metadata.Save(dest, meta) // non-fatal
+	} else {
+		destDir := filepath.Dir(dest)
+		metadata.SaveProvider(destDir, m.itemName, meta) // non-fatal
+	}
+
+	return m.itemName, nil
+}
+
+// gitUsername returns the git user.name config value, falling back to $USER.
+func gitUsername() string {
+	out, err := exec.Command("git", "config", "user.name").Output()
+	if err == nil {
+		name := strings.TrimSpace(string(out))
+		if name != "" {
+			return name
+		}
+	}
+	return os.Getenv("USER")
+}
+
+func (m importModel) updateName(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case msg.Type == tea.KeyEsc:
+		m.nameInput.Blur()
+		m.step = stepType
+		return m, nil
+	case msg.Type == tea.KeyEnter:
+		name := strings.TrimSpace(m.nameInput.Value())
+		if name == "" {
+			return m, nil
+		}
+		m.itemName = name
+		m.nameInput.Blur()
+		m.step = stepConfirm
+		return m, nil
+	}
+	var cmd tea.Cmd
+	m.nameInput, cmd = m.nameInput.Update(msg)
+	return m, cmd
+}
+
+// doScaffold creates a new content item from templates.
+func (m importModel) doScaffold() (string, error) {
+	dest := m.destinationPath()
+
+	if _, err := os.Stat(dest); err == nil {
+		return "", fmt.Errorf("destination already exists: %s", dest)
+	}
+
+	// Find the templates directory relative to repo root
+	templateDir := filepath.Join(m.repoRoot, "templates", string(m.contentType))
+
+	// Copy template files (if template dir exists)
+	if _, err := os.Stat(templateDir); err == nil {
+		if err := installer.CopyContent(templateDir, dest); err != nil {
+			return "", fmt.Errorf("scaffold failed: %w", err)
+		}
+	} else {
+		// No template — just create the directory
+		if err := os.MkdirAll(dest, 0755); err != nil {
+			return "", fmt.Errorf("creating directory: %w", err)
+		}
+	}
+
+	// Replace {{NAME}} placeholder in LLM-PROMPT.md if it exists
+	llmPath := filepath.Join(dest, "LLM-PROMPT.md")
+	if data, err := os.ReadFile(llmPath); err == nil {
+		replaced := strings.ReplaceAll(string(data), "{{NAME}}", m.itemName)
+		os.WriteFile(llmPath, []byte(replaced), 0644) // non-fatal
+	}
+
+	// Generate .romanesco.yaml
+	now := time.Now()
+	meta := &metadata.Meta{
+		ID:         metadata.NewID(),
+		Name:       m.itemName,
+		Type:       string(m.contentType),
+		Source:     "created",
+		ImportedAt: &now,
+		ImportedBy: gitUsername(),
+	}
+	metadata.Save(dest, meta) // non-fatal
+
+	return m.itemName, nil
+}
+
+// startClone creates a temp dir and returns a tea.ExecProcess command for git clone.
+func (m importModel) startClone(url string) tea.Cmd {
+	tmpDir, err := os.MkdirTemp("", "nesco-import-*")
+	if err != nil {
+		return func() tea.Msg {
+			return importCloneDoneMsg{err: fmt.Errorf("creating temp dir: %w", err)}
+		}
+	}
+
+	cmd := exec.Command("git", "clone", "--depth", "1", url, tmpDir)
+	return tea.ExecProcess(cmd, func(err error) tea.Msg {
+		return importCloneDoneMsg{err: err, path: tmpDir}
+	})
+}
+
+// cleanup removes the cloned temp directory if it exists.
+func (m *importModel) cleanup() {
+	if m.clonedPath != "" {
+		os.RemoveAll(m.clonedPath)
+		m.clonedPath = ""
+	}
+}
+
+// validateSelections checks each selected path and returns validation results.
+func (m importModel) validateSelections(paths []string) []validationItem {
+	var items []validationItem
+	for _, p := range paths {
+		name := filepath.Base(p)
+		det, ok := catalog.DetectContent(p)
+
+		vi := validationItem{
+			path:      p,
+			name:      name,
+			detection: det,
+			isWarning: !ok,
+			included:  true,
+		}
+
+		// Try to extract description from frontmatter
+		info, err := os.Stat(p)
+		if err == nil && info.IsDir() {
+			for _, marker := range []string{"SKILL.md", "AGENT.md", "PROMPT.md"} {
+				data, err := os.ReadFile(filepath.Join(p, marker))
+				if err == nil {
+					fm, fmErr := catalog.ParseFrontmatter(data)
+					if fmErr == nil && fm.Description != "" {
+						vi.description = fm.Description
+					}
+					break
+				}
+			}
+		}
+
+		items = append(items, vi)
+	}
+	return items
+}
+
+// doBatchImport imports multiple selected paths, generating metadata for each.
+// Returns a comma-separated list of imported names.
+func (m importModel) doBatchImport(paths []string) (string, error) {
+	var imported []string
+	var errs []string
+
+	for _, srcPath := range paths {
+		itemName := filepath.Base(srcPath)
+		// Build destination based on content type
+		var dest string
+		if m.contentType.IsUniversal() {
+			dest = filepath.Join(m.repoRoot, "my-tools", string(m.contentType), itemName)
+		} else {
+			dest = filepath.Join(m.repoRoot, "my-tools", string(m.contentType), m.providerName, itemName)
+		}
+
+		// Skip if destination exists
+		if _, err := os.Stat(dest); err == nil {
+			errs = append(errs, fmt.Sprintf("%s (already exists)", itemName))
+			continue
+		}
+
+		if err := installer.CopyContent(srcPath, dest); err != nil {
+			errs = append(errs, fmt.Sprintf("%s (%s)", itemName, err))
+			continue
+		}
+
+		// Generate metadata
+		now := time.Now()
+		meta := &metadata.Meta{
+			ID:         metadata.NewID(),
+			Name:       itemName,
+			Type:       string(m.contentType),
+			Source:     srcPath,
+			ImportedAt: &now,
+			ImportedBy: gitUsername(),
+		}
+		if m.contentType.IsUniversal() {
+			metadata.Save(dest, meta)
+		} else {
+			metadata.SaveProvider(filepath.Dir(dest), itemName, meta)
+		}
+
+		imported = append(imported, itemName)
+	}
+
+	result := strings.Join(imported, ", ")
+	if len(errs) > 0 {
+		if len(imported) == 0 {
+			return "", fmt.Errorf("all imports failed: %s", strings.Join(errs, "; "))
+		}
+		result += fmt.Sprintf(" (skipped: %s)", strings.Join(errs, "; "))
+	}
+	return result, nil
+}
+
+// isValidGitURL checks that a URL looks like a legitimate git remote.
+// Rejects argument-injection attempts (URLs starting with -) and dangerous
+// transports like ext::.
+func isValidGitURL(url string) bool {
+	for _, prefix := range []string{"https://", "http://", "git://", "ssh://", "git@"} {
+		if strings.HasPrefix(url, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// discoverProviderDirs reads the existing provider subdirectories for a content type.
+// Checks both the shared directory and my-tools/ for provider dirs.
+func (m importModel) discoverProviderDirs(ct catalog.ContentType) []string {
+	seen := make(map[string]bool)
+	var names []string
+
+	// Check shared directory
+	dirs := []string{
+		filepath.Join(m.repoRoot, string(ct)),
+		filepath.Join(m.repoRoot, "my-tools", string(ct)),
+	}
+	for _, typeDir := range dirs {
+		entries, err := os.ReadDir(typeDir)
+		if err != nil {
+			continue
+		}
+		for _, e := range entries {
+			if e.IsDir() && e.Name() != ".gitkeep" && !seen[e.Name()] {
+				seen[e.Name()] = true
+				names = append(names, e.Name())
+			}
+		}
+	}
+	return names
+}
+
+func cwd() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "(unknown)"
+	}
+	return dir
+}
+
+func homeDir() string {
+	dir, err := os.UserHomeDir()
+	if err != nil {
+		return "(unknown)"
+	}
+	return dir
+}
+
+func (m importModel) viewValidate() string {
+	s := helpStyle.Render("Review selections before import") + "\n\n"
+
+	for i, vi := range m.validationItems {
+		prefix := "   "
+		style := itemStyle
+		if i == m.validateCursor {
+			prefix = " ▸ "
+			style = selectedItemStyle
+		}
+
+		// Inclusion checkbox
+		check := "✓"
+		if !vi.included {
+			check = " "
+		}
+
+		// Status indicator
+		status := installedStyle.Render("✓ " + vi.detection)
+		if vi.isWarning {
+			status = errorMsgStyle.Render("⚠ No recognized content")
+		}
+
+		s += prefix + "[" + check + "] " + style.Render(vi.name) + " " + status + "\n"
+		if vi.description != "" {
+			s += "       " + countStyle.Render(vi.description) + "\n"
+		}
+	}
+
+	includedCount := 0
+	for _, vi := range m.validationItems {
+		if vi.included {
+			includedCount++
+		}
+	}
+
+	s += "\n" + helpStyle.Render(fmt.Sprintf("  %d of %d items will be imported", includedCount, len(m.validationItems)))
+	s += "\n" + helpStyle.Render("↑↓ navigate • space toggle • enter import • esc back")
+	return s
+}

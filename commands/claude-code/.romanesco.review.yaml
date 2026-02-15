@@ -1,0 +1,7 @@
+name: review
+description: Custom slash command to trigger code review workflow in Claude Code
+version: "1.0"
+tags:
+  - command
+  - claude-code
+  - code-review
