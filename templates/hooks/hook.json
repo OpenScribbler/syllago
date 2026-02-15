@@ -1,0 +1,9 @@
+{
+  "event": "event_name",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "echo 'hook triggered'"
+    }
+  ]
+}

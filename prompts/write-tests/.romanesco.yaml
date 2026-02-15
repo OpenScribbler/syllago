@@ -1,0 +1,7 @@
+name: write-tests
+description: Prompt template for generating comprehensive test cases for existing code
+version: "1.0"
+tags:
+  - prompt
+  - testing
+  - tdd

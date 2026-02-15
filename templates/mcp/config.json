@@ -1,0 +1,6 @@
+{
+  "type": "stdio",
+  "command": "command-name",
+  "args": [],
+  "env": {}
+}

@@ -1,0 +1,7 @@
+name: project-context
+description: Template for creating project context files that provide AI assistants with repo-specific knowledge
+version: "1.0"
+tags:
+  - memory
+  - project-context
+  - template

@@ -1,0 +1,7 @@
+name: explain-code
+description: Prompt template for explaining unfamiliar code in accessible terms
+version: "1.0"
+tags:
+  - prompt
+  - code-explanation
+  - learning
