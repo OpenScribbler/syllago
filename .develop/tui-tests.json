@@ -1,0 +1,54 @@
+{
+  "feature": "tui-tests",
+  "started": "2026-02-16T20:44:00Z",
+  "updated": "2026-02-16T21:35:00Z",
+  "currentStage": "complete",
+  "completed": ["brainstorm", "plan", "validate", "beads", "execute"],
+  "artifacts": {
+    "design": "docs/plans/2026-02-16-tui-tests-design.md",
+    "plan": "docs/plans/2026-02-16-tui-tests-implementation.md",
+    "phaseB": ".develop/tui-tests-phase-b.md"
+  },
+  "validation": {
+    "attempts": 1,
+    "lastGaps": [],
+    "passed": true,
+    "skipped": false
+  },
+  "beads": {
+    "created": true,
+    "prefix": "romanesco",
+    "epicIds": ["romanesco-bvn"],
+    "taskCount": 10
+  },
+  "nextAction": null,
+  "execution": {
+    "mode": "sequential",
+    "tasksDispatched": [
+      "romanesco-nyh",
+      "romanesco-obh",
+      "romanesco-8od",
+      "romanesco-9sh",
+      "romanesco-c1j",
+      "romanesco-b87",
+      "romanesco-gjk",
+      "romanesco-3gh",
+      "romanesco-1xi",
+      "romanesco-48u"
+    ],
+    "tasksCompleted": [
+      "romanesco-nyh",
+      "romanesco-obh",
+      "romanesco-8od",
+      "romanesco-9sh",
+      "romanesco-c1j",
+      "romanesco-b87",
+      "romanesco-gjk",
+      "romanesco-3gh",
+      "romanesco-1xi",
+      "romanesco-48u"
+    ],
+    "currentTaskId": null,
+    "awaitingUserAck": false
+  }
+}
