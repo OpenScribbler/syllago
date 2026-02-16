@@ -1,0 +1,24 @@
+{
+  "feature": "nesco-design-decisions",
+  "started": "2026-02-15T19:12:22.158Z",
+  "updated": "2026-02-15T19:12:22.158Z",
+  "currentStage": "plan",
+  "completed": [
+    "brainstorm"
+  ],
+  "artifacts": {
+    "design": "/home/hhewett/.local/src/romanesco/docs/nesco-design-decisions.md",
+    "plan": null
+  },
+  "validation": {
+    "attempts": 0,
+    "lastGaps": [],
+    "passed": false
+  },
+  "beads": {
+    "created": false,
+    "prefix": null,
+    "epicIds": [],
+    "taskCount": 0
+  }
+}
