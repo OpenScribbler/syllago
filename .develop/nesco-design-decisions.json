@@ -2,9 +2,10 @@
   "feature": "nesco-design-decisions",
   "started": "2026-02-15T19:12:22.158Z",
   "updated": "2026-02-15T19:12:22.158Z",
-  "currentStage": "plan",
+  "currentStage": "complete",
   "completed": [
-    "brainstorm"
+    "brainstorm",
+    "plan"
   ],
   "artifacts": {
     "design": "/home/hhewett/.local/src/romanesco/docs/nesco-design-decisions.md",
