@@ -8,6 +8,7 @@ import (
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
 	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/romanesco/cli/internal/scan"
 )
 
 type screen int
@@ -18,13 +19,16 @@ const (
 	screenDetail
 	screenImport
 	screenUpdate
+	screenSettings
 )
 
 // App is the root bubbletea model.
 type App struct {
-	catalog   *catalog.Catalog
-	providers []provider.Provider
-	version   string
+	catalog    *catalog.Catalog
+	providers  []provider.Provider
+	detectors  []scan.Detector
+	version    string
+	autoUpdate bool
 
 	screen   screen
 	category categoryModel
@@ -33,6 +37,7 @@ type App struct {
 	search   searchModel
 	importer importModel
 	updater  updateModel
+	settings settingsModel
 
 	// Update check state (persists across screen changes)
 	remoteVersion string
@@ -43,15 +48,18 @@ type App struct {
 	tooSmall bool // true when terminal is below minimum usable size
 }
 
-// NewApp creates a new App model.
-func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string) App {
+// NewApp creates a new App model. Set autoUpdate to true to pull updates
+// automatically when a newer version is detected on origin.
+func NewApp(cat *catalog.Catalog, providers []provider.Provider, detectors []scan.Detector, version string, autoUpdate bool) App {
 	return App{
-		catalog:   cat,
-		providers: providers,
-		version:   version,
-		screen:    screenCategory,
-		category:  newCategoryModel(cat, version),
-		search:    newSearchModel(),
+		catalog:    cat,
+		providers:  providers,
+		detectors:  detectors,
+		version:    version,
+		autoUpdate: autoUpdate,
+		screen:     screenCategory,
+		category:   newCategoryModel(cat, version),
+		search:     newSearchModel(),
 	}
 }
 
@@ -74,6 +82,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.importer.height = msg.Height
 		a.updater.width = msg.Width
 		a.updater.height = msg.Height
+		a.settings.width = msg.Width
+		a.settings.height = msg.Height
 		return a, nil
 
 	case appInstallDoneMsg:
@@ -134,12 +144,20 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case updateCheckMsg:
-		if msg.err == nil && msg.remoteVersion != "" && msg.remoteVersion != msg.localVersion {
+		if msg.err == nil && msg.remoteVersion != "" && versionNewer(msg.remoteVersion, msg.localVersion) {
 			a.remoteVersion = msg.remoteVersion
 			a.commitsBehind = msg.commitsBehind
 			a.category.remoteVersion = msg.remoteVersion
 			a.category.updateAvailable = true
 			a.category.commitsBehind = msg.commitsBehind
+
+			if a.autoUpdate {
+				a.updater = newUpdateModel(a.catalog.RepoRoot, a.version, a.remoteVersion, a.commitsBehind)
+				a.updater.width = a.width
+				a.updater.height = a.height
+				a.screen = screenUpdate
+				return a, a.updater.startPull()
+			}
 		}
 		return a, nil
 
@@ -176,8 +194,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, tea.Quit
 		}
 
-		// Search toggle (skip on import/update screens and when detail has active textinput)
-		if key.Matches(msg, keys.Search) && !a.search.active && a.screen != screenImport && a.screen != screenUpdate && !a.detail.HasTextInput() {
+		// Search toggle (skip on import/update/settings screens and when detail has active textinput)
+		if key.Matches(msg, keys.Search) && !a.search.active && a.screen != screenImport && a.screen != screenUpdate && a.screen != screenSettings && !a.detail.HasTextInput() {
 			a.search = a.search.activated()
 			return a, nil
 		}
@@ -231,6 +249,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.updater.width = a.width
 					a.updater.height = a.height
 					a.screen = screenUpdate
+					return a, nil
+				}
+				if a.category.isSettingsSelected() {
+					a.settings = newSettingsModel(a.catalog.RepoRoot, a.providers, a.detectors)
+					a.settings.width = a.width
+					a.settings.height = a.height
+					a.screen = screenSettings
 					return a, nil
 				}
 				if a.category.isImportSelected() {
@@ -340,6 +365,19 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			a.updater, cmd = a.updater.Update(msg)
 			return a, cmd
+
+		case screenSettings:
+			if key.Matches(msg, keys.Back) {
+				if a.settings.HasPendingAction() {
+					a.settings.CancelAction()
+					return a, nil
+				}
+				a.screen = screenCategory
+				return a, nil
+			}
+			var cmd tea.Cmd
+			a.settings, cmd = a.settings.Update(msg)
+			return a, cmd
 		}
 	}
 
@@ -364,6 +402,8 @@ func (a App) View() string {
 		content = a.importer.View()
 	case screenUpdate:
 		content = a.updater.View()
+	case screenSettings:
+		content = a.settings.View()
 	}
 
 	// Overlay search if active

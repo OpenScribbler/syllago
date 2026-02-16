@@ -147,6 +147,12 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 			item.Description = readDescription(filepath.Join(itemDir, "README.md"))
 		}
 
+		// Load README.md into ReadmeBody (for all universal types)
+		item.ReadmeBody = loadReadme(itemDir)
+
+		// Collect file listing
+		item.Files = collectFiles(itemDir, itemDir)
+
 		// Load metadata if present
 		meta, err := metadata.Load(itemDir)
 		if err != nil {
@@ -160,7 +166,9 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 }
 
 // scanProviderSpecific discovers items for provider-specific types (rules, hooks, commands).
-// Structure is <type>/<provider>/<file>. Each file inside a provider subdir is one item.
+// Supports two layouts:
+//   - Directory-per-item (new): <type>/<provider>/<item-name>/ with content file + README.md + .romanesco.yaml
+//   - Single file (legacy):    <type>/<provider>/<file> with .romanesco.<file>.yaml alongside
 func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries []os.DirEntry, local bool) error {
 	for _, providerEntry := range entries {
 		if !providerEntry.IsDir() || shouldSkip(providerEntry.Name()) {
@@ -170,53 +178,149 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 		providerDir := filepath.Join(typeDir, providerEntry.Name())
 		providerName := providerEntry.Name()
 
-		files, err := os.ReadDir(providerDir)
+		children, err := os.ReadDir(providerDir)
 		if err != nil {
 			return err
 		}
 
-		for _, file := range files {
-			if file.IsDir() || shouldSkip(file.Name()) {
+		for _, child := range children {
+			if shouldSkip(child.Name()) {
 				continue
 			}
 
-			filePath := filepath.Join(providerDir, file.Name())
-			item := ContentItem{
-				Name:     file.Name(),
-				Type:     ct,
-				Path:     filePath,
-				Provider: providerName,
-				Local:    local,
-			}
-			if strings.HasSuffix(file.Name(), ".md") {
-				item.Description = readDescription(filePath)
-			}
-			// For .json hook files, extract description from event + matcher
-			if filepath.Ext(file.Name()) == ".json" {
-				data, err := os.ReadFile(filePath)
-				if err == nil {
-					event := gjson.GetBytes(data, "event").String()
-					matcher := gjson.GetBytes(data, "matcher").String()
-					if event != "" {
-						if matcher != "" {
-							item.Description = fmt.Sprintf("%s hook for %s", event, matcher)
-						} else {
-							item.Description = fmt.Sprintf("%s hook", event)
+			if child.IsDir() {
+				// New directory-per-item format
+				item, err := scanProviderDir(filepath.Join(providerDir, child.Name()), ct, providerName, local)
+				if err != nil {
+					return err
+				}
+				if item != nil {
+					cat.Items = append(cat.Items, *item)
+				}
+			} else {
+				// Legacy single-file format
+				filePath := filepath.Join(providerDir, child.Name())
+				item := ContentItem{
+					Name:     child.Name(),
+					Type:     ct,
+					Path:     filePath,
+					Provider: providerName,
+					Local:    local,
+				}
+				if strings.HasSuffix(child.Name(), ".md") {
+					item.Description = readDescription(filePath)
+				}
+				if filepath.Ext(child.Name()) == ".json" {
+					data, readErr := os.ReadFile(filePath)
+					if readErr == nil {
+						event := gjson.GetBytes(data, "event").String()
+						matcher := gjson.GetBytes(data, "matcher").String()
+						if event != "" {
+							if matcher != "" {
+								item.Description = fmt.Sprintf("%s hook for %s", event, matcher)
+							} else {
+								item.Description = fmt.Sprintf("%s hook", event)
+							}
 						}
 					}
 				}
+				meta, metaErr := metadata.LoadProvider(providerDir, child.Name())
+				if metaErr != nil {
+					return metaErr
+				}
+				item.Meta = meta
+				cat.Items = append(cat.Items, item)
 			}
-			// Load provider-specific metadata
-			meta, err := metadata.LoadProvider(providerDir, file.Name())
-			if err != nil {
-				return err
-			}
-			item.Meta = meta
-
-			cat.Items = append(cat.Items, item)
 		}
 	}
 	return nil
+}
+
+// scanProviderDir scans a directory-format provider-specific item.
+// Looks for the content file by type convention and loads README + metadata.
+func scanProviderDir(itemDir string, ct ContentType, providerName string, local bool) (*ContentItem, error) {
+	dirName := filepath.Base(itemDir)
+	item := ContentItem{
+		Name:     dirName,
+		Type:     ct,
+		Path:     itemDir,
+		Provider: providerName,
+		Local:    local,
+	}
+
+	// Find the content file by type
+	switch ct {
+	case Rules:
+		// Look for rule.md or any .md file
+		item.Description = readDescription(filepath.Join(itemDir, "rule.md"))
+		if item.Description == "" {
+			// Try any .md file
+			entries, _ := os.ReadDir(itemDir)
+			for _, e := range entries {
+				if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") && e.Name() != "README.md" && e.Name() != "LLM-PROMPT.md" {
+					item.Description = readDescription(filepath.Join(itemDir, e.Name()))
+					break
+				}
+			}
+		}
+	case Hooks:
+		// Look for hook.json or any .json file
+		hookPath := filepath.Join(itemDir, "hook.json")
+		data, err := os.ReadFile(hookPath)
+		if err != nil {
+			// Try any .json file
+			entries, _ := os.ReadDir(itemDir)
+			for _, e := range entries {
+				if !e.IsDir() && filepath.Ext(e.Name()) == ".json" {
+					data, err = os.ReadFile(filepath.Join(itemDir, e.Name()))
+					break
+				}
+			}
+		}
+		if err == nil && data != nil {
+			event := gjson.GetBytes(data, "event").String()
+			matcher := gjson.GetBytes(data, "matcher").String()
+			if event != "" {
+				if matcher != "" {
+					item.Description = fmt.Sprintf("%s hook for %s", event, matcher)
+				} else {
+					item.Description = fmt.Sprintf("%s hook", event)
+				}
+			}
+		}
+	case Commands:
+		// Look for command.md or any .md file
+		item.Description = readDescription(filepath.Join(itemDir, "command.md"))
+		if item.Description == "" {
+			entries, _ := os.ReadDir(itemDir)
+			for _, e := range entries {
+				if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") && e.Name() != "README.md" && e.Name() != "LLM-PROMPT.md" {
+					item.Description = readDescription(filepath.Join(itemDir, e.Name()))
+					break
+				}
+			}
+		}
+	}
+
+	// Load README.md
+	item.ReadmeBody = loadReadme(itemDir)
+
+	// Collect file listing
+	item.Files = collectFiles(itemDir, itemDir)
+
+	// Load metadata from inside the item directory
+	meta, err := metadata.Load(itemDir)
+	if err != nil {
+		return nil, err
+	}
+	item.Meta = meta
+
+	// Warn to stderr if README.md is missing (non-fatal)
+	if item.ReadmeBody == "" {
+		fmt.Fprintf(os.Stderr, "warning: %s/%s/%s missing README.md\n", ct, providerName, dirName)
+	}
+
+	return &item, nil
 }
 
 // shouldSkip returns true for files/dirs that should always be ignored.
@@ -228,6 +332,34 @@ func shouldSkip(name string) bool {
 		return true
 	}
 	return false
+}
+
+// loadReadme reads README.md from an item directory.
+// Returns the raw content or "" if not found.
+func loadReadme(itemDir string) string {
+	data, err := os.ReadFile(filepath.Join(itemDir, "README.md"))
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+// collectFiles returns relative paths of all non-hidden files in an item directory.
+// Walks one level deep (item directories are expected to be shallow).
+func collectFiles(itemDir string, baseDir string) []string {
+	var files []string
+	entries, err := os.ReadDir(itemDir)
+	if err != nil {
+		return nil
+	}
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
+		rel, _ := filepath.Rel(baseDir, filepath.Join(itemDir, e.Name()))
+		files = append(files, rel)
+	}
+	return files
 }
 
 // readDescription reads a markdown file and returns the first non-empty,

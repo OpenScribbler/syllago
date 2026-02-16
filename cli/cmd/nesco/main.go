@@ -9,8 +9,10 @@ import (
 	"syscall"
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/romanesco/cli/internal/config"
 	"github.com/holdenhewett/romanesco/cli/internal/metadata"
 	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/romanesco/cli/internal/scan/detectors"
 	"github.com/holdenhewett/romanesco/cli/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -137,7 +139,14 @@ func runTUI(cmd *cobra.Command, args []string) error {
 
 	providers := provider.DetectProviders()
 
-	app := tui.NewApp(cat, providers, version)
+	// Check if auto-update is enabled in project config
+	autoUpdate := false
+	cfg, cfgErr := config.Load(root)
+	if cfgErr == nil && cfg.Preferences["autoUpdate"] == "true" {
+		autoUpdate = true
+	}
+
+	app := tui.NewApp(cat, providers, detectors.AllDetectors(), version, autoUpdate)
 	p := tea.NewProgram(app, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		return err

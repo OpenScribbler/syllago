@@ -47,6 +47,15 @@ const (
 	actionPromoteConfirm            // promote confirmation
 )
 
+// detailTab represents the active tab on the detail screen.
+type detailTab int
+
+const (
+	tabOverview detailTab = iota
+	tabFiles
+	tabInstall
+)
+
 type detailModel struct {
 	item          catalog.ContentItem
 	providers     []provider.Provider
@@ -69,9 +78,17 @@ type detailModel struct {
 	envMethodCursor int      // 0=set up new, 1=already configured (for env-choose picker)
 	envValue        string   // temporarily holds entered value between env-value and env-location
 	renderedBody    string   // cached glamour-rendered README body (apps only)
+	renderedReadme  string   // cached glamour-rendered README.md (all types)
 	llmPrompt       string   // loaded from LLM-PROMPT.md for local scaffolded items
-	width           int
-	height          int
+	// Tab state
+	activeTab        detailTab
+	// File viewer state (Files tab)
+	fileCursor       int
+	fileContent      string
+	fileScrollOffset int
+	viewingFile      bool // true when viewing file content (not file list)
+	width            int
+	height           int
 }
 
 func newDetailModel(item catalog.ContentItem, providers []provider.Provider, repoRoot string) detailModel {
@@ -99,6 +116,13 @@ func newDetailModel(item catalog.ContentItem, providers []provider.Provider, rep
 		rendered, err := glamour.Render(item.Body, "auto")
 		if err == nil {
 			m.renderedBody = rendered
+		}
+	}
+	// Pre-render ReadmeBody for all types (used in Overview tab)
+	if item.ReadmeBody != "" {
+		rendered, err := glamour.Render(item.ReadmeBody, "auto")
+		if err == nil {
+			m.renderedReadme = rendered
 		}
 	}
 	// Load LLM prompt for local items
@@ -291,6 +315,81 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			return m, cmd
 		}
 
+		// Tab switching (only when no active action/input)
+		if m.confirmAction == actionNone && !m.viewingFile {
+			switch msg.String() {
+			case "tab":
+				m.activeTab = (m.activeTab + 1) % 3
+				m.scrollOffset = 0
+				return m, nil
+			case "1":
+				m.activeTab = tabOverview
+				m.scrollOffset = 0
+				return m, nil
+			case "2":
+				m.activeTab = tabFiles
+				m.scrollOffset = 0
+				return m, nil
+			case "3":
+				m.activeTab = tabInstall
+				m.scrollOffset = 0
+				return m, nil
+			}
+		}
+
+		// File viewer: viewing file content
+		if m.activeTab == tabFiles && m.viewingFile {
+			switch {
+			case key.Matches(msg, keys.Back):
+				m.viewingFile = false
+				m.fileContent = ""
+				m.fileScrollOffset = 0
+				return m, nil
+			case key.Matches(msg, keys.Up):
+				if m.fileScrollOffset > 0 {
+					m.fileScrollOffset--
+				}
+				return m, nil
+			case key.Matches(msg, keys.Down):
+				m.fileScrollOffset++
+				return m, nil
+			}
+			return m, nil
+		}
+
+		// File viewer: navigating file list
+		if m.activeTab == tabFiles && !m.viewingFile && m.confirmAction == actionNone {
+			switch {
+			case key.Matches(msg, keys.Back):
+				// Let the outer handler deal with Esc (navigate back)
+			case key.Matches(msg, keys.Up):
+				if m.fileCursor > 0 {
+					m.fileCursor--
+				}
+				return m, nil
+			case key.Matches(msg, keys.Down):
+				if m.fileCursor < len(m.item.Files)-1 {
+					m.fileCursor++
+				}
+				return m, nil
+			case key.Matches(msg, keys.Enter):
+				if m.fileCursor < len(m.item.Files) {
+					relPath := m.item.Files[m.fileCursor]
+					absPath := filepath.Join(m.item.Path, relPath)
+					data, readErr := os.ReadFile(absPath)
+					if readErr != nil {
+						m.message = fmt.Sprintf("Cannot read file: %s", readErr)
+						m.messageIsErr = true
+					} else {
+						m.fileContent = string(data)
+						m.fileScrollOffset = 0
+						m.viewingFile = true
+					}
+				}
+				return m, nil
+			}
+		}
+
 		switch {
 		case key.Matches(msg, keys.Back):
 			if m.confirmAction != actionNone {
@@ -306,12 +405,19 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 					m.methodCursor--
 				}
 			default:
-				if m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps {
+				// Overview tab and scrollable content: scroll
+				if m.activeTab == tabOverview {
 					if m.scrollOffset > 0 {
 						m.scrollOffset--
 					}
-				} else if len(m.providerChecks) > 0 && m.checkCursor > 0 {
-					m.checkCursor--
+				} else if m.activeTab == tabInstall {
+					if m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps {
+						if m.scrollOffset > 0 {
+							m.scrollOffset--
+						}
+					} else if len(m.providerChecks) > 0 && m.checkCursor > 0 {
+						m.checkCursor--
+					}
 				}
 			}
 
@@ -322,20 +428,28 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 					m.methodCursor++
 				}
 			default:
-				if m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps {
+				if m.activeTab == tabOverview {
 					m.scrollOffset++
 					m.clampScroll()
-				} else if len(m.providerChecks) > 0 && m.checkCursor < len(m.providerChecks)-1 {
-					m.checkCursor++
+				} else if m.activeTab == tabInstall {
+					if m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps {
+						m.scrollOffset++
+						m.clampScroll()
+					} else if len(m.providerChecks) > 0 && m.checkCursor < len(m.providerChecks)-1 {
+						m.checkCursor++
+					}
 				}
 			}
 
 		case key.Matches(msg, keys.Space):
-			if m.confirmAction == actionNone && m.checkCursor < len(m.providerChecks) {
+			if m.activeTab == tabInstall && m.confirmAction == actionNone && m.checkCursor < len(m.providerChecks) {
 				m.providerChecks[m.checkCursor] = !m.providerChecks[m.checkCursor]
 			}
 
 		case key.Matches(msg, keys.Install):
+			if m.activeTab != tabInstall {
+				break
+			}
 			if m.item.Type == catalog.Prompts {
 				break
 			}
@@ -351,6 +465,9 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.Enter):
+			if m.activeTab != tabInstall && m.confirmAction == actionNone {
+				break
+			}
 			switch m.confirmAction {
 			case actionChooseMethod:
 				m.doInstallChecked()
@@ -367,6 +484,9 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.Uninstall):
+			if m.activeTab != tabInstall {
+				break
+			}
 			if m.item.Type == catalog.Prompts {
 				break
 			}
@@ -397,6 +517,9 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.Save):
+			if m.activeTab != tabInstall {
+				break
+			}
 			if m.item.Type == catalog.Prompts && m.item.Body != "" && m.confirmAction == actionNone {
 				m.confirmAction = actionSavePath
 				home, err := os.UserHomeDir()
@@ -413,6 +536,9 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.EnvSetup):
+			if m.activeTab != tabInstall {
+				break
+			}
 			if m.item.Type == catalog.MCP && m.confirmAction == actionNone {
 				m.startEnvSetup()
 			}
@@ -648,10 +774,10 @@ func (m *detailModel) doSave() {
 	}
 }
 
-// HasPendingAction returns true if the detail view has an active confirmation
-// or picker that should consume the Back key instead of navigating away.
+// HasPendingAction returns true if the detail view has an active confirmation,
+// picker, or file viewer that should consume the Back key instead of navigating away.
 func (m detailModel) HasPendingAction() bool {
-	return m.confirmAction != actionNone
+	return m.confirmAction != actionNone || m.viewingFile
 }
 
 // HasTextInput returns true if the detail view has an active text input
@@ -664,8 +790,14 @@ func (m detailModel) HasTextInput() bool {
 	return false
 }
 
-// CancelAction clears all active confirmation/picker state.
+// CancelAction clears all active confirmation/picker/file-viewer state.
 func (m *detailModel) CancelAction() {
+	if m.viewingFile {
+		m.viewingFile = false
+		m.fileContent = ""
+		m.fileScrollOffset = 0
+		return
+	}
 	m.confirmAction = actionNone
 	m.methodCursor = 0
 	m.saveInput.Blur()

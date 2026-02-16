@@ -42,7 +42,7 @@ func (m categoryModel) Update(msg tea.Msg) (categoryModel, tea.Cmd) {
 				m.cursor--
 			}
 		case key.Matches(msg, keys.Down):
-			if m.cursor < len(m.types)+2 {
+			if m.cursor < len(m.types)+3 {
 				m.cursor++
 			}
 		}
@@ -106,6 +106,15 @@ func (m categoryModel) View() string {
 	}
 	s += updatePrefix + updateStyle.Render(updateLabel) + "\n"
 
+	// Settings item
+	settingsPrefix := "   "
+	settingsStyle := itemStyle
+	if m.cursor == len(m.types)+3 {
+		settingsPrefix = " ▸ "
+		settingsStyle = selectedItemStyle
+	}
+	s += settingsPrefix + settingsStyle.Render("Settings...") + "\n"
+
 	// Update notification banner
 	if m.updateAvailable {
 		s += "\n" + updateBannerStyle.Render(fmt.Sprintf("  ✦ A new version is available (v%s)", m.remoteVersion)) + "\n"
@@ -141,6 +150,10 @@ func (m categoryModel) isImportSelected() bool {
 
 func (m categoryModel) isUpdateSelected() bool {
 	return m.cursor == len(m.types)+2
+}
+
+func (m categoryModel) isSettingsSelected() bool {
+	return m.cursor == len(m.types)+3
 }
 
 func (m categoryModel) selectedType() catalog.ContentType {
