@@ -31,4 +31,28 @@ var Codex = Provider{
 		_, err = exec.LookPath("codex")
 		return err == nil
 	},
+	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
+		switch ct {
+		case catalog.Rules:
+			return []string{filepath.Join(projectRoot, "AGENTS.md")}
+		case catalog.Commands:
+			return []string{filepath.Join(projectRoot, ".codex", "commands")}
+		default:
+			return nil
+		}
+	},
+	FileFormat: func(ct catalog.ContentType) Format {
+		return FormatMarkdown
+	},
+	EmitPath: func(projectRoot string) string {
+		return filepath.Join(projectRoot, "AGENTS.md")
+	},
+	SupportsType: func(ct catalog.ContentType) bool {
+		switch ct {
+		case catalog.Rules, catalog.Commands:
+			return true
+		default:
+			return false
+		}
+	},
 }
