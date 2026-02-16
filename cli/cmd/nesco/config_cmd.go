@@ -1,0 +1,103 @@
+package main
+
+import (
+	"fmt"
+
+	"github.com/holdenhewett/romanesco/cli/internal/config"
+	"github.com/holdenhewett/romanesco/cli/internal/output"
+	"github.com/spf13/cobra"
+)
+
+var configCmd = &cobra.Command{
+	Use:   "config",
+	Short: "View and edit nesco configuration",
+	Long:  "Manage provider selection and preferences in .nesco/config.json.",
+}
+
+var configListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List current configuration",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		root, err := findProjectRoot()
+		if err != nil {
+			return err
+		}
+		cfg, err := config.Load(root)
+		if err != nil {
+			return err
+		}
+		if output.JSON {
+			output.Print(cfg)
+		} else {
+			if len(cfg.Providers) == 0 {
+				fmt.Println("No providers configured. Run `nesco init` to set up.")
+			} else {
+				fmt.Println("Configured providers:")
+				for _, p := range cfg.Providers {
+					fmt.Printf("  - %s\n", p)
+				}
+			}
+		}
+		return nil
+	},
+}
+
+var configAddCmd = &cobra.Command{
+	Use:   "add <provider-slug>",
+	Short: "Add a provider to the configuration",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		root, err := findProjectRoot()
+		if err != nil {
+			return err
+		}
+		cfg, err := config.Load(root)
+		if err != nil {
+			return err
+		}
+		slug := args[0]
+		for _, p := range cfg.Providers {
+			if p == slug {
+				return fmt.Errorf("provider %q already configured", slug)
+			}
+		}
+		cfg.Providers = append(cfg.Providers, slug)
+		return config.Save(root, cfg)
+	},
+}
+
+var configRemoveCmd = &cobra.Command{
+	Use:   "remove <provider-slug>",
+	Short: "Remove a provider from the configuration",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		root, err := findProjectRoot()
+		if err != nil {
+			return err
+		}
+		cfg, err := config.Load(root)
+		if err != nil {
+			return err
+		}
+		slug := args[0]
+		var filtered []string
+		found := false
+		for _, p := range cfg.Providers {
+			if p == slug {
+				found = true
+				continue
+			}
+			filtered = append(filtered, p)
+		}
+		if !found {
+			return fmt.Errorf("provider %q not found in config", slug)
+		}
+		cfg.Providers = filtered
+		return config.Save(root, cfg)
+	},
+}
+
+func init() {
+	configCmd.AddCommand(configListCmd, configAddCmd, configRemoveCmd)
+	rootCmd.AddCommand(configCmd)
+}

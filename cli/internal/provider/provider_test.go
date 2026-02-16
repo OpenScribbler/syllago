@@ -1,0 +1,54 @@
+package provider
+
+import (
+	"testing"
+
+	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+)
+
+func TestDiscoveryPaths(t *testing.T) {
+	tests := []struct {
+		provider Provider
+		ct       catalog.ContentType
+		wantLen  int
+	}{
+		{ClaudeCode, catalog.Rules, 2},
+		{ClaudeCode, catalog.MCP, 1},
+		{ClaudeCode, catalog.Skills, 1},
+		{Cursor, catalog.Rules, 1},
+		{GeminiCLI, catalog.Rules, 1},
+		{Windsurf, catalog.Rules, 1},
+		{Codex, catalog.Rules, 1},
+	}
+	for _, tt := range tests {
+		paths := tt.provider.DiscoveryPaths("/tmp/project", tt.ct)
+		if len(paths) < tt.wantLen {
+			t.Errorf("%s.DiscoveryPaths(%s): got %d paths, want >= %d", tt.provider.Name, tt.ct, len(paths), tt.wantLen)
+		}
+	}
+}
+
+func TestEmitPath(t *testing.T) {
+	for _, p := range AllProviders {
+		path := p.EmitPath("/tmp/project")
+		if path == "" {
+			t.Errorf("%s.EmitPath returned empty string", p.Name)
+		}
+	}
+}
+
+func TestSupportsType(t *testing.T) {
+	// Claude Code supports Rules, Skills, Agents, Commands, MCP, Hooks
+	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.Agents, catalog.Commands, catalog.MCP, catalog.Hooks} {
+		if !ClaudeCode.SupportsType(ct) {
+			t.Errorf("ClaudeCode.SupportsType(%s) = false, want true", ct)
+		}
+	}
+	// Cursor only supports Rules
+	if !Cursor.SupportsType(catalog.Rules) {
+		t.Error("Cursor.SupportsType(Rules) = false, want true")
+	}
+	if Cursor.SupportsType(catalog.Skills) {
+		t.Error("Cursor.SupportsType(Skills) = true, want false")
+	}
+}
