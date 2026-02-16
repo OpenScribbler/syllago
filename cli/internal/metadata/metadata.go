@@ -25,7 +25,9 @@ type Dependency struct {
 type Meta struct {
 	ID           string       `yaml:"id"`
 	Name         string       `yaml:"name"`
-	Type         string       `yaml:"type"`
+	Description  string       `yaml:"description,omitempty"`
+	Version      string       `yaml:"version,omitempty"`
+	Type         string       `yaml:"type,omitempty"`
 	Author       string       `yaml:"author,omitempty"`
 	Source       string       `yaml:"source,omitempty"`
 	Tags         []string     `yaml:"tags,omitempty"`

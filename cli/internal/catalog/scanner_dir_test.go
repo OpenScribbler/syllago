@@ -15,6 +15,7 @@ func TestScanProviderDirectoryFormat(t *testing.T) {
 	os.MkdirAll(hookDir, 0755)
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"hooks":{"PostToolUse":[{"matcher":"Write","command":"echo hi"}]}}`), 0644)
 	os.WriteFile(filepath.Join(hookDir, "README.md"), []byte("# My Hook\n\nA test hook.\n"), 0644)
+	os.WriteFile(filepath.Join(hookDir, ".romanesco.yaml"), []byte("name: my-hook\ndescription: Runs a linter after file edits\nversion: \"1.0\"\n"), 0644)
 
 	// rules/claude-code/my-rule/rule.md
 	ruleDir := filepath.Join(tmp, "rules", "claude-code", "my-rule")
@@ -67,6 +68,9 @@ func TestScanProviderDirectoryFormat(t *testing.T) {
 	if h.Path != hookDir {
 		t.Errorf("hook path = %q, want %q", h.Path, hookDir)
 	}
+	if h.Description != "Runs a linter after file edits" {
+		t.Errorf("hook description = %q, want %q", h.Description, "Runs a linter after file edits")
+	}
 
 	// Check rule details
 	rules := cat.ByType(Rules)
@@ -77,8 +81,8 @@ func TestScanProviderDirectoryFormat(t *testing.T) {
 	if r.Name != "my-rule" {
 		t.Errorf("rule name = %q, want %q", r.Name, "my-rule")
 	}
-	if r.Description == "" {
-		t.Error("rule description is empty")
+	if r.Description != "Keep it short." {
+		t.Errorf("rule description = %q, want %q", r.Description, "Keep it short.")
 	}
 
 	// Check command details

@@ -213,15 +213,7 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 				if filepath.Ext(child.Name()) == ".json" {
 					data, readErr := os.ReadFile(filePath)
 					if readErr == nil {
-						event := gjson.GetBytes(data, "event").String()
-						matcher := gjson.GetBytes(data, "matcher").String()
-						if event != "" {
-							if matcher != "" {
-								item.Description = fmt.Sprintf("%s hook for %s", event, matcher)
-							} else {
-								item.Description = fmt.Sprintf("%s hook", event)
-							}
-						}
+						item.Description = describeHookJSON(data)
 					}
 				}
 				meta, metaErr := metadata.LoadProvider(providerDir, child.Name())
@@ -229,6 +221,9 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 					return metaErr
 				}
 				item.Meta = meta
+				if meta != nil && meta.Description != "" {
+					item.Description = meta.Description
+				}
 				cat.Items = append(cat.Items, item)
 			}
 		}
@@ -278,15 +273,7 @@ func scanProviderDir(itemDir string, ct ContentType, providerName string, local 
 			}
 		}
 		if err == nil && data != nil {
-			event := gjson.GetBytes(data, "event").String()
-			matcher := gjson.GetBytes(data, "matcher").String()
-			if event != "" {
-				if matcher != "" {
-					item.Description = fmt.Sprintf("%s hook for %s", event, matcher)
-				} else {
-					item.Description = fmt.Sprintf("%s hook", event)
-				}
-			}
+			item.Description = describeHookJSON(data)
 		}
 	case Commands:
 		// Look for command.md or any .md file
@@ -314,6 +301,11 @@ func scanProviderDir(itemDir string, ct ContentType, providerName string, local 
 		return nil, err
 	}
 	item.Meta = meta
+
+	// Use metadata description as primary source (overrides content-file parsing)
+	if meta != nil && meta.Description != "" {
+		item.Description = meta.Description
+	}
 
 	// Warn to stderr if README.md is missing (non-fatal)
 	if item.ReadmeBody == "" {
@@ -360,6 +352,34 @@ func collectFiles(itemDir string, baseDir string) []string {
 		files = append(files, rel)
 	}
 	return files
+}
+
+// describeHookJSON generates a description from hook JSON content.
+// Handles Claude Code format: {"hooks":{"Event":[{"matcher":"..."}]}}
+// Falls back to flat format: {"event":"...", "matcher":"..."}
+func describeHookJSON(data []byte) string {
+	// Try Claude Code hooks format: {"hooks":{"PostToolUse":[...]}}
+	hooksObj := gjson.GetBytes(data, "hooks")
+	if hooksObj.Exists() && hooksObj.IsObject() {
+		var events []string
+		hooksObj.ForEach(func(key, _ gjson.Result) bool {
+			events = append(events, key.String())
+			return true
+		})
+		if len(events) > 0 {
+			return strings.Join(events, ", ") + " hook"
+		}
+	}
+	// Fall back to flat format
+	event := gjson.GetBytes(data, "event").String()
+	matcher := gjson.GetBytes(data, "matcher").String()
+	if event != "" {
+		if matcher != "" {
+			return fmt.Sprintf("%s hook for %s", event, matcher)
+		}
+		return fmt.Sprintf("%s hook", event)
+	}
+	return ""
 }
 
 // readDescription reads a markdown file and returns the first non-empty,
