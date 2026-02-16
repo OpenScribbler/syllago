@@ -46,6 +46,12 @@ func Validate(itemDir string, contentType string, repoRoot string) []ValidationE
 		}
 	}
 
+	// Warn (not error) if README.md is missing — allows gradual adoption
+	readmePath := filepath.Join(itemDir, "README.md")
+	if _, readmeErr := os.Stat(readmePath); readmeErr != nil {
+		errs = append(errs, ValidationError{"README.md", "Missing. Consider adding a README.md for content transparency."})
+	}
+
 	// Type-specific validation
 	switch contentType {
 	case "skills":

@@ -19,16 +19,61 @@ func (m detailModel) renderContent() string {
 	}
 	s += "\n"
 
-	// Description
+	// Description (always shown above tabs)
 	if m.item.Description != "" {
 		desc := m.item.Description
 		if len(desc) > 200 {
 			desc = desc[:197] + "..."
 		}
-		s += valueStyle.Render(desc) + "\n\n"
+		s += valueStyle.Render(desc) + "\n"
 	}
 
-	// Prompt body (displayed before metadata for prompts)
+	// Tab bar
+	s += "\n" + m.renderTabBar() + "\n\n"
+
+	// Tab content
+	switch m.activeTab {
+	case tabOverview:
+		s += m.renderOverviewTab()
+	case tabFiles:
+		s += m.renderFilesTab()
+	case tabInstall:
+		s += m.renderInstallTab()
+	}
+
+	return s
+}
+
+// renderTabBar renders the tab selector: [Overview]  Files  Install
+func (m detailModel) renderTabBar() string {
+	tabs := []struct {
+		label string
+		tab   detailTab
+	}{
+		{"Overview", tabOverview},
+		{"Files", tabFiles},
+		{"Install", tabInstall},
+	}
+
+	var parts []string
+	for _, t := range tabs {
+		label := t.label
+		if t.tab == m.activeTab {
+			label = selectedItemStyle.Render("[" + label + "]")
+		} else {
+			label = helpStyle.Render(" " + label + " ")
+		}
+		parts = append(parts, label)
+	}
+
+	return strings.Join(parts, "  ")
+}
+
+// renderOverviewTab renders the README.md content (or falls back to description/body).
+func (m detailModel) renderOverviewTab() string {
+	var s string
+
+	// Prompt body (for prompts type)
 	if m.item.Type == catalog.Prompts && m.item.Body != "" {
 		s += labelStyle.Render("Prompt:") + "\n"
 		s += valueStyle.Render(m.item.Body) + "\n\n"
@@ -43,16 +88,20 @@ func (m detailModel) renderContent() string {
 		s += labelStyle.Render("Supported Providers: ") + valueStyle.Render(strings.Join(names, ", ")) + "\n\n"
 	}
 
-	// App README body (pre-rendered with glamour, cached in newDetailModel)
-	if m.item.Type == catalog.Apps {
-		if m.renderedBody != "" {
-			s += m.renderedBody + "\n"
-		} else if m.item.Body != "" {
-			s += valueStyle.Render(m.item.Body) + "\n\n"
-		}
+	// Rendered README (if available)
+	if m.renderedReadme != "" {
+		s += m.renderedReadme
+	} else if m.item.Type == catalog.Apps && m.renderedBody != "" {
+		// Apps use Body field (from README.md frontmatter body)
+		s += m.renderedBody
+	} else if m.item.Type == catalog.Apps && m.item.Body != "" {
+		s += valueStyle.Render(m.item.Body) + "\n"
+	} else {
+		s += helpStyle.Render("No README.md available for this item.") + "\n"
 	}
 
 	// Metadata
+	s += "\n"
 	s += labelStyle.Render("Type: ") + valueStyle.Render(m.item.Type.Label()) + "\n"
 	s += labelStyle.Render("Path: ") + valueStyle.Render(m.item.Path) + "\n"
 	if m.item.Provider != "" {
@@ -62,7 +111,6 @@ func (m detailModel) renderContent() string {
 	// LLM Prompt (for scaffolded local items)
 	if m.item.Local && m.llmPrompt != "" {
 		s += "\n" + labelStyle.Render("LLM Prompt Available") + " " + helpStyle.Render("(press c to copy)") + "\n"
-		// Show a preview of the prompt (first few lines)
 		lines := strings.Split(m.llmPrompt, "\n")
 		preview := lines
 		if len(preview) > 8 {
@@ -76,9 +124,90 @@ func (m detailModel) renderContent() string {
 		}
 	}
 
+	return s
+}
+
+// renderFilesTab renders the file list or file content viewer.
+func (m detailModel) renderFilesTab() string {
+	if m.viewingFile {
+		return m.renderFileContent()
+	}
+	return m.renderFileList()
+}
+
+// renderFileList shows the list of files in the item directory.
+func (m detailModel) renderFileList() string {
+	if len(m.item.Files) == 0 {
+		return helpStyle.Render("No files in this item.") + "\n"
+	}
+
+	var s string
+	for i, f := range m.item.Files {
+		prefix := "  "
+		style := itemStyle
+		if i == m.fileCursor {
+			prefix = "▸ "
+			style = selectedItemStyle
+		}
+		s += fmt.Sprintf("  %s%s\n", prefix, style.Render(f))
+	}
+	return s
+}
+
+// renderFileContent shows the content of the selected file with line numbers.
+func (m detailModel) renderFileContent() string {
+	if m.fileCursor >= len(m.item.Files) {
+		return ""
+	}
+
+	relPath := m.item.Files[m.fileCursor]
+	s := labelStyle.Render(relPath) + "\n\n"
+
+	lines := strings.Split(m.fileContent, "\n")
+
+	// Apply scroll offset
+	visibleHeight := m.height - 8 // header + tab bar + file header + help bar + margins
+	if visibleHeight < 5 {
+		visibleHeight = len(lines)
+	}
+
+	offset := m.fileScrollOffset
+	maxOffset := len(lines) - visibleHeight
+	if maxOffset < 0 {
+		maxOffset = 0
+	}
+	if offset > maxOffset {
+		offset = maxOffset
+	}
+
+	end := offset + visibleHeight
+	if end > len(lines) {
+		end = len(lines)
+	}
+
+	if offset > 0 {
+		s += helpStyle.Render("↑ scroll up for more") + "\n"
+	}
+
+	for i := offset; i < end; i++ {
+		lineNum := helpStyle.Render(fmt.Sprintf("%4d ", i+1))
+		s += lineNum + valueStyle.Render(lines[i]) + "\n"
+	}
+
+	if end < len(lines) {
+		s += helpStyle.Render("↓ scroll down for more") + "\n"
+	}
+
+	return s
+}
+
+// renderInstallTab renders the install/manage section (providers, method picker, env setup).
+func (m detailModel) renderInstallTab() string {
+	var s string
+
 	// MCP Server Configuration preview
 	if m.item.Type == catalog.MCP && m.mcpConfig != nil {
-		s += "\n" + labelStyle.Render("Server Configuration:") + "\n"
+		s += labelStyle.Render("Server Configuration:") + "\n"
 		if m.mcpConfig.Type != "" {
 			s += "  " + helpStyle.Render("Type:    ") + valueStyle.Render(m.mcpConfig.Type) + "\n"
 		}
@@ -106,6 +235,7 @@ func (m detailModel) renderContent() string {
 				s += "  " + helpStyle.Render("Env:     ") + valueStyle.Render(name) + " " + status + "\n"
 			}
 		}
+		s += "\n"
 	}
 
 	// Provider section — interactive checkboxes for non-prompt items
@@ -114,19 +244,16 @@ func (m detailModel) renderContent() string {
 		detected := m.detectedProviders()
 
 		if len(supportedProviders) > 0 {
-			s += "\n" + labelStyle.Render("Providers:") + "\n"
+			s += labelStyle.Render("Providers:") + "\n"
 
-			// Detected providers get interactive checkboxes
 			for i, p := range detected {
 				status := installer.CheckStatus(m.item, p, m.repoRoot)
 
-				// Checkbox state
 				check := "[ ]"
 				if i < len(m.providerChecks) && m.providerChecks[i] {
 					check = installedStyle.Render("[✓]")
 				}
 
-				// Cursor indicator
 				prefix := "  "
 				nameStyle := itemStyle
 				if i == m.checkCursor && m.confirmAction == actionNone {
@@ -134,7 +261,6 @@ func (m detailModel) renderContent() string {
 					nameStyle = selectedItemStyle
 				}
 
-				// Install status indicator
 				var indicator string
 				switch status {
 				case installer.StatusInstalled:
@@ -149,7 +275,6 @@ func (m detailModel) renderContent() string {
 				s += fmt.Sprintf("  %s%s %s  %s\n", prefix, check, nameStyle.Render(p.Name), indicator)
 			}
 
-			// Non-detected providers shown grayed out (no checkbox)
 			for _, p := range supportedProviders {
 				if p.Detected {
 					continue
@@ -159,11 +284,11 @@ func (m detailModel) renderContent() string {
 				s += fmt.Sprintf("      %s  %s\n", name, tag)
 			}
 		} else {
-			s += "\n" + helpStyle.Render("No providers support installing this content type yet.") + "\n"
+			s += helpStyle.Render("No providers support installing this content type yet.") + "\n"
 		}
 	}
 
-	// Method picker (for choose-method and save-method)
+	// Method picker
 	if m.confirmAction == actionChooseMethod || m.confirmAction == actionSaveMethod {
 		label := "Install method:"
 		if m.confirmAction == actionSaveMethod {
@@ -204,7 +329,7 @@ func (m detailModel) renderContent() string {
 		s += helpStyle.Render("enter confirm • esc cancel") + "\n"
 	}
 
-	// Env var interactive setup — multi-step flow
+	// Env var interactive setup
 	if m.envVarIdx < len(m.envVarNames) {
 		envName := m.envVarNames[m.envVarIdx]
 		switch m.confirmAction {
@@ -244,7 +369,7 @@ func (m detailModel) renderContent() string {
 		}
 	}
 
-	// Confirmation prompts (rendered inline with content)
+	// Confirmation prompts
 	switch m.confirmAction {
 	case actionUninstall:
 		installed := m.installedProviders()
@@ -258,7 +383,6 @@ func (m detailModel) renderContent() string {
 		s += helpStyle.Render("This creates a branch, commits, pushes, and opens a PR.") + "\n"
 		s += helpStyle.Render("Press p again to confirm, esc to cancel.") + "\n"
 	}
-	// Note: success/error messages are rendered in View() outside scrollable area
 
 	return s
 }
@@ -327,20 +451,34 @@ func (m detailModel) View() string {
 
 func (m detailModel) renderHelp() string {
 	var helpParts []string
-	helpParts = append(helpParts, "esc back")
+	helpParts = append(helpParts, "esc back", "tab switch tab")
 
-	if m.item.Type == catalog.Prompts {
+	switch m.activeTab {
+	case tabOverview:
 		helpParts = append(helpParts, "↑↓ scroll")
-		if m.item.Body != "" && m.confirmAction == actionNone {
+		if m.item.Type == catalog.Prompts && m.item.Body != "" && m.confirmAction == actionNone {
 			helpParts = append(helpParts, "c copy", "s save")
 		}
-	} else if m.item.Type == catalog.Apps {
-		helpParts = append(helpParts, "↑↓ scroll", "i install", "u uninstall")
-	} else {
-		if len(m.providerChecks) > 0 && m.confirmAction == actionNone {
-			helpParts = append(helpParts, "↑↓ navigate", "enter/space toggle", "i install", "u uninstall")
-			if m.item.Type == catalog.MCP && m.hasUnsetEnvVars() {
-				helpParts = append(helpParts, "e env setup")
+	case tabFiles:
+		if m.viewingFile {
+			helpParts = append(helpParts, "↑↓ scroll", "esc back to files")
+		} else if len(m.item.Files) > 0 {
+			helpParts = append(helpParts, "↑↓ navigate", "enter view")
+		}
+	case tabInstall:
+		if m.item.Type == catalog.Prompts {
+			helpParts = append(helpParts, "↑↓ scroll")
+			if m.item.Body != "" && m.confirmAction == actionNone {
+				helpParts = append(helpParts, "c copy", "s save")
+			}
+		} else if m.item.Type == catalog.Apps {
+			helpParts = append(helpParts, "↑↓ scroll", "i install", "u uninstall")
+		} else {
+			if len(m.providerChecks) > 0 && m.confirmAction == actionNone {
+				helpParts = append(helpParts, "↑↓ navigate", "enter/space toggle", "i install", "u uninstall")
+				if m.item.Type == catalog.MCP && m.hasUnsetEnvVars() {
+					helpParts = append(helpParts, "e env setup")
+				}
 			}
 		}
 	}

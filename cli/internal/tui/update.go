@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -61,10 +62,32 @@ func newUpdateModel(repoRoot, localVersion, remoteVersion string, commitsBehind 
 		repoRoot:      repoRoot,
 		localVersion:  localVersion,
 		remoteVersion: remoteVersion,
-		updateAvail:   remoteVersion != "" && remoteVersion != localVersion,
+		updateAvail:   remoteVersion != "" && versionNewer(remoteVersion, localVersion),
 		commitsBehind: commitsBehind,
 		step:          stepUpdateMenu,
 	}
+}
+
+// versionNewer returns true if a is newer than b using simple major.minor.patch comparison.
+func versionNewer(a, b string) bool {
+	pa := parseVersion(a)
+	pb := parseVersion(b)
+	for i := 0; i < 3; i++ {
+		if pa[i] != pb[i] {
+			return pa[i] > pb[i]
+		}
+	}
+	return false
+}
+
+func parseVersion(v string) [3]int {
+	v = strings.TrimPrefix(v, "v")
+	parts := strings.SplitN(v, ".", 3)
+	var out [3]int
+	for i := 0; i < len(parts) && i < 3; i++ {
+		out[i], _ = strconv.Atoi(parts[i])
+	}
+	return out
 }
 
 func (m updateModel) Update(msg tea.Msg) (updateModel, tea.Cmd) {
