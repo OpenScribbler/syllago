@@ -49,3 +49,15 @@ var AllProviders = []Provider{
 	Windsurf,
 	Codex,
 }
+
+// DetectedOnly returns the subset of AllProviders that are detected
+// in the given home directory.
+func DetectedOnly(home string) []Provider {
+	var detected []Provider
+	for _, prov := range AllProviders {
+		if prov.Detect != nil && prov.Detect(home) {
+			detected = append(detected, prov)
+		}
+	}
+	return detected
+}
