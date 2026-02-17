@@ -28,14 +28,15 @@ var infoCmd = &cobra.Command{
 		if output.JSON {
 			output.Print(manifest)
 		} else {
-			fmt.Printf("nesco %s\n\n", v)
-			fmt.Println("Content types:", len(catalog.AllContentTypes()))
+			fmt.Fprintf(output.Writer, "nesco %s\n\n", v)
+			fmt.Fprintf(output.Writer, "Content types: %d\n", len(catalog.AllContentTypes()))
 			for _, ct := range catalog.AllContentTypes() {
-				fmt.Printf("  - %s\n", ct.Label())
+				fmt.Fprintf(output.Writer, "  - %s\n", ct.Label())
 			}
-			fmt.Println("\nProviders:", len(provider.AllProviders))
+			fmt.Fprintln(output.Writer, "\n  Note: Prompts and Apps are standalone types (not installable to providers)")
+			fmt.Fprintf(output.Writer, "\nProviders: %d\n", len(provider.AllProviders))
 			for _, p := range provider.AllProviders {
-				fmt.Printf("  - %s (%s)\n", p.Name, p.Slug)
+				fmt.Fprintf(output.Writer, "  - %s (%s)\n", p.Name, p.Slug)
 			}
 		}
 		return nil
