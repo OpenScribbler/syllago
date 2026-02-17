@@ -22,11 +22,11 @@ type keyMap struct {
 var keys = keyMap{
 	Up: key.NewBinding(
 		key.WithKeys("up", "k"),
-		key.WithHelp("↑/k", "up"),
+		key.WithHelp("up/k", "up"),
 	),
 	Down: key.NewBinding(
 		key.WithKeys("down", "j"),
-		key.WithHelp("↓/j", "down"),
+		key.WithHelp("down/j", "down"),
 	),
 	Enter: key.NewBinding(
 		key.WithKeys("enter"),

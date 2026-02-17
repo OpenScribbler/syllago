@@ -233,7 +233,7 @@ func (m settingsModel) View() string {
 
 			s += fmt.Sprintf("  %s%s %s\n", prefix, check, style.Render(item.label))
 		}
-		s += "\n" + helpStyle.Render("↑↓ navigate • space toggle • esc done") + "\n"
+		s += "\n" + helpStyle.Render("up/down navigate • space toggle • esc done") + "\n"
 	}
 
 	// Status message
@@ -248,7 +248,7 @@ func (m settingsModel) View() string {
 	}
 
 	if m.editMode == editNone {
-		s += "\n" + helpStyle.Render("↑↓ navigate • enter/space edit • s save • esc back")
+		s += "\n" + helpStyle.Render("up/down navigate • enter/space edit • s save • esc back")
 	}
 
 	return s

@@ -199,7 +199,7 @@ func (m updateModel) View() string {
 			style := selectedItemStyle
 			s += prefix + style.Render("Check for updates") + "\n"
 		}
-		s += "\n" + helpStyle.Render("↑↓ navigate • enter select • esc back")
+		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 
 	case stepUpdatePreview:
 		if m.previewErr != nil {
@@ -242,10 +242,10 @@ func (m updateModel) View() string {
 			s += "  " + lines[i] + "\n"
 		}
 		if end < len(lines) {
-			s += helpStyle.Render("  ↓ more") + "\n"
+			s += helpStyle.Render("  (more below)") + "\n"
 		}
 
-		s += "\n" + helpStyle.Render("↑↓/jk scroll • enter update now • esc back")
+		s += "\n" + helpStyle.Render("up/down/jk scroll • enter update now • esc back")
 
 	case stepUpdatePull:
 		s += "\n" + helpStyle.Render("Updating nesco...") + "\n"

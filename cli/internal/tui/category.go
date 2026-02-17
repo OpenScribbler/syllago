@@ -136,7 +136,7 @@ func (m categoryModel) View() string {
 		s += "\n" + helpStyle.Render("Your catalog is empty. Use Import to add content.") + "\n"
 	}
 
-	s += "\n" + helpStyle.Render("↑↓ navigate • enter select • / search • q quit")
+	s += "\n" + helpStyle.Render("up/down navigate • enter select • / search • q quit")
 	return s
 }
 
