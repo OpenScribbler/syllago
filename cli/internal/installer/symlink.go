@@ -28,6 +28,17 @@ func CreateSymlink(source, target string) error {
 	return os.Symlink(source, target)
 }
 
+// IsWindowsMount returns true if the given path is on a WSL Windows mount (e.g., /mnt/c/).
+// Symlinks don't work reliably on Windows mounts, so callers should use copy instead.
+func IsWindowsMount(path string) bool {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+	// WSL mounts Windows drives at /mnt/<letter>/ — minimum valid path is "/mnt/c/" (7 chars)
+	return len(absPath) > 6 && strings.HasPrefix(absPath, "/mnt/") && absPath[6] == '/'
+}
+
 // IsSymlinkedTo checks if the given path is a symlink pointing into the repoRoot.
 func IsSymlinkedTo(path, repoRoot string) bool {
 	target, err := os.Readlink(path)

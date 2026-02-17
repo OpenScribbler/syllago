@@ -337,20 +337,32 @@ func loadReadme(itemDir string) string {
 }
 
 // collectFiles returns relative paths of all non-hidden files in an item directory.
-// Walks one level deep (item directories are expected to be shallow).
+// Walks recursively to match the behavior of installer.CopyContent.
 func collectFiles(itemDir string, baseDir string) []string {
 	var files []string
-	entries, err := os.ReadDir(itemDir)
-	if err != nil {
-		return nil
-	}
-	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), ".") {
-			continue
+	filepath.WalkDir(itemDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
 		}
-		rel, _ := filepath.Rel(baseDir, filepath.Join(itemDir, e.Name()))
+		name := d.Name()
+		// Skip hidden files and directories (e.g. .romanesco.yaml, .git)
+		if strings.HasPrefix(name, ".") {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		// Only include files, not directories
+		if d.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(baseDir, path)
+		if err != nil {
+			return nil
+		}
 		files = append(files, rel)
-	}
+		return nil
+	})
 	return files
 }
 

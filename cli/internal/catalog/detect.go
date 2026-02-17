@@ -7,12 +7,17 @@ import (
 	"strings"
 )
 
-// markerFiles maps content marker filenames to their human-readable type label.
-var markerFiles = map[string]string{
-	"SKILL.md":  "Skill",
-	"AGENT.md":  "Agent",
-	"PROMPT.md": "Prompt",
-	"APP.md":    "App",
+// markerFiles lists content marker filenames and their human-readable type
+// labels in priority order. A slice is used instead of a map to guarantee
+// deterministic iteration order.
+var markerFiles = []struct {
+	marker string
+	label  string
+}{
+	{"SKILL.md", "Skill"},
+	{"AGENT.md", "Agent"},
+	{"PROMPT.md", "Prompt"},
+	{"APP.md", "App"},
 }
 
 // DetectContent performs a lightweight check on a path to determine if it
@@ -29,9 +34,9 @@ func DetectContent(path string) (string, bool) {
 
 	if info.IsDir() {
 		// Check for marker files in priority order
-		for marker, label := range markerFiles {
-			if _, err := os.Stat(filepath.Join(path, marker)); err == nil {
-				return label, true
+		for _, mf := range markerFiles {
+			if _, err := os.Stat(filepath.Join(path, mf.marker)); err == nil {
+				return mf.label, true
 			}
 		}
 		// Check for README.md with frontmatter (apps pattern)

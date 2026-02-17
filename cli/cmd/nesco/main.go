@@ -11,6 +11,7 @@ import (
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
 	"github.com/holdenhewett/romanesco/cli/internal/config"
 	"github.com/holdenhewett/romanesco/cli/internal/metadata"
+	"github.com/holdenhewett/romanesco/cli/internal/output"
 	"github.com/holdenhewett/romanesco/cli/internal/provider"
 	"github.com/holdenhewett/romanesco/cli/internal/scan/detectors"
 	"github.com/holdenhewett/romanesco/cli/internal/tui"
@@ -25,8 +26,6 @@ var (
 	version     string
 )
 
-var jsonOutput bool
-
 var rootCmd = &cobra.Command{
 	Use:           "nesco",
 	Short:         "AI coding tool content manager and codebase scanner",
@@ -37,7 +36,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in JSON format")
+	rootCmd.PersistentFlags().BoolVar(&output.JSON, "json", false, "Output in JSON format")
 	rootCmd.PersistentFlags().Bool("no-color", false, "Disable color output")
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "Suppress non-essential output")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Verbose output")
@@ -59,7 +58,7 @@ var backfillCmd = &cobra.Command{
 	Short:  "Generate .romanesco.yaml for items without metadata",
 	Hidden: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		root, err := findRepoRoot()
+		root, err := findContentRepoRoot()
 		if err != nil {
 			return err
 		}
@@ -114,7 +113,7 @@ func main() {
 }
 
 func runTUI(cmd *cobra.Command, args []string) error {
-	root, err := findRepoRoot()
+	root, err := findContentRepoRoot()
 	if err != nil {
 		return fmt.Errorf("could not find romanesco repo: %w", err)
 	}
@@ -154,11 +153,11 @@ func runTUI(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// findRepoRoot returns the repo root path. It tries:
+// findContentRepoRoot returns the repo root path. It tries:
 // 1. Build-time embedded path (via -ldflags)
 // 2. Walk up from cwd looking for a "skills/" directory
 // 3. Walk up from the binary's own location (handles aliases, PATH installs, bare go build)
-func findRepoRoot() (string, error) {
+func findContentRepoRoot() (string, error) {
 	if repoRoot != "" {
 		if _, err := os.Stat(repoRoot); err == nil {
 			return repoRoot, nil
@@ -204,7 +203,7 @@ func findSkillsDir(dir string) (string, error) {
 // If not, it rebuilds the binary and re-execs — replacing this process seamlessly.
 // Every failure is graceful: the old binary just keeps running.
 func ensureUpToDate() {
-	root, err := findRepoRoot()
+	root, err := findContentRepoRoot()
 	if err != nil {
 		return
 	}
@@ -254,49 +253,4 @@ func ensureUpToDate() {
 	execErr := syscall.Exec(binPath, os.Args, os.Environ())
 	// Only reached if Exec fails
 	fmt.Fprintf(os.Stderr, "Restart failed: %s\n", execErr)
-}
-
-// runBackfill generates .romanesco.yaml for all shared items that don't have one.
-func runBackfill() {
-	root, err := findRepoRoot()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-		os.Exit(1)
-	}
-
-	cat, err := catalog.Scan(root)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error scanning catalog: %s\n", err)
-		os.Exit(1)
-	}
-
-	// Get git author
-	author := ""
-	out, err := exec.Command("git", "config", "user.name").Output()
-	if err == nil {
-		author = strings.TrimSpace(string(out))
-	}
-
-	count := 0
-	for _, item := range cat.Items {
-		if item.Local || item.Meta != nil {
-			continue // skip local items and items that already have metadata
-		}
-		// Only backfill universal items (they have a directory)
-		if !item.Type.IsUniversal() {
-			continue
-		}
-		if err := metadata.Backfill(item.Path, item.Name, string(item.Type), author); err != nil {
-			fmt.Fprintf(os.Stderr, "Error backfilling %s: %s\n", item.Name, err)
-			continue
-		}
-		fmt.Printf("Backfilled: %s (%s)\n", item.Name, item.Type)
-		count++
-	}
-
-	if count == 0 {
-		fmt.Println("No items need backfilling.")
-	} else {
-		fmt.Printf("Backfilled %d items.\n", count)
-	}
 }

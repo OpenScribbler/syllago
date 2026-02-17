@@ -127,6 +127,10 @@ func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, 
 	case MethodCopy:
 		return targetPath, CopyContent(sourcePath, targetPath)
 	default:
+		if IsWindowsMount(targetPath) {
+			fmt.Fprintf(os.Stderr, "note: %s is on a Windows mount, using copy instead of symlink\n", targetPath)
+			return targetPath, CopyContent(sourcePath, targetPath)
+		}
 		return targetPath, CreateSymlink(sourcePath, targetPath)
 	}
 }
@@ -160,6 +164,11 @@ func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string
 	// Remove symlinks or regular files (copies)
 	if info.Mode()&os.ModeSymlink != 0 || info.Mode().IsRegular() {
 		return targetPath, os.Remove(targetPath)
+	}
+
+	// Remove directories (copy-installed content)
+	if info.IsDir() {
+		return targetPath, os.RemoveAll(targetPath)
 	}
 
 	return "", fmt.Errorf("unexpected file type at %s, remove manually", targetPath)

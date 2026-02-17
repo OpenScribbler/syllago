@@ -13,9 +13,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/romanesco/cli/internal/gitutil"
 	"github.com/holdenhewett/romanesco/cli/internal/installer"
 	"github.com/holdenhewett/romanesco/cli/internal/metadata"
 	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/romanesco/cli/internal/readme"
 )
 
 type importStep int
@@ -725,30 +727,27 @@ func (m importModel) doImport() (string, error) {
 		Type:       string(m.contentType),
 		Source:     source,
 		ImportedAt: &now,
-		ImportedBy: gitUsername(),
+		ImportedBy: gitutil.Username(),
 	}
 	// For universal types, save in the item directory.
 	// For provider-specific types, save as provider-specific metadata.
 	if m.contentType.IsUniversal() {
-		metadata.Save(dest, meta) // non-fatal
+		if err := metadata.Save(dest, meta); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to save metadata for %s: %s\n", m.itemName, err)
+		}
 	} else {
 		destDir := filepath.Dir(dest)
-		metadata.SaveProvider(destDir, m.itemName, meta) // non-fatal
+		if err := metadata.SaveProvider(destDir, m.itemName, meta); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to save metadata for %s: %s\n", m.itemName, err)
+		}
+	}
+
+	// Generate placeholder README if the source didn't include one
+	if created, _ := readme.EnsureReadme(dest, m.itemName, string(m.contentType), ""); created {
+		fmt.Fprintf(os.Stderr, "hint: Generated placeholder README.md for %s. An LLM can improve it.\n", m.itemName)
 	}
 
 	return m.itemName, nil
-}
-
-// gitUsername returns the git user.name config value, falling back to $USER.
-func gitUsername() string {
-	out, err := exec.Command("git", "config", "user.name").Output()
-	if err == nil {
-		name := strings.TrimSpace(string(out))
-		if name != "" {
-			return name
-		}
-	}
-	return os.Getenv("USER")
 }
 
 func (m importModel) updateName(msg tea.KeyMsg) (importModel, tea.Cmd) {
@@ -810,9 +809,11 @@ func (m importModel) doScaffold() (string, error) {
 		Type:       string(m.contentType),
 		Source:     "created",
 		ImportedAt: &now,
-		ImportedBy: gitUsername(),
+		ImportedBy: gitutil.Username(),
 	}
-	metadata.Save(dest, meta) // non-fatal
+	if err := metadata.Save(dest, meta); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: failed to save metadata for %s: %s\n", m.itemName, err)
+	}
 
 	return m.itemName, nil
 }
@@ -910,12 +911,21 @@ func (m importModel) doBatchImport(paths []string) (string, error) {
 			Type:       string(m.contentType),
 			Source:     srcPath,
 			ImportedAt: &now,
-			ImportedBy: gitUsername(),
+			ImportedBy: gitutil.Username(),
 		}
 		if m.contentType.IsUniversal() {
-			metadata.Save(dest, meta)
+			if err := metadata.Save(dest, meta); err != nil {
+				fmt.Fprintf(os.Stderr, "warning: failed to save metadata for %s: %s\n", itemName, err)
+			}
 		} else {
-			metadata.SaveProvider(filepath.Dir(dest), itemName, meta)
+			if err := metadata.SaveProvider(filepath.Dir(dest), itemName, meta); err != nil {
+				fmt.Fprintf(os.Stderr, "warning: failed to save metadata for %s: %s\n", itemName, err)
+			}
+		}
+
+		// Generate placeholder README if source didn't include one (no hint in batch — too noisy)
+		if _, err := readme.EnsureReadme(dest, itemName, string(m.contentType), ""); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to generate README for %s: %s\n", itemName, err)
 		}
 
 		imported = append(imported, itemName)
