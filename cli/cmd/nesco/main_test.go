@@ -129,6 +129,53 @@ func TestQuietFlag(t *testing.T) {
 	}
 }
 
+func TestVerboseFlag(t *testing.T) {
+	tests := []struct {
+		name        string
+		args        []string
+		wantVerbose bool
+	}{
+		{
+			name:        "version without verbose",
+			args:        []string{"version"},
+			wantVerbose: false,
+		},
+		{
+			name:        "version with --verbose",
+			args:        []string{"--verbose", "version"},
+			wantVerbose: true,
+		},
+		{
+			name:        "version with -v",
+			args:        []string{"-v", "version"},
+			wantVerbose: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			origVerbose := output.Verbose
+			defer func() { output.Verbose = origVerbose }()
+
+			var buf bytes.Buffer
+			rootCmd.SetOut(&buf)
+			rootCmd.SetArgs(tt.args)
+			defer func() {
+				rootCmd.SetOut(nil)
+				rootCmd.SetArgs(nil)
+			}()
+
+			if err := rootCmd.Execute(); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if output.Verbose != tt.wantVerbose {
+				t.Errorf("output.Verbose = %v, want %v", output.Verbose, tt.wantVerbose)
+			}
+		})
+	}
+}
+
 func TestGlobalFlags(t *testing.T) {
 	flags := rootCmd.PersistentFlags()
 	if flags.Lookup("json") == nil {

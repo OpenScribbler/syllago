@@ -52,6 +52,9 @@ func init() {
 		quiet, _ := cmd.Flags().GetBool("quiet")
 		output.Quiet = quiet
 
+		verbose, _ := cmd.Flags().GetBool("verbose")
+		output.Verbose = verbose
+
 		return nil
 	}
 
