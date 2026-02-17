@@ -295,6 +295,45 @@ func TestTUIErrorMessageContentRepoNotFound(t *testing.T) {
 	}
 }
 
+func TestWrapTTYError(t *testing.T) {
+	tests := []struct {
+		name          string
+		err           error
+		wantSubcmd    bool
+		wantOriginal  bool
+	}{
+		{
+			name:       "TTY error is wrapped",
+			err:        fmt.Errorf("could not open a new TTY: something low-level"),
+			wantSubcmd: true,
+		},
+		{
+			name:         "non-TTY error passes through",
+			err:          fmt.Errorf("normal error"),
+			wantOriginal: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wrapped := wrapTTYError(tt.err)
+			msg := wrapped.Error()
+
+			if tt.wantSubcmd && !strings.Contains(msg, "subcommand") {
+				t.Errorf("TTY error should suggest subcommands, got: %s", msg)
+			}
+			if tt.wantOriginal && msg != tt.err.Error() {
+				t.Errorf("non-TTY error should pass through unchanged, got: %s", msg)
+			}
+		})
+	}
+
+	// nil input should return nil
+	if wrapTTYError(nil) != nil {
+		t.Error("wrapTTYError(nil) should return nil")
+	}
+}
+
 func TestGlobalFlags(t *testing.T) {
 	flags := rootCmd.PersistentFlags()
 	if flags.Lookup("json") == nil {

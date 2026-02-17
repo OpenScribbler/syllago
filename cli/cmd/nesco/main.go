@@ -145,6 +145,18 @@ func printExecuteError(err error) {
 	}
 }
 
+// wrapTTYError wraps bubbletea TTY errors with user-facing guidance.
+func wrapTTYError(err error) error {
+	if err == nil {
+		return nil
+	}
+	errMsg := err.Error()
+	if strings.Contains(errMsg, "TTY") || strings.Contains(errMsg, "tty") {
+		return fmt.Errorf("nesco requires a terminal for interactive mode. Use a subcommand for non-interactive usage (try: nesco scan)")
+	}
+	return err
+}
+
 func runTUI(cmd *cobra.Command, args []string) error {
 	root, err := findContentRepoRoot()
 	if err != nil {
@@ -181,7 +193,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 	app := tui.NewApp(cat, providers, detectors.AllDetectors(), version, autoUpdate)
 	p := tea.NewProgram(app, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
-		return err
+		return wrapTTYError(err)
 	}
 	return nil
 }
