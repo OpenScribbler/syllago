@@ -54,10 +54,9 @@ func runScan(cmd *cobra.Command, args []string) error {
 		}
 		// Auto-detect providers
 		home, _ := os.UserHomeDir()
-		for _, prov := range provider.AllProviders {
-			if prov.Detect != nil && prov.Detect(home) {
-				cfg.Providers = append(cfg.Providers, prov.Slug)
-			}
+		detected := provider.DetectedOnly(home)
+		for _, prov := range detected {
+			cfg.Providers = append(cfg.Providers, prov.Slug)
 		}
 		if err := config.Save(root, cfg); err != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: failed to save auto-detected config: %v\n", err)
@@ -147,12 +146,7 @@ func runScan(cmd *cobra.Command, args []string) error {
 	full, _ := cmd.Flags().GetBool("full")
 	if full {
 		home, _ := os.UserHomeDir()
-		var detected []provider.Provider
-		for _, prov := range provider.AllProviders {
-			if prov.Detect != nil && prov.Detect(home) {
-				detected = append(detected, prov)
-			}
-		}
+		detected := provider.DetectedOnly(home)
 		if len(detected) >= 2 {
 			parityReport := parity.Analyze(detected, root)
 			fmt.Fprintf(output.Writer, "\nParity: %s\n", parityReport.Summary)

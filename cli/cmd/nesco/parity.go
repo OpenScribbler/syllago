@@ -30,12 +30,7 @@ func runParity(cmd *cobra.Command, args []string) error {
 	}
 
 	home, _ := os.UserHomeDir()
-	var detected []provider.Provider
-	for _, prov := range provider.AllProviders {
-		if prov.Detect(home) {
-			detected = append(detected, prov)
-		}
-	}
+	detected := provider.DetectedOnly(home)
 
 	if len(detected) < 2 {
 		if output.JSON {
