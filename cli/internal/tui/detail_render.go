@@ -12,7 +12,7 @@ import (
 
 // renderContent builds the full detail content (without scrolling or help bar).
 func (m detailModel) renderContent() string {
-	name := displayName(m.item)
+	name := StripControlChars(displayName(m.item))
 	s := helpStyle.Render("nesco > "+m.item.Type.Label()+" >") + " " + titleStyle.Render(name)
 	if m.item.Local {
 		s += " " + warningStyle.Render("LOCAL")
@@ -21,7 +21,7 @@ func (m detailModel) renderContent() string {
 
 	// Description (always shown above tabs)
 	if m.item.Description != "" {
-		desc := m.item.Description
+		desc := StripControlChars(m.item.Description)
 		if len(desc) > 200 {
 			desc = desc[:197] + "..."
 		}
@@ -76,7 +76,7 @@ func (m detailModel) renderOverviewTab() string {
 	// Prompt body (for prompts type)
 	if m.item.Type == catalog.Prompts && m.item.Body != "" {
 		s += labelStyle.Render("Prompt:") + "\n"
-		s += valueStyle.Render(m.item.Body) + "\n\n"
+		s += valueStyle.Render(StripControlChars(m.item.Body)) + "\n\n"
 	}
 
 	// App supported providers
@@ -191,7 +191,7 @@ func (m detailModel) renderFileContent() string {
 
 	for i := offset; i < end; i++ {
 		lineNum := helpStyle.Render(fmt.Sprintf("%4d ", i+1))
-		s += lineNum + valueStyle.Render(lines[i]) + "\n"
+		s += lineNum + valueStyle.Render(StripControlChars(lines[i])) + "\n"
 	}
 
 	if end < len(lines) {

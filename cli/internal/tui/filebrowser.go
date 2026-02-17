@@ -271,7 +271,7 @@ func (fb fileBrowserModel) View() string {
 			sel = " " // can't select ..
 		}
 
-		line := prefix + sel + " " + icon + " " + style.Render(entry.name)
+		line := prefix + sel + " " + icon + " " + style.Render(StripControlChars(entry.name))
 
 		// Detection tag
 		if entry.detection != "" && entry.name != ".." {
