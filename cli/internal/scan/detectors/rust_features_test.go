@@ -9,6 +9,7 @@ import (
 )
 
 func TestRustFeaturesDetectsNonDefault(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	cargo := `[package]
@@ -58,6 +59,7 @@ fn main() {}
 }
 
 func TestRustFeaturesSkipsNonRust(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	det := RustFeatures{}

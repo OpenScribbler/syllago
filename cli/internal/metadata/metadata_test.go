@@ -8,6 +8,7 @@ import (
 )
 
 func TestNewID(t *testing.T) {
+	t.Parallel()
 	id := NewID()
 	if len(id) != 36 {
 		t.Errorf("expected 36-char UUID, got %d: %s", len(id), id)
@@ -20,6 +21,7 @@ func TestNewID(t *testing.T) {
 }
 
 func TestSaveAndLoad(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	itemDir := filepath.Join(dir, "test-item")
 
@@ -65,6 +67,7 @@ func TestSaveAndLoad(t *testing.T) {
 }
 
 func TestLoadNotFound(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	m, err := Load(dir)
 	if err != nil {
@@ -76,6 +79,7 @@ func TestLoadNotFound(t *testing.T) {
 }
 
 func TestProviderMetadata(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 
 	m := &Meta{

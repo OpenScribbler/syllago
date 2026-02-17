@@ -9,6 +9,7 @@ import (
 )
 
 func TestWriteJSONFile_Atomic(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	targetFile := filepath.Join(tmpDir, "config.json")
 
@@ -29,6 +30,7 @@ func TestWriteJSONFile_Atomic(t *testing.T) {
 }
 
 func TestWriteJSONFile_NoPartialWrites(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	targetFile := filepath.Join(tmpDir, "config.json")
 
@@ -85,6 +87,7 @@ func TestWriteJSONFile_NoPartialWrites(t *testing.T) {
 }
 
 func TestWriteJSONFileWithPerm_RestrictedPermissions(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	data := []byte(`{"test": true}`)
 
@@ -118,6 +121,7 @@ func TestWriteJSONFileWithPerm_RestrictedPermissions(t *testing.T) {
 }
 
 func TestWriteJSONFile_CreatesParentDirs(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	targetFile := filepath.Join(tmpDir, "sub", "dir", "config.json")
 

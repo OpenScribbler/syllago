@@ -10,6 +10,7 @@ import (
 )
 
 func TestLinterExtractionPrettier(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	prettierrc := `{"semi": false, "singleQuote": true, "tabWidth": 2}`
@@ -45,6 +46,7 @@ func TestLinterExtractionPrettier(t *testing.T) {
 }
 
 func TestLinterExtractionNoConfig(t *testing.T) {
+	t.Parallel()
 	det := LinterExtraction{}
 	sections, err := det.Detect(t.TempDir())
 	if err != nil {

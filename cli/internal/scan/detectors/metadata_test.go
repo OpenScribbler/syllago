@@ -9,6 +9,7 @@ import (
 )
 
 func TestProjectMetadataWithReadme(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	os.WriteFile(filepath.Join(tmp, "README.md"), []byte("# My Project\n\nA cool project for testing."), 0644)
 	os.WriteFile(filepath.Join(tmp, "LICENSE"), []byte("MIT License\n\nCopyright..."), 0644)
@@ -38,6 +39,7 @@ func TestProjectMetadataWithReadme(t *testing.T) {
 }
 
 func TestProjectMetadataEmpty(t *testing.T) {
+	t.Parallel()
 	det := ProjectMetadata{}
 	sections, err := det.Detect(t.TempDir())
 	if err != nil {

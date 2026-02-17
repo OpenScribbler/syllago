@@ -9,6 +9,7 @@ import (
 )
 
 func TestVersionConstraintGoGenerics(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Go 1.17 project — predates generics (introduced in 1.18).
@@ -47,6 +48,7 @@ func Map[T any](s []T, f func(T) T) []T {
 }
 
 func TestVersionConstraintGoClean(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Go 1.22 project — generics are fine.

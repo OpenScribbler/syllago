@@ -9,6 +9,7 @@ import (
 )
 
 func TestGoReplaceDetectsLocalPath(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	gomod := `module example.com/myproject
@@ -40,6 +41,7 @@ replace example.com/lib => ../lib
 }
 
 func TestGoReplaceCleanGoMod(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	gomod := `module example.com/myproject

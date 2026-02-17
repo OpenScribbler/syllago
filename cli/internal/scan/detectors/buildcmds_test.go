@@ -7,6 +7,7 @@ import (
 )
 
 func TestBuildCommandsMakefile(t *testing.T) {
+	t.Parallel()
 	det := BuildCommands{}
 	sections, err := det.Detect("testdata/buildcmds/makefile-project")
 	if err != nil {
@@ -25,6 +26,7 @@ func TestBuildCommandsMakefile(t *testing.T) {
 }
 
 func TestBuildCommandsEmpty(t *testing.T) {
+	t.Parallel()
 	det := BuildCommands{}
 	sections, err := det.Detect(t.TempDir())
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 )
 
 func TestSaveAndLoadBaseline(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	doc := model.ContextDocument{
 		ProjectName: "test",
@@ -36,6 +37,7 @@ func TestSaveAndLoadBaseline(t *testing.T) {
 }
 
 func TestBaselineNotExists(t *testing.T) {
+	t.Parallel()
 	if BaselineExists(t.TempDir()) {
 		t.Error("baseline should not exist in empty dir")
 	}

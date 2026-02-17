@@ -9,6 +9,7 @@ import (
 )
 
 func TestCleanupPromotedItems_RequiresNameMatch(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 
 	// Create shared skill with ID "uuid-123"
@@ -61,6 +62,7 @@ func TestCleanupPromotedItems_RequiresNameMatch(t *testing.T) {
 }
 
 func TestCleanupPromotedItems_RequiresTypeMatch(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 
 	// Create shared skill
@@ -112,6 +114,7 @@ func TestCleanupPromotedItems_RequiresTypeMatch(t *testing.T) {
 }
 
 func TestCleanupPromotedItems_CleansExactMatch(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 
 	// Create shared skill

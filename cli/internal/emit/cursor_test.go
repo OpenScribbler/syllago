@@ -9,6 +9,7 @@ import (
 )
 
 func TestCursorEmitterFrontmatter(t *testing.T) {
+	t.Parallel()
 	emitter := CursorEmitter{}
 	doc := model.ContextDocument{
 		ProjectName: "test",
@@ -38,6 +39,7 @@ func TestCursorEmitterFrontmatter(t *testing.T) {
 }
 
 func TestGenericEmitter(t *testing.T) {
+	t.Parallel()
 	emitter := GenericMarkdownEmitter{ProviderSlug: "gemini-cli", FileName: "GEMINI.md"}
 	doc := model.ContextDocument{
 		ProjectName: "test",

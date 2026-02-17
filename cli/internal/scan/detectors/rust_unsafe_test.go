@@ -10,6 +10,7 @@ import (
 )
 
 func TestRustUnsafeForbid(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	os.WriteFile(filepath.Join(tmp, "Cargo.toml"), []byte(`[package]
@@ -48,6 +49,7 @@ pub fn safe_function() -> i32 {
 }
 
 func TestRustUnsafeUsage(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	os.WriteFile(filepath.Join(tmp, "Cargo.toml"), []byte(`[package]

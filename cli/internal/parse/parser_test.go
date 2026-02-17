@@ -10,6 +10,7 @@ import (
 )
 
 func TestClaudeParserRule(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	rulePath := filepath.Join(tmp, "test-rule.md")
 	os.WriteFile(rulePath, []byte("# Always use tabs\nTabs are the way."), 0644)
@@ -36,6 +37,7 @@ func TestClaudeParserRule(t *testing.T) {
 }
 
 func TestCursorParserMDC(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	mdcPath := filepath.Join(tmp, "testing.mdc")
 	content := "---\ndescription: Testing conventions\nalwaysApply: true\n---\nAlways use Jest for testing."
@@ -63,6 +65,7 @@ func TestCursorParserMDC(t *testing.T) {
 }
 
 func TestParserForProvider(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		slug string
 	}{

@@ -10,6 +10,7 @@ import (
 )
 
 func TestDeprecatedPatternDetected(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Create a legacy/ directory (counts as 1)
@@ -41,6 +42,7 @@ func TestDeprecatedPatternDetected(t *testing.T) {
 }
 
 func TestDeprecatedPatternBelowThreshold(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Only 3 markers — below the >5 threshold

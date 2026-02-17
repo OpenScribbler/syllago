@@ -3,6 +3,7 @@ package detectors
 import "testing"
 
 func TestAllDetectorsCount(t *testing.T) {
+	t.Parallel()
 	all := AllDetectors()
 	// 5 fact + 24 surprise = 29 total
 	if len(all) != 29 {
@@ -11,6 +12,7 @@ func TestAllDetectorsCount(t *testing.T) {
 }
 
 func TestAllDetectorsUniqueNames(t *testing.T) {
+	t.Parallel()
 	all := AllDetectors()
 	seen := make(map[string]bool)
 	for _, d := range all {

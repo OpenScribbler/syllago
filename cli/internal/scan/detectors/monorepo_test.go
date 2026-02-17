@@ -10,6 +10,7 @@ import (
 )
 
 func TestMonorepoDetectsPnpmWorkspace(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	pnpmYaml := `packages:
@@ -46,6 +47,7 @@ func TestMonorepoDetectsPnpmWorkspace(t *testing.T) {
 }
 
 func TestMonorepoDetectsNpmWorkspaces(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	pkg := `{
@@ -78,6 +80,7 @@ func TestMonorepoDetectsNpmWorkspaces(t *testing.T) {
 }
 
 func TestMonorepoNotDetected(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Single-package project — no workspaces field
@@ -98,6 +101,7 @@ func TestMonorepoNotDetected(t *testing.T) {
 }
 
 func TestMonorepoSkipsEmptyDir(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	det := MonorepoStructure{}

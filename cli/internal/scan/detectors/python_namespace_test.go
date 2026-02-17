@@ -9,6 +9,7 @@ import (
 )
 
 func TestPythonNamespaceDetectsMissingInit(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Python project marker.
@@ -47,6 +48,7 @@ func TestPythonNamespaceDetectsMissingInit(t *testing.T) {
 }
 
 func TestPythonNamespaceClean(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Python project marker.
@@ -69,6 +71,7 @@ func TestPythonNamespaceClean(t *testing.T) {
 }
 
 func TestPythonNamespaceExcludesTests(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Python project marker.

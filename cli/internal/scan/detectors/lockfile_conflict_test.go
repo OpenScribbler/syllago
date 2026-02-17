@@ -9,6 +9,7 @@ import (
 )
 
 func TestLockFileConflictDetected(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	os.WriteFile(filepath.Join(tmp, "package-lock.json"), []byte("{}"), 0644)
 	os.WriteFile(filepath.Join(tmp, "yarn.lock"), []byte(""), 0644)
@@ -34,6 +35,7 @@ func TestLockFileConflictDetected(t *testing.T) {
 }
 
 func TestLockFileConflictNone(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	// Only one lock file — no conflict
 	os.WriteFile(filepath.Join(tmp, "package-lock.json"), []byte("{}"), 0644)

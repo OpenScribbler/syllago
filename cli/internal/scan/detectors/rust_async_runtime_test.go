@@ -10,6 +10,7 @@ import (
 )
 
 func TestRustAsyncRuntimeTokio(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	cargo := `[package]
@@ -53,6 +54,7 @@ async fn main() {
 }
 
 func TestRustAsyncRuntimeNone(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// A sync-only Rust project — no async runtime

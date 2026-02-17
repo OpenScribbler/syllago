@@ -28,6 +28,7 @@ func (d stubDetector) Detect(root string) ([]model.Section, error) {
 }
 
 func TestScannerCollectsResults(t *testing.T) {
+	t.Parallel()
 	scanner := NewScanner(
 		stubDetector{
 			name: "tech-stack",
@@ -53,6 +54,7 @@ func TestScannerCollectsResults(t *testing.T) {
 }
 
 func TestScannerHandlesTimeout(t *testing.T) {
+	t.Parallel()
 	scanner := NewScanner(
 		stubDetector{
 			name:  "slow",
@@ -71,6 +73,7 @@ func TestScannerHandlesTimeout(t *testing.T) {
 }
 
 func TestScannerHandlesPanic(t *testing.T) {
+	t.Parallel()
 	scanner := NewScanner(
 		stubDetector{name: "panicker", panics: true},
 		stubDetector{
@@ -91,6 +94,7 @@ func TestScannerHandlesPanic(t *testing.T) {
 }
 
 func TestScannerHandlesError(t *testing.T) {
+	t.Parallel()
 	scanner := NewScanner(
 		stubDetector{name: "erroring", err: fmt.Errorf("test error")},
 	)

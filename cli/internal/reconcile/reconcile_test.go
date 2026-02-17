@@ -6,6 +6,7 @@ import (
 )
 
 func TestParseHTMLMarkers(t *testing.T) {
+	t.Parallel()
 	content := `# Project Context
 
 <!-- nesco:auto:tech-stack -->
@@ -35,6 +36,7 @@ Our custom architecture notes.
 }
 
 func TestReconcileReplacesAuto(t *testing.T) {
+	t.Parallel()
 	existing := `<!-- nesco:auto:tech-stack -->
 ## Tech Stack
 - Go 1.21
@@ -65,6 +67,7 @@ Keep this.
 }
 
 func TestReconcileAppendsNewSections(t *testing.T) {
+	t.Parallel()
 	existing := `<!-- nesco:auto:tech-stack -->
 ## Tech Stack
 - Go 1.22
@@ -89,6 +92,7 @@ Both Jest and Vitest found.
 }
 
 func TestReconcileEmptyExisting(t *testing.T) {
+	t.Parallel()
 	result := Reconcile("", "# Fresh content\n", FormatHTML)
 	if result.Output != "# Fresh content\n" {
 		t.Errorf("empty existing should pass through fresh: %q", result.Output)

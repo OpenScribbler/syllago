@@ -10,6 +10,7 @@ import (
 )
 
 func TestAnalyzeFindsGaps(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Create Claude Code rules but no Cursor rules
@@ -58,6 +59,7 @@ func TestAnalyzeFindsGaps(t *testing.T) {
 }
 
 func TestAnalyzeNoGaps(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	// No content for any provider
 

@@ -9,6 +9,7 @@ import (
 )
 
 func TestPathAliasGapDetected(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// tsconfig.json with path aliases defined
@@ -59,6 +60,7 @@ import { v } from "./v"
 }
 
 func TestPathAliasGapAdequateUsage(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	tsconfig := `{

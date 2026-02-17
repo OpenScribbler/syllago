@@ -9,6 +9,7 @@ import (
 )
 
 func TestVersionMismatchNextMixedRouting(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Next.js 14 project with both pages/ and app/ directories.
@@ -39,6 +40,7 @@ func TestVersionMismatchNextMixedRouting(t *testing.T) {
 }
 
 func TestVersionMismatchNoMixedRouting(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Next.js 14 project with only app/ directory — no conflict.

@@ -9,6 +9,7 @@ import (
 )
 
 func TestGoInternalDetectsViolation(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Create a Go project with an internal/ directory.
@@ -38,6 +39,7 @@ func TestGoInternalDetectsViolation(t *testing.T) {
 }
 
 func TestGoInternalSkipsNonGo(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// No go.mod — not a Go project.
