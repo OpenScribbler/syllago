@@ -20,7 +20,7 @@ func CopyContent(src, dst string) error {
 	return copyFile(src, dst)
 }
 
-func copyFile(src, dst string) error {
+func copyFile(src, dst string) (err error) {
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return err
 	}
@@ -43,12 +43,16 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() {
+		if closeErr := out.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}()
 
 	if _, err = io.Copy(out, in); err != nil {
 		return err
 	}
-	return out.Close()
+	return nil
 }
 
 func copyDir(src, dst string) error {
