@@ -139,6 +139,7 @@ func (m updateModel) updateMenu(msg tea.KeyMsg) (updateModel, tea.Cmd) {
 			return m, m.fetchPreview()
 		}
 		// "Update now" (cursor 1 when update avail, cursor 0 when current)
+		m.step = stepUpdatePull
 		return m, m.startPull()
 	}
 	return m, nil
@@ -153,6 +154,7 @@ func (m updateModel) updatePreview(msg tea.KeyMsg) (updateModel, tea.Cmd) {
 	case key.Matches(msg, keys.Down) || msg.String() == "j":
 		m.scrollOffset++
 	case key.Matches(msg, keys.Enter):
+		m.step = stepUpdatePull
 		return m, m.startPull()
 	case key.Matches(msg, keys.Back):
 		m.step = stepUpdateMenu
@@ -285,7 +287,6 @@ func (m updateModel) fetchPreview() tea.Cmd {
 // startPull checks for local changes and runs git pull.
 func (m updateModel) startPull() tea.Cmd {
 	repoRoot := m.repoRoot
-	m.step = stepUpdatePull
 	return func() tea.Msg {
 		// Check for local modifications
 		statusCmd := exec.Command("git", "-C", repoRoot, "status", "--porcelain")
