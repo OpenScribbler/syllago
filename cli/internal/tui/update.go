@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type updateStep int
@@ -55,9 +57,14 @@ type updateModel struct {
 	pullErr        error
 	scrollOffset   int
 	width, height  int
+	spinner        spinner.Model
+	loading        bool // true while an async operation is in progress
 }
 
 func newUpdateModel(repoRoot, localVersion, remoteVersion string, commitsBehind int) updateModel {
+	sp := spinner.New()
+	sp.Spinner = spinner.Dot
+	sp.Style = lipgloss.NewStyle().Foreground(primaryColor)
 	return updateModel{
 		repoRoot:      repoRoot,
 		localVersion:  localVersion,
@@ -65,6 +72,7 @@ func newUpdateModel(repoRoot, localVersion, remoteVersion string, commitsBehind 
 		updateAvail:   remoteVersion != "" && versionNewer(remoteVersion, localVersion),
 		commitsBehind: commitsBehind,
 		step:          stepUpdateMenu,
+		spinner:       sp,
 	}
 }
 
@@ -92,7 +100,16 @@ func parseVersion(v string) [3]int {
 
 func (m updateModel) Update(msg tea.Msg) (updateModel, tea.Cmd) {
 	switch msg := msg.(type) {
+	case spinner.TickMsg:
+		if m.loading {
+			var cmd tea.Cmd
+			m.spinner, cmd = m.spinner.Update(msg)
+			return m, cmd
+		}
+		return m, nil
+
 	case updatePreviewMsg:
+		m.loading = false
 		m.previewLog = msg.log
 		m.previewStat = msg.stat
 		m.previewErr = msg.err
@@ -101,6 +118,7 @@ func (m updateModel) Update(msg tea.Msg) (updateModel, tea.Cmd) {
 		return m, nil
 
 	case updatePullMsg:
+		m.loading = false
 		m.pullOutput = msg.output
 		m.pullErr = msg.err
 		m.step = stepUpdateDone
@@ -136,11 +154,13 @@ func (m updateModel) updateMenu(msg tea.KeyMsg) (updateModel, tea.Cmd) {
 	case key.Matches(msg, keys.Enter):
 		if m.updateAvail && m.cursor == 0 {
 			// "See what's new"
-			return m, m.fetchPreview()
+			m.loading = true
+			return m, tea.Batch(m.fetchPreview(), m.spinner.Tick)
 		}
 		// "Update now" (cursor 1 when update avail, cursor 0 when current)
 		m.step = stepUpdatePull
-		return m, m.startPull()
+		m.loading = true
+		return m, tea.Batch(m.startPull(), m.spinner.Tick)
 	}
 	return m, nil
 }
@@ -155,7 +175,8 @@ func (m updateModel) updatePreview(msg tea.KeyMsg) (updateModel, tea.Cmd) {
 		m.scrollOffset++
 	case key.Matches(msg, keys.Enter):
 		m.step = stepUpdatePull
-		return m, m.startPull()
+		m.loading = true
+		return m, tea.Batch(m.startPull(), m.spinner.Tick)
 	case key.Matches(msg, keys.Back):
 		m.step = stepUpdateMenu
 		m.cursor = 0
@@ -181,7 +202,9 @@ func (m updateModel) View() string {
 
 	switch m.step {
 	case stepUpdateMenu:
-		if m.updateAvail {
+		if m.loading {
+			s += "\n" + m.spinner.View() + " " + helpStyle.Render("Fetching update info...") + "\n"
+		} else if m.updateAvail {
 			s += helpStyle.Render(fmt.Sprintf("You're on v%s. Version v%s is available.", m.localVersion, m.remoteVersion)) + "\n\n"
 			options := []string{"See what's new", "Update now"}
 			for i, opt := range options {
@@ -193,13 +216,14 @@ func (m updateModel) View() string {
 				}
 				s += prefix + style.Render(opt) + "\n"
 			}
+			s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 		} else {
 			s += helpStyle.Render(fmt.Sprintf("You're on v%s (latest)", m.localVersion)) + "\n\n"
 			prefix := " > "
 			style := selectedItemStyle
 			s += prefix + style.Render("Check for updates") + "\n"
+			s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 		}
-		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 
 	case stepUpdatePreview:
 		if m.previewErr != nil {
@@ -248,7 +272,7 @@ func (m updateModel) View() string {
 		s += "\n" + helpStyle.Render("up/down/jk scroll • enter update now • esc back")
 
 	case stepUpdatePull:
-		s += "\n" + helpStyle.Render("Updating nesco...") + "\n"
+		s += "\n" + m.spinner.View() + " " + helpStyle.Render("Updating nesco...") + "\n"
 
 	case stepUpdateDone:
 		if m.pullErr != nil {
