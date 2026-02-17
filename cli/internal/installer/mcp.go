@@ -47,7 +47,10 @@ func CheckEnvVars(cfg *MCPConfig) map[string]bool {
 // mcpConfigPath returns the config file path where MCP servers are stored for the given provider.
 // Claude Code: ~/.claude.json (root-level dotfile)
 // Gemini CLI: ~/.gemini/settings.json (inside config dir)
-func mcpConfigPath(prov provider.Provider) (string, error) {
+// Declared as a var so tests can override it.
+var mcpConfigPath = mcpConfigPathImpl
+
+func mcpConfigPathImpl(prov provider.Provider) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
@@ -63,9 +66,21 @@ func mcpConfigPath(prov provider.Provider) (string, error) {
 
 func installMCP(item catalog.ContentItem, prov provider.Provider, _ string) (string, error) {
 	// Read the MCP config from the content item
-	configData, err := os.ReadFile(filepath.Join(item.Path, "config.json"))
+	rawData, err := os.ReadFile(filepath.Join(item.Path, "config.json"))
 	if err != nil {
 		return "", fmt.Errorf("reading config.json: %w", err)
+	}
+
+	// Parse into struct to whitelist fields — unknown fields are dropped
+	var cfg MCPConfig
+	if err := json.Unmarshal(rawData, &cfg); err != nil {
+		return "", fmt.Errorf("parsing config.json: %w", err)
+	}
+
+	// Re-serialize to produce only whitelisted fields
+	configData, err := json.Marshal(cfg)
+	if err != nil {
+		return "", fmt.Errorf("serializing config: %w", err)
 	}
 
 	// Add _romanesco marker
