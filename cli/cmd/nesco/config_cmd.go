@@ -61,6 +61,12 @@ var configAddCmd = &cobra.Command{
 				return fmt.Errorf("provider %q already configured", slug)
 			}
 		}
+		// Warn about unknown provider slugs (but still allow them)
+		if findProviderBySlug(slug) == nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: '%s' is not a known provider slug.\n", slug)
+			fmt.Fprintf(output.ErrWriter, "  Adding anyway — unknown providers are ignored during scan.\n")
+		}
+
 		cfg.Providers = append(cfg.Providers, slug)
 		if err := config.Save(root, cfg); err != nil {
 			return err
