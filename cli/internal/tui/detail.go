@@ -89,6 +89,8 @@ type detailModel struct {
 	fileContent      string
 	fileScrollOffset int
 	viewingFile      bool // true when viewing file content (not file list)
+	listPosition     int  // 0-based position in the items list (for breadcrumb)
+	listTotal        int  // total items in the list
 	width            int
 	height           int
 }

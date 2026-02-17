@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -13,7 +14,11 @@ import (
 // renderContent builds the full detail content (without scrolling or help bar).
 func (m detailModel) renderContent() string {
 	name := StripControlChars(displayName(m.item))
-	s := helpStyle.Render("nesco > "+m.item.Type.Label()+" >") + " " + titleStyle.Render(name)
+	position := ""
+	if m.listTotal > 0 {
+		position = fmt.Sprintf(" (%d of %d)", m.listPosition+1, m.listTotal)
+	}
+	s := helpStyle.Render("nesco > "+m.item.Type.Label()+" >") + " " + titleStyle.Render(name) + helpStyle.Render(position)
 	if m.item.Local {
 		s += " " + warningStyle.Render("[LOCAL]")
 	}
@@ -186,7 +191,7 @@ func (m detailModel) renderFileContent() string {
 	}
 
 	if offset > 0 {
-		s += helpStyle.Render("(scroll up for more)") + "\n"
+		s += helpStyle.Render(fmt.Sprintf("(%d lines above)", offset)) + "\n"
 	}
 
 	for i := offset; i < end; i++ {
@@ -195,7 +200,7 @@ func (m detailModel) renderFileContent() string {
 	}
 
 	if end < len(lines) {
-		s += helpStyle.Render("(scroll down for more)") + "\n"
+		s += helpStyle.Render(fmt.Sprintf("(%d lines below)", len(lines)-end)) + "\n"
 	}
 
 	return s
@@ -314,6 +319,28 @@ func (m detailModel) renderInstallTab() string {
 			}
 			s += fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(method.name))
 			s += fmt.Sprintf("      %s\n", helpStyle.Render(method.desc))
+		}
+
+		// Show destination paths for checked providers
+		if m.confirmAction == actionChooseMethod {
+			detected := m.detectedProviders()
+			home, err := os.UserHomeDir()
+			if err == nil {
+				s += "\n" + helpStyle.Render("Destination paths:") + "\n"
+				for i, checked := range m.providerChecks {
+					if !checked || i >= len(detected) {
+						continue
+					}
+					p := detected[i]
+					if installer.IsJSONMerge(p, m.item.Type) {
+						s += "  " + helpStyle.Render(p.Name+": ") + valueStyle.Render("(merged into config)") + "\n"
+					} else {
+						destDir := p.InstallDir(home, m.item.Type)
+						dest := filepath.Join(destDir, m.item.Name)
+						s += "  " + helpStyle.Render(p.Name+": ") + valueStyle.Render(dest) + "\n"
+					}
+				}
+			}
 		}
 
 		confirmKey := "i/enter"
@@ -443,7 +470,7 @@ func (m detailModel) View() string {
 
 	if offset > 0 {
 		visible := lines[offset:end]
-		s = helpStyle.Render("(scroll up for more)") + "\n"
+		s = helpStyle.Render(fmt.Sprintf("(%d lines above)", offset)) + "\n"
 		s += strings.Join(visible, "\n")
 	} else {
 		visible := lines[offset:end]
@@ -451,7 +478,7 @@ func (m detailModel) View() string {
 	}
 
 	if end < len(lines) {
-		s += "\n" + helpStyle.Render("(scroll down for more)")
+		s += "\n" + helpStyle.Render(fmt.Sprintf("(%d lines below)", len(lines)-end))
 	}
 
 	// Status message — rendered outside scrollable area so it's always visible
@@ -475,7 +502,7 @@ func (m detailModel) renderHelp() string {
 	case tabOverview:
 		helpParts = append(helpParts, "up/down scroll")
 		if m.item.Type == catalog.Prompts && m.item.Body != "" && m.confirmAction == actionNone {
-			helpParts = append(helpParts, "c copy", "s save")
+			helpParts = append(helpParts, "c copy")
 		}
 	case tabFiles:
 		if m.viewingFile {
@@ -506,6 +533,10 @@ func (m detailModel) renderHelp() string {
 			helpParts = append(helpParts, "c copy prompt")
 		}
 		helpParts = append(helpParts, "p promote")
+	}
+
+	if m.listTotal > 1 {
+		helpParts = append(helpParts, "ctrl+n/p next/prev")
 	}
 
 	return helpStyle.Render(strings.Join(helpParts, " • "))

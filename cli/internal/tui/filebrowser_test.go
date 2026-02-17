@@ -2,6 +2,7 @@
 package tui
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -140,6 +141,50 @@ func TestFileBrowserHelpTextShowsDone(t *testing.T) {
 	if strings.Contains(view, "c confirm") {
 		t.Fatal("help text should no longer show 'c confirm'")
 	}
+}
+
+func TestFileBrowserSkipsNodeModules(t *testing.T) {
+	tmp := t.TempDir()
+	os.MkdirAll(filepath.Join(tmp, "node_modules"), 0755)
+	os.MkdirAll(filepath.Join(tmp, ".git"), 0755)
+	os.MkdirAll(filepath.Join(tmp, "src"), 0755)
+
+	fb := newFileBrowser(tmp, catalog.Skills)
+
+	for _, entry := range fb.entries {
+		if entry.name == "node_modules" {
+			t.Fatal("node_modules should be skipped in file browser")
+		}
+		if entry.name == ".git" {
+			t.Fatal(".git should be skipped in file browser")
+		}
+	}
+	// src should still appear
+	found := false
+	for _, entry := range fb.entries {
+		if entry.name == "src" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected 'src' to still appear")
+	}
+}
+
+func TestFileBrowserScrollShowsCounts(t *testing.T) {
+	tmp := t.TempDir()
+	for i := 0; i < 50; i++ {
+		os.MkdirAll(filepath.Join(tmp, fmt.Sprintf("dir-%02d", i)), 0755)
+	}
+
+	fb := newFileBrowser(tmp, catalog.Skills)
+	fb.width = 80
+	fb.height = 10 // small height forces scrolling
+
+	view := fb.View()
+	assertContains(t, view, "more below")
+	// Should show a number
+	assertNotContains(t, view, "(more items below)")
 }
 
 func TestFileBrowserNoEmoji(t *testing.T) {
