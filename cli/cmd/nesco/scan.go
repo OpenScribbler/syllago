@@ -36,7 +36,7 @@ func runScan(cmd *cobra.Command, args []string) error {
 	root, err := findProjectRoot()
 	if err != nil {
 		output.PrintError(2, "no detectable project", "Run from a project directory with go.mod, package.json, etc.")
-		return fmt.Errorf("no detectable project")
+		return output.SilentError(fmt.Errorf("no detectable project"))
 	}
 
 	// Load or create config

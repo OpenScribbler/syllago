@@ -114,3 +114,29 @@ func TestScanNoProjectFails(t *testing.T) {
 		t.Error("scan should fail when no project root is found")
 	}
 }
+
+// TestScanErrorIsSilent verifies that scan returns SilentError after PrintError
+// so main() doesn't double-print the error message.
+func TestScanErrorIsSilent(t *testing.T) {
+	origFindRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return "", os.ErrNotExist }
+	defer func() { findProjectRoot = origFindRoot }()
+
+	var buf bytes.Buffer
+	origWriter := output.Writer
+	origErrWriter := output.ErrWriter
+	output.Writer = &buf
+	output.ErrWriter = &buf
+	defer func() {
+		output.Writer = origWriter
+		output.ErrWriter = origErrWriter
+	}()
+
+	err := scanCmd.RunE(scanCmd, []string{})
+	if err == nil {
+		t.Fatal("expected error from scan with no project")
+	}
+	if !output.IsSilentError(err) {
+		t.Error("scan should return SilentError after PrintError to prevent duplicate printing")
+	}
+}
