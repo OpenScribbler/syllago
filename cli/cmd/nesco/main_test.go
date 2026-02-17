@@ -10,6 +10,39 @@ import (
 	"github.com/holdenhewett/romanesco/cli/internal/output"
 )
 
+func TestValidateVersion(t *testing.T) {
+	tests := []struct {
+		name    string
+		version string
+		valid   bool
+	}{
+		{"simple semver", "1.0.0", true},
+		{"with prerelease", "1.0.0-alpha", true},
+		{"with prerelease and build", "1.0.0-alpha.1+build.123", true},
+		{"patch version", "0.0.1", true},
+		{"major version", "2.0.0", true},
+		{"empty string", "", false},
+		{"missing patch", "1.0", false},
+		{"with v prefix", "v1.0.0", false},
+		{"with spaces", "1.0.0 ", false},
+		{"injection attempt", "1.0.0 -X main.repoRoot=/tmp/evil", false},
+		{"special chars", "1.0.0; rm -rf /", false},
+		{"newline injection", "1.0.0\n-X main.evil=true", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateVersion(tt.version)
+			if tt.valid && err != nil {
+				t.Errorf("expected valid, got error: %v", err)
+			}
+			if !tt.valid && err == nil {
+				t.Errorf("expected invalid, got nil error")
+			}
+		})
+	}
+}
+
 func TestRootCommandHelp(t *testing.T) {
 	var buf bytes.Buffer
 	rootCmd.SetOut(&buf)
