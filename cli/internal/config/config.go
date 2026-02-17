@@ -1,7 +1,10 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -47,7 +50,23 @@ func Save(projectRoot string, cfg *Config) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(FilePath(projectRoot), data, 0644)
+
+	// Atomic write: temp file then rename
+	target := FilePath(projectRoot)
+	suffix := make([]byte, 8)
+	if _, err := rand.Read(suffix); err != nil {
+		return fmt.Errorf("generating temp suffix: %w", err)
+	}
+	tempPath := target + ".tmp." + hex.EncodeToString(suffix)
+
+	if err := os.WriteFile(tempPath, data, 0644); err != nil {
+		return err
+	}
+	if err := os.Rename(tempPath, target); err != nil {
+		os.Remove(tempPath)
+		return err
+	}
+	return nil
 }
 
 func Exists(projectRoot string) bool {
