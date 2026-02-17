@@ -1,6 +1,7 @@
 package detectors
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -24,7 +25,7 @@ type RustUnsafe struct{}
 func (d RustUnsafe) Name() string { return "rust-unsafe" }
 
 func (d RustUnsafe) Detect(root string) ([]model.Section, error) {
-	if _, err := os.Stat(filepath.Join(root, "Cargo.toml")); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(root, "Cargo.toml")); errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
 

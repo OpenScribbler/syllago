@@ -1,6 +1,7 @@
 package detectors
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -82,7 +83,7 @@ func (d PythonNamespace) Detect(root string) ([]model.Section, error) {
 		}
 
 		initPath := filepath.Join(dir, "__init__.py")
-		if _, err := os.Stat(initPath); os.IsNotExist(err) {
+		if _, err := os.Stat(initPath); errors.Is(err, fs.ErrNotExist) {
 			missing = append(missing, rel)
 		}
 	}

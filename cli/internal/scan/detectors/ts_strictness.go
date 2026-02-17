@@ -2,7 +2,9 @@ package detectors
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -37,7 +39,7 @@ var strictSubFlags = []string{
 
 func (d TSStrictness) Detect(root string) ([]model.Section, error) {
 	tsconfigPath := filepath.Join(root, "tsconfig.json")
-	if _, err := os.Stat(tsconfigPath); os.IsNotExist(err) {
+	if _, err := os.Stat(tsconfigPath); errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
 

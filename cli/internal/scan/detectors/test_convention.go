@@ -1,6 +1,7 @@
 package detectors
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -19,7 +20,7 @@ func (d TestConvention) Name() string { return "test-convention" }
 
 func (d TestConvention) Detect(root string) ([]model.Section, error) {
 	srcDir := filepath.Join(root, "src")
-	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
+	if _, err := os.Stat(srcDir); errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
 
