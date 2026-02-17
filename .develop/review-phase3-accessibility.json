@@ -1,0 +1,27 @@
+{
+  "feature": "Phase 3: Color & Accessibility",
+  "designDoc": "docs/reviews/implementation-plan.md (items 3.1-3.12)",
+  "stage": "execute",
+  "stages": {
+    "brainstorm": { "status": "complete", "skipped": true },
+    "plan": { "status": "complete" },
+    "validate": { "status": "complete" },
+    "beads": { "status": "complete" },
+    "execute": { "status": "complete" }
+  },
+  "epic": "romanesco-7bl",
+  "beads": [
+    { "id": "romanesco-rrt", "task": "3.1", "title": "Add text labels to status indicators" },
+    { "id": "romanesco-yo4", "task": "3.2", "title": "Prefix success/error messages" },
+    { "id": "romanesco-3j7", "task": "3.3", "title": "Convert to AdaptiveColor" },
+    { "id": "romanesco-d3v", "task": "3.4", "title": "Replace emoji in file browser" },
+    { "id": "romanesco-wvu", "task": "3.5", "title": "Replace cursor indicator" },
+    { "id": "romanesco-bk3", "task": "3.6", "title": "Replace Unicode arrows in help" },
+    { "id": "romanesco-q5k", "task": "3.7", "title": "Replace decorative Unicode" },
+    { "id": "romanesco-4zn", "task": "3.8", "title": "ASCII checkboxes" },
+    { "id": "romanesco-1v7", "task": "3.9", "title": "Bracket LOCAL tag" },
+    { "id": "romanesco-xbx", "task": "3.10", "title": "Brighten terminal too small" },
+    { "id": "romanesco-5e3", "task": "3.11", "title": "Selected item background" },
+    { "id": "romanesco-db3", "task": "3.12", "title": "Search label prefix" }
+  ]
+}
