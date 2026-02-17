@@ -266,3 +266,12 @@ func TestFilterItemsFunction(t *testing.T) {
 		t.Fatalf("expected 0 results for 'zzzzz', got %d", len(result))
 	}
 }
+
+func TestSearchHasLabel(t *testing.T) {
+	app := testApp(t)
+	m, _ := app.Update(keyRune('/'))
+	app = m.(App)
+
+	view := app.View()
+	assertContains(t, view, "Search:")
+}

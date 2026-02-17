@@ -17,8 +17,8 @@ type searchModel struct {
 
 func newSearchModel() searchModel {
 	ti := textinput.New()
-	ti.Placeholder = "Search..."
-	ti.Prompt = searchPromptStyle.Render("/ ")
+	ti.Placeholder = "type to search..."
+	ti.Prompt = searchPromptStyle.Render("Search: ")
 	ti.CharLimit = 50
 	return searchModel{input: ti}
 }
