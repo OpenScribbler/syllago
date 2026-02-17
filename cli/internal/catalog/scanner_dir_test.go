@@ -7,6 +7,7 @@ import (
 )
 
 func TestScanProviderDirectoryFormat(t *testing.T) {
+	t.Parallel()
 	// Create a temp repo with directory-format hooks
 	tmp := t.TempDir()
 
@@ -97,6 +98,7 @@ func TestScanProviderDirectoryFormat(t *testing.T) {
 }
 
 func TestScanProviderLegacyAndDirectoryMixed(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Legacy single-file rule

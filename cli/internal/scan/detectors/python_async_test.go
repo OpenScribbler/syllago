@@ -9,6 +9,7 @@ import (
 )
 
 func TestPythonAsyncDetectsSyncInAsync(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Python project marker.
@@ -57,6 +58,7 @@ async def fetch_with_sleep():
 }
 
 func TestPythonAsyncCleanProject(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Python project with proper async code (no blocking calls).
@@ -86,6 +88,7 @@ async def get_data():
 }
 
 func TestPythonAsyncSkipsNonPython(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	// Empty dir — no Python markers.
 

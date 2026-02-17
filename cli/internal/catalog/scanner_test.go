@@ -18,7 +18,9 @@ func writeFile(t *testing.T, path, content string) {
 }
 
 func TestScan(t *testing.T) {
+	t.Parallel()
 	t.Run("discovers universal items with frontmatter", func(t *testing.T) {
+		t.Parallel()
 		root := t.TempDir()
 
 		// Create a skill with SKILL.md frontmatter.
@@ -71,6 +73,7 @@ func TestScan(t *testing.T) {
 	})
 
 	t.Run("empty type directory does not error", func(t *testing.T) {
+		t.Parallel()
 		root := t.TempDir()
 
 		// Create an empty skills directory.
@@ -88,6 +91,7 @@ func TestScan(t *testing.T) {
 	})
 
 	t.Run("missing type directories are skipped", func(t *testing.T) {
+		t.Parallel()
 		root := t.TempDir()
 		// Don't create any type directories at all.
 

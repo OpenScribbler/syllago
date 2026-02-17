@@ -9,6 +9,7 @@ import (
 )
 
 func TestGoCGODetectsImportC(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	gomod := "module example.com/myproject\n\ngo 1.22\n"
@@ -44,6 +45,7 @@ func main() {
 }
 
 func TestGoCGOCleanProject(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	gomod := "module example.com/myproject\n\ngo 1.22\n"

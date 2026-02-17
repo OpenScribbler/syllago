@@ -7,6 +7,7 @@ import (
 )
 
 func TestDiscoveryPaths(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		provider Provider
 		ct       catalog.ContentType
@@ -29,6 +30,7 @@ func TestDiscoveryPaths(t *testing.T) {
 }
 
 func TestEmitPath(t *testing.T) {
+	t.Parallel()
 	for _, p := range AllProviders {
 		path := p.EmitPath("/tmp/project")
 		if path == "" {
@@ -38,6 +40,7 @@ func TestEmitPath(t *testing.T) {
 }
 
 func TestSupportsType(t *testing.T) {
+	t.Parallel()
 	// Claude Code supports Rules, Skills, Agents, Commands, MCP, Hooks
 	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.Agents, catalog.Commands, catalog.MCP, catalog.Hooks} {
 		if !ClaudeCode.SupportsType(ct) {
@@ -50,5 +53,16 @@ func TestSupportsType(t *testing.T) {
 	}
 	if Cursor.SupportsType(catalog.Skills) {
 		t.Error("Cursor.SupportsType(Skills) = true, want false")
+	}
+}
+
+func TestDetectedOnly(t *testing.T) {
+	t.Parallel()
+	// Use a path that won't match real providers
+	detected := DetectedOnly("/nonexistent/path")
+	for _, p := range detected {
+		if !p.Detect("/nonexistent/path") {
+			t.Errorf("provider %s returned but Detect is false", p.Name)
+		}
 	}
 }

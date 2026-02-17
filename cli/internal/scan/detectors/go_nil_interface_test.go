@@ -9,6 +9,7 @@ import (
 )
 
 func TestGoNilInterfaceDetectsPattern(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	gomod := "module example.com/myproject\n\ngo 1.22\n"
@@ -54,6 +55,7 @@ func doWork() error {
 }
 
 func TestGoNilInterfaceClean(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	gomod := "module example.com/myproject\n\ngo 1.22\n"

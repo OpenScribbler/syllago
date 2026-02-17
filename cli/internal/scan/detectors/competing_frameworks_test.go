@@ -7,6 +7,7 @@ import (
 )
 
 func TestCompetingFrameworksDetects(t *testing.T) {
+	t.Parallel()
 	det := CompetingFrameworks{}
 	sections, err := det.Detect("testdata/surprises/competing-frameworks")
 	if err != nil {
@@ -30,6 +31,7 @@ func TestCompetingFrameworksDetects(t *testing.T) {
 }
 
 func TestCompetingFrameworksCleanProject(t *testing.T) {
+	t.Parallel()
 	det := CompetingFrameworks{}
 	// go-project has no competing frameworks — just cobra and bubbletea
 	// which are in different categories.
@@ -43,6 +45,7 @@ func TestCompetingFrameworksCleanProject(t *testing.T) {
 }
 
 func TestCompetingFrameworksEmptyDir(t *testing.T) {
+	t.Parallel()
 	det := CompetingFrameworks{}
 	sections, err := det.Detect(t.TempDir())
 	if err != nil {

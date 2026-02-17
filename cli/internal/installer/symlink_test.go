@@ -3,6 +3,7 @@ package installer
 import "testing"
 
 func TestIsWindowsMount(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		path string
 		want bool
@@ -19,6 +20,7 @@ func TestIsWindowsMount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
+			t.Parallel()
 			got := IsWindowsMount(tt.path)
 			if got != tt.want {
 				t.Errorf("IsWindowsMount(%q) = %v, want %v", tt.path, got, tt.want)

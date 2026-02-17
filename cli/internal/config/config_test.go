@@ -6,6 +6,7 @@ import (
 )
 
 func TestLoadMissing(t *testing.T) {
+	t.Parallel()
 	cfg, err := Load(t.TempDir())
 	if err != nil {
 		t.Fatalf("Load on missing dir: %v", err)
@@ -16,6 +17,7 @@ func TestLoadMissing(t *testing.T) {
 }
 
 func TestSaveAndLoad(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	cfg := &Config{
 		Providers: []string{"claude-code", "cursor"},
@@ -33,6 +35,7 @@ func TestSaveAndLoad(t *testing.T) {
 }
 
 func TestExists(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	if Exists(tmp) {
 		t.Error("Exists returned true before Save")
@@ -44,6 +47,7 @@ func TestExists(t *testing.T) {
 }
 
 func TestSaveCreatesDirectory(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	cfg := &Config{Providers: []string{"gemini-cli"}}
 	if err := Save(tmp, cfg); err != nil {

@@ -10,6 +10,7 @@ import (
 )
 
 func TestDiscoverFindsFiles(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	os.MkdirAll(filepath.Join(tmp, ".claude", "rules"), 0755)
 	os.WriteFile(filepath.Join(tmp, "CLAUDE.md"), []byte("# Rules"), 0644)
@@ -36,6 +37,7 @@ func TestDiscoverFindsFiles(t *testing.T) {
 }
 
 func TestDiscoverEmptyProject(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	prov := provider.Provider{
 		Slug: "cursor",
@@ -51,6 +53,7 @@ func TestDiscoverEmptyProject(t *testing.T) {
 }
 
 func TestClassifyByExtension(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		path string
 		want catalog.ContentType

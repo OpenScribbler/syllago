@@ -9,6 +9,7 @@ import (
 )
 
 func TestTestConventionMixed(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	src := filepath.Join(tmp, "src")
 	os.MkdirAll(src, 0755)
@@ -39,6 +40,7 @@ func TestTestConventionMixed(t *testing.T) {
 }
 
 func TestTestConventionConsistent(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	src := filepath.Join(tmp, "src")
 	os.MkdirAll(src, 0755)

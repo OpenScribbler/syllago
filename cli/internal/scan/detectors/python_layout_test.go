@@ -10,6 +10,7 @@ import (
 )
 
 func TestPythonLayoutDetectsSrcLayout(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Python project with src layout.
@@ -42,6 +43,7 @@ func TestPythonLayoutDetectsSrcLayout(t *testing.T) {
 }
 
 func TestPythonLayoutDetectsFlatLayout(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Python project with flat layout.
@@ -71,6 +73,7 @@ func TestPythonLayoutDetectsFlatLayout(t *testing.T) {
 }
 
 func TestPythonLayoutSkipsNonPython(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	// Empty dir — no Python markers.
 

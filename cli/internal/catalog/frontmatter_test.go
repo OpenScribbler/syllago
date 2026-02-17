@@ -5,6 +5,7 @@ import (
 )
 
 func TestParseFrontmatter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		input     string
@@ -52,6 +53,7 @@ func TestParseFrontmatter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			fm, err := ParseFrontmatter([]byte(tt.input))
 			if tt.wantErr {
 				if err == nil {
@@ -83,6 +85,7 @@ func TestParseFrontmatter(t *testing.T) {
 }
 
 func TestParseFrontmatterWithBody(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    string
@@ -133,6 +136,7 @@ func TestParseFrontmatterWithBody(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			fm, body, err := ParseFrontmatterWithBody([]byte(tt.input))
 			if tt.wantErr {
 				if err == nil {

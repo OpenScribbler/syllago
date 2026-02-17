@@ -8,6 +8,7 @@ import (
 )
 
 func TestGenerate_WithDescription(t *testing.T) {
+	t.Parallel()
 	got := Generate("my-cool-skill", "skills", "A skill that does things")
 
 	if !strings.Contains(got, "# My Cool Skill") {
@@ -22,6 +23,7 @@ func TestGenerate_WithDescription(t *testing.T) {
 }
 
 func TestGenerate_WithoutDescription(t *testing.T) {
+	t.Parallel()
 	got := Generate("test-item", "rules", "")
 
 	if !strings.Contains(got, "# Test Item") {
@@ -43,6 +45,7 @@ func TestGenerate_WithoutDescription(t *testing.T) {
 }
 
 func TestEnsureReadme_Creates(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	itemDir := filepath.Join(tmp, "my-item")
 	os.MkdirAll(itemDir, 0755)
@@ -65,6 +68,7 @@ func TestEnsureReadme_Creates(t *testing.T) {
 }
 
 func TestEnsureReadme_SkipsExisting(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	itemDir := filepath.Join(tmp, "my-item")
 	os.MkdirAll(itemDir, 0755)

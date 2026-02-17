@@ -9,6 +9,7 @@ import (
 )
 
 func TestDirectoryStructure(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	os.MkdirAll(filepath.Join(tmp, "src"), 0755)
 	os.MkdirAll(filepath.Join(tmp, "tests"), 0755)
@@ -43,6 +44,7 @@ func TestDirectoryStructure(t *testing.T) {
 }
 
 func TestDirectoryStructureSkipsHidden(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	os.MkdirAll(filepath.Join(tmp, ".git"), 0755)
 	os.MkdirAll(filepath.Join(tmp, "src"), 0755)
@@ -61,6 +63,7 @@ func TestDirectoryStructureSkipsHidden(t *testing.T) {
 }
 
 func TestDirectoryStructureEmpty(t *testing.T) {
+	t.Parallel()
 	det := DirectoryStructure{}
 	sections, err := det.Detect(t.TempDir())
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 )
 
 func TestFullScanNoProject(t *testing.T) {
+	t.Parallel()
 	// Empty directory — all detectors should return gracefully
 	scanner := scan.NewScanner(detectors.AllDetectors()...)
 	result := scanner.Run(t.TempDir())

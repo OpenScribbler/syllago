@@ -9,6 +9,7 @@ import (
 )
 
 func TestClaudeEmitterBasic(t *testing.T) {
+	t.Parallel()
 	emitter := ClaudeEmitter{}
 	doc := model.ContextDocument{
 		ProjectName: "test-project",
@@ -40,6 +41,7 @@ func TestClaudeEmitterBasic(t *testing.T) {
 }
 
 func TestClaudeEmitterSkipsHumanSections(t *testing.T) {
+	t.Parallel()
 	emitter := ClaudeEmitter{}
 	doc := model.ContextDocument{
 		ProjectName: "test-project",

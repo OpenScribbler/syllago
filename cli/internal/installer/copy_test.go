@@ -8,7 +8,9 @@ import (
 )
 
 func TestCopyContent(t *testing.T) {
+	t.Parallel()
 	t.Run("copy single file", func(t *testing.T) {
+		t.Parallel()
 		tmp := t.TempDir()
 		srcFile := filepath.Join(tmp, "src", "hello.txt")
 		dstFile := filepath.Join(tmp, "dst", "hello.txt")
@@ -34,6 +36,7 @@ func TestCopyContent(t *testing.T) {
 	})
 
 	t.Run("copy directory with subdirectories", func(t *testing.T) {
+		t.Parallel()
 		tmp := t.TempDir()
 		srcDir := filepath.Join(tmp, "src")
 		dstDir := filepath.Join(tmp, "dst")
@@ -73,6 +76,7 @@ func TestCopyContent(t *testing.T) {
 	})
 
 	t.Run("copyFile refuses symlink at destination", func(t *testing.T) {
+		t.Parallel()
 		tmp := t.TempDir()
 
 		// Create a source file
@@ -114,6 +118,7 @@ func TestCopyContent(t *testing.T) {
 	})
 
 	t.Run("copyFile works for normal files", func(t *testing.T) {
+		t.Parallel()
 		tmp := t.TempDir()
 
 		srcFile := filepath.Join(tmp, "source.txt")
@@ -136,6 +141,7 @@ func TestCopyContent(t *testing.T) {
 	})
 
 	t.Run("copyDir skips symlinks in source tree", func(t *testing.T) {
+		t.Parallel()
 		tmp := t.TempDir()
 
 		srcDir := filepath.Join(tmp, "src")
@@ -175,6 +181,7 @@ func TestCopyContent(t *testing.T) {
 	})
 
 	t.Run("source does not exist returns error", func(t *testing.T) {
+		t.Parallel()
 		tmp := t.TempDir()
 		src := filepath.Join(tmp, "nonexistent")
 		dst := filepath.Join(tmp, "dst")
@@ -186,6 +193,7 @@ func TestCopyContent(t *testing.T) {
 	})
 
 	t.Run("copied file contents match source", func(t *testing.T) {
+		t.Parallel()
 		tmp := t.TempDir()
 
 		// Use binary-ish content to make sure nothing is mangled.

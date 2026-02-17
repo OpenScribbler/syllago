@@ -7,6 +7,7 @@ import (
 )
 
 func TestDependenciesNode(t *testing.T) {
+	t.Parallel()
 	det := Dependencies{}
 	sections, err := det.Detect("testdata/techstack/node-project")
 	if err != nil {
@@ -25,6 +26,7 @@ func TestDependenciesNode(t *testing.T) {
 }
 
 func TestDependenciesGo(t *testing.T) {
+	t.Parallel()
 	det := Dependencies{}
 	sections, err := det.Detect("testdata/techstack/go-project")
 	if err != nil {

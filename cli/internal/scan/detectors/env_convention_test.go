@@ -10,6 +10,7 @@ import (
 )
 
 func TestEnvConventionUndocumented(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// .env.example documents two vars.
@@ -49,6 +50,7 @@ const secret = process.env.SECRET_TOKEN
 }
 
 func TestEnvConventionAllDocumented(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// .env.example documents everything used in code.

@@ -8,6 +8,7 @@ import (
 )
 
 func TestDetectContent(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	// Create a valid skill directory
@@ -55,6 +56,7 @@ func TestDetectContent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			gotType, gotOK := DetectContent(tt.path)
 			if gotOK != tt.wantOK {
 				t.Errorf("DetectContent(%s) ok = %v, want %v", tt.name, gotOK, tt.wantOK)

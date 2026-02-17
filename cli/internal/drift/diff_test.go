@@ -3,6 +3,7 @@ package drift
 import "testing"
 
 func TestDiffDetectsChanges(t *testing.T) {
+	t.Parallel()
 	baseline := &Baseline{
 		Sections: []BaselineSection{
 			{Category: "tech-stack", Title: "Tech Stack", Hash: "aaa"},
@@ -30,6 +31,7 @@ func TestDiffDetectsChanges(t *testing.T) {
 }
 
 func TestDiffDetectsRemoved(t *testing.T) {
+	t.Parallel()
 	baseline := &Baseline{
 		Sections: []BaselineSection{
 			{Category: "tech-stack", Title: "Tech Stack", Hash: "aaa"},
@@ -46,6 +48,7 @@ func TestDiffDetectsRemoved(t *testing.T) {
 }
 
 func TestDiffClean(t *testing.T) {
+	t.Parallel()
 	baseline := &Baseline{
 		Sections: []BaselineSection{
 			{Category: "tech-stack", Title: "Tech Stack", Hash: "aaa"},

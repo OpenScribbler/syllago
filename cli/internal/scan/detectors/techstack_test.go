@@ -7,6 +7,7 @@ import (
 )
 
 func TestTechStackNode(t *testing.T) {
+	t.Parallel()
 	det := TechStack{}
 	sections, err := det.Detect("testdata/techstack/node-project")
 	if err != nil {
@@ -28,6 +29,7 @@ func TestTechStackNode(t *testing.T) {
 }
 
 func TestTechStackGo(t *testing.T) {
+	t.Parallel()
 	det := TechStack{}
 	sections, err := det.Detect("testdata/techstack/go-project")
 	if err != nil {
@@ -49,6 +51,7 @@ func TestTechStackGo(t *testing.T) {
 }
 
 func TestTechStackEmptyDir(t *testing.T) {
+	t.Parallel()
 	det := TechStack{}
 	sections, err := det.Detect(t.TempDir())
 	if err != nil {

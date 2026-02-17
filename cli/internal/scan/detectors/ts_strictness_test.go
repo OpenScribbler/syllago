@@ -10,6 +10,7 @@ import (
 )
 
 func TestTSStrictnessFullStrict(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	tsconfig := `{
@@ -42,6 +43,7 @@ func TestTSStrictnessFullStrict(t *testing.T) {
 }
 
 func TestTSStrictnessPartial(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	tsconfig := `{
@@ -75,6 +77,7 @@ func TestTSStrictnessPartial(t *testing.T) {
 }
 
 func TestTSStrictnessSkipsNonTS(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 
 	det := TSStrictness{}

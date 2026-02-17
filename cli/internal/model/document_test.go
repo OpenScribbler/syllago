@@ -3,6 +3,7 @@ package model
 import "testing"
 
 func TestSectionInterface(t *testing.T) {
+	t.Parallel()
 	sections := []Section{
 		TextSection{Category: CatSurprise, Origin: OriginAuto, Title: "Competing test frameworks", Body: "Jest and Vitest both present"},
 		TechStackSection{Origin: OriginAuto, Title: "Tech Stack", Language: "TypeScript", LanguageVersion: "5.3"},
@@ -24,6 +25,7 @@ func TestSectionInterface(t *testing.T) {
 }
 
 func TestContextDocumentSections(t *testing.T) {
+	t.Parallel()
 	doc := ContextDocument{
 		ProjectName: "test-project",
 		Sections: []Section{
