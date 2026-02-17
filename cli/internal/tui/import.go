@@ -942,10 +942,10 @@ func (m importModel) doBatchImport(paths []string) (string, error) {
 }
 
 // isValidGitURL checks that a URL looks like a legitimate git remote.
-// Rejects argument-injection attempts (URLs starting with -) and dangerous
-// transports like ext::.
+// Only allows secure transports (https://, ssh://, git@). Rejects insecure
+// transports (git://, http://), argument injection (-), and ext:: (command injection).
 func isValidGitURL(url string) bool {
-	for _, prefix := range []string{"https://", "http://", "git://", "ssh://", "git@"} {
+	for _, prefix := range []string{"https://", "ssh://", "git@"} {
 		if strings.HasPrefix(url, prefix) {
 			return true
 		}
