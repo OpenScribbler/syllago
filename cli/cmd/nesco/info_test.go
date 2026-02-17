@@ -78,6 +78,40 @@ func TestInfoProvidersUsesDisplayNames(t *testing.T) {
 	}
 }
 
+func TestInfoFormatsShowsProviders(t *testing.T) {
+	var buf bytes.Buffer
+	origWriter := output.Writer
+	output.Writer = &buf
+	output.JSON = false
+	defer func() { output.Writer = origWriter }()
+
+	err := infoFormatsCmd.RunE(infoFormatsCmd, []string{})
+	if err != nil {
+		t.Fatalf("info formats failed: %v", err)
+	}
+
+	out := buf.String()
+
+	// Should show which providers use each format
+	if !strings.Contains(out, "claude-code") {
+		t.Error("plain text output should list providers for each format")
+	}
+
+	// Should connect format to providers on the same line
+	lines := strings.Split(out, "\n")
+	foundFormatWithProviders := false
+	for _, line := range lines {
+		if (strings.Contains(line, "Markdown") || strings.Contains(line, "JSON")) &&
+			strings.Contains(line, "claude-code") {
+			foundFormatWithProviders = true
+			break
+		}
+	}
+	if !foundFormatWithProviders {
+		t.Error("expected format lines to show provider names")
+	}
+}
+
 func TestInfoDevBuild(t *testing.T) {
 	oldVersion := version
 	version = ""
