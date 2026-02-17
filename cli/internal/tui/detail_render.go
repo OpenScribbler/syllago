@@ -15,7 +15,7 @@ func (m detailModel) renderContent() string {
 	name := StripControlChars(displayName(m.item))
 	s := helpStyle.Render("nesco > "+m.item.Type.Label()+" >") + " " + titleStyle.Render(name)
 	if m.item.Local {
-		s += " " + warningStyle.Render("LOCAL")
+		s += " " + warningStyle.Render("[LOCAL]")
 	}
 	s += "\n"
 

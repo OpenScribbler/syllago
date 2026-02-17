@@ -278,8 +278,8 @@ func (m itemsModel) View() string {
 		localPrefix := ""
 		localPrefixLen := 0
 		if item.Local {
-			localPrefix = warningStyle.Render("LOCAL") + " "
-			localPrefixLen = 6 // "LOCAL "
+			localPrefix = warningStyle.Render("[LOCAL]") + " "
+			localPrefixLen = 8 // "[LOCAL] "
 		}
 
 		if showProvCol {
