@@ -251,7 +251,7 @@ func (m detailModel) renderInstallTab() string {
 
 				check := "[ ]"
 				if i < len(m.providerChecks) && m.providerChecks[i] {
-					check = installedStyle.Render("[✓]")
+					check = installedStyle.Render("[x]")
 				}
 
 				prefix := "  "

@@ -258,7 +258,7 @@ func (fb fileBrowserModel) View() string {
 		// Selection indicator
 		sel := " "
 		if fb.selected[entry.path] {
-			sel = "✓"
+			sel = "x"
 		}
 
 		// Directory indicator: append "/" to dir names
@@ -277,7 +277,7 @@ func (fb fileBrowserModel) View() string {
 			tag := ""
 			switch entry.detection {
 			case "Skill", "Agent", "Prompt", "App":
-				tag = installedStyle.Render("✓ " + entry.detection)
+				tag = installedStyle.Render("[x] " + entry.detection)
 			default:
 				tag = countStyle.Render("(" + entry.detection + ")")
 			}

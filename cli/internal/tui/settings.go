@@ -228,7 +228,7 @@ func (m settingsModel) View() string {
 
 			check := "[ ]"
 			if item.checked {
-				check = installedStyle.Render("[✓]")
+				check = installedStyle.Render("[x]")
 			}
 
 			s += fmt.Sprintf("  %s%s %s\n", prefix, check, style.Render(item.label))
