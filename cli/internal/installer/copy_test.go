@@ -135,6 +135,45 @@ func TestCopyContent(t *testing.T) {
 		}
 	})
 
+	t.Run("copyDir skips symlinks in source tree", func(t *testing.T) {
+		tmp := t.TempDir()
+
+		srcDir := filepath.Join(tmp, "src")
+		if err := os.MkdirAll(srcDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		// Create a normal file
+		if err := os.WriteFile(filepath.Join(srcDir, "normal.txt"), []byte("normal content"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		// Create a symlink to a sensitive file (simulated)
+		sensitiveFile := filepath.Join(tmp, "sensitive.txt")
+		if err := os.WriteFile(sensitiveFile, []byte("SECRET DATA"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(sensitiveFile, filepath.Join(srcDir, "sneaky.txt")); err != nil {
+			t.Fatal(err)
+		}
+
+		dstDir := filepath.Join(tmp, "dst")
+		if err := copyDir(srcDir, dstDir); err != nil {
+			t.Fatalf("copyDir failed: %v", err)
+		}
+
+		// Verify normal file was copied
+		if _, err := os.Stat(filepath.Join(dstDir, "normal.txt")); err != nil {
+			t.Errorf("normal file was not copied: %v", err)
+		}
+
+		// Verify symlink was NOT copied
+		if _, err := os.Stat(filepath.Join(dstDir, "sneaky.txt")); err == nil {
+			data, _ := os.ReadFile(filepath.Join(dstDir, "sneaky.txt"))
+			t.Errorf("symlink should not have been copied, got: %s", data)
+		}
+	})
+
 	t.Run("source does not exist returns error", func(t *testing.T) {
 		tmp := t.TempDir()
 		src := filepath.Join(tmp, "nonexistent")

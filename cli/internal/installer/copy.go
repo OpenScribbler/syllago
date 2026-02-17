@@ -55,6 +55,13 @@ func copyDir(src, dst string) error {
 		if err != nil {
 			return err
 		}
+
+		// Skip symlinks in source tree to prevent information disclosure
+		// from untrusted content repositories.
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+
 		relPath, err := filepath.Rel(src, path)
 		if err != nil {
 			return err
