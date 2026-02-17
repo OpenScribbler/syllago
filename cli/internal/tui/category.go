@@ -64,7 +64,7 @@ func (m categoryModel) View() string {
 		style := itemStyle
 
 		if i == m.cursor {
-			prefix = " ▸ "
+			prefix = " > "
 			style = selectedItemStyle
 		}
 
@@ -78,7 +78,7 @@ func (m categoryModel) View() string {
 	myToolsPrefix := "   "
 	myToolsStyle := itemStyle
 	if m.cursor == len(m.types) {
-		myToolsPrefix = " ▸ "
+		myToolsPrefix = " > "
 		myToolsStyle = selectedItemStyle
 	}
 	myToolsLabel := fmt.Sprintf("My Tools (%d)", m.localCount)
@@ -88,7 +88,7 @@ func (m categoryModel) View() string {
 	importPrefix := "   "
 	importStyle := itemStyle
 	if m.cursor == len(m.types)+1 {
-		importPrefix = " ▸ "
+		importPrefix = " > "
 		importStyle = selectedItemStyle
 	}
 	s += importPrefix + importStyle.Render("Import an AI tool...") + "\n"
@@ -97,7 +97,7 @@ func (m categoryModel) View() string {
 	updatePrefix := "   "
 	updateStyle := itemStyle
 	if m.cursor == len(m.types)+2 {
-		updatePrefix = " ▸ "
+		updatePrefix = " > "
 		updateStyle = selectedItemStyle
 	}
 	updateLabel := "Update nesco..."
@@ -110,7 +110,7 @@ func (m categoryModel) View() string {
 	settingsPrefix := "   "
 	settingsStyle := itemStyle
 	if m.cursor == len(m.types)+3 {
-		settingsPrefix = " ▸ "
+		settingsPrefix = " > "
 		settingsStyle = selectedItemStyle
 	}
 	s += settingsPrefix + settingsStyle.Render("Settings...") + "\n"

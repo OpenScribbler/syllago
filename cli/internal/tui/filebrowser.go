@@ -251,7 +251,7 @@ func (fb fileBrowserModel) View() string {
 		prefix := "   "
 		style := itemStyle
 		if i == fb.cursor {
-			prefix = " ▸ "
+			prefix = " > "
 			style = selectedItemStyle
 		}
 

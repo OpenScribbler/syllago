@@ -222,7 +222,7 @@ func (m settingsModel) View() string {
 			prefix := "  "
 			style := itemStyle
 			if i == m.subCur {
-				prefix = "▸ "
+				prefix = "> "
 				style = selectedItemStyle
 			}
 
@@ -258,7 +258,7 @@ func (m settingsModel) renderRow(index int, label, value string) string {
 	prefix := "   "
 	style := itemStyle
 	if index == m.cursor && m.editMode == editNone {
-		prefix = " ▸ "
+		prefix = " > "
 		style = selectedItemStyle
 	}
 	return fmt.Sprintf("%s%s  %s\n", prefix, style.Render(label), helpStyle.Render(value))

@@ -546,7 +546,7 @@ func (m importModel) View() string {
 			prefix := "   "
 			style := itemStyle
 			if i == m.sourceCursor {
-				prefix = " ▸ "
+				prefix = " > "
 				style = selectedItemStyle
 			}
 			s += prefix + style.Render(opt) + "\n"
@@ -559,7 +559,7 @@ func (m importModel) View() string {
 			prefix := "   "
 			style := itemStyle
 			if i == m.typeCursor {
-				prefix = " ▸ "
+				prefix = " > "
 				style = selectedItemStyle
 			}
 			label := ct.Label()
@@ -573,7 +573,7 @@ func (m importModel) View() string {
 			prefix := "   "
 			style := itemStyle
 			if i == m.provCursor {
-				prefix = " ▸ "
+				prefix = " > "
 				style = selectedItemStyle
 			}
 			s += prefix + style.Render(name) + "\n"
@@ -591,7 +591,7 @@ func (m importModel) View() string {
 			prefix := "   "
 			style := itemStyle
 			if i == m.browseCursor {
-				prefix = " ▸ "
+				prefix = " > "
 				style = selectedItemStyle
 			}
 			s += prefix + style.Render(opt.label) + " " + countStyle.Render(opt.desc) + "\n"
@@ -639,7 +639,7 @@ func (m importModel) View() string {
 			prefix := "   "
 			style := itemStyle
 			if i == m.pickCursor {
-				prefix = " ▸ "
+				prefix = " > "
 				style = selectedItemStyle
 			}
 			label := item.Name
@@ -1002,7 +1002,7 @@ func (m importModel) viewValidate() string {
 		prefix := "   "
 		style := itemStyle
 		if i == m.validateCursor {
-			prefix = " ▸ "
+			prefix = " > "
 			style = selectedItemStyle
 		}
 

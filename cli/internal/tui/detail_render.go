@@ -146,7 +146,7 @@ func (m detailModel) renderFileList() string {
 		prefix := "  "
 		style := itemStyle
 		if i == m.fileCursor {
-			prefix = "▸ "
+			prefix = "> "
 			style = selectedItemStyle
 		}
 		s += fmt.Sprintf("  %s%s\n", prefix, style.Render(f))
@@ -257,7 +257,7 @@ func (m detailModel) renderInstallTab() string {
 				prefix := "  "
 				nameStyle := itemStyle
 				if i == m.checkCursor && m.confirmAction == actionNone {
-					prefix = "▸ "
+					prefix = "> "
 					nameStyle = selectedItemStyle
 				}
 
@@ -309,7 +309,7 @@ func (m detailModel) renderInstallTab() string {
 			prefix := "  "
 			nameStyle := itemStyle
 			if i == m.methodCursor {
-				prefix = "▸ "
+				prefix = "> "
 				nameStyle = selectedItemStyle
 			}
 			s += fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(method.name))
@@ -342,7 +342,7 @@ func (m detailModel) renderInstallTab() string {
 				prefix := "  "
 				style := itemStyle
 				if i == m.envMethodCursor {
-					prefix = "▸ "
+					prefix = "> "
 					style = selectedItemStyle
 				}
 				s += fmt.Sprintf("  %s%s\n", prefix, style.Render(opt))
