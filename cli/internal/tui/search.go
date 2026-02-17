@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,8 +12,9 @@ import (
 )
 
 type searchModel struct {
-	input  textinput.Model
-	active bool
+	input      textinput.Model
+	active     bool
+	matchCount int // -1 = not showing count
 }
 
 func newSearchModel() searchModel {
@@ -20,7 +22,7 @@ func newSearchModel() searchModel {
 	ti.Placeholder = "type to search..."
 	ti.Prompt = searchPromptStyle.Render("Search: ")
 	ti.CharLimit = 50
-	return searchModel{input: ti}
+	return searchModel{input: ti, matchCount: -1}
 }
 
 func (m searchModel) activated() searchModel {
@@ -31,6 +33,7 @@ func (m searchModel) activated() searchModel {
 
 func (m searchModel) deactivated() searchModel {
 	m.active = false
+	m.matchCount = -1
 	m.input.Blur()
 	m.input.SetValue("")
 	return m
@@ -49,7 +52,11 @@ func (m searchModel) View() string {
 	if !m.active {
 		return ""
 	}
-	return m.input.View()
+	v := m.input.View()
+	if m.matchCount >= 0 {
+		v += " " + helpStyle.Render(fmt.Sprintf("(%d matches)", m.matchCount))
+	}
+	return v
 }
 
 func (m searchModel) query() string {
