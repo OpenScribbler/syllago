@@ -14,8 +14,12 @@ var infoCmd = &cobra.Command{
 	Short: "Show nesco capabilities",
 	Long:  "Machine-readable capability manifest. Useful for agents discovering nesco's features.",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		v := version
+		if v == "" {
+			v = "(dev build)"
+		}
 		manifest := map[string]any{
-			"version":      version,
+			"version":      v,
 			"contentTypes": catalog.AllContentTypes(),
 			"providers":    providerSlugs(),
 			"commands":     []string{"init", "import", "parity", "config", "info", "scan", "drift", "baseline"},
@@ -23,7 +27,7 @@ var infoCmd = &cobra.Command{
 		if output.JSON {
 			output.Print(manifest)
 		} else {
-			fmt.Printf("nesco %s\n\n", version)
+			fmt.Printf("nesco %s\n\n", v)
 			fmt.Println("Content types:", len(catalog.AllContentTypes()))
 			for _, ct := range catalog.AllContentTypes() {
 				fmt.Printf("  - %s\n", ct.Label())
