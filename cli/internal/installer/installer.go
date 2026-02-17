@@ -29,13 +29,13 @@ const (
 func (s Status) String() string {
 	switch s {
 	case StatusNotAvailable:
-		return "-"
+		return "[-]"
 	case StatusNotInstalled:
-		return "○"
+		return "[--]"
 	case StatusInstalled:
-		return "●"
+		return "[ok]"
 	}
-	return "?"
+	return "[?]"
 }
 
 // IsJSONMerge returns true if the provider uses JSON merge for the given content type.
