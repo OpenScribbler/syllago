@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/holdenhewett/romanesco/cli/internal/output"
 )
 
 func TestRootCommandHelp(t *testing.T) {
@@ -76,6 +78,53 @@ func TestNoColorFlag(t *testing.T) {
 
 			// When color output is added in Phase 3, add ANSI code checks here.
 			// For now, verify the flag is wired and doesn't break execution.
+		})
+	}
+}
+
+func TestQuietFlag(t *testing.T) {
+	tests := []struct {
+		name      string
+		args      []string
+		wantQuiet bool
+	}{
+		{
+			name:      "version without quiet",
+			args:      []string{"version"},
+			wantQuiet: false,
+		},
+		{
+			name:      "version with --quiet",
+			args:      []string{"--quiet", "version"},
+			wantQuiet: true,
+		},
+		{
+			name:      "version with -q",
+			args:      []string{"-q", "version"},
+			wantQuiet: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			origQuiet := output.Quiet
+			defer func() { output.Quiet = origQuiet }()
+
+			var buf bytes.Buffer
+			rootCmd.SetOut(&buf)
+			rootCmd.SetArgs(tt.args)
+			defer func() {
+				rootCmd.SetOut(nil)
+				rootCmd.SetArgs(nil)
+			}()
+
+			if err := rootCmd.Execute(); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if output.Quiet != tt.wantQuiet {
+				t.Errorf("output.Quiet = %v, want %v", output.Quiet, tt.wantQuiet)
+			}
 		})
 	}
 }
