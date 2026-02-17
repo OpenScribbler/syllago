@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"syscall"
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
 	"github.com/holdenhewett/romanesco/cli/internal/config"
@@ -316,7 +315,7 @@ func ensureUpToDate() {
 	}
 
 	// Replace this process with the newly built binary
-	execErr := syscall.Exec(binPath, os.Args, os.Environ())
+	execErr := execSelf(os.Args)
 	// Only reached if Exec fails
 	fmt.Fprintf(os.Stderr, "Restart failed: %s\n", execErr)
 }
