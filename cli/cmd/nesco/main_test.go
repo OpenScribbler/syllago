@@ -334,6 +334,31 @@ func TestWrapTTYError(t *testing.T) {
 	}
 }
 
+func TestHelpDocumentsExitCodes(t *testing.T) {
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	rootCmd.SetArgs([]string{"--help"})
+	defer func() {
+		rootCmd.SetOut(nil)
+		rootCmd.SetArgs(nil)
+	}()
+
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("--help failed: %v", err)
+	}
+	out := buf.String()
+
+	if !strings.Contains(out, "Exit code") && !strings.Contains(out, "exit code") {
+		t.Error("help text should document exit codes")
+	}
+
+	for _, code := range []string{"0", "1", "2", "3"} {
+		if !strings.Contains(out, code) {
+			t.Errorf("help text should mention exit code %s", code)
+		}
+	}
+}
+
 func TestGlobalFlags(t *testing.T) {
 	flags := rootCmd.PersistentFlags()
 	if flags.Lookup("json") == nil {
