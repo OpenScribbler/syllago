@@ -128,8 +128,16 @@ func main() {
 		ensureUpToDate()
 	}
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		printExecuteError(err)
 		os.Exit(1)
+	}
+}
+
+// printExecuteError prints err to the error writer unless it's a SilentError
+// (meaning the command already printed its own error message).
+func printExecuteError(err error) {
+	if !output.IsSilentError(err) {
+		fmt.Fprintln(output.ErrWriter, err)
 	}
 }
 

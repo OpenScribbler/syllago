@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -217,6 +218,26 @@ func TestVersionCommandDevBuild(t *testing.T) {
 				t.Errorf("version output = %q, want to contain %q", out, tt.wantContain)
 			}
 		})
+	}
+}
+
+func TestPrintExecuteError(t *testing.T) {
+	var buf bytes.Buffer
+	origWriter := output.ErrWriter
+	output.ErrWriter = &buf
+	defer func() { output.ErrWriter = origWriter }()
+
+	// Normal error should be printed
+	printExecuteError(fmt.Errorf("normal error"))
+	if !strings.Contains(buf.String(), "normal error") {
+		t.Error("normal error should be printed to stderr")
+	}
+
+	// Silent error should not be printed
+	buf.Reset()
+	printExecuteError(output.SilentError(fmt.Errorf("already shown")))
+	if buf.Len() > 0 {
+		t.Errorf("silent error should not print, got: %s", buf.String())
 	}
 }
 
