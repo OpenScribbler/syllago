@@ -457,9 +457,9 @@ func (m detailModel) View() string {
 	// Status message — rendered outside scrollable area so it's always visible
 	if m.message != "" {
 		if m.messageIsErr {
-			s += "\n" + errorMsgStyle.Render(m.message)
+			s += "\n" + errorMsgStyle.Render("Error: "+m.message)
 		} else {
-			s += "\n" + successMsgStyle.Render(m.message)
+			s += "\n" + successMsgStyle.Render("Done: "+m.message)
 		}
 	}
 

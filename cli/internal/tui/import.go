@@ -685,9 +685,9 @@ func (m importModel) View() string {
 	// Status message
 	if m.message != "" {
 		if m.messageIsErr {
-			s += "\n" + errorMsgStyle.Render(m.message)
+			s += "\n" + errorMsgStyle.Render("Error: " + m.message)
 		} else {
-			s += "\n" + successMsgStyle.Render(m.message)
+			s += "\n" + successMsgStyle.Render("Done: " + m.message)
 		}
 	}
 

@@ -240,9 +240,9 @@ func (m settingsModel) View() string {
 	if m.message != "" {
 		s += "\n"
 		if m.messageErr {
-			s += errorMsgStyle.Render(m.message)
+			s += errorMsgStyle.Render("Error: " + m.message)
 		} else {
-			s += successMsgStyle.Render(m.message)
+			s += successMsgStyle.Render("Done: " + m.message)
 		}
 		s += "\n"
 	}
