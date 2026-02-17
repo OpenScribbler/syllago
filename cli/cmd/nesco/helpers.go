@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/holdenhewett/romanesco/cli/internal/output"
 	"github.com/holdenhewett/romanesco/cli/internal/provider"
 )
 
@@ -36,8 +38,13 @@ func findProjectRootImpl() (string, error) {
 		dir = parent
 	}
 
-	// Fallback to cwd
-	return os.Getwd()
+	// Fallback to cwd with warning
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	fmt.Fprintf(output.ErrWriter, "Warning: no project markers found (go.mod, package.json, etc.). Using current directory: %s\n", cwd)
+	return cwd, nil
 }
 
 // findProviderBySlug returns a pointer to the matching provider, or nil.
