@@ -23,6 +23,15 @@ func copyFile(src, dst string) error {
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return err
 	}
+
+	// Refuse to write through a symlink at the destination (prevents arbitrary
+	// file overwrite when processing content from untrusted repositories).
+	if info, err := os.Lstat(dst); err == nil {
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("destination is a symlink: %s (refusing to follow for security)", dst)
+		}
+	}
+
 	in, err := os.Open(src)
 	if err != nil {
 		return err
