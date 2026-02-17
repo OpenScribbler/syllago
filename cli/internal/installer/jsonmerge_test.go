@@ -84,6 +84,39 @@ func TestWriteJSONFile_NoPartialWrites(t *testing.T) {
 	}
 }
 
+func TestWriteJSONFileWithPerm_RestrictedPermissions(t *testing.T) {
+	tmpDir := t.TempDir()
+	data := []byte(`{"test": true}`)
+
+	// 0600 permissions (home directory files)
+	homeFile := filepath.Join(tmpDir, ".claude.json")
+	if err := writeJSONFileWithPerm(homeFile, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := os.Stat(homeFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mode := info.Mode().Perm(); mode != 0600 {
+		t.Errorf("home file permissions = %o, want 0600", mode)
+	}
+
+	// 0644 permissions (project files)
+	projectFile := filepath.Join(tmpDir, "project", "config.json")
+	if err := writeJSONFileWithPerm(projectFile, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	info2, err := os.Stat(projectFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mode := info2.Mode().Perm(); mode != 0644 {
+		t.Errorf("project file permissions = %o, want 0644", mode)
+	}
+}
+
 func TestWriteJSONFile_CreatesParentDirs(t *testing.T) {
 	tmpDir := t.TempDir()
 	targetFile := filepath.Join(tmpDir, "sub", "dir", "config.json")
