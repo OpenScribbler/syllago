@@ -59,7 +59,9 @@ func runScan(cmd *cobra.Command, args []string) error {
 				cfg.Providers = append(cfg.Providers, prov.Slug)
 			}
 		}
-		config.Save(root, cfg)
+		if err := config.Save(root, cfg); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to save auto-detected config: %v\n", err)
+		}
 	}
 
 	// Run scanner
