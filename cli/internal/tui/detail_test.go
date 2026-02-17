@@ -3,6 +3,8 @@ package tui
 import (
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
 )
 
@@ -801,4 +803,134 @@ func TestDetailBackCancelsPendingAction(t *testing.T) {
 	m, _ = app.Update(keyEsc)
 	app = m.(App)
 	assertScreen(t, app, screenItems)
+}
+
+// ---------------------------------------------------------------------------
+// Position indicator (4.16)
+// ---------------------------------------------------------------------------
+
+func TestDetailShowsPosition(t *testing.T) {
+	app := navigateToDetail(t, catalog.Skills)
+	view := app.View()
+	assertContains(t, view, "1 of")
+}
+
+// ---------------------------------------------------------------------------
+// Next/prev navigation (4.17)
+// ---------------------------------------------------------------------------
+
+func TestDetailNextPrevItem(t *testing.T) {
+	app := testApp(t)
+	m, _ := app.Update(keyEnter) // -> items
+	app = m.(App)
+
+	if len(app.items.items) < 2 {
+		t.Skip("need at least 2 items")
+	}
+
+	m, _ = app.Update(keyEnter) // -> detail of first item
+	app = m.(App)
+	firstName := app.detail.item.Name
+
+	// ctrl+n goes to next
+	ctrlN := tea.KeyMsg{Type: tea.KeyCtrlN}
+	m, _ = app.Update(ctrlN)
+	app = m.(App)
+
+	if app.detail.item.Name == firstName {
+		t.Fatal("expected different item after ctrl+n")
+	}
+	assertScreen(t, app, screenDetail)
+
+	// ctrl+p goes back
+	ctrlP := tea.KeyMsg{Type: tea.KeyCtrlP}
+	m, _ = app.Update(ctrlP)
+	app = m.(App)
+
+	if app.detail.item.Name != firstName {
+		t.Fatalf("expected %s after ctrl+p, got %s", firstName, app.detail.item.Name)
+	}
+}
+
+func TestDetailNextPrevBounds(t *testing.T) {
+	app := testApp(t)
+	m, _ := app.Update(keyEnter) // -> items
+	app = m.(App)
+
+	m, _ = app.Update(keyEnter) // -> detail of first item
+	app = m.(App)
+	firstName := app.detail.item.Name
+
+	// ctrl+p at first item should do nothing
+	ctrlP := tea.KeyMsg{Type: tea.KeyCtrlP}
+	m, _ = app.Update(ctrlP)
+	app = m.(App)
+	if app.detail.item.Name != firstName {
+		t.Fatal("ctrl+p at first item should do nothing")
+	}
+
+	// Navigate to last item
+	ctrlN := tea.KeyMsg{Type: tea.KeyCtrlN}
+	for i := 0; i < len(app.items.items)+5; i++ {
+		m, _ = app.Update(ctrlN)
+		app = m.(App)
+	}
+
+	lastName := app.detail.item.Name
+	// ctrl+n at last item should do nothing
+	m, _ = app.Update(ctrlN)
+	app = m.(App)
+	if app.detail.item.Name != lastName {
+		t.Fatal("ctrl+n at last item should do nothing")
+	}
+}
+
+func TestDetailNextPrevBlockedDuringAction(t *testing.T) {
+	app := navigateToDetail(t, catalog.Skills)
+	app.detail.confirmAction = actionUninstall
+	originalName := app.detail.item.Name
+
+	ctrlN := tea.KeyMsg{Type: tea.KeyCtrlN}
+	m, _ := app.Update(ctrlN)
+	app = m.(App)
+
+	if app.detail.item.Name != originalName {
+		t.Fatal("ctrl+n should be blocked during active action")
+	}
+}
+
+func TestDetailNextPrevShowsInHelpBar(t *testing.T) {
+	app := navigateToDetail(t, catalog.Skills)
+	// Set listTotal > 1 so the help bar shows ctrl+n/p
+	app.detail.listTotal = 5
+	view := app.detail.renderHelp()
+	assertContains(t, view, "ctrl+n/p")
+}
+
+// ---------------------------------------------------------------------------
+// Help bar audit (4.19)
+// ---------------------------------------------------------------------------
+
+func TestHelpBarNoSaveOnOverviewTab(t *testing.T) {
+	app := navigateToDetail(t, catalog.Prompts)
+	// Should be on Overview tab by default
+	view := app.detail.renderHelp()
+	assertNotContains(t, view, "s save")
+	assertContains(t, view, "c copy")
+}
+
+// ---------------------------------------------------------------------------
+// Method picker path preview (4.18)
+// ---------------------------------------------------------------------------
+
+func TestDetailMethodPickerShowsPaths(t *testing.T) {
+	app := navigateToDetail(t, catalog.Skills)
+	app.detail.activeTab = tabInstall
+	app.detail.confirmAction = actionChooseMethod
+	if len(app.detail.providerChecks) > 0 {
+		app.detail.providerChecks[0] = true
+	}
+
+	view := app.View()
+	assertContains(t, view, "Destination")
 }

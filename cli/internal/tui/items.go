@@ -257,7 +257,7 @@ func (m itemsModel) View() string {
 
 	// Scroll indicators
 	if offset > 0 {
-		s += helpStyle.Render("  (more items above)") + "\n"
+		s += helpStyle.Render(fmt.Sprintf("  (%d more above)", offset)) + "\n"
 	}
 
 	// Whether to show a type tag per item (for mixed-type views)
@@ -316,7 +316,7 @@ func (m itemsModel) View() string {
 
 	// Scroll indicator for items below
 	if end < len(m.items) {
-		s += helpStyle.Render("  (more items below)") + "\n"
+		s += helpStyle.Render(fmt.Sprintf("  (%d more below)", len(m.items)-end)) + "\n"
 	}
 
 	s += "\n" + helpStyle.Render("up/down navigate • enter detail • esc back • / search")

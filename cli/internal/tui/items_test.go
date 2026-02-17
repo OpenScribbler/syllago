@@ -123,13 +123,33 @@ func TestItemsScrollIndicators(t *testing.T) {
 
 	// At the top, no "above" indicator but should have "below" indicator
 	view := app.View()
-	assertNotContains(t, view, "more items above")
-	assertContains(t, view, "more items below")
+	assertNotContains(t, view, "more above")
+	assertContains(t, view, "more below")
 
 	// Navigate down past the visible area
 	app = pressN(app, keyDown, 40)
 	view = app.View()
-	assertContains(t, view, "more items above")
+	assertContains(t, view, "more above")
+}
+
+func TestItemsScrollShowsCounts(t *testing.T) {
+	items := make([]catalog.ContentItem, 50)
+	for i := range items {
+		items[i] = catalog.ContentItem{Name: fmt.Sprintf("item-%02d", i), Type: catalog.Skills}
+	}
+	m := newItemsModel(catalog.Skills, items, nil, "/tmp")
+	m.width = 80
+	m.height = 10 // small height forces scrolling
+
+	// Navigate to bottom
+	for i := 0; i < 40; i++ {
+		m, _ = m.Update(keyDown)
+	}
+
+	view := m.View()
+	assertContains(t, view, "more above")
+	// Should show a number, not just generic text
+	assertNotContains(t, view, "(more items above)")
 }
 
 func TestItemsProviderColumn(t *testing.T) {
@@ -241,6 +261,16 @@ func TestTableHeaderStyleIsBold(t *testing.T) {
 	if !tableHeaderStyle.GetBold() {
 		t.Fatal("tableHeaderStyle should be bold")
 	}
+}
+
+func TestMyToolsEmptyGuidance(t *testing.T) {
+	m := newItemsModel(catalog.MyTools, nil, nil, "/tmp")
+	m.width = 80
+	m.height = 30
+
+	view := m.View()
+	assertContains(t, view, "Import")
+	assertContains(t, view, "nesco add")
 }
 
 func TestItemsCursorIsASCII(t *testing.T) {

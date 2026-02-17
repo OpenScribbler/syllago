@@ -51,6 +51,24 @@ func newFileBrowser(dir string, ct catalog.ContentType) fileBrowserModel {
 	return fb
 }
 
+// skipDirs lists directory names that are never useful as import sources.
+var skipDirs = map[string]bool{
+	"node_modules":  true,
+	".git":          true,
+	"__pycache__":   true,
+	".venv":         true,
+	"venv":          true,
+	"target":        true, // Rust
+	"vendor":        true, // Go
+	".tox":          true,
+	".mypy_cache":   true,
+	".pytest_cache": true,
+	"dist":          true,
+	"build":         true,
+}
+
+const maxBrowserEntries = 500
+
 // loadDir reads the given directory and populates entries with detection results.
 func (fb *fileBrowserModel) loadDir(dir string) {
 	fb.currentDir = dir
@@ -65,12 +83,20 @@ func (fb *fileBrowserModel) loadDir(dir string) {
 		return
 	}
 
+	if len(osEntries) > maxBrowserEntries {
+		fb.errMsg = fmt.Sprintf("Directory has %d entries (showing first %d). Navigate into subdirectories for better performance.", len(osEntries), maxBrowserEntries)
+		osEntries = osEntries[:maxBrowserEntries]
+	}
+
 	var dirs, files []fileBrowserEntry
 
 	for _, e := range osEntries {
 		// Skip . and .. (handled separately) but show other dotfiles/dotdirs
 		// since config dirs like .claude/, .config/ are common import sources
 		if e.Name() == "." || e.Name() == ".." {
+			continue
+		}
+		if e.IsDir() && skipDirs[e.Name()] {
 			continue
 		}
 		absPath := filepath.Join(dir, e.Name())
@@ -249,7 +275,7 @@ func (fb fileBrowserModel) View() string {
 	}
 
 	if fb.offset > 0 {
-		s += helpStyle.Render("  (more items above)") + "\n"
+		s += helpStyle.Render(fmt.Sprintf("  (%d more above)", fb.offset)) + "\n"
 	}
 
 	for i := fb.offset; i < end; i++ {
@@ -294,7 +320,7 @@ func (fb fileBrowserModel) View() string {
 	}
 
 	if end < len(fb.entries) {
-		s += helpStyle.Render("  (more items below)") + "\n"
+		s += helpStyle.Render(fmt.Sprintf("  (%d more below)", len(fb.entries)-end)) + "\n"
 	}
 
 	// Footer

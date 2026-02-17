@@ -394,6 +394,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				a.detail.width = a.width
 				a.detail.height = a.height
+				a.detail.listPosition = a.items.cursor
+				a.detail.listTotal = len(a.items.items)
 				a.screen = screenDetail
 				return a, nil
 			}
@@ -402,6 +404,31 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, cmd
 
 		case screenDetail:
+			// Next/previous item navigation (ctrl+n / ctrl+p)
+			if msg.String() == "ctrl+n" && !a.detail.HasTextInput() && a.detail.confirmAction == actionNone {
+				if a.items.cursor < len(a.items.items)-1 {
+					a.items.cursor++
+					item := a.items.selectedItem()
+					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
+					a.detail.width = a.width
+					a.detail.height = a.height
+					a.detail.listPosition = a.items.cursor
+					a.detail.listTotal = len(a.items.items)
+				}
+				return a, nil
+			}
+			if msg.String() == "ctrl+p" && !a.detail.HasTextInput() && a.detail.confirmAction == actionNone {
+				if a.items.cursor > 0 {
+					a.items.cursor--
+					item := a.items.selectedItem()
+					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
+					a.detail.width = a.width
+					a.detail.height = a.height
+					a.detail.listPosition = a.items.cursor
+					a.detail.listTotal = len(a.items.items)
+				}
+				return a, nil
+			}
 			if key.Matches(msg, keys.Back) {
 				// If detail has a pending action (confirmation, method picker),
 				// cancel it instead of navigating back
