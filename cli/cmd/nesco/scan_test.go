@@ -15,11 +15,14 @@ func TestScanCommandJSON(t *testing.T) {
 
 	var buf bytes.Buffer
 	origWriter := output.Writer
+	origQuiet := output.Quiet
 	output.Writer = &buf
 	output.JSON = true
+	output.Quiet = false
 	defer func() {
 		output.Writer = origWriter
 		output.JSON = false
+		output.Quiet = origQuiet
 	}()
 
 	origFindRoot := findProjectRoot
