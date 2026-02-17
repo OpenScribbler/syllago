@@ -3,6 +3,7 @@ package installer
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -68,6 +69,69 @@ func TestCopyContent(t *testing.T) {
 		}
 		if string(gotB) != "file b" {
 			t.Errorf("sub/b.txt content = %q, want %q", string(gotB), "file b")
+		}
+	})
+
+	t.Run("copyFile refuses symlink at destination", func(t *testing.T) {
+		tmp := t.TempDir()
+
+		// Create a source file
+		srcFile := filepath.Join(tmp, "source.txt")
+		if err := os.WriteFile(srcFile, []byte("attack payload"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		// Create a target file that we don't want overwritten
+		targetFile := filepath.Join(tmp, "important.txt")
+		if err := os.WriteFile(targetFile, []byte("important data"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		// Create a symlink at the destination pointing to the important file
+		symlinkPath := filepath.Join(tmp, "dest.txt")
+		if err := os.Symlink(targetFile, symlinkPath); err != nil {
+			t.Fatal(err)
+		}
+
+		// Attempt to copy — should fail
+		err := copyFile(srcFile, symlinkPath)
+		if err == nil {
+			t.Fatal("copyFile should refuse to follow symlink at destination")
+		}
+
+		if !strings.Contains(err.Error(), "symlink") {
+			t.Errorf("error should mention symlink, got: %v", err)
+		}
+
+		// Verify important file was not overwritten
+		data, err := os.ReadFile(targetFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(data) != "important data" {
+			t.Errorf("target file was overwritten! got: %s", data)
+		}
+	})
+
+	t.Run("copyFile works for normal files", func(t *testing.T) {
+		tmp := t.TempDir()
+
+		srcFile := filepath.Join(tmp, "source.txt")
+		if err := os.WriteFile(srcFile, []byte("test content"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		dstFile := filepath.Join(tmp, "dest.txt")
+		if err := copyFile(srcFile, dstFile); err != nil {
+			t.Fatalf("copyFile failed for normal file: %v", err)
+		}
+
+		data, err := os.ReadFile(dstFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(data) != "test content" {
+			t.Errorf("content mismatch: got %s", data)
 		}
 	})
 
