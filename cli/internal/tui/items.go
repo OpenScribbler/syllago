@@ -155,8 +155,8 @@ func (m itemsModel) buildProvCell(item catalog.ContentItem, relevant []provider.
 	for _, p := range relevant {
 		status := installer.CheckStatus(item, p, m.repoRoot)
 		if status == installer.StatusInstalled {
-			plainParts = append(plainParts, "● "+p.Name)
-			styledParts = append(styledParts, installedStyle.Render("●")+" "+p.Name)
+			plainParts = append(plainParts, "[ok] "+p.Name)
+			styledParts = append(styledParts, installedStyle.Render("[ok]")+" "+p.Name)
 		}
 	}
 	return provCell{
