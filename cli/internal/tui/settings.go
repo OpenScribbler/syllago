@@ -32,6 +32,7 @@ type settingsModel struct {
 	subItems []settingsPickerItem
 	subCur   int // cursor within sub-picker
 
+	dirty      bool // true if any setting changed since load/save
 	message    string
 	messageErr bool
 	width      int
@@ -121,6 +122,7 @@ func (m *settingsModel) activateRow() {
 		} else {
 			m.cfg.Preferences["autoUpdate"] = "true"
 		}
+		m.dirty = true
 	case 1: // providers multi-select
 		m.editMode = editProviders
 		m.subCur = 0
@@ -172,6 +174,7 @@ func (m *settingsModel) applySubPicker() {
 		}
 		m.cfg.DisabledDetectors = names
 	}
+	m.dirty = true
 }
 
 // save persists config to disk.

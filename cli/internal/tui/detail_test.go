@@ -87,6 +87,33 @@ func navigateToDetailItem(t *testing.T, ct catalog.ContentType, name string) App
 // Tab switching
 // ---------------------------------------------------------------------------
 
+func TestDetailMessageClearsOnKeypress(t *testing.T) {
+	app := navigateToDetail(t, catalog.Skills)
+	app.detail.message = "test message"
+	app.detail.messageIsErr = false
+
+	// Any non-esc key should clear the message
+	m, _ := app.Update(keyDown)
+	app = m.(App)
+	if app.detail.message != "" {
+		t.Fatal("expected message to be cleared on keypress")
+	}
+}
+
+func TestDetailMessagePreservedDuringTextInput(t *testing.T) {
+	app := navigateToDetail(t, catalog.Skills)
+	app.detail.confirmAction = actionSavePath
+	app.detail.message = "some error"
+	app.detail.messageIsErr = true
+
+	// During text input, message should NOT be cleared
+	m, _ := app.Update(keyRune('a'))
+	app = m.(App)
+	if app.detail.message != "some error" {
+		t.Fatal("message should be preserved during text input")
+	}
+}
+
 func TestDetailTabCycle(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 

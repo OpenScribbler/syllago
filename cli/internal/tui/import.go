@@ -941,6 +941,11 @@ func (m importModel) doBatchImport(paths []string) (string, error) {
 	return result, nil
 }
 
+// hasTextInput returns true if the import model has an active text input.
+func (m importModel) hasTextInput() bool {
+	return m.step == stepGitURL || m.step == stepPath || m.step == stepName
+}
+
 // isValidGitURL checks that a URL looks like a legitimate git remote.
 // Only allows secure transports (https://, ssh://, git@). Rejects insecure
 // transports (git://, http://), argument injection (-), and ext:: (command injection).

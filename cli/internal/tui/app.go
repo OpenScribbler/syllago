@@ -199,9 +199,22 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "ctrl+c" {
 			return a, tea.Quit
 		}
-		// q quits from category screen only (when not searching)
-		if key.Matches(msg, keys.Quit) && !a.search.active && a.screen == screenCategory {
-			return a, tea.Quit
+		// q quits from category, navigates back from other screens
+		if key.Matches(msg, keys.Quit) && !a.search.active {
+			if a.screen == screenCategory {
+				return a, tea.Quit
+			}
+			// Skip if text input is active
+			if a.screen == screenDetail && a.detail.HasTextInput() {
+				// fall through to normal handling
+			} else if a.screen == screenImport && a.importer.hasTextInput() {
+				// fall through to normal handling
+			} else if a.screen == screenSettings && a.settings.editMode != editNone {
+				// fall through to normal handling
+			} else {
+				// Synthesize esc key to navigate back
+				return a.Update(tea.KeyMsg{Type: tea.KeyEsc})
+			}
 		}
 
 		// Help overlay toggle (skip when search active or text input active)
@@ -437,6 +450,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if a.settings.HasPendingAction() {
 					a.settings.CancelAction()
 					return a, nil
+				}
+				if a.settings.dirty {
+					a.settings.save()
 				}
 				a.screen = screenCategory
 				return a, nil

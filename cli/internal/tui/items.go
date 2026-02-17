@@ -80,6 +80,12 @@ func (m itemsModel) Update(msg tea.Msg) (itemsModel, tea.Cmd) {
 			if m.cursor < len(m.items)-1 {
 				m.cursor++
 			}
+		case key.Matches(msg, keys.Home):
+			m.cursor = 0
+		case key.Matches(msg, keys.End):
+			if len(m.items) > 0 {
+				m.cursor = len(m.items) - 1
+			}
 		}
 	}
 	return m, nil
@@ -219,7 +225,7 @@ func (m itemsModel) View() string {
 	} else {
 		hdr += fmt.Sprintf("%-*s  %s", nameW, "Name", "Description")
 	}
-	s += helpStyle.Render(hdr) + "\n"
+	s += tableHeaderStyle.Render(hdr) + "\n"
 
 	// Separator
 	sep := strings.Repeat(" ", cursorWidth)

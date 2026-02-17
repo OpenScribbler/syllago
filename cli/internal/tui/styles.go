@@ -62,6 +62,11 @@ var (
 	countStyle = lipgloss.NewStyle().
 			Foreground(mutedColor)
 
+	// Table header (bold muted — distinct from help text)
+	tableHeaderStyle = lipgloss.NewStyle().
+				Foreground(mutedColor).
+				Bold(true)
+
 	// Search
 	searchPromptStyle = lipgloss.NewStyle().
 				Foreground(primaryColor).

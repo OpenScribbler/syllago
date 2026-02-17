@@ -45,6 +45,10 @@ func (m categoryModel) Update(msg tea.Msg) (categoryModel, tea.Cmd) {
 			if m.cursor < len(m.types)+3 {
 				m.cursor++
 			}
+		case key.Matches(msg, keys.Home):
+			m.cursor = 0
+		case key.Matches(msg, keys.End):
+			m.cursor = len(m.types) + 3
 		}
 	}
 	return m, nil

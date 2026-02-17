@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
@@ -62,6 +63,24 @@ func TestItemsBackGoesToCategory(t *testing.T) {
 	m, _ = app.Update(keyEsc) // → category
 	app = m.(App)
 	assertScreen(t, app, screenCategory)
+}
+
+func TestQFromItemsNavigatesBack(t *testing.T) {
+	app := testApp(t)
+	m, _ := app.Update(keyEnter) // -> items
+	app = m.(App)
+	assertScreen(t, app, screenItems)
+
+	m, _ = app.Update(keyRune('q'))
+	app = m.(App)
+	assertScreen(t, app, screenCategory)
+}
+
+func TestQFromDetailNavigatesBack(t *testing.T) {
+	app := navigateToDetail(t, catalog.Skills)
+	m, _ := app.Update(keyRune('q'))
+	app = m.(App)
+	assertScreen(t, app, screenItems)
 }
 
 func TestItemsEmptyList(t *testing.T) {
@@ -190,6 +209,38 @@ func TestItemsMyToolsTypeTag(t *testing.T) {
 	assertContains(t, view, "My Tools")
 	// Type tags should appear
 	assertContains(t, view, catalog.Skills.Label())
+}
+
+func TestItemsHomeEnd(t *testing.T) {
+	var items []catalog.ContentItem
+	for i := 0; i < 20; i++ {
+		items = append(items, catalog.ContentItem{
+			Name: fmt.Sprintf("item-%02d", i),
+			Type: catalog.Skills,
+			Path: fmt.Sprintf("/tmp/items/%d", i),
+		})
+	}
+	m := newItemsModel(catalog.Skills, items, nil, "/tmp")
+	m.width = 80
+	m.height = 30
+
+	// End jumps to last
+	m, _ = m.Update(keyRune('G'))
+	if m.cursor != 19 {
+		t.Fatalf("expected cursor 19 after End/G, got %d", m.cursor)
+	}
+
+	// Home jumps to first
+	m, _ = m.Update(keyRune('g'))
+	if m.cursor != 0 {
+		t.Fatalf("expected cursor 0 after Home/g, got %d", m.cursor)
+	}
+}
+
+func TestTableHeaderStyleIsBold(t *testing.T) {
+	if !tableHeaderStyle.GetBold() {
+		t.Fatal("tableHeaderStyle should be bold")
+	}
 }
 
 func TestItemsCursorIsASCII(t *testing.T) {

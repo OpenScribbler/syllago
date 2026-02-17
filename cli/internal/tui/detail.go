@@ -176,6 +176,12 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 		}
 		return m, nil
 	case tea.KeyMsg:
+		// Clear transient message on any keypress (consistent with other screens)
+		if m.message != "" && msg.Type != tea.KeyEsc && !m.HasTextInput() {
+			m.message = ""
+			m.messageIsErr = false
+		}
+
 		// When save path input is active, route keys to it
 		if m.confirmAction == actionSavePath {
 			if msg.Type == tea.KeyEsc {
