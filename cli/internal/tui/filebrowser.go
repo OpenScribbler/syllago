@@ -224,7 +224,7 @@ func (fb fileBrowserModel) visibleRows() int {
 }
 
 func (fb fileBrowserModel) View() string {
-	s := helpStyle.Render("📂 "+fb.currentDir) + "\n\n"
+	s := helpStyle.Render(fb.currentDir) + "\n\n"
 
 	if fb.errMsg != "" {
 		s += errorMsgStyle.Render(fb.errMsg) + "\n"
@@ -261,17 +261,16 @@ func (fb fileBrowserModel) View() string {
 			sel = "✓"
 		}
 
-		// Icon
-		icon := "📄"
-		if entry.isDir {
-			icon = "📁"
+		// Directory indicator: append "/" to dir names
+		name := entry.name
+		if entry.isDir && entry.name != ".." {
+			name += "/"
 		}
 		if entry.name == ".." {
-			icon = "📁"
 			sel = " " // can't select ..
 		}
 
-		line := prefix + sel + " " + icon + " " + style.Render(StripControlChars(entry.name))
+		line := prefix + sel + " " + style.Render(StripControlChars(name))
 
 		// Detection tag
 		if entry.detection != "" && entry.name != ".." {

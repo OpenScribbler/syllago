@@ -65,10 +65,26 @@ func TestFileBrowserView(t *testing.T) {
 	fb.height = 30
 
 	view := fb.View()
-	if !strings.Contains(view, "📁") {
-		t.Fatal("view should contain directory icon 📁")
-	}
 	if !strings.Contains(view, "my-skill") {
 		t.Fatal("view should show 'my-skill' directory")
 	}
+}
+
+func TestFileBrowserNoEmoji(t *testing.T) {
+	tmp := t.TempDir()
+	os.MkdirAll(filepath.Join(tmp, "subdir"), 0755)
+	os.WriteFile(filepath.Join(tmp, "file.txt"), []byte("hi"), 0644)
+
+	fb := newFileBrowser(tmp, catalog.Skills)
+	fb.width = 80
+	fb.height = 30
+
+	view := fb.View()
+
+	assertNotContains(t, view, "📁")
+	assertNotContains(t, view, "📄")
+	assertNotContains(t, view, "📂")
+
+	// Directories should have "/" suffix
+	assertContains(t, view, "subdir/")
 }
