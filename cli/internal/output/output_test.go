@@ -2,6 +2,7 @@ package output
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -90,6 +91,33 @@ func TestPrintVerbose(t *testing.T) {
 	PrintVerbose("should not appear\n")
 	if buf.Len() > 0 {
 		t.Errorf("PrintVerbose should suppress output in normal mode, got: %s", buf.String())
+	}
+}
+
+func TestSilentError(t *testing.T) {
+	baseErr := fmt.Errorf("underlying error")
+	silentErr := SilentError(baseErr)
+
+	if !IsSilentError(silentErr) {
+		t.Error("IsSilentError should return true for SilentError")
+	}
+
+	normalErr := fmt.Errorf("normal error")
+	if IsSilentError(normalErr) {
+		t.Error("IsSilentError should return false for normal errors")
+	}
+
+	// Verify the error message is preserved
+	if silentErr.Error() != baseErr.Error() {
+		t.Errorf("error message = %q, want %q", silentErr.Error(), baseErr.Error())
+	}
+
+	// Nil input should return nil
+	if SilentError(nil) != nil {
+		t.Error("SilentError(nil) should return nil")
+	}
+	if IsSilentError(nil) {
+		t.Error("IsSilentError(nil) should return false")
 	}
 }
 
