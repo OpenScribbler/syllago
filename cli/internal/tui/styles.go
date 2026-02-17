@@ -3,13 +3,14 @@ package tui
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	// Colors
-	primaryColor   = lipgloss.Color("#7C3AED") // purple
-	secondaryColor = lipgloss.Color("#06B6D4") // cyan
-	mutedColor     = lipgloss.Color("#6B7280") // gray
-	successColor   = lipgloss.Color("#10B981") // green
-	dangerColor    = lipgloss.Color("#EF4444") // red
-	warningColor   = lipgloss.Color("#F59E0B") // amber
+	// Colors — adaptive for light/dark terminal themes.
+	// Light = color on dark backgrounds, Dark = color on light backgrounds.
+	primaryColor = lipgloss.AdaptiveColor{Light: "#7C3AED", Dark: "#A78BFA"}
+	secondaryColor = lipgloss.AdaptiveColor{Light: "#06B6D4", Dark: "#22D3EE"}
+	mutedColor     = lipgloss.AdaptiveColor{Light: "#6B7280", Dark: "#9CA3AF"}
+	successColor   = lipgloss.AdaptiveColor{Light: "#10B981", Dark: "#34D399"}
+	dangerColor    = lipgloss.AdaptiveColor{Light: "#EF4444", Dark: "#F87171"}
+	warningColor   = lipgloss.AdaptiveColor{Light: "#F59E0B", Dark: "#FBBF24"}
 
 	// Title bar
 	titleStyle = lipgloss.NewStyle().
