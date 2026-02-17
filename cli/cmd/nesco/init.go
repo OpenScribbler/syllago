@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
@@ -51,12 +52,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	home, _ := os.UserHomeDir()
-	var detected []provider.Provider
-	for _, prov := range provider.AllProviders {
-		if prov.Detect != nil && prov.Detect(home) {
-			detected = append(detected, prov)
-		}
-	}
+	detected := provider.DetectedOnly(home)
 
 	if !output.JSON {
 		fmt.Printf("Detected AI tools:\n")
@@ -118,7 +114,7 @@ func installBuiltins(cmd *cobra.Command, repoRoot string, detected []provider.Pr
 	// Find items with the "builtin" tag
 	var builtins []catalog.ContentItem
 	for _, item := range cat.Items {
-		if item.Meta != nil && hasTag(item.Meta.Tags, "builtin") {
+		if item.Meta != nil && slices.Contains(item.Meta.Tags, "builtin") {
 			builtins = append(builtins, item)
 		}
 	}
@@ -175,13 +171,4 @@ func installBuiltins(cmd *cobra.Command, repoRoot string, detected []provider.Pr
 	}
 
 	return installed
-}
-
-func hasTag(tags []string, target string) bool {
-	for _, t := range tags {
-		if t == target {
-			return true
-		}
-	}
-	return false
 }
