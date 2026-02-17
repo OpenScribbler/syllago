@@ -78,6 +78,24 @@ func TestInfoProvidersUsesDisplayNames(t *testing.T) {
 	}
 }
 
+func TestInfoNotesStandaloneTypes(t *testing.T) {
+	var buf bytes.Buffer
+	origWriter := output.Writer
+	output.Writer = &buf
+	output.JSON = false
+	defer func() { output.Writer = origWriter }()
+
+	err := infoCmd.RunE(infoCmd, []string{})
+	if err != nil {
+		t.Fatalf("info failed: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "standalone") {
+		t.Error("info output should note that some types are standalone")
+	}
+}
+
 func TestInfoFormatsShowsProviders(t *testing.T) {
 	var buf bytes.Buffer
 	origWriter := output.Writer
