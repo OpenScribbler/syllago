@@ -50,6 +50,28 @@ func TestPrintErrorJSON(t *testing.T) {
 	}
 }
 
+func TestPrintQuietMode(t *testing.T) {
+	var buf bytes.Buffer
+	Writer = &buf
+	JSON = false
+	defer func() { Writer = os.Stdout; Quiet = false }()
+
+	// Normal mode
+	Quiet = false
+	Print("visible")
+	if !strings.Contains(buf.String(), "visible") {
+		t.Error("Print should output in normal mode")
+	}
+
+	// Quiet mode
+	buf.Reset()
+	Quiet = true
+	Print("hidden")
+	if buf.Len() > 0 {
+		t.Errorf("Print should suppress output in quiet mode, got: %s", buf.String())
+	}
+}
+
 func TestPrintErrorHuman(t *testing.T) {
 	var buf bytes.Buffer
 	ErrWriter = &buf

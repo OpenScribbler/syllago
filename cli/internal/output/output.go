@@ -9,11 +9,15 @@ import (
 
 var (
 	JSON      bool      // set from --json flag
+	Quiet     bool      // set from --quiet flag
 	Writer    io.Writer = os.Stdout
 	ErrWriter io.Writer = os.Stderr
 )
 
 func Print(v any) {
+	if Quiet {
+		return
+	}
 	if JSON {
 		data, _ := json.MarshalIndent(v, "", "  ")
 		fmt.Fprintln(Writer, string(data))
