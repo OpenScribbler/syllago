@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	cursorWidth = 3 // "   " or " ▸ "
+	cursorWidth = 3 // "   " or " > "
 	colGap      = 2 // spaces between columns
 )
 
@@ -260,7 +260,7 @@ func (m itemsModel) View() string {
 		prefix := "   "
 		style := itemStyle
 		if i == m.cursor {
-			prefix = " ▸ "
+			prefix = " > "
 			style = selectedItemStyle
 		}
 

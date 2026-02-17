@@ -192,6 +192,15 @@ func TestItemsMyToolsTypeTag(t *testing.T) {
 	assertContains(t, view, catalog.Skills.Label())
 }
 
+func TestItemsCursorIsASCII(t *testing.T) {
+	app := testApp(t)
+	app = pressN(app, keyEnter, 1) // → items
+	view := app.items.View()
+
+	assertContains(t, view, " > ")
+	assertNotContains(t, view, "▸")
+}
+
 func TestItemsCursorPreserved(t *testing.T) {
 	app := testApp(t)
 	m, _ := app.Update(keyEnter) // → items (Skills)

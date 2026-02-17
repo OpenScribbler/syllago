@@ -188,14 +188,14 @@ func (m updateModel) View() string {
 				prefix := "   "
 				style := itemStyle
 				if i == m.cursor {
-					prefix = " ▸ "
+					prefix = " > "
 					style = selectedItemStyle
 				}
 				s += prefix + style.Render(opt) + "\n"
 			}
 		} else {
 			s += helpStyle.Render(fmt.Sprintf("You're on v%s (latest)", m.localVersion)) + "\n\n"
-			prefix := " ▸ "
+			prefix := " > "
 			style := selectedItemStyle
 			s += prefix + style.Render("Check for updates") + "\n"
 		}

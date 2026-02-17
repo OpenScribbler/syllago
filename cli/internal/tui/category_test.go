@@ -195,3 +195,11 @@ func TestCategoryViewHelp(t *testing.T) {
 	assertContains(t, view, "navigate")
 	assertContains(t, view, "quit")
 }
+
+func TestCategoryCursorIsASCII(t *testing.T) {
+	app := testApp(t)
+	view := app.category.View()
+
+	assertContains(t, view, " > ")
+	assertNotContains(t, view, "▸")
+}

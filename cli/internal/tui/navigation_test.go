@@ -51,18 +51,18 @@ func TestItemsNavigation(t *testing.T) {
 		t.Fatalf("after Up, expected cursor 1, got %d", m.cursor)
 	}
 
-	// View renders ▸ at cursor position
+	// View renders > at cursor position
 	view := m.View()
 	lines := strings.Split(view, "\n")
 	foundCursor := false
 	for _, line := range lines {
-		if strings.Contains(line, "▸") && strings.Contains(line, "item-b") {
+		if strings.Contains(line, ">") && strings.Contains(line, "item-b") {
 			foundCursor = true
 			break
 		}
 	}
 	if !foundCursor {
-		t.Fatal("expected ▸ next to item-b (cursor=1)")
+		t.Fatal("expected > next to item-b (cursor=1)")
 	}
 }
 
