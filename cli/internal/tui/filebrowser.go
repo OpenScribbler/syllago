@@ -126,6 +126,16 @@ func (fb fileBrowserModel) SelectionCount() int {
 	return len(fb.selected)
 }
 
+// fbKeys holds file-browser-specific key bindings that don't belong in
+// the global keyMap (they only apply inside the file browser).
+var fbKeys = struct {
+	SelectAll key.Binding
+	Done      key.Binding
+}{
+	SelectAll: key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "select all")),
+	Done:      key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "done")),
+}
+
 func (fb fileBrowserModel) Update(msg tea.Msg) (fileBrowserModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -166,11 +176,7 @@ func (fb fileBrowserModel) Update(msg tea.Msg) (fileBrowserModel, tea.Cmd) {
 			}
 			entry := fb.entries[fb.cursor]
 			if entry.isDir {
-				if entry.name == ".." {
-					fb.loadDir(entry.path)
-				} else {
-					fb.loadDir(entry.path)
-				}
+				fb.loadDir(entry.path)
 			} else {
 				// Toggle selection for files
 				if fb.selected[entry.path] {
@@ -180,7 +186,7 @@ func (fb fileBrowserModel) Update(msg tea.Msg) (fileBrowserModel, tea.Cmd) {
 				}
 			}
 
-		case msg.String() == "a":
+		case key.Matches(msg, fbKeys.SelectAll):
 			// Select all non-".." entries
 			for _, entry := range fb.entries {
 				if entry.name != ".." {
@@ -188,7 +194,7 @@ func (fb fileBrowserModel) Update(msg tea.Msg) (fileBrowserModel, tea.Cmd) {
 				}
 			}
 
-		case msg.String() == "c":
+		case key.Matches(msg, fbKeys.Done):
 			// Confirm selection
 			if len(fb.selected) > 0 {
 				return fb, func() tea.Msg {
@@ -297,7 +303,7 @@ func (fb fileBrowserModel) View() string {
 	if selCount > 0 {
 		s += helpStyle.Render(fmt.Sprintf("  %d selected", selCount)) + "\n"
 	}
-	s += helpStyle.Render("up/down navigate • enter open dir • space select • a select all • c confirm • esc parent dir")
+	s += helpStyle.Render("up/down navigate • enter open dir • space select • a select all • d done • esc parent dir")
 
 	return s
 }
