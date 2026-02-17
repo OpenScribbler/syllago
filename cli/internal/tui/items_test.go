@@ -153,7 +153,7 @@ func TestItemsLocalPrefix(t *testing.T) {
 	}
 
 	view := app.View()
-	assertContains(t, view, "LOCAL")
+	assertContains(t, view, "[LOCAL]")
 }
 
 func TestItemsSearchResultsTypeTag(t *testing.T) {
