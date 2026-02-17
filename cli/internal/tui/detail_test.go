@@ -158,6 +158,47 @@ func TestDetailTabBlockedDuringAction(t *testing.T) {
 	}
 }
 
+func TestDetailShiftTabReverseCycle(t *testing.T) {
+	app := navigateToDetail(t, catalog.Skills)
+
+	// Start at Overview (0)
+	if app.detail.activeTab != tabOverview {
+		t.Fatalf("expected tabOverview, got %d", app.detail.activeTab)
+	}
+
+	// Shift+Tab: Overview -> Install (wraps backward)
+	m, _ := app.Update(keyShiftTab)
+	app = m.(App)
+	if app.detail.activeTab != tabInstall {
+		t.Fatalf("expected tabInstall after shift+tab from Overview, got %d", app.detail.activeTab)
+	}
+
+	// Shift+Tab: Install -> Files
+	m, _ = app.Update(keyShiftTab)
+	app = m.(App)
+	if app.detail.activeTab != tabFiles {
+		t.Fatalf("expected tabFiles after shift+tab from Install, got %d", app.detail.activeTab)
+	}
+
+	// Shift+Tab: Files -> Overview
+	m, _ = app.Update(keyShiftTab)
+	app = m.(App)
+	if app.detail.activeTab != tabOverview {
+		t.Fatalf("expected tabOverview after shift+tab from Files, got %d", app.detail.activeTab)
+	}
+}
+
+func TestDetailShiftTabBlockedDuringAction(t *testing.T) {
+	app := navigateToDetail(t, catalog.Skills)
+	app.detail.confirmAction = actionUninstall
+
+	m, _ := app.Update(keyShiftTab)
+	app = m.(App)
+	if app.detail.activeTab != tabOverview {
+		t.Fatal("shift+tab should be blocked during active action")
+	}
+}
+
 func TestDetailTabBlockedDuringFileView(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 	app.detail.viewingFile = true
