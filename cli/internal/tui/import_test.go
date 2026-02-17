@@ -628,3 +628,33 @@ func TestImportViewSource(t *testing.T) {
 	assertContains(t, view, "Git URL")
 	assertContains(t, view, "Create New")
 }
+
+// ---------------------------------------------------------------------------
+// Git URL validation: secure transports only
+// ---------------------------------------------------------------------------
+
+func TestIsValidGitURL(t *testing.T) {
+	tests := []struct {
+		url   string
+		valid bool
+	}{
+		{"https://github.com/user/repo.git", true},
+		{"ssh://git@github.com/user/repo.git", true},
+		{"git@github.com:user/repo.git", true},
+		{"git://github.com/user/repo.git", false}, // insecure
+		{"http://github.com/user/repo.git", false}, // insecure
+		{"ext::sh -c 'evil'", false},               // command injection
+		{"-u flag injection", false},                // argument injection
+		{"", false},
+		{"not-a-url", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.url, func(t *testing.T) {
+			got := isValidGitURL(tt.url)
+			if got != tt.valid {
+				t.Errorf("isValidGitURL(%q) = %v, want %v", tt.url, got, tt.valid)
+			}
+		})
+	}
+}
