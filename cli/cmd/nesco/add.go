@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
@@ -56,7 +57,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	typeStr, _ := cmd.Flags().GetString("type")
 	ct := catalog.ContentType(typeStr)
-	if !isValidContentType(ct) {
+	if !slices.Contains(catalog.AllContentTypes(), ct) {
 		output.PrintError(1, "invalid content type: "+typeStr,
 			"Valid types: skills, agents, prompts, mcp, apps, rules, hooks, commands")
 		return fmt.Errorf("invalid content type: %s", typeStr)
@@ -133,14 +134,5 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-func isValidContentType(ct catalog.ContentType) bool {
-	for _, valid := range catalog.AllContentTypes() {
-		if ct == valid {
-			return true
-		}
-	}
-	return false
 }
 
