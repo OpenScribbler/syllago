@@ -103,6 +103,63 @@ func TestScan(t *testing.T) {
 		}
 	})
 
+	t.Run("rejects item names with sjson special characters", func(t *testing.T) {
+		root := t.TempDir()
+
+		skillsDir := filepath.Join(root, "skills")
+
+		invalidNames := []string{
+			"foo.bar",          // dot (sjson path separator)
+			"skill*",           // asterisk (sjson wildcard)
+			"skill#hash",       // hash (sjson modifier)
+			"skill|pipe",       // pipe (sjson alternative)
+			"mcpServers.evil",  // path injection attempt
+		}
+
+		for _, name := range invalidNames {
+			writeFile(t, filepath.Join(skillsDir, name, "SKILL.md"), "# Test")
+		}
+
+		// Also create a valid skill to verify it still gets discovered
+		writeFile(t, filepath.Join(skillsDir, "valid-skill_123", "SKILL.md"), "# Valid")
+
+		cat, err := Scan(root)
+		if err != nil {
+			t.Fatalf("Scan failed: %v", err)
+		}
+
+		// Only the valid skill should be discovered
+		skills := cat.ByType(Skills)
+		if len(skills) != 1 {
+			var names []string
+			for _, s := range skills {
+				names = append(names, s.Name)
+			}
+			t.Errorf("expected 1 valid skill, got %d: %v", len(skills), names)
+		}
+		if len(skills) == 1 && skills[0].Name != "valid-skill_123" {
+			t.Errorf("expected valid-skill_123, got %s", skills[0].Name)
+		}
+	})
+
+	t.Run("IsValidItemName accepts valid names", func(t *testing.T) {
+		valid := []string{"my-skill", "skill_v2", "abc123", "CamelCase", "a"}
+		for _, name := range valid {
+			if !IsValidItemName(name) {
+				t.Errorf("IsValidItemName(%q) = false, want true", name)
+			}
+		}
+	})
+
+	t.Run("IsValidItemName rejects invalid names", func(t *testing.T) {
+		invalid := []string{"foo.bar", "a*b", "x#y", "a|b", "", "a b", "a/b"}
+		for _, name := range invalid {
+			if IsValidItemName(name) {
+				t.Errorf("IsValidItemName(%q) = true, want false", name)
+			}
+		}
+	})
+
 	t.Run("discovers multiple content types", func(t *testing.T) {
 		root := t.TempDir()
 

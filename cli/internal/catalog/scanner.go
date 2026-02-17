@@ -6,11 +6,22 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/holdenhewett/romanesco/cli/internal/metadata"
 	"github.com/tidwall/gjson"
 )
+
+// validItemNameRe matches names safe for use in sjson/gjson key paths.
+// Rejects . (path separator), * (wildcard), # (array modifier), | (pipe),
+// spaces, and slashes.
+var validItemNameRe = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
+// IsValidItemName checks if a name is safe for use as an sjson/gjson key.
+func IsValidItemName(name string) bool {
+	return validItemNameRe.MatchString(name)
+}
 
 // Scan walks the repo root and my-tools/ to discover all content items.
 // It reads one directory level at a time using os.ReadDir for controlled traversal.
@@ -65,6 +76,10 @@ func scanRoot(cat *Catalog, baseDir string, local bool) error {
 func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.DirEntry, local bool) error {
 	for _, entry := range entries {
 		if !entry.IsDir() || shouldSkip(entry.Name()) {
+			continue
+		}
+		if !IsValidItemName(entry.Name()) {
+			fmt.Fprintf(os.Stderr, "Warning: skipping item %q — name contains characters unsafe for JSON key paths\n", entry.Name())
 			continue
 		}
 
@@ -185,6 +200,10 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 
 		for _, child := range children {
 			if shouldSkip(child.Name()) {
+				continue
+			}
+			if child.IsDir() && !IsValidItemName(child.Name()) {
+				fmt.Fprintf(os.Stderr, "Warning: skipping item %q — name contains characters unsafe for JSON key paths\n", child.Name())
 				continue
 			}
 
