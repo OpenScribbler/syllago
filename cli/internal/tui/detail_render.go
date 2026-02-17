@@ -369,6 +369,24 @@ func (m detailModel) renderInstallTab() string {
 		}
 	}
 
+	// App install.sh preview
+	if m.confirmAction == actionAppScriptConfirm {
+		s += "\n" + warningStyle.Render("WARNING: This will execute a shell script") + "\n\n"
+		s += labelStyle.Render("install.sh preview (first 20 lines):") + "\n"
+		s += helpStyle.Render("───") + "\n"
+
+		for _, line := range strings.Split(StripControlChars(m.appScriptPreview), "\n") {
+			s += helpStyle.Render(line) + "\n"
+		}
+
+		s += helpStyle.Render("───") + "\n\n"
+		if len(strings.Split(m.appScriptPreview, "\n")) >= 20 {
+			s += helpStyle.Render("(script continues below...)") + "\n\n"
+		}
+		s += helpStyle.Render("Press i again to execute, esc to cancel") + "\n"
+		return s
+	}
+
 	// Confirmation prompts
 	switch m.confirmAction {
 	case actionUninstall:

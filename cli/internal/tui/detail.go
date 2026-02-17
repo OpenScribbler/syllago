@@ -45,6 +45,7 @@ const (
 	actionEnvLocation               // env var setup: choose save location
 	actionEnvSource                 // env var setup: enter source file path
 	actionPromoteConfirm            // promote confirmation
+	actionAppScriptConfirm          // app install.sh preview before execution
 )
 
 // detailTab represents the active tab on the detail screen.
@@ -77,6 +78,7 @@ type detailModel struct {
 	envVarIdx       int      // current index being prompted
 	envMethodCursor int      // 0=set up new, 1=already configured (for env-choose picker)
 	envValue        string   // temporarily holds entered value between env-value and env-location
+	appScriptPreview string  // first N lines of install.sh for preview
 	renderedBody    string   // cached glamour-rendered README body (apps only)
 	renderedReadme  string   // cached glamour-rendered README.md (all types)
 	llmPrompt       string   // loaded from LLM-PROMPT.md for local scaffolded items
@@ -395,6 +397,7 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			if m.confirmAction != actionNone {
 				m.confirmAction = actionNone
 				m.methodCursor = 0
+				m.appScriptPreview = ""
 				return m, nil
 			}
 
@@ -454,7 +457,27 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 				break
 			}
 			if m.item.Type == catalog.Apps {
-				return m, m.runAppScript()
+				if m.confirmAction == actionAppScriptConfirm {
+					// Second press — user confirmed after preview
+					m.confirmAction = actionNone
+					m.appScriptPreview = ""
+					return m, m.runAppScript()
+				}
+				// First press — show script preview before execution
+				scriptPath := filepath.Join(m.item.Path, "install.sh")
+				data, err := os.ReadFile(scriptPath)
+				if err != nil {
+					m.message = fmt.Sprintf("Cannot read install.sh: %v", err)
+					m.messageIsErr = true
+					return m, nil
+				}
+				lines := strings.Split(string(data), "\n")
+				if len(lines) > 20 {
+					lines = lines[:20]
+				}
+				m.appScriptPreview = strings.Join(lines, "\n")
+				m.confirmAction = actionAppScriptConfirm
+				return m, nil
 			}
 			switch m.confirmAction {
 			case actionChooseMethod:
@@ -800,6 +823,7 @@ func (m *detailModel) CancelAction() {
 	}
 	m.confirmAction = actionNone
 	m.methodCursor = 0
+	m.appScriptPreview = ""
 	m.saveInput.Blur()
 	m.envInput.Blur()
 	m.envVarNames = nil
