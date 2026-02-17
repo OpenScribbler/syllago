@@ -121,7 +121,7 @@ func (m categoryModel) View() string {
 	}
 
 	if m.message != "" {
-		s += successMsgStyle.Render(m.message) + "\n"
+		s += successMsgStyle.Render("Done: "+m.message) + "\n"
 	}
 
 	// Show empty catalog guidance
