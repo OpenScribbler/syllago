@@ -121,6 +121,27 @@ func TestSilentError(t *testing.T) {
 	}
 }
 
+func TestExitCodeConstants(t *testing.T) {
+	tests := []struct {
+		name string
+		code int
+		want int
+	}{
+		{"success", ExitSuccess, 0},
+		{"general error", ExitError, 1},
+		{"usage error", ExitUsage, 2},
+		{"drift detected", ExitDrift, 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.code != tt.want {
+				t.Errorf("%s = %d, want %d", tt.name, tt.code, tt.want)
+			}
+		})
+	}
+}
+
 func TestPrintErrorHuman(t *testing.T) {
 	var buf bytes.Buffer
 	ErrWriter = &buf

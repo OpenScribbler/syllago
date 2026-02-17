@@ -7,6 +7,14 @@ import (
 	"os"
 )
 
+// Exit codes for consistent scripting behavior.
+const (
+	ExitSuccess = 0 // Success
+	ExitError   = 1 // General error
+	ExitUsage   = 2 // Usage error (invalid arguments, missing config, etc.)
+	ExitDrift   = 3 // Drift detected (drift command only)
+)
+
 var (
 	JSON      bool      // set from --json flag
 	Quiet     bool      // set from --quiet flag
