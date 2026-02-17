@@ -176,6 +176,50 @@ func TestVerboseFlag(t *testing.T) {
 	}
 }
 
+func TestVersionCommandDevBuild(t *testing.T) {
+	tests := []struct {
+		name        string
+		versionVar  string
+		wantContain string
+	}{
+		{
+			name:        "with version set",
+			versionVar:  "1.2.3",
+			wantContain: "1.2.3",
+		},
+		{
+			name:        "dev build (empty version)",
+			versionVar:  "",
+			wantContain: "(dev build)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldVersion := version
+			version = tt.versionVar
+			defer func() { version = oldVersion }()
+
+			var buf bytes.Buffer
+			rootCmd.SetOut(&buf)
+			rootCmd.SetArgs([]string{"version"})
+			defer func() {
+				rootCmd.SetOut(nil)
+				rootCmd.SetArgs(nil)
+			}()
+
+			if err := rootCmd.Execute(); err != nil {
+				t.Fatalf("version command failed: %v", err)
+			}
+
+			out := buf.String()
+			if !strings.Contains(out, tt.wantContain) {
+				t.Errorf("version output = %q, want to contain %q", out, tt.wantContain)
+			}
+		})
+	}
+}
+
 func TestGlobalFlags(t *testing.T) {
 	flags := rootCmd.PersistentFlags()
 	if flags.Lookup("json") == nil {

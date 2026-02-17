@@ -66,7 +66,11 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print nesco version",
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Println(version)
+		v := version
+		if v == "" {
+			v = "(dev build)"
+		}
+		cmd.Println(v)
 	},
 }
 
