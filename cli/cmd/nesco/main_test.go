@@ -26,6 +26,29 @@ func TestRootCommandHelp(t *testing.T) {
 	}
 }
 
+func TestHelpTextMentionsTUI(t *testing.T) {
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	rootCmd.SetArgs([]string{"--help"})
+	defer func() {
+		rootCmd.SetOut(nil)
+		rootCmd.SetArgs(nil)
+	}()
+
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("--help failed: %v", err)
+	}
+	out := buf.String()
+
+	if !strings.Contains(out, "interactive") && !strings.Contains(out, "TUI") {
+		t.Error("help text should mention interactive/TUI mode")
+	}
+
+	if !strings.Contains(out, "without arguments") && !strings.Contains(out, "no arguments") {
+		t.Error("help text should explain running without arguments")
+	}
+}
+
 func TestVersionCommand(t *testing.T) {
 	var buf bytes.Buffer
 	rootCmd.SetOut(&buf)
