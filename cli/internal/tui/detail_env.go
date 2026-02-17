@@ -64,7 +64,10 @@ func (m *detailModel) saveEnvToFile(name, value, filePath string) error {
 	}
 	defer f.Close()
 
-	line := fmt.Sprintf("%s=\"%s\"\n", name, strings.ReplaceAll(value, "\"", "\\\""))
+	// Use single quotes to prevent shell expansion ($, `, etc.)
+	// Escape embedded single quotes with the '\'' idiom
+	escapedValue := strings.ReplaceAll(value, "'", "'\\''")
+	line := fmt.Sprintf("%s='%s'\n", name, escapedValue)
 	_, err = f.WriteString(line)
 	return err
 }
