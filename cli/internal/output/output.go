@@ -1,6 +1,7 @@
 package output
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,6 +23,37 @@ var (
 	Writer    io.Writer = os.Stdout
 	ErrWriter io.Writer = os.Stderr
 )
+
+// SetForTest saves current global state and returns test-safe writers.
+// It registers a cleanup function via t.Cleanup to restore all globals
+// after the test completes (even if the test panics).
+//
+// Returns (stdout, stderr) buffers that are also set as Writer/ErrWriter.
+func SetForTest(t interface{ Cleanup(func()) }) (stdout, stderr *bytes.Buffer) {
+	savedJSON := JSON
+	savedQuiet := Quiet
+	savedVerbose := Verbose
+	savedWriter := Writer
+	savedErrWriter := ErrWriter
+
+	t.Cleanup(func() {
+		JSON = savedJSON
+		Quiet = savedQuiet
+		Verbose = savedVerbose
+		Writer = savedWriter
+		ErrWriter = savedErrWriter
+	})
+
+	JSON = false
+	Quiet = false
+	Verbose = false
+	stdout = &bytes.Buffer{}
+	stderr = &bytes.Buffer{}
+	Writer = stdout
+	ErrWriter = stderr
+
+	return stdout, stderr
+}
 
 func Print(v any) {
 	if Quiet {
