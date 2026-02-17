@@ -62,7 +62,11 @@ var configAddCmd = &cobra.Command{
 			}
 		}
 		cfg.Providers = append(cfg.Providers, slug)
-		return config.Save(root, cfg)
+		if err := config.Save(root, cfg); err != nil {
+			return err
+		}
+		fmt.Fprintf(output.Writer, "Added provider: %s\n", slug)
+		return nil
 	},
 }
 
@@ -93,7 +97,11 @@ var configRemoveCmd = &cobra.Command{
 			return fmt.Errorf("provider %q not found in config", slug)
 		}
 		cfg.Providers = filtered
-		return config.Save(root, cfg)
+		if err := config.Save(root, cfg); err != nil {
+			return err
+		}
+		fmt.Fprintf(output.Writer, "Removed provider: %s\n", slug)
+		return nil
 	},
 }
 

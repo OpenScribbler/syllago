@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/holdenhewett/romanesco/cli/internal/config"
+	"github.com/holdenhewett/romanesco/cli/internal/output"
 )
 
 func TestConfigAddAndRemove(t *testing.T) {
@@ -63,5 +66,53 @@ func TestConfigRemoveNotFound(t *testing.T) {
 	err := configRemoveCmd.RunE(configRemoveCmd, []string{"nonexistent"})
 	if err == nil {
 		t.Error("removing nonexistent provider should fail")
+	}
+}
+
+func TestConfigAddConfirmation(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	config.Save(tmp, &config.Config{Providers: []string{}})
+
+	origDir, _ := os.Getwd()
+	os.Chdir(tmp)
+	defer os.Chdir(origDir)
+
+	var stdout bytes.Buffer
+	origWriter := output.Writer
+	output.Writer = &stdout
+	defer func() { output.Writer = origWriter }()
+
+	if err := configAddCmd.RunE(configAddCmd, []string{"cursor"}); err != nil {
+		t.Fatalf("config add: %v", err)
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "Added") || !strings.Contains(out, "cursor") {
+		t.Errorf("expected confirmation message, got: %s", out)
+	}
+}
+
+func TestConfigRemoveConfirmation(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	config.Save(tmp, &config.Config{Providers: []string{"claude-code"}})
+
+	origDir, _ := os.Getwd()
+	os.Chdir(tmp)
+	defer os.Chdir(origDir)
+
+	var stdout bytes.Buffer
+	origWriter := output.Writer
+	output.Writer = &stdout
+	defer func() { output.Writer = origWriter }()
+
+	if err := configRemoveCmd.RunE(configRemoveCmd, []string{"claude-code"}); err != nil {
+		t.Fatalf("config remove: %v", err)
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "Removed") || !strings.Contains(out, "claude-code") {
+		t.Errorf("expected confirmation message, got: %s", out)
 	}
 }
