@@ -361,6 +361,54 @@ func TestParseVersion(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Spinner / Loading
+// ---------------------------------------------------------------------------
+
+func TestUpdateSpinnerDuringPull(t *testing.T) {
+	app := navigateToUpdateWithRemote(t)
+	app.updater.step = stepUpdatePull
+	app.updater.loading = true
+
+	view := app.View()
+	assertContains(t, view, "Updating nesco")
+}
+
+func TestUpdateSpinnerDuringFetch(t *testing.T) {
+	app := navigateToUpdateWithRemote(t)
+	app.updater.loading = true
+
+	view := app.View()
+	assertContains(t, view, "Fetching update info")
+}
+
+func TestUpdateLoadingClearedOnPreviewMsg(t *testing.T) {
+	app := navigateToUpdateWithRemote(t)
+	app.updater.loading = true
+
+	msg := updatePreviewMsg{log: "commit1", stat: "file.go | 1 +"}
+	m, _ := app.Update(msg)
+	app = m.(App)
+
+	if app.updater.loading {
+		t.Fatal("loading should be false after preview msg")
+	}
+}
+
+func TestUpdateLoadingClearedOnPullMsg(t *testing.T) {
+	app := navigateToUpdateWithRemote(t)
+	app.updater.step = stepUpdatePull
+	app.updater.loading = true
+
+	msg := updatePullMsg{output: "Already up to date."}
+	m, _ := app.Update(msg)
+	app = m.(App)
+
+	if app.updater.loading {
+		t.Fatal("loading should be false after pull msg")
+	}
+}
+
+// ---------------------------------------------------------------------------
 // View rendering
 // ---------------------------------------------------------------------------
 

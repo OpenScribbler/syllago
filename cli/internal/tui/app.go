@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
@@ -162,6 +163,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return a, nil
+
+	case spinner.TickMsg:
+		if a.screen == screenUpdate {
+			var cmd tea.Cmd
+			a.updater, cmd = a.updater.Update(msg)
+			return a, cmd
+		}
 
 	case updatePreviewMsg:
 		if a.screen == screenUpdate {
