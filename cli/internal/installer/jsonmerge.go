@@ -1,6 +1,8 @@
 package installer
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -17,12 +19,33 @@ func readJSONFile(path string) ([]byte, error) {
 	return data, err
 }
 
-// writeJSONFile writes data to a JSON file, creating parent dirs if needed.
+// writeJSONFile writes data to a JSON file atomically using temp-then-rename.
+// The target file is never left in a partially-written state.
 func writeJSONFile(path string, data []byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("creating directory: %w", err)
 	}
-	return os.WriteFile(path, data, 0644)
+
+	// Generate random suffix for temp file
+	suffix := make([]byte, 8)
+	if _, err := rand.Read(suffix); err != nil {
+		return fmt.Errorf("generating temp suffix: %w", err)
+	}
+	tempPath := path + ".tmp." + hex.EncodeToString(suffix)
+
+	// Write to temp file
+	if err := os.WriteFile(tempPath, data, 0644); err != nil {
+		return fmt.Errorf("writing temp file: %w", err)
+	}
+
+	// Atomic rename (on POSIX, rename within same filesystem is atomic)
+	if err := os.Rename(tempPath, path); err != nil {
+		os.Remove(tempPath)
+		return fmt.Errorf("renaming temp file: %w", err)
+	}
+
+	return nil
 }
 
 // backupFile creates a .bak copy of a file before modifying it.
