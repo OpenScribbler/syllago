@@ -179,3 +179,14 @@ func TestImportBrowseFlow(t *testing.T) {
 		t.Fatalf("expected stepBrowseStart, got %d", app.importer.step)
 	}
 }
+
+func TestTooSmallMessageNoUnicode(t *testing.T) {
+	app := testApp(t)
+	app.tooSmall = true
+
+	view := app.View()
+	assertContains(t, view, "Terminal too small")
+	// Should use ASCII "x" not Unicode "×" for dimensions
+	assertContains(t, view, "40x10")
+	assertNotContains(t, view, "×")
+}

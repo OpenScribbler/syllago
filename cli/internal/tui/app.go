@@ -386,7 +386,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (a App) View() string {
 	if a.tooSmall {
-		return "\n" + helpStyle.Render("Terminal too small. Resize to at least 40×10.") + "\n"
+		return "\n" + warningStyle.Render("Terminal too small. Resize to at least 40x10.") + "\n"
 	}
 
 	var content string
