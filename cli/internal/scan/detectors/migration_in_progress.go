@@ -2,6 +2,7 @@ package detectors
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -71,8 +72,8 @@ func detectJsTsMigration(root string) *model.TextSection {
 
 	var jsCount, tsCount int
 
-	filepath.Walk(scanRoot, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+	filepath.WalkDir(scanRoot, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
 			return nil
 		}
 		ext := filepath.Ext(path)
@@ -124,8 +125,8 @@ func detectReactComponentMigration(root string) *model.TextSection {
 
 	var classCount, functionCount int
 
-	filepath.Walk(scanRoot, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+	filepath.WalkDir(scanRoot, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
 			return nil
 		}
 		ext := filepath.Ext(path)

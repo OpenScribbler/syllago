@@ -2,6 +2,7 @@ package detectors
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -104,18 +105,18 @@ var sourceExtensions = map[string]bool{
 func findReferencedEnvVars(root string) map[string]bool {
 	vars := make(map[string]bool)
 
-	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		ext := filepath.Ext(info.Name())
+		ext := filepath.Ext(d.Name())
 		if !sourceExtensions[ext] {
 			return nil
 		}

@@ -3,6 +3,7 @@ package detectors
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,12 +31,12 @@ func (d DeprecatedPattern) Detect(root string) ([]model.Section, error) {
 	var details []string
 
 	// Check for legacy/ directories
-	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
 				return filepath.SkipDir
 			}
@@ -49,7 +50,7 @@ func (d DeprecatedPattern) Detect(root string) ([]model.Section, error) {
 		}
 
 		// Only scan text-like files by extension
-		if !isScannable(info.Name()) {
+		if !isScannable(d.Name()) {
 			return nil
 		}
 

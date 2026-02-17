@@ -2,6 +2,7 @@ package detectors
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -33,18 +34,18 @@ func (d GoNilInterface) Detect(root string) ([]model.Section, error) {
 
 	var findings []string
 
-	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if strings.HasPrefix(name, ".") || name == "vendor" || name == "node_modules" {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if !strings.HasSuffix(info.Name(), ".go") || strings.HasSuffix(info.Name(), "_test.go") {
+		if !strings.HasSuffix(d.Name(), ".go") || strings.HasSuffix(d.Name(), "_test.go") {
 			return nil
 		}
 

@@ -2,6 +2,7 @@ package detectors
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -77,8 +78,8 @@ func (d WrapperBypass) Detect(root string) ([]model.Section, error) {
 				continue
 			}
 
-			filepath.Walk(candidate, func(path string, info os.FileInfo, err error) error {
-				if err != nil || info.IsDir() {
+			filepath.WalkDir(candidate, func(path string, d fs.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
 					return nil
 				}
 				ext := filepath.Ext(path)

@@ -2,6 +2,7 @@ package detectors
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,18 +26,18 @@ func (d GoCGO) Detect(root string) ([]model.Section, error) {
 
 	var cgoFiles []string
 
-	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if strings.HasPrefix(name, ".") || name == "vendor" || name == "node_modules" {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if !strings.HasSuffix(info.Name(), ".go") {
+		if !strings.HasSuffix(d.Name(), ".go") {
 			return nil
 		}
 

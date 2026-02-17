@@ -2,6 +2,7 @@ package detectors
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -62,8 +63,8 @@ func (d ModuleConflict) Detect(root string) ([]model.Section, error) {
 
 	var cjsFiles, esmFiles []string
 
-	filepath.Walk(scanRoot, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+	filepath.WalkDir(scanRoot, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
 			return nil
 		}
 

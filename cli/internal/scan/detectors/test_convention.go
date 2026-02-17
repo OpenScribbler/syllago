@@ -2,6 +2,7 @@ package detectors
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,18 +25,18 @@ func (d TestConvention) Detect(root string) ([]model.Section, error) {
 
 	var testCount, specCount int
 
-	filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+	filepath.WalkDir(srcDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil // skip unreadable entries
 		}
-		if info.IsDir() {
-			if strings.HasPrefix(info.Name(), ".") {
+		if d.IsDir() {
+			if strings.HasPrefix(d.Name(), ".") {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
-		name := info.Name()
+		name := d.Name()
 		if isTestFile(name) {
 			testCount++
 		} else if isSpecFile(name) {
