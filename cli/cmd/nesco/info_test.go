@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/holdenhewett/romanesco/cli/internal/output"
@@ -35,6 +36,45 @@ func TestInfoJSON(t *testing.T) {
 	}
 	if _, ok := manifest["providers"]; !ok {
 		t.Error("manifest missing 'providers' key")
+	}
+}
+
+func TestInfoProvidersUsesDisplayNames(t *testing.T) {
+	var buf bytes.Buffer
+	origWriter := output.Writer
+	output.Writer = &buf
+	output.JSON = true
+	defer func() {
+		output.JSON = false
+		output.Writer = origWriter
+	}()
+
+	err := infoProvidersCmd.RunE(infoProvidersCmd, []string{})
+	if err != nil {
+		t.Fatalf("info providers failed: %v", err)
+	}
+
+	var infos []map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &infos); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	// Find a provider with supported types and verify they use Label() (title case)
+	for _, info := range infos {
+		types, ok := info["supportedTypes"].([]any)
+		if !ok || len(types) == 0 {
+			continue
+		}
+		for _, typ := range types {
+			s, ok := typ.(string)
+			if !ok {
+				continue
+			}
+			// Labels should be title case (e.g., "Skills" not "skills")
+			if s != "" && strings.ToLower(s) == s {
+				t.Errorf("supportedTypes should use display names (title case), got: %q", s)
+			}
+		}
 	}
 }
 

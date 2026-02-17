@@ -56,7 +56,7 @@ var infoProvidersCmd = &cobra.Command{
 			if p.SupportsType != nil {
 				for _, ct := range catalog.AllContentTypes() {
 					if p.SupportsType(ct) {
-						types = append(types, string(ct))
+						types = append(types, ct.Label())
 					}
 				}
 			}
