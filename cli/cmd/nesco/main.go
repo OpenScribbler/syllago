@@ -16,6 +16,8 @@ import (
 	"github.com/holdenhewett/romanesco/cli/internal/scan/detectors"
 	"github.com/holdenhewett/romanesco/cli/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
 )
 
@@ -40,6 +42,14 @@ func init() {
 	rootCmd.PersistentFlags().Bool("no-color", false, "Disable color output")
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "Suppress non-essential output")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Verbose output")
+
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		noColor, _ := cmd.Flags().GetBool("no-color")
+		if noColor || os.Getenv("NO_COLOR") != "" || os.Getenv("TERM") == "dumb" {
+			lipgloss.SetColorProfile(termenv.Ascii)
+		}
+		return nil
+	}
 
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(backfillCmd)
