@@ -144,7 +144,7 @@ func printExecuteError(err error) {
 func runTUI(cmd *cobra.Command, args []string) error {
 	root, err := findContentRepoRoot()
 	if err != nil {
-		return fmt.Errorf("could not find romanesco repo: %w", err)
+		return fmt.Errorf("could not find romanesco content repository.\n\nTo get started:\n  nesco init    Create a new content repo in the current directory\n\nFor more info: nesco --help")
 	}
 
 	cat, err := catalog.Scan(root)
@@ -209,12 +209,14 @@ func findContentRepoRoot() (string, error) {
 		}
 	}
 
-	cwd, _ := os.Getwd()
-	return "", fmt.Errorf("could not find repo root (no skills/ directory found above %s or binary location)", cwd)
+	return "", fmt.Errorf("could not find romanesco content repository")
 }
 
 // findSkillsDir walks up from dir looking for a "skills/" directory.
-func findSkillsDir(dir string) (string, error) {
+// Declared as a var so tests can override it.
+var findSkillsDir = findSkillsDirImpl
+
+func findSkillsDirImpl(dir string) (string, error) {
 	for {
 		if _, err := os.Stat(filepath.Join(dir, "skills")); err == nil {
 			return dir, nil

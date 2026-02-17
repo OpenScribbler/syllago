@@ -241,6 +241,37 @@ func TestPrintExecuteError(t *testing.T) {
 	}
 }
 
+func TestTUIErrorMessageContentRepoNotFound(t *testing.T) {
+	// Override findSkillsDir to force error
+	oldFindSkills := findSkillsDir
+	findSkillsDir = func(dir string) (string, error) {
+		return "", fmt.Errorf("not found")
+	}
+	defer func() { findSkillsDir = oldFindSkills }()
+
+	// Clear repoRoot to ensure it's not used
+	oldRepoRoot := repoRoot
+	repoRoot = ""
+	defer func() { repoRoot = oldRepoRoot }()
+
+	err := runTUI(rootCmd, []string{})
+	if err == nil {
+		t.Fatal("expected error when content repo not found")
+	}
+
+	errMsg := err.Error()
+
+	// Should not mention internal implementation details
+	if strings.Contains(errMsg, "skills/") {
+		t.Error("error message should not mention internal 'skills/' directory")
+	}
+
+	// Should provide helpful guidance
+	if !strings.Contains(errMsg, "romanesco") {
+		t.Error("error message should mention 'romanesco'")
+	}
+}
+
 func TestGlobalFlags(t *testing.T) {
 	flags := rootCmd.PersistentFlags()
 	if flags.Lookup("json") == nil {
