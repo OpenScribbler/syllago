@@ -27,7 +27,11 @@ var (
 
 	selectedItemStyle = lipgloss.NewStyle().
 				Foreground(secondaryColor).
-				Bold(true)
+				Background(lipgloss.AdaptiveColor{
+				Light: "#1E293B", // dark blue-gray for dark terminals
+				Dark:  "#E2E8F0", // light gray for light terminals
+			}).
+			Bold(true)
 
 	// Status indicators
 	installedStyle = lipgloss.NewStyle().
