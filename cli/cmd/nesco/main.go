@@ -133,7 +133,7 @@ func main() {
 	}
 	if err := rootCmd.Execute(); err != nil {
 		printExecuteError(err)
-		os.Exit(1)
+		os.Exit(output.ExitError)
 	}
 }
 
