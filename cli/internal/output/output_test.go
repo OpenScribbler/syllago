@@ -72,6 +72,27 @@ func TestPrintQuietMode(t *testing.T) {
 	}
 }
 
+func TestPrintVerbose(t *testing.T) {
+	var buf bytes.Buffer
+	Writer = &buf
+	defer func() { Writer = os.Stdout; Verbose = false }()
+
+	// Verbose mode
+	Verbose = true
+	PrintVerbose("debug info: %s\n", "details")
+	if !strings.Contains(buf.String(), "debug info: details") {
+		t.Error("PrintVerbose should output in verbose mode")
+	}
+
+	// Normal mode
+	buf.Reset()
+	Verbose = false
+	PrintVerbose("should not appear\n")
+	if buf.Len() > 0 {
+		t.Errorf("PrintVerbose should suppress output in normal mode, got: %s", buf.String())
+	}
+}
+
 func TestPrintErrorHuman(t *testing.T) {
 	var buf bytes.Buffer
 	ErrWriter = &buf
