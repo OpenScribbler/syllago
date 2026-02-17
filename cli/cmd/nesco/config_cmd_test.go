@@ -69,6 +69,67 @@ func TestConfigRemoveNotFound(t *testing.T) {
 	}
 }
 
+func TestConfigAddUnknownProviderWarning(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	config.Save(tmp, &config.Config{Providers: []string{}})
+
+	origDir, _ := os.Getwd()
+	os.Chdir(tmp)
+	defer os.Chdir(origDir)
+
+	var stderr bytes.Buffer
+	origErr := output.ErrWriter
+	output.ErrWriter = &stderr
+	defer func() { output.ErrWriter = origErr }()
+
+	// Redirect stdout too to avoid noise
+	var stdout bytes.Buffer
+	origWriter := output.Writer
+	output.Writer = &stdout
+	defer func() { output.Writer = origWriter }()
+
+	err := configAddCmd.RunE(configAddCmd, []string{"xyz123"})
+	if err != nil {
+		t.Fatalf("config add should succeed even with unknown slug: %v", err)
+	}
+
+	stderrStr := stderr.String()
+	if !strings.Contains(stderrStr, "Warning") || !strings.Contains(stderrStr, "unknown") {
+		t.Errorf("expected warning about unknown provider slug, got stderr: %q", stderrStr)
+	}
+}
+
+func TestConfigAddKnownProviderNoWarning(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	config.Save(tmp, &config.Config{Providers: []string{}})
+
+	origDir, _ := os.Getwd()
+	os.Chdir(tmp)
+	defer os.Chdir(origDir)
+
+	var stderr bytes.Buffer
+	origErr := output.ErrWriter
+	output.ErrWriter = &stderr
+	defer func() { output.ErrWriter = origErr }()
+
+	var stdout bytes.Buffer
+	origWriter := output.Writer
+	output.Writer = &stdout
+	defer func() { output.Writer = origWriter }()
+
+	err := configAddCmd.RunE(configAddCmd, []string{"cursor"})
+	if err != nil {
+		t.Fatalf("config add failed: %v", err)
+	}
+
+	stderrStr := stderr.String()
+	if strings.Contains(stderrStr, "Warning") {
+		t.Errorf("should not warn for known provider, got: %s", stderrStr)
+	}
+}
+
 func TestConfigAddConfirmation(t *testing.T) {
 	tmp := t.TempDir()
 	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
