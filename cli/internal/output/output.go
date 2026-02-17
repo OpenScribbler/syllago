@@ -10,6 +10,7 @@ import (
 var (
 	JSON      bool      // set from --json flag
 	Quiet     bool      // set from --quiet flag
+	Verbose   bool      // set from --verbose flag
 	Writer    io.Writer = os.Stdout
 	ErrWriter io.Writer = os.Stderr
 )
@@ -24,6 +25,14 @@ func Print(v any) {
 	} else {
 		fmt.Fprintln(Writer, v)
 	}
+}
+
+// PrintVerbose prints only when Verbose is true.
+func PrintVerbose(format string, args ...any) {
+	if !Verbose {
+		return
+	}
+	fmt.Fprintf(Writer, format, args...)
 }
 
 type ErrorResponse struct {
