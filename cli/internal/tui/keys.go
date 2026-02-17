@@ -18,7 +18,9 @@ type keyMap struct {
 	Promote   key.Binding
 	Tab      key.Binding
 	ShiftTab key.Binding
-	Help     key.Binding
+	Help key.Binding
+	Home key.Binding
+	End  key.Binding
 }
 
 var keys = keyMap{
@@ -85,5 +87,13 @@ var keys = keyMap{
 	Help: key.NewBinding(
 		key.WithKeys("?"),
 		key.WithHelp("?", "help"),
+	),
+	Home: key.NewBinding(
+		key.WithKeys("home", "g"),
+		key.WithHelp("home/g", "top"),
+	),
+	End: key.NewBinding(
+		key.WithKeys("end", "G"),
+		key.WithHelp("end/G", "bottom"),
 	),
 }
