@@ -2,6 +2,7 @@ package detectors
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -136,18 +137,18 @@ var cfgFeatureRe = regexp.MustCompile(`#\[cfg\(feature\s*=\s*"([^"]+)"\)\]`)
 func findCfgFeatures(root string) map[string]bool {
 	found := make(map[string]bool)
 
-	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if strings.HasPrefix(name, ".") || name == "target" {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if filepath.Ext(info.Name()) != ".rs" {
+		if filepath.Ext(d.Name()) != ".rs" {
 			return nil
 		}
 

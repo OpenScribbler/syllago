@@ -2,6 +2,7 @@ package promote
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -133,7 +134,7 @@ func sharedPath(repoRoot string, item catalog.ContentItem) string {
 
 // copyForPromote copies content from local to shared, excluding scaffold artifacts.
 func copyForPromote(src, dst string) error {
-	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -147,7 +148,7 @@ func copyForPromote(src, dst string) error {
 			return nil
 		}
 		targetPath := filepath.Join(dst, relPath)
-		if info.IsDir() {
+		if d.IsDir() {
 			return os.MkdirAll(targetPath, 0755)
 		}
 		return installer.CopyContent(path, targetPath)

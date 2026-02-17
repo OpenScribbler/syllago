@@ -3,6 +3,7 @@ package detectors
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -51,19 +52,19 @@ func (d PathAliasGap) Detect(root string) ([]model.Section, error) {
 	// Walk .ts/.tsx files counting alias vs relative imports
 	var aliasImports, relativeImports int
 
-	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "dist" || name == "build" {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
-		ext := filepath.Ext(info.Name())
+		ext := filepath.Ext(d.Name())
 		if ext != ".ts" && ext != ".tsx" {
 			return nil
 		}

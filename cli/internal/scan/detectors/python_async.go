@@ -3,6 +3,7 @@ package detectors
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,18 +57,18 @@ func (d PythonAsync) Detect(root string) ([]model.Section, error) {
 	}
 	var findings []finding
 
-	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
-		if info.IsDir() {
-			name := info.Name()
+		if d.IsDir() {
+			name := d.Name()
 			if shouldSkipDir(name) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if filepath.Ext(info.Name()) != ".py" {
+		if filepath.Ext(d.Name()) != ".py" {
 			return nil
 		}
 

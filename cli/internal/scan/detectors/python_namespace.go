@@ -2,6 +2,7 @@ package detectors
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,17 +49,17 @@ func (d PythonNamespace) Detect(root string) ([]model.Section, error) {
 	// Collect directories that contain .py files.
 	dirsWithPy := make(map[string]bool)
 
-	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
-		if info.IsDir() {
-			if shouldSkipDir(info.Name()) {
+		if d.IsDir() {
+			if shouldSkipDir(d.Name()) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if filepath.Ext(info.Name()) == ".py" {
+		if filepath.Ext(d.Name()) == ".py" {
 			dir := filepath.Dir(path)
 			dirsWithPy[dir] = true
 		}

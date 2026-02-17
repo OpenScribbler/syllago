@@ -3,6 +3,7 @@ package installer
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -51,14 +52,14 @@ func copyFile(src, dst string) error {
 }
 
 func copyDir(src, dst string) error {
-	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// Skip symlinks in source tree to prevent information disclosure
 		// from untrusted content repositories.
-		if info.Mode()&os.ModeSymlink != 0 {
+		if d.Type()&os.ModeSymlink != 0 {
 			return nil
 		}
 
@@ -68,7 +69,7 @@ func copyDir(src, dst string) error {
 		}
 		targetPath := filepath.Join(dst, relPath)
 
-		if info.IsDir() {
+		if d.IsDir() {
 			return os.MkdirAll(targetPath, 0755)
 		}
 		return copyFile(path, targetPath)
