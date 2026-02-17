@@ -1007,13 +1007,13 @@ func (m importModel) viewValidate() string {
 		}
 
 		// Inclusion checkbox
-		check := "✓"
+		check := "x"
 		if !vi.included {
 			check = " "
 		}
 
 		// Status indicator
-		status := installedStyle.Render("✓ " + vi.detection)
+		status := installedStyle.Render("[x] " + vi.detection)
 		if vi.isWarning {
 			status = errorMsgStyle.Render("[!] No recognized content")
 		}
