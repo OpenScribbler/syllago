@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
 	"github.com/holdenhewett/romanesco/cli/internal/output"
@@ -93,9 +94,10 @@ var infoFormatsCmd = &cobra.Command{
 		if output.JSON {
 			output.Print(formats)
 		} else {
-			fmt.Println("Supported formats:")
+			fmt.Fprintln(output.Writer, "Supported formats:")
 			for _, f := range formats {
-				fmt.Printf("  %s (%s)\n", f.Format, f.Extension)
+				provList := strings.Join(f.Providers, ", ")
+				fmt.Fprintf(output.Writer, "  %s (%s) — used by: %s\n", f.Format, f.Extension, provList)
 			}
 		}
 		return nil
