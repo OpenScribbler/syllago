@@ -534,9 +534,37 @@ func (m importModel) updateConfirm(msg tea.KeyMsg) (importModel, tea.Cmd) {
 	return m, nil
 }
 
+// stepLabel returns a human-readable step indicator for the import flow.
+func (m importModel) stepLabel() string {
+	switch m.step {
+	case stepSource:
+		return "Step 1 of 4: Source"
+	case stepType:
+		return "Step 2 of 4: Content Type"
+	case stepProvider:
+		return "Step 2b of 4: Provider"
+	case stepBrowseStart, stepBrowse, stepPath:
+		return "Step 3 of 4: Browse"
+	case stepValidate:
+		return "Step 3b of 4: Review"
+	case stepGitURL:
+		return "Step 2 of 3: Repository URL"
+	case stepGitPick:
+		return "Step 3 of 3: Select Item"
+	case stepName:
+		return "Step 2 of 3: Name"
+	case stepConfirm:
+		return "Confirm"
+	}
+	return ""
+}
+
 // View renders the current step's UI.
 func (m importModel) View() string {
-	s := titleStyle.Render("Import Content") + "\n"
+	s := helpStyle.Render("nesco >") + " " + titleStyle.Render("Import Content") + "\n"
+	if label := m.stepLabel(); label != "" {
+		s += helpStyle.Render(label) + "\n"
+	}
 
 	switch m.step {
 	case stepSource:

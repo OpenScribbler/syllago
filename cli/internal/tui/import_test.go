@@ -629,6 +629,18 @@ func TestImportViewSource(t *testing.T) {
 	assertContains(t, view, "Create New")
 }
 
+func TestImportShowsStepIndicator(t *testing.T) {
+	app := navigateToImport(t)
+	view := app.View()
+	assertContains(t, view, "Step 1")
+}
+
+func TestImportShowsBreadcrumb(t *testing.T) {
+	app := navigateToImport(t)
+	view := app.View()
+	assertContains(t, view, "nesco >")
+}
+
 // ---------------------------------------------------------------------------
 // Git URL validation: secure transports only
 // ---------------------------------------------------------------------------

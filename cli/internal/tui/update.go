@@ -198,7 +198,7 @@ func (m updateModel) menuItemCount() int {
 }
 
 func (m updateModel) View() string {
-	s := titleStyle.Render("Update nesco") + "\n"
+	s := helpStyle.Render("nesco >") + " " + titleStyle.Render("Update nesco") + "\n"
 
 	switch m.step {
 	case stepUpdateMenu:

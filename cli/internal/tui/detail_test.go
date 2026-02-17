@@ -87,6 +87,60 @@ func navigateToDetailItem(t *testing.T, ct catalog.ContentType, name string) App
 // Tab switching
 // ---------------------------------------------------------------------------
 
+func TestDetailStatePreservedOnReenter(t *testing.T) {
+	app := navigateToDetail(t, catalog.Skills)
+
+	// Switch to Files tab
+	m, _ := app.Update(keyRune('2'))
+	app = m.(App)
+	if app.detail.activeTab != tabFiles {
+		t.Fatal("expected tabFiles")
+	}
+
+	// Navigate back
+	m, _ = app.Update(keyEsc)
+	app = m.(App)
+	assertScreen(t, app, screenItems)
+
+	// Re-enter same item
+	m, _ = app.Update(keyEnter)
+	app = m.(App)
+	assertScreen(t, app, screenDetail)
+
+	// Tab should be preserved
+	if app.detail.activeTab != tabFiles {
+		t.Fatalf("expected tabFiles preserved, got %d", app.detail.activeTab)
+	}
+}
+
+func TestDetailStateClearedOnDifferentItem(t *testing.T) {
+	app := navigateToDetail(t, catalog.Skills)
+
+	m, _ := app.Update(keyRune('2')) // Files tab
+	app = m.(App)
+
+	// Back
+	m, _ = app.Update(keyEsc)
+	app = m.(App)
+
+	if len(app.items.items) < 2 {
+		t.Skip("need at least 2 items")
+	}
+
+	// Move to different item
+	m, _ = app.Update(keyDown)
+	app = m.(App)
+
+	// Enter different item
+	m, _ = app.Update(keyEnter)
+	app = m.(App)
+
+	// Should NOT preserve previous tab
+	if app.detail.activeTab != tabOverview {
+		t.Fatalf("expected tabOverview for new item, got %d", app.detail.activeTab)
+	}
+}
+
 func TestDetailMessageClearsOnKeypress(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 	app.detail.message = "test message"

@@ -184,6 +184,9 @@ func (m itemsModel) View() string {
 
 	if len(m.items) == 0 {
 		s += helpStyle.Render("  No items found") + "\n"
+		if m.contentType == catalog.MyTools {
+			s += "\n" + helpStyle.Render("  Use Import to add content, or run 'nesco add' from the command line.") + "\n"
+		}
 		s += "\n" + helpStyle.Render("esc back")
 		return s
 	}
