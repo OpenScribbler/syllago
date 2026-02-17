@@ -106,7 +106,7 @@ func Promote(repoRoot string, item catalog.ContentItem) (*Result, error) {
 		prTitle := fmt.Sprintf("Add %s: %s", item.Type, item.Name)
 		prBody := fmt.Sprintf("Promotes `%s` from my-tools/ to shared.\n\nType: %s\nSource: %s",
 			item.Name, item.Type, item.Meta.Source)
-		out, err := gitOutput(repoRoot, "gh", "pr", "create",
+		out, err := commandOutput(repoRoot, "gh", "pr", "create",
 			"--title", prTitle,
 			"--body", prBody,
 			"--base", defaultBranch)
@@ -157,7 +157,7 @@ func copyForPromote(src, dst string) error {
 
 // isTreeDirty checks if the git working tree has uncommitted changes.
 func isTreeDirty(repoRoot string) (bool, error) {
-	out, err := gitOutput(repoRoot, "git", "status", "--porcelain")
+	out, err := commandOutput(repoRoot, "git", "status", "--porcelain")
 	if err != nil {
 		return false, err
 	}
@@ -166,7 +166,7 @@ func isTreeDirty(repoRoot string) (bool, error) {
 
 // detectDefaultBranch finds the default branch name from the remote.
 func detectDefaultBranch(repoRoot string) string {
-	out, err := gitOutput(repoRoot, "git", "symbolic-ref", "refs/remotes/origin/HEAD")
+	out, err := commandOutput(repoRoot, "git", "symbolic-ref", "refs/remotes/origin/HEAD")
 	if err == nil {
 		// Returns something like "refs/remotes/origin/main"
 		parts := strings.Split(strings.TrimSpace(out), "/")
@@ -179,7 +179,7 @@ func detectDefaultBranch(repoRoot string) string {
 
 // buildCompareURL constructs a GitHub compare URL from the remote origin.
 func buildCompareURL(repoRoot, branch string) string {
-	out, err := gitOutput(repoRoot, "git", "remote", "get-url", "origin")
+	out, err := commandOutput(repoRoot, "git", "remote", "get-url", "origin")
 	if err != nil {
 		return ""
 	}
@@ -209,8 +209,9 @@ func gitRun(dir string, args ...string) error {
 	return cmd.Run()
 }
 
-// gitOutput executes a command and returns its stdout.
-func gitOutput(dir string, name string, args ...string) (string, error) {
+// commandOutput executes a command and returns its stdout.
+// Unlike gitRun, this takes the command name as a parameter (for git, gh, etc).
+func commandOutput(dir string, name string, args ...string) (string, error) {
 	cmd := exec.Command(name, args...)
 	cmd.Dir = dir
 	out, err := cmd.Output()
