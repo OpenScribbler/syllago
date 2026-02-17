@@ -4,7 +4,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
@@ -28,7 +30,7 @@ func FilePath(projectRoot string) string {
 
 func Load(projectRoot string) (*Config, error) {
 	data, err := os.ReadFile(FilePath(projectRoot))
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return &Config{}, nil
 	}
 	if err != nil {

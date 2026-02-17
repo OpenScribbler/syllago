@@ -1,6 +1,7 @@
 package detectors
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -25,7 +26,7 @@ func (d RustAsyncRuntime) Name() string { return "rust-async-runtime" }
 
 func (d RustAsyncRuntime) Detect(root string) ([]model.Section, error) {
 	cargoPath := filepath.Join(root, "Cargo.toml")
-	if _, err := os.Stat(cargoPath); os.IsNotExist(err) {
+	if _, err := os.Stat(cargoPath); errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
 
