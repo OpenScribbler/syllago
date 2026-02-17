@@ -31,7 +31,11 @@ var (
 var rootCmd = &cobra.Command{
 	Use:           "nesco",
 	Short:         "AI coding tool content manager and codebase scanner",
-	Long:          "Nesco manages AI tool configurations and scans codebases for context that helps AI agents produce correct code.",
+	Long: `Nesco manages AI tool configurations and scans codebases for context
+that helps AI agents produce correct code.
+
+Run without arguments for interactive mode (TUI). Use subcommands for
+automation and scripting.`,
 	RunE:          runTUI,
 	SilenceUsage:  true,
 	SilenceErrors: true,
