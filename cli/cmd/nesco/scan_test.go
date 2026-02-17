@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/holdenhewett/romanesco/cli/internal/drift"
@@ -138,5 +140,44 @@ func TestScanErrorIsSilent(t *testing.T) {
 	}
 	if !output.IsSilentError(err) {
 		t.Error("scan should return SilentError after PrintError to prevent duplicate printing")
+	}
+}
+
+func TestScanConfigSaveWarning(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+
+	// Create .nesco dir as read+execute but no write to force Save error
+	nescoDir := filepath.Join(tmp, ".nesco")
+	os.MkdirAll(nescoDir, 0755)
+	os.Chmod(nescoDir, 0555)
+	defer os.Chmod(nescoDir, 0755)
+
+	origFindRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	defer func() { findProjectRoot = origFindRoot }()
+
+	// Set env to bypass prompt (triggers auto-detect + save path)
+	origEnv := os.Getenv("NESCO_NO_PROMPT")
+	os.Setenv("NESCO_NO_PROMPT", "1")
+	defer os.Setenv("NESCO_NO_PROMPT", origEnv)
+
+	var outBuf bytes.Buffer
+	var errBuf bytes.Buffer
+	origWriter := output.Writer
+	origErrWriter := output.ErrWriter
+	output.Writer = &outBuf
+	output.ErrWriter = &errBuf
+	defer func() {
+		output.Writer = origWriter
+		output.ErrWriter = origErrWriter
+	}()
+
+	// Run scan — may error for other reasons, we only care about the warning
+	_ = scanCmd.RunE(scanCmd, []string{})
+
+	stderrStr := errBuf.String()
+	if !strings.Contains(stderrStr, "Warning") || !strings.Contains(stderrStr, "config") {
+		t.Errorf("expected warning about config save failure, got stderr: %q", stderrStr)
 	}
 }
