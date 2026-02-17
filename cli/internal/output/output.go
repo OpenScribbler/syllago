@@ -35,6 +35,32 @@ func PrintVerbose(format string, args ...any) {
 	fmt.Fprintf(Writer, format, args...)
 }
 
+// silentError wraps an error to signal that it has already been printed
+// and should not be printed again by the main error handler.
+type silentError struct {
+	err error
+}
+
+func (e silentError) Error() string { return e.err.Error() }
+func (e silentError) Unwrap() error { return e.err }
+
+// SilentError wraps an error to mark it as already printed.
+func SilentError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return silentError{err: err}
+}
+
+// IsSilentError checks if an error is marked as already printed.
+func IsSilentError(err error) bool {
+	if err == nil {
+		return false
+	}
+	_, ok := err.(silentError)
+	return ok
+}
+
 type ErrorResponse struct {
 	Code       int    `json:"code"`
 	Message    string `json:"message"`
