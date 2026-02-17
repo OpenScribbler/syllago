@@ -551,7 +551,7 @@ func (m importModel) View() string {
 			}
 			s += prefix + style.Render(opt) + "\n"
 		}
-		s += "\n" + helpStyle.Render("↑↓ navigate • enter select • esc back")
+		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 
 	case stepType:
 		s += helpStyle.Render("Select content type") + "\n\n"
@@ -565,7 +565,7 @@ func (m importModel) View() string {
 			label := ct.Label()
 			s += prefix + style.Render(label) + "\n"
 		}
-		s += "\n" + helpStyle.Render("↑↓ navigate • enter select • esc back")
+		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 
 	case stepProvider:
 		s += helpStyle.Render("Select provider for "+m.contentType.Label()) + "\n\n"
@@ -578,7 +578,7 @@ func (m importModel) View() string {
 			}
 			s += prefix + style.Render(name) + "\n"
 		}
-		s += "\n" + helpStyle.Render("↑↓ navigate • enter select • esc back")
+		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 
 	case stepBrowseStart:
 		s += helpStyle.Render("Where do you want to browse?") + "\n\n"
@@ -596,7 +596,7 @@ func (m importModel) View() string {
 			}
 			s += prefix + style.Render(opt.label) + " " + countStyle.Render(opt.desc) + "\n"
 		}
-		s += "\n" + helpStyle.Render("↑↓ navigate • enter select • esc back")
+		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 
 	case stepBrowse:
 		s += m.browser.View()
@@ -632,7 +632,7 @@ func (m importModel) View() string {
 		}
 
 		if offset > 0 {
-			s += helpStyle.Render("  ↑ more items above") + "\n"
+			s += helpStyle.Render("  (more items above)") + "\n"
 		}
 		for i := offset; i < end; i++ {
 			item := m.clonedItems[i]
@@ -650,9 +650,9 @@ func (m importModel) View() string {
 			s += prefix + style.Render(label) + " " + typeTag + "\n"
 		}
 		if end < len(m.clonedItems) {
-			s += helpStyle.Render("  ↓ more items below") + "\n"
+			s += helpStyle.Render("  (more items below)") + "\n"
 		}
-		s += "\n" + helpStyle.Render("↑↓ navigate • enter select • esc back")
+		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 
 	case stepName:
 		s += helpStyle.Render("Enter a name for your new "+m.contentType.Label()+" item") + "\n\n"
@@ -1032,6 +1032,6 @@ func (m importModel) viewValidate() string {
 	}
 
 	s += "\n" + helpStyle.Render(fmt.Sprintf("  %d of %d items will be imported", includedCount, len(m.validationItems)))
-	s += "\n" + helpStyle.Render("↑↓ navigate • space toggle • enter import • esc back")
+	s += "\n" + helpStyle.Render("up/down navigate • space toggle • enter import • esc back")
 	return s
 }

@@ -186,7 +186,7 @@ func (m detailModel) renderFileContent() string {
 	}
 
 	if offset > 0 {
-		s += helpStyle.Render("↑ scroll up for more") + "\n"
+		s += helpStyle.Render("(scroll up for more)") + "\n"
 	}
 
 	for i := offset; i < end; i++ {
@@ -195,7 +195,7 @@ func (m detailModel) renderFileContent() string {
 	}
 
 	if end < len(lines) {
-		s += helpStyle.Render("↓ scroll down for more") + "\n"
+		s += helpStyle.Render("(scroll down for more)") + "\n"
 	}
 
 	return s
@@ -320,7 +320,7 @@ func (m detailModel) renderInstallTab() string {
 		if m.confirmAction == actionSaveMethod {
 			confirmKey = "enter"
 		}
-		s += "\n" + helpStyle.Render(fmt.Sprintf("↑↓ select • %s confirm • esc cancel", confirmKey)) + "\n"
+		s += "\n" + helpStyle.Render(fmt.Sprintf("up/down select • %s confirm • esc cancel", confirmKey)) + "\n"
 	}
 
 	// Save path input
@@ -347,7 +347,7 @@ func (m detailModel) renderInstallTab() string {
 				}
 				s += fmt.Sprintf("  %s%s\n", prefix, style.Render(opt))
 			}
-			s += "\n" + helpStyle.Render("  ↑↓ select • enter choose • esc skip") + "\n"
+			s += "\n" + helpStyle.Render("  up/down select • enter choose • esc skip") + "\n"
 
 		case actionEnvValue:
 			s += "\n" + labelStyle.Render("Environment Variable Setup") + "\n"
@@ -443,7 +443,7 @@ func (m detailModel) View() string {
 
 	if offset > 0 {
 		visible := lines[offset:end]
-		s = helpStyle.Render("↑ scroll up for more") + "\n"
+		s = helpStyle.Render("(scroll up for more)") + "\n"
 		s += strings.Join(visible, "\n")
 	} else {
 		visible := lines[offset:end]
@@ -451,7 +451,7 @@ func (m detailModel) View() string {
 	}
 
 	if end < len(lines) {
-		s += "\n" + helpStyle.Render("↓ scroll down for more")
+		s += "\n" + helpStyle.Render("(scroll down for more)")
 	}
 
 	// Status message — rendered outside scrollable area so it's always visible
@@ -473,27 +473,27 @@ func (m detailModel) renderHelp() string {
 
 	switch m.activeTab {
 	case tabOverview:
-		helpParts = append(helpParts, "↑↓ scroll")
+		helpParts = append(helpParts, "up/down scroll")
 		if m.item.Type == catalog.Prompts && m.item.Body != "" && m.confirmAction == actionNone {
 			helpParts = append(helpParts, "c copy", "s save")
 		}
 	case tabFiles:
 		if m.viewingFile {
-			helpParts = append(helpParts, "↑↓ scroll", "esc back to files")
+			helpParts = append(helpParts, "up/down scroll", "esc back to files")
 		} else if len(m.item.Files) > 0 {
-			helpParts = append(helpParts, "↑↓ navigate", "enter view")
+			helpParts = append(helpParts, "up/down navigate", "enter view")
 		}
 	case tabInstall:
 		if m.item.Type == catalog.Prompts {
-			helpParts = append(helpParts, "↑↓ scroll")
+			helpParts = append(helpParts, "up/down scroll")
 			if m.item.Body != "" && m.confirmAction == actionNone {
 				helpParts = append(helpParts, "c copy", "s save")
 			}
 		} else if m.item.Type == catalog.Apps {
-			helpParts = append(helpParts, "↑↓ scroll", "i install", "u uninstall")
+			helpParts = append(helpParts, "up/down scroll", "i install", "u uninstall")
 		} else {
 			if len(m.providerChecks) > 0 && m.confirmAction == actionNone {
-				helpParts = append(helpParts, "↑↓ navigate", "enter/space toggle", "i install", "u uninstall")
+				helpParts = append(helpParts, "up/down navigate", "enter/space toggle", "i install", "u uninstall")
 				if m.item.Type == catalog.MCP && m.hasUnsetEnvVars() {
 					helpParts = append(helpParts, "e env setup")
 				}

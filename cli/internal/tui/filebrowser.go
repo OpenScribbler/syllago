@@ -243,7 +243,7 @@ func (fb fileBrowserModel) View() string {
 	}
 
 	if fb.offset > 0 {
-		s += helpStyle.Render("  ↑ more items above") + "\n"
+		s += helpStyle.Render("  (more items above)") + "\n"
 	}
 
 	for i := fb.offset; i < end; i++ {
@@ -288,7 +288,7 @@ func (fb fileBrowserModel) View() string {
 	}
 
 	if end < len(fb.entries) {
-		s += helpStyle.Render("  ↓ more items below") + "\n"
+		s += helpStyle.Render("  (more items below)") + "\n"
 	}
 
 	// Footer
@@ -297,7 +297,7 @@ func (fb fileBrowserModel) View() string {
 	if selCount > 0 {
 		s += helpStyle.Render(fmt.Sprintf("  %d selected", selCount)) + "\n"
 	}
-	s += helpStyle.Render("↑↓ navigate • enter open dir • space select • a select all • c confirm • esc parent dir")
+	s += helpStyle.Render("up/down navigate • enter open dir • space select • a select all • c confirm • esc parent dir")
 
 	return s
 }

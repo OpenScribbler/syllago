@@ -196,6 +196,15 @@ func TestCategoryViewHelp(t *testing.T) {
 	assertContains(t, view, "quit")
 }
 
+func TestCategoryHelpTextNoArrows(t *testing.T) {
+	app := testApp(t)
+	view := app.category.View()
+
+	assertNotContains(t, view, "↑")
+	assertNotContains(t, view, "↓")
+	assertContains(t, view, "up/down")
+}
+
 func TestCategoryCursorIsASCII(t *testing.T) {
 	app := testApp(t)
 	view := app.category.View()
