@@ -324,6 +324,10 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 				m.activeTab = (m.activeTab + 1) % 3
 				m.scrollOffset = 0
 				return m, nil
+			case "shift+tab":
+				m.activeTab = (m.activeTab + 2) % 3
+				m.scrollOffset = 0
+				return m, nil
 			case "1":
 				m.activeTab = tabOverview
 				m.scrollOffset = 0

@@ -30,8 +30,9 @@ var (
 	keyEnter = tea.KeyMsg{Type: tea.KeyEnter}
 	keyEsc   = tea.KeyMsg{Type: tea.KeyEsc}
 	keySpace = tea.KeyMsg{Type: tea.KeySpace}
-	keyTab   = tea.KeyMsg{Type: tea.KeyTab}
-	keyCtrlC = tea.KeyMsg{Type: tea.KeyCtrlC}
+	keyTab      = tea.KeyMsg{Type: tea.KeyTab}
+	keyShiftTab = tea.KeyMsg{Type: tea.KeyShiftTab}
+	keyCtrlC    = tea.KeyMsg{Type: tea.KeyCtrlC}
 )
 
 func keyRune(r rune) tea.KeyMsg {
