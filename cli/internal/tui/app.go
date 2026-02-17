@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -237,6 +238,40 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			a.search, cmd = a.search.Update(msg)
+
+			// Live-filter items while typing
+			if a.screen == screenItems {
+				query := a.search.query()
+				ct := a.items.contentType
+				var source []catalog.ContentItem
+				if ct == catalog.SearchResults {
+					source = a.catalog.Items
+				} else if ct == catalog.MyTools {
+					for _, item := range a.catalog.Items {
+						if item.Local {
+							source = append(source, item)
+						}
+					}
+				} else {
+					source = a.catalog.ByType(ct)
+				}
+				filtered := filterItems(source, query)
+				items := newItemsModel(ct, filtered, a.providers, a.catalog.RepoRoot)
+				items.width = a.width
+				items.height = a.height
+				a.items = items
+			}
+
+			// Show match count preview on category screen
+			if a.screen == screenCategory {
+				query := a.search.query()
+				if query != "" {
+					a.search.matchCount = len(filterItems(a.catalog.Items, query))
+				} else {
+					a.search.matchCount = -1
+				}
+			}
+
 			return a, cmd
 		}
 
@@ -406,8 +441,17 @@ func (a App) View() string {
 		content = a.settings.View()
 	}
 
-	// Overlay search if active
+	// Overlay search if active (replaces the help bar)
 	if a.search.active {
+		lines := strings.Split(content, "\n")
+		// Remove trailing empty lines and the help bar
+		for len(lines) > 0 && strings.TrimSpace(lines[len(lines)-1]) == "" {
+			lines = lines[:len(lines)-1]
+		}
+		if len(lines) > 0 {
+			lines = lines[:len(lines)-1] // remove help bar
+		}
+		content = strings.Join(lines, "\n")
 		content += "\n" + a.search.View()
 	}
 

@@ -275,3 +275,59 @@ func TestSearchHasLabel(t *testing.T) {
 	view := app.View()
 	assertContains(t, view, "Search:")
 }
+
+func TestSearchLiveFilterItems(t *testing.T) {
+	app := testApp(t)
+	m, _ := app.Update(keyEnter) // → items (Skills)
+	app = m.(App)
+	origCount := len(app.items.items)
+
+	// Activate search
+	m, _ = app.Update(keyRune('/'))
+	app = m.(App)
+
+	// Type "alpha" — should filter live
+	for _, r := range "alpha" {
+		m, _ = app.Update(keyRune(r))
+		app = m.(App)
+	}
+
+	// Items should be filtered without pressing Enter
+	if len(app.items.items) >= origCount && origCount > 1 {
+		t.Fatalf("expected fewer items during live search, got %d (was %d)", len(app.items.items), origCount)
+	}
+}
+
+func TestSearchLiveFilterCategoryShowsCount(t *testing.T) {
+	app := testApp(t)
+	assertScreen(t, app, screenCategory)
+
+	m, _ := app.Update(keyRune('/'))
+	app = m.(App)
+
+	for _, r := range "skill" {
+		m, _ = app.Update(keyRune(r))
+		app = m.(App)
+	}
+
+	// Match count should be visible
+	view := app.View()
+	assertContains(t, view, "matches)")
+}
+
+func TestSearchReplacesHelpBar(t *testing.T) {
+	app := testApp(t)
+
+	// Before search: help bar is visible
+	view := app.View()
+	assertContains(t, view, "/ search")
+
+	// Activate search
+	m, _ := app.Update(keyRune('/'))
+	app = m.(App)
+
+	view = app.View()
+	assertContains(t, view, "Search:")
+	// Help bar should be replaced, not both showing
+	assertNotContains(t, view, "/ search")
+}
