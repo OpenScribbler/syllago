@@ -129,6 +129,15 @@ func TestCategoryUpdateBanner(t *testing.T) {
 	assertContains(t, view, "2.0.0")
 }
 
+func TestUpdateBannerNoDecorativeUnicode(t *testing.T) {
+	app := testApp(t)
+	app.category.updateAvailable = true
+	app.category.remoteVersion = "2.0.0"
+
+	view := app.View()
+	assertNotContains(t, view, "✦")
+}
+
 func TestCategoryCountDisplay(t *testing.T) {
 	app := testApp(t)
 	view := app.View()

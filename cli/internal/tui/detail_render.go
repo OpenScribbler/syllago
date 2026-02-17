@@ -266,7 +266,7 @@ func (m detailModel) renderInstallTab() string {
 				case installer.StatusInstalled:
 					indicator = installedStyle.Render("[ok] installed")
 					if m.item.Type == catalog.MCP && m.hasUnsetEnvVars() {
-						indicator += " " + warningStyle.Render("⚠ needs setup")
+						indicator += " " + warningStyle.Render("[!] needs setup")
 					}
 				case installer.StatusNotInstalled:
 					indicator = notInstalledStyle.Render("[--] available")

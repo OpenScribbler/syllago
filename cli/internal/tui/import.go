@@ -1015,7 +1015,7 @@ func (m importModel) viewValidate() string {
 		// Status indicator
 		status := installedStyle.Render("✓ " + vi.detection)
 		if vi.isWarning {
-			status = errorMsgStyle.Render("⚠ No recognized content")
+			status = errorMsgStyle.Render("[!] No recognized content")
 		}
 
 		s += prefix + "[" + check + "] " + style.Render(vi.name) + " " + status + "\n"

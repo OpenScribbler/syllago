@@ -117,7 +117,7 @@ func (m categoryModel) View() string {
 
 	// Update notification banner
 	if m.updateAvailable {
-		s += "\n" + updateBannerStyle.Render(fmt.Sprintf("  ✦ A new version is available (v%s)", m.remoteVersion)) + "\n"
+		s += "\n" + updateBannerStyle.Render(fmt.Sprintf("  [update] A new version is available (v%s)", m.remoteVersion)) + "\n"
 	}
 
 	if m.message != "" {
