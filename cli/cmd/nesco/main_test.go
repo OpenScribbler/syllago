@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"testing"
 )
@@ -28,6 +29,54 @@ func TestVersionCommand(t *testing.T) {
 	rootCmd.SetArgs([]string{"version"})
 	if err := rootCmd.Execute(); err != nil {
 		t.Fatalf("version command failed: %v", err)
+	}
+}
+
+func TestNoColorFlag(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		env  map[string]string
+	}{
+		{
+			name: "with --no-color flag",
+			args: []string{"--no-color", "--help"},
+		},
+		{
+			name: "with NO_COLOR env var",
+			args: []string{"--help"},
+			env:  map[string]string{"NO_COLOR": "1"},
+		},
+		{
+			name: "with TERM=dumb",
+			args: []string{"--help"},
+			env:  map[string]string{"TERM": "dumb"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for k, v := range tt.env {
+				old := os.Getenv(k)
+				os.Setenv(k, v)
+				defer os.Setenv(k, old)
+			}
+
+			var buf bytes.Buffer
+			rootCmd.SetOut(&buf)
+			rootCmd.SetArgs(tt.args)
+			defer func() {
+				rootCmd.SetOut(nil)
+				rootCmd.SetArgs(nil)
+			}()
+
+			if err := rootCmd.Execute(); err != nil {
+				t.Fatalf("command failed: %v", err)
+			}
+
+			// When color output is added in Phase 3, add ANSI code checks here.
+			// For now, verify the flag is wired and doesn't break execution.
+		})
 	}
 }
 
