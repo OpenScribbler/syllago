@@ -31,14 +31,15 @@ type App struct {
 	version    string
 	autoUpdate bool
 
-	screen   screen
-	category categoryModel
-	items    itemsModel
-	detail   detailModel
-	search   searchModel
-	importer importModel
-	updater  updateModel
-	settings settingsModel
+	screen      screen
+	category    categoryModel
+	items       itemsModel
+	detail      detailModel
+	search      searchModel
+	helpOverlay helpOverlayModel
+	importer    importModel
+	updater     updateModel
+	settings    settingsModel
 
 	// Update check state (persists across screen changes)
 	remoteVersion string
@@ -193,6 +194,28 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// q quits from category screen only (when not searching)
 		if key.Matches(msg, keys.Quit) && !a.search.active && a.screen == screenCategory {
 			return a, tea.Quit
+		}
+
+		// Help overlay toggle (skip when search active or text input active)
+		if key.Matches(msg, keys.Help) && !a.search.active {
+			if a.helpOverlay.active {
+				a.helpOverlay.active = false
+				return a, nil
+			}
+			if a.screen == screenDetail && a.detail.HasTextInput() {
+				// Don't activate during text input
+			} else {
+				a.helpOverlay.active = true
+				return a, nil
+			}
+		}
+
+		// If help overlay is active, esc closes it; all other keys are swallowed
+		if a.helpOverlay.active {
+			if msg.Type == tea.KeyEsc {
+				a.helpOverlay.active = false
+			}
+			return a, nil
 		}
 
 		// Search toggle (skip on import/update/settings screens and when detail has active textinput)
@@ -439,6 +462,11 @@ func (a App) View() string {
 		content = a.updater.View()
 	case screenSettings:
 		content = a.settings.View()
+	}
+
+	// Help overlay replaces all content
+	if a.helpOverlay.active {
+		content = a.helpOverlay.View(a.screen)
 	}
 
 	// Overlay search if active (replaces the help bar)

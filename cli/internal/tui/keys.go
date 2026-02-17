@@ -18,6 +18,7 @@ type keyMap struct {
 	Promote   key.Binding
 	Tab      key.Binding
 	ShiftTab key.Binding
+	Help     key.Binding
 }
 
 var keys = keyMap{
@@ -80,5 +81,9 @@ var keys = keyMap{
 	ShiftTab: key.NewBinding(
 		key.WithKeys("shift+tab"),
 		key.WithHelp("shift+tab", "prev tab"),
+	),
+	Help: key.NewBinding(
+		key.WithKeys("?"),
+		key.WithHelp("?", "help"),
 	),
 }
