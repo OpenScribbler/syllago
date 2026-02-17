@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall"
 
@@ -248,6 +249,17 @@ func findSkillsDirImpl(dir string) (string, error) {
 	return "", fmt.Errorf("no skills/ directory found above %s", dir)
 }
 
+// semverRegex validates strict semver format (no 'v' prefix).
+var semverRegex = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
+
+// validateVersion checks if a string is a valid semver version.
+func validateVersion(v string) error {
+	if !semverRegex.MatchString(v) {
+		return fmt.Errorf("invalid version format: %q (must be semver like 1.0.0)", v)
+	}
+	return nil
+}
+
 // ensureUpToDate checks if the binary's embedded commit matches the repo HEAD.
 // If not, it rebuilds the binary and re-execs — replacing this process seamlessly.
 // Every failure is graceful: the old binary just keeps running.
@@ -282,10 +294,15 @@ func ensureUpToDate() {
 		return
 	}
 
-	// Read version from VERSION file
+	// Read version from VERSION file, validate before use in ldflags
 	rebuildVersion := version
 	if vb, err := os.ReadFile(filepath.Join(root, "VERSION")); err == nil {
-		rebuildVersion = strings.TrimSpace(string(vb))
+		candidate := strings.TrimSpace(string(vb))
+		if validateVersion(candidate) == nil {
+			rebuildVersion = candidate
+		} else {
+			fmt.Fprintf(os.Stderr, "Warning: VERSION file has invalid format %q, using existing version\n", candidate)
+		}
 	}
 
 	// Rebuild with the new commit and version embedded
