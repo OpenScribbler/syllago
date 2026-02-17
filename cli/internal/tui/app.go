@@ -42,6 +42,10 @@ type App struct {
 	updater     updateModel
 	settings    settingsModel
 
+	// Detail model cache (preserves state when re-entering same item)
+	cachedDetail     *detailModel
+	cachedDetailPath string
+
 	// Update check state (persists across screen changes)
 	remoteVersion string
 	commitsBehind int
@@ -90,6 +94,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case appInstallDoneMsg:
+		a.cachedDetail = nil // invalidate cache (install state changed)
 		if a.screen == screenDetail {
 			var cmd tea.Cmd
 			a.detail, cmd = a.detail.Update(msg)
@@ -98,6 +103,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case promoteDoneMsg:
 		if a.screen == screenDetail {
+			a.cachedDetail = nil // invalidate cache
 			var cmd tea.Cmd
 			a.detail, cmd = a.detail.Update(msg)
 			// Rescan catalog after promote
@@ -127,6 +133,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case importDoneMsg:
+		a.cachedDetail = nil // invalidate cache
 		if msg.err != nil {
 			a.importer.message = fmt.Sprintf("Import failed: %s", msg.err)
 			a.importer.messageIsErr = true
@@ -380,7 +387,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if key.Matches(msg, keys.Enter) && len(a.items.items) > 0 {
 				item := a.items.selectedItem()
-				a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
+				if a.cachedDetailPath == item.Path && a.cachedDetail != nil {
+					a.detail = *a.cachedDetail
+				} else {
+					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
+				}
 				a.detail.width = a.width
 				a.detail.height = a.height
 				a.screen = screenDetail
@@ -419,6 +430,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					items.cursor = a.items.cursor // preserve cursor position
 					a.items = items
 				}
+				// Cache detail state for re-entry
+				cached := a.detail
+				a.cachedDetail = &cached
+				a.cachedDetailPath = a.detail.item.Path
 				a.screen = screenItems
 				return a, nil
 			}
