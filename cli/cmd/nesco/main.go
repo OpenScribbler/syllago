@@ -48,6 +48,10 @@ func init() {
 		if noColor || os.Getenv("NO_COLOR") != "" || os.Getenv("TERM") == "dumb" {
 			lipgloss.SetColorProfile(termenv.Ascii)
 		}
+
+		quiet, _ := cmd.Flags().GetBool("quiet")
+		output.Quiet = quiet
+
 		return nil
 	}
 
