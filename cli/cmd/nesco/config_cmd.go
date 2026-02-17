@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/holdenhewett/romanesco/cli/internal/config"
 	"github.com/holdenhewett/romanesco/cli/internal/output"
+	"github.com/holdenhewett/romanesco/cli/internal/provider"
 	"github.com/spf13/cobra"
 )
 
@@ -63,7 +65,12 @@ var configAddCmd = &cobra.Command{
 		}
 		// Warn about unknown provider slugs (but still allow them)
 		if findProviderBySlug(slug) == nil {
+			var slugs []string
+			for _, p := range provider.AllProviders {
+				slugs = append(slugs, p.Slug)
+			}
 			fmt.Fprintf(output.ErrWriter, "Warning: '%s' is not a known provider slug.\n", slug)
+			fmt.Fprintf(output.ErrWriter, "  Known providers: %s\n", strings.Join(slugs, ", "))
 			fmt.Fprintf(output.ErrWriter, "  Adding anyway — unknown providers are ignored during scan.\n")
 		}
 

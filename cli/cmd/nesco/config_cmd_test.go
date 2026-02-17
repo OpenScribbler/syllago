@@ -130,6 +130,39 @@ func TestConfigAddKnownProviderNoWarning(t *testing.T) {
 	}
 }
 
+func TestConfigAddWarningListsKnownProviders(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	config.Save(tmp, &config.Config{Providers: []string{}})
+
+	origDir, _ := os.Getwd()
+	os.Chdir(tmp)
+	defer os.Chdir(origDir)
+
+	var stderr bytes.Buffer
+	origErr := output.ErrWriter
+	output.ErrWriter = &stderr
+	defer func() { output.ErrWriter = origErr }()
+
+	var stdout bytes.Buffer
+	origWriter := output.Writer
+	output.Writer = &stdout
+	defer func() { output.Writer = origWriter }()
+
+	err := configAddCmd.RunE(configAddCmd, []string{"cursro"})
+	if err != nil {
+		t.Fatalf("config add should succeed: %v", err)
+	}
+
+	stderrStr := stderr.String()
+	if !strings.Contains(stderrStr, "cursor") || !strings.Contains(stderrStr, "claude-code") {
+		t.Errorf("warning should list known provider slugs, got: %q", stderrStr)
+	}
+	if !strings.Contains(stderrStr, "Known providers") {
+		t.Error("warning should have 'Known providers' label")
+	}
+}
+
 func TestConfigAddConfirmation(t *testing.T) {
 	tmp := t.TempDir()
 	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
