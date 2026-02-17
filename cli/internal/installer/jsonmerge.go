@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // readJSONFile reads a JSON file, returning empty object {} if file doesn't exist.
@@ -19,9 +20,21 @@ func readJSONFile(path string) ([]byte, error) {
 	return data, err
 }
 
-// writeJSONFile writes data to a JSON file atomically using temp-then-rename.
-// The target file is never left in a partially-written state.
+// writeJSONFile writes data to a JSON file atomically with appropriate permissions.
+// Files in the home directory get 0600 (user-only), project files get 0644 (readable).
 func writeJSONFile(path string, data []byte) error {
+	perm := os.FileMode(0644)
+	if home, err := os.UserHomeDir(); err == nil {
+		if strings.HasPrefix(path, home+string(filepath.Separator)) {
+			perm = 0600
+		}
+	}
+	return writeJSONFileWithPerm(path, data, perm)
+}
+
+// writeJSONFileWithPerm writes data to a JSON file atomically using temp-then-rename
+// with the specified file permissions.
+func writeJSONFileWithPerm(path string, data []byte, perm os.FileMode) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("creating directory: %w", err)
@@ -34,8 +47,8 @@ func writeJSONFile(path string, data []byte) error {
 	}
 	tempPath := path + ".tmp." + hex.EncodeToString(suffix)
 
-	// Write to temp file
-	if err := os.WriteFile(tempPath, data, 0644); err != nil {
+	// Write to temp file with specified permissions
+	if err := os.WriteFile(tempPath, data, perm); err != nil {
 		return fmt.Errorf("writing temp file: %w", err)
 	}
 
