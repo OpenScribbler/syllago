@@ -35,7 +35,9 @@ var rootCmd = &cobra.Command{
 that helps AI agents produce correct code.
 
 Run without arguments for interactive mode (TUI). Use subcommands for
-automation and scripting.`,
+automation and scripting.
+
+Exit codes: 0=success, 1=error, 2=usage error, 3=drift detected`,
 	RunE:          runTUI,
 	SilenceUsage:  true,
 	SilenceErrors: true,
