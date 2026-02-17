@@ -70,6 +70,78 @@ func TestFileBrowserView(t *testing.T) {
 	}
 }
 
+func TestFileBrowserDKeyConfirms(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "file.txt"), []byte("hi"), 0644)
+
+	fb := newFileBrowser(tmp, catalog.Skills)
+	fb.width = 80
+	fb.height = 30
+
+	// Select file.txt (Down past "..", then Space to select)
+	fb, _ = fb.Update(tea.KeyMsg{Type: tea.KeyDown})
+	fb, _ = fb.Update(tea.KeyMsg{Type: tea.KeySpace})
+
+	if fb.SelectionCount() != 1 {
+		t.Fatalf("expected 1 selected, got %d", fb.SelectionCount())
+	}
+
+	// 'd' confirms
+	_, cmd := fb.Update(keyRune('d'))
+	if cmd == nil {
+		t.Fatal("expected fileBrowserDoneMsg command from 'd'")
+	}
+}
+
+func TestFileBrowserCKeyDoesNotConfirm(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "file.txt"), []byte("hi"), 0644)
+
+	fb := newFileBrowser(tmp, catalog.Skills)
+	fb.width = 80
+	fb.height = 30
+
+	fb, _ = fb.Update(tea.KeyMsg{Type: tea.KeyDown})
+	fb, _ = fb.Update(tea.KeyMsg{Type: tea.KeySpace})
+
+	// 'c' should NOT confirm anymore
+	_, cmd := fb.Update(keyRune('c'))
+	if cmd != nil {
+		t.Fatal("'c' should NOT trigger confirm in file browser")
+	}
+}
+
+func TestFileBrowserSelectAllUsesKeyMatches(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "one.txt"), []byte("1"), 0644)
+	os.WriteFile(filepath.Join(tmp, "two.txt"), []byte("2"), 0644)
+
+	fb := newFileBrowser(tmp, catalog.Skills)
+	fb.width = 80
+	fb.height = 30
+
+	// 'a' selects all non-".." entries
+	fb, _ = fb.Update(keyRune('a'))
+	if fb.SelectionCount() != 2 {
+		t.Fatalf("expected 2 selected after 'a', got %d", fb.SelectionCount())
+	}
+}
+
+func TestFileBrowserHelpTextShowsDone(t *testing.T) {
+	tmp := t.TempDir()
+	fb := newFileBrowser(tmp, catalog.Skills)
+	fb.width = 80
+	fb.height = 30
+
+	view := fb.View()
+	if !strings.Contains(view, "d done") {
+		t.Fatal("help text should show 'd done' instead of 'c confirm'")
+	}
+	if strings.Contains(view, "c confirm") {
+		t.Fatal("help text should no longer show 'c confirm'")
+	}
+}
+
 func TestFileBrowserNoEmoji(t *testing.T) {
 	tmp := t.TempDir()
 	os.MkdirAll(filepath.Join(tmp, "subdir"), 0755)
