@@ -7,8 +7,19 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textinput"
+
 	"github.com/holdenhewett/romanesco/cli/internal/installer"
 )
+
+// envSetupModel groups the interactive environment variable setup state.
+type envSetupModel struct {
+	input        textinput.Model
+	varNames     []string // ordered list of unset env var names
+	varIdx       int      // current index being prompted
+	methodCursor int      // 0=set up new, 1=already configured
+	value        string   // temporarily holds entered value between steps
+}
 
 // startEnvSetup begins the env var setup flow if there are unset vars.
 // Returns true if the flow was started.
@@ -19,9 +30,9 @@ func (m *detailModel) startEnvSetup() bool {
 		m.messageIsErr = false
 		return false
 	}
-	m.envVarNames = unsetNames
-	m.envVarIdx = 0
-	m.envMethodCursor = 0
+	m.env.varNames = unsetNames
+	m.env.varIdx = 0
+	m.env.methodCursor = 0
 	m.confirmAction = actionEnvChoose
 	m.message = ""
 	return true
@@ -29,17 +40,17 @@ func (m *detailModel) startEnvSetup() bool {
 
 // advanceEnvSetup moves to the next unset env var, or finishes the setup flow.
 func (m *detailModel) advanceEnvSetup() {
-	m.envVarIdx++
-	if m.envVarIdx < len(m.envVarNames) {
+	m.env.varIdx++
+	if m.env.varIdx < len(m.env.varNames) {
 		m.confirmAction = actionEnvChoose
-		m.envMethodCursor = 0
-		m.envInput.Blur()
+		m.env.methodCursor = 0
+		m.env.input.Blur()
 	} else {
 		// All vars processed
-		m.envInput.Blur()
-		m.envVarNames = nil
-		m.envVarIdx = 0
-		m.envMethodCursor = 0
+		m.env.input.Blur()
+		m.env.varNames = nil
+		m.env.varIdx = 0
+		m.env.methodCursor = 0
 		m.confirmAction = actionNone
 	}
 }

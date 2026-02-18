@@ -134,7 +134,7 @@ func (m detailModel) renderOverviewTab() string {
 
 // renderFilesTab renders the file list or file content viewer.
 func (m detailModel) renderFilesTab() string {
-	if m.viewingFile {
+	if m.fileViewer.viewing {
 		return m.renderFileContent()
 	}
 	return m.renderFileList()
@@ -150,7 +150,7 @@ func (m detailModel) renderFileList() string {
 	for i, f := range m.item.Files {
 		prefix := "  "
 		style := itemStyle
-		if i == m.fileCursor {
+		if i == m.fileViewer.cursor {
 			prefix = "> "
 			style = selectedItemStyle
 		}
@@ -161,14 +161,14 @@ func (m detailModel) renderFileList() string {
 
 // renderFileContent shows the content of the selected file with line numbers.
 func (m detailModel) renderFileContent() string {
-	if m.fileCursor >= len(m.item.Files) {
+	if m.fileViewer.cursor >= len(m.item.Files) {
 		return ""
 	}
 
-	relPath := m.item.Files[m.fileCursor]
+	relPath := m.item.Files[m.fileViewer.cursor]
 	s := labelStyle.Render(relPath) + "\n\n"
 
-	lines := strings.Split(m.fileContent, "\n")
+	lines := strings.Split(m.fileViewer.content, "\n")
 
 	// Apply scroll offset
 	visibleHeight := m.height - 8 // header + tab bar + file header + help bar + margins
@@ -176,7 +176,7 @@ func (m detailModel) renderFileContent() string {
 		visibleHeight = len(lines)
 	}
 
-	offset := m.fileScrollOffset
+	offset := m.fileViewer.scrollOffset
 	maxOffset := len(lines) - visibleHeight
 	if maxOffset < 0 {
 		maxOffset = 0
@@ -255,13 +255,13 @@ func (m detailModel) renderInstallTab() string {
 				status := installer.CheckStatus(m.item, p, m.repoRoot)
 
 				check := "[ ]"
-				if i < len(m.providerChecks) && m.providerChecks[i] {
+				if i < len(m.provCheck.checks) && m.provCheck.checks[i] {
 					check = installedStyle.Render("[x]")
 				}
 
 				prefix := "  "
 				nameStyle := itemStyle
-				if i == m.checkCursor && m.confirmAction == actionNone {
+				if i == m.provCheck.cursor && m.confirmAction == actionNone {
 					prefix = "> "
 					nameStyle = selectedItemStyle
 				}
@@ -327,7 +327,7 @@ func (m detailModel) renderInstallTab() string {
 			home, err := os.UserHomeDir()
 			if err == nil {
 				s += "\n" + helpStyle.Render("Destination paths:") + "\n"
-				for i, checked := range m.providerChecks {
+				for i, checked := range m.provCheck.checks {
 					if !checked || i >= len(detected) {
 						continue
 					}
@@ -357,18 +357,18 @@ func (m detailModel) renderInstallTab() string {
 	}
 
 	// Env var interactive setup
-	if m.envVarIdx < len(m.envVarNames) {
-		envName := m.envVarNames[m.envVarIdx]
+	if m.env.varIdx < len(m.env.varNames) {
+		envName := m.env.varNames[m.env.varIdx]
 		switch m.confirmAction {
 		case actionEnvChoose:
 			s += "\n" + labelStyle.Render("Environment Variable Setup") + "\n"
-			s += helpStyle.Render(fmt.Sprintf("  %s (%d of %d)", envName, m.envVarIdx+1, len(m.envVarNames))) + "\n\n"
+			s += helpStyle.Render(fmt.Sprintf("  %s (%d of %d)", envName, m.env.varIdx+1, len(m.env.varNames))) + "\n\n"
 
 			options := []string{"Set up new value", "I already have it configured"}
 			for i, opt := range options {
 				prefix := "  "
 				style := itemStyle
-				if i == m.envMethodCursor {
+				if i == m.env.methodCursor {
 					prefix = "> "
 					style = selectedItemStyle
 				}
@@ -378,20 +378,20 @@ func (m detailModel) renderInstallTab() string {
 
 		case actionEnvValue:
 			s += "\n" + labelStyle.Render("Environment Variable Setup") + "\n"
-			s += helpStyle.Render(fmt.Sprintf("  %s (%d of %d)", envName, m.envVarIdx+1, len(m.envVarNames))) + "\n\n"
-			s += "  " + m.envInput.View() + "\n"
+			s += helpStyle.Render(fmt.Sprintf("  %s (%d of %d)", envName, m.env.varIdx+1, len(m.env.varNames))) + "\n\n"
+			s += "  " + m.env.input.View() + "\n"
 			s += "\n" + helpStyle.Render("  enter next • esc back") + "\n"
 
 		case actionEnvLocation:
 			s += "\n" + labelStyle.Render("Environment Variable Setup") + "\n"
 			s += helpStyle.Render(fmt.Sprintf("  Save %s to:", envName)) + "\n\n"
-			s += "  " + m.envInput.View() + "\n"
+			s += "  " + m.env.input.View() + "\n"
 			s += "\n" + helpStyle.Render("  enter save • esc back") + "\n"
 
 		case actionEnvSource:
 			s += "\n" + labelStyle.Render("Environment Variable Setup") + "\n"
 			s += helpStyle.Render(fmt.Sprintf("  Load %s from an existing file:", envName)) + "\n\n"
-			s += "  " + m.envInput.View() + "\n"
+			s += "  " + m.env.input.View() + "\n"
 			s += "\n" + helpStyle.Render("  enter load • esc back") + "\n"
 		}
 	}
@@ -505,7 +505,7 @@ func (m detailModel) renderHelp() string {
 			helpParts = append(helpParts, "c copy")
 		}
 	case tabFiles:
-		if m.viewingFile {
+		if m.fileViewer.viewing {
 			helpParts = append(helpParts, "up/down scroll", "esc back to files")
 		} else if len(m.item.Files) > 0 {
 			helpParts = append(helpParts, "up/down navigate", "enter view")
@@ -519,7 +519,7 @@ func (m detailModel) renderHelp() string {
 		} else if m.item.Type == catalog.Apps {
 			helpParts = append(helpParts, "up/down scroll", "i install", "u uninstall")
 		} else {
-			if len(m.providerChecks) > 0 && m.confirmAction == actionNone {
+			if len(m.provCheck.checks) > 0 && m.confirmAction == actionNone {
 				helpParts = append(helpParts, "up/down navigate", "enter/space toggle", "i install", "u uninstall")
 				if m.item.Type == catalog.MCP && m.hasUnsetEnvVars() {
 					helpParts = append(helpParts, "e env setup")

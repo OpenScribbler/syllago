@@ -284,7 +284,7 @@ func TestDetailShiftTabBlockedDuringAction(t *testing.T) {
 
 func TestDetailTabBlockedDuringFileView(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	app.detail.viewingFile = true
+	app.detail.fileViewer.viewing = true
 
 	m, _ := app.Update(keyTab)
 	app = m.(App)
@@ -393,14 +393,14 @@ func TestDetailFilesNavigation(t *testing.T) {
 	// Navigate down
 	m, _ = app.Update(keyDown)
 	app = m.(App)
-	if app.detail.fileCursor != 1 {
-		t.Fatalf("expected fileCursor 1, got %d", app.detail.fileCursor)
+	if app.detail.fileViewer.cursor != 1 {
+		t.Fatalf("expected fileCursor 1, got %d", app.detail.fileViewer.cursor)
 	}
 
 	// Bounds clamping
 	app = pressN(app, keyDown, nFiles+5)
-	if app.detail.fileCursor != nFiles-1 {
-		t.Fatalf("expected fileCursor clamped at %d, got %d", nFiles-1, app.detail.fileCursor)
+	if app.detail.fileViewer.cursor != nFiles-1 {
+		t.Fatalf("expected fileCursor clamped at %d, got %d", nFiles-1, app.detail.fileViewer.cursor)
 	}
 }
 
@@ -413,10 +413,10 @@ func TestDetailFilesEnterOpens(t *testing.T) {
 	m, _ = app.Update(keyEnter)
 	app = m.(App)
 
-	if !app.detail.viewingFile {
+	if !app.detail.fileViewer.viewing {
 		t.Fatal("expected viewingFile=true after enter on file")
 	}
-	if app.detail.fileContent == "" {
+	if app.detail.fileViewer.content == "" {
 		t.Fatal("expected fileContent to be loaded")
 	}
 }
@@ -443,8 +443,8 @@ func TestDetailFilesViewerScroll(t *testing.T) {
 	// Scroll down in viewer
 	m, _ = app.Update(keyDown)
 	app = m.(App)
-	if app.detail.fileScrollOffset != 1 {
-		t.Fatalf("expected fileScrollOffset 1, got %d", app.detail.fileScrollOffset)
+	if app.detail.fileViewer.scrollOffset != 1 {
+		t.Fatalf("expected fileScrollOffset 1, got %d", app.detail.fileViewer.scrollOffset)
 	}
 }
 
@@ -455,14 +455,14 @@ func TestDetailFilesViewerEsc(t *testing.T) {
 	m, _ = app.Update(keyEnter) // open file
 	app = m.(App)
 
-	if !app.detail.viewingFile {
+	if !app.detail.fileViewer.viewing {
 		t.Fatal("expected viewingFile=true")
 	}
 
 	// Esc closes file viewer (not back to items — handled by app level)
 	m, _ = app.Update(keyEsc)
 	app = m.(App)
-	if app.detail.viewingFile {
+	if app.detail.fileViewer.viewing {
 		t.Fatal("expected viewingFile=false after esc")
 	}
 }
@@ -487,7 +487,7 @@ func TestDetailInstallCheckboxNav(t *testing.T) {
 	m, _ := app.Update(keyRune('3')) // → Install tab
 	app = m.(App)
 
-	nChecks := len(app.detail.providerChecks)
+	nChecks := len(app.detail.provCheck.checks)
 	if nChecks < 1 {
 		t.Skip("no provider checkboxes available")
 	}
@@ -495,8 +495,8 @@ func TestDetailInstallCheckboxNav(t *testing.T) {
 	if nChecks >= 2 {
 		m, _ = app.Update(keyDown)
 		app = m.(App)
-		if app.detail.checkCursor != 1 {
-			t.Fatalf("expected checkCursor 1, got %d", app.detail.checkCursor)
+		if app.detail.provCheck.cursor != 1 {
+			t.Fatalf("expected checkCursor 1, got %d", app.detail.provCheck.cursor)
 		}
 	}
 }
@@ -506,23 +506,23 @@ func TestDetailInstallCheckboxToggle(t *testing.T) {
 	m, _ := app.Update(keyRune('3')) // → Install tab
 	app = m.(App)
 
-	if len(app.detail.providerChecks) < 1 {
+	if len(app.detail.provCheck.checks) < 1 {
 		t.Skip("no provider checkboxes")
 	}
 
-	initial := app.detail.providerChecks[0]
+	initial := app.detail.provCheck.checks[0]
 
 	// Space toggles
 	m, _ = app.Update(keySpace)
 	app = m.(App)
-	if app.detail.providerChecks[0] == initial {
+	if app.detail.provCheck.checks[0] == initial {
 		t.Fatal("space should toggle checkbox")
 	}
 
 	// Enter also toggles
 	m, _ = app.Update(keyEnter)
 	app = m.(App)
-	if app.detail.providerChecks[0] != initial {
+	if app.detail.provCheck.checks[0] != initial {
 		t.Fatal("enter should toggle checkbox back")
 	}
 }
@@ -533,7 +533,7 @@ func TestDetailInstallPreChecked(t *testing.T) {
 	// Since our test providers have empty install dirs, nothing should be
 	// pre-checked (no files exist). Just verify the array is initialized.
 	app := navigateToDetail(t, catalog.Skills)
-	if app.detail.providerChecks == nil {
+	if app.detail.provCheck.checks == nil {
 		t.Fatal("providerChecks should be initialized")
 	}
 }
@@ -588,8 +588,8 @@ func TestDetailInstallAlreadyInstalled(t *testing.T) {
 	app = m.(App)
 
 	// Mark all checkboxes as checked (simulating already installed)
-	for i := range app.detail.providerChecks {
-		app.detail.providerChecks[i] = true
+	for i := range app.detail.provCheck.checks {
+		app.detail.provCheck.checks[i] = true
 	}
 	// Force startInstall path — but the providers have empty install dirs so
 	// CheckStatus won't find them installed. Instead, test with no new installs.
@@ -927,8 +927,8 @@ func TestDetailMethodPickerShowsPaths(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 	app.detail.activeTab = tabInstall
 	app.detail.confirmAction = actionChooseMethod
-	if len(app.detail.providerChecks) > 0 {
-		app.detail.providerChecks[0] = true
+	if len(app.detail.provCheck.checks) > 0 {
+		app.detail.provCheck.checks[0] = true
 	}
 
 	view := app.View()

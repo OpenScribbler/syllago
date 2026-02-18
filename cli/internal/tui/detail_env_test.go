@@ -17,7 +17,7 @@ func setupEnvDetail(t *testing.T) App {
 	app := navigateToDetailItem(t, catalog.MCP, "test-mcp")
 
 	// Ensure env vars are unset so the wizard has work to do
-	for _, name := range app.detail.envVarNames {
+	for _, name := range app.detail.env.varNames {
 		t.Setenv(name, "")
 	}
 
@@ -64,7 +64,7 @@ func TestEnvChooseNewValue(t *testing.T) {
 	}
 
 	// Cursor at 0 = "Set up new", press enter
-	app.detail.envMethodCursor = 0
+	app.detail.env.methodCursor = 0
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
@@ -77,7 +77,7 @@ func TestEnvChooseAlreadyConfigured(t *testing.T) {
 	app := setupEnvDetail(t)
 
 	// Cursor at 1 = "Already configured", press enter
-	app.detail.envMethodCursor = 1
+	app.detail.env.methodCursor = 1
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
@@ -89,42 +89,42 @@ func TestEnvChooseAlreadyConfigured(t *testing.T) {
 func TestEnvChooseNavigation(t *testing.T) {
 	app := setupEnvDetail(t)
 
-	if app.detail.envMethodCursor != 0 {
-		t.Fatalf("expected initial envMethodCursor 0, got %d", app.detail.envMethodCursor)
+	if app.detail.env.methodCursor != 0 {
+		t.Fatalf("expected initial envMethodCursor 0, got %d", app.detail.env.methodCursor)
 	}
 
 	m, _ := app.Update(keyDown)
 	app = m.(App)
-	if app.detail.envMethodCursor != 1 {
-		t.Fatalf("expected envMethodCursor 1 after down, got %d", app.detail.envMethodCursor)
+	if app.detail.env.methodCursor != 1 {
+		t.Fatalf("expected envMethodCursor 1 after down, got %d", app.detail.env.methodCursor)
 	}
 
 	// Bounds clamping
 	m, _ = app.Update(keyDown)
 	app = m.(App)
-	if app.detail.envMethodCursor != 1 {
+	if app.detail.env.methodCursor != 1 {
 		t.Fatal("envMethodCursor should clamp at 1")
 	}
 
 	m, _ = app.Update(keyUp)
 	app = m.(App)
-	if app.detail.envMethodCursor != 0 {
-		t.Fatalf("expected envMethodCursor 0 after up, got %d", app.detail.envMethodCursor)
+	if app.detail.env.methodCursor != 0 {
+		t.Fatalf("expected envMethodCursor 0 after up, got %d", app.detail.env.methodCursor)
 	}
 }
 
 func TestEnvChooseSkip(t *testing.T) {
 	app := setupEnvDetail(t)
 
-	initialIdx := app.detail.envVarIdx
+	initialIdx := app.detail.env.varIdx
 
 	// Esc skips to the next var
 	m, _ := app.Update(keyEsc)
 	app = m.(App)
 
-	if len(app.detail.envVarNames) > 1 {
-		if app.detail.envVarIdx != initialIdx+1 {
-			t.Fatalf("expected envVarIdx %d after skip, got %d", initialIdx+1, app.detail.envVarIdx)
+	if len(app.detail.env.varNames) > 1 {
+		if app.detail.env.varIdx != initialIdx+1 {
+			t.Fatalf("expected envVarIdx %d after skip, got %d", initialIdx+1, app.detail.env.varIdx)
 		}
 	}
 }
@@ -133,7 +133,7 @@ func TestEnvValueInput(t *testing.T) {
 	app := setupEnvDetail(t)
 
 	// Navigate to value input
-	app.detail.envMethodCursor = 0
+	app.detail.env.methodCursor = 0
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
@@ -160,7 +160,7 @@ func TestEnvValueEsc(t *testing.T) {
 	app := setupEnvDetail(t)
 
 	// Navigate to value input
-	app.detail.envMethodCursor = 0
+	app.detail.env.methodCursor = 0
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
@@ -178,7 +178,7 @@ func TestEnvLocationInput(t *testing.T) {
 	app := setupEnvDetail(t)
 
 	// Navigate: choose → value → type value → enter → location
-	app.detail.envMethodCursor = 0
+	app.detail.env.methodCursor = 0
 	m, _ := app.Update(keyEnter) // → value
 	app = m.(App)
 	for _, r := range "testval" {
@@ -206,7 +206,7 @@ func TestEnvLocationEsc(t *testing.T) {
 	app := setupEnvDetail(t)
 
 	// Navigate to location
-	app.detail.envMethodCursor = 0
+	app.detail.env.methodCursor = 0
 	m, _ := app.Update(keyEnter) // → value
 	app = m.(App)
 	for _, r := range "val" {
@@ -229,7 +229,7 @@ func TestEnvSourceInput(t *testing.T) {
 	app := setupEnvDetail(t)
 
 	// Navigate to source (already configured path)
-	app.detail.envMethodCursor = 1
+	app.detail.env.methodCursor = 1
 	m, _ := app.Update(keyEnter) // → source
 	app = m.(App)
 
@@ -240,10 +240,10 @@ func TestEnvSourceInput(t *testing.T) {
 	// Type a path to a .env file
 	envFile := t.TempDir() + "/.env"
 	// Create a test .env file
-	writeTestEnvFile(t, envFile, app.detail.envVarNames[app.detail.envVarIdx], "test-secret-value")
+	writeTestEnvFile(t, envFile, app.detail.env.varNames[app.detail.env.varIdx], "test-secret-value")
 
 	// Clear input and type new path
-	app.detail.envInput.SetValue(envFile)
+	app.detail.env.input.SetValue(envFile)
 	m, _ = app.Update(keyEnter)
 	app = m.(App)
 
@@ -257,7 +257,7 @@ func TestEnvSourceEsc(t *testing.T) {
 	app := setupEnvDetail(t)
 
 	// Navigate to source
-	app.detail.envMethodCursor = 1
+	app.detail.env.methodCursor = 1
 	m, _ := app.Update(keyEnter) // → source
 	app = m.(App)
 

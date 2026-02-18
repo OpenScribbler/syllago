@@ -69,26 +69,16 @@ type detailModel struct {
 	scrollOffset  int
 	saveInput     textinput.Model
 	savePath      string // confirmed save destination (after path input)
-	// Provider checkbox state (initialized on creation for non-prompt items)
-	providerChecks []bool
-	checkCursor    int
-	// Env var interactive setup
-	envInput        textinput.Model
-	envVarNames     []string // ordered list of unset env var names
-	envVarIdx       int      // current index being prompted
-	envMethodCursor int      // 0=set up new, 1=already configured (for env-choose picker)
-	envValue        string   // temporarily holds entered value between env-value and env-location
-	appScriptPreview string  // first N lines of install.sh for preview
+	// Sub-models for grouped concerns
+	provCheck        provCheckModel  // provider checkbox state (Install tab)
+	env              envSetupModel   // env var interactive setup
+	appScriptPreview string          // first N lines of install.sh for preview
 	renderedBody    string   // cached glamour-rendered README body (apps only)
 	renderedReadme  string   // cached glamour-rendered README.md (all types)
 	llmPrompt       string   // loaded from LLM-PROMPT.md for local scaffolded items
 	// Tab state
 	activeTab        detailTab
-	// File viewer state (Files tab)
-	fileCursor       int
-	fileContent      string
-	fileScrollOffset int
-	viewingFile      bool // true when viewing file content (not file list)
+	fileViewer       fileViewerModel // file viewer state (Files tab)
 	listPosition     int  // 0-based position in the items list (for breadcrumb)
 	listTotal        int  // total items in the list
 	width            int
@@ -108,7 +98,7 @@ func newDetailModel(item catalog.ContentItem, providers []provider.Provider, rep
 		providers: providers,
 		repoRoot:  repoRoot,
 		saveInput: ti,
-		envInput:  ei,
+		env: envSetupModel{input: ei},
 	}
 	// Parse MCP config for preview
 	if item.Type == catalog.MCP {
@@ -140,10 +130,10 @@ func newDetailModel(item catalog.ContentItem, providers []provider.Provider, rep
 	// Pre-check any providers where the item is already installed
 	if item.Type != catalog.Prompts {
 		detected := m.detectedProviders()
-		m.providerChecks = make([]bool, len(detected))
+		m.provCheck.checks = make([]bool, len(detected))
 		for i, p := range detected {
 			status := installer.CheckStatus(item, p, repoRoot)
-			m.providerChecks[i] = status == installer.StatusInstalled
+			m.provCheck.checks[i] = status == installer.StatusInstalled
 		}
 	}
 	return m
@@ -209,44 +199,44 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			case msg.Type == tea.KeyEsc:
 				m.advanceEnvSetup() // skip this var
 			case key.Matches(msg, keys.Up):
-				if m.envMethodCursor > 0 {
-					m.envMethodCursor--
+				if m.env.methodCursor > 0 {
+					m.env.methodCursor--
 				}
 			case key.Matches(msg, keys.Down):
-				if m.envMethodCursor < 1 {
-					m.envMethodCursor++
+				if m.env.methodCursor < 1 {
+					m.env.methodCursor++
 				}
 			case msg.Type == tea.KeyEnter:
-				if m.envMethodCursor == 0 {
+				if m.env.methodCursor == 0 {
 					// "Set up new value"
 					m.confirmAction = actionEnvValue
-					m.envInput.Prompt = labelStyle.Render(m.envVarNames[m.envVarIdx]+": ") + " "
-					m.envInput.Placeholder = "enter value or esc to go back"
-					m.envInput.SetValue("")
-					m.envInput.Focus()
+					m.env.input.Prompt = labelStyle.Render(m.env.varNames[m.env.varIdx]+": ") + " "
+					m.env.input.Placeholder = "enter value or esc to go back"
+					m.env.input.SetValue("")
+					m.env.input.Focus()
 				} else {
 					// "Already configured"
 					m.confirmAction = actionEnvSource
-					m.envInput.Prompt = labelStyle.Render("Path to .env file: ") + " "
-					m.envInput.Placeholder = "e.g. ~/.env or /path/to/.env"
-					m.envInput.SetValue("")
-					m.envInput.Focus()
+					m.env.input.Prompt = labelStyle.Render("Path to .env file: ") + " "
+					m.env.input.Placeholder = "e.g. ~/.env or /path/to/.env"
+					m.env.input.SetValue("")
+					m.env.input.Focus()
 				}
 			}
 			return m, nil
 		}
 		if m.confirmAction == actionEnvValue {
 			if msg.Type == tea.KeyEsc {
-				m.envInput.Blur()
+				m.env.input.Blur()
 				m.confirmAction = actionEnvChoose
 				return m, nil
 			}
 			if msg.Type == tea.KeyEnter {
-				value := m.envInput.Value()
+				value := m.env.input.Value()
 				if value == "" {
 					return m, nil
 				}
-				m.envValue = value
+				m.env.value = value
 				m.confirmAction = actionEnvLocation
 				home, err := os.UserHomeDir()
 				if err != nil {
@@ -255,60 +245,60 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 					return m, nil
 				}
 				defaultPath := filepath.Join(home, ".config", "romanesco", ".env")
-				m.envInput.Prompt = labelStyle.Render("Save to: ") + " "
-				m.envInput.Placeholder = defaultPath
-				m.envInput.SetValue(defaultPath)
-				m.envInput.Focus()
+				m.env.input.Prompt = labelStyle.Render("Save to: ") + " "
+				m.env.input.Placeholder = defaultPath
+				m.env.input.SetValue(defaultPath)
+				m.env.input.Focus()
 				return m, nil
 			}
 			var cmd tea.Cmd
-			m.envInput, cmd = m.envInput.Update(msg)
+			m.env.input, cmd = m.env.input.Update(msg)
 			return m, cmd
 		}
 		if m.confirmAction == actionEnvLocation {
 			if msg.Type == tea.KeyEsc {
 				m.confirmAction = actionEnvValue
-				m.envInput.Prompt = labelStyle.Render(m.envVarNames[m.envVarIdx]+": ") + " "
-				m.envInput.Placeholder = "enter value or esc to go back"
-				m.envInput.SetValue(m.envValue)
-				m.envInput.Focus()
+				m.env.input.Prompt = labelStyle.Render(m.env.varNames[m.env.varIdx]+": ") + " "
+				m.env.input.Placeholder = "enter value or esc to go back"
+				m.env.input.SetValue(m.env.value)
+				m.env.input.Focus()
 				return m, nil
 			}
 			if msg.Type == tea.KeyEnter {
-				savePath := m.envInput.Value()
+				savePath := m.env.input.Value()
 				if savePath == "" {
 					return m, nil
 				}
-				name := m.envVarNames[m.envVarIdx]
-				if err := m.saveEnvToFile(name, m.envValue, savePath); err != nil {
+				name := m.env.varNames[m.env.varIdx]
+				if err := m.saveEnvToFile(name, m.env.value, savePath); err != nil {
 					m.message = fmt.Sprintf("Failed to save %s: %s", name, err)
 					m.messageIsErr = true
 				} else {
 					m.message = fmt.Sprintf("Saved %s to %s", name, savePath)
 					m.messageIsErr = false
 				}
-				os.Setenv(name, m.envValue)
-				m.envValue = ""
-				m.envInput.Blur()
+				os.Setenv(name, m.env.value)
+				m.env.value = ""
+				m.env.input.Blur()
 				m.advanceEnvSetup()
 				return m, nil
 			}
 			var cmd tea.Cmd
-			m.envInput, cmd = m.envInput.Update(msg)
+			m.env.input, cmd = m.env.input.Update(msg)
 			return m, cmd
 		}
 		if m.confirmAction == actionEnvSource {
 			if msg.Type == tea.KeyEsc {
-				m.envInput.Blur()
+				m.env.input.Blur()
 				m.confirmAction = actionEnvChoose
 				return m, nil
 			}
 			if msg.Type == tea.KeyEnter {
-				filePath := m.envInput.Value()
+				filePath := m.env.input.Value()
 				if filePath == "" {
 					return m, nil
 				}
-				name := m.envVarNames[m.envVarIdx]
+				name := m.env.varNames[m.env.varIdx]
 				if err := m.loadEnvFromFile(name, filePath); err != nil {
 					m.message = fmt.Sprintf("Could not load %s from %s: %s", name, filePath, err)
 					m.messageIsErr = true
@@ -316,17 +306,17 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 					m.message = fmt.Sprintf("Loaded %s from %s", name, filePath)
 					m.messageIsErr = false
 				}
-				m.envInput.Blur()
+				m.env.input.Blur()
 				m.advanceEnvSetup()
 				return m, nil
 			}
 			var cmd tea.Cmd
-			m.envInput, cmd = m.envInput.Update(msg)
+			m.env.input, cmd = m.env.input.Update(msg)
 			return m, cmd
 		}
 
 		// Tab switching (only when no active action/input)
-		if m.confirmAction == actionNone && !m.viewingFile {
+		if m.confirmAction == actionNone && !m.fileViewer.viewing {
 			switch msg.String() {
 			case "tab":
 				m.activeTab = (m.activeTab + 1) % 3
@@ -352,52 +342,52 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 		}
 
 		// File viewer: viewing file content
-		if m.activeTab == tabFiles && m.viewingFile {
+		if m.activeTab == tabFiles && m.fileViewer.viewing {
 			switch {
 			case key.Matches(msg, keys.Back):
-				m.viewingFile = false
-				m.fileContent = ""
-				m.fileScrollOffset = 0
+				m.fileViewer.viewing = false
+				m.fileViewer.content = ""
+				m.fileViewer.scrollOffset = 0
 				return m, nil
 			case key.Matches(msg, keys.Up):
-				if m.fileScrollOffset > 0 {
-					m.fileScrollOffset--
+				if m.fileViewer.scrollOffset > 0 {
+					m.fileViewer.scrollOffset--
 				}
 				return m, nil
 			case key.Matches(msg, keys.Down):
-				m.fileScrollOffset++
+				m.fileViewer.scrollOffset++
 				return m, nil
 			}
 			return m, nil
 		}
 
 		// File viewer: navigating file list
-		if m.activeTab == tabFiles && !m.viewingFile && m.confirmAction == actionNone {
+		if m.activeTab == tabFiles && !m.fileViewer.viewing && m.confirmAction == actionNone {
 			switch {
 			case key.Matches(msg, keys.Back):
 				// Let the outer handler deal with Esc (navigate back)
 			case key.Matches(msg, keys.Up):
-				if m.fileCursor > 0 {
-					m.fileCursor--
+				if m.fileViewer.cursor > 0 {
+					m.fileViewer.cursor--
 				}
 				return m, nil
 			case key.Matches(msg, keys.Down):
-				if m.fileCursor < len(m.item.Files)-1 {
-					m.fileCursor++
+				if m.fileViewer.cursor < len(m.item.Files)-1 {
+					m.fileViewer.cursor++
 				}
 				return m, nil
 			case key.Matches(msg, keys.Enter):
-				if m.fileCursor < len(m.item.Files) {
-					relPath := m.item.Files[m.fileCursor]
+				if m.fileViewer.cursor < len(m.item.Files) {
+					relPath := m.item.Files[m.fileViewer.cursor]
 					absPath := filepath.Join(m.item.Path, relPath)
 					data, readErr := os.ReadFile(absPath)
 					if readErr != nil {
 						m.message = fmt.Sprintf("Cannot read file: %s", readErr)
 						m.messageIsErr = true
 					} else {
-						m.fileContent = string(data)
-						m.fileScrollOffset = 0
-						m.viewingFile = true
+						m.fileViewer.content = string(data)
+						m.fileViewer.scrollOffset = 0
+						m.fileViewer.viewing = true
 					}
 				}
 				return m, nil
@@ -430,8 +420,8 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 						if m.scrollOffset > 0 {
 							m.scrollOffset--
 						}
-					} else if len(m.providerChecks) > 0 && m.checkCursor > 0 {
-						m.checkCursor--
+					} else if len(m.provCheck.checks) > 0 && m.provCheck.cursor > 0 {
+						m.provCheck.cursor--
 					}
 				}
 			}
@@ -450,15 +440,15 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 					if m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps {
 						m.scrollOffset++
 						m.clampScroll()
-					} else if len(m.providerChecks) > 0 && m.checkCursor < len(m.providerChecks)-1 {
-						m.checkCursor++
+					} else if len(m.provCheck.checks) > 0 && m.provCheck.cursor < len(m.provCheck.checks)-1 {
+						m.provCheck.cursor++
 					}
 				}
 			}
 
 		case key.Matches(msg, keys.Space):
-			if m.activeTab == tabInstall && m.confirmAction == actionNone && m.checkCursor < len(m.providerChecks) {
-				m.providerChecks[m.checkCursor] = !m.providerChecks[m.checkCursor]
+			if m.activeTab == tabInstall && m.confirmAction == actionNone && m.provCheck.cursor < len(m.provCheck.checks) {
+				m.provCheck.checks[m.provCheck.cursor] = !m.provCheck.checks[m.provCheck.cursor]
 			}
 
 		case key.Matches(msg, keys.Install):
@@ -513,8 +503,8 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 				m.methodCursor = 0
 			default:
 				// Enter toggles checkbox in default config panel state
-				if m.confirmAction == actionNone && m.checkCursor < len(m.providerChecks) {
-					m.providerChecks[m.checkCursor] = !m.providerChecks[m.checkCursor]
+				if m.confirmAction == actionNone && m.provCheck.cursor < len(m.provCheck.checks) {
+					m.provCheck.checks[m.provCheck.cursor] = !m.provCheck.checks[m.provCheck.cursor]
 				}
 			}
 
@@ -609,17 +599,17 @@ func (m *detailModel) startInstall() {
 	}
 
 	// Auto-check the cursor provider if it's not already installed
-	if m.checkCursor < len(detected) && m.checkCursor < len(m.providerChecks) {
-		status := installer.CheckStatus(m.item, detected[m.checkCursor], m.repoRoot)
+	if m.provCheck.cursor < len(detected) && m.provCheck.cursor < len(m.provCheck.checks) {
+		status := installer.CheckStatus(m.item, detected[m.provCheck.cursor], m.repoRoot)
 		if status != installer.StatusInstalled {
-			m.providerChecks[m.checkCursor] = true
+			m.provCheck.checks[m.provCheck.cursor] = true
 		}
 	}
 
 	// Find providers that are checked but not yet installed
 	hasNewInstalls := false
 	needsMethod := false
-	for i, checked := range m.providerChecks {
+	for i, checked := range m.provCheck.checks {
 		if !checked || i >= len(detected) {
 			continue
 		}
@@ -657,7 +647,7 @@ func (m *detailModel) doInstallChecked() {
 	}
 
 	var successes, errs []string
-	for i, checked := range m.providerChecks {
+	for i, checked := range m.provCheck.checks {
 		if !checked || i >= len(detected) {
 			continue
 		}
@@ -691,9 +681,9 @@ func (m *detailModel) doInstallChecked() {
 	// Refresh checkbox state to reflect actual install status
 	detected = m.detectedProviders()
 	for i, p := range detected {
-		if i < len(m.providerChecks) {
+		if i < len(m.provCheck.checks) {
 			status := installer.CheckStatus(m.item, p, m.repoRoot)
-			m.providerChecks[i] = status == installer.StatusInstalled
+			m.provCheck.checks[i] = status == installer.StatusInstalled
 		}
 	}
 
@@ -734,8 +724,8 @@ func (m *detailModel) doUninstallAll() {
 	}
 
 	// Uncheck all provider checkboxes after uninstall
-	for i := range m.providerChecks {
-		m.providerChecks[i] = false
+	for i := range m.provCheck.checks {
+		m.provCheck.checks[i] = false
 	}
 }
 
@@ -812,7 +802,7 @@ func (m *detailModel) doSave() {
 // HasPendingAction returns true if the detail view has an active confirmation,
 // picker, or file viewer that should consume the Back key instead of navigating away.
 func (m detailModel) HasPendingAction() bool {
-	return m.confirmAction != actionNone || m.viewingFile
+	return m.confirmAction != actionNone || m.fileViewer.viewing
 }
 
 // HasTextInput returns true if the detail view has an active text input
@@ -827,21 +817,21 @@ func (m detailModel) HasTextInput() bool {
 
 // CancelAction clears all active confirmation/picker/file-viewer state.
 func (m *detailModel) CancelAction() {
-	if m.viewingFile {
-		m.viewingFile = false
-		m.fileContent = ""
-		m.fileScrollOffset = 0
+	if m.fileViewer.viewing {
+		m.fileViewer.viewing = false
+		m.fileViewer.content = ""
+		m.fileViewer.scrollOffset = 0
 		return
 	}
 	m.confirmAction = actionNone
 	m.methodCursor = 0
 	m.appScriptPreview = ""
 	m.saveInput.Blur()
-	m.envInput.Blur()
-	m.envVarNames = nil
-	m.envVarIdx = 0
-	m.envMethodCursor = 0
-	m.envValue = ""
+	m.env.input.Blur()
+	m.env.varNames = nil
+	m.env.varIdx = 0
+	m.env.methodCursor = 0
+	m.env.value = ""
 }
 
 // supportedProviders returns all providers that support this item's content type.
