@@ -158,7 +158,7 @@ func TestDetailMessageClearsOnKeypress(t *testing.T) {
 
 func TestDetailMessagePreservedDuringTextInput(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	app.detail.confirmAction = actionSavePath
+	app.detail.confirmAction = actionEnvValue
 	app.detail.message = "some error"
 	app.detail.messageIsErr = true
 
@@ -548,13 +548,14 @@ func TestDetailInstallStart(t *testing.T) {
 	app = m.(App)
 
 	// Press 'i' to start install
-	m, _ = app.Update(keyRune('i'))
+	m, cmd := app.Update(keyRune('i'))
 	app = m.(App)
 
-	// Should enter method picker or complete install (depending on provider type)
-	// Either confirmAction changes or message is set
-	if app.detail.confirmAction == actionNone && app.detail.message == "" {
-		t.Fatal("expected install to either set confirmAction or message")
+	// The modal-based install flow: pressing 'i' with detected providers emits
+	// an openModalMsg cmd (no direct state change). If no providers, message is set.
+	// Either a cmd was returned (modal flow) or message was set (no-provider case).
+	if cmd == nil && app.detail.confirmAction == actionNone && app.detail.message == "" {
+		t.Fatal("expected install to either return a cmd (modal) or set message (no providers)")
 	}
 }
 
@@ -689,26 +690,14 @@ func TestDetailPromptSavePath(t *testing.T) {
 	m, _ := app.Update(keyRune('3')) // Install tab
 	app = m.(App)
 
-	// Press 's' to start save path flow
-	m, _ = app.Update(keyRune('s'))
+	// Press 's' to start save flow — now opens a modal via openSaveModalMsg cmd
+	m, cmd := app.Update(keyRune('s'))
 	app = m.(App)
 
-	if app.detail.confirmAction != actionSavePath {
-		t.Fatalf("expected actionSavePath, got %d", app.detail.confirmAction)
-	}
-
-	// Type a path and enter → method picker
-	m, _ = app.Update(keyEnter)
-	app = m.(App)
-	if app.detail.confirmAction != actionSaveMethod {
-		t.Fatalf("expected actionSaveMethod after enter, got %d", app.detail.confirmAction)
-	}
-
-	// Esc from save method → back to none
-	m, _ = app.Update(keyEsc)
-	app = m.(App)
-	if app.detail.confirmAction != actionNone {
-		t.Fatalf("expected actionNone after esc from save method, got %d", app.detail.confirmAction)
+	// The save flow is modal-based: pressing 's' emits an openSaveModalMsg cmd.
+	// Verify the cmd was returned (the modal will be opened by App.Update on cmd exec).
+	if cmd == nil {
+		t.Fatal("expected 's' to return a cmd (openSaveModalMsg) for the save modal")
 	}
 }
 
@@ -731,18 +720,24 @@ func TestDetailPromoteLocal(t *testing.T) {
 		t.Fatal("expected local item")
 	}
 
-	// First 'p' → confirmation
-	m, _ = app.Update(keyRune('p'))
-	app = m.(App)
-	if app.detail.confirmAction != actionPromoteConfirm {
-		t.Fatalf("expected actionPromoteConfirm, got %d", app.detail.confirmAction)
-	}
-
-	// Second 'p' → executes promote (returns command)
+	// 'p' now emits openModalMsg instead of setting confirmAction
 	m, cmd := app.Update(keyRune('p'))
 	app = m.(App)
+	if app.detail.confirmAction == actionPromoteConfirm {
+		t.Fatal("pressing p should NOT set confirmAction=actionPromoteConfirm; it should emit openModalMsg")
+	}
 	if cmd == nil {
-		t.Fatal("expected promote command on double-press")
+		t.Fatal("pressing p should return a cmd (openModalMsg) to open the promote modal")
+	}
+	// Verify the cmd produces an openModalMsg with modalPromote purpose
+	if msg := cmd(); msg != nil {
+		oMsg, ok := msg.(openModalMsg)
+		if !ok {
+			t.Fatalf("cmd should return openModalMsg, got %T", msg)
+		}
+		if oMsg.purpose != modalPromote {
+			t.Errorf("openModalMsg.purpose should be modalPromote, got %d", oMsg.purpose)
+		}
 	}
 }
 
@@ -812,7 +807,8 @@ func TestDetailBackCancelsPendingAction(t *testing.T) {
 func TestDetailShowsPosition(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 	view := app.View()
-	assertContains(t, view, "1 of")
+	// Position is shown as "(N/Total)" format per Task 4.1 renderContentSplit
+	assertContains(t, view, "1/")
 }
 
 // ---------------------------------------------------------------------------

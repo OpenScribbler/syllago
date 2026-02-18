@@ -31,6 +31,14 @@ type promoteDoneMsg struct {
 	err    error
 }
 
+// openSaveModalMsg is sent by detailModel to ask App to open the save modal.
+type openSaveModalMsg struct{}
+
+// openEnvModalMsg is sent by detailModel to ask App to open the env setup wizard modal.
+type openEnvModalMsg struct {
+	envTypes []string
+}
+
 // detailAction represents the current interactive state of the detail view.
 type detailAction int
 
@@ -172,25 +180,6 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 		if m.message != "" && msg.Type != tea.KeyEsc && !m.HasTextInput() {
 			m.message = ""
 			m.messageIsErr = false
-		}
-
-		// When save path input is active, route keys to it
-		if m.confirmAction == actionSavePath {
-			if msg.Type == tea.KeyEsc {
-				m.confirmAction = actionNone
-				m.saveInput.Blur()
-				return m, nil
-			}
-			if msg.Type == tea.KeyEnter {
-				m.savePath = m.saveInput.Value()
-				m.saveInput.Blur()
-				m.confirmAction = actionSaveMethod
-				m.methodCursor = 0
-				return m, nil
-			}
-			var cmd tea.Cmd
-			m.saveInput, cmd = m.saveInput.Update(msg)
-			return m, cmd
 		}
 
 		// Env setup: multi-step flow
@@ -405,7 +394,7 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 
 		case key.Matches(msg, keys.Up):
 			switch m.confirmAction {
-			case actionChooseMethod, actionSaveMethod:
+			case actionChooseMethod:
 				if m.methodCursor > 0 {
 					m.methodCursor--
 				}
@@ -428,7 +417,7 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 
 		case key.Matches(msg, keys.Down):
 			switch m.confirmAction {
-			case actionChooseMethod, actionSaveMethod:
+			case actionChooseMethod:
 				if m.methodCursor < 1 {
 					m.methodCursor++
 				}
@@ -459,34 +448,28 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 				break
 			}
 			if m.item.Type == catalog.Apps {
-				if m.confirmAction == actionAppScriptConfirm {
-					// Second press — user confirmed after preview
-					m.confirmAction = actionNone
-					m.appScriptPreview = ""
-					return m, m.runAppScript()
+				itemPath := m.item.Path
+				return m, func() tea.Msg {
+					scriptPreview := loadScriptPreview(itemPath)
+					return openModalMsg{
+						purpose: modalAppScript,
+						title:   "Run install.sh?",
+						body:    "WARNING: executes a shell script.\n\n" + scriptPreview,
+					}
 				}
-				// First press — show script preview before execution
-				scriptPath := filepath.Join(m.item.Path, "install.sh")
-				data, err := os.ReadFile(scriptPath)
-				if err != nil {
-					m.message = fmt.Sprintf("Cannot read install.sh: %v", err)
-					m.messageIsErr = true
-					return m, nil
-				}
-				lines := strings.Split(string(data), "\n")
-				if len(lines) > 20 {
-					lines = lines[:20]
-				}
-				m.appScriptPreview = strings.Join(lines, "\n")
-				m.confirmAction = actionAppScriptConfirm
+			}
+			// Guard: no providers detected
+			if len(m.detectedProviders()) == 0 {
+				m.message = "No providers detected for this content type"
+				m.messageIsErr = true
 				return m, nil
 			}
-			switch m.confirmAction {
-			case actionChooseMethod:
-				m.doInstallChecked()
-				m.methodCursor = 0
-			default:
-				m.startInstall()
+			return m, func() tea.Msg {
+				return openModalMsg{
+					purpose: modalInstall,
+					title:   fmt.Sprintf("Install %q?", m.item.Name),
+					body:    "Install to checked providers using symlink or copy.",
+				}
 			}
 
 		case key.Matches(msg, keys.Enter):
@@ -496,10 +479,6 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			switch m.confirmAction {
 			case actionChooseMethod:
 				m.doInstallChecked()
-				m.methodCursor = 0
-			case actionSaveMethod:
-				m.doSave()
-				m.confirmAction = actionNone
 				m.methodCursor = 0
 			default:
 				// Enter toggles checkbox in default config panel state
@@ -518,17 +497,23 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			if m.item.Type == catalog.Apps {
 				return m, m.runAppScript("--uninstall")
 			}
-			if m.confirmAction == actionUninstall {
-				m.doUninstallAll()
-				m.confirmAction = actionNone
-			} else if m.confirmAction == actionNone {
+			if m.confirmAction == actionNone {
 				installed := m.installedProviders()
 				if len(installed) == 0 {
 					m.message = "Not installed in any provider"
 					m.messageIsErr = true
 				} else {
-					m.confirmAction = actionUninstall
-					m.message = ""
+					var names []string
+					for _, p := range installed {
+						names = append(names, p.Name)
+					}
+					return m, func() tea.Msg {
+						return openModalMsg{
+							purpose: modalUninstall,
+							title:   fmt.Sprintf("Uninstall %q?", m.item.Name),
+							body:    fmt.Sprintf("Remove from: %s", strings.Join(names, ", ")),
+						}
+					}
 				}
 			}
 
@@ -546,18 +531,7 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 				break
 			}
 			if m.item.Type == catalog.Prompts && m.item.Body != "" && m.confirmAction == actionNone {
-				m.confirmAction = actionSavePath
-				home, err := os.UserHomeDir()
-				if err != nil {
-					m.message = "Cannot determine home directory"
-					m.messageIsErr = true
-					return m, nil
-				}
-				defaultPath := filepath.Join(home, "prompts", m.item.Name+".md")
-				m.saveInput.SetValue(defaultPath)
-				m.saveInput.Focus()
-				m.message = ""
-				return m, nil
+				return m, func() tea.Msg { return openSaveModalMsg{} }
 			}
 
 		case key.Matches(msg, keys.EnvSetup):
@@ -565,21 +539,23 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 				break
 			}
 			if m.item.Type == catalog.MCP && m.confirmAction == actionNone {
-				m.startEnvSetup()
+				envTypes := m.unsetEnvVarNames()
+				if len(envTypes) == 0 {
+					m.message = "All environment variables are set"
+					m.messageIsErr = false
+					return m, nil
+				}
+				return m, func() tea.Msg { return openEnvModalMsg{envTypes: envTypes} }
 			}
 
 		case key.Matches(msg, keys.Promote):
 			if m.item.Local && m.confirmAction == actionNone {
-				m.confirmAction = actionPromoteConfirm
-				m.message = ""
-			} else if m.confirmAction == actionPromoteConfirm {
-				// Double-press confirms
-				m.confirmAction = actionNone
-				repoRoot := m.repoRoot
-				item := m.item
 				return m, func() tea.Msg {
-					result, err := promote.Promote(repoRoot, item)
-					return promoteDoneMsg{result: result, err: err}
+					return openModalMsg{
+						purpose: modalPromote,
+						title:   fmt.Sprintf("Promote %q to shared?", m.item.Name),
+						body:    "Creates a branch, commits, pushes, and opens a PR.",
+					}
 				}
 			}
 		}
@@ -749,6 +725,20 @@ func (m *detailModel) runAppScript(args ...string) tea.Cmd {
 	})
 }
 
+// loadScriptPreview reads the first 10 lines of install.sh from itemPath.
+// Returns a placeholder string if the file cannot be read.
+func loadScriptPreview(itemPath string) string {
+	data, err := os.ReadFile(filepath.Join(itemPath, "install.sh"))
+	if err != nil {
+		return "(script not found)"
+	}
+	lines := strings.Split(string(data), "\n")
+	if len(lines) > 10 {
+		lines = lines[:10]
+	}
+	return strings.Join(lines, "\n")
+}
+
 func (m *detailModel) doCopy() {
 	if err := clipboard.WriteAll(m.item.Body); err != nil {
 		m.message = fmt.Sprintf("Copy failed: %s", err)
@@ -799,6 +789,15 @@ func (m *detailModel) doSave() {
 	}
 }
 
+// doSavePrompt sets the save path from the modal input value and triggers save.
+// It replaces the inline actionSavePath/actionSaveMethod flow.
+func (m *detailModel) doSavePrompt(filename string) {
+	m.savePath = filename
+	// Default to symlink (methodCursor 0); user chose via modal, not method picker
+	m.methodCursor = 0
+	m.doSave()
+}
+
 // HasPendingAction returns true if the detail view has an active confirmation,
 // picker, or file viewer that should consume the Back key instead of navigating away.
 func (m detailModel) HasPendingAction() bool {
@@ -809,7 +808,7 @@ func (m detailModel) HasPendingAction() bool {
 // (e.g., save-path, env-setup) that should capture keyboard input.
 func (m detailModel) HasTextInput() bool {
 	switch m.confirmAction {
-	case actionSavePath, actionEnvValue, actionEnvLocation, actionEnvSource:
+	case actionEnvValue, actionEnvLocation, actionEnvSource:
 		return true
 	}
 	return false
@@ -872,15 +871,16 @@ func (m detailModel) installedProviders() []provider.Provider {
 
 // clampScroll ensures scrollOffset stays within valid bounds.
 func (m *detailModel) clampScroll() {
-	content := m.renderContent()
-	lines := strings.Split(content, "\n")
+	pinned, body := m.renderContentSplit()
+	pinnedLines := strings.Split(pinned, "\n")
+	bodyLines := strings.Split(body, "\n")
 
-	visibleHeight := m.height - 2
+	visibleHeight := m.height - len(pinnedLines) - 2
 	if visibleHeight < 1 {
-		visibleHeight = len(lines)
+		visibleHeight = len(bodyLines)
 	}
 
-	maxOffset := len(lines) - visibleHeight
+	maxOffset := len(bodyLines) - visibleHeight
 	if maxOffset < 0 {
 		maxOffset = 0
 	}

@@ -7,46 +7,66 @@ import (
 	"sort"
 	"strings"
 
+	zone "github.com/lrstanley/bubblezone"
+
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
 	"github.com/holdenhewett/romanesco/cli/internal/installer"
 )
 
 // renderContent builds the full detail content (without scrolling or help bar).
+// Returns the combined string of pinned header and scrollable body.
 func (m detailModel) renderContent() string {
+	pinned, body := m.renderContentSplit()
+	return pinned + body
+}
+
+// renderContentSplit returns pinned header and scrollable body separately.
+// The pinned header contains: item name + tab bar + Type/Path/Provider metadata + separator.
+// The scrollable body contains: tab content only.
+func (m detailModel) renderContentSplit() (pinned string, body string) {
 	name := StripControlChars(displayName(m.item))
 	position := ""
 	if m.listTotal > 0 {
-		position = fmt.Sprintf(" (%d of %d)", m.listPosition+1, m.listTotal)
+		position = fmt.Sprintf(" (%d/%d)", m.listPosition+1, m.listTotal)
 	}
-	s := helpStyle.Render("nesco > "+m.item.Type.Label()+" >") + " " + titleStyle.Render(name) + helpStyle.Render(position)
+
+	// Header line: name + position + LOCAL tag + tab bar (right side)
+	nameStr := titleStyle.Render(name)
 	if m.item.Local {
-		s += " " + warningStyle.Render("[LOCAL]")
+		nameStr += " " + warningStyle.Render("[LOCAL]")
 	}
-	s += "\n"
+	nameStr += helpStyle.Render(position)
+	tabBar := m.renderTabBar()
 
-	// Description (always shown above tabs)
-	if m.item.Description != "" {
-		desc := StripControlChars(m.item.Description)
-		if len(desc) > 200 {
-			desc = desc[:197] + "..."
-		}
-		s += valueStyle.Render(desc) + "\n"
+	// Combine name and tab bar on one line
+	headerLine := nameStr + "  " + tabBar
+	pinned += headerLine + "\n"
+
+	// Metadata block: Type, Path, Providers (always visible, above separator)
+	pinned += "\n"
+	pinned += labelStyle.Render("Type: ") + valueStyle.Render(m.item.Type.Label())
+	if m.item.Path != "" {
+		pinned += "   " + labelStyle.Render("Path: ") + valueStyle.Render(m.item.Path)
+	}
+	pinned += "\n"
+	if m.item.Provider != "" {
+		pinned += labelStyle.Render("Providers: ") + valueStyle.Render(m.item.Provider) + "\n"
 	}
 
-	// Tab bar
-	s += "\n" + m.renderTabBar() + "\n\n"
+	// Horizontal separator
+	pinned += helpStyle.Render(strings.Repeat("─", 60)) + "\n\n"
 
-	// Tab content
+	// Scrollable body: tab content only
 	switch m.activeTab {
 	case tabOverview:
-		s += m.renderOverviewTab()
+		body = m.renderOverviewTab()
 	case tabFiles:
-		s += m.renderFilesTab()
+		body = m.renderFilesTab()
 	case tabInstall:
-		s += m.renderInstallTab()
+		body = m.renderInstallTab()
 	}
 
-	return s
+	return pinned, body
 }
 
 // renderTabBar renders the tab selector: [Overview]  Files  Install
@@ -63,12 +83,13 @@ func (m detailModel) renderTabBar() string {
 	var parts []string
 	for _, t := range tabs {
 		label := t.label
+		var rendered string
 		if t.tab == m.activeTab {
-			label = selectedItemStyle.Render("[" + label + "]")
+			rendered = selectedItemStyle.Render("[" + label + "]")
 		} else {
-			label = helpStyle.Render(" " + label + " ")
+			rendered = helpStyle.Render(" " + label + " ")
 		}
-		parts = append(parts, label)
+		parts = append(parts, zone.Mark(fmt.Sprintf("tab-%d", int(t.tab)), rendered))
 	}
 
 	return strings.Join(parts, "  ")
@@ -103,14 +124,6 @@ func (m detailModel) renderOverviewTab() string {
 		s += valueStyle.Render(m.item.Body) + "\n"
 	} else {
 		s += helpStyle.Render("No README.md available for this item.") + "\n"
-	}
-
-	// Metadata
-	s += "\n"
-	s += labelStyle.Render("Type: ") + valueStyle.Render(m.item.Type.Label()) + "\n"
-	s += labelStyle.Render("Path: ") + valueStyle.Render(m.item.Path) + "\n"
-	if m.item.Provider != "" {
-		s += labelStyle.Render("Provider: ") + valueStyle.Render(m.item.Provider) + "\n"
 	}
 
 	// LLM Prompt (for scaffolded local items)
@@ -210,6 +223,14 @@ func (m detailModel) renderFileContent() string {
 func (m detailModel) renderInstallTab() string {
 	var s string
 
+	// Action button bar — rendered in the content area so mouse clicks are targetable
+	installBtn := zone.Mark("detail-btn-install", helpStyle.Render("[i]nstall"))
+	uninstallBtn := zone.Mark("detail-btn-uninstall", helpStyle.Render("[u]ninstall"))
+	copyBtn := zone.Mark("detail-btn-copy", helpStyle.Render("[c]opy"))
+	saveBtn := zone.Mark("detail-btn-save", helpStyle.Render("[s]ave"))
+	actionBar := installBtn + "  " + uninstallBtn + "  " + copyBtn + "  " + saveBtn
+	s += actionBar + "\n\n"
+
 	// MCP Server Configuration preview
 	if m.item.Type == catalog.MCP && m.mcpConfig != nil {
 		s += labelStyle.Render("Server Configuration:") + "\n"
@@ -294,12 +315,8 @@ func (m detailModel) renderInstallTab() string {
 	}
 
 	// Method picker
-	if m.confirmAction == actionChooseMethod || m.confirmAction == actionSaveMethod {
-		label := "Install method:"
-		if m.confirmAction == actionSaveMethod {
-			label = "Save method:"
-		}
-		s += "\n" + labelStyle.Render(label) + "\n"
+	if m.confirmAction == actionChooseMethod {
+		s += "\n" + labelStyle.Render("Install method:") + "\n"
 
 		type methodOption struct {
 			name string
@@ -322,38 +339,26 @@ func (m detailModel) renderInstallTab() string {
 		}
 
 		// Show destination paths for checked providers
-		if m.confirmAction == actionChooseMethod {
-			detected := m.detectedProviders()
-			home, err := os.UserHomeDir()
-			if err == nil {
-				s += "\n" + helpStyle.Render("Destination paths:") + "\n"
-				for i, checked := range m.provCheck.checks {
-					if !checked || i >= len(detected) {
-						continue
-					}
-					p := detected[i]
-					if installer.IsJSONMerge(p, m.item.Type) {
-						s += "  " + helpStyle.Render(p.Name+": ") + valueStyle.Render("(merged into config)") + "\n"
-					} else {
-						destDir := p.InstallDir(home, m.item.Type)
-						dest := filepath.Join(destDir, m.item.Name)
-						s += "  " + helpStyle.Render(p.Name+": ") + valueStyle.Render(dest) + "\n"
-					}
+		detected := m.detectedProviders()
+		home, err := os.UserHomeDir()
+		if err == nil {
+			s += "\n" + helpStyle.Render("Destination paths:") + "\n"
+			for i, checked := range m.provCheck.checks {
+				if !checked || i >= len(detected) {
+					continue
+				}
+				p := detected[i]
+				if installer.IsJSONMerge(p, m.item.Type) {
+					s += "  " + helpStyle.Render(p.Name+": ") + valueStyle.Render("(merged into config)") + "\n"
+				} else {
+					destDir := p.InstallDir(home, m.item.Type)
+					dest := filepath.Join(destDir, m.item.Name)
+					s += "  " + helpStyle.Render(p.Name+": ") + valueStyle.Render(dest) + "\n"
 				}
 			}
 		}
 
-		confirmKey := "i/enter"
-		if m.confirmAction == actionSaveMethod {
-			confirmKey = "enter"
-		}
-		s += "\n" + helpStyle.Render(fmt.Sprintf("up/down select • %s confirm • esc cancel", confirmKey)) + "\n"
-	}
-
-	// Save path input
-	if m.confirmAction == actionSavePath {
-		s += "\n" + m.saveInput.View() + "\n"
-		s += helpStyle.Render("enter confirm • esc cancel") + "\n"
+		s += "\n" + helpStyle.Render("up/down select • i/enter confirm • esc cancel") + "\n"
 	}
 
 	// Env var interactive setup
@@ -396,60 +401,30 @@ func (m detailModel) renderInstallTab() string {
 		}
 	}
 
-	// App install.sh preview
-	if m.confirmAction == actionAppScriptConfirm {
-		s += "\n" + warningStyle.Render("WARNING: This will execute a shell script") + "\n\n"
-		s += labelStyle.Render("install.sh preview (first 20 lines):") + "\n"
-		s += helpStyle.Render("───") + "\n"
-
-		for _, line := range strings.Split(StripControlChars(m.appScriptPreview), "\n") {
-			s += helpStyle.Render(line) + "\n"
-		}
-
-		s += helpStyle.Render("───") + "\n\n"
-		if len(strings.Split(m.appScriptPreview, "\n")) >= 20 {
-			s += helpStyle.Render("(script continues below...)") + "\n\n"
-		}
-		s += helpStyle.Render("Press i again to execute, esc to cancel") + "\n"
-		return s
-	}
-
-	// Confirmation prompts
-	switch m.confirmAction {
-	case actionUninstall:
-		installed := m.installedProviders()
-		var names []string
-		for _, p := range installed {
-			names = append(names, p.Name)
-		}
-		s += "\n" + helpStyle.Render(fmt.Sprintf("Uninstall from %s? Press u to confirm, esc to cancel", strings.Join(names, ", "))) + "\n"
-	case actionPromoteConfirm:
-		s += "\n" + warningStyle.Render("Promote to shared?") + "\n"
-		s += helpStyle.Render("This creates a branch, commits, pushes, and opens a PR.") + "\n"
-		s += helpStyle.Render("Press p again to confirm, esc to cancel.") + "\n"
-	}
-
 	return s
 }
 
 func (m detailModel) View() string {
-	content := m.renderContent()
-	lines := strings.Split(content, "\n")
+	pinned, body := m.renderContentSplit()
 
+	pinnedLines := strings.Split(pinned, "\n")
+	pinnedHeight := len(pinnedLines)
+
+	bodyLines := strings.Split(body, "\n")
 	helpBar := m.renderHelp()
 
-	// Reserve space for message line if present (outside scrollable area)
 	messageLines := 0
 	if m.message != "" {
 		messageLines = 1
 	}
 
-	visibleHeight := m.height - 2 - messageLines
+	// Scrollable area = total height minus pinned header, message, help bar, margins
+	visibleHeight := m.height - pinnedHeight - messageLines - 2
 	if visibleHeight < 1 {
-		visibleHeight = len(lines)
+		visibleHeight = len(bodyLines)
 	}
 
-	maxOffset := len(lines) - visibleHeight
+	maxOffset := len(bodyLines) - visibleHeight
 	if maxOffset < 0 {
 		maxOffset = 0
 	}
@@ -462,23 +437,21 @@ func (m detailModel) View() string {
 	}
 
 	end := offset + visibleHeight
-	if end > len(lines) {
-		end = len(lines)
+	if end > len(bodyLines) {
+		end = len(bodyLines)
 	}
 
-	var s string
+	s := pinned // always show pinned header
 
 	if offset > 0 {
-		visible := lines[offset:end]
-		s = helpStyle.Render(fmt.Sprintf("(%d lines above)", offset)) + "\n"
-		s += strings.Join(visible, "\n")
+		s += helpStyle.Render(fmt.Sprintf("(%d lines above)", offset)) + "\n"
+		s += strings.Join(bodyLines[offset:end], "\n")
 	} else {
-		visible := lines[offset:end]
-		s = strings.Join(visible, "\n")
+		s += strings.Join(bodyLines[offset:end], "\n")
 	}
 
-	if end < len(lines) {
-		s += "\n" + helpStyle.Render(fmt.Sprintf("(%d lines below)", len(lines)-end))
+	if end < len(bodyLines) {
+		s += "\n" + helpStyle.Render(fmt.Sprintf("(%d lines below)", len(bodyLines)-end))
 	}
 
 	// Status message — rendered outside scrollable area so it's always visible

@@ -4,13 +4,19 @@ import "github.com/charmbracelet/lipgloss"
 
 var (
 	// Colors — adaptive for light/dark terminal themes.
-	// Light = color on dark backgrounds, Dark = color on light backgrounds.
-	primaryColor = lipgloss.AdaptiveColor{Light: "#7C3AED", Dark: "#A78BFA"}
-	secondaryColor = lipgloss.AdaptiveColor{Light: "#06B6D4", Dark: "#22D3EE"}
-	mutedColor     = lipgloss.AdaptiveColor{Light: "#6B7280", Dark: "#9CA3AF"}
-	successColor   = lipgloss.AdaptiveColor{Light: "#10B981", Dark: "#34D399"}
-	dangerColor    = lipgloss.AdaptiveColor{Light: "#EF4444", Dark: "#F87171"}
-	warningColor   = lipgloss.AdaptiveColor{Light: "#F59E0B", Dark: "#FBBF24"}
+	// Light = color on light terminal backgrounds, Dark = color on dark terminal backgrounds.
+	primaryColor = lipgloss.AdaptiveColor{Light: "#047857", Dark: "#6EE7B7"} // Mint
+	accentColor  = lipgloss.AdaptiveColor{Light: "#6D28D9", Dark: "#C4B5FD"} // Viola
+	mutedColor   = lipgloss.AdaptiveColor{Light: "#57534E", Dark: "#A8A29E"} // Stone
+	successColor = lipgloss.AdaptiveColor{Light: "#15803D", Dark: "#4ADE80"} // Green
+	dangerColor  = lipgloss.AdaptiveColor{Light: "#B91C1C", Dark: "#FCA5A5"} // Red
+	warningColor = lipgloss.AdaptiveColor{Light: "#B45309", Dark: "#FCD34D"} // Amber
+
+	// Panel and layout colors
+	borderColor      = lipgloss.AdaptiveColor{Light: "#D4D4D8", Dark: "#3F3F46"}
+	selectedBgColor  = lipgloss.AdaptiveColor{Light: "#D1FAE5", Dark: "#1A3A2A"}
+	modalBgColor     = lipgloss.AdaptiveColor{Light: "#F4F4F5", Dark: "#27272A"}
+	modalBorderColor = lipgloss.AdaptiveColor{Light: "#6D28D9", Dark: "#C4B5FD"} // same as accent
 
 	// Title bar
 	titleStyle = lipgloss.NewStyle().
@@ -26,12 +32,9 @@ var (
 	itemStyle = lipgloss.NewStyle()
 
 	selectedItemStyle = lipgloss.NewStyle().
-				Foreground(secondaryColor).
-				Background(lipgloss.AdaptiveColor{
-				Light: "#1E293B", // dark blue-gray for dark terminals
-				Dark:  "#E2E8F0", // light gray for light terminals
-			}).
-			Bold(true)
+				Foreground(accentColor).
+				Background(selectedBgColor).
+				Bold(true)
 
 	// Status indicators
 	installedStyle = lipgloss.NewStyle().
@@ -78,4 +81,27 @@ var (
 
 	versionStyle = lipgloss.NewStyle().
 			Foreground(mutedColor)
+
+	// Sidebar panel
+	sidebarBorderStyle = lipgloss.NewStyle().
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(borderColor).
+		BorderRight(true)
+
+	// Content panel header bar (item name + tab bar line)
+	contentHeaderStyle = lipgloss.NewStyle().
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(borderColor).
+		BorderBottom(true)
+
+	// Footer bar
+	footerStyle = lipgloss.NewStyle().
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(borderColor).
+		BorderTop(true).
+		Foreground(mutedColor)
+
+	// Breadcrumb within footer
+	breadcrumbStyle = lipgloss.NewStyle().
+		Foreground(mutedColor)
 )

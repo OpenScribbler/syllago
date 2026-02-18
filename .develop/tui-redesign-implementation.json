@@ -1,0 +1,33 @@
+{
+  "feature": "tui-redesign-implementation",
+  "started": "2026-02-18T01:49:04.774Z",
+  "updated": "2026-02-18T01:49:04.774Z",
+  "currentStage": "plan",
+  "completed": [
+    "brainstorm"
+  ],
+  "artifacts": {
+    "design": "/home/hhewett/.local/src/romanesco/docs/plans/2026-02-17-tui-redesign-implementation.md",
+    "plan": null
+  },
+  "validation": {
+    "attempts": 0,
+    "lastGaps": [],
+    "passed": false
+  },
+  "beads": {
+    "created": false,
+    "prefix": null,
+    "epicIds": [],
+    "taskCount": 0
+  },
+  "nextAction": {
+    "action": "invoke_skill",
+    "description": "Invoke Plan skill to create implementation plan",
+    "tool": "Skill",
+    "toolInput": {
+      "skill": "plan",
+      "args": "--from-design /home/hhewett/.local/src/romanesco/docs/plans/2026-02-17-tui-redesign-implementation.md"
+    }
+  }
+}

@@ -25,8 +25,8 @@ func navigateToUpdateWithRemote(t *testing.T) App {
 	app := testApp(t)
 	app.remoteVersion = "2.0.0"
 	app.commitsBehind = 5
-	app.category.remoteVersion = "2.0.0"
-	app.category.updateAvailable = true
+	app.sidebar.remoteVersion = "2.0.0"
+	app.sidebar.updateAvailable = true
 
 	nTypes := len(catalog.AllContentTypes())
 	app = pressN(app, keyDown, nTypes+2)
@@ -186,7 +186,7 @@ func TestUpdateCheckMsgSuccess(t *testing.T) {
 	m, _ := app.Update(msg)
 	app = m.(App)
 
-	if !app.category.updateAvailable {
+	if !app.sidebar.updateAvailable {
 		t.Fatal("expected updateAvailable=true")
 	}
 	if app.remoteVersion != "2.0.0" {
@@ -205,7 +205,7 @@ func TestUpdateCheckMsgSameVersion(t *testing.T) {
 	m, _ := app.Update(msg)
 	app = m.(App)
 
-	if app.category.updateAvailable {
+	if app.sidebar.updateAvailable {
 		t.Fatal("expected updateAvailable=false when versions match")
 	}
 }
@@ -220,7 +220,7 @@ func TestUpdateCheckMsgError(t *testing.T) {
 	app = m.(App)
 
 	// Should not crash, and updateAvailable should remain false
-	if app.category.updateAvailable {
+	if app.sidebar.updateAvailable {
 		t.Fatal("updateAvailable should be false on error")
 	}
 }

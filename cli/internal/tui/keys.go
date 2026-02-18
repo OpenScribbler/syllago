@@ -21,6 +21,7 @@ type keyMap struct {
 	Help key.Binding
 	Home key.Binding
 	End  key.Binding
+	Right key.Binding
 }
 
 var keys = keyMap{
@@ -95,5 +96,9 @@ var keys = keyMap{
 	End: key.NewBinding(
 		key.WithKeys("end", "G"),
 		key.WithHelp("end/G", "bottom"),
+	),
+	Right: key.NewBinding(
+		key.WithKeys("right", "l"),
+		key.WithHelp("right/l", "enter"),
 	),
 }

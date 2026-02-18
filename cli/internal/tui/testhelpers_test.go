@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
 	"github.com/holdenhewett/romanesco/cli/internal/model"
@@ -18,6 +19,9 @@ func init() {
 	// Disable ANSI color output for deterministic test assertions.
 	// All charmbracelet libraries honor the NO_COLOR standard.
 	os.Setenv("NO_COLOR", "1")
+	// Initialize the bubblezone global manager so zone.Mark() calls in View()
+	// don't panic during tests (in production this is called in main.go).
+	zone.NewGlobal()
 }
 
 // ---------------------------------------------------------------------------

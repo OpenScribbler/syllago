@@ -7,8 +7,11 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/romanesco/cli/internal/promote"
 	"github.com/holdenhewett/romanesco/cli/internal/provider"
 	"github.com/holdenhewett/romanesco/cli/internal/scan"
 )
@@ -24,6 +27,14 @@ const (
 	screenSettings
 )
 
+type focusTarget int
+
+const (
+	focusSidebar focusTarget = iota
+	focusContent
+	focusModal
+)
+
 // App is the root bubbletea model.
 type App struct {
 	catalog    *catalog.Catalog
@@ -33,14 +44,19 @@ type App struct {
 	autoUpdate bool
 
 	screen      screen
-	category    categoryModel
+	focus       focusTarget
+	modal       confirmModal
+	saveModal   saveModal
+	envModal    envSetupModal
+	sidebar     sidebarModel
 	items       itemsModel
 	detail      detailModel
 	search      searchModel
 	helpOverlay helpOverlayModel
 	importer    importModel
 	updater     updateModel
-	settings    settingsModel
+	settings      settingsModel
+	statusMessage string
 
 	// Detail model cache (preserves state when re-entering same item)
 	cachedDetail     *detailModel
@@ -65,7 +81,8 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, detectors []sca
 		version:    version,
 		autoUpdate: autoUpdate,
 		screen:     screenCategory,
-		category:   newCategoryModel(cat, version),
+		focus:      focusSidebar,
+		sidebar:    newSidebarModel(cat, version),
 		search:     newSearchModel(),
 	}
 }
@@ -79,17 +96,22 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		a.width = msg.Width
 		a.height = msg.Height
-		a.tooSmall = msg.Width < 40 || msg.Height < 10
-		a.items.width = msg.Width
+		a.tooSmall = msg.Width < 60 || msg.Height < 10
+		// sidebarWidth is inner content width; rendered width is sidebarWidth + 1 (right border).
+		contentW := msg.Width - sidebarWidth - 1
+		if contentW < 20 {
+			contentW = 20
+		}
+		a.items.width = contentW
 		a.items.height = msg.Height
-		a.detail.width = msg.Width
+		a.detail.width = contentW
 		a.detail.height = msg.Height
 		a.detail.clampScroll()
-		a.importer.width = msg.Width
+		a.importer.width = contentW
 		a.importer.height = msg.Height
-		a.updater.width = msg.Width
+		a.updater.width = contentW
 		a.updater.height = msg.Height
-		a.settings.width = msg.Width
+		a.settings.width = contentW
 		a.settings.height = msg.Height
 		return a, nil
 
@@ -111,8 +133,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cat, err := catalog.Scan(a.catalog.RepoRoot)
 				if err == nil {
 					a.catalog = cat
-					a.category.counts = cat.CountByType()
-					a.category.localCount = cat.CountLocal()
+					a.sidebar.counts = cat.CountByType()
+					a.sidebar.localCount = cat.CountLocal()
 				}
 			}
 			return a, cmd
@@ -143,12 +165,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cat, err := catalog.Scan(a.catalog.RepoRoot)
 		if err == nil {
 			a.catalog = cat
-			a.category.message = fmt.Sprintf("Imported %q successfully", msg.name)
+			a.statusMessage = fmt.Sprintf("Imported %q successfully", msg.name)
 		} else {
-			a.category.message = fmt.Sprintf("Imported %q but catalog rescan failed: %s", msg.name, err)
+			a.statusMessage = fmt.Sprintf("Imported %q but catalog rescan failed: %s", msg.name, err)
 		}
-		a.category.counts = a.catalog.CountByType()
-		a.category.localCount = a.catalog.CountLocal()
+		a.sidebar.counts = a.catalog.CountByType()
+		a.sidebar.localCount = a.catalog.CountLocal()
 		a.screen = screenCategory
 		a.importer.cleanup()
 		return a, nil
@@ -157,13 +179,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err == nil && msg.remoteVersion != "" && versionNewer(msg.remoteVersion, msg.localVersion) {
 			a.remoteVersion = msg.remoteVersion
 			a.commitsBehind = msg.commitsBehind
-			a.category.remoteVersion = msg.remoteVersion
-			a.category.updateAvailable = true
-			a.category.commitsBehind = msg.commitsBehind
+			a.sidebar.remoteVersion = msg.remoteVersion
+			a.sidebar.updateAvailable = true
+			a.sidebar.commitsBehind = msg.commitsBehind
 
 			if a.autoUpdate {
 				a.updater = newUpdateModel(a.catalog.RepoRoot, a.version, a.remoteVersion, a.commitsBehind)
-				a.updater.width = a.width
+				a.updater.width = a.width - sidebarWidth - 1
 				a.updater.height = a.height
 				a.screen = screenUpdate
 				return a, a.updater.startPull()
@@ -194,21 +216,133 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cat, err := catalog.Scan(a.catalog.RepoRoot)
 				if err == nil {
 					a.catalog = cat
-					a.category.counts = cat.CountByType()
-					a.category.localCount = cat.CountLocal()
+					a.sidebar.counts = cat.CountByType()
+					a.sidebar.localCount = cat.CountLocal()
 				}
 			}
 			return a, cmd
 		}
+
+	case openModalMsg:
+		a.modal = newConfirmModal(msg.title, msg.body)
+		a.modal.purpose = msg.purpose
+		a.focus = focusModal
+		return a, nil
+
+	case openSaveModalMsg:
+		a.saveModal = newSaveModal("filename.md")
+		a.focus = focusModal
+		return a, nil
+
+	case openEnvModalMsg:
+		a.envModal = newEnvSetupModal(msg.envTypes)
+		a.focus = focusModal
+		return a, nil
+
+	case tea.MouseMsg:
+		if msg.Action != tea.MouseActionRelease || msg.Button != tea.MouseButtonLeft {
+			return a, nil
+		}
+		// Check sidebar zones
+		for i := 0; i < a.sidebar.totalItems(); i++ {
+			if zone.Get(fmt.Sprintf("sidebar-%d", i)).InBounds(msg) {
+				a.sidebar.cursor = i
+				a.screen = screenCategory
+				// Synthesize Enter to load content
+				return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+			}
+		}
+		// Check item list zones
+		if a.screen == screenItems {
+			for i := range a.items.items {
+				if zone.Get(fmt.Sprintf("item-%d", i)).InBounds(msg) {
+					a.items.cursor = i
+					a.focus = focusContent
+					return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+				}
+			}
+		}
+		// Check detail tab zones
+		if a.screen == screenDetail {
+			tabs := []detailTab{tabOverview, tabFiles, tabInstall}
+			for _, tab := range tabs {
+				if zone.Get(fmt.Sprintf("tab-%d", int(tab))).InBounds(msg) {
+					a.detail.activeTab = tab
+					return a, nil
+				}
+			}
+		}
+		// Check detail action button zones
+		if a.screen == screenDetail {
+			btnChars := map[string]string{
+				"detail-btn-install":   "i",
+				"detail-btn-uninstall": "u",
+				"detail-btn-copy":      "c",
+				"detail-btn-save":      "s",
+			}
+			for zoneID, char := range btnChars {
+				if zone.Get(zoneID).InBounds(msg) {
+					return a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(char)})
+				}
+			}
+		}
+		return a, nil
 
 	case tea.KeyMsg:
 		// ctrl+c always quits from any screen
 		if msg.String() == "ctrl+c" {
 			return a, tea.Quit
 		}
-		// q quits from category, navigates back from other screens
+		// If a modal is active, route all input to it
+		if a.modal.active {
+			var cmd tea.Cmd
+			a.modal, cmd = a.modal.Update(msg)
+			if !a.modal.active {
+				a.focus = focusContent // return focus after dismiss
+				if a.modal.confirmed {
+					switch a.modal.purpose {
+					case modalInstall:
+						a.detail.doInstallChecked()
+					case modalUninstall:
+						a.detail.doUninstallAll()
+					case modalPromote:
+						repoRoot := a.detail.repoRoot
+						item := a.detail.item
+						return a, func() tea.Msg {
+							result, err := promote.Promote(repoRoot, item)
+							return promoteDoneMsg{result: result, err: err}
+						}
+					case modalAppScript:
+						return a, a.detail.runAppScript()
+					}
+				}
+			}
+			return a, cmd
+		}
+		if a.saveModal.active {
+			var cmd tea.Cmd
+			a.saveModal, cmd = a.saveModal.Update(msg)
+			if !a.saveModal.active && a.saveModal.confirmed {
+				a.detail.savePath = a.saveModal.value
+				a.detail.doSave()
+				a.focus = focusContent
+			} else if !a.saveModal.active {
+				a.focus = focusContent
+			}
+			return a, cmd
+		}
+		if a.envModal.active {
+			var cmd tea.Cmd
+			a.envModal, cmd = a.envModal.Update(msg)
+			if !a.envModal.active {
+				a.focus = focusContent
+			}
+			return a, cmd
+		}
+		// q quits from sidebar, navigates back from content screens
 		if key.Matches(msg, keys.Quit) && !a.search.active {
-			if a.screen == screenCategory {
+			// Quit when focus is on the sidebar (home base) or on the root category screen
+			if a.screen == screenCategory || a.focus == focusSidebar {
 				return a, tea.Quit
 			}
 			// Skip if text input is active
@@ -258,7 +392,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.search = a.search.deactivated()
 				// If on items screen, reset items
 				if a.screen == screenItems {
-					ct := a.category.selectedType()
+					ct := a.sidebar.selectedType()
 					items := newItemsModel(ct, a.catalog.ByType(ct), a.providers, a.catalog.RepoRoot)
 					items.width = a.width
 					items.height = a.height
@@ -277,7 +411,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.items = items
 					a.screen = screenItems
 				} else if a.screen == screenItems {
-					ct := a.category.selectedType()
+					ct := a.sidebar.selectedType()
 					filtered := filterItems(a.catalog.ByType(ct), a.search.query())
 					items := newItemsModel(ct, filtered, a.providers, a.catalog.RepoRoot)
 					items.width = a.width
@@ -326,63 +460,102 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, cmd
 		}
 
+		// Tab/Shift+Tab: switch focus between sidebar and content.
+		// Guard: NOT on screenDetail (Tab still switches detail tabs when content is focused).
+		// On screenDetail, Tab is handled by detail.Update() to switch Overview/Files/Install tabs.
+		// Panel-focus Tab only fires when sidebar is focused OR when on screens other than screenDetail.
+		if (key.Matches(msg, keys.Tab) || key.Matches(msg, keys.ShiftTab)) &&
+			!a.search.active && !a.helpOverlay.active &&
+			a.screen != screenDetail {
+			if a.screen != screenImport && a.screen != screenUpdate && a.screen != screenSettings {
+				if !a.detail.HasTextInput() {
+					if a.focus == focusSidebar {
+						a.focus = focusContent
+					} else {
+						a.focus = focusSidebar
+					}
+					return a, nil
+				}
+			}
+		}
+
 		// Screen-specific key handling
 		switch a.screen {
+		// Sidebar-focused: route input to sidebar; Enter/Right drills into content
 		case screenCategory:
-			if key.Matches(msg, keys.Enter) {
-				if a.category.isUpdateSelected() {
-					a.updater = newUpdateModel(a.catalog.RepoRoot, a.version, a.remoteVersion, a.commitsBehind)
-					a.updater.width = a.width
-					a.updater.height = a.height
-					a.screen = screenUpdate
-					return a, nil
-				}
-				if a.category.isSettingsSelected() {
-					a.settings = newSettingsModel(a.catalog.RepoRoot, a.providers, a.detectors)
-					a.settings.width = a.width
-					a.settings.height = a.height
-					a.screen = screenSettings
-					return a, nil
-				}
-				if a.category.isImportSelected() {
-					a.importer = newImportModel(a.providers, a.catalog.RepoRoot)
-					a.importer.width = a.width
-					a.importer.height = a.height
-					a.screen = screenImport
-					return a, nil
-				}
-				if a.category.isMyToolsSelected() {
-					var localItems []catalog.ContentItem
-					for _, item := range a.catalog.Items {
-						if item.Local {
-							localItems = append(localItems, item)
-						}
+			if a.focus == focusSidebar {
+				if key.Matches(msg, keys.Enter) || key.Matches(msg, keys.Right) {
+					if a.sidebar.isUpdateSelected() {
+						a.updater = newUpdateModel(a.catalog.RepoRoot, a.version, a.remoteVersion, a.commitsBehind)
+						a.updater.width = a.width - sidebarWidth - 1
+						a.updater.height = a.height
+						a.screen = screenUpdate
+						a.focus = focusContent
+						return a, nil
 					}
-					items := newItemsModel(catalog.MyTools, localItems, a.providers, a.catalog.RepoRoot)
-					items.width = a.width
+					if a.sidebar.isSettingsSelected() {
+						a.settings = newSettingsModel(a.catalog.RepoRoot, a.providers, a.detectors)
+						a.settings.width = a.width - sidebarWidth - 1
+						a.settings.height = a.height
+						a.screen = screenSettings
+						a.focus = focusContent
+						return a, nil
+					}
+					if a.sidebar.isImportSelected() {
+						a.importer = newImportModel(a.providers, a.catalog.RepoRoot)
+						a.importer.width = a.width - sidebarWidth - 1
+						a.importer.height = a.height
+						a.screen = screenImport
+						a.focus = focusContent
+						return a, nil
+					}
+					if a.sidebar.isMyToolsSelected() {
+						var localItems []catalog.ContentItem
+						for _, item := range a.catalog.Items {
+							if item.Local {
+								localItems = append(localItems, item)
+							}
+						}
+						items := newItemsModel(catalog.MyTools, localItems, a.providers, a.catalog.RepoRoot)
+						items.width = a.width - sidebarWidth - 1
+						items.height = a.height
+						a.items = items
+						a.screen = screenItems
+						a.focus = focusContent
+						return a, nil
+					}
+					ct := a.sidebar.selectedType()
+					items := newItemsModel(ct, a.catalog.ByType(ct), a.providers, a.catalog.RepoRoot)
+					items.width = a.width - sidebarWidth - 1
 					items.height = a.height
 					a.items = items
 					a.screen = screenItems
+					a.focus = focusContent
 					return a, nil
 				}
-				ct := a.category.selectedType()
-				items := newItemsModel(ct, a.catalog.ByType(ct), a.providers, a.catalog.RepoRoot)
-				items.width = a.width
-				items.height = a.height
-				a.items = items
-				a.screen = screenItems
-				return a, nil
+				a.sidebar.focused = true
+				var cmd tea.Cmd
+				a.sidebar, cmd = a.sidebar.Update(msg)
+				return a, cmd
 			}
-			var cmd tea.Cmd
-			a.category, cmd = a.category.Update(msg)
-			return a, cmd
 
 		case screenItems:
 			if key.Matches(msg, keys.Back) {
-				a.screen = screenCategory
-				// Refresh counts in case installs changed
-				a.category.counts = a.catalog.CountByType()
-				a.category.localCount = a.catalog.CountLocal()
+				if a.focus == focusSidebar {
+					// Second Esc (sidebar already focused): go back to category screen
+					a.screen = screenCategory
+					if a.catalog != nil {
+						a.sidebar.counts = a.catalog.CountByType()
+						a.sidebar.localCount = a.catalog.CountLocal()
+					}
+				} else {
+					// First Esc: shift focus back to sidebar
+					a.focus = focusSidebar
+					if a.catalog != nil {
+						a.sidebar.counts = a.catalog.CountByType()
+						a.sidebar.localCount = a.catalog.CountLocal()
+					}
+				}
 				return a, nil
 			}
 			if key.Matches(msg, keys.Enter) && len(a.items.items) > 0 {
@@ -471,6 +644,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case screenImport:
 			if key.Matches(msg, keys.Back) && a.importer.step == stepSource {
 				a.screen = screenCategory
+				a.focus = focusSidebar
 				a.importer.cleanup()
 				return a, nil
 			}
@@ -481,6 +655,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case screenUpdate:
 			if key.Matches(msg, keys.Back) && (a.updater.step == stepUpdateMenu || a.updater.step == stepUpdateDone) {
 				a.screen = screenCategory
+				a.focus = focusSidebar
 				return a, nil
 			}
 			var cmd tea.Cmd
@@ -497,6 +672,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.settings.save()
 				}
 				a.screen = screenCategory
+				a.focus = focusSidebar
 				return a, nil
 			}
 			var cmd tea.Cmd
@@ -510,44 +686,122 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (a App) View() string {
 	if a.tooSmall {
-		return "\n" + warningStyle.Render("Terminal too small. Resize to at least 40x10.") + "\n"
+		// Below minimum: skip sidebar, show warning full-width
+		if a.width < 60 || a.height < 10 {
+			return "\n" + warningStyle.Render("Terminal too small. Resize to at least 60x10.") + "\n"
+		}
 	}
 
-	var content string
+	// sidebarWidth is the lipgloss inner content width. With BorderRight(true),
+	// the rendered sidebar is sidebarWidth + 1 characters wide.
+	// Subtract the extra border character so content does not overflow the terminal.
+	contentWidth := a.width - sidebarWidth - 1
+	if contentWidth < 20 {
+		contentWidth = 20
+	}
+	_ = contentWidth // used by sub-models via WindowSizeMsg; kept for clarity
 
+	// Sidebar (always visible on the left)
+	a.sidebar.focused = (a.focus == focusSidebar)
+	sidebarView := a.sidebar.View()
+
+	// Content area: route to the active sub-view
+	var contentView string
 	switch a.screen {
-	case screenCategory:
-		content = a.category.View()
 	case screenItems:
-		content = a.items.View()
+		contentView = a.items.View()
 	case screenDetail:
-		content = a.detail.View()
+		contentView = a.detail.View()
 	case screenImport:
-		content = a.importer.View()
+		contentView = a.importer.View()
 	case screenUpdate:
-		content = a.updater.View()
+		contentView = a.updater.View()
 	case screenSettings:
-		content = a.settings.View()
+		contentView = a.settings.View()
+	default:
+		// screenCategory: sidebar is the primary UI; show welcome guidance in content
+		contentView = a.renderContentWelcome()
 	}
 
-	// Help overlay replaces all content
+	// Help overlay replaces the content view entirely
 	if a.helpOverlay.active {
-		content = a.helpOverlay.View(a.screen)
+		contentView = a.helpOverlay.View(a.screen)
 	}
 
-	// Overlay search if active (replaces the help bar)
+	// Compose sidebar + content side by side
+	panels := lipgloss.JoinHorizontal(lipgloss.Top, sidebarView, contentView)
+
+	// Footer: context-sensitive help on the left, breadcrumb on the right
+	footer := a.renderFooter()
+
+	// Search overlay replaces the footer
 	if a.search.active {
-		lines := strings.Split(content, "\n")
-		// Remove trailing empty lines and the help bar
-		for len(lines) > 0 && strings.TrimSpace(lines[len(lines)-1]) == "" {
-			lines = lines[:len(lines)-1]
-		}
-		if len(lines) > 0 {
-			lines = lines[:len(lines)-1] // remove help bar
-		}
-		content = strings.Join(lines, "\n")
-		content += "\n" + a.search.View()
+		footer = a.search.View()
 	}
 
-	return fmt.Sprintf("\n%s\n", content)
+	body := lipgloss.JoinVertical(lipgloss.Left, panels, footer)
+
+	if a.modal.active {
+		body = a.modal.overlayView(body)
+	}
+
+	if a.saveModal.active {
+		body = a.saveModal.overlayView(body)
+	}
+
+	if a.envModal.active {
+		body = a.envModal.overlayView(body)
+	}
+
+	return zone.Scan(fmt.Sprintf("\n%s\n", body))
+}
+
+// renderContentWelcome returns guidance text for when no category is drilled into.
+func (a App) renderContentWelcome() string {
+	if a.statusMessage != "" {
+		return successMsgStyle.Render("Done: " + a.statusMessage)
+	}
+	return helpStyle.Render("Select a category from the sidebar to browse content.")
+}
+
+// renderFooter builds the breadcrumb + context-sensitive help bar.
+func (a App) renderFooter() string {
+	crumb := a.breadcrumb()
+	var helpText string
+	switch a.screen {
+	case screenDetail:
+		helpText = "Esc: back   Tab: switch tab   ?: help   q: quit"
+	case screenItems:
+		helpText = "/: search   Enter: detail   Esc: sidebar   ?: help   q: quit"
+	default:
+		helpText = "Tab: switch panel   /: search   ?: help   q: quit"
+	}
+
+	left := footerStyle.Render(helpText)
+	right := breadcrumbStyle.Render(crumb)
+
+	// Pad the gap between help text and breadcrumb so crumb is right-aligned
+	gap := a.width - lipgloss.Width(left) - lipgloss.Width(right)
+	if gap < 1 {
+		gap = 1
+	}
+	return left + strings.Repeat(" ", gap) + right
+}
+
+// breadcrumb returns a "Category > Item" navigation string for the current screen.
+func (a App) breadcrumb() string {
+	switch a.screen {
+	case screenDetail:
+		return a.sidebar.selectedType().Label() + " > " + displayName(a.detail.item)
+	case screenItems:
+		return a.sidebar.selectedType().Label()
+	case screenImport:
+		return "Import"
+	case screenUpdate:
+		return "Update"
+	case screenSettings:
+		return "Settings"
+	default:
+		return "nesco"
+	}
 }
