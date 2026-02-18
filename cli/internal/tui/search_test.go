@@ -87,8 +87,8 @@ func TestSearchBlockedDetailTextInput(t *testing.T) {
 	app = m.(App)
 	assertScreen(t, app, screenDetail)
 
-	// Activate a text input on detail (e.g., save path)
-	app.detail.confirmAction = actionSavePath
+	// Activate a text input on detail (e.g., env value input)
+	app.detail.confirmAction = actionEnvValue
 
 	m, _ = app.Update(keyRune('/'))
 	app = m.(App)
@@ -318,9 +318,9 @@ func TestSearchLiveFilterCategoryShowsCount(t *testing.T) {
 func TestSearchReplacesHelpBar(t *testing.T) {
 	app := testApp(t)
 
-	// Before search: help bar is visible
+	// Before search: help bar is visible (footer shows /: search hint)
 	view := app.View()
-	assertContains(t, view, "/ search")
+	assertContains(t, view, "/: search")
 
 	// Activate search
 	m, _ := app.Update(keyRune('/'))
@@ -329,5 +329,5 @@ func TestSearchReplacesHelpBar(t *testing.T) {
 	view = app.View()
 	assertContains(t, view, "Search:")
 	// Help bar should be replaced, not both showing
-	assertNotContains(t, view, "/ search")
+	assertNotContains(t, view, "/: search")
 }

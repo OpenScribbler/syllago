@@ -44,11 +44,11 @@ func TestHelpOverlaySwallowsKeys(t *testing.T) {
 	m, _ := app.Update(keyRune('?'))
 	app = m.(App)
 
-	// Down key should not change category cursor
-	origCursor := app.category.cursor
+	// Down key should not change sidebar cursor
+	origCursor := app.sidebar.cursor
 	m, _ = app.Update(keyDown)
 	app = m.(App)
-	if app.category.cursor != origCursor {
+	if app.sidebar.cursor != origCursor {
 		t.Fatal("keys should be swallowed while help overlay is active")
 	}
 }
@@ -92,7 +92,7 @@ func TestHelpOverlayBlockedDuringSearch(t *testing.T) {
 
 func TestHelpOverlayBlockedDuringTextInput(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	app.detail.confirmAction = actionSavePath
+	app.detail.confirmAction = actionEnvValue
 
 	// ? should not activate during text input
 	m, _ := app.Update(keyRune('?'))

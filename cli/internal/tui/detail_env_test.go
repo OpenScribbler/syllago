@@ -10,28 +10,32 @@ import (
 	"github.com/holdenhewett/romanesco/cli/internal/installer"
 )
 
-// setupEnvDetail navigates to the MCP item detail and starts env setup.
-// Returns the app positioned in the env wizard.
+// setupEnvDetail navigates to the MCP item detail and starts the inline env setup flow.
+// This tests the inline flow (used post-install); pressing 'e' now opens the modal wizard instead.
 func setupEnvDetail(t *testing.T) App {
 	t.Helper()
 	app := navigateToDetailItem(t, catalog.MCP, "test-mcp")
-
-	// Ensure env vars are unset so the wizard has work to do
-	for _, name := range app.detail.env.varNames {
-		t.Setenv(name, "")
-	}
 
 	// The MCP item should have an mcpConfig parsed
 	if app.detail.mcpConfig == nil {
 		t.Fatal("expected mcpConfig to be parsed for MCP item")
 	}
 
-	// Switch to install tab and press 'e' to start env setup
+	// Ensure env vars are unset so the wizard has work to do
+	for k := range app.detail.mcpConfig.Env {
+		os.Unsetenv(k)
+	}
+
+	// Switch to install tab
 	m, _ := app.Update(keyRune('3')) // → Install tab
 	app = m.(App)
 
-	m, _ = app.Update(keyRune('e'))
-	app = m.(App)
+	// Directly trigger the inline env setup flow (as used post-install).
+	// Pressing 'e' now opens the modal wizard, not the inline flow.
+	started := app.detail.startEnvSetup()
+	if !started {
+		t.Fatal("startEnvSetup() should return true when env vars are unset")
+	}
 
 	return app
 }

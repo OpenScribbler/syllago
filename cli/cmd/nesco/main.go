@@ -18,6 +18,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
+	zone "github.com/lrstanley/bubblezone"
 	"github.com/spf13/cobra"
 )
 
@@ -193,7 +194,11 @@ func runTUI(cmd *cobra.Command, args []string) error {
 	}
 
 	app := tui.NewApp(cat, providers, detectors.AllDetectors(), version, autoUpdate)
-	p := tea.NewProgram(app, tea.WithAltScreen())
+	zone.NewGlobal()
+	p := tea.NewProgram(app,
+		tea.WithAltScreen(),
+		tea.WithMouseCellMotion(),
+	)
 	if _, err := p.Run(); err != nil {
 		return wrapTTYError(err)
 	}

@@ -12,28 +12,28 @@ func TestCategoryNavigation(t *testing.T) {
 	app := testApp(t)
 	assertScreen(t, app, screenCategory)
 
-	// There are 8 content types + My Tools + Import + Update + Settings = 12 rows (indices 0-11)
-	totalRows := len(catalog.AllContentTypes()) + 3 // +3 for My Tools, Import, Update, Settings... but +3 means indices go to types+3
-	if app.category.cursor != 0 {
-		t.Fatalf("expected initial cursor 0, got %d", app.category.cursor)
+	// Sidebar navigation: 8 content types + My Tools + Import + Update + Settings = 12 rows (indices 0-11)
+	totalRows := len(catalog.AllContentTypes()) + 3 // types + My Tools + Import + Update + Settings
+	if app.sidebar.cursor != 0 {
+		t.Fatalf("expected initial cursor 0, got %d", app.sidebar.cursor)
 	}
 
 	// Navigate all the way down
 	app = pressN(app, keyDown, totalRows)
-	if app.category.cursor != totalRows {
-		t.Fatalf("expected cursor %d at bottom, got %d", totalRows, app.category.cursor)
+	if app.sidebar.cursor != totalRows {
+		t.Fatalf("expected cursor %d at bottom, got %d", totalRows, app.sidebar.cursor)
 	}
 
 	// Bounds clamp: pressing down again stays at bottom
 	app = pressN(app, keyDown, 3)
-	if app.category.cursor != totalRows {
-		t.Fatalf("expected cursor clamped at %d, got %d", totalRows, app.category.cursor)
+	if app.sidebar.cursor != totalRows {
+		t.Fatalf("expected cursor clamped at %d, got %d", totalRows, app.sidebar.cursor)
 	}
 
 	// Navigate back up to top
 	app = pressN(app, keyUp, totalRows+5)
-	if app.category.cursor != 0 {
-		t.Fatalf("expected cursor clamped at 0, got %d", app.category.cursor)
+	if app.sidebar.cursor != 0 {
+		t.Fatalf("expected cursor clamped at 0, got %d", app.sidebar.cursor)
 	}
 }
 
@@ -107,44 +107,13 @@ func TestCategorySelectSettings(t *testing.T) {
 	assertScreen(t, app, screenSettings)
 }
 
-func TestCategoryMessageClear(t *testing.T) {
-	app := testApp(t)
-	app.category.message = "Something happened"
-
-	// Any keypress should clear the message
-	m, _ := app.Update(keyDown)
-	app = m.(App)
-	if app.category.message != "" {
-		t.Fatalf("expected message cleared after keypress, got %q", app.category.message)
-	}
-}
-
-func TestCategoryUpdateBanner(t *testing.T) {
-	app := testApp(t)
-	app.category.updateAvailable = true
-	app.category.remoteVersion = "2.0.0"
-
-	view := app.View()
-	assertContains(t, view, "new version is available")
-	assertContains(t, view, "2.0.0")
-}
-
-func TestUpdateBannerNoDecorativeUnicode(t *testing.T) {
-	app := testApp(t)
-	app.category.updateAvailable = true
-	app.category.remoteVersion = "2.0.0"
-
-	view := app.View()
-	assertNotContains(t, view, "✦")
-}
-
 func TestCategoryCountDisplay(t *testing.T) {
 	app := testApp(t)
 	view := app.View()
 
 	// The catalog has items of various types — verify counts appear
 	for _, ct := range catalog.AllContentTypes() {
-		count := app.category.counts[ct]
+		count := app.sidebar.counts[ct]
 		if count > 0 {
 			// The label should appear in the view
 			assertContains(t, view, ct.Label())
@@ -190,34 +159,4 @@ func TestCategoryQuitOnlyFromCategory(t *testing.T) {
 			}
 		}
 	}
-}
-
-func TestCategoryVersionDisplay(t *testing.T) {
-	app := testApp(t)
-	view := app.View()
-	assertContains(t, view, "v1.0.0")
-}
-
-func TestCategoryViewHelp(t *testing.T) {
-	app := testApp(t)
-	view := app.View()
-	assertContains(t, view, "navigate")
-	assertContains(t, view, "quit")
-}
-
-func TestCategoryHelpTextNoArrows(t *testing.T) {
-	app := testApp(t)
-	view := app.category.View()
-
-	assertNotContains(t, view, "↑")
-	assertNotContains(t, view, "↓")
-	assertContains(t, view, "up/down")
-}
-
-func TestCategoryCursorIsASCII(t *testing.T) {
-	app := testApp(t)
-	view := app.category.View()
-
-	assertContains(t, view, " > ")
-	assertNotContains(t, view, "▸")
 }

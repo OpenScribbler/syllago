@@ -115,16 +115,14 @@ func TestAppFullNavigation(t *testing.T) {
 		t.Fatalf("expected screenItems after Esc, got %d", app.screen)
 	}
 
-	// Esc goes back to category
+	// Esc from items: new behavior is focus returns to sidebar, screen stays as items
 	model, _ = app.Update(esc)
 	app = model.(App)
-	if app.screen != screenCategory {
-		t.Fatalf("expected screenCategory after 2nd Esc, got %d", app.screen)
+	if app.focus != focusSidebar {
+		t.Fatalf("expected focusSidebar after 2nd Esc (from items), got focus=%d", app.focus)
 	}
 
 	// ctrl+c quits from any screen
-	model, _ = app.Update(enter) // back to items
-	app = model.(App)
 	ctrlC := tea.KeyMsg{Type: tea.KeyCtrlC}
 	_, cmd := app.Update(ctrlC)
 	if cmd == nil {
@@ -183,10 +181,11 @@ func TestImportBrowseFlow(t *testing.T) {
 func TestTooSmallMessageNoUnicode(t *testing.T) {
 	app := testApp(t)
 	app.tooSmall = true
+	app.width = 40 // force width below the 60-column threshold
 
 	view := app.View()
 	assertContains(t, view, "Terminal too small")
 	// Should use ASCII "x" not Unicode "×" for dimensions
-	assertContains(t, view, "40x10")
+	assertContains(t, view, "60x10")
 	assertNotContains(t, view, "×")
 }

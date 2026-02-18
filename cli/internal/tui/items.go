@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
 	"github.com/holdenhewett/romanesco/cli/internal/installer"
@@ -293,7 +294,7 @@ func (m itemsModel) View() string {
 
 		if showProvCol {
 			paddedDesc := fmt.Sprintf("%-*s", descW, truncate(item.Description, descW-localPrefixLen))
-			s += fmt.Sprintf("%s%s%s  %s%s  %s\n",
+			rowStr := fmt.Sprintf("%s%s%s  %s%s  %s\n",
 				prefix,
 				styledName,
 				typeTag,
@@ -301,16 +302,18 @@ func (m itemsModel) View() string {
 				helpStyle.Render(paddedDesc),
 				provCells[i].styled,
 			)
+			s += zone.Mark(fmt.Sprintf("item-%d", i), rowStr)
 		} else {
 			desc := truncate(item.Description, descW-localPrefixLen)
 			paddedDesc := fmt.Sprintf("%-*s", descW-localPrefixLen, desc)
-			s += fmt.Sprintf("%s%s%s  %s%s\n",
+			rowStr := fmt.Sprintf("%s%s%s  %s%s\n",
 				prefix,
 				styledName,
 				typeTag,
 				localPrefix,
 				helpStyle.Render(paddedDesc),
 			)
+			s += zone.Mark(fmt.Sprintf("item-%d", i), rowStr)
 		}
 	}
 
