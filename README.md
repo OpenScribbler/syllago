@@ -179,7 +179,7 @@ make build      # Build the nesco binary (output: cli/nesco)
 make test       # Run tests
 make fmt        # Format Go source
 make vet        # Run go vet
-make build-all  # Cross-compile for linux/darwin amd64/arm64
+make build-all  # Cross-compile for linux/darwin/windows amd64 + linux/darwin arm64
 ```
 
 ## License
