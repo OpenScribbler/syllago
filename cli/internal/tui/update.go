@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 type updateStep int
@@ -100,6 +101,18 @@ func parseVersion(v string) [3]int {
 
 func (m updateModel) Update(msg tea.Msg) (updateModel, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		if msg.Action == tea.MouseActionRelease && msg.Button == tea.MouseButtonLeft && m.step == stepUpdateMenu && !m.loading {
+			menuItems := m.menuItemCount()
+			for i := 0; i < menuItems; i++ {
+				if zone.Get(fmt.Sprintf("update-opt-%d", i)).InBounds(msg) {
+					m.cursor = i
+					return m.updateMenu(tea.KeyMsg{Type: tea.KeyEnter})
+				}
+			}
+		}
+		return m, nil
+
 	case spinner.TickMsg:
 		if m.loading {
 			var cmd tea.Cmd
@@ -173,6 +186,21 @@ func (m updateModel) updatePreview(msg tea.KeyMsg) (updateModel, tea.Cmd) {
 		}
 	case key.Matches(msg, keys.Down) || msg.String() == "j":
 		m.scrollOffset++
+	case key.Matches(msg, keys.PageUp):
+		pageSize := m.height - 8
+		if pageSize < 1 {
+			pageSize = 10
+		}
+		m.scrollOffset -= pageSize
+		if m.scrollOffset < 0 {
+			m.scrollOffset = 0
+		}
+	case key.Matches(msg, keys.PageDown):
+		pageSize := m.height - 8
+		if pageSize < 1 {
+			pageSize = 10
+		}
+		m.scrollOffset += pageSize
 	case key.Matches(msg, keys.Enter):
 		m.step = stepUpdatePull
 		m.loading = true
@@ -198,7 +226,7 @@ func (m updateModel) menuItemCount() int {
 }
 
 func (m updateModel) View() string {
-	s := helpStyle.Render("nesco >") + " " + titleStyle.Render("Update nesco") + "\n"
+	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + " " + helpStyle.Render(">") + " " + titleStyle.Render("Update nesco") + "\n"
 
 	switch m.step {
 	case stepUpdateMenu:
@@ -214,14 +242,16 @@ func (m updateModel) View() string {
 					prefix = " > "
 					style = selectedItemStyle
 				}
-				s += prefix + style.Render(opt) + "\n"
+				row := prefix + style.Render(opt)
+				s += zone.Mark(fmt.Sprintf("update-opt-%d", i), row) + "\n"
 			}
 			s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 		} else {
 			s += helpStyle.Render(fmt.Sprintf("You're on v%s (latest)", m.localVersion)) + "\n\n"
 			prefix := " > "
 			style := selectedItemStyle
-			s += prefix + style.Render("Check for updates") + "\n"
+			row := prefix + style.Render("Check for updates")
+			s += zone.Mark("update-opt-0", row) + "\n"
 			s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 		}
 

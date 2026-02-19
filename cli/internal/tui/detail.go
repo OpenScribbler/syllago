@@ -346,6 +346,23 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			case key.Matches(msg, keys.Down):
 				m.fileViewer.scrollOffset++
 				return m, nil
+			case key.Matches(msg, keys.PageUp):
+				pageSize := m.height - 8
+				if pageSize < 1 {
+					pageSize = 10
+				}
+				m.fileViewer.scrollOffset -= pageSize
+				if m.fileViewer.scrollOffset < 0 {
+					m.fileViewer.scrollOffset = 0
+				}
+				return m, nil
+			case key.Matches(msg, keys.PageDown):
+				pageSize := m.height - 8
+				if pageSize < 1 {
+					pageSize = 10
+				}
+				m.fileViewer.scrollOffset += pageSize
+				return m, nil
 			}
 			return m, nil
 		}
@@ -433,6 +450,28 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 						m.provCheck.cursor++
 					}
 				}
+			}
+
+		case key.Matches(msg, keys.PageUp):
+			if m.confirmAction == actionNone && (m.activeTab == tabOverview || (m.activeTab == tabInstall && (m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps))) {
+				pageSize := m.height - 6
+				if pageSize < 1 {
+					pageSize = 10
+				}
+				m.scrollOffset -= pageSize
+				if m.scrollOffset < 0 {
+					m.scrollOffset = 0
+				}
+			}
+
+		case key.Matches(msg, keys.PageDown):
+			if m.confirmAction == actionNone && (m.activeTab == tabOverview || (m.activeTab == tabInstall && (m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps))) {
+				pageSize := m.height - 6
+				if pageSize < 1 {
+					pageSize = 10
+				}
+				m.scrollOffset += pageSize
+				m.clampScroll()
 			}
 
 		case key.Matches(msg, keys.Space):
