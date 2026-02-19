@@ -303,6 +303,19 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
 			}
 		}
+		// Check welcome page configuration links
+		welcomeConfigMap := map[string]int{
+			"welcome-import":   len(a.sidebar.types) + 1,
+			"welcome-update":   len(a.sidebar.types) + 2,
+			"welcome-settings": len(a.sidebar.types) + 3,
+		}
+		for zoneID, sidebarIdx := range welcomeConfigMap {
+			if zone.Get(zoneID).InBounds(msg) {
+				a.sidebar.cursor = sidebarIdx
+				a.focus = focusSidebar
+				return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+			}
+		}
 		// Check breadcrumb zones (detail and items screens)
 		if zone.Get("crumb-home").InBounds(msg) {
 			a.screen = screenCategory
@@ -963,6 +976,37 @@ func (a App) renderContentWelcome() string {
 
 		s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
 	}
+
+	// Configuration section at the bottom
+	s += "\n" + labelStyle.Render("  Configuration") + "\n\n"
+
+	configItems := []struct {
+		label string
+		desc  string
+		zoneID string
+	}{
+		{"Import", "Import your own AI tools from local files or git repos", "welcome-import"},
+		{"Update", "Check for updates and pull latest changes", "welcome-update"},
+		{"Settings", "Configure paths, providers, and detectors", "welcome-settings"},
+	}
+
+	configCardW := (contentW - 7) / 3 // 3 cards: 6 border chars + 2 gaps
+	if configCardW < 16 {
+		configCardW = 16
+	}
+	configCardStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(borderColor).
+		Width(configCardW).
+		Padding(0, 1).
+		Height(3) // title + 2 lines description (uniform across all cards)
+
+	var configCards []string
+	for _, ci := range configItems {
+		inner := labelStyle.Render(ci.label) + "\n" + helpStyle.Render(ci.desc)
+		configCards = append(configCards, zone.Mark(ci.zoneID, configCardStyle.Render(inner)))
+	}
+	s += lipgloss.JoinHorizontal(lipgloss.Top, configCards[0], " ", configCards[1], " ", configCards[2]) + "\n"
 
 	return s
 }

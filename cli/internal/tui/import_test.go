@@ -626,7 +626,7 @@ func TestImportDoneError(t *testing.T) {
 func TestImportViewSource(t *testing.T) {
 	app := navigateToImport(t)
 	view := app.View()
-	assertContains(t, view, "Import Content")
+	assertContains(t, view, "Import AI Tools")
 	assertContains(t, view, "Local Path")
 	assertContains(t, view, "Git URL")
 	assertContains(t, view, "Create New")

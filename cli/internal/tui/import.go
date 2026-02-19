@@ -645,7 +645,7 @@ func (m importModel) stepLabel() string {
 
 // View renders the current step's UI.
 func (m importModel) View() string {
-	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + " " + helpStyle.Render(">") + " " + titleStyle.Render("Import Content") + "\n"
+	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + " " + helpStyle.Render(">") + " " + titleStyle.Render("Import AI Tools") + "\n"
 	if label := m.stepLabel(); label != "" {
 		if m.step == stepConflict {
 			s += "\n" + warningStyle.Render(label) + "\n"
@@ -656,7 +656,8 @@ func (m importModel) View() string {
 
 	switch m.step {
 	case stepSource:
-		s += helpStyle.Render("Choose import source") + "\n\n"
+		s += "\n" + helpStyle.Render("Bring in skills, agents, prompts, rules, hooks, commands, and MCP configs") + "\n"
+		s += helpStyle.Render("from your filesystem or a git repository. Create New scaffolds a blank template.") + "\n\n"
 		options := []string{"Local Path", "Git URL", "Create New"}
 		for i, opt := range options {
 			prefix := "   "
