@@ -5,12 +5,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
 	"github.com/holdenhewett/romanesco/cli/internal/gitutil"
@@ -34,6 +36,7 @@ const (
 	stepGitPick                       // (git only) pick item from scanned clone
 	stepConfirm                       // review and execute
 	stepName                          // (create only) enter item name
+	stepConflict                      // conflict resolution (overwrite/skip)
 )
 
 type importCloneDoneMsg struct {
@@ -42,8 +45,9 @@ type importCloneDoneMsg struct {
 }
 
 type importDoneMsg struct {
-	name string
-	err  error
+	name     string
+	err      error
+	warnings []string
 }
 
 type validationItem struct {
@@ -53,6 +57,19 @@ type validationItem struct {
 	description string
 	isWarning   bool
 	included    bool
+}
+
+// conflictInfo holds file comparison data for a single conflicting item.
+type conflictInfo struct {
+	existingPath string   // absolute path to existing destination
+	sourcePath   string   // absolute path to source being imported
+	itemName     string   // name of the conflicting item
+	onlyExisting []string // relative paths only in existing (will be removed)
+	onlyNew      []string // relative paths only in new (will be added)
+	inBoth       []string // relative paths in both (may differ)
+	diffText     string   // precomputed unified diff for all files
+	scrollOffset int      // vertical scroll position
+	hOffset      int      // horizontal scroll position
 }
 
 type importModel struct {
@@ -96,6 +113,12 @@ type importModel struct {
 	providerName string
 	itemName     string
 	isCreate     bool // true if using "Create New" flow
+
+	// Conflict resolution
+	conflict       conflictInfo      // current conflict being shown
+	batchConflicts []string          // source paths that have conflicts
+	batchConflictIdx int             // index into batchConflicts
+	batchOverwrite map[string]bool   // srcPath → true means overwrite
 
 	// Result messaging
 	message      string
@@ -173,6 +196,24 @@ func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
 		m.message = ""
 		return m, nil
 
+	case tea.MouseMsg:
+		if m.step == stepBrowse {
+			m.browser, _ = m.browser.Update(msg)
+		}
+		if m.step == stepConflict {
+			if msg.Button == tea.MouseButtonWheelUp && m.conflict.scrollOffset > 0 {
+				m.conflict.scrollOffset--
+			}
+			if msg.Button == tea.MouseButtonWheelDown {
+				m.conflict.scrollOffset++
+			}
+		}
+		// Handle left-clicks on zone-marked list items
+		if msg.Action == tea.MouseActionRelease && msg.Button == tea.MouseButtonLeft {
+			return m.handleMouseClick(msg)
+		}
+		return m, nil
+
 	case tea.KeyMsg:
 		// Clear any previous message on keypress
 		if msg.Type != tea.KeyEsc {
@@ -203,6 +244,8 @@ func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
 			return m.updateConfirm(msg)
 		case stepName:
 			return m.updateName(msg)
+		case stepConflict:
+			return m.updateConflict(msg)
 		}
 	}
 	return m, nil
@@ -349,6 +392,13 @@ func (m importModel) updateBrowseStart(msg tea.KeyMsg) (importModel, tea.Cmd) {
 func (m importModel) updateBrowse(msg tea.KeyMsg) (importModel, tea.Cmd) {
 	switch {
 	case msg.Type == tea.KeyEsc:
+		// If previewing a file, exit preview first
+		if m.browser.previewing {
+			m.browser.previewing = false
+			m.browser.previewContent = ""
+			m.browser.previewOffset = 0
+			return m, nil
+		}
 		// If selections exist, clear them first
 		if len(m.browser.selected) > 0 {
 			m.browser.selected = make(map[string]bool)
@@ -443,10 +493,30 @@ func (m importModel) updateValidate(msg tea.KeyMsg) (importModel, tea.Cmd) {
 			m.step = stepConfirm
 			return m, nil
 		}
-		// For batch, go directly to import
+		// For batch, check for conflicts before importing
+		var conflicts []string
+		for _, srcPath := range included {
+			dest := m.batchDestForSource(srcPath)
+			if _, err := os.Stat(dest); err == nil {
+				conflicts = append(conflicts, srcPath)
+			}
+		}
+		if len(conflicts) > 0 {
+			m.batchConflicts = conflicts
+			m.batchConflictIdx = 0
+			m.batchOverwrite = make(map[string]bool)
+			// Build conflict info for first conflict
+			srcPath := conflicts[0]
+			dest := m.batchDestForSource(srcPath)
+			itemName := filepath.Base(srcPath)
+			m.conflict = m.buildConflictInfo(dest, srcPath, itemName)
+			m.step = stepConflict
+			return m, nil
+		}
+		// No conflicts — go directly to import
 		return m, func() tea.Msg {
-			name, err := m.doBatchImport(included)
-			return importDoneMsg{name: name, err: err}
+			name, warnings, err := m.doBatchImportWithOverwrite(included, nil)
+			return importDoneMsg{name: name, warnings: warnings, err: err}
 		}
 	}
 	return m, nil
@@ -518,17 +588,26 @@ func (m importModel) updateConfirm(msg tea.KeyMsg) (importModel, tea.Cmd) {
 			m.step = stepValidate
 		}
 	case key.Matches(msg, keys.Enter):
+		// Check if destination already exists (conflict detection)
+		dest := m.destinationPath()
+		if _, err := os.Stat(dest); err == nil {
+			m.conflict = m.buildConflictInfo(dest, m.sourcePath, m.itemName)
+			m.batchConflicts = nil
+			m.batchOverwrite = nil
+			m.step = stepConflict
+			return m, nil
+		}
 		if m.isCreate {
 			return m, func() tea.Msg {
-				name, err := m.doScaffold()
-				return importDoneMsg{name: name, err: err}
+				name, warnings, err := m.doScaffold()
+				return importDoneMsg{name: name, warnings: warnings, err: err}
 			}
 		}
 		// Run the copy in the Cmd closure so it doesn't block the UI.
 		// m is a value copy, so doImport reads from an immutable snapshot.
 		return m, func() tea.Msg {
-			name, err := m.doImport()
-			return importDoneMsg{name: name, err: err}
+			name, warnings, err := m.doImport()
+			return importDoneMsg{name: name, warnings: warnings, err: err}
 		}
 	}
 	return m, nil
@@ -555,15 +634,24 @@ func (m importModel) stepLabel() string {
 		return "Step 2 of 3: Name"
 	case stepConfirm:
 		return "Confirm"
+	case stepConflict:
+		if len(m.batchConflicts) > 0 {
+			return fmt.Sprintf("Conflict %d of %d", m.batchConflictIdx+1, len(m.batchConflicts))
+		}
+		return "Conflict"
 	}
 	return ""
 }
 
 // View renders the current step's UI.
 func (m importModel) View() string {
-	s := helpStyle.Render("nesco >") + " " + titleStyle.Render("Import Content") + "\n"
+	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + " " + helpStyle.Render(">") + " " + titleStyle.Render("Import Content") + "\n"
 	if label := m.stepLabel(); label != "" {
-		s += helpStyle.Render(label) + "\n"
+		if m.step == stepConflict {
+			s += "\n" + warningStyle.Render(label) + "\n"
+		} else {
+			s += helpStyle.Render(label) + "\n"
+		}
 	}
 
 	switch m.step {
@@ -577,7 +665,8 @@ func (m importModel) View() string {
 				prefix = " > "
 				style = selectedItemStyle
 			}
-			s += prefix + style.Render(opt) + "\n"
+			row := prefix + style.Render(opt)
+			s += zone.Mark(fmt.Sprintf("import-opt-%d", i), row) + "\n"
 		}
 		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 
@@ -591,7 +680,8 @@ func (m importModel) View() string {
 				style = selectedItemStyle
 			}
 			label := ct.Label()
-			s += prefix + style.Render(label) + "\n"
+			row := prefix + style.Render(label)
+			s += zone.Mark(fmt.Sprintf("import-opt-%d", i), row) + "\n"
 		}
 		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 
@@ -604,7 +694,8 @@ func (m importModel) View() string {
 				prefix = " > "
 				style = selectedItemStyle
 			}
-			s += prefix + style.Render(name) + "\n"
+			row := prefix + style.Render(name)
+			s += zone.Mark(fmt.Sprintf("import-opt-%d", i), row) + "\n"
 		}
 		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 
@@ -622,7 +713,8 @@ func (m importModel) View() string {
 				prefix = " > "
 				style = selectedItemStyle
 			}
-			s += prefix + style.Render(opt.label) + " " + countStyle.Render(opt.desc) + "\n"
+			row := prefix + style.Render(opt.label) + " " + countStyle.Render(opt.desc)
+			s += zone.Mark(fmt.Sprintf("import-opt-%d", i), row) + "\n"
 		}
 		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 
@@ -675,7 +767,8 @@ func (m importModel) View() string {
 			if item.Provider != "" {
 				typeTag = countStyle.Render("(" + item.Type.Label() + "/" + item.Provider + ")")
 			}
-			s += prefix + style.Render(label) + " " + typeTag + "\n"
+			row := prefix + style.Render(label) + " " + typeTag
+			s += zone.Mark(fmt.Sprintf("import-opt-%d", i), row) + "\n"
 		}
 		if end < len(m.clonedItems) {
 			s += helpStyle.Render("  (more items below)") + "\n"
@@ -708,6 +801,9 @@ func (m importModel) View() string {
 			s += labelStyle.Render("To:    ") + valueStyle.Render(dest) + " " + helpStyle.Render("(local, not git-tracked)") + "\n"
 			s += "\n" + helpStyle.Render("enter import • esc back")
 		}
+
+	case stepConflict:
+		s += m.viewConflict()
 	}
 
 	// Status message
@@ -731,16 +827,28 @@ func (m importModel) destinationPath() string {
 }
 
 // doImport executes the copy, generates metadata, and returns the item name.
-func (m importModel) doImport() (string, error) {
+func (m importModel) doImport() (string, []string, error) {
 	dest := m.destinationPath()
+	var warnings []string
 
-	// Check destination doesn't already exist
-	if _, err := os.Stat(dest); err == nil {
-		return "", fmt.Errorf("destination already exists: %s", dest)
+	// When importing a single file for a universal type, wrap it in a
+	// directory so metadata and README can coexist alongside the content.
+	srcInfo, err := os.Stat(m.sourcePath)
+	if err != nil {
+		return "", nil, fmt.Errorf("stat source: %w", err)
 	}
-
-	if err := installer.CopyContent(m.sourcePath, dest); err != nil {
-		return "", fmt.Errorf("copy failed: %w", err)
+	if !srcInfo.IsDir() && m.contentType.IsUniversal() {
+		if err := os.MkdirAll(dest, 0755); err != nil {
+			return "", nil, fmt.Errorf("creating directory: %w", err)
+		}
+		fileDest := filepath.Join(dest, filepath.Base(m.sourcePath))
+		if err := installer.CopyContent(m.sourcePath, fileDest); err != nil {
+			return "", nil, fmt.Errorf("copy failed: %w", err)
+		}
+	} else {
+		if err := installer.CopyContent(m.sourcePath, dest); err != nil {
+			return "", nil, fmt.Errorf("copy failed: %w", err)
+		}
 	}
 
 	// Generate .romanesco.yaml metadata
@@ -761,21 +869,21 @@ func (m importModel) doImport() (string, error) {
 	// For provider-specific types, save as provider-specific metadata.
 	if m.contentType.IsUniversal() {
 		if err := metadata.Save(dest, meta); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: failed to save metadata for %s: %s\n", m.itemName, err)
+			warnings = append(warnings, fmt.Sprintf("Failed to save metadata for %s: %s", m.itemName, err))
 		}
 	} else {
 		destDir := filepath.Dir(dest)
 		if err := metadata.SaveProvider(destDir, m.itemName, meta); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: failed to save metadata for %s: %s\n", m.itemName, err)
+			warnings = append(warnings, fmt.Sprintf("Failed to save metadata for %s: %s", m.itemName, err))
 		}
 	}
 
 	// Generate placeholder README if the source didn't include one
 	if created, _ := readme.EnsureReadme(dest, m.itemName, string(m.contentType), ""); created {
-		fmt.Fprintf(os.Stderr, "hint: Generated placeholder README.md for %s. An LLM can improve it.\n", m.itemName)
+		warnings = append(warnings, fmt.Sprintf("Generated placeholder README.md for %s — an LLM can improve it", m.itemName))
 	}
 
-	return m.itemName, nil
+	return m.itemName, warnings, nil
 }
 
 func (m importModel) updateName(msg tea.KeyMsg) (importModel, tea.Cmd) {
@@ -800,12 +908,9 @@ func (m importModel) updateName(msg tea.KeyMsg) (importModel, tea.Cmd) {
 }
 
 // doScaffold creates a new content item from templates.
-func (m importModel) doScaffold() (string, error) {
+func (m importModel) doScaffold() (string, []string, error) {
 	dest := m.destinationPath()
-
-	if _, err := os.Stat(dest); err == nil {
-		return "", fmt.Errorf("destination already exists: %s", dest)
-	}
+	var warnings []string
 
 	// Find the templates directory relative to repo root
 	templateDir := filepath.Join(m.repoRoot, "templates", string(m.contentType))
@@ -813,12 +918,12 @@ func (m importModel) doScaffold() (string, error) {
 	// Copy template files (if template dir exists)
 	if _, err := os.Stat(templateDir); err == nil {
 		if err := installer.CopyContent(templateDir, dest); err != nil {
-			return "", fmt.Errorf("scaffold failed: %w", err)
+			return "", nil, fmt.Errorf("scaffold failed: %w", err)
 		}
 	} else {
 		// No template — just create the directory
 		if err := os.MkdirAll(dest, 0755); err != nil {
-			return "", fmt.Errorf("creating directory: %w", err)
+			return "", nil, fmt.Errorf("creating directory: %w", err)
 		}
 	}
 
@@ -840,10 +945,10 @@ func (m importModel) doScaffold() (string, error) {
 		ImportedBy: gitutil.Username(),
 	}
 	if err := metadata.Save(dest, meta); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: failed to save metadata for %s: %s\n", m.itemName, err)
+		warnings = append(warnings, fmt.Sprintf("Failed to save metadata for %s: %s", m.itemName, err))
 	}
 
-	return m.itemName, nil
+	return m.itemName, warnings, nil
 }
 
 // startClone creates a temp dir and returns a tea.ExecProcess command for git clone.
@@ -906,29 +1011,59 @@ func (m importModel) validateSelections(paths []string) []validationItem {
 
 // doBatchImport imports multiple selected paths, generating metadata for each.
 // Returns a comma-separated list of imported names.
-func (m importModel) doBatchImport(paths []string) (string, error) {
+func (m importModel) doBatchImport(paths []string) (string, []string, error) {
+	return m.doBatchImportWithOverwrite(paths, nil)
+}
+
+// doBatchImportWithOverwrite imports multiple paths, with an optional overwrite map.
+// Paths in the overwrite map are removed before importing. Paths not in the map
+// that already exist are skipped.
+func (m importModel) doBatchImportWithOverwrite(paths []string, overwrite map[string]bool) (string, []string, error) {
 	var imported []string
 	var errs []string
+	var warnings []string
 
 	for _, srcPath := range paths {
 		itemName := filepath.Base(srcPath)
-		// Build destination based on content type
-		var dest string
-		if m.contentType.IsUniversal() {
-			dest = filepath.Join(m.repoRoot, "my-tools", string(m.contentType), itemName)
-		} else {
-			dest = filepath.Join(m.repoRoot, "my-tools", string(m.contentType), m.providerName, itemName)
-		}
+		dest := m.batchDestForSource(srcPath)
 
-		// Skip if destination exists
+		// Check if destination exists
 		if _, err := os.Stat(dest); err == nil {
-			errs = append(errs, fmt.Sprintf("%s (already exists)", itemName))
-			continue
+			if overwrite[srcPath] {
+				// Overwrite: remove existing destination
+				if err := os.RemoveAll(dest); err != nil {
+					errs = append(errs, fmt.Sprintf("%s (remove failed: %s)", itemName, err))
+					continue
+				}
+			} else {
+				// Skip non-overwritten conflicts
+				errs = append(errs, fmt.Sprintf("%s (already exists)", itemName))
+				continue
+			}
 		}
 
-		if err := installer.CopyContent(srcPath, dest); err != nil {
+		// When importing a single file for a universal type, wrap it in a
+		// directory so metadata and README can coexist alongside the content.
+		srcInfo, err := os.Stat(srcPath)
+		if err != nil {
 			errs = append(errs, fmt.Sprintf("%s (%s)", itemName, err))
 			continue
+		}
+		if !srcInfo.IsDir() && m.contentType.IsUniversal() {
+			if err := os.MkdirAll(dest, 0755); err != nil {
+				errs = append(errs, fmt.Sprintf("%s (%s)", itemName, err))
+				continue
+			}
+			fileDest := filepath.Join(dest, filepath.Base(srcPath))
+			if err := installer.CopyContent(srcPath, fileDest); err != nil {
+				errs = append(errs, fmt.Sprintf("%s (%s)", itemName, err))
+				continue
+			}
+		} else {
+			if err := installer.CopyContent(srcPath, dest); err != nil {
+				errs = append(errs, fmt.Sprintf("%s (%s)", itemName, err))
+				continue
+			}
 		}
 
 		// Generate metadata
@@ -943,17 +1078,17 @@ func (m importModel) doBatchImport(paths []string) (string, error) {
 		}
 		if m.contentType.IsUniversal() {
 			if err := metadata.Save(dest, meta); err != nil {
-				fmt.Fprintf(os.Stderr, "warning: failed to save metadata for %s: %s\n", itemName, err)
+				warnings = append(warnings, fmt.Sprintf("Failed to save metadata for %s: %s", itemName, err))
 			}
 		} else {
 			if err := metadata.SaveProvider(filepath.Dir(dest), itemName, meta); err != nil {
-				fmt.Fprintf(os.Stderr, "warning: failed to save metadata for %s: %s\n", itemName, err)
+				warnings = append(warnings, fmt.Sprintf("Failed to save metadata for %s: %s", itemName, err))
 			}
 		}
 
-		// Generate placeholder README if source didn't include one (no hint in batch — too noisy)
+		// Generate placeholder README if source didn't include one
 		if _, err := readme.EnsureReadme(dest, itemName, string(m.contentType), ""); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: failed to generate README for %s: %s\n", itemName, err)
+			warnings = append(warnings, fmt.Sprintf("Failed to generate README for %s: %s", itemName, err))
 		}
 
 		imported = append(imported, itemName)
@@ -962,11 +1097,420 @@ func (m importModel) doBatchImport(paths []string) (string, error) {
 	result := strings.Join(imported, ", ")
 	if len(errs) > 0 {
 		if len(imported) == 0 {
-			return "", fmt.Errorf("all imports failed: %s", strings.Join(errs, "; "))
+			return "", nil, fmt.Errorf("all imports failed: %s", strings.Join(errs, "; "))
 		}
 		result += fmt.Sprintf(" (skipped: %s)", strings.Join(errs, "; "))
 	}
-	return result, nil
+	return result, warnings, nil
+}
+
+func (m importModel) updateConflict(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case key.Matches(msg, keys.Up):
+		if m.conflict.scrollOffset > 0 {
+			m.conflict.scrollOffset--
+		}
+	case key.Matches(msg, keys.Down):
+		m.conflict.scrollOffset++
+	case key.Matches(msg, keys.PageUp):
+		pageSize := m.height - 10
+		if pageSize < 1 {
+			pageSize = 10
+		}
+		m.conflict.scrollOffset -= pageSize
+		if m.conflict.scrollOffset < 0 {
+			m.conflict.scrollOffset = 0
+		}
+	case key.Matches(msg, keys.PageDown):
+		pageSize := m.height - 10
+		if pageSize < 1 {
+			pageSize = 10
+		}
+		m.conflict.scrollOffset += pageSize
+	case key.Matches(msg, keys.Left):
+		if m.conflict.hOffset > 0 {
+			m.conflict.hOffset -= 8
+			if m.conflict.hOffset < 0 {
+				m.conflict.hOffset = 0
+			}
+		}
+	case key.Matches(msg, keys.Right):
+		m.conflict.hOffset += 8
+	case msg.Type == tea.KeyRunes && string(msg.Runes) == "y":
+		// Overwrite
+		if len(m.batchConflicts) > 0 {
+			m.batchOverwrite[m.batchConflicts[m.batchConflictIdx]] = true
+			return m.advanceConflict()
+		}
+		return m, func() tea.Msg {
+			name, warnings, err := m.doImportOverwrite()
+			return importDoneMsg{name: name, warnings: warnings, err: err}
+		}
+	case msg.Type == tea.KeyRunes && string(msg.Runes) == "n":
+		if len(m.batchConflicts) > 0 {
+			return m.advanceConflict()
+		}
+	case msg.Type == tea.KeyEsc:
+		if len(m.batchConflicts) > 0 {
+			return m.advanceConflict()
+		}
+		m.step = stepConfirm
+	}
+	return m, nil
+}
+
+func (m importModel) viewConflict() string {
+	s := warningStyle.Render("Destination already exists!") + "\n"
+	s += labelStyle.Render("Path: ") + valueStyle.Render(m.conflict.existingPath) + "\n"
+
+	// Summary line
+	var parts []string
+	if n := len(m.conflict.onlyExisting); n > 0 {
+		parts = append(parts, fmt.Sprintf("%d removed", n))
+	}
+	if n := len(m.conflict.onlyNew); n > 0 {
+		parts = append(parts, fmt.Sprintf("%d added", n))
+	}
+	if n := len(m.conflict.inBoth); n > 0 {
+		parts = append(parts, fmt.Sprintf("%d modified", n))
+	}
+	if len(parts) > 0 {
+		s += helpStyle.Render(strings.Join(parts, ", ")) + "\n"
+	}
+	s += "\n"
+
+	if m.conflict.diffText == "" {
+		s += helpStyle.Render("(no differences found)") + "\n"
+	} else {
+		lines := strings.Split(m.conflict.diffText, "\n")
+		visibleHeight := m.height - 10
+		if visibleHeight < 5 {
+			visibleHeight = len(lines)
+		}
+
+		// Clamp scroll
+		maxOffset := len(lines) - visibleHeight
+		if maxOffset < 0 {
+			maxOffset = 0
+		}
+		offset := m.conflict.scrollOffset
+		if offset > maxOffset {
+			offset = maxOffset
+		}
+
+		end := offset + visibleHeight
+		if end > len(lines) {
+			end = len(lines)
+		}
+
+		if offset > 0 {
+			s += helpStyle.Render(fmt.Sprintf("(%d lines above)", offset)) + "\n"
+		}
+
+		hOff := m.conflict.hOffset
+		for i := offset; i < end; i++ {
+			s += "  " + renderDiffLine(lines[i], hOff) + "\n"
+		}
+
+		if end < len(lines) {
+			s += helpStyle.Render(fmt.Sprintf("(%d lines below)", len(lines)-end)) + "\n"
+		}
+	}
+
+	// Footer
+	s += "\n"
+	footer := "↑↓ scroll • "
+	if m.conflict.hOffset > 0 {
+		footer += fmt.Sprintf("←→ scroll (col %d) • ", m.conflict.hOffset)
+	} else {
+		footer += "←→ scroll • "
+	}
+	if len(m.batchConflicts) > 0 {
+		footer += "y overwrite • n skip"
+	} else {
+		footer += "y overwrite • esc cancel"
+	}
+	s += helpStyle.Render(footer)
+
+	return s
+}
+
+// renderDiffLine applies unified-diff syntax coloring and horizontal offset.
+func renderDiffLine(line string, hOff int) string {
+	// Apply horizontal offset to display text
+	display := line
+	runes := []rune(display)
+	if hOff > 0 && hOff < len(runes) {
+		display = string(runes[hOff:])
+	} else if hOff >= len(runes) {
+		display = ""
+	}
+
+	// Color based on original line prefix (coloring is always correct even when scrolled)
+	switch {
+	case strings.HasPrefix(line, "--- ") || strings.HasPrefix(line, "+++ "):
+		return labelStyle.Render(display)
+	case strings.HasPrefix(line, "@@"):
+		return helpStyle.Render(display)
+	case strings.HasPrefix(line, "+"):
+		return installedStyle.Render(display)
+	case strings.HasPrefix(line, "-"):
+		return errorMsgStyle.Render(display)
+	default:
+		return valueStyle.Render(display)
+	}
+}
+
+// collectRelativeFiles walks a directory and returns sorted relative file paths.
+// Skips symlinks and .romanesco.yaml (metadata noise).
+func collectRelativeFiles(dir string) []string {
+	var files []string
+	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil // skip unreadable entries
+		}
+		if d.Type()&os.ModeSymlink != 0 {
+			return nil // skip symlinks
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if d.Name() == ".romanesco.yaml" {
+			return nil
+		}
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return nil
+		}
+		files = append(files, rel)
+		return nil
+	})
+	sort.Strings(files)
+	return files
+}
+
+// buildConflictInfo creates a conflictInfo comparing the existing destination
+// with the source being imported.
+func (m importModel) buildConflictInfo(dest, source, name string) conflictInfo {
+	ci := conflictInfo{
+		existingPath: dest,
+		sourcePath:   source,
+		itemName:     name,
+	}
+
+	existingFiles := collectRelativeFiles(dest)
+
+	var newFiles []string
+	if m.isCreate {
+		// Create flow: source files are empty (all existing → "will be removed")
+		newFiles = nil
+	} else {
+		// Check if source is a single file (universal type wrapping)
+		srcInfo, err := os.Stat(source)
+		if err == nil && !srcInfo.IsDir() {
+			// Single file will be wrapped in a directory
+			newFiles = []string{filepath.Base(source)}
+		} else {
+			newFiles = collectRelativeFiles(source)
+		}
+	}
+
+	// Classify files
+	existingSet := make(map[string]bool, len(existingFiles))
+	for _, f := range existingFiles {
+		existingSet[f] = true
+	}
+	newSet := make(map[string]bool, len(newFiles))
+	for _, f := range newFiles {
+		newSet[f] = true
+	}
+
+	for _, f := range existingFiles {
+		if newSet[f] {
+			ci.inBoth = append(ci.inBoth, f)
+		} else {
+			ci.onlyExisting = append(ci.onlyExisting, f)
+		}
+	}
+	for _, f := range newFiles {
+		if !existingSet[f] {
+			ci.onlyNew = append(ci.onlyNew, f)
+		}
+	}
+
+	ci.diffText = computeDiffText(ci)
+	return ci
+}
+
+// sourceFilePath returns the full path to a source file given its relative path.
+// Handles the single-file wrapping case where sourcePath is a file, not a directory.
+func (ci conflictInfo) sourceFilePath(relPath string) string {
+	info, err := os.Stat(ci.sourcePath)
+	if err == nil && !info.IsDir() {
+		return ci.sourcePath
+	}
+	return filepath.Join(ci.sourcePath, relPath)
+}
+
+// computeDiffText generates a unified diff for all changed files in the conflict.
+func computeDiffText(ci conflictInfo) string {
+	var buf strings.Builder
+
+	// Files only in existing (will be removed)
+	for _, f := range ci.onlyExisting {
+		data, err := os.ReadFile(filepath.Join(ci.existingPath, f))
+		if err != nil {
+			continue
+		}
+		buf.WriteString(fmt.Sprintf("--- a/%s\n", f))
+		buf.WriteString("+++ /dev/null\n")
+		content := strings.TrimRight(string(data), "\n")
+		if content == "" {
+			buf.WriteString("@@ -0,0 +0,0 @@\n")
+		} else {
+			lines := strings.Split(content, "\n")
+			buf.WriteString(fmt.Sprintf("@@ -1,%d +0,0 @@\n", len(lines)))
+			for _, l := range lines {
+				buf.WriteString("-" + l + "\n")
+			}
+		}
+		buf.WriteString("\n")
+	}
+
+	// Files only in new (will be added)
+	for _, f := range ci.onlyNew {
+		filePath := ci.sourceFilePath(f)
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			continue
+		}
+		buf.WriteString("--- /dev/null\n")
+		buf.WriteString(fmt.Sprintf("+++ b/%s\n", f))
+		content := strings.TrimRight(string(data), "\n")
+		if content == "" {
+			buf.WriteString("@@ -0,0 +0,0 @@\n")
+		} else {
+			lines := strings.Split(content, "\n")
+			buf.WriteString(fmt.Sprintf("@@ -0,0 +1,%d @@\n", len(lines)))
+			for _, l := range lines {
+				buf.WriteString("+" + l + "\n")
+			}
+		}
+		buf.WriteString("\n")
+	}
+
+	// Files in both — run diff -u to get unified diff
+	for _, f := range ci.inBoth {
+		existFile := filepath.Join(ci.existingPath, f)
+		newFile := ci.sourceFilePath(f)
+		cmd := exec.Command("diff", "-u", existFile, newFile)
+		out, _ := cmd.Output()
+		if len(out) == 0 {
+			continue // identical files — skip
+		}
+		// Replace header lines with clean relative paths
+		diffStr := string(out)
+		diffLines := strings.SplitN(diffStr, "\n", 3)
+		if len(diffLines) >= 3 {
+			diffLines[0] = "--- a/" + f
+			diffLines[1] = "+++ b/" + f
+			diffStr = strings.Join(diffLines, "\n")
+		}
+		buf.WriteString(diffStr)
+		if !strings.HasSuffix(diffStr, "\n") {
+			buf.WriteString("\n")
+		}
+		buf.WriteString("\n")
+	}
+
+	return strings.TrimRight(buf.String(), "\n")
+}
+
+// doImportOverwrite removes the destination then delegates to doImport or doScaffold.
+func (m importModel) doImportOverwrite() (string, []string, error) {
+	dest := m.destinationPath()
+	if err := os.RemoveAll(dest); err != nil {
+		return "", nil, fmt.Errorf("removing existing: %w", err)
+	}
+	if m.isCreate {
+		return m.doScaffold()
+	}
+	return m.doImport()
+}
+
+// batchDestForSource computes the destination path for a batch source path.
+func (m importModel) batchDestForSource(srcPath string) string {
+	itemName := filepath.Base(srcPath)
+	if m.contentType.IsUniversal() {
+		return filepath.Join(m.repoRoot, "my-tools", string(m.contentType), itemName)
+	}
+	return filepath.Join(m.repoRoot, "my-tools", string(m.contentType), m.providerName, itemName)
+}
+
+// advanceConflict moves to the next batch conflict, or launches the batch import
+// if all conflicts have been resolved.
+func (m importModel) advanceConflict() (importModel, tea.Cmd) {
+	m.batchConflictIdx++
+	if m.batchConflictIdx < len(m.batchConflicts) {
+		// Build conflict info for the next conflict
+		srcPath := m.batchConflicts[m.batchConflictIdx]
+		dest := m.batchDestForSource(srcPath)
+		itemName := filepath.Base(srcPath)
+		m.conflict = m.buildConflictInfo(dest, srcPath, itemName)
+		return m, nil
+	}
+	// All conflicts resolved — launch batch import with overwrite decisions
+	overwrite := m.batchOverwrite
+	included := m.selectedPaths
+	return m, func() tea.Msg {
+		name, warnings, err := m.doBatchImportWithOverwrite(included, overwrite)
+		return importDoneMsg{name: name, warnings: warnings, err: err}
+	}
+}
+
+// handleMouseClick processes a left-click on zone-marked import options.
+// Clicking an option sets the cursor and triggers Enter (select).
+func (m importModel) handleMouseClick(msg tea.MouseMsg) (importModel, tea.Cmd) {
+	// Check how many options are in the current step
+	var maxItems int
+	switch m.step {
+	case stepSource:
+		maxItems = 3
+	case stepType:
+		maxItems = len(m.types)
+	case stepProvider:
+		maxItems = len(m.providerNames)
+	case stepBrowseStart:
+		maxItems = 3
+	case stepGitPick:
+		maxItems = len(m.clonedItems)
+	case stepValidate:
+		maxItems = len(m.validationItems)
+	default:
+		return m, nil
+	}
+
+	for i := 0; i < maxItems; i++ {
+		if zone.Get(fmt.Sprintf("import-opt-%d", i)).InBounds(msg) {
+			switch m.step {
+			case stepSource:
+				m.sourceCursor = i
+			case stepType:
+				m.typeCursor = i
+			case stepProvider:
+				m.provCursor = i
+			case stepBrowseStart:
+				m.browseCursor = i
+			case stepGitPick:
+				m.pickCursor = i
+			case stepValidate:
+				m.validateCursor = i
+			}
+			// Synthesize Enter to activate the selection
+			return m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		}
+	}
+	return m, nil
 }
 
 // hasTextInput returns true if the import model has an active text input.
@@ -1033,28 +1577,31 @@ func (m importModel) viewValidate() string {
 
 	for i, vi := range m.validationItems {
 		prefix := "   "
-		style := itemStyle
+		nameStyle := itemStyle
 		if i == m.validateCursor {
 			prefix = " > "
-			style = selectedItemStyle
+			nameStyle = selectedItemStyle
+		} else if vi.included {
+			nameStyle = installedStyle
 		}
 
 		// Inclusion checkbox
-		check := "x"
-		if !vi.included {
-			check = " "
+		check := " "
+		if vi.included {
+			check = installedStyle.Render("✓")
 		}
 
 		// Status indicator
-		status := installedStyle.Render("[x] " + vi.detection)
+		status := installedStyle.Render("[✓] " + vi.detection)
 		if vi.isWarning {
 			status = errorMsgStyle.Render("[!] No recognized content")
 		}
 
-		s += prefix + "[" + check + "] " + style.Render(vi.name) + " " + status + "\n"
+		row := prefix + "[" + check + "] " + nameStyle.Render(vi.name) + " " + status
 		if vi.description != "" {
-			s += "       " + countStyle.Render(vi.description) + "\n"
+			row += "\n       " + countStyle.Render(vi.description)
 		}
+		s += zone.Mark(fmt.Sprintf("import-opt-%d", i), row) + "\n"
 	}
 
 	includedCount := 0

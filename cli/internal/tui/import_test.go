@@ -2,6 +2,9 @@ package tui
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/holdenhewett/romanesco/cli/internal/catalog"
@@ -638,7 +641,7 @@ func TestImportShowsStepIndicator(t *testing.T) {
 func TestImportShowsBreadcrumb(t *testing.T) {
 	app := navigateToImport(t)
 	view := app.View()
-	assertContains(t, view, "nesco >")
+	assertContains(t, view, "Home")
 }
 
 // ---------------------------------------------------------------------------
@@ -669,4 +672,465 @@ func TestIsValidGitURL(t *testing.T) {
 			}
 		})
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Helper function tests
+// ---------------------------------------------------------------------------
+
+func TestCollectRelativeFiles(t *testing.T) {
+	tmp := t.TempDir()
+	// Create nested structure
+	os.MkdirAll(filepath.Join(tmp, "sub"), 0o755)
+	os.WriteFile(filepath.Join(tmp, "a.md"), []byte("a"), 0o644)
+	os.WriteFile(filepath.Join(tmp, "sub", "b.md"), []byte("b"), 0o644)
+	os.WriteFile(filepath.Join(tmp, ".romanesco.yaml"), []byte("meta"), 0o644)
+	// Create symlink (should be skipped)
+	os.Symlink(filepath.Join(tmp, "a.md"), filepath.Join(tmp, "link.md"))
+
+	files := collectRelativeFiles(tmp)
+
+	// Should contain a.md and sub/b.md, sorted
+	if len(files) != 2 {
+		t.Fatalf("expected 2 files, got %d: %v", len(files), files)
+	}
+	if files[0] != "a.md" {
+		t.Errorf("expected files[0]='a.md', got %q", files[0])
+	}
+	if files[1] != filepath.Join("sub", "b.md") {
+		t.Errorf("expected files[1]='sub/b.md', got %q", files[1])
+	}
+}
+
+func TestBuildConflictInfoDirectories(t *testing.T) {
+	existing := t.TempDir()
+	source := t.TempDir()
+
+	// A only in existing, B in both, C only in new
+	os.WriteFile(filepath.Join(existing, "a.md"), []byte("old-a"), 0o644)
+	os.WriteFile(filepath.Join(existing, "b.md"), []byte("old-b"), 0o644)
+	os.WriteFile(filepath.Join(source, "b.md"), []byte("new-b"), 0o644)
+	os.WriteFile(filepath.Join(source, "c.md"), []byte("new-c"), 0o644)
+
+	m := importModel{}
+	ci := m.buildConflictInfo(existing, source, "test-item")
+
+	if len(ci.onlyExisting) != 1 || ci.onlyExisting[0] != "a.md" {
+		t.Errorf("expected onlyExisting=[a.md], got %v", ci.onlyExisting)
+	}
+	if len(ci.inBoth) != 1 || ci.inBoth[0] != "b.md" {
+		t.Errorf("expected inBoth=[b.md], got %v", ci.inBoth)
+	}
+	if len(ci.onlyNew) != 1 || ci.onlyNew[0] != "c.md" {
+		t.Errorf("expected onlyNew=[c.md], got %v", ci.onlyNew)
+	}
+}
+
+func TestBuildConflictInfoSingleFile(t *testing.T) {
+	existing := t.TempDir()
+	os.WriteFile(filepath.Join(existing, "tool.sh"), []byte("old"), 0o644)
+
+	// Source is a single file (universal type wrapping)
+	sourceFile := filepath.Join(t.TempDir(), "tool.sh")
+	os.WriteFile(sourceFile, []byte("new"), 0o644)
+
+	m := importModel{}
+	ci := m.buildConflictInfo(existing, sourceFile, "tool")
+
+	// tool.sh exists in both
+	if len(ci.inBoth) != 1 || ci.inBoth[0] != "tool.sh" {
+		t.Errorf("expected inBoth=[tool.sh], got %v", ci.inBoth)
+	}
+}
+
+func TestBuildConflictInfoCreateFlow(t *testing.T) {
+	existing := t.TempDir()
+	os.WriteFile(filepath.Join(existing, "SKILL.md"), []byte("content"), 0o644)
+	os.WriteFile(filepath.Join(existing, "README.md"), []byte("readme"), 0o644)
+
+	m := importModel{isCreate: true}
+	ci := m.buildConflictInfo(existing, "", "test-item")
+
+	// All existing files should be in onlyExisting
+	if len(ci.onlyExisting) != 2 {
+		t.Errorf("expected 2 onlyExisting, got %d: %v", len(ci.onlyExisting), ci.onlyExisting)
+	}
+	if len(ci.onlyNew) != 0 {
+		t.Errorf("expected empty onlyNew, got %v", ci.onlyNew)
+	}
+	if len(ci.inBoth) != 0 {
+		t.Errorf("expected empty inBoth, got %v", ci.inBoth)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Single import conflict tests
+// ---------------------------------------------------------------------------
+
+func TestConflictDetectionOnConfirm(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepConfirm
+	app.importer.contentType = catalog.Skills
+	app.importer.isCreate = false
+
+	// Create source
+	srcDir := t.TempDir()
+	os.WriteFile(filepath.Join(srcDir, "SKILL.md"), []byte("content"), 0o644)
+	app.importer.sourcePath = srcDir
+	app.importer.itemName = "conflict-test"
+
+	// Create the destination so it conflicts
+	dest := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "conflict-test")
+	os.MkdirAll(dest, 0o755)
+	os.WriteFile(filepath.Join(dest, "SKILL.md"), []byte("existing"), 0o644)
+
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+
+	if app.importer.step != stepConflict {
+		t.Fatalf("expected stepConflict, got %d", app.importer.step)
+	}
+}
+
+func TestNoConflictPassesThrough(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepConfirm
+	app.importer.contentType = catalog.Skills
+	app.importer.isCreate = false
+	app.importer.sourcePath = app.catalog.Items[0].Path
+	app.importer.itemName = "no-conflict-unique-name"
+
+	_, cmd := app.Update(keyEnter)
+	if cmd == nil {
+		t.Fatal("expected import command (no conflict), got nil")
+	}
+}
+
+func TestConflictOverwriteSingle(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepConflict
+	app.importer.contentType = catalog.Skills
+	app.importer.isCreate = false
+
+	// Set up source and destination
+	srcDir := t.TempDir()
+	os.WriteFile(filepath.Join(srcDir, "SKILL.md"), []byte("new"), 0o644)
+	app.importer.sourcePath = srcDir
+	app.importer.itemName = "overwrite-test"
+
+	dest := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "overwrite-test")
+	os.MkdirAll(dest, 0o755)
+	os.WriteFile(filepath.Join(dest, "SKILL.md"), []byte("old"), 0o644)
+
+	app.importer.conflict = conflictInfo{
+		existingPath: dest,
+		sourcePath:   srcDir,
+		itemName:     "overwrite-test",
+		inBoth:       []string{"SKILL.md"},
+	}
+
+	// Press 'y' to overwrite
+	_, cmd := app.Update(keyRune('y'))
+	if cmd == nil {
+		t.Fatal("expected overwrite import command, got nil")
+	}
+}
+
+func TestConflictCancelSingle(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepConflict
+	app.importer.conflict = conflictInfo{
+		existingPath: "/fake/dest",
+		sourcePath:   "/fake/src",
+		itemName:     "cancel-test",
+	}
+	// No batch conflicts (single mode)
+	app.importer.batchConflicts = nil
+
+	m, _ := app.Update(keyEsc)
+	app = m.(App)
+
+	if app.importer.step != stepConfirm {
+		t.Fatalf("expected stepConfirm after esc, got %d", app.importer.step)
+	}
+}
+
+func TestConflictScrolling(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepConflict
+	app.importer.conflict = conflictInfo{
+		diffText: "--- a/file.md\n+++ b/file.md\n@@ -1,1 +1,1 @@\n-old\n+new",
+	}
+
+	// Scroll down
+	m, _ := app.Update(keyDown)
+	app = m.(App)
+	if app.importer.conflict.scrollOffset != 1 {
+		t.Fatalf("expected scrollOffset 1, got %d", app.importer.conflict.scrollOffset)
+	}
+
+	// Scroll back up
+	m, _ = app.Update(keyUp)
+	app = m.(App)
+	if app.importer.conflict.scrollOffset != 0 {
+		t.Fatalf("expected scrollOffset 0, got %d", app.importer.conflict.scrollOffset)
+	}
+
+	// Clamp at top
+	m, _ = app.Update(keyUp)
+	app = m.(App)
+	if app.importer.conflict.scrollOffset != 0 {
+		t.Fatal("scrollOffset should clamp at 0")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Batch conflict tests
+// ---------------------------------------------------------------------------
+
+func TestBatchConflictDetection(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepValidate
+	app.importer.contentType = catalog.Skills
+
+	// Create 3 source items
+	src1 := filepath.Join(t.TempDir(), "item-1")
+	src2 := filepath.Join(t.TempDir(), "item-2")
+	src3 := filepath.Join(t.TempDir(), "item-3")
+	for _, d := range []string{src1, src2, src3} {
+		os.MkdirAll(d, 0o755)
+		os.WriteFile(filepath.Join(d, "SKILL.md"), []byte("content"), 0o644)
+	}
+
+	app.importer.validationItems = []validationItem{
+		{path: src1, name: "item-1", included: true},
+		{path: src2, name: "item-2", included: true},
+		{path: src3, name: "item-3", included: true},
+	}
+
+	// Create destinations for item-1 and item-3 so they conflict
+	for _, name := range []string{"item-1", "item-3"} {
+		dest := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", name)
+		os.MkdirAll(dest, 0o755)
+		os.WriteFile(filepath.Join(dest, "SKILL.md"), []byte("existing"), 0o644)
+	}
+
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+
+	if app.importer.step != stepConflict {
+		t.Fatalf("expected stepConflict, got %d", app.importer.step)
+	}
+	if len(app.importer.batchConflicts) != 2 {
+		t.Fatalf("expected 2 batch conflicts, got %d", len(app.importer.batchConflicts))
+	}
+}
+
+func TestBatchNoConflicts(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepValidate
+	app.importer.contentType = catalog.Skills
+
+	src1 := filepath.Join(t.TempDir(), "unique-1")
+	src2 := filepath.Join(t.TempDir(), "unique-2")
+	for _, d := range []string{src1, src2} {
+		os.MkdirAll(d, 0o755)
+		os.WriteFile(filepath.Join(d, "SKILL.md"), []byte("content"), 0o644)
+	}
+
+	app.importer.validationItems = []validationItem{
+		{path: src1, name: "unique-1", included: true},
+		{path: src2, name: "unique-2", included: true},
+	}
+
+	_, cmd := app.Update(keyEnter)
+	if cmd == nil {
+		t.Fatal("expected batch import command (no conflicts)")
+	}
+}
+
+func TestBatchConflictStepThrough(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepConflict
+	app.importer.contentType = catalog.Skills
+
+	src1 := filepath.Join(t.TempDir(), "batch-1")
+	src2 := filepath.Join(t.TempDir(), "batch-2")
+	for _, d := range []string{src1, src2} {
+		os.MkdirAll(d, 0o755)
+		os.WriteFile(filepath.Join(d, "SKILL.md"), []byte("new"), 0o644)
+	}
+
+	dest1 := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "batch-1")
+	dest2 := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "batch-2")
+	for _, d := range []string{dest1, dest2} {
+		os.MkdirAll(d, 0o755)
+		os.WriteFile(filepath.Join(d, "SKILL.md"), []byte("old"), 0o644)
+	}
+
+	app.importer.batchConflicts = []string{src1, src2}
+	app.importer.batchConflictIdx = 0
+	app.importer.batchOverwrite = make(map[string]bool)
+	app.importer.selectedPaths = []string{src1, src2}
+	app.importer.conflict = app.importer.buildConflictInfo(dest1, src1, "batch-1")
+
+	// Press 'y' on first conflict → overwrite marked, advances
+	m, _ := app.Update(keyRune('y'))
+	app = m.(App)
+
+	if !app.importer.batchOverwrite[src1] {
+		t.Fatal("expected batch-1 marked for overwrite")
+	}
+	if app.importer.batchConflictIdx != 1 {
+		t.Fatalf("expected batchConflictIdx=1, got %d", app.importer.batchConflictIdx)
+	}
+
+	// Press 'n' on second conflict → skip, triggers batch import
+	_, cmd := app.Update(keyRune('n'))
+	if cmd == nil {
+		t.Fatal("expected batch import command after resolving all conflicts")
+	}
+	if app.importer.batchOverwrite[src2] {
+		t.Fatal("batch-2 should not be marked for overwrite")
+	}
+}
+
+func TestBatchConflictAllOverwrite(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepConflict
+	app.importer.contentType = catalog.Skills
+
+	src1 := filepath.Join(t.TempDir(), "all-ow-1")
+	src2 := filepath.Join(t.TempDir(), "all-ow-2")
+	for _, d := range []string{src1, src2} {
+		os.MkdirAll(d, 0o755)
+		os.WriteFile(filepath.Join(d, "SKILL.md"), []byte("new"), 0o644)
+	}
+
+	dest1 := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "all-ow-1")
+	dest2 := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "all-ow-2")
+	for _, d := range []string{dest1, dest2} {
+		os.MkdirAll(d, 0o755)
+	}
+
+	app.importer.batchConflicts = []string{src1, src2}
+	app.importer.batchConflictIdx = 0
+	app.importer.batchOverwrite = make(map[string]bool)
+	app.importer.selectedPaths = []string{src1, src2}
+	app.importer.conflict = app.importer.buildConflictInfo(dest1, src1, "all-ow-1")
+
+	// y, y
+	m, _ := app.Update(keyRune('y'))
+	app = m.(App)
+	_, cmd := app.Update(keyRune('y'))
+
+	if !app.importer.batchOverwrite[src1] || !app.importer.batchOverwrite[src2] {
+		t.Fatal("expected both paths marked for overwrite")
+	}
+	if cmd == nil {
+		t.Fatal("expected batch import command")
+	}
+}
+
+func TestBatchConflictAllSkip(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepConflict
+	app.importer.contentType = catalog.Skills
+
+	src1 := filepath.Join(t.TempDir(), "skip-1")
+	src2 := filepath.Join(t.TempDir(), "skip-2")
+	for _, d := range []string{src1, src2} {
+		os.MkdirAll(d, 0o755)
+	}
+
+	dest1 := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "skip-1")
+	dest2 := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "skip-2")
+	for _, d := range []string{dest1, dest2} {
+		os.MkdirAll(d, 0o755)
+	}
+
+	app.importer.batchConflicts = []string{src1, src2}
+	app.importer.batchConflictIdx = 0
+	app.importer.batchOverwrite = make(map[string]bool)
+	app.importer.selectedPaths = []string{src1, src2}
+	app.importer.conflict = app.importer.buildConflictInfo(dest1, src1, "skip-1")
+
+	// n, n (Esc also works for skip)
+	m, _ := app.Update(keyRune('n'))
+	app = m.(App)
+	app.Update(keyEsc) // Esc also skips in batch
+
+	if len(app.importer.batchOverwrite) != 0 {
+		t.Fatalf("expected empty batchOverwrite, got %v", app.importer.batchOverwrite)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// View rendering tests
+// ---------------------------------------------------------------------------
+
+func TestConflictViewDiff(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepConflict
+	app.importer.conflict = conflictInfo{
+		existingPath: "/dest/test",
+		sourcePath:   "/src/test",
+		itemName:     "test",
+		onlyExisting: []string{"old-file.md"},
+		onlyNew:      []string{"new-file.md"},
+		inBoth:       []string{"shared.md"},
+		diffText:     "--- a/old-file.md\n+++ /dev/null\n@@ -1,1 +0,0 @@\n-old content\n\n--- /dev/null\n+++ b/new-file.md\n@@ -0,0 +1,1 @@\n+new content\n\n--- a/shared.md\n+++ b/shared.md\n@@ -1,1 +1,1 @@\n-old shared\n+new shared",
+	}
+
+	view := app.importer.viewConflict()
+
+	assertContains(t, view, "Destination already exists")
+	assertContains(t, view, "old-file.md")
+	assertContains(t, view, "new-file.md")
+	assertContains(t, view, "shared.md")
+	assertContains(t, view, "-old content")
+	assertContains(t, view, "+new content")
+	assertContains(t, view, "y overwrite")
+	assertContains(t, view, "1 removed")
+	assertContains(t, view, "1 added")
+	assertContains(t, view, "1 modified")
+}
+
+func TestConflictViewBatchHeader(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepConflict
+	app.importer.batchConflicts = []string{"/a", "/b", "/c"}
+	app.importer.batchConflictIdx = 1
+	app.importer.conflict = conflictInfo{
+		existingPath: "/dest",
+		sourcePath:   "/src",
+	}
+
+	label := app.importer.stepLabel()
+	if !strings.Contains(label, "2 of 3") {
+		t.Fatalf("expected step label to contain '2 of 3', got %q", label)
+	}
+}
+
+func TestConflictDiffComputation(t *testing.T) {
+	existing := t.TempDir()
+	source := t.TempDir()
+
+	os.WriteFile(filepath.Join(existing, "keep.md"), []byte("line one.\nline two."), 0o644)
+	os.WriteFile(filepath.Join(source, "keep.md"), []byte("line one\nline two."), 0o644) // removed period
+
+	m := importModel{}
+	ci := m.buildConflictInfo(existing, source, "diff-test")
+
+	if ci.diffText == "" {
+		t.Fatal("expected non-empty diffText for files with differences")
+	}
+	if !strings.Contains(ci.diffText, "-line one.") {
+		t.Error("diffText should contain removed line with period")
+	}
+	if !strings.Contains(ci.diffText, "+line one") {
+		t.Error("diffText should contain added line without period")
+	}
+	assertContains(t, ci.diffText, "--- a/keep.md")
+	assertContains(t, ci.diffText, "+++ b/keep.md")
 }
