@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -18,6 +19,7 @@ type sidebarModel struct {
 	localCount int
 	cursor     int
 	focused    bool
+	height     int // available terminal height for sidebar panel
 
 	// Version/update state (displayed in sidebar header)
 	version         string
@@ -74,10 +76,12 @@ func (m sidebarModel) View() string {
 	// Header: "nesco" title
 	s += titleStyle.Render("nesco") + "\n\n"
 
+	// ── AI Tools section ──
+	s += labelStyle.Render("  AI Tools") + "\n"
+
 	// Content type rows
 	for i, ct := range m.types {
 		count := m.counts[ct]
-		prefix := "  "
 		label := ct.Label()
 		countStr := fmt.Sprintf("%2d", count)
 
@@ -88,43 +92,75 @@ func (m sidebarModel) View() string {
 
 		var rowContent string
 		if i == m.cursor {
-			rowContent = "▸ " + selectedItemStyle.Render(line)
+			rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, line))
 		} else {
-			rowContent = prefix + itemStyle.Render(line)
+			rowContent = "  " + itemStyle.Render(line)
 		}
 		s += zone.Mark(fmt.Sprintf("sidebar-%d", i), rowContent) + "\n"
 	}
 
+	// My Tools (end of AI Tools section)
+	myIdx := len(m.types)
+	myCountStr := fmt.Sprintf("%2d", m.localCount)
+	myLine := fmt.Sprintf("%-*s%s", inner-len(myCountStr)-2, "My Tools", myCountStr)
+	if len(myLine) > inner {
+		myLine = myLine[:inner]
+	}
+	var rowContent string
+	if myIdx == m.cursor {
+		rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, myLine))
+	} else {
+		rowContent = "  " + itemStyle.Render(myLine)
+	}
+	s += zone.Mark(fmt.Sprintf("sidebar-%d", myIdx), rowContent) + "\n"
+
 	// Separator
 	s += helpStyle.Render("  "+"─────────────") + "\n"
 
-	// Utility items: My Tools, Import, Update, Settings
+	// ── Romanesco section ──
+	s += labelStyle.Render("  Romanesco") + "\n"
+
+	// Utility items: Import, Update, Settings
 	utilItems := []struct {
-		label  string
-		index  int
-		hasDot bool // true = ◆ (has items), false = ◇
+		label string
+		index int
 	}{
-		{fmt.Sprintf("My Tools %2d", m.localCount), len(m.types), m.localCount > 0},
-		{"Import", len(m.types) + 1, false},
-		{"Update", len(m.types) + 2, false},
-		{"Settings", len(m.types) + 3, false},
+		{"Import", len(m.types) + 1},
+		{"Update", len(m.types) + 2},
+		{"Settings", len(m.types) + 3},
 	}
 
 	for _, u := range utilItems {
-		diamond := "◇"
-		if u.hasDot {
-			diamond = "◆"
-		}
 		var rowContent string
 		if u.index == m.cursor {
-			rowContent = diamond + " " + selectedItemStyle.Render(u.label)
+			rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, u.label))
 		} else {
-			rowContent = diamond + " " + itemStyle.Render(u.label)
+			rowContent = "  " + itemStyle.Render(u.label)
 		}
 		s += zone.Mark(fmt.Sprintf("sidebar-%d", u.index), rowContent) + "\n"
 	}
 
-	return sidebarBorderStyle.Width(sidebarWidth).Render(s)
+	// Version pinned to bottom-right of sidebar
+	if m.version != "" && m.height > 0 {
+		ver := "v" + m.version
+		pad := inner - len(ver)
+		if pad < 0 {
+			pad = 0
+		}
+		verLine := strings.Repeat(" ", pad) + versionStyle.Render(ver)
+		contentLines := strings.Count(s, "\n")
+		gap := m.height - contentLines - 1
+		if gap > 0 {
+			s += strings.Repeat("\n", gap)
+		}
+		s += verLine
+	}
+
+	style := sidebarBorderStyle.Width(sidebarWidth)
+	if m.height > 0 {
+		style = style.Height(m.height)
+	}
+	return style.Render(s)
 }
 
 // Selector methods for use in App.Update routing

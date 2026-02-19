@@ -61,11 +61,9 @@ func TestTeatestCategoryToItems(t *testing.T) {
 	tm.Send(keyEnter)
 	waitFor(t, tm, "alpha-skill")
 
-	// First Esc: shifts focus to sidebar (stays on items screen)
-	// Second Esc: back to category (renders category welcome content)
+	// Single Esc: back to category (renders category welcome content)
 	tm.Send(keyEsc)
-	tm.Send(keyEsc)
-	waitFor(t, tm, "Select a category")
+	waitFor(t, tm, "Reusable skill definitions")
 
 	// Quit
 	tm.Send(keyRune('q'))

@@ -56,7 +56,8 @@ type App struct {
 	importer    importModel
 	updater     updateModel
 	settings      settingsModel
-	statusMessage string
+	statusMessage  string
+	statusWarnings []string
 
 	// Detail model cache (preserves state when re-entering same item)
 	cachedDetail     *detailModel
@@ -91,6 +92,16 @@ func (a App) Init() tea.Cmd {
 	return checkForUpdate(a.catalog.RepoRoot, a.version)
 }
 
+// panelHeight returns the usable height for sidebar and content panels,
+// reserving space for the footer bar (border line + text = 2 rows).
+func (a App) panelHeight() int {
+	h := a.height - 2
+	if h < 5 {
+		h = 5
+	}
+	return h
+}
+
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -102,17 +113,19 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if contentW < 20 {
 			contentW = 20
 		}
+		ph := a.panelHeight()
+		a.sidebar.height = ph
 		a.items.width = contentW
-		a.items.height = msg.Height
+		a.items.height = ph
 		a.detail.width = contentW
-		a.detail.height = msg.Height
+		a.detail.height = ph
 		a.detail.clampScroll()
 		a.importer.width = contentW
-		a.importer.height = msg.Height
+		a.importer.height = ph
 		a.updater.width = contentW
-		a.updater.height = msg.Height
+		a.updater.height = ph
 		a.settings.width = contentW
-		a.settings.height = msg.Height
+		a.settings.height = ph
 		return a, nil
 
 	case appInstallDoneMsg:
@@ -169,6 +182,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			a.statusMessage = fmt.Sprintf("Imported %q but catalog rescan failed: %s", msg.name, err)
 		}
+		a.statusWarnings = msg.warnings
 		a.sidebar.counts = a.catalog.CountByType()
 		a.sidebar.localCount = a.catalog.CountLocal()
 		a.screen = screenCategory
@@ -186,7 +200,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if a.autoUpdate {
 				a.updater = newUpdateModel(a.catalog.RepoRoot, a.version, a.remoteVersion, a.commitsBehind)
 				a.updater.width = a.width - sidebarWidth - 1
-				a.updater.height = a.height
+				a.updater.height = a.panelHeight()
 				a.screen = screenUpdate
 				return a, a.updater.startPull()
 			}
@@ -240,6 +254,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.MouseMsg:
+		// Forward wheel events to active screen for scroll support
+		if msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown {
+			switch a.screen {
+			case screenImport:
+				var cmd tea.Cmd
+				a.importer, cmd = a.importer.Update(msg)
+				return a, cmd
+			}
+			return a, nil
+		}
 		if msg.Action != tea.MouseActionRelease || msg.Button != tea.MouseButtonLeft {
 			return a, nil
 		}
@@ -248,6 +272,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if zone.Get(fmt.Sprintf("sidebar-%d", i)).InBounds(msg) {
 				a.sidebar.cursor = i
 				a.screen = screenCategory
+				a.focus = focusSidebar
 				// Synthesize Enter to load content
 				return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
 			}
@@ -260,6 +285,34 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.focus = focusContent
 					return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
 				}
+			}
+		}
+		// Check welcome page category links
+		allTypes := catalog.AllContentTypes()
+		for i, ct := range allTypes {
+			if zone.Get(fmt.Sprintf("welcome-%d", i)).InBounds(msg) {
+				// Find the sidebar index for this type and select it
+				for j, st := range a.sidebar.types {
+					if st == ct {
+						a.sidebar.cursor = j
+						break
+					}
+				}
+				a.screen = screenCategory
+				a.focus = focusSidebar
+				return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+			}
+		}
+		// Check breadcrumb zones (detail and items screens)
+		if zone.Get("crumb-home").InBounds(msg) {
+			a.screen = screenCategory
+			a.focus = focusSidebar
+			return a, nil
+		}
+		if zone.Get("crumb-category").InBounds(msg) {
+			if a.screen == screenDetail {
+				// Navigate back to items list
+				return a.Update(tea.KeyMsg{Type: tea.KeyEsc})
 			}
 		}
 		// Check detail tab zones
@@ -285,6 +338,21 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(char)})
 				}
 			}
+		}
+		// Forward left-clicks to content screens that handle their own zones
+		switch a.screen {
+		case screenImport:
+			var cmd tea.Cmd
+			a.importer, cmd = a.importer.Update(msg)
+			return a, cmd
+		case screenUpdate:
+			var cmd tea.Cmd
+			a.updater, cmd = a.updater.Update(msg)
+			return a, cmd
+		case screenSettings:
+			var cmd tea.Cmd
+			a.settings, cmd = a.settings.Update(msg)
+			return a, cmd
 		}
 		return a, nil
 
@@ -395,7 +463,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					ct := a.sidebar.selectedType()
 					items := newItemsModel(ct, a.catalog.ByType(ct), a.providers, a.catalog.RepoRoot)
 					items.width = a.width
-					items.height = a.height
+					items.height = a.panelHeight()
 					a.items = items
 				}
 				return a, nil
@@ -407,7 +475,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					filtered := filterItems(a.catalog.Items, a.search.query())
 					items := newItemsModel(catalog.SearchResults, filtered, a.providers, a.catalog.RepoRoot)
 					items.width = a.width
-					items.height = a.height
+					items.height = a.panelHeight()
 					a.items = items
 					a.screen = screenItems
 				} else if a.screen == screenItems {
@@ -415,7 +483,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					filtered := filterItems(a.catalog.ByType(ct), a.search.query())
 					items := newItemsModel(ct, filtered, a.providers, a.catalog.RepoRoot)
 					items.width = a.width
-					items.height = a.height
+					items.height = a.panelHeight()
 					a.items = items
 				}
 				a.search = a.search.deactivated()
@@ -443,7 +511,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				filtered := filterItems(source, query)
 				items := newItemsModel(ct, filtered, a.providers, a.catalog.RepoRoot)
 				items.width = a.width
-				items.height = a.height
+				items.height = a.panelHeight()
 				a.items = items
 			}
 
@@ -488,7 +556,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if a.sidebar.isUpdateSelected() {
 						a.updater = newUpdateModel(a.catalog.RepoRoot, a.version, a.remoteVersion, a.commitsBehind)
 						a.updater.width = a.width - sidebarWidth - 1
-						a.updater.height = a.height
+						a.updater.height = a.panelHeight()
 						a.screen = screenUpdate
 						a.focus = focusContent
 						return a, nil
@@ -496,7 +564,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if a.sidebar.isSettingsSelected() {
 						a.settings = newSettingsModel(a.catalog.RepoRoot, a.providers, a.detectors)
 						a.settings.width = a.width - sidebarWidth - 1
-						a.settings.height = a.height
+						a.settings.height = a.panelHeight()
 						a.screen = screenSettings
 						a.focus = focusContent
 						return a, nil
@@ -504,7 +572,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if a.sidebar.isImportSelected() {
 						a.importer = newImportModel(a.providers, a.catalog.RepoRoot)
 						a.importer.width = a.width - sidebarWidth - 1
-						a.importer.height = a.height
+						a.importer.height = a.panelHeight()
 						a.screen = screenImport
 						a.focus = focusContent
 						return a, nil
@@ -518,7 +586,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						}
 						items := newItemsModel(catalog.MyTools, localItems, a.providers, a.catalog.RepoRoot)
 						items.width = a.width - sidebarWidth - 1
-						items.height = a.height
+						items.height = a.panelHeight()
 						a.items = items
 						a.screen = screenItems
 						a.focus = focusContent
@@ -527,7 +595,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					ct := a.sidebar.selectedType()
 					items := newItemsModel(ct, a.catalog.ByType(ct), a.providers, a.catalog.RepoRoot)
 					items.width = a.width - sidebarWidth - 1
-					items.height = a.height
+					items.height = a.panelHeight()
 					a.items = items
 					a.screen = screenItems
 					a.focus = focusContent
@@ -541,20 +609,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case screenItems:
 			if key.Matches(msg, keys.Back) {
-				if a.focus == focusSidebar {
-					// Second Esc (sidebar already focused): go back to category screen
-					a.screen = screenCategory
-					if a.catalog != nil {
-						a.sidebar.counts = a.catalog.CountByType()
-						a.sidebar.localCount = a.catalog.CountLocal()
-					}
-				} else {
-					// First Esc: shift focus back to sidebar
-					a.focus = focusSidebar
-					if a.catalog != nil {
-						a.sidebar.counts = a.catalog.CountByType()
-						a.sidebar.localCount = a.catalog.CountLocal()
-					}
+				a.screen = screenCategory
+				a.focus = focusSidebar
+				if a.catalog != nil {
+					a.sidebar.counts = a.catalog.CountByType()
+					a.sidebar.localCount = a.catalog.CountLocal()
 				}
 				return a, nil
 			}
@@ -566,7 +625,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
 				}
 				a.detail.width = a.width
-				a.detail.height = a.height
+				a.detail.height = a.panelHeight()
 				a.detail.listPosition = a.items.cursor
 				a.detail.listTotal = len(a.items.items)
 				a.screen = screenDetail
@@ -584,7 +643,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					item := a.items.selectedItem()
 					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
 					a.detail.width = a.width
-					a.detail.height = a.height
+					a.detail.height = a.panelHeight()
 					a.detail.listPosition = a.items.cursor
 					a.detail.listTotal = len(a.items.items)
 				}
@@ -596,7 +655,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					item := a.items.selectedItem()
 					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
 					a.detail.width = a.width
-					a.detail.height = a.height
+					a.detail.height = a.panelHeight()
 					a.detail.listPosition = a.items.cursor
 					a.detail.listTotal = len(a.items.items)
 				}
@@ -619,14 +678,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					items := newItemsModel(catalog.MyTools, localItems, a.providers, a.catalog.RepoRoot)
 					items.width = a.width
-					items.height = a.height
+					items.height = a.panelHeight()
 					items.cursor = a.items.cursor
 					a.items = items
 				} else if a.items.contentType != catalog.SearchResults {
 					ct := a.items.contentType
 					items := newItemsModel(ct, a.catalog.ByType(ct), a.providers, a.catalog.RepoRoot)
 					items.width = a.width
-					items.height = a.height
+					items.height = a.panelHeight()
 					items.cursor = a.items.cursor // preserve cursor position
 					a.items = items
 				}
@@ -728,6 +787,9 @@ func (a App) View() string {
 		contentView = a.helpOverlay.View(a.screen)
 	}
 
+	// Constrain content to the same height as the sidebar so panels align.
+	contentView = lipgloss.NewStyle().Height(a.panelHeight()).Render(contentView)
+
 	// Compose sidebar + content side by side
 	panels := lipgloss.JoinHorizontal(lipgloss.Top, sidebarView, contentView)
 
@@ -753,15 +815,166 @@ func (a App) View() string {
 		body = a.envModal.overlayView(body)
 	}
 
-	return zone.Scan(fmt.Sprintf("\n%s\n", body))
+	return zone.Scan(body)
 }
 
-// renderContentWelcome returns guidance text for when no category is drilled into.
-func (a App) renderContentWelcome() string {
-	if a.statusMessage != "" {
-		return successMsgStyle.Render("Done: " + a.statusMessage)
+// categoryDesc maps content types to short descriptions for the welcome cards.
+var categoryDesc = map[catalog.ContentType]string{
+	catalog.Skills:   "Reusable skill definitions that extend AI tool capabilities",
+	catalog.Agents:   "Agent configurations with specialized roles and personalities",
+	catalog.Prompts:  "Prompt templates for common tasks and workflows",
+	catalog.MCP:      "Model Context Protocol server configurations",
+	catalog.Apps:     "Application scaffolds and project templates",
+	catalog.Rules:    "Rule files that guide AI coding tool behavior",
+	catalog.Hooks:    "Event-driven hooks for automation and validation",
+	catalog.Commands: "Custom slash commands for AI coding tools",
+}
+
+// nescoFontRaw is the "nesco cli" text in ANSI Shadow style.
+const nescoFontRaw = `░████████   ░███████   ░███████   ░███████   ░███████      ░███████  ░██ ░██
+░██    ░██ ░██    ░██ ░██        ░██    ░██ ░██    ░██    ░██    ░██ ░██ ░██
+░██    ░██ ░█████████  ░███████  ░██        ░██    ░██    ░██        ░██ ░██
+░██    ░██ ░██               ░██ ░██    ░██ ░██    ░██    ░██    ░██ ░██ ░██
+░██    ░██  ░███████   ░███████   ░███████   ░███████      ░███████  ░██ ░██`
+
+// nescoPlantRaw is the romanesco fractal plant ASCII art.
+const nescoPlantRaw = `
+                                     ##+
+                                    ###+#
+                                  ###++++++      ######
+                                 ###++++++++  ##########
+                      ++++++-   ###++++++++#############
+                     ++++++-...##++++++++#########+++++++
+                     +++++--..##+++++++#######++++++++#+++++++++#+
+                     +++++--.#+++++++######+++++#++++++++++++++++++
+          #######+++#+++++-.###+++++#####++++#+++++++++++++++++++++
+          #######+++#++++--.#++++++#####++#++++++++---------------+
+          #######+++#++++--.#+++++###+++++++++------.............-
+          ########+++++++--##++++####+#+++----##################..
+           #######++++++++-##+++###+++++--##+++++++++++++++++########
+           #######+++#++++-##+++####++++##++++++++++++++++++++++++#+####
+            #######+++++++-##++###+++-#+++###############+++++++++++++#####
+             #######++#++++.#++###++-++######+++############++++++++++++####
+            ++#######++#+++-#++##+++#+###++++++####++##########++++++++++++
+          +++++#######++++++-#++#++++###+-+++++++++###++#########++++++++#
+        ####++++#######++#+++-#+##+++#+#++##+##++++++####++########+++++
+       ######+++++######++++++-#++#+++#++##++#+#-++++++####++########-+
+       ########+++++######+++++++#++########++#+##+++++++###+++#######
+        #########+++++#######++#+++++++++###++##+##-++++++###+++######
+          +#########++++########+#++++#####+++##+##--++++++###+++###
+             ##########+#+++##############-+++##++##-+++++++###++#
+              .-############+#+++++######+++++##++##-++++++++###
+             ---....##################+-+++++##++###-++++++++####
+             --------...-#########---++++#++###++###--++++++++####
+            ++++++---+-----------++++++#++###+++###--++++++++####
+            +++++++++++++++++++++++++#++++###++++###--++++++++#####
+            #++++++++++++++++++++##+++++####++++###---+++++++++####
+               ####+++++++++##++++++++#####++++####--++++++++++####
+                     ++++++++++++++######+++++####.--+++++++++#+#
+                      ++++++++#########++++++####.---+++++
+                      ###############++++++#####----++++++
+                      ############+++++++######.---++++++
+                       ########    ++++++#####    +++++++
+                        ##          +#######+
+                                      #####
+                                       ##`
+
+// trimArt removes common leading whitespace from multi-line ASCII art.
+func trimArt(s string) string {
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+	minIndent := len(s)
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		indent := len(line) - len(strings.TrimLeft(line, " "))
+		if indent < minIndent {
+			minIndent = indent
+		}
 	}
-	return helpStyle.Render("Select a category from the sidebar to browse content.")
+	var result []string
+	for _, line := range lines {
+		if len(line) > minIndent {
+			result = append(result, strings.TrimRight(line[minIndent:], " "))
+		} else {
+			result = append(result, "")
+		}
+	}
+	return strings.Join(result, "\n")
+}
+
+// renderContentWelcome returns the landing page with centered ASCII art and category cards.
+func (a App) renderContentWelcome() string {
+	contentW := a.width - sidebarWidth - 1
+	if contentW < 30 {
+		contentW = 30
+	}
+
+	var s string
+
+	// Status message (from import, etc.)
+	if a.statusMessage != "" {
+		s += successMsgStyle.Render("Done: "+a.statusMessage) + "\n"
+		for _, w := range a.statusWarnings {
+			s += warningStyle.Render("Warning: "+w) + "\n"
+		}
+		s += "\n"
+	}
+
+	// Logo: big font on wide terminals, simple title on narrow
+	if contentW >= 78 {
+		font := trimArt(nescoFontRaw)
+		s += lipgloss.PlaceHorizontal(contentW, lipgloss.Center, titleStyle.Render(font))
+	} else {
+		s += lipgloss.PlaceHorizontal(contentW, lipgloss.Center, titleStyle.Render("nesco cli"))
+	}
+	s += "\n\n"
+
+	// Category cards: 2 per row
+	// Card width accounts for borders (2 chars per card) + 1 char gap between cards.
+	allTypes := catalog.AllContentTypes()
+	counts := make(map[catalog.ContentType]int)
+	if a.catalog != nil {
+		counts = a.catalog.CountByType()
+	}
+
+	cardW := (contentW - 5) / 2 // 5 = 2 borders left + 2 borders right + 1 gap
+	if cardW < 18 {
+		cardW = 18
+	}
+
+	cardStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(borderColor).
+		Width(cardW).
+		Padding(0, 1).
+		Height(3) // uniform: title + 2 lines of description
+
+	for i := 0; i < len(allTypes); i += 2 {
+		var left, right string
+
+		left = a.renderCategoryCard(allTypes[i], counts[allTypes[i]])
+		left = zone.Mark(fmt.Sprintf("welcome-%d", i), cardStyle.Render(left))
+
+		if i+1 < len(allTypes) {
+			right = a.renderCategoryCard(allTypes[i+1], counts[allTypes[i+1]])
+			right = zone.Mark(fmt.Sprintf("welcome-%d", i+1), cardStyle.Render(right))
+		}
+
+		s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
+	}
+
+	return s
+}
+
+// renderCategoryCard builds the inner content for a single category card.
+func (a App) renderCategoryCard(ct catalog.ContentType, count int) string {
+	title := labelStyle.Render(ct.Label()) + " " + countStyle.Render(fmt.Sprintf("(%d)", count))
+	desc := categoryDesc[ct]
+	if desc == "" {
+		desc = "Browse " + ct.Label() + " content"
+	}
+	return title + "\n" + helpStyle.Render(desc)
 }
 
 // renderFooter builds the breadcrumb + context-sensitive help bar.
@@ -777,15 +990,15 @@ func (a App) renderFooter() string {
 		helpText = "Tab: switch panel   /: search   ?: help   q: quit"
 	}
 
-	left := footerStyle.Render(helpText)
-	right := breadcrumbStyle.Render(crumb)
-
 	// Pad the gap between help text and breadcrumb so crumb is right-aligned
-	gap := a.width - lipgloss.Width(left) - lipgloss.Width(right)
+	gap := a.width - len(helpText) - len(crumb)
 	if gap < 1 {
 		gap = 1
 	}
-	return left + strings.Repeat(" ", gap) + right
+	line := helpText + strings.Repeat(" ", gap) + crumb
+
+	// Apply footer style (muted color + top border) to the full-width line
+	return footerStyle.Width(a.width).Render(line)
 }
 
 // breadcrumb returns a "Category > Item" navigation string for the current screen.

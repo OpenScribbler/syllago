@@ -21,8 +21,7 @@ var (
 	// Title bar
 	titleStyle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(primaryColor).
-			MarginBottom(1)
+			Foreground(primaryColor)
 
 	// Help bar at bottom
 	helpStyle = lipgloss.NewStyle().
@@ -103,5 +102,20 @@ var (
 
 	// Breadcrumb within footer
 	breadcrumbStyle = lipgloss.NewStyle().
+		Foreground(mutedColor)
+
+	// Detail tabs — single-line with background color for active
+	activeTabStyle = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(accentColor).
+		Background(selectedBgColor).
+		Padding(0, 1)
+
+	inactiveTabStyle = lipgloss.NewStyle().
+		Foreground(mutedColor).
+		Padding(0, 1)
+
+	// Clickable back link
+	backLinkStyle = lipgloss.NewStyle().
 		Foreground(mutedColor)
 )
