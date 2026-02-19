@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/holdenhewett/romanesco/cli/internal/config"
 	"github.com/holdenhewett/romanesco/cli/internal/provider"
@@ -64,6 +65,29 @@ func (m settingsModel) settingsRowCount() int {
 
 func (m settingsModel) Update(msg tea.Msg) (settingsModel, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		if msg.Action == tea.MouseActionRelease && msg.Button == tea.MouseButtonLeft {
+			if m.editMode != editNone {
+				// Sub-picker: click toggles item
+				for i := range m.subItems {
+					if zone.Get(fmt.Sprintf("settings-sub-%d", i)).InBounds(msg) {
+						m.subCur = i
+						m.subItems[i].checked = !m.subItems[i].checked
+						return m, nil
+					}
+				}
+			} else {
+				// Main rows: click activates
+				for i := 0; i < m.settingsRowCount(); i++ {
+					if zone.Get(fmt.Sprintf("settings-row-%d", i)).InBounds(msg) {
+						m.cursor = i
+						m.activateRow()
+						return m, nil
+					}
+				}
+			}
+		}
+		return m, nil
 	case tea.KeyMsg:
 		m.message = ""
 
@@ -189,7 +213,7 @@ func (m *settingsModel) save() {
 }
 
 func (m settingsModel) View() string {
-	s := helpStyle.Render("nesco >") + " " + titleStyle.Render("Settings") + "\n\n"
+	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + " " + helpStyle.Render(">") + " " + titleStyle.Render("Settings") + "\n\n"
 
 	// Row 0: Auto-update
 	autoVal := "off"
@@ -231,10 +255,11 @@ func (m settingsModel) View() string {
 
 			check := "[ ]"
 			if item.checked {
-				check = installedStyle.Render("[x]")
+				check = installedStyle.Render("[✓]")
 			}
 
-			s += fmt.Sprintf("  %s%s %s\n", prefix, check, style.Render(item.label))
+			row := fmt.Sprintf("  %s%s %s", prefix, check, style.Render(item.label))
+			s += zone.Mark(fmt.Sprintf("settings-sub-%d", i), row) + "\n"
 		}
 		s += "\n" + helpStyle.Render("up/down navigate • space toggle • esc done") + "\n"
 	}
@@ -264,7 +289,8 @@ func (m settingsModel) renderRow(index int, label, value string) string {
 		prefix = " > "
 		style = selectedItemStyle
 	}
-	return fmt.Sprintf("%s%s  %s\n", prefix, style.Render(label), helpStyle.Render(value))
+	row := fmt.Sprintf("%s%s  %s", prefix, style.Render(label), helpStyle.Render(value))
+	return zone.Mark(fmt.Sprintf("settings-row-%d", index), row) + "\n"
 }
 
 // HasPendingAction returns true if a sub-picker is open.

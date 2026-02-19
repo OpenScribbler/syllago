@@ -21,7 +21,10 @@ type keyMap struct {
 	Help key.Binding
 	Home key.Binding
 	End  key.Binding
-	Right key.Binding
+	Left     key.Binding
+	Right    key.Binding
+	PageUp   key.Binding
+	PageDown key.Binding
 }
 
 var keys = keyMap{
@@ -97,8 +100,20 @@ var keys = keyMap{
 		key.WithKeys("end", "G"),
 		key.WithHelp("end/G", "bottom"),
 	),
+	Left: key.NewBinding(
+		key.WithKeys("left", "h"),
+		key.WithHelp("left/h", "scroll left"),
+	),
 	Right: key.NewBinding(
 		key.WithKeys("right", "l"),
 		key.WithHelp("right/l", "enter"),
+	),
+	PageUp: key.NewBinding(
+		key.WithKeys("pgup"),
+		key.WithHelp("pgup", "page up"),
+	),
+	PageDown: key.NewBinding(
+		key.WithKeys("pgdown"),
+		key.WithHelp("pgdown", "page down"),
 	),
 }

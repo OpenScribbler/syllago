@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -32,6 +33,13 @@ type fileBrowserModel struct {
 	contentType    catalog.ContentType
 	width, height  int
 	errMsg         string // error message for permission denied, etc.
+
+	// File preview state (inline viewer, same pattern as detail fileViewerModel)
+	previewContent string
+	previewName    string // filename shown in title
+	previewPath    string // absolute path of previewed file
+	previewOffset  int
+	previewing     bool
 }
 
 // fileBrowserDoneMsg is sent when the user confirms their selection.
@@ -162,9 +170,50 @@ var fbKeys = struct {
 	Done:      key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "done")),
 }
 
+const maxPreviewBytes = 100 * 1024 // 100KB cap for file previews
+
 func (fb fileBrowserModel) Update(msg tea.Msg) (fileBrowserModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Preview mode: handle scroll and exit before normal browser keys
+		if fb.previewing {
+			switch {
+			case key.Matches(msg, keys.Back):
+				fb.previewing = false
+				fb.previewContent = ""
+				fb.previewOffset = 0
+			case key.Matches(msg, keys.Up):
+				if fb.previewOffset > 0 {
+					fb.previewOffset--
+				}
+			case key.Matches(msg, keys.Down):
+				fb.previewOffset++
+			case key.Matches(msg, keys.PageUp):
+				pageSize := fb.height - 7
+				if pageSize < 1 {
+					pageSize = 10
+				}
+				fb.previewOffset -= pageSize
+				if fb.previewOffset < 0 {
+					fb.previewOffset = 0
+				}
+			case key.Matches(msg, keys.PageDown):
+				pageSize := fb.height - 7
+				if pageSize < 1 {
+					pageSize = 10
+				}
+				fb.previewOffset += pageSize
+			case key.Matches(msg, keys.Space):
+				// Toggle selection on the previewed file
+				if fb.selected[fb.previewPath] {
+					delete(fb.selected, fb.previewPath)
+				} else {
+					fb.selected[fb.previewPath] = true
+				}
+			}
+			return fb, nil // swallow all other keys while previewing
+		}
+
 		switch {
 		case key.Matches(msg, keys.Up):
 			if fb.cursor > 0 {
@@ -204,12 +253,21 @@ func (fb fileBrowserModel) Update(msg tea.Msg) (fileBrowserModel, tea.Cmd) {
 			if entry.isDir {
 				fb.loadDir(entry.path)
 			} else {
-				// Toggle selection for files
-				if fb.selected[entry.path] {
-					delete(fb.selected, entry.path)
-				} else {
-					fb.selected[entry.path] = true
+				// Preview file content
+				data, err := os.ReadFile(entry.path)
+				if err != nil {
+					fb.errMsg = "Cannot read file: " + err.Error()
+					return fb, nil
 				}
+				content := string(data)
+				if len(data) > maxPreviewBytes {
+					content = string(data[:maxPreviewBytes]) + "\n\n(truncated at 100KB)"
+				}
+				fb.previewContent = content
+				fb.previewName = entry.name
+				fb.previewPath = entry.path
+				fb.previewOffset = 0
+				fb.previewing = true
 			}
 
 		case key.Matches(msg, fbKeys.SelectAll):
@@ -226,6 +284,30 @@ func (fb fileBrowserModel) Update(msg tea.Msg) (fileBrowserModel, tea.Cmd) {
 				return fb, func() tea.Msg {
 					return fileBrowserDoneMsg{paths: fb.SelectedPaths()}
 				}
+			}
+		}
+
+	case tea.MouseMsg:
+		if msg.Button == tea.MouseButtonWheelUp {
+			if fb.previewing {
+				if fb.previewOffset > 0 {
+					fb.previewOffset--
+				}
+			} else {
+				if fb.cursor > 0 {
+					fb.cursor--
+				}
+				fb.adjustScroll()
+			}
+		}
+		if msg.Button == tea.MouseButtonWheelDown {
+			if fb.previewing {
+				fb.previewOffset++
+			} else {
+				if fb.cursor < len(fb.entries)-1 {
+					fb.cursor++
+				}
+				fb.adjustScroll()
 			}
 		}
 	}
@@ -256,6 +338,10 @@ func (fb fileBrowserModel) visibleRows() int {
 }
 
 func (fb fileBrowserModel) View() string {
+	if fb.previewing {
+		return fb.viewPreview()
+	}
+
 	s := helpStyle.Render(fb.currentDir) + "\n\n"
 
 	if fb.errMsg != "" {
@@ -290,7 +376,10 @@ func (fb fileBrowserModel) View() string {
 		// Selection indicator
 		sel := " "
 		if fb.selected[entry.path] {
-			sel = "x"
+			sel = installedStyle.Render("✓")
+			if i != fb.cursor {
+				style = installedStyle
+			}
 		}
 
 		// Directory indicator: append "/" to dir names
@@ -309,7 +398,7 @@ func (fb fileBrowserModel) View() string {
 			tag := ""
 			switch entry.detection {
 			case "Skill", "Agent", "Prompt", "App":
-				tag = installedStyle.Render("[x] " + entry.detection)
+				tag = installedStyle.Render("[✓] " + entry.detection)
 			default:
 				tag = countStyle.Render("(" + entry.detection + ")")
 			}
@@ -329,7 +418,57 @@ func (fb fileBrowserModel) View() string {
 	if selCount > 0 {
 		s += helpStyle.Render(fmt.Sprintf("  %d selected", selCount)) + "\n"
 	}
-	s += helpStyle.Render("up/down navigate • enter open dir • space select • a select all • d done • esc parent dir")
+	s += helpStyle.Render("up/down navigate • enter open/preview • space select • a select all • d done • esc back")
+
+	return s
+}
+
+// viewPreview renders the file content preview with line numbers and scroll.
+func (fb fileBrowserModel) viewPreview() string {
+	s := labelStyle.Render(fb.previewName) + "\n\n"
+
+	lines := strings.Split(fb.previewContent, "\n")
+
+	// Visible area: height minus title(1) + blank(1) + scroll indicators(2) + footer(3)
+	visibleHeight := fb.height - 7
+	if visibleHeight < 5 {
+		visibleHeight = len(lines)
+	}
+
+	// Clamp scroll offset
+	maxOffset := len(lines) - visibleHeight
+	if maxOffset < 0 {
+		maxOffset = 0
+	}
+	offset := fb.previewOffset
+	if offset > maxOffset {
+		offset = maxOffset
+	}
+
+	end := offset + visibleHeight
+	if end > len(lines) {
+		end = len(lines)
+	}
+
+	if offset > 0 {
+		s += helpStyle.Render(fmt.Sprintf("(%d lines above)", offset)) + "\n"
+	}
+
+	for i := offset; i < end; i++ {
+		lineNum := helpStyle.Render(fmt.Sprintf("%4d ", i+1))
+		s += lineNum + valueStyle.Render(StripControlChars(lines[i])) + "\n"
+	}
+
+	if end < len(lines) {
+		s += helpStyle.Render(fmt.Sprintf("(%d lines below)", len(lines)-end)) + "\n"
+	}
+
+	// Selection status and help
+	s += "\n"
+	if fb.selected[fb.previewPath] {
+		s += installedStyle.Render("  ✓ selected") + "\n"
+	}
+	s += helpStyle.Render("esc back • up/down scroll • space select")
 
 	return s
 }
