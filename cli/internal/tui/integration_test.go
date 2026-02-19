@@ -35,7 +35,7 @@ func newTestModel(t *testing.T) *teatest.TestModel {
 	t.Helper()
 	app := testApp(t)
 	return teatest.NewTestModel(t, testModel{app},
-		teatest.WithInitialTermSize(80, 30),
+		teatest.WithInitialTermSize(80, 40),
 	)
 }
 
@@ -168,7 +168,7 @@ func TestTeatestImportStart(t *testing.T) {
 	tm.Send(keyEnter)
 
 	// Should see import source options
-	waitFor(t, tm, "Import Content")
+	waitFor(t, tm, "Import AI Tools")
 
 	tm.Send(keyEsc)
 	waitFor(t, tm, "nesco")

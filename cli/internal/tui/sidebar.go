@@ -117,8 +117,8 @@ func (m sidebarModel) View() string {
 	// Separator
 	s += helpStyle.Render("  "+"─────────────") + "\n"
 
-	// ── Romanesco section ──
-	s += labelStyle.Render("  Romanesco") + "\n"
+	// ── Configuration section ──
+	s += labelStyle.Render("  Configuration") + "\n"
 
 	// Utility items: Import, Update, Settings
 	utilItems := []struct {
