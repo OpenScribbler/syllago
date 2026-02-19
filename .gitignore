@@ -1,5 +1,6 @@
 # Build output
 cli/nesco
+cli/nesco.*
 cli/nesco-*
 
 # Local user content
