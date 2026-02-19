@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -61,6 +62,16 @@ type itemsModel struct {
 }
 
 func newItemsModel(ct catalog.ContentType, items []catalog.ContentItem, providers []provider.Provider, repoRoot string) itemsModel {
+	// Sort My Tools by type (in display order) so grouped rendering shows contiguous sections
+	if ct == catalog.MyTools && len(items) > 1 {
+		typeOrder := make(map[catalog.ContentType]int)
+		for idx, t := range catalog.AllContentTypes() {
+			typeOrder[t] = idx
+		}
+		sort.SliceStable(items, func(i, j int) bool {
+			return typeOrder[items[i].Type] < typeOrder[items[j].Type]
+		})
+	}
 	return itemsModel{
 		contentType: ct,
 		items:       items,
@@ -173,14 +184,18 @@ func (m itemsModel) buildProvCell(item catalog.ContentItem, relevant []provider.
 }
 
 func (m itemsModel) View() string {
+	// Breadcrumb: Home > Category
+	home := zone.Mark("crumb-home", helpStyle.Render("Home"))
+	arrow := helpStyle.Render(" > ")
+
 	var s string
 	switch m.contentType {
 	case catalog.SearchResults:
-		s = helpStyle.Render("nesco >") + " " + titleStyle.Render(fmt.Sprintf("Search Results (%d)", len(m.items))) + "\n"
+		s = home + arrow + titleStyle.Render(fmt.Sprintf("Search Results (%d)", len(m.items))) + "\n\n"
 	case catalog.MyTools:
-		s = helpStyle.Render("nesco >") + " " + titleStyle.Render(fmt.Sprintf("My Tools (%d)", len(m.items))) + "\n"
+		s = home + arrow + titleStyle.Render(fmt.Sprintf("My Tools (%d)", len(m.items))) + "\n\n"
 	default:
-		s = helpStyle.Render("nesco >") + " " + titleStyle.Render(m.contentType.Label()) + "\n"
+		s = home + arrow + titleStyle.Render(m.contentType.Label()) + "\n\n"
 	}
 
 	if len(m.items) == 0 {
@@ -195,6 +210,9 @@ func (m itemsModel) View() string {
 	relevant := m.relevantProviders()
 	isProvSpecific := !m.contentType.IsUniversal()
 	showProvCol := isProvSpecific || len(relevant) > 0
+	if m.contentType == catalog.MyTools {
+		showProvCol = false // grouped headers replace provider column
+	}
 	nameW := m.maxNameLen()
 	tw := m.termWidth()
 
@@ -222,22 +240,24 @@ func (m itemsModel) View() string {
 		descW = 10
 	}
 
-	// Table header
-	hdr := strings.Repeat(" ", cursorWidth)
-	if showProvCol {
-		hdr += fmt.Sprintf("%-*s  %-*s  %s", nameW, "Name", descW, "Description", "Provider")
-	} else {
-		hdr += fmt.Sprintf("%-*s  %s", nameW, "Name", "Description")
-	}
-	s += tableHeaderStyle.Render(hdr) + "\n"
+	// Table header (skip for MyTools — group headers replace it)
+	if m.contentType != catalog.MyTools {
+		hdr := strings.Repeat(" ", cursorWidth)
+		if showProvCol {
+			hdr += fmt.Sprintf("%-*s  %-*s  %s", nameW, "Name", descW, "Description", "Provider")
+		} else {
+			hdr += fmt.Sprintf("%-*s  %s", nameW, "Name", "Description")
+		}
+		s += tableHeaderStyle.Render(hdr) + "\n"
 
-	// Separator
-	sep := strings.Repeat(" ", cursorWidth)
-	sep += strings.Repeat("─", nameW) + "  " + strings.Repeat("─", descW)
-	if showProvCol {
-		sep += "  " + strings.Repeat("─", maxProvW)
+		// Separator
+		sep := strings.Repeat(" ", cursorWidth)
+		sep += strings.Repeat("─", nameW) + "  " + strings.Repeat("─", descW)
+		if showProvCol {
+			sep += "  " + strings.Repeat("─", maxProvW)
+		}
+		s += helpStyle.Render(sep) + "\n"
 	}
-	s += helpStyle.Render(sep) + "\n"
 
 	// Calculate viewport: show only items that fit in terminal height
 	// Header takes ~3 lines (title + header row + separator), footer takes ~2 lines (blank + help)
@@ -262,11 +282,21 @@ func (m itemsModel) View() string {
 	}
 
 	// Whether to show a type tag per item (for mixed-type views)
-	showTypeTag := m.contentType == catalog.SearchResults || m.contentType == catalog.MyTools
+	showTypeTag := m.contentType == catalog.SearchResults
 
 	// Rows (only render visible items)
+	var prevGroupType catalog.ContentType
 	for i := offset; i < end; i++ {
 		item := m.items[i]
+
+		// Group headers for MyTools — insert section label when type changes
+		if m.contentType == catalog.MyTools && item.Type != prevGroupType {
+			if prevGroupType != "" {
+				s += "\n"
+			}
+			s += labelStyle.Render("  "+item.Type.Label()) + "\n"
+			prevGroupType = item.Type
+		}
 		prefix := "   "
 		style := itemStyle
 		if i == m.cursor {
@@ -294,7 +324,7 @@ func (m itemsModel) View() string {
 
 		if showProvCol {
 			paddedDesc := fmt.Sprintf("%-*s", descW, truncate(item.Description, descW-localPrefixLen))
-			rowStr := fmt.Sprintf("%s%s%s  %s%s  %s\n",
+			rowStr := fmt.Sprintf("%s%s%s  %s%s  %s",
 				prefix,
 				styledName,
 				typeTag,
@@ -302,18 +332,18 @@ func (m itemsModel) View() string {
 				helpStyle.Render(paddedDesc),
 				provCells[i].styled,
 			)
-			s += zone.Mark(fmt.Sprintf("item-%d", i), rowStr)
+			s += zone.Mark(fmt.Sprintf("item-%d", i), rowStr) + "\n"
 		} else {
 			desc := truncate(item.Description, descW-localPrefixLen)
 			paddedDesc := fmt.Sprintf("%-*s", descW-localPrefixLen, desc)
-			rowStr := fmt.Sprintf("%s%s%s  %s%s\n",
+			rowStr := fmt.Sprintf("%s%s%s  %s%s",
 				prefix,
 				styledName,
 				typeTag,
 				localPrefix,
 				helpStyle.Render(paddedDesc),
 			)
-			s += zone.Mark(fmt.Sprintf("item-%d", i), rowStr)
+			s += zone.Mark(fmt.Sprintf("item-%d", i), rowStr) + "\n"
 		}
 	}
 

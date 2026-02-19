@@ -21,40 +21,52 @@ func (m detailModel) renderContent() string {
 }
 
 // renderContentSplit returns pinned header and scrollable body separately.
-// The pinned header contains: item name + tab bar + Type/Path/Provider metadata + separator.
+// The pinned header contains: back link + item name + tab bar + metadata + separator.
 // The scrollable body contains: tab content only.
 func (m detailModel) renderContentSplit() (pinned string, body string) {
 	name := StripControlChars(displayName(m.item))
-	position := ""
-	if m.listTotal > 0 {
-		position = fmt.Sprintf(" (%d/%d)", m.listPosition+1, m.listTotal)
-	}
 
-	// Header line: name + position + LOCAL tag + tab bar (right side)
-	nameStr := titleStyle.Render(name)
+	// Breadcrumb: Home > Category > Item Name
+	home := zone.Mark("crumb-home", helpStyle.Render("Home"))
+	cat := zone.Mark("crumb-category", helpStyle.Render(m.item.Type.Label()))
+	arrow := helpStyle.Render(" > ")
+	current := titleStyle.Render(name)
 	if m.item.Local {
-		nameStr += " " + warningStyle.Render("[LOCAL]")
+		current += " " + warningStyle.Render("[LOCAL]")
 	}
-	nameStr += helpStyle.Render(position)
-	tabBar := m.renderTabBar()
+	pinned += home + arrow + cat + arrow + current + "\n\n"
 
-	// Combine name and tab bar on one line
-	headerLine := nameStr + "  " + tabBar
-	pinned += headerLine + "\n"
+	// Tab bar
+	pinned += m.renderTabBar() + "\n"
 
-	// Metadata block: Type, Path, Providers (always visible, above separator)
-	pinned += "\n"
+	// Metadata block (always visible, below tabs)
 	pinned += labelStyle.Render("Type: ") + valueStyle.Render(m.item.Type.Label())
-	if m.item.Path != "" {
-		pinned += "   " + labelStyle.Render("Path: ") + valueStyle.Render(m.item.Path)
+	if m.item.Local {
+		pinned += "  " + warningStyle.Render("[Local]")
 	}
 	pinned += "\n"
-	if m.item.Provider != "" {
-		pinned += labelStyle.Render("Providers: ") + valueStyle.Render(m.item.Provider) + "\n"
+	if m.item.Path != "" {
+		pinned += labelStyle.Render("Path: ") + valueStyle.Render(m.item.Path) + "\n"
+	}
+	if !m.item.Type.IsUniversal() && m.item.Provider != "" {
+		pinned += labelStyle.Render("Provider: ") + valueStyle.Render(providerDisplayName(m.item.Provider)) + "\n"
+	} else {
+		detected := m.detectedProviders()
+		if len(detected) > 0 {
+			var names []string
+			for _, p := range detected {
+				names = append(names, p.Name)
+			}
+			pinned += labelStyle.Render("Providers: ") + valueStyle.Render(strings.Join(names, ", ")) + "\n"
+		}
 	}
 
-	// Horizontal separator
-	pinned += helpStyle.Render(strings.Repeat("─", 60)) + "\n\n"
+	// Horizontal separator (full content width)
+	sepW := m.width
+	if sepW < 20 {
+		sepW = 60
+	}
+	pinned += helpStyle.Render(strings.Repeat("─", sepW)) + "\n\n"
 
 	// Scrollable body: tab content only
 	switch m.activeTab {
@@ -69,7 +81,7 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 	return pinned, body
 }
 
-// renderTabBar renders the tab selector: [Overview]  Files  Install
+// renderTabBar renders the tab selector (Overview | Files | Install).
 func (m detailModel) renderTabBar() string {
 	tabs := []struct {
 		label string
@@ -82,17 +94,17 @@ func (m detailModel) renderTabBar() string {
 
 	var parts []string
 	for _, t := range tabs {
-		label := t.label
 		var rendered string
 		if t.tab == m.activeTab {
-			rendered = selectedItemStyle.Render("[" + label + "]")
+			rendered = activeTabStyle.Render(t.label)
 		} else {
-			rendered = helpStyle.Render(" " + label + " ")
+			rendered = inactiveTabStyle.Render(t.label)
 		}
 		parts = append(parts, zone.Mark(fmt.Sprintf("tab-%d", int(t.tab)), rendered))
 	}
 
-	return strings.Join(parts, "  ")
+	sep := helpStyle.Render(" | ")
+	return strings.Join(parts, sep)
 }
 
 // renderOverviewTab renders the README.md content (or falls back to description/body).
@@ -277,7 +289,7 @@ func (m detailModel) renderInstallTab() string {
 
 				check := "[ ]"
 				if i < len(m.provCheck.checks) && m.provCheck.checks[i] {
-					check = installedStyle.Render("[x]")
+					check = installedStyle.Render("[✓]")
 				}
 
 				prefix := "  "

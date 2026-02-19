@@ -44,8 +44,8 @@ func TestTabTogglesFocus(t *testing.T) {
 	}
 }
 
-func TestEscFromItemsReturnsFocusToSidebar(t *testing.T) {
-	// Esc from screenItems should shift focus to sidebar, not change screen
+func TestEscFromItemsGoesToCategory(t *testing.T) {
+	// Esc from screenItems should go back to category/welcome screen
 	a := App{
 		width:  80,
 		height: 24,
@@ -58,7 +58,7 @@ func TestEscFromItemsReturnsFocusToSidebar(t *testing.T) {
 	if updated.focus != focusSidebar {
 		t.Errorf("Esc from screenItems should set focus=focusSidebar, got %d", updated.focus)
 	}
-	if updated.screen != screenItems {
-		t.Errorf("Esc from screenItems should keep screen=screenItems, got %d", updated.screen)
+	if updated.screen != screenCategory {
+		t.Errorf("Esc from screenItems should go to screenCategory, got %d", updated.screen)
 	}
 }

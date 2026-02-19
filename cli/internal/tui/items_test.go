@@ -60,14 +60,13 @@ func TestItemsBackGoesToCategory(t *testing.T) {
 	app = m.(App)
 	assertScreen(t, app, screenItems)
 
-	m, _ = app.Update(keyEsc) // Esc: shifts focus to sidebar, stays on screenItems
+	m, _ = app.Update(keyEsc) // Single Esc: back to category screen
 	app = m.(App)
-	// New behavior: Esc from items shifts focus back to sidebar, screen stays as screenItems
+	if app.screen != screenCategory {
+		t.Fatalf("expected screen=screenCategory after Esc from items, got %d", app.screen)
+	}
 	if app.focus != focusSidebar {
 		t.Fatalf("expected focus=focusSidebar after Esc from items, got %d", app.focus)
-	}
-	if app.screen != screenItems {
-		t.Fatalf("expected screen=screenItems after Esc, got %d", app.screen)
 	}
 }
 
@@ -77,15 +76,13 @@ func TestQFromItemsNavigatesBack(t *testing.T) {
 	app = m.(App)
 	assertScreen(t, app, screenItems)
 
-	// q from content focus: synthesizes Esc → shifts focus to sidebar
-	// Then q with focus=sidebar should quit
+	// q from content focus: synthesizes Esc → goes back to category screen
 	m, _ = app.Update(keyRune('q'))
 	app = m.(App)
-	// After first q, focus should now be on sidebar (Esc was synthesized)
-	if app.focus != focusSidebar {
-		t.Fatalf("expected focus=focusSidebar after q from items, got %d", app.focus)
+	if app.screen != screenCategory {
+		t.Fatalf("expected screen=screenCategory after q from items, got %d", app.screen)
 	}
-	// Second q should quit
+	// q from category/sidebar should quit
 	_, cmd := app.Update(keyRune('q'))
 	if cmd == nil {
 		t.Fatal("q from sidebar should produce quit command")

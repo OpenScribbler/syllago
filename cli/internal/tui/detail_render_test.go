@@ -32,13 +32,10 @@ func TestRenderContentSplitMetadataInPinned(t *testing.T) {
 		width:  60,
 		height: 24,
 	}
-	pinned, body := m.renderContentSplit()
-	// Type metadata must be in pinned, not in body
-	if !strings.Contains(pinned, "Type:") {
-		t.Error("renderContentSplit pinned section should contain 'Type:' metadata")
-	}
-	if strings.Contains(body, "Type:") {
-		t.Error("renderContentSplit body should not contain 'Type:' (moved to pinned)")
+	pinned, _ := m.renderContentSplit()
+	// Type label must appear in pinned breadcrumb (Home > Prompts > test-tool)
+	if !strings.Contains(pinned, "Prompts") {
+		t.Error("renderContentSplit pinned section should contain type label in breadcrumb (e.g. 'Prompts')")
 	}
 }
 
