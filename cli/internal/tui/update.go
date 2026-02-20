@@ -2,13 +2,17 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 )
@@ -17,7 +21,7 @@ type updateStep int
 
 const (
 	stepUpdateMenu    updateStep = iota // "See what's new" / "Update now"
-	stepUpdatePreview                   // git log + diff stat
+	stepUpdatePreview                   // release notes or git log + diff stat
 	stepUpdatePull                      // running git pull
 	stepUpdateDone                      // result
 )
@@ -32,9 +36,11 @@ type updateCheckMsg struct {
 }
 
 type updatePreviewMsg struct {
-	log  string
-	stat string
-	err  error
+	releaseNotes string // glamour-rendered release notes (empty = use fallback)
+	fallbackLog  string // git log output
+	fallbackStat string // diff stat output
+	versionRange string // e.g. "v0.2.0 → v0.3.0"
+	err          error
 }
 
 type updatePullMsg struct {
@@ -44,22 +50,24 @@ type updatePullMsg struct {
 
 // updateModel handles the "Update nesco..." screen.
 type updateModel struct {
-	repoRoot       string
-	localVersion   string
-	remoteVersion  string
-	updateAvail    bool
-	commitsBehind  int
-	step           updateStep
-	cursor         int
-	previewLog     string
-	previewStat    string
-	previewErr     error
-	pullOutput     string
-	pullErr        error
-	scrollOffset   int
-	width, height  int
-	spinner        spinner.Model
-	loading        bool // true while an async operation is in progress
+	repoRoot      string
+	localVersion  string
+	remoteVersion string
+	updateAvail   bool
+	commitsBehind int
+	step          updateStep
+	cursor        int
+	releaseNotes  string // glamour-rendered release notes
+	fallbackLog   string // git log (used when no release notes)
+	fallbackStat  string // diff stat (used when no release notes)
+	versionRange  string // e.g. "v0.2.0 → v0.3.0"
+	previewErr    error
+	pullOutput    string
+	pullErr       error
+	scrollOffset  int
+	width, height int
+	spinner       spinner.Model
+	loading       bool // true while an async operation is in progress
 }
 
 func newUpdateModel(repoRoot, localVersion, remoteVersion string, commitsBehind int) updateModel {
@@ -87,6 +95,12 @@ func versionNewer(a, b string) bool {
 		}
 	}
 	return false
+}
+
+// versionInRange returns true if v is in the range (localV, remoteV] — strictly
+// newer than localV and at most remoteV.
+func versionInRange(v, localV, remoteV string) bool {
+	return versionNewer(v, localV) && !versionNewer(v, remoteV)
 }
 
 func parseVersion(v string) [3]int {
@@ -123,8 +137,10 @@ func (m updateModel) Update(msg tea.Msg) (updateModel, tea.Cmd) {
 
 	case updatePreviewMsg:
 		m.loading = false
-		m.previewLog = msg.log
-		m.previewStat = msg.stat
+		m.releaseNotes = msg.releaseNotes
+		m.fallbackLog = msg.fallbackLog
+		m.fallbackStat = msg.fallbackStat
+		m.versionRange = msg.versionRange
 		m.previewErr = msg.err
 		m.step = stepUpdatePreview
 		m.scrollOffset = 0
@@ -168,12 +184,22 @@ func (m updateModel) updateMenu(msg tea.KeyMsg) (updateModel, tea.Cmd) {
 		if m.updateAvail && m.cursor == 0 {
 			// "See what's new"
 			m.loading = true
-			return m, tea.Batch(m.fetchPreview(), m.spinner.Tick)
+			return m, tea.Batch(m.fetchReleaseNotes(), m.spinner.Tick)
 		}
-		// "Update now" (cursor 1 when update avail, cursor 0 when current)
-		m.step = stepUpdatePull
+		if !m.updateAvail && m.cursor == 0 {
+			// "View release notes" (on latest version)
+			m.loading = true
+			return m, tea.Batch(m.fetchLocalReleaseNotes(), m.spinner.Tick)
+		}
+		// "Update now" (cursor 1 when update avail) or "Check for updates" (cursor 1 when on latest)
+		if m.updateAvail {
+			m.step = stepUpdatePull
+			m.loading = true
+			return m, tea.Batch(m.startPull(), m.spinner.Tick)
+		}
+		// "Check for updates" — re-run the check
 		m.loading = true
-		return m, tea.Batch(m.startPull(), m.spinner.Tick)
+		return m, tea.Batch(checkForUpdate(m.repoRoot, m.localVersion), m.spinner.Tick)
 	}
 	return m, nil
 }
@@ -202,6 +228,10 @@ func (m updateModel) updatePreview(msg tea.KeyMsg) (updateModel, tea.Cmd) {
 		}
 		m.scrollOffset += pageSize
 	case key.Matches(msg, keys.Enter):
+		if !m.updateAvail {
+			// Viewing local release notes — Enter is a no-op
+			return m, nil
+		}
 		m.step = stepUpdatePull
 		m.loading = true
 		return m, tea.Batch(m.startPull(), m.spinner.Tick)
@@ -219,10 +249,7 @@ func (m updateModel) updateDone(msg tea.KeyMsg) (updateModel, tea.Cmd) {
 
 // menuItemCount returns how many menu items are shown.
 func (m updateModel) menuItemCount() int {
-	if m.updateAvail {
-		return 2 // "See what's new" + "Update now"
-	}
-	return 1 // "Update now" (check for updates)
+	return 2 // always 2: release notes + update/check
 }
 
 func (m updateModel) View() string {
@@ -248,10 +275,17 @@ func (m updateModel) View() string {
 			s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 		} else {
 			s += helpStyle.Render(fmt.Sprintf("You're on v%s (latest)", m.localVersion)) + "\n\n"
-			prefix := " > "
-			style := selectedItemStyle
-			row := prefix + style.Render("Check for updates")
-			s += zone.Mark("update-opt-0", row) + "\n"
+			options := []string{"View release notes", "Check for updates"}
+			for i, opt := range options {
+				prefix := "   "
+				style := itemStyle
+				if i == m.cursor {
+					prefix = " > "
+					style = selectedItemStyle
+				}
+				row := prefix + style.Render(opt)
+				s += zone.Mark(fmt.Sprintf("update-opt-%d", i), row) + "\n"
+			}
 			s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 		}
 
@@ -261,17 +295,28 @@ func (m updateModel) View() string {
 			s += "\n" + helpStyle.Render("esc back")
 			break
 		}
-		s += helpStyle.Render("What's new") + "\n\n"
 
-		// Combine log and stat into scrollable content
-		var content strings.Builder
-		if m.previewLog != "" {
-			content.WriteString(labelStyle.Render("Commits:") + "\n")
-			content.WriteString(m.previewLog + "\n")
+		// Header with version range
+		if m.versionRange != "" {
+			s += helpStyle.Render(fmt.Sprintf("What's new (%s)", m.versionRange)) + "\n\n"
+		} else {
+			s += helpStyle.Render("What's new") + "\n\n"
 		}
-		if m.previewStat != "" {
-			content.WriteString(labelStyle.Render("Files changed:") + "\n")
-			content.WriteString(m.previewStat)
+
+		// Build scrollable content
+		var content strings.Builder
+		if m.releaseNotes != "" {
+			content.WriteString(m.releaseNotes)
+		} else {
+			// Fallback to git log + diff stat
+			if m.fallbackLog != "" {
+				content.WriteString(labelStyle.Render("Commits:") + "\n")
+				content.WriteString(m.fallbackLog + "\n")
+			}
+			if m.fallbackStat != "" {
+				content.WriteString(labelStyle.Render("Files changed:") + "\n")
+				content.WriteString(m.fallbackStat)
+			}
 		}
 
 		lines := strings.Split(content.String(), "\n")
@@ -299,7 +344,11 @@ func (m updateModel) View() string {
 			s += helpStyle.Render("  (more below)") + "\n"
 		}
 
-		s += "\n" + helpStyle.Render("up/down/jk scroll • enter update now • esc back")
+		if m.updateAvail {
+			s += "\n" + helpStyle.Render("up/down/jk scroll • enter update now • esc back")
+		} else {
+			s += "\n" + helpStyle.Render("up/down/jk scroll • esc back")
+		}
 
 	case stepUpdatePull:
 		s += "\n" + m.spinner.View() + " " + helpStyle.Render("Updating nesco...") + "\n"
@@ -318,10 +367,68 @@ func (m updateModel) View() string {
 	return s
 }
 
-// fetchPreview runs git log and git diff --stat in the background.
-func (m updateModel) fetchPreview() tea.Cmd {
+// fetchReleaseNotes reads release notes from origin/main for all versions between
+// local and remote, renders them with glamour, and falls back to git log + diff stat
+// if no matching release notes are found.
+func (m updateModel) fetchReleaseNotes() tea.Cmd {
 	repoRoot := m.repoRoot
+	localVersion := m.localVersion
+	remoteVersion := m.remoteVersion
 	return func() tea.Msg {
+		versionRange := fmt.Sprintf("v%s -> v%s", localVersion, remoteVersion)
+
+		// List release notes files on origin/main
+		lsCmd := exec.Command("git", "-C", repoRoot, "ls-tree", "--name-only", "origin/main", "releases/")
+		lsOut, err := lsCmd.Output()
+
+		var versions []string
+		if err == nil {
+			for _, line := range strings.Split(strings.TrimSpace(string(lsOut)), "\n") {
+				name := filepath.Base(line)
+				if !strings.HasPrefix(name, "v") || !strings.HasSuffix(name, ".md") {
+					continue
+				}
+				v := strings.TrimSuffix(name, ".md")
+				if versionInRange(v, localVersion, remoteVersion) {
+					versions = append(versions, v)
+				}
+			}
+		}
+
+		// Sort descending (newest first)
+		sort.Slice(versions, func(i, j int) bool {
+			return versionNewer(versions[i], versions[j])
+		})
+
+		// Read and concatenate release notes
+		if len(versions) > 0 {
+			var combined strings.Builder
+			for i, v := range versions {
+				if i > 0 {
+					combined.WriteString("\n---\n\n")
+				}
+				showCmd := exec.Command("git", "-C", repoRoot, "show", fmt.Sprintf("origin/main:releases/%s.md", v))
+				showOut, err := showCmd.Output()
+				if err != nil {
+					// If any file fails to read, fall through to fallback
+					versions = nil
+					break
+				}
+				combined.Write(showOut)
+			}
+
+			if len(versions) > 0 {
+				rendered, err := glamour.Render(combined.String(), "auto")
+				if err == nil {
+					return updatePreviewMsg{
+						releaseNotes: strings.TrimSpace(rendered),
+						versionRange: versionRange,
+					}
+				}
+			}
+		}
+
+		// Fallback: git log + diff stat
 		logCmd := exec.Command("git", "-C", repoRoot, "log", "HEAD..origin/main", "--oneline", "--no-decorate")
 		logOut, logErr := logCmd.Output()
 
@@ -332,8 +439,32 @@ func (m updateModel) fetchPreview() tea.Cmd {
 			return updatePreviewMsg{err: fmt.Errorf("git log: %w", logErr)}
 		}
 		return updatePreviewMsg{
-			log:  strings.TrimSpace(string(logOut)),
-			stat: strings.TrimSpace(string(statOut)),
+			fallbackLog:  strings.TrimSpace(string(logOut)),
+			fallbackStat: strings.TrimSpace(string(statOut)),
+			versionRange: versionRange,
+		}
+	}
+}
+
+// fetchLocalReleaseNotes reads release notes for the current local version from disk.
+func (m updateModel) fetchLocalReleaseNotes() tea.Cmd {
+	repoRoot := m.repoRoot
+	localVersion := m.localVersion
+	return func() tea.Msg {
+		path := filepath.Join(repoRoot, "releases", fmt.Sprintf("v%s.md", localVersion))
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return updatePreviewMsg{err: fmt.Errorf("no release notes found for v%s", localVersion)}
+		}
+
+		rendered, err := glamour.Render(string(data), "auto")
+		if err != nil {
+			return updatePreviewMsg{err: fmt.Errorf("render error: %w", err)}
+		}
+
+		return updatePreviewMsg{
+			releaseNotes: strings.TrimSpace(rendered),
+			versionRange: fmt.Sprintf("v%s", localVersion),
 		}
 	}
 }

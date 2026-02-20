@@ -266,6 +266,17 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				a.detail.clampScroll()
 				return a, nil
+			case screenUpdate:
+				if a.updater.step == stepUpdatePreview {
+					if msg.Button == tea.MouseButtonWheelUp {
+						if a.updater.scrollOffset > 0 {
+							a.updater.scrollOffset--
+						}
+					} else {
+						a.updater.scrollOffset++
+					}
+				}
+				return a, nil
 			}
 			return a, nil
 		}

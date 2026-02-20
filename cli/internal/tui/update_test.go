@@ -65,10 +65,10 @@ func TestUpdateMenuNavigation(t *testing.T) {
 func TestUpdateMenuSeeWhatsNew(t *testing.T) {
 	app := navigateToUpdateWithRemote(t)
 
-	// Cursor at 0 = "See what's new" → triggers fetchPreview command
+	// Cursor at 0 = "See what's new" → triggers fetchReleaseNotes command
 	_, cmd := app.Update(keyEnter)
 	if cmd == nil {
-		t.Fatal("expected fetchPreview command")
+		t.Fatal("expected fetchReleaseNotes command")
 	}
 }
 
@@ -83,12 +83,56 @@ func TestUpdateMenuUpdateNow(t *testing.T) {
 }
 
 func TestUpdateMenuCheckForUpdates(t *testing.T) {
-	// When no update available, only "Check for updates" option
+	// When no update available, cursor 1 = "Check for updates"
 	app := navigateToUpdate(t)
+	app = pressN(app, keyDown, 1) // Move to "Check for updates"
 
 	_, cmd := app.Update(keyEnter)
 	if cmd == nil {
 		t.Fatal("expected check/pull command")
+	}
+}
+
+func TestUpdateMenuViewReleaseNotes(t *testing.T) {
+	// When on latest, cursor 0 = "View release notes"
+	app := navigateToUpdate(t)
+
+	// Cursor starts at 0 = "View release notes"
+	_, cmd := app.Update(keyEnter)
+	if cmd == nil {
+		t.Fatal("expected fetchLocalReleaseNotes command")
+	}
+	if app.updater.updateAvail {
+		t.Fatal("expected no update available")
+	}
+}
+
+func TestUpdateMenuNavigationLatest(t *testing.T) {
+	// When on latest, two options: "View release notes"(0), "Check for updates"(1)
+	app := navigateToUpdate(t)
+
+	if app.updater.cursor != 0 {
+		t.Fatalf("expected cursor 0, got %d", app.updater.cursor)
+	}
+
+	m, _ := app.Update(keyDown)
+	app = m.(App)
+	if app.updater.cursor != 1 {
+		t.Fatalf("expected cursor 1, got %d", app.updater.cursor)
+	}
+
+	// Bounds clamping
+	m, _ = app.Update(keyDown)
+	app = m.(App)
+	if app.updater.cursor != 1 {
+		t.Fatal("cursor should clamp at 1")
+	}
+
+	// Back up
+	m, _ = app.Update(keyUp)
+	app = m.(App)
+	if app.updater.cursor != 0 {
+		t.Fatalf("expected cursor 0, got %d", app.updater.cursor)
 	}
 }
 
@@ -99,8 +143,8 @@ func TestUpdateMenuCheckForUpdates(t *testing.T) {
 func TestUpdatePreviewScroll(t *testing.T) {
 	app := navigateToUpdateWithRemote(t)
 	app.updater.step = stepUpdatePreview
-	app.updater.previewLog = "commit1\ncommit2\ncommit3\ncommit4\ncommit5"
-	app.updater.previewStat = "file1.go | 5 +++\nfile2.go | 3 ---"
+	app.updater.fallbackLog = "commit1\ncommit2\ncommit3\ncommit4\ncommit5"
+	app.updater.fallbackStat = "file1.go | 5 +++\nfile2.go | 3 ---"
 
 	m, _ := app.Update(keyDown)
 	app = m.(App)
@@ -133,6 +177,33 @@ func TestUpdatePreviewEscBack(t *testing.T) {
 	app = m.(App)
 	if app.updater.step != stepUpdateMenu {
 		t.Fatalf("expected stepUpdateMenu after esc, got %d", app.updater.step)
+	}
+}
+
+func TestUpdatePreviewReleaseNotes(t *testing.T) {
+	app := navigateToUpdateWithRemote(t)
+	app.updater.step = stepUpdatePreview
+	app.updater.releaseNotes = "# v2.0.0\n\nSome rendered content"
+	app.updater.versionRange = "v1.0.0 -> v2.0.0"
+
+	view := app.View()
+	assertContains(t, view, "v1.0.0 -> v2.0.0")
+	assertContains(t, view, "Some rendered content")
+}
+
+func TestUpdatePreviewNoUpdateEnterIgnored(t *testing.T) {
+	// When viewing local release notes (no update), Enter should be a no-op
+	app := navigateToUpdate(t)
+	app.updater.step = stepUpdatePreview
+	app.updater.releaseNotes = "# v1.0.0\n\nLocal notes"
+
+	m, cmd := app.Update(keyEnter)
+	app = m.(App)
+	if cmd != nil {
+		t.Fatal("expected no command (Enter should be no-op without update)")
+	}
+	if app.updater.step != stepUpdatePreview {
+		t.Fatalf("expected to stay on preview, got step %d", app.updater.step)
 	}
 }
 
@@ -230,8 +301,8 @@ func TestUpdatePreviewMsgSuccess(t *testing.T) {
 	app.updater.step = stepUpdateMenu // simulate waiting for preview
 
 	msg := updatePreviewMsg{
-		log:  "abc1234 Fix bug",
-		stat: "file.go | 5 +++",
+		fallbackLog:  "abc1234 Fix bug",
+		fallbackStat: "file.go | 5 +++",
 	}
 
 	m, _ := app.Update(msg)
@@ -240,8 +311,8 @@ func TestUpdatePreviewMsgSuccess(t *testing.T) {
 	if app.updater.step != stepUpdatePreview {
 		t.Fatalf("expected stepUpdatePreview, got %d", app.updater.step)
 	}
-	if app.updater.previewLog != "abc1234 Fix bug" {
-		t.Fatalf("expected preview log, got %q", app.updater.previewLog)
+	if app.updater.fallbackLog != "abc1234 Fix bug" {
+		t.Fatalf("expected fallback log, got %q", app.updater.fallbackLog)
 	}
 }
 
@@ -340,6 +411,41 @@ func TestVersionNewer(t *testing.T) {
 	}
 }
 
+func TestVersionInRange(t *testing.T) {
+	tests := []struct {
+		v, localV, remoteV string
+		want               bool
+	}{
+		// In range: strictly newer than local, at most remote
+		{"v0.2.1", "0.2.0", "0.3.0", true},
+		{"v0.3.0", "0.2.0", "0.3.0", true}, // upper bound inclusive
+		{"v0.2.2", "0.2.0", "0.3.0", true},
+
+		// At lower boundary (exclusive): not in range
+		{"v0.2.0", "0.2.0", "0.3.0", false},
+
+		// Beyond upper boundary: not in range
+		{"v0.4.0", "0.2.0", "0.3.0", false},
+
+		// Below lower boundary: not in range
+		{"v0.1.0", "0.2.0", "0.3.0", false},
+
+		// Equal to both bounds (local == remote): not in range
+		{"v1.0.0", "1.0.0", "1.0.0", false},
+
+		// With v prefix on all
+		{"v2.0.0", "v1.0.0", "v2.0.0", true},
+	}
+
+	for _, tt := range tests {
+		got := versionInRange(tt.v, tt.localV, tt.remoteV)
+		if got != tt.want {
+			t.Errorf("versionInRange(%q, %q, %q) = %v, want %v",
+				tt.v, tt.localV, tt.remoteV, got, tt.want)
+		}
+	}
+}
+
 func TestParseVersion(t *testing.T) {
 	tests := []struct {
 		input string
@@ -385,7 +491,7 @@ func TestUpdateLoadingClearedOnPreviewMsg(t *testing.T) {
 	app := navigateToUpdateWithRemote(t)
 	app.updater.loading = true
 
-	msg := updatePreviewMsg{log: "commit1", stat: "file.go | 1 +"}
+	msg := updatePreviewMsg{fallbackLog: "commit1", fallbackStat: "file.go | 1 +"}
 	m, _ := app.Update(msg)
 	app = m.(App)
 
@@ -418,6 +524,14 @@ func TestUpdateViewMenu(t *testing.T) {
 	assertContains(t, view, "Update nesco")
 	assertContains(t, view, "See what's new")
 	assertContains(t, view, "Update now")
+}
+
+func TestUpdateViewMenuLatest(t *testing.T) {
+	app := navigateToUpdate(t)
+	view := app.View()
+	assertContains(t, view, "Update nesco")
+	assertContains(t, view, "View release notes")
+	assertContains(t, view, "Check for updates")
 }
 
 func TestUpdateViewDoneSuccess(t *testing.T) {
