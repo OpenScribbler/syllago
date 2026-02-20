@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
 )
 
 // navigateToImport creates a test app and navigates to the import screen.
@@ -684,7 +684,7 @@ func TestCollectRelativeFiles(t *testing.T) {
 	os.MkdirAll(filepath.Join(tmp, "sub"), 0o755)
 	os.WriteFile(filepath.Join(tmp, "a.md"), []byte("a"), 0o644)
 	os.WriteFile(filepath.Join(tmp, "sub", "b.md"), []byte("b"), 0o644)
-	os.WriteFile(filepath.Join(tmp, ".romanesco.yaml"), []byte("meta"), 0o644)
+	os.WriteFile(filepath.Join(tmp, ".nesco.yaml"), []byte("meta"), 0o644)
 	// Create symlink (should be skipped)
 	os.Symlink(filepath.Join(tmp, "a.md"), filepath.Join(tmp, "link.md"))
 

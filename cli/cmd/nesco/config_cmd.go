@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/holdenhewett/romanesco/cli/internal/config"
-	"github.com/holdenhewett/romanesco/cli/internal/output"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/config"
+	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 	"github.com/spf13/cobra"
 )
 

@@ -10,10 +10,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/promote"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
-	"github.com/holdenhewett/romanesco/cli/internal/scan"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/promote"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 )
 
 type screen int
@@ -39,7 +38,6 @@ const (
 type App struct {
 	catalog    *catalog.Catalog
 	providers  []provider.Provider
-	detectors  []scan.Detector
 	version    string
 	autoUpdate bool
 
@@ -74,11 +72,10 @@ type App struct {
 
 // NewApp creates a new App model. Set autoUpdate to true to pull updates
 // automatically when a newer version is detected on origin.
-func NewApp(cat *catalog.Catalog, providers []provider.Provider, detectors []scan.Detector, version string, autoUpdate bool) App {
+func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string, autoUpdate bool) App {
 	return App{
 		catalog:    cat,
 		providers:  providers,
-		detectors:  detectors,
 		version:    version,
 		autoUpdate: autoUpdate,
 		screen:     screenCategory,
@@ -107,7 +104,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		a.width = msg.Width
 		a.height = msg.Height
-		a.tooSmall = msg.Width < 60 || msg.Height < 10
+		a.tooSmall = msg.Width < 60 || msg.Height < 20
 		// sidebarWidth is inner content width; rendered width is sidebarWidth + 1 (right border).
 		contentW := msg.Width - sidebarWidth - 1
 		if contentW < 20 {
@@ -261,6 +258,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				var cmd tea.Cmd
 				a.importer, cmd = a.importer.Update(msg)
 				return a, cmd
+			case screenDetail:
+				if msg.Button == tea.MouseButtonWheelUp {
+					a.detail.scrollOffset--
+				} else {
+					a.detail.scrollOffset++
+				}
+				a.detail.clampScroll()
+				return a, nil
 			}
 			return a, nil
 		}
@@ -575,7 +580,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return a, nil
 					}
 					if a.sidebar.isSettingsSelected() {
-						a.settings = newSettingsModel(a.catalog.RepoRoot, a.providers, a.detectors)
+						a.settings = newSettingsModel(a.catalog.RepoRoot, a.providers)
 						a.settings.width = a.width - sidebarWidth - 1
 						a.settings.height = a.panelHeight()
 						a.screen = screenSettings
@@ -759,8 +764,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (a App) View() string {
 	if a.tooSmall {
 		// Below minimum: skip sidebar, show warning full-width
-		if a.width < 60 || a.height < 10 {
-			return "\n" + warningStyle.Render("Terminal too small. Resize to at least 60x10.") + "\n"
+		if a.width < 60 || a.height < 20 {
+			return "\n" + warningStyle.Render("Terminal too small. Resize to at least 60x20.") + "\n"
 		}
 	}
 
@@ -843,14 +848,14 @@ var categoryDesc = map[catalog.ContentType]string{
 	catalog.Commands: "Custom slash commands for AI coding tools",
 }
 
-// nescoFontRaw is the "nesco cli" text in ANSI Shadow style.
-const nescoFontRaw = `░████████   ░███████   ░███████   ░███████   ░███████      ░███████  ░██ ░██
-░██    ░██ ░██    ░██ ░██        ░██    ░██ ░██    ░██    ░██    ░██ ░██ ░██
-░██    ░██ ░█████████  ░███████  ░██        ░██    ░██    ░██        ░██ ░██
-░██    ░██ ░██               ░██ ░██    ░██ ░██    ░██    ░██    ░██ ░██ ░██
-░██    ░██  ░███████   ░███████   ░███████   ░███████      ░███████  ░██ ░██`
+// nescoFontRaw is the "nesco" text in ANSI Shadow style.
+const nescoFontRaw = `░████████   ░███████   ░███████   ░███████   ░███████
+░██    ░██ ░██    ░██ ░██        ░██    ░██ ░██    ░██
+░██    ░██ ░█████████  ░███████  ░██        ░██    ░██
+░██    ░██ ░██               ░██ ░██    ░██ ░██    ░██
+░██    ░██  ░███████   ░███████   ░███████   ░███████`
 
-// nescoPlantRaw is the romanesco fractal plant ASCII art.
+// nescoPlantRaw is the nesco fractal plant ASCII art.
 const nescoPlantRaw = `
                                      ##+
                                     ###+#
@@ -917,6 +922,8 @@ func trimArt(s string) string {
 }
 
 // renderContentWelcome returns the landing page with centered ASCII art and category cards.
+// Uses bordered cards when the terminal is tall enough (height >= 35), falling back to
+// a compact single-line list when cards would be truncated.
 func (a App) renderContentWelcome() string {
 	contentW := a.width - sidebarWidth - 1
 	if contentW < 30 {
@@ -934,24 +941,55 @@ func (a App) renderContentWelcome() string {
 		s += "\n"
 	}
 
-	// Logo: big font on wide terminals, simple title on narrow
-	if contentW >= 78 {
-		font := trimArt(nescoFontRaw)
-		s += lipgloss.PlaceHorizontal(contentW, lipgloss.Center, titleStyle.Render(font))
-	} else {
-		s += lipgloss.PlaceHorizontal(contentW, lipgloss.Center, titleStyle.Render("nesco cli"))
-	}
-	s += "\n\n"
-
-	// Category cards: 2 per row
-	// Card width accounts for borders (2 chars per card) + 1 char gap between cards.
 	allTypes := catalog.AllContentTypes()
 	counts := make(map[catalog.ContentType]int)
 	if a.catalog != nil {
 		counts = a.catalog.CountByType()
 	}
 
+	configItems := []struct {
+		label  string
+		desc   string
+		zoneID string
+	}{
+		{"Import", "Import your own AI tools from local files or git repos", "welcome-import"},
+		{"Update", "Check for updates and pull latest changes", "welcome-update"},
+		{"Settings", "Configure paths and providers", "welcome-settings"},
+	}
+
+	// Cards need ~33 lines of panel height. With ASCII art (+7), ~40 total.
+	// panelHeight = height - 2, so cards fit at height >= 35, art+cards at >= 42.
+	useCards := a.height >= 35
+
+	// --- ASCII art title (only when cards are showing and terminal is large) ---
+	if useCards && a.height >= 42 && contentW >= 55 {
+		font := trimArt(nescoFontRaw)
+		s += lipgloss.PlaceHorizontal(contentW, lipgloss.Center, titleStyle.Render(font))
+		s += "\n\n"
+	}
+
+	if useCards {
+		s += a.renderWelcomeCards(allTypes, counts, contentW, configItems)
+	} else {
+		s += a.renderWelcomeList(allTypes, counts, contentW, configItems)
+	}
+
+	return s
+}
+
+// renderWelcomeCards renders the category and config sections as bordered cards.
+func (a App) renderWelcomeCards(allTypes []catalog.ContentType, counts map[catalog.ContentType]int, contentW int, configItems []struct {
+	label  string
+	desc   string
+	zoneID string
+}) string {
+	var s string
+
+	singleCol := contentW < 42
 	cardW := (contentW - 5) / 2 // 5 = 2 borders left + 2 borders right + 1 gap
+	if singleCol {
+		cardW = contentW - 2
+	}
 	if cardW < 18 {
 		cardW = 18
 	}
@@ -960,37 +998,40 @@ func (a App) renderContentWelcome() string {
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(borderColor).
 		Width(cardW).
-		Padding(0, 1).
-		Height(3) // uniform: title + 2 lines of description
+		Padding(0, 1)
+	if !singleCol {
+		cardStyle = cardStyle.Height(3)
+	}
 
-	for i := 0; i < len(allTypes); i += 2 {
-		var left, right string
-
-		left = a.renderCategoryCard(allTypes[i], counts[allTypes[i]])
-		left = zone.Mark(fmt.Sprintf("welcome-%d", i), cardStyle.Render(left))
-
-		if i+1 < len(allTypes) {
-			right = a.renderCategoryCard(allTypes[i+1], counts[allTypes[i+1]])
-			right = zone.Mark(fmt.Sprintf("welcome-%d", i+1), cardStyle.Render(right))
+	if singleCol {
+		for i, ct := range allTypes {
+			inner := renderCategoryCardInner(ct, counts[ct])
+			s += zone.Mark(fmt.Sprintf("welcome-%d", i), cardStyle.Render(inner)) + "\n"
 		}
+	} else {
+		for i := 0; i < len(allTypes); i += 2 {
+			left := renderCategoryCardInner(allTypes[i], counts[allTypes[i]])
+			left = zone.Mark(fmt.Sprintf("welcome-%d", i), cardStyle.Render(left))
 
-		s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
+			var right string
+			if i+1 < len(allTypes) {
+				right = renderCategoryCardInner(allTypes[i+1], counts[allTypes[i+1]])
+				right = zone.Mark(fmt.Sprintf("welcome-%d", i+1), cardStyle.Render(right))
+			}
+
+			s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
+		}
 	}
 
-	// Configuration section at the bottom
-	s += "\n" + labelStyle.Render("  Configuration") + "\n\n"
+	// Configuration section
+	s += "\n"
+	s += labelStyle.Render("  Configuration") + "\n\n"
 
-	configItems := []struct {
-		label string
-		desc  string
-		zoneID string
-	}{
-		{"Import", "Import your own AI tools from local files or git repos", "welcome-import"},
-		{"Update", "Check for updates and pull latest changes", "welcome-update"},
-		{"Settings", "Configure paths, providers, and detectors", "welcome-settings"},
+	singleColConfig := contentW < 56
+	configCardW := (contentW - 7) / 3
+	if singleColConfig {
+		configCardW = contentW - 2
 	}
-
-	configCardW := (contentW - 7) / 3 // 3 cards: 6 border chars + 2 gaps
 	if configCardW < 16 {
 		configCardW = 16
 	}
@@ -998,27 +1039,78 @@ func (a App) renderContentWelcome() string {
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(borderColor).
 		Width(configCardW).
-		Padding(0, 1).
-		Height(3) // title + 2 lines description (uniform across all cards)
-
-	var configCards []string
-	for _, ci := range configItems {
-		inner := labelStyle.Render(ci.label) + "\n" + helpStyle.Render(ci.desc)
-		configCards = append(configCards, zone.Mark(ci.zoneID, configCardStyle.Render(inner)))
+		Padding(0, 1)
+	if !singleColConfig {
+		configCardStyle = configCardStyle.Height(3)
 	}
-	s += lipgloss.JoinHorizontal(lipgloss.Top, configCards[0], " ", configCards[1], " ", configCards[2]) + "\n"
+
+	if singleColConfig {
+		for _, ci := range configItems {
+			inner := labelStyle.Render(ci.label) + "\n" + helpStyle.Render(ci.desc)
+			s += zone.Mark(ci.zoneID, configCardStyle.Render(inner)) + "\n"
+		}
+	} else {
+		var configCards []string
+		for _, ci := range configItems {
+			inner := labelStyle.Render(ci.label) + "\n" + helpStyle.Render(ci.desc)
+			configCards = append(configCards, zone.Mark(ci.zoneID, configCardStyle.Render(inner)))
+		}
+		s += lipgloss.JoinHorizontal(lipgloss.Top, configCards[0], " ", configCards[1], " ", configCards[2]) + "\n"
+	}
 
 	return s
 }
 
-// renderCategoryCard builds the inner content for a single category card.
-func (a App) renderCategoryCard(ct catalog.ContentType, count int) string {
+// renderWelcomeList renders a compact text list when cards won't fit.
+func (a App) renderWelcomeList(allTypes []catalog.ContentType, counts map[catalog.ContentType]int, contentW int, configItems []struct {
+	label  string
+	desc   string
+	zoneID string
+}) string {
+	var s string
+
+	s += labelStyle.Render("  AI Tools") + "\n"
+	for i, ct := range allTypes {
+		line := renderCategoryLine(ct, counts[ct], contentW)
+		s += zone.Mark(fmt.Sprintf("welcome-%d", i), line) + "\n"
+	}
+
+	s += "\n"
+	s += labelStyle.Render("  Configuration") + "\n"
+
+	for _, ci := range configItems {
+		line := fmt.Sprintf("  %-12s - %s", ci.label, helpStyle.Render(ci.desc))
+		if len(line) > contentW {
+			line = line[:contentW]
+		}
+		s += zone.Mark(ci.zoneID, line) + "\n"
+	}
+
+	return s
+}
+
+// renderCategoryCardInner builds the inner content for a single category card.
+func renderCategoryCardInner(ct catalog.ContentType, count int) string {
 	title := labelStyle.Render(ct.Label()) + " " + countStyle.Render(fmt.Sprintf("(%d)", count))
 	desc := categoryDesc[ct]
 	if desc == "" {
 		desc = "Browse " + ct.Label() + " content"
 	}
 	return title + "\n" + helpStyle.Render(desc)
+}
+
+// renderCategoryLine builds a compact single-line row for a category.
+func renderCategoryLine(ct catalog.ContentType, count int, maxW int) string {
+	label := ct.Label()
+	desc := categoryDesc[ct]
+	if desc == "" {
+		desc = "Browse " + ct.Label() + " content"
+	}
+	line := fmt.Sprintf("  %-10s %s %s", label, countStyle.Render(fmt.Sprintf("%2d", count)), "- "+helpStyle.Render(desc))
+	if len(line) > maxW {
+		line = line[:maxW]
+	}
+	return line
 }
 
 // renderFooter builds the breadcrumb + context-sensitive help bar.

@@ -1,8 +1,8 @@
 # Phase 2: Security Hardening - Design↔Plan Validation Report
 
 **Date:** 2026-02-17
-**Design Doc:** `/home/hhewett/.local/src/romanesco/docs/reviews/implementation-plan.md` (lines 172-251)
-**Implementation Plan:** `/home/hhewett/.local/src/romanesco/docs/plans/2026-02-17-review-phase2-security-implementation.md`
+**Design Doc:** `/home/hhewett/.local/src/nesco/docs/reviews/implementation-plan.md` (lines 172-251)
+**Implementation Plan:** `/home/hhewett/.local/src/nesco/docs/plans/2026-02-17-review-phase2-security-implementation.md`
 
 ## Executive Summary
 

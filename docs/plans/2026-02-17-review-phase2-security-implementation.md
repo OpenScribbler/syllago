@@ -21,7 +21,7 @@ Security fixes are concentrated in three areas:
 
 ## Design Document
 
-Based on `/home/hhewett/.local/src/romanesco/docs/reviews/implementation-plan.md` lines 172-251 and `/home/hhewett/.local/src/romanesco/docs/reviews/review-security.md`.
+Based on `/home/hhewett/.local/src/nesco/docs/reviews/implementation-plan.md` lines 172-251 and `/home/hhewett/.local/src/nesco/docs/reviews/review-security.md`.
 
 ---
 
@@ -30,8 +30,8 @@ Based on `/home/hhewett/.local/src/romanesco/docs/reviews/implementation-plan.md
 **Design items:** 2.1
 **Severity:** HIGH
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/installer/copy.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/installer/copy_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/installer/copy.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/installer/copy_test.go`
 
 **Depends on:** None
 
@@ -124,7 +124,7 @@ func TestCopyFile_WorksForNormalFiles(t *testing.T) {
 
 ### Step 2: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/installer/... -run TestCopyFile_RefusesSymlinkDestination -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/installer/... -run TestCopyFile_RefusesSymlinkDestination -v`
 
 Expected: FAIL - "copyFile should refuse to follow symlink at destination"
 
@@ -169,14 +169,14 @@ func copyFile(src, dst string) error {
 
 ### Step 4: Run test to verify it passes
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/installer/... -run TestCopyFile -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/installer/... -run TestCopyFile -v`
 
 Expected: PASS (both tests)
 
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli
+cd /home/hhewett/.local/src/nesco/cli
 git add internal/installer/copy.go internal/installer/copy_test.go
 git commit -m "$(cat <<'EOF'
 security(installer): prevent copyFile from following symlinks at destination
@@ -201,8 +201,8 @@ EOF
 **Design items:** 2.4
 **Severity:** MEDIUM
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/installer/copy.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/installer/copy_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/installer/copy.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/installer/copy_test.go`
 
 **Depends on:** Task 1
 
@@ -299,7 +299,7 @@ func TestCopyDir_NormalDirectories(t *testing.T) {
 
 ### Step 2: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/installer/... -run TestCopyDir_SkipsSymlinksInSource -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/installer/... -run TestCopyDir_SkipsSymlinksInSource -v`
 
 Expected: FAIL - "symlink was followed and copied sensitive data"
 
@@ -336,14 +336,14 @@ func copyDir(src, dst string) error {
 
 ### Step 4: Run test to verify it passes
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/installer/... -run TestCopyDir -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/installer/... -run TestCopyDir -v`
 
 Expected: PASS (both tests)
 
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli
+cd /home/hhewett/.local/src/nesco/cli
 git add internal/installer/copy.go internal/installer/copy_test.go
 git commit -m "$(cat <<'EOF'
 security(installer): skip symlinks in copyDir source tree
@@ -368,10 +368,10 @@ EOF
 **Design items:** 2.2
 **Severity:** HIGH
 **Files:**
-- Create: `/home/hhewett/.local/src/romanesco/cli/internal/tui/sanitize.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/sanitize_test.go`
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail_render.go`
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/filebrowser.go`
+- Create: `/home/hhewett/.local/src/nesco/cli/internal/tui/sanitize.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/sanitize_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail_render.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/filebrowser.go`
 
 **Depends on:** None
 
@@ -454,7 +454,7 @@ func TestStripControlChars(t *testing.T) {
 
 ### Step 2: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/... -run TestStripControlChars -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/... -run TestStripControlChars -v`
 
 Expected: FAIL - "undefined: StripControlChars"
 
@@ -654,14 +654,14 @@ for i, entry := range visible {
 
 ### Step 5: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/... -run TestStripControlChars -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/... -run TestStripControlChars -v`
 
 Expected: PASS
 
 ### Step 6: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli
+cd /home/hhewett/.local/src/nesco/cli
 git add internal/tui/sanitize.go internal/tui/sanitize_test.go internal/tui/detail_render.go internal/tui/filebrowser.go
 git commit -m "$(cat <<'EOF'
 security(tui): strip ANSI escape sequences from all external text
@@ -693,8 +693,8 @@ EOF
 **Design items:** 2.3
 **Severity:** HIGH
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/catalog/scanner.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/catalog/scanner_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/catalog/scanner.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/catalog/scanner_test.go`
 
 **Depends on:** None
 
@@ -811,7 +811,7 @@ func TestScan_AcceptsValidItemNames(t *testing.T) {
 
 ### Step 2: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/catalog/... -run TestScan_RejectsInvalidItemNames -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/catalog/... -run TestScan_RejectsInvalidItemNames -v`
 
 Expected: FAIL - "expected 1 item, got 6" (all invalid names were scanned)
 
@@ -872,14 +872,14 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 
 ### Step 4: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/catalog/... -run TestScan_.*ItemNames -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/catalog/... -run TestScan_.*ItemNames -v`
 
 Expected: PASS (both tests)
 
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli
+cd /home/hhewett/.local/src/nesco/cli
 git add internal/catalog/scanner.go internal/catalog/scanner_test.go
 git commit -m "$(cat <<'EOF'
 security(catalog): validate item names against sjson special characters
@@ -910,10 +910,10 @@ EOF
 **Design items:** 2.5
 **Severity:** MEDIUM
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/installer/jsonmerge.go`
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/config/config.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/installer/jsonmerge_test.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/config/config_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/installer/jsonmerge.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/config/config.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/installer/jsonmerge_test.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/config/config_test.go`
 
 **Depends on:** None
 
@@ -1025,7 +1025,7 @@ func TestWriteJSONFile_NoPartialWrites(t *testing.T) {
 
 ### Step 2: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/installer/... -run TestWriteJSONFile_NoPartialWrites -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/installer/... -run TestWriteJSONFile_NoPartialWrites -v`
 
 Expected: Might PASS or FAIL depending on timing, but the current implementation is not atomic (uses os.WriteFile directly which truncates before writing)
 
@@ -1119,18 +1119,18 @@ func Save(projectRoot string, cfg *Config) error {
 
 ### Step 4: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/installer/... -run TestWriteJSONFile -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/installer/... -run TestWriteJSONFile -v`
 
 Expected: PASS
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/config/... -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/config/... -v`
 
 Expected: PASS (existing tests should still work)
 
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli
+cd /home/hhewett/.local/src/nesco/cli
 git add internal/installer/jsonmerge.go internal/installer/jsonmerge_test.go internal/config/config.go
 git commit -m "$(cat <<'EOF'
 security(installer,config): make config file writes atomic
@@ -1158,8 +1158,8 @@ EOF
 **Design items:** 2.6
 **Severity:** MEDIUM
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/installer/jsonmerge.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/installer/jsonmerge_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/installer/jsonmerge.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/installer/jsonmerge_test.go`
 
 **Depends on:** Task 5
 
@@ -1221,7 +1221,7 @@ func TestWriteJSONFile_ProjectPermissions(t *testing.T) {
 
 ### Step 2: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/installer/... -run TestWriteJSONFile_.*Permissions -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/installer/... -run TestWriteJSONFile_.*Permissions -v`
 
 Expected: FAIL - "undefined: writeJSONFileWithPerm"
 
@@ -1316,14 +1316,14 @@ func backupFile(path string) error {
 
 ### Step 4: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/installer/... -run TestWriteJSONFile -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/installer/... -run TestWriteJSONFile -v`
 
 Expected: PASS
 
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli
+cd /home/hhewett/.local/src/nesco/cli
 git add internal/installer/jsonmerge.go internal/installer/jsonmerge_test.go
 git commit -m "$(cat <<'EOF'
 security(installer): use 0600 permissions for home-directory config files
@@ -1350,8 +1350,8 @@ EOF
 **Design items:** 2.7
 **Severity:** MEDIUM
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`
 
 **Depends on:** None
 
@@ -1408,7 +1408,7 @@ func TestValidateVersion(t *testing.T) {
 
 ### Step 2: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/... -run TestValidateVersion -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/... -run TestValidateVersion -v`
 
 Expected: FAIL - "undefined: validateVersion"
 
@@ -1449,14 +1449,14 @@ func ensureUpToDate() error {
 
 ### Step 4: Run test to verify it passes
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/... -run TestValidateVersion -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/... -run TestValidateVersion -v`
 
 Expected: PASS
 
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli
+cd /home/hhewett/.local/src/nesco/cli
 git add cmd/nesco/main.go cmd/nesco/main_test.go
 git commit -m "$(cat <<'EOF'
 security(main): validate VERSION file content before use in ldflags
@@ -1484,7 +1484,7 @@ EOF
 **Design items:** 2.8
 **Severity:** MEDIUM
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail.go`
 - Test: Manual TUI testing (app install flow)
 
 **Depends on:** None
@@ -1590,7 +1590,7 @@ if m.confirmAction == actionAppScriptConfirm {
 ### Step 3: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli
+cd /home/hhewett/.local/src/nesco/cli
 git add internal/tui/detail.go internal/tui/detail_render.go
 git commit -m "$(cat <<'EOF'
 security(tui): warn and show preview before executing install.sh
@@ -1621,8 +1621,8 @@ EOF
 **Design items:** 2.9
 **Severity:** MEDIUM
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/import.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/import_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/import.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/import_test.go`
 
 **Depends on:** None
 
@@ -1672,7 +1672,7 @@ func TestIsValidGitURL(t *testing.T) {
 
 ### Step 2: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/... -run TestIsValidGitURL -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/... -run TestIsValidGitURL -v`
 
 Expected: FAIL - git:// and http:// are currently accepted
 
@@ -1706,14 +1706,14 @@ func isValidGitURL(url string) bool {
 
 ### Step 4: Run test to verify it passes
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/... -run TestIsValidGitURL -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/... -run TestIsValidGitURL -v`
 
 Expected: PASS
 
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli
+cd /home/hhewett/.local/src/nesco/cli
 git add internal/tui/import.go internal/tui/import_test.go
 git commit -m "$(cat <<'EOF'
 security(tui): reject git:// and http:// clone URLs
@@ -1740,8 +1740,8 @@ EOF
 **Design items:** 2.10
 **Severity:** LOW
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/installer/mcp.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/installer/mcp_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/installer/mcp.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/installer/mcp_test.go`
 
 **Depends on:** None
 
@@ -1778,8 +1778,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 	"github.com/tidwall/gjson"
 )
 
@@ -1874,16 +1874,16 @@ func TestInstallMCP_WhitelistsFields(t *testing.T) {
 		t.Error("_internal_config should have been dropped")
 	}
 
-	// Should have _romanesco marker (whitelisted internally)
-	if !serverConfig.Get("_romanesco").Bool() {
-		t.Error("_romanesco marker missing")
+	// Should have _nesco marker (whitelisted internally)
+	if !serverConfig.Get("_nesco").Bool() {
+		t.Error("_nesco marker missing")
 	}
 }
 ```
 
 ### Step 2: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/installer/... -run TestInstallMCP_WhitelistsFields -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/installer/... -run TestInstallMCP_WhitelistsFields -v`
 
 Expected: FAIL - unknown fields are currently passed through
 
@@ -1910,8 +1910,8 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, _ string) (str
 		return "", fmt.Errorf("serializing config: %w", err)
 	}
 
-	// Add _romanesco marker to the cleaned data
-	cleanedData, err = sjson.SetBytes(cleanedData, "_romanesco", true)
+	// Add _nesco marker to the cleaned data
+	cleanedData, err = sjson.SetBytes(cleanedData, "_nesco", true)
 	if err != nil {
 		return "", fmt.Errorf("adding marker: %w", err)
 	}
@@ -1948,14 +1948,14 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, _ string) (str
 
 ### Step 4: Run test to verify it passes
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/installer/... -run TestInstallMCP_WhitelistsFields -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/installer/... -run TestInstallMCP_WhitelistsFields -v`
 
 Expected: PASS
 
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli
+cd /home/hhewett/.local/src/nesco/cli
 git add internal/installer/mcp.go internal/installer/mcp_test.go
 git commit -m "$(cat <<'EOF'
 security(installer): whitelist MCP config fields before writing
@@ -1985,8 +1985,8 @@ EOF
 **Design items:** 2.11
 **Severity:** LOW
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail_env.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail_env_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail_env.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail_env_test.go`
 
 **Depends on:** None
 
@@ -2088,7 +2088,7 @@ func TestSaveEnvToFile_Escaping(t *testing.T) {
 
 ### Step 2: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/... -run TestSaveEnvToFile_Escaping -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/... -run TestSaveEnvToFile_Escaping -v`
 
 Expected: FAIL - current implementation uses double quotes
 
@@ -2127,14 +2127,14 @@ func (m *detailModel) saveEnvToFile(name, value, filePath string) error {
 
 ### Step 4: Run test to verify it passes
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/... -run TestSaveEnvToFile_Escaping -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/... -run TestSaveEnvToFile_Escaping -v`
 
 Expected: PASS
 
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli
+cd /home/hhewett/.local/src/nesco/cli
 git add internal/tui/detail_env.go internal/tui/detail_env_test.go
 git commit -m "$(cat <<'EOF'
 security(tui): use single quotes for .env values to prevent shell expansion
@@ -2164,8 +2164,8 @@ EOF
 **Design items:** 2.12
 **Severity:** LOW
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/catalog/cleanup.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/catalog/cleanup_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/catalog/cleanup.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/catalog/cleanup_test.go`
 
 **Depends on:** None
 
@@ -2187,7 +2187,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/metadata"
+	"github.com/holdenhewett/nesco/cli/internal/metadata"
 )
 
 func TestCleanupPromotedItems_RequiresNameAndTypeMatch(t *testing.T) {
@@ -2349,7 +2349,7 @@ func TestCleanupPromotedItems_CleansExactMatches(t *testing.T) {
 
 ### Step 2: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/catalog/... -run TestCleanupPromotedItems -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/catalog/... -run TestCleanupPromotedItems -v`
 
 Expected: FAIL - name mismatch test will fail (item is currently deleted on ID match alone)
 
@@ -2412,14 +2412,14 @@ func CleanupPromotedItems(cat *Catalog) ([]CleanupResult, error) {
 
 ### Step 4: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/catalog/... -run TestCleanupPromotedItems -v`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/catalog/... -run TestCleanupPromotedItems -v`
 
 Expected: PASS (all three tests)
 
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli
+cd /home/hhewett/.local/src/nesco/cli
 git add internal/catalog/cleanup.go internal/catalog/cleanup_test.go
 git commit -m "$(cat <<'EOF'
 security(catalog): require name+type match for promoted item cleanup
@@ -2475,7 +2475,7 @@ This plan implements all 12 security hardening items from Phase 2:
 ## Next Steps
 
 After completing Phase 2:
-1. Run full test suite: `cd /home/hhewett/.local/src/romanesco/cli && make test`
-2. Run vet: `cd /home/hhewett/.local/src/romanesco/cli && make vet`
+1. Run full test suite: `cd /home/hhewett/.local/src/nesco/cli && make test`
+2. Run vet: `cd /home/hhewett/.local/src/nesco/cli && make vet`
 3. Manual TUI testing for app install.sh warning (Task 8)
 4. Proceed to Phase 3 (Color & Accessibility) or Phase 1 (CLI Flags & Error Handling) depending on priorities

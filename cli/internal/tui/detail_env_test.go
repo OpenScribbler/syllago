@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/installer"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/installer"
 )
 
 // setupEnvDetail navigates to the MCP item detail and starts the inline env setup flow.

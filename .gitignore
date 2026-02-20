@@ -17,4 +17,4 @@ my-tools/
 *.bak
 
 # Review docs (local reference)
-docs/reviews/
+docs/

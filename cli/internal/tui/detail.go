@@ -15,10 +15,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/installer"
-	"github.com/holdenhewett/romanesco/cli/internal/promote"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/installer"
+	"github.com/holdenhewett/nesco/cli/internal/promote"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 )
 
 type appInstallDoneMsg struct {
@@ -233,7 +233,7 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 					m.messageIsErr = true
 					return m, nil
 				}
-				defaultPath := filepath.Join(home, ".config", "romanesco", ".env")
+				defaultPath := filepath.Join(home, ".config", "nesco", ".env")
 				m.env.input.Prompt = labelStyle.Render("Save to: ") + " "
 				m.env.input.Placeholder = defaultPath
 				m.env.input.SetValue(defaultPath)
@@ -922,6 +922,9 @@ func (m *detailModel) clampScroll() {
 	maxOffset := len(bodyLines) - visibleHeight
 	if maxOffset < 0 {
 		maxOffset = 0
+	}
+	if m.scrollOffset < 0 {
+		m.scrollOffset = 0
 	}
 	if m.scrollOffset > maxOffset {
 		m.scrollOffset = maxOffset

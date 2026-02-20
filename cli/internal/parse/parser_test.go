@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/model"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/model"
 )
 
 func TestClaudeParserRule(t *testing.T) {

@@ -528,7 +528,7 @@ cli/
 │   └── main.go              # CLI entrypoint — TUI + cobra subcommands
 ├── internal/
 │   ├── catalog/             # [EXISTING] Content repo scanning/indexing
-│   ├── metadata/            # [EXISTING] .romanesco.yaml handling
+│   ├── metadata/            # [EXISTING] .nesco.yaml handling
 │   ├── provider/            # [EXISTING, EXPANDED] Provider detection + Phase 1 methods
 │   ├── installer/           # [EXISTING] Content install/uninstall
 │   ├── promote/             # [EXISTING] Local → shared promotion
@@ -663,7 +663,7 @@ alwaysApply: true
 **Options considered:**
 - **Canonical model in memory** — Import parses → ContextDocument in memory. Emit, analyze, or inspect from there. Nothing persisted unless explicitly requested.
 - **Write to .nesco/imported/** — Persistent storage of parsed content.
-- **Write to content repo** — Convert into romanesco repo format.
+- **Write to content repo** — Convert into nesco repo format.
 
 **Decision:** Canonical model in memory.
 

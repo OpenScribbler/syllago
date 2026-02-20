@@ -7,7 +7,7 @@
     "brainstorm"
   ],
   "artifacts": {
-    "design": "/home/hhewett/.local/src/romanesco/docs/plans/2026-02-17-tui-redesign-implementation.md",
+    "design": "/home/hhewett/.local/src/nesco/docs/plans/2026-02-17-tui-redesign-implementation.md",
     "plan": null
   },
   "validation": {
@@ -27,7 +27,7 @@
     "tool": "Skill",
     "toolInput": {
       "skill": "plan",
-      "args": "--from-design /home/hhewett/.local/src/romanesco/docs/plans/2026-02-17-tui-redesign-implementation.md"
+      "args": "--from-design /home/hhewett/.local/src/nesco/docs/plans/2026-02-17-tui-redesign-implementation.md"
     }
   }
 }

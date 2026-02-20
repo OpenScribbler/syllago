@@ -154,7 +154,7 @@ Tasks analyzed: 12
   - Only whitelisted fields (type, command, args, url, env) appear in written config
   - Test TestInstallMCP_WhitelistsFields passes
   - malicious_field, unexpected_key, _internal_config are not present in final config
-  - _romanesco marker is present (added after serialization)
+  - _nesco marker is present (added after serialization)
 
 **Actions taken:**
 - None required

@@ -8,9 +8,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/holdenhewett/romanesco/cli/internal/config"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
-	"github.com/holdenhewett/romanesco/cli/internal/scan"
+	"github.com/holdenhewett/nesco/cli/internal/config"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 )
 
 // settingsEditMode represents which sub-picker is open.
@@ -19,14 +18,12 @@ type settingsEditMode int
 const (
 	editNone      settingsEditMode = iota
 	editProviders                  // multi-select picker for providers
-	editDetectors                  // multi-select picker for disabled detectors
 )
 
 type settingsModel struct {
 	repoRoot  string
 	cfg       *config.Config
 	providers []provider.Provider
-	detectors []scan.Detector
 
 	cursor   int              // main settings row cursor
 	editMode settingsEditMode // which sub-picker is active
@@ -45,7 +42,7 @@ type settingsPickerItem struct {
 	checked bool
 }
 
-func newSettingsModel(repoRoot string, providers []provider.Provider, detectors []scan.Detector) settingsModel {
+func newSettingsModel(repoRoot string, providers []provider.Provider) settingsModel {
 	cfg, err := config.Load(repoRoot)
 	if err != nil {
 		cfg = &config.Config{}
@@ -54,13 +51,12 @@ func newSettingsModel(repoRoot string, providers []provider.Provider, detectors 
 		repoRoot:  repoRoot,
 		cfg:       cfg,
 		providers: providers,
-		detectors: detectors,
 	}
 }
 
 // settingsRowCount returns the number of configurable rows.
 func (m settingsModel) settingsRowCount() int {
-	return 3 // auto-update, providers, disabled detectors
+	return 2 // auto-update, providers
 }
 
 func (m settingsModel) Update(msg tea.Msg) (settingsModel, tea.Cmd) {
@@ -161,20 +157,6 @@ func (m *settingsModel) activateRow() {
 				checked: enabled[p.Slug],
 			})
 		}
-	case 2: // disabled detectors multi-select
-		m.editMode = editDetectors
-		m.subCur = 0
-		disabled := make(map[string]bool)
-		for _, name := range m.cfg.DisabledDetectors {
-			disabled[name] = true
-		}
-		m.subItems = nil
-		for _, d := range m.detectors {
-			m.subItems = append(m.subItems, settingsPickerItem{
-				label:   d.Name(),
-				checked: disabled[d.Name()],
-			})
-		}
 	}
 }
 
@@ -189,14 +171,6 @@ func (m *settingsModel) applySubPicker() {
 			}
 		}
 		m.cfg.Providers = slugs
-	case editDetectors:
-		var names []string
-		for i, item := range m.subItems {
-			if item.checked && i < len(m.detectors) {
-				names = append(names, m.detectors[i].Name())
-			}
-		}
-		m.cfg.DisabledDetectors = names
 	}
 	m.dirty = true
 }
@@ -229,20 +203,10 @@ func (m settingsModel) View() string {
 	}
 	s += m.renderRow(1, "Providers", provVal)
 
-	// Row 2: Disabled detectors
-	detVal := "(none)"
-	if len(m.cfg.DisabledDetectors) > 0 {
-		detVal = strings.Join(m.cfg.DisabledDetectors, ", ")
-	}
-	s += m.renderRow(2, "Disabled detectors", detVal)
-
 	// Sub-picker overlay
 	if m.editMode != editNone {
 		s += "\n"
 		title := "Select providers:"
-		if m.editMode == editDetectors {
-			title = "Select detectors to disable:"
-		}
 		s += labelStyle.Render(title) + "\n"
 
 		for i, item := range m.subItems {

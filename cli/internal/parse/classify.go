@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
 )
 
 // ClassifyByExtension provides a fallback classification based on file extension

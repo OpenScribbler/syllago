@@ -3,7 +3,7 @@ package parse
 import (
 	"path/filepath"
 
-	"github.com/holdenhewett/romanesco/cli/internal/model"
+	"github.com/holdenhewett/nesco/cli/internal/model"
 )
 
 // GenericParser handles providers that use standard markdown files.

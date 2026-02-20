@@ -14,12 +14,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/gitutil"
-	"github.com/holdenhewett/romanesco/cli/internal/installer"
-	"github.com/holdenhewett/romanesco/cli/internal/metadata"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
-	"github.com/holdenhewett/romanesco/cli/internal/readme"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/gitutil"
+	"github.com/holdenhewett/nesco/cli/internal/installer"
+	"github.com/holdenhewett/nesco/cli/internal/metadata"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/readme"
 )
 
 type importStep int
@@ -852,7 +852,7 @@ func (m importModel) doImport() (string, []string, error) {
 		}
 	}
 
-	// Generate .romanesco.yaml metadata
+	// Generate .nesco.yaml metadata
 	now := time.Now()
 	source := m.sourcePath
 	if m.clonedPath != "" {
@@ -935,7 +935,7 @@ func (m importModel) doScaffold() (string, []string, error) {
 		os.WriteFile(llmPath, []byte(replaced), 0644) // non-fatal
 	}
 
-	// Generate .romanesco.yaml
+	// Generate .nesco.yaml
 	now := time.Now()
 	meta := &metadata.Meta{
 		ID:         metadata.NewID(),
@@ -1263,7 +1263,7 @@ func renderDiffLine(line string, hOff int) string {
 }
 
 // collectRelativeFiles walks a directory and returns sorted relative file paths.
-// Skips symlinks and .romanesco.yaml (metadata noise).
+// Skips symlinks and .nesco.yaml (metadata noise).
 func collectRelativeFiles(dir string) []string {
 	var files []string
 	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
@@ -1276,7 +1276,7 @@ func collectRelativeFiles(dir string) []string {
 		if d.IsDir() {
 			return nil
 		}
-		if d.Name() == ".romanesco.yaml" {
+		if d.Name() == ".nesco.yaml" {
 			return nil
 		}
 		rel, err := filepath.Rel(dir, path)

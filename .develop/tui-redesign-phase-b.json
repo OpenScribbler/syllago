@@ -7,7 +7,7 @@
     "brainstorm"
   ],
   "artifacts": {
-    "design": "/home/hhewett/.local/src/romanesco/.develop/tui-redesign-phase-b.md",
+    "design": "/home/hhewett/.local/src/nesco/.develop/tui-redesign-phase-b.md",
     "plan": null
   },
   "validation": {
@@ -27,7 +27,7 @@
     "tool": "Skill",
     "toolInput": {
       "skill": "plan",
-      "args": "--from-design /home/hhewett/.local/src/romanesco/.develop/tui-redesign-phase-b.md"
+      "args": "--from-design /home/hhewett/.local/src/nesco/.develop/tui-redesign-phase-b.md"
     }
   }
 }

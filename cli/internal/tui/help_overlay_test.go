@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
 )
 
 func TestHelpOverlayToggle(t *testing.T) {

@@ -62,8 +62,8 @@ func (m helpOverlayModel) View(s screen) string {
 	case screenSettings:
 		lines = append(lines, labelStyle.Render("Settings Screen:"))
 		lines = append(lines, "  "+helpStyle.Render("up/down   navigate"))
-		lines = append(lines, "  "+helpStyle.Render("space     toggle detector"))
-		lines = append(lines, "  "+helpStyle.Render("enter     run scan"))
+		lines = append(lines, "  "+helpStyle.Render("enter     edit setting"))
+		lines = append(lines, "  "+helpStyle.Render("s         save"))
 	}
 
 	lines = append(lines, "")

@@ -9,8 +9,8 @@ import (
 
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/installer"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/installer"
 )
 
 // renderContent builds the full detail content (without scrolling or help bar).
@@ -444,6 +444,9 @@ func (m detailModel) View() string {
 	// Use a local clamped offset (View has a value receiver so mutations are discarded;
 	// persistent clamping happens in Update via clampScroll).
 	offset := m.scrollOffset
+	if offset < 0 {
+		offset = 0
+	}
 	if offset > maxOffset {
 		offset = maxOffset
 	}

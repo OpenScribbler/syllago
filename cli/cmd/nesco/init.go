@@ -6,11 +6,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/config"
-	"github.com/holdenhewett/romanesco/cli/internal/installer"
-	"github.com/holdenhewett/romanesco/cli/internal/output"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/config"
+	"github.com/holdenhewett/nesco/cli/internal/installer"
+	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +22,7 @@ var initCmd = &cobra.Command{
 }
 
 func init() {
-	initCmd.Flags().Bool("yes", false, "Skip interactive confirmation")
+	initCmd.Flags().BoolP("yes", "y", false, "Skip interactive confirmation")
 	initCmd.Flags().Bool("force", false, "Overwrite existing config")
 	rootCmd.AddCommand(initCmd)
 }
@@ -65,7 +65,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	yes, _ := cmd.Flags().GetBool("yes")
-	if !yes && os.Getenv("NESCO_NO_PROMPT") != "1" && !output.JSON {
+	if !yes && isInteractive() && os.Getenv("NESCO_NO_PROMPT") != "1" && !output.JSON {
 		fmt.Printf("\nSave to .nesco/config.json? [Y/n] ")
 		var response string
 		fmt.Scanln(&response)
@@ -85,7 +85,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Install built-in content if we're in a romanesco repo
+	// Install built-in content if we're in a nesco repo
 	var installed []installedItem
 	repoRoot, repoErr := findContentRepoRoot()
 	if repoErr == nil {
@@ -130,7 +130,7 @@ func installBuiltins(cmd *cobra.Command, repoRoot string, detected []provider.Pr
 	}
 
 	yes, _ := cmd.Flags().GetBool("yes")
-	if !yes && os.Getenv("NESCO_NO_PROMPT") != "1" && !output.JSON {
+	if !yes && isInteractive() && os.Getenv("NESCO_NO_PROMPT") != "1" && !output.JSON {
 		fmt.Printf("\nInstall built-in content to detected providers? [Y/n] ")
 		var response string
 		fmt.Scanln(&response)

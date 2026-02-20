@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/output"
+	"github.com/holdenhewett/nesco/cli/internal/output"
 )
 
 func TestValidateVersion(t *testing.T) {
@@ -54,7 +54,7 @@ func TestRootCommandHelp(t *testing.T) {
 	if !strings.Contains(out, "nesco") {
 		t.Error("help output should contain 'nesco'")
 	}
-	if !strings.Contains(out, "scan") || !strings.Contains(out, "version") {
+	if !strings.Contains(out, "init") || !strings.Contains(out, "version") {
 		t.Error("help output should list subcommands")
 	}
 }
@@ -323,8 +323,8 @@ func TestTUIErrorMessageContentRepoNotFound(t *testing.T) {
 	}
 
 	// Should provide helpful guidance
-	if !strings.Contains(errMsg, "romanesco") {
-		t.Error("error message should mention 'romanesco'")
+	if !strings.Contains(errMsg, "nesco") {
+		t.Error("error message should mention 'nesco'")
 	}
 }
 
@@ -385,7 +385,7 @@ func TestHelpDocumentsExitCodes(t *testing.T) {
 		t.Error("help text should document exit codes")
 	}
 
-	for _, code := range []string{"0", "1", "2", "3"} {
+	for _, code := range []string{"0", "1", "2"} {
 		if !strings.Contains(out, code) {
 			t.Errorf("help text should mention exit code %s", code)
 		}

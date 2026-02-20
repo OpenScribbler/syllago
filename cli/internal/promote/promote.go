@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/installer"
-	"github.com/holdenhewett/romanesco/cli/internal/metadata"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/installer"
+	"github.com/holdenhewett/nesco/cli/internal/metadata"
 )
 
 // Result holds the outcome of a promote operation.
@@ -34,7 +34,7 @@ func Promote(repoRoot string, item catalog.ContentItem) (*Result, error) {
 
 	// 2. Validate
 	if item.Meta == nil {
-		return nil, fmt.Errorf("item has no .romanesco.yaml metadata")
+		return nil, fmt.Errorf("item has no .nesco.yaml metadata")
 	}
 	errs := metadata.Validate(item.Path, string(item.Type), repoRoot)
 	if len(errs) > 0 {

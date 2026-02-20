@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -50,8 +50,8 @@ func installHook(item catalog.ContentItem, prov provider.Provider, _ string) (st
 		return "", fmt.Errorf("parsing hook file: %w", err)
 	}
 
-	// Add _romanesco marker with item name for identification
-	matcherGroup, err = sjson.SetBytes(matcherGroup, "_romanesco", item.Name)
+	// Add _nesco marker with item name for identification
+	matcherGroup, err = sjson.SetBytes(matcherGroup, "_nesco", item.Name)
 	if err != nil {
 		return "", fmt.Errorf("adding marker: %w", err)
 	}
@@ -70,11 +70,11 @@ func installHook(item catalog.ContentItem, prov provider.Provider, _ string) (st
 		return "", fmt.Errorf("reading %s: %w", settingsPath, err)
 	}
 
-	// Check if this hook is already installed (by _romanesco marker)
+	// Check if this hook is already installed (by _nesco marker)
 	hooksArray := gjson.GetBytes(fileData, "hooks."+event)
 	if hooksArray.Exists() && hooksArray.IsArray() {
 		for _, entry := range hooksArray.Array() {
-			if entry.Get("_romanesco").String() == item.Name {
+			if entry.Get("_nesco").String() == item.Name {
 				return "", fmt.Errorf("hook %s already installed for %s event", item.Name, event)
 			}
 		}
@@ -111,7 +111,7 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, _ string) (
 		return "", fmt.Errorf("reading %s: %w", settingsPath, err)
 	}
 
-	// Find and remove the entry with matching _romanesco marker
+	// Find and remove the entry with matching _nesco marker
 	hooksArray := gjson.GetBytes(fileData, "hooks."+event)
 	if !hooksArray.Exists() || !hooksArray.IsArray() {
 		return "", fmt.Errorf("no hooks.%s array in %s", event, settingsPath)
@@ -119,7 +119,7 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, _ string) (
 
 	found := -1
 	for i, entry := range hooksArray.Array() {
-		if entry.Get("_romanesco").String() == item.Name {
+		if entry.Get("_nesco").String() == item.Name {
 			found = i
 			break
 		}
@@ -169,7 +169,7 @@ func checkHookStatus(item catalog.ContentItem, prov provider.Provider, _ string)
 	}
 
 	for _, entry := range hooksArray.Array() {
-		if entry.Get("_romanesco").String() == item.Name {
+		if entry.Get("_nesco").String() == item.Name {
 			return StatusInstalled
 		}
 	}

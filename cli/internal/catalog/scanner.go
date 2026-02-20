@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/holdenhewett/romanesco/cli/internal/metadata"
+	"github.com/holdenhewett/nesco/cli/internal/metadata"
 	"github.com/tidwall/gjson"
 )
 
@@ -182,8 +182,8 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 
 // scanProviderSpecific discovers items for provider-specific types (rules, hooks, commands).
 // Supports two layouts:
-//   - Directory-per-item (new): <type>/<provider>/<item-name>/ with content file + README.md + .romanesco.yaml
-//   - Single file (legacy):    <type>/<provider>/<file> with .romanesco.<file>.yaml alongside
+//   - Directory-per-item (new): <type>/<provider>/<item-name>/ with content file + README.md + .nesco.yaml
+//   - Single file (legacy):    <type>/<provider>/<file> with .nesco.<file>.yaml alongside
 func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries []os.DirEntry, local bool) error {
 	for _, providerEntry := range entries {
 		if !providerEntry.IsDir() || shouldSkip(providerEntry.Name()) {
@@ -339,7 +339,7 @@ func shouldSkip(name string) bool {
 	if name == ".gitkeep" || name == "README.md" || name == "LLM-PROMPT.md" {
 		return true
 	}
-	if name == metadata.FileName || strings.HasPrefix(name, ".romanesco.") {
+	if name == metadata.FileName || strings.HasPrefix(name, ".nesco.") {
 		return true
 	}
 	return false
@@ -364,7 +364,7 @@ func collectFiles(itemDir string, baseDir string) []string {
 			return nil
 		}
 		name := d.Name()
-		// Skip hidden files and directories (e.g. .romanesco.yaml, .git)
+		// Skip hidden files and directories (e.g. .nesco.yaml, .git)
 		if strings.HasPrefix(name, ".") {
 			if d.IsDir() {
 				return filepath.SkipDir

@@ -1,6 +1,6 @@
 package catalog
 
-import "github.com/holdenhewett/romanesco/cli/internal/metadata"
+import "github.com/holdenhewett/nesco/cli/internal/metadata"
 
 // ContentType represents a category of content in the repo.
 type ContentType string
@@ -68,7 +68,7 @@ type ContentItem struct {
 	ReadmeBody         string          // raw README.md content (for rendering in detail view)
 	Files              []string        // relative paths of all files in item directory
 	SupportedProviders []string        // provider slugs this item works with (apps only), e.g. ["claude-code", "gemini-cli"]
-	Meta               *metadata.Meta  // loaded from .romanesco.yaml if present
+	Meta               *metadata.Meta  // loaded from .nesco.yaml if present
 	Local              bool            // true if item lives in my-tools/
 }
 

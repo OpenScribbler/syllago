@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
 )
 
 func TestCategoryNavigation(t *testing.T) {

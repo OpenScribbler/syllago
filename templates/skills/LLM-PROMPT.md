@@ -1,11 +1,11 @@
-You are helping me create content for romanesco, a shared library of AI coding tool configurations. Romanesco manages skills, agents, prompts, MCP servers, apps, rules, hooks, and commands that get installed into tools like Claude Code, Cursor, and Gemini CLI.
+You are helping me create content for nesco, a shared library of AI coding tool configurations. Nesco manages skills, agents, prompts, MCP servers, apps, rules, hooks, and commands that get installed into tools like Claude Code, Cursor, and Gemini CLI.
 
 I'm creating a new skill called "{{NAME}}". A skill is a domain knowledge package that gets loaded into an AI assistant's context. Skills live in their own directory and must have a SKILL.md file with YAML frontmatter.
 
 Required structure:
   my-tools/skills/{{NAME}}/
   ├── SKILL.md          # Required: frontmatter (name, description) + skill content
-  └── .romanesco.yaml      # Auto-generated, don't edit
+  └── .nesco.yaml      # Auto-generated, don't edit
 
 SKILL.md format:
 ---

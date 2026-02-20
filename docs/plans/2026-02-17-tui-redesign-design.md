@@ -1,4 +1,4 @@
-# TUI Redesign: Sidebar Layout + Mouse Support + Modals + Romanesco Palette
+# TUI Redesign: Sidebar Layout + Mouse Support + Modals + Nesco Palette
 
 **Date:** 2026-02-17
 **Status:** Design
@@ -26,7 +26,7 @@ Redesign the TUI with three changes:
 1. **Sidebar + Content layout** (VS Code style) — persistent category sidebar on the left (~16 chars wide), content area on the right swaps between items list and detail view
 2. **Modal overlay system** — centered confirmation dialogs for destructive/important actions using bubbletea-overlay
 3. **Mouse support** — click-to-select via bubblezone for sidebar items, list items, action buttons, and tabs
-4. **Romanesco color palette** — brand-aligned mint green + lavender purple with all colors passing WCAG AA
+4. **Nesco color palette** — brand-aligned mint green + lavender purple with all colors passing WCAG AA
 
 ---
 
@@ -267,7 +267,7 @@ return zone.Scan(body)
 | Confirmations | Centered modal overlays | Industry standard for destructive actions, clear visual hierarchy |
 | Modal library | bubbletea-overlay v0.6.5 | Purpose-built for Bubble Tea, lipgloss-compatible, handles positioning |
 | Mouse support | bubblezone | Zone-based click detection, wraps existing rendering, minimal code changes |
-| Color scheme | Romanesco palette (mint + viola) | Brand-aligned, all colors pass WCAG AA on both light and dark terminals |
+| Color scheme | Nesco palette (mint + viola) | Brand-aligned, all colors pass WCAG AA on both light and dark terminals |
 | Env setup flow | Multi-step modal wizard | Groups related steps, doesn't leave the detail view context |
 | Search/Help | Keep current overlay approach | Already works well, no need to change |
 
@@ -354,7 +354,7 @@ return zone.Scan(body)
 
 ---
 
-## 6. Color Palette (Romanesco)
+## 6. Color Palette (Nesco)
 
 ### Semantic Colors
 
@@ -422,7 +422,7 @@ All colors pass WCAG AA (4.5:1 minimum for normal text):
 5. **WCAG AA contrast** — all text passes 4.5:1 ratio on both light and dark terminals
 6. **No regression** — all existing keyboard shortcuts continue to work
 7. **Responsive** — layout adapts to terminal width (sidebar collapses below ~60 cols)
-8. **Brand-aligned** — Romanesco mint green + viola purple palette throughout
+8. **Brand-aligned** — Nesco mint green + viola purple palette throughout
 
 ---
 
@@ -433,7 +433,7 @@ All colors pass WCAG AA (4.5:1 minimum for normal text):
 - Sidebar + content panel layout
 - Modal overlay system for confirmations
 - Mouse click support (bubblezone)
-- Romanesco color palette
+- Nesco color palette
 - Breadcrumb footer
 - Focus management (Tab to switch panels)
 

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/metadata"
+	"github.com/holdenhewett/nesco/cli/internal/metadata"
 )
 
 func TestCleanupPromotedItems_RequiresNameMatch(t *testing.T) {

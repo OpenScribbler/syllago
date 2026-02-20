@@ -86,7 +86,7 @@ func relativeLuminance(hex string) float64 {
 	return 0.2126*toLinear(r) + 0.7152*toLinear(g) + 0.0722*toLinear(b)
 }
 
-// TestColorsPassWCAGAA verifies all Romanesco palette colors achieve >= 4.5:1
+// TestColorsPassWCAGAA verifies all Nesco palette colors achieve >= 4.5:1
 // contrast ratio against their respective terminal background assumptions.
 // Light colors are tested against white (#FFFFFF); dark colors against near-black (#18181B).
 func TestColorsPassWCAGAA(t *testing.T) {

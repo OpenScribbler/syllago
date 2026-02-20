@@ -1,4 +1,4 @@
-You are helping me create content for romanesco, a shared library of AI coding tool configurations. Romanesco manages skills, agents, prompts, MCP servers, apps, rules, hooks, and commands that get installed into tools like Claude Code, Cursor, and Gemini CLI.
+You are helping me create content for nesco, a shared library of AI coding tool configurations. Nesco manages skills, agents, prompts, MCP servers, apps, rules, hooks, and commands that get installed into tools like Claude Code, Cursor, and Gemini CLI.
 
 I'm creating a new MCP server configuration called "{{NAME}}". MCP (Model Context Protocol) servers provide tools that AI assistants can call. The config tells the AI tool how to launch and connect to the server.
 
@@ -6,7 +6,7 @@ Required structure:
   my-tools/mcp/{{NAME}}/
   ├── config.json       # Required: MCP server configuration (valid JSON)
   ├── README.md         # Optional: description and setup instructions
-  └── .romanesco.yaml      # Auto-generated, don't edit
+  └── .nesco.yaml      # Auto-generated, don't edit
 
 config.json format (stdio type):
 {

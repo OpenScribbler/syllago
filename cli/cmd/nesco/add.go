@@ -7,12 +7,12 @@ import (
 	"slices"
 	"time"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/gitutil"
-	"github.com/holdenhewett/romanesco/cli/internal/installer"
-	"github.com/holdenhewett/romanesco/cli/internal/metadata"
-	"github.com/holdenhewett/romanesco/cli/internal/output"
-	"github.com/holdenhewett/romanesco/cli/internal/readme"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/gitutil"
+	"github.com/holdenhewett/nesco/cli/internal/installer"
+	"github.com/holdenhewett/nesco/cli/internal/metadata"
+	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/holdenhewett/nesco/cli/internal/readme"
 	"github.com/spf13/cobra"
 )
 
@@ -52,7 +52,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	root, err := findContentRepoRoot()
 	if err != nil {
-		return fmt.Errorf("could not find romanesco repo: %w", err)
+		return fmt.Errorf("could not find nesco repo: %w", err)
 	}
 
 	typeStr, _ := cmd.Flags().GetString("type")
@@ -93,7 +93,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("copy failed: %w", err)
 	}
 
-	// Generate .romanesco.yaml metadata
+	// Generate .nesco.yaml metadata
 	now := time.Now()
 	meta := &metadata.Meta{
 		ID:         metadata.NewID(),
@@ -131,6 +131,9 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		if readmeCreated {
 			fmt.Fprintf(os.Stderr, "hint: Generated placeholder README.md for %s. An LLM can improve it.\n", name)
 		}
+		// Next steps hints
+		fmt.Fprintf(output.Writer, "  -> Browse in TUI: nesco\n")
+		fmt.Fprintf(output.Writer, "  -> Export to a provider: nesco export --to claude-code\n")
 	}
 
 	return nil

@@ -17,36 +17,36 @@
   },
   "beads": {
     "created": true,
-    "prefix": "romanesco",
-    "epicIds": ["romanesco-bvn"],
+    "prefix": "nesco",
+    "epicIds": ["nesco-bvn"],
     "taskCount": 10
   },
   "nextAction": null,
   "execution": {
     "mode": "sequential",
     "tasksDispatched": [
-      "romanesco-nyh",
-      "romanesco-obh",
-      "romanesco-8od",
-      "romanesco-9sh",
-      "romanesco-c1j",
-      "romanesco-b87",
-      "romanesco-gjk",
-      "romanesco-3gh",
-      "romanesco-1xi",
-      "romanesco-48u"
+      "nesco-nyh",
+      "nesco-obh",
+      "nesco-8od",
+      "nesco-9sh",
+      "nesco-c1j",
+      "nesco-b87",
+      "nesco-gjk",
+      "nesco-3gh",
+      "nesco-1xi",
+      "nesco-48u"
     ],
     "tasksCompleted": [
-      "romanesco-nyh",
-      "romanesco-obh",
-      "romanesco-8od",
-      "romanesco-9sh",
-      "romanesco-c1j",
-      "romanesco-b87",
-      "romanesco-gjk",
-      "romanesco-3gh",
-      "romanesco-1xi",
-      "romanesco-48u"
+      "nesco-nyh",
+      "nesco-obh",
+      "nesco-8od",
+      "nesco-9sh",
+      "nesco-c1j",
+      "nesco-b87",
+      "nesco-gjk",
+      "nesco-3gh",
+      "nesco-1xi",
+      "nesco-48u"
     ],
     "currentTaskId": null,
     "awaitingUserAck": false
