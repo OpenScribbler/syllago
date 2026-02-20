@@ -16,7 +16,7 @@ func TestScanProviderDirectoryFormat(t *testing.T) {
 	os.MkdirAll(hookDir, 0755)
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"hooks":{"PostToolUse":[{"matcher":"Write","command":"echo hi"}]}}`), 0644)
 	os.WriteFile(filepath.Join(hookDir, "README.md"), []byte("# My Hook\n\nA test hook.\n"), 0644)
-	os.WriteFile(filepath.Join(hookDir, ".romanesco.yaml"), []byte("name: my-hook\ndescription: Runs a linter after file edits\nversion: \"1.0\"\n"), 0644)
+	os.WriteFile(filepath.Join(hookDir, ".nesco.yaml"), []byte("name: my-hook\ndescription: Runs a linter after file edits\nversion: \"1.0\"\n"), 0644)
 
 	// rules/claude-code/my-rule/rule.md
 	ruleDir := filepath.Join(tmp, "rules", "claude-code", "my-rule")

@@ -1,0 +1,11 @@
+{
+  "providers": [
+    "claude-code",
+    "cursor",
+    "windsurf",
+    "codex"
+  ],
+  "preferences": {
+    "autoUpdate": "false"
+  }
+}

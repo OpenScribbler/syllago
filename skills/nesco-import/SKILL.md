@@ -1,11 +1,11 @@
 ---
 name: nesco-import
-description: Import and manage AI coding tool content using romanesco CLI
+description: Import and manage AI coding tool content using nesco CLI
 ---
 
 # Nesco Import Skill
 
-Instructions for importing content into a romanesco repository.
+Instructions for importing content into a nesco repository.
 
 ## Content Types
 
@@ -65,7 +65,7 @@ nesco import --from claude-code --preview
 ## Directory Structure
 
 ```
-romanesco-repo/
+nesco-repo/
   skills/           # Shared skills (git-tracked)
   agents/           # Shared agents
   rules/

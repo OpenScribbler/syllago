@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/output"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +23,7 @@ var infoCmd = &cobra.Command{
 			"version":      v,
 			"contentTypes": catalog.AllContentTypes(),
 			"providers":    providerSlugs(),
-			"commands":     []string{"init", "import", "parity", "config", "info", "scan", "drift", "baseline"},
+			"commands":     []string{"init", "import", "config", "info"},
 		}
 		if output.JSON {
 			output.Print(manifest)

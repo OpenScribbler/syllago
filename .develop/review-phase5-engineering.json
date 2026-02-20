@@ -1,0 +1,27 @@
+{
+  "feature": "Phase 5: Go Engineering Patterns",
+  "designDoc": "docs/reviews/implementation-plan.md (items 5.1-5.12)",
+  "stage": "execute",
+  "stages": {
+    "brainstorm": { "status": "complete", "skipped": true },
+    "plan": { "status": "complete" },
+    "validate": { "status": "complete" },
+    "beads": { "status": "complete" },
+    "execute": { "status": "in_progress" }
+  },
+  "epic": "nesco-cb0",
+  "beads": [
+    { "id": "nesco-eo8", "task": "5.1", "title": "Migrate filepath.Walk to filepath.WalkDir" },
+    { "id": "nesco-ehp", "task": "5.2", "title": "Replace os.IsNotExist with errors.Is" },
+    { "id": "nesco-3gb", "task": "5.3", "title": "Add output package test helper SetForTest" },
+    { "id": "nesco-lz4", "task": "5.4", "title": "Fix gitRun/gitOutput API inconsistency" },
+    { "id": "nesco-qos", "task": "5.5", "title": "Fix copyFile double-close on success path" },
+    { "id": "nesco-rsa", "task": "5.6", "title": "Add t.Parallel() to independent tests" },
+    { "id": "nesco-hx9", "task": "5.7", "title": "Use errors.Join for batch operations" },
+    { "id": "nesco-ov6", "task": "5.8", "title": "Add CGO_ENABLED=0 to Makefile" },
+    { "id": "nesco-t0j", "task": "5.9", "title": "Extract detailModel sub-models" },
+    { "id": "nesco-kjd", "task": "5.10", "title": "Consolidate duplicate provider detection" },
+    { "id": "nesco-aqk", "task": "5.11", "title": "Replace hasTag/isValidContentType with slices.Contains" },
+    { "id": "nesco-d1d", "task": "5.12", "title": "Guard syscall.Exec for Windows compatibility" }
+  ]
+}

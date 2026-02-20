@@ -13,7 +13,7 @@ import (
 )
 
 // FileName is the metadata file stored in each content item directory.
-const FileName = ".romanesco.yaml"
+const FileName = ".nesco.yaml"
 
 // Dependency represents a dependency on another content item.
 type Dependency struct {
@@ -46,10 +46,10 @@ func MetaPath(itemDir string) string {
 // ProviderMetaPath returns the path to a provider-specific metadata file.
 // Used for provider-specific content where multiple files share a directory.
 func ProviderMetaPath(dir, filename string) string {
-	return filepath.Join(dir, ".romanesco."+filename+".yaml")
+	return filepath.Join(dir, ".nesco."+filename+".yaml")
 }
 
-// Load reads .romanesco.yaml from itemDir. Returns nil, nil if the file does not exist.
+// Load reads .nesco.yaml from itemDir. Returns nil, nil if the file does not exist.
 func Load(itemDir string) (*Meta, error) {
 	data, err := os.ReadFile(MetaPath(itemDir))
 	if errors.Is(err, fs.ErrNotExist) {
@@ -82,7 +82,7 @@ func LoadProvider(dir, filename string) (*Meta, error) {
 	return &m, nil
 }
 
-// Save writes .romanesco.yaml to itemDir, creating directories as needed.
+// Save writes .nesco.yaml to itemDir, creating directories as needed.
 func Save(itemDir string, m *Meta) error {
 	if err := os.MkdirAll(itemDir, 0755); err != nil {
 		return fmt.Errorf("creating directory: %w", err)

@@ -3,14 +3,14 @@
 Generated: 2026-02-16
 Tasks analyzed: 10
 
-## Task 1: Add teatest dependency and create testhelpers_test.go (romanesco-nyh)
+## Task 1: Add teatest dependency and create testhelpers_test.go (nesco-nyh)
 - [x] Implicit deps: None
 - [x] Missing context: `lipgloss.SetColorProfile` needs `github.com/muesli/termenv` import. The plan doesn't specify how many items or what specific metadata fields should be in testCatalog. FileBrowser constructor is `newFileBrowser`, not exported.
 - [x] Hidden blockers: teatest is not currently in go.mod (verified). The plan assumes `lipgloss.SetColorProfile` is the correct API but should verify this is current in the version being used.
 - [x] Cross-task conflicts: None - this is the foundation task
 - [x] Success criteria:
   - `go.mod` contains `github.com/charmbracelet/x/exp/teatest` dependency
-  - `testhelpers_test.go` exists in `/home/hhewett/.local/src/romanesco/cli/internal/tui/`
+  - `testhelpers_test.go` exists in `/home/hhewett/.local/src/nesco/cli/internal/tui/`
   - File contains all specified helpers: `init()`, `testCatalog(t)`, `testProviders(t)`, `testDetectors()`, `testApp(t)`, key constants, `pressN()`, `assertScreen()`, `assertContains()`, `assertNotContains()`
   - `testCatalog(t)` creates items covering all 8 types with realistic test data
   - `testProviders(t)` creates 2 providers with correct Detected and SupportsType() behavior
@@ -22,7 +22,7 @@ Tasks analyzed: 10
 - Confirmed all struct fields are lowercase (package-private) but accessible from `_test.go` files in same package
 - Identified missing import requirement: `github.com/muesli/termenv` for `lipgloss.SetColorProfile`
 
-## Task 2: Write category_test.go (~13 tests) (romanesco-obh)
+## Task 2: Write category_test.go (~13 tests) (nesco-obh)
 - [x] Implicit deps: Depends on Task 1 (testhelpers). Uses `testApp(t)` and `testCatalog(t)`.
 - [x] Missing context: None - the plan is clear about what to test and existing navigation_test.go shows the pattern
 - [x] Hidden blockers: Tests access unexported fields like `app.screen`, `app.category.cursor`, `app.category.updateAvailable`, `app.category.message` - this is fine since tests are in the same package
@@ -40,7 +40,7 @@ Tasks analyzed: 10
 - Confirmed helper methods exist: `isMyToolsSelected()`, `isImportSelected()`, `isUpdateSelected()`, `isSettingsSelected()`, `selectedType()`
 - Verified screen enum values are accessible: `screenCategory`, `screenItems`, `screenImport`, `screenUpdate`, `screenSettings`
 
-## Task 3: Write items_test.go (~11 tests) (romanesco-8od)
+## Task 3: Write items_test.go (~11 tests) (nesco-8od)
 - [x] Implicit deps: Depends on Task 1 (testhelpers). Tests like `TestItemsCursorPreserved` may need to transition through detail screen (Task 6 domain).
 - [x] Missing context: Plan doesn't specify what "LOCAL" prefix format should look like or where it appears in the view. Scroll indicators test needs clarity on expected indicator symbols.
 - [x] Hidden blockers: `TestItemsCursorPreserved` requires understanding detail model behavior but doesn't need detail tests to pass first
@@ -59,7 +59,7 @@ Tasks analyzed: 10
 - Confirmed `selectedItem()` method exists for getting current item
 - Verified ContentType constants: `SearchResults`, `MyTools` are defined
 
-## Task 4: Write search_test.go (~12 tests) (romanesco-9sh)
+## Task 4: Write search_test.go (~12 tests) (nesco-9sh)
 - [x] Implicit deps: Depends on Task 1 (testhelpers). Tests interact with app-level routing and items/category screens (Tasks 2-3 domain).
 - [x] Missing context: `TestSearchBlockedDetailTextInput` needs to know when detail has text input active. Plan doesn't specify exactly what "detail has text input" means - is it checking `detail.HasTextInput()`?
 - [x] Hidden blockers: `detail.HasTextInput()` method must exist in detailModel. Verified App.search field exists and is type searchModel.
@@ -79,7 +79,7 @@ Tasks analyzed: 10
 - Confirmed `filterItems()` function exists and is exported (accessible to tests)
 - Verified `detail.HasTextInput()` exists in app.go (line 198)
 
-## Task 5: Write detail_test.go (~30 tests) (romanesco-c1j)
+## Task 5: Write detail_test.go (~30 tests) (nesco-c1j)
 - [x] Implicit deps: Depends on Task 1 (testhelpers). Overlaps slightly with Task 6 (detail_env) but they test different action types.
 - [x] Missing context: Tests need to know file list structure from testCatalog items. Plan assumes all tab shortcuts (1/2/3) work but should verify these are implemented. The plan says "double-press p" for promote but needs to verify this matches implementation.
 - [x] Hidden blockers: File viewer requires items with actual Files populated in testCatalog. Install/uninstall tests need provider InstallDir pointing to temp directories. Promote tests need item.Local=true items.
@@ -102,7 +102,7 @@ Tasks analyzed: 10
 - Confirmed action enum: `actionNone`, `actionChooseMethod`, `actionUninstall`, `actionSavePath`, `actionSaveMethod`, `actionPromoteConfirm`
 - Verified methods exist: `HasTextInput()`, `HasPendingAction()`, `CancelAction()`
 
-## Task 6: Write detail_env_test.go (~12 tests) (romanesco-b87)
+## Task 6: Write detail_env_test.go (~12 tests) (nesco-b87)
 - [x] Implicit deps: Depends on Task 1 (testhelpers). Requires MCP items in testCatalog with env vars. Overlaps with Task 5 but focuses on env-specific action flow.
 - [x] Missing context: Tests need to know the structure of mcpConfig and envVarNames. Plan doesn't specify how many env vars should be in test MCP item. Needs clarity on what "Already configured" does vs "Set up new".
 - [x] Hidden blockers: Requires installer.CheckEnvVars() and installer.MCPConfig type. Tests may need `t.Setenv()` to restore env after tests. The `advanceEnvSetup()` method must handle multi-var iteration correctly.
@@ -124,7 +124,7 @@ Tasks analyzed: 10
 - Verified `startEnvSetup()` and `advanceEnvSetup()` methods exist in detail_env.go
 - Confirmed MCP type exists in catalog.ContentType
 
-## Task 7: Write settings_test.go (~12 tests) (romanesco-gjk)
+## Task 7: Write settings_test.go (~12 tests) (nesco-gjk)
 - [x] Implicit deps: Depends on Task 1 (testhelpers). Uses `testApp(t)`, `testProviders(t)`, `testDetectors()`.
 - [x] Missing context: Plan says 3 rows (auto-update, providers, disabled detectors) but doesn't specify labels or how they appear in view. Sub-picker behavior is described but needs to verify Esc applies (not cancels) changes.
 - [x] Hidden blockers: Settings save requires config file path to be writable (temp dir in tests). Sub-picker checkbox state must be initialized from current config. settingsModel.HasPendingAction() must exist (referenced in app.go line 371).
@@ -146,7 +146,7 @@ Tasks analyzed: 10
 - Verified settingsPickerItem struct: `label`, `checked`
 - Confirmed methods: `HasPendingAction()`, `CancelAction()`, `settingsRowCount()`, `activateRow()`, `applySubPicker()`, `save()`
 
-## Task 8: Write import_test.go (~35 tests) (romanesco-3gh)
+## Task 8: Write import_test.go (~35 tests) (nesco-3gh)
 - [x] Implicit deps: Depends on Task 1 (testhelpers). This is the largest test file covering 14 import steps.
 - [x] Missing context: Plan lists 14 steps but spec says ~35 tests. Need to verify which steps have multiple test cases. Git clone tests need to simulate importCloneDoneMsg arrival. Create flow needs scaffold behavior. Validation step structure is mentioned but not detailed.
 - [x] Hidden blockers: Git clone returns tea.Cmd that produces importCloneDoneMsg - tests must simulate this async message. File browser is embedded as `browser fileBrowserModel` field. Validation requires catalog.Scan() or metadata.Validate() functions. Cleanup after git clone requires tracking clonedPath field.
@@ -173,7 +173,7 @@ Tasks analyzed: 10
 - Verified message types: `fileBrowserDoneMsg`, `importCloneDoneMsg`, `importDoneMsg`
 - Confirmed validationItem struct: `path`, `name`, `detection`, `description`, `isWarning`, `included`
 
-## Task 9: Write update_test.go (~18 tests) (romanesco-1xi)
+## Task 9: Write update_test.go (~18 tests) (nesco-1xi)
 - [x] Implicit deps: Depends on Task 1 (testhelpers). Tests async message handling patterns.
 - [x] Missing context: Plan says "Menu: navigation, see what's new, update now, check for updates" suggests 3 menu options but needs to verify cursor bounds. Auto-update test needs to know how to trigger auto-update mode (set autoUpdate=true on App).
 - [x] Hidden blockers: Update commands return tea.Cmd that produce async messages. Tests must simulate updateCheckMsg, updatePreviewMsg, updatePullMsg. Git operations are non-hermetic but tests only verify state transitions, not actual git calls. versionNewer() and parseVersion() are utility functions that can be unit tested.
@@ -195,7 +195,7 @@ Tasks analyzed: 10
 - Confirmed message types: `updateCheckMsg`, `updatePreviewMsg`, `updatePullMsg` with documented fields
 - Verified utility functions: `versionNewer()`, `parseVersion()` exist and are exported
 
-## Task 10: Write integration_test.go (~8 teatest tests) (romanesco-48u)
+## Task 10: Write integration_test.go (~8 teatest tests) (nesco-48u)
 - [x] Implicit deps: Depends on Task 1 (testhelpers). Depends conceptually on all previous tasks (Tasks 2-9) to ensure individual components work before integration testing.
 - [x] Missing context: Plan mentions `testableApp` wrapper that suppresses `Init()` but doesn't explain how this wrapper works. Need to verify if teatest.NewTestModel() requires special initialization. Terminal size test needs min dimensions (plan says 40x30 somewhere).
 - [x] Hidden blockers: teatest.NewTestModel() is the key API - need to understand its usage. Suppressing Init() to skip git fetch requires either a custom Init() or a test-only wrapper. teatest may use golden files (plan mentions `-update` flag) - need strategy for deterministic output. App.Init() returns checkForUpdate() command - must be mocked or skipped.

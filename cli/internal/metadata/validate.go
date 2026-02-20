@@ -28,7 +28,7 @@ func (e ValidationError) String() string {
 func Validate(itemDir string, contentType string, repoRoot string) []ValidationError {
 	var errs []ValidationError
 
-	// All types: .romanesco.yaml must exist with required fields
+	// All types: .nesco.yaml must exist with required fields
 	meta, err := Load(itemDir)
 	if err != nil {
 		errs = append(errs, ValidationError{FileName, fmt.Sprintf("Cannot read: %s", err)})

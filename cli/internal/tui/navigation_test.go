@@ -8,8 +8,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 )
 
 func TestItemsNavigation(t *testing.T) {
@@ -76,7 +76,7 @@ func TestAppFullNavigation(t *testing.T) {
 	}
 	providers := []provider.Provider{}
 
-	app := NewApp(cat, providers, nil, "", false)
+	app := NewApp(cat, providers, "", false)
 	app.width = 80
 	app.height = 30
 
@@ -143,7 +143,7 @@ func TestImportBrowseFlow(t *testing.T) {
 	cat := &catalog.Catalog{RepoRoot: tmp, Items: nil}
 	providers := []provider.Provider{}
 
-	app := NewApp(cat, providers, nil, "", false)
+	app := NewApp(cat, providers, "", false)
 	app.width = 80
 	app.height = 30
 
@@ -186,6 +186,6 @@ func TestTooSmallMessageNoUnicode(t *testing.T) {
 	view := app.View()
 	assertContains(t, view, "Terminal too small")
 	// Should use ASCII "x" not Unicode "×" for dimensions
-	assertContains(t, view, "60x10")
+	assertContains(t, view, "60x20")
 	assertNotContains(t, view, "×")
 }

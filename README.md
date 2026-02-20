@@ -1,4 +1,4 @@
-# Romanesco
+# Nesco
 
 ```
 ░████████   ░███████   ░███████   ░███████   ░███████      ░███████  ░██ ░██
@@ -60,7 +60,7 @@ We recommend cloning to `~/.local/src/` so it stays out of your project director
 
 ```bash
 mkdir -p ~/.local/src
-git clone https://github.com/holdenhewett/romanesco.git ~/.local/src/romanesco
+git clone https://github.com/holdenhewett/nesco.git ~/.local/src/nesco
 ```
 
 This location becomes your local content library. The `nesco` CLI reads from it directly — no need to move or copy the repo elsewhere.
@@ -70,7 +70,7 @@ This location becomes your local content library. The `nesco` CLI reads from it 
 Requires Go 1.25+.
 
 ```bash
-cd ~/.local/src/romanesco
+cd ~/.local/src/nesco
 make build
 ```
 
@@ -83,14 +83,14 @@ Add this line to your shell profile so `nesco` is available in every session:
 **Bash** (`~/.bashrc`):
 
 ```bash
-echo 'export PATH="$HOME/.local/src/romanesco/cli:$PATH"' >> ~/.bashrc
+echo 'export PATH="$HOME/.local/src/nesco/cli:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
 **Zsh** (`~/.zshrc`):
 
 ```bash
-echo 'export PATH="$HOME/.local/src/romanesco/cli:$PATH"' >> ~/.zshrc
+echo 'export PATH="$HOME/.local/src/nesco/cli:$PATH"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
@@ -102,9 +102,9 @@ nesco version
 
 ## What It Does
 
-Romanesco has two sides:
+Nesco has two sides:
 
-**Content management.** A centralized repository of reusable content for AI coding tools — custom instructions, agent definitions, prompt templates, hook scripts, and MCP server configs. The `nesco` TUI lets you browse, preview, and install content into any supported tool. When you install, Romanesco detects which tools you have, converts formats as needed, and places files in the correct locations.
+**Content management.** A centralized repository of reusable content for AI coding tools — custom instructions, agent definitions, prompt templates, hook scripts, and MCP server configs. The `nesco` TUI lets you browse, preview, and install content into any supported tool. When you install, Nesco detects which tools you have, converts formats as needed, and places files in the correct locations.
 
 **Codebase scanning.** `nesco scan` runs detectors against your project to discover tech stack, dependencies, build commands, conventions, and "surprises" (gotchas that trip up AI agents). Results are emitted as context files in each provider's native format — Markdown for Claude Code, MDC for Cursor, etc. Drift detection lets you track how your codebase changes over time.
 
@@ -244,7 +244,7 @@ Results are emitted as context files in each provider's native format (Markdown 
 ## Repository Structure
 
 ```
-romanesco/
+nesco/
 ├── skills/          # Multi-file skill packages
 ├── agents/          # Agent definitions
 ├── prompts/         # Prompt templates
@@ -271,7 +271,7 @@ romanesco/
 
 ## Adding Your Own Content
 
-Each content item is a directory (or file) with a `.romanesco.yaml` metadata file:
+Each content item is a directory (or file) with a `.nesco.yaml` metadata file:
 
 ```yaml
 name: my-skill

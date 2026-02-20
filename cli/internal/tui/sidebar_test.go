@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
 )
 
 func TestSidebarViewHasZoneMarks(t *testing.T) {

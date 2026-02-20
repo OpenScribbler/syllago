@@ -19,10 +19,10 @@
 - **Explanatory text**: The source selection step explains what content types can be imported and what each option does.
 
 #### Sidebar
-- **Section rename**: The "Romanesco" section label is now "Configuration" for clarity.
+- **Section rename**: The "Nesco" section label is now "Configuration" for clarity.
 
 #### README
-- **ASCII art**: Added the `nesco cli` ANSI Shadow font banner and romanesco fractal plant art at the top.
+- **ASCII art**: Added the `nesco cli` ANSI Shadow font banner and nesco fractal plant art at the top.
 - **TUI documentation**: New section covering layout, keyboard shortcuts, mouse support, detail view tabs, import workflow with conflict resolution, settings, and update.
 - **Codebase detectors**: New section describing the 30+ scanning detectors and what they discover.
 - **`nesco add` command**: Added to the commands table (was previously missing).

@@ -1,6 +1,6 @@
 # Review Phase 1: CLI Flags & Error Handling - Implementation Plan
 
-**Goal:** Fix 15 CLI flag and error handling issues identified in the romanesco review
+**Goal:** Fix 15 CLI flag and error handling issues identified in the nesco review
 
 **Architecture:** Changes concentrated in Cobra command setup (main.go), output formatting (output.go), and individual command files. All fixes are additive — no structural refactoring.
 
@@ -13,7 +13,7 @@
 ## Task 1A: Write test for --no-color flag disabling ANSI codes
 
 **Files:**
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`
 
 **Depends on:** None
 
@@ -26,7 +26,7 @@
 
 ### Step 1: Write the test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`:
 
 ```go
 func TestNoColorFlag(t *testing.T) {
@@ -84,7 +84,7 @@ func TestNoColorFlag(t *testing.T) {
 ### Step 2: Run test to verify it passes with current setup
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestNoColorFlag -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestNoColorFlag -v
 ```
 
 Expected output: Test passes, verifying flag handling works (PersistentPreRunE doesn't error).
@@ -92,7 +92,7 @@ Expected output: Test passes, verifying flag handling works (PersistentPreRunE d
 ## Task 1B: Wire --no-color flag to lipgloss
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (line 38-46)
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (line 38-46)
 
 **Depends on:** Task 1A
 
@@ -105,7 +105,7 @@ Expected output: Test passes, verifying flag handling works (PersistentPreRunE d
 
 ### Step 1: Write minimal implementation
 
-Update the `init()` function in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (after line 42, before line 44):
+Update the `init()` function in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (after line 42, before line 44):
 
 ```go
 func init() {
@@ -128,7 +128,7 @@ func init() {
 }
 ```
 
-Add required imports to the existing import block in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go`:
+Add required imports to the existing import block in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go`:
 
 ```go
 import (
@@ -139,13 +139,13 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/config"
-	"github.com/holdenhewett/romanesco/cli/internal/metadata"
-	"github.com/holdenhewett/romanesco/cli/internal/output"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
-	"github.com/holdenhewett/romanesco/cli/internal/scan/detectors"
-	"github.com/holdenhewett/romanesco/cli/internal/tui"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/config"
+	"github.com/holdenhewett/nesco/cli/internal/metadata"
+	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/scan/detectors"
+	"github.com/holdenhewett/nesco/cli/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
@@ -156,7 +156,7 @@ import (
 ### Step 2: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestNoColorFlag -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestNoColorFlag -v
 ```
 
 Expected output: All test cases pass, confirming PersistentPreRunE is wired correctly.
@@ -164,7 +164,7 @@ Expected output: All test cases pass, confirming PersistentPreRunE is wired corr
 ### Step 3: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/main.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/main.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
 fix(cli): wire --no-color flag and NO_COLOR/TERM=dumb checks
 
 Implements the --no-color persistent flag, NO_COLOR env var, and
@@ -183,8 +183,8 @@ EOF
 ## Task 2A: Add Quiet global and update Print() function
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/output/output.go` (line 10-23)
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/output/output_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/output/output.go` (line 10-23)
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/output/output_test.go`
 
 **Depends on:** Task 1B
 
@@ -197,7 +197,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/internal/output/output_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/internal/output/output_test.go`:
 
 ```go
 func TestPrintQuietMode(t *testing.T) {
@@ -226,14 +226,14 @@ func TestPrintQuietMode(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/output/ -run TestPrintQuietMode -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./internal/output/ -run TestPrintQuietMode -v
 ```
 
 Expected output: Test fails because `Quiet` variable doesn't exist.
 
 ### Step 3: Write minimal implementation
 
-Update `/home/hhewett/.local/src/romanesco/cli/internal/output/output.go`:
+Update `/home/hhewett/.local/src/nesco/cli/internal/output/output.go`:
 
 ```go
 var (
@@ -259,7 +259,7 @@ func Print(v any) {
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/output/ -run TestPrintQuietMode -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./internal/output/ -run TestPrintQuietMode -v
 ```
 
 Expected output: Test passes.
@@ -267,7 +267,7 @@ Expected output: Test passes.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/internal/output/output.go cli/internal/output/output_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/internal/output/output.go cli/internal/output/output_test.go && git commit -m "$(cat <<'EOF'
 feat(output): add Quiet mode to Print function
 
 Adds Quiet global variable. When set to true, Print() suppresses
@@ -286,8 +286,8 @@ EOF
 ## Task 2B: Wire --quiet flag in main.go
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (line 44-51)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (line 44-51)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`
 
 **Depends on:** Task 2A
 
@@ -300,7 +300,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`:
 
 ```go
 func TestQuietFlag(t *testing.T) {
@@ -365,14 +365,14 @@ func TestQuietFlag(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestQuietFlag -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestQuietFlag -v
 ```
 
 Expected output: Test fails because PersistentPreRunE doesn't set output.Quiet.
 
 ### Step 3: Write minimal implementation
 
-Update the `PersistentPreRunE` in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (after line 44):
+Update the `PersistentPreRunE` in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (after line 44):
 
 ```go
 	// Wire up --no-color, NO_COLOR, and TERM=dumb
@@ -392,7 +392,7 @@ Update the `PersistentPreRunE` in `/home/hhewett/.local/src/romanesco/cli/cmd/ne
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestQuietFlag -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestQuietFlag -v
 ```
 
 Expected output: All test cases pass.
@@ -400,7 +400,7 @@ Expected output: All test cases pass.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/main.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/main.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
 feat(cli): wire --quiet flag to output.Quiet
 
 Wires --quiet/-q flag in PersistentPreRunE to set output.Quiet.
@@ -419,8 +419,8 @@ EOF
 ## Task 3A: Add Verbose global and PrintVerbose function
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/output/output.go` (line 10-15, add after line 23)
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/output/output_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/output/output.go` (line 10-15, add after line 23)
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/output/output_test.go`
 
 **Depends on:** Task 2B
 
@@ -433,7 +433,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/internal/output/output_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/internal/output/output_test.go`:
 
 ```go
 func TestPrintVerbose(t *testing.T) {
@@ -461,14 +461,14 @@ func TestPrintVerbose(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/output/ -run TestPrintVerbose -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./internal/output/ -run TestPrintVerbose -v
 ```
 
 Expected output: Test fails because `Verbose` and `PrintVerbose` don't exist.
 
 ### Step 3: Write minimal implementation
 
-Update `/home/hhewett/.local/src/romanesco/cli/internal/output/output.go`:
+Update `/home/hhewett/.local/src/nesco/cli/internal/output/output.go`:
 
 ```go
 var (
@@ -503,7 +503,7 @@ func PrintVerbose(format string, args ...any) {
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/output/ -run TestPrintVerbose -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./internal/output/ -run TestPrintVerbose -v
 ```
 
 Expected output: Test passes.
@@ -511,7 +511,7 @@ Expected output: Test passes.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/internal/output/output.go cli/internal/output/output_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/internal/output/output.go cli/internal/output/output_test.go && git commit -m "$(cat <<'EOF'
 feat(output): add Verbose mode and PrintVerbose function
 
 Adds Verbose global variable and PrintVerbose() helper for future
@@ -530,8 +530,8 @@ EOF
 ## Task 3B: Wire --verbose flag in main.go
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (line 44-54)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (line 44-54)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`
 
 **Depends on:** Task 3A
 
@@ -543,7 +543,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`:
 
 ```go
 func TestVerboseFlag(t *testing.T) {
@@ -590,14 +590,14 @@ func TestVerboseFlag(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestVerboseFlag -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestVerboseFlag -v
 ```
 
 Expected output: Test fails because PersistentPreRunE doesn't set output.Verbose.
 
 ### Step 3: Write minimal implementation
 
-Update the `PersistentPreRunE` in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (line 44-54):
+Update the `PersistentPreRunE` in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (line 44-54):
 
 ```go
 	// Wire up --no-color, NO_COLOR, and TERM=dumb
@@ -620,7 +620,7 @@ Update the `PersistentPreRunE` in `/home/hhewett/.local/src/romanesco/cli/cmd/ne
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestVerboseFlag -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestVerboseFlag -v
 ```
 
 Expected output: All test cases pass.
@@ -628,7 +628,7 @@ Expected output: All test cases pass.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/main.go cli/internal/output/output.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/main.go cli/internal/output/output.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
 feat(cli): implement --verbose flag
 
 Adds Verbose global to output package and wires --verbose/-v flag
@@ -647,7 +647,7 @@ EOF
 ## Task 4: Write test for version command with dev builds
 
 **Files:**
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`
 
 **Depends on:** Task 3B
 
@@ -660,7 +660,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`:
 
 ```go
 func TestVersionCommandDevBuild(t *testing.T) {
@@ -712,14 +712,14 @@ func TestVersionCommandDevBuild(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestVersionCommandDevBuild -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestVersionCommandDevBuild -v
 ```
 
 Expected output: Test fails for empty version case because current code prints a blank line instead of "(dev build)".
 
 ### Step 3: Write minimal implementation
 
-Update the `versionCmd` in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (lines 48-54):
+Update the `versionCmd` in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (lines 48-54):
 
 ```go
 var versionCmd = &cobra.Command{
@@ -738,7 +738,7 @@ var versionCmd = &cobra.Command{
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestVersionCommandDevBuild -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestVersionCommandDevBuild -v
 ```
 
 Expected output: Both test cases pass.
@@ -746,7 +746,7 @@ Expected output: Both test cases pass.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/main.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/main.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
 fix(cli): show "(dev build)" when version is empty
 
 Version command now prints "(dev build)" instead of empty string
@@ -765,8 +765,8 @@ EOF
 ## Task 5: Update info command to use "(dev build)" for version
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info.go` (lines 16-26, the RunE function body)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info.go` (lines 16-26, the RunE function body)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info_test.go`
 
 **Depends on:** Task 4
 
@@ -779,7 +779,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info_test.go`:
 
 ```go
 func TestInfoDevBuild(t *testing.T) {
@@ -820,14 +820,14 @@ func TestInfoDevBuild(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestInfoDevBuild -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestInfoDevBuild -v
 ```
 
 Expected output: Test fails because version is empty string instead of "(dev build)".
 
 ### Step 3: Write minimal implementation
 
-Update `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info.go` RunE function (lines 16-26):
+Update `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info.go` RunE function (lines 16-26):
 
 ```go
 var infoCmd = &cobra.Command{
@@ -866,7 +866,7 @@ var infoCmd = &cobra.Command{
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestInfoDevBuild -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestInfoDevBuild -v
 ```
 
 Expected output: Test passes.
@@ -874,7 +874,7 @@ Expected output: Test passes.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/info.go cli/cmd/nesco/info_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/info.go cli/cmd/nesco/info_test.go && git commit -m "$(cat <<'EOF'
 fix(cli): show "(dev build)" in info command for empty version
 
 Ensures info command displays "(dev build)" in both JSON and plain
@@ -892,8 +892,8 @@ EOF
 ## Task 6: Create sentinel error type to prevent duplicate error messages
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/output/output.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/output/output_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/output/output.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/output/output_test.go`
 
 **Depends on:** Task 5
 
@@ -906,7 +906,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/internal/output/output_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/internal/output/output_test.go`:
 
 ```go
 func TestSilentError(t *testing.T) {
@@ -943,14 +943,14 @@ import (
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/output/ -run TestSilentError -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./internal/output/ -run TestSilentError -v
 ```
 
 Expected output: Test fails because `SilentError` and `IsSilentError` don't exist.
 
 ### Step 3: Write minimal implementation
 
-Add to `/home/hhewett/.local/src/romanesco/cli/internal/output/output.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/internal/output/output.go`:
 
 ```go
 // silentError wraps an error to signal that it has already been printed
@@ -988,7 +988,7 @@ func IsSilentError(err error) bool {
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/output/ -run TestSilentError -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./internal/output/ -run TestSilentError -v
 ```
 
 Expected output: Test passes.
@@ -996,7 +996,7 @@ Expected output: Test passes.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/internal/output/output.go cli/internal/output/output_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/internal/output/output.go cli/internal/output/output_test.go && git commit -m "$(cat <<'EOF'
 feat(output): add SilentError type to prevent duplicate error messages
 
 Adds silentError wrapper type that marks errors as already printed.
@@ -1015,8 +1015,8 @@ EOF
 ## Task 7: Update main() to skip printing silent errors
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (line 109-112)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (line 109-112)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`
 
 **Depends on:** Task 6
 
@@ -1029,7 +1029,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`:
 
 ```go
 func TestMainSilentErrorNotPrinted(t *testing.T) {
@@ -1106,7 +1106,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/output"
+	"github.com/holdenhewett/nesco/cli/internal/output"
 	"github.com/spf13/cobra"
 )
 ```
@@ -1114,14 +1114,14 @@ import (
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestMainSilentErrorNotPrinted -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestMainSilentErrorNotPrinted -v
 ```
 
 Expected output: Test fails because main() currently prints all errors to stderr.
 
 ### Step 3: Write minimal implementation
 
-Update the `main()` function in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (around line 109):
+Update the `main()` function in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (around line 109):
 
 ```go
 func main() {
@@ -1142,7 +1142,7 @@ func main() {
 ### Step 4: Run tests to verify nothing broke
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -v
 ```
 
 Expected output: All tests still pass.
@@ -1150,7 +1150,7 @@ Expected output: All tests still pass.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/main.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/main.go && git commit -m "$(cat <<'EOF'
 fix(cli): skip printing errors marked as silent in main()
 
 main() now checks IsSilentError() before printing to stderr. This
@@ -1169,8 +1169,8 @@ EOF
 ## Task 8: Update scan command to use SilentError
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/scan.go` (lines 36-39)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/scan_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/scan.go` (lines 36-39)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/scan_test.go`
 
 **Depends on:** Task 7
 
@@ -1182,7 +1182,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/scan_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/scan_test.go`:
 
 ```go
 func TestScanErrorNoDuplicate(t *testing.T) {
@@ -1212,7 +1212,7 @@ func TestScanErrorNoDuplicate(t *testing.T) {
 }
 ```
 
-Add required imports to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/scan_test.go`:
+Add required imports to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/scan_test.go`:
 
 ```go
 import (
@@ -1222,21 +1222,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/output"
+	"github.com/holdenhewett/nesco/cli/internal/output"
 )
 ```
 
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestScanErrorNoDuplicate -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestScanErrorNoDuplicate -v
 ```
 
 Expected output: Test fails because error is printed twice (once by PrintError, once by main()).
 
 ### Step 3: Write minimal implementation
 
-Update `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/scan.go` (lines 36-39):
+Update `/home/hhewett/.local/src/nesco/cli/cmd/nesco/scan.go` (lines 36-39):
 
 ```go
 func runScan(cmd *cobra.Command, args []string) error {
@@ -1251,7 +1251,7 @@ func runScan(cmd *cobra.Command, args []string) error {
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestScanErrorNoDuplicate -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestScanErrorNoDuplicate -v
 ```
 
 Expected output: Test passes with exactly one error message.
@@ -1259,7 +1259,7 @@ Expected output: Test passes with exactly one error message.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/scan.go cli/cmd/nesco/scan_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/scan.go cli/cmd/nesco/scan_test.go && git commit -m "$(cat <<'EOF'
 fix(scan): prevent duplicate error message on no detectable project
 
 Wraps error return with SilentError after calling PrintError to
@@ -1278,8 +1278,8 @@ EOF
 ## Task 9: Improve TUI error message when content repo not found
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (line 118, line 184, and convert findSkillsDir to a var)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (line 118, line 184, and convert findSkillsDir to a var)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`
 
 **Depends on:** Task 8
 
@@ -1293,7 +1293,7 @@ EOF
 
 ### Step 1: Write the failing test and convert findSkillsDir to var
 
-First, update `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` to make findSkillsDir testable. After line 186, convert the function:
+First, update `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` to make findSkillsDir testable. After line 186, convert the function:
 
 ```go
 // findSkillsDir walks up from dir looking for a "skills/" directory.
@@ -1315,7 +1315,7 @@ func findSkillsDirImpl(dir string) (string, error) {
 }
 ```
 
-Then add the test to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`:
+Then add the test to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`:
 
 ```go
 func TestTUIErrorMessageContentRepoNotFound(t *testing.T) {
@@ -1345,8 +1345,8 @@ func TestTUIErrorMessageContentRepoNotFound(t *testing.T) {
 	}
 
 	// Should provide helpful guidance
-	if !strings.Contains(errMsg, "romanesco") {
-		t.Error("error message should mention 'romanesco'")
+	if !strings.Contains(errMsg, "nesco") {
+		t.Error("error message should mention 'nesco'")
 	}
 }
 ```
@@ -1354,14 +1354,14 @@ func TestTUIErrorMessageContentRepoNotFound(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestTUIErrorMessageContentRepoNotFound -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestTUIErrorMessageContentRepoNotFound -v
 ```
 
 Expected output: Test fails because current error mentions "skills/" directory.
 
 ### Step 3: Write minimal implementation
 
-Update the `runTUI` function in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (line 118):
+Update the `runTUI` function in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (line 118):
 
 ```go
 func runTUI(cmd *cobra.Command, args []string) error {
@@ -1387,7 +1387,7 @@ Also update the `findContentRepoRoot` error message (line 184):
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestTUIErrorMessageContentRepoNotFound -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestTUIErrorMessageContentRepoNotFound -v
 ```
 
 Expected output: Test passes with improved error message.
@@ -1395,12 +1395,12 @@ Expected output: Test passes with improved error message.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/main.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/main.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
 fix(tui): improve error when content repo not found
 
 Replaces internal "skills/ directory" error with user-facing
 message that explains what nesco needs and suggests actionable
-fixes (run from content repo or clone romanesco repo).
+fixes (run from content repo or clone nesco repo).
 
 Fixes: UX-013, FTU-004
 
@@ -1414,8 +1414,8 @@ EOF
 ## Task 10: Add warning when findProjectRoot falls back to CWD
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/helpers.go` (lines 14-40, the findProjectRootImpl function)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/helpers_test.go` (new file)
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/helpers.go` (lines 14-40, the findProjectRootImpl function)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/helpers_test.go` (new file)
 
 **Depends on:** Task 9
 
@@ -1428,7 +1428,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Create `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/helpers_test.go`:
+Create `/home/hhewett/.local/src/nesco/cli/cmd/nesco/helpers_test.go`:
 
 ```go
 package main
@@ -1440,7 +1440,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/output"
+	"github.com/holdenhewett/nesco/cli/internal/output"
 )
 
 func TestFindProjectRootFallbackWarning(t *testing.T) {
@@ -1511,14 +1511,14 @@ func TestFindProjectRootFallbackWarning(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestFindProjectRootFallbackWarning -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestFindProjectRootFallbackWarning -v
 ```
 
 Expected output: Test fails for "no project markers" case because no warning is printed.
 
 ### Step 3: Write minimal implementation
 
-Update the `findProjectRootImpl` function in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/helpers.go` (lines 14-40). Note that `var findProjectRoot = findProjectRootImpl` already exists at line 12, so we only need to modify the implementation function:
+Update the `findProjectRootImpl` function in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/helpers.go` (lines 14-40). Note that `var findProjectRoot = findProjectRootImpl` already exists at line 12, so we only need to modify the implementation function:
 
 ```go
 func findProjectRootImpl() (string, error) {
@@ -1565,15 +1565,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/holdenhewett/romanesco/cli/internal/output"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 )
 ```
 
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestFindProjectRootFallbackWarning -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestFindProjectRootFallbackWarning -v
 ```
 
 Expected output: All test cases pass.
@@ -1581,7 +1581,7 @@ Expected output: All test cases pass.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/helpers.go cli/cmd/nesco/helpers_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/helpers.go cli/cmd/nesco/helpers_test.go && git commit -m "$(cat <<'EOF'
 fix(scan): warn when findProjectRoot falls back to CWD
 
 Prints warning to stderr when no project markers are found and
@@ -1601,8 +1601,8 @@ EOF
 ## Task 11: Handle swallowed config.Save error in scan command
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/scan.go` (lines 56-62, the auto-detect block)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/scan_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/scan.go` (lines 56-62, the auto-detect block)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/scan_test.go`
 
 **Depends on:** Task 10
 
@@ -1615,7 +1615,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/scan_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/scan_test.go`:
 
 ```go
 func TestScanConfigSaveError(t *testing.T) {
@@ -1654,14 +1654,14 @@ func TestScanConfigSaveError(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestScanConfigSaveError -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestScanConfigSaveError -v
 ```
 
 Expected output: Test fails because no warning is printed when config.Save fails.
 
 ### Step 3: Write minimal implementation
 
-Update `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/scan.go` (lines 56-62):
+Update `/home/hhewett/.local/src/nesco/cli/cmd/nesco/scan.go` (lines 56-62):
 
 ```go
 		// Auto-detect providers
@@ -1680,7 +1680,7 @@ Update `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/scan.go` (lines 56-62):
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestScanConfigSaveError -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestScanConfigSaveError -v
 ```
 
 Expected output: Test passes with warning message.
@@ -1688,7 +1688,7 @@ Expected output: Test passes with warning message.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/scan.go cli/cmd/nesco/scan_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/scan.go cli/cmd/nesco/scan_test.go && git commit -m "$(cat <<'EOF'
 fix(scan): log warning when auto-detect config save fails
 
 scan command now prints warning to stderr if config.Save fails
@@ -1707,7 +1707,7 @@ EOF
 ## Task 12: Add help text mentioning TUI mode
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (lines 32-33, the Long field)
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (lines 32-33, the Long field)
 
 **Depends on:** Task 11
 
@@ -1719,7 +1719,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`:
 
 ```go
 func TestHelpTextMentionsTUI(t *testing.T) {
@@ -1751,14 +1751,14 @@ func TestHelpTextMentionsTUI(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestHelpTextMentionsTUI -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestHelpTextMentionsTUI -v
 ```
 
 Expected output: Test fails because current help text doesn't mention TUI mode.
 
 ### Step 3: Write minimal implementation
 
-Update the `rootCmd` Long field in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (lines 32-33):
+Update the `rootCmd` Long field in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (lines 32-33):
 
 ```go
 var rootCmd = &cobra.Command{
@@ -1776,7 +1776,7 @@ Run without arguments for interactive mode (TUI). Use subcommands for automation
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestHelpTextMentionsTUI -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestHelpTextMentionsTUI -v
 ```
 
 Expected output: Test passes.
@@ -1784,7 +1784,7 @@ Expected output: Test passes.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/main.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/main.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
 docs(cli): add help text mentioning TUI mode
 
 Updates root command Long description to explain that running
@@ -1803,8 +1803,8 @@ EOF
 ## Task 13: Add success confirmations for config add and remove
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/config_cmd.go` (line 65, 96)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/config_cmd_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/config_cmd.go` (line 65, 96)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/config_cmd_test.go`
 
 **Depends on:** Task 12
 
@@ -1817,7 +1817,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/config_cmd_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/config_cmd_test.go`:
 
 ```go
 func TestConfigAddConfirmation(t *testing.T) {
@@ -1869,7 +1869,7 @@ func TestConfigRemoveConfirmation(t *testing.T) {
 }
 ```
 
-Add required imports to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/config_cmd_test.go`:
+Add required imports to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/config_cmd_test.go`:
 
 ```go
 import (
@@ -1879,22 +1879,22 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/config"
-	"github.com/holdenhewett/romanesco/cli/internal/output"
+	"github.com/holdenhewett/nesco/cli/internal/config"
+	"github.com/holdenhewett/nesco/cli/internal/output"
 )
 ```
 
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run "TestConfigAddConfirmation|TestConfigRemoveConfirmation" -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run "TestConfigAddConfirmation|TestConfigRemoveConfirmation" -v
 ```
 
 Expected output: Tests fail because no confirmation messages are printed.
 
 ### Step 3: Write minimal implementation
 
-Update `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/config_cmd.go`:
+Update `/home/hhewett/.local/src/nesco/cli/cmd/nesco/config_cmd.go`:
 
 For `configAddCmd` (around line 64-66):
 ```go
@@ -1919,7 +1919,7 @@ For `configRemoveCmd` (around line 95-97):
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run "TestConfigAddConfirmation|TestConfigRemoveConfirmation" -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run "TestConfigAddConfirmation|TestConfigRemoveConfirmation" -v
 ```
 
 Expected output: Both tests pass.
@@ -1927,7 +1927,7 @@ Expected output: Both tests pass.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/config_cmd.go cli/cmd/nesco/config_cmd_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/config_cmd.go cli/cmd/nesco/config_cmd_test.go && git commit -m "$(cat <<'EOF'
 feat(config): add success confirmations for add and remove
 
 config add and config remove now print confirmation messages on
@@ -1945,8 +1945,8 @@ EOF
 ## Task 14: Wrap bubbletea TTY error with user-facing message
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (add wrapTTYError function before runTUI, update line 150-152 in runTUI)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (add wrapTTYError function before runTUI, update line 150-152 in runTUI)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`
 
 **Depends on:** Task 13
 
@@ -1959,7 +1959,7 @@ EOF
 
 ### Step 1: Add stub function and test together
 
-First, add a minimal stub to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (before `runTUI`, around line 114):
+First, add a minimal stub to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (before `runTUI`, around line 114):
 
 ```go
 // wrapTTYError wraps bubbletea TTY errors with user-facing guidance
@@ -1968,7 +1968,7 @@ func wrapTTYError(err error) error {
 }
 ```
 
-Then add the test to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`:
+Then add the test to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`:
 
 ```go
 func TestTUITTYErrorWrapped(t *testing.T) {
@@ -1996,14 +1996,14 @@ func TestTUITTYErrorWrapped(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestTUITTYErrorWrapped -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestTUITTYErrorWrapped -v
 ```
 
 Expected output: Test fails because stub doesn't wrap the error.
 
 ### Step 3: Replace stub with real implementation
 
-Replace the stub `wrapTTYError` function in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go`:
+Replace the stub `wrapTTYError` function in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go`:
 
 ```go
 // wrapTTYError wraps bubbletea TTY errors with user-facing guidance
@@ -2033,7 +2033,7 @@ Update `runTUI` to use the wrapper (around line 150):
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestTUITTYErrorWrapped -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestTUITTYErrorWrapped -v
 ```
 
 Expected output: Test passes.
@@ -2041,7 +2041,7 @@ Expected output: Test passes.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/main.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/main.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
 fix(tui): wrap raw bubbletea TTY error with user guidance
 
 Detects TTY-related errors from bubbletea and wraps them with
@@ -2060,8 +2060,8 @@ EOF
 ## Task 15A: Add basic slug validation and warning
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/config_cmd.go` (line 58-64)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/config_cmd_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/config_cmd.go` (line 58-64)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/config_cmd_test.go`
 
 **Depends on:** Task 14
 
@@ -2074,7 +2074,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/config_cmd_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/config_cmd_test.go`:
 
 ```go
 func TestConfigAddUnknownProviderWarning(t *testing.T) {
@@ -2132,14 +2132,14 @@ func TestConfigAddKnownProviderNoWarning(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run "TestConfigAddUnknownProviderWarning|TestConfigAddKnownProviderNoWarning" -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run "TestConfigAddUnknownProviderWarning|TestConfigAddKnownProviderNoWarning" -v
 ```
 
 Expected output: Tests fail because no warning is printed for unknown slugs.
 
 ### Step 3: Write minimal implementation
 
-Update `configAddCmd` in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/config_cmd.go` (around line 58-66):
+Update `configAddCmd` in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/config_cmd.go` (around line 58-66):
 
 ```go
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -2176,7 +2176,7 @@ Update `configAddCmd` in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/confi
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run "TestConfigAddUnknownProviderWarning|TestConfigAddKnownProviderNoWarning" -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run "TestConfigAddUnknownProviderWarning|TestConfigAddKnownProviderNoWarning" -v
 ```
 
 Expected output: Both tests pass.
@@ -2184,7 +2184,7 @@ Expected output: Both tests pass.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/config_cmd.go cli/cmd/nesco/config_cmd_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/config_cmd.go cli/cmd/nesco/config_cmd_test.go && git commit -m "$(cat <<'EOF'
 feat(config): add basic validation for unknown provider slugs
 
 config add now validates slugs against known providers and prints
@@ -2203,8 +2203,8 @@ EOF
 ## Task 15B: Enhance warning to list all known providers
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/config_cmd.go` (update warning message)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/config_cmd_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/config_cmd.go` (update warning message)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/config_cmd_test.go`
 
 **Depends on:** Task 15A
 
@@ -2217,7 +2217,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/config_cmd_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/config_cmd_test.go`:
 
 ```go
 func TestConfigAddWarningListsKnownProviders(t *testing.T) {
@@ -2255,14 +2255,14 @@ func TestConfigAddWarningListsKnownProviders(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestConfigAddWarningListsKnownProviders -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestConfigAddWarningListsKnownProviders -v
 ```
 
 Expected output: Test fails because warning doesn't list known providers.
 
 ### Step 3: Write minimal implementation
 
-Update the warning in `configAddCmd` in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/config_cmd.go`:
+Update the warning in `configAddCmd` in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/config_cmd.go`:
 
 ```go
 		// Validate against known providers
@@ -2283,7 +2283,7 @@ Update the warning in `configAddCmd` in `/home/hhewett/.local/src/romanesco/cli/
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestConfigAddWarningListsKnownProviders -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestConfigAddWarningListsKnownProviders -v
 ```
 
 Expected output: Test passes.
@@ -2291,7 +2291,7 @@ Expected output: Test passes.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/config_cmd.go cli/cmd/nesco/config_cmd_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/config_cmd.go cli/cmd/nesco/config_cmd_test.go && git commit -m "$(cat <<'EOF'
 feat(config): list known providers in slug validation warning
 
 Enhances unknown slug warning to list all known provider slugs.
@@ -2309,8 +2309,8 @@ EOF
 ## Task 16: Fix info providers using slugs instead of display names
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info.go` (line 55)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info.go` (line 55)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info_test.go`
 
 **Depends on:** Task 15B
 
@@ -2322,7 +2322,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info_test.go`:
 
 ```go
 func TestInfoProvidersUsesDisplayNames(t *testing.T) {
@@ -2353,7 +2353,7 @@ func TestInfoProvidersUsesDisplayNames(t *testing.T) {
 ### Step 2: Run test to verify baseline
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestInfoProvidersUsesDisplayNames -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestInfoProvidersUsesDisplayNames -v
 ```
 
 Expected output: Test passes but output uses slugs internally.
@@ -2362,7 +2362,7 @@ Expected output: Test passes but output uses slugs internally.
 
 The current code already uses `string(ct)` which gives the slug. Per the design doc, we need to use `ct.Label()` instead. However, looking at the code structure, this is for listing which content types each provider supports.
 
-Looking more carefully at line 65 and the finding description, the issue is in the types list. Update `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info.go` (around line 50-70):
+Looking more carefully at line 65 and the finding description, the issue is in the types list. Update `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info.go` (around line 50-70):
 
 ```go
 var infoProvidersCmd = &cobra.Command{
@@ -2404,7 +2404,7 @@ var infoProvidersCmd = &cobra.Command{
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestInfoProvidersUsesDisplayNames -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestInfoProvidersUsesDisplayNames -v
 ```
 
 Expected output: Test passes.
@@ -2412,7 +2412,7 @@ Expected output: Test passes.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/info.go cli/cmd/nesco/info_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/info.go cli/cmd/nesco/info_test.go && git commit -m "$(cat <<'EOF'
 fix(info): use display names for content types in info providers
 
 info providers now uses ContentType.Label() to show display names
@@ -2431,8 +2431,8 @@ EOF
 ## Task 17: Add provider-to-format mapping in info formats
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info.go` (line 92-95)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info.go` (line 92-95)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info_test.go`
 
 **Depends on:** Task 16
 
@@ -2445,7 +2445,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info_test.go`:
 
 ```go
 func TestInfoFormatsShowsProviders(t *testing.T) {
@@ -2488,14 +2488,14 @@ func TestInfoFormatsShowsProviders(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestInfoFormatsShowsProviders -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestInfoFormatsShowsProviders -v
 ```
 
 Expected output: Test fails because plain text output doesn't show providers.
 
 ### Step 3: Write minimal implementation
 
-Update `infoFormatsCmd` in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info.go` (around line 90-98):
+Update `infoFormatsCmd` in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info.go` (around line 90-98):
 
 ```go
 		if output.JSON {
@@ -2512,7 +2512,7 @@ Update `infoFormatsCmd` in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/inf
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestInfoFormatsShowsProviders -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestInfoFormatsShowsProviders -v
 ```
 
 Expected output: Test passes.
@@ -2520,7 +2520,7 @@ Expected output: Test passes.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/info.go cli/cmd/nesco/info_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/info.go cli/cmd/nesco/info_test.go && git commit -m "$(cat <<'EOF'
 feat(info): show provider list for each format in info formats
 
 Plain text output now appends "used by: provider1, provider2" to
@@ -2539,8 +2539,8 @@ EOF
 ## Task 18: Note standalone content types in info output
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info.go` (line 28-29)
-- Test: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info.go` (line 28-29)
+- Test: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info_test.go`
 
 **Depends on:** Task 17
 
@@ -2553,7 +2553,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info_test.go`:
 
 ```go
 func TestInfoNotesStandaloneTypes(t *testing.T) {
@@ -2582,14 +2582,14 @@ func TestInfoNotesStandaloneTypes(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestInfoNotesStandaloneTypes -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestInfoNotesStandaloneTypes -v
 ```
 
 Expected output: Test fails because no standalone note appears.
 
 ### Step 3: Write minimal implementation
 
-Update the plain text output in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/info.go` (around line 25-35):
+Update the plain text output in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/info.go` (around line 25-35):
 
 ```go
 		} else {
@@ -2609,7 +2609,7 @@ Update the plain text output in `/home/hhewett/.local/src/romanesco/cli/cmd/nesc
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestInfoNotesStandaloneTypes -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestInfoNotesStandaloneTypes -v
 ```
 
 Expected output: Test passes.
@@ -2617,7 +2617,7 @@ Expected output: Test passes.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/info.go cli/cmd/nesco/info_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/info.go cli/cmd/nesco/info_test.go && git commit -m "$(cat <<'EOF'
 docs(info): note that Prompts and Apps are standalone types
 
 Adds brief note in info command plain text output explaining that
@@ -2636,8 +2636,8 @@ EOF
 ## Task 19: Define exit code constants
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/output/output.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/output/output_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/output/output.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/output/output_test.go`
 
 **Depends on:** Task 18
 
@@ -2650,7 +2650,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/internal/output/output_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/internal/output/output_test.go`:
 
 ```go
 func TestExitCodeConstants(t *testing.T) {
@@ -2678,14 +2678,14 @@ func TestExitCodeConstants(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/output/ -run TestExitCodeConstants -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./internal/output/ -run TestExitCodeConstants -v
 ```
 
 Expected output: Test fails because constants don't exist.
 
 ### Step 3: Write minimal implementation
 
-Add to `/home/hhewett/.local/src/romanesco/cli/internal/output/output.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/internal/output/output.go`:
 
 ```go
 // Exit codes
@@ -2700,7 +2700,7 @@ const (
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/output/ -run TestExitCodeConstants -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./internal/output/ -run TestExitCodeConstants -v
 ```
 
 Expected output: Test passes.
@@ -2708,7 +2708,7 @@ Expected output: Test passes.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/internal/output/output.go cli/internal/output/output_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/internal/output/output.go cli/internal/output/output_test.go && git commit -m "$(cat <<'EOF'
 feat(output): define exit code constants
 
 Adds exported constants for exit codes: ExitSuccess (0), ExitError
@@ -2727,7 +2727,7 @@ EOF
 ## Task 20: Update main() to use exit code constants
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (line 112)
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (line 112)
 
 **Depends on:** Task 19
 
@@ -2744,14 +2744,14 @@ Existing tests cover the functionality. We're just improving code quality.
 ### Step 2: Verify baseline
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -v
 ```
 
 Expected output: All tests pass.
 
 ### Step 3: Write minimal implementation
 
-Update `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (around line 109-112):
+Update `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (around line 109-112):
 
 ```go
 func main() {
@@ -2772,7 +2772,7 @@ func main() {
 ### Step 4: Run tests to verify nothing broke
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -v
 ```
 
 Expected output: All tests still pass.
@@ -2780,7 +2780,7 @@ Expected output: All tests still pass.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/main.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/main.go && git commit -m "$(cat <<'EOF'
 refactor(cli): use ExitError constant in main()
 
 Replaces hardcoded exit code 1 with output.ExitError for better
@@ -2798,7 +2798,7 @@ EOF
 ## Task 21: Document exit codes in root command help
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (line 32)
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (line 32)
 
 **Depends on:** Task 20
 
@@ -2811,7 +2811,7 @@ EOF
 
 ### Step 1: Write the failing test
 
-Add to `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main_test.go`:
+Add to `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main_test.go`:
 
 ```go
 func TestHelpDocumentsExitCodes(t *testing.T) {
@@ -2840,14 +2840,14 @@ func TestHelpDocumentsExitCodes(t *testing.T) {
 ### Step 2: Run test to verify it fails
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestHelpDocumentsExitCodes -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestHelpDocumentsExitCodes -v
 ```
 
 Expected output: Test fails because exit codes aren't documented in help.
 
 ### Step 3: Write minimal implementation
 
-Update the `rootCmd` Long description in `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (around line 29-36):
+Update the `rootCmd` Long description in `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (around line 29-36):
 
 ```go
 var rootCmd = &cobra.Command{
@@ -2867,7 +2867,7 @@ Exit codes: 0=success, 1=error, 2=usage error, 3=drift detected`,
 ### Step 4: Run test to verify it passes
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -run TestHelpDocumentsExitCodes -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -run TestHelpDocumentsExitCodes -v
 ```
 
 Expected output: Test passes.
@@ -2875,7 +2875,7 @@ Expected output: Test passes.
 ### Step 5: Commit
 
 ```bash
-cd /home/hhewett/.local/src/romanesco && git add cli/cmd/nesco/main.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
+cd /home/hhewett/.local/src/nesco && git add cli/cmd/nesco/main.go cli/cmd/nesco/main_test.go && git commit -m "$(cat <<'EOF'
 docs(cli): document exit codes in root command help
 
 Adds exit code documentation to the root command Long description.
@@ -2908,7 +2908,7 @@ EOF
 ### Step 1: Run tests for cmd/nesco package
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./cmd/nesco/ -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./cmd/nesco/ -v
 ```
 
 Expected output: All tests pass. Look for:
@@ -2932,7 +2932,7 @@ Expected output: All tests pass. Look for:
 ### Step 2: Run tests for internal/output package
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/output/ -v
+cd /home/hhewett/.local/src/nesco/cli && go test ./internal/output/ -v
 ```
 
 Expected output: All tests pass. Look for:
@@ -2944,7 +2944,7 @@ Expected output: All tests pass. Look for:
 ### Step 3: Run go vet on modified packages
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go vet ./cmd/nesco/ ./internal/output/
+cd /home/hhewett/.local/src/nesco/cli && go vet ./cmd/nesco/ ./internal/output/
 ```
 
 Expected output: No issues reported.
@@ -2952,7 +2952,7 @@ Expected output: No issues reported.
 ### Step 4: Verify no compilation errors across entire CLI
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli && go build ./...
+cd /home/hhewett/.local/src/nesco/cli && go build ./...
 ```
 
 Expected output: Successful build with no errors.

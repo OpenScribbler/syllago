@@ -1,4 +1,4 @@
-You are helping me create content for romanesco, a shared library of AI coding tool configurations. Romanesco manages skills, agents, prompts, MCP servers, apps, rules, hooks, and commands that get installed into tools like Claude Code, Cursor, and Gemini CLI.
+You are helping me create content for nesco, a shared library of AI coding tool configurations. Nesco manages skills, agents, prompts, MCP servers, apps, rules, hooks, and commands that get installed into tools like Claude Code, Cursor, and Gemini CLI.
 
 I'm creating a new hook called "{{NAME}}". Hooks are provider-specific event handlers that run commands when certain events occur (like session start, tool use, etc). They're JSON files.
 

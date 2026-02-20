@@ -15,9 +15,8 @@ const DirName = ".nesco"
 const FileName = "config.json"
 
 type Config struct {
-	Providers         []string          `json:"providers"`                   // enabled provider slugs
-	DisabledDetectors []string          `json:"disabledDetectors,omitempty"`
-	Preferences       map[string]string `json:"preferences,omitempty"`
+	Providers   []string          `json:"providers"`              // enabled provider slugs
+	Preferences map[string]string `json:"preferences,omitempty"`
 }
 
 func DirPath(projectRoot string) string {

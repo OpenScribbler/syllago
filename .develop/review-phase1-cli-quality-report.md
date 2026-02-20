@@ -1,8 +1,8 @@
 # Phase 1 CLI Implementation Plan - Quality Review (Attempt 2)
 
 **Review Date:** 2026-02-17
-**Plan:** `/home/hhewett/.local/src/romanesco/docs/plans/2026-02-17-review-phase1-cli-implementation.md`
-**Design Doc:** `/home/hhewett/.local/src/romanesco/docs/reviews/implementation-plan.md` (Phase 1, items 1.1–1.15)
+**Plan:** `/home/hhewett/.local/src/nesco/docs/plans/2026-02-17-review-phase1-cli-implementation.md`
+**Design Doc:** `/home/hhewett/.local/src/nesco/docs/reviews/implementation-plan.md` (Phase 1, items 1.1–1.15)
 **Previous Review:** All 8 critical and 7 medium issues from first review
 
 ---

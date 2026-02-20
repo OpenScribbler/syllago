@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/config"
+	"github.com/holdenhewett/nesco/cli/internal/config"
 )
 
 func TestInitCreatesConfig(t *testing.T) {
@@ -42,6 +42,59 @@ func TestInitRefusesOverwrite(t *testing.T) {
 	err := initCmd.RunE(initCmd, []string{})
 	if err == nil {
 		t.Error("init should fail when config already exists (no --force)")
+	}
+}
+
+func TestInitNonInteractiveSkipsPrompt(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+
+	origDir, _ := os.Getwd()
+	os.Chdir(tmp)
+	defer os.Chdir(origDir)
+
+	// Simulate non-TTY: isInteractive returns false, so no prompt is needed
+	// even without --yes flag.
+	origIsInteractive := isInteractive
+	isInteractive = func() bool { return false }
+	defer func() { isInteractive = origIsInteractive }()
+
+	initCmd.Flags().Set("yes", "false")
+	initCmd.Flags().Set("force", "false")
+	if err := initCmd.RunE(initCmd, []string{}); err != nil {
+		t.Fatalf("init in non-interactive mode failed: %v", err)
+	}
+
+	if !config.Exists(tmp) {
+		t.Error("config.json should exist after init in non-interactive mode")
+	}
+}
+
+func TestInitShortYesFlag(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+
+	origDir, _ := os.Getwd()
+	os.Chdir(tmp)
+	defer os.Chdir(origDir)
+
+	// Verify the -y shorthand is registered and works
+	flag := initCmd.Flags().ShorthandLookup("y")
+	if flag == nil {
+		t.Fatal("-y shorthand flag not registered on init command")
+	}
+	if flag.Name != "yes" {
+		t.Errorf("-y should be shorthand for --yes, got --%s", flag.Name)
+	}
+
+	initCmd.Flags().Set("yes", "true")
+	initCmd.Flags().Set("force", "false")
+	if err := initCmd.RunE(initCmd, []string{}); err != nil {
+		t.Fatalf("init -y failed: %v", err)
+	}
+
+	if !config.Exists(tmp) {
+		t.Error("config.json should exist after init -y")
 	}
 }
 

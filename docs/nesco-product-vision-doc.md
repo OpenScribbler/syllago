@@ -2,7 +2,7 @@
 
 **February 2026**
 
-Product: **Romanesco** | CLI command: **nesco** | Language: Go
+Product: **Nesco** | CLI command: **nesco** | Language: Go
 Status: Vision validated, building on existing CLI (v0.2.0)
 
 ---
@@ -158,7 +158,7 @@ This gives security properties by construction: the PR can't contain executable 
 
 The flywheel: usage surfaces gaps → agents generate structured contributions → nesco gets better at detecting that class of surprise → fewer misses → more trust → more users.
 
-This embodies the Romanesco "ideas not code" contribution philosophy — contributors describe what they encountered, the skill structures it, the maintainer reviews the specification.
+This embodies the Nesco "ideas not code" contribution philosophy — contributors describe what they encountered, the skill structures it, the maintainer reviews the specification.
 
 ### Contribution Security (Research Required)
 
@@ -264,7 +264,7 @@ Queued for separate deep-dive sessions:
 | Build order | Provider parity → scan → skill → convert → MCP | Each phase unlocks the next |
 | Competitive position | Superset — do what sync tools do, plus what nobody does | Best-in-class emission + surprise detection + guided interview |
 | Static vs runtime | Both — emit files AND serve via MCP | Teams choose their preference, same underlying state |
-| Romanesco relationship | Independent tool, branding heritage | No ecosystem dependency |
+| Nesco relationship | Independent tool, branding heritage | No ecosystem dependency |
 | Baseline management | Decoupled from file generation | Supports adoption, conversion, and team onboarding scenarios |
 
 ---

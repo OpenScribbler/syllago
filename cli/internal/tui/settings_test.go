@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
 )
 
 // navigateToSettings creates a test app and navigates to the settings screen.
@@ -27,30 +27,24 @@ func TestSettingsNavigation(t *testing.T) {
 		t.Fatalf("expected initial cursor 0, got %d", app.settings.cursor)
 	}
 
-	// 3 rows: auto-update(0), providers(1), detectors(2)
+	// 2 rows: auto-update(0), providers(1)
 	m, _ := app.Update(keyDown)
 	app = m.(App)
 	if app.settings.cursor != 1 {
 		t.Fatalf("expected cursor 1, got %d", app.settings.cursor)
 	}
 
-	m, _ = app.Update(keyDown)
-	app = m.(App)
-	if app.settings.cursor != 2 {
-		t.Fatalf("expected cursor 2, got %d", app.settings.cursor)
-	}
-
 	// Bounds clamping
 	m, _ = app.Update(keyDown)
 	app = m.(App)
-	if app.settings.cursor != 2 {
-		t.Fatal("cursor should clamp at 2")
+	if app.settings.cursor != 1 {
+		t.Fatal("cursor should clamp at 1")
 	}
 
 	m, _ = app.Update(keyUp)
 	app = m.(App)
-	if app.settings.cursor != 1 {
-		t.Fatalf("expected cursor 1 after up, got %d", app.settings.cursor)
+	if app.settings.cursor != 0 {
+		t.Fatalf("expected cursor 0 after up, got %d", app.settings.cursor)
 	}
 }
 
@@ -147,43 +141,6 @@ func TestSettingsProviderPickerEscApplies(t *testing.T) {
 	}
 }
 
-func TestSettingsDetectorSubPicker(t *testing.T) {
-	app := navigateToSettings(t)
-	app = pressN(app, keyDown, 2) // cursor to detectors row
-
-	m, _ := app.Update(keyEnter)
-	app = m.(App)
-
-	if app.settings.editMode != editDetectors {
-		t.Fatalf("expected editDetectors, got %d", app.settings.editMode)
-	}
-	if len(app.settings.subItems) == 0 {
-		t.Fatal("expected sub-picker items for detectors")
-	}
-}
-
-func TestSettingsDetectorPickerToggle(t *testing.T) {
-	app := navigateToSettings(t)
-	app = pressN(app, keyDown, 2)
-	m, _ := app.Update(keyEnter) // open detector picker
-	app = m.(App)
-
-	initial := app.settings.subItems[0].checked
-
-	m, _ = app.Update(keySpace)
-	app = m.(App)
-	if app.settings.subItems[0].checked == initial {
-		t.Fatal("space should toggle detector checkbox")
-	}
-
-	// Close and verify applied
-	m, _ = app.Update(keyEsc)
-	app = m.(App)
-	if app.settings.editMode != editNone {
-		t.Fatal("esc should close detector picker")
-	}
-}
-
 func TestSettingsSave(t *testing.T) {
 	app := navigateToSettings(t)
 
@@ -250,5 +207,5 @@ func TestSettingsViewRendering(t *testing.T) {
 	assertContains(t, view, "Settings")
 	assertContains(t, view, "Auto-update")
 	assertContains(t, view, "Providers")
-	assertContains(t, view, "Disabled detectors")
+	assertNotContains(t, view, "Disabled detectors")
 }

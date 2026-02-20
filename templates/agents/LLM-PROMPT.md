@@ -1,11 +1,11 @@
-You are helping me create content for romanesco, a shared library of AI coding tool configurations. Romanesco manages skills, agents, prompts, MCP servers, apps, rules, hooks, and commands that get installed into tools like Claude Code, Cursor, and Gemini CLI.
+You are helping me create content for nesco, a shared library of AI coding tool configurations. Nesco manages skills, agents, prompts, MCP servers, apps, rules, hooks, and commands that get installed into tools like Claude Code, Cursor, and Gemini CLI.
 
 I'm creating a new agent called "{{NAME}}". An agent is a specialized AI persona with specific instructions, behavior guidelines, and capabilities. Agents live in their own directory with an AGENT.md file.
 
 Required structure:
   my-tools/agents/{{NAME}}/
   ├── AGENT.md          # Required: frontmatter (name, description) + agent instructions
-  └── .romanesco.yaml      # Auto-generated, don't edit
+  └── .nesco.yaml      # Auto-generated, don't edit
 
 AGENT.md format:
 ---

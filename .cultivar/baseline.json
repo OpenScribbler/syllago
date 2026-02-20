@@ -1,0 +1,26 @@
+{
+  "projectName": "/home/hhewett/.local/src/nesco",
+  "sections": [
+    {
+      "category": "build-commands",
+      "title": "Build Commands",
+      "origin": "auto",
+      "hash": "655a3c358c990db323adc6da3ff13a252edc6036bc8e2b7809a365f60f2892df",
+      "content": "{\"origin\":\"auto\",\"title\":\"Build Commands\",\"commands\":[{\"name\":\"build\",\"command\":\"make build\",\"source\":\"Makefile\"},{\"name\":\"clean\",\"command\":\"make clean\",\"source\":\"Makefile\"},{\"name\":\"build-all\",\"command\":\"make build-all\",\"source\":\"Makefile\"},{\"name\":\"test\",\"command\":\"make test\",\"source\":\"Makefile\"},{\"name\":\"fmt\",\"command\":\"make fmt\",\"source\":\"Makefile\"},{\"name\":\"vet\",\"command\":\"make vet\",\"source\":\"Makefile\"}]}"
+    },
+    {
+      "category": "directory-structure",
+      "title": "Directory Structure",
+      "origin": "auto",
+      "hash": "f29f2d94bcc754117bac4ad6bf57d914115bcac0cb31d05a8833277ea8ebdcf8",
+      "content": "{\"origin\":\"auto\",\"title\":\"Directory Structure\",\"entries\":[{\"path\":\"agents/\"},{\"path\":\"apps/\"},{\"path\":\"cli/\"},{\"path\":\"commands/\"},{\"path\":\"docs/\",\"convention\":\"documentation\"},{\"path\":\"hooks/\"},{\"path\":\"mcp/\"},{\"path\":\"memory/\"},{\"path\":\"my-tools/\"},{\"path\":\"prompts/\"},{\"path\":\"rules/\"},{\"path\":\"skills/\"},{\"path\":\"templates/\"}]}"
+    },
+    {
+      "category": "project-metadata",
+      "title": "Project Metadata",
+      "origin": "auto",
+      "hash": "403c613903ba5b21c8ba28b5e834aa6a0dc9777b7b3a06c02cc3c4b8237bb032",
+      "content": "{\"origin\":\"auto\",\"title\":\"Project Metadata\",\"description\":\"```\",\"license\":\"Apache-2.0\"}"
+    }
+  ]
+}

@@ -9,7 +9,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 
-	"github.com/holdenhewett/romanesco/cli/internal/installer"
+	"github.com/holdenhewett/nesco/cli/internal/installer"
 )
 
 // envSetupModel groups the interactive environment variable setup state.

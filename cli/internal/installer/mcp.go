@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -83,8 +83,8 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, _ string) (str
 		return "", fmt.Errorf("serializing config: %w", err)
 	}
 
-	// Add _romanesco marker
-	configData, err = sjson.SetBytes(configData, "_romanesco", true)
+	// Add _nesco marker
+	configData, err = sjson.SetBytes(configData, "_nesco", true)
 	if err != nil {
 		return "", fmt.Errorf("adding marker: %w", err)
 	}
@@ -131,12 +131,12 @@ func uninstallMCP(item catalog.ContentItem, prov provider.Provider, _ string) (s
 
 	key := "mcpServers." + item.Name
 
-	// Check if it exists and has _romanesco marker
+	// Check if it exists and has _nesco marker
 	entry := gjson.GetBytes(fileData, key)
 	if !entry.Exists() {
 		return "", fmt.Errorf("%s not found in %s", key, cfgPath)
 	}
-	if !gjson.GetBytes(fileData, key+"._romanesco").Bool() {
+	if !gjson.GetBytes(fileData, key+"._nesco").Bool() {
 		return "", fmt.Errorf("%s was not installed by nesco", key)
 	}
 
@@ -172,7 +172,7 @@ func checkMCPStatus(item catalog.ContentItem, prov provider.Provider, _ string) 
 	if !entry.Exists() {
 		return StatusNotInstalled
 	}
-	if gjson.GetBytes(fileData, key+"._romanesco").Bool() {
+	if gjson.GetBytes(fileData, key+"._nesco").Bool() {
 		return StatusInstalled
 	}
 	// Entry exists but wasn't installed by nesco -- treat as installed

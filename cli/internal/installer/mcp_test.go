@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 	"github.com/tidwall/gjson"
 )
 
@@ -103,8 +103,8 @@ func TestInstallMCP_WhitelistsFields(t *testing.T) {
 		t.Error("_internal_config should have been dropped")
 	}
 
-	// Should have _romanesco marker
-	if !serverConfig.Get("_romanesco").Bool() {
-		t.Error("_romanesco marker missing")
+	// Should have _nesco marker
+	if !serverConfig.Get("_nesco").Bool() {
+		t.Error("_nesco marker missing")
 	}
 }

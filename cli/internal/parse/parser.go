@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/holdenhewett/romanesco/cli/internal/model"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 )
 
 // Parser reads a provider-specific file and returns canonical sections.

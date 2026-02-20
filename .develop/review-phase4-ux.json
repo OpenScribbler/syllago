@@ -1,0 +1,22 @@
+{
+  "feature": "Phase 4: TUI UX Improvements",
+  "designDoc": "docs/reviews/implementation-plan.md (items 4.1-4.20)",
+  "stage": "execute",
+  "stages": {
+    "brainstorm": { "status": "complete", "skipped": true },
+    "plan": { "status": "complete" },
+    "validate": { "status": "complete" },
+    "beads": { "status": "complete" },
+    "execute": { "status": "in_progress" }
+  },
+  "epic": "nesco-uso",
+  "beads": [
+    { "id": "nesco-0ua", "batch": "A", "title": "Key binding fixes (4.6, 4.3)" },
+    { "id": "nesco-u1e", "batch": "B", "title": "Live search + position fix (4.2, 4.4)" },
+    { "id": "nesco-ksd", "batch": "C", "title": "Help overlay (4.5)" },
+    { "id": "nesco-to6", "batch": "D", "title": "Spinner/loading indicators (4.1)" },
+    { "id": "nesco-fr0", "batch": "E", "title": "Small UX polish (4.7, 4.9, 4.11, 4.12, 4.13)" },
+    { "id": "nesco-f6s", "batch": "F", "title": "State/guidance improvements (4.8, 4.10, 4.14)" },
+    { "id": "nesco-eb0", "batch": "G", "title": "Enhancement polish (4.15-4.20)" }
+  ]
+}

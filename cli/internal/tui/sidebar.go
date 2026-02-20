@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
 )
 
 const sidebarWidth = 18 // fixed width including border character
@@ -140,20 +140,20 @@ func (m sidebarModel) View() string {
 		s += zone.Mark(fmt.Sprintf("sidebar-%d", u.index), rowContent) + "\n"
 	}
 
-	// Version pinned to bottom-right of sidebar
+	// Version pinned to bottom-right of sidebar, only when it fits
 	if m.version != "" && m.height > 0 {
-		ver := "v" + m.version
-		pad := inner - len(ver)
-		if pad < 0 {
-			pad = 0
-		}
-		verLine := strings.Repeat(" ", pad) + versionStyle.Render(ver)
 		contentLines := strings.Count(s, "\n")
-		gap := m.height - contentLines - 1
-		if gap > 0 {
-			s += strings.Repeat("\n", gap)
+		// Only show version if there's at least 1 line of gap below content
+		if contentLines+1 < m.height {
+			ver := "v" + m.version
+			pad := inner - len(ver)
+			if pad < 0 {
+				pad = 0
+			}
+			verLine := strings.Repeat(" ", pad) + versionStyle.Render(ver)
+			gap := m.height - contentLines - 1
+			s += strings.Repeat("\n", gap) + verLine
 		}
-		s += verLine
 	}
 
 	style := sidebarBorderStyle.Width(sidebarWidth)

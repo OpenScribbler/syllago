@@ -12,7 +12,7 @@
   ],
   "artifacts": {
     "design": "docs/nesco-design-decisions.md",
-    "plan": "/home/hhewett/.local/src/romanesco/docs/plans/2026-02-15-nesco-phase-1-2-implementation.md",
+    "plan": "/home/hhewett/.local/src/nesco/docs/plans/2026-02-15-nesco-phase-1-2-implementation.md",
     "phaseB": ".develop/nesco-phase-1-2-phase-b.md"
   },
   "notes": "Phase A: 5 epics + 28 tasks created in beads. 31 dependency edges, 0 cycles. Phase B: 28 tasks analyzed, 0 new deps, 0 new beads, 6 minor implementation notes for executors. Ready for execution.",
@@ -24,8 +24,8 @@
   },
   "beads": {
     "created": true,
-    "prefix": "romanesco",
-    "epicIds": ["romanesco-tbq", "romanesco-u16", "romanesco-nnc", "romanesco-7of", "romanesco-5l0"],
+    "prefix": "nesco",
+    "epicIds": ["nesco-tbq", "nesco-u16", "nesco-nnc", "nesco-7of", "nesco-5l0"],
     "taskCount": 28
   }
 }

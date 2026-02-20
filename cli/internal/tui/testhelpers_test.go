@@ -9,10 +9,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/model"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
-	"github.com/holdenhewett/romanesco/cli/internal/scan"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 )
 
 func init() {
@@ -242,46 +240,17 @@ func testProviders(t *testing.T) []provider.Provider {
 }
 
 // ---------------------------------------------------------------------------
-// Test detectors
-// ---------------------------------------------------------------------------
-
-// mockDetector implements scan.Detector for settings tests.
-type mockDetector struct {
-	name string
-}
-
-func (d mockDetector) Name() string {
-	return d.name
-}
-
-func (d mockDetector) Detect(root string) ([]model.Section, error) {
-	return nil, nil
-}
-
-// Verify mockDetector implements scan.Detector at compile time.
-var _ scan.Detector = mockDetector{}
-
-// testDetectors returns 2 mock detectors for settings screen tests.
-func testDetectors() []scan.Detector {
-	return []scan.Detector{
-		mockDetector{name: "go-detector"},
-		mockDetector{name: "node-detector"},
-	}
-}
-
-// ---------------------------------------------------------------------------
 // Test app factory
 // ---------------------------------------------------------------------------
 
-// testApp creates a fully-wired App with test catalog, providers, detectors,
+// testApp creates a fully-wired App with test catalog, providers,
 // and a terminal size of 80x30.
 func testApp(t *testing.T) App {
 	t.Helper()
 	cat := testCatalog(t)
 	providers := testProviders(t)
-	detectors := testDetectors()
 
-	app := NewApp(cat, providers, detectors, "1.0.0", false)
+	app := NewApp(cat, providers, "1.0.0", false)
 	app.width = 80
 	app.height = 30
 	// Propagate dimensions to sub-models that need them

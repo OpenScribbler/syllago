@@ -12,7 +12,7 @@
 
 ### ✅ Covered (12 requirements → 18 tasks)
 
-- **Romanesco semantic colors** (mint primary, viola accent, stone muted, success green, danger red, warning amber) → Task 1.1 Step 1 (exact hex values in `styles.go`)
+- **Nesco semantic colors** (mint primary, viola accent, stone muted, success green, danger red, warning amber) → Task 1.1 Step 1 (exact hex values in `styles.go`)
 - **Panel/layout colors** (border `#D4D4D8/#3F3F46`, selectedBg `#D1FAE5/#1A3A2A`, modalBg `#F4F4F5/#27272A`, modalBorder = accent) → Task 1.1 Step 2
 - **`secondaryColor` → `accentColor` rename** → Task 1.1 Step 3, Task 1.2 Step 1
 - **Sidebar + content layout** (sidebar ~16 chars, content swaps items/detail) → Task 2.1 (`sidebarWidth = 18` including border), Task 3.2 (`lipgloss.JoinHorizontal`)
@@ -67,7 +67,7 @@
 
 ### Changes to Implementation Plan
 
-The following tasks were added to `/home/hhewett/.local/src/romanesco/docs/plans/2026-02-17-tui-redesign-implementation.md`:
+The following tasks were added to `/home/hhewett/.local/src/nesco/docs/plans/2026-02-17-tui-redesign-implementation.md`:
 
 | Task | Group | Description |
 |------|-------|-------------|

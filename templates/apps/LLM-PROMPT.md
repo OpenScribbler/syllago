@@ -1,4 +1,4 @@
-You are helping me create content for romanesco, a shared library of AI coding tool configurations. Romanesco manages skills, agents, prompts, MCP servers, apps, rules, hooks, and commands that get installed into tools like Claude Code, Cursor, and Gemini CLI.
+You are helping me create content for nesco, a shared library of AI coding tool configurations. Nesco manages skills, agents, prompts, MCP servers, apps, rules, hooks, and commands that get installed into tools like Claude Code, Cursor, and Gemini CLI.
 
 I'm creating a new app called "{{NAME}}". An app is a complete installable package with its own install.sh script. Apps can include MCP servers, hooks, configuration files, and any other components. They're the most flexible content type.
 
@@ -6,7 +6,7 @@ Required structure:
   my-tools/apps/{{NAME}}/
   ├── README.md         # Required: frontmatter (name, description, providers) + documentation
   ├── install.sh        # Required: bash script for install/uninstall
-  └── .romanesco.yaml      # Auto-generated, don't edit
+  └── .nesco.yaml      # Auto-generated, don't edit
 
 README.md format:
 ---

@@ -1,6 +1,6 @@
 package provider
 
-import "github.com/holdenhewett/romanesco/cli/internal/catalog"
+import "github.com/holdenhewett/nesco/cli/internal/catalog"
 
 // JSONMergeSentinel is returned by InstallDir when the content type requires
 // JSON merge installation (e.g., MCP into config files, hooks into settings.json)

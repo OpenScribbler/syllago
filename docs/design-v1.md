@@ -2,7 +2,7 @@
 
 **Design Document — February 2026**
 
-Product: **Romanesco** | CLI command: **nesco** | Language: Go
+Product: **Nesco** | CLI command: **nesco** | Language: Go
 Status: Design complete, ready for implementation
 
 ---
@@ -13,7 +13,7 @@ nesco scans a codebase, detects its conventions, and generates context files for
 
 No LLM required. Purely mechanical detection. Single static binary. Works offline, in CI, and as an MCP server that LLM agents can call directly.
 
-nesco is an independent tool. Romanesco is branding heritage, not a dependency.
+nesco is an independent tool. Nesco is branding heritage, not a dependency.
 
 ---
 
@@ -393,8 +393,8 @@ No database, no HTTP server, no external services. Single static binary.
 | Maintenance scope | Generation + drift detection | Auto-update too risky for MVP |
 | Output formats | CLAUDE.md, AGENTS.md, Cursor, Copilot, GEMINI.md | Covers major AI coding tools |
 | LLM requirement | Purely mechanical | Ship fast, deterministic, zero cost, add LLM enrichment later |
-| Romanesco relationship | Independent tool, branding only | No ecosystem dependency |
-| CLI name | `nesco` | 5 chars, derived from romanesco, no meaningful collisions in Go/CLI space |
+| Nesco relationship | Independent tool, branding only | No ecosystem dependency |
+| CLI name | `nesco` | 5 chars, derived from nesco, no meaningful collisions in Go/CLI space |
 | Format auto-detection | Detect + confirm on first run, save to config | Don't clog repos with unused files |
 
 ---
@@ -405,4 +405,4 @@ No database, no HTTP server, no external services. Single static binary.
 - **Watch mode** — `nesco watch` monitors filesystem changes and warns about drift in real time.
 - **IDE plugins** — VS Code extension that shows drift status and offers one-click regeneration.
 - **Custom detectors** — User-defined detectors via plugin system or config-driven rules.
-- **Workflow-to-workflow** — nesco as a component in larger Romanesco-generated workflows.
+- **Workflow-to-workflow** — nesco as a component in larger Nesco-generated workflows.

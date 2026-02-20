@@ -3,7 +3,7 @@
 # Phase 2: Security Hardening Implementation Plan - Quality Review (UPDATED)
 
 **Review Date:** 2026-02-17
-**Plan:** `/home/hhewett/.local/src/romanesco/docs/plans/2026-02-17-review-phase2-security-implementation.md`
+**Plan:** `/home/hhewett/.local/src/nesco/docs/plans/2026-02-17-review-phase2-security-implementation.md`
 **Previous Report:** Issues resolved in final revision
 **Current Status:** Ready for implementation
 

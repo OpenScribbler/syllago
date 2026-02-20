@@ -2,8 +2,8 @@
 
 **Date:** 2026-02-17
 **Reviewer:** Claude Code
-**Design Doc:** `/home/hhewett/.local/src/romanesco/docs/plans/2026-02-17-tui-redesign-design.md`
-**Plan Doc:** `/home/hhewett/.local/src/romanesco/docs/plans/2026-02-17-tui-redesign-implementation.md`
+**Design Doc:** `/home/hhewett/.local/src/nesco/docs/plans/2026-02-17-tui-redesign-design.md`
+**Plan Doc:** `/home/hhewett/.local/src/nesco/docs/plans/2026-02-17-tui-redesign-implementation.md`
 
 ---
 
@@ -168,15 +168,15 @@ No "add validation here" or "implement X" placeholders. All critical paths are p
 
 All file paths are relative to project root and fully specified:
 
-- `/home/hhewett/.local/src/romanesco/cli/internal/tui/styles.go`
-- `/home/hhewett/.local/src/romanesco/cli/internal/tui/sidebar.go`
-- `/home/hhewett/.local/src/romanesco/cli/internal/tui/app.go`
-- `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go`
-- `/home/hhewett/.local/src/romanesco/cli/go.mod`
+- `/home/hhewett/.local/src/nesco/cli/internal/tui/styles.go`
+- `/home/hhewett/.local/src/nesco/cli/internal/tui/sidebar.go`
+- `/home/hhewett/.local/src/nesco/cli/internal/tui/app.go`
+- `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go`
+- `/home/hhewett/.local/src/nesco/cli/go.mod`
 
 Summary table at end lists all affected files:
 | File | Action |
-| `cli/internal/tui/styles.go` | Modify: Romanesco palette + panel styles |
+| `cli/internal/tui/styles.go` | Modify: Nesco palette + panel styles |
 | `cli/internal/tui/sidebar.go` | Create: sidebarModel struct + View + Update |
 | etc. |
 
@@ -190,7 +190,7 @@ Clear and complete.
 
 Checking all items from the design doc against implementation plan:
 
-#### Romanesco Color Palette
+#### Nesco Color Palette
 - **Design:** Mint (#047857/#6EE7B7) + Viola (#6D28D9/#C4B5FD) + support colors
 - **Plan:** Task 1.1 explicitly defines all colors with exact hex values
 - ✅ Covered

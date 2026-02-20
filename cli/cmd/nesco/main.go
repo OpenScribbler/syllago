@@ -8,13 +8,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
-	"github.com/holdenhewett/romanesco/cli/internal/config"
-	"github.com/holdenhewett/romanesco/cli/internal/metadata"
-	"github.com/holdenhewett/romanesco/cli/internal/output"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
-	"github.com/holdenhewett/romanesco/cli/internal/scan/detectors"
-	"github.com/holdenhewett/romanesco/cli/internal/tui"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/config"
+	"github.com/holdenhewett/nesco/cli/internal/metadata"
+	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
@@ -31,14 +30,13 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:           "nesco",
-	Short:         "AI coding tool content manager and codebase scanner",
-	Long: `Nesco manages AI tool configurations and scans codebases for context
-that helps AI agents produce correct code.
+	Short:         "AI coding tool content manager",
+	Long: `Nesco manages AI tool configurations across providers.
 
 Run without arguments for interactive mode (TUI). Use subcommands for
 automation and scripting.
 
-Exit codes: 0=success, 1=error, 2=usage error, 3=drift detected`,
+Exit codes: 0=success, 1=error, 2=usage error`,
 	RunE:          runTUI,
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -83,7 +81,7 @@ var versionCmd = &cobra.Command{
 
 var backfillCmd = &cobra.Command{
 	Use:    "backfill",
-	Short:  "Generate .romanesco.yaml for items without metadata",
+	Short:  "Generate .nesco.yaml for items without metadata",
 	Hidden: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findContentRepoRoot()
@@ -155,7 +153,7 @@ func wrapTTYError(err error) error {
 	}
 	errMsg := err.Error()
 	if strings.Contains(errMsg, "TTY") || strings.Contains(errMsg, "tty") {
-		return fmt.Errorf("nesco requires a terminal for interactive mode. Use a subcommand for non-interactive usage (try: nesco scan)")
+		return fmt.Errorf("nesco requires a terminal for interactive mode. Use a subcommand for non-interactive usage")
 	}
 	return err
 }
@@ -163,7 +161,7 @@ func wrapTTYError(err error) error {
 func runTUI(cmd *cobra.Command, args []string) error {
 	root, err := findContentRepoRoot()
 	if err != nil {
-		return fmt.Errorf("could not find romanesco content repository.\n\nTo get started:\n  nesco init    Create a new content repo in the current directory\n\nFor more info: nesco --help")
+		return fmt.Errorf("could not find nesco content repository.\n\nTo get started:\n  nesco init    Create a new content repo in the current directory\n\nFor more info: nesco --help")
 	}
 
 	cat, err := catalog.Scan(root)
@@ -193,7 +191,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		autoUpdate = true
 	}
 
-	app := tui.NewApp(cat, providers, detectors.AllDetectors(), version, autoUpdate)
+	app := tui.NewApp(cat, providers, version, autoUpdate)
 	zone.NewGlobal()
 	p := tea.NewProgram(app,
 		tea.WithAltScreen(),
@@ -232,7 +230,7 @@ func findContentRepoRoot() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("could not find romanesco content repository")
+	return "", fmt.Errorf("could not find nesco content repository")
 }
 
 // findSkillsDir walks up from dir looking for a "skills/" directory.

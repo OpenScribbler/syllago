@@ -1,9 +1,9 @@
 # TUI Redesign - Implementation Plan
 
-**Goal:** Refactor the Nesco TUI from full-screen replacement navigation to a persistent sidebar + content layout with modal overlays, mouse support, and the Romanesco color palette.
+**Goal:** Refactor the Nesco TUI from full-screen replacement navigation to a persistent sidebar + content layout with modal overlays, mouse support, and the Nesco color palette.
 **Architecture:** The `App` struct gains a `focusTarget` enum and a `sidebarModel` extracted from `categoryModel`; the existing `screen` enum is replaced by a content-area routing field; `App.View()` composes sidebar and content with `lipgloss.JoinHorizontal`; modals are centered overlays rendered by `bubbletea-overlay`.
 **Tech Stack:** Go 1.25, Bubble Tea v1.3.10, lipgloss v1.1.1, bubblezone (latest), bubbletea-overlay v0.6.5
-**Design Doc:** `/home/hhewett/.local/src/romanesco/docs/plans/2026-02-17-tui-redesign-design.md`
+**Design Doc:** `/home/hhewett/.local/src/nesco/docs/plans/2026-02-17-tui-redesign-design.md`
 
 ---
 
@@ -12,13 +12,13 @@
 ### Task 1.1: Update Semantic Color Variables in styles.go
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/styles.go` (lines 5-14)
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/styles_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/styles.go` (lines 5-14)
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/styles_test.go`
 
 **Depends on:** nothing
 
 **Success Criteria:**
-- [ ] Six semantic colors match Romanesco palette values exactly
+- [ ] Six semantic colors match Nesco palette values exactly
 - [ ] `secondaryColor` variable is renamed to `accentColor`
 - [ ] Comment reflects correct adaptive convention (Light = light terminal bg, Dark = dark terminal bg)
 - [ ] `go build ./...` passes
@@ -29,17 +29,17 @@ The comment in styles.go currently has Light and Dark reversed ("Light = color o
 
 ```go
 // cli/internal/tui/styles_test.go
-func TestRomanescoPaletteValues(t *testing.T) {
-	// Verify the primary color uses the Romanesco mint value (not the old color)
+func TestNescoPaletteValues(t *testing.T) {
+	// Verify the primary color uses the Nesco mint value (not the old color)
 	ac, ok := primaryColor.(lipgloss.AdaptiveColor)
 	if !ok {
 		t.Fatal("primaryColor should be AdaptiveColor")
 	}
 	if ac.Dark != "#6EE7B7" {
-		t.Errorf("primaryColor.Dark should be #6EE7B7 (Romanesco mint), got %s", ac.Dark)
+		t.Errorf("primaryColor.Dark should be #6EE7B7 (Nesco mint), got %s", ac.Dark)
 	}
 	if ac.Light != "#047857" {
-		t.Errorf("primaryColor.Light should be #047857 (Romanesco mint dark), got %s", ac.Light)
+		t.Errorf("primaryColor.Light should be #047857 (Nesco mint dark), got %s", ac.Light)
 	}
 	// Verify accentColor exists (was secondaryColor)
 	acc, ok := accentColor.(lipgloss.AdaptiveColor)
@@ -47,7 +47,7 @@ func TestRomanescoPaletteValues(t *testing.T) {
 		t.Fatal("accentColor should be AdaptiveColor")
 	}
 	if acc.Dark != "#C4B5FD" {
-		t.Errorf("accentColor.Dark should be #C4B5FD (Romanesco viola), got %s", acc.Dark)
+		t.Errorf("accentColor.Dark should be #C4B5FD (Nesco viola), got %s", acc.Dark)
 	}
 }
 
@@ -62,7 +62,7 @@ func TestPanelStylesExist(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (accentColor undefined, sidebarBorderStyle undefined)
 
 #### Step 1: Replace the color block
@@ -135,7 +135,7 @@ Add new panel styles at the end of the `var` block:
 
 #### Step 4: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -143,7 +143,7 @@ Expected: PASS
 ### Task 1.2: Update styles_test.go for Renamed Variable
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/styles_test.go` (lines 21-34)
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/styles_test.go` (lines 21-34)
 
 **Depends on:** Task 1.1
 
@@ -195,9 +195,9 @@ func TestPanelColorsAreAdaptive(t *testing.T) {
 ### Task 1.3: Add New Dependencies
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/go.mod` (via go get)
-- Modify: `/home/hhewett/.local/src/romanesco/cli/go.sum` (via go get)
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/styles_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/go.mod` (via go get)
+- Modify: `/home/hhewett/.local/src/nesco/cli/go.sum` (via go get)
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/styles_test.go`
 
 **Depends on:** nothing (can run in parallel with Task 1.1)
 
@@ -222,13 +222,13 @@ func TestDependenciesPresent(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go build ./...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go build ./...`
 Expected: Build fails if any file imports the packages before they're in go.mod. (If no imports yet, verify go.mod does NOT contain the packages.)
 
 #### Step 1: Run go get for both packages
 
 ```bash
-cd /home/hhewett/.local/src/romanesco/cli
+cd /home/hhewett/.local/src/nesco/cli
 go get github.com/lrstanley/bubblezone@latest
 go get github.com/rmhubbert/bubbletea-overlay@latest
 ```
@@ -237,7 +237,7 @@ go get github.com/rmhubbert/bubbletea-overlay@latest
 
 #### Step 2: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go build ./...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go build ./...`
 Expected: PASS (go.mod now contains both packages)
 
 ---
@@ -247,8 +247,8 @@ Expected: PASS (go.mod now contains both packages)
 ### Task 2.1: Create sidebar.go
 
 **Files:**
-- Create: `/home/hhewett/.local/src/romanesco/cli/internal/tui/sidebar.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/sidebar_test.go`
+- Create: `/home/hhewett/.local/src/nesco/cli/internal/tui/sidebar.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/sidebar_test.go`
 
 **Depends on:** Task 1.1
 
@@ -305,7 +305,7 @@ func TestSidebarViewContainsDiamonds(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (sidebarModel undefined)
 
 #### Step 1: Write sidebar.go
@@ -319,7 +319,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
 )
 
 const sidebarWidth = 18 // fixed width including border character
@@ -452,7 +452,7 @@ func (m sidebarModel) selectedType() catalog.ContentType {
 
 #### Step 2: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -460,8 +460,8 @@ Expected: PASS
 ### Task 2.2: Wire sidebarModel into App struct (compile-only, no behavior change yet)
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app.go` (lines 27-56, 60-71)
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/app.go` (lines 27-56, 60-71)
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/app_test.go`
 
 **Depends on:** Task 2.1
 
@@ -490,7 +490,7 @@ func TestAppHasSidebarField(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (App.sidebar undefined)
 
 #### Step 1: Add sidebar field to App struct
@@ -511,7 +511,7 @@ Add to the `return App{...}` literal in `NewApp()`:
 
 #### Step 3: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -521,8 +521,8 @@ Expected: PASS
 ### Task 3.1: Add focusTarget Type and Focus Field to App
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app.go` (lines 16-25, 27-56)
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/app.go` (lines 16-25, 27-56)
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/app_test.go`
 
 **Depends on:** Task 2.2
 
@@ -551,7 +551,7 @@ func TestFocusTargetConstants(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (focusSidebar undefined, App.focus undefined)
 
 #### Step 1: Add focusTarget type after the screen enum
@@ -586,7 +586,7 @@ Add to `NewApp()` return literal:
 
 #### Step 4: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -594,8 +594,8 @@ Expected: PASS
 ### Task 3.2: Refactor App.View() to Sidebar + Content Composition
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app.go` (lines 511-553)
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/app.go` (lines 511-553)
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/app_test.go`
 
 **Depends on:** Task 3.1
 
@@ -628,7 +628,7 @@ func TestAppViewContainsBreadcrumb(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (breadcrumb/footer not rendered in current App.View())
 
 #### Step 1: Replace App.View() entirely
@@ -744,7 +744,7 @@ func (a App) breadcrumb() string {
 
 #### Step 2: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -752,9 +752,9 @@ Expected: PASS
 ### Task 3.3: Refactor App.Update() for Focus-Based Input Routing
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app.go` (lines 77-509)
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/keys.go` (add `Right` binding)
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/app.go` (lines 77-509)
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/keys.go` (add `Right` binding)
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/app_test.go`
 
 **Depends on:** Task 3.2
 
@@ -811,7 +811,7 @@ func TestEscFromItemsReturnsFocusToSidebar(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (Tab does not toggle focus, Esc changes screen instead of focus)
 
 #### Step 0c: Add Right binding to keys.go
@@ -996,7 +996,7 @@ For `screenUpdate` and `screenSettings` back, add `a.focus = focusSidebar` after
 
 #### Step 6: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -1004,9 +1004,9 @@ Expected: PASS
 ### Task 3.4: Remove Redundant screenCategory View Routing and Category Model
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app.go` (App.View switch)
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app.go` (App struct, NewApp)
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/app.go` (App.View switch)
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/app.go` (App struct, NewApp)
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/app_test.go`
 
 **Depends on:** Task 3.3
 
@@ -1036,7 +1036,7 @@ func TestAppHasNoCategory(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (App.statusMessage undefined)
 
 #### Step 1: Remove category field from App struct
@@ -1088,11 +1088,11 @@ Update `renderFooter()` to display `a.statusMessage` when set (e.g., append it t
 #### Step 4: Delete category.go
 
 Once `categoryModel` is fully replaced by `sidebarModel` and no references remain, delete:
-`/home/hhewett/.local/src/romanesco/cli/internal/tui/category.go`
+`/home/hhewett/.local/src/nesco/cli/internal/tui/category.go`
 
 #### Step 5: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -1102,9 +1102,9 @@ Expected: PASS
 ### Task 4.1: Refactor renderContent() to Put Metadata Above Separator
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail_render.go` (lines 15-50)
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail.go` (`clampScroll()` method — Step 4 rewrites it)
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail_render_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail_render.go` (lines 15-50)
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail.go` (`clampScroll()` method — Step 4 rewrites it)
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail_render_test.go`
 
 **Depends on:** Task 3.2 (sidebar exists and content width is set correctly)
 
@@ -1126,7 +1126,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
 )
 
 func TestRenderContentSplitHasSeparator(t *testing.T) {
@@ -1167,7 +1167,7 @@ func TestRenderContentSplitMetadataInPinned(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (renderContentSplit undefined)
 
 #### Step 1: Replace renderContent() with pinned-header version
@@ -1335,7 +1335,7 @@ func (m *detailModel) clampScroll() {
 
 #### Step 5: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -1345,8 +1345,8 @@ Expected: PASS
 ### Task 5.1: Initialize bubblezone in main.go
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/cmd/nesco/main.go` (around line 196)
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/styles_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/cmd/nesco/main.go` (around line 196)
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/styles_test.go`
 
 **Depends on:** Task 1.3
 
@@ -1372,7 +1372,7 @@ func TestBubblezoneImportable(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (zone import not yet in styles_test.go, or zone.NewGlobal referenced before Task 1.3 completes)
 
 #### Step 1: Add import and initialization in main.go's runTUI function
@@ -1393,7 +1393,7 @@ p := tea.NewProgram(app,
 
 #### Step 2: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go build ./...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go build ./...`
 Expected: PASS
 
 ---
@@ -1401,8 +1401,8 @@ Expected: PASS
 ### Task 5.2: Add zone.Mark() to Sidebar Rendering
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/sidebar.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/sidebar_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/sidebar.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/sidebar_test.go`
 
 **Depends on:** Task 5.1, Task 2.1
 
@@ -1428,7 +1428,7 @@ func TestSidebarViewHasZoneMarks(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (no zone.Mark calls in View() yet)
 
 #### Step 1: Add zone import to sidebar.go
@@ -1474,7 +1474,7 @@ case tea.MouseMsg:
 
 #### Step 4: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -1482,10 +1482,10 @@ Expected: PASS
 ### Task 5.3: Add zone.Mark() to Items List and Detail Tabs
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/items.go` (View method)
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail_render.go` (renderTabBar)
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app.go` (MouseMsg handler + App.View return)
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail_render_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/items.go` (View method)
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail_render.go` (renderTabBar)
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/app.go` (MouseMsg handler + App.View return)
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail_render_test.go`
 
 **Depends on:** Task 5.2
 
@@ -1513,7 +1513,7 @@ func TestRenderTabBarHasZoneMarks(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (no zone.Mark in renderTabBar yet)
 
 #### Step 1: Wrap item rows in items.go View()
@@ -1604,7 +1604,7 @@ return zone.Scan(fmt.Sprintf("\n%s\n", body))
 
 #### Step 6: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -1614,8 +1614,8 @@ Expected: PASS
 ### Task 6.1: Create modal.go with ConfirmModal Component
 
 **Files:**
-- Create: `/home/hhewett/.local/src/romanesco/cli/internal/tui/modal.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/modal_test.go`
+- Create: `/home/hhewett/.local/src/nesco/cli/internal/tui/modal.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/modal_test.go`
 
 **Depends on:** Task 1.3
 
@@ -1674,7 +1674,7 @@ func TestConfirmModalEscCancels(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (confirmModal undefined)
 
 #### Step 1: Write modal.go
@@ -1760,7 +1760,7 @@ func (m confirmModal) overlayView(background string) string {
 
 #### Step 2: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -1768,8 +1768,8 @@ Expected: PASS
 ### Task 6.2: Add Modal Field to App Struct and Route Modal Input
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/modal_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/app.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/modal_test.go`
 
 **Depends on:** Task 6.1, Task 3.3
 
@@ -1805,7 +1805,7 @@ func TestAppModalCapturesInput(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (App.modal field undefined)
 
 #### Step 1: Add modal field to App struct
@@ -1843,7 +1843,7 @@ After composing `panels` and `footer` in View(), add:
 
 #### Step 4: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -1851,9 +1851,9 @@ Expected: PASS
 ### Task 6.3: Convert Install Flow to Modal
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app.go`
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/modal_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/app.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/modal_test.go`
 
 **Depends on:** Task 6.2
 
@@ -1894,7 +1894,7 @@ func TestOpenModalMsgOpensModal(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (openModalMsg undefined, modalInstall undefined)
 
 #### Step 1: Define a modalPurpose type to track what the modal is confirming
@@ -1979,7 +1979,7 @@ case openModalMsg:
 
 #### Step 5: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -1987,9 +1987,9 @@ Expected: PASS
 ### Task 6.4: Convert Uninstall, Save, Promote, and App Script to Modals
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail.go`
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/modal_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/app.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/modal_test.go`
 
 **Depends on:** Task 6.3
 
@@ -2024,7 +2024,7 @@ func TestModalPurposesAreDefined(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (modalSave, modalPromote, modalAppScript undefined if not yet added in Task 6.3)
 
 #### Step 1: Replace actionUninstall emit
@@ -2131,7 +2131,7 @@ In `renderInstallTab()`, delete the `case actionUninstall:` and `case actionProm
 
 #### Step 6: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -2139,10 +2139,10 @@ Expected: PASS
 ### Task 6.5: Convert Save Prompt to Modal
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/modal.go`
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail.go`
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/modal_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/modal.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/app.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/modal_test.go`
 
 **Depends on:** Task 6.4
 
@@ -2183,7 +2183,7 @@ func TestSaveModalEnterWithValueConfirms(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (saveModal undefined, newSaveModal undefined)
 
 #### Step 1: Add saveModal struct to modal.go
@@ -2332,7 +2332,7 @@ Delete the `actionSavePath` and `actionSaveMethod` confirm paths from `detail.Up
 
 #### Step 6: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -2340,10 +2340,10 @@ Expected: PASS
 ### Task 6.6: Implement Env Setup Modal Wizard
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/modal.go`
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail.go`
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/modal_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/modal.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/app.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/modal_test.go`
 
 **Depends on:** Task 6.5
 
@@ -2384,7 +2384,7 @@ func TestEnvSetupModalStep1EnterAdvances(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (newEnvSetupModal undefined, envStepSelectType undefined)
 
 #### Step 1: Add envSetupModal struct to modal.go
@@ -2603,7 +2603,7 @@ case openEnvModalMsg:
 
 #### Step 5: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -2611,9 +2611,9 @@ Expected: PASS
 ### Task 6.7: Add zone.Mark() to Detail Action Buttons
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail_render.go`
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/app.go`
-- Test: `/home/hhewett/.local/src/romanesco/cli/internal/tui/detail_render_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail_render.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/app.go`
+- Test: `/home/hhewett/.local/src/nesco/cli/internal/tui/detail_render_test.go`
 
 **Depends on:** Task 5.3
 
@@ -2651,7 +2651,7 @@ func TestRenderInstallTabHasActionButtons(t *testing.T) {
 
 #### Step 0b: Run test to verify it fails
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: FAIL (no zone marks in renderInstallTab yet)
 
 #### Step 1: Add an action button bar to renderInstallTab()
@@ -2697,7 +2697,7 @@ Add to the `case tea.MouseMsg:` handler in `app.go`:
 
 #### Step 3: Run tests to verify they pass
 
-Run: `cd /home/hhewett/.local/src/romanesco/cli && go test ./internal/tui/...`
+Run: `cd /home/hhewett/.local/src/nesco/cli && go test ./internal/tui/...`
 Expected: PASS
 
 ---
@@ -2705,7 +2705,7 @@ Expected: PASS
 ### Task 1.4: Add WCAG AA Contrast Verification Test
 
 **Files:**
-- Modify: `/home/hhewett/.local/src/romanesco/cli/internal/tui/styles_test.go`
+- Modify: `/home/hhewett/.local/src/nesco/cli/internal/tui/styles_test.go`
 
 **Depends on:** Task 1.2
 
@@ -2744,7 +2744,7 @@ func relativeLuminance(hex string) float64 {
 	return 0.2126*toLinear(r) + 0.7152*toLinear(g) + 0.0722*toLinear(b)
 }
 
-// TestColorsPassWCAGAA verifies all Romanesco palette colors achieve >= 4.5:1
+// TestColorsPassWCAGAA verifies all Nesco palette colors achieve >= 4.5:1
 // contrast ratio against their respective terminal background assumptions.
 // Light colors are tested against white (#FFFFFF); dark colors against near-black (#18181B).
 func TestColorsPassWCAGAA(t *testing.T) {
@@ -2791,7 +2791,7 @@ func TestColorsPassWCAGAA(t *testing.T) {
 
 | File | Action |
 |------|--------|
-| `cli/internal/tui/styles.go` | Modify: Romanesco palette + panel styles |
+| `cli/internal/tui/styles.go` | Modify: Nesco palette + panel styles |
 | `cli/internal/tui/styles_test.go` | Modify: rename secondaryColor → accentColor, add panel color tests + WCAG AA test |
 | `cli/internal/tui/sidebar.go` | Create: sidebarModel struct + View + Update |
 | `cli/internal/tui/sidebar_test.go` | Create: sidebarModel unit tests |

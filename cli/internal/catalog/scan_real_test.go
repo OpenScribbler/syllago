@@ -6,7 +6,7 @@ import (
 )
 
 func TestScanRealRepo(t *testing.T) {
-	cat, err := Scan("/home/hhewett/.local/src/romanesco")
+	cat, err := Scan("/home/hhewett/.local/src/nesco")
 	if err != nil {
 		t.Fatalf("Scan failed: %v", err)
 	}

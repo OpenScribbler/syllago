@@ -7,7 +7,7 @@
     "brainstorm"
   ],
   "artifacts": {
-    "design": "/home/hhewett/.local/src/romanesco/.develop/tui-redesign-validation-report.md",
+    "design": "/home/hhewett/.local/src/nesco/.develop/tui-redesign-validation-report.md",
     "plan": null
   },
   "validation": {
@@ -27,7 +27,7 @@
     "tool": "Skill",
     "toolInput": {
       "skill": "plan",
-      "args": "--from-design /home/hhewett/.local/src/romanesco/.develop/tui-redesign-validation-report.md"
+      "args": "--from-design /home/hhewett/.local/src/nesco/.develop/tui-redesign-validation-report.md"
     }
   }
 }

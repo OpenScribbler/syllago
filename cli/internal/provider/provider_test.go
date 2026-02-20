@@ -3,7 +3,7 @@ package provider
 import (
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
 )
 
 func TestDiscoveryPaths(t *testing.T) {

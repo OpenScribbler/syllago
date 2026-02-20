@@ -8,7 +8,7 @@
     "plan"
   ],
   "artifacts": {
-    "design": "/home/hhewett/.local/src/romanesco/docs/nesco-design-decisions.md",
+    "design": "/home/hhewett/.local/src/nesco/docs/nesco-design-decisions.md",
     "plan": null
   },
   "validation": {

@@ -1,6 +1,6 @@
 # Nesco Import Skill
 
-A built-in skill that teaches LLMs how to import content into a romanesco repository using the `nesco` CLI.
+A built-in skill that teaches LLMs how to import content into a nesco repository using the `nesco` CLI.
 
 ## What It Does
 

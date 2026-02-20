@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/holdenhewett/romanesco/cli/internal/output"
-	"github.com/holdenhewett/romanesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/holdenhewett/nesco/cli/internal/provider"
 )
 
 // findProjectRoot walks up from cwd looking for common project markers.
@@ -45,6 +45,19 @@ func findProjectRootImpl() (string, error) {
 	}
 	fmt.Fprintf(output.ErrWriter, "Warning: no project markers found (go.mod, package.json, etc.). Using current directory: %s\n", cwd)
 	return cwd, nil
+}
+
+// isInteractive reports whether stdin is connected to a terminal.
+// Returns false when stdin is piped or redirected (e.g. CI, scripts),
+// which lets commands auto-accept prompts instead of hanging.
+var isInteractive = isInteractiveImpl
+
+func isInteractiveImpl() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
 }
 
 // findProviderBySlug returns a pointer to the matching provider, or nil.

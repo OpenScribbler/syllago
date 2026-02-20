@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/holdenhewett/romanesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
 )
 
 func TestItemsNavigationUpDown(t *testing.T) {
