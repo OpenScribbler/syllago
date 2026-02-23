@@ -1,56 +1,18 @@
+<div align="center">
+
 # Nesco
 
-```
-░████████   ░███████   ░███████   ░███████   ░███████      ░███████  ░██ ░██
-░██    ░██ ░██    ░██ ░██        ░██    ░██ ░██    ░██    ░██    ░██ ░██ ░██
-░██    ░██ ░█████████  ░███████  ░██        ░██    ░██    ░██        ░██ ░██
-░██    ░██ ░██               ░██ ░██    ░██ ░██    ░██    ░██    ░██ ░██ ░██
-░██    ░██  ░███████   ░███████   ░███████   ░███████      ░███████  ░██ ░██
-```
+<pre>
+░████████   ░███████   ░███████   ░███████   ░███████
+░██    ░██ ░██    ░██ ░██        ░██    ░██ ░██    ░██
+░██    ░██ ░█████████  ░███████  ░██        ░██    ░██
+░██    ░██ ░██               ░██ ░██    ░██ ░██    ░██
+░██    ░██  ░███████   ░███████   ░███████   ░███████
+</pre>
 
-```
-                                 ##+
-                                ###+#
-                              ###++++++      ######
-                             ###++++++++  ##########
-                  ++++++-   ###++++++++#############
-                 ++++++-...##++++++++#########+++++++
-                 +++++--..##+++++++#######++++++++#+++++++++#+
-                 +++++--.#+++++++######+++++#++++++++++++++++++
-      #######+++#+++++-.###+++++#####++++#+++++++++++++++++++++
-      #######+++#++++--.#++++++#####++#++++++++---------------+
-      #######+++#++++--.#+++++###+++++++++------.............-
-      ########+++++++--##++++####+#+++----##################..
-       #######++++++++-##+++###+++++--##++++++++++++++++++++########
-       #######+++#++++-##+++####++++##+++++++++++++++++++++++++++#+####
-        #######+++++++-##++###+++-#+++###############+++++++++++++#####
-         #######++#++++.#++###++-++######+++############++++++++++++####
-        ++#######++#+++-#++##+++#+###++++++####++##########++++++++++++
-      +++++#######++++++-#++#++++###+-+++++++++###++#########++++++++#
-    ####++++#######++#+++-#+##+++#+#++##+##++++++####++########+++++
-   ######+++++######++++++-#++#+++#++##++#+#-++++++####++########-+
-   ########+++++######+++++++#++########++#+##+++++++###+++#######
-    #########+++++#######++#+++++++++###++##+##-++++++###+++######
-      +#########++++########+#++++#####+++##+##--++++++###+++###
-         ##########+#+++##############-+++##++##-+++++++###++#
-          .-############+#+++++######+++++##++##-++++++++###
-         ---....##################+-+++++##++###-++++++++####
-         --------...-#########---++++#++###++###--++++++++####
-        ++++++---+-----------++++++#++###+++###--++++++++####
-        +++++++++++++++++++++++++#++++###++++###--++++++++#####
-        #++++++++++++++++++++##+++++####++++###---+++++++++####
-           ####+++++++++##++++++++#####++++####--++++++++++####
-                 ++++++++++++++######+++++####.--+++++++++#+#
-                  ++++++++#########++++++####.---+++++
-                  ###############++++++#####----++++++
-                  ############+++++++######.---++++++
-                   ########    ++++++#####    +++++++
-                    ##          +#######+
-                                  #####
-                                   ##
-```
+</div>
 
-A CLI and TUI for managing AI coding tool content and scanning codebases for context. Browse and install skills, agents, prompts, rules, hooks, commands, and MCP configs across Claude Code, Cursor, Windsurf, Codex, and Gemini CLI. Scan any project to generate context files that help AI agents produce correct code.
+A CLI and TUI for managing AI coding tool content. Browse, install, and export skills, agents, prompts, rules, hooks, commands, and MCP configs across Claude Code, Cursor, Windsurf, Codex, and Gemini CLI. Content is automatically converted between provider formats when you install or export.
 
 ## Getting Started
 
@@ -67,7 +29,7 @@ This location becomes your local content library. The `nesco` CLI reads from it 
 
 ### 2. Build the CLI
 
-Requires Go 1.25+.
+Requires Go 1.25.5 or later.
 
 ```bash
 cd ~/.local/src/nesco
@@ -102,11 +64,9 @@ nesco version
 
 ## What It Does
 
-Nesco has two sides:
+A centralized repository of reusable content for AI coding tools — custom instructions, agent definitions, prompt templates, hook scripts, and MCP server configs. The `nesco` TUI lets you browse, preview, and install content into any supported tool. When you install or export, Nesco detects which tools you have, converts formats between providers as needed (e.g., Cursor MDC to Claude Code Markdown), and places files in the correct locations.
 
-**Content management.** A centralized repository of reusable content for AI coding tools — custom instructions, agent definitions, prompt templates, hook scripts, and MCP server configs. The `nesco` TUI lets you browse, preview, and install content into any supported tool. When you install, Nesco detects which tools you have, converts formats as needed, and places files in the correct locations.
-
-**Codebase scanning.** `nesco scan` runs detectors against your project to discover tech stack, dependencies, build commands, conventions, and "surprises" (gotchas that trip up AI agents). Results are emitted as context files in each provider's native format — Markdown for Claude Code, MDC for Cursor, etc. Drift detection lets you track how your codebase changes over time.
+The `nesco export` command copies content from your local `my-tools/` directory into a provider's install location, handling cross-provider format conversion automatically. The `nesco add` command imports content from external sources (local filesystem or git repos) into the catalog, canonicalizing provider-specific formats on ingest.
 
 ## The TUI
 
@@ -163,18 +123,13 @@ Check for updates, preview what's new (commit log + diffstat), and pull — all 
 
 ## Commands
 
-Subcommands handle scanning, drift detection, and configuration:
-
 | Command | Description |
 |---------|-------------|
 | `nesco` | Launch the TUI |
 | `nesco init` | Initialize nesco for a project (creates `.nesco/config.json`) |
-| `nesco scan` | Run detectors and generate context files for configured providers |
-| `nesco drift` | Compare current codebase state against the stored baseline |
-| `nesco baseline` | Save current state as the baseline for drift detection |
+| `nesco add` | Add content to the catalog from local filesystem or git repos |
+| `nesco export` | Export items from `my-tools/` to a provider's install location |
 | `nesco import` | Read existing AI tool configs into the canonical model (read-only) |
-| `nesco parity` | Compare AI tool configs across providers and report gaps |
-| `nesco add` | Add content items to the catalog (non-interactive import) |
 | `nesco config` | Manage provider selection (`list`, `add`, `remove`) |
 | `nesco info` | Show capabilities (`providers`, `formats`) |
 | `nesco version` | Print version |
@@ -190,56 +145,32 @@ All commands accept these flags:
 -v, --verbose Verbose output
 ```
 
-### Scanning Workflow
+### Example Workflows
 
 ```bash
-# First time: initialize and scan
-nesco init              # Detect tools, create .nesco/config.json
-nesco scan              # Run detectors, emit context files, set baseline
+# Add content from a git repo
+nesco add --from https://github.com/user/repo.git --type skills --name my-skill
 
-# Later: check for drift
-nesco drift             # Compare current state against baseline
-nesco drift --ci        # CI mode — exit code 3 if drift detected
+# Export your local content to Claude Code
+nesco export --to claude-code
 
-# After reviewing drift, accept the new state
-nesco baseline          # Update baseline to current state
+# Export only rules to Cursor
+nesco export --to cursor --type rules
 
-# Re-scan after changes
-nesco scan              # Re-run detectors and update context files
-```
-
-### Import and Parity
-
-```bash
 # See what a provider already has configured
 nesco import --from claude-code
 nesco import --from cursor --type rules --preview
-
-# Compare content across providers
-nesco parity
 ```
 
 ## Supported Tools
 
-| Tool | Rules | Commands | Hooks | MCP |
-|------|-------|----------|-------|-----|
-| Claude Code | ✓ | ✓ | ✓ | ✓ |
-| Cursor | ✓ | — | — | ✓ |
-| Windsurf | ✓ | — | — | ✓ |
-| Codex | ✓ | ✓ | — | — |
-| Gemini CLI | ✓ | ✓ | ✓ | — |
-
-## Codebase Detectors
-
-`nesco scan` runs 30+ detectors against your project to discover:
-
-- **Tech stack** — Languages, frameworks, runtime versions
-- **Dependencies** — Package managers, dependency files, version constraints
-- **Build system** — Build commands, test runners, CI configuration
-- **Conventions** — Linting rules, test patterns, directory structure, env variables
-- **Surprises** — Go replace directives, Rust feature flags, Python async patterns, TypeScript strictness, competing frameworks, namespace packages, nil interface returns, and other gotchas that trip up AI agents
-
-Results are emitted as context files in each provider's native format (Markdown for Claude Code, MDC for Cursor, etc.) so AI tools automatically get project-specific awareness.
+| Tool        | Rules | Skills | Agents | Commands | Hooks | MCP |
+|-------------|:-----:|:------:|:------:|:--------:|:-----:|:---:|
+| Claude Code |   ✓   |   ✓    |   ✓    |    ✓     |   ✓   |  ✓  |
+| Gemini CLI  |   ✓   |   ✓    |   ✓    |    ✓     |   ✓   |  ✓  |
+| Codex       |   ✓   |   —    |   —    |    ✓     |   —   |  —  |
+| Cursor      |   ✓   |   —    |   —    |    —     |   —   |  —  |
+| Windsurf    |   ✓   |   —    |   —    |    —     |   —   |  —  |
 
 ## Repository Structure
 
