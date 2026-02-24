@@ -1,18 +1,21 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/holdenhewett/nesco/cli/internal/catalog"
 	"github.com/holdenhewett/nesco/cli/internal/config"
 	"github.com/holdenhewett/nesco/cli/internal/metadata"
 	"github.com/holdenhewett/nesco/cli/internal/output"
 	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/holdenhewett/nesco/cli/internal/registry"
 	"github.com/holdenhewett/nesco/cli/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -164,7 +167,43 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("could not find nesco content repository.\n\nTo get started:\n  nesco init    Create a new content repo in the current directory\n\nFor more info: nesco --help")
 	}
 
-	cat, err := catalog.Scan(root)
+	// Load config to get registry list and preferences
+	cfg, cfgErr := config.Load(root)
+	if cfgErr != nil {
+		cfg = &config.Config{}
+	}
+
+	// Auto-sync registries if enabled (5-second timeout; failure is non-fatal)
+	if cfgErr == nil && cfg.Preferences["registryAutoSync"] == "true" && len(cfg.Registries) > 0 {
+		names := make([]string, len(cfg.Registries))
+		for i, r := range cfg.Registries {
+			names[i] = r.Name
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		_ = ctx // The goroutine and underlying git process are intentionally abandoned on timeout — git will finish on its own.
+		syncDone := make(chan struct{})
+		go func() {
+			registry.SyncAll(names)
+			close(syncDone)
+		}()
+		select {
+		case <-syncDone:
+		case <-ctx.Done():
+			fmt.Fprintf(os.Stderr, "Registry auto-sync timed out, using cached content\n")
+		}
+		cancel()
+	}
+
+	// Build registry sources from config
+	var regSources []catalog.RegistrySource
+	for _, r := range cfg.Registries {
+		if registry.IsCloned(r.Name) {
+			dir, _ := registry.CloneDir(r.Name)
+			regSources = append(regSources, catalog.RegistrySource{Name: r.Name, Path: dir})
+		}
+	}
+
+	cat, err := catalog.ScanWithRegistries(root, regSources)
 	if err != nil {
 		return fmt.Errorf("catalog scan failed: %w", err)
 	}
@@ -176,7 +215,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "Cleaned up promoted item: %s (%s)\n", c.Name, c.Type)
 		}
 		// Rescan after cleanup
-		cat, err = catalog.Scan(root)
+		cat, err = catalog.ScanWithRegistries(root, regSources)
 		if err != nil {
 			return fmt.Errorf("error rescanning catalog: %w", err)
 		}
@@ -186,12 +225,11 @@ func runTUI(cmd *cobra.Command, args []string) error {
 
 	// Check if auto-update is enabled in project config
 	autoUpdate := false
-	cfg, cfgErr := config.Load(root)
 	if cfgErr == nil && cfg.Preferences["autoUpdate"] == "true" {
 		autoUpdate = true
 	}
 
-	app := tui.NewApp(cat, providers, version, autoUpdate)
+	app := tui.NewApp(cat, providers, version, autoUpdate, regSources, cfg)
 	zone.NewGlobal()
 	p := tea.NewProgram(app,
 		tea.WithAltScreen(),

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/converter"
 	"github.com/holdenhewett/nesco/cli/internal/provider"
 )
 
@@ -67,7 +68,8 @@ func resolveTarget(item catalog.ContentItem, prov provider.Provider) (string, er
 }
 
 // CheckStatus checks whether an item is installed for a given provider.
-func CheckStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
+// registryPaths contains additional valid symlink source roots (registry cache directories).
+func CheckStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string, registryPaths ...string) Status {
 	// Dispatch to JSON merge handlers for types that need it
 	if IsJSONMerge(prov, item.Type) {
 		switch item.Type {
@@ -84,7 +86,8 @@ func CheckStatus(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return StatusNotAvailable
 	}
 
-	if IsSymlinkedTo(targetPath, repoRoot) {
+	allRoots := append([]string{repoRoot}, registryPaths...)
+	if IsSymlinkedToAny(targetPath, allRoots) {
 		return StatusInstalled
 	}
 
@@ -110,6 +113,18 @@ func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, 
 			return installHook(item, prov, repoRoot)
 		}
 		return "", fmt.Errorf("%s does not support %s via JSON merge", prov.Name, item.Type.Label())
+	}
+
+	// Check for cross-provider rendering via converter
+	if conv := converter.For(item.Type); conv != nil {
+		// Source provider differs from target → render from canonical
+		if item.Provider != "" && item.Provider != prov.Slug {
+			return installWithRender(item, prov, conv)
+		}
+		// Same provider + has .source/ → use original for lossless install
+		if converter.HasSourceFile(item) && item.Provider == prov.Slug {
+			return installFromSource(item, prov)
+		}
 	}
 
 	targetPath, err := resolveTarget(item, prov)
@@ -172,4 +187,72 @@ func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string
 	}
 
 	return "", fmt.Errorf("unexpected file type at %s, remove manually", targetPath)
+}
+
+// installWithRender reads canonical content and renders it for the target provider.
+// Used when the item's source provider differs from the install target.
+func installWithRender(item catalog.ContentItem, prov provider.Provider, conv converter.Converter) (string, error) {
+	contentFile := converter.ResolveContentFile(item)
+	if contentFile == "" {
+		return "", fmt.Errorf("no content file found in %s", item.Path)
+	}
+
+	content, err := os.ReadFile(contentFile)
+	if err != nil {
+		return "", fmt.Errorf("reading content file: %w", err)
+	}
+
+	result, err := conv.Render(content, prov)
+	if err != nil {
+		return "", fmt.Errorf("rendering for %s: %w", prov.Name, err)
+	}
+
+	// nil Content means this rule should be skipped (e.g. non-alwaysApply for single-file providers)
+	if result.Content == nil {
+		for _, w := range result.Warnings {
+			fmt.Fprintf(os.Stderr, "warning: %s: %s\n", item.Name, w)
+		}
+		return "", fmt.Errorf("skipped %s: not compatible with %s", item.Name, prov.Name)
+	}
+
+	for _, w := range result.Warnings {
+		fmt.Fprintf(os.Stderr, "warning: %s: %s\n", item.Name, w)
+	}
+
+	targetPath, err := resolveTarget(item, prov)
+	if err != nil {
+		return "", err
+	}
+
+	// Rendered content uses the converter's filename
+	targetDir := filepath.Dir(targetPath)
+	targetPath = filepath.Join(targetDir, result.Filename)
+
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		return "", err
+	}
+	return targetPath, os.WriteFile(targetPath, result.Content, 0644)
+}
+
+// installFromSource copies the .source/ original directly to the target.
+// Used for lossless roundtrip when target matches source provider.
+func installFromSource(item catalog.ContentItem, prov provider.Provider) (string, error) {
+	sourcePath := converter.SourceFilePath(item)
+	if sourcePath == "" {
+		return "", fmt.Errorf("no source file found in %s/.source/", item.Path)
+	}
+
+	targetPath, err := resolveTarget(item, prov)
+	if err != nil {
+		return "", err
+	}
+
+	// Use the original filename from .source/
+	targetDir := filepath.Dir(targetPath)
+	targetPath = filepath.Join(targetDir, filepath.Base(sourcePath))
+
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		return "", err
+	}
+	return targetPath, CopyContent(sourcePath, targetPath)
 }

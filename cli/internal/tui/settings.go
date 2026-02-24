@@ -56,7 +56,7 @@ func newSettingsModel(repoRoot string, providers []provider.Provider) settingsMo
 
 // settingsRowCount returns the number of configurable rows.
 func (m settingsModel) settingsRowCount() int {
-	return 2 // auto-update, providers
+	return 3 // auto-update, providers, registry-auto-sync
 }
 
 func (m settingsModel) Update(msg tea.Msg) (settingsModel, tea.Cmd) {
@@ -157,6 +157,16 @@ func (m *settingsModel) activateRow() {
 				checked: enabled[p.Slug],
 			})
 		}
+	case 2: // registry auto-sync toggle
+		if m.cfg.Preferences == nil {
+			m.cfg.Preferences = make(map[string]string)
+		}
+		if m.cfg.Preferences["registryAutoSync"] == "true" {
+			m.cfg.Preferences["registryAutoSync"] = "false"
+		} else {
+			m.cfg.Preferences["registryAutoSync"] = "true"
+		}
+		m.dirty = true
 	}
 }
 
@@ -186,6 +196,13 @@ func (m *settingsModel) save() {
 	}
 }
 
+// settingsDescriptions maps cursor index to a description shown in the bottom detail area.
+var settingsDescriptions = []string{
+	"Pull updates automatically when a new version is detected on the remote.",
+	"Providers are AI coding tools (Claude Code, Cursor, Gemini CLI, etc.).\nEnable the ones you use -- nesco imports their existing configs\nand can export your catalog items back to them.",
+	"Sync git registries automatically when nesco launches (5-second timeout).\nRegistries must be added via `nesco registry add` first.",
+}
+
 func (m settingsModel) View() string {
 	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + " " + helpStyle.Render(">") + " " + titleStyle.Render("Settings") + "\n\n"
 
@@ -203,11 +220,17 @@ func (m settingsModel) View() string {
 	}
 	s += m.renderRow(1, "Providers", provVal)
 
+	// Row 2: Registry auto-sync
+	autoSyncVal := "off"
+	if m.cfg.Preferences["registryAutoSync"] == "true" {
+		autoSyncVal = "on"
+	}
+	s += m.renderRow(2, "Registry auto-sync", autoSyncVal)
+
 	// Sub-picker overlay
 	if m.editMode != editNone {
 		s += "\n"
-		title := "Select providers:"
-		s += labelStyle.Render(title) + "\n"
+		s += labelStyle.Render("Select providers:") + "\n\n"
 
 		for i, item := range m.subItems {
 			prefix := "  "
@@ -237,6 +260,21 @@ func (m settingsModel) View() string {
 			s += successMsgStyle.Render("Done: " + m.message)
 		}
 		s += "\n"
+	}
+
+	// Bottom detail area (fixed 3-line height to prevent jitter)
+	if m.editMode == editNone && m.cursor >= 0 && m.cursor < len(settingsDescriptions) {
+		const detailLines = 3
+		s += "\n " + helpStyle.Render(strings.Repeat("─", 45)) + "\n"
+		lines := strings.Split(settingsDescriptions[m.cursor], "\n")
+		for i := 0; i < detailLines; i++ {
+			if i < len(lines) {
+				s += " " + helpStyle.Render(lines[i]) + "\n"
+			} else {
+				s += "\n"
+			}
+		}
+		s += " " + helpStyle.Render(strings.Repeat("─", 45)) + "\n"
 	}
 
 	if m.editMode == editNone {

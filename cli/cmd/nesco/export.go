@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/converter"
 	"github.com/holdenhewett/nesco/cli/internal/installer"
 	"github.com/holdenhewett/nesco/cli/internal/output"
 	"github.com/holdenhewett/nesco/cli/internal/provider"
@@ -25,6 +26,7 @@ func init() {
 	exportCmd.MarkFlagRequired("to")
 	exportCmd.Flags().String("type", "", "Filter to a specific content type (e.g., skills, rules)")
 	exportCmd.Flags().String("name", "", "Filter by item name (substring match)")
+	exportCmd.Flags().String("llm-hooks", "skip", "How to handle LLM-evaluated hooks: skip (drop with warning) or generate (create wrapper scripts)")
 	rootCmd.AddCommand(exportCmd)
 }
 
@@ -34,9 +36,11 @@ type exportResult struct {
 }
 
 type exportedItem struct {
-	Name        string `json:"name"`
-	Type        string `json:"type"`
-	Destination string `json:"destination"`
+	Name        string   `json:"name"`
+	Type        string   `json:"type"`
+	Destination string   `json:"destination"`
+	Converted   bool     `json:"converted,omitempty"`
+	Warnings    []string `json:"warnings,omitempty"`
 }
 
 type skippedItem struct {
@@ -62,6 +66,12 @@ func runExport(cmd *cobra.Command, args []string) error {
 
 	typeFilter, _ := cmd.Flags().GetString("type")
 	nameFilter, _ := cmd.Flags().GetString("name")
+	llmHooksMode, _ := cmd.Flags().GetString("llm-hooks")
+
+	// Configure the hooks converter with the LLM hooks mode.
+	if hooksConv, ok := converter.For(catalog.Hooks).(*converter.HooksConverter); ok {
+		hooksConv.LLMHooksMode = llmHooksMode
+	}
 
 	// Scan the catalog to find local (my-tools/) items.
 	cat, err := catalog.Scan(root)
@@ -117,9 +127,49 @@ func runExport(cmd *cobra.Command, args []string) error {
 		}
 
 		// Check for JSON merge sentinel — these types require config-file
-		// merging rather than filesystem copy. Skip with a warning.
+		// merging rather than filesystem copy. If a converter exists and this
+		// is a cross-provider export, let the converter handle format transformation
+		// and write the converted JSON to a standalone file.
 		installDir := prov.InstallDir(homeDir, item.Type)
 		if installDir == provider.JSONMergeSentinel {
+			// Allow converter-based cross-provider export for JSON merge types
+			if conv := converter.For(item.Type); conv != nil && item.Provider != "" && item.Provider != toSlug {
+				contentFile := converter.ResolveContentFile(item)
+				if contentFile != "" {
+					content, readErr := os.ReadFile(contentFile)
+					if readErr == nil {
+						rendered, renderErr := conv.Render(content, *prov)
+						if renderErr == nil && rendered.Content != nil {
+							// Write converted JSON to my-tools path (for user to manually merge)
+							dest := filepath.Join(item.Path, "exported-"+toSlug+"-"+rendered.Filename)
+							if writeErr := os.WriteFile(dest, rendered.Content, 0644); writeErr == nil {
+								// Write any extra files (e.g. generated scripts)
+								for name, extraContent := range rendered.ExtraFiles {
+									extraPath := filepath.Join(item.Path, name)
+									if extraErr := os.WriteFile(extraPath, extraContent, 0755); extraErr != nil {
+										rendered.Warnings = append(rendered.Warnings, fmt.Sprintf("failed to write %s: %s", name, extraErr))
+									}
+								}
+								result.Exported = append(result.Exported, exportedItem{
+									Name:        item.Name,
+									Type:        string(item.Type),
+									Destination: dest,
+									Converted:   true,
+									Warnings:    append(rendered.Warnings, fmt.Sprintf("JSON merge type: saved to %s (merge manually into provider config)", dest)),
+								})
+								if !output.JSON {
+									fmt.Fprintf(output.Writer, "Exported %s to %s (converted, merge manually)\n", item.Name, dest)
+									for _, w := range rendered.Warnings {
+										fmt.Fprintf(output.ErrWriter, "  warning: %s\n", w)
+									}
+								}
+								continue
+							}
+						}
+					}
+				}
+			}
+
 			skip := skippedItem{
 				Name:   item.Name,
 				Type:   string(item.Type),
@@ -147,12 +197,40 @@ func runExport(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		// Determine destination: installDir/<item-name>
-		dest := filepath.Join(installDir, item.Name)
-
 		if err := os.MkdirAll(installDir, 0755); err != nil {
 			return fmt.Errorf("creating directory %s: %w", installDir, err)
 		}
+
+		// Try cross-provider rendering via converter
+		if conv := converter.For(item.Type); conv != nil {
+			exported, handled := exportWithConverter(item, *prov, toSlug, conv, installDir)
+			if handled {
+				if exported != nil {
+					result.Exported = append(result.Exported, *exported)
+					if !output.JSON {
+						fmt.Fprintf(output.Writer, "Exported %s to %s (converted)\n", item.Name, exported.Destination)
+						for _, w := range exported.Warnings {
+							fmt.Fprintf(output.ErrWriter, "  warning: %s\n", w)
+						}
+					}
+				} else {
+					// Skipped by converter (e.g. non-alwaysApply for single-file provider)
+					skip := skippedItem{
+						Name:   item.Name,
+						Type:   string(item.Type),
+						Reason: fmt.Sprintf("not compatible with %s format", prov.Name),
+					}
+					result.Skipped = append(result.Skipped, skip)
+					if !output.JSON {
+						fmt.Fprintf(output.ErrWriter, "Skipping %s: not compatible with %s format\n", item.Name, prov.Name)
+					}
+				}
+				continue
+			}
+		}
+
+		// Fallback: direct copy (no converter or same-provider without .source/)
+		dest := filepath.Join(installDir, item.Name)
 
 		if err := installer.CopyContent(item.Path, dest); err != nil {
 			return fmt.Errorf("copying %s: %w", item.Name, err)
@@ -178,3 +256,78 @@ func runExport(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// exportWithConverter handles export with cross-provider conversion.
+// Returns (exportedItem, true) if the converter handled the item.
+// Returns (nil, true) if the converter skipped it (not compatible).
+// Returns (nil, false) if the converter doesn't apply (fall through to default copy).
+func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlug string, conv converter.Converter, installDir string) (*exportedItem, bool) {
+	// Same provider + has .source/ → copy original verbatim (lossless)
+	if converter.HasSourceFile(item) && item.Provider == toSlug {
+		srcPath := converter.SourceFilePath(item)
+		if srcPath == "" {
+			return nil, false
+		}
+		dest := filepath.Join(installDir, item.Name, filepath.Base(srcPath))
+		if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+			return nil, false
+		}
+		if err := installer.CopyContent(srcPath, dest); err != nil {
+			return nil, false
+		}
+		return &exportedItem{
+			Name:        item.Name,
+			Type:        string(item.Type),
+			Destination: dest,
+		}, true
+	}
+
+	// Cross-provider → render from canonical
+	if item.Provider != "" && item.Provider != toSlug {
+		contentFile := converter.ResolveContentFile(item)
+		if contentFile == "" {
+			return nil, false
+		}
+		content, err := os.ReadFile(contentFile)
+		if err != nil {
+			return nil, false
+		}
+
+		rendered, err := conv.Render(content, prov)
+		if err != nil {
+			return nil, false
+		}
+
+		// nil Content means skip
+		if rendered.Content == nil {
+			return nil, true
+		}
+
+		dest := filepath.Join(installDir, item.Name, rendered.Filename)
+		if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+			return nil, false
+		}
+		if err := os.WriteFile(dest, rendered.Content, 0644); err != nil {
+			return nil, false
+		}
+
+		// Write any extra files (e.g. generated LLM hook wrapper scripts)
+		for name, content := range rendered.ExtraFiles {
+			extraPath := filepath.Join(filepath.Dir(dest), name)
+			if err := os.WriteFile(extraPath, content, 0755); err != nil {
+				// Non-fatal: warn but continue
+				rendered.Warnings = append(rendered.Warnings, fmt.Sprintf("failed to write %s: %s", name, err))
+			}
+		}
+
+		return &exportedItem{
+			Name:        item.Name,
+			Type:        string(item.Type),
+			Destination: dest,
+			Converted:   true,
+			Warnings:    rendered.Warnings,
+		}, true
+	}
+
+	// No conversion needed — fall through to default copy
+	return nil, false
+}

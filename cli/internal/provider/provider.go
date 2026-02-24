@@ -48,6 +48,7 @@ var AllProviders = []Provider{
 	Cursor,
 	Windsurf,
 	Codex,
+	CopilotCLI,
 }
 
 // DetectedOnly returns the subset of AllProviders that are detected

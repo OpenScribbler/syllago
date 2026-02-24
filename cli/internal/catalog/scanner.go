@@ -44,6 +44,48 @@ func Scan(repoRoot string) (*Catalog, error) {
 	return cat, nil
 }
 
+// ScanWithRegistries scans the repo root (including my-tools/) plus any provided
+// registry sources. Registry items are tagged with their registry name.
+// Per-registry scan errors are logged to stderr but do not fail the overall scan.
+func ScanWithRegistries(repoRoot string, registries []RegistrySource) (*Catalog, error) {
+	// Start with the standard scan (local + shared repo items)
+	cat, err := Scan(repoRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	// Append items from each registry
+	for _, reg := range registries {
+		before := len(cat.Items)
+		if err := scanRoot(cat, reg.Path, false); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: registry %q scan error: %s\n", reg.Name, err)
+			continue
+		}
+		// Tag all newly-appended items with the registry name
+		for i := before; i < len(cat.Items); i++ {
+			cat.Items[i].Registry = reg.Name
+		}
+	}
+
+	return cat, nil
+}
+
+// ScanRegistriesOnly scans only the provided registry sources without a local repo scan.
+func ScanRegistriesOnly(registries []RegistrySource) (*Catalog, error) {
+	cat := &Catalog{}
+	for _, reg := range registries {
+		before := len(cat.Items)
+		if err := scanRoot(cat, reg.Path, false); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: registry %q scan error: %s\n", reg.Name, err)
+			continue
+		}
+		for i := before; i < len(cat.Items); i++ {
+			cat.Items[i].Registry = reg.Name
+		}
+	}
+	return cat, nil
+}
+
 // scanRoot scans a base directory for content items of all types.
 // If local is true, discovered items are marked as local (my-tools/).
 func scanRoot(cat *Catalog, baseDir string, local bool) error {

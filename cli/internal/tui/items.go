@@ -314,12 +314,16 @@ func (m itemsModel) View() string {
 			typeTag = " " + countStyle.Render("("+item.Type.Label()+")")
 		}
 
-		// Build description with LOCAL prefix for local items
+		// Build description prefix: [LOCAL] for local items, [registry-name] for registry items
 		localPrefix := ""
 		localPrefixLen := 0
 		if item.Local {
 			localPrefix = warningStyle.Render("[LOCAL]") + " "
 			localPrefixLen = 8 // "[LOCAL] "
+		} else if item.Registry != "" {
+			tag := "[" + item.Registry + "]"
+			localPrefix = countStyle.Render(tag) + " "
+			localPrefixLen = len(tag) + 1 // tag + space
 		}
 
 		if showProvCol {

@@ -33,6 +33,8 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 	current := titleStyle.Render(name)
 	if m.item.Local {
 		current += " " + warningStyle.Render("[LOCAL]")
+	} else if m.item.Registry != "" {
+		current += " " + countStyle.Render("["+m.item.Registry+"]")
 	}
 	pinned += home + arrow + cat + arrow + current + "\n\n"
 
@@ -45,6 +47,9 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 		pinned += "  " + warningStyle.Render("[Local]")
 	}
 	pinned += "\n"
+	if m.item.Registry != "" {
+		pinned += labelStyle.Render("Registry: ") + valueStyle.Render(m.item.Registry) + "\n"
+	}
 	if m.item.Path != "" {
 		pinned += labelStyle.Render("Path: ") + valueStyle.Render(m.item.Path) + "\n"
 	}

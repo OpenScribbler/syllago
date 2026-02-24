@@ -34,8 +34,10 @@ type Meta struct {
 	Dependencies []Dependency `yaml:"dependencies,omitempty"`
 	ImportedAt   *time.Time   `yaml:"imported_at,omitempty"`
 	ImportedBy   string       `yaml:"imported_by,omitempty"`
-	PromotedAt   *time.Time   `yaml:"promoted_at,omitempty"`
-	PRBranch     string       `yaml:"pr_branch,omitempty"`
+	PromotedAt     *time.Time   `yaml:"promoted_at,omitempty"`
+	PRBranch       string       `yaml:"pr_branch,omitempty"`
+	SourceProvider string       `yaml:"source_provider,omitempty"` // provider slug content was imported from
+	SourceFormat   string       `yaml:"source_format,omitempty"`   // original file extension (e.g. "mdc", "md")
 }
 
 // MetaPath returns the path to the metadata file in the given directory.
