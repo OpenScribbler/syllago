@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
 )
 
 func TestItemsNavigationUpDown(t *testing.T) {

@@ -1,6 +1,6 @@
 package catalog
 
-import "github.com/holdenhewett/nesco/cli/internal/metadata"
+import "github.com/OpenScribbler/nesco/cli/internal/metadata"
 
 // ContentType represents a category of content in the repo.
 type ContentType string
@@ -68,15 +68,15 @@ type ContentItem struct {
 	DisplayName        string // human-readable name from frontmatter (skills only), falls back to Name
 	Description        string
 	Type               ContentType
-	Path               string          // absolute path to the item directory or file
-	Provider           string          // for provider-specific content (rules, hooks, commands), which provider
-	Body               string          // full text content (used by Prompts for display/clipboard)
-	ReadmeBody         string          // raw README.md content (for rendering in detail view)
-	Files              []string        // relative paths of all files in item directory
-	SupportedProviders []string        // provider slugs this item works with (apps only), e.g. ["claude-code", "gemini-cli"]
-	Meta               *metadata.Meta  // loaded from .nesco.yaml if present
-	Local              bool            // true if item lives in my-tools/
-	Registry           string          // non-empty if item came from a git registry (value is the registry name)
+	Path               string         // absolute path to the item directory or file
+	Provider           string         // for provider-specific content (rules, hooks, commands), which provider
+	Body               string         // full text content (used by Prompts for display/clipboard)
+	ReadmeBody         string         // raw README.md content (for rendering in detail view)
+	Files              []string       // relative paths of all files in item directory
+	SupportedProviders []string       // provider slugs this item works with (apps only), e.g. ["claude-code", "gemini-cli"]
+	Meta               *metadata.Meta // loaded from .nesco.yaml if present
+	Local              bool           // true if item lives in my-tools/
+	Registry           string         // non-empty if item came from a git registry (value is the registry name)
 }
 
 // Catalog holds all discovered content items and the repo root they came from.

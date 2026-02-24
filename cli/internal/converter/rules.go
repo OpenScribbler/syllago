@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/parse"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/parse"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 	"gopkg.in/yaml.v3"
 )
 

@@ -139,13 +139,13 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/config"
-	"github.com/holdenhewett/nesco/cli/internal/metadata"
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
-	"github.com/holdenhewett/nesco/cli/internal/scan/detectors"
-	"github.com/holdenhewett/nesco/cli/internal/tui"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/metadata"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/scan/detectors"
+	"github.com/OpenScribbler/nesco/cli/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
@@ -1106,7 +1106,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
 	"github.com/spf13/cobra"
 )
 ```
@@ -1222,7 +1222,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
 )
 ```
 
@@ -1440,7 +1440,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
 )
 
 func TestFindProjectRootFallbackWarning(t *testing.T) {
@@ -1565,8 +1565,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
 ```
 
@@ -1879,8 +1879,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/config"
-	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
 )
 ```
 

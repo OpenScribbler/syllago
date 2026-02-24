@@ -10,10 +10,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/config"
-	"github.com/holdenhewett/nesco/cli/internal/promote"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/promote"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
 
 type screen int
@@ -44,21 +44,22 @@ type App struct {
 	autoUpdate      bool
 	registrySources []catalog.RegistrySource
 
-	screen      screen
-	focus       focusTarget
-	modal       confirmModal
-	saveModal   saveModal
-	envModal    envSetupModal
-	sidebar     sidebarModel
-	items       itemsModel
-	detail      detailModel
-	search      searchModel
-	helpOverlay helpOverlayModel
-	importer    importModel
-	updater     updateModel
-	settings      settingsModel
-	registries    registriesModel
-	registryCfg   *config.Config
+	screen         screen
+	focus          focusTarget
+	modal          confirmModal
+	saveModal      saveModal
+	envModal       envSetupModal
+	instModal      installModal
+	sidebar        sidebarModel
+	items          itemsModel
+	detail         detailModel
+	search         searchModel
+	helpOverlay    helpOverlayModel
+	importer       importModel
+	updater        updateModel
+	settings       settingsModel
+	registries     registriesModel
+	registryCfg    *config.Config
 	statusMessage  string
 	statusWarnings []string
 
@@ -266,6 +267,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.focus = focusModal
 		return a, nil
 
+	case openInstallModalMsg:
+		a.instModal = newInstallModal(msg.item, msg.providers, msg.repoRoot)
+		a.focus = focusModal
+		return a, nil
+
 	case tea.MouseMsg:
 		// Forward wheel events to active screen for scroll support
 		if msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown {
@@ -419,8 +425,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.focus = focusContent // return focus after dismiss
 				if a.modal.confirmed {
 					switch a.modal.purpose {
-					case modalInstall:
-						a.detail.doInstallChecked()
 					case modalUninstall:
 						a.detail.doUninstallAll()
 					case modalPromote:
@@ -454,6 +458,20 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.envModal, cmd = a.envModal.Update(msg)
 			if !a.envModal.active {
 				a.focus = focusContent
+			}
+			return a, cmd
+		}
+		if a.instModal.active {
+			var cmd tea.Cmd
+			a.instModal, cmd = a.instModal.Update(msg)
+			if !a.instModal.active {
+				a.focus = focusContent
+				if a.instModal.confirmed {
+					envCmd := a.detail.doInstallFromModal(a.instModal)
+					if envCmd != nil {
+						return a, envCmd
+					}
+				}
 			}
 			return a, cmd
 		}
@@ -695,7 +713,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case screenDetail:
 			// Next/previous item navigation (ctrl+n / ctrl+p)
-			if msg.String() == "ctrl+n" && !a.detail.HasTextInput() && a.detail.confirmAction == actionNone {
+			if msg.String() == "ctrl+n" && !a.detail.HasTextInput() {
 				if a.items.cursor < len(a.items.items)-1 {
 					a.items.cursor++
 					item := a.items.selectedItem()
@@ -707,7 +725,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return a, nil
 			}
-			if msg.String() == "ctrl+p" && !a.detail.HasTextInput() && a.detail.confirmAction == actionNone {
+			if msg.String() == "ctrl+p" && !a.detail.HasTextInput() {
 				if a.items.cursor > 0 {
 					a.items.cursor--
 					item := a.items.selectedItem()
@@ -897,6 +915,10 @@ func (a App) View() string {
 
 	if a.envModal.active {
 		body = a.envModal.overlayView(body)
+	}
+
+	if a.instModal.active {
+		body = a.instModal.overlayView(body)
 	}
 
 	return zone.Scan(body)

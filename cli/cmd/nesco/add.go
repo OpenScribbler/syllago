@@ -7,13 +7,13 @@ import (
 	"slices"
 	"time"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/converter"
-	"github.com/holdenhewett/nesco/cli/internal/gitutil"
-	"github.com/holdenhewett/nesco/cli/internal/installer"
-	"github.com/holdenhewett/nesco/cli/internal/metadata"
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/readme"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/converter"
+	"github.com/OpenScribbler/nesco/cli/internal/gitutil"
+	"github.com/OpenScribbler/nesco/cli/internal/installer"
+	"github.com/OpenScribbler/nesco/cli/internal/metadata"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/readme"
 	"github.com/spf13/cobra"
 )
 

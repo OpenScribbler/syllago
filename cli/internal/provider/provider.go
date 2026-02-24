@@ -1,6 +1,6 @@
 package provider
 
-import "github.com/holdenhewett/nesco/cli/internal/catalog"
+import "github.com/OpenScribbler/nesco/cli/internal/catalog"
 
 // JSONMergeSentinel is returned by InstallDir when the content type requires
 // JSON merge installation (e.g., MCP into config files, hooks into settings.json)
@@ -12,7 +12,7 @@ type Format string
 
 const (
 	FormatMarkdown Format = "md"
-	FormatMDC      Format = "mdc"  // Cursor .mdc format
+	FormatMDC      Format = "mdc" // Cursor .mdc format
 	FormatJSON     Format = "json"
 	FormatYAML     Format = "yaml"
 )

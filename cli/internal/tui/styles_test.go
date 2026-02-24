@@ -23,12 +23,12 @@ func TestSelectedItemHasBackground(t *testing.T) {
 
 func TestColorsAreAdaptive(t *testing.T) {
 	colors := map[string]lipgloss.TerminalColor{
-		"primaryColor":   primaryColor,
-		"accentColor":    accentColor,
-		"mutedColor":     mutedColor,
-		"successColor":   successColor,
-		"dangerColor":    dangerColor,
-		"warningColor":   warningColor,
+		"primaryColor": primaryColor,
+		"accentColor":  accentColor,
+		"mutedColor":   mutedColor,
+		"successColor": successColor,
+		"dangerColor":  dangerColor,
+		"warningColor": warningColor,
 	}
 
 	for name, c := range colors {
@@ -95,27 +95,27 @@ func TestColorsPassWCAGAA(t *testing.T) {
 	darkBg := "#18181B"
 
 	checks := []struct {
-		name    string
-		fg      string // foreground hex
-		bg      string // background hex
+		name     string
+		fg       string // foreground hex
+		bg       string // background hex
 		minRatio float64
 	}{
 		// Semantic colors (Light = on light terminal, Dark = on dark terminal)
-		{"primaryColor light",  "#047857", lightBg, minRatio},
-		{"primaryColor dark",   "#6EE7B7", darkBg,  minRatio},
-		{"accentColor light",   "#6D28D9", lightBg, minRatio},
-		{"accentColor dark",    "#C4B5FD", darkBg,  minRatio},
-		{"mutedColor light",    "#57534E", lightBg, minRatio},
-		{"mutedColor dark",     "#A8A29E", darkBg,  minRatio},
-		{"successColor light",  "#15803D", lightBg, minRatio},
-		{"successColor dark",   "#4ADE80", darkBg,  minRatio},
-		{"dangerColor light",   "#B91C1C", lightBg, minRatio},
-		{"dangerColor dark",    "#FCA5A5", darkBg,  minRatio},
-		{"warningColor light",  "#B45309", lightBg, minRatio},
-		{"warningColor dark",   "#FCD34D", darkBg,  minRatio},
+		{"primaryColor light", "#047857", lightBg, minRatio},
+		{"primaryColor dark", "#6EE7B7", darkBg, minRatio},
+		{"accentColor light", "#6D28D9", lightBg, minRatio},
+		{"accentColor dark", "#C4B5FD", darkBg, minRatio},
+		{"mutedColor light", "#57534E", lightBg, minRatio},
+		{"mutedColor dark", "#A8A29E", darkBg, minRatio},
+		{"successColor light", "#15803D", lightBg, minRatio},
+		{"successColor dark", "#4ADE80", darkBg, minRatio},
+		{"dangerColor light", "#B91C1C", lightBg, minRatio},
+		{"dangerColor dark", "#FCA5A5", darkBg, minRatio},
+		{"warningColor light", "#B45309", lightBg, minRatio},
+		{"warningColor dark", "#FCD34D", darkBg, minRatio},
 		// Selected item: foreground against selectedBgColor
 		{"selected mint on light bg", "#047857", "#D1FAE5", minRatio},
-		{"selected mint on dark bg",  "#6EE7B7", "#1A3A2A", minRatio},
+		{"selected mint on dark bg", "#6EE7B7", "#1A3A2A", minRatio},
 	}
 
 	for _, c := range checks {

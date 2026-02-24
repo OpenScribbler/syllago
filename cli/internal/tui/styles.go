@@ -83,39 +83,39 @@ var (
 
 	// Sidebar panel
 	sidebarBorderStyle = lipgloss.NewStyle().
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(borderColor).
-		BorderRight(true)
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(borderColor).
+				BorderRight(true)
 
 	// Content panel header bar (item name + tab bar line)
 	contentHeaderStyle = lipgloss.NewStyle().
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(borderColor).
-		BorderBottom(true)
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(borderColor).
+				BorderBottom(true)
 
 	// Footer bar
 	footerStyle = lipgloss.NewStyle().
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(borderColor).
-		BorderTop(true).
-		Foreground(mutedColor)
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(borderColor).
+			BorderTop(true).
+			Foreground(mutedColor)
 
 	// Breadcrumb within footer
 	breadcrumbStyle = lipgloss.NewStyle().
-		Foreground(mutedColor)
+			Foreground(mutedColor)
 
 	// Detail tabs — single-line with background color for active
 	activeTabStyle = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(accentColor).
-		Background(selectedBgColor).
-		Padding(0, 1)
+			Bold(true).
+			Foreground(accentColor).
+			Background(selectedBgColor).
+			Padding(0, 1)
 
 	inactiveTabStyle = lipgloss.NewStyle().
-		Foreground(mutedColor).
-		Padding(0, 1)
+				Foreground(mutedColor).
+				Padding(0, 1)
 
 	// Clickable back link
 	backLinkStyle = lipgloss.NewStyle().
-		Foreground(mutedColor)
+			Foreground(mutedColor)
 )

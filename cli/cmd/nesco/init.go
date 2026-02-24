@@ -6,11 +6,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/config"
-	"github.com/holdenhewett/nesco/cli/internal/installer"
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/installer"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 	"github.com/spf13/cobra"
 )
 
@@ -151,7 +151,7 @@ func installBuiltins(cmd *cobra.Command, repoRoot string, detected []provider.Pr
 				continue
 			}
 
-			desc, err := installer.Install(item, prov, repoRoot, installer.MethodSymlink)
+			desc, err := installer.Install(item, prov, repoRoot, installer.MethodSymlink, "")
 			if err != nil {
 				if !output.JSON {
 					fmt.Fprintf(os.Stderr, "  warning: could not install %s to %s: %s\n", item.Name, prov.Name, err)

@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/converter"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/converter"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
 
 // InstallMethod controls how content is placed in the target directory.
@@ -44,14 +44,10 @@ func IsJSONMerge(prov provider.Provider, itemType catalog.ContentType) bool {
 	return prov.InstallDir("", itemType) == provider.JSONMergeSentinel
 }
 
-// resolveTarget computes the target path for an item in a provider's install directory.
+// resolveTargetWithBase computes the target path using a specific base directory.
 // Returns an error if the provider doesn't support the content type or uses JSON merge.
-func resolveTarget(item catalog.ContentItem, prov provider.Provider) (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("getting home directory: %w", err)
-	}
-	installDir := prov.InstallDir(home, item.Type)
+func resolveTargetWithBase(item catalog.ContentItem, prov provider.Provider, baseDir string) (string, error) {
+	installDir := prov.InstallDir(baseDir, item.Type)
 	if installDir == "" {
 		return "", fmt.Errorf("%s does not support %s", prov.Name, item.Type.Label())
 	}
@@ -65,6 +61,16 @@ func resolveTarget(item catalog.ContentItem, prov provider.Provider) (string, er
 		return filepath.Join(installDir, item.Name), nil
 	}
 	return filepath.Join(installDir, filepath.Base(item.Path)), nil
+}
+
+// resolveTarget computes the target path for an item in a provider's install directory.
+// Uses the user's home directory as the base.
+func resolveTarget(item catalog.ContentItem, prov provider.Provider) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("getting home directory: %w", err)
+	}
+	return resolveTargetWithBase(item, prov, home)
 }
 
 // CheckStatus checks whether an item is installed for a given provider.
@@ -102,8 +108,9 @@ func CheckStatus(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 // Install places the given item under the provider's install directory.
 // For JSON merge types (MCP, hooks), it merges into the provider's config file.
 // For filesystem types, it creates a symlink or copy depending on the method.
+// baseDir overrides the home directory as the install root. If empty, uses home dir.
 // Returns a description of what was installed on success.
-func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, method InstallMethod) (string, error) {
+func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, method InstallMethod, baseDir string) (string, error) {
 	// Dispatch to JSON merge handlers for types that need it
 	if IsJSONMerge(prov, item.Type) {
 		switch item.Type {
@@ -115,19 +122,39 @@ func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, 
 		return "", fmt.Errorf("%s does not support %s via JSON merge", prov.Name, item.Type.Label())
 	}
 
+	// Resolve target path using baseDir or home dir
+	resolveTarget := func() (string, error) {
+		if baseDir != "" {
+			return resolveTargetWithBase(item, prov, baseDir)
+		}
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("getting home directory: %w", err)
+		}
+		return resolveTargetWithBase(item, prov, home)
+	}
+
 	// Check for cross-provider rendering via converter
 	if conv := converter.For(item.Type); conv != nil {
 		// Source provider differs from target → render from canonical
 		if item.Provider != "" && item.Provider != prov.Slug {
-			return installWithRender(item, prov, conv)
+			targetPath, err := resolveTarget()
+			if err != nil {
+				return "", err
+			}
+			return installWithRenderTo(item, prov, conv, filepath.Dir(targetPath))
 		}
 		// Same provider + has .source/ → use original for lossless install
 		if converter.HasSourceFile(item) && item.Provider == prov.Slug {
-			return installFromSource(item, prov)
+			targetPath, err := resolveTarget()
+			if err != nil {
+				return "", err
+			}
+			return installFromSourceTo(item, prov, filepath.Dir(targetPath))
 		}
 	}
 
-	targetPath, err := resolveTarget(item, prov)
+	targetPath, err := resolveTarget()
 	if err != nil {
 		return "", err
 	}
@@ -189,9 +216,9 @@ func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string
 	return "", fmt.Errorf("unexpected file type at %s, remove manually", targetPath)
 }
 
-// installWithRender reads canonical content and renders it for the target provider.
-// Used when the item's source provider differs from the install target.
-func installWithRender(item catalog.ContentItem, prov provider.Provider, conv converter.Converter) (string, error) {
+// installWithRenderTo reads canonical content, renders it for the target provider,
+// and writes to the specified target directory.
+func installWithRenderTo(item catalog.ContentItem, prov provider.Provider, conv converter.Converter, targetDir string) (string, error) {
 	contentFile := converter.ResolveContentFile(item)
 	if contentFile == "" {
 		return "", fmt.Errorf("no content file found in %s", item.Path)
@@ -219,14 +246,7 @@ func installWithRender(item catalog.ContentItem, prov provider.Provider, conv co
 		fmt.Fprintf(os.Stderr, "warning: %s: %s\n", item.Name, w)
 	}
 
-	targetPath, err := resolveTarget(item, prov)
-	if err != nil {
-		return "", err
-	}
-
-	// Rendered content uses the converter's filename
-	targetDir := filepath.Dir(targetPath)
-	targetPath = filepath.Join(targetDir, result.Filename)
+	targetPath := filepath.Join(targetDir, result.Filename)
 
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 		return "", err
@@ -234,22 +254,15 @@ func installWithRender(item catalog.ContentItem, prov provider.Provider, conv co
 	return targetPath, os.WriteFile(targetPath, result.Content, 0644)
 }
 
-// installFromSource copies the .source/ original directly to the target.
+// installFromSourceTo copies the .source/ original directly to the specified target directory.
 // Used for lossless roundtrip when target matches source provider.
-func installFromSource(item catalog.ContentItem, prov provider.Provider) (string, error) {
+func installFromSourceTo(item catalog.ContentItem, _ provider.Provider, targetDir string) (string, error) {
 	sourcePath := converter.SourceFilePath(item)
 	if sourcePath == "" {
 		return "", fmt.Errorf("no source file found in %s/.source/", item.Path)
 	}
 
-	targetPath, err := resolveTarget(item, prov)
-	if err != nil {
-		return "", err
-	}
-
-	// Use the original filename from .source/
-	targetDir := filepath.Dir(targetPath)
-	targetPath = filepath.Join(targetDir, filepath.Base(sourcePath))
+	targetPath := filepath.Join(targetDir, filepath.Base(sourcePath))
 
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 		return "", err

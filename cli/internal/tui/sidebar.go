@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
 )
 
 const sidebarWidth = 18 // fixed width including border character
@@ -178,11 +178,11 @@ func (m sidebarModel) View() string {
 }
 
 // Selector methods for use in App.Update routing
-func (m sidebarModel) isMyToolsSelected() bool { return m.cursor == len(m.types) }
-func (m sidebarModel) isImportSelected() bool   { return m.cursor == len(m.types)+1 }
-func (m sidebarModel) isUpdateSelected() bool   { return m.cursor == len(m.types)+2 }
-func (m sidebarModel) isSettingsSelected() bool    { return m.cursor == len(m.types)+3 }
-func (m sidebarModel) isRegistriesSelected() bool  { return m.cursor == len(m.types)+4 }
+func (m sidebarModel) isMyToolsSelected() bool    { return m.cursor == len(m.types) }
+func (m sidebarModel) isImportSelected() bool     { return m.cursor == len(m.types)+1 }
+func (m sidebarModel) isUpdateSelected() bool     { return m.cursor == len(m.types)+2 }
+func (m sidebarModel) isSettingsSelected() bool   { return m.cursor == len(m.types)+3 }
+func (m sidebarModel) isRegistriesSelected() bool { return m.cursor == len(m.types)+4 }
 func (m sidebarModel) selectedType() catalog.ContentType {
 	if m.cursor >= len(m.types) {
 		return ""

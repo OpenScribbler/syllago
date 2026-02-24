@@ -14,12 +14,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/gitutil"
-	"github.com/holdenhewett/nesco/cli/internal/installer"
-	"github.com/holdenhewett/nesco/cli/internal/metadata"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
-	"github.com/holdenhewett/nesco/cli/internal/readme"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/gitutil"
+	"github.com/OpenScribbler/nesco/cli/internal/installer"
+	"github.com/OpenScribbler/nesco/cli/internal/metadata"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/readme"
 )
 
 type importStep int
@@ -115,10 +115,10 @@ type importModel struct {
 	isCreate     bool // true if using "Create New" flow
 
 	// Conflict resolution
-	conflict       conflictInfo      // current conflict being shown
-	batchConflicts []string          // source paths that have conflicts
+	conflict         conflictInfo    // current conflict being shown
+	batchConflicts   []string        // source paths that have conflicts
 	batchConflictIdx int             // index into batchConflicts
-	batchOverwrite map[string]bool   // srcPath → true means overwrite
+	batchOverwrite   map[string]bool // srcPath → true means overwrite
 
 	// Result messaging
 	message      string
@@ -810,9 +810,9 @@ func (m importModel) View() string {
 	// Status message
 	if m.message != "" {
 		if m.messageIsErr {
-			s += "\n" + errorMsgStyle.Render("Error: " + m.message)
+			s += "\n" + errorMsgStyle.Render("Error: "+m.message)
 		} else {
-			s += "\n" + successMsgStyle.Render("Done: " + m.message)
+			s += "\n" + successMsgStyle.Render("Done: "+m.message)
 		}
 	}
 

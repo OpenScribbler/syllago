@@ -23,17 +23,17 @@ type Dependency struct {
 
 // Meta holds metadata for a single content item.
 type Meta struct {
-	ID           string       `yaml:"id"`
-	Name         string       `yaml:"name"`
-	Description  string       `yaml:"description,omitempty"`
-	Version      string       `yaml:"version,omitempty"`
-	Type         string       `yaml:"type,omitempty"`
-	Author       string       `yaml:"author,omitempty"`
-	Source       string       `yaml:"source,omitempty"`
-	Tags         []string     `yaml:"tags,omitempty"`
-	Dependencies []Dependency `yaml:"dependencies,omitempty"`
-	ImportedAt   *time.Time   `yaml:"imported_at,omitempty"`
-	ImportedBy   string       `yaml:"imported_by,omitempty"`
+	ID             string       `yaml:"id"`
+	Name           string       `yaml:"name"`
+	Description    string       `yaml:"description,omitempty"`
+	Version        string       `yaml:"version,omitempty"`
+	Type           string       `yaml:"type,omitempty"`
+	Author         string       `yaml:"author,omitempty"`
+	Source         string       `yaml:"source,omitempty"`
+	Tags           []string     `yaml:"tags,omitempty"`
+	Dependencies   []Dependency `yaml:"dependencies,omitempty"`
+	ImportedAt     *time.Time   `yaml:"imported_at,omitempty"`
+	ImportedBy     string       `yaml:"imported_by,omitempty"`
 	PromotedAt     *time.Time   `yaml:"promoted_at,omitempty"`
 	PRBranch       string       `yaml:"pr_branch,omitempty"`
 	SourceProvider string       `yaml:"source_provider,omitempty"` // provider slug content was imported from

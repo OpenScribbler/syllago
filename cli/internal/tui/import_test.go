@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
 )
 
 // navigateToImport creates a test app and navigates to the import screen.
@@ -656,10 +656,10 @@ func TestIsValidGitURL(t *testing.T) {
 		{"https://github.com/user/repo.git", true},
 		{"ssh://git@github.com/user/repo.git", true},
 		{"git@github.com:user/repo.git", true},
-		{"git://github.com/user/repo.git", false}, // insecure
+		{"git://github.com/user/repo.git", false},  // insecure
 		{"http://github.com/user/repo.git", false}, // insecure
 		{"ext::sh -c 'evil'", false},               // command injection
-		{"-u flag injection", false},                // argument injection
+		{"-u flag injection", false},               // argument injection
 		{"", false},
 		{"not-a-url", false},
 	}

@@ -171,9 +171,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
-	"github.com/holdenhewett/nesco/cli/internal/tui"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
@@ -604,7 +604,7 @@ package provider
 
 import (
 	"testing"
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
 )
 
 func TestDiscoveryPaths(t *testing.T) {
@@ -938,8 +938,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
 
 // DiscoveredFile represents a single file found during import discovery.
@@ -1027,7 +1027,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
 )
 
 // ClassifyByExtension provides a fallback classification based on file extension
@@ -1088,8 +1088,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
 
 func TestDiscoverFindsFiles(t *testing.T) {
@@ -1197,7 +1197,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 // Parser reads a provider-specific file and returns canonical sections.
@@ -1263,8 +1263,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 // ClaudeParser parses Claude Code provider files.
@@ -1354,8 +1354,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 	"gopkg.in/yaml.v3"
 )
 
@@ -1467,7 +1467,7 @@ package parse
 import (
 	"path/filepath"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 // GenericParser handles providers that use standard markdown files
@@ -1519,8 +1519,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 func TestClaudeParserRule(t *testing.T) {
@@ -1628,9 +1628,9 @@ Expected: PASS
 package parity
 
 import (
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/parse"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/parse"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
 
 // Coverage represents what a single provider has configured.
@@ -1762,8 +1762,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
 
 func TestAnalyzeFindsGaps(t *testing.T) {
@@ -1875,9 +1875,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/config"
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 	"github.com/spf13/cobra"
 )
 
@@ -2002,7 +2002,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
 )
 
 func TestInitCreatesConfig(t *testing.T) {
@@ -2103,10 +2103,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/parse"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/parse"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 	"github.com/spf13/cobra"
 )
 
@@ -2232,10 +2232,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/parity"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/parity"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 	"github.com/spf13/cobra"
 )
 
@@ -2339,7 +2339,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
 )
 
 func TestImportRequiresFrom(t *testing.T) {
@@ -2392,7 +2392,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
 )
 
 func TestParityNeedsMultipleProviders(t *testing.T) {
@@ -2456,7 +2456,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
 )
 
 func TestConfigAddAndRemove(t *testing.T) {
@@ -2532,7 +2532,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
 )
 
 func TestInfoJSON(t *testing.T) {
@@ -2572,8 +2572,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/holdenhewett/nesco/cli/internal/config"
-	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -2683,9 +2683,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 	"github.com/spf13/cobra"
 )
 
@@ -2890,7 +2890,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 // Detector is the interface implemented by all fact and surprise detectors.
@@ -3052,7 +3052,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 // stubDetector returns fixed sections for testing.
@@ -3195,7 +3195,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 // TechStack detects the primary technology stack from manifest files.
@@ -3379,7 +3379,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 // Dependencies detects project dependencies from manifest files.
@@ -3526,7 +3526,7 @@ package detectors
 import (
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 func TestTechStackNode(t *testing.T) {
@@ -3591,7 +3591,7 @@ package detectors
 import (
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 func TestDependenciesNode(t *testing.T) {
@@ -3679,7 +3679,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 // BuildCommands detects build/task runner commands.
@@ -3774,7 +3774,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 // DirectoryStructure maps the project's directory layout.
@@ -3856,7 +3856,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 // ProjectMetadata detects project-level facts (README, LICENSE, CI).
@@ -3964,7 +3964,7 @@ package detectors
 import (
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 func TestBuildCommandsMakefile(t *testing.T) {
@@ -4008,7 +4008,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 func TestDirectoryStructure(t *testing.T) {
@@ -4086,7 +4086,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 func TestProjectMetadataWithReadme(t *testing.T) {
@@ -4167,7 +4167,7 @@ Expected: PASS
 
 package emit
 
-import "github.com/holdenhewett/nesco/cli/internal/model"
+import "github.com/OpenScribbler/nesco/cli/internal/model"
 
 // Emitter renders a ContextDocument into a provider-specific format string.
 // Emitters are pure functions — no filesystem access, no side effects.
@@ -4207,7 +4207,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 // ClaudeEmitter renders ContextDocument as CLAUDE.md format with boundary markers.
@@ -4344,7 +4344,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 func TestClaudeEmitterBasic(t *testing.T) {
@@ -4472,7 +4472,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 // CursorEmitter renders ContextDocument as Cursor .mdc format.
@@ -4535,7 +4535,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 // GenericMarkdownEmitter renders ContextDocument as standard markdown
@@ -4597,7 +4597,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 func TestCursorEmitterFrontmatter(t *testing.T) {
@@ -5148,7 +5148,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 // CompetingFrameworks detects when 2+ tools in the same category coexist.
@@ -5308,7 +5308,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 type ModuleConflict struct{}
@@ -5410,7 +5410,7 @@ package detectors
 import (
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 func TestCompetingFrameworksDetects(t *testing.T) {
@@ -5821,7 +5821,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 func TestLinterExtractionPrettier(t *testing.T) {
@@ -6887,7 +6887,7 @@ Expected: PASS
 
 package detectors
 
-import "github.com/holdenhewett/nesco/cli/internal/scan"
+import "github.com/OpenScribbler/nesco/cli/internal/scan"
 
 // AllDetectors returns every registered detector (fact + surprise).
 func AllDetectors() []scan.Detector {
@@ -6946,7 +6946,7 @@ package scan
 import (
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/scan/detectors"
+	"github.com/OpenScribbler/nesco/cli/internal/scan/detectors"
 )
 
 func TestFullScanNoProject(t *testing.T) {
@@ -7020,7 +7020,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 const BaselineFileName = "baseline.json"
@@ -7170,7 +7170,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 )
 
 func TestSaveAndLoadBaseline(t *testing.T) {
@@ -7318,9 +7318,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/config"
-	"github.com/holdenhewett/nesco/cli/internal/drift"
-	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/drift"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
 )
 
 func setupGoProject(t *testing.T) string {
@@ -7430,15 +7430,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/holdenhewett/nesco/cli/internal/config"
-	"github.com/holdenhewett/nesco/cli/internal/drift"
-	"github.com/holdenhewett/nesco/cli/internal/emit"
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/parity"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
-	"github.com/holdenhewett/nesco/cli/internal/reconcile"
-	"github.com/holdenhewett/nesco/cli/internal/scan"
-	"github.com/holdenhewett/nesco/cli/internal/scan/detectors"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/drift"
+	"github.com/OpenScribbler/nesco/cli/internal/emit"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/parity"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/reconcile"
+	"github.com/OpenScribbler/nesco/cli/internal/scan"
+	"github.com/OpenScribbler/nesco/cli/internal/scan/detectors"
 	"github.com/spf13/cobra"
 )
 
@@ -7634,10 +7634,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/config"
-	"github.com/holdenhewett/nesco/cli/internal/drift"
-	"github.com/holdenhewett/nesco/cli/internal/model"
-	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/drift"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
 )
 
 func TestDriftCommandNoBaseline(t *testing.T) {
@@ -7747,11 +7747,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/holdenhewett/nesco/cli/internal/config"
-	"github.com/holdenhewett/nesco/cli/internal/drift"
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/scan"
-	"github.com/holdenhewett/nesco/cli/internal/scan/detectors"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/drift"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/scan"
+	"github.com/OpenScribbler/nesco/cli/internal/scan/detectors"
 	"github.com/spf13/cobra"
 )
 
@@ -7892,8 +7892,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/drift"
-	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/drift"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
 )
 
 func TestBaselineCommandCreatesBaseline(t *testing.T) {
@@ -7992,11 +7992,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/holdenhewett/nesco/cli/internal/config"
-	"github.com/holdenhewett/nesco/cli/internal/drift"
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/scan"
-	"github.com/holdenhewett/nesco/cli/internal/scan/detectors"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/drift"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/scan"
+	"github.com/OpenScribbler/nesco/cli/internal/scan/detectors"
 	"github.com/spf13/cobra"
 )
 

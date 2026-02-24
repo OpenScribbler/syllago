@@ -113,11 +113,11 @@ func TestScan(t *testing.T) {
 		skillsDir := filepath.Join(root, "skills")
 
 		invalidNames := []string{
-			"foo.bar",          // dot (sjson path separator)
-			"skill*",           // asterisk (sjson wildcard)
-			"skill#hash",       // hash (sjson modifier)
-			"skill|pipe",       // pipe (sjson alternative)
-			"mcpServers.evil",  // path injection attempt
+			"foo.bar",         // dot (sjson path separator)
+			"skill*",          // asterisk (sjson wildcard)
+			"skill#hash",      // hash (sjson modifier)
+			"skill|pipe",      // pipe (sjson alternative)
+			"mcpServers.evil", // path injection attempt
 		}
 
 		for _, name := range invalidNames {
