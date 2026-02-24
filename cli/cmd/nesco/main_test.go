@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
 )
 
 func TestValidateVersion(t *testing.T) {
@@ -330,10 +330,10 @@ func TestTUIErrorMessageContentRepoNotFound(t *testing.T) {
 
 func TestWrapTTYError(t *testing.T) {
 	tests := []struct {
-		name          string
-		err           error
-		wantSubcmd    bool
-		wantOriginal  bool
+		name         string
+		err          error
+		wantSubcmd   bool
+		wantOriginal bool
 	}{
 		{
 			name:       "TTY error is wrapped",

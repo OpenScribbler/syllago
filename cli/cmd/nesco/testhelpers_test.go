@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
 )
 
 // setupGoProject creates a temporary Go project with nesco config for testing.

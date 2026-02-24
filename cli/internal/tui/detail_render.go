@@ -3,14 +3,13 @@ package tui
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/installer"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/installer"
 )
 
 // renderContent builds the full detail content (without scrolling or help bar).
@@ -299,7 +298,7 @@ func (m detailModel) renderInstallTab() string {
 
 				prefix := "  "
 				nameStyle := itemStyle
-				if i == m.provCheck.cursor && m.confirmAction == actionNone {
+				if i == m.provCheck.cursor {
 					prefix = "> "
 					nameStyle = selectedItemStyle
 				}
@@ -328,93 +327,6 @@ func (m detailModel) renderInstallTab() string {
 			}
 		} else {
 			s += helpStyle.Render("No providers support installing this content type yet.") + "\n"
-		}
-	}
-
-	// Method picker
-	if m.confirmAction == actionChooseMethod {
-		s += "\n" + labelStyle.Render("Install method:") + "\n"
-
-		type methodOption struct {
-			name string
-			desc string
-		}
-		methods := []methodOption{
-			{"Symlink (recommended)", "Stays in sync with repo. Auto-updates on git pull."},
-			{"Copy", "Independent copy. Won't change when repo updates."},
-		}
-
-		for i, method := range methods {
-			prefix := "  "
-			nameStyle := itemStyle
-			if i == m.methodCursor {
-				prefix = "> "
-				nameStyle = selectedItemStyle
-			}
-			s += fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(method.name))
-			s += fmt.Sprintf("      %s\n", helpStyle.Render(method.desc))
-		}
-
-		// Show destination paths for checked providers
-		detected := m.detectedProviders()
-		home, err := os.UserHomeDir()
-		if err == nil {
-			s += "\n" + helpStyle.Render("Destination paths:") + "\n"
-			for i, checked := range m.provCheck.checks {
-				if !checked || i >= len(detected) {
-					continue
-				}
-				p := detected[i]
-				if installer.IsJSONMerge(p, m.item.Type) {
-					s += "  " + helpStyle.Render(p.Name+": ") + valueStyle.Render("(merged into config)") + "\n"
-				} else {
-					destDir := p.InstallDir(home, m.item.Type)
-					dest := filepath.Join(destDir, m.item.Name)
-					s += "  " + helpStyle.Render(p.Name+": ") + valueStyle.Render(dest) + "\n"
-				}
-			}
-		}
-
-		s += "\n" + helpStyle.Render("up/down select • i/enter confirm • esc cancel") + "\n"
-	}
-
-	// Env var interactive setup
-	if m.env.varIdx < len(m.env.varNames) {
-		envName := m.env.varNames[m.env.varIdx]
-		switch m.confirmAction {
-		case actionEnvChoose:
-			s += "\n" + labelStyle.Render("Environment Variable Setup") + "\n"
-			s += helpStyle.Render(fmt.Sprintf("  %s (%d of %d)", envName, m.env.varIdx+1, len(m.env.varNames))) + "\n\n"
-
-			options := []string{"Set up new value", "I already have it configured"}
-			for i, opt := range options {
-				prefix := "  "
-				style := itemStyle
-				if i == m.env.methodCursor {
-					prefix = "> "
-					style = selectedItemStyle
-				}
-				s += fmt.Sprintf("  %s%s\n", prefix, style.Render(opt))
-			}
-			s += "\n" + helpStyle.Render("  up/down select • enter choose • esc skip") + "\n"
-
-		case actionEnvValue:
-			s += "\n" + labelStyle.Render("Environment Variable Setup") + "\n"
-			s += helpStyle.Render(fmt.Sprintf("  %s (%d of %d)", envName, m.env.varIdx+1, len(m.env.varNames))) + "\n\n"
-			s += "  " + m.env.input.View() + "\n"
-			s += "\n" + helpStyle.Render("  enter next • esc back") + "\n"
-
-		case actionEnvLocation:
-			s += "\n" + labelStyle.Render("Environment Variable Setup") + "\n"
-			s += helpStyle.Render(fmt.Sprintf("  Save %s to:", envName)) + "\n\n"
-			s += "  " + m.env.input.View() + "\n"
-			s += "\n" + helpStyle.Render("  enter save • esc back") + "\n"
-
-		case actionEnvSource:
-			s += "\n" + labelStyle.Render("Environment Variable Setup") + "\n"
-			s += helpStyle.Render(fmt.Sprintf("  Load %s from an existing file:", envName)) + "\n\n"
-			s += "  " + m.env.input.View() + "\n"
-			s += "\n" + helpStyle.Render("  enter load • esc back") + "\n"
 		}
 	}
 
@@ -494,7 +406,7 @@ func (m detailModel) renderHelp() string {
 	switch m.activeTab {
 	case tabOverview:
 		helpParts = append(helpParts, "up/down scroll")
-		if m.item.Type == catalog.Prompts && m.item.Body != "" && m.confirmAction == actionNone {
+		if m.item.Type == catalog.Prompts && m.item.Body != "" {
 			helpParts = append(helpParts, "c copy")
 		}
 	case tabFiles:
@@ -506,13 +418,13 @@ func (m detailModel) renderHelp() string {
 	case tabInstall:
 		if m.item.Type == catalog.Prompts {
 			helpParts = append(helpParts, "up/down scroll")
-			if m.item.Body != "" && m.confirmAction == actionNone {
+			if m.item.Body != "" {
 				helpParts = append(helpParts, "c copy", "s save")
 			}
 		} else if m.item.Type == catalog.Apps {
 			helpParts = append(helpParts, "up/down scroll", "i install", "u uninstall")
 		} else {
-			if len(m.provCheck.checks) > 0 && m.confirmAction == actionNone {
+			if len(m.provCheck.checks) > 0 {
 				helpParts = append(helpParts, "up/down navigate", "enter/space toggle", "i install", "u uninstall")
 				if m.item.Type == catalog.MCP && m.hasUnsetEnvVars() {
 					helpParts = append(helpParts, "e env setup")
@@ -521,7 +433,7 @@ func (m detailModel) renderHelp() string {
 		}
 	}
 
-	if m.item.Local && m.confirmAction == actionNone {
+	if m.item.Local {
 		if m.llmPrompt != "" {
 			helpParts = append(helpParts, "c copy prompt")
 		}

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/model"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/model"
 	"gopkg.in/yaml.v3"
 )
 

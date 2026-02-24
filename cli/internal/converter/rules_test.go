@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
 
 // --- Cursor → canonical → Windsurf ---

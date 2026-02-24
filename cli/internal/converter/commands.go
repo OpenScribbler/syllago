@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 	toml "github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v3"
 )
@@ -21,8 +21,8 @@ type CommandMeta struct {
 	Name                   string   `yaml:"name,omitempty"`
 	Description            string   `yaml:"description,omitempty"`
 	AllowedTools           []string `yaml:"allowed-tools,omitempty"`
-	Context                string   `yaml:"context,omitempty"`        // "fork" | ""
-	Agent                  string   `yaml:"agent,omitempty"`          // e.g. "Explore"
+	Context                string   `yaml:"context,omitempty"` // "fork" | ""
+	Agent                  string   `yaml:"agent,omitempty"`   // e.g. "Explore"
 	Model                  string   `yaml:"model,omitempty"`
 	DisableModelInvocation bool     `yaml:"disable-model-invocation,omitempty"`
 	UserInvocable          *bool    `yaml:"user-invocable,omitempty"`

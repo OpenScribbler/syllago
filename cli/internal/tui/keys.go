@@ -16,15 +16,15 @@ type keyMap struct {
 	Space     key.Binding
 	EnvSetup  key.Binding
 	Promote   key.Binding
-	Tab      key.Binding
-	ShiftTab key.Binding
-	Help key.Binding
-	Home key.Binding
-	End  key.Binding
-	Left     key.Binding
-	Right    key.Binding
-	PageUp   key.Binding
-	PageDown key.Binding
+	Tab       key.Binding
+	ShiftTab  key.Binding
+	Help      key.Binding
+	Home      key.Binding
+	End       key.Binding
+	Left      key.Binding
+	Right     key.Binding
+	PageUp    key.Binding
+	PageDown  key.Binding
 }
 
 var keys = keyMap{

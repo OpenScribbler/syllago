@@ -66,7 +66,7 @@ Minor gaps:
 
 Most dependencies are correctly captured. The sequence (Task 1 → 2 → 3 → 4 → 5 → 6, with 7/8/9 depending on 4+5) is sound.
 
-One implicit dependency missing: Task 6 (write tests) depends on `provider.Windsurf`, `provider.Cursor`, `provider.ClaudeCode`, and `provider.Codex` being exported package-level variables. The test file imports `github.com/holdenhewett/nesco/cli/internal/provider` and uses these directly. The plan does not mention verifying that these named provider variables exist, or note that the test depends on them. A developer executing the plan should be told: "Verify that `provider.Windsurf`, `provider.Cursor`, `provider.ClaudeCode`, and `provider.Codex` are exported variables in the provider package before writing tests."
+One implicit dependency missing: Task 6 (write tests) depends on `provider.Windsurf`, `provider.Cursor`, `provider.ClaudeCode`, and `provider.Codex` being exported package-level variables. The test file imports `github.com/OpenScribbler/nesco/cli/internal/provider` and uses these directly. The plan does not mention verifying that these named provider variables exist, or note that the test depends on them. A developer executing the plan should be told: "Verify that `provider.Windsurf`, `provider.Cursor`, `provider.ClaudeCode`, and `provider.Codex` are exported variables in the provider package before writing tests."
 
 ### 4. TDD Structure (Test → Fail → Implement → Pass → Commit)
 

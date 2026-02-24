@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
 )
 
 func TestSearchActivateCategory(t *testing.T) {

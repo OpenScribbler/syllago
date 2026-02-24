@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
 )
 
 func TestHelpOverlayToggle(t *testing.T) {
@@ -90,14 +90,15 @@ func TestHelpOverlayBlockedDuringSearch(t *testing.T) {
 	}
 }
 
-func TestHelpOverlayBlockedDuringTextInput(t *testing.T) {
+func TestHelpOverlayBlockedDuringModal(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	app.detail.confirmAction = actionEnvValue
+	// When a modal is active, all keys route to the modal — help overlay should not activate
+	app.envModal = newEnvSetupModal([]string{"TEST_VAR"})
+	app.focus = focusModal
 
-	// ? should not activate during text input
 	m, _ := app.Update(keyRune('?'))
 	app = m.(App)
 	if app.helpOverlay.active {
-		t.Fatal("help overlay should not activate during detail text input")
+		t.Fatal("help overlay should not activate when a modal is active")
 	}
 }

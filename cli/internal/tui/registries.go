@@ -8,9 +8,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/config"
-	"github.com/holdenhewett/nesco/cli/internal/registry"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/registry"
 )
 
 // registryEntry holds display data for one registry row.
@@ -103,7 +103,7 @@ func (m registriesModel) View() string {
 
 	// Header
 	s += tableHeaderStyle.Render(fmt.Sprintf("   %-20s  %-8s  %-6s  %s", "Name", "Status", "Items", "URL")) + "\n"
-	s += helpStyle.Render("   " + strings.Repeat("─", 20) + "  " + strings.Repeat("─", 8) + "  " + strings.Repeat("─", 6) + "  " + strings.Repeat("─", 30)) + "\n"
+	s += helpStyle.Render("   "+strings.Repeat("─", 20)+"  "+strings.Repeat("─", 8)+"  "+strings.Repeat("─", 6)+"  "+strings.Repeat("─", 30)) + "\n"
 
 	for i, entry := range m.entries {
 		prefix := "   "

@@ -9,8 +9,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
 
 func init() {
@@ -27,11 +27,11 @@ func init() {
 // ---------------------------------------------------------------------------
 
 var (
-	keyUp    = tea.KeyMsg{Type: tea.KeyUp}
-	keyDown  = tea.KeyMsg{Type: tea.KeyDown}
-	keyEnter = tea.KeyMsg{Type: tea.KeyEnter}
-	keyEsc   = tea.KeyMsg{Type: tea.KeyEsc}
-	keySpace = tea.KeyMsg{Type: tea.KeySpace}
+	keyUp       = tea.KeyMsg{Type: tea.KeyUp}
+	keyDown     = tea.KeyMsg{Type: tea.KeyDown}
+	keyEnter    = tea.KeyMsg{Type: tea.KeyEnter}
+	keyEsc      = tea.KeyMsg{Type: tea.KeyEsc}
+	keySpace    = tea.KeyMsg{Type: tea.KeySpace}
 	keyTab      = tea.KeyMsg{Type: tea.KeyTab}
 	keyShiftTab = tea.KeyMsg{Type: tea.KeyShiftTab}
 	keyCtrlC    = tea.KeyMsg{Type: tea.KeyCtrlC}

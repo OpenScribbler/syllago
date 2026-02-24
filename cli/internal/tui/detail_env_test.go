@@ -6,39 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/installer"
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/installer"
 )
-
-// setupEnvDetail navigates to the MCP item detail and starts the inline env setup flow.
-// This tests the inline flow (used post-install); pressing 'e' now opens the modal wizard instead.
-func setupEnvDetail(t *testing.T) App {
-	t.Helper()
-	app := navigateToDetailItem(t, catalog.MCP, "test-mcp")
-
-	// The MCP item should have an mcpConfig parsed
-	if app.detail.mcpConfig == nil {
-		t.Fatal("expected mcpConfig to be parsed for MCP item")
-	}
-
-	// Ensure env vars are unset so the wizard has work to do
-	for k := range app.detail.mcpConfig.Env {
-		os.Unsetenv(k)
-	}
-
-	// Switch to install tab
-	m, _ := app.Update(keyRune('3')) // → Install tab
-	app = m.(App)
-
-	// Directly trigger the inline env setup flow (as used post-install).
-	// Pressing 'e' now opens the modal wizard, not the inline flow.
-	started := app.detail.startEnvSetup()
-	if !started {
-		t.Fatal("startEnvSetup() should return true when env vars are unset")
-	}
-
-	return app
-}
 
 func TestEnvSetupStart(t *testing.T) {
 	app := navigateToDetailItem(t, catalog.MCP, "test-mcp")
@@ -51,241 +23,182 @@ func TestEnvSetupStart(t *testing.T) {
 	for k := range app.detail.mcpConfig.Env {
 		t.Setenv(k, "")
 	}
-	// Actually unset them (t.Setenv sets them, we need them unset)
-	// Use a different approach: verify CheckEnvVars behavior
-	envStatus := installer.CheckEnvVars(app.detail.mcpConfig)
 	// At minimum, the mcpConfig should have env vars defined
+	envStatus := installer.CheckEnvVars(app.detail.mcpConfig)
 	if len(envStatus) == 0 {
 		t.Fatal("expected env vars in MCP config")
 	}
 }
 
-func TestEnvChooseNewValue(t *testing.T) {
-	app := setupEnvDetail(t)
+// TestEnvModalOpensFromKey tests that pressing 'e' on an MCP item with
+// unset env vars sends an openEnvModalMsg.
+func TestEnvModalOpensFromKey(t *testing.T) {
+	app := navigateToDetailItem(t, catalog.MCP, "test-mcp")
 
-	if app.detail.confirmAction != actionEnvChoose {
-		t.Fatalf("expected actionEnvChoose, got %d", app.detail.confirmAction)
+	if app.detail.mcpConfig == nil {
+		t.Fatal("expected mcpConfig to be parsed for MCP item")
 	}
 
-	// Cursor at 0 = "Set up new", press enter
-	app.detail.env.methodCursor = 0
-	m, _ := app.Update(keyEnter)
+	// Ensure env vars are unset
+	for k := range app.detail.mcpConfig.Env {
+		os.Unsetenv(k)
+	}
+
+	// Switch to install tab
+	m, _ := app.Update(keyRune('3'))
 	app = m.(App)
 
-	if app.detail.confirmAction != actionEnvValue {
-		t.Fatalf("expected actionEnvValue after choosing 'Set up new', got %d", app.detail.confirmAction)
+	// Press 'e' to open env setup
+	m, cmd := app.Update(keyRune('e'))
+	app = m.(App)
+
+	if cmd == nil {
+		t.Fatal("pressing 'e' should return a cmd to open the env modal")
+	}
+	msg := cmd()
+	if _, ok := msg.(openEnvModalMsg); !ok {
+		t.Fatalf("expected openEnvModalMsg, got %T", msg)
 	}
 }
 
-func TestEnvChooseAlreadyConfigured(t *testing.T) {
-	app := setupEnvDetail(t)
+// TestEnvModalChooseNavigation tests up/down navigation on the choose step.
+func TestEnvModalChooseNavigation(t *testing.T) {
+	modal := newEnvSetupModal([]string{"API_KEY"})
 
-	// Cursor at 1 = "Already configured", press enter
-	app.detail.env.methodCursor = 1
-	m, _ := app.Update(keyEnter)
-	app = m.(App)
-
-	if app.detail.confirmAction != actionEnvSource {
-		t.Fatalf("expected actionEnvSource after choosing 'Already configured', got %d", app.detail.confirmAction)
+	if modal.step != envStepChoose {
+		t.Fatalf("expected envStepChoose, got %d", modal.step)
 	}
-}
-
-func TestEnvChooseNavigation(t *testing.T) {
-	app := setupEnvDetail(t)
-
-	if app.detail.env.methodCursor != 0 {
-		t.Fatalf("expected initial envMethodCursor 0, got %d", app.detail.env.methodCursor)
+	if modal.methodCursor != 0 {
+		t.Fatalf("expected initial methodCursor 0, got %d", modal.methodCursor)
 	}
 
-	m, _ := app.Update(keyDown)
-	app = m.(App)
-	if app.detail.env.methodCursor != 1 {
-		t.Fatalf("expected envMethodCursor 1 after down, got %d", app.detail.env.methodCursor)
+	updated, _ := modal.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if updated.methodCursor != 1 {
+		t.Fatalf("expected methodCursor 1 after down, got %d", updated.methodCursor)
 	}
 
 	// Bounds clamping
-	m, _ = app.Update(keyDown)
-	app = m.(App)
-	if app.detail.env.methodCursor != 1 {
-		t.Fatal("envMethodCursor should clamp at 1")
+	updated, _ = updated.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if updated.methodCursor != 1 {
+		t.Fatal("methodCursor should clamp at 1")
 	}
 
-	m, _ = app.Update(keyUp)
-	app = m.(App)
-	if app.detail.env.methodCursor != 0 {
-		t.Fatalf("expected envMethodCursor 0 after up, got %d", app.detail.env.methodCursor)
+	updated, _ = updated.Update(tea.KeyMsg{Type: tea.KeyUp})
+	if updated.methodCursor != 0 {
+		t.Fatalf("expected methodCursor 0 after up, got %d", updated.methodCursor)
 	}
 }
 
-func TestEnvChooseSkip(t *testing.T) {
-	app := setupEnvDetail(t)
-
-	initialIdx := app.detail.env.varIdx
-
-	// Esc skips to the next var
-	m, _ := app.Update(keyEsc)
-	app = m.(App)
-
-	if len(app.detail.env.varNames) > 1 {
-		if app.detail.env.varIdx != initialIdx+1 {
-			t.Fatalf("expected envVarIdx %d after skip, got %d", initialIdx+1, app.detail.env.varIdx)
-		}
+// TestEnvModalChooseNewValue tests that selecting "Set up new value" advances to envStepValue.
+func TestEnvModalChooseNewValue(t *testing.T) {
+	modal := newEnvSetupModal([]string{"API_KEY"})
+	// methodCursor 0 = "Set up new value"
+	updated, _ := modal.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if updated.step != envStepValue {
+		t.Fatalf("expected envStepValue, got %d", updated.step)
 	}
 }
 
-func TestEnvValueInput(t *testing.T) {
-	app := setupEnvDetail(t)
-
-	// Navigate to value input
-	app.detail.env.methodCursor = 0
-	m, _ := app.Update(keyEnter)
-	app = m.(App)
-
-	if app.detail.confirmAction != actionEnvValue {
-		t.Fatalf("expected actionEnvValue, got %d", app.detail.confirmAction)
+// TestEnvModalChooseAlreadyConfigured tests that selecting "Already configured"
+// advances to envStepSource.
+func TestEnvModalChooseAlreadyConfigured(t *testing.T) {
+	modal := newEnvSetupModal([]string{"API_KEY"})
+	// Move to "Already configured"
+	modal, _ = modal.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ := modal.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if updated.step != envStepSource {
+		t.Fatalf("expected envStepSource, got %d", updated.step)
 	}
+}
+
+// TestEnvModalEscSkips tests that Esc on the choose step skips to the next var.
+func TestEnvModalEscSkips(t *testing.T) {
+	modal := newEnvSetupModal([]string{"API_KEY", "AUTH_TOKEN"})
+
+	updated, _ := modal.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if updated.varIdx != 1 {
+		t.Fatalf("expected varIdx 1 after esc, got %d", updated.varIdx)
+	}
+	if !updated.active {
+		t.Fatal("modal should still be active (more vars to process)")
+	}
+}
+
+// TestEnvModalEscOnLastVarCloses tests that Esc on the last var closes the modal.
+func TestEnvModalEscOnLastVarCloses(t *testing.T) {
+	modal := newEnvSetupModal([]string{"API_KEY"})
+	updated, _ := modal.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if updated.active {
+		t.Fatal("Esc on last var should close the modal")
+	}
+}
+
+// TestEnvModalValueInput tests that entering a value advances to the location step.
+func TestEnvModalValueInput(t *testing.T) {
+	modal := newEnvSetupModal([]string{"API_KEY"})
+	// Enter choose step → value step
+	modal, _ = modal.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
 	// Type a value
-	for _, r := range "my-api-key" {
-		m, _ = app.Update(keyRune(r))
-		app = m.(App)
+	for _, r := range "my-secret" {
+		modal, _ = modal.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
 	}
 
-	// Enter → actionEnvLocation
-	m, _ = app.Update(keyEnter)
-	app = m.(App)
-
-	if app.detail.confirmAction != actionEnvLocation {
-		t.Fatalf("expected actionEnvLocation after value entry, got %d", app.detail.confirmAction)
+	// Enter → location step
+	updated, _ := modal.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if updated.step != envStepLocation {
+		t.Fatalf("expected envStepLocation after value entry, got %d", updated.step)
 	}
 }
 
-func TestEnvValueEsc(t *testing.T) {
-	app := setupEnvDetail(t)
+// TestEnvModalValueEscGoesBack tests that Esc from value input goes back to choose.
+func TestEnvModalValueEscGoesBack(t *testing.T) {
+	modal := newEnvSetupModal([]string{"API_KEY"})
+	modal, _ = modal.Update(tea.KeyMsg{Type: tea.KeyEnter}) // → value
 
-	// Navigate to value input
-	app.detail.env.methodCursor = 0
-	m, _ := app.Update(keyEnter)
-	app = m.(App)
-
-	// Esc at the app level calls CancelAction() which resets to actionNone
-	// (the detail model's internal back-navigation is intercepted by the app)
-	m, _ = app.Update(keyEsc)
-	app = m.(App)
-
-	if app.detail.confirmAction != actionNone {
-		t.Fatalf("expected actionNone after esc from value (app cancels action), got %d", app.detail.confirmAction)
+	updated, _ := modal.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if updated.step != envStepChoose {
+		t.Fatalf("expected envStepChoose after esc from value, got %d", updated.step)
 	}
 }
 
-func TestEnvLocationInput(t *testing.T) {
-	app := setupEnvDetail(t)
+// TestEnvModalSourceInput tests that entering a source path loads the env var
+// and advances to the next var.
+func TestEnvModalSourceInput(t *testing.T) {
+	modal := newEnvSetupModal([]string{"TEST_VAR", "OTHER_VAR"})
 
-	// Navigate: choose → value → type value → enter → location
-	app.detail.env.methodCursor = 0
-	m, _ := app.Update(keyEnter) // → value
-	app = m.(App)
-	for _, r := range "testval" {
-		m, _ = app.Update(keyRune(r))
-		app = m.(App)
-	}
-	m, _ = app.Update(keyEnter) // → location
-	app = m.(App)
+	// Choose "Already configured"
+	modal, _ = modal.Update(tea.KeyMsg{Type: tea.KeyDown})
+	modal, _ = modal.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
-	if app.detail.confirmAction != actionEnvLocation {
-		t.Fatalf("expected actionEnvLocation, got %d", app.detail.confirmAction)
+	if modal.step != envStepSource {
+		t.Fatalf("expected envStepSource, got %d", modal.step)
 	}
 
-	// Enter with default path → advances to next var (writes to temp file)
-	m, _ = app.Update(keyEnter)
-	app = m.(App)
-
-	// Should advance: either next env choose or actionNone
-	if app.detail.confirmAction != actionEnvChoose && app.detail.confirmAction != actionNone {
-		t.Fatalf("expected actionEnvChoose or actionNone after location, got %d", app.detail.confirmAction)
-	}
-}
-
-func TestEnvLocationEsc(t *testing.T) {
-	app := setupEnvDetail(t)
-
-	// Navigate to location
-	app.detail.env.methodCursor = 0
-	m, _ := app.Update(keyEnter) // → value
-	app = m.(App)
-	for _, r := range "val" {
-		m, _ = app.Update(keyRune(r))
-		app = m.(App)
-	}
-	m, _ = app.Update(keyEnter) // → location
-	app = m.(App)
-
-	// Esc at the app level calls CancelAction() which resets to actionNone
-	m, _ = app.Update(keyEsc)
-	app = m.(App)
-
-	if app.detail.confirmAction != actionNone {
-		t.Fatalf("expected actionNone after esc from location (app cancels action), got %d", app.detail.confirmAction)
-	}
-}
-
-func TestEnvSourceInput(t *testing.T) {
-	app := setupEnvDetail(t)
-
-	// Navigate to source (already configured path)
-	app.detail.env.methodCursor = 1
-	m, _ := app.Update(keyEnter) // → source
-	app = m.(App)
-
-	if app.detail.confirmAction != actionEnvSource {
-		t.Fatalf("expected actionEnvSource, got %d", app.detail.confirmAction)
-	}
-
-	// Type a path to a .env file
-	envFile := t.TempDir() + "/.env"
 	// Create a test .env file
-	writeTestEnvFile(t, envFile, app.detail.env.varNames[app.detail.env.varIdx], "test-secret-value")
+	envFile := filepath.Join(t.TempDir(), ".env")
+	writeTestEnvFile(t, envFile, "TEST_VAR", "test-secret-value")
 
-	// Clear input and type new path
-	app.detail.env.input.SetValue(envFile)
-	m, _ = app.Update(keyEnter)
-	app = m.(App)
+	// Set the input value and press enter
+	modal.input.SetValue(envFile)
+	updated, _ := modal.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
-	// Should advance to next var or finish
-	if app.detail.confirmAction != actionEnvChoose && app.detail.confirmAction != actionNone {
-		t.Fatalf("expected actionEnvChoose or actionNone, got %d", app.detail.confirmAction)
+	// Should advance to next var
+	if updated.varIdx != 1 {
+		t.Fatalf("expected varIdx 1, got %d", updated.varIdx)
 	}
 }
 
-func TestEnvSourceEsc(t *testing.T) {
-	app := setupEnvDetail(t)
-
-	// Navigate to source
-	app.detail.env.methodCursor = 1
-	m, _ := app.Update(keyEnter) // → source
-	app = m.(App)
-
-	// Esc at the app level calls CancelAction() which resets to actionNone
-	m, _ = app.Update(keyEsc)
-	app = m.(App)
-
-	if app.detail.confirmAction != actionNone {
-		t.Fatalf("expected actionNone after esc from source (app cancels action), got %d", app.detail.confirmAction)
-	}
-}
-
-func TestEnvAllComplete(t *testing.T) {
-	app := setupEnvDetail(t)
+// TestEnvModalAllComplete tests that skipping all vars closes the modal.
+func TestEnvModalAllComplete(t *testing.T) {
+	modal := newEnvSetupModal([]string{"VAR_A", "VAR_B"})
 
 	// Skip all vars with Esc
-	for app.detail.confirmAction == actionEnvChoose {
-		m, _ := app.Update(keyEsc)
-		app = m.(App)
-	}
+	modal, _ = modal.Update(tea.KeyMsg{Type: tea.KeyEsc}) // skip VAR_A
+	modal, _ = modal.Update(tea.KeyMsg{Type: tea.KeyEsc}) // skip VAR_B
 
-	// After all vars skipped, should be done
-	if app.detail.confirmAction != actionNone {
-		t.Fatalf("expected actionNone after all vars completed, got %d", app.detail.confirmAction)
+	if modal.active {
+		t.Fatal("modal should be closed after all vars processed")
 	}
 }
 
@@ -339,8 +252,7 @@ func TestSaveEnvToFile_Escaping(t *testing.T) {
 			tmpDir := t.TempDir()
 			envFile := filepath.Join(tmpDir, ".env")
 
-			m := detailModel{}
-			if err := m.saveEnvToFile(tt.key, tt.value, envFile); err != nil {
+			if err := saveEnvToFile(tt.key, tt.value, envFile); err != nil {
 				t.Fatalf("saveEnvToFile failed: %v", err)
 			}
 

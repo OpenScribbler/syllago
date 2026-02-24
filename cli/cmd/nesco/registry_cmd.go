@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/config"
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/registry"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/registry"
 	"github.com/spf13/cobra"
 )
 

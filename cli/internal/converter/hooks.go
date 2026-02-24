@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
 
 func init() {

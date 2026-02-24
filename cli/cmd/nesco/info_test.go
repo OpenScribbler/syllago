@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
 )
 
 func TestInfoJSON(t *testing.T) {

@@ -10,17 +10,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/config"
-	"github.com/holdenhewett/nesco/cli/internal/metadata"
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
-	"github.com/holdenhewett/nesco/cli/internal/registry"
-	"github.com/holdenhewett/nesco/cli/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/termenv"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/metadata"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/registry"
+	"github.com/OpenScribbler/nesco/cli/internal/tui"
 	zone "github.com/lrstanley/bubblezone"
+	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
 )
 
@@ -32,8 +32,8 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:           "nesco",
-	Short:         "AI coding tool content manager",
+	Use:   "nesco",
+	Short: "AI coding tool content manager",
 	Long: `Nesco manages AI tool configurations across providers.
 
 Run without arguments for interactive mode (TUI). Use subcommands for

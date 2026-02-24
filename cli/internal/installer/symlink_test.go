@@ -14,7 +14,7 @@ func TestIsWindowsMount(t *testing.T) {
 		{"/mnt", false},
 		{"/mnt/", false},
 		{"", false},
-		{"/mnt/c", false},    // no trailing slash after drive letter
+		{"/mnt/c", false},      // no trailing slash after drive letter
 		{"/mnt/cc/foo", false}, // two-char mount name — not a Windows drive
 	}
 

@@ -5,7 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
 
 // ---------------------------------------------------------------------------
@@ -156,17 +157,18 @@ func TestDetailMessageClearsOnKeypress(t *testing.T) {
 	}
 }
 
-func TestDetailMessagePreservedDuringTextInput(t *testing.T) {
+func TestDetailMessagePreservedDuringModal(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	app.detail.confirmAction = actionEnvValue
 	app.detail.message = "some error"
 	app.detail.messageIsErr = true
+	// Activate a modal — all keys route to the modal, not detail
+	app.envModal = newEnvSetupModal([]string{"TEST_VAR"})
+	app.focus = focusModal
 
-	// During text input, message should NOT be cleared
 	m, _ := app.Update(keyRune('a'))
 	app = m.(App)
 	if app.detail.message != "some error" {
-		t.Fatal("message should be preserved during text input")
+		t.Fatal("message should be preserved when a modal is active")
 	}
 }
 
@@ -222,22 +224,18 @@ func TestDetailTabShortcuts(t *testing.T) {
 	}
 }
 
-func TestDetailTabBlockedDuringAction(t *testing.T) {
+func TestDetailTabBlockedDuringModal(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	app.detail.confirmAction = actionUninstall
+	// Activate a modal — all keys route to the modal, not detail
+	app.modal = newConfirmModal("Test", "body")
+	app.modal.purpose = modalUninstall
+	app.focus = focusModal
 
-	// Tab should not switch when an action is active
+	// Tab should not switch when a modal is active (keys go to modal)
 	m, _ := app.Update(keyTab)
 	app = m.(App)
 	if app.detail.activeTab != tabOverview {
-		t.Fatal("tab switching should be blocked during active action")
-	}
-
-	// Number shortcuts should also be blocked
-	m, _ = app.Update(keyRune('2'))
-	app = m.(App)
-	if app.detail.activeTab != tabOverview {
-		t.Fatal("tab shortcut should be blocked during active action")
+		t.Fatal("tab switching should be blocked during active modal")
 	}
 }
 
@@ -271,14 +269,16 @@ func TestDetailShiftTabReverseCycle(t *testing.T) {
 	}
 }
 
-func TestDetailShiftTabBlockedDuringAction(t *testing.T) {
+func TestDetailShiftTabBlockedDuringModal(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	app.detail.confirmAction = actionUninstall
+	app.modal = newConfirmModal("Test", "body")
+	app.modal.purpose = modalUninstall
+	app.focus = focusModal
 
 	m, _ := app.Update(keyShiftTab)
 	app = m.(App)
 	if app.detail.activeTab != tabOverview {
-		t.Fatal("shift+tab should be blocked during active action")
+		t.Fatal("shift+tab should be blocked during active modal")
 	}
 }
 
@@ -469,7 +469,7 @@ func TestDetailFilesViewerEsc(t *testing.T) {
 
 func TestDetailFilesEmpty(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	app.detail.item.Files = nil // clear files
+	app.detail.item.Files = nil      // clear files
 	m, _ := app.Update(keyRune('2')) // → Files tab
 	app = m.(App)
 
@@ -547,39 +547,57 @@ func TestDetailInstallStart(t *testing.T) {
 	m, _ := app.Update(keyRune('3')) // → Install tab
 	app = m.(App)
 
-	// Press 'i' to start install
+	// Press 'i' to start install — should return a cmd to open install modal
 	m, cmd := app.Update(keyRune('i'))
 	app = m.(App)
 
-	// The modal-based install flow: pressing 'i' with detected providers emits
-	// an openModalMsg cmd (no direct state change). If no providers, message is set.
-	// Either a cmd was returned (modal flow) or message was set (no-provider case).
-	if cmd == nil && app.detail.confirmAction == actionNone && app.detail.message == "" {
-		t.Fatal("expected install to either return a cmd (modal) or set message (no providers)")
+	// startInstall() returns a cmd (openInstallModalMsg) for filesystem providers,
+	// or installs directly and sets a message for JSON-merge-only providers.
+	if cmd == nil && app.detail.message == "" {
+		t.Fatal("expected a cmd (install modal) or a result message after pressing i")
 	}
 }
 
-func TestDetailInstallMethodPicker(t *testing.T) {
-	app := navigateToDetail(t, catalog.Skills)
-	m, _ := app.Update(keyRune('3'))
-	app = m.(App)
+func TestDetailInstallModalNavigation(t *testing.T) {
+	// Test that the install modal handles location navigation
+	modal := newInstallModal(
+		catalog.ContentItem{Name: "test-skill", Type: catalog.Skills},
+		nil, "/tmp/test",
+	)
 
-	// Force method picker state
-	app.detail.confirmAction = actionChooseMethod
-	app.detail.methodCursor = 0
-
-	// Navigate method picker
-	m, _ = app.Update(keyDown)
-	app = m.(App)
-	if app.detail.methodCursor != 1 {
-		t.Fatalf("expected methodCursor 1, got %d", app.detail.methodCursor)
+	// Navigate location picker
+	updated, _ := modal.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if updated.locationCursor != 1 {
+		t.Fatalf("expected locationCursor 1, got %d", updated.locationCursor)
 	}
 
-	// Bounds clamping
-	m, _ = app.Update(keyDown)
-	app = m.(App)
-	if app.detail.methodCursor != 1 {
-		t.Fatal("methodCursor should clamp at 1")
+	// Bounds clamping at max
+	updated, _ = updated.Update(tea.KeyMsg{Type: tea.KeyDown})
+	updated, _ = updated.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if updated.locationCursor != 2 {
+		t.Fatal("locationCursor should clamp at 2")
+	}
+
+	// Select "Global" (cursor 0) → should advance to method step
+	updated.locationCursor = 0
+	updated, _ = updated.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if updated.step != installStepMethod {
+		t.Fatalf("expected installStepMethod after selecting Global, got %d", updated.step)
+	}
+
+	// Navigate method picker
+	updated, _ = updated.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if updated.methodCursor != 1 {
+		t.Fatalf("expected methodCursor 1, got %d", updated.methodCursor)
+	}
+
+	// Confirm method → modal should close with confirmed=true
+	updated, _ = updated.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if updated.active {
+		t.Fatal("modal should be inactive after confirming method")
+	}
+	if !updated.confirmed {
+		t.Fatal("modal should be confirmed")
 	}
 }
 
@@ -626,25 +644,26 @@ func TestDetailUninstallFlow(t *testing.T) {
 	m, _ := app.Update(keyRune('3'))
 	app = m.(App)
 
-	// First 'u' press → confirmation (or "not installed" message)
+	// Check a provider so we pass the "nothing selected" guard
+	if len(app.detail.provCheck.checks) > 0 {
+		app.detail.provCheck.checks[0] = true
+	}
+
+	// 'u' with nothing installed → "Not installed" message
 	m, _ = app.Update(keyRune('u'))
 	app = m.(App)
-
-	// Since nothing is installed, should get "Not installed" message
-	if app.detail.confirmAction == actionUninstall {
-		// Second 'u' confirms
-		m, _ = app.Update(keyRune('u'))
-		app = m.(App)
-		if app.detail.confirmAction != actionNone {
-			t.Fatal("expected actionNone after double-press u")
-		}
-	}
+	assertContains(t, app.detail.message, "Not installed")
 }
 
 func TestDetailUninstallNotInstalled(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 	m, _ := app.Update(keyRune('3'))
 	app = m.(App)
+
+	// Check a provider checkbox so we pass the "nothing selected" guard
+	if len(app.detail.provCheck.checks) > 0 {
+		app.detail.provCheck.checks[0] = true
+	}
 
 	m, _ = app.Update(keyRune('u'))
 	app = m.(App)
@@ -653,6 +672,22 @@ func TestDetailUninstallNotInstalled(t *testing.T) {
 	if app.detail.confirmAction == actionNone {
 		assertContains(t, app.detail.message, "Not installed")
 	}
+}
+
+func TestDetailUninstallNothingSelected(t *testing.T) {
+	app := navigateToDetail(t, catalog.Skills)
+	m, _ := app.Update(keyRune('3'))
+	app = m.(App)
+
+	// Ensure no checkboxes are checked
+	for i := range app.detail.provCheck.checks {
+		app.detail.provCheck.checks[i] = false
+	}
+
+	m, _ = app.Update(keyRune('u'))
+	app = m.(App)
+
+	assertContains(t, app.detail.message, "No providers selected")
 }
 
 func TestDetailUninstallEscCancels(t *testing.T) {
@@ -782,13 +817,12 @@ func TestDetailPromoteEscCancels(t *testing.T) {
 
 func TestDetailBackCancelsPendingAction(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	app.detail.confirmAction = actionChooseMethod
+	app.detail.confirmAction = actionUninstall
 
-	// Esc should cancel the action, not navigate back
+	// Esc should cancel the pending action, not navigate back
 	m, _ := app.Update(keyEsc)
 	app = m.(App)
 
-	// Should still be on detail screen
 	assertScreen(t, app, screenDetail)
 	if app.detail.confirmAction != actionNone {
 		t.Fatal("esc should cancel pending action first")
@@ -919,14 +953,20 @@ func TestHelpBarNoSaveOnOverviewTab(t *testing.T) {
 // Method picker path preview (4.18)
 // ---------------------------------------------------------------------------
 
-func TestDetailMethodPickerShowsPaths(t *testing.T) {
-	app := navigateToDetail(t, catalog.Skills)
-	app.detail.activeTab = tabInstall
-	app.detail.confirmAction = actionChooseMethod
-	if len(app.detail.provCheck.checks) > 0 {
-		app.detail.provCheck.checks[0] = true
+func TestInstallModalShowsDestination(t *testing.T) {
+	providers := testProviders(t)
+	detected := []provider.Provider{}
+	for _, p := range providers {
+		if p.Detected {
+			detected = append(detected, p)
+		}
 	}
 
-	view := app.View()
+	modal := newInstallModal(
+		catalog.ContentItem{Name: "test-skill", Type: catalog.Skills},
+		detected, "/tmp/test",
+	)
+
+	view := modal.View()
 	assertContains(t, view, "Destination")
 }

@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
 )
 
 type searchModel struct {

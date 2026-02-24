@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/parse"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/parse"
 	"github.com/spf13/cobra"
 )
 

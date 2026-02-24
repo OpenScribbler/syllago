@@ -14,14 +14,14 @@ type ContextDocument struct {
 type Category string
 
 const (
-	CatTechStack    Category = "tech-stack"
-	CatDependencies Category = "dependencies"
+	CatTechStack     Category = "tech-stack"
+	CatDependencies  Category = "dependencies"
 	CatBuildCommands Category = "build-commands"
-	CatDirStructure Category = "directory-structure"
-	CatProjectMeta  Category = "project-metadata"
-	CatConventions  Category = "conventions"
-	CatSurprise     Category = "surprise"
-	CatCurated      Category = "curated"
+	CatDirStructure  Category = "directory-structure"
+	CatProjectMeta   Category = "project-metadata"
+	CatConventions   Category = "conventions"
+	CatSurprise      Category = "surprise"
+	CatCurated       Category = "curated"
 )
 
 // Origin distinguishes auto-maintained from human-authored content.

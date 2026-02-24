@@ -7,57 +7,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-
-	"github.com/holdenhewett/nesco/cli/internal/installer"
+	"github.com/OpenScribbler/nesco/cli/internal/installer"
 )
-
-// envSetupModel groups the interactive environment variable setup state.
-type envSetupModel struct {
-	input        textinput.Model
-	varNames     []string // ordered list of unset env var names
-	varIdx       int      // current index being prompted
-	methodCursor int      // 0=set up new, 1=already configured
-	value        string   // temporarily holds entered value between steps
-}
-
-// startEnvSetup begins the env var setup flow if there are unset vars.
-// Returns true if the flow was started.
-func (m *detailModel) startEnvSetup() bool {
-	unsetNames := m.unsetEnvVarNames()
-	if len(unsetNames) == 0 {
-		m.message = "All environment variables are set"
-		m.messageIsErr = false
-		return false
-	}
-	m.env.varNames = unsetNames
-	m.env.varIdx = 0
-	m.env.methodCursor = 0
-	m.confirmAction = actionEnvChoose
-	m.message = ""
-	return true
-}
-
-// advanceEnvSetup moves to the next unset env var, or finishes the setup flow.
-func (m *detailModel) advanceEnvSetup() {
-	m.env.varIdx++
-	if m.env.varIdx < len(m.env.varNames) {
-		m.confirmAction = actionEnvChoose
-		m.env.methodCursor = 0
-		m.env.input.Blur()
-	} else {
-		// All vars processed
-		m.env.input.Blur()
-		m.env.varNames = nil
-		m.env.varIdx = 0
-		m.env.methodCursor = 0
-		m.confirmAction = actionNone
-	}
-}
 
 // saveEnvToFile writes a KEY=VALUE line to the specified file (e.g., a .env file).
 // Creates the file and parent directories if they don't exist.
-func (m *detailModel) saveEnvToFile(name, value, filePath string) error {
+func saveEnvToFile(name, value, filePath string) error {
 	expanded, err := expandHome(filePath)
 	if err != nil {
 		return err
@@ -85,7 +40,7 @@ func (m *detailModel) saveEnvToFile(name, value, filePath string) error {
 
 // loadEnvFromFile reads a .env file and looks for the specified variable.
 // If found, sets it in the current process environment.
-func (m *detailModel) loadEnvFromFile(name, filePath string) error {
+func loadEnvFromFile(name, filePath string) error {
 	expanded, err := expandHome(filePath)
 	if err != nil {
 		return err

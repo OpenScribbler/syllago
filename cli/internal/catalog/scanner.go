@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/holdenhewett/nesco/cli/internal/metadata"
+	"github.com/OpenScribbler/nesco/cli/internal/metadata"
 	"github.com/tidwall/gjson"
 )
 

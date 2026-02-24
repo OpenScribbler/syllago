@@ -22,7 +22,7 @@ We recommend cloning to `~/.local/src/` so it stays out of your project director
 
 ```bash
 mkdir -p ~/.local/src
-git clone https://github.com/holdenhewett/nesco.git ~/.local/src/nesco
+git clone https://github.com/OpenScribbler/nesco.git ~/.local/src/nesco
 ```
 
 This location becomes your local content library. The `nesco` CLI reads from it directly — no need to move or copy the repo elsewhere.
@@ -232,7 +232,7 @@ make build-all  # Cross-compile for linux/darwin/windows amd64 + linux/darwin ar
 ## Security
 
 Nesco does not operate any registry or marketplace. The built-in content comes from
-the [nesco-tools](https://github.com/holdenhewett/nesco-tools) repository, which you
+the [nesco-tools](https://github.com/OpenScribbler/nesco-tools) repository, which you
 can audit directly.
 
 **Third-party registries are unverified.** When you run `nesco registry add <url>`,

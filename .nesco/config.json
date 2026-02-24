@@ -1,9 +1,7 @@
 {
   "providers": [
     "claude-code",
-    "cursor",
-    "windsurf",
-    "codex"
+    "gemini-cli"
   ],
   "preferences": {
     "autoUpdate": "false"

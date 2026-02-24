@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/installer"
-	"github.com/holdenhewett/nesco/cli/internal/metadata"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/installer"
+	"github.com/OpenScribbler/nesco/cli/internal/metadata"
 )
 
 // Result holds the outcome of a promote operation.

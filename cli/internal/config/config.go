@@ -22,7 +22,7 @@ type Registry struct {
 }
 
 type Config struct {
-	Providers   []string          `json:"providers"`              // enabled provider slugs
+	Providers   []string          `json:"providers"` // enabled provider slugs
 	Registries  []Registry        `json:"registries,omitempty"`
 	Preferences map[string]string `json:"preferences,omitempty"`
 }

@@ -170,10 +170,10 @@
   ```
   Currently `promote` is only imported in `detail.go`. `app.go` does not import the `promote` package. After Task 3.3 Step 3, `app.go` will need:
   ```go
-  "github.com/holdenhewett/nesco/cli/internal/promote"
+  "github.com/OpenScribbler/nesco/cli/internal/promote"
   ```
   This is not mentioned in the task.
-  - **Fix:** Add to the task: "Add `\"github.com/holdenhewett/nesco/cli/internal/promote\"` to app.go imports."
+  - **Fix:** Add to the task: "Add `\"github.com/OpenScribbler/nesco/cli/internal/promote\"` to app.go imports."
 
 - [ ] **Missing context — `fmt` import needed in app.go sidebar zone loop** — Task 5.2 (mouse handling) uses `fmt.Sprintf("sidebar-%d", i)` in `App.Update()`. Currently `app.go` already imports `fmt` (line 4), so this is fine. But Task 3.3 does not add fmt calls, so no issue here.
 

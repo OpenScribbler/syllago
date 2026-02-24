@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/holdenhewett/nesco/cli/internal/catalog"
-	"github.com/holdenhewett/nesco/cli/internal/output"
-	"github.com/holdenhewett/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/output"
+	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
 
 // setupExportRepo creates a temp nesco repo with my-tools/ content and
