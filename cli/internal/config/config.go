@@ -14,8 +14,16 @@ import (
 const DirName = ".nesco"
 const FileName = "config.json"
 
+// Registry represents a git-based content source registered in this project.
+type Registry struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+	Ref  string `json:"ref,omitempty"` // branch/tag/commit, defaults to default branch
+}
+
 type Config struct {
 	Providers   []string          `json:"providers"`              // enabled provider slugs
+	Registries  []Registry        `json:"registries,omitempty"`
 	Preferences map[string]string `json:"preferences,omitempty"`
 }
 

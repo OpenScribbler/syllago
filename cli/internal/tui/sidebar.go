@@ -14,12 +14,13 @@ import (
 const sidebarWidth = 18 // fixed width including border character
 
 type sidebarModel struct {
-	types      []catalog.ContentType
-	counts     map[catalog.ContentType]int
-	localCount int
-	cursor     int
-	focused    bool
-	height     int // available terminal height for sidebar panel
+	types         []catalog.ContentType
+	counts        map[catalog.ContentType]int
+	localCount    int
+	registryCount int // number of configured registries
+	cursor        int
+	focused       bool
+	height        int // available terminal height for sidebar panel
 
 	// Version/update state (displayed in sidebar header)
 	version         string
@@ -28,19 +29,20 @@ type sidebarModel struct {
 	commitsBehind   int
 }
 
-func newSidebarModel(cat *catalog.Catalog, version string) sidebarModel {
+func newSidebarModel(cat *catalog.Catalog, version string, registryCount int) sidebarModel {
 	return sidebarModel{
-		types:      catalog.AllContentTypes(),
-		counts:     cat.CountByType(),
-		localCount: cat.CountLocal(),
-		version:    version,
+		types:         catalog.AllContentTypes(),
+		counts:        cat.CountByType(),
+		localCount:    cat.CountLocal(),
+		registryCount: registryCount,
+		version:       version,
 	}
 }
 
 // totalItems returns the total number of navigable items in the sidebar
-// (content types + My Tools + Import + Update + Settings).
+// (content types + My Tools + Import + Update + Settings + Registries).
 func (m sidebarModel) totalItems() int {
-	return len(m.types) + 4
+	return len(m.types) + 5
 }
 
 func (m sidebarModel) Update(msg tea.Msg) (sidebarModel, tea.Cmd) {
@@ -120,7 +122,7 @@ func (m sidebarModel) View() string {
 	// ── Configuration section ──
 	s += labelStyle.Render("  Configuration") + "\n"
 
-	// Utility items: Import, Update, Settings
+	// Utility items: Import, Update, Settings, Registries
 	utilItems := []struct {
 		label string
 		index int
@@ -128,14 +130,26 @@ func (m sidebarModel) View() string {
 		{"Import", len(m.types) + 1},
 		{"Update", len(m.types) + 2},
 		{"Settings", len(m.types) + 3},
+		{"Registries", len(m.types) + 4},
 	}
 
 	for _, u := range utilItems {
 		var rowContent string
-		if u.index == m.cursor {
-			rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, u.label))
+		// Registries shows item count like content types
+		if u.label == "Registries" && m.registryCount > 0 {
+			countStr := fmt.Sprintf("%2d", m.registryCount)
+			line := fmt.Sprintf("%-*s%s", inner-len(countStr)-2, u.label, countStr)
+			if u.index == m.cursor {
+				rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, line))
+			} else {
+				rowContent = "  " + itemStyle.Render(line)
+			}
 		} else {
-			rowContent = "  " + itemStyle.Render(u.label)
+			if u.index == m.cursor {
+				rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, u.label))
+			} else {
+				rowContent = "  " + itemStyle.Render(u.label)
+			}
 		}
 		s += zone.Mark(fmt.Sprintf("sidebar-%d", u.index), rowContent) + "\n"
 	}
@@ -167,7 +181,8 @@ func (m sidebarModel) View() string {
 func (m sidebarModel) isMyToolsSelected() bool { return m.cursor == len(m.types) }
 func (m sidebarModel) isImportSelected() bool   { return m.cursor == len(m.types)+1 }
 func (m sidebarModel) isUpdateSelected() bool   { return m.cursor == len(m.types)+2 }
-func (m sidebarModel) isSettingsSelected() bool { return m.cursor == len(m.types)+3 }
+func (m sidebarModel) isSettingsSelected() bool    { return m.cursor == len(m.types)+3 }
+func (m sidebarModel) isRegistriesSelected() bool  { return m.cursor == len(m.types)+4 }
 func (m sidebarModel) selectedType() catalog.ContentType {
 	if m.cursor >= len(m.types) {
 		return ""

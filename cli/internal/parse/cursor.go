@@ -49,7 +49,7 @@ func (p CursorParser) parseMDC(path string, content []byte) ([]model.Section, er
 	name := filepath.Base(path)
 	name = strings.TrimSuffix(name, ".mdc")
 
-	fm, body, err := parseMDCFrontmatter(content)
+	fm, body, err := ParseMDCFrontmatter(content)
 	if err != nil {
 		return []model.Section{
 			model.TextSection{
@@ -78,7 +78,9 @@ func (p CursorParser) parseMDC(path string, content []byte) ([]model.Section, er
 	}, nil
 }
 
-func parseMDCFrontmatter(content []byte) (CursorFrontmatter, string, error) {
+// ParseMDCFrontmatter extracts YAML frontmatter and body from .mdc content.
+// Returns the parsed frontmatter, the body text, and any error.
+func ParseMDCFrontmatter(content []byte) (CursorFrontmatter, string, error) {
 	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
 
 	opening := []byte("---\n")

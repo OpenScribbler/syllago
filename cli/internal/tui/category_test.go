@@ -12,8 +12,8 @@ func TestCategoryNavigation(t *testing.T) {
 	app := testApp(t)
 	assertScreen(t, app, screenCategory)
 
-	// Sidebar navigation: 8 content types + My Tools + Import + Update + Settings = 12 rows (indices 0-11)
-	totalRows := len(catalog.AllContentTypes()) + 3 // types + My Tools + Import + Update + Settings
+	// Sidebar navigation: 8 content types + My Tools + Import + Update + Settings + Registries = 13 rows (indices 0-12)
+	totalRows := len(catalog.AllContentTypes()) + 4 // types + My Tools + Import + Update + Settings + Registries
 	if app.sidebar.cursor != 0 {
 		t.Fatalf("expected initial cursor 0, got %d", app.sidebar.cursor)
 	}

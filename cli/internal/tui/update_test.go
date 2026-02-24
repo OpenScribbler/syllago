@@ -93,6 +93,52 @@ func TestUpdateMenuCheckForUpdates(t *testing.T) {
 	}
 }
 
+func TestUpdateCheckForUpdatesClearsLoading(t *testing.T) {
+	// "Check for updates" dispatches checkForUpdate which returns updateCheckMsg.
+	// The updater must clear loading when it receives the response.
+	app := navigateToUpdate(t)
+	app.updater.loading = true // simulate waiting for check
+
+	msg := updateCheckMsg{
+		localVersion:  "1.0.0",
+		remoteVersion: "1.0.0",
+		commitsBehind: 0,
+	}
+	m, _ := app.Update(msg)
+	app = m.(App)
+
+	if app.updater.loading {
+		t.Fatal("loading should be false after updateCheckMsg")
+	}
+	if app.updater.step != stepUpdateMenu {
+		t.Fatalf("expected stepUpdateMenu, got %d", app.updater.step)
+	}
+}
+
+func TestUpdateCheckForUpdatesFindsUpdate(t *testing.T) {
+	// When "Check for updates" finds a newer version, updater should reflect it.
+	app := navigateToUpdate(t)
+	app.updater.loading = true
+
+	msg := updateCheckMsg{
+		localVersion:  "1.0.0",
+		remoteVersion: "2.0.0",
+		commitsBehind: 3,
+	}
+	m, _ := app.Update(msg)
+	app = m.(App)
+
+	if app.updater.loading {
+		t.Fatal("loading should be false")
+	}
+	if !app.updater.updateAvail {
+		t.Fatal("expected updateAvail=true after finding newer version")
+	}
+	if app.updater.remoteVersion != "2.0.0" {
+		t.Fatalf("expected remoteVersion 2.0.0, got %s", app.updater.remoteVersion)
+	}
+}
+
 func TestUpdateMenuViewReleaseNotes(t *testing.T) {
 	// When on latest, cursor 0 = "View release notes"
 	app := navigateToUpdate(t)

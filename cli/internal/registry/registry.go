@@ -1,0 +1,149 @@
+package registry
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
+	"github.com/holdenhewett/nesco/cli/internal/catalog"
+)
+
+// CacheDir returns the global registry cache directory (~/.nesco/registries).
+func CacheDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("getting home directory: %w", err)
+	}
+	return filepath.Join(home, ".nesco", "registries"), nil
+}
+
+// CloneDir returns the path where a named registry is cloned.
+func CloneDir(name string) (string, error) {
+	cache, err := CacheDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(cache, name), nil
+}
+
+// IsCloned returns true if the registry clone directory exists.
+func IsCloned(name string) bool {
+	dir, err := CloneDir(name)
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(dir)
+	return err == nil
+}
+
+// NameFromURL derives a registry name from a git URL.
+// Examples:
+//
+//	"git@github.com:acme/nesco-tools.git" → "nesco-tools"
+//	"https://github.com/acme/nesco-tools"  → "nesco-tools"
+func NameFromURL(url string) string {
+	// Take the last path segment
+	url = strings.TrimSuffix(url, "/")
+	last := url
+	if i := strings.LastIndexAny(url, "/:"); i >= 0 {
+		last = url[i+1:]
+	}
+	// Strip .git suffix
+	return strings.TrimSuffix(last, ".git")
+}
+
+// checkGit returns an error if git is not on PATH.
+func checkGit() error {
+	_, err := exec.LookPath("git")
+	if err != nil {
+		return fmt.Errorf("git is required for registry operations but was not found on PATH")
+	}
+	return nil
+}
+
+// Clone clones the given URL into the registry cache as name.
+// If ref is non-empty, checks out that branch/tag after cloning.
+func Clone(url, name, ref string) error {
+	if !catalog.IsValidItemName(name) {
+		return fmt.Errorf("registry name %q contains invalid characters (use letters, numbers, - and _)", name)
+	}
+	if err := checkGit(); err != nil {
+		return err
+	}
+
+	dir, err := CloneDir(name)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(dir), 0755); err != nil {
+		return fmt.Errorf("creating registry cache: %w", err)
+	}
+
+	args := []string{"clone", url, dir}
+	if ref != "" {
+		args = append(args, "--branch", ref)
+	}
+	cmd := exec.Command("git", args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		// Clean up partial clone
+		os.RemoveAll(dir)
+		return fmt.Errorf("git clone failed: %s", strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// Sync runs git pull --ff-only in the registry clone directory.
+// Returns an error if the clone does not exist or git pull fails.
+func Sync(name string) error {
+	if err := checkGit(); err != nil {
+		return err
+	}
+	dir, err := CloneDir(name)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command("git", "-C", dir, "pull", "--ff-only")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git pull failed for %q: %s\n(Hint: delete the clone at ~/.nesco/registries/%s and re-run `nesco registry add`)", name, strings.TrimSpace(string(out)), name)
+	}
+	return nil
+}
+
+// SyncResult holds the outcome of a single registry sync.
+type SyncResult struct {
+	Name string
+	Err  error
+}
+
+// SyncAll syncs all registries concurrently (up to 4 at a time) and returns results.
+func SyncAll(names []string) []SyncResult {
+	results := make([]SyncResult, len(names))
+	sem := make(chan struct{}, 4) // max 4 concurrent syncs
+
+	done := make(chan struct{}, len(names))
+	for i, name := range names {
+		go func(i int, name string) {
+			sem <- struct{}{}
+			results[i] = SyncResult{Name: name, Err: Sync(name)}
+			<-sem
+			done <- struct{}{}
+		}(i, name)
+	}
+	for range names {
+		<-done
+	}
+	return results
+}
+
+// Remove deletes the registry clone directory.
+func Remove(name string) error {
+	dir, err := CloneDir(name)
+	if err != nil {
+		return err
+	}
+	return os.RemoveAll(dir)
+}

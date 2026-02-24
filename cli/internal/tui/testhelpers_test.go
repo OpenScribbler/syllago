@@ -250,7 +250,7 @@ func testApp(t *testing.T) App {
 	cat := testCatalog(t)
 	providers := testProviders(t)
 
-	app := NewApp(cat, providers, "1.0.0", false)
+	app := NewApp(cat, providers, "1.0.0", false, nil, nil)
 	app.width = 80
 	app.height = 30
 	// Propagate dimensions to sub-models that need them

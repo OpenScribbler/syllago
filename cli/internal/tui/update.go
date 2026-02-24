@@ -135,6 +135,16 @@ func (m updateModel) Update(msg tea.Msg) (updateModel, tea.Cmd) {
 		}
 		return m, nil
 
+	case updateCheckMsg:
+		m.loading = false
+		if msg.err == nil && msg.remoteVersion != "" {
+			m.remoteVersion = msg.remoteVersion
+			m.commitsBehind = msg.commitsBehind
+			m.updateAvail = versionNewer(msg.remoteVersion, m.localVersion)
+		}
+		m.cursor = 0
+		return m, nil
+
 	case updatePreviewMsg:
 		m.loading = false
 		m.releaseNotes = msg.releaseNotes

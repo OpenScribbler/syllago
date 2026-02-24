@@ -229,6 +229,23 @@ make vet        # Run go vet
 make build-all  # Cross-compile for linux/darwin/windows amd64 + linux/darwin arm64
 ```
 
+## Security
+
+Nesco does not operate any registry or marketplace. The built-in content comes from
+the [nesco-tools](https://github.com/holdenhewett/nesco-tools) repository, which you
+can audit directly.
+
+**Third-party registries are unverified.** When you run `nesco registry add <url>`,
+you are trusting the owner of that repository. Review the content before installing
+anything from it.
+
+**Hooks and MCP configs can execute arbitrary code.** A hook is a shell script that
+runs automatically in your AI coding session. An MCP server is a process that your AI
+tool connects to. Before installing either, read the source.
+
+The nesco maintainers are not affiliated with and accept no liability for any
+third-party registry or its content.
+
 ## License
 
 Apache 2.0 — see [LICENSE](LICENSE) for full text.

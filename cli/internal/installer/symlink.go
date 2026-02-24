@@ -54,3 +54,13 @@ func IsSymlinkedTo(path, repoRoot string) bool {
 	repoRoot = filepath.Clean(repoRoot)
 	return strings.HasPrefix(target, repoRoot+string(filepath.Separator)) || target == repoRoot
 }
+
+// IsSymlinkedToAny checks if path is a symlink pointing into any of the given roots.
+func IsSymlinkedToAny(path string, roots []string) bool {
+	for _, root := range roots {
+		if IsSymlinkedTo(path, root) {
+			return true
+		}
+	}
+	return false
+}

@@ -56,6 +56,12 @@ func (ct ContentType) Label() string {
 	return string(ct)
 }
 
+// RegistrySource describes a registry to include in a multi-source scan.
+type RegistrySource struct {
+	Name string // registry name (used to tag items)
+	Path string // absolute path to the registry clone directory
+}
+
 // ContentItem represents a single discoverable piece of content in the repo.
 type ContentItem struct {
 	Name               string
@@ -70,6 +76,7 @@ type ContentItem struct {
 	SupportedProviders []string        // provider slugs this item works with (apps only), e.g. ["claude-code", "gemini-cli"]
 	Meta               *metadata.Meta  // loaded from .nesco.yaml if present
 	Local              bool            // true if item lives in my-tools/
+	Registry           string          // non-empty if item came from a git registry (value is the registry name)
 }
 
 // Catalog holds all discovered content items and the repo root they came from.
@@ -109,11 +116,11 @@ func (c *Catalog) ByTypeLocal(ct ContentType) []ContentItem {
 	return result
 }
 
-// ByTypeShared returns shared-only items of a given type.
+// ByTypeShared returns shared-only items of a given type (from the main repo, not registries).
 func (c *Catalog) ByTypeShared(ct ContentType) []ContentItem {
 	var result []ContentItem
 	for _, item := range c.Items {
-		if item.Type == ct && !item.Local {
+		if item.Type == ct && !item.Local && item.Registry == "" {
 			result = append(result, item)
 		}
 	}
@@ -125,6 +132,28 @@ func (c *Catalog) CountLocal() int {
 	count := 0
 	for _, item := range c.Items {
 		if item.Local {
+			count++
+		}
+	}
+	return count
+}
+
+// ByRegistry returns all items from a specific named registry.
+func (c *Catalog) ByRegistry(name string) []ContentItem {
+	var result []ContentItem
+	for _, item := range c.Items {
+		if item.Registry == name {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+// CountRegistry returns the number of items from a specific named registry.
+func (c *Catalog) CountRegistry(name string) int {
+	count := 0
+	for _, item := range c.Items {
+		if item.Registry == name {
 			count++
 		}
 	}

@@ -27,24 +27,29 @@ func TestSettingsNavigation(t *testing.T) {
 		t.Fatalf("expected initial cursor 0, got %d", app.settings.cursor)
 	}
 
-	// 2 rows: auto-update(0), providers(1)
+	// 3 rows: auto-update(0), providers(1), registry-auto-sync(2)
 	m, _ := app.Update(keyDown)
 	app = m.(App)
 	if app.settings.cursor != 1 {
 		t.Fatalf("expected cursor 1, got %d", app.settings.cursor)
 	}
 
+	m, _ = app.Update(keyDown)
+	app = m.(App)
+	if app.settings.cursor != 2 {
+		t.Fatalf("expected cursor 2, got %d", app.settings.cursor)
+	}
+
 	// Bounds clamping
 	m, _ = app.Update(keyDown)
 	app = m.(App)
-	if app.settings.cursor != 1 {
-		t.Fatal("cursor should clamp at 1")
+	if app.settings.cursor != 2 {
+		t.Fatal("cursor should clamp at 2")
 	}
 
-	m, _ = app.Update(keyUp)
-	app = m.(App)
+	app = pressN(app, keyUp, 2)
 	if app.settings.cursor != 0 {
-		t.Fatalf("expected cursor 0 after up, got %d", app.settings.cursor)
+		t.Fatalf("expected cursor 0 after two ups, got %d", app.settings.cursor)
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/holdenhewett/nesco/cli/internal/catalog"
+	"github.com/holdenhewett/nesco/cli/internal/config"
 	"github.com/holdenhewett/nesco/cli/internal/promote"
 	"github.com/holdenhewett/nesco/cli/internal/provider"
 )
@@ -24,6 +25,7 @@ const (
 	screenImport
 	screenUpdate
 	screenSettings
+	screenRegistries
 )
 
 type focusTarget int
@@ -36,10 +38,11 @@ const (
 
 // App is the root bubbletea model.
 type App struct {
-	catalog    *catalog.Catalog
-	providers  []provider.Provider
-	version    string
-	autoUpdate bool
+	catalog         *catalog.Catalog
+	providers       []provider.Provider
+	version         string
+	autoUpdate      bool
+	registrySources []catalog.RegistrySource
 
 	screen      screen
 	focus       focusTarget
@@ -54,6 +57,8 @@ type App struct {
 	importer    importModel
 	updater     updateModel
 	settings      settingsModel
+	registries    registriesModel
+	registryCfg   *config.Config
 	statusMessage  string
 	statusWarnings []string
 
@@ -72,16 +77,21 @@ type App struct {
 
 // NewApp creates a new App model. Set autoUpdate to true to pull updates
 // automatically when a newer version is detected on origin.
-func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string, autoUpdate bool) App {
+func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string, autoUpdate bool, registrySources []catalog.RegistrySource, cfg *config.Config) App {
+	if cfg == nil {
+		cfg = &config.Config{}
+	}
 	return App{
-		catalog:    cat,
-		providers:  providers,
-		version:    version,
-		autoUpdate: autoUpdate,
-		screen:     screenCategory,
-		focus:      focusSidebar,
-		sidebar:    newSidebarModel(cat, version),
-		search:     newSearchModel(),
+		catalog:         cat,
+		providers:       providers,
+		version:         version,
+		autoUpdate:      autoUpdate,
+		registrySources: registrySources,
+		registryCfg:     cfg,
+		screen:          screenCategory,
+		focus:           focusSidebar,
+		sidebar:         newSidebarModel(cat, version, len(cfg.Registries)),
+		search:          newSearchModel(),
 	}
 }
 
@@ -123,6 +133,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.updater.height = ph
 		a.settings.width = contentW
 		a.settings.height = ph
+		a.registries.width = contentW
+		a.registries.height = ph
 		return a, nil
 
 	case appInstallDoneMsg:
@@ -140,7 +152,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.detail, cmd = a.detail.Update(msg)
 			// Rescan catalog after promote
 			if msg.err == nil {
-				cat, err := catalog.Scan(a.catalog.RepoRoot)
+				cat, err := catalog.ScanWithRegistries(a.catalog.RepoRoot, a.registrySources)
 				if err == nil {
 					a.catalog = cat
 					a.sidebar.counts = cat.CountByType()
@@ -172,7 +184,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		// Rescan catalog
-		cat, err := catalog.Scan(a.catalog.RepoRoot)
+		cat, err := catalog.ScanWithRegistries(a.catalog.RepoRoot, a.registrySources)
 		if err == nil {
 			a.catalog = cat
 			a.statusMessage = fmt.Sprintf("Imported %q successfully", msg.name)
@@ -202,6 +214,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a, a.updater.startPull()
 			}
 		}
+		// Forward to updater so it can clear loading state
+		if a.screen == screenUpdate {
+			a.updater, _ = a.updater.Update(msg)
+		}
 		return a, nil
 
 	case spinner.TickMsg:
@@ -224,7 +240,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.updater, cmd = a.updater.Update(msg)
 			// On successful pull, rescan catalog
 			if msg.err == nil {
-				cat, err := catalog.Scan(a.catalog.RepoRoot)
+				cat, err := catalog.ScanWithRegistries(a.catalog.RepoRoot, a.registrySources)
 				if err == nil {
 					a.catalog = cat
 					a.sidebar.counts = cat.CountByType()
@@ -321,9 +337,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Check welcome page configuration links
 		welcomeConfigMap := map[string]int{
-			"welcome-import":   len(a.sidebar.types) + 1,
-			"welcome-update":   len(a.sidebar.types) + 2,
-			"welcome-settings": len(a.sidebar.types) + 3,
+			"welcome-import":     len(a.sidebar.types) + 1,
+			"welcome-update":     len(a.sidebar.types) + 2,
+			"welcome-settings":   len(a.sidebar.types) + 3,
+			"welcome-registries": len(a.sidebar.types) + 4,
 		}
 		for zoneID, sidebarIdx := range welcomeConfigMap {
 			if zone.Get(zoneID).InBounds(msg) {
@@ -381,6 +398,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case screenSettings:
 			var cmd tea.Cmd
 			a.settings, cmd = a.settings.Update(msg)
+			return a, cmd
+		case screenRegistries:
+			var cmd tea.Cmd
+			a.registries, cmd = a.registries.Update(msg)
 			return a, cmd
 		}
 		return a, nil
@@ -478,7 +499,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Search toggle (skip on import/update/settings screens and when detail has active textinput)
-		if key.Matches(msg, keys.Search) && !a.search.active && a.screen != screenImport && a.screen != screenUpdate && a.screen != screenSettings && !a.detail.HasTextInput() {
+		if key.Matches(msg, keys.Search) && !a.search.active && a.screen != screenImport && a.screen != screenUpdate && a.screen != screenSettings && a.screen != screenRegistries && !a.detail.HasTextInput() {
 			a.search = a.search.activated()
 			return a, nil
 		}
@@ -564,7 +585,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if (key.Matches(msg, keys.Tab) || key.Matches(msg, keys.ShiftTab)) &&
 			!a.search.active && !a.helpOverlay.active &&
 			a.screen != screenDetail {
-			if a.screen != screenImport && a.screen != screenUpdate && a.screen != screenSettings {
+			if a.screen != screenImport && a.screen != screenUpdate && a.screen != screenSettings && a.screen != screenRegistries {
 				if !a.detail.HasTextInput() {
 					if a.focus == focusSidebar {
 						a.focus = focusContent
@@ -603,6 +624,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						a.importer.width = a.width - sidebarWidth - 1
 						a.importer.height = a.panelHeight()
 						a.screen = screenImport
+						a.focus = focusContent
+						return a, nil
+					}
+					if a.sidebar.isRegistriesSelected() {
+						a.registries = newRegistriesModel(a.catalog.RepoRoot, a.registryCfg, a.catalog)
+						a.registries.width = a.width - sidebarWidth - 1
+						a.registries.height = a.panelHeight()
+						a.screen = screenRegistries
 						a.focus = focusContent
 						return a, nil
 					}
@@ -766,6 +795,30 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			a.settings, cmd = a.settings.Update(msg)
 			return a, cmd
+
+		case screenRegistries:
+			if key.Matches(msg, keys.Back) {
+				a.screen = screenCategory
+				a.focus = focusSidebar
+				return a, nil
+			}
+			// Enter on a registry → show its items
+			if key.Matches(msg, keys.Enter) && len(a.registries.entries) > 0 {
+				name := a.registries.selectedName()
+				if name != "" {
+					regItems := a.catalog.ByRegistry(name)
+					items := newItemsModel(catalog.SearchResults, regItems, a.providers, a.catalog.RepoRoot)
+					items.width = a.width - sidebarWidth - 1
+					items.height = a.panelHeight()
+					a.items = items
+					a.screen = screenItems
+					a.focus = focusContent
+					return a, nil
+				}
+			}
+			var cmd tea.Cmd
+			a.registries, cmd = a.registries.Update(msg)
+			return a, cmd
 		}
 	}
 
@@ -806,6 +859,8 @@ func (a App) View() string {
 		contentView = a.updater.View()
 	case screenSettings:
 		contentView = a.settings.View()
+	case screenRegistries:
+		contentView = a.registries.View()
 	default:
 		// screenCategory: sidebar is the primary UI; show welcome guidance in content
 		contentView = a.renderContentWelcome()
@@ -966,6 +1021,7 @@ func (a App) renderContentWelcome() string {
 		{"Import", "Import your own AI tools from local files or git repos", "welcome-import"},
 		{"Update", "Check for updates and pull latest changes", "welcome-update"},
 		{"Settings", "Configure paths and providers", "welcome-settings"},
+		{"Registries", "Manage git-based content sources from your team or organization", "welcome-registries"},
 	}
 
 	// Cards need ~33 lines of panel height. With ASCII art (+7), ~40 total.
@@ -1039,7 +1095,7 @@ func (a App) renderWelcomeCards(allTypes []catalog.ContentType, counts map[catal
 	s += labelStyle.Render("  Configuration") + "\n\n"
 
 	singleColConfig := contentW < 56
-	configCardW := (contentW - 7) / 3
+	configCardW := (contentW - 5) / 2
 	if singleColConfig {
 		configCardW = contentW - 2
 	}
@@ -1061,12 +1117,18 @@ func (a App) renderWelcomeCards(allTypes []catalog.ContentType, counts map[catal
 			s += zone.Mark(ci.zoneID, configCardStyle.Render(inner)) + "\n"
 		}
 	} else {
-		var configCards []string
-		for _, ci := range configItems {
-			inner := labelStyle.Render(ci.label) + "\n" + helpStyle.Render(ci.desc)
-			configCards = append(configCards, zone.Mark(ci.zoneID, configCardStyle.Render(inner)))
+		// Render config cards in rows of 2
+		for i := 0; i < len(configItems); i += 2 {
+			leftInner := labelStyle.Render(configItems[i].label) + "\n" + helpStyle.Render(configItems[i].desc)
+			left := zone.Mark(configItems[i].zoneID, configCardStyle.Render(leftInner))
+			if i+1 < len(configItems) {
+				rightInner := labelStyle.Render(configItems[i+1].label) + "\n" + helpStyle.Render(configItems[i+1].desc)
+				right := zone.Mark(configItems[i+1].zoneID, configCardStyle.Render(rightInner))
+				s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
+			} else {
+				s += left + "\n"
+			}
 		}
-		s += lipgloss.JoinHorizontal(lipgloss.Top, configCards[0], " ", configCards[1], " ", configCards[2]) + "\n"
 	}
 
 	return s
@@ -1161,6 +1223,8 @@ func (a App) breadcrumb() string {
 		return "Update"
 	case screenSettings:
 		return "Settings"
+	case screenRegistries:
+		return "Registries"
 	default:
 		return "nesco"
 	}

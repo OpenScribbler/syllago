@@ -76,7 +76,7 @@ func TestAppFullNavigation(t *testing.T) {
 	}
 	providers := []provider.Provider{}
 
-	app := NewApp(cat, providers, "", false)
+	app := NewApp(cat, providers, "", false, nil, nil)
 	app.width = 80
 	app.height = 30
 
@@ -143,7 +143,7 @@ func TestImportBrowseFlow(t *testing.T) {
 	cat := &catalog.Catalog{RepoRoot: tmp, Items: nil}
 	providers := []provider.Provider{}
 
-	app := NewApp(cat, providers, "", false)
+	app := NewApp(cat, providers, "", false, nil, nil)
 	app.width = 80
 	app.height = 30
 
