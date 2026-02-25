@@ -1,0 +1,15 @@
+Keyboard Shortcuts
+
+Global:
+  ?         help (this overlay)
+  ctrl+c    quit
+  /         search
+  esc       back / cancel
+
+Category Screen:
+  up/k      move up
+  down/j    move down
+  enter     select
+  q         quit
+
+Press ? or esc to close

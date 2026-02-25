@@ -247,23 +247,28 @@ func testProviders(t *testing.T) []provider.Provider {
 // and a terminal size of 80x30.
 func testApp(t *testing.T) App {
 	t.Helper()
+	return testAppSize(t, 80, 30)
+}
+
+func testAppSize(t *testing.T, width, height int) App {
+	t.Helper()
 	cat := testCatalog(t)
 	providers := testProviders(t)
 
 	app := NewApp(cat, providers, "1.0.0", false, nil, nil)
-	app.width = 80
-	app.height = 30
+	app.width = width
+	app.height = height
 	// Propagate dimensions to sub-models that need them
-	app.items.width = 80
-	app.items.height = 30
-	app.detail.width = 80
-	app.detail.height = 30
-	app.settings.width = 80
-	app.settings.height = 30
-	app.importer.width = 80
-	app.importer.height = 30
-	app.updater.width = 80
-	app.updater.height = 30
+	app.items.width = width
+	app.items.height = height
+	app.detail.width = width
+	app.detail.height = height
+	app.settings.width = width
+	app.settings.height = height
+	app.importer.width = width
+	app.importer.height = height
+	app.updater.width = width
+	app.updater.height = height
 	return app
 }
 

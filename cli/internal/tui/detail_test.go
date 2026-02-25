@@ -668,10 +668,8 @@ func TestDetailUninstallNotInstalled(t *testing.T) {
 	m, _ = app.Update(keyRune('u'))
 	app = m.(App)
 
-	// No items are installed in test providers
-	if app.detail.confirmAction == actionNone {
-		assertContains(t, app.detail.message, "Not installed")
-	}
+	// No items are installed in test providers — message should indicate this
+	assertContains(t, app.detail.message, "Not installed")
 }
 
 func TestDetailUninstallNothingSelected(t *testing.T) {
@@ -690,18 +688,8 @@ func TestDetailUninstallNothingSelected(t *testing.T) {
 	assertContains(t, app.detail.message, "No providers selected")
 }
 
-func TestDetailUninstallEscCancels(t *testing.T) {
-	app := navigateToDetail(t, catalog.Skills)
-	app.detail.activeTab = tabInstall
-	app.detail.confirmAction = actionUninstall
-
-	// Esc should cancel the confirmation
-	m, _ := app.Update(keyEsc)
-	app = m.(App)
-	if app.detail.confirmAction != actionNone {
-		t.Fatal("esc should cancel uninstall confirmation")
-	}
-}
+// TestDetailUninstallEscCancels was removed — uninstall confirmation is now
+// handled by the centralized confirmModal. Esc behavior is tested in modal_test.go.
 
 // ---------------------------------------------------------------------------
 // Install tab (prompts)
@@ -758,9 +746,6 @@ func TestDetailPromoteLocal(t *testing.T) {
 	// 'p' now emits openModalMsg instead of setting confirmAction
 	m, cmd := app.Update(keyRune('p'))
 	app = m.(App)
-	if app.detail.confirmAction == actionPromoteConfirm {
-		t.Fatal("pressing p should NOT set confirmAction=actionPromoteConfirm; it should emit openModalMsg")
-	}
 	if cmd == nil {
 		t.Fatal("pressing p should return a cmd (openModalMsg) to open the promote modal")
 	}
@@ -783,53 +768,25 @@ func TestDetailPromoteNonLocal(t *testing.T) {
 		t.Skip("first skill is local, can't test non-local promote blocking")
 	}
 
-	// 'p' should do nothing for non-local items
-	m, _ := app.Update(keyRune('p'))
-	app = m.(App)
-	if app.detail.confirmAction == actionPromoteConfirm {
+	// 'p' should do nothing for non-local items (no cmd returned)
+	_, cmd := app.Update(keyRune('p'))
+	if cmd != nil {
 		t.Fatal("promote should not activate for non-local items")
 	}
 }
 
-func TestDetailPromoteEscCancels(t *testing.T) {
-	app := testApp(t)
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes) // My Tools
-	m, _ := app.Update(keyEnter)
-	app = m.(App)
-	m, _ = app.Update(keyEnter) // → detail
-	app = m.(App)
-	assertScreen(t, app, screenDetail)
-
-	m, _ = app.Update(keyRune('p')) // first press → confirm
-	app = m.(App)
-
-	m, _ = app.Update(keyEsc) // cancel
-	app = m.(App)
-	if app.detail.confirmAction != actionNone {
-		t.Fatal("esc should cancel promote confirmation")
-	}
-}
+// TestDetailPromoteEscCancels was removed — promote confirmation is now
+// handled by the centralized confirmModal. Esc behavior is tested in modal_test.go.
 
 // ---------------------------------------------------------------------------
 // Back navigation
 // ---------------------------------------------------------------------------
 
-func TestDetailBackCancelsPendingAction(t *testing.T) {
+func TestDetailBackNavigatesToItems(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	app.detail.confirmAction = actionUninstall
 
-	// Esc should cancel the pending action, not navigate back
+	// Esc should navigate back to items
 	m, _ := app.Update(keyEsc)
-	app = m.(App)
-
-	assertScreen(t, app, screenDetail)
-	if app.detail.confirmAction != actionNone {
-		t.Fatal("esc should cancel pending action first")
-	}
-
-	// Another esc should navigate back to items
-	m, _ = app.Update(keyEsc)
 	app = m.(App)
 	assertScreen(t, app, screenItems)
 }
@@ -915,19 +872,9 @@ func TestDetailNextPrevBounds(t *testing.T) {
 	}
 }
 
-func TestDetailNextPrevBlockedDuringAction(t *testing.T) {
-	app := navigateToDetail(t, catalog.Skills)
-	app.detail.confirmAction = actionUninstall
-	originalName := app.detail.item.Name
-
-	ctrlN := tea.KeyMsg{Type: tea.KeyCtrlN}
-	m, _ := app.Update(ctrlN)
-	app = m.(App)
-
-	if app.detail.item.Name != originalName {
-		t.Fatal("ctrl+n should be blocked during active action")
-	}
-}
+// TestDetailNextPrevBlockedDuringAction was removed — confirmAction no longer
+// exists on detailModel. Navigation blocking during confirmation is now handled
+// by the centralized confirmModal at the App level.
 
 func TestDetailNextPrevShowsInHelpBar(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)

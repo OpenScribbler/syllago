@@ -249,10 +249,7 @@ func TestUninstallKeyEmitsOpenModalMsg(t *testing.T) {
 	m := newDetailModel(item, []provider.Provider{p}, itemDir)
 	m.activeTab = tabInstall
 	uMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("u")}
-	updated, cmd := m.Update(uMsg)
-	if updated.confirmAction != actionNone {
-		t.Error("pressing u should NOT set confirmAction; it should emit openModalMsg")
-	}
+	_, cmd := m.Update(uMsg)
 	msg := extractCmd(cmd)
 	oMsg, ok := msg.(openModalMsg)
 	if !ok {
@@ -268,10 +265,7 @@ func TestPromoteKeyEmitsOpenModalMsg(t *testing.T) {
 	// instead of setting confirmAction=actionPromoteConfirm.
 	m := makeDetailModel(catalog.MCP, true, false)
 	pMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")}
-	updated, cmd := m.Update(pMsg)
-	if updated.confirmAction != actionNone {
-		t.Error("pressing p should NOT set confirmAction; it should emit openModalMsg")
-	}
+	_, cmd := m.Update(pMsg)
 	msg := extractCmd(cmd)
 	oMsg, ok := msg.(openModalMsg)
 	if !ok {
@@ -287,10 +281,7 @@ func TestAppScriptKeyEmitsOpenModalMsg(t *testing.T) {
 	// instead of setting confirmAction=actionAppScriptConfirm.
 	m := makeDetailModel(catalog.Apps, false, false)
 	iMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("i")}
-	updated, cmd := m.Update(iMsg)
-	if updated.confirmAction != actionNone {
-		t.Error("pressing i on Apps should NOT set confirmAction; it should emit openModalMsg")
-	}
+	_, cmd := m.Update(iMsg)
 	msg := extractCmd(cmd)
 	oMsg, ok := msg.(openModalMsg)
 	if !ok {

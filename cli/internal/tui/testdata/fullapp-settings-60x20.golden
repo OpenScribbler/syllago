@@ -1,0 +1,21 @@
+nesco             │Home > Settings
+                  │
+  AI Tools        │ > Auto-update  off
+  Skills        3 │   Providers  (none)
+  Agents        1 │   Registry auto-sync  off
+  Prompts       1 │
+  MCP Configs   1 │ ─────────────────────────────────────────────
+  Apps          1 │ Pull updates automatically when a new version is detected on the remote.
+  Rules         1 │
+  Hooks         1 │
+  Commands      1 │ ─────────────────────────────────────────────
+  My Tools      1 │
+  ─────────────   │up/down navigate • enter/space edit • s save • esc back
+  Configuration   │
+  Import          │
+  Update          │
+▸ Settings        │
+  Registries      │
+                  │
+────────────────────────────────────────────────────────────
+Tab: switch panel   /: search   ?: help   q: quit   Settings

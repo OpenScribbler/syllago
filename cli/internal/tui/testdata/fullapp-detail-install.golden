@@ -1,0 +1,30 @@
+nesco             │Home > Skills > alpha-skill
+                  │
+  AI Tools        │ Overview  |  Files  |  Install
+▸ Skills        3 │Type: Skills
+  Agents        1 │Path: <TESTDIR>/skills/alpha-skill
+  Prompts       1 │Providers: Claude Code
+  MCP Configs   1 │────────────────────────────────────────────────────────────────────────────────
+  Apps          1 │
+  Rules         1 │[i]nstall  [u]ninstall  [c]opy  [s]ave
+  Hooks         1 │
+  Commands      1 │Providers:
+  My Tools      1 │  > [ ] Claude Code  [--] available
+  ─────────────   │      Cursor  (not detected)
+  Configuration   │
+  Import          │esc back • tab switch tab • up/down navigate • enter/space toggle • i install • u uninstall • ctrl+n/p next/prev
+  Update          │
+  Settings        │
+  Registries      │
+                  │
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+Esc: back   Tab: switch tab   ?: help   q: quit             Skills > alpha-skill

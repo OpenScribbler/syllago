@@ -78,24 +78,9 @@ func TestSearchBlockedSettings(t *testing.T) {
 	}
 }
 
-func TestSearchBlockedDetailTextInput(t *testing.T) {
-	app := testApp(t)
-	// Navigate to detail screen
-	m, _ := app.Update(keyEnter) // → items
-	app = m.(App)
-	m, _ = app.Update(keyEnter) // → detail
-	app = m.(App)
-	assertScreen(t, app, screenDetail)
-
-	// Activate a text input on detail (e.g., env value input)
-	app.detail.confirmAction = actionEnvValue
-
-	m, _ = app.Update(keyRune('/'))
-	app = m.(App)
-	if app.search.active {
-		t.Fatal("search should NOT activate when detail has active text input")
-	}
-}
+// TestSearchBlockedDetailTextInput was removed — confirmAction/actionEnvValue
+// no longer exist on detailModel. Text input is now handled by the centralized
+// modal system, and HasTextInput() always returns false on detail.
 
 func TestSearchTypeQuery(t *testing.T) {
 	app := testApp(t)
