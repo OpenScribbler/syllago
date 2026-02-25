@@ -1,0 +1,40 @@
+nesco             │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
+                  ││ Skills (3)                                     │ │ Agents (1)                                     │
+  AI Tools        ││ Reusable skill definitions that extend AI tool │ │ Agent configurations with specialized roles    │
+▸ Skills        3 ││ capabilities                                   │ │ and personalities                              │
+  Agents        1 │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
+  Prompts       1 │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
+  MCP Configs   1 ││ Prompts (1)                                    │ │ MCP Configs (1)                                │
+  Apps          1 ││ Prompt templates for common tasks and          │ │ Model Context Protocol server configurations   │
+  Rules         1 ││ workflows                                      │ │                                                │
+  Hooks         1 │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
+  Commands      1 │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
+  My Tools      1 ││ Apps (1)                                       │ │ Rules (1)                                      │
+  ─────────────   ││ Application scaffolds and project templates    │ │ Rule files that guide AI coding tool behavior  │
+  Configuration   ││                                                │ │                                                │
+  Import          │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
+  Update          │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
+  Settings        ││ Hooks (1)                                      │ │ Commands (1)                                   │
+  Registries      ││ Event-driven hooks for automation and          │ │ Custom slash commands for AI coding tools      │
+                  ││ validation                                     │ │                                                │
+                   ╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
+
+                     Configuration
+
+                   ╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
+                   │ Import                                         │ │ Update                                         │
+                   │ Import your own AI tools from local files or   │ │ Check for updates and pull latest changes      │
+                   │ git repos                                      │ │                                                │
+                   ╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
+                   ╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
+                   │ Settings                                       │ │ Registries                                     │
+                   │ Configure paths and providers                  │ │ Manage git-based content sources from your     │
+                   │                                                │ │ team or organization                           │
+                   ╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Tab: switch panel   /: search   ?: help   q: quit                                                                  nesco

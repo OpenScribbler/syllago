@@ -1,3 +1,6 @@
 
 # Use bd merge for beads JSONL files
 .beads/issues.jsonl merge=beads
+
+# Golden test files: normalize line endings, keep text diffs in git
+cli/internal/tui/testdata/*.golden text eol=lf
