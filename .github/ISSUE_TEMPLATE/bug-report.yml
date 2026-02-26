@@ -1,0 +1,73 @@
+name: Bug Report
+description: Something isn't working the way it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Describe what you saw and what felt wrong.
+        If you have ideas about the cause, explain your thinking — no code needed.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the behavior you observed.
+      placeholder: "When I ran ... I saw ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      description: What should have happened instead?
+      placeholder: "I expected ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: how-to-reproduce
+    attributes:
+      label: How did you get there?
+      description: Walk us through the steps, context, or conditions that led to it — in your own words, not scripts.
+      placeholder: |
+        1. I was trying to ...
+        2. Then I ...
+        3. That's when ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of nesco?
+      description: What area does this relate to?
+      options:
+        - CLI
+        - TUI
+        - Specific command
+        - Content installation
+        - Templates
+        - Configuration
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: theories
+    attributes:
+      label: Any theories?
+      description: If you have a hunch about why this happened, share it in your own words. No code — just your thinking.
+      placeholder: "I think it might be because ..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Links, screenshots, related issues, or anything else that might help.
+    validations:
+      required: false

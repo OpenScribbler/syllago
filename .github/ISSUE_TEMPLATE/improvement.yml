@@ -1,0 +1,53 @@
+name: Improvement
+description: Something that works but could be better
+labels: ["improvement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tell us what's not working well and what "better" means to you.
+        If you have thoughts on how to get there, walk us through your thinking — no code needed.
+
+  - type: textarea
+    id: what-exists
+    attributes:
+      label: What exists today that could be better?
+      description: Point to the specific area, feature, or behavior.
+      placeholder: "Right now when you ... it ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: friction
+    attributes:
+      label: What's the friction?
+      description: What makes the current experience rough, slow, or confusing?
+      placeholder: "The problem is ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-better-looks-like
+    attributes:
+      label: What would better look like?
+      description: Describe the improved experience.
+      placeholder: "Instead, it should ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: how-to-change
+    attributes:
+      label: How should it change?
+      description: If you have ideas about the approach, explain your reasoning in your own words. No code — just your thinking.
+      placeholder: "I think the way to get there is ..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Links, screenshots, related issues, or anything else that might help.
+    validations:
+      required: false

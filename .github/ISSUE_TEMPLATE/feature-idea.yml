@@ -1,0 +1,60 @@
+name: Feature Idea
+description: Something that should exist but doesn't yet
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Paint the picture of what this looks like in use. Walk us through it like
+        you're explaining to a teammate — no code, just your thinking.
+
+  - type: textarea
+    id: what-should-exist
+    attributes:
+      label: What should exist that doesn't?
+      description: Describe the capability you're imagining.
+      placeholder: "There should be a way to ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: who-and-when
+    attributes:
+      label: Who would use this and when?
+      description: Describe the scenario or workflow where this matters.
+      placeholder: "When someone is trying to ... they would ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: how-should-it-work
+    attributes:
+      label: How should it work?
+      description: Walk through the experience in your own words. What would a user see, do, or get back? No code — just describe it.
+      placeholder: "The user would ... and then they'd see ..."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: areas
+    attributes:
+      label: What might this touch?
+      description: Which parts of nesco could be involved? Check all that apply.
+      options:
+        - label: CLI
+        - label: TUI
+        - label: Commands
+        - label: Templates
+        - label: Content (skills, agents, prompts, rules, hooks)
+        - label: MCP
+        - label: Configuration
+        - label: Documentation
+        - label: Not sure
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Links, screenshots, related issues, prior discussion, or anything else that might help.
+    validations:
+      required: false
