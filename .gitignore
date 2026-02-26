@@ -21,3 +21,6 @@ docs/
 
 # Development workflow state
 .develop/
+
+# Release state (ephemeral, created by /release skill)
+.release-pending.yml
