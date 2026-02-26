@@ -2,6 +2,7 @@ package sandbox
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -28,7 +29,7 @@ func StageConfigs(stagingDir string, globalConfigPaths []string) ([]ConfigSnapsh
 	var snapshots []ConfigSnapshot
 	for _, src := range globalConfigPaths {
 		info, err := os.Stat(src)
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			continue
 		}
 		if err != nil {
@@ -158,8 +159,9 @@ func hashPath(path string) ([]byte, error) {
 }
 
 // buildDiff returns a human-readable diff and whether it's high-risk.
-// High-risk: any JSON file in the path contains new "mcpServers" or "hooks" keys.
-// Handles both file and directory paths — for directories it walks all JSON files.
+// High-risk: either version contains "mcpServers", "hooks", or "commands" keys.
+// Handles both file and directory paths — for directories it walks both sides
+// to detect changed, new, and deleted files.
 func buildDiff(orig, staged string) (string, bool) {
 	info, err := os.Stat(staged)
 	if err != nil {
@@ -169,6 +171,8 @@ func buildDiff(orig, staged string) (string, bool) {
 	if info.IsDir() {
 		var sb strings.Builder
 		highRisk := false
+
+		// Walk staged to find changed and new files.
 		_ = filepath.WalkDir(staged, func(p string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
 				return nil
@@ -178,13 +182,35 @@ func buildDiff(orig, staged string) (string, bool) {
 			origData, _ := os.ReadFile(origFile)
 			stagedData, _ := os.ReadFile(p)
 			if string(origData) != string(stagedData) {
-				fmt.Fprintf(&sb, "--- %s\n+++ %s\n%s", origFile, p, unifiedDiff(origData, stagedData))
-				if containsHighRiskChange(stagedData) {
+				origLabel := origFile
+				if len(origData) == 0 {
+					origLabel = "/dev/null"
+				}
+				fmt.Fprintf(&sb, "--- %s\n+++ %s\n%s", origLabel, p, unifiedDiff(origData, stagedData))
+				if isHighRiskDiff(origData, stagedData) {
 					highRisk = true
 				}
 			}
 			return nil
 		})
+
+		// Walk original to find files deleted inside the sandbox.
+		_ = filepath.WalkDir(orig, func(p string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return nil
+			}
+			rel, _ := filepath.Rel(orig, p)
+			stagedFile := filepath.Join(staged, rel)
+			if _, statErr := os.Stat(stagedFile); errors.Is(statErr, fs.ErrNotExist) {
+				origData, _ := os.ReadFile(p)
+				fmt.Fprintf(&sb, "--- %s\n+++ /dev/null\n%s", p, deletedDiff(origData))
+				if hasHighRiskKeys(origData) {
+					highRisk = true
+				}
+			}
+			return nil
+		})
+
 		return sb.String(), highRisk
 	}
 
@@ -195,14 +221,33 @@ func buildDiff(orig, staged string) (string, bool) {
 		orig, staged,
 		unifiedDiff(origData, stagedData),
 	)
-	highRisk := containsHighRiskChange(stagedData)
+	highRisk := isHighRiskDiff(origData, stagedData)
 	return diff, highRisk
 }
 
-// containsHighRiskChange detects new MCP servers or hooks in JSON config.
-func containsHighRiskChange(data []byte) bool {
+// hasHighRiskKeys checks if data contains MCP server, hooks, or commands definitions.
+func hasHighRiskKeys(data []byte) bool {
 	s := string(data)
-	return strings.Contains(s, `"mcpServers"`) || strings.Contains(s, `"hooks"`)
+	return strings.Contains(s, `"mcpServers"`) ||
+		strings.Contains(s, `"hooks"`) ||
+		strings.Contains(s, `"commands"`)
+}
+
+// isHighRiskDiff returns true if either the original or staged content contains
+// high-risk keys (MCP servers, hooks, commands). Conservative: any change to a
+// file containing these keys requires explicit approval, even if the change
+// doesn't touch the high-risk sections directly.
+func isHighRiskDiff(origData, stagedData []byte) bool {
+	return hasHighRiskKeys(origData) || hasHighRiskKeys(stagedData)
+}
+
+// deletedDiff formats removed lines for a deleted file.
+func deletedDiff(data []byte) string {
+	var out strings.Builder
+	for _, line := range strings.Split(string(data), "\n") {
+		out.WriteString("-" + line + "\n")
+	}
+	return out.String()
 }
 
 // unifiedDiff produces a simple line-diff between two byte slices.

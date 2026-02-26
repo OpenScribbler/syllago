@@ -183,27 +183,35 @@ func RunSession(cfg RunConfig, w *os.File) error {
 		fmt.Fprintf(w, "Warning: config diff failed: %s\n", err)
 	}
 
-	// Step 17: Show diff and prompt for approval.
+	// Step 17: Show diffs and handle approval.
+	// High-risk changes (MCP servers, hooks, commands): require explicit approval.
+	// Low-risk changes (settings, preferences): auto-approve with notification.
 	approved, rejected := 0, 0
 	for _, d := range diffs {
 		if !d.Changed {
 			continue
 		}
-		risk := "low risk"
-		if d.IsHighRisk {
-			risk = "HIGH RISK (MCP servers or hooks)"
-		}
-		fmt.Fprintf(w, "\nConfig changed: %s [%s]\n", d.Snapshot.OriginalPath, risk)
-		fmt.Fprintf(w, "%s\n", d.DiffText)
 
-		if promptYN(w, "Apply this change?") {
+		if d.IsHighRisk {
+			fmt.Fprintf(w, "\nConfig changed: %s [HIGH RISK: MCP servers, hooks, or commands]\n", d.Snapshot.OriginalPath)
+			fmt.Fprintf(w, "%s\n", d.DiffText)
+			if promptYN(w, "Apply this change?") {
+				if err := ApplyDiff(d); err != nil {
+					fmt.Fprintf(w, "Error applying diff: %s\n", err)
+				} else {
+					approved++
+				}
+			} else {
+				rejected++
+			}
+		} else {
+			fmt.Fprintf(w, "\nConfig changed: %s [auto-approved, low risk]\n", d.Snapshot.OriginalPath)
+			fmt.Fprintf(w, "%s\n", d.DiffText)
 			if err := ApplyDiff(d); err != nil {
 				fmt.Fprintf(w, "Error applying diff: %s\n", err)
 			} else {
 				approved++
 			}
-		} else {
-			rejected++
 		}
 	}
 
