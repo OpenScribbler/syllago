@@ -2,11 +2,16 @@ package catalog
 
 import (
 	"fmt"
+	"os"
 	"testing"
 )
 
 func TestScanRealRepo(t *testing.T) {
-	cat, err := Scan("/home/hhewett/.local/src/nesco")
+	repoRoot := "/home/hhewett/.local/src/nesco"
+	if _, err := os.Stat(repoRoot); os.IsNotExist(err) {
+		t.Skip("skipping: real repo not available (CI environment)")
+	}
+	cat, err := Scan(repoRoot)
 	if err != nil {
 		t.Fatalf("Scan failed: %v", err)
 	}
