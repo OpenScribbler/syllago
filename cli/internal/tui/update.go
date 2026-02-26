@@ -15,6 +15,8 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+
+	"github.com/OpenScribbler/nesco/cli/internal/updater"
 )
 
 type updateStep int
@@ -32,6 +34,8 @@ type updateCheckMsg struct {
 	localVersion  string
 	remoteVersion string
 	commitsBehind int
+	updateAvail   bool
+	releaseBody   string
 	err           error
 }
 
@@ -50,38 +54,41 @@ type updatePullMsg struct {
 
 // updateModel handles the "Update nesco..." screen.
 type updateModel struct {
-	repoRoot      string
-	localVersion  string
-	remoteVersion string
-	updateAvail   bool
-	commitsBehind int
-	step          updateStep
-	cursor        int
-	releaseNotes  string // glamour-rendered release notes
-	fallbackLog   string // git log (used when no release notes)
-	fallbackStat  string // diff stat (used when no release notes)
-	versionRange  string // e.g. "v0.2.0 → v0.3.0"
-	previewErr    error
-	pullOutput    string
-	pullErr       error
-	scrollOffset  int
-	width, height int
-	spinner       spinner.Model
-	loading       bool // true while an async operation is in progress
+	repoRoot       string
+	localVersion   string
+	remoteVersion  string
+	updateAvail    bool
+	commitsBehind  int
+	isReleaseBuild bool
+	releaseBody    string // raw release notes from API (release builds only)
+	step           updateStep
+	cursor         int
+	releaseNotes   string // glamour-rendered release notes
+	fallbackLog    string // git log (used when no release notes)
+	fallbackStat   string // diff stat (used when no release notes)
+	versionRange   string // e.g. "v0.2.0 → v0.3.0"
+	previewErr     error
+	pullOutput     string
+	pullErr        error
+	scrollOffset   int
+	width, height  int
+	spinner        spinner.Model
+	loading        bool // true while an async operation is in progress
 }
 
-func newUpdateModel(repoRoot, localVersion, remoteVersion string, commitsBehind int) updateModel {
+func newUpdateModel(repoRoot, localVersion, remoteVersion string, commitsBehind int, isReleaseBuild bool) updateModel {
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
 	sp.Style = lipgloss.NewStyle().Foreground(primaryColor)
 	return updateModel{
-		repoRoot:      repoRoot,
-		localVersion:  localVersion,
-		remoteVersion: remoteVersion,
-		updateAvail:   remoteVersion != "" && versionNewer(remoteVersion, localVersion),
-		commitsBehind: commitsBehind,
-		step:          stepUpdateMenu,
-		spinner:       sp,
+		repoRoot:       repoRoot,
+		localVersion:   localVersion,
+		remoteVersion:  remoteVersion,
+		updateAvail:    remoteVersion != "" && versionNewer(remoteVersion, localVersion),
+		commitsBehind:  commitsBehind,
+		isReleaseBuild: isReleaseBuild,
+		step:           stepUpdateMenu,
+		spinner:        sp,
 	}
 }
 
@@ -141,6 +148,9 @@ func (m updateModel) Update(msg tea.Msg) (updateModel, tea.Cmd) {
 			m.remoteVersion = msg.remoteVersion
 			m.commitsBehind = msg.commitsBehind
 			m.updateAvail = versionNewer(msg.remoteVersion, m.localVersion)
+			if msg.releaseBody != "" {
+				m.releaseBody = msg.releaseBody
+			}
 		}
 		m.cursor = 0
 		return m, nil
@@ -209,6 +219,9 @@ func (m updateModel) updateMenu(msg tea.KeyMsg) (updateModel, tea.Cmd) {
 		}
 		// "Check for updates" — re-run the check
 		m.loading = true
+		if m.isReleaseBuild {
+			return m, tea.Batch(checkForUpdateRelease(m.localVersion), m.spinner.Tick)
+		}
 		return m, tea.Batch(checkForUpdate(m.repoRoot, m.localVersion), m.spinner.Tick)
 	}
 	return m, nil
@@ -377,10 +390,30 @@ func (m updateModel) View() string {
 	return s
 }
 
-// fetchReleaseNotes reads release notes from origin/main for all versions between
-// local and remote, renders them with glamour, and falls back to git log + diff stat
-// if no matching release notes are found.
+// fetchReleaseNotes reads release notes for all versions between local and remote.
+// For release builds it renders the body already fetched from the GitHub API.
+// For dev builds it reads release notes from git and falls back to git log + diff stat.
 func (m updateModel) fetchReleaseNotes() tea.Cmd {
+	if m.isReleaseBuild {
+		localVersion := m.localVersion
+		remoteVersion := m.remoteVersion
+		releaseBody := m.releaseBody
+		return func() tea.Msg {
+			versionRange := fmt.Sprintf("v%s -> v%s", localVersion, remoteVersion)
+			if releaseBody == "" {
+				return updatePreviewMsg{versionRange: versionRange}
+			}
+			rendered, err := glamour.Render(releaseBody, "auto")
+			if err != nil {
+				return updatePreviewMsg{versionRange: versionRange}
+			}
+			return updatePreviewMsg{
+				releaseNotes: strings.TrimSpace(rendered),
+				versionRange: versionRange,
+			}
+		}
+	}
+
 	repoRoot := m.repoRoot
 	localVersion := m.localVersion
 	remoteVersion := m.remoteVersion
@@ -479,8 +512,25 @@ func (m updateModel) fetchLocalReleaseNotes() tea.Cmd {
 	}
 }
 
-// startPull checks for local changes and runs git pull.
+// startPull runs the appropriate update mechanism based on build type.
 func (m updateModel) startPull() tea.Cmd {
+	if m.isReleaseBuild {
+		return m.startPullRelease()
+	}
+	return m.startPullGit()
+}
+
+// startPullRelease downloads and installs the latest release binary via the updater package.
+func (m updateModel) startPullRelease() tea.Cmd {
+	localVersion := m.localVersion
+	return func() tea.Msg {
+		err := updater.Update(localVersion, func(string) {})
+		return updatePullMsg{err: err}
+	}
+}
+
+// startPullGit checks for local changes and runs git pull.
+func (m updateModel) startPullGit() tea.Cmd {
 	repoRoot := m.repoRoot
 	return func() tea.Msg {
 		// Check for local modifications
@@ -506,6 +556,23 @@ func (m updateModel) startPull() tea.Cmd {
 			return updatePullMsg{output: string(out), err: fmt.Errorf("git pull failed: %s", strings.TrimSpace(string(out)))}
 		}
 		return updatePullMsg{output: string(out)}
+	}
+}
+
+// checkForUpdateRelease fetches the latest release from GitHub and compares it to
+// the local version. Used for release builds (no git required).
+func checkForUpdateRelease(localVersion string) tea.Cmd {
+	return func() tea.Msg {
+		info, err := updater.CheckLatest(localVersion)
+		if err != nil {
+			return updateCheckMsg{err: err}
+		}
+		return updateCheckMsg{
+			localVersion:  localVersion,
+			remoteVersion: info.Version,
+			updateAvail:   info.UpdateAvail,
+			releaseBody:   info.Body,
+		}
 	}
 }
 

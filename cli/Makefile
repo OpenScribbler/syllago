@@ -8,7 +8,7 @@ COMMIT := $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 VERSION := $(shell cat ../VERSION 2>/dev/null || echo dev)
 LDFLAGS := -X main.repoRoot=$(REPO_ROOT) -X main.buildCommit=$(COMMIT) -X main.version=$(VERSION)
 
-.PHONY: build clean build-all test fmt vet
+.PHONY: build clean build-all test fmt vet build-linux-amd64 build-linux-arm64 build-darwin-amd64 build-darwin-arm64 build-windows-amd64 build-windows-arm64
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(OUTPUT) ./cmd/nesco
@@ -29,9 +29,12 @@ build-darwin-arm64:
 	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(BINARY)-darwin-arm64 ./cmd/nesco
 
 build-windows-amd64:
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BINARY).exe ./cmd/nesco
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BINARY)-windows-amd64.exe ./cmd/nesco
 
-build-all: build-linux-amd64 build-linux-arm64 build-darwin-amd64 build-darwin-arm64 build-windows-amd64
+build-windows-arm64:
+	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(BINARY)-windows-arm64.exe ./cmd/nesco
+
+build-all: build-linux-amd64 build-linux-arm64 build-darwin-amd64 build-darwin-arm64 build-windows-amd64 build-windows-arm64
 
 test:
 	go test ./...
