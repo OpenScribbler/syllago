@@ -1,0 +1,148 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+
+      - name: Extract version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      - name: Build all targets
+        working-directory: cli
+        run: |
+          LDFLAGS="-X main.version=${VERSION}"
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o nesco-linux-amd64 ./cmd/nesco
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" -o nesco-linux-arm64 ./cmd/nesco
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o nesco-darwin-amd64 ./cmd/nesco
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" -o nesco-darwin-arm64 ./cmd/nesco
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o nesco-windows-amd64.exe ./cmd/nesco
+          CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -ldflags "$LDFLAGS" -o nesco-windows-arm64.exe ./cmd/nesco
+
+      - name: Generate checksums
+        working-directory: cli
+        run: |
+          sha256sum nesco-linux-amd64 nesco-linux-arm64 \
+            nesco-darwin-amd64 nesco-darwin-arm64 \
+            nesco-windows-amd64.exe nesco-windows-arm64.exe \
+            > checksums.txt
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign checksums
+        working-directory: cli
+        run: cosign sign-blob --yes checksums.txt --bundle checksums.txt.bundle
+
+      - name: Prepare release notes
+        id: notes
+        run: |
+          NOTES_FILE="releases/${GITHUB_REF_NAME}.md"
+          if [ -f "$NOTES_FILE" ]; then
+            echo "notes_file=$NOTES_FILE" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release (with release notes)
+        if: steps.notes.outputs.notes_file != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTES_FILE: ${{ steps.notes.outputs.notes_file }}
+        working-directory: cli
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file "../$NOTES_FILE" \
+            nesco-linux-amd64 nesco-linux-arm64 \
+            nesco-darwin-amd64 nesco-darwin-arm64 \
+            nesco-windows-amd64.exe nesco-windows-arm64.exe \
+            checksums.txt checksums.txt.bundle
+
+      - name: Create GitHub Release (auto-generated notes)
+        if: steps.notes.outputs.notes_file == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: cli
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            nesco-linux-amd64 nesco-linux-arm64 \
+            nesco-darwin-amd64 nesco-darwin-arm64 \
+            nesco-windows-amd64.exe nesco-windows-arm64.exe \
+            checksums.txt checksums.txt.bundle
+
+      - name: Update Homebrew formula
+        continue-on-error: true
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ env.VERSION }}
+          TAG_NAME: ${{ github.ref_name }}
+        working-directory: cli
+        run: |
+          if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
+            echo "HOMEBREW_TAP_TOKEN not set, skipping Homebrew update"
+            exit 0
+          fi
+
+          # Extract SHA-256 for macOS binaries
+          SHA_DARWIN_AMD64=$(grep nesco-darwin-amd64 checksums.txt | awk '{print $1}')
+          SHA_DARWIN_ARM64=$(grep nesco-darwin-arm64 checksums.txt | awk '{print $1}')
+
+          # Clone the tap repo
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/OpenScribbler/homebrew-tap.git" /tmp/homebrew-tap
+
+          # Update the formula
+          cd /tmp/homebrew-tap
+          mkdir -p Formula
+
+          cat > Formula/nesco.rb << FORMULA
+class Nesco < Formula
+  desc "AI coding tool content manager"
+  homepage "https://github.com/OpenScribbler/nesco"
+  version "${VERSION}"
+  license "Apache-2.0"
+
+  on_macos do
+    if Hardware::CPU.arm?
+      url "https://github.com/OpenScribbler/nesco/releases/download/${TAG_NAME}/nesco-darwin-arm64"
+      sha256 "${SHA_DARWIN_ARM64}"
+    else
+      url "https://github.com/OpenScribbler/nesco/releases/download/${TAG_NAME}/nesco-darwin-amd64"
+      sha256 "${SHA_DARWIN_AMD64}"
+    end
+  end
+
+  def install
+    binary = Hardware::CPU.arm? ? "nesco-darwin-arm64" : "nesco-darwin-amd64"
+    bin.install binary => "nesco"
+  end
+
+  test do
+    assert_match version.to_s, shell_output("#{bin}/nesco version")
+  end
+end
+FORMULA
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/nesco.rb
+          git commit -m "nesco ${TAG_NAME}"
+          git push

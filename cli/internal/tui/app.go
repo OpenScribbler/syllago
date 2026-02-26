@@ -43,6 +43,7 @@ type App struct {
 	providers       []provider.Provider
 	version         string
 	autoUpdate      bool
+	isReleaseBuild  bool
 	registrySources []catalog.RegistrySource
 
 	screen          screen
@@ -79,8 +80,9 @@ type App struct {
 }
 
 // NewApp creates a new App model. Set autoUpdate to true to pull updates
-// automatically when a newer version is detected on origin.
-func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string, autoUpdate bool, registrySources []catalog.RegistrySource, cfg *config.Config) App {
+// automatically when a newer version is detected on origin. Set isReleaseBuild
+// to true for release binaries so the updater uses GitHub Releases instead of git.
+func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string, autoUpdate bool, registrySources []catalog.RegistrySource, cfg *config.Config, isReleaseBuild bool) App {
 	if cfg == nil {
 		cfg = &config.Config{}
 	}
@@ -89,6 +91,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		providers:       providers,
 		version:         version,
 		autoUpdate:      autoUpdate,
+		isReleaseBuild:  isReleaseBuild,
 		registrySources: registrySources,
 		registryCfg:     cfg,
 		screen:          screenCategory,
@@ -99,6 +102,9 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 }
 
 func (a App) Init() tea.Cmd {
+	if a.isReleaseBuild {
+		return checkForUpdateRelease(a.version)
+	}
 	return checkForUpdate(a.catalog.RepoRoot, a.version)
 }
 
@@ -212,7 +218,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.sidebar.commitsBehind = msg.commitsBehind
 
 			if a.autoUpdate {
-				a.updater = newUpdateModel(a.catalog.RepoRoot, a.version, a.remoteVersion, a.commitsBehind)
+				a.updater = newUpdateModel(a.catalog.RepoRoot, a.version, a.remoteVersion, a.commitsBehind, a.isReleaseBuild)
 				a.updater.width = a.width - sidebarWidth - 1
 				a.updater.height = a.panelHeight()
 				a.screen = screenUpdate
@@ -630,7 +636,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if a.focus == focusSidebar {
 				if key.Matches(msg, keys.Enter) || key.Matches(msg, keys.Right) {
 					if a.sidebar.isUpdateSelected() {
-						a.updater = newUpdateModel(a.catalog.RepoRoot, a.version, a.remoteVersion, a.commitsBehind)
+						a.updater = newUpdateModel(a.catalog.RepoRoot, a.version, a.remoteVersion, a.commitsBehind, a.isReleaseBuild)
 						a.updater.width = a.width - sidebarWidth - 1
 						a.updater.height = a.panelHeight()
 						a.screen = screenUpdate

@@ -255,7 +255,7 @@ func testAppSize(t *testing.T, width, height int) App {
 	cat := testCatalog(t)
 	providers := testProviders(t)
 
-	app := NewApp(cat, providers, "1.0.0", false, nil, nil)
+	app := NewApp(cat, providers, "1.0.0", false, nil, nil, false)
 	app.width = width
 	app.height = height
 	// Propagate dimensions to sub-models that need them

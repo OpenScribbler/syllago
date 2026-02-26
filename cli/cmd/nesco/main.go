@@ -17,6 +17,7 @@ import (
 	"github.com/OpenScribbler/nesco/cli/internal/provider"
 	"github.com/OpenScribbler/nesco/cli/internal/registry"
 	"github.com/OpenScribbler/nesco/cli/internal/tui"
+	"github.com/OpenScribbler/nesco/cli/internal/updater"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
@@ -68,6 +69,7 @@ func init() {
 
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(backfillCmd)
+	rootCmd.AddCommand(updateCmd)
 }
 
 var versionCmd = &cobra.Command{
@@ -128,6 +130,28 @@ var backfillCmd = &cobra.Command{
 		}
 		return nil
 	},
+}
+
+var updateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Update nesco to the latest release",
+	RunE:  runUpdate,
+}
+
+func runUpdate(cmd *cobra.Command, args []string) error {
+	if buildCommit != "" {
+		// Dev build — self-rebuild handles updates via ensureUpToDate()
+		cmd.Println("Self-update is only available for release builds.")
+		cmd.Println("You're running a dev build. Use `make build` to rebuild from source.")
+		return nil
+	}
+	v := version
+	if v == "" {
+		v = "0.0.0"
+	}
+	return updater.Update(v, func(msg string) {
+		cmd.Println(msg)
+	})
 }
 
 func main() {
@@ -229,7 +253,8 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		autoUpdate = true
 	}
 
-	app := tui.NewApp(cat, providers, version, autoUpdate, regSources, cfg)
+	isReleaseBuild := buildCommit == "" && version != ""
+	app := tui.NewApp(cat, providers, version, autoUpdate, regSources, cfg, isReleaseBuild)
 	zone.NewGlobal()
 	p := tea.NewProgram(app,
 		tea.WithAltScreen(),
