@@ -49,16 +49,16 @@ const (
 )
 
 type detailModel struct {
-	item          catalog.ContentItem
-	providers     []provider.Provider
-	repoRoot      string
+	item         catalog.ContentItem
+	providers    []provider.Provider
+	repoRoot     string
 	message      string
 	messageIsErr bool
 	methodCursor int                  // 0=symlink, 1=copy (for save-method picker)
-	mcpConfig     *installer.MCPConfig // parsed on creation for MCP items
-	scrollOffset  int
-	saveInput     textinput.Model
-	savePath      string // confirmed save destination (after path input)
+	mcpConfig    *installer.MCPConfig // parsed on creation for MCP items
+	scrollOffset int
+	saveInput    textinput.Model
+	savePath     string // confirmed save destination (after path input)
 	// Sub-models for grouped concerns
 	provCheck        provCheckModel // provider checkbox state (Install tab)
 	appScriptPreview string         // first N lines of install.sh for preview

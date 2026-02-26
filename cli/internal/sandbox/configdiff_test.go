@@ -1,0 +1,285 @@
+package sandbox
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestStageConfigs_CopiesFiles(t *testing.T) {
+	srcDir := t.TempDir()
+	stagingDir := t.TempDir()
+
+	// Create a source config file.
+	srcFile := filepath.Join(srcDir, "config.json")
+	content := []byte(`{"model":"claude"}`)
+	os.WriteFile(srcFile, content, 0644)
+
+	snaps, err := StageConfigs(stagingDir, []string{srcFile})
+	if err != nil {
+		t.Fatalf("StageConfigs: %v", err)
+	}
+	if len(snaps) != 1 {
+		t.Fatalf("expected 1 snapshot, got %d", len(snaps))
+	}
+
+	staged, err := os.ReadFile(snaps[0].StagedPath)
+	if err != nil {
+		t.Fatalf("reading staged file: %v", err)
+	}
+	if string(staged) != string(content) {
+		t.Errorf("staged content = %q, want %q", staged, content)
+	}
+}
+
+func TestStageConfigs_SkipsNonExistent(t *testing.T) {
+	stagingDir := t.TempDir()
+
+	snaps, err := StageConfigs(stagingDir, []string{"/nonexistent/path/config.json"})
+	if err != nil {
+		t.Fatalf("StageConfigs: %v", err)
+	}
+	if len(snaps) != 0 {
+		t.Errorf("expected 0 snapshots for nonexistent path, got %d", len(snaps))
+	}
+}
+
+func TestStageConfigs_CopiesDir(t *testing.T) {
+	srcDir := t.TempDir()
+	stagingDir := t.TempDir()
+
+	// Create a source config directory with a nested file.
+	configDir := filepath.Join(srcDir, "myconfig")
+	os.MkdirAll(filepath.Join(configDir, "sub"), 0755)
+	os.WriteFile(filepath.Join(configDir, "a.json"), []byte(`{"a":1}`), 0644)
+	os.WriteFile(filepath.Join(configDir, "sub", "b.json"), []byte(`{"b":2}`), 0644)
+
+	snaps, err := StageConfigs(stagingDir, []string{configDir})
+	if err != nil {
+		t.Fatalf("StageConfigs: %v", err)
+	}
+	if len(snaps) != 1 {
+		t.Fatalf("expected 1 snapshot, got %d", len(snaps))
+	}
+
+	// Check nested file was copied.
+	nested, err := os.ReadFile(filepath.Join(snaps[0].StagedPath, "sub", "b.json"))
+	if err != nil {
+		t.Fatalf("reading nested staged file: %v", err)
+	}
+	if string(nested) != `{"b":2}` {
+		t.Errorf("nested content = %q, want %q", nested, `{"b":2}`)
+	}
+}
+
+func TestComputeDiffs_UnchangedFile(t *testing.T) {
+	srcDir := t.TempDir()
+	stagingDir := t.TempDir()
+
+	srcFile := filepath.Join(srcDir, "config.json")
+	os.WriteFile(srcFile, []byte(`{"unchanged":true}`), 0644)
+
+	snaps, err := StageConfigs(stagingDir, []string{srcFile})
+	if err != nil {
+		t.Fatalf("StageConfigs: %v", err)
+	}
+
+	// Don't modify the staged file — should produce no diffs.
+	diffs, err := ComputeDiffs(snaps)
+	if err != nil {
+		t.Fatalf("ComputeDiffs: %v", err)
+	}
+	if len(diffs) != 0 {
+		t.Errorf("expected 0 diffs for unchanged file, got %d", len(diffs))
+	}
+}
+
+func TestComputeDiffs_ChangedFile(t *testing.T) {
+	srcDir := t.TempDir()
+	stagingDir := t.TempDir()
+
+	srcFile := filepath.Join(srcDir, "config.json")
+	os.WriteFile(srcFile, []byte(`{"old":true}`), 0644)
+
+	snaps, err := StageConfigs(stagingDir, []string{srcFile})
+	if err != nil {
+		t.Fatalf("StageConfigs: %v", err)
+	}
+
+	// Modify the staged file.
+	os.WriteFile(snaps[0].StagedPath, []byte(`{"new":true}`), 0644)
+
+	diffs, err := ComputeDiffs(snaps)
+	if err != nil {
+		t.Fatalf("ComputeDiffs: %v", err)
+	}
+	if len(diffs) != 1 {
+		t.Fatalf("expected 1 diff, got %d", len(diffs))
+	}
+	if !diffs[0].Changed {
+		t.Error("expected Changed=true")
+	}
+}
+
+func TestComputeDiffs_HighRiskMCP(t *testing.T) {
+	srcDir := t.TempDir()
+	stagingDir := t.TempDir()
+
+	srcFile := filepath.Join(srcDir, "config.json")
+	os.WriteFile(srcFile, []byte(`{}`), 0644)
+
+	snaps, err := StageConfigs(stagingDir, []string{srcFile})
+	if err != nil {
+		t.Fatalf("StageConfigs: %v", err)
+	}
+
+	// Inject mcpServers into staged file.
+	os.WriteFile(snaps[0].StagedPath, []byte(`{"mcpServers":{"evil":{}}}`), 0644)
+
+	diffs, err := ComputeDiffs(snaps)
+	if err != nil {
+		t.Fatalf("ComputeDiffs: %v", err)
+	}
+	if len(diffs) != 1 {
+		t.Fatalf("expected 1 diff, got %d", len(diffs))
+	}
+	if !diffs[0].IsHighRisk {
+		t.Error("expected IsHighRisk=true for mcpServers change")
+	}
+}
+
+func TestComputeDiffs_HighRiskHooks(t *testing.T) {
+	srcDir := t.TempDir()
+	stagingDir := t.TempDir()
+
+	srcFile := filepath.Join(srcDir, "config.json")
+	os.WriteFile(srcFile, []byte(`{}`), 0644)
+
+	snaps, err := StageConfigs(stagingDir, []string{srcFile})
+	if err != nil {
+		t.Fatalf("StageConfigs: %v", err)
+	}
+
+	// Inject hooks into staged file.
+	os.WriteFile(snaps[0].StagedPath, []byte(`{"hooks":{"postInstall":"rm -rf /"}}`), 0644)
+
+	diffs, err := ComputeDiffs(snaps)
+	if err != nil {
+		t.Fatalf("ComputeDiffs: %v", err)
+	}
+	if len(diffs) != 1 {
+		t.Fatalf("expected 1 diff, got %d", len(diffs))
+	}
+	if !diffs[0].IsHighRisk {
+		t.Error("expected IsHighRisk=true for hooks change")
+	}
+}
+
+func TestComputeDiffs_HighRiskMCPInDir(t *testing.T) {
+	srcDir := t.TempDir()
+	stagingDir := t.TempDir()
+
+	// Create a source config directory.
+	configDir := filepath.Join(srcDir, "dotclaude")
+	os.MkdirAll(configDir, 0755)
+	os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(`{}`), 0644)
+
+	snaps, err := StageConfigs(stagingDir, []string{configDir})
+	if err != nil {
+		t.Fatalf("StageConfigs: %v", err)
+	}
+
+	// Modify the staged file inside the directory.
+	os.WriteFile(filepath.Join(snaps[0].StagedPath, "settings.json"),
+		[]byte(`{"mcpServers":{"pwned":{}}}`), 0644)
+
+	diffs, err := ComputeDiffs(snaps)
+	if err != nil {
+		t.Fatalf("ComputeDiffs: %v", err)
+	}
+	if len(diffs) != 1 {
+		t.Fatalf("expected 1 diff, got %d", len(diffs))
+	}
+	if !diffs[0].IsHighRisk {
+		t.Error("expected IsHighRisk=true for mcpServers in dir")
+	}
+}
+
+func TestComputeDiffs_DirDiff_ShowsChangedFiles(t *testing.T) {
+	srcDir := t.TempDir()
+	stagingDir := t.TempDir()
+
+	configDir := filepath.Join(srcDir, "dotclaude")
+	os.MkdirAll(configDir, 0755)
+	os.WriteFile(filepath.Join(configDir, "a.json"), []byte(`{"a":1}`), 0644)
+	os.WriteFile(filepath.Join(configDir, "b.json"), []byte(`{"b":2}`), 0644)
+
+	snaps, err := StageConfigs(stagingDir, []string{configDir})
+	if err != nil {
+		t.Fatalf("StageConfigs: %v", err)
+	}
+
+	// Only change one file.
+	os.WriteFile(filepath.Join(snaps[0].StagedPath, "a.json"), []byte(`{"a":99}`), 0644)
+
+	diffs, err := ComputeDiffs(snaps)
+	if err != nil {
+		t.Fatalf("ComputeDiffs: %v", err)
+	}
+	if len(diffs) != 1 {
+		t.Fatalf("expected 1 diff, got %d", len(diffs))
+	}
+	// DiffText should mention the changed file but not the unchanged one.
+	if !contains(diffs[0].DiffText, "a.json") {
+		t.Error("expected DiffText to mention a.json")
+	}
+}
+
+func TestApplyDiff_CopiesBack(t *testing.T) {
+	srcDir := t.TempDir()
+	stagingDir := t.TempDir()
+
+	srcFile := filepath.Join(srcDir, "config.json")
+	os.WriteFile(srcFile, []byte(`{"old":true}`), 0644)
+
+	snaps, err := StageConfigs(stagingDir, []string{srcFile})
+	if err != nil {
+		t.Fatalf("StageConfigs: %v", err)
+	}
+
+	// Modify staged.
+	newContent := []byte(`{"new":true}`)
+	os.WriteFile(snaps[0].StagedPath, newContent, 0644)
+
+	diffs, err := ComputeDiffs(snaps)
+	if err != nil {
+		t.Fatalf("ComputeDiffs: %v", err)
+	}
+	if len(diffs) != 1 {
+		t.Fatalf("expected 1 diff, got %d", len(diffs))
+	}
+
+	// Apply the diff.
+	if err := ApplyDiff(diffs[0]); err != nil {
+		t.Fatalf("ApplyDiff: %v", err)
+	}
+
+	// Original should now have the new content.
+	got, err := os.ReadFile(srcFile)
+	if err != nil {
+		t.Fatalf("reading original: %v", err)
+	}
+	if string(got) != string(newContent) {
+		t.Errorf("original content = %q, want %q", got, newContent)
+	}
+}
+
+// contains is a helper to avoid importing strings in tests.
+func contains(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

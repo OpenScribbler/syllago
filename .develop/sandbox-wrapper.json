@@ -1,0 +1,32 @@
+{
+  "feature": "sandbox-wrapper",
+  "started": "2026-02-25T23:27:41.100Z",
+  "updated": "2026-02-26T02:00:00.000Z",
+  "currentStage": "execute",
+  "completed": [
+    "brainstorm",
+    "plan",
+    "validate",
+    "beads"
+  ],
+  "artifacts": {
+    "design": "/home/hhewett/.local/src/nesco/docs/plans/2026-02-25-sandbox-wrapper-design.md",
+    "plan": "/home/hhewett/.local/src/nesco/docs/plans/2026-02-25-sandbox-wrapper-implementation.md"
+  },
+  "validation": {
+    "attempts": 3,
+    "lastGaps": [],
+    "passed": true
+  },
+  "beads": {
+    "created": true,
+    "prefix": "romanesco",
+    "epicIds": ["romanesco-dy3", "romanesco-g27", "romanesco-auf", "romanesco-9mb", "romanesco-ezl", "romanesco-2wb", "romanesco-yul", "romanesco-9pi", "romanesco-qcg"],
+    "taskCount": 20
+  },
+  "nextAction": {
+    "action": "ask_user",
+    "description": "Ask user for execution mode",
+    "tool": "AskUserQuestion"
+  }
+}

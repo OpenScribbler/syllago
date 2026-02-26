@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/OpenScribbler/nesco/cli/internal/catalog"
 	"github.com/OpenScribbler/nesco/cli/internal/config"
 	"github.com/OpenScribbler/nesco/cli/internal/metadata"
@@ -19,6 +17,8 @@ import (
 	"github.com/OpenScribbler/nesco/cli/internal/provider"
 	"github.com/OpenScribbler/nesco/cli/internal/registry"
 	"github.com/OpenScribbler/nesco/cli/internal/tui"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
