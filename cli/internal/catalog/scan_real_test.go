@@ -3,11 +3,16 @@ package catalog
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
 func TestScanRealRepo(t *testing.T) {
-	repoRoot := "/home/hhewett/.local/src/nesco"
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("skipping: cannot determine home directory")
+	}
+	repoRoot := filepath.Join(home, ".local", "src", "nesco")
 	if _, err := os.Stat(repoRoot); os.IsNotExist(err) {
 		t.Skip("skipping: real repo not available (CI environment)")
 	}
