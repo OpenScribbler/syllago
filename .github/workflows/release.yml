@@ -113,33 +113,33 @@ jobs:
           cd /tmp/homebrew-tap
           mkdir -p Formula
 
-          cat > Formula/nesco.rb << FORMULA
-class Nesco < Formula
-  desc "AI coding tool content manager"
-  homepage "https://github.com/OpenScribbler/nesco"
-  version "${VERSION}"
-  license "Apache-2.0"
-
-  on_macos do
-    if Hardware::CPU.arm?
-      url "https://github.com/OpenScribbler/nesco/releases/download/${TAG_NAME}/nesco-darwin-arm64"
-      sha256 "${SHA_DARWIN_ARM64}"
-    else
-      url "https://github.com/OpenScribbler/nesco/releases/download/${TAG_NAME}/nesco-darwin-amd64"
-      sha256 "${SHA_DARWIN_AMD64}"
-    end
-  end
-
-  def install
-    binary = Hardware::CPU.arm? ? "nesco-darwin-arm64" : "nesco-darwin-amd64"
-    bin.install binary => "nesco"
-  end
-
-  test do
-    assert_match version.to_s, shell_output("#{bin}/nesco version")
-  end
-end
-FORMULA
+          {
+            echo 'class Nesco < Formula'
+            echo '  desc "AI coding tool content manager"'
+            echo '  homepage "https://github.com/OpenScribbler/nesco"'
+            echo "  version \"${VERSION}\""
+            echo '  license "Apache-2.0"'
+            echo ''
+            echo '  on_macos do'
+            echo '    if Hardware::CPU.arm?'
+            echo "      url \"https://github.com/OpenScribbler/nesco/releases/download/${TAG_NAME}/nesco-darwin-arm64\""
+            echo "      sha256 \"${SHA_DARWIN_ARM64}\""
+            echo '    else'
+            echo "      url \"https://github.com/OpenScribbler/nesco/releases/download/${TAG_NAME}/nesco-darwin-amd64\""
+            echo "      sha256 \"${SHA_DARWIN_AMD64}\""
+            echo '    end'
+            echo '  end'
+            echo ''
+            echo '  def install'
+            echo '    binary = Hardware::CPU.arm? ? "nesco-darwin-arm64" : "nesco-darwin-amd64"'
+            echo '    bin.install binary => "nesco"'
+            echo '  end'
+            echo ''
+            echo '  test do'
+            echo '    assert_match version.to_s, shell_output("#{bin}/nesco version")'
+            echo '  end'
+            echo 'end'
+          } > Formula/nesco.rb
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
