@@ -12,55 +12,39 @@
 
 </div>
 
-A CLI and TUI for managing AI coding tool content. Browse, install, and export skills, agents, prompts, rules, hooks, commands, and MCP configs across Claude Code, Cursor, Windsurf, Codex, and Gemini CLI. Content is automatically converted between provider formats when you install or export.
+A CLI and TUI for managing AI coding tool content. Browse, install, and export skills, agents, prompts, rules, hooks, commands, and MCP configs across Claude Code, Gemini CLI, Codex, Cursor, Windsurf, and Copilot CLI. Content is automatically converted between provider formats when you install or export.
 
-## Getting Started
+## Installation
 
-### 1. Clone the repo
-
-We recommend cloning to `~/.local/src/` so it stays out of your project directories:
+### Install script (Linux, macOS, Windows)
 
 ```bash
-mkdir -p ~/.local/src
-git clone https://github.com/OpenScribbler/nesco.git ~/.local/src/nesco
+curl -fsSL https://raw.githubusercontent.com/OpenScribbler/nesco/main/install.sh | sh
 ```
 
-This location becomes your local content library. The `nesco` CLI reads from it directly — no need to move or copy the repo elsewhere.
-
-### 2. Build the CLI
-
-Requires Go 1.25.5 or later.
+Downloads the latest release binary for your platform, verifies the SHA-256 checksum, and installs to `~/.local/bin`. Override the install location with `INSTALL_DIR`:
 
 ```bash
+INSTALL_DIR=/usr/local/bin sh install.sh
+```
+
+### Homebrew (macOS, Linux)
+
+```bash
+brew install openscribbler/tap/nesco
+```
+
+### From source
+
+Requires Go 1.25 or later.
+
+```bash
+git clone https://github.com/OpenScribbler/nesco.git ~/.local/src/nesco
 cd ~/.local/src/nesco
 make build
 ```
 
-This builds the `nesco` binary inside the `cli/` directory. You only need to do this once — after the initial build, `nesco` keeps itself up to date automatically (see [Auto-rebuild](#auto-rebuild) below).
-
-### 3. Add it to your PATH
-
-Add this line to your shell profile so `nesco` is available in every session:
-
-**Bash** (`~/.bashrc`):
-
-```bash
-echo 'export PATH="$HOME/.local/src/nesco/cli:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-**Zsh** (`~/.zshrc`):
-
-```bash
-echo 'export PATH="$HOME/.local/src/nesco/cli:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-Then verify it works:
-
-```bash
-nesco version
-```
+See [Development](#development) for build details.
 
 ## What It Does
 
@@ -131,7 +115,11 @@ Check for updates, preview what's new (commit log + diffstat), and pull — all 
 | `nesco export` | Export items from `my-tools/` to a provider's install location |
 | `nesco import` | Read existing AI tool configs into the canonical model (read-only) |
 | `nesco config` | Manage provider selection (`list`, `add`, `remove`) |
+| `nesco registry` | Manage git-based content registries (`add`, `remove`, `list`, `sync`, `items`) |
+| `nesco sandbox` | Run AI CLI tools in bubblewrap sandboxes (Linux only) |
+| `nesco update` | Update nesco to the latest release |
 | `nesco info` | Show capabilities (`providers`, `formats`) |
+| `nesco completion` | Generate shell autocompletion (bash, zsh, fish, powershell) |
 | `nesco version` | Print version |
 
 ### Global Flags
@@ -168,9 +156,56 @@ nesco import --from cursor --type rules --preview
 |-------------|:-----:|:------:|:------:|:--------:|:-----:|:---:|
 | Claude Code |   ✓   |   ✓    |   ✓    |    ✓     |   ✓   |  ✓  |
 | Gemini CLI  |   ✓   |   ✓    |   ✓    |    ✓     |   ✓   |  ✓  |
+| Copilot CLI |   ✓   |   —    |   ✓    |    ✓     |   ✓   |  ✓  |
 | Codex       |   ✓   |   —    |   —    |    ✓     |   —   |  —  |
 | Cursor      |   ✓   |   —    |   —    |    —     |   —   |  —  |
 | Windsurf    |   ✓   |   —    |   —    |    —     |   —   |  —  |
+
+## Sandbox
+
+Nesco can wrap AI CLI tools in [bubblewrap](https://github.com/containers/bubblewrap) sandboxes that restrict filesystem access, network egress, and environment variables. Linux only.
+
+```bash
+# Run Claude Code in a sandbox
+nesco sandbox run claude-code
+
+# Check prerequisites
+nesco sandbox check claude-code
+
+# Manage the domain allowlist
+nesco sandbox allow-domain example.com
+nesco sandbox deny-domain example.com
+nesco sandbox domains
+```
+
+The sandbox provides:
+
+- **Filesystem isolation** — The project directory is writable; everything else is read-only or hidden
+- **Network egress proxy** — Only allowed domains can be reached (provider API + ecosystem registries)
+- **Environment filtering** — Only explicitly allowed env vars are forwarded
+- **Config change review** — Provider config changes made inside the sandbox are diffed and require approval before being applied back
+
+Requires bubblewrap >= 0.4.0 and socat >= 1.7.0.
+
+## Registries
+
+Registries are git repositories of nesco content that you can browse and install from.
+
+```bash
+# Add a registry
+nesco registry add https://github.com/OpenScribbler/nesco-tools.git
+
+# List registered registries
+nesco registry list
+
+# Sync (pull latest)
+nesco registry sync
+
+# Browse items across all registries
+nesco registry items
+```
+
+Registries also appear in the TUI — browse by category, preview content, and install with one keypress.
 
 ## Repository Structure
 
@@ -215,19 +250,27 @@ tags:
 
 Place your content in the appropriate category directory and `nesco` will discover it automatically. Use the `my-tools/` directory for local content you don't want to commit to the repository.
 
-## Auto-rebuild
+## Updating
 
-After the initial `make build`, `nesco` detects when its own source files have changed and automatically rebuilds before running. You don't need to re-run `make build` after pulling updates — just `git pull` and the next invocation handles it.
+**Release builds** (installed via install script or Homebrew): run `nesco update` or use the Update screen in the TUI. Both use the same updater — downloads the latest release, verifies the checksum, and replaces the binary.
+
+**Dev builds** (built from source): `nesco` detects when its own source files have changed and automatically rebuilds before running. Just `git pull` — the next invocation handles the rest.
 
 ## Development
+
+Requires Go 1.25 or later.
 
 ```bash
 make build      # Build the nesco binary (output: cli/nesco)
 make test       # Run tests
 make fmt        # Format Go source
 make vet        # Run go vet
-make build-all  # Cross-compile for linux/darwin/windows amd64 + linux/darwin arm64
+make build-all  # Cross-compile for all 6 targets (linux/darwin/windows × amd64/arm64)
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute. Nesco accepts ideas, not code — open an issue using one of the structured templates and describe what you'd like to see.
 
 ## Security
 
