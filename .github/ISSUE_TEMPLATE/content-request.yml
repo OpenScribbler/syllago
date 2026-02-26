@@ -1,0 +1,77 @@
+name: Content Request
+description: Suggest new built-in AI content that helps people use or understand nesco
+labels: ["content"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        nesco ships with built-in AI content — skills, agents, prompts, rules, hooks, and more —
+        that help users work with and understand the CLI. Use this template to suggest a new piece
+        of that tooling. Describe what it should do for nesco users in plain language — no code needed.
+
+  - type: dropdown
+    id: content-type
+    attributes:
+      label: What type of content?
+      description: Which kind of nesco built-in content are you suggesting?
+      options:
+        - Skill
+        - Agent
+        - Prompt
+        - Rule
+        - Hook
+        - Command
+        - MCP config
+        - App template
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-should-it-help-with
+    attributes:
+      label: What should it help with?
+      description: What part of using or understanding nesco would this address?
+      placeholder: "This would help users ..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: who-benefits
+    attributes:
+      label: Who benefits?
+      description: Who is the primary audience for this content?
+      options:
+        - New users learning nesco
+        - Power users optimizing workflows
+        - Content authors building on nesco
+        - Everyone
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: gap
+    attributes:
+      label: What gap exists today?
+      description: What's confusing, undocumented, or manual that this would fix?
+      placeholder: "Right now there's no good way to ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: how-should-it-work
+    attributes:
+      label: How should it work?
+      description: Describe the experience in your own words — what the user does, what they get back. No code, just walk us through it.
+      placeholder: "The user would ... and then they'd see ..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Links, screenshots, related issues, existing examples to model after, or anything else that might help.
+    validations:
+      required: false
