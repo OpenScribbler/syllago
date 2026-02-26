@@ -3,10 +3,11 @@
 // Golden tests at multiple terminal sizes to catch breakpoint regressions.
 //
 // Breakpoints in the TUI:
-//   60x20  — minimum viable terminal (below this: "Terminal too small" error)
-//   80x30  — default (tested in golden_fullapp_test.go)
-//   120x40 — medium: card layout visible (height >= 35), two-column cards
-//   160x50 — large: ASCII art title visible (height >= 42, content width >= 55)
+//
+//	60x20  — minimum viable terminal (below this: "Terminal too small" error)
+//	80x30  — default (tested in golden_fullapp_test.go)
+//	120x40 — medium: card layout visible (height >= 35), two-column cards
+//	160x50 — large: ASCII art title visible (height >= 42, content width >= 55)
 package tui
 
 import (

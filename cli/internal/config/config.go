@@ -21,10 +21,19 @@ type Registry struct {
 	Ref  string `json:"ref,omitempty"` // branch/tag/commit, defaults to default branch
 }
 
+// SandboxConfig holds project-level sandbox policy.
+// Git-tracked so teams share the same sandbox settings.
+type SandboxConfig struct {
+	AllowedDomains []string `json:"allowed_domains,omitempty"`
+	AllowedEnv     []string `json:"allowed_env,omitempty"`
+	AllowedPorts   []int    `json:"allowed_ports,omitempty"`
+}
+
 type Config struct {
 	Providers   []string          `json:"providers"` // enabled provider slugs
 	Registries  []Registry        `json:"registries,omitempty"`
 	Preferences map[string]string `json:"preferences,omitempty"`
+	Sandbox     SandboxConfig     `json:"sandbox,omitempty"`
 }
 
 func DirPath(projectRoot string) string {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,14 +29,14 @@ var registryAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		url := args[0]
+		gitURL := args[0]
 
 		nameFlag, _ := cmd.Flags().GetString("name")
 		refFlag, _ := cmd.Flags().GetString("ref")
 
 		name := nameFlag
 		if name == "" {
-			name = registry.NameFromURL(url)
+			name = registry.NameFromURL(gitURL)
 		}
 		if !catalog.IsValidItemName(name) {
 			return fmt.Errorf("registry name %q contains invalid characters (use letters, numbers, - and _)", name)
@@ -77,8 +78,8 @@ var registryAddCmd = &cobra.Command{
 		}
 
 		// Clone the registry
-		fmt.Fprintf(output.Writer, "Cloning %s as %q...\n", url, name)
-		if err := registry.Clone(url, name, refFlag); err != nil {
+		fmt.Fprintf(output.Writer, "Cloning %s as %q...\n", gitURL, name)
+		if err := registry.Clone(gitURL, name, refFlag); err != nil {
 			return err
 		}
 
@@ -99,7 +100,7 @@ var registryAddCmd = &cobra.Command{
 		// Save to config
 		cfg.Registries = append(cfg.Registries, config.Registry{
 			Name: name,
-			URL:  url,
+			URL:  gitURL,
 			Ref:  refFlag,
 		})
 		if err := config.Save(root, cfg); err != nil {
@@ -107,6 +108,35 @@ var registryAddCmd = &cobra.Command{
 		}
 
 		fmt.Fprintf(output.Writer, "Added registry: %s\n", name)
+
+		// SAND-003: Offer to add registry domain to sandbox allowlist.
+		parsed, parseErr := url.Parse(gitURL)
+		if parseErr == nil && parsed.Hostname() != "" {
+			host := parsed.Hostname()
+			fmt.Fprintf(output.Writer, "\nSecurity: Nesco does not verify registry content. Registry servers can supply\n")
+			fmt.Fprintf(output.Writer, "hooks and MCP servers that run on your machine.\n")
+			fmt.Fprintf(output.Writer, "Sandbox: Add %s to the sandbox network allowlist? [y/N] ", host)
+			var answer string
+			fmt.Fscan(os.Stdin, &answer)
+			if strings.ToLower(strings.TrimSpace(answer)) == "y" {
+				alreadyPresent := false
+				for _, d := range cfg.Sandbox.AllowedDomains {
+					if d == host {
+						alreadyPresent = true
+						break
+					}
+				}
+				if !alreadyPresent {
+					cfg.Sandbox.AllowedDomains = append(cfg.Sandbox.AllowedDomains, host)
+				}
+				if saveErr := config.Save(root, cfg); saveErr != nil {
+					fmt.Fprintf(output.Writer, "Warning: failed to save sandbox allowlist: %s\n", saveErr)
+				} else {
+					fmt.Fprintf(output.Writer, "Added %s to sandbox allowlist.\n", host)
+				}
+			}
+		}
+
 		return nil
 	},
 }

@@ -40,9 +40,9 @@ func newSidebarModel(cat *catalog.Catalog, version string, registryCount int) si
 }
 
 // totalItems returns the total number of navigable items in the sidebar
-// (content types + My Tools + Import + Update + Settings + Registries).
+// (content types + My Tools + Import + Update + Settings + Registries + Sandbox).
 func (m sidebarModel) totalItems() int {
-	return len(m.types) + 5
+	return len(m.types) + 6
 }
 
 func (m sidebarModel) Update(msg tea.Msg) (sidebarModel, tea.Cmd) {
@@ -131,6 +131,7 @@ func (m sidebarModel) View() string {
 		{"Update", len(m.types) + 2},
 		{"Settings", len(m.types) + 3},
 		{"Registries", len(m.types) + 4},
+		{"Sandbox", len(m.types) + 5},
 	}
 
 	for _, u := range utilItems {
@@ -183,6 +184,7 @@ func (m sidebarModel) isImportSelected() bool     { return m.cursor == len(m.typ
 func (m sidebarModel) isUpdateSelected() bool     { return m.cursor == len(m.types)+2 }
 func (m sidebarModel) isSettingsSelected() bool   { return m.cursor == len(m.types)+3 }
 func (m sidebarModel) isRegistriesSelected() bool { return m.cursor == len(m.types)+4 }
+func (m sidebarModel) isSandboxSelected() bool    { return m.cursor == len(m.types)+5 }
 func (m sidebarModel) selectedType() catalog.ContentType {
 	if m.cursor >= len(m.types) {
 		return ""
