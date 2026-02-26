@@ -7,7 +7,8 @@ on:
       - main
 
 jobs:
-  test:
+  test-and-build:
+    name: Go Test + Build
     runs-on: ubuntu-latest
     permissions:
       contents: read
