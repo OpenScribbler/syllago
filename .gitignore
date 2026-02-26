@@ -18,3 +18,6 @@ my-tools/
 
 # Review docs (local reference)
 docs/
+
+# Development workflow state
+.develop/
