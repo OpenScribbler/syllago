@@ -22,45 +22,39 @@ Instructions for importing content into a nesco repository.
 
 **Universal types** work with any AI tool. **Provider-specific types** require a `--provider` flag.
 
-## Adding Content (Non-Interactive)
+## Importing Content
 
-Use `nesco add` to import content without the TUI:
-
-```bash
-# Universal type (skills, agents, prompts, mcp, apps)
-nesco add /path/to/my-skill --type skills
-
-# Provider-specific type (rules, hooks, commands)
-nesco add /path/to/my-rules --type rules --provider claude-code
-
-# Custom name (defaults to source directory basename)
-nesco add /path/to/content --type skills --name my-custom-name
-```
-
-Content is copied to `local/<type>/[<provider>/]<name>/`.
-
-## README Generation
-
-When importing content that lacks a README.md, one is generated automatically with:
-- A title derived from the item name
-- The content type
-
-Existing README.md files are never overwritten.
-
-## Discovering Existing Provider Content
-
-Use `nesco import` to discover what a provider already has configured:
+Use `nesco import` to bring content into nesco from any provider:
 
 ```bash
-# See what Claude Code has
+# Import all content from a provider
 nesco import --from claude-code
 
 # Filter to specific type
-nesco import --from claude-code --type rules
+nesco import --from claude-code --type skills
+
+# Import a specific item by name
+nesco import --from cursor --name my-rule
 
 # Preview mode (discovery only, no parsing)
 nesco import --from claude-code --preview
 ```
+
+Content is copied to `local/<type>/[<provider>/]<name>/` and automatically canonicalized.
+
+## Exporting Content
+
+Use `nesco export` to install content into any provider:
+
+```bash
+# Export all content to a provider
+nesco export --to cursor
+
+# Export only skills to Kiro
+nesco export --to kiro --type skills
+```
+
+Nesco handles format conversion automatically during export.
 
 ## Directory Structure
 

@@ -30,7 +30,9 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 	cat := zone.Mark("crumb-category", helpStyle.Render(m.item.Type.Label()))
 	arrow := helpStyle.Render(" > ")
 	current := titleStyle.Render(name)
-	if m.item.Local {
+	if m.item.IsBuiltin() {
+		current += " " + builtinStyle.Render("[BUILT-IN]")
+	} else if m.item.Local {
 		current += " " + warningStyle.Render("[LOCAL]")
 	} else if m.item.Registry != "" {
 		current += " " + countStyle.Render("["+m.item.Registry+"]")
@@ -42,7 +44,9 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 
 	// Metadata block (always visible, below tabs)
 	pinned += labelStyle.Render("Type: ") + valueStyle.Render(m.item.Type.Label())
-	if m.item.Local {
+	if m.item.IsBuiltin() {
+		pinned += "  " + builtinStyle.Render("[Built-in]")
+	} else if m.item.Local {
 		pinned += "  " + warningStyle.Render("[Local]")
 	}
 	pinned += "\n"
