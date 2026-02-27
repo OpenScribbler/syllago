@@ -3,7 +3,7 @@ You are helping me create content for nesco, a shared library of AI coding tool 
 I'm creating a new agent called "{{NAME}}". An agent is a specialized AI persona with specific instructions, behavior guidelines, and capabilities. Agents live in their own directory with an AGENT.md file.
 
 Required structure:
-  my-tools/agents/{{NAME}}/
+  local/agents/{{NAME}}/
   ├── AGENT.md          # Required: frontmatter (name, description) + agent instructions
   └── .nesco.yaml      # Auto-generated, don't edit
 

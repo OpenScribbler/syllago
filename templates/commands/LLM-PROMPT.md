@@ -3,7 +3,7 @@ You are helping me create content for nesco, a shared library of AI coding tool 
 I'm creating a new command called "{{NAME}}". Commands are provider-specific slash commands that users can invoke (e.g., /command-name). They're typically markdown files with instructions.
 
 Structure:
-  my-tools/commands/<provider>/{{NAME}}
+  local/commands/<provider>/{{NAME}}
 
 Command format:
 ---

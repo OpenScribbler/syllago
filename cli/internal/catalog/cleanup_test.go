@@ -27,7 +27,7 @@ func TestCleanupPromotedItems_RequiresNameMatch(t *testing.T) {
 	}
 
 	// Create local item with same ID but DIFFERENT name (ID collision)
-	localDir := filepath.Join(root, "my-tools", "skills", "different-name")
+	localDir := filepath.Join(root, "local", "skills", "different-name")
 	if err := os.MkdirAll(localDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestCleanupPromotedItems_RequiresTypeMatch(t *testing.T) {
 	}
 
 	// Create local agent with same ID and name but different type
-	localDir := filepath.Join(root, "my-tools", "agents", "tool-name")
+	localDir := filepath.Join(root, "local", "agents", "tool-name")
 	if err := os.MkdirAll(localDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestCleanupPromotedItems_CleansExactMatch(t *testing.T) {
 	}
 
 	// Create local item with matching ID, name, and type
-	localDir := filepath.Join(root, "my-tools", "skills", "promoted-tool")
+	localDir := filepath.Join(root, "local", "skills", "promoted-tool")
 	if err := os.MkdirAll(localDir, 0755); err != nil {
 		t.Fatal(err)
 	}

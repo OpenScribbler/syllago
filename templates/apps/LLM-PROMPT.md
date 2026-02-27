@@ -3,7 +3,7 @@ You are helping me create content for nesco, a shared library of AI coding tool 
 I'm creating a new app called "{{NAME}}". An app is a complete installable package with its own install.sh script. Apps can include MCP servers, hooks, configuration files, and any other components. They're the most flexible content type.
 
 Required structure:
-  my-tools/apps/{{NAME}}/
+  local/apps/{{NAME}}/
   ├── README.md         # Required: frontmatter (name, description, providers) + documentation
   ├── install.sh        # Required: bash script for install/uninstall
   └── .nesco.yaml      # Auto-generated, don't edit

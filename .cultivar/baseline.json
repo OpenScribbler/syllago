@@ -13,7 +13,7 @@
       "title": "Directory Structure",
       "origin": "auto",
       "hash": "f29f2d94bcc754117bac4ad6bf57d914115bcac0cb31d05a8833277ea8ebdcf8",
-      "content": "{\"origin\":\"auto\",\"title\":\"Directory Structure\",\"entries\":[{\"path\":\"agents/\"},{\"path\":\"apps/\"},{\"path\":\"cli/\"},{\"path\":\"commands/\"},{\"path\":\"docs/\",\"convention\":\"documentation\"},{\"path\":\"hooks/\"},{\"path\":\"mcp/\"},{\"path\":\"memory/\"},{\"path\":\"my-tools/\"},{\"path\":\"prompts/\"},{\"path\":\"rules/\"},{\"path\":\"skills/\"},{\"path\":\"templates/\"}]}"
+      "content": "{\"origin\":\"auto\",\"title\":\"Directory Structure\",\"entries\":[{\"path\":\"agents/\"},{\"path\":\"apps/\"},{\"path\":\"cli/\"},{\"path\":\"commands/\"},{\"path\":\"docs/\",\"convention\":\"documentation\"},{\"path\":\"hooks/\"},{\"path\":\"mcp/\"},{\"path\":\"memory/\"},{\"path\":\"local/\"},{\"path\":\"prompts/\"},{\"path\":\"rules/\"},{\"path\":\"skills/\"},{\"path\":\"templates/\"}]}"
     },
     {
       "category": "project-metadata",

@@ -4,7 +4,7 @@ cli/nesco.*
 cli/nesco-*
 
 # Local user content
-my-tools/
+local/
 
 # OS
 .DS_Store

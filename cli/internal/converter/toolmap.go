@@ -3,15 +3,73 @@ package converter
 import "strings"
 
 // ToolNames maps canonical tool names (Claude Code) to provider-specific equivalents.
+// Note: Zed uses "edit_file" for both Write and Edit. Reverse translation is ambiguous
+// and may return either canonical name; round-trips through Zed lose the distinction.
 var ToolNames = map[string]map[string]string{
-	"Read":      {"gemini-cli": "read_file", "copilot-cli": "view", "kiro": "read"},
-	"Write":     {"gemini-cli": "write_file", "copilot-cli": "apply_patch", "kiro": "fs_write"},
-	"Edit":      {"gemini-cli": "replace", "copilot-cli": "apply_patch", "kiro": "fs_write"},
-	"Bash":      {"gemini-cli": "run_shell_command", "copilot-cli": "shell", "kiro": "shell"},
-	"Glob":      {"gemini-cli": "list_directory", "copilot-cli": "glob", "kiro": "read"},
-	"Grep":      {"gemini-cli": "grep_search", "copilot-cli": "rg", "kiro": "read"},
-	"WebSearch": {"gemini-cli": "google_search"},
-	"Task":      {"copilot-cli": "task"},
+	"Read": {
+		"gemini-cli":  "read_file",
+		"copilot-cli": "view",
+		"kiro":        "read",
+		"opencode":    "view",
+		"zed":         "read_file",
+		"cline":       "read_file",
+		"roo-code":    "ReadFileTool",
+	},
+	"Write": {
+		"gemini-cli":  "write_file",
+		"copilot-cli": "apply_patch",
+		"kiro":        "fs_write",
+		"opencode":    "write",
+		"zed":         "edit_file",
+		"cline":       "write_to_file",
+		"roo-code":    "WriteToFileTool",
+	},
+	"Edit": {
+		"gemini-cli":  "replace",
+		"copilot-cli": "apply_patch",
+		"kiro":        "fs_write",
+		"opencode":    "edit",
+		"zed":         "edit_file",
+		"cline":       "apply_diff",
+		"roo-code":    "EditFileTool",
+	},
+	"Bash": {
+		"gemini-cli":  "run_shell_command",
+		"copilot-cli": "shell",
+		"kiro":        "shell",
+		"opencode":    "bash",
+		"zed":         "terminal",
+		"cline":       "execute_command",
+		"roo-code":    "ExecuteCommandTool",
+	},
+	"Glob": {
+		"gemini-cli":  "list_directory",
+		"copilot-cli": "glob",
+		"kiro":        "read",
+		"opencode":    "glob",
+		"zed":         "find_path",
+		"cline":       "list_files",
+		"roo-code":    "ListFilesTool",
+	},
+	"Grep": {
+		"gemini-cli":  "grep_search",
+		"copilot-cli": "rg",
+		"kiro":        "read",
+		"opencode":    "grep",
+		"zed":         "grep",
+		"cline":       "search_files",
+		"roo-code":    "SearchFilesTool",
+	},
+	"WebSearch": {
+		"gemini-cli": "google_search",
+		"opencode":   "fetch",
+		"zed":        "web_search",
+	},
+	"Task": {
+		"copilot-cli": "task",
+		"opencode":    "agent",
+		"zed":         "subagent",
+	},
 }
 
 // HookEvents maps canonical event names (Claude Code) to provider-specific equivalents.
@@ -83,32 +141,33 @@ func ReverseTranslateTool(name, sourceSlug string) string {
 }
 
 // TranslateMCPToolName translates MCP tool name format between providers.
-// Claude: mcp__server__tool, Gemini: server__tool, Copilot: server/tool
+// Providers group into three patterns:
+//   - Prefixed double-underscore: claude-code, kiro → mcp__server__tool
+//   - Bare double-underscore: gemini-cli, opencode, cline, roo-code → server__tool
+//   - Slash-separated: copilot-cli, zed → server/tool
 func TranslateMCPToolName(name, sourceSlug, targetSlug string) string {
-	// Normalize to parts: server, tool
 	server, tool := parseMCPToolName(name, sourceSlug)
 	if server == "" {
 		return name // not an MCP tool name
 	}
 
 	switch targetSlug {
-	case "claude-code":
+	case "claude-code", "kiro":
 		return "mcp__" + server + "__" + tool
-	case "gemini-cli":
+	case "gemini-cli", "opencode", "cline", "roo-code":
 		return server + "__" + tool
-	case "copilot-cli":
+	case "copilot-cli", "zed":
 		return server + "/" + tool
-	case "kiro":
-		return "mcp__" + server + "__" + tool
 	default:
 		return name
 	}
 }
 
 // parseMCPToolName extracts server and tool from a provider-specific MCP tool name.
+// Providers group into three parsing patterns by separator format.
 func parseMCPToolName(name, sourceSlug string) (server, tool string) {
 	switch sourceSlug {
-	case "claude-code":
+	case "claude-code", "kiro":
 		// mcp__server__tool
 		if !strings.HasPrefix(name, "mcp__") {
 			return "", ""
@@ -119,27 +178,16 @@ func parseMCPToolName(name, sourceSlug string) (server, tool string) {
 			return "", ""
 		}
 		return parts[0], parts[1]
-	case "gemini-cli":
+	case "gemini-cli", "opencode", "cline", "roo-code":
 		// server__tool
 		parts := strings.SplitN(name, "__", 2)
 		if len(parts) != 2 {
 			return "", ""
 		}
 		return parts[0], parts[1]
-	case "copilot-cli":
+	case "copilot-cli", "zed":
 		// server/tool
 		parts := strings.SplitN(name, "/", 2)
-		if len(parts) != 2 {
-			return "", ""
-		}
-		return parts[0], parts[1]
-	case "kiro":
-		// mcp__server__tool
-		if !strings.HasPrefix(name, "mcp__") {
-			return "", ""
-		}
-		rest := strings.TrimPrefix(name, "mcp__")
-		parts := strings.SplitN(rest, "__", 2)
 		if len(parts) != 2 {
 			return "", ""
 		}

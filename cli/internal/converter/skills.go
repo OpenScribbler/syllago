@@ -190,9 +190,42 @@ func canonicalizeSkillFromMarkdown(content []byte) (*Result, error) {
 	return &Result{Content: canonical, Filename: "SKILL.md"}, nil
 }
 
-// renderKiroSkill renders a canonical skill to a Kiro steering file (plain markdown).
-func renderKiroSkill(meta SkillMeta, body string) (*Result, error) {
-	var warnings []string
+// buildSkillProseNotes generates behavioral embedding notes for skill metadata
+// that can't be represented as structured fields. Uses canonical tool names
+// (no provider-specific translation) since the target is plain markdown.
+func buildSkillProseNotes(meta SkillMeta) []string {
+	var notes []string
+	if len(meta.AllowedTools) > 0 {
+		notes = append(notes, fmt.Sprintf("**Tool restriction:** Use only %s tools.", strings.Join(meta.AllowedTools, ", ")))
+	}
+	if len(meta.DisallowedTools) > 0 {
+		notes = append(notes, fmt.Sprintf("**Do not use:** %s tools.", strings.Join(meta.DisallowedTools, ", ")))
+	}
+	if meta.Context == "fork" {
+		notes = append(notes, "Run in an isolated context. Do not modify the main conversation.")
+	}
+	if meta.Agent != "" {
+		notes = append(notes, fmt.Sprintf("Use a %s-focused approach.", strings.ToLower(meta.Agent)))
+	}
+	if meta.Model != "" {
+		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
+	}
+	if meta.DisableModelInvocation {
+		notes = append(notes, "Only invoke when the user explicitly requests it.")
+	}
+	if meta.UserInvocable != nil && *meta.UserInvocable {
+		notes = append(notes, "Intended to appear in the command menu.")
+	}
+	if meta.ArgumentHint != "" {
+		notes = append(notes, fmt.Sprintf("Usage: %s", meta.ArgumentHint))
+	}
+	return notes
+}
+
+// renderPlainMarkdownSkill renders a canonical skill to a plain markdown file
+// with no frontmatter. Used by Kiro and OpenCode where skill files are simple markdown.
+// Metadata that can't be represented structurally is embedded as prose.
+func renderPlainMarkdownSkill(meta SkillMeta, body string) (*Result, error) {
 	cleanBody := StripConversionNotes(body)
 
 	var header strings.Builder
@@ -206,13 +239,13 @@ func renderKiroSkill(meta SkillMeta, body string) (*Result, error) {
 		header.WriteString("\n\n")
 	}
 
-	content := header.String() + cleanBody
+	outBody := header.String() + cleanBody
 
-	if len(meta.AllowedTools) > 0 {
-		warnings = append(warnings, "allowed-tools not supported in Kiro steering files (dropped)")
-	}
-	if meta.UserInvocable != nil {
-		warnings = append(warnings, "user-invocable not supported by Kiro steering files (dropped)")
+	// Embed behavioral metadata as prose rather than dropping it
+	notes := buildSkillProseNotes(meta)
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
 	}
 
 	name := "skill"
@@ -221,48 +254,19 @@ func renderKiroSkill(meta SkillMeta, body string) (*Result, error) {
 	}
 
 	return &Result{
-		Content:  []byte(content + "\n"),
+		Content:  []byte(outBody + "\n"),
 		Filename: name + ".md",
-		Warnings: warnings,
 	}, nil
 }
 
+// renderKiroSkill renders a canonical skill to a Kiro steering file (plain markdown).
+func renderKiroSkill(meta SkillMeta, body string) (*Result, error) {
+	return renderPlainMarkdownSkill(meta, body)
+}
+
 // renderOpenCodeSkill renders a canonical skill to OpenCode's plain markdown format.
-// OpenCode skills in .opencode/skill/ are plain markdown without frontmatter.
 func renderOpenCodeSkill(meta SkillMeta, body string) (*Result, error) {
-	var warnings []string
-	cleanBody := StripConversionNotes(body)
-
-	var header strings.Builder
-	if meta.Name != "" {
-		header.WriteString("# ")
-		header.WriteString(meta.Name)
-		header.WriteString("\n\n")
-	}
-	if meta.Description != "" {
-		header.WriteString(meta.Description)
-		header.WriteString("\n\n")
-	}
-
-	content := header.String() + cleanBody
-
-	if len(meta.AllowedTools) > 0 {
-		warnings = append(warnings, "allowed-tools not supported in OpenCode skill files (dropped)")
-	}
-	if meta.UserInvocable != nil {
-		warnings = append(warnings, "user-invocable not supported in OpenCode skill files (dropped)")
-	}
-
-	name := "skill"
-	if meta.Name != "" {
-		name = slugify(meta.Name)
-	}
-
-	return &Result{
-		Content:  []byte(content + "\n"),
-		Filename: name + ".md",
-		Warnings: warnings,
-	}, nil
+	return renderPlainMarkdownSkill(meta, body)
 }
 
 // --- Helpers ---

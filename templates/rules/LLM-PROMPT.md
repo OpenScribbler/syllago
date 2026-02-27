@@ -3,7 +3,7 @@ You are helping me create content for nesco, a shared library of AI coding tool 
 I'm creating a new rule called "{{NAME}}". Rules are provider-specific configuration files that define behavioral constraints or guidelines for a specific AI tool. They live under a provider subdirectory.
 
 Structure:
-  my-tools/rules/<provider>/{{NAME}}
+  local/rules/<provider>/{{NAME}}
 
 Rules are single files (typically .md) placed in a provider-specific directory.
 Provider slugs: claude-code, gemini-cli, cursor, windsurf, codex

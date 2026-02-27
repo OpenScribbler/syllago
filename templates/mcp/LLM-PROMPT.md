@@ -3,7 +3,7 @@ You are helping me create content for nesco, a shared library of AI coding tool 
 I'm creating a new MCP server configuration called "{{NAME}}". MCP (Model Context Protocol) servers provide tools that AI assistants can call. The config tells the AI tool how to launch and connect to the server.
 
 Required structure:
-  my-tools/mcp/{{NAME}}/
+  local/mcp/{{NAME}}/
   ├── config.json       # Required: MCP server configuration (valid JSON)
   ├── README.md         # Optional: description and setup instructions
   └── .nesco.yaml      # Auto-generated, don't edit

@@ -819,12 +819,12 @@ func (m importModel) View() string {
 	return s
 }
 
-// destinationPath computes where the content will be copied to (always my-tools/).
+// destinationPath computes where the content will be copied to (always local/).
 func (m importModel) destinationPath() string {
 	if m.contentType.IsUniversal() {
-		return filepath.Join(m.repoRoot, "my-tools", string(m.contentType), m.itemName)
+		return filepath.Join(m.repoRoot, "local", string(m.contentType), m.itemName)
 	}
-	return filepath.Join(m.repoRoot, "my-tools", string(m.contentType), m.providerName, m.itemName)
+	return filepath.Join(m.repoRoot, "local", string(m.contentType), m.providerName, m.itemName)
 }
 
 // doImport executes the copy, generates metadata, and returns the item name.
@@ -1443,9 +1443,9 @@ func (m importModel) doImportOverwrite() (string, []string, error) {
 func (m importModel) batchDestForSource(srcPath string) string {
 	itemName := filepath.Base(srcPath)
 	if m.contentType.IsUniversal() {
-		return filepath.Join(m.repoRoot, "my-tools", string(m.contentType), itemName)
+		return filepath.Join(m.repoRoot, "local", string(m.contentType), itemName)
 	}
-	return filepath.Join(m.repoRoot, "my-tools", string(m.contentType), m.providerName, itemName)
+	return filepath.Join(m.repoRoot, "local", string(m.contentType), m.providerName, itemName)
 }
 
 // advanceConflict moves to the next batch conflict, or launches the batch import
@@ -1532,7 +1532,7 @@ func isValidGitURL(url string) bool {
 }
 
 // discoverProviderDirs reads the existing provider subdirectories for a content type.
-// Checks both the shared directory and my-tools/ for provider dirs.
+// Checks both the shared directory and local/ for provider dirs.
 func (m importModel) discoverProviderDirs(ct catalog.ContentType) []string {
 	seen := make(map[string]bool)
 	var names []string
@@ -1540,7 +1540,7 @@ func (m importModel) discoverProviderDirs(ct catalog.ContentType) []string {
 	// Check shared directory
 	dirs := []string{
 		filepath.Join(m.repoRoot, string(ct)),
-		filepath.Join(m.repoRoot, "my-tools", string(ct)),
+		filepath.Join(m.repoRoot, "local", string(ct)),
 	}
 	for _, typeDir := range dirs {
 		entries, err := os.ReadDir(typeDir)

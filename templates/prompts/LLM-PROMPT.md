@@ -3,7 +3,7 @@ You are helping me create content for nesco, a shared library of AI coding tool 
 I'm creating a new prompt called "{{NAME}}". A prompt is a reusable text snippet that can be copied to the clipboard and pasted into any AI tool. Prompts live in their own directory with a PROMPT.md file.
 
 Required structure:
-  my-tools/prompts/{{NAME}}/
+  local/prompts/{{NAME}}/
   ├── PROMPT.md         # Required: frontmatter (name, description) + prompt body
   └── .nesco.yaml      # Auto-generated, don't edit
 

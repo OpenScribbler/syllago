@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/converter"
 	"github.com/OpenScribbler/nesco/cli/internal/provider"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -45,12 +46,11 @@ func CheckEnvVars(cfg *MCPConfig) map[string]bool {
 }
 
 // mcpConfigPath returns the config file path where MCP servers are stored for the given provider.
-// Claude Code: ~/.claude.json (root-level dotfile)
-// Gemini CLI: ~/.gemini/settings.json (inside config dir)
+// Some providers store MCP config per-user (home dir), others per-project (repo root).
 // Declared as a var so tests can override it.
 var mcpConfigPath = mcpConfigPathImpl
 
-func mcpConfigPathImpl(prov provider.Provider) (string, error) {
+func mcpConfigPathImpl(prov provider.Provider, repoRoot string) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
@@ -60,11 +60,45 @@ func mcpConfigPathImpl(prov provider.Provider) (string, error) {
 		return filepath.Join(home, ".claude.json"), nil
 	case "gemini-cli":
 		return filepath.Join(home, prov.ConfigDir, "settings.json"), nil
+	case "copilot-cli":
+		return filepath.Join(repoRoot, ".copilot", "mcp.json"), nil
+	case "kiro":
+		return filepath.Join(repoRoot, ".kiro", "settings", "mcp.json"), nil
+	case "opencode":
+		return filepath.Join(repoRoot, "opencode.json"), nil
+	case "zed":
+		return filepath.Join(home, ".config", "zed", "settings.json"), nil
+	case "cline":
+		return filepath.Join(repoRoot, ".vscode", "mcp.json"), nil
+	case "roo-code":
+		return filepath.Join(repoRoot, ".roo", "mcp.json"), nil
 	}
 	return "", fmt.Errorf("MCP config path not defined for %s", prov.Name)
 }
 
-func installMCP(item catalog.ContentItem, prov provider.Provider, _ string) (string, error) {
+// mcpConfigKey returns the JSON key under which MCP servers are stored.
+// Most providers use "mcpServers"; Zed uses "context_servers".
+func mcpConfigKey(prov provider.Provider) string {
+	if prov.Slug == "zed" {
+		return "context_servers"
+	}
+	return "mcpServers"
+}
+
+// readMCPConfig reads and returns the JSON bytes from a provider's MCP config file.
+// For OpenCode, strips JSONC comments before returning.
+func readMCPConfig(cfgPath string, prov provider.Provider) ([]byte, error) {
+	data, err := readJSONFile(cfgPath)
+	if err != nil {
+		return nil, err
+	}
+	if prov.Slug == "opencode" {
+		data = converter.StripJSONCComments(data)
+	}
+	return data, nil
+}
+
+func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string) (string, error) {
 	// Read the MCP config from the content item
 	rawData, err := os.ReadFile(filepath.Join(item.Path, "config.json"))
 	if err != nil {
@@ -90,7 +124,7 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, _ string) (str
 	}
 
 	// Read target config file
-	cfgPath, err := mcpConfigPath(prov)
+	cfgPath, err := mcpConfigPath(prov, repoRoot)
 	if err != nil {
 		return "", err
 	}
@@ -99,13 +133,14 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, _ string) (str
 		return "", fmt.Errorf("backing up %s: %w", cfgPath, err)
 	}
 
-	fileData, err := readJSONFile(cfgPath)
+	fileData, err := readMCPConfig(cfgPath, prov)
 	if err != nil {
 		return "", fmt.Errorf("reading %s: %w", cfgPath, err)
 	}
 
-	// Set mcpServers.<name> to our config
-	key := "mcpServers." + item.Name
+	// Set <key>.<name> to our config (key varies by provider)
+	jsonKey := mcpConfigKey(prov)
+	key := jsonKey + "." + item.Name
 	fileData, err = sjson.SetRawBytes(fileData, key, configData)
 	if err != nil {
 		return "", fmt.Errorf("setting %s: %w", key, err)
@@ -115,21 +150,22 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, _ string) (str
 		return "", fmt.Errorf("writing %s: %w", cfgPath, err)
 	}
 
-	return fmt.Sprintf("mcpServers.%s in %s", item.Name, cfgPath), nil
+	return fmt.Sprintf("%s.%s in %s", jsonKey, item.Name, cfgPath), nil
 }
 
-func uninstallMCP(item catalog.ContentItem, prov provider.Provider, _ string) (string, error) {
-	cfgPath, err := mcpConfigPath(prov)
+func uninstallMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string) (string, error) {
+	cfgPath, err := mcpConfigPath(prov, repoRoot)
 	if err != nil {
 		return "", err
 	}
 
-	fileData, err := readJSONFile(cfgPath)
+	fileData, err := readMCPConfig(cfgPath, prov)
 	if err != nil {
 		return "", fmt.Errorf("reading %s: %w", cfgPath, err)
 	}
 
-	key := "mcpServers." + item.Name
+	jsonKey := mcpConfigKey(prov)
+	key := jsonKey + "." + item.Name
 
 	// Check if it exists and has _nesco marker
 	entry := gjson.GetBytes(fileData, key)
@@ -153,21 +189,22 @@ func uninstallMCP(item catalog.ContentItem, prov provider.Provider, _ string) (s
 		return "", fmt.Errorf("writing %s: %w", cfgPath, err)
 	}
 
-	return fmt.Sprintf("mcpServers.%s from %s", item.Name, cfgPath), nil
+	return fmt.Sprintf("%s.%s from %s", jsonKey, item.Name, cfgPath), nil
 }
 
-func checkMCPStatus(item catalog.ContentItem, prov provider.Provider, _ string) Status {
-	cfgPath, err := mcpConfigPath(prov)
+func checkMCPStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
+	cfgPath, err := mcpConfigPath(prov, repoRoot)
 	if err != nil {
 		return StatusNotAvailable
 	}
 
-	fileData, err := readJSONFile(cfgPath)
+	fileData, err := readMCPConfig(cfgPath, prov)
 	if err != nil {
 		return StatusNotAvailable
 	}
 
-	key := "mcpServers." + item.Name
+	jsonKey := mcpConfigKey(prov)
+	key := jsonKey + "." + item.Name
 	entry := gjson.GetBytes(fileData, key)
 	if !entry.Exists() {
 		return StatusNotInstalled

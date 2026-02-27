@@ -64,6 +64,9 @@ func (c *AgentsConverter) Canonicalize(content []byte, sourceProvider string) (*
 	if sourceProvider == "kiro" {
 		return canonicalizeKiroAgent(content)
 	}
+	if sourceProvider == "codex" {
+		return canonicalizeCodexAgents(content)
+	}
 
 	meta, body, err := parseAgentCanonical(content)
 	if err != nil {
@@ -109,6 +112,8 @@ func (c *AgentsConverter) Render(content []byte, target provider.Provider) (*Res
 		return renderOpenCodeAgent(meta, body)
 	case "kiro":
 		return renderKiroAgent(meta, body)
+	case "codex":
+		return renderCodexAgents(meta, body)
 	default:
 		// Claude Code — full frontmatter preserved
 		return renderClaudeAgent(meta, body)

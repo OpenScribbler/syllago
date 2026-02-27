@@ -407,6 +407,63 @@ func TestClaudeHooksToKiro(t *testing.T) {
 	assertEqual(t, "nesco-hooks.json", result.Filename)
 }
 
+func TestHooklessProviderWarning(t *testing.T) {
+	input := []byte(`{
+		"hooks": {
+			"PreToolUse": [
+				{
+					"matcher": "Bash",
+					"hooks": [
+						{"type": "command", "command": "echo check", "timeout": 5000}
+					]
+				}
+			]
+		}
+	}`)
+
+	conv := &HooksConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	hooklessTargets := []struct {
+		name string
+		prov provider.Provider
+	}{
+		{"opencode", provider.OpenCode},
+		{"zed", provider.Zed},
+		{"cline", provider.Cline},
+		{"roo-code", provider.RooCode},
+	}
+
+	for _, tt := range hooklessTargets {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.Render(canonical.Content, tt.prov)
+			if err != nil {
+				t.Fatalf("Render to %s: %v", tt.name, err)
+			}
+
+			// Content should be nil (no output)
+			if result.Content != nil {
+				t.Errorf("expected nil Content for hookless provider %s, got %d bytes", tt.name, len(result.Content))
+			}
+
+			// Filename should be empty
+			if result.Filename != "" {
+				t.Errorf("expected empty Filename for hookless provider %s, got %q", tt.name, result.Filename)
+			}
+
+			// Should have exactly one warning
+			if len(result.Warnings) != 1 {
+				t.Fatalf("expected 1 warning for %s, got %d: %v", tt.name, len(result.Warnings), result.Warnings)
+			}
+			assertContains(t, result.Warnings[0], "does not support hooks")
+			assertContains(t, result.Warnings[0], tt.name)
+		})
+	}
+}
+
 func containsStr(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && stringContains(s, substr))
 }

@@ -72,7 +72,25 @@ func (c *HooksConverter) Canonicalize(content []byte, sourceProvider string) (*R
 	}
 }
 
+// hooklessProviders lists providers that have no hook system.
+// Converting hooks to these providers emits a warning instead of content.
+var hooklessProviders = map[string]bool{
+	"opencode": true,
+	"zed":      true,
+	"cline":    true,
+	"roo-code": true,
+	"cursor":   true,
+	"windsurf": true,
+	"codex":    true,
+}
+
 func (c *HooksConverter) Render(content []byte, target provider.Provider) (*Result, error) {
+	if hooklessProviders[target.Slug] {
+		return &Result{
+			Warnings: []string{fmt.Sprintf("target provider %q does not support hooks; hook content was not converted", target.Slug)},
+		}, nil
+	}
+
 	var cfg hooksConfig
 	if err := json.Unmarshal(content, &cfg); err != nil {
 		return nil, fmt.Errorf("parsing canonical hooks: %w", err)

@@ -115,12 +115,11 @@ func TestClaudeSkillToOpenCode(t *testing.T) {
 	out := string(result.Content)
 	assertContains(t, out, "# Go Expert")
 	assertContains(t, out, "idiomatic Go")
-	assertNotContains(t, out, "allowed-tools")
+	assertContains(t, out, "Go coding guidelines") // description embedded as prose
+	assertNotContains(t, out, "allowed-tools")      // no YAML key in output
+	assertContains(t, out, "Tool restriction")       // embedded as prose instead
+	assertContains(t, out, "Read")                   // tool name preserved in prose
 	assertEqual(t, "go-expert.md", result.Filename)
-
-	if len(result.Warnings) == 0 {
-		t.Fatal("expected warning about dropped allowed-tools")
-	}
 }
 
 // --- Kiro skills ---
@@ -142,13 +141,11 @@ func TestClaudeSkillToKiro(t *testing.T) {
 	out := string(result.Content)
 	assertContains(t, out, "# Go Expert")
 	assertContains(t, out, "idiomatic Go")
-	assertNotContains(t, out, "allowed-tools")
+	assertContains(t, out, "Go coding guidelines") // description embedded as prose
+	assertNotContains(t, out, "allowed-tools")      // no YAML key in output
+	assertContains(t, out, "Tool restriction")       // allowed-tools embedded as prose
+	assertContains(t, out, "command menu")           // user-invocable embedded as prose
 	assertEqual(t, "go-expert.md", result.Filename)
-
-	// Should warn about dropped fields
-	if len(result.Warnings) < 2 {
-		t.Fatalf("expected at least 2 warnings (allowed-tools, user-invocable), got %d", len(result.Warnings))
-	}
 }
 
 func TestSkillWithUserInvocable(t *testing.T) {

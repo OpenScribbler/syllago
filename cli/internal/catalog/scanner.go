@@ -23,7 +23,7 @@ func IsValidItemName(name string) bool {
 	return validItemNameRe.MatchString(name)
 }
 
-// Scan walks the repo root and my-tools/ to discover all content items.
+// Scan walks the repo root and local/ to discover all content items.
 // It reads one directory level at a time using os.ReadDir for controlled traversal.
 func Scan(repoRoot string) (*Catalog, error) {
 	cat := &Catalog{RepoRoot: repoRoot}
@@ -33,8 +33,8 @@ func Scan(repoRoot string) (*Catalog, error) {
 		return nil, err
 	}
 
-	// Scan local content (my-tools/, gitignored)
-	myToolsDir := filepath.Join(repoRoot, "my-tools")
+	// Scan local content (local/, gitignored)
+	myToolsDir := filepath.Join(repoRoot, "local")
 	if _, err := os.Stat(myToolsDir); err == nil {
 		if err := scanRoot(cat, myToolsDir, true); err != nil {
 			return nil, err
@@ -44,7 +44,7 @@ func Scan(repoRoot string) (*Catalog, error) {
 	return cat, nil
 }
 
-// ScanWithRegistries scans the repo root (including my-tools/) plus any provided
+// ScanWithRegistries scans the repo root (including local/) plus any provided
 // registry sources. Registry items are tagged with their registry name.
 // Per-registry scan errors are logged to stderr but do not fail the overall scan.
 func ScanWithRegistries(repoRoot string, registries []RegistrySource) (*Catalog, error) {
@@ -87,7 +87,7 @@ func ScanRegistriesOnly(registries []RegistrySource) (*Catalog, error) {
 }
 
 // scanRoot scans a base directory for content items of all types.
-// If local is true, discovered items are marked as local (my-tools/).
+// If local is true, discovered items are marked as local (local/).
 func scanRoot(cat *Catalog, baseDir string, local bool) error {
 	for _, ct := range AllContentTypes() {
 		typeDir := filepath.Join(baseDir, string(ct))

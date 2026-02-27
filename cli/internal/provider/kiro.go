@@ -15,11 +15,11 @@ var Kiro = Provider{
 		base := filepath.Join(homeDir, ".kiro")
 		switch ct {
 		case catalog.Rules:
-			return "" // Steering files go in project .kiro/steering/
+			return ProjectScopeSentinel // Steering files go in project .kiro/steering/
 		case catalog.Agents:
 			return filepath.Join(base, "agents")
 		case catalog.Skills:
-			return "" // Skills map to steering files
+			return ProjectScopeSentinel // Skills map to steering files in project .kiro/steering/
 		case catalog.Hooks:
 			return JSONMergeSentinel // Hooks live inside agent JSON files
 		case catalog.MCP:

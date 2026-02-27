@@ -137,8 +137,8 @@ func TestImportBrowseFlow(t *testing.T) {
 	os.MkdirAll(skillDir, 0755)
 	os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("---\nname: test-skill\ndescription: A test\n---\n"), 0644)
 
-	// Create my-tools dir
-	os.MkdirAll(filepath.Join(tmp, "my-tools", "skills"), 0755)
+	// Create local dir
+	os.MkdirAll(filepath.Join(tmp, "local", "skills"), 0755)
 
 	cat := &catalog.Catalog{RepoRoot: tmp, Items: nil}
 	providers := []provider.Provider{}

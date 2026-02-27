@@ -11,7 +11,7 @@ type CleanupResult struct {
 	Path string
 }
 
-// CleanupPromotedItems removes local (my-tools/) items whose ID, name, and type
+// CleanupPromotedItems removes local (local/) items whose ID, name, and type
 // all match a shared item. This happens after a promote PR is merged and pulled —
 // the shared copy now exists, so the local copy is redundant.
 //

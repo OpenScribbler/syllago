@@ -40,6 +40,17 @@ var rootCmd = &cobra.Command{
 Run without arguments for interactive mode (TUI). Use subcommands for
 automation and scripting.
 
+Workflow:
+  1. nesco import    Bring content in from a provider, path, or git URL
+  2. nesco export    Send content out to any provider's install location
+  3. nesco promote   Share local content to a registry (PR workflow)
+
+Content lives in local/ after import. Nesco handles format conversion
+automatically — a Claude Code skill becomes a Kiro steering file, a Cursor
+rule becomes a Windsurf rule, etc.
+
+Browse registries with "nesco registry items" and sync with "nesco registry sync".
+
 Exit codes: 0=success, 1=error, 2=usage error`,
 	RunE:          runTUI,
 	SilenceUsage:  true,

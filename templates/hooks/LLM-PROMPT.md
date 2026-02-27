@@ -3,7 +3,7 @@ You are helping me create content for nesco, a shared library of AI coding tool 
 I'm creating a new hook called "{{NAME}}". Hooks are provider-specific event handlers that run commands when certain events occur (like session start, tool use, etc). They're JSON files.
 
 Structure:
-  my-tools/hooks/<provider>/{{NAME}}
+  local/hooks/<provider>/{{NAME}}
 
 Hook JSON format (Claude Code example):
 {

@@ -17,7 +17,20 @@ import (
 var registryCmd = &cobra.Command{
 	Use:   "registry",
 	Short: "Manage git-based content registries",
-	Long:  "Add, remove, list, and sync git repositories as content registries in .nesco/config.json.",
+	Long: `Add, remove, list, and sync git repositories as content registries.
+
+Registries are read-only git repos containing shared content (skills, rules,
+hooks, MCP configs, etc.). Use "registry sync" to pull updates, and
+"registry items" to browse what's available.
+
+To use registry content, browse it in the TUI ("nesco") or export it
+directly with "nesco export --to <provider>".
+
+Workflow:
+  nesco registry add <url>           Add a new registry
+  nesco registry sync                Pull latest from all registries
+  nesco registry items               Browse available content
+  nesco registry items --type skills Show only skills across registries`,
 }
 
 var registryAddCmd = &cobra.Command{
@@ -226,8 +239,17 @@ var registryListCmd = &cobra.Command{
 
 var registrySyncCmd = &cobra.Command{
 	Use:   "sync [name]",
-	Short: "Sync (git pull) one or all registries",
-	Args:  cobra.MaximumNArgs(1),
+	Short: "Pull latest content from one or all registries",
+	Long: `Runs git pull on registry clones to fetch the latest content.
+
+Sync updates the local clone only — it does not modify your local/ or
+installed provider content. Use "nesco registry items" to see what changed,
+and "nesco export" to install updated content.
+
+Examples:
+  nesco registry sync              Sync all registries
+  nesco registry sync my-rules     Sync a specific registry`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findProjectRoot()
 		if err != nil {
@@ -282,8 +304,17 @@ var registrySyncCmd = &cobra.Command{
 
 var registryItemsCmd = &cobra.Command{
 	Use:   "items [name]",
-	Short: "List items from a registry (or all registries)",
-	Args:  cobra.MaximumNArgs(1),
+	Short: "Browse content available in registries",
+	Long: `Lists content items from one or all registries.
+
+Use --type to filter by content type. To install registry content, use
+"nesco export --to <provider>" or browse in the TUI with "nesco".
+
+Examples:
+  nesco registry items                     List all items from all registries
+  nesco registry items my-rules            List items from a specific registry
+  nesco registry items --type skills       List only skills`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findProjectRoot()
 		if err != nil {

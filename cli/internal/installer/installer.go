@@ -54,6 +54,9 @@ func resolveTargetWithBase(item catalog.ContentItem, prov provider.Provider, bas
 	if installDir == provider.JSONMergeSentinel {
 		return "", fmt.Errorf("%s uses JSON merge for %s (not filesystem install)", prov.Name, item.Type.Label())
 	}
+	if installDir == provider.ProjectScopeSentinel {
+		return "", fmt.Errorf("%s %s is project-scoped (use export with --to from within a project directory)", prov.Name, item.Type.Label())
+	}
 	if item.Type == catalog.Agents {
 		return filepath.Join(installDir, item.Name+".md"), nil
 	}

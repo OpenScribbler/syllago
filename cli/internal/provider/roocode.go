@@ -14,11 +14,11 @@ var RooCode = Provider{
 	InstallDir: func(homeDir string, ct catalog.ContentType) string {
 		switch ct {
 		case catalog.Rules:
-			return "" // Rules go in project root as .roo/rules/
+			return ProjectScopeSentinel // Rules go in project root as .roo/rules/
 		case catalog.MCP:
 			return JSONMergeSentinel // Merges into .roo/mcp.json
 		case catalog.Agents:
-			return "" // Custom modes defined in settings or YAML
+			return ProjectScopeSentinel // Custom modes in project .roomodes or .roo/
 		}
 		return ""
 	},
