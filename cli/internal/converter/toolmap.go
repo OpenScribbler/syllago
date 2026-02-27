@@ -4,23 +4,23 @@ import "strings"
 
 // ToolNames maps canonical tool names (Claude Code) to provider-specific equivalents.
 var ToolNames = map[string]map[string]string{
-	"Read":      {"gemini-cli": "read_file", "copilot-cli": "view"},
-	"Write":     {"gemini-cli": "write_file", "copilot-cli": "apply_patch"},
-	"Edit":      {"gemini-cli": "replace", "copilot-cli": "apply_patch"},
-	"Bash":      {"gemini-cli": "run_shell_command", "copilot-cli": "shell"},
-	"Glob":      {"gemini-cli": "list_directory", "copilot-cli": "glob"},
-	"Grep":      {"gemini-cli": "grep_search", "copilot-cli": "rg"},
+	"Read":      {"gemini-cli": "read_file", "copilot-cli": "view", "kiro": "read"},
+	"Write":     {"gemini-cli": "write_file", "copilot-cli": "apply_patch", "kiro": "fs_write"},
+	"Edit":      {"gemini-cli": "replace", "copilot-cli": "apply_patch", "kiro": "fs_write"},
+	"Bash":      {"gemini-cli": "run_shell_command", "copilot-cli": "shell", "kiro": "shell"},
+	"Glob":      {"gemini-cli": "list_directory", "copilot-cli": "glob", "kiro": "read"},
+	"Grep":      {"gemini-cli": "grep_search", "copilot-cli": "rg", "kiro": "read"},
 	"WebSearch": {"gemini-cli": "google_search"},
 	"Task":      {"copilot-cli": "task"},
 }
 
 // HookEvents maps canonical event names (Claude Code) to provider-specific equivalents.
 var HookEvents = map[string]map[string]string{
-	"PreToolUse":        {"gemini-cli": "BeforeTool", "copilot-cli": "preToolUse"},
-	"PostToolUse":       {"gemini-cli": "AfterTool", "copilot-cli": "postToolUse"},
-	"UserPromptSubmit":  {"gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted"},
-	"Stop":              {"gemini-cli": "AfterAgent"},
-	"SessionStart":      {"gemini-cli": "SessionStart", "copilot-cli": "sessionStart"},
+	"PreToolUse":        {"gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse"},
+	"PostToolUse":       {"gemini-cli": "AfterTool", "copilot-cli": "postToolUse", "kiro": "postToolUse"},
+	"UserPromptSubmit":  {"gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted", "kiro": "userPromptSubmit"},
+	"Stop":              {"gemini-cli": "AfterAgent", "kiro": "stop"},
+	"SessionStart":      {"gemini-cli": "SessionStart", "copilot-cli": "sessionStart", "kiro": "agentSpawn"},
 	"SessionEnd":        {"gemini-cli": "SessionEnd", "copilot-cli": "sessionEnd"},
 	"PreCompact":        {"gemini-cli": "PreCompress"},
 	"Notification":      {"gemini-cli": "Notification"},
@@ -98,6 +98,8 @@ func TranslateMCPToolName(name, sourceSlug, targetSlug string) string {
 		return server + "__" + tool
 	case "copilot-cli":
 		return server + "/" + tool
+	case "kiro":
+		return "mcp__" + server + "__" + tool
 	default:
 		return name
 	}
@@ -127,6 +129,17 @@ func parseMCPToolName(name, sourceSlug string) (server, tool string) {
 	case "copilot-cli":
 		// server/tool
 		parts := strings.SplitN(name, "/", 2)
+		if len(parts) != 2 {
+			return "", ""
+		}
+		return parts[0], parts[1]
+	case "kiro":
+		// mcp__server__tool
+		if !strings.HasPrefix(name, "mcp__") {
+			return "", ""
+		}
+		rest := strings.TrimPrefix(name, "mcp__")
+		parts := strings.SplitN(rest, "__", 2)
 		if len(parts) != 2 {
 			return "", ""
 		}

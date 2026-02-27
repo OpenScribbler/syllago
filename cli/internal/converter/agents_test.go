@@ -1,6 +1,7 @@
 package converter
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/nesco/cli/internal/provider"
@@ -130,4 +131,174 @@ func TestAgentNoFrontmatter(t *testing.T) {
 
 	out := string(result.Content)
 	assertContains(t, out, "Just instructions for an agent.")
+}
+
+// --- Kiro agents ---
+
+func TestClaudeAgentToKiro(t *testing.T) {
+	input := []byte("---\nname: AWS Expert\ndescription: AWS Rust development specialist\ntools:\n  - Read\n  - Write\n  - Bash\nmodel: claude-sonnet-4\nmaxTurns: 20\n---\n\nYou are an expert in AWS and Rust development.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, `"name": "AWS Expert"`)
+	assertContains(t, out, `"description"`)
+	assertContains(t, out, `"prompt": "file://./prompts/aws-expert.md"`)
+	assertContains(t, out, `"model": "claude-sonnet-4"`)
+	// Tool names translated to Kiro
+	assertContains(t, out, `"read"`)
+	assertContains(t, out, `"fs_write"`)
+	assertContains(t, out, `"shell"`)
+	assertEqual(t, "aws-expert.json", result.Filename)
+
+	// Prompt body goes to ExtraFiles
+	if result.ExtraFiles == nil {
+		t.Fatal("expected ExtraFiles with prompt file")
+	}
+	promptContent, ok := result.ExtraFiles["prompts/aws-expert.md"]
+	if !ok {
+		t.Fatal("expected prompts/aws-expert.md in ExtraFiles")
+	}
+	if !strings.Contains(string(promptContent), "AWS and Rust") {
+		t.Error("expected prompt body in prompts/aws-expert.md")
+	}
+
+	// maxTurns should warn
+	if len(result.Warnings) == 0 {
+		t.Fatal("expected warning about dropped maxTurns")
+	}
+}
+
+func TestKiroAgentCanonicalize(t *testing.T) {
+	// Use unambiguous tool names: fs_write→Write/Edit, shell→Bash
+	// ("read" is ambiguous — maps to Read, Glob, and Grep)
+	input := []byte(`{
+		"name": "AWS Expert",
+		"description": "AWS and Rust specialist",
+		"prompt": "file://./prompts/aws-expert.md",
+		"model": "claude-sonnet-4",
+		"tools": ["fs_write", "shell"]
+	}`)
+
+	conv := &AgentsConverter{}
+	result, err := conv.Canonicalize(input, "kiro")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: AWS Expert")
+	assertContains(t, out, "model: claude-sonnet-4")
+	// fs_write → Write (or Edit, both map to fs_write)
+	// shell → Bash
+	assertContains(t, out, "Bash")
+	// Prompt file reference should be preserved
+	assertContains(t, out, "kiro:prompt-file")
+}
+
+// --- OpenCode agents ---
+
+func TestClaudeAgentToOpenCode(t *testing.T) {
+	input := []byte("---\nname: Refactor Bot\ndescription: Refactoring assistant\npermissionMode: bypassPermissions\n---\n\nYou help refactor code.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.OpenCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "Refactor Bot")
+	assertContains(t, out, "refactor code")
+	assertNotContains(t, out, "permissionMode")
+	assertEqual(t, "refactor-bot.md", result.Filename)
+
+	if len(result.Warnings) == 0 {
+		t.Fatal("expected warning about dropped permissionMode")
+	}
+}
+
+// --- Roo Code agents ---
+
+func TestAgentToRooCode(t *testing.T) {
+	input := []byte("---\nname: Explorer\ndescription: Explore codebase\ntools:\n  - Read\n  - Glob\n  - Grep\n  - Bash\n---\n\nExplore and summarize the codebase.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.RooCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// YAML output with Roo Code custom mode fields
+	assertContains(t, out, "slug: explorer")
+	assertContains(t, out, "name: Explorer")
+	assertContains(t, out, "roleDefinition:")
+	assertContains(t, out, "whenToUse: Explore codebase")
+	// Tool groups mapped from canonical tool names
+	assertContains(t, out, "read")
+	assertContains(t, out, "command")
+	// Filename should be slugified
+	assertContains(t, result.Filename, "explorer.yaml")
+}
+
+func TestAgentToRooCodeToolGroupDedup(t *testing.T) {
+	// Read, Glob, Grep all map to "read" — should appear only once
+	input := []byte("---\nname: Reader\ndescription: Read things\ntools:\n  - Read\n  - Glob\n  - Grep\n---\n\nRead everything.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.RooCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "read")
+	// "read" should appear in groups but only once (deduped via map)
+	assertNotContains(t, out, "edit")
+	assertNotContains(t, out, "command")
+}
+
+func TestAgentToRooCodeDroppedFieldWarnings(t *testing.T) {
+	input := []byte("---\nname: Full Agent\ndescription: Has everything\nmodel: opus\nmaxTurns: 50\npermissionMode: plan\nmemory: project\nbackground: true\nisolation: worktree\nskills:\n  - coding\nmcpServers:\n  - github\ndisallowedTools:\n  - Bash\n---\n\nFull instructions.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.RooCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	// Should have warnings for all unsupported fields
+	if len(result.Warnings) < 5 {
+		t.Fatalf("expected at least 5 warnings for dropped fields, got %d: %v", len(result.Warnings), result.Warnings)
+	}
 }

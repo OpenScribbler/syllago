@@ -96,6 +96,61 @@ func TestSkillNoFrontmatter(t *testing.T) {
 	assertEqual(t, "SKILL.md", result.Filename)
 }
 
+// --- OpenCode skills ---
+
+func TestClaudeSkillToOpenCode(t *testing.T) {
+	input := []byte("---\nname: Go Expert\ndescription: Go coding guidelines\nallowed-tools:\n  - Read\n---\n\nUse idiomatic Go patterns.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.OpenCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "# Go Expert")
+	assertContains(t, out, "idiomatic Go")
+	assertNotContains(t, out, "allowed-tools")
+	assertEqual(t, "go-expert.md", result.Filename)
+
+	if len(result.Warnings) == 0 {
+		t.Fatal("expected warning about dropped allowed-tools")
+	}
+}
+
+// --- Kiro skills ---
+
+func TestClaudeSkillToKiro(t *testing.T) {
+	input := []byte("---\nname: Go Expert\ndescription: Go coding guidelines\nallowed-tools:\n  - Read\nuser-invocable: true\n---\n\nUse idiomatic Go patterns.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "# Go Expert")
+	assertContains(t, out, "idiomatic Go")
+	assertNotContains(t, out, "allowed-tools")
+	assertEqual(t, "go-expert.md", result.Filename)
+
+	// Should warn about dropped fields
+	if len(result.Warnings) < 2 {
+		t.Fatalf("expected at least 2 warnings (allowed-tools, user-invocable), got %d", len(result.Warnings))
+	}
+}
+
 func TestSkillWithUserInvocable(t *testing.T) {
 	boolTrue := true
 	input := []byte("---\nname: test\ndescription: Test skill\nuser-invocable: true\nargument-hint: \"<query>\"\n---\n\nDo things.\n")

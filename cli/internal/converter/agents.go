@@ -2,6 +2,7 @@ package converter
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -60,6 +61,10 @@ func (c *AgentsConverter) ContentType() catalog.ContentType {
 }
 
 func (c *AgentsConverter) Canonicalize(content []byte, sourceProvider string) (*Result, error) {
+	if sourceProvider == "kiro" {
+		return canonicalizeKiroAgent(content)
+	}
+
 	meta, body, err := parseAgentCanonical(content)
 	if err != nil {
 		return nil, err
@@ -98,6 +103,12 @@ func (c *AgentsConverter) Render(content []byte, target provider.Provider) (*Res
 		return renderGeminiAgent(meta, body)
 	case "copilot-cli":
 		return renderCopilotAgent(meta, body)
+	case "roo-code":
+		return renderRooCodeAgent(meta, body)
+	case "opencode":
+		return renderOpenCodeAgent(meta, body)
+	case "kiro":
+		return renderKiroAgent(meta, body)
 	default:
 		// Claude Code — full frontmatter preserved
 		return renderClaudeAgent(meta, body)
@@ -276,6 +287,237 @@ func renderClaudeAgent(meta AgentMeta, body string) (*Result, error) {
 	buf.WriteString("\n")
 
 	return &Result{Content: buf.Bytes(), Filename: "agent.md"}, nil
+}
+
+func renderRooCodeAgent(meta AgentMeta, body string) (*Result, error) {
+	// Slugify the name: lowercase and replace spaces/underscores with hyphens.
+	slug := strings.ToLower(meta.Name)
+	slug = strings.ReplaceAll(slug, " ", "-")
+	slug = strings.ReplaceAll(slug, "_", "-")
+
+	// Map canonical tool names to Roo Code tool groups.
+	groupSet := map[string]struct{}{}
+	for _, tool := range meta.Tools {
+		switch tool {
+		case "Read", "Glob", "Grep":
+			groupSet["read"] = struct{}{}
+		case "Write", "Edit":
+			groupSet["edit"] = struct{}{}
+		case "Bash":
+			groupSet["command"] = struct{}{}
+		case "WebSearch", "WebFetch":
+			groupSet["browser"] = struct{}{}
+		}
+	}
+	var groups []string
+	// Emit in a stable order.
+	for _, g := range []string{"read", "edit", "command", "browser"} {
+		if _, ok := groupSet[g]; ok {
+			groups = append(groups, g)
+		}
+	}
+
+	mode := rooCodeMode{
+		Slug:           slug,
+		Name:           meta.Name,
+		RoleDefinition: body,
+		WhenToUse:      meta.Description,
+		Groups:         groups,
+	}
+
+	out, err := yaml.Marshal(mode)
+	if err != nil {
+		return nil, fmt.Errorf("marshalling roo-code mode: %w", err)
+	}
+
+	// Warn about fields with no Roo Code equivalent.
+	var warnings []string
+	if meta.MaxTurns > 0 {
+		warnings = append(warnings, "maxTurns has no Roo Code equivalent; dropped")
+	}
+	if meta.PermissionMode != "" {
+		warnings = append(warnings, "permissionMode has no Roo Code equivalent; dropped")
+	}
+	if meta.Model != "" {
+		warnings = append(warnings, "model has no Roo Code equivalent; dropped")
+	}
+	if meta.Memory != "" {
+		warnings = append(warnings, "memory has no Roo Code equivalent; dropped")
+	}
+	if meta.Background {
+		warnings = append(warnings, "background has no Roo Code equivalent; dropped")
+	}
+	if meta.Isolation != "" {
+		warnings = append(warnings, "isolation has no Roo Code equivalent; dropped")
+	}
+	if len(meta.Skills) > 0 {
+		warnings = append(warnings, "skills has no Roo Code equivalent; dropped")
+	}
+	if len(meta.MCPServers) > 0 {
+		warnings = append(warnings, "mcpServers has no Roo Code equivalent; dropped")
+	}
+	if len(meta.DisallowedTools) > 0 {
+		warnings = append(warnings, "disallowedTools has no Roo Code equivalent; dropped")
+	}
+
+	return &Result{
+		Content:  out,
+		Filename: slug + ".yaml",
+		Warnings: warnings,
+	}, nil
+}
+
+// rooCodeMode is the schema for a Roo Code custom mode YAML file.
+type rooCodeMode struct {
+	Slug               string   `yaml:"slug"`
+	Name               string   `yaml:"name"`
+	RoleDefinition     string   `yaml:"roleDefinition"`
+	WhenToUse          string   `yaml:"whenToUse,omitempty"`
+	CustomInstructions string   `yaml:"customInstructions,omitempty"`
+	Groups             []string `yaml:"groups,omitempty"`
+}
+
+// kiroAgentConfig is Kiro's on-disk agent format.
+type kiroAgentConfig struct {
+	Name         string   `json:"name"`
+	Description  string   `json:"description"`
+	Prompt       string   `json:"prompt"`
+	Model        string   `json:"model,omitempty"`
+	Tools        []string `json:"tools,omitempty"`
+	AllowedTools []string `json:"allowedTools,omitempty"`
+}
+
+func canonicalizeKiroAgent(content []byte) (*Result, error) {
+	var ka kiroAgentConfig
+	if err := json.Unmarshal(content, &ka); err != nil {
+		return nil, fmt.Errorf("parsing Kiro agent JSON: %w", err)
+	}
+
+	// Translate Kiro tool names to canonical
+	var tools []string
+	for _, t := range ka.Tools {
+		tools = append(tools, ReverseTranslateTool(t, "kiro"))
+	}
+	for _, t := range ka.AllowedTools {
+		// allowedTools may include granular forms like "@git/git_status"
+		base := t
+		if idx := strings.Index(t, "/"); idx != -1 {
+			base = t[:idx]
+		}
+		canonical := ReverseTranslateTool(base, "kiro")
+		if !containsString(tools, canonical) {
+			tools = append(tools, canonical)
+		}
+	}
+
+	meta := AgentMeta{
+		Name:        ka.Name,
+		Description: ka.Description,
+		Tools:       tools,
+		Model:       ka.Model,
+	}
+
+	// Prompt body: if it's a file:// reference, store as a note
+	body := ""
+	if strings.HasPrefix(ka.Prompt, "file://") {
+		body = fmt.Sprintf("<!-- kiro:prompt-file=%q -->\n\n(Prompt body loaded from %s)", ka.Prompt, ka.Prompt)
+	} else {
+		body = ka.Prompt
+	}
+
+	canonical, err := buildAgentCanonical(meta, body)
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: canonical, Filename: "agent.md"}, nil
+}
+
+func containsString(s []string, v string) bool {
+	for _, x := range s {
+		if x == v {
+			return true
+		}
+	}
+	return false
+}
+
+func renderKiroAgent(meta AgentMeta, body string) (*Result, error) {
+	var warnings []string
+	cleanBody := StripConversionNotes(body)
+
+	agentName := meta.Name
+	if agentName == "" {
+		agentName = "agent"
+	}
+	promptFilename := slugify(agentName) + ".md"
+	promptRef := "file://./prompts/" + promptFilename
+
+	// Translate tools to Kiro names
+	kiroTools := TranslateTools(meta.Tools, "kiro")
+
+	ka := kiroAgentConfig{
+		Name:        meta.Name,
+		Description: meta.Description,
+		Prompt:      promptRef,
+		Tools:       kiroTools,
+		Model:       meta.Model,
+	}
+
+	if meta.MaxTurns > 0 {
+		warnings = append(warnings, fmt.Sprintf("maxTurns (%d) not supported by Kiro (dropped)", meta.MaxTurns))
+	}
+	if meta.PermissionMode != "" {
+		warnings = append(warnings, fmt.Sprintf("permissionMode (%q) not supported by Kiro (dropped)", meta.PermissionMode))
+	}
+	if len(meta.DisallowedTools) > 0 {
+		warnings = append(warnings, "disallowedTools not supported by Kiro; consider using tool groups instead")
+	}
+
+	agentJSON, err := json.MarshalIndent(ka, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+
+	promptPath := "prompts/" + promptFilename
+
+	return &Result{
+		Content:  agentJSON,
+		Filename: slugify(agentName) + ".json",
+		Warnings: warnings,
+		ExtraFiles: map[string][]byte{
+			promptPath: []byte(cleanBody + "\n"),
+		},
+	}, nil
+}
+
+// renderOpenCodeAgent renders a canonical agent to OpenCode's markdown format.
+// OpenCode agents are markdown files with YAML frontmatter in .opencode/agents/.
+// The format is nearly identical to Claude Code's sub-agents.
+func renderOpenCodeAgent(meta AgentMeta, body string) (*Result, error) {
+	var warnings []string
+	cleanBody := StripConversionNotes(body)
+
+	// OpenCode does not support permissionMode
+	if meta.PermissionMode != "" {
+		warnings = append(warnings, fmt.Sprintf("permissionMode (%q) not supported by OpenCode (dropped)", meta.PermissionMode))
+	}
+
+	canonical, err := buildAgentCanonical(AgentMeta{
+		Name:        meta.Name,
+		Description: meta.Description,
+		Tools:       meta.Tools,
+		Model:       meta.Model,
+		MaxTurns:    meta.MaxTurns,
+	}, cleanBody)
+	if err != nil {
+		return nil, err
+	}
+
+	name := "agent"
+	if meta.Name != "" {
+		name = slugify(meta.Name)
+	}
+	return &Result{Content: canonical, Filename: name + ".md", Warnings: warnings}, nil
 }
 
 // --- Helpers ---

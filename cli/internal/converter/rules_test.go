@@ -336,6 +336,160 @@ func TestWindsurfModelDecisionToCursor(t *testing.T) {
 	assertNotContains(t, out, "globs:")
 }
 
+// --- Cline rules ---
+
+func TestClineRuleRender(t *testing.T) {
+	// Build canonical input with globs directly (skipping a source provider)
+	input := []byte("---\ndescription: TypeScript rule\nalwaysApply: false\nglobs:\n    - \"*.ts\"\n    - \"*.tsx\"\n---\n\nUse strict TypeScript.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Render(input, provider.Cline)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "paths:")
+	assertNotContains(t, out, "globs:")
+	assertContains(t, out, "*.ts")
+	assertContains(t, out, "*.tsx")
+	assertContains(t, out, "Use strict TypeScript.")
+}
+
+func TestClineRuleCanonicalize(t *testing.T) {
+	input := []byte("---\npaths:\n    - \"*.go\"\n    - \"*.mod\"\n---\n\nGo conventions.\n")
+
+	conv := &RulesConverter{}
+	canonical, err := conv.Canonicalize(input, "cline")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(canonical.Content)
+	assertContains(t, out, "globs:")
+	assertNotContains(t, out, "paths:")
+	assertContains(t, out, "*.go")
+	assertContains(t, out, "Go conventions.")
+}
+
+// --- Kiro rules ---
+
+func TestKiroRuleRender(t *testing.T) {
+	input := []byte("---\nalwaysApply: true\n---\n\nAlways follow these guidelines.\n")
+	conv := &RulesConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+	result, err := conv.Render(canonical.Content, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	assertContains(t, string(result.Content), "Always follow")
+	assertNotContains(t, string(result.Content), "---") // no frontmatter
+}
+
+func TestKiroRuleScopedEmbedsProse(t *testing.T) {
+	input := []byte("---\ndescription: TS files\nalwaysApply: false\nglobs:\n    - \"*.ts\"\n---\n\nTypeScript rule.\n")
+	conv := &RulesConverter{}
+	canonical, err := conv.Canonicalize(input, "cursor")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+	result, err := conv.Render(canonical.Content, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	out := string(result.Content)
+	assertContains(t, out, "TypeScript rule.")
+	assertContains(t, out, "**Scope:**")
+	assertContains(t, out, "*.ts")
+}
+
+// --- Roo Code rules ---
+
+func TestRooCodeRuleRender(t *testing.T) {
+	input := []byte("---\ndescription: Go conventions\nalwaysApply: true\n---\n\nUse gofmt.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Render(input, provider.RooCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// Roo Code rules are plain markdown with description as HTML comment
+	assertContains(t, out, "<!-- Go conventions -->")
+	assertContains(t, out, "Use gofmt.")
+	// Should not have YAML frontmatter
+	assertNotContains(t, out, "---")
+	assertNotContains(t, out, "alwaysApply")
+
+	// Filename should be slugified from description
+	assertEqual(t, "go-conventions.md", result.Filename)
+}
+
+func TestRooCodeRuleGlobsWarning(t *testing.T) {
+	input := []byte("---\ndescription: TS rule\nalwaysApply: false\nglobs:\n    - \"*.ts\"\n---\n\nUse strict.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Render(input, provider.RooCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	if len(result.Warnings) == 0 {
+		t.Fatal("expected warning about glob scoping not supported by Roo Code")
+	}
+	assertContains(t, result.Warnings[0], "glob")
+}
+
+func TestRooCodeRuleNoDescription(t *testing.T) {
+	input := []byte("---\nalwaysApply: true\n---\n\nPlain rule content.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Render(input, provider.RooCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "Plain rule content.")
+	assertNotContains(t, out, "<!--")
+	assertEqual(t, "rule.md", result.Filename)
+}
+
+// --- Zed rules ---
+
+func TestZedRuleRender(t *testing.T) {
+	input := []byte("---\ndescription: Project guide\nalwaysApply: true\n---\n\nFollow the guide.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Render(input, provider.Zed)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "<!-- Project guide -->")
+	assertContains(t, out, "Follow the guide.")
+	assertEqual(t, ".rules", result.Filename)
+}
+
+func TestZedRuleGlobsWarning(t *testing.T) {
+	input := []byte("---\ndescription: Scoped rule\nalwaysApply: false\nglobs:\n    - \"*.py\"\n---\n\nPython rule.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Render(input, provider.Zed)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	if len(result.Warnings) == 0 {
+		t.Fatal("expected warning about glob scoping not supported by Zed")
+	}
+}
+
 // --- Helpers ---
 
 func assertContains(t *testing.T, haystack, needle string) {

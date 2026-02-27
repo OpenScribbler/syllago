@@ -132,6 +132,27 @@ func TestGeminiDirectivesWarning(t *testing.T) {
 	assertContains(t, result.Warnings[0], "Gemini CLI template directives")
 }
 
+// --- OpenCode commands ---
+
+func TestClaudeCommandToOpenCode(t *testing.T) {
+	input := []byte("---\ndescription: Run the test suite\n---\n\nExecute all tests with coverage.\n")
+
+	conv := &CommandsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.OpenCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "test suite")
+	assertContains(t, out, "coverage")
+}
+
 func TestCommandNoFrontmatterToGemini(t *testing.T) {
 	input := []byte("Just do the thing.\n")
 

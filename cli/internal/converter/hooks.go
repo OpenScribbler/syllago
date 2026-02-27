@@ -86,6 +86,8 @@ func (c *HooksConverter) Render(content []byte, target provider.Provider) (*Resu
 	switch target.Slug {
 	case "copilot-cli":
 		return renderCopilotHooks(cfg, mode)
+	case "kiro":
+		return renderKiroHooks(cfg, mode)
 	default:
 		// Claude Code and Gemini CLI
 		return renderStandardHooks(cfg, target.Slug, mode)
@@ -307,12 +309,87 @@ func renderCopilotHooks(cfg hooksConfig, llmMode string) (*Result, error) {
 	return r, nil
 }
 
+// --- Kiro hooks ---
+
+// kiroHookEntry is a single hook in Kiro's format.
+type kiroHookEntry struct {
+	Command   string `json:"command"`
+	Matcher   string `json:"matcher,omitempty"`
+	TimeoutMs int    `json:"timeout_ms,omitempty"`
+}
+
+// kiroHooksAgent is the shape of the nesco-hooks.json file Kiro reads.
+type kiroHooksAgent struct {
+	Name        string                     `json:"name"`
+	Description string                     `json:"description"`
+	Prompt      string                     `json:"prompt"`
+	Hooks       map[string][]kiroHookEntry `json:"hooks"`
+}
+
+func renderKiroHooks(cfg hooksConfig, llmMode string) (*Result, error) {
+	var warnings []string
+	kiroHooks := make(map[string][]kiroHookEntry)
+
+	for event, matchers := range cfg.Hooks {
+		translated, supported := TranslateHookEvent(event, "kiro")
+		if !supported {
+			warnings = append(warnings, fmt.Sprintf("hook event %q is not supported by Kiro (dropped)", event))
+			continue
+		}
+
+		for _, m := range matchers {
+			matcher := ""
+			if m.Matcher != "" {
+				matcher = TranslateTool(m.Matcher, "kiro")
+			}
+
+			for _, h := range m.Hooks {
+				if h.Type == "prompt" || h.Type == "agent" {
+					if llmMode == LLMHooksModeGenerate {
+						scriptName, _ := generateLLMWrapperScript(h, "kiro", event, len(kiroHooks))
+						kiroHooks[translated] = append(kiroHooks[translated], kiroHookEntry{
+							Command:   "./" + scriptName,
+							Matcher:   matcher,
+							TimeoutMs: 30000,
+						})
+						warnings = append(warnings, fmt.Sprintf("LLM hook (type: %q) converted to wrapper script %s", h.Type, scriptName))
+					} else {
+						warnings = append(warnings, fmt.Sprintf("LLM-evaluated hook (type: %q) dropped for kiro", h.Type))
+					}
+					continue
+				}
+
+				entry := kiroHookEntry{
+					Command:   h.Command,
+					Matcher:   matcher,
+					TimeoutMs: h.Timeout,
+				}
+				kiroHooks[translated] = append(kiroHooks[translated], entry)
+			}
+		}
+	}
+
+	agent := kiroHooksAgent{
+		Name:        "nesco-hooks",
+		Description: "Hooks installed by nesco",
+		Prompt:      "",
+		Hooks:       kiroHooks,
+	}
+
+	result, err := json.MarshalIndent(agent, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: result, Filename: "nesco-hooks.json", Warnings: warnings}, nil
+}
+
 // --- LLM wrapper script generation ---
 
 // cliCommands maps provider slugs to their CLI command names.
 var cliCommands = map[string]string{
 	"claude-code": "claude",
 	"gemini-cli":  "gemini",
+	"kiro":        "kiro",
 }
 
 // generateLLMWrapperScript creates a shell script that calls the target provider's
