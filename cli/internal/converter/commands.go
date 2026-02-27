@@ -48,6 +48,9 @@ func (c *CommandsConverter) Canonicalize(content []byte, sourceProvider string) 
 		return canonicalizeGeminiCommand(content)
 	case "codex":
 		return canonicalizeCodexCommand(content)
+	case "opencode":
+		// OpenCode commands use the same format as Claude Code
+		return canonicalizeClaudeCommand(content)
 	default:
 		// Claude Code, Copilot CLI — already YAML frontmatter + markdown
 		return canonicalizeClaudeCommand(content)
@@ -65,6 +68,8 @@ func (c *CommandsConverter) Render(content []byte, target provider.Provider) (*R
 		return renderGeminiCommand(meta, body)
 	case "codex":
 		return renderCodexCommand(meta, body)
+	case "opencode":
+		return renderOpenCodeCommand(meta, body)
 	default:
 		// Claude Code, Copilot CLI — YAML frontmatter + markdown
 		return renderClaudeCommand(meta, body)
@@ -237,6 +242,30 @@ func renderClaudeCommand(meta CommandMeta, body string) (*Result, error) {
 	buf.WriteString("\n")
 
 	return &Result{Content: buf.Bytes(), Filename: "command.md", Warnings: warnings}, nil
+}
+
+// renderOpenCodeCommand renders a canonical command to OpenCode's markdown format.
+// OpenCode commands are markdown files in .opencode/commands/ with optional frontmatter.
+func renderOpenCodeCommand(meta CommandMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	name := "command"
+	if meta.Name != "" {
+		name = slugify(meta.Name)
+	}
+
+	// Build minimal frontmatter if description is present
+	var buf strings.Builder
+	if meta.Description != "" {
+		buf.WriteString("---\n")
+		buf.WriteString("description: ")
+		buf.WriteString(meta.Description)
+		buf.WriteString("\n---\n\n")
+	}
+	buf.WriteString(cleanBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: []byte(buf.String()), Filename: name + ".md"}, nil
 }
 
 // --- Helpers ---

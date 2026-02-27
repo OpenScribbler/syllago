@@ -42,16 +42,21 @@ func (c *SkillsConverter) ContentType() catalog.ContentType {
 }
 
 func (c *SkillsConverter) Canonicalize(content []byte, sourceProvider string) (*Result, error) {
-	// Both providers use YAML frontmatter + markdown
-	meta, body, err := parseSkillCanonical(content)
-	if err != nil {
-		return nil, err
+	switch sourceProvider {
+	case "kiro", "opencode":
+		return canonicalizeSkillFromMarkdown(content)
+	default:
+		// Claude Code, Gemini CLI, Copilot CLI — YAML frontmatter + markdown
+		meta, body, err := parseSkillCanonical(content)
+		if err != nil {
+			return nil, err
+		}
+		canonical, err := buildSkillCanonical(meta, body)
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "SKILL.md"}, nil
 	}
-	canonical, err := buildSkillCanonical(meta, body)
-	if err != nil {
-		return nil, err
-	}
-	return &Result{Content: canonical, Filename: "SKILL.md"}, nil
 }
 
 func (c *SkillsConverter) Render(content []byte, target provider.Provider) (*Result, error) {
@@ -63,6 +68,10 @@ func (c *SkillsConverter) Render(content []byte, target provider.Provider) (*Res
 	switch target.Slug {
 	case "gemini-cli":
 		return renderGeminiSkill(meta, body)
+	case "opencode":
+		return renderOpenCodeSkill(meta, body)
+	case "kiro":
+		return renderKiroSkill(meta, body)
 	default:
 		// Claude Code, Copilot CLI — full frontmatter preserved
 		return renderClaudeSkill(meta, body)
@@ -167,6 +176,93 @@ func renderClaudeSkill(meta SkillMeta, body string) (*Result, error) {
 	buf.WriteString("\n")
 
 	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+}
+
+// canonicalizeSkillFromMarkdown wraps plain markdown content in minimal canonical skill format.
+// Used for providers whose skills are plain markdown without frontmatter (Kiro, OpenCode).
+func canonicalizeSkillFromMarkdown(content []byte) (*Result, error) {
+	body := strings.TrimSpace(string(content))
+	meta := SkillMeta{}
+	canonical, err := buildSkillCanonical(meta, body)
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: canonical, Filename: "SKILL.md"}, nil
+}
+
+// renderKiroSkill renders a canonical skill to a Kiro steering file (plain markdown).
+func renderKiroSkill(meta SkillMeta, body string) (*Result, error) {
+	var warnings []string
+	cleanBody := StripConversionNotes(body)
+
+	var header strings.Builder
+	if meta.Name != "" {
+		header.WriteString("# ")
+		header.WriteString(meta.Name)
+		header.WriteString("\n\n")
+	}
+	if meta.Description != "" {
+		header.WriteString(meta.Description)
+		header.WriteString("\n\n")
+	}
+
+	content := header.String() + cleanBody
+
+	if len(meta.AllowedTools) > 0 {
+		warnings = append(warnings, "allowed-tools not supported in Kiro steering files (dropped)")
+	}
+	if meta.UserInvocable != nil {
+		warnings = append(warnings, "user-invocable not supported by Kiro steering files (dropped)")
+	}
+
+	name := "skill"
+	if meta.Name != "" {
+		name = slugify(meta.Name)
+	}
+
+	return &Result{
+		Content:  []byte(content + "\n"),
+		Filename: name + ".md",
+		Warnings: warnings,
+	}, nil
+}
+
+// renderOpenCodeSkill renders a canonical skill to OpenCode's plain markdown format.
+// OpenCode skills in .opencode/skill/ are plain markdown without frontmatter.
+func renderOpenCodeSkill(meta SkillMeta, body string) (*Result, error) {
+	var warnings []string
+	cleanBody := StripConversionNotes(body)
+
+	var header strings.Builder
+	if meta.Name != "" {
+		header.WriteString("# ")
+		header.WriteString(meta.Name)
+		header.WriteString("\n\n")
+	}
+	if meta.Description != "" {
+		header.WriteString(meta.Description)
+		header.WriteString("\n\n")
+	}
+
+	content := header.String() + cleanBody
+
+	if len(meta.AllowedTools) > 0 {
+		warnings = append(warnings, "allowed-tools not supported in OpenCode skill files (dropped)")
+	}
+	if meta.UserInvocable != nil {
+		warnings = append(warnings, "user-invocable not supported in OpenCode skill files (dropped)")
+	}
+
+	name := "skill"
+	if meta.Name != "" {
+		name = slugify(meta.Name)
+	}
+
+	return &Result{
+		Content:  []byte(content + "\n"),
+		Filename: name + ".md",
+		Warnings: warnings,
+	}, nil
 }
 
 // --- Helpers ---

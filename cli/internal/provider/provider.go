@@ -12,9 +12,10 @@ type Format string
 
 const (
 	FormatMarkdown Format = "md"
-	FormatMDC      Format = "mdc" // Cursor .mdc format
+	FormatMDC      Format = "mdc"   // Cursor .mdc format
 	FormatJSON     Format = "json"
 	FormatYAML     Format = "yaml"
+	FormatJSONC    Format = "jsonc" // JSON with comments (OpenCode)
 )
 
 type Provider struct {
@@ -49,6 +50,11 @@ var AllProviders = []Provider{
 	Windsurf,
 	Codex,
 	CopilotCLI,
+	Zed,
+	Cline,
+	RooCode,
+	OpenCode,
+	Kiro,
 }
 
 // DetectedOnly returns the subset of AllProviders that are detected

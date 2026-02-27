@@ -360,6 +360,53 @@ func TestLLMHookDefaultSkipMode(t *testing.T) {
 	assertContains(t, result.Warnings[0], "--llm-hooks=generate")
 }
 
+// --- Kiro hooks ---
+
+func TestClaudeHooksToKiro(t *testing.T) {
+	input := []byte(`{
+		"hooks": {
+			"PreToolUse": [
+				{
+					"matcher": "Bash",
+					"hooks": [
+						{"type": "command", "command": "echo checking", "timeout": 5000}
+					]
+				}
+			],
+			"SessionStart": [
+				{
+					"hooks": [
+						{"type": "command", "command": "echo starting"}
+					]
+				}
+			]
+		}
+	}`)
+
+	conv := &HooksConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// Output is the nesco-hooks.json agent file
+	assertContains(t, out, `"name": "nesco-hooks"`)
+	assertContains(t, out, `"preToolUse"`)
+	assertContains(t, out, `"agentSpawn"`)
+	assertContains(t, out, "echo checking")
+	assertContains(t, out, "echo starting")
+	// Matcher translated: Bash → shell
+	assertContains(t, out, `"matcher": "shell"`)
+	assertNotContains(t, out, "PreToolUse")
+	assertEqual(t, "nesco-hooks.json", result.Filename)
+}
+
 func containsStr(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && stringContains(s, substr))
 }
