@@ -16,9 +16,24 @@ import (
 
 var exportCmd = &cobra.Command{
 	Use:   "export",
-	Short: "Export items from my-tools/ to a provider's install location",
-	Long:  "Copies content from my-tools/ into the target provider's filesystem locations (e.g., ~/.claude/skills).",
-	RunE:  runExport,
+	Short: "Export content to a provider's install location",
+	Long: `Converts and installs content from local/ into a provider's location.
+
+Nesco automatically converts between provider formats. A Claude Code skill
+becomes a Kiro steering file, a Cursor rule becomes a Windsurf rule, etc.
+Metadata that can't be represented structurally is embedded as prose.
+
+Examples:
+  nesco export --to cursor                         Export all content to Cursor
+  nesco export --to kiro --type skills             Export only skills to Kiro
+  nesco export --to gemini-cli --name research     Export a specific item
+
+Use "nesco import" first to bring content into nesco, then "nesco export"
+to install it for any provider.
+
+For project-scoped providers (Kiro, Cline, Zed), content is written to the
+current working directory's provider config (e.g., .kiro/steering/).`,
+	RunE: runExport,
 }
 
 func init() {
@@ -73,7 +88,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 		hooksConv.LLMHooksMode = llmHooksMode
 	}
 
-	// Scan the catalog to find local (my-tools/) items.
+	// Scan the catalog to find local (local/) items.
 	cat, err := catalog.Scan(root)
 	if err != nil {
 		return fmt.Errorf("scanning catalog: %w", err)
@@ -95,7 +110,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(items) == 0 {
-		msg := "no items found in my-tools/"
+		msg := "no items found in local/"
 		if typeFilter != "" || nameFilter != "" {
 			msg += " matching filters"
 		}
@@ -133,14 +148,19 @@ func runExport(cmd *cobra.Command, args []string) error {
 		installDir := prov.InstallDir(homeDir, item.Type)
 		if installDir == provider.JSONMergeSentinel {
 			// Allow converter-based cross-provider export for JSON merge types
-			if conv := converter.For(item.Type); conv != nil && item.Provider != "" && item.Provider != toSlug {
+			srcProv := effectiveProvider(item)
+			if conv := converter.For(item.Type); conv != nil && srcProv != "" && srcProv != toSlug {
 				contentFile := converter.ResolveContentFile(item)
 				if contentFile != "" {
 					content, readErr := os.ReadFile(contentFile)
 					if readErr == nil {
-						rendered, renderErr := conv.Render(content, *prov)
+						canonical, canonErr := conv.Canonicalize(content, srcProv)
+						if canonErr != nil {
+							canonical = &converter.Result{Content: content}
+						}
+						rendered, renderErr := conv.Render(canonical.Content, *prov)
 						if renderErr == nil && rendered.Content != nil {
-							// Write converted JSON to my-tools path (for user to manually merge)
+							// Write converted JSON to local path (for user to manually merge)
 							dest := filepath.Join(item.Path, "exported-"+toSlug+"-"+rendered.Filename)
 							if writeErr := os.WriteFile(dest, rendered.Content, 0644); writeErr == nil {
 								// Write any extra files (e.g. generated scripts)
@@ -181,6 +201,33 @@ func runExport(cmd *cobra.Command, args []string) error {
 					item.Name, item.Type.Label(), prov.Name)
 			}
 			continue
+		}
+
+		// Project-scope types: resolve install dir from DiscoveryPaths using CWD.
+		if installDir == provider.ProjectScopeSentinel {
+			cwd, cwdErr := os.Getwd()
+			if cwdErr != nil {
+				return fmt.Errorf("getting working directory: %w", cwdErr)
+			}
+			if prov.DiscoveryPaths != nil {
+				paths := prov.DiscoveryPaths(cwd, item.Type)
+				if len(paths) > 0 {
+					installDir = paths[0]
+				}
+			}
+			if installDir == provider.ProjectScopeSentinel {
+				skip := skippedItem{
+					Name:   item.Name,
+					Type:   string(item.Type),
+					Reason: fmt.Sprintf("%s %s requires a project directory (no discovery path configured)", prov.Name, item.Type.Label()),
+				}
+				result.Skipped = append(result.Skipped, skip)
+				if !output.JSON {
+					fmt.Fprintf(output.ErrWriter, "Skipping %s (%s): %s %s requires a project directory\n",
+						item.Name, item.Type.Label(), prov.Name, item.Type.Label())
+				}
+				continue
+			}
 		}
 
 		if installDir == "" {
@@ -256,13 +303,28 @@ func runExport(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// effectiveProvider returns the source provider for an item. For provider-specific
+// types (rules, hooks, commands) this comes from the directory structure. For universal
+// types (skills, agents, mcp) it comes from .nesco.yaml metadata.
+func effectiveProvider(item catalog.ContentItem) string {
+	if item.Provider != "" {
+		return item.Provider
+	}
+	if item.Meta != nil && item.Meta.SourceProvider != "" {
+		return item.Meta.SourceProvider
+	}
+	return ""
+}
+
 // exportWithConverter handles export with cross-provider conversion.
 // Returns (exportedItem, true) if the converter handled the item.
 // Returns (nil, true) if the converter skipped it (not compatible).
 // Returns (nil, false) if the converter doesn't apply (fall through to default copy).
 func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlug string, conv converter.Converter, installDir string) (*exportedItem, bool) {
+	srcProvider := effectiveProvider(item)
+
 	// Same provider + has .source/ → copy original verbatim (lossless)
-	if converter.HasSourceFile(item) && item.Provider == toSlug {
+	if converter.HasSourceFile(item) && srcProvider == toSlug {
 		srcPath := converter.SourceFilePath(item)
 		if srcPath == "" {
 			return nil, false
@@ -281,8 +343,8 @@ func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlu
 		}, true
 	}
 
-	// Cross-provider → render from canonical
-	if item.Provider != "" && item.Provider != toSlug {
+	// Cross-provider → canonicalize then render
+	if srcProvider != "" && srcProvider != toSlug {
 		contentFile := converter.ResolveContentFile(item)
 		if contentFile == "" {
 			return nil, false
@@ -292,7 +354,13 @@ func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlu
 			return nil, false
 		}
 
-		rendered, err := conv.Render(content, prov)
+		// Canonicalize from source provider format, then render to target
+		canonical, err := conv.Canonicalize(content, srcProvider)
+		if err != nil {
+			return nil, false
+		}
+
+		rendered, err := conv.Render(canonical.Content, prov)
 		if err != nil {
 			return nil, false
 		}

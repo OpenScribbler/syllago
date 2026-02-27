@@ -50,7 +50,7 @@ See [Development](#development) for build details.
 
 A centralized repository of reusable content for AI coding tools — custom instructions, agent definitions, prompt templates, hook scripts, and MCP server configs. The `nesco` TUI lets you browse, preview, and install content into any supported tool. When you install or export, Nesco detects which tools you have, converts formats between providers as needed (e.g., Cursor MDC to Claude Code Markdown), and places files in the correct locations.
 
-The `nesco export` command copies content from your local `my-tools/` directory into a provider's install location, handling cross-provider format conversion automatically. The `nesco add` command imports content from external sources (local filesystem or git repos) into the catalog, canonicalizing provider-specific formats on ingest.
+The `nesco import` command brings content from any provider into nesco, and `nesco export` installs it into any other provider's location with automatic format conversion.
 
 ## The TUI
 
@@ -111,9 +111,8 @@ Check for updates, preview what's new (commit log + diffstat), and pull — all 
 |---------|-------------|
 | `nesco` | Launch the TUI |
 | `nesco init` | Initialize nesco for a project (creates `.nesco/config.json`) |
-| `nesco add` | Add content to the catalog from local filesystem or git repos |
-| `nesco export` | Export items from `my-tools/` to a provider's install location |
-| `nesco import` | Read existing AI tool configs into the canonical model (read-only) |
+| `nesco import` | Bring content into nesco from a provider, path, or git URL |
+| `nesco export` | Export content to a provider's install location |
 | `nesco config` | Manage provider selection (`list`, `add`, `remove`) |
 | `nesco registry` | Manage git-based content registries (`add`, `remove`, `list`, `sync`, `items`) |
 | `nesco sandbox` | Run AI CLI tools in bubblewrap sandboxes (Linux only) |
@@ -231,7 +230,7 @@ nesco/
 ├── apps/            # Full application packages
 ├── memory/          # Context files for AI assistants
 ├── templates/       # Scaffolding for new content
-├── my-tools/        # Local content (gitignored)
+├── local/           # Local content (gitignored)
 └── cli/             # Go source code for nesco
 ```
 
@@ -248,7 +247,7 @@ tags:
   - code-review
 ```
 
-Place your content in the appropriate category directory and `nesco` will discover it automatically. Use the `my-tools/` directory for local content you don't want to commit to the repository.
+Place your content in the appropriate category directory and `nesco` will discover it automatically. Use the `local/` directory for content you don't want to commit to the repository.
 
 ## Updating
 

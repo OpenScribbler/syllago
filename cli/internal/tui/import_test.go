@@ -780,7 +780,7 @@ func TestConflictDetectionOnConfirm(t *testing.T) {
 	app.importer.itemName = "conflict-test"
 
 	// Create the destination so it conflicts
-	dest := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "conflict-test")
+	dest := filepath.Join(app.catalog.RepoRoot, "local", "skills", "conflict-test")
 	os.MkdirAll(dest, 0o755)
 	os.WriteFile(filepath.Join(dest, "SKILL.md"), []byte("existing"), 0o644)
 
@@ -818,7 +818,7 @@ func TestConflictOverwriteSingle(t *testing.T) {
 	app.importer.sourcePath = srcDir
 	app.importer.itemName = "overwrite-test"
 
-	dest := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "overwrite-test")
+	dest := filepath.Join(app.catalog.RepoRoot, "local", "skills", "overwrite-test")
 	os.MkdirAll(dest, 0o755)
 	os.WriteFile(filepath.Join(dest, "SKILL.md"), []byte("old"), 0o644)
 
@@ -910,7 +910,7 @@ func TestBatchConflictDetection(t *testing.T) {
 
 	// Create destinations for item-1 and item-3 so they conflict
 	for _, name := range []string{"item-1", "item-3"} {
-		dest := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", name)
+		dest := filepath.Join(app.catalog.RepoRoot, "local", "skills", name)
 		os.MkdirAll(dest, 0o755)
 		os.WriteFile(filepath.Join(dest, "SKILL.md"), []byte("existing"), 0o644)
 	}
@@ -961,8 +961,8 @@ func TestBatchConflictStepThrough(t *testing.T) {
 		os.WriteFile(filepath.Join(d, "SKILL.md"), []byte("new"), 0o644)
 	}
 
-	dest1 := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "batch-1")
-	dest2 := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "batch-2")
+	dest1 := filepath.Join(app.catalog.RepoRoot, "local", "skills", "batch-1")
+	dest2 := filepath.Join(app.catalog.RepoRoot, "local", "skills", "batch-2")
 	for _, d := range []string{dest1, dest2} {
 		os.MkdirAll(d, 0o755)
 		os.WriteFile(filepath.Join(d, "SKILL.md"), []byte("old"), 0o644)
@@ -1007,8 +1007,8 @@ func TestBatchConflictAllOverwrite(t *testing.T) {
 		os.WriteFile(filepath.Join(d, "SKILL.md"), []byte("new"), 0o644)
 	}
 
-	dest1 := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "all-ow-1")
-	dest2 := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "all-ow-2")
+	dest1 := filepath.Join(app.catalog.RepoRoot, "local", "skills", "all-ow-1")
+	dest2 := filepath.Join(app.catalog.RepoRoot, "local", "skills", "all-ow-2")
 	for _, d := range []string{dest1, dest2} {
 		os.MkdirAll(d, 0o755)
 	}
@@ -1043,8 +1043,8 @@ func TestBatchConflictAllSkip(t *testing.T) {
 		os.MkdirAll(d, 0o755)
 	}
 
-	dest1 := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "skip-1")
-	dest2 := filepath.Join(app.catalog.RepoRoot, "my-tools", "skills", "skip-2")
+	dest1 := filepath.Join(app.catalog.RepoRoot, "local", "skills", "skip-1")
+	dest2 := filepath.Join(app.catalog.RepoRoot, "local", "skills", "skip-2")
 	for _, d := range []string{dest1, dest2} {
 		os.MkdirAll(d, 0o755)
 	}

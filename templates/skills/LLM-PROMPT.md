@@ -3,7 +3,7 @@ You are helping me create content for nesco, a shared library of AI coding tool 
 I'm creating a new skill called "{{NAME}}". A skill is a domain knowledge package that gets loaded into an AI assistant's context. Skills live in their own directory and must have a SKILL.md file with YAML frontmatter.
 
 Required structure:
-  my-tools/skills/{{NAME}}/
+  local/skills/{{NAME}}/
   ├── SKILL.md          # Required: frontmatter (name, description) + skill content
   └── .nesco.yaml      # Auto-generated, don't edit
 

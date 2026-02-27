@@ -14,7 +14,7 @@ var Cline = Provider{
 	InstallDir: func(homeDir string, ct catalog.ContentType) string {
 		switch ct {
 		case catalog.Rules:
-			return "" // Rules go in project root as .clinerules/ directory
+			return ProjectScopeSentinel // Rules go in project root as .clinerules/ directory
 		case catalog.MCP:
 			return JSONMergeSentinel // Merges into VS Code globalStorage config
 		}

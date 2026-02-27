@@ -15,7 +15,7 @@ const (
 	Hooks         ContentType = "hooks"
 	Commands      ContentType = "commands"
 	SearchResults ContentType = "search"   // virtual type for cross-category search results
-	MyTools       ContentType = "my-tools" // virtual type for local items view
+	MyTools       ContentType = "local" // virtual type for local items view
 )
 
 // AllContentTypes returns all content types in display order.
@@ -75,7 +75,7 @@ type ContentItem struct {
 	Files              []string       // relative paths of all files in item directory
 	SupportedProviders []string       // provider slugs this item works with (apps only), e.g. ["claude-code", "gemini-cli"]
 	Meta               *metadata.Meta // loaded from .nesco.yaml if present
-	Local              bool           // true if item lives in my-tools/
+	Local              bool           // true if item lives in local/
 	Registry           string         // non-empty if item came from a git registry (value is the registry name)
 }
 

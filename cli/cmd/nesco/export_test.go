@@ -11,7 +11,7 @@ import (
 	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
 
-// setupExportRepo creates a temp nesco repo with my-tools/ content and
+// setupExportRepo creates a temp nesco repo with local/ content and
 // a skills/ marker directory. Returns the repo root.
 func setupExportRepo(t *testing.T) string {
 	t.Helper()
@@ -20,19 +20,19 @@ func setupExportRepo(t *testing.T) string {
 	// Create the skills/ marker so findContentRepoRoot works.
 	os.MkdirAll(filepath.Join(root, "skills"), 0755)
 
-	// Create a skill in my-tools/skills/greeting/
-	skillDir := filepath.Join(root, "my-tools", "skills", "greeting")
+	// Create a skill in local/skills/greeting/
+	skillDir := filepath.Join(root, "local", "skills", "greeting")
 	os.MkdirAll(skillDir, 0755)
 	os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# Greeting Skill\nSays hello.\n"), 0644)
 	os.WriteFile(filepath.Join(skillDir, "README.md"), []byte("# greeting\nA greeting skill.\n"), 0644)
 
-	// Create a second skill in my-tools/skills/farewell/
-	farewellDir := filepath.Join(root, "my-tools", "skills", "farewell")
+	// Create a second skill in local/skills/farewell/
+	farewellDir := filepath.Join(root, "local", "skills", "farewell")
 	os.MkdirAll(farewellDir, 0755)
 	os.WriteFile(filepath.Join(farewellDir, "SKILL.md"), []byte("# Farewell Skill\nSays goodbye.\n"), 0644)
 
-	// Create an MCP item in my-tools/mcp/my-server/
-	mcpDir := filepath.Join(root, "my-tools", "mcp", "my-server")
+	// Create an MCP item in local/mcp/my-server/
+	mcpDir := filepath.Join(root, "local", "mcp", "my-server")
 	os.MkdirAll(mcpDir, 0755)
 	os.WriteFile(filepath.Join(mcpDir, "README.md"), []byte("# My MCP Server\n"), 0644)
 
@@ -206,7 +206,7 @@ func TestExportJSONMergeSentinelSkipped(t *testing.T) {
 	root := setupExportRepo(t)
 	withFakeRepoRoot(t, root)
 
-	// Claude Code uses JSON merge for MCP. We have an MCP item in my-tools/.
+	// Claude Code uses JSON merge for MCP. We have an MCP item in local/.
 	// Export should skip it with a warning.
 	_, stderr := output.SetForTest(t)
 

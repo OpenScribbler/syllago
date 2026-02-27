@@ -104,7 +104,7 @@ func Promote(repoRoot string, item catalog.ContentItem) (*Result, error) {
 	// 10. PR creation (adaptive)
 	if ghPath, err := exec.LookPath("gh"); err == nil && ghPath != "" {
 		prTitle := fmt.Sprintf("Add %s: %s", item.Type, item.Name)
-		prBody := fmt.Sprintf("Promotes `%s` from my-tools/ to shared.\n\nType: %s\nSource: %s",
+		prBody := fmt.Sprintf("Promotes `%s` from local/ to shared.\n\nType: %s\nSource: %s",
 			item.Name, item.Type, item.Meta.Source)
 		out, err := commandOutput(repoRoot, "gh", "pr", "create",
 			"--title", prTitle,

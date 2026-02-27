@@ -12,9 +12,21 @@ import (
 
 var importCmd = &cobra.Command{
 	Use:   "import",
-	Short: "Read existing AI tool configs into canonical model",
-	Long:  "Discovers and parses provider-specific content files. Read-only — nothing is written to disk.",
-	RunE:  runImport,
+	Short: "Bring content into nesco from a provider, path, or git URL",
+	Long: `Discovers content from a provider and imports it into local/.
+
+Nesco handles format conversion automatically. Once imported, content can be
+exported to any supported provider with "nesco export --to <provider>".
+
+Examples:
+  nesco import --from claude-code                  Import all content from Claude Code
+  nesco import --from claude-code --type skills    Import only skills
+  nesco import --from cursor --name my-rule        Import a specific rule by name
+  nesco import --from claude-code --preview        Preview what would be imported (read-only)
+
+After import, use "nesco export" to install content into other providers,
+or browse in the TUI with "nesco".`,
+	RunE: runImport,
 }
 
 func init() {

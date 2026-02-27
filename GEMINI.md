@@ -26,7 +26,7 @@
 - `hooks/`
 - `mcp/`
 - `memory/`
-- `my-tools/`
+- `local/` — local user content (gitignored)
 - `prompts/`
 - `rules/`
 - `skills/`

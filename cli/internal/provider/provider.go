@@ -7,6 +7,12 @@ import "github.com/OpenScribbler/nesco/cli/internal/catalog"
 // rather than filesystem placement (symlink or copy).
 const JSONMergeSentinel = "__json_merge__"
 
+// ProjectScopeSentinel is returned by InstallDir when the content type is
+// supported but lives at project scope (e.g., .kiro/steering/, .clinerules/)
+// rather than user scope (~/.provider/). Callers should use DiscoveryPaths
+// with the project root to determine the actual install directory.
+const ProjectScopeSentinel = "__project_scope__"
+
 // Format identifies a file format used by a provider.
 type Format string
 
@@ -16,6 +22,7 @@ const (
 	FormatJSON     Format = "json"
 	FormatYAML     Format = "yaml"
 	FormatJSONC    Format = "jsonc" // JSON with comments (OpenCode)
+	FormatTOML     Format = "toml"  // TOML (Codex multi-agent config)
 )
 
 type Provider struct {

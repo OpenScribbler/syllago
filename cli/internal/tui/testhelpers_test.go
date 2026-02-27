@@ -60,8 +60,8 @@ func testCatalog(t *testing.T) *catalog.Catalog {
 	t.Helper()
 	tmp := t.TempDir()
 
-	// Create my-tools directory for local items
-	os.MkdirAll(filepath.Join(tmp, "my-tools", "skills"), 0o755)
+	// Create local directory for local items
+	os.MkdirAll(filepath.Join(tmp, "local", "skills"), 0o755)
 
 	items := []catalog.ContentItem{
 		makeSkill(t, tmp, "alpha-skill", "A helpful skill", false),
@@ -86,7 +86,7 @@ func makeSkill(t *testing.T, root, name, desc string, local bool) catalog.Conten
 	t.Helper()
 	dir := filepath.Join(root, "skills", name)
 	if local {
-		dir = filepath.Join(root, "my-tools", "skills", name)
+		dir = filepath.Join(root, "local", "skills", name)
 	}
 	os.MkdirAll(dir, 0o755)
 	os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("# "+name+"\n"+desc), 0o644)

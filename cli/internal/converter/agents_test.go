@@ -302,3 +302,114 @@ func TestAgentToRooCodeDroppedFieldWarnings(t *testing.T) {
 		t.Fatalf("expected at least 5 warnings for dropped fields, got %d: %v", len(result.Warnings), result.Warnings)
 	}
 }
+
+// --- Cross-provider integration roundtrip tests ---
+
+func TestClaudeToOpenCodeRoundtrip(t *testing.T) {
+	input := []byte("---\nname: reviewer\ndescription: Code review agent\ntools:\n  - Read\n  - Grep\n  - Bash\nmodel: sonnet\n---\n\nReview all changed files.\n")
+
+	conv := &AgentsConverter{}
+
+	// Claude → canonical
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// canonical → OpenCode
+	opencode, err := conv.Render(canonical.Content, provider.OpenCode)
+	if err != nil {
+		t.Fatalf("Render to OpenCode: %v", err)
+	}
+
+	out := string(opencode.Content)
+	// OpenCode uses plain markdown (no frontmatter) with tool names translated
+	assertContains(t, out, "Review all changed files")
+
+	// OpenCode → canonical
+	backToCanonical, err := conv.Canonicalize(opencode.Content, "opencode")
+	if err != nil {
+		t.Fatalf("Canonicalize from OpenCode: %v", err)
+	}
+
+	// canonical → Claude
+	backToClaude, err := conv.Render(backToCanonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render to Claude: %v", err)
+	}
+
+	final := string(backToClaude.Content)
+	assertContains(t, final, "Review all changed files")
+}
+
+func TestGeminiToCodexRoundtrip(t *testing.T) {
+	input := []byte("---\nname: planner\ndescription: Planning agent\ntools:\n  - read_file\n  - run_shell_command\nmodel: gemini-pro\ntemperature: 0.5\n---\n\nPlan the implementation strategy.\n")
+
+	conv := &AgentsConverter{}
+
+	// Gemini → canonical
+	canonical, err := conv.Canonicalize(input, "gemini-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize from Gemini: %v", err)
+	}
+
+	canonicalStr := string(canonical.Content)
+	// Tools should be in canonical form
+	assertContains(t, canonicalStr, "Read")
+	assertContains(t, canonicalStr, "Bash")
+
+	// canonical → Codex
+	codex, err := conv.Render(canonical.Content, provider.Codex)
+	if err != nil {
+		t.Fatalf("Render to Codex: %v", err)
+	}
+
+	codexStr := string(codex.Content)
+	assertContains(t, codexStr, "[agents.planner]")
+	assertContains(t, codexStr, "Plan the implementation strategy")
+	// Tools in Codex vocabulary (same as Copilot CLI)
+	assertContains(t, codexStr, "view")   // Read → view
+	assertContains(t, codexStr, "shell")  // Bash → shell
+
+	// Should have warning for temperature (not supported in Codex)
+	// temperature is in Gemini-specific fields but Codex doesn't have it
+}
+
+func TestAgentAcrossAllNewProviders(t *testing.T) {
+	// Verify a Claude agent can render to all new providers without error
+	input := []byte("---\nname: universal\ndescription: Works everywhere\ntools:\n  - Read\n  - Bash\nmodel: sonnet\n---\n\nDo your best work.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	targets := []struct {
+		name string
+		prov provider.Provider
+	}{
+		{"opencode", provider.OpenCode},
+		{"kiro", provider.Kiro},
+		{"roo-code", provider.RooCode},
+		{"codex", provider.Codex},
+		{"copilot-cli", provider.CopilotCLI},
+		{"gemini-cli", provider.GeminiCLI},
+	}
+
+	for _, tt := range targets {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.Render(canonical.Content, tt.prov)
+			if err != nil {
+				t.Fatalf("Render to %s: %v", tt.name, err)
+			}
+			if result.Content == nil || len(result.Content) == 0 {
+				t.Fatalf("expected non-empty content for %s", tt.name)
+			}
+			out := string(result.Content)
+			if !strings.Contains(out, "Do your best work") && !strings.Contains(out, "universal") {
+				t.Errorf("expected agent content to be preserved for %s", tt.name)
+			}
+		})
+	}
+}

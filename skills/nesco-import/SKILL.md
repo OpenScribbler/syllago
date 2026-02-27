@@ -37,7 +37,7 @@ nesco add /path/to/my-rules --type rules --provider claude-code
 nesco add /path/to/content --type skills --name my-custom-name
 ```
 
-Content is copied to `my-tools/<type>/[<provider>/]<name>/`.
+Content is copied to `local/<type>/[<provider>/]<name>/`.
 
 ## README Generation
 
@@ -71,10 +71,10 @@ nesco-repo/
   rules/
     claude-code/    # Provider-specific rules
     cursor/
-  my-tools/         # Local items (gitignored)
+  local/         # Local items (gitignored)
     skills/
     rules/
       claude-code/
 ```
 
-Items in `my-tools/` are local and not shared via git. Use the TUI's promote feature to move items to the shared directory.
+Items in `local/` are local and not shared via git. Use the TUI's promote feature to move items to the shared directory.

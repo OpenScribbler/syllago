@@ -15,7 +15,7 @@ var Zed = Provider{
 	InstallDir: func(homeDir string, ct catalog.ContentType) string {
 		switch ct {
 		case catalog.Rules:
-			return "" // Rules go in project root as .rules
+			return ProjectScopeSentinel // Rules go in project root as .rules
 		case catalog.MCP:
 			return JSONMergeSentinel // Merges into ~/.config/zed/settings.json
 		}

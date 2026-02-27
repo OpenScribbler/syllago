@@ -18,6 +18,8 @@ var Codex = Provider{
 			return filepath.Join(homeDir, ".codex")
 		case catalog.Commands:
 			return filepath.Join(homeDir, ".codex")
+		case catalog.Agents:
+			return filepath.Join(homeDir, ".codex")
 		}
 		return ""
 	},
@@ -37,19 +39,26 @@ var Codex = Provider{
 			return []string{filepath.Join(projectRoot, "AGENTS.md")}
 		case catalog.Commands:
 			return []string{filepath.Join(projectRoot, ".codex", "commands")}
+		case catalog.Agents:
+			return []string{filepath.Join(projectRoot, ".codex", "agents")}
 		default:
 			return nil
 		}
 	},
 	FileFormat: func(ct catalog.ContentType) Format {
-		return FormatMarkdown
+		switch ct {
+		case catalog.Agents:
+			return FormatTOML
+		default:
+			return FormatMarkdown
+		}
 	},
 	EmitPath: func(projectRoot string) string {
 		return filepath.Join(projectRoot, "AGENTS.md")
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {
-		case catalog.Rules, catalog.Commands:
+		case catalog.Rules, catalog.Commands, catalog.Agents:
 			return true
 		default:
 			return false
