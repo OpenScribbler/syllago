@@ -64,6 +64,10 @@ var (
 	countStyle = lipgloss.NewStyle().
 			Foreground(mutedColor)
 
+	// Built-in content badge (accent/purple to distinguish from LOCAL/registry)
+	builtinStyle = lipgloss.NewStyle().
+			Foreground(accentColor)
+
 	// Table header (bold muted — distinct from help text)
 	tableHeaderStyle = lipgloss.NewStyle().
 				Foreground(mutedColor).

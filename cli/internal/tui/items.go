@@ -314,10 +314,13 @@ func (m itemsModel) View() string {
 			typeTag = " " + countStyle.Render("("+item.Type.Label()+")")
 		}
 
-		// Build description prefix: [LOCAL] for local items, [registry-name] for registry items
+		// Build description prefix: [BUILT-IN] for meta-tools, [LOCAL] for local items, [registry-name] for registry items
 		localPrefix := ""
 		localPrefixLen := 0
-		if item.Local {
+		if item.IsBuiltin() {
+			localPrefix = builtinStyle.Render("[BUILT-IN]") + " "
+			localPrefixLen = 11 // "[BUILT-IN] "
+		} else if item.Local {
 			localPrefix = warningStyle.Render("[LOCAL]") + " "
 			localPrefixLen = 8 // "[LOCAL] "
 		} else if item.Registry != "" {
