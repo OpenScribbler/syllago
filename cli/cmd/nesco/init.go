@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -85,6 +86,17 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Create local/ directory for user content
+	if err := os.MkdirAll(filepath.Join(root, "local"), 0755); err != nil {
+		return fmt.Errorf("creating local/ directory: %w", err)
+	}
+
+	// Ensure .gitignore covers local content and registry cache
+	if err := ensureGitignoreEntries(root, []string{"local/", ".nesco/registries/"}); err != nil {
+		// Non-fatal: warn but don't block init
+		fmt.Fprintf(os.Stderr, "warning: could not update .gitignore: %s\n", err)
+	}
+
 	// Install built-in content if we're in a nesco repo
 	var installed []installedItem
 	repoRoot, repoErr := findContentRepoRoot()
@@ -104,9 +116,36 @@ func runInit(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// ensureGitignoreEntries appends gitignore entries that are not already present.
+func ensureGitignoreEntries(projectRoot string, entries []string) error {
+	gitignorePath := filepath.Join(projectRoot, ".gitignore")
+	existing := ""
+	data, err := os.ReadFile(gitignorePath)
+	if err == nil {
+		existing = string(data)
+	}
+
+	var toAdd []string
+	for _, entry := range entries {
+		if !strings.Contains(existing, entry) {
+			toAdd = append(toAdd, entry)
+		}
+	}
+	if len(toAdd) == 0 {
+		return nil
+	}
+
+	// Ensure there's a trailing newline before appending
+	if existing != "" && !strings.HasSuffix(existing, "\n") {
+		existing += "\n"
+	}
+	content := existing + strings.Join(toAdd, "\n") + "\n"
+	return os.WriteFile(gitignorePath, []byte(content), 0644)
+}
+
 // installBuiltins discovers items tagged "builtin" and installs them to detected providers.
 func installBuiltins(cmd *cobra.Command, repoRoot string, detected []provider.Provider) []installedItem {
-	cat, err := catalog.Scan(repoRoot)
+	cat, err := catalog.Scan(repoRoot, repoRoot)
 	if err != nil {
 		return nil
 	}

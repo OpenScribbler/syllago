@@ -45,6 +45,7 @@ type App struct {
 	autoUpdate      bool
 	isReleaseBuild  bool
 	registrySources []catalog.RegistrySource
+	projectRoot     string
 
 	screen          screen
 	focus           focusTarget
@@ -74,6 +75,8 @@ type App struct {
 	remoteVersion string
 	commitsBehind int
 
+	showHidden bool // when true, hidden items are included in lists
+
 	width    int
 	height   int
 	tooSmall bool // true when terminal is below minimum usable size
@@ -82,7 +85,9 @@ type App struct {
 // NewApp creates a new App model. Set autoUpdate to true to pull updates
 // automatically when a newer version is detected on origin. Set isReleaseBuild
 // to true for release binaries so the updater uses GitHub Releases instead of git.
-func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string, autoUpdate bool, registrySources []catalog.RegistrySource, cfg *config.Config, isReleaseBuild bool) App {
+// projectRoot is the project root where local/ lives (may differ from cat.RepoRoot
+// when contentRoot has been moved to a subdirectory like content/).
+func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string, autoUpdate bool, registrySources []catalog.RegistrySource, cfg *config.Config, isReleaseBuild bool, projectRoot string) App {
 	if cfg == nil {
 		cfg = &config.Config{}
 	}
@@ -93,6 +98,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		autoUpdate:      autoUpdate,
 		isReleaseBuild:  isReleaseBuild,
 		registrySources: registrySources,
+		projectRoot:     projectRoot,
 		registryCfg:     cfg,
 		screen:          screenCategory,
 		focus:           focusSidebar,
@@ -116,6 +122,32 @@ func (a App) panelHeight() int {
 		h = 5
 	}
 	return h
+}
+
+// visibleItems filters out hidden items unless showHidden is true.
+func (a App) visibleItems(src []catalog.ContentItem) []catalog.ContentItem {
+	if a.showHidden {
+		return src
+	}
+	var result []catalog.ContentItem
+	for _, item := range src {
+		if item.Meta != nil && item.Meta.Hidden {
+			continue
+		}
+		result = append(result, item)
+	}
+	return result
+}
+
+// countHidden returns the number of hidden items in the slice.
+func countHidden(items []catalog.ContentItem) int {
+	count := 0
+	for _, item := range items {
+		if item.Meta != nil && item.Meta.Hidden {
+			count++
+		}
+	}
+	return count
 }
 
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -163,7 +195,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.detail, cmd = a.detail.Update(msg)
 			// Rescan catalog after promote
 			if msg.err == nil {
-				cat, err := catalog.ScanWithRegistries(a.catalog.RepoRoot, a.registrySources)
+				cat, err := catalog.ScanWithRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
 				if err == nil {
 					a.catalog = cat
 					a.sidebar.counts = cat.CountByType()
@@ -195,7 +227,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		// Rescan catalog
-		cat, err := catalog.ScanWithRegistries(a.catalog.RepoRoot, a.registrySources)
+		cat, err := catalog.ScanWithRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
 		if err == nil {
 			a.catalog = cat
 			a.statusMessage = fmt.Sprintf("Imported %q successfully", msg.name)
@@ -251,7 +283,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.updater, cmd = a.updater.Update(msg)
 			// On successful pull, rescan catalog
 			if msg.err == nil {
-				cat, err := catalog.ScanWithRegistries(a.catalog.RepoRoot, a.registrySources)
+				cat, err := catalog.ScanWithRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
 				if err == nil {
 					a.catalog = cat
 					a.sidebar.counts = cat.CountByType()
@@ -543,7 +575,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// If on items screen, reset items
 				if a.screen == screenItems {
 					ct := a.sidebar.selectedType()
-					items := newItemsModel(ct, a.catalog.ByType(ct), a.providers, a.catalog.RepoRoot)
+					src := a.visibleItems(a.catalog.ByType(ct))
+					items := newItemsModel(ct, src, a.providers, a.catalog.RepoRoot)
+					items.hiddenCount = countHidden(a.catalog.ByType(ct))
 					items.width = a.width
 					items.height = a.panelHeight()
 					a.items = items
@@ -554,7 +588,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Apply filter
 				if a.screen == screenCategory {
 					// Search across all items, go to items view with filtered results
-					filtered := filterItems(a.catalog.Items, a.search.query())
+					filtered := filterItems(a.visibleItems(a.catalog.Items), a.search.query())
 					items := newItemsModel(catalog.SearchResults, filtered, a.providers, a.catalog.RepoRoot)
 					items.width = a.width
 					items.height = a.panelHeight()
@@ -562,8 +596,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.screen = screenItems
 				} else if a.screen == screenItems {
 					ct := a.sidebar.selectedType()
-					filtered := filterItems(a.catalog.ByType(ct), a.search.query())
+					filtered := filterItems(a.visibleItems(a.catalog.ByType(ct)), a.search.query())
 					items := newItemsModel(ct, filtered, a.providers, a.catalog.RepoRoot)
+					items.hiddenCount = countHidden(a.catalog.ByType(ct))
 					items.width = a.width
 					items.height = a.panelHeight()
 					a.items = items
@@ -580,18 +615,19 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				ct := a.items.contentType
 				var source []catalog.ContentItem
 				if ct == catalog.SearchResults {
-					source = a.catalog.Items
+					source = a.visibleItems(a.catalog.Items)
 				} else if ct == catalog.MyTools {
-					for _, item := range a.catalog.Items {
+					for _, item := range a.visibleItems(a.catalog.Items) {
 						if item.Local {
 							source = append(source, item)
 						}
 					}
 				} else {
-					source = a.catalog.ByType(ct)
+					source = a.visibleItems(a.catalog.ByType(ct))
 				}
 				filtered := filterItems(source, query)
 				items := newItemsModel(ct, filtered, a.providers, a.catalog.RepoRoot)
+				items.hiddenCount = countHidden(a.catalog.ByType(ct))
 				items.width = a.width
 				items.height = a.panelHeight()
 				a.items = items
@@ -633,6 +669,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch a.screen {
 		// Sidebar-focused: route input to sidebar; Enter/Right drills into content
 		case screenCategory:
+			if key.Matches(msg, keys.ToggleHidden) {
+				a.showHidden = !a.showHidden
+				return a, nil
+			}
 			if a.focus == focusSidebar {
 				if key.Matches(msg, keys.Enter) || key.Matches(msg, keys.Right) {
 					if a.sidebar.isUpdateSelected() {
@@ -677,12 +717,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					if a.sidebar.isMyToolsSelected() {
 						var localItems []catalog.ContentItem
-						for _, item := range a.catalog.Items {
+						for _, item := range a.visibleItems(a.catalog.Items) {
 							if item.Local {
 								localItems = append(localItems, item)
 							}
 						}
 						items := newItemsModel(catalog.MyTools, localItems, a.providers, a.catalog.RepoRoot)
+						items.hiddenCount = countHidden(a.catalog.Items)
 						items.width = a.width - sidebarWidth - 1
 						items.height = a.panelHeight()
 						a.items = items
@@ -691,7 +732,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return a, nil
 					}
 					ct := a.sidebar.selectedType()
-					items := newItemsModel(ct, a.catalog.ByType(ct), a.providers, a.catalog.RepoRoot)
+					src := a.visibleItems(a.catalog.ByType(ct))
+					items := newItemsModel(ct, src, a.providers, a.catalog.RepoRoot)
+					items.hiddenCount = countHidden(a.catalog.ByType(ct))
 					items.width = a.width - sidebarWidth - 1
 					items.height = a.panelHeight()
 					a.items = items
@@ -715,12 +758,38 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return a, nil
 			}
+			if key.Matches(msg, keys.ToggleHidden) {
+				a.showHidden = !a.showHidden
+				ct := a.items.contentType
+				if ct == catalog.MyTools {
+					var localItems []catalog.ContentItem
+					for _, item := range a.visibleItems(a.catalog.Items) {
+						if item.Local {
+							localItems = append(localItems, item)
+						}
+					}
+					items := newItemsModel(catalog.MyTools, localItems, a.providers, a.catalog.RepoRoot)
+					items.hiddenCount = countHidden(a.catalog.Items)
+					items.width = a.items.width
+					items.height = a.items.height
+					a.items = items
+				} else if ct != catalog.SearchResults {
+					src := a.visibleItems(a.catalog.ByType(ct))
+					items := newItemsModel(ct, src, a.providers, a.catalog.RepoRoot)
+					items.hiddenCount = countHidden(a.catalog.ByType(ct))
+					items.width = a.items.width
+					items.height = a.items.height
+					a.items = items
+				}
+				return a, nil
+			}
 			if key.Matches(msg, keys.Enter) && len(a.items.items) > 0 {
 				item := a.items.selectedItem()
 				if a.cachedDetailPath == item.Path && a.cachedDetail != nil {
 					a.detail = *a.cachedDetail
 				} else {
 					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
+					a.detail.overrides = a.catalog.OverridesFor(item.Name, item.Type)
 				}
 				a.detail.width = a.width
 				a.detail.height = a.panelHeight()
@@ -740,6 +809,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.items.cursor++
 					item := a.items.selectedItem()
 					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
+					a.detail.overrides = a.catalog.OverridesFor(item.Name, item.Type)
 					a.detail.width = a.width
 					a.detail.height = a.panelHeight()
 					a.detail.listPosition = a.items.cursor
@@ -752,6 +822,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.items.cursor--
 					item := a.items.selectedItem()
 					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
+					a.detail.overrides = a.catalog.OverridesFor(item.Name, item.Type)
 					a.detail.width = a.width
 					a.detail.height = a.panelHeight()
 					a.detail.listPosition = a.items.cursor
@@ -769,19 +840,22 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Refresh items to show updated install status, unless search results
 				if a.items.contentType == catalog.MyTools {
 					var localItems []catalog.ContentItem
-					for _, item := range a.catalog.Items {
+					for _, item := range a.visibleItems(a.catalog.Items) {
 						if item.Local {
 							localItems = append(localItems, item)
 						}
 					}
 					items := newItemsModel(catalog.MyTools, localItems, a.providers, a.catalog.RepoRoot)
+					items.hiddenCount = countHidden(a.catalog.Items)
 					items.width = a.width
 					items.height = a.panelHeight()
 					items.cursor = a.items.cursor
 					a.items = items
 				} else if a.items.contentType != catalog.SearchResults {
 					ct := a.items.contentType
-					items := newItemsModel(ct, a.catalog.ByType(ct), a.providers, a.catalog.RepoRoot)
+					src := a.visibleItems(a.catalog.ByType(ct))
+					items := newItemsModel(ct, src, a.providers, a.catalog.RepoRoot)
+					items.hiddenCount = countHidden(a.catalog.ByType(ct))
 					items.width = a.width
 					items.height = a.panelHeight()
 					items.cursor = a.items.cursor // preserve cursor position
@@ -861,7 +935,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if key.Matches(msg, keys.Enter) && len(a.registries.entries) > 0 {
 				name := a.registries.selectedName()
 				if name != "" {
-					regItems := a.catalog.ByRegistry(name)
+					regItems := a.visibleItems(a.catalog.ByRegistry(name))
 					items := newItemsModel(catalog.SearchResults, regItems, a.providers, a.catalog.RepoRoot)
 					items.width = a.width - sidebarWidth - 1
 					items.height = a.panelHeight()
@@ -1048,13 +1122,47 @@ func trimArt(s string) string {
 	return strings.Join(result, "\n")
 }
 
+// renderFirstRun returns a getting-started guide shown when the catalog is empty
+// and no registries are configured. This is the zero-state experience for new users.
+func (a App) renderFirstRun(contentW int) string {
+	var s string
+
+	s += titleStyle.Render("Welcome to nesco!") + "\n\n"
+	s += helpStyle.Render("No content found. Here's how to get started:") + "\n\n"
+
+	steps := []struct {
+		num  string
+		head string
+		cmd  string
+	}{
+		{"1.", "Import existing content:", "nesco import --from claude-code"},
+		{"2.", "Add a community registry:", "nesco registry add nesco-tools"},
+		{"3.", "Create new content:", "nesco create skill my-first-skill"},
+	}
+
+	for _, step := range steps {
+		s += labelStyle.Render(step.num) + " " + valueStyle.Render(step.head) + "\n"
+		s += "   " + helpStyle.Render(step.cmd) + "\n\n"
+	}
+
+	s += helpStyle.Render("Press ? for help, q to exit.") + "\n"
+	return s
+}
+
 // renderContentWelcome returns the landing page with centered ASCII art and category cards.
 // Uses bordered cards when the terminal is tall enough (height >= 35), falling back to
 // a compact single-line list when cards would be truncated.
+// When the catalog is empty and no registries are configured, shows the first-run screen.
 func (a App) renderContentWelcome() string {
 	contentW := a.width - sidebarWidth - 1
 	if contentW < 30 {
 		contentW = 30
+	}
+
+	// First-run: no content and no registries — show getting-started guide
+	if (a.catalog == nil || len(a.catalog.Items) == 0) &&
+		(a.registryCfg == nil || len(a.registryCfg.Registries) == 0) {
+		return a.renderFirstRun(contentW)
 	}
 
 	var s string

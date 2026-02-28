@@ -1,0 +1,7 @@
+id: example-kitchen-sink-agent
+name: example-kitchen-sink-agent
+description: Example agent populating every available metadata field for testing and reference
+tags:
+  - builtin
+  - example
+hidden: true

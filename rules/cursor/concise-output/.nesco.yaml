@@ -1,7 +1,0 @@
-name: concise-output
-description: Rule for concise, focused output in Cursor (adapted from Claude Code version)
-version: "1.0"
-tags:
-  - rule
-  - cursor
-  - communication-style

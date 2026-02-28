@@ -4,7 +4,18 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/OpenScribbler/nesco/cli/internal/metadata"
 )
+
+// makeItem is a test helper for building ContentItem values concisely.
+func makeItem(name string, ct ContentType, local bool, registry string, builtin bool) ContentItem {
+	item := ContentItem{Name: name, Type: ct, Local: local, Registry: registry}
+	if builtin {
+		item.Meta = &metadata.Meta{Tags: []string{"builtin"}}
+	}
+	return item
+}
 
 // writeFile is a test helper that creates a file (including parent dirs) with the given content.
 func writeFile(t *testing.T, path, content string) {
@@ -31,7 +42,7 @@ func TestScan(t *testing.T) {
 		writeFile(t, filepath.Join(root, "rules", "claude-code", "rule.md"),
 			"# Rule\nThis rule does something.\n")
 
-		cat, err := Scan(root)
+		cat, err := Scan(root, root)
 		if err != nil {
 			t.Fatalf("Scan returned error: %v", err)
 		}
@@ -81,7 +92,7 @@ func TestScan(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		cat, err := Scan(root)
+		cat, err := Scan(root, root)
 		if err != nil {
 			t.Fatalf("Scan returned error: %v", err)
 		}
@@ -95,7 +106,7 @@ func TestScan(t *testing.T) {
 		root := t.TempDir()
 		// Don't create any type directories at all.
 
-		cat, err := Scan(root)
+		cat, err := Scan(root, root)
 		if err != nil {
 			t.Fatalf("Scan returned error: %v", err)
 		}
@@ -127,7 +138,7 @@ func TestScan(t *testing.T) {
 		// Also create a valid skill to verify it still gets discovered
 		writeFile(t, filepath.Join(skillsDir, "valid-skill_123", "SKILL.md"), "# Valid")
 
-		cat, err := Scan(root)
+		cat, err := Scan(root, root)
 		if err != nil {
 			t.Fatalf("Scan failed: %v", err)
 		}
@@ -183,7 +194,7 @@ func TestScan(t *testing.T) {
 		writeFile(t, filepath.Join(root, "rules", "gemini-cli", "setup.md"),
 			"# Setup\nConfigure gemini.\n")
 
-		cat, err := Scan(root)
+		cat, err := Scan(root, root)
 		if err != nil {
 			t.Fatalf("Scan returned error: %v", err)
 		}
@@ -208,4 +219,214 @@ func TestScan(t *testing.T) {
 			t.Errorf("Prompt Body = %q, want %q", prompts[0].Body, "Prompt body here.")
 		}
 	})
+}
+
+func TestApplyPrecedence(t *testing.T) {
+	t.Parallel()
+
+	t.Run("local wins over shared", func(t *testing.T) {
+		t.Parallel()
+		cat := &Catalog{
+			Items: []ContentItem{
+				makeItem("my-skill", Skills, false, "", false), // shared
+				makeItem("my-skill", Skills, true, "", false),  // local
+			},
+		}
+		applyPrecedence(cat)
+		if len(cat.Items) != 1 {
+			t.Fatalf("expected 1 item, got %d", len(cat.Items))
+		}
+		if !cat.Items[0].Local {
+			t.Error("local item should win")
+		}
+		if len(cat.Overridden) != 1 {
+			t.Fatalf("expected 1 overridden item, got %d", len(cat.Overridden))
+		}
+		if cat.Overridden[0].Local {
+			t.Error("shared item should be overridden")
+		}
+	})
+
+	t.Run("shared wins over registry", func(t *testing.T) {
+		t.Parallel()
+		cat := &Catalog{
+			Items: []ContentItem{
+				makeItem("my-skill", Skills, false, "team-reg", false), // registry
+				makeItem("my-skill", Skills, false, "", false),         // shared
+			},
+		}
+		applyPrecedence(cat)
+		if len(cat.Items) != 1 {
+			t.Fatalf("expected 1 item, got %d", len(cat.Items))
+		}
+		if cat.Items[0].Registry != "" {
+			t.Error("shared item should win over registry")
+		}
+		if len(cat.Overridden) != 1 || cat.Overridden[0].Registry != "team-reg" {
+			t.Error("registry item should be overridden")
+		}
+	})
+
+	t.Run("registry wins over builtin", func(t *testing.T) {
+		t.Parallel()
+		cat := &Catalog{
+			Items: []ContentItem{
+				makeItem("my-skill", Skills, false, "", true),          // built-in
+				makeItem("my-skill", Skills, false, "team-reg", false), // registry
+			},
+		}
+		applyPrecedence(cat)
+		if len(cat.Items) != 1 {
+			t.Fatalf("expected 1 item, got %d", len(cat.Items))
+		}
+		if cat.Items[0].Registry != "team-reg" {
+			t.Error("registry item should win over built-in")
+		}
+		if len(cat.Overridden) != 1 || !cat.Overridden[0].IsBuiltin() {
+			t.Error("built-in item should be overridden")
+		}
+	})
+
+	t.Run("different types are not deduplicated", func(t *testing.T) {
+		t.Parallel()
+		cat := &Catalog{
+			Items: []ContentItem{
+				makeItem("my-item", Skills, false, "", false),
+				makeItem("my-item", Rules, false, "", false),
+			},
+		}
+		applyPrecedence(cat)
+		if len(cat.Items) != 2 {
+			t.Errorf("expected 2 items (different types), got %d", len(cat.Items))
+		}
+		if len(cat.Overridden) != 0 {
+			t.Errorf("expected 0 overridden items, got %d", len(cat.Overridden))
+		}
+	})
+
+	t.Run("case-insensitive name matching", func(t *testing.T) {
+		t.Parallel()
+		cat := &Catalog{
+			Items: []ContentItem{
+				makeItem("My-Skill", Skills, false, "", false), // shared
+				makeItem("my-skill", Skills, true, "", false),  // local wins
+			},
+		}
+		applyPrecedence(cat)
+		if len(cat.Items) != 1 {
+			t.Fatalf("expected 1 item after case-insensitive dedup, got %d", len(cat.Items))
+		}
+		if !cat.Items[0].Local {
+			t.Error("local item should win (case-insensitive match)")
+		}
+		if len(cat.Overridden) != 1 {
+			t.Fatalf("expected 1 overridden item, got %d", len(cat.Overridden))
+		}
+	})
+
+	t.Run("no duplicates leaves overridden empty", func(t *testing.T) {
+		t.Parallel()
+		cat := &Catalog{
+			Items: []ContentItem{
+				makeItem("skill-a", Skills, false, "", false),
+				makeItem("skill-b", Skills, false, "", false),
+			},
+		}
+		applyPrecedence(cat)
+		if len(cat.Items) != 2 {
+			t.Errorf("expected 2 items, got %d", len(cat.Items))
+		}
+		if len(cat.Overridden) != 0 {
+			t.Errorf("expected 0 overridden items, got %d", len(cat.Overridden))
+		}
+	})
+}
+
+func TestOverridesFor(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns losers for given name and type", func(t *testing.T) {
+		t.Parallel()
+		cat := &Catalog{
+			Items: []ContentItem{
+				makeItem("my-skill", Skills, true, "", false), // local wins
+			},
+			Overridden: []ContentItem{
+				makeItem("my-skill", Skills, false, "", false),         // shared lost
+				makeItem("my-skill", Skills, false, "team-reg", false), // registry lost
+			},
+		}
+		got := cat.OverridesFor("my-skill", Skills)
+		if len(got) != 2 {
+			t.Errorf("expected 2 overrides, got %d", len(got))
+		}
+	})
+
+	t.Run("different type does not match", func(t *testing.T) {
+		t.Parallel()
+		cat := &Catalog{
+			Overridden: []ContentItem{
+				makeItem("my-item", Rules, false, "", false),
+			},
+		}
+		got := cat.OverridesFor("my-item", Skills)
+		if len(got) != 0 {
+			t.Errorf("expected 0 overrides for different type, got %d", len(got))
+		}
+	})
+
+	t.Run("case-insensitive lookup", func(t *testing.T) {
+		t.Parallel()
+		cat := &Catalog{
+			Overridden: []ContentItem{
+				makeItem("My-Skill", Skills, false, "", false),
+			},
+		}
+		got := cat.OverridesFor("my-skill", Skills)
+		if len(got) != 1 {
+			t.Errorf("expected 1 override (case-insensitive), got %d", len(got))
+		}
+	})
+}
+
+func TestScanLocalRootSeparate(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	contentRoot := filepath.Join(projectRoot, "content")
+
+	// Shared item under contentRoot
+	writeFile(t, filepath.Join(contentRoot, "skills", "shared-skill", "SKILL.md"),
+		"---\nname: Shared Skill\ndescription: A shared skill\n---\n")
+
+	// Local item under projectRoot/local/ (NOT under contentRoot/local/)
+	writeFile(t, filepath.Join(projectRoot, "local", "skills", "my-local-skill", "SKILL.md"),
+		"---\nname: My Local Skill\ndescription: A local skill\n---\n")
+
+	cat, err := Scan(contentRoot, projectRoot)
+	if err != nil {
+		t.Fatalf("Scan returned error: %v", err)
+	}
+
+	skills := cat.ByType(Skills)
+	if len(skills) != 2 {
+		var names []string
+		for _, s := range skills {
+			names = append(names, s.Name)
+		}
+		t.Fatalf("expected 2 skills (1 shared + 1 local), got %d: %v", len(skills), names)
+	}
+
+	// Find the local item and verify it's marked Local
+	var foundLocal bool
+	for _, s := range skills {
+		if s.Name == "my-local-skill" {
+			if !s.Local {
+				t.Error("my-local-skill should be marked Local=true")
+			}
+			foundLocal = true
+		}
+	}
+	if !foundLocal {
+		t.Error("local skill was not discovered")
+	}
 }

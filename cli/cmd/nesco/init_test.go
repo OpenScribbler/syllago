@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/nesco/cli/internal/config"
@@ -112,5 +113,74 @@ func TestInitForceOverwrite(t *testing.T) {
 	err := initCmd.RunE(initCmd, []string{})
 	if err != nil {
 		t.Fatalf("init --force --yes failed: %v", err)
+	}
+}
+
+func TestInitCreatesLocalDir(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+
+	origDir, _ := os.Getwd()
+	os.Chdir(tmp)
+	defer os.Chdir(origDir)
+
+	initCmd.Flags().Set("yes", "true")
+	initCmd.Flags().Set("force", "false")
+	if err := initCmd.RunE(initCmd, []string{}); err != nil {
+		t.Fatalf("init failed: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(tmp, "local")); err != nil {
+		t.Error("local/ directory should exist after init")
+	}
+}
+
+func TestInitWritesGitignore(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+
+	origDir, _ := os.Getwd()
+	os.Chdir(tmp)
+	defer os.Chdir(origDir)
+
+	initCmd.Flags().Set("yes", "true")
+	initCmd.Flags().Set("force", "false")
+	if err := initCmd.RunE(initCmd, []string{}); err != nil {
+		t.Fatalf("init failed: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(tmp, ".gitignore"))
+	if err != nil {
+		t.Fatal(".gitignore should exist after init")
+	}
+	content := string(data)
+	if !strings.Contains(content, "local/") {
+		t.Error(".gitignore should contain local/")
+	}
+	if !strings.Contains(content, ".nesco/registries/") {
+		t.Error(".gitignore should contain .nesco/registries/")
+	}
+}
+
+func TestInitGitignoreNoDuplicates(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	// Pre-populate .gitignore with one of the entries
+	os.WriteFile(filepath.Join(tmp, ".gitignore"), []byte("local/\n"), 0644)
+
+	origDir, _ := os.Getwd()
+	os.Chdir(tmp)
+	defer os.Chdir(origDir)
+
+	initCmd.Flags().Set("yes", "true")
+	initCmd.Flags().Set("force", "false")
+	if err := initCmd.RunE(initCmd, []string{}); err != nil {
+		t.Fatalf("init failed: %v", err)
+	}
+
+	data, _ := os.ReadFile(filepath.Join(tmp, ".gitignore"))
+	count := strings.Count(string(data), "local/")
+	if count != 1 {
+		t.Errorf(".gitignore should contain local/ exactly once, got %d", count)
 	}
 }

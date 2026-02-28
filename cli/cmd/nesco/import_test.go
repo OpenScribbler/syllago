@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/nesco/cli/internal/output"
@@ -135,5 +136,75 @@ func TestImportNameFilterNoMatch(t *testing.T) {
 
 	if len(report.Files) != 0 {
 		t.Errorf("expected 0 files for non-matching name, got %d", len(report.Files))
+	}
+}
+
+func TestImportWritesToLocal(t *testing.T) {
+	tmp := setupImportProject(t)
+
+	_, _ = output.SetForTest(t)
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	importCmd.Flags().Set("from", "claude-code")
+	importCmd.Flags().Set("type", "rules")
+	importCmd.Flags().Set("name", "security")
+	importCmd.Flags().Set("preview", "false")
+	importCmd.Flags().Set("dry-run", "false")
+
+	if err := importCmd.RunE(importCmd, []string{}); err != nil {
+		t.Fatalf("import failed: %v", err)
+	}
+
+	// Verify the file was written to local/rules/claude-code/security/
+	itemDir := filepath.Join(tmp, "local", "rules", "claude-code", "security")
+	if _, err := os.Stat(itemDir); err != nil {
+		t.Fatalf("expected item directory at %s, got error: %v", itemDir, err)
+	}
+
+	// Check that .nesco.yaml was created
+	metaPath := filepath.Join(itemDir, ".nesco.yaml")
+	if _, err := os.Stat(metaPath); err != nil {
+		t.Errorf("expected metadata at %s, got error: %v", metaPath, err)
+	}
+
+	// Check that a content file exists
+	contentPath := filepath.Join(itemDir, "rule.md")
+	if _, err := os.Stat(contentPath); err != nil {
+		t.Errorf("expected content file at %s, got error: %v", contentPath, err)
+	}
+}
+
+func TestImportDryRunDoesNotWrite(t *testing.T) {
+	tmp := setupImportProject(t)
+
+	stdout, _ := output.SetForTest(t)
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	importCmd.Flags().Set("from", "claude-code")
+	importCmd.Flags().Set("type", "rules")
+	importCmd.Flags().Set("name", "")
+	importCmd.Flags().Set("preview", "false")
+	importCmd.Flags().Set("dry-run", "true")
+
+	if err := importCmd.RunE(importCmd, []string{}); err != nil {
+		t.Fatalf("import --dry-run failed: %v", err)
+	}
+
+	// Verify that local/ was NOT created
+	localDir := filepath.Join(tmp, "local")
+	if _, err := os.Stat(localDir); err == nil {
+		t.Errorf("expected local/ to not exist during --dry-run, but it does")
+	}
+
+	// Verify output mentions dry-run
+	out := stdout.String()
+	if !strings.Contains(out, "dry-run") {
+		t.Errorf("expected 'dry-run' in output, got: %s", out)
 	}
 }

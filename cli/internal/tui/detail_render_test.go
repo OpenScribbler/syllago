@@ -1,10 +1,13 @@
 package tui
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/metadata"
 )
 
 func TestRenderContentSplitHasSeparator(t *testing.T) {
@@ -81,6 +84,115 @@ func TestRenderInstallTabHasActionButtons(t *testing.T) {
 		t.Error("renderInstallTab() should contain ANSI escape sequences from zone.Mark() calls on action buttons")
 	}
 }
+// TestRenderOverviewTabShowsRiskIndicators verifies that hook items with command
+// hooks display a risk indicator in the Overview tab.
+func TestRenderOverviewTabShowsRiskIndicators(t *testing.T) {
+	dir := t.TempDir()
+	hookJSON := `{"hooks":{"PostToolUse":[{"matcher":"Write","command":"echo hi"}]}}`
+	if err := os.WriteFile(filepath.Join(dir, "hook.json"), []byte(hookJSON), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	m := detailModel{
+		item: catalog.ContentItem{
+			Name:  "test-hook",
+			Type:  catalog.Hooks,
+			Path:  dir,
+			Files: []string{"hook.json"},
+		},
+		width:  60,
+		height: 24,
+	}
+	body := m.renderOverviewTab()
+	if !strings.Contains(body, "Runs commands") {
+		t.Errorf("Overview tab should show 'Runs commands' risk indicator, got:\n%s", body)
+	}
+}
+
+// TestRenderOverviewTabNoRiskForPrompts verifies that prompt items (which have
+// no risk signals) show nothing extra in the Overview tab.
+func TestRenderOverviewTabNoRiskForPrompts(t *testing.T) {
+	m := detailModel{
+		item: catalog.ContentItem{
+			Name:  "safe-prompt",
+			Type:  catalog.Prompts,
+			Body:  "You are a helpful assistant.",
+			Files: []string{"PROMPT.md"},
+		},
+		width:  60,
+		height: 24,
+	}
+	body := m.renderOverviewTab()
+	if strings.Contains(body, "⚠") {
+		t.Errorf("Overview tab should not show risk indicators for Prompts, got:\n%s", body)
+	}
+}
+
+func TestRenderOverrideInfoShown(t *testing.T) {
+	m := detailModel{
+		item: catalog.ContentItem{
+			Name:  "my-skill",
+			Type:  catalog.Skills,
+			Local: true,
+		},
+		overrides: []catalog.ContentItem{
+			{
+				Name:     "my-skill",
+				Type:     catalog.Skills,
+				Registry: "community",
+			},
+		},
+		width:  60,
+		height: 24,
+	}
+	pinned, _ := m.renderContentSplit()
+	if !strings.Contains(pinned, "Overrides") {
+		t.Errorf("pinned section should contain 'Overrides' when overrides exist, got:\n%s", pinned)
+	}
+	if !strings.Contains(pinned, "community") {
+		t.Errorf("pinned section should mention the overridden registry name 'community', got:\n%s", pinned)
+	}
+}
+
+func TestRenderOverrideInfoBuiltIn(t *testing.T) {
+	m := detailModel{
+		item: catalog.ContentItem{
+			Name:  "my-skill",
+			Type:  catalog.Skills,
+			Local: true,
+		},
+		overrides: []catalog.ContentItem{
+			{
+				Name: "my-skill",
+				Type: catalog.Skills,
+				Meta: &metadata.Meta{Tags: []string{"builtin"}},
+			},
+		},
+		width:  60,
+		height: 24,
+	}
+	pinned, _ := m.renderContentSplit()
+	if !strings.Contains(pinned, "built-in") {
+		t.Errorf("pinned section should mention 'built-in' for builtin overrides, got:\n%s", pinned)
+	}
+}
+
+func TestRenderOverrideInfoNotShownWhenEmpty(t *testing.T) {
+	m := detailModel{
+		item: catalog.ContentItem{
+			Name: "my-skill",
+			Type: catalog.Skills,
+		},
+		overrides: nil,
+		width:     60,
+		height:    24,
+	}
+	pinned, _ := m.renderContentSplit()
+	if strings.Contains(pinned, "Overrides") {
+		t.Errorf("pinned section should NOT contain 'Overrides' when there are none, got:\n%s", pinned)
+	}
+}
+
 func TestMessagePrefixes(t *testing.T) {
 	tests := []struct {
 		name       string

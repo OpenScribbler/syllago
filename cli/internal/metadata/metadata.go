@@ -31,8 +31,10 @@ type Meta struct {
 	Author         string       `yaml:"author,omitempty"`
 	Source         string       `yaml:"source,omitempty"`
 	Tags           []string     `yaml:"tags,omitempty"`
+	Hidden         bool         `yaml:"hidden,omitempty"`
 	Dependencies   []Dependency `yaml:"dependencies,omitempty"`
-	ImportedAt     *time.Time   `yaml:"imported_at,omitempty"`
+	CreatedAt      *time.Time   `yaml:"created_at,omitempty"`  // when item was scaffolded via nesco create
+	ImportedAt     *time.Time   `yaml:"imported_at,omitempty"` // when item was imported from a provider
 	ImportedBy     string       `yaml:"imported_by,omitempty"`
 	PromotedAt     *time.Time   `yaml:"promoted_at,omitempty"`
 	PRBranch       string       `yaml:"pr_branch,omitempty"`

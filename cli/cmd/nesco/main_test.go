@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -298,14 +299,12 @@ func TestPrintExecuteError(t *testing.T) {
 }
 
 func TestTUIErrorMessageContentRepoNotFound(t *testing.T) {
-	// Override findSkillsDir to force error
-	oldFindSkills := findSkillsDir
-	findSkillsDir = func(dir string) (string, error) {
-		return "", fmt.Errorf("not found")
+	oldFindProject := findProjectRoot
+	findProjectRoot = func() (string, error) {
+		return "", fmt.Errorf("no project root")
 	}
-	defer func() { findSkillsDir = oldFindSkills }()
+	defer func() { findProjectRoot = oldFindProject }()
 
-	// Clear repoRoot to ensure it's not used
 	oldRepoRoot := repoRoot
 	repoRoot = ""
 	defer func() { repoRoot = oldRepoRoot }()
@@ -314,15 +313,10 @@ func TestTUIErrorMessageContentRepoNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when content repo not found")
 	}
-
 	errMsg := err.Error()
-
-	// Should not mention internal implementation details
 	if strings.Contains(errMsg, "skills/") {
 		t.Error("error message should not mention internal 'skills/' directory")
 	}
-
-	// Should provide helpful guidance
 	if !strings.Contains(errMsg, "nesco") {
 		t.Error("error message should mention 'nesco'")
 	}
@@ -405,5 +399,79 @@ func TestGlobalFlags(t *testing.T) {
 	}
 	if flags.Lookup("verbose") == nil {
 		t.Error("missing --verbose global flag")
+	}
+}
+
+func TestFindContentRepoRootConfigBased(t *testing.T) {
+	tmp := t.TempDir()
+	// Create project markers
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	// Create .nesco/config.json with contentRoot
+	os.MkdirAll(filepath.Join(tmp, ".nesco"), 0755)
+	os.WriteFile(filepath.Join(tmp, ".nesco", "config.json"),
+		[]byte(`{"providers":[],"content_root":"content"}`), 0644)
+	// Create the content dir so the path is valid
+	os.MkdirAll(filepath.Join(tmp, "content"), 0755)
+
+	oldFindProject := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	defer func() { findProjectRoot = oldFindProject }()
+
+	oldRepoRoot := repoRoot
+	repoRoot = ""
+	defer func() { repoRoot = oldRepoRoot }()
+
+	got, err := findContentRepoRoot()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := filepath.Join(tmp, "content")
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFindContentRepoRootContentDirFallback(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	// No config, but skills/ exists at project root
+	os.MkdirAll(filepath.Join(tmp, "skills"), 0755)
+
+	oldFindProject := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	defer func() { findProjectRoot = oldFindProject }()
+
+	oldRepoRoot := repoRoot
+	repoRoot = ""
+	defer func() { repoRoot = oldRepoRoot }()
+
+	got, err := findContentRepoRoot()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != tmp {
+		t.Errorf("got %q, want %q", got, tmp)
+	}
+}
+
+func TestFindContentRepoRootProjectRootFallback(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	// No config, no content dirs — should fall back to project root
+
+	oldFindProject := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	defer func() { findProjectRoot = oldFindProject }()
+
+	oldRepoRoot := repoRoot
+	repoRoot = ""
+	defer func() { repoRoot = oldRepoRoot }()
+
+	got, err := findContentRepoRoot()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != tmp {
+		t.Errorf("got %q, want %q", got, tmp)
 	}
 }

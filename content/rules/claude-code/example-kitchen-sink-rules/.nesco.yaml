@@ -1,0 +1,7 @@
+id: example-kitchen-sink-rules
+name: example-kitchen-sink-rules
+description: Example rules populating every available metadata field for testing and reference
+tags:
+  - builtin
+  - example
+hidden: true

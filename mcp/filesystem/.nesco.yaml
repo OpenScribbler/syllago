@@ -1,7 +1,0 @@
-name: filesystem
-description: Basic MCP server configuration for filesystem access
-version: "1.0"
-tags:
-  - mcp
-  - filesystem
-  - server-config

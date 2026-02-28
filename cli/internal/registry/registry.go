@@ -1,13 +1,16 @@
 package registry
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"gopkg.in/yaml.v3"
 )
 
 // CacheDir returns the global registry cache directory (~/.nesco/registries).
@@ -146,4 +149,59 @@ func Remove(name string) error {
 		return err
 	}
 	return os.RemoveAll(dir)
+}
+
+// Manifest holds optional metadata from registry.yaml at the registry root.
+// Its purpose is display-only: teams can describe their registry for the TUI
+// and CLI output. Registries without a manifest still work normally.
+type Manifest struct {
+	Name            string   `yaml:"name"`
+	Description     string   `yaml:"description,omitempty"`
+	Maintainers     []string `yaml:"maintainers,omitempty"`
+	Version         string   `yaml:"version,omitempty"`
+	MinNescoVersion string   `yaml:"min_nesco_version,omitempty"`
+}
+
+// LoadManifest reads registry.yaml from the clone directory for the named registry.
+// Returns nil, nil if the file does not exist (manifest is optional).
+func LoadManifest(name string) (*Manifest, error) {
+	dir, err := CloneDir(name)
+	if err != nil {
+		return nil, err
+	}
+	return loadManifestFromDir(dir)
+}
+
+// KnownAliases maps short names to full git URLs for official nesco registries.
+// Users can always use full URLs directly.
+var KnownAliases = map[string]string{
+	"nesco-tools": "https://github.com/OpenScribbler/nesco-tools.git",
+}
+
+// ExpandAlias returns the full URL for a known alias, or the input unchanged if not an alias.
+// An alias is identified by not containing "/" or ":" — these characters appear in all valid git URLs.
+func ExpandAlias(input string) (url string, expanded bool) {
+	if !strings.Contains(input, "/") && !strings.Contains(input, ":") {
+		if full, ok := KnownAliases[input]; ok {
+			return full, true
+		}
+	}
+	return input, false
+}
+
+// loadManifestFromDir reads registry.yaml from an explicit directory path.
+// Extracted as a helper so tests can call it without needing a real clone.
+func loadManifestFromDir(dir string) (*Manifest, error) {
+	data, err := os.ReadFile(filepath.Join(dir, "registry.yaml"))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("reading registry.yaml in %q: %w", dir, err)
+	}
+	var m Manifest
+	if err := yaml.Unmarshal(data, &m); err != nil {
+		return nil, fmt.Errorf("parsing registry.yaml in %q: %w", dir, err)
+	}
+	return &m, nil
 }

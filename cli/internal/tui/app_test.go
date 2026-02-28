@@ -5,6 +5,10 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/metadata"
 )
 
 func TestAppHasSidebarField(t *testing.T) {
@@ -60,5 +64,161 @@ func TestEscFromItemsGoesToCategory(t *testing.T) {
 	}
 	if updated.screen != screenCategory {
 		t.Errorf("Esc from screenItems should go to screenCategory, got %d", updated.screen)
+	}
+}
+
+// TestFirstRunScreenAppearsWhenEmpty verifies that renderContentWelcome shows
+// the first-run screen when both catalog and registries are empty.
+func TestFirstRunScreenAppearsWhenEmpty(t *testing.T) {
+	a := App{
+		width:  80,
+		height: 30,
+		screen: screenCategory,
+		catalog: &catalog.Catalog{
+			Items: nil,
+		},
+		registryCfg: &config.Config{
+			Registries: nil,
+		},
+	}
+	view := a.renderContentWelcome()
+	if !strings.Contains(view, "Welcome to nesco") {
+		t.Error("first-run screen should show 'Welcome to nesco' when catalog is empty")
+	}
+	if !strings.Contains(view, "nesco import") {
+		t.Error("first-run screen should show 'nesco import' step")
+	}
+	if !strings.Contains(view, "nesco registry add") {
+		t.Error("first-run screen should show 'nesco registry add' step")
+	}
+	if !strings.Contains(view, "nesco create") {
+		t.Error("first-run screen should show 'nesco create' step")
+	}
+}
+
+// TestNormalWelcomeScreenWhenContentExists verifies that the normal welcome
+// screen (not first-run) appears when there is at least one catalog item.
+func TestNormalWelcomeScreenWhenContentExists(t *testing.T) {
+	a := testApp(t)
+	a.screen = screenCategory
+	view := a.renderContentWelcome()
+	// Normal welcome should show category cards/list, not the first-run message
+	if strings.Contains(view, "Welcome to nesco!") {
+		t.Error("normal welcome screen should not show first-run message when content exists")
+	}
+}
+
+// TestFirstRunScreenWithRegistriesButNoContent verifies that having registries
+// (even without catalog items) bypasses the first-run screen. Users who know
+// how to add registries don't need the getting-started guide.
+func TestFirstRunScreenWithRegistriesButNoContent(t *testing.T) {
+	a := App{
+		width:  80,
+		height: 30,
+		screen: screenCategory,
+		catalog: &catalog.Catalog{
+			Items: nil,
+		},
+		registryCfg: &config.Config{
+			Registries: []config.Registry{
+				{Name: "my-reg", URL: "https://example.com/reg.git"},
+			},
+		},
+	}
+	view := a.renderContentWelcome()
+	// Should NOT show first-run since user has a registry configured
+	if strings.Contains(view, "Welcome to nesco!") {
+		t.Error("should not show first-run when registries are configured")
+	}
+}
+
+func TestHiddenItemsFilteredByDefault(t *testing.T) {
+	app := testApp(t)
+
+	// Add a hidden item to the catalog
+	app.catalog.Items = append(app.catalog.Items, catalog.ContentItem{
+		Name:        "hidden-skill",
+		Description: "A hidden skill",
+		Type:        catalog.Skills,
+		Path:        "/tmp/skills/hidden-skill",
+		Meta:        &metadata.Meta{Hidden: true},
+	})
+
+	// Navigate to Skills
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+	assertScreen(t, app, screenItems)
+
+	// The hidden item should not appear in the items list
+	for _, item := range app.items.items {
+		if item.Name == "hidden-skill" {
+			t.Fatal("hidden item should be filtered out by default")
+		}
+	}
+
+	// But the hidden count should be tracked
+	if app.items.hiddenCount == 0 {
+		t.Fatal("expected hiddenCount > 0 when hidden items exist")
+	}
+}
+
+func TestHKeyTogglesShowHidden(t *testing.T) {
+	app := testApp(t)
+
+	// Add a hidden item to the catalog
+	app.catalog.Items = append(app.catalog.Items, catalog.ContentItem{
+		Name:        "hidden-skill",
+		Description: "A hidden skill",
+		Type:        catalog.Skills,
+		Path:        "/tmp/skills/hidden-skill",
+		Meta:        &metadata.Meta{Hidden: true},
+	})
+
+	// Navigate to Skills
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+	assertScreen(t, app, screenItems)
+
+	// Count items before toggle
+	countBefore := len(app.items.items)
+
+	// Press H to show hidden items
+	m, _ = app.Update(keyRune('H'))
+	app = m.(App)
+
+	if !app.showHidden {
+		t.Fatal("showHidden should be true after pressing H")
+	}
+
+	countAfter := len(app.items.items)
+	if countAfter <= countBefore {
+		t.Fatalf("expected more items after showing hidden (before=%d, after=%d)", countBefore, countAfter)
+	}
+
+	// Verify the hidden item is now visible
+	found := false
+	for _, item := range app.items.items {
+		if item.Name == "hidden-skill" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("hidden-skill should appear after pressing H to show hidden items")
+	}
+
+	// Press H again to hide
+	m, _ = app.Update(keyRune('H'))
+	app = m.(App)
+
+	if app.showHidden {
+		t.Fatal("showHidden should be false after pressing H again")
+	}
+
+	// Hidden item should be filtered out again
+	for _, item := range app.items.items {
+		if item.Name == "hidden-skill" {
+			t.Fatal("hidden item should be filtered out after toggling H off")
+		}
 	}
 }

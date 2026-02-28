@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/hooks/release-guard.py"
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.claude/hooks/release-guard.py\""
           }
         ]
       }

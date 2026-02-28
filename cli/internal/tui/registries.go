@@ -15,11 +15,13 @@ import (
 
 // registryEntry holds display data for one registry row.
 type registryEntry struct {
-	name      string
-	url       string
-	ref       string
-	cloned    bool
-	itemCount int
+	name        string
+	url         string
+	ref         string
+	cloned      bool
+	itemCount   int
+	version     string // from manifest.Version, empty if no manifest
+	description string // from manifest.Description, empty if no manifest
 }
 
 type registriesModel struct {
@@ -33,13 +35,18 @@ type registriesModel struct {
 func newRegistriesModel(repoRoot string, cfg *config.Config, cat *catalog.Catalog) registriesModel {
 	entries := make([]registryEntry, len(cfg.Registries))
 	for i, r := range cfg.Registries {
-		entries[i] = registryEntry{
+		entry := registryEntry{
 			name:      r.Name,
 			url:       r.URL,
 			ref:       r.Ref,
 			cloned:    registry.IsCloned(r.Name),
 			itemCount: cat.CountRegistry(r.Name),
 		}
+		if manifest, err := registry.LoadManifest(r.Name); err == nil && manifest != nil {
+			entry.version = manifest.Version
+			entry.description = manifest.Description
+		}
+		entries[i] = entry
 	}
 	return registriesModel{
 		entries:  entries,
@@ -102,8 +109,8 @@ func (m registriesModel) View() string {
 	}
 
 	// Header
-	s += tableHeaderStyle.Render(fmt.Sprintf("   %-20s  %-8s  %-6s  %s", "Name", "Status", "Items", "URL")) + "\n"
-	s += helpStyle.Render("   "+strings.Repeat("─", 20)+"  "+strings.Repeat("─", 8)+"  "+strings.Repeat("─", 6)+"  "+strings.Repeat("─", 30)) + "\n"
+	s += tableHeaderStyle.Render(fmt.Sprintf("   %-20s  %-8s  %-6s  %-8s  %s", "Name", "Status", "Items", "Version", "URL")) + "\n"
+	s += helpStyle.Render("   "+strings.Repeat("─", 20)+"  "+strings.Repeat("─", 8)+"  "+strings.Repeat("─", 6)+"  "+strings.Repeat("─", 8)+"  "+strings.Repeat("─", 30)) + "\n"
 
 	for i, entry := range m.entries {
 		prefix := "   "
@@ -124,14 +131,23 @@ func (m registriesModel) View() string {
 			url = url[:37] + "..."
 		}
 
-		row := fmt.Sprintf("%s%-20s  %s  %s  %s",
+		version := "─"
+		if entry.version != "" {
+			version = entry.version
+		}
+
+		row := fmt.Sprintf("%s%-20s  %s  %s  %-8s  %s",
 			prefix,
 			nameStyle.Render(truncate(entry.name, 20)),
 			status,
 			helpStyle.Render(countStr),
+			helpStyle.Render(truncate(version, 8)),
 			helpStyle.Render(url),
 		)
 		s += zone.Mark(fmt.Sprintf("registry-row-%d", i), row) + "\n"
+		if entry.description != "" {
+			s += helpStyle.Render("      "+entry.description) + "\n"
+		}
 	}
 
 	s += "\n"

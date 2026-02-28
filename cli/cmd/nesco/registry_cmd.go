@@ -44,6 +44,12 @@ var registryAddCmd = &cobra.Command{
 		}
 		gitURL := args[0]
 
+		// Expand short aliases before any other processing
+		if fullURL, wasExpanded := registry.ExpandAlias(gitURL); wasExpanded {
+			fmt.Fprintf(output.Writer, "Expanding alias %q → %s\n", gitURL, fullURL)
+			gitURL = fullURL
+		}
+
 		nameFlag, _ := cmd.Flags().GetString("name")
 		refFlag, _ := cmd.Flags().GetString("ref")
 
@@ -65,6 +71,13 @@ var registryAddCmd = &cobra.Command{
 			if r.Name == name {
 				return fmt.Errorf("registry %q already exists (use a different --name or remove it first)", name)
 			}
+		}
+
+		// Enforce allowedRegistries policy
+		if !cfg.IsRegistryAllowed(gitURL) {
+			return fmt.Errorf("registry URL %q is not in the allowedRegistries list.\n"+
+				"Your project config restricts which registries can be added.\n"+
+				"Contact your team lead to add it to .nesco/config.json", gitURL)
 		}
 
 		// Security warning: prominent box on first registry, brief reminder otherwise
@@ -197,6 +210,14 @@ var registryRemoveCmd = &cobra.Command{
 	},
 }
 
+type registryListItem struct {
+	Name     string             `json:"name"`
+	Status   string             `json:"status"`
+	URL      string             `json:"url"`
+	Ref      string             `json:"ref"`
+	Manifest *registry.Manifest `json:"manifest,omitempty"`
+}
+
 var registryListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List registered registries",
@@ -210,18 +231,12 @@ var registryListCmd = &cobra.Command{
 			return err
 		}
 
-		if output.JSON {
-			output.Print(cfg.Registries)
-			return nil
-		}
-
 		if len(cfg.Registries) == 0 {
 			fmt.Println("No registries configured. Run `nesco registry add <url>` to add one.")
 			return nil
 		}
 
-		fmt.Printf("%-20s  %-8s  %s\n", "NAME", "STATUS", "URL")
-		fmt.Printf("%-20s  %-8s  %s\n", strings.Repeat("─", 20), strings.Repeat("─", 8), strings.Repeat("─", 40))
+		var items []registryListItem
 		for _, r := range cfg.Registries {
 			status := "missing"
 			if registry.IsCloned(r.Name) {
@@ -231,7 +246,35 @@ var registryListCmd = &cobra.Command{
 			if ref == "" {
 				ref = "default"
 			}
-			fmt.Printf("%-20s  %-8s  %s  [%s]\n", r.Name, status, r.URL, ref)
+			manifest, _ := registry.LoadManifest(r.Name) // ignore error; manifest is optional
+			items = append(items, registryListItem{
+				Name:     r.Name,
+				Status:   status,
+				URL:      r.URL,
+				Ref:      ref,
+				Manifest: manifest,
+			})
+		}
+
+		if output.JSON {
+			output.Print(items)
+			return nil
+		}
+
+		fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %s\n", "NAME", "STATUS", "VERSION", "URL / DESCRIPTION")
+		fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %s\n",
+			strings.Repeat("─", 20), strings.Repeat("─", 8),
+			strings.Repeat("─", 8), strings.Repeat("─", 40))
+		for _, item := range items {
+			version := "─"
+			if item.Manifest != nil && item.Manifest.Version != "" {
+				version = item.Manifest.Version
+			}
+			fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %s\n",
+				truncateStr(item.Name, 20), item.Status, version, item.URL)
+			if item.Manifest != nil && item.Manifest.Description != "" {
+				fmt.Fprintf(output.Writer, "  %s\n", item.Manifest.Description)
+			}
 		}
 		return nil
 	},

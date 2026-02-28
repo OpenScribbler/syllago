@@ -23,8 +23,9 @@ type keyMap struct {
 	End       key.Binding
 	Left      key.Binding
 	Right     key.Binding
-	PageUp    key.Binding
-	PageDown  key.Binding
+	PageUp       key.Binding
+	PageDown     key.Binding
+	ToggleHidden key.Binding
 }
 
 var keys = keyMap{
@@ -115,5 +116,9 @@ var keys = keyMap{
 	PageDown: key.NewBinding(
 		key.WithKeys("pgdown"),
 		key.WithHelp("pgdown", "page down"),
+	),
+	ToggleHidden: key.NewBinding(
+		key.WithKeys("H"),
+		key.WithHelp("H", "show/hide hidden"),
 	),
 }

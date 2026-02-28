@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -78,5 +79,109 @@ func TestPreferences(t *testing.T) {
 	}
 	if loaded.Preferences["output-format"] != "json" {
 		t.Errorf("preferences = %v, want output-format=json", loaded.Preferences)
+	}
+}
+
+func TestConfigContentRoot(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	cfg := &Config{
+		Providers:   []string{"claude-code"},
+		ContentRoot: "content",
+	}
+	if err := Save(dir, cfg); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	loaded, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if loaded.ContentRoot != "content" {
+		t.Errorf("ContentRoot = %q, want %q", loaded.ContentRoot, "content")
+	}
+
+	// Verify it's present in raw JSON when set
+	data, _ := os.ReadFile(FilePath(dir))
+	if !strings.Contains(string(data), "content_root") {
+		t.Error("JSON should contain content_root key when set")
+	}
+}
+
+func TestConfigContentRootOmittedWhenEmpty(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	cfg := &Config{Providers: []string{"claude-code"}}
+	if err := Save(dir, cfg); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	data, _ := os.ReadFile(FilePath(dir))
+	if strings.Contains(string(data), "content_root") {
+		t.Error("JSON should not contain content_root when empty")
+	}
+}
+
+func TestAllowedRegistriesRoundTrip(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	cfg := &Config{
+		Providers:         []string{"claude-code"},
+		AllowedRegistries: []string{"https://github.com/acme/tools.git", "https://github.com/acme/prompts.git"},
+	}
+	if err := Save(dir, cfg); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	loaded, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if len(loaded.AllowedRegistries) != 2 {
+		t.Fatalf("AllowedRegistries = %v, want 2 entries", loaded.AllowedRegistries)
+	}
+	if loaded.AllowedRegistries[0] != "https://github.com/acme/tools.git" {
+		t.Errorf("AllowedRegistries[0] = %q, want %q", loaded.AllowedRegistries[0], "https://github.com/acme/tools.git")
+	}
+
+	// Verify key is present in raw JSON when set
+	data, _ := os.ReadFile(FilePath(dir))
+	if !strings.Contains(string(data), "allowed_registries") {
+		t.Error("JSON should contain allowed_registries key when set")
+	}
+}
+
+func TestAllowedRegistriesOmittedWhenEmpty(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	cfg := &Config{Providers: []string{"claude-code"}}
+	if err := Save(dir, cfg); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	data, _ := os.ReadFile(FilePath(dir))
+	if strings.Contains(string(data), "allowed_registries") {
+		t.Error("JSON should not contain allowed_registries when empty")
+	}
+}
+
+func TestIsRegistryAllowed(t *testing.T) {
+	empty := &Config{}
+	if !empty.IsRegistryAllowed("https://any-url.git") {
+		t.Error("empty AllowedRegistries should allow any URL")
+	}
+
+	restricted := &Config{
+		AllowedRegistries: []string{"https://github.com/acme/tools.git"},
+	}
+	if !restricted.IsRegistryAllowed("https://github.com/acme/tools.git") {
+		t.Error("allowed URL should pass")
+	}
+	if restricted.IsRegistryAllowed("https://github.com/random/other.git") {
+		t.Error("non-allowed URL should be rejected")
 	}
 }

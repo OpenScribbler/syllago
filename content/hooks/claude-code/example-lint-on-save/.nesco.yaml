@@ -1,0 +1,10 @@
+name: example-lint-on-save
+description: Example hook that runs a linter after file edits in Claude Code
+version: "1.0"
+hidden: true
+tags:
+  - example
+  - hook
+  - claude-code
+  - linting
+  - quality

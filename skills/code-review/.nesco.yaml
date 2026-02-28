@@ -1,8 +1,0 @@
-name: code-review
-description: Systematic code review workflow covering correctness, security, performance, and maintainability
-version: "1.0"
-tags:
-  - code-review
-  - quality
-  - security
-  - best-practices

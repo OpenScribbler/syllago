@@ -69,6 +69,21 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 		}
 	}
 
+	// Override info
+	if len(m.overrides) > 0 {
+		for _, ov := range m.overrides {
+			source := "built-in"
+			if ov.Registry != "" {
+				source = ov.Registry
+			} else if ov.Local {
+				source = "local"
+			} else if !ov.IsBuiltin() {
+				source = "shared"
+			}
+			pinned += warningStyle.Render("Overrides ["+source+"] version") + "\n"
+		}
+	}
+
 	// Horizontal separator (full content width)
 	sepW := m.width
 	if sepW < 20 {
@@ -132,6 +147,17 @@ func (m detailModel) renderOverviewTab() string {
 			names = append(names, providerDisplayName(slug))
 		}
 		s += labelStyle.Render("Supported Providers: ") + valueStyle.Render(strings.Join(names, ", ")) + "\n\n"
+	}
+
+	// Risk indicators (shown after description, before README)
+	risks := catalog.RiskIndicators(m.item)
+	if len(risks) > 0 {
+		s += "\n"
+		for _, r := range risks {
+			s += warningStyle.Render("⚠  "+r.Label) + "\n"
+			s += helpStyle.Render("   "+r.Description) + "\n"
+		}
+		s += "\n"
 	}
 
 	// Rendered README (if available)

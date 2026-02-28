@@ -30,10 +30,27 @@ type SandboxConfig struct {
 }
 
 type Config struct {
-	Providers   []string          `json:"providers"` // enabled provider slugs
-	Registries  []Registry        `json:"registries,omitempty"`
-	Preferences map[string]string `json:"preferences,omitempty"`
-	Sandbox     SandboxConfig     `json:"sandbox,omitempty"`
+	Providers         []string          `json:"providers"`                         // enabled provider slugs
+	ContentRoot       string            `json:"content_root,omitempty"`            // relative path to content directory (default: project root)
+	Registries        []Registry        `json:"registries,omitempty"`
+	AllowedRegistries []string          `json:"allowed_registries,omitempty"`      // URL allowlist; empty means any URL is permitted
+	Preferences       map[string]string `json:"preferences,omitempty"`
+	Sandbox           SandboxConfig     `json:"sandbox,omitempty"`
+}
+
+// IsRegistryAllowed returns true if url is permitted given the config.
+// When AllowedRegistries is empty, any URL is allowed (solo-user default).
+// When non-empty, url must appear in the list (exact string match).
+func (c *Config) IsRegistryAllowed(url string) bool {
+	if len(c.AllowedRegistries) == 0 {
+		return true
+	}
+	for _, allowed := range c.AllowedRegistries {
+		if allowed == url {
+			return true
+		}
+	}
+	return false
 }
 
 func DirPath(projectRoot string) string {

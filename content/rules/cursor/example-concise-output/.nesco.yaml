@@ -1,0 +1,9 @@
+name: example-concise-output
+description: Rule for concise, focused output in Cursor (adapted from Claude Code version)
+version: "1.0"
+hidden: true
+tags:
+  - example
+  - rule
+  - cursor
+  - communication-style

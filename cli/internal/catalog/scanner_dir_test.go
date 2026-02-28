@@ -32,7 +32,7 @@ func TestScanProviderDirectoryFormat(t *testing.T) {
 	// Also need a skills/ dir for findRepoRoot
 	os.MkdirAll(filepath.Join(tmp, "skills"), 0755)
 
-	cat, err := Scan(tmp)
+	cat, err := Scan(tmp, tmp)
 	if err != nil {
 		t.Fatalf("Scan failed: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestScanProviderLegacyAndDirectoryMixed(t *testing.T) {
 
 	os.MkdirAll(filepath.Join(tmp, "skills"), 0755)
 
-	cat, err := Scan(tmp)
+	cat, err := Scan(tmp, tmp)
 	if err != nil {
 		t.Fatalf("Scan failed: %v", err)
 	}
