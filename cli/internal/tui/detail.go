@@ -65,6 +65,8 @@ type detailModel struct {
 	renderedBody     string         // cached glamour-rendered README body (apps only)
 	renderedReadme   string         // cached glamour-rendered README.md (all types)
 	llmPrompt        string         // loaded from LLM-PROMPT.md for local scaffolded items
+	// Override info
+	overrides []catalog.ContentItem // lower-precedence items this one shadows
 	// Tab state
 	activeTab    detailTab
 	fileViewer   fileViewerModel // file viewer state (Files tab)

@@ -1,0 +1,42 @@
+{
+  "mcpServers": {
+    "example-stdio-server": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@example/mcp-server",
+        "--port",
+        "3000"
+      ],
+      "env": {
+        "API_KEY": "placeholder-key",
+        "LOG_LEVEL": "debug"
+      },
+      "cwd": "/workspace/project",
+      "type": "stdio",
+      "autoApprove": [
+        "read_file",
+        "list_directory"
+      ],
+      "disabled": false
+    },
+    "example-http-server": {
+      "url": "https://mcp.example.com/v1",
+      "headers": {
+        "Authorization": "Bearer placeholder-token",
+        "X-Custom-Header": "example-value"
+      },
+      "type": "streamable-http",
+      "trust": "full",
+      "includeTools": [
+        "search",
+        "query"
+      ],
+      "excludeTools": [
+        "admin_delete",
+        "admin_reset"
+      ],
+      "disabled": false
+    }
+  }
+}

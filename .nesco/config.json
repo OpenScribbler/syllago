@@ -3,6 +3,7 @@
     "claude-code",
     "gemini-cli"
   ],
+  "content_root": "content",
   "preferences": {
     "autoUpdate": "false"
   }

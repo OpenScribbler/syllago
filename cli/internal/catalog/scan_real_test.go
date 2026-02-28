@@ -16,7 +16,11 @@ func TestScanRealRepo(t *testing.T) {
 	if _, err := os.Stat(repoRoot); os.IsNotExist(err) {
 		t.Skip("skipping: real repo not available (CI environment)")
 	}
-	cat, err := Scan(repoRoot)
+	contentRoot := filepath.Join(repoRoot, "content")
+	if _, err := os.Stat(contentRoot); os.IsNotExist(err) {
+		contentRoot = repoRoot // fall back for pre-restructure state
+	}
+	cat, err := Scan(contentRoot, repoRoot)
 	if err != nil {
 		t.Fatalf("Scan failed: %v", err)
 	}

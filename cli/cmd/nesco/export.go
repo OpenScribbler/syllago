@@ -17,16 +17,26 @@ import (
 var exportCmd = &cobra.Command{
 	Use:   "export",
 	Short: "Export content to a provider's install location",
-	Long: `Converts and installs content from local/ into a provider's location.
+	Long: `Converts and installs content into a provider's location.
+
+By default, exports from local/ only. Use --source to choose which items:
+  local    (default) Items in local/ (your imports and personal content)
+  shared   Git-tracked items in the repo (not from registries or built-in)
+  registry Items from cloned registries
+  builtin  Built-in meta-content (nesco-guide, nesco-author)
+  all      Everything
 
 Nesco automatically converts between provider formats. A Claude Code skill
 becomes a Kiro steering file, a Cursor rule becomes a Windsurf rule, etc.
 Metadata that can't be represented structurally is embedded as prose.
 
 Examples:
-  nesco export --to cursor                         Export all content to Cursor
-  nesco export --to kiro --type skills             Export only skills to Kiro
-  nesco export --to gemini-cli --name research     Export a specific item
+  nesco export --to cursor                             Export local content to Cursor
+  nesco export --to kiro --type skills                 Export only skills to Kiro
+  nesco export --to gemini-cli --name research         Export a specific item
+  nesco export --to cursor --source shared             Export shared repo content
+  nesco export --to claude-code --source all            Export everything
+  nesco export --to all                                 Export to every known provider
 
 Use "nesco import" first to bring content into nesco, then "nesco export"
 to install it for any provider.
@@ -37,10 +47,11 @@ current working directory's provider config (e.g., .kiro/steering/).`,
 }
 
 func init() {
-	exportCmd.Flags().String("to", "", "Provider slug to export to (required)")
+	exportCmd.Flags().String("to", "", "Provider slug to export to, or \"all\" for every provider (required)")
 	exportCmd.MarkFlagRequired("to")
 	exportCmd.Flags().String("type", "", "Filter to a specific content type (e.g., skills, rules)")
 	exportCmd.Flags().String("name", "", "Filter by item name (substring match)")
+	exportCmd.Flags().String("source", "local", "Which items to export: local (default), shared, registry, builtin, all")
 	exportCmd.Flags().String("llm-hooks", "skip", "How to handle LLM-evaluated hooks: skip (drop with warning) or generate (create wrapper scripts)")
 	rootCmd.AddCommand(exportCmd)
 }
@@ -71,9 +82,16 @@ func runExport(cmd *cobra.Command, args []string) error {
 	}
 
 	toSlug, _ := cmd.Flags().GetString("to")
+
+	// "all" exports to every known provider in sequence.
+	if toSlug == "all" {
+		return runExportAll(cmd, root)
+	}
+
 	prov := findProviderBySlug(toSlug)
 	if prov == nil {
 		slugs := providerSlugs()
+		slugs = append(slugs, "all")
 		output.PrintError(1, "unknown provider: "+toSlug,
 			"Available: "+strings.Join(slugs, ", "))
 		return output.SilentError(fmt.Errorf("unknown provider: %s", toSlug))
@@ -81,6 +99,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 
 	typeFilter, _ := cmd.Flags().GetString("type")
 	nameFilter, _ := cmd.Flags().GetString("name")
+	sourceFilter, _ := cmd.Flags().GetString("source")
 	llmHooksMode, _ := cmd.Flags().GetString("llm-hooks")
 
 	// Configure the hooks converter with the LLM hooks mode.
@@ -88,16 +107,20 @@ func runExport(cmd *cobra.Command, args []string) error {
 		hooksConv.LLMHooksMode = llmHooksMode
 	}
 
-	// Scan the catalog to find local (local/) items.
-	cat, err := catalog.Scan(root)
+	// Scan the catalog. Use ScanWithRegistries when we need non-local sources.
+	projectRoot, _ := findProjectRoot()
+	if projectRoot == "" {
+		projectRoot = root
+	}
+	cat, err := catalog.Scan(root, projectRoot)
 	if err != nil {
 		return fmt.Errorf("scanning catalog: %w", err)
 	}
 
-	// Collect only local items, applying filters.
+	// Collect items matching source, type, and name filters.
 	var items []catalog.ContentItem
 	for _, item := range cat.Items {
-		if !item.Local {
+		if !filterBySource(item, sourceFilter) {
 			continue
 		}
 		if typeFilter != "" && string(item.Type) != typeFilter {
@@ -110,7 +133,10 @@ func runExport(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(items) == 0 {
-		msg := "no items found in local/"
+		msg := "no items found"
+		if sourceFilter != "all" {
+			msg += " in " + sourceFilter
+		}
 		if typeFilter != "" || nameFilter != "" {
 			msg += " matching filters"
 		}
@@ -126,6 +152,11 @@ func runExport(cmd *cobra.Command, args []string) error {
 	result := exportResult{}
 
 	for _, item := range items {
+		// Warn about built-in or example content before processing.
+		if msg := exportWarnMessage(item); msg != "" {
+			fmt.Fprintf(output.ErrWriter, "  warning: %s is %s\n", item.Name, msg)
+		}
+
 		// Check if provider supports this type via SupportsType.
 		if prov.SupportsType != nil && !prov.SupportsType(item.Type) {
 			skip := skippedItem{
@@ -303,6 +334,71 @@ func runExport(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// runExportAll exports to every known provider in sequence. It calls runExport
+// for each provider by temporarily setting the --to flag. This reuses all existing
+// export logic (filters, converter, etc.) without duplication.
+func runExportAll(cmd *cobra.Command, root string) error {
+	typeFilter, _ := cmd.Flags().GetString("type")
+	nameFilter, _ := cmd.Flags().GetString("name")
+
+	type providerSummary struct {
+		Slug     string
+		Exported int
+		Skipped  int
+		Err      error
+	}
+
+	var summaries []providerSummary
+
+	for _, prov := range provider.AllProviders {
+		if !output.JSON {
+			fmt.Fprintf(output.Writer, "\n--- %s (%s) ---\n", prov.Name, prov.Slug)
+		}
+
+		// Set --to to this provider's slug, run the normal export, then restore.
+		cmd.Flags().Set("to", prov.Slug)
+		err := runExport(cmd, nil)
+
+		s := providerSummary{Slug: prov.Slug, Err: err}
+		summaries = append(summaries, s)
+	}
+
+	// Restore --to to "all" so the flag state is consistent for callers.
+	cmd.Flags().Set("to", "all")
+
+	// Print summary.
+	if !output.JSON {
+		fmt.Fprintf(output.Writer, "\n=== Export All Summary ===\n")
+		hasErrors := false
+		for _, s := range summaries {
+			status := "ok"
+			if s.Err != nil {
+				status = "error: " + s.Err.Error()
+				hasErrors = true
+			}
+			fmt.Fprintf(output.Writer, "  %-20s %s\n", s.Slug, status)
+		}
+
+		// Show filter reminder if filters were active.
+		if typeFilter != "" || nameFilter != "" {
+			filters := []string{}
+			if typeFilter != "" {
+				filters = append(filters, "type="+typeFilter)
+			}
+			if nameFilter != "" {
+				filters = append(filters, "name="+nameFilter)
+			}
+			fmt.Fprintf(output.Writer, "  (filtered by %s)\n", strings.Join(filters, ", "))
+		}
+
+		if hasErrors {
+			return fmt.Errorf("one or more provider exports failed")
+		}
+	}
+
+	return nil
+}
+
 // effectiveProvider returns the source provider for an item. For provider-specific
 // types (rules, hooks, commands) this comes from the directory structure. For universal
 // types (skills, agents, mcp) it comes from .nesco.yaml metadata.
@@ -398,4 +494,36 @@ func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlu
 
 	// No conversion needed — fall through to default copy
 	return nil, false
+}
+
+// exportWarnMessage returns a warning string if the item is example or built-in
+// content. These items are provided by nesco and may conflict with provider defaults
+// or aren't intended for direct use. Returns "" for normal items.
+func exportWarnMessage(item catalog.ContentItem) string {
+	if item.IsExample() {
+		return "example content (for reference, not intended for direct use)"
+	}
+	if item.IsBuiltin() {
+		return "built-in nesco content (may conflict with provider defaults)"
+	}
+	return ""
+}
+
+// filterBySource returns true if the item matches the given source filter.
+// Valid source values: "local", "shared", "registry", "builtin", "all".
+func filterBySource(item catalog.ContentItem, source string) bool {
+	switch source {
+	case "local":
+		return item.Local
+	case "shared":
+		return !item.Local && item.Registry == "" && !item.IsBuiltin()
+	case "registry":
+		return item.Registry != ""
+	case "builtin":
+		return item.IsBuiltin()
+	case "all":
+		return true
+	default:
+		return item.Local
+	}
 }

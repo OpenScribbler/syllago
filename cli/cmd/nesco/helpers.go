@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/OpenScribbler/nesco/cli/internal/catalog"
 	"github.com/OpenScribbler/nesco/cli/internal/output"
 	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
@@ -68,4 +70,43 @@ func findProviderBySlug(slug string) *provider.Provider {
 		}
 	}
 	return nil
+}
+
+// findItemByPath parses a path like "type/name" or "type/provider/name" and
+// finds the matching item in the catalog.
+func findItemByPath(cat *catalog.Catalog, path string) (*catalog.ContentItem, error) {
+	parts := strings.Split(path, "/")
+
+	switch len(parts) {
+	case 2:
+		// type/name
+		typeName, itemName := parts[0], parts[1]
+		for i := range cat.Items {
+			if string(cat.Items[i].Type) == typeName && cat.Items[i].Name == itemName {
+				return &cat.Items[i], nil
+			}
+		}
+
+	case 3:
+		// Try type/provider/name first (provider-specific content).
+		typeName, providerOrType, name := parts[0], parts[1], parts[2]
+		for i := range cat.Items {
+			item := &cat.Items[i]
+			if string(item.Type) == typeName && item.Provider == providerOrType && item.Name == name {
+				return item, nil
+			}
+		}
+		// Fallback: try registry/type/name (the first part is a registry name).
+		for i := range cat.Items {
+			item := &cat.Items[i]
+			if item.Registry == typeName && string(item.Type) == providerOrType && item.Name == name {
+				return item, nil
+			}
+		}
+
+	default:
+		return nil, fmt.Errorf("invalid path format: %q (expected type/name or type/provider/name)", path)
+	}
+
+	return nil, fmt.Errorf("item not found: %s", path)
 }

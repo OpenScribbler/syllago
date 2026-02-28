@@ -1,0 +1,7 @@
+id: example-kitchen-sink-rules-windsurf
+name: example-kitchen-sink-rules
+description: Example Windsurf rule with always-active mode demonstrating all available fields
+tags:
+  - builtin
+  - example
+hidden: true

@@ -68,6 +68,10 @@ var (
 	builtinStyle = lipgloss.NewStyle().
 			Foreground(accentColor)
 
+	// Example content badge (dim purple, distinct from builtinStyle)
+	exampleStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.AdaptiveColor{Light: "#9D7ACC", Dark: "#A78BFA"})
+
 	// Table header (bold muted — distinct from help text)
 	tableHeaderStyle = lipgloss.NewStyle().
 				Foreground(mutedColor).

@@ -79,6 +79,19 @@ type ContentItem struct {
 	Registry           string         // non-empty if item came from a git registry (value is the registry name)
 }
 
+// IsExample returns true if this item is tagged as example content.
+func (ci ContentItem) IsExample() bool {
+	if ci.Meta == nil {
+		return false
+	}
+	for _, tag := range ci.Meta.Tags {
+		if tag == "example" {
+			return true
+		}
+	}
+	return false
+}
+
 // IsBuiltin returns true if this item is tagged as built-in meta-content.
 func (ci ContentItem) IsBuiltin() bool {
 	if ci.Meta == nil {
@@ -94,8 +107,9 @@ func (ci ContentItem) IsBuiltin() bool {
 
 // Catalog holds all discovered content items and the repo root they came from.
 type Catalog struct {
-	Items    []ContentItem
-	RepoRoot string
+	Items      []ContentItem
+	Overridden []ContentItem // lower-precedence items shadowed by higher-precedence ones
+	RepoRoot   string
 }
 
 // ByType returns all items of a given type.

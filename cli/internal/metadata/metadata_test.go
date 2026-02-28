@@ -3,6 +3,7 @@ package metadata
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -101,5 +102,66 @@ func TestProviderMetadata(t *testing.T) {
 	}
 	if loaded.ID != m.ID {
 		t.Errorf("ID mismatch: got %s, want %s", loaded.ID, m.ID)
+	}
+}
+
+func TestMetaCreatedAt(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	now := time.Now().UTC().Truncate(time.Second)
+	m := &Meta{
+		ID:        NewID(),
+		Name:      "test",
+		CreatedAt: &now,
+	}
+	if err := Save(dir, m); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	loaded, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if loaded.CreatedAt == nil {
+		t.Fatal("CreatedAt was not persisted")
+	}
+	if !loaded.CreatedAt.Equal(now) {
+		t.Errorf("CreatedAt: got %v, want %v", *loaded.CreatedAt, now)
+	}
+	// ImportedAt should be nil — CreatedAt and ImportedAt are independent
+	if loaded.ImportedAt != nil {
+		t.Error("ImportedAt should be nil for a created (not imported) item")
+	}
+}
+
+func TestMetaHiddenField(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	itemDir := filepath.Join(dir, "test-item")
+
+	m := &Meta{
+		ID:     NewID(),
+		Name:   "test-skill",
+		Hidden: true,
+	}
+	if err := Save(itemDir, m); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	loaded, err := Load(itemDir)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if !loaded.Hidden {
+		t.Error("Hidden should be true after round-trip")
+	}
+
+	// Verify false (zero value) is omitted
+	m2 := &Meta{ID: NewID(), Name: "visible"}
+	if err := Save(filepath.Join(dir, "item2"), m2); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+	data, _ := os.ReadFile(MetaPath(filepath.Join(dir, "item2")))
+	if strings.Contains(string(data), "hidden") {
+		t.Error("hidden field should be omitted when false")
 	}
 }

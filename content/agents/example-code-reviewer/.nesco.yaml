@@ -1,0 +1,9 @@
+name: example-code-reviewer
+description: AI agent personality for conducting thorough, constructive code reviews
+version: "1.0"
+hidden: true
+tags:
+  - example
+  - agent
+  - code-review
+  - feedback

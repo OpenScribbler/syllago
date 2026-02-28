@@ -1,7 +1,0 @@
-name: concise-output
-description: Rule for concise, focused output without unnecessary verbosity
-version: "1.0"
-tags:
-  - rule
-  - claude-code
-  - communication-style

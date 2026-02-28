@@ -19,13 +19,15 @@ type CleanupResult struct {
 // from UUID collisions or malicious ID duplication.
 func CleanupPromotedItems(cat *Catalog) ([]CleanupResult, error) {
 	// Build a map of shared items keyed by ID, storing name and type for validation.
+	// Shared items may be in cat.Items or cat.Overridden (the local copy wins precedence,
+	// pushing the shared copy to Overridden after applyPrecedence runs).
 	type sharedInfo struct {
 		Name string
 		Type ContentType
 	}
 	sharedByID := make(map[string]sharedInfo)
-	for _, item := range cat.Items {
-		if !item.Local && item.Meta != nil && item.Meta.ID != "" {
+	for _, item := range append(cat.Items, cat.Overridden...) {
+		if !item.Local && item.Registry == "" && item.Meta != nil && item.Meta.ID != "" {
 			sharedByID[item.Meta.ID] = sharedInfo{Name: item.Name, Type: item.Type}
 		}
 	}

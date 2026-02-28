@@ -172,8 +172,8 @@ func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
 			return m, nil
 		}
 		m.clonedPath = msg.path
-		// Scan the cloned repo for content
-		cat, err := catalog.Scan(msg.path)
+		// Scan the cloned repo for content (cloned repo is self-contained; both roots are the same)
+		cat, err := catalog.Scan(msg.path, msg.path)
 		if err != nil {
 			m.cleanup()
 			m.message = fmt.Sprintf("Scan failed: %s", err)

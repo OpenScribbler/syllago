@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/nesco/cli/internal/metadata"
 )
 
 func TestItemsNavigationUpDown(t *testing.T) {
@@ -384,4 +385,68 @@ func indexOf(s, substr string) int {
 		}
 	}
 	return -1
+}
+
+func TestExampleBadgeRendered(t *testing.T) {
+	items := []catalog.ContentItem{
+		{
+			Name:        "example-skill",
+			Description: "An example skill",
+			Type:        catalog.Skills,
+			Path:        "/tmp/skills/example-skill",
+			Meta:        &metadata.Meta{Tags: []string{"example"}},
+		},
+		{
+			Name:        "normal-skill",
+			Description: "A normal skill",
+			Type:        catalog.Skills,
+			Path:        "/tmp/skills/normal-skill",
+		},
+	}
+
+	m := newItemsModel(catalog.Skills, items, nil, "/tmp")
+	m.width = 100
+	m.height = 30
+
+	view := m.View()
+	assertContains(t, view, "[EXAMPLE]")
+	// The normal skill should NOT have the example badge
+	// (It has no meta at all, so no badge)
+	assertNotContains(t, view, "[BUILT-IN]")
+}
+
+func TestHiddenCountInFooter(t *testing.T) {
+	items := []catalog.ContentItem{
+		{
+			Name:        "visible-skill",
+			Description: "Visible",
+			Type:        catalog.Skills,
+			Path:        "/tmp/skills/visible",
+		},
+	}
+	m := newItemsModel(catalog.Skills, items, nil, "/tmp")
+	m.width = 100
+	m.height = 30
+	m.hiddenCount = 3
+
+	view := m.View()
+	assertContains(t, view, "H show 3 hidden")
+}
+
+func TestNoHiddenCountWhenZero(t *testing.T) {
+	items := []catalog.ContentItem{
+		{
+			Name:        "visible-skill",
+			Description: "Visible",
+			Type:        catalog.Skills,
+			Path:        "/tmp/skills/visible",
+		},
+	}
+	m := newItemsModel(catalog.Skills, items, nil, "/tmp")
+	m.width = 100
+	m.height = 30
+	m.hiddenCount = 0
+
+	view := m.View()
+	assertNotContains(t, view, "hidden")
 }

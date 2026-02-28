@@ -57,6 +57,7 @@ type itemsModel struct {
 	providers   []provider.Provider
 	repoRoot    string
 	cursor      int
+	hiddenCount int // number of hidden items filtered out
 	width       int
 	height      int
 }
@@ -314,10 +315,13 @@ func (m itemsModel) View() string {
 			typeTag = " " + countStyle.Render("("+item.Type.Label()+")")
 		}
 
-		// Build description prefix: [BUILT-IN] for meta-tools, [LOCAL] for local items, [registry-name] for registry items
+		// Build description prefix: [EXAMPLE] for examples, [BUILT-IN] for meta-tools, [LOCAL] for local items, [registry-name] for registry items
 		localPrefix := ""
 		localPrefixLen := 0
-		if item.IsBuiltin() {
+		if item.IsExample() {
+			localPrefix = exampleStyle.Render("[EXAMPLE]") + " "
+			localPrefixLen = 10 // "[EXAMPLE] "
+		} else if item.IsBuiltin() {
 			localPrefix = builtinStyle.Render("[BUILT-IN]") + " "
 			localPrefixLen = 11 // "[BUILT-IN] "
 		} else if item.Local {
@@ -359,7 +363,11 @@ func (m itemsModel) View() string {
 		s += helpStyle.Render(fmt.Sprintf("  (%d more below)", len(m.items)-end)) + "\n"
 	}
 
-	s += "\n" + helpStyle.Render("up/down navigate • enter detail • esc back • / search")
+	footer := "up/down navigate • enter detail • esc back • / search"
+	if m.hiddenCount > 0 {
+		footer += fmt.Sprintf(" • H show %d hidden", m.hiddenCount)
+	}
+	s += "\n" + helpStyle.Render(footer)
 	return s
 }
 

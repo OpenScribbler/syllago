@@ -40,7 +40,7 @@ func TestCleanupPromotedItems_RequiresNameMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cat, err := Scan(root)
+	cat, err := Scan(root, root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestCleanupPromotedItems_RequiresTypeMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cat, err := Scan(root)
+	cat, err := Scan(root, root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func TestCleanupPromotedItems_CleansExactMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cat, err := Scan(root)
+	cat, err := Scan(root, root)
 	if err != nil {
 		t.Fatal(err)
 	}

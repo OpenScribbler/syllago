@@ -105,7 +105,11 @@ var backfillCmd = &cobra.Command{
 			return err
 		}
 
-		cat, err := catalog.Scan(root)
+		projectRoot, _ := findProjectRoot()
+		if projectRoot == "" {
+			projectRoot = root
+		}
+		cat, err := catalog.Scan(root, projectRoot)
 		if err != nil {
 			return fmt.Errorf("scanning catalog: %w", err)
 		}
@@ -238,7 +242,12 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	cat, err := catalog.ScanWithRegistries(root, regSources)
+	projectRoot, _ := findProjectRoot()
+	if projectRoot == "" {
+		projectRoot = root
+	}
+
+	cat, err := catalog.ScanWithRegistries(root, projectRoot, regSources)
 	if err != nil {
 		return fmt.Errorf("catalog scan failed: %w", err)
 	}
@@ -250,7 +259,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "Cleaned up promoted item: %s (%s)\n", c.Name, c.Type)
 		}
 		// Rescan after cleanup
-		cat, err = catalog.ScanWithRegistries(root, regSources)
+		cat, err = catalog.ScanWithRegistries(root, projectRoot, regSources)
 		if err != nil {
 			return fmt.Errorf("error rescanning catalog: %w", err)
 		}
@@ -265,7 +274,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 	}
 
 	isReleaseBuild := buildCommit == "" && version != ""
-	app := tui.NewApp(cat, providers, version, autoUpdate, regSources, cfg, isReleaseBuild)
+	app := tui.NewApp(cat, providers, version, autoUpdate, regSources, cfg, isReleaseBuild, projectRoot)
 	zone.NewGlobal()
 	p := tea.NewProgram(app,
 		tea.WithAltScreen(),
@@ -277,10 +286,9 @@ func runTUI(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// findContentRepoRoot returns the repo root path. It tries:
+// findContentRepoRoot returns the path nesco uses as its content root. It tries:
 // 1. Build-time embedded path (via -ldflags)
-// 2. Walk up from cwd looking for a "skills/" directory
-// 3. Walk up from the binary's own location (handles aliases, PATH installs, bare go build)
+// 2. Config-aware resolution from the project root
 func findContentRepoRoot() (string, error) {
 	if repoRoot != "" {
 		if _, err := os.Stat(repoRoot); err == nil {
@@ -288,41 +296,31 @@ func findContentRepoRoot() (string, error) {
 		}
 	}
 
-	// Try walking up from CWD
-	if cwd, err := os.Getwd(); err == nil {
-		if root, err := findSkillsDir(cwd); err == nil {
-			return root, nil
-		}
+	projectRoot, err := findProjectRoot()
+	if err != nil {
+		return "", fmt.Errorf("could not find nesco content repository")
 	}
 
-	// Try walking up from the binary's own location (resolves symlinks)
-	if binPath, err := os.Executable(); err == nil {
-		if resolved, err := filepath.EvalSymlinks(binPath); err == nil {
-			if root, err := findSkillsDir(filepath.Dir(resolved)); err == nil {
-				return root, nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("could not find nesco content repository")
+	return resolveContentRoot(projectRoot)
 }
 
-// findSkillsDir walks up from dir looking for a "skills/" directory.
-// Declared as a var so tests can override it.
-var findSkillsDir = findSkillsDirImpl
-
-func findSkillsDirImpl(dir string) (string, error) {
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "skills")); err == nil {
-			return dir, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
+// resolveContentRoot applies the config-aware resolution order:
+// 1. If .nesco/config.json exists with contentRoot → use <projectRoot>/<contentRoot>
+// 2. Else if any content directory exists at project root → use project root
+// 3. Else → use project root (scanner handles empty gracefully)
+func resolveContentRoot(projectRoot string) (string, error) {
+	cfg, err := config.Load(projectRoot)
+	if err == nil && cfg.ContentRoot != "" {
+		return filepath.Join(projectRoot, cfg.ContentRoot), nil
 	}
-	return "", fmt.Errorf("no skills/ directory found above %s", dir)
+
+	for _, ct := range catalog.AllContentTypes() {
+		if _, err := os.Stat(filepath.Join(projectRoot, string(ct))); err == nil {
+			return projectRoot, nil
+		}
+	}
+
+	return projectRoot, nil
 }
 
 // semverRegex validates strict semver format (no 'v' prefix).
