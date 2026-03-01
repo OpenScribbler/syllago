@@ -96,23 +96,47 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 	case tabOverview:
 		body = m.renderOverviewTab()
 	case tabFiles:
-		body = m.renderFilesTab()
+		if m.item.Type == catalog.Loadouts {
+			body = m.renderLoadoutContentsTab()
+		} else {
+			body = m.renderFilesTab()
+		}
 	case tabInstall:
-		body = m.renderInstallTab()
+		if m.item.Type == catalog.Loadouts {
+			body = m.renderLoadoutApplyTab()
+		} else {
+			body = m.renderInstallTab()
+		}
 	}
 
 	return pinned, body
 }
 
 // renderTabBar renders the tab selector (Overview | Files | Install).
+// For loadouts, tabs are (Overview | Contents | Apply).
 func (m detailModel) renderTabBar() string {
-	tabs := []struct {
+	var tabs []struct {
 		label string
 		tab   detailTab
-	}{
-		{"Overview", tabOverview},
-		{"Files", tabFiles},
-		{"Install", tabInstall},
+	}
+	if m.item.Type == catalog.Loadouts {
+		tabs = []struct {
+			label string
+			tab   detailTab
+		}{
+			{"Overview", tabOverview},
+			{"Contents", tabFiles},
+			{"Apply", tabInstall},
+		}
+	} else {
+		tabs = []struct {
+			label string
+			tab   detailTab
+		}{
+			{"Overview", tabOverview},
+			{"Files", tabFiles},
+			{"Install", tabInstall},
+		}
 	}
 
 	var parts []string
@@ -363,6 +387,96 @@ func (m detailModel) renderInstallTab() string {
 	return s
 }
 
+// renderLoadoutContentsTab shows the loadout manifest items grouped by type.
+// This gives the user a quick overview of what a loadout includes without
+// needing to read the raw loadout.yaml file.
+func (m detailModel) renderLoadoutContentsTab() string {
+	if m.loadoutManifestErr != "" {
+		return errorMsgStyle.Render("Error parsing loadout: "+m.loadoutManifestErr) + "\n"
+	}
+	if m.loadoutManifest == nil {
+		return helpStyle.Render("No loadout manifest found.") + "\n"
+	}
+
+	manifest := m.loadoutManifest
+	var s string
+
+	s += labelStyle.Render("Loadout Contents") + "\n"
+	s += helpStyle.Render(fmt.Sprintf("  Provider: %s  |  %d items total", manifest.Provider, manifest.ItemCount())) + "\n\n"
+
+	// Show items grouped by type, in display order. The order matches
+	// AllContentTypes() so the user sees a consistent layout.
+	typeOrder := []struct {
+		label string
+		items []string
+	}{
+		{"Rules", manifest.Rules},
+		{"Hooks", manifest.Hooks},
+		{"Skills", manifest.Skills},
+		{"Agents", manifest.Agents},
+		{"MCP Configs", manifest.MCP},
+		{"Commands", manifest.Commands},
+		{"Prompts", manifest.Prompts},
+		{"Apps", manifest.Apps},
+	}
+
+	for _, group := range typeOrder {
+		if len(group.items) == 0 {
+			continue
+		}
+		s += labelStyle.Render(fmt.Sprintf("  %s (%d):", group.label, len(group.items))) + "\n"
+		for _, name := range group.items {
+			s += "    " + valueStyle.Render(name) + "\n"
+		}
+		s += "\n"
+	}
+
+	return s
+}
+
+// renderLoadoutApplyTab shows the apply mode selector (Preview / Try / Keep).
+// The user picks a mode and presses Enter to trigger the apply flow.
+//
+// Why three modes:
+//   - Preview: dry run, shows what would happen without touching files
+//   - Try: applies temporarily, auto-reverts when the session ends
+//   - Keep: applies permanently until explicitly removed
+func (m detailModel) renderLoadoutApplyTab() string {
+	if m.loadoutManifestErr != "" {
+		return errorMsgStyle.Render("Error parsing loadout: "+m.loadoutManifestErr) + "\n"
+	}
+	if m.loadoutManifest == nil {
+		return helpStyle.Render("No loadout manifest found.") + "\n"
+	}
+
+	var s string
+	s += labelStyle.Render("Apply Loadout") + "\n"
+	s += helpStyle.Render("  Choose a mode and press Enter:") + "\n\n"
+
+	type modeOpt struct {
+		name string
+		desc string
+	}
+	modes := []modeOpt{
+		{"Preview", "Dry run — show what would be applied without changing anything"},
+		{"Try", "Apply temporarily — auto-reverts when the session ends"},
+		{"Keep", "Apply permanently — stays until you run: nesco loadout remove"},
+	}
+
+	for i, mode := range modes {
+		prefix := "  "
+		nameStyle := itemStyle
+		if i == m.loadoutModeCursor {
+			prefix = "> "
+			nameStyle = selectedItemStyle
+		}
+		s += fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(mode.name))
+		s += fmt.Sprintf("      %s\n", helpStyle.Render(mode.desc))
+	}
+
+	return s
+}
+
 func (m detailModel) View() string {
 	pinned, body := m.renderContentSplit()
 
@@ -440,13 +554,17 @@ func (m detailModel) renderHelp() string {
 			helpParts = append(helpParts, "c copy")
 		}
 	case tabFiles:
-		if m.fileViewer.viewing {
+		if m.item.Type == catalog.Loadouts {
+			helpParts = append(helpParts, "up/down scroll")
+		} else if m.fileViewer.viewing {
 			helpParts = append(helpParts, "up/down scroll", "esc back to files")
 		} else if len(m.item.Files) > 0 {
 			helpParts = append(helpParts, "up/down navigate", "enter view")
 		}
 	case tabInstall:
-		if m.item.Type == catalog.Prompts {
+		if m.item.Type == catalog.Loadouts {
+			helpParts = append(helpParts, "up/down navigate", "enter apply")
+		} else if m.item.Type == catalog.Prompts {
 			helpParts = append(helpParts, "up/down scroll")
 			if m.item.Body != "" {
 				helpParts = append(helpParts, "c copy", "s save")

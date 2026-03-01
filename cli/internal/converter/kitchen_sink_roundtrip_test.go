@@ -21,12 +21,12 @@ import (
 
 // skillRoundTripTarget defines a provider to test for skill round-trips.
 type skillRoundTripTarget struct {
-	name           string
-	provider       provider.Provider
-	sourceSlug     string // provider slug used when re-canonicalizing the rendered output
-	lossyName      bool   // true if name is expected to be lost
-	lossyDesc      bool   // true if description is expected to be lost
-	bodySubstring  string // required substring in the round-tripped body
+	name          string
+	provider      provider.Provider
+	sourceSlug    string // provider slug used when re-canonicalizing the rendered output
+	lossyName     bool   // true if name is expected to be lost
+	lossyDesc     bool   // true if description is expected to be lost
+	bodySubstring string // required substring in the round-tripped body
 }
 
 func TestKitchenSinkSkillRoundTrip(t *testing.T) {

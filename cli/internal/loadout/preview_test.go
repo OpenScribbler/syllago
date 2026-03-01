@@ -218,6 +218,76 @@ func TestPreview_NewHook(t *testing.T) {
 	}
 }
 
+func TestPreview_NewMCP(t *testing.T) {
+	t.Parallel()
+	repoRoot := t.TempDir()
+	os.MkdirAll(filepath.Join(repoRoot, ".nesco"), 0755)
+
+	prov := provider.Provider{
+		Name: "test-provider",
+		Slug: "test",
+		InstallDir: func(home string, ct catalog.ContentType) string {
+			return ""
+		},
+	}
+
+	refs := []ResolvedRef{
+		{Type: catalog.MCP, Name: "new-server", Item: catalog.ContentItem{
+			Name: "new-server", Type: catalog.MCP,
+		}},
+	}
+
+	actions, err := Preview(refs, prov, repoRoot, t.TempDir())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(actions) != 1 {
+		t.Fatalf("expected 1 action, got %d", len(actions))
+	}
+	if actions[0].Action != "merge-mcp" {
+		t.Errorf("expected merge-mcp for new MCP, got %s", actions[0].Action)
+	}
+}
+
+func TestPreview_MCPAlreadyInstalled(t *testing.T) {
+	t.Parallel()
+	repoRoot := t.TempDir()
+	os.MkdirAll(filepath.Join(repoRoot, ".nesco"), 0755)
+
+	// Write installed.json with an existing MCP entry
+	inst := &installer.Installed{
+		MCP: []installer.InstalledMCP{
+			{Name: "existing-server", Source: "export"},
+		},
+	}
+	installer.SaveInstalled(repoRoot, inst)
+
+	prov := provider.Provider{
+		Name: "test-provider",
+		Slug: "test",
+		InstallDir: func(home string, ct catalog.ContentType) string {
+			return ""
+		},
+	}
+
+	refs := []ResolvedRef{
+		{Type: catalog.MCP, Name: "existing-server", Item: catalog.ContentItem{
+			Name: "existing-server", Type: catalog.MCP,
+		}},
+	}
+
+	actions, err := Preview(refs, prov, repoRoot, t.TempDir())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(actions) != 1 {
+		t.Fatalf("expected 1 action, got %d", len(actions))
+	}
+	if actions[0].Action != "skip-exists" {
+		t.Errorf("expected skip-exists for already-installed MCP, got %s", actions[0].Action)
+	}
+}
+
 func TestPreview_RegularFileConflict(t *testing.T) {
 	t.Parallel()
 	homeDir := t.TempDir()

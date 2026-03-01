@@ -111,6 +111,92 @@ func TestCreate_ManifestContents(t *testing.T) {
 	}
 }
 
+func TestRestore_RestoresContent(t *testing.T) {
+	t.Parallel()
+
+	// Restore writes files back to os.UserHomeDir()/rel, so we need to
+	// use the real home dir. Create a subdirectory under home for isolation.
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("getting home dir: %v", err)
+	}
+
+	projectRoot := t.TempDir()
+	testDir := filepath.Join(home, ".nesco-test-restore-"+filepath.Base(projectRoot))
+	os.MkdirAll(testDir, 0755)
+	t.Cleanup(func() { os.RemoveAll(testDir) })
+
+	// Write original content
+	testFile := filepath.Join(testDir, "settings.json")
+	originalContent := []byte(`{"original": true}`)
+	os.WriteFile(testFile, originalContent, 0644)
+
+	// Create snapshot that backs up the file
+	snapshotDir, err := Create(projectRoot, "restore-test", "keep",
+		[]string{testFile}, nil, nil)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Overwrite the file (simulating apply changes)
+	os.WriteFile(testFile, []byte(`{"modified": true}`), 0644)
+
+	// Load and restore
+	manifest, loadedDir, err := Load(projectRoot)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if loadedDir != snapshotDir {
+		t.Fatalf("snapshot dir mismatch")
+	}
+
+	if err := Restore(snapshotDir, manifest); err != nil {
+		t.Fatalf("Restore failed: %v", err)
+	}
+
+	// Verify content was restored
+	data, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("reading restored file: %v", err)
+	}
+	if string(data) != string(originalContent) {
+		t.Errorf("file not restored: got %q, want %q", string(data), string(originalContent))
+	}
+}
+
+func TestLoad_ReturnsLatestSnapshot(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+
+	// Create two snapshots with different timestamps by manually creating dirs.
+	// The Load function sorts by directory name (timestamp-based, newest first).
+	snapshotsPath := filepath.Join(projectRoot, ".nesco", "snapshots")
+
+	// Create an older snapshot
+	olderDir := filepath.Join(snapshotsPath, "20250101T000000")
+	os.MkdirAll(olderDir, 0755)
+	olderManifest := `{"loadoutName":"older","mode":"keep","createdAt":"2025-01-01T00:00:00Z","symlinks":[]}`
+	os.WriteFile(filepath.Join(olderDir, "manifest.json"), []byte(olderManifest), 0644)
+
+	// Create a newer snapshot
+	newerDir := filepath.Join(snapshotsPath, "20250201T000000")
+	os.MkdirAll(newerDir, 0755)
+	newerManifest := `{"loadoutName":"newer","mode":"try","createdAt":"2025-02-01T00:00:00Z","symlinks":[]}`
+	os.WriteFile(filepath.Join(newerDir, "manifest.json"), []byte(newerManifest), 0644)
+
+	// Load should return the newer one
+	manifest, dir, err := Load(projectRoot)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if manifest.LoadoutName != "newer" {
+		t.Errorf("expected newest snapshot (newer), got %q", manifest.LoadoutName)
+	}
+	if dir != newerDir {
+		t.Errorf("expected dir %s, got %s", newerDir, dir)
+	}
+}
+
 func TestDelete_RemovesDir(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()

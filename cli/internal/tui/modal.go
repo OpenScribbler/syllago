@@ -289,6 +289,7 @@ const (
 	modalSave
 	modalPromote
 	modalAppScript
+	modalLoadoutApply
 )
 
 // openModalMsg is sent by sub-models (e.g. detailModel) to ask App to open a modal.

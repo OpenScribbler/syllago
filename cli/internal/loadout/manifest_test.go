@@ -99,6 +99,91 @@ func TestItemCount(t *testing.T) {
 	}
 }
 
+func TestParse_MissingName(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	f := filepath.Join(tmp, "loadout.yaml")
+	os.WriteFile(f, []byte("kind: loadout\nversion: 1\nprovider: claude-code\n"), 0644)
+
+	_, err := Parse(f)
+	if err == nil {
+		t.Fatal("expected error for missing name")
+	}
+}
+
+func TestParse_WrongVersion(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	f := filepath.Join(tmp, "loadout.yaml")
+	os.WriteFile(f, []byte("kind: loadout\nversion: 99\nprovider: claude-code\nname: test\n"), 0644)
+
+	_, err := Parse(f)
+	if err == nil {
+		t.Fatal("expected error for wrong version")
+	}
+}
+
+func TestParse_AllSectionsPopulated(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	f := filepath.Join(tmp, "loadout.yaml")
+	content := `kind: loadout
+version: 1
+provider: claude-code
+name: full-loadout
+description: all sections
+rules:
+  - rule-a
+hooks:
+  - hook-a
+skills:
+  - skill-a
+agents:
+  - agent-a
+mcp:
+  - mcp-a
+commands:
+  - cmd-a
+prompts:
+  - prompt-a
+apps:
+  - app-a
+`
+	os.WriteFile(f, []byte(content), 0644)
+
+	m, err := Parse(f)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if m.ItemCount() != 8 {
+		t.Errorf("expected 8 items, got %d", m.ItemCount())
+	}
+	refs := m.RefsByType()
+	if len(refs) != 8 {
+		t.Errorf("expected 8 content types, got %d", len(refs))
+	}
+}
+
+func TestParse_NonexistentFile(t *testing.T) {
+	t.Parallel()
+	_, err := Parse("/nonexistent/path/loadout.yaml")
+	if err == nil {
+		t.Fatal("expected error for nonexistent file")
+	}
+}
+
+func TestParse_InvalidYAML(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	f := filepath.Join(tmp, "loadout.yaml")
+	os.WriteFile(f, []byte("{{invalid yaml"), 0644)
+
+	_, err := Parse(f)
+	if err == nil {
+		t.Fatal("expected error for invalid YAML")
+	}
+}
+
 func TestRefsByType(t *testing.T) {
 	t.Parallel()
 	m := &Manifest{

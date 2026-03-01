@@ -368,8 +368,8 @@ func TestGeminiToCodexRoundtrip(t *testing.T) {
 	assertContains(t, codexStr, "[agents.planner]")
 	assertContains(t, codexStr, "Plan the implementation strategy")
 	// Tools in Codex vocabulary (same as Copilot CLI)
-	assertContains(t, codexStr, "view")   // Read → view
-	assertContains(t, codexStr, "shell")  // Bash → shell
+	assertContains(t, codexStr, "view")  // Read → view
+	assertContains(t, codexStr, "shell") // Bash → shell
 
 	// Should have warning for temperature (not supported in Codex)
 	// temperature is in Gemini-specific fields but Codex doesn't have it

@@ -151,7 +151,7 @@ tools = ["shell", "apply_patch"]
 
 	// Verify canonical form has correct tool names
 	canonicalStr := string(canonical.Content)
-	assertContains(t, canonicalStr, "Bash")  // shell → Bash
+	assertContains(t, canonicalStr, "Bash") // shell → Bash
 	// apply_patch maps to both Write and Edit in Copilot CLI; reverse translation
 	// picks one (map iteration order). Either is correct.
 	if !strings.Contains(canonicalStr, "Write") && !strings.Contains(canonicalStr, "Edit") {

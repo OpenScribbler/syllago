@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/OpenScribbler/nesco/cli/internal/catalog"
 	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/nesco/cli/internal/loadout"
 	"github.com/OpenScribbler/nesco/cli/internal/promote"
 	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
@@ -76,6 +78,11 @@ type App struct {
 	commitsBehind int
 
 	showHidden bool // when true, hidden items are included in lists
+
+	// Loadout apply state
+	loadoutApplyItem catalog.ContentItem // the loadout item being applied
+	loadoutApplyMode string              // "preview", "try", or "keep"
+	activeLoadout    string              // name of currently active loadout (empty if none)
 
 	width    int
 	height   int
@@ -314,6 +321,45 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.focus = focusModal
 		return a, nil
 
+	case openLoadoutApplyMsg:
+		a.loadoutApplyItem = msg.item
+		a.loadoutApplyMode = msg.mode
+		if msg.mode == "preview" {
+			// Preview mode: run immediately without confirmation
+			return a, a.runLoadoutApply(msg.item, msg.mode)
+		}
+		// Try/Keep modes: show confirmation modal first
+		var body string
+		if msg.mode == "try" {
+			body = "This loadout is temporary. It will auto-revert when the session ends.\nIf auto-revert fails, run: nesco loadout remove\n\nApply?"
+		} else {
+			body = "This loadout will stay until you run: nesco loadout remove\n\nApply?"
+		}
+		a.modal = newConfirmModal(fmt.Sprintf("Apply %q (%s)?", msg.item.Name, msg.mode), body)
+		a.modal.purpose = modalLoadoutApply
+		a.focus = focusModal
+		return a, nil
+
+	case loadoutApplyDoneMsg:
+		if msg.err != nil {
+			a.detail.message = fmt.Sprintf("Apply failed: %s", msg.err)
+			a.detail.messageIsErr = true
+		} else {
+			// Build success message from the actions
+			var summary []string
+			for _, action := range msg.result.Actions {
+				summary = append(summary, fmt.Sprintf("%s %s: %s", action.Action, action.Name, action.Detail))
+			}
+			if msg.mode == "preview" {
+				a.detail.message = fmt.Sprintf("Preview (%d actions):\n%s", len(msg.result.Actions), strings.Join(summary, "\n"))
+			} else {
+				a.detail.message = fmt.Sprintf("Applied (%s mode, %d actions)", msg.mode, len(msg.result.Actions))
+				a.activeLoadout = a.loadoutApplyItem.Name
+			}
+			a.detail.messageIsErr = false
+		}
+		return a, nil
+
 	case tea.MouseMsg:
 		// Forward wheel events to active screen for scroll support
 		if msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown {
@@ -482,6 +528,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						}
 					case modalAppScript:
 						return a, a.detail.runAppScript()
+					case modalLoadoutApply:
+						return a, a.runLoadoutApply(a.loadoutApplyItem, a.loadoutApplyMode)
 					}
 				}
 			}
@@ -952,6 +1000,45 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return a, nil
+}
+
+// runLoadoutApply runs a loadout apply operation as a background command.
+// The loadout engine handles parsing, resolving, validating, and applying.
+// Results are sent back as a loadoutApplyDoneMsg.
+func (a App) runLoadoutApply(item catalog.ContentItem, mode string) tea.Cmd {
+	cat := a.catalog
+	providers := a.providers
+	projectRoot := a.projectRoot
+	return func() tea.Msg {
+		manifest, err := loadout.Parse(filepath.Join(item.Path, "loadout.yaml"))
+		if err != nil {
+			return loadoutApplyDoneMsg{err: err, mode: mode}
+		}
+
+		// Find the target provider by matching the manifest's provider field
+		var targetProv provider.Provider
+		found := false
+		for _, p := range providers {
+			if p.Slug == manifest.Provider && p.Detected {
+				targetProv = p
+				found = true
+				break
+			}
+		}
+		if !found {
+			return loadoutApplyDoneMsg{
+				err:  fmt.Errorf("provider %q not detected", manifest.Provider),
+				mode: mode,
+			}
+		}
+
+		result, err := loadout.Apply(manifest, cat, targetProv, loadout.ApplyOptions{
+			Mode:        mode,
+			ProjectRoot: projectRoot,
+			RepoRoot:    cat.RepoRoot,
+		})
+		return loadoutApplyDoneMsg{result: result, err: err, mode: mode}
+	}
 }
 
 func (a App) View() string {

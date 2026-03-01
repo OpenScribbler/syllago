@@ -84,6 +84,7 @@ func TestRenderInstallTabHasActionButtons(t *testing.T) {
 		t.Error("renderInstallTab() should contain ANSI escape sequences from zone.Mark() calls on action buttons")
 	}
 }
+
 // TestRenderOverviewTabShowsRiskIndicators verifies that hook items with command
 // hooks display a risk indicator in the Overview tab.
 func TestRenderOverviewTabShowsRiskIndicators(t *testing.T) {

@@ -3,26 +3,26 @@ package tui
 import "github.com/charmbracelet/bubbles/key"
 
 type keyMap struct {
-	Up        key.Binding
-	Down      key.Binding
-	Enter     key.Binding
-	Back      key.Binding
-	Quit      key.Binding
-	Search    key.Binding
-	Install   key.Binding
-	Uninstall key.Binding
-	Copy      key.Binding
-	Save      key.Binding
-	Space     key.Binding
-	EnvSetup  key.Binding
-	Promote   key.Binding
-	Tab       key.Binding
-	ShiftTab  key.Binding
-	Help      key.Binding
-	Home      key.Binding
-	End       key.Binding
-	Left      key.Binding
-	Right     key.Binding
+	Up           key.Binding
+	Down         key.Binding
+	Enter        key.Binding
+	Back         key.Binding
+	Quit         key.Binding
+	Search       key.Binding
+	Install      key.Binding
+	Uninstall    key.Binding
+	Copy         key.Binding
+	Save         key.Binding
+	Space        key.Binding
+	EnvSetup     key.Binding
+	Promote      key.Binding
+	Tab          key.Binding
+	ShiftTab     key.Binding
+	Help         key.Binding
+	Home         key.Binding
+	End          key.Binding
+	Left         key.Binding
+	Right        key.Binding
 	PageUp       key.Binding
 	PageDown     key.Binding
 	ToggleHidden key.Binding

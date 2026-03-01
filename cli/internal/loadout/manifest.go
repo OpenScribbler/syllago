@@ -10,9 +10,9 @@ import (
 
 // Manifest represents a parsed loadout.yaml file.
 type Manifest struct {
-	Kind        string   `yaml:"kind"`        // must be "loadout"
-	Version     int      `yaml:"version"`     // must be 1
-	Provider    string   `yaml:"provider"`    // e.g. "claude-code"
+	Kind        string   `yaml:"kind"`     // must be "loadout"
+	Version     int      `yaml:"version"`  // must be 1
+	Provider    string   `yaml:"provider"` // e.g. "claude-code"
 	Name        string   `yaml:"name"`
 	Description string   `yaml:"description"`
 	Rules       []string `yaml:"rules,omitempty"`
