@@ -418,6 +418,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Check sidebar zones
 		for i := 0; i < a.sidebar.totalItems(); i++ {
 			if zone.Get(fmt.Sprintf("sidebar-%d", i)).InBounds(msg) {
+				a.resetInstallModal() // cancel any in-progress install when navigating away
 				a.sidebar.cursor = i
 				a.screen = screenCategory
 				a.focus = focusSidebar
@@ -467,6 +468,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Check breadcrumb zones (detail and items screens)
 		if zone.Get("crumb-home").InBounds(msg) {
+			a.resetInstallModal() // cancel any in-progress install when navigating away
 			a.screen = screenCategory
 			a.focus = focusSidebar
 			return a, nil
@@ -498,6 +500,17 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			for zoneID, char := range btnChars {
 				if zone.Get(zoneID).InBounds(msg) {
 					return a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(char)})
+				}
+			}
+		}
+		// Check provider checkbox zones (Install tab)
+		if a.screen == screenDetail && a.detail.activeTab == tabInstall {
+			detected := a.detail.detectedProviders()
+			for i := range detected {
+				if zone.Get(fmt.Sprintf("prov-check-%d", i)).InBounds(msg) {
+					a.detail.provCheck.cursor = i
+					a.detail.provCheck.checks[i] = !a.detail.provCheck.checks[i]
+					return a, nil
 				}
 			}
 		}
@@ -584,12 +597,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.focus = focusContent
 				if a.instModal.confirmed {
 					envCmd := a.detail.doInstallFromModal(a.instModal)
-					a.instModal = installModal{} // reset after use
+					a.resetInstallModal()
 					if envCmd != nil {
 						return a, envCmd
 					}
 				} else {
-					a.instModal = installModal{} // reset on cancel
+					a.resetInstallModal() // prevent ghost installs from stale state
 				}
 			}
 			return a, cmd
@@ -1026,6 +1039,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return a, nil
+}
+
+// resetInstallModal clears all install modal state. Called whenever the install
+// modal is dismissed (cancelled or confirmed) or the user navigates away from
+// the detail screen while the modal might be open, preventing ghost installs.
+func (a *App) resetInstallModal() {
+	a.instModal = installModal{}
 }
 
 // runLoadoutApply runs a loadout apply operation as a background command.

@@ -331,6 +331,124 @@ func TestAppScriptKeyEmitsOpenModalMsg(t *testing.T) {
 	}
 }
 
+func TestInstallModalEscapeResetsState(t *testing.T) {
+	// Open the install modal, advance to step 2 (method selection), then cancel
+	// via Escape. The App's instModal must be fully zeroed — not just inactive —
+	// so stale location/method choices cannot influence a future install.
+	item := catalog.ContentItem{
+		Name: "test-item",
+		Type: catalog.Agents,
+		Path: t.TempDir(),
+	}
+	p := provider.Provider{
+		Name:     "TestProvider",
+		Detected: true,
+		Slug:     "test",
+		SupportsType: func(ct catalog.ContentType) bool { return true },
+		InstallDir:   func(_ string, _ catalog.ContentType) string { return t.TempDir() },
+	}
+
+	// Start with an install modal already open (as if openInstallModalMsg was received)
+	a := App{
+		width:  80,
+		height: 24,
+		screen: screenDetail,
+		focus:  focusModal,
+		instModal: newInstallModal(item, []provider.Provider{p}, "/tmp/repo"),
+	}
+
+	// Advance to step 2: move cursor to "Project" then press Enter to reach method step
+	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyDown}) // locationCursor → 1 (project)
+	a = m.(App)
+	m, _ = a.Update(tea.KeyMsg{Type: tea.KeyEnter}) // advance to installStepMethod
+	a = m.(App)
+
+	if a.instModal.step != installStepMethod {
+		t.Fatalf("expected installStepMethod after Enter, got step %d", a.instModal.step)
+	}
+	if a.instModal.locationCursor != 1 {
+		t.Fatalf("expected locationCursor=1 (project), got %d", a.instModal.locationCursor)
+	}
+
+	// Escape at method step goes back to location step (one step back, not cancel)
+	m, _ = a.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	a = m.(App)
+	if a.instModal.step != installStepLocation {
+		t.Fatalf("expected back at installStepLocation, got step %d", a.instModal.step)
+	}
+
+	// Escape at location step closes and cancels the modal
+	m, _ = a.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	a = m.(App)
+
+	// The modal must be fully reset — zero value, not just active=false
+	if a.instModal.active {
+		t.Error("instModal.active should be false after cancel")
+	}
+	if a.instModal.confirmed {
+		t.Error("instModal.confirmed should be false after cancel")
+	}
+	if a.instModal.locationCursor != 0 {
+		t.Errorf("instModal.locationCursor should be reset to 0, got %d", a.instModal.locationCursor)
+	}
+	if a.instModal.methodCursor != 0 {
+		t.Errorf("instModal.methodCursor should be reset to 0, got %d", a.instModal.methodCursor)
+	}
+	if a.instModal.step != installStepLocation {
+		t.Errorf("instModal.step should be reset to installStepLocation (0), got %d", a.instModal.step)
+	}
+}
+
+func TestInstallModalNavigateAwayResetsState(t *testing.T) {
+	// Simulate navigating away from screenDetail while instModal is active.
+	// The resetInstallModal helper (called by mouse navigation paths) must zero
+	// out the modal so a later re-entry to the detail screen starts clean.
+	item := catalog.ContentItem{
+		Name: "test-item",
+		Type: catalog.Agents,
+		Path: t.TempDir(),
+	}
+	p := provider.Provider{
+		Name:     "TestProvider",
+		Detected: true,
+		Slug:     "test",
+		SupportsType: func(ct catalog.ContentType) bool { return true },
+		InstallDir:   func(_ string, _ catalog.ContentType) string { return t.TempDir() },
+	}
+
+	// Build an App with a mid-flow install modal: step 2 with a non-default cursor.
+	modal := newInstallModal(item, []provider.Provider{p}, "/tmp/repo")
+	modal.step = installStepMethod
+	modal.locationCursor = 1 // project-level selected
+	modal.methodCursor = 1   // copy selected
+	a := App{
+		width:     80,
+		height:    24,
+		screen:    screenDetail,
+		focus:     focusModal,
+		instModal: modal,
+	}
+
+	// Call resetInstallModal directly — this is what mouse navigation paths invoke
+	a.resetInstallModal()
+
+	if a.instModal.active {
+		t.Error("instModal.active should be false after reset")
+	}
+	if a.instModal.confirmed {
+		t.Error("instModal.confirmed should be false after reset")
+	}
+	if a.instModal.step != installStepLocation {
+		t.Errorf("instModal.step should be reset to 0 (installStepLocation), got %d", a.instModal.step)
+	}
+	if a.instModal.locationCursor != 0 {
+		t.Errorf("instModal.locationCursor should be reset to 0, got %d", a.instModal.locationCursor)
+	}
+	if a.instModal.methodCursor != 0 {
+		t.Errorf("instModal.methodCursor should be reset to 0, got %d", a.instModal.methodCursor)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Regression tests: modal escape behavior at the App routing level
 // ---------------------------------------------------------------------------
