@@ -584,9 +584,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.focus = focusContent
 				if a.instModal.confirmed {
 					envCmd := a.detail.doInstallFromModal(a.instModal)
+					a.instModal = installModal{} // reset after use
 					if envCmd != nil {
 						return a, envCmd
 					}
+				} else {
+					a.instModal = installModal{} // reset on cancel
 				}
 			}
 			return a, cmd
@@ -1478,12 +1481,14 @@ func (a App) renderFooter() string {
 	crumb := a.breadcrumb()
 	var helpText string
 	switch a.screen {
-	case screenDetail:
-		helpText = "Esc: back   Tab: switch tab   ?: help   q: quit"
-	case screenItems:
-		helpText = "/: search   Enter: detail   Esc: sidebar   ?: help   q: quit"
-	default:
+	case screenCategory:
 		helpText = "Tab: switch panel   /: search   ?: help   q: quit"
+	case screenDetail:
+		helpText = "Esc: back   Tab: switch tab   ?: help"
+	case screenItems:
+		helpText = "/: search   Enter: detail   Esc: back   ?: help"
+	default:
+		helpText = "Esc: back   ?: help"
 	}
 
 	// Pad the gap between help text and breadcrumb so crumb is right-aligned
