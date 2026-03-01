@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/installer"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // PlannedAction describes one action the loadout apply would take.

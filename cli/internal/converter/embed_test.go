@@ -6,7 +6,7 @@ import (
 
 func TestConversionMarker(t *testing.T) {
 	got := ConversionMarker("claude-code")
-	assertEqual(t, `<!-- nesco:converted from="claude-code" -->`, got)
+	assertEqual(t, `<!-- syllago:converted from="claude-code" -->`, got)
 }
 
 func TestBuildConversionNotes(t *testing.T) {
@@ -15,7 +15,7 @@ func TestBuildConversionNotes(t *testing.T) {
 		"Run in an isolated context.",
 	})
 	assertContains(t, notes, "---\n")
-	assertContains(t, notes, `<!-- nesco:converted from="claude-code" -->`)
+	assertContains(t, notes, `<!-- syllago:converted from="claude-code" -->`)
 	assertContains(t, notes, "**Tool restriction:** Use only read_file and grep_search tools.")
 	assertContains(t, notes, "Run in an isolated context.")
 }
@@ -47,7 +47,7 @@ func TestStripConversionNotes(t *testing.T) {
 More instructions.
 
 ---
-<!-- nesco:converted from="claude-code" -->
+<!-- syllago:converted from="claude-code" -->
 **Tool restriction:** Use only read_file and grep_search tools.
 Run in an isolated context.
 `

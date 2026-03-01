@@ -8,9 +8,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/config"
-	"github.com/OpenScribbler/nesco/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 // registryEntry holds display data for one registry row.
@@ -103,7 +103,7 @@ func (m registriesModel) View() string {
 
 	if len(m.entries) == 0 {
 		s += helpStyle.Render("  No registries configured.") + "\n\n"
-		s += helpStyle.Render("  Add one with: nesco registry add <git-url>") + "\n"
+		s += helpStyle.Render("  Add one with: syllago registry add <git-url>") + "\n"
 		s += "\n" + helpStyle.Render("esc back")
 		return s
 	}
@@ -152,7 +152,7 @@ func (m registriesModel) View() string {
 
 	s += "\n"
 	s += helpStyle.Render("up/down navigate • enter browse items • esc back") + "\n"
-	s += helpStyle.Render("add: nesco registry add <url> • sync: nesco registry sync • remove: nesco registry remove <name>") + "\n"
+	s += helpStyle.Render("add: syllago registry add <url> • sync: syllago registry sync • remove: syllago registry remove <name>") + "\n"
 
 	return s
 }

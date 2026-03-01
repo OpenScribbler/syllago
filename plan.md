@@ -6,7 +6,7 @@ Implement four components of the contribution model:
 1. **GitHub Action safety net** — auto-close external PRs with a friendly redirect
 2. **GitHub Issue Form** — structured YAML issue template as the lowest-friction fallback
 3. **Agent skill** — `contribute` skill that agents can load and run programmatically
-4. **`nesco contribute` CLI command** — interactive Go command with TUI flow
+4. **`syllago contribute` CLI command** — interactive Go command with TUI flow
 
 ---
 
@@ -18,7 +18,7 @@ Implement four components of the contribution model:
 - Checks if PR author is NOT in an allowlist (maintainers: `holdenhewett`, `OpenScribblerOwner`)
 - Also allows PRs from bots/actions (for Dependabot, Claude Code Action, etc.)
 - Auto-comments with a friendly message explaining the contribution model:
-  - Points to `nesco contribute` CLI command
+  - Points to `syllago contribute` CLI command
   - Points to the GitHub Issue Form as fallback
   - Explains the "ideas not code" philosophy briefly
   - Keeps tone warm, not dismissive
@@ -40,7 +40,7 @@ Structured YAML issue form with these fields:
 5. **Scope** — optional checkboxes: CLI, TUI, Skills, Agents, Prompts, Rules, Hooks, Commands, MCP, Documentation, Other
 6. **Additional Context** — optional textarea for links, screenshots, related issues
 
-Also create `.github/ISSUE_TEMPLATE/config.yml` to add a link to the `nesco contribute` CLI command guidance (and disable blank issues, directing people to the form).
+Also create `.github/ISSUE_TEMPLATE/config.yml` to add a link to the `syllago contribute` CLI command guidance (and disable blank issues, directing people to the form).
 
 ---
 
@@ -50,24 +50,24 @@ Also create `.github/ISSUE_TEMPLATE/config.yml` to add a link to the `nesco cont
 
 Files:
 - `SKILL.md` — frontmatter + instructions for agents to run the contribution flow
-- `.nesco.yaml` — metadata
+- `.syllago.yaml` — metadata
 
 The skill will:
 - Instruct the agent to collect the same structured information as the CLI/issue form
 - Provide the question flow as a structured prompt
 - Define the output format (GitHub issue body in markdown)
 - Include instructions to use `gh issue create` if available, or output the formatted body
-- Reference the OpenScribbler/nesco repo specifically
+- Reference the OpenScribbler/syllago repo specifically
 
 This is the primary path for AI agents contributing to the project.
 
 ---
 
-## 4. `nesco contribute` CLI Command
+## 4. `syllago contribute` CLI Command
 
-**File:** `cli/cmd/nesco/contribute.go`
+**File:** `cli/cmd/syllago/contribute.go`
 
-A new cobra command `nesco contribute` that:
+A new cobra command `syllago contribute` that:
 
 ### Interactive Flow (when stdin is a TTY)
 Uses simple stdin prompts (consistent with existing `init` command patterns — no bubbletea TUI for this flow):
@@ -93,7 +93,7 @@ Accept JSON on stdin with the same fields for programmatic use.
 - `--type` — pre-select contribution type
 - `--dry-run` — generate output without submitting
 - `--json` — JSON output mode
-- `--repo` — target repo (defaults to OpenScribbler/nesco)
+- `--repo` — target repo (defaults to OpenScribbler/syllago)
 
 ---
 
@@ -114,8 +114,8 @@ Accept JSON on stdin with the same fields for programmatic use.
 | `.github/ISSUE_TEMPLATE/contribution.yml` | Create |
 | `.github/ISSUE_TEMPLATE/config.yml` | Create |
 | `skills/contribute/SKILL.md` | Create |
-| `skills/contribute/.nesco.yaml` | Create |
-| `cli/cmd/nesco/contribute.go` | Create |
-| `cli/cmd/nesco/contribute_test.go` | Create |
+| `skills/contribute/.syllago.yaml` | Create |
+| `cli/cmd/syllago/contribute.go` | Create |
+| `cli/cmd/syllago/contribute_test.go` | Create |
 
 No existing files are modified.

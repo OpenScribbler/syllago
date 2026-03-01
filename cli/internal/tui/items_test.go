@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
 
 func TestItemsNavigationUpDown(t *testing.T) {
@@ -284,7 +284,7 @@ func TestMyToolsEmptyGuidance(t *testing.T) {
 
 	view := m.View()
 	assertContains(t, view, "Import")
-	assertContains(t, view, "nesco add")
+	assertContains(t, view, "syllago add")
 }
 
 func TestItemsCursorIsASCII(t *testing.T) {

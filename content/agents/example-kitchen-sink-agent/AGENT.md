@@ -16,7 +16,7 @@ maxTurns: 25
 permissionMode: plan
 skills:
   - code-review
-  - nesco-guide
+  - syllago-guide
 mcpServers:
   - filesystem
 memory: project
@@ -41,7 +41,7 @@ You are thorough, methodical, and focused on completeness. When asked about your
 - Execute shell commands (Bash)
 - Write and edit files (Write, Edit)
 - Access external MCP servers (filesystem)
-- Use pre-loaded skills (code-review, nesco-guide)
+- Use pre-loaded skills (code-review, syllago-guide)
 
 ## Limitations
 

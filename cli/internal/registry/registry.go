@@ -9,17 +9,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"gopkg.in/yaml.v3"
 )
 
-// CacheDir returns the global registry cache directory (~/.nesco/registries).
+// CacheDir returns the global registry cache directory (~/.syllago/registries).
 func CacheDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("getting home directory: %w", err)
 	}
-	return filepath.Join(home, ".nesco", "registries"), nil
+	return filepath.Join(home, ".syllago", "registries"), nil
 }
 
 // CloneDir returns the path where a named registry is cloned.
@@ -44,8 +44,8 @@ func IsCloned(name string) bool {
 // NameFromURL derives a registry name from a git URL.
 // Examples:
 //
-//	"git@github.com:acme/nesco-tools.git" → "nesco-tools"
-//	"https://github.com/acme/nesco-tools"  → "nesco-tools"
+//	"git@github.com:acme/syllago-tools.git" → "syllago-tools"
+//	"https://github.com/acme/syllago-tools"  → "syllago-tools"
 func NameFromURL(url string) string {
 	// Take the last path segment
 	url = strings.TrimSuffix(url, "/")
@@ -111,7 +111,7 @@ func Sync(name string) error {
 	cmd := exec.Command("git", "-C", dir, "pull", "--ff-only")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("git pull failed for %q: %s\n(Hint: delete the clone at ~/.nesco/registries/%s and re-run `nesco registry add`)", name, strings.TrimSpace(string(out)), name)
+		return fmt.Errorf("git pull failed for %q: %s\n(Hint: delete the clone at ~/.syllago/registries/%s and re-run `syllago registry add`)", name, strings.TrimSpace(string(out)), name)
 	}
 	return nil
 }
@@ -159,7 +159,7 @@ type Manifest struct {
 	Description     string   `yaml:"description,omitempty"`
 	Maintainers     []string `yaml:"maintainers,omitempty"`
 	Version         string   `yaml:"version,omitempty"`
-	MinNescoVersion string   `yaml:"min_nesco_version,omitempty"`
+	MinSyllagoVersion string `yaml:"min_syllago_version,omitempty"`
 }
 
 // LoadManifest reads registry.yaml from the clone directory for the named registry.
@@ -172,10 +172,10 @@ func LoadManifest(name string) (*Manifest, error) {
 	return loadManifestFromDir(dir)
 }
 
-// KnownAliases maps short names to full git URLs for official nesco registries.
+// KnownAliases maps short names to full git URLs for official syllago registries.
 // Users can always use full URLs directly.
 var KnownAliases = map[string]string{
-	"nesco-tools": "https://github.com/OpenScribbler/nesco-tools.git",
+	"syllago-tools": "https://github.com/OpenScribbler/syllago-tools.git",
 }
 
 // ExpandAlias returns the full URL for a known alias, or the input unchanged if not an alias.

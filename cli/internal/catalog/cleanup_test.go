@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
 
 func TestCleanupPromotedItems_RequiresNameMatch(t *testing.T) {

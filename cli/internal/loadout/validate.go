@@ -3,7 +3,7 @@ package loadout
 import (
 	"fmt"
 
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // ValidationResult describes one validation issue.

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/OpenScribbler/nesco/cli/internal/snapshot"
+	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 )
 
 // staleThreshold is how old a --try snapshot can be before we consider it stale.

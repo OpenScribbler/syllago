@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -146,7 +146,7 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 		}
 	}
 	if found == -1 {
-		return "", fmt.Errorf("hook %s not found in hooks.%s (not installed by nesco)", item.Name, event)
+		return "", fmt.Errorf("hook %s not found in hooks.%s (not installed by syllago)", item.Name, event)
 	}
 
 	if err := backupFile(settingsPath); err != nil {

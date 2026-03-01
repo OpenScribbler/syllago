@@ -11,13 +11,13 @@ import (
 	"sort"
 	"time"
 
-	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 )
 
 // ErrNoSnapshot is returned by Load when no snapshot exists.
 var ErrNoSnapshot = errors.New("no active snapshot")
 
-// SnapshotManifest is written to .nesco/snapshots/<timestamp>/manifest.json.
+// SnapshotManifest is written to .syllago/snapshots/<timestamp>/manifest.json.
 type SnapshotManifest struct {
 	LoadoutName   string          `json:"loadoutName"`
 	Mode          string          `json:"mode"` // "try" or "keep"
@@ -33,7 +33,7 @@ type SymlinkRecord struct {
 	Target string `json:"target"` // absolute path it points to
 }
 
-// snapshotsDir returns the path to .nesco/snapshots/.
+// snapshotsDir returns the path to .syllago/snapshots/.
 func snapshotsDir(projectRoot string) string {
 	return filepath.Join(config.DirPath(projectRoot), "snapshots")
 }
@@ -101,7 +101,7 @@ func Create(projectRoot string, loadoutName string, mode string,
 }
 
 // Load reads the manifest from the most recent snapshot directory.
-// Returns ErrNoSnapshot if .nesco/snapshots/ is empty or missing.
+// Returns ErrNoSnapshot if .syllago/snapshots/ is empty or missing.
 func Load(projectRoot string) (*SnapshotManifest, string, error) {
 	dir := snapshotsDir(projectRoot)
 	entries, err := os.ReadDir(dir)

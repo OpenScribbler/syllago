@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 var Cursor = Provider{
@@ -39,7 +39,7 @@ var Cursor = Provider{
 		}
 	},
 	EmitPath: func(projectRoot string) string {
-		return filepath.Join(projectRoot, ".cursor", "rules", "nesco-context.mdc")
+		return filepath.Join(projectRoot, ".cursor", "rules", "syllago-context.mdc")
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {

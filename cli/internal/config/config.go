@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 )
 
-const DirName = ".nesco"
+const DirName = ".syllago"
 const FileName = "config.json"
 
 // Registry represents a git-based content source registered in this project.

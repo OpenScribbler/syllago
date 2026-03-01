@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OpenScribbler/nesco/cli/internal/snapshot"
+	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 )
 
 func TestCheckStaleSnapshot_NoSnapshot(t *testing.T) {

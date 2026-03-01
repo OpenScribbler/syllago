@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 )
 
-// InstalledHook records a hook placed into settings.json by nesco.
+// InstalledHook records a hook placed into settings.json by syllago.
 type InstalledHook struct {
 	Name        string    `json:"name"`
 	Event       string    `json:"event"`
@@ -20,14 +20,14 @@ type InstalledHook struct {
 	InstalledAt time.Time `json:"installedAt"`
 }
 
-// InstalledMCP records an MCP server placed into .claude.json by nesco.
+// InstalledMCP records an MCP server placed into .claude.json by syllago.
 type InstalledMCP struct {
 	Name        string    `json:"name"`
 	Source      string    `json:"source"`
 	InstalledAt time.Time `json:"installedAt"`
 }
 
-// InstalledSymlink records a symlink placed by nesco.
+// InstalledSymlink records a symlink placed by syllago.
 type InstalledSymlink struct {
 	Path        string    `json:"path"`   // absolute path of the symlink
 	Target      string    `json:"target"` // absolute path it points to
@@ -35,7 +35,7 @@ type InstalledSymlink struct {
 	InstalledAt time.Time `json:"installedAt"`
 }
 
-// Installed is the root structure for .nesco/installed.json.
+// Installed is the root structure for .syllago/installed.json.
 type Installed struct {
 	Hooks    []InstalledHook    `json:"hooks,omitempty"`
 	MCP      []InstalledMCP     `json:"mcp,omitempty"`
@@ -44,12 +44,12 @@ type Installed struct {
 
 const installedFileName = "installed.json"
 
-// installedPath returns the path to .nesco/installed.json.
+// installedPath returns the path to .syllago/installed.json.
 func installedPath(projectRoot string) string {
 	return filepath.Join(config.DirPath(projectRoot), installedFileName)
 }
 
-// LoadInstalled reads .nesco/installed.json.
+// LoadInstalled reads .syllago/installed.json.
 // Returns an empty Installed if the file does not exist.
 func LoadInstalled(projectRoot string) (*Installed, error) {
 	data, err := os.ReadFile(installedPath(projectRoot))
@@ -66,7 +66,7 @@ func LoadInstalled(projectRoot string) (*Installed, error) {
 	return &inst, nil
 }
 
-// SaveInstalled writes .nesco/installed.json atomically.
+// SaveInstalled writes .syllago/installed.json atomically.
 func SaveInstalled(projectRoot string, inst *Installed) error {
 	dir := config.DirPath(projectRoot)
 	if err := os.MkdirAll(dir, 0755); err != nil {

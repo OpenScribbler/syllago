@@ -67,7 +67,7 @@ func TestLoad_EmptySnapshotsDir(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 
-	os.MkdirAll(filepath.Join(tmpDir, ".nesco", "snapshots"), 0755)
+	os.MkdirAll(filepath.Join(tmpDir, ".syllago", "snapshots"), 0755)
 
 	_, _, err := Load(tmpDir)
 	if !errors.Is(err, ErrNoSnapshot) {
@@ -122,7 +122,7 @@ func TestRestore_RestoresContent(t *testing.T) {
 	}
 
 	projectRoot := t.TempDir()
-	testDir := filepath.Join(home, ".nesco-test-restore-"+filepath.Base(projectRoot))
+	testDir := filepath.Join(home, ".syllago-test-restore-"+filepath.Base(projectRoot))
 	os.MkdirAll(testDir, 0755)
 	t.Cleanup(func() { os.RemoveAll(testDir) })
 
@@ -170,7 +170,7 @@ func TestLoad_ReturnsLatestSnapshot(t *testing.T) {
 
 	// Create two snapshots with different timestamps by manually creating dirs.
 	// The Load function sorts by directory name (timestamp-based, newest first).
-	snapshotsPath := filepath.Join(projectRoot, ".nesco", "snapshots")
+	snapshotsPath := filepath.Join(projectRoot, ".syllago", "snapshots")
 
 	// Create an older snapshot
 	olderDir := filepath.Join(snapshotsPath, "20250101T000000")

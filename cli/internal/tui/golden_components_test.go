@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 func TestGoldenComponent_Sidebar(t *testing.T) {

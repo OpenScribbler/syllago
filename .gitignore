@@ -1,7 +1,7 @@
 # Build output
-cli/nesco
-cli/nesco.*
-cli/nesco-*
+cli/syllago
+cli/syllago.*
+cli/syllago-*
 
 # Local user content
 local/

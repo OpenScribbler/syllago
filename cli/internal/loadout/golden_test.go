@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 var updateGolden = flag.Bool("update-golden", false, "update golden files")
@@ -47,8 +47,8 @@ func TestGolden_HookMerge(t *testing.T) {
 	homeDir := t.TempDir()
 	projectRoot := t.TempDir()
 
-	// Create .nesco dir
-	os.MkdirAll(filepath.Join(projectRoot, ".nesco"), 0755)
+	// Create .syllago dir
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
 
 	// Provider directories
 	os.MkdirAll(filepath.Join(homeDir, ".claude", "rules"), 0755)

@@ -14,12 +14,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/gitutil"
-	"github.com/OpenScribbler/nesco/cli/internal/installer"
-	"github.com/OpenScribbler/nesco/cli/internal/metadata"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
-	"github.com/OpenScribbler/nesco/cli/internal/readme"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/gitutil"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/readme"
 )
 
 type importStep int
@@ -852,7 +852,7 @@ func (m importModel) doImport() (string, []string, error) {
 		}
 	}
 
-	// Generate .nesco.yaml metadata
+	// Generate .syllago.yaml metadata
 	now := time.Now()
 	source := m.sourcePath
 	if m.clonedPath != "" {
@@ -935,7 +935,7 @@ func (m importModel) doScaffold() (string, []string, error) {
 		os.WriteFile(llmPath, []byte(replaced), 0644) // non-fatal
 	}
 
-	// Generate .nesco.yaml
+	// Generate .syllago.yaml
 	now := time.Now()
 	meta := &metadata.Meta{
 		ID:         metadata.NewID(),
@@ -954,7 +954,7 @@ func (m importModel) doScaffold() (string, []string, error) {
 
 // startClone creates a temp dir and returns a tea.ExecProcess command for git clone.
 func (m importModel) startClone(url string) tea.Cmd {
-	tmpDir, err := os.MkdirTemp("", "nesco-import-*")
+	tmpDir, err := os.MkdirTemp("", "syllago-import-*")
 	if err != nil {
 		return func() tea.Msg {
 			return importCloneDoneMsg{err: fmt.Errorf("creating temp dir: %w", err)}
@@ -1263,7 +1263,7 @@ func renderDiffLine(line string, hOff int) string {
 }
 
 // collectRelativeFiles walks a directory and returns sorted relative file paths.
-// Skips symlinks and .nesco.yaml (metadata noise).
+// Skips symlinks and .syllago.yaml (metadata noise).
 func collectRelativeFiles(dir string) []string {
 	var files []string
 	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
@@ -1276,7 +1276,7 @@ func collectRelativeFiles(dir string) []string {
 		if d.IsDir() {
 			return nil
 		}
-		if d.Name() == ".nesco.yaml" {
+		if d.Name() == ".syllago.yaml" {
 			return nil
 		}
 		rel, err := filepath.Rel(dir, path)

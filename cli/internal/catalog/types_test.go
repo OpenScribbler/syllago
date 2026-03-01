@@ -3,7 +3,7 @@ package catalog
 import (
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
 
 func TestIsExample(t *testing.T) {

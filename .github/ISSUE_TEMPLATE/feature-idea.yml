@@ -39,7 +39,7 @@ body:
     id: areas
     attributes:
       label: What might this touch?
-      description: Which parts of nesco could be involved? Check all that apply.
+      description: Which parts of syllago could be involved? Check all that apply.
       options:
         - label: CLI
         - label: TUI

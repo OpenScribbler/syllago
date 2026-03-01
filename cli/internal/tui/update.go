@@ -16,7 +16,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/OpenScribbler/nesco/cli/internal/updater"
+	"github.com/OpenScribbler/syllago/cli/internal/updater"
 )
 
 type updateStep int
@@ -52,7 +52,7 @@ type updatePullMsg struct {
 	err    error
 }
 
-// updateModel handles the "Update nesco..." screen.
+// updateModel handles the "Update syllago..." screen.
 type updateModel struct {
 	repoRoot       string
 	localVersion   string
@@ -276,7 +276,7 @@ func (m updateModel) menuItemCount() int {
 }
 
 func (m updateModel) View() string {
-	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + " " + helpStyle.Render(">") + " " + titleStyle.Render("Update nesco") + "\n"
+	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + " " + helpStyle.Render(">") + " " + titleStyle.Render("Update syllago") + "\n"
 
 	switch m.step {
 	case stepUpdateMenu:
@@ -374,7 +374,7 @@ func (m updateModel) View() string {
 		}
 
 	case stepUpdatePull:
-		s += "\n" + m.spinner.View() + " " + helpStyle.Render("Updating nesco...") + "\n"
+		s += "\n" + m.spinner.View() + " " + helpStyle.Render("Updating syllago...") + "\n"
 
 	case stepUpdateDone:
 		if m.pullErr != nil {
@@ -382,7 +382,7 @@ func (m updateModel) View() string {
 			s += helpStyle.Render(m.pullErr.Error()) + "\n"
 		} else {
 			s += "\n" + successMsgStyle.Render(fmt.Sprintf("Updated to v%s", m.remoteVersion)) + "\n"
-			s += helpStyle.Render("Restart nesco to complete the update.") + "\n"
+			s += helpStyle.Render("Restart syllago to complete the update.") + "\n"
 		}
 		s += "\n" + helpStyle.Render("esc to return")
 	}

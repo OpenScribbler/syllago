@@ -25,7 +25,7 @@ func GitWrapperScript(realGit string) string {
 	}
 
 	return fmt.Sprintf(`#!/bin/sh
-# Nesco sandbox git wrapper — blocks network operations.
+# Syllago sandbox git wrapper — blocks network operations.
 SUBCMD="${1:-}"
 case "$SUBCMD" in
 %s    config)

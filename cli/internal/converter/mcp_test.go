@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 func TestClaudeMCPToGemini(t *testing.T) {

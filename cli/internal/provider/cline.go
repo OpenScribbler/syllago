@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 var Cline = Provider{

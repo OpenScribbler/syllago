@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // Round-trip tests verify that canonicalize(render(canonicalize(input))) preserves

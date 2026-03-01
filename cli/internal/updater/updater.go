@@ -20,7 +20,7 @@ import (
 )
 
 // githubAPIURL is a var so tests can override it with an httptest server URL.
-var githubAPIURL = "https://api.github.com/repos/OpenScribbler/nesco/releases/latest"
+var githubAPIURL = "https://api.github.com/repos/OpenScribbler/syllago/releases/latest"
 
 // httpClient is a shared client with a 15-second timeout. GitHub is generally
 // fast; we don't want to hang the TUI or CLI waiting on a slow network.
@@ -54,7 +54,7 @@ func CheckLatest(currentVersion string) (ReleaseInfo, error) {
 		return ReleaseInfo{}, fmt.Errorf("building request: %w", err)
 	}
 	// GitHub requires a User-Agent header; requests without one get a 403.
-	req.Header.Set("User-Agent", "nesco-updater")
+	req.Header.Set("User-Agent", "syllago-updater")
 	req.Header.Set("Accept", "application/vnd.github+json")
 
 	resp, err := httpClient.Do(req)
@@ -105,7 +105,7 @@ func CheckLatest(currentVersion string) (ReleaseInfo, error) {
 // Update downloads and installs the latest release binary for the current
 // platform. progress is called with human-readable status messages as the
 // update proceeds. Returns nil on success; the caller should prompt the user
-// to restart nesco.
+// to restart syllago.
 func Update(currentVersion string, progress func(string)) error {
 	info, err := CheckLatest(currentVersion)
 	if err != nil {
@@ -121,10 +121,10 @@ func Update(currentVersion string, progress func(string)) error {
 		return fmt.Errorf("no release asset found for %s/%s", runtime.GOOS, runtime.GOARCH)
 	}
 
-	progress(fmt.Sprintf("Downloading nesco v%s...", info.Version))
+	progress(fmt.Sprintf("Downloading syllago v%s...", info.Version))
 
 	// Use a temp directory so both the binary and checksums file land together.
-	tmpDir, err := os.MkdirTemp("", "nesco-update-*")
+	tmpDir, err := os.MkdirTemp("", "syllago-update-*")
 	if err != nil {
 		return fmt.Errorf("creating temp dir: %w", err)
 	}
@@ -187,14 +187,14 @@ func Update(currentVersion string, progress func(string)) error {
 
 	// tmpDir's deferred RemoveAll is now harmless — the binary has been moved out.
 
-	progress(fmt.Sprintf("Updated to v%s. Restart nesco to use the new version.", info.Version))
+	progress(fmt.Sprintf("Updated to v%s. Restart syllago to use the new version.", info.Version))
 	return nil
 }
 
 // assetName returns the expected GitHub release asset filename for the current
-// platform. Matches the naming convention used in nesco's release workflow.
+// platform. Matches the naming convention used in syllago's release workflow.
 func assetName() string {
-	name := fmt.Sprintf("nesco-%s-%s", runtime.GOOS, runtime.GOARCH)
+	name := fmt.Sprintf("syllago-%s-%s", runtime.GOOS, runtime.GOARCH)
 	if runtime.GOOS == "windows" {
 		name += ".exe"
 	}
@@ -207,7 +207,7 @@ func downloadFile(url, destPath string) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("User-Agent", "nesco-updater")
+	req.Header.Set("User-Agent", "syllago-updater")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {

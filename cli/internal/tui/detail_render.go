@@ -8,8 +8,8 @@ import (
 
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 )
 
 // renderContent builds the full detail content (without scrolling or help bar).
@@ -460,7 +460,7 @@ func (m detailModel) renderLoadoutApplyTab() string {
 	modes := []modeOpt{
 		{"Preview", "Dry run — show what would be applied without changing anything"},
 		{"Try", "Apply temporarily — auto-reverts when the session ends"},
-		{"Keep", "Apply permanently — stays until you run: nesco loadout remove"},
+		{"Keep", "Apply permanently — stays until you run: syllago loadout remove"},
 	}
 
 	for i, mode := range modes {

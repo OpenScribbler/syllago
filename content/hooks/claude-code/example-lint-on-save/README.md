@@ -8,7 +8,7 @@ This hook triggers on the `PostToolUse` event, matching `Write|Edit` tool calls.
 
 ## Usage
 
-1. Install this hook via nesco
+1. Install this hook via syllago
 2. Replace the placeholder command in `hook.json` with your actual linter (e.g., `eslint --fix`, `gofmt -w`)
 
 ## Configuration

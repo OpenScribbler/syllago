@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
 
 func TestRenderContentSplitHasSeparator(t *testing.T) {

@@ -3,7 +3,7 @@ package parse
 import (
 	"path/filepath"
 
-	"github.com/OpenScribbler/nesco/cli/internal/model"
+	"github.com/OpenScribbler/syllago/cli/internal/model"
 )
 
 // GenericParser handles providers that use standard markdown files.

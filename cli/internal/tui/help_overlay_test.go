@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 func TestHelpOverlayToggle(t *testing.T) {

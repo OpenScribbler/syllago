@@ -19,7 +19,7 @@ var sensitiveBlocklist = []string{
 // projectMarkers are files/dirs that indicate a valid project root.
 var projectMarkers = []string{
 	".git",
-	".nesco",
+	".syllago",
 	"go.mod",
 	"package.json",
 	"Cargo.toml",
@@ -80,9 +80,9 @@ func ValidateDir(dir string, forceDir bool) error {
 	if err != nil {
 		return &DirSafetyError{Reason: "cannot compute path depth relative to home"}
 	}
-	// rel = "projects/nesco" → depth 2 (OK), "projects" → depth 1 (fail)
+	// rel = "projects/syllago" → depth 2 (OK), "projects" → depth 1 (fail)
 	if !strings.Contains(rel, string(filepath.Separator)) {
-		return &DirSafetyError{Reason: fmt.Sprintf("directory must be at least 2 levels below $HOME (e.g. ~/projects/nesco). Got: %s", rel)}
+		return &DirSafetyError{Reason: fmt.Sprintf("directory must be at least 2 levels below $HOME (e.g. ~/projects/syllago). Got: %s", rel)}
 	}
 
 	// Rule 3: project marker.

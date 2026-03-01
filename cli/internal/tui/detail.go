@@ -15,11 +15,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/installer"
-	"github.com/OpenScribbler/nesco/cli/internal/loadout"
-	"github.com/OpenScribbler/nesco/cli/internal/promote"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/loadout"
+	"github.com/OpenScribbler/syllago/cli/internal/promote"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 type appInstallDoneMsg struct {

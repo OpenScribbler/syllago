@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/OpenScribbler/nesco/cli/internal/model"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/model"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // Parser reads a provider-specific file and returns canonical sections.

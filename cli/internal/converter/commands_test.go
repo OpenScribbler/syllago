@@ -3,7 +3,7 @@ package converter
 import (
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 func TestClaudeCommandToGeminiTOML(t *testing.T) {
@@ -71,7 +71,7 @@ func TestClaudeCommandBehavioralEmbedding(t *testing.T) {
 	assertContains(t, out, "explore-focused approach")
 	assertContains(t, out, "model: opus")
 	assertContains(t, out, "isolated context")
-	assertContains(t, out, "nesco:converted")
+	assertContains(t, out, "syllago:converted")
 }
 
 func TestCodexCommandToClaudeRoundTrip(t *testing.T) {

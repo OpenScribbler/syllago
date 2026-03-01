@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/converter"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -189,7 +189,7 @@ func uninstallMCP(item catalog.ContentItem, prov provider.Provider, repoRoot str
 	}
 	instIdx := inst.FindMCP(item.Name)
 	if instIdx < 0 {
-		return "", fmt.Errorf("%s was not installed by nesco", key)
+		return "", fmt.Errorf("%s was not installed by syllago", key)
 	}
 
 	if err := backupFile(cfgPath); err != nil {
@@ -232,14 +232,14 @@ func checkMCPStatus(item catalog.ContentItem, prov provider.Provider, repoRoot s
 		return StatusNotInstalled
 	}
 
-	// Check installed.json for nesco ownership
+	// Check installed.json for syllago ownership
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
 		return StatusInstalled // entry exists in config, can't verify ownership
 	}
 	if inst.FindMCP(item.Name) >= 0 {
-		return StatusInstalled // nesco-owned
+		return StatusInstalled // syllago-owned
 	}
-	// Entry exists in config but wasn't installed by nesco — still report installed
+	// Entry exists in config but wasn't installed by syllago — still report installed
 	return StatusInstalled
 }

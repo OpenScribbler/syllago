@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // --- Cursor → canonical → Windsurf ---
@@ -193,7 +193,7 @@ func TestCursorNotAlwaysApplyEmbedsScopeToClaude(t *testing.T) {
 	out := string(result.Content)
 	assertContains(t, out, "Conditional content.")
 	assertContains(t, out, "**Scope:** Apply when: Conditional rule")
-	assertContains(t, out, "nesco:converted")
+	assertContains(t, out, "syllago:converted")
 }
 
 // --- Round-trip tests ---

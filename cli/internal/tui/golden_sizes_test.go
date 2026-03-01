@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 // testSizes defines the additional terminal sizes to test at.
