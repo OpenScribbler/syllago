@@ -12,9 +12,10 @@ LDFLAGS := -X main.repoRoot=$(REPO_ROOT) -X main.buildCommit=$(COMMIT) -X main.v
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(OUTPUT) ./cmd/syllago
+	ln -sf $(OUTPUT) syll$(EXT)
 
 clean:
-	rm -f $(BINARY) $(BINARY).exe $(BINARY)-*
+	rm -f $(BINARY) $(BINARY).exe $(BINARY)-* syll syll.exe
 
 build-linux-amd64:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BINARY)-linux-amd64 ./cmd/syllago

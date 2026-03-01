@@ -98,7 +98,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 	if cfg == nil {
 		cfg = &config.Config{}
 	}
-	return App{
+	app := App{
 		catalog:         cat,
 		providers:       providers,
 		version:         version,
@@ -112,6 +112,9 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		sidebar:         newSidebarModel(cat, version, len(cfg.Registries)),
 		search:          newSearchModel(),
 	}
+	// Overwrite raw counts with visible-only counts (excludes hidden items)
+	app.refreshSidebarCounts()
+	return app
 }
 
 func (a App) Init() tea.Cmd {
@@ -155,6 +158,28 @@ func countHidden(items []catalog.ContentItem) int {
 		}
 	}
 	return count
+}
+
+// refreshSidebarCounts updates the sidebar counts to reflect the current
+// showHidden state. This ensures counts match what the user actually sees.
+func (a *App) refreshSidebarCounts() {
+	counts := make(map[catalog.ContentType]int)
+	for _, ct := range catalog.AllContentTypes() {
+		counts[ct] = len(a.visibleItems(a.catalog.ByType(ct)))
+	}
+	a.sidebar.counts = counts
+	a.sidebar.localCount = len(a.visibleItems(a.localItems()))
+}
+
+// localItems returns all local items from the catalog.
+func (a App) localItems() []catalog.ContentItem {
+	var result []catalog.ContentItem
+	for _, item := range a.catalog.Items {
+		if item.Local {
+			result = append(result, item)
+		}
+	}
+	return result
 }
 
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -205,8 +230,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cat, err := catalog.ScanWithRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
 				if err == nil {
 					a.catalog = cat
-					a.sidebar.counts = cat.CountByType()
-					a.sidebar.localCount = cat.CountLocal()
+					a.refreshSidebarCounts()
 				}
 			}
 			return a, cmd
@@ -242,8 +266,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.statusMessage = fmt.Sprintf("Imported %q but catalog rescan failed: %s", msg.name, err)
 		}
 		a.statusWarnings = msg.warnings
-		a.sidebar.counts = a.catalog.CountByType()
-		a.sidebar.localCount = a.catalog.CountLocal()
+		a.refreshSidebarCounts()
 		a.screen = screenCategory
 		a.importer.cleanup()
 		return a, nil
@@ -293,8 +316,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cat, err := catalog.ScanWithRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
 				if err == nil {
 					a.catalog = cat
-					a.sidebar.counts = cat.CountByType()
-					a.sidebar.localCount = cat.CountLocal()
+					a.refreshSidebarCounts()
 				}
 			}
 			return a, cmd
@@ -719,6 +741,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case screenCategory:
 			if key.Matches(msg, keys.ToggleHidden) {
 				a.showHidden = !a.showHidden
+				a.refreshSidebarCounts()
 				return a, nil
 			}
 			if a.focus == focusSidebar {
@@ -801,13 +824,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.screen = screenCategory
 				a.focus = focusSidebar
 				if a.catalog != nil {
-					a.sidebar.counts = a.catalog.CountByType()
-					a.sidebar.localCount = a.catalog.CountLocal()
+					a.refreshSidebarCounts()
 				}
 				return a, nil
 			}
 			if key.Matches(msg, keys.ToggleHidden) {
 				a.showHidden = !a.showHidden
+				a.refreshSidebarCounts()
 				ct := a.items.contentType
 				if ct == catalog.MyTools {
 					var localItems []catalog.ContentItem
@@ -1137,12 +1160,18 @@ var categoryDesc = map[catalog.ContentType]string{
 	catalog.Loadouts: "Curated content bundles for quick session setup",
 }
 
-// syllagoFontRaw is the "syllago" text in ANSI Shadow style.
-const syllagoFontRaw = `░████████   ░███████   ░███████   ░███████   ░███████
-░██    ░██ ░██    ░██ ░██        ░██    ░██ ░██    ░██
-░██    ░██ ░█████████  ░███████  ░██        ░██    ░██
-░██    ░██ ░██               ░██ ░██    ░██ ░██    ░██
-░██    ░██  ░███████   ░███████   ░███████   ░███████`
+// syllagoFontRaw is the "Syllago" text in block letter style.
+const syllagoFontRaw = ` █████████             ████  ████
+███░░░░░███           ░░███ ░░███
+░███    ░░░  █████ ████ ░███  ░███   ██████    ███████  ██████
+░░█████████ ░░███ ░███  ░███  ░███  ░░░░░███  ███░░███ ███░░███
+ ░░░░░░░░███ ░███ ░███  ░███  ░███   ███████ ░███ ░███░███ ░███
+ ███    ░███ ░███ ░███  ░███  ░███  ███░░███ ░███ ░███░███ ░███
+░░█████████  ░░███████  █████ █████░░████████░░███████░░██████
+ ░░░░░░░░░    ░░░░░███ ░░░░░ ░░░░░  ░░░░░░░░  ░░░░░███ ░░░░░░
+              ███ ░███                        ███ ░███
+             ░░██████                        ░░██████
+              ░░░░░░                          ░░░░░░`
 
 // syllagoPlantRaw is the syllago fractal plant ASCII art.
 const syllagoPlantRaw = `
@@ -1265,9 +1294,10 @@ func (a App) renderContentWelcome() string {
 	}
 
 	allTypes := catalog.AllContentTypes()
-	counts := make(map[catalog.ContentType]int)
-	if a.catalog != nil {
-		counts = a.catalog.CountByType()
+	// Use sidebar counts (already filtered by showHidden state)
+	counts := a.sidebar.counts
+	if counts == nil {
+		counts = make(map[catalog.ContentType]int)
 	}
 
 	configItems := []struct {
@@ -1281,12 +1311,12 @@ func (a App) renderContentWelcome() string {
 		{"Registries", "Manage git-based content sources from your team or organization", "welcome-registries"},
 	}
 
-	// Cards need ~33 lines of panel height. With ASCII art (+7), ~40 total.
-	// panelHeight = height - 2, so cards fit at height >= 35, art+cards at >= 42.
+	// Cards need ~33 lines of panel height. With ASCII art (+13), ~46 total.
+	// panelHeight = height - 2, so cards fit at height >= 35, art+cards at >= 48.
 	useCards := a.height >= 35
 
 	// --- ASCII art title (only when cards are showing and terminal is large) ---
-	if useCards && a.height >= 42 && contentW >= 55 {
+	if useCards && a.height >= 48 && contentW >= 75 {
 		font := trimArt(syllagoFontRaw)
 		s += lipgloss.PlaceHorizontal(contentW, lipgloss.Center, titleStyle.Render(font))
 		s += "\n\n"

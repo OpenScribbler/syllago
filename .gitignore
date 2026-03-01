@@ -2,6 +2,8 @@
 cli/syllago
 cli/syllago.*
 cli/syllago-*
+cli/syll
+cli/syll.exe
 
 # Local user content
 local/

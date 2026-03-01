@@ -293,7 +293,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 func findContentRepoRoot() (string, error) {
 	if repoRoot != "" {
 		if _, err := os.Stat(repoRoot); err == nil {
-			return repoRoot, nil
+			return resolveContentRoot(repoRoot)
 		}
 	}
 
