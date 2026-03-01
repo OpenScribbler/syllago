@@ -625,8 +625,8 @@ func (m installModal) View() string {
 
 		type opt struct{ name, desc string }
 		options := []opt{
-			{"Symlink (recommended)", "Stays in sync with repo. Auto-updates on git pull."},
-			{"Copy", "Independent copy. Won't change when repo updates."},
+			{"Symlink (recommended)", "Stays in sync with repo, auto-updates on pull"},
+			{"Copy", "Independent copy, won't change"},
 		}
 
 		for i, o := range options {
