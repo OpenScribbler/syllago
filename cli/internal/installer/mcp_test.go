@@ -103,9 +103,18 @@ func TestInstallMCP_WhitelistsFields(t *testing.T) {
 		t.Error("_internal_config should have been dropped")
 	}
 
-	// Should have _nesco marker
-	if !serverConfig.Get("_nesco").Bool() {
-		t.Error("_nesco marker missing")
+	// Should NOT have _nesco marker (removed — tracking is via installed.json)
+	if serverConfig.Get("_nesco").Exists() {
+		t.Error("_nesco marker should not be present")
+	}
+
+	// Verify installed.json was written
+	inst, err := LoadInstalled(tmpDir)
+	if err != nil {
+		t.Fatalf("loading installed.json: %v", err)
+	}
+	if inst.FindMCP("test-server") < 0 {
+		t.Error("test-server not found in installed.json")
 	}
 }
 

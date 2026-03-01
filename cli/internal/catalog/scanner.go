@@ -11,6 +11,7 @@ import (
 
 	"github.com/OpenScribbler/nesco/cli/internal/metadata"
 	"github.com/tidwall/gjson"
+	"gopkg.in/yaml.v3"
 )
 
 // validItemNameRe matches names safe for use in sjson/gjson key paths.
@@ -350,6 +351,19 @@ func scanProviderDir(itemDir string, ct ContentType, providerName string, local 
 					item.Description = readDescription(filepath.Join(itemDir, e.Name()))
 					break
 				}
+			}
+		}
+	case Loadouts:
+		// Load loadout.yaml for description
+		loadoutPath := filepath.Join(itemDir, "loadout.yaml")
+		data, readErr := os.ReadFile(loadoutPath)
+		if readErr == nil {
+			// Quick YAML parse for description field
+			var parsed struct {
+				Description string `yaml:"description"`
+			}
+			if yamlErr := yaml.Unmarshal(data, &parsed); yamlErr == nil && parsed.Description != "" {
+				item.Description = parsed.Description
 			}
 		}
 	}

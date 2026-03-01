@@ -9,16 +9,16 @@ nesco             │Home > Skills > alpha-skill
   Rules         1 │
   Hooks         1 │  # alpha-skill
   Commands      1 │         ╭────────────────────────────────────────╮
-  My Tools      1 │  Readme │                                        │
-  ─────────────   │         │  Confirm Uninstall                     │
-  Configuration   │         │                                        │
-  Import          │esc back │  Remove alpha-skill from all           │/p next/prev
-  Update          │         │  providers?                            │
-  Settings        │         │                                        │
-  Registries      │         │  [Enter/y] Confirm   [Esc/n] Cancel    │
-  Sandbox         │         │                                        │
-                  │         ╰────────────────────────────────────────╯
-
+  Loadouts      0 │  Readme │                                        │
+  My Tools      1 │         │  Confirm Uninstall                     │
+  ─────────────   │         │                                        │
+  Configuration   │esc back │  Remove alpha-skill from all           │/p next/prev
+  Import          │         │  providers?                            │
+  Update          │         │                                        │
+  Settings        │         │  [Enter/y] Confirm   [Esc/n] Cancel    │
+  Registries      │         │                                        │
+  Sandbox         │         ╰────────────────────────────────────────╯
+                  │
 
 
 

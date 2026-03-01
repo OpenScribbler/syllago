@@ -7,8 +7,9 @@ nesco             │  AI Tools
   MCP Configs   1 │  Rules       1 - Rule files that guide AI coding tool behavi
   Apps          1 │  Hooks       1 - Event-driven hooks for automation and valid
   Rules         1 │  Commands    1 - Custom slash commands for AI coding tools
-  Hooks         1 │
-  Commands      1 │  Configuration
+  Hooks         1 │  Loadouts    0 - Curated content bundles for quick session s
+  Commands      1 │
+  Loadouts      0 │  Configuration
   My Tools      1 │  Import       - Import your own AI tools from local files or
   ─────────────   │  Update       - Check for updates and pull latest changes
   Configuration   │  Settings     - Configure paths and providers
@@ -18,7 +19,6 @@ nesco             │  AI Tools
   Registries      │
   Sandbox         │
                   │
-
 
 
 

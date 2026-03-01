@@ -112,10 +112,10 @@ func TestDiscoverTracksUnsupportedTypes(t *testing.T) {
 		}
 	}
 
-	// Skills, Agents, Prompts, MCP, Apps, Hooks, Commands are not supported.
-	// AllContentTypes returns 8 types; only Rules is supported, so 7 unsupported.
-	if len(report.Unsupported) != 7 {
-		t.Errorf("expected 7 unsupported types, got %d: %v", len(report.Unsupported), report.Unsupported)
+	// Skills, Agents, Prompts, MCP, Apps, Hooks, Commands, Loadouts are not supported.
+	// AllContentTypes returns 9 types; only Rules is supported, so 8 unsupported.
+	if len(report.Unsupported) != 8 {
+		t.Errorf("expected 8 unsupported types, got %d: %v", len(report.Unsupported), report.Unsupported)
 	}
 }
 

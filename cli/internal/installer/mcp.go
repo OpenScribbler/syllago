@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/OpenScribbler/nesco/cli/internal/catalog"
 	"github.com/OpenScribbler/nesco/cli/internal/converter"
@@ -117,12 +118,6 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		return "", fmt.Errorf("serializing config: %w", err)
 	}
 
-	// Add _nesco marker
-	configData, err = sjson.SetBytes(configData, "_nesco", true)
-	if err != nil {
-		return "", fmt.Errorf("adding marker: %w", err)
-	}
-
 	// Read target config file
 	cfgPath, err := mcpConfigPath(prov, repoRoot)
 	if err != nil {
@@ -150,6 +145,20 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		return "", fmt.Errorf("writing %s: %w", cfgPath, err)
 	}
 
+	// Record in installed.json
+	inst, err := LoadInstalled(repoRoot)
+	if err != nil {
+		return "", fmt.Errorf("loading installed.json: %w", err)
+	}
+	inst.MCP = append(inst.MCP, InstalledMCP{
+		Name:        item.Name,
+		Source:      "export",
+		InstalledAt: time.Now(),
+	})
+	if err := SaveInstalled(repoRoot, inst); err != nil {
+		return "", fmt.Errorf("saving installed.json: %w", err)
+	}
+
 	return fmt.Sprintf("%s.%s in %s", jsonKey, item.Name, cfgPath), nil
 }
 
@@ -167,12 +176,19 @@ func uninstallMCP(item catalog.ContentItem, prov provider.Provider, repoRoot str
 	jsonKey := mcpConfigKey(prov)
 	key := jsonKey + "." + item.Name
 
-	// Check if it exists and has _nesco marker
+	// Check if entry exists in config file
 	entry := gjson.GetBytes(fileData, key)
 	if !entry.Exists() {
 		return "", fmt.Errorf("%s not found in %s", key, cfgPath)
 	}
-	if !gjson.GetBytes(fileData, key+"._nesco").Bool() {
+
+	// Check installed.json for ownership
+	inst, err := LoadInstalled(repoRoot)
+	if err != nil {
+		return "", fmt.Errorf("loading installed.json: %w", err)
+	}
+	instIdx := inst.FindMCP(item.Name)
+	if instIdx < 0 {
 		return "", fmt.Errorf("%s was not installed by nesco", key)
 	}
 
@@ -187,6 +203,12 @@ func uninstallMCP(item catalog.ContentItem, prov provider.Provider, repoRoot str
 
 	if err := writeJSONFile(cfgPath, fileData); err != nil {
 		return "", fmt.Errorf("writing %s: %w", cfgPath, err)
+	}
+
+	// Remove from installed.json
+	inst.RemoveMCP(instIdx)
+	if err := SaveInstalled(repoRoot, inst); err != nil {
+		return "", fmt.Errorf("saving installed.json: %w", err)
 	}
 
 	return fmt.Sprintf("%s.%s from %s", jsonKey, item.Name, cfgPath), nil
@@ -209,10 +231,15 @@ func checkMCPStatus(item catalog.ContentItem, prov provider.Provider, repoRoot s
 	if !entry.Exists() {
 		return StatusNotInstalled
 	}
-	if gjson.GetBytes(fileData, key+"._nesco").Bool() {
-		return StatusInstalled
+
+	// Check installed.json for nesco ownership
+	inst, err := LoadInstalled(repoRoot)
+	if err != nil {
+		return StatusInstalled // entry exists in config, can't verify ownership
 	}
-	// Entry exists but wasn't installed by nesco -- treat as installed
-	// (could be manually added -- don't overwrite)
+	if inst.FindMCP(item.Name) >= 0 {
+		return StatusInstalled // nesco-owned
+	}
+	// Entry exists in config but wasn't installed by nesco — still report installed
 	return StatusInstalled
 }

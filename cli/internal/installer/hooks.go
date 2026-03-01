@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/OpenScribbler/nesco/cli/internal/catalog"
 	"github.com/OpenScribbler/nesco/cli/internal/provider"
@@ -43,17 +44,20 @@ func parseHookFile(path string) (event string, matcherGroup []byte, err error) {
 	return event, matcherGroup, nil
 }
 
-func installHook(item catalog.ContentItem, prov provider.Provider, _ string) (string, error) {
+func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot string) (string, error) {
 	// item.Path is already absolute (set by scanner)
 	event, matcherGroup, err := parseHookFile(item.Path)
 	if err != nil {
 		return "", fmt.Errorf("parsing hook file: %w", err)
 	}
 
-	// Add _nesco marker with item name for identification
-	matcherGroup, err = sjson.SetBytes(matcherGroup, "_nesco", item.Name)
+	// Check installed.json for duplicate
+	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
-		return "", fmt.Errorf("adding marker: %w", err)
+		return "", fmt.Errorf("loading installed.json: %w", err)
+	}
+	if inst.FindHook(item.Name, event) >= 0 {
+		return "", fmt.Errorf("hook %s already installed for %s event", item.Name, event)
 	}
 
 	settingsPath, err := hookSettingsPath(prov)
@@ -70,16 +74,6 @@ func installHook(item catalog.ContentItem, prov provider.Provider, _ string) (st
 		return "", fmt.Errorf("reading %s: %w", settingsPath, err)
 	}
 
-	// Check if this hook is already installed (by _nesco marker)
-	hooksArray := gjson.GetBytes(fileData, "hooks."+event)
-	if hooksArray.Exists() && hooksArray.IsArray() {
-		for _, entry := range hooksArray.Array() {
-			if entry.Get("_nesco").String() == item.Name {
-				return "", fmt.Errorf("hook %s already installed for %s event", item.Name, event)
-			}
-		}
-	}
-
 	// Append to hooks.<event> array using sjson's -1 (append) syntax
 	key := "hooks." + event + ".-1"
 	fileData, err = sjson.SetRawBytes(fileData, key, matcherGroup)
@@ -91,10 +85,25 @@ func installHook(item catalog.ContentItem, prov provider.Provider, _ string) (st
 		return "", fmt.Errorf("writing %s: %w", settingsPath, err)
 	}
 
+	// Extract command from the hook for tracking
+	command := gjson.GetBytes(matcherGroup, "hooks.0.command").String()
+
+	// Record in installed.json
+	inst.Hooks = append(inst.Hooks, InstalledHook{
+		Name:        item.Name,
+		Event:       event,
+		Command:     command,
+		Source:      "export",
+		InstalledAt: time.Now(),
+	})
+	if err := SaveInstalled(repoRoot, inst); err != nil {
+		return "", fmt.Errorf("saving installed.json: %w", err)
+	}
+
 	return fmt.Sprintf("hooks.%s in %s", event, settingsPath), nil
 }
 
-func uninstallHook(item catalog.ContentItem, prov provider.Provider, _ string) (string, error) {
+func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot string) (string, error) {
 	// item.Path is already absolute (set by scanner)
 	event, _, err := parseHookFile(item.Path)
 	if err != nil {
@@ -111,17 +120,29 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, _ string) (
 		return "", fmt.Errorf("reading %s: %w", settingsPath, err)
 	}
 
-	// Find and remove the entry with matching _nesco marker
+	// Find entry by installed.json lookup
+	inst, err := LoadInstalled(repoRoot)
+	if err != nil {
+		return "", fmt.Errorf("loading installed.json: %w", err)
+	}
+
+	instIdx := inst.FindHook(item.Name, event)
+
+	// Find the hook entry in settings.json by matching the command string
 	hooksArray := gjson.GetBytes(fileData, "hooks."+event)
 	if !hooksArray.Exists() || !hooksArray.IsArray() {
 		return "", fmt.Errorf("no hooks.%s array in %s", event, settingsPath)
 	}
 
 	found := -1
-	for i, entry := range hooksArray.Array() {
-		if entry.Get("_nesco").String() == item.Name {
-			found = i
-			break
+	if instIdx >= 0 {
+		// Match by command string from installed.json
+		cmd := inst.Hooks[instIdx].Command
+		for i, entry := range hooksArray.Array() {
+			if entry.Get("hooks.0.command").String() == cmd {
+				found = i
+				break
+			}
 		}
 	}
 	if found == -1 {
@@ -143,16 +164,34 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, _ string) (
 		return "", fmt.Errorf("writing %s: %w", settingsPath, err)
 	}
 
+	// Remove from installed.json
+	if instIdx >= 0 {
+		inst.RemoveHook(instIdx)
+		if err := SaveInstalled(repoRoot, inst); err != nil {
+			return "", fmt.Errorf("saving installed.json: %w", err)
+		}
+	}
+
 	return fmt.Sprintf("hooks.%s from %s", event, settingsPath), nil
 }
 
-func checkHookStatus(item catalog.ContentItem, prov provider.Provider, _ string) Status {
+func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
 	// item.Path is already absolute (set by scanner)
 	event, _, err := parseHookFile(item.Path)
 	if err != nil {
 		return StatusNotAvailable
 	}
 
+	// Check installed.json first
+	inst, err := LoadInstalled(repoRoot)
+	if err != nil {
+		return StatusNotAvailable
+	}
+	if inst.FindHook(item.Name, event) >= 0 {
+		return StatusInstalled
+	}
+
+	// Also check if event array exists in settings.json (installed by other means)
 	settingsPath, err := hookSettingsPath(prov)
 	if err != nil {
 		return StatusNotAvailable
@@ -166,12 +205,6 @@ func checkHookStatus(item catalog.ContentItem, prov provider.Provider, _ string)
 	hooksArray := gjson.GetBytes(fileData, "hooks."+event)
 	if !hooksArray.Exists() || !hooksArray.IsArray() {
 		return StatusNotInstalled
-	}
-
-	for _, entry := range hooksArray.Array() {
-		if entry.Get("_nesco").String() == item.Name {
-			return StatusInstalled
-		}
 	}
 
 	return StatusNotInstalled

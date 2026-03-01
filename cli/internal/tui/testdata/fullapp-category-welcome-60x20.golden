@@ -7,8 +7,9 @@ nesco             │  AI Tools
   MCP Configs   1 │  Rules       1 - Rule files that guide A
   Apps          1 │  Hooks       1 - Event-driven hooks for
   Rules         1 │  Commands    1 - Custom slash commands f
-  Hooks         1 │
-  Commands      1 │  Configuration
+  Hooks         1 │  Loadouts    0 - Curated content bundles
+  Commands      1 │
+  Loadouts      0 │  Configuration
   My Tools      1 │  Import       - Import your own AI tools
   ─────────────   │  Update       - Check for updates and pu
   Configuration   │  Settings     - Configure paths and prov
