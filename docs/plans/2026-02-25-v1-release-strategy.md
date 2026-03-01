@@ -51,7 +51,7 @@ Based on risk profiles and unblocking dependencies:
 6. ~~**Content Model Restructure**~~ ✅ b7a415f — 42 tasks across 6 phases. `content/` directory, scanner refactor, kitchen-sink examples, CLI fixes (import/export/create/list/inspect), registry features, TUI polish.
 7. ~~**SEC-001 Fix**~~ ✅ — Symlink checks in `copyFile` and `copyDir` (Lstat guard + source tree skip).
 8. ~~**Sandbox Wrapper**~~ ✅ v0.5.0 — Bubblewrap isolation, egress proxy, config diff-and-approve, TUI settings.
-9. **Starters** — Session config packaging. Claude Code only for v1. Design: `docs/nesco-starters-design.md`.
+9. **Loadouts** — Session config packaging. Claude Code only for v1. Design: `docs/nesco-loadouts-design.md` (renamed from "starters").
 10. **TUI Polish + Registry Experience** — Audit for remaining gaps after content model restructure.
 11. **Documentation Site (Content)** — Scaffolding done. Write actual docs content last, once features are stable.
 
