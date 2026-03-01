@@ -380,9 +380,9 @@ func TestExportJSONMergeSentinelSkipped(t *testing.T) {
 
 func TestExportWarnMessage(t *testing.T) {
 	tests := []struct {
-		name     string
-		item     catalog.ContentItem
-		wantMsg  string
+		name      string
+		item      catalog.ContentItem
+		wantMsg   string
 		wantEmpty bool
 	}{
 		{

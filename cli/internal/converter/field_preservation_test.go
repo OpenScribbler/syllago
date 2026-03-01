@@ -224,15 +224,15 @@ func TestFieldPreservation_Agents(t *testing.T) {
 				"name: Kitchen Sink Agent",
 				"read_file",                  // Read translated
 				"write_file",                 // Write translated
-				"run_shell_command",           // Bash translated
+				"run_shell_command",          // Bash translated
 				"model: opus",                // preserved
 				"max_turns: 25",              // preserved
-				"read-only exploration mode",  // permissionMode → prose
-				"background task",             // background → prose
-				"separate git worktree",       // isolation → prose
-				"Do not use these tools",      // disallowedTools → prose
-				"nesco:converted",             // conversion marker
-				"comprehensive test agent",    // body preserved
+				"read-only exploration mode", // permissionMode → prose
+				"background task",            // background → prose
+				"separate git worktree",      // isolation → prose
+				"Do not use these tools",     // disallowedTools → prose
+				"nesco:converted",            // conversion marker
+				"comprehensive test agent",   // body preserved
 			},
 			absent:   []string{"permissionMode:", "isolation: worktree"},
 			filename: "agent.md",
@@ -242,7 +242,7 @@ func TestFieldPreservation_Agents(t *testing.T) {
 			target: provider.CopilotCLI,
 			contains: []string{
 				"name: Kitchen Sink Agent",
-				"Limit to 25 turns",       // maxTurns → prose
+				"Limit to 25 turns",        // maxTurns → prose
 				"comprehensive test agent", // body preserved
 			},
 			filename: "agent.md",
@@ -278,7 +278,7 @@ func TestFieldPreservation_Agents(t *testing.T) {
 			contains: []string{
 				`"name": "Kitchen Sink Agent"`,
 				`"model": "opus"`,
-				`"read"`,    // Read → read
+				`"read"`,     // Read → read
 				`"fs_write"`, // Write → fs_write
 				`"shell"`,    // Bash → shell
 			},
@@ -342,13 +342,13 @@ func TestFieldPreservation_Skills(t *testing.T) {
 			contains: []string{
 				"name: code-review",
 				"description: Code review skill",
-				"read_file",             // allowed-tools translated
-				"grep_search",           // allowed-tools translated
-				"model: opus",           // embedded as prose
-				"isolated context",      // context: fork → prose
-				"command menu",          // user-invocable → prose
-				"<pr-url>",             // argument-hint → prose
-				"run_shell_command",     // disallowed-tools translated
+				"read_file",         // allowed-tools translated
+				"grep_search",       // allowed-tools translated
+				"model: opus",       // embedded as prose
+				"isolated context",  // context: fork → prose
+				"command menu",      // user-invocable → prose
+				"<pr-url>",          // argument-hint → prose
+				"run_shell_command", // disallowed-tools translated
 				"Review code for best practices",
 				"nesco:converted",
 			},
@@ -361,10 +361,10 @@ func TestFieldPreservation_Skills(t *testing.T) {
 			contains: []string{
 				"# code-review",
 				"Review code for best practices",
-				"Tool restriction",    // allowed-tools embedded as prose
-				"isolated context",    // context: fork embedded as prose
-				"model: opus",         // model embedded as prose
-				"command menu",        // user-invocable embedded as prose
+				"Tool restriction", // allowed-tools embedded as prose
+				"isolated context", // context: fork embedded as prose
+				"model: opus",      // model embedded as prose
+				"command menu",     // user-invocable embedded as prose
 			},
 			absent:   []string{"allowed-tools:"},
 			filename: "code-review.md",
@@ -375,9 +375,9 @@ func TestFieldPreservation_Skills(t *testing.T) {
 			contains: []string{
 				"# code-review",
 				"Review code for best practices",
-				"Tool restriction",    // allowed-tools embedded as prose
-				"Do not use",          // disallowed-tools embedded as prose
-				"command menu",        // user-invocable embedded as prose
+				"Tool restriction", // allowed-tools embedded as prose
+				"Do not use",       // disallowed-tools embedded as prose
+				"command menu",     // user-invocable embedded as prose
 			},
 			absent:   []string{"allowed-tools:"},
 			filename: "code-review.md",
@@ -415,12 +415,12 @@ func TestFieldPreservation_Commands(t *testing.T) {
 			target: provider.GeminiCLI,
 			contains: []string{
 				"Deploy to production",
-				"read_file",             // allowed-tools translated
-				"run_shell_command",     // Bash translated
-				"explore-focused",      // agent: Explore → prose
-				"model: opus",          // embedded as prose
-				"isolated context",     // context: fork → prose
-				"{{args}}",             // $ARGUMENTS → {{args}}
+				"read_file",         // allowed-tools translated
+				"run_shell_command", // Bash translated
+				"explore-focused",   // agent: Explore → prose
+				"model: opus",       // embedded as prose
+				"isolated context",  // context: fork → prose
+				"{{args}}",          // $ARGUMENTS → {{args}}
 				"nesco:converted",
 			},
 			absent:   []string{"$ARGUMENTS", "allowed-tools:", "context: fork"},
@@ -491,11 +491,11 @@ func TestFieldPreservation_Hooks(t *testing.T) {
 			t.Fatalf("Render: %v", err)
 		}
 		out := string(result.Content)
-		assertContains(t, out, "BeforeTool")          // PreToolUse → BeforeTool
-		assertContains(t, out, "run_shell_command")    // Bash → run_shell_command
-		assertContains(t, out, "echo safety-check")    // command preserved
-		assertNotContains(t, out, "PreToolUse")        // not leaked
-		assertNotContains(t, out, `"Bash"`)            // not leaked
+		assertContains(t, out, "BeforeTool")        // PreToolUse → BeforeTool
+		assertContains(t, out, "run_shell_command") // Bash → run_shell_command
+		assertContains(t, out, "echo safety-check") // command preserved
+		assertNotContains(t, out, "PreToolUse")     // not leaked
+		assertNotContains(t, out, `"Bash"`)         // not leaked
 	})
 
 	// Copilot CLI — events translated, matchers dropped with warning
@@ -605,8 +605,8 @@ func TestFieldPreservation_MCPMixed(t *testing.T) {
 			t.Fatalf("Render: %v", err)
 		}
 		out := string(result.Content)
-		assertContains(t, out, "context_servers")   // Zed key name
-		assertContains(t, out, "npx")               // stdio server preserved
+		assertContains(t, out, "context_servers")    // Zed key name
+		assertContains(t, out, "npx")                // stdio server preserved
 		assertNotContains(t, out, "api.example.com") // HTTP server dropped
 		if len(result.Warnings) == 0 {
 			t.Error("expected warning about dropped HTTP server")
@@ -621,9 +621,9 @@ func TestFieldPreservation_MCPMixed(t *testing.T) {
 		}
 		out := string(result.Content)
 		assertContains(t, out, "npx")
-		assertContains(t, out, "alwaysAllow")          // autoApprove → alwaysAllow
+		assertContains(t, out, "alwaysAllow") // autoApprove → alwaysAllow
 		assertNotContains(t, out, "autoApprove")
-		assertNotContains(t, out, "api.example.com")   // HTTP dropped
+		assertNotContains(t, out, "api.example.com") // HTTP dropped
 		if len(result.Warnings) == 0 {
 			t.Error("expected warning about dropped HTTP server")
 		}
@@ -652,13 +652,13 @@ func TestFieldPreservation_MCPMixed(t *testing.T) {
 			t.Fatalf("Render: %v", err)
 		}
 		out := string(result.Content)
-		assertContains(t, out, `"mcp"`)                // OpenCode key
+		assertContains(t, out, `"mcp"`) // OpenCode key
 		assertNotContains(t, out, `"mcpServers"`)
-		assertContains(t, out, `"command": [`)          // array format
-		assertContains(t, out, `"environment"`)         // env → environment
+		assertContains(t, out, `"command": [`)  // array format
+		assertContains(t, out, `"environment"`) // env → environment
 		assertNotContains(t, out, `"env"`)
-		assertContains(t, out, "api.example.com")       // HTTP preserved
-		assertContains(t, out, `"type": "remote"`)      // sse → remote
+		assertContains(t, out, "api.example.com")  // HTTP preserved
+		assertContains(t, out, `"type": "remote"`) // sse → remote
 	})
 
 	// Copilot — preserves both stdio and HTTP, drops autoApprove
@@ -692,11 +692,11 @@ func TestFieldPreservation_MCPMixed(t *testing.T) {
 
 func TestCanonicalize_WindsurfTriggerFormats(t *testing.T) {
 	tests := []struct {
-		name            string
-		input           string
-		expectAlways    bool
-		expectGlobs     bool
-		expectDesc      string
+		name         string
+		input        string
+		expectAlways bool
+		expectGlobs  bool
+		expectDesc   string
 	}{
 		{
 			name:         "always_on",
@@ -787,12 +787,12 @@ func TestCanonicalize_OpenCodeMCPFormat(t *testing.T) {
 
 	out := string(result.Content)
 	assertContains(t, out, "mcpServers")
-	assertContains(t, out, `"command": "node"`)      // array → command + args
+	assertContains(t, out, `"command": "node"`) // array → command + args
 	assertContains(t, out, `"args"`)
-	assertContains(t, out, `"env"`)                   // environment → env
+	assertContains(t, out, `"env"`) // environment → env
 	assertNotContains(t, out, `"environment"`)
 	assertContains(t, out, "DB_URL")
-	assertContains(t, out, `"disabled": true`)        // enabled:false → disabled:true
+	assertContains(t, out, `"disabled": true`) // enabled:false → disabled:true
 }
 
 func TestCanonicalize_ZedContextServers(t *testing.T) {
@@ -815,7 +815,7 @@ func TestCanonicalize_ZedContextServers(t *testing.T) {
 	out := string(result.Content)
 	assertContains(t, out, "mcpServers")
 	assertNotContains(t, out, "context_servers")
-	assertNotContains(t, out, "source")   // Zed-specific field stripped
+	assertNotContains(t, out, "source") // Zed-specific field stripped
 	assertContains(t, out, "npx")
 }
 
@@ -864,8 +864,8 @@ func TestCanonicalize_GeminiHttpUrl(t *testing.T) {
 
 	server := cfg.MCPServers["api"]
 	assertEqual(t, "https://api.example.com/sse", server.URL)
-	assertEqual(t, "", server.HTTPUrl)   // normalized away
-	assertEqual(t, "sse", server.Type)   // inferred from httpUrl
+	assertEqual(t, "", server.HTTPUrl) // normalized away
+	assertEqual(t, "sse", server.Type) // inferred from httpUrl
 }
 
 func TestCanonicalize_GeminiHookEvents(t *testing.T) {
@@ -896,9 +896,9 @@ func TestCanonicalize_GeminiHookEvents(t *testing.T) {
 	}
 
 	out := string(result.Content)
-	assertContains(t, out, "PreToolUse")    // BeforeTool → PreToolUse
-	assertContains(t, out, "PostToolUse")   // AfterTool → PostToolUse
-	assertContains(t, out, `"Bash"`)        // run_shell_command → Bash
+	assertContains(t, out, "PreToolUse")  // BeforeTool → PreToolUse
+	assertContains(t, out, "PostToolUse") // AfterTool → PostToolUse
+	assertContains(t, out, `"Bash"`)      // run_shell_command → Bash
 	assertNotContains(t, out, "BeforeTool")
 	assertNotContains(t, out, "AfterTool")
 	assertNotContains(t, out, "run_shell_command")
@@ -924,9 +924,9 @@ func TestCanonicalize_CopilotHookFormat(t *testing.T) {
 	}
 
 	out := string(result.Content)
-	assertContains(t, out, "PreToolUse")    // preToolUse → PreToolUse
+	assertContains(t, out, "PreToolUse") // preToolUse → PreToolUse
 	assertContains(t, out, "echo verify")
-	assertContains(t, out, "10000")         // 10 sec → 10000 ms
+	assertContains(t, out, "10000") // 10 sec → 10000 ms
 	assertContains(t, out, "Safety verification")
 }
 
@@ -1041,10 +1041,10 @@ func TestRoundTrip_HooksClaudeGemini(t *testing.T) {
 	}
 
 	out := string(backToCanonical.Content)
-	assertContains(t, out, "PreToolUse")   // event translated back
-	assertContains(t, out, `"Bash"`)       // matcher translated back
-	assertContains(t, out, "echo check")   // command preserved
-	assertContains(t, out, "3000")         // timeout preserved
+	assertContains(t, out, "PreToolUse") // event translated back
+	assertContains(t, out, `"Bash"`)     // matcher translated back
+	assertContains(t, out, "echo check") // command preserved
+	assertContains(t, out, "3000")       // timeout preserved
 }
 
 // =============================================================================
@@ -1145,7 +1145,7 @@ func TestCrossProvider_CursorRulesToKiro(t *testing.T) {
 
 	out := string(result.Content)
 	assertContains(t, out, "Use type hints.")
-	assertContains(t, out, "**Scope:**")  // globs embedded as prose
+	assertContains(t, out, "**Scope:**") // globs embedded as prose
 	assertContains(t, out, "*.py")
 }
 
@@ -1464,10 +1464,12 @@ func TestEdgeCase_CommandMinimalToAllProviders(t *testing.T) {
 
 func TestFilenameSlugification(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		target   provider.Provider
-		conv     interface{ Render([]byte, provider.Provider) (*Result, error) }
+		name   string
+		input  string
+		target provider.Provider
+		conv   interface {
+			Render([]byte, provider.Provider) (*Result, error)
+		}
 		expected string
 	}{
 		{
@@ -1796,8 +1798,8 @@ func TestRoundTrip_MCPClaudeOpenCode(t *testing.T) {
 
 	// Verify OpenCode format
 	openOut := string(openCodeResult.Content)
-	assertContains(t, openOut, `"command": [`)      // array format
-	assertContains(t, openOut, `"environment"`)      // env → environment
+	assertContains(t, openOut, `"command": [`)  // array format
+	assertContains(t, openOut, `"environment"`) // env → environment
 
 	// Back to canonical
 	backToCanonical, err := conv.Canonicalize(openCodeResult.Content, "opencode")

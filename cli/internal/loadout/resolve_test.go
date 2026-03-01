@@ -130,6 +130,28 @@ func TestResolve_UniversalIgnoresProvider(t *testing.T) {
 	}
 }
 
+func TestResolve_EmptyManifest(t *testing.T) {
+	t.Parallel()
+
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "some-rule", Type: catalog.Rules, Provider: "claude-code"},
+		},
+	}
+	manifest := &Manifest{
+		Provider: "claude-code",
+		// No rules, hooks, skills, etc.
+	}
+
+	refs, err := Resolve(manifest, cat)
+	if err != nil {
+		t.Fatalf("unexpected error for empty manifest: %v", err)
+	}
+	if len(refs) != 0 {
+		t.Errorf("expected 0 refs for empty manifest, got %d", len(refs))
+	}
+}
+
 func TestResolve_PrecedenceFirstWins(t *testing.T) {
 	t.Parallel()
 

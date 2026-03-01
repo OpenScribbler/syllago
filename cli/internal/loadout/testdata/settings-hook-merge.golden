@@ -1,0 +1,19 @@
+{
+  "userPref": "dark-mode",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*.go",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "go vet"
+          }
+        ]
+      }
+    ]
+  ,"PostToolUse":[{
+  "matcher": ".*",
+  "hooks": [{"type": "command", "command": "echo golden-test"}]
+}]}
+}

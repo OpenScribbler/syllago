@@ -66,6 +66,21 @@ func TestValidate_DuplicateRef(t *testing.T) {
 	}
 }
 
+func TestValidate_EmptyRefs(t *testing.T) {
+	t.Parallel()
+
+	prov := provider.ClaudeCode
+	results := Validate(nil, prov)
+	if len(results) != 0 {
+		t.Errorf("expected no issues for nil refs, got %d", len(results))
+	}
+
+	results = Validate([]ResolvedRef{}, prov)
+	if len(results) != 0 {
+		t.Errorf("expected no issues for empty refs, got %d", len(results))
+	}
+}
+
 func TestValidate_NilSupportsType(t *testing.T) {
 	t.Parallel()
 

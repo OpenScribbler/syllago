@@ -15,8 +15,8 @@ const (
 	Hooks         ContentType = "hooks"
 	Commands      ContentType = "commands"
 	Loadouts      ContentType = "loadouts"
-	SearchResults ContentType = "search"   // virtual type for cross-category search results
-	MyTools       ContentType = "local" // virtual type for local items view
+	SearchResults ContentType = "search" // virtual type for cross-category search results
+	MyTools       ContentType = "local"  // virtual type for local items view
 )
 
 // AllContentTypes returns all content types in display order.

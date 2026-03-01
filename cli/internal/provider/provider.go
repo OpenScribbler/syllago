@@ -18,7 +18,7 @@ type Format string
 
 const (
 	FormatMarkdown Format = "md"
-	FormatMDC      Format = "mdc"   // Cursor .mdc format
+	FormatMDC      Format = "mdc" // Cursor .mdc format
 	FormatJSON     Format = "json"
 	FormatYAML     Format = "yaml"
 	FormatJSONC    Format = "jsonc" // JSON with comments (OpenCode)

@@ -31,14 +31,14 @@ func init() {
 
 // inspectResult is the JSON-serializable output for nesco inspect.
 type inspectResult struct {
-	Name        string               `json:"name"`
-	Type        string               `json:"type"`
-	Source      string               `json:"source"`
-	Provider    string               `json:"provider,omitempty"`
-	Path        string               `json:"path"`
-	Description string               `json:"description,omitempty"`
-	Files       []string             `json:"files,omitempty"`
-	Risks       []inspectRisk        `json:"risks,omitempty"`
+	Name        string        `json:"name"`
+	Type        string        `json:"type"`
+	Source      string        `json:"source"`
+	Provider    string        `json:"provider,omitempty"`
+	Path        string        `json:"path"`
+	Description string        `json:"description,omitempty"`
+	Files       []string      `json:"files,omitempty"`
+	Risks       []inspectRisk `json:"risks,omitempty"`
 }
 
 type inspectRisk struct {
@@ -117,4 +117,3 @@ func runInspect(cmd *cobra.Command, args []string) error {
 
 	return nil
 }
-

@@ -116,9 +116,9 @@ func TestClaudeSkillToOpenCode(t *testing.T) {
 	assertContains(t, out, "# Go Expert")
 	assertContains(t, out, "idiomatic Go")
 	assertContains(t, out, "Go coding guidelines") // description embedded as prose
-	assertNotContains(t, out, "allowed-tools")      // no YAML key in output
-	assertContains(t, out, "Tool restriction")       // embedded as prose instead
-	assertContains(t, out, "Read")                   // tool name preserved in prose
+	assertNotContains(t, out, "allowed-tools")     // no YAML key in output
+	assertContains(t, out, "Tool restriction")     // embedded as prose instead
+	assertContains(t, out, "Read")                 // tool name preserved in prose
 	assertEqual(t, "go-expert.md", result.Filename)
 }
 
@@ -142,9 +142,9 @@ func TestClaudeSkillToKiro(t *testing.T) {
 	assertContains(t, out, "# Go Expert")
 	assertContains(t, out, "idiomatic Go")
 	assertContains(t, out, "Go coding guidelines") // description embedded as prose
-	assertNotContains(t, out, "allowed-tools")      // no YAML key in output
-	assertContains(t, out, "Tool restriction")       // allowed-tools embedded as prose
-	assertContains(t, out, "command menu")           // user-invocable embedded as prose
+	assertNotContains(t, out, "allowed-tools")     // no YAML key in output
+	assertContains(t, out, "Tool restriction")     // allowed-tools embedded as prose
+	assertContains(t, out, "command menu")         // user-invocable embedded as prose
 	assertEqual(t, "go-expert.md", result.Filename)
 }
 

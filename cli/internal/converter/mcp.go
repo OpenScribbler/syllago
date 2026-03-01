@@ -36,7 +36,7 @@ type mcpServerConfig struct {
 	HTTPUrl string `json:"httpUrl,omitempty"` // Gemini uses httpUrl instead of url
 
 	// OpenCode-specific (preserved in canonical for round-trips)
-	Environment  map[string]string `json:"environment,omitempty"` // OpenCode uses "environment" not "env"
+	Environment  map[string]string `json:"environment,omitempty"`  // OpenCode uses "environment" not "env"
 	CommandArray []string          `json:"commandArray,omitempty"` // OpenCode command as array
 	Enabled      *bool             `json:"enabled,omitempty"`      // OpenCode uses "enabled" (true default) not "disabled"
 	Timeout      int               `json:"timeout,omitempty"`      // OpenCode timeout in ms

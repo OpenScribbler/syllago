@@ -17,6 +17,7 @@ import (
 
 	"github.com/OpenScribbler/nesco/cli/internal/catalog"
 	"github.com/OpenScribbler/nesco/cli/internal/installer"
+	"github.com/OpenScribbler/nesco/cli/internal/loadout"
 	"github.com/OpenScribbler/nesco/cli/internal/promote"
 	"github.com/OpenScribbler/nesco/cli/internal/provider"
 )
@@ -37,6 +38,19 @@ type openSaveModalMsg struct{}
 // openEnvModalMsg is sent by detailModel to ask App to open the env setup wizard modal.
 type openEnvModalMsg struct {
 	envTypes []string
+}
+
+// openLoadoutApplyMsg is sent by detailModel to ask App to run a loadout apply.
+type openLoadoutApplyMsg struct {
+	item catalog.ContentItem
+	mode string // "preview", "try", or "keep"
+}
+
+// loadoutApplyDoneMsg carries the result of a loadout apply operation.
+type loadoutApplyDoneMsg struct {
+	result *loadout.ApplyResult
+	err    error
+	mode   string
 }
 
 // detailTab represents the active tab on the detail screen.
@@ -74,6 +88,10 @@ type detailModel struct {
 	listTotal    int             // total items in the list
 	width        int
 	height       int
+	// Loadout-specific state
+	loadoutManifest    *loadout.Manifest // parsed manifest (for Loadouts type)
+	loadoutManifestErr string            // error from parsing manifest
+	loadoutModeCursor  int               // 0=preview, 1=try, 2=keep (Apply tab)
 }
 
 func newDetailModel(item catalog.ContentItem, providers []provider.Provider, repoRoot string) detailModel {
@@ -111,6 +129,15 @@ func newDetailModel(item catalog.ContentItem, providers []provider.Provider, rep
 		llmPath := filepath.Join(item.Path, "LLM-PROMPT.md")
 		if data, err := os.ReadFile(llmPath); err == nil {
 			m.llmPrompt = string(data)
+		}
+	}
+	// Parse loadout manifest for loadout items
+	if item.Type == catalog.Loadouts {
+		manifest, err := loadout.Parse(filepath.Join(item.Path, "loadout.yaml"))
+		if err != nil {
+			m.loadoutManifestErr = err.Error()
+		} else {
+			m.loadoutManifest = manifest
 		}
 	}
 	// Initialize provider checkboxes for non-prompt items
@@ -267,8 +294,17 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 				if m.scrollOffset > 0 {
 					m.scrollOffset--
 				}
+			} else if m.activeTab == tabFiles && m.item.Type == catalog.Loadouts {
+				// Contents tab for loadouts: scroll
+				if m.scrollOffset > 0 {
+					m.scrollOffset--
+				}
 			} else if m.activeTab == tabInstall {
-				if m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps {
+				if m.item.Type == catalog.Loadouts {
+					if m.loadoutModeCursor > 0 {
+						m.loadoutModeCursor--
+					}
+				} else if m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps {
 					if m.scrollOffset > 0 {
 						m.scrollOffset--
 					}
@@ -281,8 +317,16 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			if m.activeTab == tabOverview {
 				m.scrollOffset++
 				m.clampScroll()
+			} else if m.activeTab == tabFiles && m.item.Type == catalog.Loadouts {
+				// Contents tab for loadouts: scroll
+				m.scrollOffset++
+				m.clampScroll()
 			} else if m.activeTab == tabInstall {
-				if m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps {
+				if m.item.Type == catalog.Loadouts {
+					if m.loadoutModeCursor < 2 {
+						m.loadoutModeCursor++
+					}
+				} else if m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps {
 					m.scrollOffset++
 					m.clampScroll()
 				} else if len(m.provCheck.checks) > 0 && m.provCheck.cursor < len(m.provCheck.checks)-1 {
@@ -291,7 +335,10 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.PageUp):
-			if m.activeTab == tabOverview || (m.activeTab == tabInstall && (m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps)) {
+			scrollable := m.activeTab == tabOverview ||
+				(m.activeTab == tabInstall && (m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps)) ||
+				(m.activeTab == tabFiles && m.item.Type == catalog.Loadouts)
+			if scrollable {
 				pageSize := m.height - 6
 				if pageSize < 1 {
 					pageSize = 10
@@ -303,7 +350,10 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.PageDown):
-			if m.activeTab == tabOverview || (m.activeTab == tabInstall && (m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps)) {
+			scrollable := m.activeTab == tabOverview ||
+				(m.activeTab == tabInstall && (m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps)) ||
+				(m.activeTab == tabFiles && m.item.Type == catalog.Loadouts)
+			if scrollable {
 				pageSize := m.height - 6
 				if pageSize < 1 {
 					pageSize = 10
@@ -321,7 +371,7 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			if m.activeTab != tabInstall {
 				break
 			}
-			if m.item.Type == catalog.Prompts {
+			if m.item.Type == catalog.Prompts || m.item.Type == catalog.Loadouts {
 				break
 			}
 			if m.item.Type == catalog.Apps {
@@ -347,6 +397,20 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			if m.activeTab != tabInstall {
 				break
 			}
+			// Loadout Apply tab: trigger apply with selected mode
+			if m.item.Type == catalog.Loadouts {
+				if m.loadoutManifest == nil {
+					m.message = "Cannot apply: loadout manifest not loaded"
+					m.messageIsErr = true
+					return m, nil
+				}
+				modes := []string{"preview", "try", "keep"}
+				mode := modes[m.loadoutModeCursor]
+				item := m.item
+				return m, func() tea.Msg {
+					return openLoadoutApplyMsg{item: item, mode: mode}
+				}
+			}
 			// Enter toggles checkbox
 			if m.provCheck.cursor < len(m.provCheck.checks) {
 				m.provCheck.checks[m.provCheck.cursor] = !m.provCheck.checks[m.provCheck.cursor]
@@ -356,7 +420,7 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			if m.activeTab != tabInstall {
 				break
 			}
-			if m.item.Type == catalog.Prompts {
+			if m.item.Type == catalog.Prompts || m.item.Type == catalog.Loadouts {
 				break
 			}
 			if m.item.Type == catalog.Apps {

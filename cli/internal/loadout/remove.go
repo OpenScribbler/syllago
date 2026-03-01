@@ -13,15 +13,15 @@ var ErrNoActiveLoadout = errors.New("no active loadout to remove")
 
 // RemoveOptions configures a loadout remove operation.
 type RemoveOptions struct {
-	Auto        bool   // if true, skip confirmation; used by --auto flag from SessionEnd hook
+	Auto        bool // if true, skip confirmation; used by --auto flag from SessionEnd hook
 	ProjectRoot string
 }
 
 // RemoveResult describes what was reverted.
 type RemoveResult struct {
-	RestoredFiles  []string // absolute paths of files restored from snapshot
+	RestoredFiles   []string // absolute paths of files restored from snapshot
 	RemovedSymlinks []string // absolute paths of symlinks deleted
-	LoadoutName    string
+	LoadoutName     string
 }
 
 // Remove reads the active snapshot, restores backed-up files, deletes symlinks,

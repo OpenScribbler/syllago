@@ -30,10 +30,10 @@ type SandboxConfig struct {
 }
 
 type Config struct {
-	Providers         []string          `json:"providers"`                         // enabled provider slugs
-	ContentRoot       string            `json:"content_root,omitempty"`            // relative path to content directory (default: project root)
+	Providers         []string          `json:"providers"`              // enabled provider slugs
+	ContentRoot       string            `json:"content_root,omitempty"` // relative path to content directory (default: project root)
 	Registries        []Registry        `json:"registries,omitempty"`
-	AllowedRegistries []string          `json:"allowed_registries,omitempty"`      // URL allowlist; empty means any URL is permitted
+	AllowedRegistries []string          `json:"allowed_registries,omitempty"` // URL allowlist; empty means any URL is permitted
 	Preferences       map[string]string `json:"preferences,omitempty"`
 	Sandbox           SandboxConfig     `json:"sandbox,omitempty"`
 }

@@ -17,8 +17,8 @@ type codexAgentConfig struct {
 
 // codexConfig represents the full Codex config.toml structure.
 type codexConfig struct {
-	Features map[string]bool                 `toml:"features,omitempty"`
-	Agents   map[string]codexAgentConfig     `toml:"agents,omitempty"`
+	Features map[string]bool             `toml:"features,omitempty"`
+	Agents   map[string]codexAgentConfig `toml:"agents,omitempty"`
 }
 
 // canonicalizeCodexAgents parses Codex TOML multi-agent config into canonical agents.

@@ -16,7 +16,7 @@ type InstalledHook struct {
 	Name        string    `json:"name"`
 	Event       string    `json:"event"`
 	Command     string    `json:"command"`
-	Source      string    `json:"source"`      // "export" or "loadout:<name>"
+	Source      string    `json:"source"` // "export" or "loadout:<name>"
 	InstalledAt time.Time `json:"installedAt"`
 }
 
