@@ -8,11 +8,14 @@ COMMIT := $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 VERSION := $(shell cat ../VERSION 2>/dev/null || echo dev)
 LDFLAGS := -X main.repoRoot=$(REPO_ROOT) -X main.buildCommit=$(COMMIT) -X main.version=$(VERSION)
 
-.PHONY: build clean build-all test fmt vet build-linux-amd64 build-linux-arm64 build-darwin-amd64 build-darwin-arm64 build-windows-amd64 build-windows-arm64
+.PHONY: build clean build-all test fmt vet gendocs build-linux-amd64 build-linux-arm64 build-darwin-amd64 build-darwin-arm64 build-windows-amd64 build-windows-arm64
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(OUTPUT) ./cmd/syllago
 	ln -sf $(OUTPUT) syll$(EXT)
+
+gendocs: build
+	./$(OUTPUT) _gendocs > commands.json
 
 clean:
 	rm -f $(BINARY) $(BINARY).exe $(BINARY)-* syll syll.exe
