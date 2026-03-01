@@ -29,3 +29,14 @@ jobs:
       - name: Build smoke check
         working-directory: cli
         run: go build ./cmd/syllago
+
+      - name: Check commands.json freshness
+        working-directory: cli
+        run: |
+          go build -o syllago-ci ./cmd/syllago
+          ./syllago-ci _gendocs > commands.json.tmp
+          # Strip volatile fields (timestamp, version) before comparing command definitions
+          grep -v '"generatedAt"' commands.json | grep -v '"syllagoVersion"' > commands.json.stable
+          grep -v '"generatedAt"' commands.json.tmp | grep -v '"syllagoVersion"' > commands.json.tmp.stable
+          diff -u commands.json.stable commands.json.tmp.stable
+          rm -f syllago-ci commands.json.tmp commands.json.stable commands.json.tmp.stable
