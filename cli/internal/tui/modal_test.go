@@ -291,3 +291,198 @@ func TestAppScriptKeyEmitsOpenModalMsg(t *testing.T) {
 		t.Errorf("openModalMsg.purpose should be modalAppScript, got %d", oMsg.purpose)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Regression tests: modal escape behavior at the App routing level
+// ---------------------------------------------------------------------------
+
+// TestConfirmModalClosesOnEscape verifies that pressing Escape on the App when
+// a confirmModal is active closes the modal, returns focus to content, and does
+// not set confirmed (no action taken).
+func TestConfirmModalClosesOnEscape(t *testing.T) {
+	a := App{
+		width:  80,
+		height: 24,
+		screen: screenDetail,
+		focus:  focusModal,
+		modal:  newConfirmModal("Delete?", "This cannot be undone."),
+	}
+	a.modal.purpose = modalUninstall
+
+	result, _ := a.Update(keyEsc)
+	updated := result.(App)
+
+	if updated.modal.active {
+		t.Error("confirmModal should be inactive after Escape")
+	}
+	if updated.modal.confirmed {
+		t.Error("Escape should not confirm the modal (confirmed must stay false)")
+	}
+	if updated.focus == focusModal {
+		t.Errorf("focus should no longer be focusModal after modal closes, got %d", updated.focus)
+	}
+}
+
+// TestSaveModalClosesOnEscape verifies that pressing Escape when the saveModal
+// is active closes it without saving: confirmed stays false and detail.savePath
+// is not set.
+func TestSaveModalClosesOnEscape(t *testing.T) {
+	a := App{
+		width:     80,
+		height:    24,
+		screen:    screenDetail,
+		focus:     focusModal,
+		saveModal: newSaveModal("filename.md"),
+	}
+	// Type some text into the save input before pressing Escape.
+	a.saveModal.input.SetValue("my-unsaved-prompt.md")
+
+	result, _ := a.Update(keyEsc)
+	updated := result.(App)
+
+	if updated.saveModal.active {
+		t.Error("saveModal should be inactive after Escape")
+	}
+	if updated.saveModal.confirmed {
+		t.Error("Escape should not confirm the save modal")
+	}
+	if updated.detail.savePath != "" {
+		t.Errorf("detail.savePath should be empty after Escape, got %q", updated.detail.savePath)
+	}
+	if updated.focus == focusModal {
+		t.Errorf("focus should no longer be focusModal after saveModal closes, got %d", updated.focus)
+	}
+}
+
+// TestInstallModalClosesOnEscapeAtLocationStep verifies that pressing Escape
+// while the installModal is on its first step (location selection) closes the
+// modal entirely and does not trigger an install.
+func TestInstallModalClosesOnEscapeAtLocationStep(t *testing.T) {
+	item := catalog.ContentItem{
+		Name: "test-item",
+		Type: catalog.Skills,
+		Path: "/tmp/test-item",
+	}
+	p := provider.Provider{
+		Name:     "Claude Code",
+		Slug:     "claude-code",
+		Detected: true,
+		SupportsType: func(ct catalog.ContentType) bool { return true },
+		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/claude" },
+	}
+	a := App{
+		width:     80,
+		height:    24,
+		screen:    screenDetail,
+		focus:     focusModal,
+		instModal: newInstallModal(item, []provider.Provider{p}, "/tmp/repo"),
+	}
+	// Sanity check: modal starts at the location step.
+	if a.instModal.step != installStepLocation {
+		t.Fatalf("expected installStepLocation at start, got %d", a.instModal.step)
+	}
+
+	result, _ := a.Update(keyEsc)
+	updated := result.(App)
+
+	if updated.instModal.active {
+		t.Error("installModal should be inactive after Escape at location step")
+	}
+	if updated.instModal.confirmed {
+		t.Error("Escape should not confirm the install modal")
+	}
+	if updated.focus == focusModal {
+		t.Errorf("focus should no longer be focusModal after installModal closes, got %d", updated.focus)
+	}
+}
+
+// TestInstallModalEscapeAtMethodStepNavigatesBack verifies that pressing Escape
+// on the method step navigates back to the location step rather than closing
+// the modal.
+func TestInstallModalEscapeAtMethodStepNavigatesBack(t *testing.T) {
+	item := catalog.ContentItem{
+		Name: "test-item",
+		Type: catalog.Skills,
+		Path: "/tmp/test-item",
+	}
+	a := App{
+		width:     80,
+		height:    24,
+		screen:    screenDetail,
+		focus:     focusModal,
+		instModal: newInstallModal(item, nil, "/tmp/repo"),
+	}
+	// Advance to method step.
+	a.instModal.step = installStepMethod
+
+	result, _ := a.Update(keyEsc)
+	updated := result.(App)
+
+	if !updated.instModal.active {
+		t.Error("installModal should remain active after Escape at method step (navigates back)")
+	}
+	if updated.instModal.step != installStepLocation {
+		t.Errorf("Escape at method step should return to installStepLocation, got %d", updated.instModal.step)
+	}
+	if updated.instModal.confirmed {
+		t.Error("Escape should not confirm the install modal")
+	}
+}
+
+// TestEnvSetupModalClosesOnEscapeWhenLastVar verifies that pressing Escape while
+// the envSetupModal is on its only variable (choose step) closes the modal and
+// returns focus to content — no env writes occur.
+func TestEnvSetupModalClosesOnEscapeWhenLastVar(t *testing.T) {
+	a := App{
+		width:    80,
+		height:   24,
+		screen:   screenDetail,
+		focus:    focusModal,
+		envModal: newEnvSetupModal([]string{"API_KEY"}),
+	}
+	// Sanity check: modal starts active on the choose step.
+	if !a.envModal.active {
+		t.Fatal("envModal should be active at start")
+	}
+	if a.envModal.step != envStepChoose {
+		t.Fatalf("expected envStepChoose at start, got %d", a.envModal.step)
+	}
+
+	result, _ := a.Update(keyEsc)
+	updated := result.(App)
+
+	if updated.envModal.active {
+		t.Error("envModal should be inactive after Escape on last variable")
+	}
+	if updated.focus == focusModal {
+		t.Errorf("focus should no longer be focusModal after envModal closes, got %d", updated.focus)
+	}
+}
+
+// TestEnvSetupModalEscapeOnValueStepNavigatesBack verifies that pressing Escape
+// on the value-entry step returns to the choose step without closing the modal.
+func TestEnvSetupModalEscapeOnValueStepNavigatesBack(t *testing.T) {
+	a := App{
+		width:    80,
+		height:   24,
+		screen:   screenDetail,
+		focus:    focusModal,
+		envModal: newEnvSetupModal([]string{"API_KEY"}),
+	}
+	// Advance to value step.
+	a.envModal.step = envStepValue
+
+	result, _ := a.Update(keyEsc)
+	updated := result.(App)
+
+	if !updated.envModal.active {
+		t.Error("envModal should remain active after Escape at value step (navigates back to choose)")
+	}
+	if updated.envModal.step != envStepChoose {
+		t.Errorf("Escape at value step should return to envStepChoose, got %d", updated.envModal.step)
+	}
+	// Focus should still be on modal since it's still active.
+	if updated.focus != focusModal {
+		t.Errorf("focus should remain focusModal while envModal is still active, got %d", updated.focus)
+	}
+}
