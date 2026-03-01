@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 const sidebarWidth = 18 // fixed width including border character
@@ -75,8 +75,8 @@ func (m sidebarModel) View() string {
 
 	var s string
 
-	// Header: "nesco" title
-	s += titleStyle.Render("nesco") + "\n\n"
+	// Header: "syllago" title
+	s += titleStyle.Render("syllago") + "\n\n"
 
 	// ── AI Tools section ──
 	s += labelStyle.Render("  AI Tools") + "\n"

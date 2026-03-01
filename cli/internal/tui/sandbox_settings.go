@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 )
 
 // sandboxSettingsModel manages the sandbox configuration TUI.

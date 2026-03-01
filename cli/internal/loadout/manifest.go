@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"gopkg.in/yaml.v3"
 )
 

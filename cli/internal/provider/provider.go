@@ -1,6 +1,6 @@
 package provider
 
-import "github.com/OpenScribbler/nesco/cli/internal/catalog"
+import "github.com/OpenScribbler/syllago/cli/internal/catalog"
 
 // JSONMergeSentinel is returned by InstallDir when the content type requires
 // JSON merge installation (e.g., MCP into config files, hooks into settings.json)
@@ -43,7 +43,7 @@ type Provider struct {
 	DiscoveryPaths func(projectRoot string, ct catalog.ContentType) []string
 	// FileFormat returns the file format used by this provider for a content type.
 	FileFormat func(ct catalog.ContentType) Format
-	// EmitPath returns the path where nesco should write scan output for this provider.
+	// EmitPath returns the path where syllago should write scan output for this provider.
 	EmitPath func(projectRoot string) string
 	// SupportsType returns true if this provider handles the given content type.
 	SupportsType func(ct catalog.ContentType) bool

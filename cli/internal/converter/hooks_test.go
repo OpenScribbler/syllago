@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 func TestClaudeHooksToGemini(t *testing.T) {
@@ -248,7 +248,7 @@ func TestLLMHookGenerateMode(t *testing.T) {
 	if matchers[0].Hooks[0].Type != "command" {
 		t.Fatalf("expected type 'command', got %q", matchers[0].Hooks[0].Type)
 	}
-	assertContains(t, matchers[0].Hooks[0].Command, "nesco-llm-hook")
+	assertContains(t, matchers[0].Hooks[0].Command, "syllago-llm-hook")
 
 	// ExtraFiles should contain the wrapper script
 	if result.ExtraFiles == nil {
@@ -260,11 +260,11 @@ func TestLLMHookGenerateMode(t *testing.T) {
 
 	// Verify script content
 	for name, content := range result.ExtraFiles {
-		assertContains(t, name, "nesco-llm-hook")
+		assertContains(t, name, "syllago-llm-hook")
 		assertContains(t, name, ".sh")
 		script := string(content)
 		assertContains(t, script, "#!/bin/bash")
-		assertContains(t, script, "nesco-generated")
+		assertContains(t, script, "syllago-generated")
 		assertContains(t, script, "gemini")
 		assertContains(t, script, "Is this command safe")
 	}
@@ -313,8 +313,8 @@ func TestLLMHookGenerateModeCopilot(t *testing.T) {
 	if len(entries) == 0 {
 		t.Fatal("expected LLM hook to be converted for copilot")
 	}
-	assertContains(t, entries[0].Bash, "nesco-llm-hook")
-	assertContains(t, entries[0].Comment, "nesco-generated")
+	assertContains(t, entries[0].Bash, "syllago-llm-hook")
+	assertContains(t, entries[0].Comment, "syllago-generated")
 
 	if result.ExtraFiles == nil || len(result.ExtraFiles) != 1 {
 		t.Fatal("expected 1 extra file for copilot LLM hook")
@@ -395,8 +395,8 @@ func TestClaudeHooksToKiro(t *testing.T) {
 	}
 
 	out := string(result.Content)
-	// Output is the nesco-hooks.json agent file
-	assertContains(t, out, `"name": "nesco-hooks"`)
+	// Output is the syllago-hooks.json agent file
+	assertContains(t, out, `"name": "syllago-hooks"`)
 	assertContains(t, out, `"preToolUse"`)
 	assertContains(t, out, `"agentSpawn"`)
 	assertContains(t, out, "echo checking")
@@ -404,7 +404,7 @@ func TestClaudeHooksToKiro(t *testing.T) {
 	// Matcher translated: Bash → shell
 	assertContains(t, out, `"matcher": "shell"`)
 	assertNotContains(t, out, "PreToolUse")
-	assertEqual(t, "nesco-hooks.json", result.Filename)
+	assertEqual(t, "syllago-hooks.json", result.Filename)
 }
 
 func TestHooklessProviderWarning(t *testing.T) {

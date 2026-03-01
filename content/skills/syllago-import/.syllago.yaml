@@ -1,0 +1,7 @@
+name: syllago-import
+description: Import and manage AI coding tool content using syllago CLI
+version: "1.0"
+tags:
+  - builtin
+  - import
+  - syllago

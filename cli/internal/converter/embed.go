@@ -6,13 +6,13 @@ import (
 	"strings"
 )
 
-// conversionNotePattern matches the nesco conversion notes block at the bottom of a body.
-// Matches: ---\n<!-- nesco:converted ... -->\n...content...
-var conversionNotePattern = regexp.MustCompile(`(?s)\n---\n<!-- nesco:converted[^>]*-->\n.*$`)
+// conversionNotePattern matches the syllago conversion notes block at the bottom of a body.
+// Matches: ---\n<!-- syllago:converted ... -->\n...content...
+var conversionNotePattern = regexp.MustCompile(`(?s)\n---\n<!-- syllago:converted[^>]*-->\n.*$`)
 
 // ConversionMarker returns the HTML comment marker for converted content.
 func ConversionMarker(sourceProvider string) string {
-	return fmt.Sprintf("<!-- nesco:converted from=%q -->", sourceProvider)
+	return fmt.Sprintf("<!-- syllago:converted from=%q -->", sourceProvider)
 }
 
 // BuildConversionNotes assembles a conversion notes block from individual note lines.
@@ -41,7 +41,7 @@ func AppendNotes(body, notes string) string {
 	return strings.TrimRight(body, "\n") + "\n\n" + notes
 }
 
-// StripConversionNotes removes any nesco conversion notes block from a body.
+// StripConversionNotes removes any syllago conversion notes block from a body.
 func StripConversionNotes(body string) string {
 	return strings.TrimSpace(conversionNotePattern.ReplaceAllString(body, ""))
 }

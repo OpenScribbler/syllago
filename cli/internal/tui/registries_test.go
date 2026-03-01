@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 )
 
 // TestRegistriesViewShowsVersionAndDescription verifies that manifest version

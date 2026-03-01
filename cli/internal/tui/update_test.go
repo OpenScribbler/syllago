@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 // navigateToUpdate creates a test app and navigates to the update screen.
@@ -522,7 +522,7 @@ func TestUpdateSpinnerDuringPull(t *testing.T) {
 	app.updater.loading = true
 
 	view := app.View()
-	assertContains(t, view, "Updating nesco")
+	assertContains(t, view, "Updating syllago")
 }
 
 func TestUpdateSpinnerDuringFetch(t *testing.T) {
@@ -567,7 +567,7 @@ func TestUpdateLoadingClearedOnPullMsg(t *testing.T) {
 func TestUpdateViewMenu(t *testing.T) {
 	app := navigateToUpdateWithRemote(t)
 	view := app.View()
-	assertContains(t, view, "Update nesco")
+	assertContains(t, view, "Update syllago")
 	assertContains(t, view, "See what's new")
 	assertContains(t, view, "Update now")
 }
@@ -575,7 +575,7 @@ func TestUpdateViewMenu(t *testing.T) {
 func TestUpdateViewMenuLatest(t *testing.T) {
 	app := navigateToUpdate(t)
 	view := app.View()
-	assertContains(t, view, "Update nesco")
+	assertContains(t, view, "Update syllago")
 	assertContains(t, view, "View release notes")
 	assertContains(t, view, "Check for updates")
 }

@@ -11,11 +11,11 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/config"
-	"github.com/OpenScribbler/nesco/cli/internal/loadout"
-	"github.com/OpenScribbler/nesco/cli/internal/promote"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/loadout"
+	"github.com/OpenScribbler/syllago/cli/internal/promote"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 type screen int
@@ -331,9 +331,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Try/Keep modes: show confirmation modal first
 		var body string
 		if msg.mode == "try" {
-			body = "This loadout is temporary. It will auto-revert when the session ends.\nIf auto-revert fails, run: nesco loadout remove\n\nApply?"
+			body = "This loadout is temporary. It will auto-revert when the session ends.\nIf auto-revert fails, run: syllago loadout remove\n\nApply?"
 		} else {
-			body = "This loadout will stay until you run: nesco loadout remove\n\nApply?"
+			body = "This loadout will stay until you run: syllago loadout remove\n\nApply?"
 		}
 		a.modal = newConfirmModal(fmt.Sprintf("Apply %q (%s)?", msg.item.Name, msg.mode), body)
 		a.modal.purpose = modalLoadoutApply
@@ -1137,15 +1137,15 @@ var categoryDesc = map[catalog.ContentType]string{
 	catalog.Loadouts: "Curated content bundles for quick session setup",
 }
 
-// nescoFontRaw is the "nesco" text in ANSI Shadow style.
-const nescoFontRaw = `░████████   ░███████   ░███████   ░███████   ░███████
+// syllagoFontRaw is the "syllago" text in ANSI Shadow style.
+const syllagoFontRaw = `░████████   ░███████   ░███████   ░███████   ░███████
 ░██    ░██ ░██    ░██ ░██        ░██    ░██ ░██    ░██
 ░██    ░██ ░█████████  ░███████  ░██        ░██    ░██
 ░██    ░██ ░██               ░██ ░██    ░██ ░██    ░██
 ░██    ░██  ░███████   ░███████   ░███████   ░███████`
 
-// nescoPlantRaw is the nesco fractal plant ASCII art.
-const nescoPlantRaw = `
+// syllagoPlantRaw is the syllago fractal plant ASCII art.
+const syllagoPlantRaw = `
                                      ##+
                                     ###+#
                                   ###++++++      ######
@@ -1215,7 +1215,7 @@ func trimArt(s string) string {
 func (a App) renderFirstRun(contentW int) string {
 	var s string
 
-	s += titleStyle.Render("Welcome to nesco!") + "\n\n"
+	s += titleStyle.Render("Welcome to syllago!") + "\n\n"
 	s += helpStyle.Render("No content found. Here's how to get started:") + "\n\n"
 
 	steps := []struct {
@@ -1223,9 +1223,9 @@ func (a App) renderFirstRun(contentW int) string {
 		head string
 		cmd  string
 	}{
-		{"1.", "Import existing content:", "nesco import --from claude-code"},
-		{"2.", "Add a community registry:", "nesco registry add nesco-tools"},
-		{"3.", "Create new content:", "nesco create skill my-first-skill"},
+		{"1.", "Import existing content:", "syllago import --from claude-code"},
+		{"2.", "Add a community registry:", "syllago registry add syllago-tools"},
+		{"3.", "Create new content:", "syllago create skill my-first-skill"},
 	}
 
 	for _, step := range steps {
@@ -1287,7 +1287,7 @@ func (a App) renderContentWelcome() string {
 
 	// --- ASCII art title (only when cards are showing and terminal is large) ---
 	if useCards && a.height >= 42 && contentW >= 55 {
-		font := trimArt(nescoFontRaw)
+		font := trimArt(syllagoFontRaw)
 		s += lipgloss.PlaceHorizontal(contentW, lipgloss.Center, titleStyle.Render(font))
 		s += "\n\n"
 	}
@@ -1485,6 +1485,6 @@ func (a App) breadcrumb() string {
 	case screenSandbox:
 		return "Sandbox"
 	default:
-		return "nesco"
+		return "syllago"
 	}
 }

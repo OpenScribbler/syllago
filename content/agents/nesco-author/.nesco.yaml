@@ -1,7 +1,0 @@
-name: nesco-author
-description: Expert at creating nesco-canonical content for AI coding tools
-version: "1.0"
-tags:
-  - builtin
-  - authoring
-  - nesco

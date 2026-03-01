@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/tidwall/gjson"
 )
 
@@ -103,9 +103,9 @@ func TestInstallMCP_WhitelistsFields(t *testing.T) {
 		t.Error("_internal_config should have been dropped")
 	}
 
-	// Should NOT have _nesco marker (removed — tracking is via installed.json)
-	if serverConfig.Get("_nesco").Exists() {
-		t.Error("_nesco marker should not be present")
+	// Should NOT have _syllago marker (removed — tracking is via installed.json)
+	if serverConfig.Get("_syllago").Exists() {
+		t.Error("_syllago marker should not be present")
 	}
 
 	// Verify installed.json was written

@@ -12,9 +12,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/installer"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 type envSetupStep int
@@ -127,7 +127,7 @@ func (m envSetupModal) Update(msg tea.Msg) (envSetupModal, tea.Cmd) {
 					m.messageIsErr = true
 					return m, nil
 				}
-				defaultPath := filepath.Join(home, ".config", "nesco", ".env")
+				defaultPath := filepath.Join(home, ".config", "syllago", ".env")
 				m.input.Prompt = labelStyle.Render("Save to: ") + " "
 				m.input.Placeholder = defaultPath
 				m.input.SetValue(defaultPath)

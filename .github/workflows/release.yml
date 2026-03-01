@@ -30,19 +30,19 @@ jobs:
         working-directory: cli
         run: |
           LDFLAGS="-X main.version=${VERSION}"
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o nesco-linux-amd64 ./cmd/nesco
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" -o nesco-linux-arm64 ./cmd/nesco
-          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o nesco-darwin-amd64 ./cmd/nesco
-          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" -o nesco-darwin-arm64 ./cmd/nesco
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o nesco-windows-amd64.exe ./cmd/nesco
-          CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -ldflags "$LDFLAGS" -o nesco-windows-arm64.exe ./cmd/nesco
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o syllago-linux-amd64 ./cmd/syllago
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" -o syllago-linux-arm64 ./cmd/syllago
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o syllago-darwin-amd64 ./cmd/syllago
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" -o syllago-darwin-arm64 ./cmd/syllago
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o syllago-windows-amd64.exe ./cmd/syllago
+          CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -ldflags "$LDFLAGS" -o syllago-windows-arm64.exe ./cmd/syllago
 
       - name: Generate checksums
         working-directory: cli
         run: |
-          sha256sum nesco-linux-amd64 nesco-linux-arm64 \
-            nesco-darwin-amd64 nesco-darwin-arm64 \
-            nesco-windows-amd64.exe nesco-windows-arm64.exe \
+          sha256sum syllago-linux-amd64 syllago-linux-arm64 \
+            syllago-darwin-amd64 syllago-darwin-arm64 \
+            syllago-windows-amd64.exe syllago-windows-arm64.exe \
             > checksums.txt
 
       - name: Install cosign
@@ -70,9 +70,9 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --title "$GITHUB_REF_NAME" \
             --notes-file "../$NOTES_FILE" \
-            nesco-linux-amd64 nesco-linux-arm64 \
-            nesco-darwin-amd64 nesco-darwin-arm64 \
-            nesco-windows-amd64.exe nesco-windows-arm64.exe \
+            syllago-linux-amd64 syllago-linux-arm64 \
+            syllago-darwin-amd64 syllago-darwin-arm64 \
+            syllago-windows-amd64.exe syllago-windows-arm64.exe \
             checksums.txt checksums.txt.bundle
 
       - name: Create GitHub Release (auto-generated notes)
@@ -84,9 +84,9 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --title "$GITHUB_REF_NAME" \
             --generate-notes \
-            nesco-linux-amd64 nesco-linux-arm64 \
-            nesco-darwin-amd64 nesco-darwin-arm64 \
-            nesco-windows-amd64.exe nesco-windows-arm64.exe \
+            syllago-linux-amd64 syllago-linux-arm64 \
+            syllago-darwin-amd64 syllago-darwin-arm64 \
+            syllago-windows-amd64.exe syllago-windows-arm64.exe \
             checksums.txt checksums.txt.bundle
 
       - name: Update Homebrew formula
@@ -103,8 +103,8 @@ jobs:
           fi
 
           # Extract SHA-256 for macOS binaries
-          SHA_DARWIN_AMD64=$(grep nesco-darwin-amd64 checksums.txt | awk '{print $1}')
-          SHA_DARWIN_ARM64=$(grep nesco-darwin-arm64 checksums.txt | awk '{print $1}')
+          SHA_DARWIN_AMD64=$(grep syllago-darwin-amd64 checksums.txt | awk '{print $1}')
+          SHA_DARWIN_ARM64=$(grep syllago-darwin-arm64 checksums.txt | awk '{print $1}')
 
           # Clone the tap repo
           git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/OpenScribbler/homebrew-tap.git" /tmp/homebrew-tap
@@ -114,35 +114,35 @@ jobs:
           mkdir -p Formula
 
           {
-            echo 'class Nesco < Formula'
+            echo 'class Syllago < Formula'
             echo '  desc "AI coding tool content manager"'
-            echo '  homepage "https://github.com/OpenScribbler/nesco"'
+            echo '  homepage "https://github.com/OpenScribbler/syllago"'
             echo "  version \"${VERSION}\""
             echo '  license "Apache-2.0"'
             echo ''
             echo '  on_macos do'
             echo '    if Hardware::CPU.arm?'
-            echo "      url \"https://github.com/OpenScribbler/nesco/releases/download/${TAG_NAME}/nesco-darwin-arm64\""
+            echo "      url \"https://github.com/OpenScribbler/syllago/releases/download/${TAG_NAME}/syllago-darwin-arm64\""
             echo "      sha256 \"${SHA_DARWIN_ARM64}\""
             echo '    else'
-            echo "      url \"https://github.com/OpenScribbler/nesco/releases/download/${TAG_NAME}/nesco-darwin-amd64\""
+            echo "      url \"https://github.com/OpenScribbler/syllago/releases/download/${TAG_NAME}/syllago-darwin-amd64\""
             echo "      sha256 \"${SHA_DARWIN_AMD64}\""
             echo '    end'
             echo '  end'
             echo ''
             echo '  def install'
-            echo '    binary = Hardware::CPU.arm? ? "nesco-darwin-arm64" : "nesco-darwin-amd64"'
-            echo '    bin.install binary => "nesco"'
+            echo '    binary = Hardware::CPU.arm? ? "syllago-darwin-arm64" : "syllago-darwin-amd64"'
+            echo '    bin.install binary => "syllago"'
             echo '  end'
             echo ''
             echo '  test do'
-            echo '    assert_match version.to_s, shell_output("#{bin}/nesco version")'
+            echo '    assert_match version.to_s, shell_output("#{bin}/syllago version")'
             echo '  end'
             echo 'end'
-          } > Formula/nesco.rb
+          } > Formula/syllago.rb
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/nesco.rb
-          git commit -m "nesco ${TAG_NAME}"
+          git add Formula/syllago.rb
+          git commit -m "syllago ${TAG_NAME}"
           git push

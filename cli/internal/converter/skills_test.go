@@ -3,7 +3,7 @@ package converter
 import (
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 func TestClaudeSkillToGemini(t *testing.T) {
@@ -29,7 +29,7 @@ func TestClaudeSkillToGemini(t *testing.T) {
 	assertContains(t, out, "grep_search")
 	assertContains(t, out, "model: opus")
 	assertContains(t, out, "isolated context")
-	assertContains(t, out, "nesco:converted")
+	assertContains(t, out, "syllago:converted")
 	// Should NOT have Claude-specific frontmatter fields
 	assertNotContains(t, out, "allowed-tools:")
 	assertNotContains(t, out, "context: fork")

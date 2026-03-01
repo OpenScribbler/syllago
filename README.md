@@ -1,6 +1,6 @@
 <div align="center">
 
-# Nesco
+# Syllago
 
 <pre>
 ░████████   ░███████   ░███████   ░███████   ░███████
@@ -19,7 +19,7 @@ A CLI and TUI for managing AI coding tool content. Browse, install, and export s
 ### Install script (Linux, macOS, Windows)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/OpenScribbler/nesco/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/OpenScribbler/syllago/main/install.sh | sh
 ```
 
 Downloads the latest release binary for your platform, verifies the SHA-256 checksum, and installs to `~/.local/bin`. Override the install location with `INSTALL_DIR`:
@@ -31,7 +31,7 @@ INSTALL_DIR=/usr/local/bin sh install.sh
 ### Homebrew (macOS, Linux)
 
 ```bash
-brew install openscribbler/tap/nesco
+brew install openscribbler/tap/syllago
 ```
 
 ### From source
@@ -39,8 +39,8 @@ brew install openscribbler/tap/nesco
 Requires Go 1.25 or later.
 
 ```bash
-git clone https://github.com/OpenScribbler/nesco.git ~/.local/src/nesco
-cd ~/.local/src/nesco
+git clone https://github.com/OpenScribbler/syllago.git ~/.local/src/syllago
+cd ~/.local/src/syllago
 make build
 ```
 
@@ -48,13 +48,13 @@ See [Development](#development) for build details.
 
 ## What It Does
 
-A centralized repository of reusable content for AI coding tools — custom instructions, agent definitions, prompt templates, hook scripts, and MCP server configs. The `nesco` TUI lets you browse, preview, and install content into any supported tool. When you install or export, Nesco detects which tools you have, converts formats between providers as needed (e.g., Cursor MDC to Claude Code Markdown), and places files in the correct locations.
+A centralized repository of reusable content for AI coding tools — custom instructions, agent definitions, prompt templates, hook scripts, and MCP server configs. The `syllago` TUI lets you browse, preview, and install content into any supported tool. When you install or export, Syllago detects which tools you have, converts formats between providers as needed (e.g., Cursor MDC to Claude Code Markdown), and places files in the correct locations.
 
-The `nesco import` command brings content from any provider into nesco, and `nesco export` installs it into any other provider's location with automatic format conversion.
+The `syllago import` command brings content from any provider into syllago, and `syllago export` installs it into any other provider's location with automatic format conversion.
 
 ## The TUI
 
-Running `nesco` with no arguments launches a full terminal UI for browsing and managing content.
+Running `syllago` with no arguments launches a full terminal UI for browsing and managing content.
 
 ### Layout
 
@@ -109,17 +109,17 @@ Check for updates, preview what's new (commit log + diffstat), and pull — all 
 
 | Command | Description |
 |---------|-------------|
-| `nesco` | Launch the TUI |
-| `nesco init` | Initialize nesco for a project (creates `.nesco/config.json`) |
-| `nesco import` | Bring content into nesco from a provider, path, or git URL |
-| `nesco export` | Export content to a provider's install location |
-| `nesco config` | Manage provider selection (`list`, `add`, `remove`) |
-| `nesco registry` | Manage git-based content registries (`add`, `remove`, `list`, `sync`, `items`) |
-| `nesco sandbox` | Run AI CLI tools in bubblewrap sandboxes (Linux only) |
-| `nesco update` | Update nesco to the latest release |
-| `nesco info` | Show capabilities (`providers`, `formats`) |
-| `nesco completion` | Generate shell autocompletion (bash, zsh, fish, powershell) |
-| `nesco version` | Print version |
+| `syllago` | Launch the TUI |
+| `syllago init` | Initialize syllago for a project (creates `.syllago/config.json`) |
+| `syllago import` | Bring content into syllago from a provider, path, or git URL |
+| `syllago export` | Export content to a provider's install location |
+| `syllago config` | Manage provider selection (`list`, `add`, `remove`) |
+| `syllago registry` | Manage git-based content registries (`add`, `remove`, `list`, `sync`, `items`) |
+| `syllago sandbox` | Run AI CLI tools in bubblewrap sandboxes (Linux only) |
+| `syllago update` | Update syllago to the latest release |
+| `syllago info` | Show capabilities (`providers`, `formats`) |
+| `syllago completion` | Generate shell autocompletion (bash, zsh, fish, powershell) |
+| `syllago version` | Print version |
 
 ### Global Flags
 
@@ -136,17 +136,17 @@ All commands accept these flags:
 
 ```bash
 # Add content from a git repo
-nesco add --from https://github.com/user/repo.git --type skills --name my-skill
+syllago add --from https://github.com/user/repo.git --type skills --name my-skill
 
 # Export your local content to Claude Code
-nesco export --to claude-code
+syllago export --to claude-code
 
 # Export only rules to Cursor
-nesco export --to cursor --type rules
+syllago export --to cursor --type rules
 
 # See what a provider already has configured
-nesco import --from claude-code
-nesco import --from cursor --type rules --preview
+syllago import --from claude-code
+syllago import --from cursor --type rules --preview
 ```
 
 ## Supported Tools
@@ -162,19 +162,19 @@ nesco import --from cursor --type rules --preview
 
 ## Sandbox
 
-Nesco can wrap AI CLI tools in [bubblewrap](https://github.com/containers/bubblewrap) sandboxes that restrict filesystem access, network egress, and environment variables. Linux only.
+Syllago can wrap AI CLI tools in [bubblewrap](https://github.com/containers/bubblewrap) sandboxes that restrict filesystem access, network egress, and environment variables. Linux only.
 
 ```bash
 # Run Claude Code in a sandbox
-nesco sandbox run claude-code
+syllago sandbox run claude-code
 
 # Check prerequisites
-nesco sandbox check claude-code
+syllago sandbox check claude-code
 
 # Manage the domain allowlist
-nesco sandbox allow-domain example.com
-nesco sandbox deny-domain example.com
-nesco sandbox domains
+syllago sandbox allow-domain example.com
+syllago sandbox deny-domain example.com
+syllago sandbox domains
 ```
 
 The sandbox provides:
@@ -188,20 +188,20 @@ Requires bubblewrap >= 0.4.0 and socat >= 1.7.0.
 
 ## Registries
 
-Registries are git repositories of nesco content that you can browse and install from.
+Registries are git repositories of syllago content that you can browse and install from.
 
 ```bash
 # Add a registry
-nesco registry add https://github.com/OpenScribbler/nesco-tools.git
+syllago registry add https://github.com/OpenScribbler/syllago-tools.git
 
 # List registered registries
-nesco registry list
+syllago registry list
 
 # Sync (pull latest)
-nesco registry sync
+syllago registry sync
 
 # Browse items across all registries
-nesco registry items
+syllago registry items
 ```
 
 Registries also appear in the TUI — browse by category, preview content, and install with one keypress.
@@ -209,7 +209,7 @@ Registries also appear in the TUI — browse by category, preview content, and i
 ## Repository Structure
 
 ```
-nesco/
+syllago/
 ├── skills/          # Multi-file skill packages
 ├── agents/          # Agent definitions
 ├── prompts/         # Prompt templates
@@ -231,12 +231,12 @@ nesco/
 ├── memory/          # Context files for AI assistants
 ├── templates/       # Scaffolding for new content
 ├── local/           # Local content (gitignored)
-└── cli/             # Go source code for nesco
+└── cli/             # Go source code for syllago
 ```
 
 ## Adding Your Own Content
 
-Each content item is a directory (or file) with a `.nesco.yaml` metadata file:
+Each content item is a directory (or file) with a `.syllago.yaml` metadata file:
 
 ```yaml
 name: my-skill
@@ -247,20 +247,20 @@ tags:
   - code-review
 ```
 
-Place your content in the appropriate category directory and `nesco` will discover it automatically. Use the `local/` directory for content you don't want to commit to the repository.
+Place your content in the appropriate category directory and `syllago` will discover it automatically. Use the `local/` directory for content you don't want to commit to the repository.
 
 ## Updating
 
-**Release builds** (installed via install script or Homebrew): run `nesco update` or use the Update screen in the TUI. Both use the same updater — downloads the latest release, verifies the checksum, and replaces the binary.
+**Release builds** (installed via install script or Homebrew): run `syllago update` or use the Update screen in the TUI. Both use the same updater — downloads the latest release, verifies the checksum, and replaces the binary.
 
-**Dev builds** (built from source): `nesco` detects when its own source files have changed and automatically rebuilds before running. Just `git pull` — the next invocation handles the rest.
+**Dev builds** (built from source): `syllago` detects when its own source files have changed and automatically rebuilds before running. Just `git pull` — the next invocation handles the rest.
 
 ## Development
 
 Requires Go 1.25 or later.
 
 ```bash
-make build      # Build the nesco binary (output: cli/nesco)
+make build      # Build the syllago binary (output: cli/syllago)
 make test       # Run tests
 make fmt        # Format Go source
 make vet        # Run go vet
@@ -269,15 +269,15 @@ make build-all  # Cross-compile for all 6 targets (linux/darwin/windows × amd64
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute. Nesco accepts ideas, not code — open an issue using one of the structured templates and describe what you'd like to see.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute. Syllago accepts ideas, not code — open an issue using one of the structured templates and describe what you'd like to see.
 
 ## Security
 
-Nesco does not operate any registry or marketplace. The built-in content comes from
-the [nesco-tools](https://github.com/OpenScribbler/nesco-tools) repository, which you
+Syllago does not operate any registry or marketplace. The built-in content comes from
+the [syllago-tools](https://github.com/OpenScribbler/syllago-tools) repository, which you
 can audit directly.
 
-**Third-party registries are unverified.** When you run `nesco registry add <url>`,
+**Third-party registries are unverified.** When you run `syllago registry add <url>`,
 you are trusting the owner of that repository. Review the content before installing
 anything from it.
 
@@ -285,7 +285,7 @@ anything from it.
 runs automatically in your AI coding session. An MCP server is a process that your AI
 tool connects to. Before installing either, read the source.
 
-The nesco maintainers are not affiliated with and accept no liability for any
+The syllago maintainers are not affiliated with and accept no liability for any
 third-party registry or its content.
 
 ## License

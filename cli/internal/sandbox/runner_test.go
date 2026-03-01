@@ -57,7 +57,7 @@ func TestRunSession_ForceDirPrintsWarning(t *testing.T) {
 
 func TestRunSession_CleansStaleDirs(t *testing.T) {
 	// Create a stale staging dir.
-	stale := filepath.Join("/tmp", "nesco-sandbox-stalerunnertest")
+	stale := filepath.Join("/tmp", "syllago-sandbox-stalerunnertest")
 	os.MkdirAll(stale, 0700)
 	defer os.RemoveAll(stale) // cleanup if test fails
 

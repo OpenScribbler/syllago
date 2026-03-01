@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 func init() {
@@ -233,7 +233,7 @@ func renderStandardHooks(cfg hooksConfig, targetSlug string, llmMode string) (*R
 							Type:          "command",
 							Command:       "./" + scriptName,
 							Timeout:       30000, // LLM calls need more time
-							StatusMessage: fmt.Sprintf("nesco-generated: LLM-evaluated hook (from %s)", h.Type),
+							StatusMessage: fmt.Sprintf("syllago-generated: LLM-evaluated hook (from %s)", h.Type),
 						})
 						warnings = append(warnings, fmt.Sprintf("LLM hook (type: %q) converted to wrapper script %s", h.Type, scriptName))
 					} else {
@@ -294,7 +294,7 @@ func renderCopilotHooks(cfg hooksConfig, llmMode string) (*Result, error) {
 						entries = append(entries, copilotHookEntry{
 							Bash:       "./" + scriptName,
 							TimeoutSec: 30,
-							Comment:    fmt.Sprintf("nesco-generated: LLM-evaluated hook (from %s)", h.Type),
+							Comment:    fmt.Sprintf("syllago-generated: LLM-evaluated hook (from %s)", h.Type),
 						})
 						warnings = append(warnings, fmt.Sprintf("LLM hook (type: %q) converted to wrapper script %s", h.Type, scriptName))
 					} else {
@@ -336,7 +336,7 @@ type kiroHookEntry struct {
 	TimeoutMs int    `json:"timeout_ms,omitempty"`
 }
 
-// kiroHooksAgent is the shape of the nesco-hooks.json file Kiro reads.
+// kiroHooksAgent is the shape of the syllago-hooks.json file Kiro reads.
 type kiroHooksAgent struct {
 	Name        string                     `json:"name"`
 	Description string                     `json:"description"`
@@ -388,8 +388,8 @@ func renderKiroHooks(cfg hooksConfig, llmMode string) (*Result, error) {
 	}
 
 	agent := kiroHooksAgent{
-		Name:        "nesco-hooks",
-		Description: "Hooks installed by nesco",
+		Name:        "syllago-hooks",
+		Description: "Hooks installed by syllago",
 		Prompt:      "",
 		Hooks:       kiroHooks,
 	}
@@ -398,7 +398,7 @@ func renderKiroHooks(cfg hooksConfig, llmMode string) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Result{Content: result, Filename: "nesco-hooks.json", Warnings: warnings}, nil
+	return &Result{Content: result, Filename: "syllago-hooks.json", Warnings: warnings}, nil
 }
 
 // --- LLM wrapper script generation ---
@@ -413,7 +413,7 @@ var cliCommands = map[string]string{
 // generateLLMWrapperScript creates a shell script that calls the target provider's
 // CLI to evaluate an LLM hook. Returns (filename, content).
 func generateLLMWrapperScript(h hookEntry, targetSlug string, event string, idx int) (string, []byte) {
-	scriptName := fmt.Sprintf("nesco-llm-hook-%s-%d.sh", sanitizeForFilename(event), idx)
+	scriptName := fmt.Sprintf("syllago-llm-hook-%s-%d.sh", sanitizeForFilename(event), idx)
 
 	cli := cliCommands[targetSlug]
 	if cli == "" {
@@ -427,7 +427,7 @@ func generateLLMWrapperScript(h hookEntry, targetSlug string, event string, idx 
 
 	var b strings.Builder
 	b.WriteString("#!/bin/bash\n")
-	b.WriteString("# nesco-generated: LLM-evaluated hook wrapper\n")
+	b.WriteString("# syllago-generated: LLM-evaluated hook wrapper\n")
 	b.WriteString(fmt.Sprintf("# Original type: %s | Event: %s\n", h.Type, event))
 	b.WriteString("# Calls the target provider's CLI in non-interactive mode.\n")
 	b.WriteString("# No API key needed — uses the locally installed CLI's auth.\n")

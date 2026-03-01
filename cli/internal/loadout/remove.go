@@ -4,8 +4,8 @@ import (
 	"errors"
 	"os"
 
-	"github.com/OpenScribbler/nesco/cli/internal/installer"
-	"github.com/OpenScribbler/nesco/cli/internal/snapshot"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 )
 
 // ErrNoActiveLoadout is returned when no snapshot is found to revert.

@@ -28,4 +28,4 @@ jobs:
 
       - name: Build smoke check
         working-directory: cli
-        run: go build ./cmd/nesco
+        run: go build ./cmd/syllago

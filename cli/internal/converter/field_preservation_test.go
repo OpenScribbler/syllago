@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // Field preservation tests verify that every canonical field is accounted for
@@ -83,7 +83,7 @@ func TestFieldPreservation_RulesScoped(t *testing.T) {
 		{
 			name:     "to Claude",
 			target:   provider.ClaudeCode,
-			contains: []string{"Use strict TypeScript", "**Scope:**", "*.ts", "nesco:converted"},
+			contains: []string{"Use strict TypeScript", "**Scope:**", "*.ts", "syllago:converted"},
 			absent:   []string{"alwaysApply:", "trigger:"},
 		},
 		{
@@ -231,7 +231,7 @@ func TestFieldPreservation_Agents(t *testing.T) {
 				"background task",            // background → prose
 				"separate git worktree",      // isolation → prose
 				"Do not use these tools",     // disallowedTools → prose
-				"nesco:converted",            // conversion marker
+				"syllago:converted",            // conversion marker
 				"comprehensive test agent",   // body preserved
 			},
 			absent:   []string{"permissionMode:", "isolation: worktree"},
@@ -350,7 +350,7 @@ func TestFieldPreservation_Skills(t *testing.T) {
 				"<pr-url>",          // argument-hint → prose
 				"run_shell_command", // disallowed-tools translated
 				"Review code for best practices",
-				"nesco:converted",
+				"syllago:converted",
 			},
 			absent:   []string{"allowed-tools:", "context: fork", "user-invocable:"},
 			filename: "SKILL.md",
@@ -421,7 +421,7 @@ func TestFieldPreservation_Commands(t *testing.T) {
 				"model: opus",       // embedded as prose
 				"isolated context",  // context: fork → prose
 				"{{args}}",          // $ARGUMENTS → {{args}}
-				"nesco:converted",
+				"syllago:converted",
 			},
 			absent:   []string{"$ARGUMENTS", "allowed-tools:", "context: fork"},
 			filename: "command.toml",
@@ -528,13 +528,13 @@ func TestFieldPreservation_Hooks(t *testing.T) {
 			t.Fatalf("Render: %v", err)
 		}
 		out := string(result.Content)
-		assertContains(t, out, `"name": "nesco-hooks"`)
+		assertContains(t, out, `"name": "syllago-hooks"`)
 		assertContains(t, out, "echo safety-check")
 		assertContains(t, out, "echo session-init")
 		// Events translated to Kiro format
 		assertNotContains(t, out, "PreToolUse")
 		assertNotContains(t, out, "SessionStart")
-		assertEqual(t, "nesco-hooks.json", result.Filename)
+		assertEqual(t, "syllago-hooks.json", result.Filename)
 	})
 }
 
@@ -1573,7 +1573,7 @@ func TestLLMHookGenerateMode_AllProviders(t *testing.T) {
 
 			// Verify wrapper script contents
 			for name, content := range result.ExtraFiles {
-				assertContains(t, name, "nesco-llm-hook")
+				assertContains(t, name, "syllago-llm-hook")
 				script := string(content)
 				assertContains(t, script, "#!/bin/bash")
 				assertContains(t, script, "Is this command safe")

@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/installer"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
-	"github.com/OpenScribbler/nesco/cli/internal/snapshot"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -324,7 +324,7 @@ func applyMCP(ref ResolvedRef, prov provider.Provider, projectRoot string, inst 
 	return nil
 }
 
-// injectSessionEndHook appends a SessionEnd hook that runs "nesco loadout remove --auto".
+// injectSessionEndHook appends a SessionEnd hook that runs "syllago loadout remove --auto".
 // This hook is NOT tracked in installed.json -- it gets reverted when the snapshot restores
 // settings.json.
 func injectSessionEndHook(prov provider.Provider, homeDir string) error {
@@ -336,7 +336,7 @@ func injectSessionEndHook(prov provider.Provider, homeDir string) error {
 		"hooks": []map[string]interface{}{
 			{
 				"type":    "command",
-				"command": "nesco loadout remove --auto",
+				"command": "syllago loadout remove --auto",
 			},
 		},
 	}
@@ -380,7 +380,7 @@ func collectBackupFiles(actions []PlannedAction, prov provider.Provider, opts Ap
 	}
 
 	// Also back up installed.json
-	files = append(files, filepath.Join(opts.ProjectRoot, ".nesco", "installed.json"))
+	files = append(files, filepath.Join(opts.ProjectRoot, ".syllago", "installed.json"))
 
 	return files
 }

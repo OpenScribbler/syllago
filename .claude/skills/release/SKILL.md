@@ -1,11 +1,11 @@
 ---
 name: release
-description: Automate the full release workflow for nesco. USE WHEN creating a release OR tagging a version OR bumping VERSION OR publishing to GitHub releases.
+description: Automate the full release workflow for syllago. USE WHEN creating a release OR tagging a version OR bumping VERSION OR publishing to GitHub releases.
 ---
 
 # release
 
-Interactive two-phase release workflow for nesco. Analyzes changes, recommends a version bump, writes release notes, and ships — with human approval at every decision point.
+Interactive two-phase release workflow for syllago. Analyzes changes, recommends a version bump, writes release notes, and ships — with human approval at every decision point.
 
 ## Arguments
 
@@ -18,16 +18,16 @@ Use these criteria when recommending a release type. Present these in the AskUse
 ### Major (X.0.0)
 
 - Breaking changes to CLI commands (renamed/removed subcommands, changed flags, changed output format)
-- Breaking changes to `.nesco.yaml` schema that require user migration
+- Breaking changes to `.syllago.yaml` schema that require user migration
 - Breaking changes to registry protocol or content format
 - Dropping support for a provider
-- Any change that would break existing scripts or workflows using nesco
+- Any change that would break existing scripts or workflows using syllago
 
 ### Minor (0.X.0)
 
 - New features (commands, subcommands, TUI screens, content types)
 - New provider support
-- Non-breaking additions to config format or `.nesco.yaml`
+- Non-breaking additions to config format or `.syllago.yaml`
 - Significant improvements to existing features (new options, expanded behavior)
 - New built-in content (skills, agents, etc.)
 
@@ -41,7 +41,7 @@ Use these criteria when recommending a release type. Present these in the AskUse
 
 ### Pre-1.0 Note
 
-While nesco is pre-1.0, minor versions may include small breaking changes if needed. After 1.0, semver is strict — breaking changes require a major bump.
+While syllago is pre-1.0, minor versions may include small breaking changes if needed. After 1.0, semver is strict — breaking changes require a major bump.
 
 ## Workflow Routing
 
@@ -79,5 +79,5 @@ Claude: Commits notes + VERSION bump, creates .release-pending.yml
         [AskUserQuestion: Ship v0.5.0?]
 User: "Ship it"
 Claude: Tags v0.5.0, pushes, creates GitHub Release
-        "Released! https://github.com/OpenScribbler/nesco/releases/tag/v0.5.0"
+        "Released! https://github.com/OpenScribbler/syllago/releases/tag/v0.5.0"
 ```

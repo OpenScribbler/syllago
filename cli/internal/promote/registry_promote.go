@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 // RegistryResult holds the outcome of a promote-to-registry operation.
@@ -31,7 +31,7 @@ func PromoteToRegistry(repoRoot string, registryName string, item catalog.Conten
 		return nil, fmt.Errorf("resolving registry path: %w", err)
 	}
 	if _, err := os.Stat(cloneDir); err != nil {
-		return nil, fmt.Errorf("registry %q is not cloned locally (run `nesco registry add` first)", registryName)
+		return nil, fmt.Errorf("registry %q is not cloned locally (run `syllago registry add` first)", registryName)
 	}
 
 	// 2. Determine destination path within the registry.
@@ -56,7 +56,7 @@ func PromoteToRegistry(repoRoot string, registryName string, item catalog.Conten
 	defaultBranch := detectDefaultBranch(cloneDir)
 
 	// 5. Create contribution branch
-	branchName := fmt.Sprintf("nesco/contribute/%s/%s", item.Type, item.Name)
+	branchName := fmt.Sprintf("syllago/contribute/%s/%s", item.Type, item.Name)
 	if err := gitRun(cloneDir, "checkout", "-b", branchName); err != nil {
 		// Branch might already exist — append timestamp
 		branchName = fmt.Sprintf("%s-%d", branchName, time.Now().Unix())

@@ -6,9 +6,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/config"
-	"github.com/OpenScribbler/nesco/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
 
 func TestAppHasSidebarField(t *testing.T) {
@@ -26,9 +26,9 @@ func TestAppViewContainsBreadcrumb(t *testing.T) {
 		screen: screenCategory,
 	}
 	view := a.View()
-	// The default breadcrumb for screenCategory is "nesco"
-	if !strings.Contains(view, "nesco") {
-		t.Error("App.View() should contain 'nesco' breadcrumb in the footer")
+	// The default breadcrumb for screenCategory is "syllago"
+	if !strings.Contains(view, "syllago") {
+		t.Error("App.View() should contain 'syllago' breadcrumb in the footer")
 	}
 }
 
@@ -82,17 +82,17 @@ func TestFirstRunScreenAppearsWhenEmpty(t *testing.T) {
 		},
 	}
 	view := a.renderContentWelcome()
-	if !strings.Contains(view, "Welcome to nesco") {
-		t.Error("first-run screen should show 'Welcome to nesco' when catalog is empty")
+	if !strings.Contains(view, "Welcome to syllago") {
+		t.Error("first-run screen should show 'Welcome to syllago' when catalog is empty")
 	}
-	if !strings.Contains(view, "nesco import") {
-		t.Error("first-run screen should show 'nesco import' step")
+	if !strings.Contains(view, "syllago import") {
+		t.Error("first-run screen should show 'syllago import' step")
 	}
-	if !strings.Contains(view, "nesco registry add") {
-		t.Error("first-run screen should show 'nesco registry add' step")
+	if !strings.Contains(view, "syllago registry add") {
+		t.Error("first-run screen should show 'syllago registry add' step")
 	}
-	if !strings.Contains(view, "nesco create") {
-		t.Error("first-run screen should show 'nesco create' step")
+	if !strings.Contains(view, "syllago create") {
+		t.Error("first-run screen should show 'syllago create' step")
 	}
 }
 
@@ -103,7 +103,7 @@ func TestNormalWelcomeScreenWhenContentExists(t *testing.T) {
 	a.screen = screenCategory
 	view := a.renderContentWelcome()
 	// Normal welcome should show category cards/list, not the first-run message
-	if strings.Contains(view, "Welcome to nesco!") {
+	if strings.Contains(view, "Welcome to syllago!") {
 		t.Error("normal welcome screen should not show first-run message when content exists")
 	}
 }
@@ -127,7 +127,7 @@ func TestFirstRunScreenWithRegistriesButNoContent(t *testing.T) {
 	}
 	view := a.renderContentWelcome()
 	// Should NOT show first-run since user has a registry configured
-	if strings.Contains(view, "Welcome to nesco!") {
+	if strings.Contains(view, "Welcome to syllago!") {
 		t.Error("should not show first-run when registries are configured")
 	}
 }

@@ -8,9 +8,9 @@ import (
 	"testing"
 )
 
-// repoRoot returns the nesco repo root relative to this test file.
+// repoRoot returns the syllago repo root relative to this test file.
 // The test lives at cli/internal/converter/, so the repo root is three
-// directories up: converter -> internal -> cli -> nesco.
+// directories up: converter -> internal -> cli -> syllago.
 func repoRoot(t *testing.T) string {
 	t.Helper()
 	_, thisFile, _, ok := runtime.Caller(0)

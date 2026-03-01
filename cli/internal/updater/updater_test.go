@@ -22,19 +22,19 @@ func TestAssetName(t *testing.T) {
 		goarch string
 		want   string
 	}{
-		{"linux", "amd64", "nesco-linux-amd64"},
-		{"linux", "arm64", "nesco-linux-arm64"},
-		{"darwin", "amd64", "nesco-darwin-amd64"},
-		{"darwin", "arm64", "nesco-darwin-arm64"},
-		{"windows", "amd64", "nesco-windows-amd64.exe"},
-		{"windows", "arm64", "nesco-windows-arm64.exe"},
+		{"linux", "amd64", "syllago-linux-amd64"},
+		{"linux", "arm64", "syllago-linux-arm64"},
+		{"darwin", "amd64", "syllago-darwin-amd64"},
+		{"darwin", "arm64", "syllago-darwin-arm64"},
+		{"windows", "amd64", "syllago-windows-amd64.exe"},
+		{"windows", "arm64", "syllago-windows-arm64.exe"},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.goos+"/"+tc.goarch, func(t *testing.T) {
 			// Exercise the same formatting logic as assetName() with explicit
 			// inputs so we don't depend on the test runner's platform.
-			name := fmt.Sprintf("nesco-%s-%s", tc.goos, tc.goarch)
+			name := fmt.Sprintf("syllago-%s-%s", tc.goos, tc.goarch)
 			if tc.goos == "windows" {
 				name += ".exe"
 			}
@@ -53,11 +53,11 @@ func TestCheckLatest(t *testing.T) {
 		"tag_name": "v0.5.0",
 		"body":     "## What's New\n\n- Feature A\n- Bug fix B\n",
 		"assets": []map[string]interface{}{
-			{"name": "nesco-linux-amd64", "browser_download_url": "https://example.com/nesco-linux-amd64"},
-			{"name": "nesco-linux-arm64", "browser_download_url": "https://example.com/nesco-linux-arm64"},
-			{"name": "nesco-darwin-amd64", "browser_download_url": "https://example.com/nesco-darwin-amd64"},
-			{"name": "nesco-darwin-arm64", "browser_download_url": "https://example.com/nesco-darwin-arm64"},
-			{"name": "nesco-windows-amd64.exe", "browser_download_url": "https://example.com/nesco-windows-amd64.exe"},
+			{"name": "syllago-linux-amd64", "browser_download_url": "https://example.com/syllago-linux-amd64"},
+			{"name": "syllago-linux-arm64", "browser_download_url": "https://example.com/syllago-linux-arm64"},
+			{"name": "syllago-darwin-amd64", "browser_download_url": "https://example.com/syllago-darwin-amd64"},
+			{"name": "syllago-darwin-arm64", "browser_download_url": "https://example.com/syllago-darwin-arm64"},
+			{"name": "syllago-windows-amd64.exe", "browser_download_url": "https://example.com/syllago-windows-amd64.exe"},
 			{"name": "checksums.txt", "browser_download_url": "https://example.com/checksums.txt"},
 		},
 	}
@@ -158,7 +158,7 @@ func TestChecksumVerification(t *testing.T) {
 	dir := t.TempDir()
 
 	// Write a deterministic "binary" file.
-	binaryPath := filepath.Join(dir, "nesco-linux-amd64")
+	binaryPath := filepath.Join(dir, "syllago-linux-amd64")
 	content := []byte("fake binary content for testing")
 	if err := os.WriteFile(binaryPath, content, 0644); err != nil {
 		t.Fatalf("writing binary: %v", err)
@@ -170,14 +170,14 @@ func TestChecksumVerification(t *testing.T) {
 
 	// Write a checksums.txt that matches the Go-tool format.
 	checksumPath := filepath.Join(dir, "checksums.txt")
-	checksumContent := fmt.Sprintf("%s  nesco-linux-amd64\n%s  nesco-darwin-arm64\n",
+	checksumContent := fmt.Sprintf("%s  syllago-linux-amd64\n%s  syllago-darwin-arm64\n",
 		expectedHash, "deadbeef00000000000000000000000000000000000000000000000000000000")
 	if err := os.WriteFile(checksumPath, []byte(checksumContent), 0644); err != nil {
 		t.Fatalf("writing checksums: %v", err)
 	}
 
 	t.Run("correct hash passes", func(t *testing.T) {
-		found, err := findChecksum(checksumPath, "nesco-linux-amd64")
+		found, err := findChecksum(checksumPath, "syllago-linux-amd64")
 		if err != nil {
 			t.Fatalf("findChecksum: %v", err)
 		}
@@ -202,20 +202,20 @@ func TestChecksumVerification(t *testing.T) {
 	})
 
 	t.Run("missing entry returns error", func(t *testing.T) {
-		_, err := findChecksum(checksumPath, "nesco-windows-amd64.exe")
+		_, err := findChecksum(checksumPath, "syllago-windows-amd64.exe")
 		if err == nil {
 			t.Error("expected error for missing entry, got nil")
 		}
 	})
 
 	t.Run("checksum with path prefix is matched by base name", func(t *testing.T) {
-		// Some tools emit "sha256  ./path/to/nesco-linux-amd64" — verify we handle it.
+		// Some tools emit "sha256  ./path/to/syllago-linux-amd64" — verify we handle it.
 		pathChecksumPath := filepath.Join(dir, "checksums-path.txt")
-		pathContent := fmt.Sprintf("%s  ./dist/nesco-linux-amd64\n", expectedHash)
+		pathContent := fmt.Sprintf("%s  ./dist/syllago-linux-amd64\n", expectedHash)
 		if err := os.WriteFile(pathChecksumPath, []byte(pathContent), 0644); err != nil {
 			t.Fatalf("writing checksums: %v", err)
 		}
-		found, err := findChecksum(pathChecksumPath, "nesco-linux-amd64")
+		found, err := findChecksum(pathChecksumPath, "syllago-linux-amd64")
 		if err != nil {
 			t.Fatalf("findChecksum with path prefix: %v", err)
 		}

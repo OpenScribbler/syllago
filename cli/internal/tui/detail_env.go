@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/OpenScribbler/nesco/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 )
 
 // saveEnvToFile writes a KEY=VALUE line to the specified file (e.g., a .env file).

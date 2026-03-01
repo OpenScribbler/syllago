@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/OpenScribbler/nesco/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v3"
 )
@@ -229,8 +229,8 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 
 // scanProviderSpecific discovers items for provider-specific types (rules, hooks, commands).
 // Supports two layouts:
-//   - Directory-per-item (new): <type>/<provider>/<item-name>/ with content file + README.md + .nesco.yaml
-//   - Single file (legacy):    <type>/<provider>/<file> with .nesco.<file>.yaml alongside
+//   - Directory-per-item (new): <type>/<provider>/<item-name>/ with content file + README.md + .syllago.yaml
+//   - Single file (legacy):    <type>/<provider>/<file> with .syllago.<file>.yaml alongside
 func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries []os.DirEntry, local bool) error {
 	for _, providerEntry := range entries {
 		if !providerEntry.IsDir() || shouldSkip(providerEntry.Name()) {
@@ -399,7 +399,7 @@ func shouldSkip(name string) bool {
 	if name == ".gitkeep" || name == "README.md" || name == "LLM-PROMPT.md" {
 		return true
 	}
-	if name == metadata.FileName || strings.HasPrefix(name, ".nesco.") {
+	if name == metadata.FileName || strings.HasPrefix(name, ".syllago.") {
 		return true
 	}
 	return false
@@ -424,7 +424,7 @@ func collectFiles(itemDir string, baseDir string) []string {
 			return nil
 		}
 		name := d.Name()
-		// Skip hidden files and directories (e.g. .nesco.yaml, .git)
+		// Skip hidden files and directories (e.g. .syllago.yaml, .git)
 		if strings.HasPrefix(name, ".") {
 			if d.IsDir() {
 				return filepath.SkipDir

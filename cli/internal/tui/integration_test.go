@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/exp/teatest"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 // testModel wraps App to suppress Init() — prevents git fetch during tests.
@@ -55,7 +55,7 @@ func TestTeatestCategoryToItems(t *testing.T) {
 	tm := newTestModel(t)
 
 	// Category screen should render on start
-	waitFor(t, tm, "nesco")
+	waitFor(t, tm, "syllago")
 
 	// Enter on first item (Skills) → items screen
 	tm.Send(keyEnter)
@@ -72,7 +72,7 @@ func TestTeatestCategoryToItems(t *testing.T) {
 
 func TestTeatestSearchFlow(t *testing.T) {
 	tm := newTestModel(t)
-	waitFor(t, tm, "nesco")
+	waitFor(t, tm, "syllago")
 
 	// Activate search with /
 	tm.Send(keyRune('/'))
@@ -88,7 +88,7 @@ func TestTeatestSearchFlow(t *testing.T) {
 
 	// Esc back
 	tm.Send(keyEsc)
-	waitFor(t, tm, "nesco")
+	waitFor(t, tm, "syllago")
 
 	tm.Send(keyRune('q'))
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
@@ -96,7 +96,7 @@ func TestTeatestSearchFlow(t *testing.T) {
 
 func TestTeatestDetailTabs(t *testing.T) {
 	tm := newTestModel(t)
-	waitFor(t, tm, "nesco")
+	waitFor(t, tm, "syllago")
 
 	// Navigate to Skills → enter → items
 	tm.Send(keyEnter)
@@ -119,7 +119,7 @@ func TestTeatestDetailTabs(t *testing.T) {
 	// Back to category
 	tm.Send(keyEsc) // → items
 	tm.Send(keyEsc) // → category
-	waitFor(t, tm, "nesco")
+	waitFor(t, tm, "syllago")
 
 	tm.Send(keyRune('q'))
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
@@ -127,7 +127,7 @@ func TestTeatestDetailTabs(t *testing.T) {
 
 func TestTeatestSettingsToggle(t *testing.T) {
 	tm := newTestModel(t)
-	waitFor(t, tm, "nesco")
+	waitFor(t, tm, "syllago")
 
 	// Navigate to Settings (last row)
 	nTypes := len(catalog.AllContentTypes())
@@ -147,7 +147,7 @@ func TestTeatestSettingsToggle(t *testing.T) {
 	waitFor(t, tm, "Auto-update")
 
 	tm.Send(keyEsc)
-	waitFor(t, tm, "nesco")
+	waitFor(t, tm, "syllago")
 
 	tm.Send(keyRune('q'))
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
@@ -155,7 +155,7 @@ func TestTeatestSettingsToggle(t *testing.T) {
 
 func TestTeatestImportStart(t *testing.T) {
 	tm := newTestModel(t)
-	waitFor(t, tm, "nesco")
+	waitFor(t, tm, "syllago")
 
 	// Navigate to Import (8 types + My Tools = nTypes+1 presses)
 	nTypes := len(catalog.AllContentTypes())
@@ -171,7 +171,7 @@ func TestTeatestImportStart(t *testing.T) {
 	waitFor(t, tm, "Import AI Tools")
 
 	tm.Send(keyEsc)
-	waitFor(t, tm, "nesco")
+	waitFor(t, tm, "syllago")
 
 	tm.Send(keyRune('q'))
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
@@ -179,7 +179,7 @@ func TestTeatestImportStart(t *testing.T) {
 
 func TestTeatestQuit(t *testing.T) {
 	tm := newTestModel(t)
-	waitFor(t, tm, "nesco")
+	waitFor(t, tm, "syllago")
 
 	tm.Send(keyRune('q'))
 
@@ -191,7 +191,7 @@ func TestTeatestQuit(t *testing.T) {
 
 func TestTeatestCtrlCAnywhere(t *testing.T) {
 	tm := newTestModel(t)
-	waitFor(t, tm, "nesco")
+	waitFor(t, tm, "syllago")
 
 	// Navigate deep: category → items → detail
 	tm.Send(keyEnter)
@@ -207,7 +207,7 @@ func TestTeatestCtrlCAnywhere(t *testing.T) {
 
 func TestTeatestWindowResize(t *testing.T) {
 	tm := newTestModel(t)
-	waitFor(t, tm, "nesco")
+	waitFor(t, tm, "syllago")
 
 	// Resize to below minimum (40x10)
 	tm.Send(tea.WindowSizeMsg{Width: 30, Height: 8})
@@ -217,7 +217,7 @@ func TestTeatestWindowResize(t *testing.T) {
 	tm.Send(tea.WindowSizeMsg{Width: 80, Height: 30})
 
 	// Should recover and show normal UI
-	waitFor(t, tm, "nesco")
+	waitFor(t, tm, "syllago")
 
 	tm.Send(keyRune('q'))
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))

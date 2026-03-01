@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/parse"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/parse"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"gopkg.in/yaml.v3"
 )
 
@@ -354,7 +354,7 @@ func renderSingleFileRule(meta RuleMeta, body string) (*Result, error) {
 		notes = append(notes, "**Scope:** Apply only when explicitly asked.")
 	}
 
-	notesBlock := BuildConversionNotes("nesco", notes)
+	notesBlock := BuildConversionNotes("syllago", notes)
 	result := AppendNotes(body, notesBlock)
 	return &Result{Content: []byte(result + "\n"), Filename: "rule.md"}, nil
 }
@@ -468,7 +468,7 @@ func renderKiroRule(meta RuleMeta, body string) (*Result, error) {
 
 	content := body
 	if len(notes) > 0 {
-		notesBlock := BuildConversionNotes("nesco", notes)
+		notesBlock := BuildConversionNotes("syllago", notes)
 		content = AppendNotes(body, notesBlock)
 	}
 
@@ -498,7 +498,7 @@ func renderOpenCodeRule(meta RuleMeta, body string) (*Result, error) {
 		notes = append(notes, "**Scope:** Apply only when explicitly asked.")
 	}
 
-	notesBlock := BuildConversionNotes("nesco", notes)
+	notesBlock := BuildConversionNotes("syllago", notes)
 	result := AppendNotes(body, notesBlock)
 	return &Result{Content: []byte(result + "\n"), Filename: "AGENTS.md"}, nil
 }

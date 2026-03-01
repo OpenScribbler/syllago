@@ -91,7 +91,7 @@ func TestStagingDir_Cleanup(t *testing.T) {
 
 func TestCleanStale_RemovesOldDirs(t *testing.T) {
 	// Create a fake stale staging dir in /tmp.
-	stale := filepath.Join("/tmp", "nesco-sandbox-staletest123")
+	stale := filepath.Join("/tmp", "syllago-sandbox-staletest123")
 	if err := os.MkdirAll(stale, 0700); err != nil {
 		t.Fatalf("creating stale dir: %v", err)
 	}

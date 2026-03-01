@@ -11,7 +11,7 @@ rules:
 hooks:
   - example-kitchen-sink-hooks
 skills:
-  - nesco-guide
+  - syllago-guide
 agents:
   - example-kitchen-sink-agent
 mcp:

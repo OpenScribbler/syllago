@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 // navigateToSettings creates a test app and navigates to the settings screen.
@@ -150,7 +150,7 @@ func TestSettingsSave(t *testing.T) {
 	app := navigateToSettings(t)
 
 	// Ensure the config directory exists
-	configDir := filepath.Join(app.catalog.RepoRoot, ".nesco")
+	configDir := filepath.Join(app.catalog.RepoRoot, ".syllago")
 	os.MkdirAll(configDir, 0o755)
 
 	// Press 's' to save

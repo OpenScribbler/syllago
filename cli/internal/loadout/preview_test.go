@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/installer"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 func TestPreview_AllNew(t *testing.T) {
@@ -15,8 +15,8 @@ func TestPreview_AllNew(t *testing.T) {
 	homeDir := t.TempDir()
 	repoRoot := t.TempDir()
 
-	// Create .nesco dir for installed.json
-	os.MkdirAll(filepath.Join(repoRoot, ".nesco"), 0755)
+	// Create .syllago dir for installed.json
+	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
 
 	prov := provider.Provider{
 		Name: "test-provider",
@@ -59,7 +59,7 @@ func TestPreview_ExistingSameTarget(t *testing.T) {
 	t.Parallel()
 	homeDir := t.TempDir()
 	repoRoot := t.TempDir()
-	os.MkdirAll(filepath.Join(repoRoot, ".nesco"), 0755)
+	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
 
 	skillsDir := filepath.Join(homeDir, ".test", "skills")
 	os.MkdirAll(skillsDir, 0755)
@@ -105,7 +105,7 @@ func TestPreview_Conflict(t *testing.T) {
 	t.Parallel()
 	homeDir := t.TempDir()
 	repoRoot := t.TempDir()
-	os.MkdirAll(filepath.Join(repoRoot, ".nesco"), 0755)
+	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
 
 	skillsDir := filepath.Join(homeDir, ".test", "skills")
 	os.MkdirAll(skillsDir, 0755)
@@ -151,7 +151,7 @@ func TestPreview_HookAlreadyInstalled(t *testing.T) {
 	repoRoot := t.TempDir()
 
 	// Write installed.json with an existing hook
-	os.MkdirAll(filepath.Join(repoRoot, ".nesco"), 0755)
+	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
 	inst := &installer.Installed{
 		Hooks: []installer.InstalledHook{
 			{Name: "my-hook", Event: "PostToolUse", Command: "echo test", Source: "export"},
@@ -190,7 +190,7 @@ func TestPreview_HookAlreadyInstalled(t *testing.T) {
 func TestPreview_NewHook(t *testing.T) {
 	t.Parallel()
 	repoRoot := t.TempDir()
-	os.MkdirAll(filepath.Join(repoRoot, ".nesco"), 0755)
+	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
 
 	prov := provider.Provider{
 		Name: "test-provider",
@@ -221,7 +221,7 @@ func TestPreview_NewHook(t *testing.T) {
 func TestPreview_NewMCP(t *testing.T) {
 	t.Parallel()
 	repoRoot := t.TempDir()
-	os.MkdirAll(filepath.Join(repoRoot, ".nesco"), 0755)
+	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
 
 	prov := provider.Provider{
 		Name: "test-provider",
@@ -252,7 +252,7 @@ func TestPreview_NewMCP(t *testing.T) {
 func TestPreview_MCPAlreadyInstalled(t *testing.T) {
 	t.Parallel()
 	repoRoot := t.TempDir()
-	os.MkdirAll(filepath.Join(repoRoot, ".nesco"), 0755)
+	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
 
 	// Write installed.json with an existing MCP entry
 	inst := &installer.Installed{
@@ -292,7 +292,7 @@ func TestPreview_RegularFileConflict(t *testing.T) {
 	t.Parallel()
 	homeDir := t.TempDir()
 	repoRoot := t.TempDir()
-	os.MkdirAll(filepath.Join(repoRoot, ".nesco"), 0755)
+	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
 
 	rulesDir := filepath.Join(homeDir, ".test", "rules")
 	os.MkdirAll(rulesDir, 0755)

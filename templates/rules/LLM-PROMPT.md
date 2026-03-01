@@ -1,4 +1,4 @@
-You are helping me create content for nesco, a shared library of AI coding tool configurations. Nesco manages skills, agents, prompts, MCP servers, apps, rules, hooks, and commands that get installed into tools like Claude Code, Cursor, and Gemini CLI.
+You are helping me create content for syllago, a shared library of AI coding tool configurations. Syllago manages skills, agents, prompts, MCP servers, apps, rules, hooks, and commands that get installed into tools like Claude Code, Cursor, and Gemini CLI.
 
 I'm creating a new rule called "{{NAME}}". Rules are provider-specific configuration files that define behavioral constraints or guidelines for a specific AI tool. They live under a provider subdirectory.
 

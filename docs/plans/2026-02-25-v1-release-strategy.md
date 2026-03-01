@@ -1,4 +1,4 @@
-# Nesco v1.0 Release Strategy
+# Syllago v1.0 Release Strategy
 
 *Design date: 2026-02-25*
 *Status: In Progress — updated 2026-02-27*
@@ -9,11 +9,11 @@
 
 **Subline:** Browse, install, and share AI tool content across Claude Code, Cursor, Gemini CLI, and more. Automatic format conversion. Team-ready registries. No lock-in.
 
-**Identity:** Nesco is the package manager for AI coding tool content.
+**Identity:** Syllago is the package manager for AI coding tool content.
 
 ### How We Differ From Rulesync
 
-| | Rulesync | Nesco |
+| | Rulesync | Syllago |
 |---|---|---|
 | **Model** | Compiler (source -> generated outputs) | Package manager (browse -> install -> share) |
 | **Content** | Prescriptive (official skills, simulated features) | Platform (bring your own, share your own) |
@@ -24,7 +24,7 @@
 
 ### Philosophy: Platform, Not Prescription
 
-Nesco does not prescribe what content you should use. The only built-in content is meta-tooling (skills/agents that help you use nesco itself and create content for it). Everything else comes from registries that people create and share. Nesco is the platform, not the content source.
+Syllago does not prescribe what content you should use. The only built-in content is meta-tooling (skills/agents that help you use syllago itself and create content for it). Everything else comes from registries that people create and share. Syllago is the platform, not the content source.
 
 ---
 
@@ -43,15 +43,15 @@ V1.0 must work well for both from day one.
 
 Based on risk profiles and unblocking dependencies:
 
-1. ~~**Distribution**~~ ✅ v0.5.0 — Binaries (6 platforms), install script, Homebrew tap, cosign signing, `nesco update`.
+1. ~~**Distribution**~~ ✅ v0.5.0 — Binaries (6 platforms), install script, Homebrew tap, cosign signing, `syllago update`.
 2. ~~**CI Pipeline**~~ ✅ v0.5.0 — `go test` + `go build` on PR and push to main.
 3. ~~**Tool Coverage (11 providers)**~~ ✅ v0.5.0 + d39214c — All 11 providers: Claude Code, Gemini CLI, Cursor, Windsurf, Codex, Copilot CLI, Cline, Kiro, Roo Code, Zed, OpenCode.
 4. ~~**Format Conversion Fidelity**~~ ✅ d39214c — Tool name tables for all providers, MCP merge for 9 providers, Codex multi-agent TOML, hookless provider warnings, field preservation tests.
-5. ~~**Meta-Content**~~ ✅ — `nesco-guide` skill, `nesco-author` agent, built-in badge in TUI.
+5. ~~**Meta-Content**~~ ✅ — `syllago-guide` skill, `syllago-author` agent, built-in badge in TUI.
 6. ~~**Content Model Restructure**~~ ✅ b7a415f — 42 tasks across 6 phases. `content/` directory, scanner refactor, kitchen-sink examples, CLI fixes (import/export/create/list/inspect), registry features, TUI polish.
 7. ~~**SEC-001 Fix**~~ ✅ — Symlink checks in `copyFile` and `copyDir` (Lstat guard + source tree skip).
 8. ~~**Sandbox Wrapper**~~ ✅ v0.5.0 — Bubblewrap isolation, egress proxy, config diff-and-approve, TUI settings.
-9. **Loadouts** — Session config packaging. Claude Code only for v1. Design: `docs/nesco-loadouts-design.md` (renamed from "starters").
+9. **Loadouts** — Session config packaging. Claude Code only for v1. Design: `docs/syllago-loadouts-design.md` (renamed from "starters").
 10. **TUI Polish + Registry Experience** — Audit for remaining gaps after content model restructure.
 11. **Documentation Site (Content)** — Scaffolding done. Write actual docs content last, once features are stable.
 
@@ -64,9 +64,9 @@ Eight of ten original workstreams are complete. Two workstreams remain plus a ne
 | # | Workstream | Status | Key Items |
 |---|-----------|--------|-----------|
 | ~~NEW~~ | ~~Content Model Restructure~~ | ✅ Complete (b7a415f) | 42 tasks, 6 phases, 120 files changed |
-| ~~NEW~~ | ~~Critical CLI Fixes~~ | ✅ Complete (b7a415f) | Import to local/, export --source, nesco create/list/inspect |
+| ~~NEW~~ | ~~Critical CLI Fixes~~ | ✅ Complete (b7a415f) | Import to local/, export --source, syllago create/list/inspect |
 | ~~NEW~~ | ~~Registry & Team Features~~ | ✅ Complete (b7a415f) | allowedRegistries, inspect, precedence, manifest, promote --to-registry |
-| NEW | **Starters** | Designed, not started | Session config packaging — `nesco start/stop/revert/bundle` |
+| NEW | **Starters** | Designed, not started | Session config packaging — `syllago start/stop/revert/bundle` |
 | 2+5 | TUI Polish + Registry Experience | Partially done (most items done via content model) | Audit for remaining gaps |
 | 8 | Documentation Site Content | Not started (blocked by features) | Getting started, provider ref, authoring guide, CLI ref |
 
@@ -80,14 +80,14 @@ Eight of ten original workstreams are complete. Two workstreams remain plus a ne
 
 **Status:** Complete (v0.5.0)
 
-**Goal:** `curl -fsSL https://get.nesco.dev | sh` or `brew install nesco`
+**Goal:** `curl -fsSL https://get.syllago.dev | sh` or `brew install syllago`
 
 - ✅ Pre-built binaries for Linux/macOS/Windows (amd64 + arm64) on GitHub Releases
 - ✅ One-liner install script (shell script that detects OS/arch, downloads binary)
-- ✅ Homebrew tap (`brew install openscribbler/tap/nesco`)
+- ✅ Homebrew tap (`brew install openscribbler/tap/syllago`)
 - ✅ SHA-256 checksums + cosign signing
 - ✅ `/release` skill with interactive two-phase flow + release guard hook
-- ✅ `nesco update` self-update command
+- ✅ `syllago update` self-update command
 
 ### 2. TUI Polish (Must-Have)
 
@@ -118,14 +118,14 @@ All 11 providers implemented:
 
 **Status:** Complete
 
-**Goal:** Ship 2-3 built-in items that make nesco self-bootstrapping.
+**Goal:** Ship 2-3 built-in items that make syllago self-bootstrapping.
 
-- ✅ **`nesco-guide` skill** — Complete reference: all commands, content types, 11 providers, format conversion, registries, sandbox
-- ✅ **`nesco-author` agent** — Persona with full canonical format reference, converter constraints, tool name table, .nesco.yaml schema, provider-specific gotchas
-- ✅ **`nesco-import` skill** — Updated to reflect current CLI (removed `nesco add` references, added export examples)
-- ✅ **"Built-in" badge** — Purple `[BUILT-IN]` badge in TUI items list and detail view (distinct from amber LOCAL and grey registry badges). Uses `IsBuiltin()` helper on `ContentItem` checking `.nesco.yaml` `builtin` tag.
+- ✅ **`syllago-guide` skill** — Complete reference: all commands, content types, 11 providers, format conversion, registries, sandbox
+- ✅ **`syllago-author` agent** — Persona with full canonical format reference, converter constraints, tool name table, .syllago.yaml schema, provider-specific gotchas
+- ✅ **`syllago-import` skill** — Updated to reflect current CLI (removed `syllago add` references, added export examples)
+- ✅ **"Built-in" badge** — Purple `[BUILT-IN]` badge in TUI items list and detail view (distinct from amber LOCAL and grey registry badges). Uses `IsBuiltin()` helper on `ContentItem` checking `.syllago.yaml` `builtin` tag.
 
-Built-in items: `nesco-guide` (skill), `nesco-author` (agent), `nesco-import` (skill).
+Built-in items: `syllago-guide` (skill), `syllago-author` (agent), `syllago-import` (skill).
 
 ### 5. Registry Experience (Must-Have)
 
@@ -133,11 +133,11 @@ Built-in items: `nesco-guide` (skill), `nesco-author` (agent), `nesco-import` (s
 
 **Goal:** Adding and browsing a registry should feel like discovering an app store.
 
-- **`nesco init` suggests adding nesco-tools registry** - First-run guidance
+- **`syllago init` suggests adding syllago-tools registry** - First-run guidance
 - **Registry browser in TUI** - Browse by category, item count badges, preview before install
-- **nesco-tools as reference registry** - Move example content to nesco-tools repo; keep meta-tools in nesco itself
+- **syllago-tools as reference registry** - Move example content to syllago-tools repo; keep meta-tools in syllago itself
 - **Registry README rendering** - Show description, maintainer, last updated in TUI
-- **Short alias for common registries** - `nesco registry add nesco-tools` (expands to full GitHub URL)
+- **Short alias for common registries** - `syllago registry add syllago-tools` (expands to full GitHub URL)
 
 **Why:** The registry IS the content story. Good registry UX -> people create and share content.
 
@@ -145,7 +145,7 @@ Built-in items: `nesco-guide` (skill), `nesco-author` (agent), `nesco-import` (s
 
 **Status:** Complete (v0.5.0)
 
-**Goal:** `nesco sandbox run <provider>` wraps AI CLI tools in bubblewrap sandboxes.
+**Goal:** `syllago sandbox run <provider>` wraps AI CLI tools in bubblewrap sandboxes.
 
 - ✅ Bubblewrap-based isolation (filesystem, network, PID, IPC)
 - ✅ Egress proxy with domain allowlist (auto-detected from project ecosystem)
@@ -176,7 +176,7 @@ Full design: `docs/plans/2026-02-25-sandbox-wrapper-design.md`
 
 **Goal:** Package entire session configurations — rules, hooks, skills, agents, MCP servers — into shareable artifacts that work across providers.
 
-**Full design:** `docs/nesco-starters-design.md`
+**Full design:** `docs/syllago-starters-design.md`
 
 **V1 Scope Decisions (2026-02-28):**
 
@@ -187,7 +187,7 @@ Full design: `docs/plans/2026-02-25-sandbox-wrapper-design.md`
 - **Kitchen-sink starter for testing only** — validates the system, not shipped as recommended content
 
 **V1 deliverables:**
-- CLI commands: `nesco start`, `nesco stop`, `nesco revert`, `nesco bundle`
+- CLI commands: `syllago start`, `syllago stop`, `syllago revert`, `syllago bundle`
 - Three-mode model: preview (default), `--try` (temporary, auto-revert), `--keep` (permanent)
 - Starter manifest format (YAML with `ref:` and `inline:` content references)
 - Snapshot system for backup/restore of modified files
@@ -203,12 +203,12 @@ Full design: `docs/plans/2026-02-25-sandbox-wrapper-design.md`
 
 ### 8. Documentation Site (Must-Have)
 
-**Goal:** Public documentation site for nesco, built with Astro Starlight, hosted in a separate repo (`nesco-docs`), with release-gated sync to the CLI repo.
+**Goal:** Public documentation site for syllago, built with Astro Starlight, hosted in a separate repo (`syllago-docs`), with release-gated sync to the CLI repo.
 
 **Scaffolding: DONE** (2026-02-26)
 
-Site infrastructure is live at `https://openscribbler.github.io/nesco-docs/`. Completed:
-- Repo created (`OpenScribbler/nesco-docs`)
+Site infrastructure is live at `https://openscribbler.github.io/syllago-docs/`. Completed:
+- Repo created (`OpenScribbler/syllago-docs`)
 - Astro Starlight with Flexoki theme configured
 - Full sidebar IA with 25 placeholder pages (hero + 24 content)
 - GitHub Actions deploy workflow (SHA-pinned)
@@ -222,14 +222,14 @@ Design doc: `docs/plans/2026-02-26-docs-site-design.md`
 Docs content is written last, after all features are implemented and stable. This ensures we document what actually shipped, not what we planned. Content scope:
 - Getting started (install, first run, basic usage)
 - Provider reference (supported tools, what content types each supports, format details)
-- Content authoring guide (how to create skills, agents, rules, etc. in nesco-canonical format)
+- Content authoring guide (how to create skills, agents, rules, etc. in syllago-canonical format)
 - Starters guide (how to create, apply, and share session configurations)
 - Registry guide (how to create, publish, and consume registries)
 - Sandbox guide (setup, usage, security model)
 - CLI reference (all commands and flags)
 
 **Release-gated sync:**
-- The `/release` skill checks that `nesco-docs` has a matching version tag before proceeding with a CLI release
+- The `/release` skill checks that `syllago-docs` has a matching version tag before proceeding with a CLI release
 - No escape hatch — docs are a release requirement, not a suggestion
 - Content-only fixes deploy independently anytime
 
@@ -237,9 +237,9 @@ Docs content is written last, after all features are implemented and stable. Thi
 
 | Repo | Purpose |
 |---|---|
-| `nesco` | CLI source, meta-content, design docs |
-| `nesco-docs` | Public documentation site (Astro Starlight) |
-| `nesco-tools` | Reference registry content |
+| `syllago` | CLI source, meta-content, design docs |
+| `syllago-docs` | Public documentation site (Astro Starlight) |
+| `syllago-tools` | Reference registry content |
 
 **Why:** A tool that manages AI coding tool content needs documentation that looks professional and is easy to navigate. Writing docs last ensures we document reality, not aspirations.
 
@@ -264,12 +264,12 @@ Docs content is written last, after all features are implemented and stable. Thi
 
 > Every AI coding tool stores its configuration differently. Cursor uses `.mdc` files. Claude Code uses `CLAUDE.md`. Copilot uses `.instructions.md`. If your team uses more than one tool - or if different team members prefer different tools - you're manually keeping these in sync.
 >
-> **Nesco is the package manager for AI coding tool content.** It gives you:
+> **Syllago is the package manager for AI coding tool content.** It gives you:
 >
 > 1. **A TUI to browse and install** - Search skills, rules, agents, hooks, and MCP configs. Preview them. Install to any supported tool with one keypress.
-> 2. **Automatic format conversion** - Install a Cursor rule into Claude Code. Export a Claude Code skill for Gemini CLI. Nesco handles the translation, and tells you if anything was lost.
+> 2. **Automatic format conversion** - Install a Cursor rule into Claude Code. Export a Claude Code skill for Gemini CLI. Syllago handles the translation, and tells you if anything was lost.
 > 3. **Registries for sharing** - Teams create git repos of content and register them. Everyone browses and installs from the same source, regardless of which AI tool they prefer.
-> 4. **No lock-in, no prescription** - We don't tell you what rules to write. We give you a platform to share and discover them. Stop using nesco anytime - your installed content stays exactly where it is.
+> 4. **No lock-in, no prescription** - We don't tell you what rules to write. We give you a platform to share and discover them. Stop using syllago anytime - your installed content stays exactly where it is.
 
 ---
 
@@ -289,7 +289,7 @@ Rulesync (v7.8.1) is the established tool in this space with 824 GitHub stars, 1
 
 ### ai-config (azat-io/ai-config)
 
-Lightweight opinionated "dotfiles installer" — ships one developer's curated AI tool configs (4 agents, 9 commands, 7 skills) and deploys them via `npx`. Supports Claude Code, Codex, Gemini CLI, and OpenCode. Not a direct competitor — different layer entirely. ai-config is content with a smart installer; nesco is the platform for managing any content.
+Lightweight opinionated "dotfiles installer" — ships one developer's curated AI tool configs (4 agents, 9 commands, 7 skills) and deploys them via `npx`. Supports Claude Code, Codex, Gemini CLI, and OpenCode. Not a direct competitor — different layer entirely. ai-config is content with a smart installer; syllago is the platform for managing any content.
 
 **Not a threat because:** No ongoing management, no registry/sharing, no TUI, no format conversion as a standalone feature, no sandbox, requires Node.js 22+, solo maintainer, <1 month old.
 

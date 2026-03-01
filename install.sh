@@ -1,10 +1,10 @@
 #!/bin/sh
-# Install nesco — AI coding tool content manager
-# Usage: curl -fsSL https://raw.githubusercontent.com/OpenScribbler/nesco/main/install.sh | sh
+# Install syllago — AI coding tool content manager
+# Usage: curl -fsSL https://raw.githubusercontent.com/OpenScribbler/syllago/main/install.sh | sh
 # Or:    INSTALL_DIR=/usr/local/bin sh install.sh
 set -e
 
-REPO="OpenScribbler/nesco"
+REPO="OpenScribbler/syllago"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 
 # Detect OS
@@ -24,7 +24,7 @@ case "$ARCH" in
   *) echo "Error: unsupported architecture: $ARCH" >&2; exit 1 ;;
 esac
 
-BINARY="nesco-${OS}-${ARCH}"
+BINARY="syllago-${OS}-${ARCH}"
 if [ "$OS" = "windows" ]; then
   BINARY="${BINARY}.exe"
 fi
@@ -32,7 +32,7 @@ fi
 echo "Detected: ${OS}/${ARCH}"
 
 # Fetch latest release version
-echo "Fetching latest nesco release..."
+echo "Fetching latest syllago release..."
 LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
   | grep '"tag_name"' | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')
 
@@ -81,15 +81,15 @@ echo "Checksum verified."
 
 # Install
 mkdir -p "$INSTALL_DIR"
-DEST="${INSTALL_DIR}/nesco"
+DEST="${INSTALL_DIR}/syllago"
 if [ "$OS" = "windows" ]; then
-  DEST="${INSTALL_DIR}/nesco.exe"
+  DEST="${INSTALL_DIR}/syllago.exe"
 fi
 
 cp "${TMP_DIR}/${BINARY}" "$DEST"
 chmod 755 "$DEST"
 
-echo "Installed nesco to ${DEST}"
+echo "Installed syllago to ${DEST}"
 
 # PATH guidance
 case ":$PATH:" in
@@ -105,4 +105,4 @@ case ":$PATH:" in
     ;;
 esac
 
-echo "Done! Run: nesco --help"
+echo "Done! Run: syllago --help"

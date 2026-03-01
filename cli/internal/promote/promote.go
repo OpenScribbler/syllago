@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/installer"
-	"github.com/OpenScribbler/nesco/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
 
 // Result holds the outcome of a promote operation.
@@ -34,7 +34,7 @@ func Promote(repoRoot string, item catalog.ContentItem) (*Result, error) {
 
 	// 2. Validate
 	if item.Meta == nil {
-		return nil, fmt.Errorf("item has no .nesco.yaml metadata")
+		return nil, fmt.Errorf("item has no .syllago.yaml metadata")
 	}
 	errs := metadata.Validate(item.Path, string(item.Type), repoRoot)
 	if len(errs) > 0 {
@@ -52,7 +52,7 @@ func Promote(repoRoot string, item catalog.ContentItem) (*Result, error) {
 	defaultBranch := detectDefaultBranch(repoRoot)
 
 	// 5. Create branch
-	branchName := fmt.Sprintf("nesco/promote/%s/%s", item.Type, item.Name)
+	branchName := fmt.Sprintf("syllago/promote/%s/%s", item.Type, item.Name)
 	if err := gitRun(repoRoot, "checkout", "-b", branchName); err != nil {
 		// Branch might already exist — append timestamp
 		branchName = fmt.Sprintf("%s-%d", branchName, time.Now().Unix())

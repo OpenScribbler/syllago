@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/installer"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
-	"github.com/OpenScribbler/nesco/cli/internal/snapshot"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 	"github.com/tidwall/gjson"
 )
 
@@ -36,12 +36,12 @@ func setupIntegrationEnv(t *testing.T) (homeDir, projectRoot string, manifest *M
 	}
 	// Replace slashes in test name (subtests use "/")
 	safeName := filepath.Base(projectRoot) + "-" + filepath.Base(t.Name())
-	homeDir = filepath.Join(home, ".nesco-inttest-"+safeName)
+	homeDir = filepath.Join(home, ".syllago-inttest-"+safeName)
 	os.MkdirAll(homeDir, 0755)
 	t.Cleanup(func() { os.RemoveAll(homeDir) })
 
-	// Create .nesco dir
-	os.MkdirAll(filepath.Join(projectRoot, ".nesco"), 0755)
+	// Create .syllago dir
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
 
 	// Create provider directories
 	rulesDir := filepath.Join(homeDir, ".claude", "rules")
@@ -164,8 +164,8 @@ func TestTryRoundTrip_ApplyAndAutoRevert(t *testing.T) {
 		t.Fatal("hooks.SessionEnd not found or empty after try apply")
 	}
 	cmd := sessionEnd.Array()[0].Get("hooks.0.command").String()
-	if cmd != "nesco loadout remove --auto" {
-		t.Errorf("SessionEnd hook command: got %q, want \"nesco loadout remove --auto\"", cmd)
+	if cmd != "syllago loadout remove --auto" {
+		t.Errorf("SessionEnd hook command: got %q, want \"syllago loadout remove --auto\"", cmd)
 	}
 
 	// Step 4: Verify the loadout's hook was merged too.

@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// Backfill creates an .nesco.yaml for an item that doesn't have one.
+// Backfill creates an .syllago.yaml for an item that doesn't have one.
 // Returns nil if the file already exists (idempotent).
 func Backfill(itemDir, name, contentType, author string) error {
 	existing, err := Load(itemDir)

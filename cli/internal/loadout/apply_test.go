@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/tidwall/gjson"
 )
 
@@ -17,8 +17,8 @@ func setupTestEnv(t *testing.T) (homeDir string, projectRoot string, manifest *M
 	homeDir = t.TempDir()
 	projectRoot = t.TempDir()
 
-	// Create .nesco dir
-	os.MkdirAll(filepath.Join(projectRoot, ".nesco"), 0755)
+	// Create .syllago dir
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
 
 	// Create provider directories
 	rulesDir := filepath.Join(homeDir, ".claude", "rules")
@@ -233,7 +233,7 @@ func TestApply_TryMode_InjectsSessionEndHook(t *testing.T) {
 
 	// Check the command
 	cmd := sessionEnd.Array()[0].Get("hooks.0.command").String()
-	if cmd != "nesco loadout remove --auto" {
+	if cmd != "syllago loadout remove --auto" {
 		t.Errorf("expected auto-remove command, got %q", cmd)
 	}
 }

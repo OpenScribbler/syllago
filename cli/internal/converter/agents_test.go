@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 func TestClaudeAgentToGemini(t *testing.T) {
@@ -28,7 +28,7 @@ func TestClaudeAgentToGemini(t *testing.T) {
 	assertContains(t, out, "grep_search")
 	assertContains(t, out, "max_turns: 30")
 	assertContains(t, out, "read-only exploration mode")
-	assertContains(t, out, "nesco:converted")
+	assertContains(t, out, "syllago:converted")
 	assertEqual(t, "agent.md", result.Filename)
 }
 

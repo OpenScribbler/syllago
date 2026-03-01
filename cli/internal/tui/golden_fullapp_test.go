@@ -4,7 +4,7 @@ package tui
 import (
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 // snapshotApp renders the full app view, strips ANSI, and normalizes non-deterministic

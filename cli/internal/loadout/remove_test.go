@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OpenScribbler/nesco/cli/internal/installer"
-	"github.com/OpenScribbler/nesco/cli/internal/snapshot"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 )
 
 func TestRemove_NoSnapshot(t *testing.T) {
@@ -34,7 +34,7 @@ func TestRemove_RestoresFiles(t *testing.T) {
 	}
 
 	// Create a temp file under the real home for backup testing
-	testDir := filepath.Join(home, ".nesco-test-remove-"+filepath.Base(projectRoot))
+	testDir := filepath.Join(home, ".syllago-test-remove-"+filepath.Base(projectRoot))
 	os.MkdirAll(testDir, 0755)
 	t.Cleanup(func() { os.RemoveAll(testDir) })
 
@@ -131,7 +131,7 @@ func TestRemove_SymlinkAlreadyGone(t *testing.T) {
 func TestRemove_CleansInstalledJSON(t *testing.T) {
 	t.Parallel()
 	projectRoot := t.TempDir()
-	os.MkdirAll(filepath.Join(projectRoot, ".nesco"), 0755)
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
 
 	// Write installed.json with entries from this loadout AND from other sources
 	inst := &installer.Installed{
@@ -144,7 +144,7 @@ func TestRemove_CleansInstalledJSON(t *testing.T) {
 		},
 	}
 	data, _ := json.MarshalIndent(inst, "", "  ")
-	os.WriteFile(filepath.Join(projectRoot, ".nesco", "installed.json"), data, 0644)
+	os.WriteFile(filepath.Join(projectRoot, ".syllago", "installed.json"), data, 0644)
 
 	// Create a minimal snapshot
 	_, err := snapshot.Create(projectRoot, "test-loadout", "keep", nil, nil, nil)

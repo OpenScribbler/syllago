@@ -8,8 +8,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
-	"github.com/OpenScribbler/nesco/cli/internal/config"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // settingsEditMode represents which sub-picker is open.
@@ -199,8 +199,8 @@ func (m *settingsModel) save() {
 // settingsDescriptions maps cursor index to a description shown in the bottom detail area.
 var settingsDescriptions = []string{
 	"Pull updates automatically when a new version is detected on the remote.",
-	"Providers are AI coding tools (Claude Code, Cursor, Gemini CLI, etc.).\nEnable the ones you use -- nesco imports their existing configs\nand can export your catalog items back to them.",
-	"Sync git registries automatically when nesco launches (5-second timeout).\nRegistries must be added via `nesco registry add` first.",
+	"Providers are AI coding tools (Claude Code, Cursor, Gemini CLI, etc.).\nEnable the ones you use -- syllago imports their existing configs\nand can export your catalog items back to them.",
+	"Sync git registries automatically when syllago launches (5-second timeout).\nRegistries must be added via `syllago registry add` first.",
 }
 
 func (m settingsModel) View() string {

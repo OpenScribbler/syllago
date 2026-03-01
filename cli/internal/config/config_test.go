@@ -54,7 +54,7 @@ func TestSaveCreatesDirectory(t *testing.T) {
 	if err := Save(tmp, cfg); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
-	// Verify .nesco directory was created
+	// Verify .syllago directory was created
 	info, err := os.Stat(DirPath(tmp))
 	if err != nil {
 		t.Fatalf("DirPath stat: %v", err)

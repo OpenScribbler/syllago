@@ -73,7 +73,7 @@ Use this format when writing release notes for a new version tag.
 - **Highlights**: 2-3 items max. The skim-friendly summary.
 - **Grouping**: Use `####` subheadings when a section has 5+ items.
 - **Brevity**: One line per item. Link to issues/PRs for details.
-- **Code references**: Use backticks for commands (`nesco scan`), flags (`--json`), files (`Makefile`), and functions.
+- **Code references**: Use backticks for commands (`syllago scan`), flags (`--json`), files (`Makefile`), and functions.
 - **Tone**: Factual and direct. No marketing language.
 - **Omit empty sections**: Don't include headings with nothing under them.
 - **Breaking changes**: Always explicit, even if minor.

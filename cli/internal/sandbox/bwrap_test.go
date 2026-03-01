@@ -8,10 +8,10 @@ func testConfig() BwrapConfig {
 	return BwrapConfig{
 		ProjectDir:     "/home/user/project",
 		HomeDir:        "/home/user",
-		StagingDir:     "/tmp/nesco-sandbox-abc123",
-		SocketPath:     "/tmp/nesco-sandbox-abc123/proxy.sock",
-		GitWrapperPath: "/tmp/nesco-sandbox-abc123/git",
-		WrapperScript:  "/tmp/nesco-sandbox-abc123/wrapper.sh",
+		StagingDir:     "/tmp/syllago-sandbox-abc123",
+		SocketPath:     "/tmp/syllago-sandbox-abc123/proxy.sock",
+		GitWrapperPath: "/tmp/syllago-sandbox-abc123/git",
+		WrapperScript:  "/tmp/syllago-sandbox-abc123/wrapper.sh",
 		Profile: &MountProfile{
 			BinaryPaths: []string{"/usr/bin/claude"},
 		},

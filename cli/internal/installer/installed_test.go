@@ -27,9 +27,9 @@ func TestLoadInstalled_MalformedJSON(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 
-	nescoDir := filepath.Join(tmpDir, ".nesco")
-	os.MkdirAll(nescoDir, 0755)
-	os.WriteFile(filepath.Join(nescoDir, "installed.json"), []byte("not json"), 0644)
+	syllagoDir := filepath.Join(tmpDir, ".syllago")
+	os.MkdirAll(syllagoDir, 0755)
+	os.WriteFile(filepath.Join(syllagoDir, "installed.json"), []byte("not json"), 0644)
 
 	_, err := LoadInstalled(tmpDir)
 	if err == nil {

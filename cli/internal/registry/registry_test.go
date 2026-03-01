@@ -11,10 +11,10 @@ func TestNameFromURL(t *testing.T) {
 		url  string
 		want string
 	}{
-		{"git@github.com:acme/nesco-tools.git", "nesco-tools"},
-		{"https://github.com/acme/nesco-tools.git", "nesco-tools"},
-		{"https://github.com/acme/nesco-tools", "nesco-tools"},
-		{"https://github.com/acme/nesco-tools/", "nesco-tools"},
+		{"git@github.com:acme/syllago-tools.git", "syllago-tools"},
+		{"https://github.com/acme/syllago-tools.git", "syllago-tools"},
+		{"https://github.com/acme/syllago-tools", "syllago-tools"},
+		{"https://github.com/acme/syllago-tools/", "syllago-tools"},
 		{"git@github.com:acme/my_tools.git", "my_tools"},
 	}
 	for _, tt := range tests {
@@ -26,12 +26,12 @@ func TestNameFromURL(t *testing.T) {
 }
 
 func TestExpandAlias_KnownAlias(t *testing.T) {
-	url, expanded := ExpandAlias("nesco-tools")
+	url, expanded := ExpandAlias("syllago-tools")
 	if !expanded {
-		t.Fatal("expected expanded=true for known alias 'nesco-tools'")
+		t.Fatal("expected expanded=true for known alias 'syllago-tools'")
 	}
-	if url != "https://github.com/OpenScribbler/nesco-tools.git" {
-		t.Errorf("url = %q, want %q", url, "https://github.com/OpenScribbler/nesco-tools.git")
+	if url != "https://github.com/OpenScribbler/syllago-tools.git" {
+		t.Errorf("url = %q, want %q", url, "https://github.com/OpenScribbler/syllago-tools.git")
 	}
 }
 
@@ -126,7 +126,7 @@ maintainers:
   - alice
   - bob
 version: "2.1.0"
-min_nesco_version: "0.5.0"
+min_syllago_version: "0.5.0"
 `
 	if err := os.WriteFile(filepath.Join(dir, "registry.yaml"), []byte(content), 0644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
@@ -141,7 +141,7 @@ min_nesco_version: "0.5.0"
 	if len(m.Maintainers) != 2 {
 		t.Errorf("Maintainers len = %d, want 2", len(m.Maintainers))
 	}
-	if m.MinNescoVersion != "0.5.0" {
-		t.Errorf("MinNescoVersion = %q, want %q", m.MinNescoVersion, "0.5.0")
+	if m.MinSyllagoVersion != "0.5.0" {
+		t.Errorf("MinSyllagoVersion = %q, want %q", m.MinSyllagoVersion, "0.5.0")
 	}
 }

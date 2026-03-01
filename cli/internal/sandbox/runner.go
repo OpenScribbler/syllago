@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/OpenScribbler/nesco/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 )
 
 // RunConfig is the full configuration for a sandbox session.
@@ -81,7 +81,7 @@ func RunSession(cfg RunConfig, w *os.File) error {
 	}
 
 	// Step 7: Write sandbox gitconfig.
-	if err := staging.WriteGitconfig("Sandbox User", "sandbox@nesco.local"); err != nil {
+	if err := staging.WriteGitconfig("Sandbox User", "sandbox@syllago.local"); err != nil {
 		return fmt.Errorf("writing gitconfig: %w", err)
 	}
 

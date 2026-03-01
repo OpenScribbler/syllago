@@ -5,15 +5,15 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/OpenScribbler/nesco/cli/internal/catalog"
-	"github.com/OpenScribbler/nesco/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/tidwall/gjson"
 )
 
 func TestInstallHook_RecordsInInstalledJSON(t *testing.T) {
 	t.Parallel()
 	projectRoot := t.TempDir()
-	os.MkdirAll(filepath.Join(projectRoot, ".nesco"), 0755)
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
 
 	// Create hook file
 	hookDir := filepath.Join(projectRoot, "hooks", "test-hook")
@@ -78,7 +78,7 @@ func TestInstallHook_RecordsInInstalledJSON(t *testing.T) {
 func TestUninstallHook_RemovesFromInstalledJSON(t *testing.T) {
 	t.Parallel()
 	projectRoot := t.TempDir()
-	os.MkdirAll(filepath.Join(projectRoot, ".nesco"), 0755)
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
 
 	// Pre-populate installed.json with a hook
 	inst := &Installed{
@@ -113,7 +113,7 @@ func TestUninstallHook_RemovesFromInstalledJSON(t *testing.T) {
 func TestCheckHookStatus_UsesInstalledJSON(t *testing.T) {
 	t.Parallel()
 	projectRoot := t.TempDir()
-	os.MkdirAll(filepath.Join(projectRoot, ".nesco"), 0755)
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
 
 	// Create hook file for parsing
 	hookDir := filepath.Join(projectRoot, "hooks", "status-hook")
@@ -137,7 +137,7 @@ func TestCheckHookStatus_UsesInstalledJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("getting home dir: %v", err)
 	}
-	configDir := filepath.Join(home, ".nesco-test-hookstatus-"+filepath.Base(projectRoot))
+	configDir := filepath.Join(home, ".syllago-test-hookstatus-"+filepath.Base(projectRoot))
 	os.MkdirAll(configDir, 0755)
 	t.Cleanup(func() { os.RemoveAll(configDir) })
 	os.WriteFile(filepath.Join(configDir, "settings.json"), []byte("{}"), 0644)

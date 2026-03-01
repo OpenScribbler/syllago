@@ -13,7 +13,7 @@ import (
 )
 
 // FileName is the metadata file stored in each content item directory.
-const FileName = ".nesco.yaml"
+const FileName = ".syllago.yaml"
 
 // Dependency represents a dependency on another content item.
 type Dependency struct {
@@ -33,7 +33,7 @@ type Meta struct {
 	Tags           []string     `yaml:"tags,omitempty"`
 	Hidden         bool         `yaml:"hidden,omitempty"`
 	Dependencies   []Dependency `yaml:"dependencies,omitempty"`
-	CreatedAt      *time.Time   `yaml:"created_at,omitempty"`  // when item was scaffolded via nesco create
+	CreatedAt      *time.Time   `yaml:"created_at,omitempty"`  // when item was scaffolded via syllago create
 	ImportedAt     *time.Time   `yaml:"imported_at,omitempty"` // when item was imported from a provider
 	ImportedBy     string       `yaml:"imported_by,omitempty"`
 	PromotedAt     *time.Time   `yaml:"promoted_at,omitempty"`
@@ -50,10 +50,10 @@ func MetaPath(itemDir string) string {
 // ProviderMetaPath returns the path to a provider-specific metadata file.
 // Used for provider-specific content where multiple files share a directory.
 func ProviderMetaPath(dir, filename string) string {
-	return filepath.Join(dir, ".nesco."+filename+".yaml")
+	return filepath.Join(dir, ".syllago."+filename+".yaml")
 }
 
-// Load reads .nesco.yaml from itemDir. Returns nil, nil if the file does not exist.
+// Load reads .syllago.yaml from itemDir. Returns nil, nil if the file does not exist.
 func Load(itemDir string) (*Meta, error) {
 	data, err := os.ReadFile(MetaPath(itemDir))
 	if errors.Is(err, fs.ErrNotExist) {
@@ -86,7 +86,7 @@ func LoadProvider(dir, filename string) (*Meta, error) {
 	return &m, nil
 }
 
-// Save writes .nesco.yaml to itemDir, creating directories as needed.
+// Save writes .syllago.yaml to itemDir, creating directories as needed.
 func Save(itemDir string, m *Meta) error {
 	if err := os.MkdirAll(itemDir, 0755); err != nil {
 		return fmt.Errorf("creating directory: %w", err)
