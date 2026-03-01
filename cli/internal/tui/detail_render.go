@@ -368,7 +368,8 @@ func (m detailModel) renderInstallTab() string {
 					indicator = notInstalledStyle.Render("[--] available")
 				}
 
-				s += fmt.Sprintf("  %s%s %s  %s\n", prefix, check, nameStyle.Render(p.Name), indicator)
+				row := fmt.Sprintf("  %s%s %s  %s", prefix, check, nameStyle.Render(p.Name), indicator)
+				s += zone.Mark(fmt.Sprintf("prov-check-%d", i), row) + "\n"
 			}
 
 			for _, p := range supportedProviders {

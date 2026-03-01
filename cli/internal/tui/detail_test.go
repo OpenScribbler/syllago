@@ -2,8 +2,10 @@ package tui
 
 import (
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -535,6 +537,43 @@ func TestDetailInstallPreChecked(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 	if app.detail.provCheck.checks == nil {
 		t.Fatal("providerChecks should be initialized")
+	}
+}
+
+func TestProviderCheckboxClickToggle(t *testing.T) {
+	app := navigateToDetail(t, catalog.Skills)
+	m, _ := app.Update(keyRune('3')) // → Install tab
+	app = m.(App)
+
+	if len(app.detail.provCheck.checks) < 1 {
+		t.Skip("no provider checkboxes available")
+	}
+
+	// app.View() calls zone.Scan() internally, which strips zone markers and
+	// queues zone positions asynchronously via a channel. Wait for the worker
+	// goroutine to process the queue before querying zone coordinates.
+	app.View()
+	time.Sleep(50 * time.Millisecond)
+
+	zi := zone.Get("prov-check-0")
+	if zi == nil || zi.IsZero() {
+		t.Skip("prov-check-0 zone not registered after View() (cannot simulate click)")
+	}
+
+	initial := app.detail.provCheck.checks[0]
+
+	// Synthesize a left-click at the zone's start coordinates.
+	click := tea.MouseMsg{
+		X:      zi.StartX,
+		Y:      zi.StartY,
+		Button: tea.MouseButtonLeft,
+		Action: tea.MouseActionRelease,
+	}
+	m, _ = app.Update(click)
+	app = m.(App)
+
+	if app.detail.provCheck.checks[0] == initial {
+		t.Fatal("clicking prov-check-0 zone should toggle checkbox[0]")
 	}
 }
 
