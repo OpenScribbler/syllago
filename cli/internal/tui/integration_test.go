@@ -35,7 +35,7 @@ func newTestModel(t *testing.T) *teatest.TestModel {
 	t.Helper()
 	app := testApp(t)
 	return teatest.NewTestModel(t, testModel{app},
-		teatest.WithInitialTermSize(80, 40),
+		teatest.WithInitialTermSize(80, 45),
 	)
 }
 

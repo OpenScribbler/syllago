@@ -14,13 +14,14 @@ const (
 	Rules         ContentType = "rules"
 	Hooks         ContentType = "hooks"
 	Commands      ContentType = "commands"
+	Loadouts      ContentType = "loadouts"
 	SearchResults ContentType = "search"   // virtual type for cross-category search results
 	MyTools       ContentType = "local" // virtual type for local items view
 )
 
 // AllContentTypes returns all content types in display order.
 func AllContentTypes() []ContentType {
-	return []ContentType{Skills, Agents, Prompts, MCP, Apps, Rules, Hooks, Commands}
+	return []ContentType{Skills, Agents, Prompts, MCP, Apps, Rules, Hooks, Commands, Loadouts}
 }
 
 // IsUniversal returns true if this content type works with any AI tool
@@ -52,6 +53,8 @@ func (ct ContentType) Label() string {
 		return "Hooks"
 	case Commands:
 		return "Commands"
+	case Loadouts:
+		return "Loadouts"
 	}
 	return string(ct)
 }

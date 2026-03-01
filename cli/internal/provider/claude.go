@@ -67,7 +67,7 @@ var ClaudeCode = Provider{
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {
-		case catalog.Rules, catalog.Skills, catalog.Agents, catalog.Commands, catalog.MCP, catalog.Hooks:
+		case catalog.Rules, catalog.Skills, catalog.Agents, catalog.Commands, catalog.MCP, catalog.Hooks, catalog.Loadouts:
 			return true
 		default:
 			return false

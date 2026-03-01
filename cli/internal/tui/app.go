@@ -1047,6 +1047,7 @@ var categoryDesc = map[catalog.ContentType]string{
 	catalog.Rules:    "Rule files that guide AI coding tool behavior",
 	catalog.Hooks:    "Event-driven hooks for automation and validation",
 	catalog.Commands: "Custom slash commands for AI coding tools",
+	catalog.Loadouts: "Curated content bundles for quick session setup",
 }
 
 // nescoFontRaw is the "nesco" text in ANSI Shadow style.

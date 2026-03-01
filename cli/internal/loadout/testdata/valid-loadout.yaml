@@ -1,0 +1,22 @@
+kind: loadout
+version: 1
+provider: claude-code
+name: test-loadout
+description: A test loadout for unit tests
+
+rules:
+  - security-conventions
+  - project-core
+hooks:
+  - block-sensitive-files
+  - secret-scanner
+skills:
+  - secure-deploy
+agents:
+  - code-reviewer
+mcp:
+  - test-server
+commands:
+  - quick-fix
+prompts:
+  - review-prompt

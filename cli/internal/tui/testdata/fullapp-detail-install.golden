@@ -9,16 +9,16 @@ nesco             │Home > Skills > alpha-skill
   Rules         1 │[i]nstall  [u]ninstall  [c]opy  [s]ave
   Hooks         1 │
   Commands      1 │Providers:
-  My Tools      1 │  > [ ] Claude Code  [--] available
-  ─────────────   │      Cursor  (not detected)
-  Configuration   │
-  Import          │esc back • tab switch tab • up/down navigate • enter/space toggle • i install • u uninstall • ctrl+n/p next/prev
+  Loadouts      0 │  > [ ] Claude Code  [--] available
+  My Tools      1 │      Cursor  (not detected)
+  ─────────────   │
+  Configuration   │esc back • tab switch tab • up/down navigate • enter/space toggle • i install • u uninstall • ctrl+n/p next/prev
+  Import          │
   Update          │
   Settings        │
   Registries      │
   Sandbox         │
                   │
-
 
 
 

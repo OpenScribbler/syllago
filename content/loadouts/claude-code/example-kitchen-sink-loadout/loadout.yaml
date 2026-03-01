@@ -1,0 +1,22 @@
+kind: loadout
+version: 1
+provider: claude-code
+name: example-kitchen-sink-loadout
+description: >
+  Test loadout that exercises every content type.
+  For development validation only.
+
+rules:
+  - example-kitchen-sink-rules
+hooks:
+  - example-kitchen-sink-hooks
+skills:
+  - nesco-guide
+agents:
+  - example-kitchen-sink-agent
+mcp:
+  - example-kitchen-sink-mcp
+commands:
+  - example-kitchen-sink-commands
+prompts:
+  - example-kitchen-sink-prompt
