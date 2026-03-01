@@ -159,6 +159,45 @@ func TestEnvSetupModalEscOnLastVarCloses(t *testing.T) {
 	}
 }
 
+// TestInstallMethodDescriptionNoOrphanedWords verifies that the install method
+// descriptions fit within the modal width without wrapping. A wrapped description
+// produces a continuation line that starts with a lowercase word — a visual defect
+// where the text appears flush-left instead of indented under the description column.
+func TestInstallMethodDescriptionNoOrphanedWords(t *testing.T) {
+	p := provider.Provider{
+		Name:     "Claude Code",
+		Slug:     "claude-code",
+		Detected: true,
+		InstallDir: func(_ string, _ catalog.ContentType) string {
+			return "/tmp/test"
+		},
+		SupportsType: func(_ catalog.ContentType) bool { return true },
+	}
+	item := catalog.ContentItem{
+		Name: "test-skill",
+		Type: catalog.Skills,
+	}
+	m := newInstallModal(item, []provider.Provider{p}, "/tmp/repo")
+	// Advance to the method selection step
+	m.step = installStepMethod
+
+	view := m.View()
+	lines := strings.Split(view, "\n")
+	for _, line := range lines {
+		// Strip border characters and spaces to get the visible content
+		trimmed := strings.TrimLeft(line, " │")
+		if len(trimmed) == 0 {
+			continue
+		}
+		// A wrapped description continuation starts with a lowercase letter after
+		// the border and padding have been stripped. These lines indicate description
+		// text wrapped and the continuation landed flush-left, unindented.
+		if trimmed[0] >= 'a' && trimmed[0] <= 'z' {
+			t.Errorf("install method modal has an orphaned lowercase continuation line: %q", line)
+		}
+	}
+}
+
 func TestModalPurposesAreDefined(t *testing.T) {
 	// All required modal purposes must be defined and distinct
 	purposes := []modalPurpose{
