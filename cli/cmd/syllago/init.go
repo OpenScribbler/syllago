@@ -14,6 +14,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/spf13/cobra"
 )
 
@@ -59,6 +60,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 	yes, _ := cmd.Flags().GetBool("yes")
 
 	var slugs []string
+	var registryEntry *config.Registry // non-nil if the wizard collected a registry URL
+	var scaffoldRegistry string        // non-empty if the wizard wants to create a registry dir
 
 	// Interactive wizard: let the user toggle providers before confirming.
 	// Falls through to auto-accept in non-interactive / --yes / --json modes.
@@ -77,6 +80,15 @@ func runInit(cmd *cobra.Command, args []string) error {
 			return nil
 		}
 		slugs = final.wizard.selectedSlugs()
+
+		switch final.wizard.registryAction {
+		case "add":
+			url := final.wizard.registryURL
+			name := registry.NameFromURL(url)
+			registryEntry = &config.Registry{Name: name, URL: url}
+		case "create":
+			scaffoldRegistry = final.wizard.registryName
+		}
 	} else {
 		// Non-interactive: use detected providers as-is
 		if !output.JSON {
@@ -96,8 +108,21 @@ func runInit(cmd *cobra.Command, args []string) error {
 	cfg := &config.Config{
 		Providers: slugs,
 	}
+	if registryEntry != nil {
+		cfg.Registries = []config.Registry{*registryEntry}
+	}
 	if err := config.Save(root, cfg); err != nil {
 		return err
+	}
+	if registryEntry != nil && !output.JSON {
+		fmt.Printf("  Added registry %q (%s)\n", registryEntry.Name, registryEntry.URL)
+	}
+	if scaffoldRegistry != "" {
+		if err := registry.Scaffold(root, scaffoldRegistry, ""); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not scaffold registry %q: %s\n", scaffoldRegistry, err)
+		} else if !output.JSON {
+			fmt.Printf("  Created registry directory %q\n", scaffoldRegistry)
+		}
 	}
 
 	// Create local/ directory for user content
