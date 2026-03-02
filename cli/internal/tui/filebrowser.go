@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
@@ -310,6 +311,30 @@ func (fb fileBrowserModel) Update(msg tea.Msg) (fileBrowserModel, tea.Cmd) {
 				fb.adjustScroll()
 			}
 		}
+		if msg.Action == tea.MouseActionRelease && msg.Button == tea.MouseButtonLeft && !fb.previewing {
+			visibleRows := fb.visibleRows()
+			end := fb.offset + visibleRows
+			if end > len(fb.entries) {
+				end = len(fb.entries)
+			}
+			for j := 0; j < end-fb.offset; j++ {
+				if zone.Get(fmt.Sprintf("fb-row-%d", j)).InBounds(msg) {
+					entryIdx := fb.offset + j
+					fb.cursor = entryIdx
+					entry := fb.entries[entryIdx]
+					if entry.isDir {
+						fb.loadDir(entry.path)
+					} else {
+						if fb.selected[entry.path] {
+							delete(fb.selected, entry.path)
+						} else {
+							fb.selected[entry.path] = true
+						}
+					}
+					break
+				}
+			}
+		}
 	}
 	return fb, nil
 }
@@ -405,7 +430,7 @@ func (fb fileBrowserModel) View() string {
 			line += " " + tag
 		}
 
-		s += line + "\n"
+		s += zone.Mark(fmt.Sprintf("fb-row-%d", i-fb.offset), line) + "\n"
 	}
 
 	if end < len(fb.entries) {
