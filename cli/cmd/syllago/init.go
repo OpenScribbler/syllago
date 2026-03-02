@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
@@ -54,30 +56,42 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	home, _ := os.UserHomeDir()
 	detected := provider.DetectedOnly(home)
-
-	if !output.JSON {
-		fmt.Printf("Detected AI tools:\n")
-		for _, p := range detected {
-			fmt.Printf("  + %s\n", p.Name)
-		}
-		if len(detected) == 0 {
-			fmt.Println("  (none detected)")
-		}
-	}
-
 	yes, _ := cmd.Flags().GetBool("yes")
-	if !yes && isInteractive() && os.Getenv("SYLLAGO_NO_PROMPT") != "1" && !output.JSON {
-		fmt.Printf("\nSave to .syllago/config.json? [Y/n] ")
-		var response string
-		fmt.Scanln(&response)
-		if strings.ToLower(response) == "n" {
+
+	var slugs []string
+
+	// Interactive wizard: let the user toggle providers before confirming.
+	// Falls through to auto-accept in non-interactive / --yes / --json modes.
+	if !yes && !output.JSON && isInteractive() && os.Getenv("SYLLAGO_NO_PROMPT") != "1" {
+		allProviders := provider.DetectProviders()
+		wizard := newInitWizard(detected, allProviders)
+		model := initWizardModel{wizard: wizard}
+		p := tea.NewProgram(model)
+		finalModel, err := p.Run()
+		if err != nil {
+			return fmt.Errorf("init wizard: %w", err)
+		}
+		final := finalModel.(initWizardModel)
+		if final.wizard.cancelled {
+			fmt.Println("Init cancelled.")
 			return nil
 		}
-	}
-
-	slugs := make([]string, len(detected))
-	for i, p := range detected {
-		slugs[i] = p.Slug
+		slugs = final.wizard.selectedSlugs()
+	} else {
+		// Non-interactive: use detected providers as-is
+		if !output.JSON {
+			fmt.Printf("Detected AI tools:\n")
+			for _, p := range detected {
+				fmt.Printf("  + %s\n", p.Name)
+			}
+			if len(detected) == 0 {
+				fmt.Println("  (none detected)")
+			}
+		}
+		slugs = make([]string, len(detected))
+		for i, p := range detected {
+			slugs[i] = p.Slug
+		}
 	}
 	cfg := &config.Config{
 		Providers: slugs,
