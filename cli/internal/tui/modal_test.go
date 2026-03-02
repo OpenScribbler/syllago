@@ -643,3 +643,88 @@ func TestEnvSetupModalEscapeOnValueStepNavigatesBack(t *testing.T) {
 		t.Errorf("focus should remain focusModal while envModal is still active, got %d", updated.focus)
 	}
 }
+
+func TestClickAway_ClosesConfirmModal(t *testing.T) {
+	a := App{
+		width:  80,
+		height: 24,
+		screen: screenDetail,
+		focus:  focusModal,
+		modal:  newConfirmModal("Test", "body"),
+	}
+	a.modal.purpose = modalInstall
+
+	clickMsg := tea.MouseMsg{
+		Action: tea.MouseActionRelease,
+		Button: tea.MouseButtonLeft,
+		X:      0,
+		Y:      0,
+	}
+	m, _ := a.Update(clickMsg)
+	updated := m.(App)
+	if updated.modal.active {
+		t.Error("clicking outside modal should close it")
+	}
+	if updated.modal.confirmed {
+		t.Error("click-away should not confirm modal")
+	}
+	if updated.focus != focusContent {
+		t.Errorf("focus should return to focusContent, got %d", updated.focus)
+	}
+}
+
+func TestClickAway_ClosesSaveModal(t *testing.T) {
+	a := App{
+		width:     80,
+		height:    24,
+		screen:    screenDetail,
+		focus:     focusModal,
+		saveModal: newSaveModal("filename.md"),
+	}
+	a.saveModal.input.SetValue("my-file.md")
+
+	clickMsg := tea.MouseMsg{
+		Action: tea.MouseActionRelease,
+		Button: tea.MouseButtonLeft,
+		X:      0,
+		Y:      0,
+	}
+	m, _ := a.Update(clickMsg)
+	updated := m.(App)
+	if updated.saveModal.active {
+		t.Error("clicking outside save modal should close it")
+	}
+	if updated.saveModal.confirmed {
+		t.Error("click-away should not confirm save modal")
+	}
+}
+
+func TestClickAway_ClosesInstallModal(t *testing.T) {
+	item := catalog.ContentItem{
+		Name: "test-item",
+		Type: catalog.Skills,
+		Path: "/tmp/test",
+	}
+	a := App{
+		width:     80,
+		height:    24,
+		screen:    screenDetail,
+		focus:     focusModal,
+		instModal: newInstallModal(item, nil, ""),
+	}
+
+	clickMsg := tea.MouseMsg{
+		Action: tea.MouseActionRelease,
+		Button: tea.MouseButtonLeft,
+		X:      0,
+		Y:      0,
+	}
+	m, _ := a.Update(clickMsg)
+	updated := m.(App)
+	if updated.instModal.active {
+		t.Error("clicking outside install modal should close it")
+	}
+	if updated.instModal.confirmed {
+		t.Error("click-away should not confirm install modal")
+	}
+}

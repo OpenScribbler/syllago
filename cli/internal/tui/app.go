@@ -415,23 +415,67 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Action != tea.MouseActionRelease || msg.Button != tea.MouseButtonLeft {
 			return a, nil
 		}
-		// Forward clicks to install modal when active
+		// Click-away: any click while a modal is active closes the modal.
+		// For confirmModal and saveModal, clicks are not used for interaction
+		// (they use Enter/Esc/y/n), so any click is a click-away dismiss.
+		if a.modal.active {
+			a.modal.active = false
+			a.modal.confirmed = false
+			a.focus = focusContent
+			return a, nil
+		}
+		if a.saveModal.active {
+			a.saveModal.active = false
+			a.saveModal.confirmed = false
+			a.focus = focusContent
+			return a, nil
+		}
+		if a.envModal.active {
+			a.envModal.active = false
+			a.focus = focusContent
+			return a, nil
+		}
+		// For installModal, check if click hits a modal option zone first.
+		// If it does, forward to the modal. If not, close it (click-away).
 		if a.instModal.active {
-			var cmd tea.Cmd
-			a.instModal, cmd = a.instModal.Update(msg)
-			if !a.instModal.active {
-				a.focus = focusContent
-				if a.instModal.confirmed {
-					envCmd := a.detail.doInstallFromModal(a.instModal)
-					a.resetInstallModal()
-					if envCmd != nil {
-						return a, envCmd
-					}
-				} else {
-					a.resetInstallModal()
+			// Check if click lands on any install modal zone
+			onModalZone := false
+			for i := 0; i < 3; i++ {
+				if zone.Get(fmt.Sprintf("install-loc-%d", i)).InBounds(msg) {
+					onModalZone = true
+					break
 				}
 			}
-			return a, cmd
+			if !onModalZone {
+				for i := 0; i < 2; i++ {
+					if zone.Get(fmt.Sprintf("install-method-%d", i)).InBounds(msg) {
+						onModalZone = true
+						break
+					}
+				}
+			}
+			if onModalZone {
+				// Forward to installModal's own mouse handler
+				var cmd tea.Cmd
+				a.instModal, cmd = a.instModal.Update(msg)
+				if !a.instModal.active {
+					a.focus = focusContent
+					if a.instModal.confirmed {
+						envCmd := a.detail.doInstallFromModal(a.instModal)
+						a.resetInstallModal()
+						if envCmd != nil {
+							return a, envCmd
+						}
+					} else {
+						a.resetInstallModal()
+					}
+				}
+				return a, cmd
+			}
+			// Click-away: close the install modal
+			a.resetInstallModal()
+			a.focus = focusContent
+			return a, nil
 		}
 		// Check sidebar zones
 		for i := 0; i < a.sidebar.totalItems(); i++ {
