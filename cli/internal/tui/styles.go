@@ -105,6 +105,17 @@ var (
 				BorderForeground(borderColor).
 				BorderBottom(true)
 
+	// Action buttons (Install tab)
+	buttonStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#FFFFFF"}).
+			Background(accentColor).
+			Padding(0, 1)
+
+	buttonDisabledStyle = lipgloss.NewStyle().
+				Foreground(mutedColor).
+				Background(lipgloss.AdaptiveColor{Light: "#E4E4E7", Dark: "#3F3F46"}).
+				Padding(0, 1)
+
 	// Footer bar
 	footerStyle = lipgloss.NewStyle().
 			BorderStyle(lipgloss.NormalBorder()).
