@@ -1338,8 +1338,9 @@ func (a App) renderFirstRun(contentW int) string {
 		cmd  string
 	}{
 		{"1.", "Import existing content:", "syllago import --from claude-code"},
-		{"2.", "Add a community registry:", "syllago registry add syllago-tools"},
+		{"2.", "Add a registry:", "syllago registry add <git-url>"},
 		{"3.", "Create new content:", "syllago create skill my-first-skill"},
+		{"4.", "Create a registry:", "syllago registry create my-registry"},
 	}
 
 	for _, step := range steps {
@@ -1347,7 +1348,7 @@ func (a App) renderFirstRun(contentW int) string {
 		s += "   " + helpStyle.Render(step.cmd) + "\n\n"
 	}
 
-	s += helpStyle.Render("Press ? for help, q to exit.") + "\n"
+	s += helpStyle.Render("Press ? for help, q to quit.") + "\n"
 	return s
 }
 
