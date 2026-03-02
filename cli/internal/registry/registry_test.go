@@ -25,13 +25,9 @@ func TestNameFromURL(t *testing.T) {
 	}
 }
 
-func TestExpandAlias_KnownAlias(t *testing.T) {
-	url, expanded := ExpandAlias("syllago-tools")
-	if !expanded {
-		t.Fatal("expected expanded=true for known alias 'syllago-tools'")
-	}
-	if url != "https://github.com/OpenScribbler/syllago-tools.git" {
-		t.Errorf("url = %q, want %q", url, "https://github.com/OpenScribbler/syllago-tools.git")
+func TestExpandAlias_KnownAliasTableIsEmpty(t *testing.T) {
+	if len(KnownAliases) != 0 {
+		t.Errorf("KnownAliases should be empty, got %d entries: %v", len(KnownAliases), KnownAliases)
 	}
 }
 
