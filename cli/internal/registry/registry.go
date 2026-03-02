@@ -44,8 +44,8 @@ func IsCloned(name string) bool {
 // NameFromURL derives a registry name from a git URL.
 // Examples:
 //
-//	"git@github.com:acme/syllago-tools.git" → "syllago-tools"
-//	"https://github.com/acme/syllago-tools"  → "syllago-tools"
+//	"git@github.com:acme/my-tools.git" → "my-tools"
+//	"https://github.com/acme/my-tools"  → "my-tools"
 func NameFromURL(url string) string {
 	// Take the last path segment
 	url = strings.TrimSuffix(url, "/")
