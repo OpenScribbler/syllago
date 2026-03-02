@@ -52,14 +52,15 @@ type provCell struct {
 }
 
 type itemsModel struct {
-	contentType catalog.ContentType
-	items       []catalog.ContentItem
-	providers   []provider.Provider
-	repoRoot    string
-	cursor      int
-	hiddenCount int // number of hidden items filtered out
-	width       int
-	height      int
+	contentType    catalog.ContentType
+	items          []catalog.ContentItem
+	providers      []provider.Provider
+	repoRoot       string
+	sourceRegistry string // set when browsing items from a specific registry
+	cursor         int
+	hiddenCount    int // number of hidden items filtered out
+	width          int
+	height         int
 }
 
 func newItemsModel(ct catalog.ContentType, items []catalog.ContentItem, providers []provider.Provider, repoRoot string) itemsModel {
@@ -190,10 +191,13 @@ func (m itemsModel) View() string {
 	arrow := helpStyle.Render(" > ")
 
 	var s string
-	switch m.contentType {
-	case catalog.SearchResults:
+	switch {
+	case m.sourceRegistry != "":
+		reg := zone.Mark("crumb-registries", helpStyle.Render("Registries"))
+		s = home + arrow + reg + arrow + titleStyle.Render(m.sourceRegistry) + "\n\n"
+	case m.contentType == catalog.SearchResults:
 		s = home + arrow + titleStyle.Render(fmt.Sprintf("Search Results (%d)", len(m.items))) + "\n\n"
-	case catalog.MyTools:
+	case m.contentType == catalog.MyTools:
 		s = home + arrow + titleStyle.Render(fmt.Sprintf("My Tools (%d)", len(m.items))) + "\n\n"
 	default:
 		s = home + arrow + titleStyle.Render(m.contentType.Label()) + "\n\n"

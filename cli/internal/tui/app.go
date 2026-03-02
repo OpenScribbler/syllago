@@ -541,6 +541,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a.Update(tea.KeyMsg{Type: tea.KeyEsc})
 			}
 		}
+		if zone.Get("crumb-registries").InBounds(msg) {
+			if a.screen == screenItems && a.items.sourceRegistry != "" {
+				// Navigate back to registries screen
+				a.screen = screenRegistries
+				a.focus = focusContent
+				return a, nil
+			}
+		}
 		// Check detail tab zones
 		if a.screen == screenDetail {
 			tabs := []detailTab{tabOverview, tabFiles, tabInstall}
@@ -899,6 +907,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case screenItems:
 			if key.Matches(msg, keys.Back) {
+				if a.items.sourceRegistry != "" {
+					// Came from registry drill-in — go back to registries
+					a.screen = screenRegistries
+					a.focus = focusContent
+					return a, nil
+				}
 				a.screen = screenCategory
 				a.focus = focusSidebar
 				if a.catalog != nil {
@@ -1086,6 +1100,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if name != "" {
 					regItems := a.visibleItems(a.catalog.ByRegistry(name))
 					items := newItemsModel(catalog.SearchResults, regItems, a.providers, a.catalog.RepoRoot)
+					items.sourceRegistry = name
 					items.width = a.width - sidebarWidth - 1
 					items.height = a.panelHeight()
 					a.items = items
@@ -1591,6 +1606,9 @@ func (a App) breadcrumb() string {
 	case screenDetail:
 		return a.sidebar.selectedType().Label() + " > " + displayName(a.detail.item)
 	case screenItems:
+		if a.items.sourceRegistry != "" {
+			return "Registries > " + a.items.sourceRegistry
+		}
 		return a.sidebar.selectedType().Label()
 	case screenImport:
 		return "Import"
