@@ -295,14 +295,6 @@ func (m detailModel) renderFileContent() string {
 func (m detailModel) renderInstallTab() string {
 	var s string
 
-	// Action button bar — rendered in the content area so mouse clicks are targetable
-	installBtn := zone.Mark("detail-btn-install", helpStyle.Render("[i]nstall"))
-	uninstallBtn := zone.Mark("detail-btn-uninstall", helpStyle.Render("[u]ninstall"))
-	copyBtn := zone.Mark("detail-btn-copy", helpStyle.Render("[c]opy"))
-	saveBtn := zone.Mark("detail-btn-save", helpStyle.Render("[s]ave"))
-	actionBar := installBtn + "  " + uninstallBtn + "  " + copyBtn + "  " + saveBtn
-	s += actionBar + "\n\n"
-
 	// MCP Server Configuration preview
 	if m.item.Type == catalog.MCP && m.mcpConfig != nil {
 		s += labelStyle.Render("Server Configuration:") + "\n"
@@ -336,14 +328,16 @@ func (m detailModel) renderInstallTab() string {
 		s += "\n"
 	}
 
+	// Providers section header
+	s += labelStyle.Render("Providers") + "\n"
+	s += helpStyle.Render(strings.Repeat("─", 20)) + "\n"
+
 	// Provider section — interactive checkboxes for non-prompt items
 	if m.item.Type != catalog.Prompts {
 		supportedProviders := m.supportedProviders()
 		detected := m.detectedProviders()
 
 		if len(supportedProviders) > 0 {
-			s += labelStyle.Render("Providers:") + "\n"
-
 			for i, p := range detected {
 				status := installer.CheckStatus(m.item, p, m.repoRoot)
 
@@ -386,6 +380,19 @@ func (m detailModel) renderInstallTab() string {
 			s += helpStyle.Render("No providers support installing this content type yet.") + "\n"
 		}
 	}
+
+	// Actions section header
+	s += "\n"
+	s += labelStyle.Render("Actions") + "\n"
+	s += helpStyle.Render(strings.Repeat("─", 20)) + "\n"
+
+	// Action button bar — rendered in the content area so mouse clicks are targetable
+	installBtn := zone.Mark("detail-btn-install", helpStyle.Render("[i]nstall"))
+	uninstallBtn := zone.Mark("detail-btn-uninstall", helpStyle.Render("[u]ninstall"))
+	copyBtn := zone.Mark("detail-btn-copy", helpStyle.Render("[c]opy"))
+	saveBtn := zone.Mark("detail-btn-save", helpStyle.Render("[s]ave"))
+	actionBar := installBtn + "  " + uninstallBtn + "  " + copyBtn + "  " + saveBtn
+	s += actionBar + "\n"
 
 	return s
 }
