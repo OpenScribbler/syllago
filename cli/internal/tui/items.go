@@ -315,7 +315,7 @@ func (m itemsModel) View() string {
 			typeTag = " " + countStyle.Render("("+item.Type.Label()+")")
 		}
 
-		// Build description prefix: [EXAMPLE] for examples, [BUILT-IN] for meta-tools, [LOCAL] for local items, [registry-name] for registry items
+		// Build description prefix: [EXAMPLE] for examples, [BUILT-IN] for meta-tools, [LOCAL] for local items, [registry-name] for registry items, [G] for global items
 		localPrefix := ""
 		localPrefixLen := 0
 		if item.IsExample() {
@@ -331,6 +331,9 @@ func (m itemsModel) View() string {
 			tag := "[" + item.Registry + "]"
 			localPrefix = countStyle.Render(tag) + " "
 			localPrefixLen = len(tag) + 1 // tag + space
+		} else if item.Source == "global" {
+			localPrefix = globalStyle.Render("[G]") + " "
+			localPrefixLen = 4 // "[G] "
 		}
 
 		if showProvCol {

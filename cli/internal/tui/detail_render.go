@@ -36,6 +36,8 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 		current += " " + warningStyle.Render("[LOCAL]")
 	} else if m.item.Registry != "" {
 		current += " " + countStyle.Render("["+m.item.Registry+"]")
+	} else if m.item.Source == "global" {
+		current += " " + globalStyle.Render("[GLOBAL]")
 	}
 	pinned += home + arrow + cat + arrow + current + "\n\n"
 
