@@ -624,6 +624,8 @@ func (m installModal) View() string {
 
 	var content string
 
+	var hint string
+
 	switch m.step {
 	case installStepLocation:
 		content = labelStyle.Render("Install Location") + "\n\n"
@@ -650,12 +652,12 @@ func (m installModal) View() string {
 		// Destination preview
 		content += m.destinationPreview()
 
-		content += "\n" + helpStyle.Render("[↑↓] Navigate   [Enter] Select   [Esc] Cancel")
+		hint = helpStyle.Render("[↑↓] Navigate   [Enter] Select   [Esc] Cancel")
 
 	case installStepCustomPath:
 		content = labelStyle.Render("Custom Install Path") + "\n\n"
 		content += m.customPathInput.View() + "\n\n"
-		content += helpStyle.Render("[Enter] Confirm   [Esc] Back")
+		hint = helpStyle.Render("[Enter] Confirm   [Esc] Back")
 
 	case installStepMethod:
 		content = labelStyle.Render("Install Method") + "\n\n"
@@ -681,8 +683,18 @@ func (m installModal) View() string {
 		// Destination paths
 		content += m.destinationPreview()
 
-		content += "\n" + helpStyle.Render("[↑↓] Navigate   [Enter] Install   [Esc] Back")
+		hint = helpStyle.Render("[↑↓] Navigate   [Enter] Install   [Esc] Back")
 	}
+
+	// Pin hint to the bottom of the fixed-height modal frame.
+	// Inner area = modalHeight - 2 (1 top + 1 bottom padding) = 16 lines.
+	// We want: contentLines + spacer + 1 (hint) = 16, so spacer = 15 - contentLines.
+	contentLines := strings.Count(content, "\n")
+	spacer := (modalHeight - 2 - 1) - contentLines
+	if spacer < 0 {
+		spacer = 0
+	}
+	content += strings.Repeat("\n", spacer) + hint
 
 	return modalStyle.Render(content)
 }
