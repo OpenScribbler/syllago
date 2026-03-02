@@ -437,13 +437,11 @@ func (fb fileBrowserModel) View() string {
 		s += helpStyle.Render(fmt.Sprintf("  (%d more below)", len(fb.entries)-end)) + "\n"
 	}
 
-	// Footer
 	s += "\n"
 	selCount := len(fb.selected)
 	if selCount > 0 {
 		s += helpStyle.Render(fmt.Sprintf("  %d selected", selCount)) + "\n"
 	}
-	s += helpStyle.Render("up/down navigate • enter open/preview • space select • a select all • d done • esc back")
 
 	return s
 }
@@ -488,12 +486,11 @@ func (fb fileBrowserModel) viewPreview() string {
 		s += helpStyle.Render(fmt.Sprintf("(%d lines below)", len(lines)-end)) + "\n"
 	}
 
-	// Selection status and help
+	// Selection status
 	s += "\n"
 	if fb.selected[fb.previewPath] {
 		s += installedStyle.Render("  ✓ selected") + "\n"
 	}
-	s += helpStyle.Render("esc back • up/down scroll • space select")
 
 	return s
 }

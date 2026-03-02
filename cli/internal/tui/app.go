@@ -445,8 +445,24 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		if a.instModal.active {
-			if zone.Get("modal-zone").InBounds(msg) {
-				// Click is inside the install modal — forward to its handler
+			// Check specific option zones first (most reliable hit-testing)
+			onOptionZone := false
+			for i := 0; i < 3; i++ {
+				if zone.Get(fmt.Sprintf("install-loc-%d", i)).InBounds(msg) {
+					onOptionZone = true
+					break
+				}
+			}
+			if !onOptionZone {
+				for i := 0; i < 2; i++ {
+					if zone.Get(fmt.Sprintf("install-method-%d", i)).InBounds(msg) {
+						onOptionZone = true
+						break
+					}
+				}
+			}
+			if onOptionZone {
+				// Forward click to the install modal's own handler
 				var cmd tea.Cmd
 				a.instModal, cmd = a.instModal.Update(msg)
 				if !a.instModal.active {
@@ -462,6 +478,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 				return a, cmd
+			}
+			// Click inside modal body but not on an option — ignore
+			if zone.Get("modal-zone").InBounds(msg) {
+				return a, nil
 			}
 			// Click-away: close the install modal
 			a.resetInstallModal()
@@ -1565,20 +1585,34 @@ func renderCategoryLine(ct catalog.ContentType, count int, maxW int) string {
 	return line
 }
 
+// contextHelpText returns the appropriate help text for the current screen state.
+func (a App) contextHelpText() string {
+	switch a.screen {
+	case screenCategory:
+		return "Tab: switch panel   /: search   ?: help   q: quit"
+	case screenDetail:
+		return a.detail.renderHelp()
+	case screenItems:
+		return "/: search   Enter: detail   Esc: back   ?: help"
+	case screenRegistries:
+		return a.registries.helpText()
+	case screenSettings:
+		return a.settings.helpText()
+	case screenImport:
+		return a.importer.helpText()
+	case screenUpdate:
+		return a.updater.helpText()
+	case screenSandbox:
+		return a.sandboxSettings.helpText()
+	default:
+		return "Esc: back   ?: help"
+	}
+}
+
 // renderFooter builds the breadcrumb + context-sensitive help bar.
 func (a App) renderFooter() string {
 	crumb := a.breadcrumb()
-	var helpText string
-	switch a.screen {
-	case screenCategory:
-		helpText = "Tab: switch panel   /: search   ?: help   q: quit"
-	case screenDetail:
-		helpText = "Esc: back   Tab: switch tab   ?: help"
-	case screenItems:
-		helpText = "/: search   Enter: detail   Esc: back   ?: help"
-	default:
-		helpText = "Esc: back   ?: help"
-	}
+	helpText := a.contextHelpText()
 
 	// Pad the gap between help text and breadcrumb so crumb is right-aligned
 	gap := a.width - len(helpText) - len(crumb)

@@ -90,6 +90,10 @@ func (m registriesModel) Update(msg tea.Msg) (registriesModel, tea.Cmd) {
 	return m, nil
 }
 
+func (m registriesModel) helpText() string {
+	return "up/down: navigate   Enter: browse items   Esc: back"
+}
+
 func (m registriesModel) selectedName() string {
 	if len(m.entries) == 0 || m.cursor >= len(m.entries) {
 		return ""
@@ -104,7 +108,6 @@ func (m registriesModel) View() string {
 	if len(m.entries) == 0 {
 		s += helpStyle.Render("  No registries configured.") + "\n\n"
 		s += helpStyle.Render("  Add one with: syllago registry add <git-url>") + "\n"
-		s += "\n" + helpStyle.Render("esc back")
 		return s
 	}
 
@@ -151,7 +154,6 @@ func (m registriesModel) View() string {
 	}
 
 	s += "\n"
-	s += helpStyle.Render("up/down navigate • enter browse items • esc back") + "\n"
 	s += helpStyle.Render("add: syllago registry add <url> • sync: syllago registry sync • remove: syllago registry remove <name>") + "\n"
 
 	return s

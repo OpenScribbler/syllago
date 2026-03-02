@@ -179,7 +179,6 @@ func (m sandboxSettingsModel) View() string {
 	if m.editMode != 0 {
 		prompt := [...]string{"", "Add domain: ", "Add env var: ", "Add port: "}[m.editMode]
 		s += "\n" + labelStyle.Render(prompt) + m.editInput + "_\n"
-		s += helpStyle.Render("enter to save  |  esc cancel") + "\n"
 	}
 
 	if m.message != "" {
@@ -192,8 +191,14 @@ func (m sandboxSettingsModel) View() string {
 		s += "\n"
 	}
 
-	s += "\n" + helpStyle.Render("up/down navigate  |  enter add  |  d delete last  |  s save  |  esc back")
 	return s
+}
+
+func (m sandboxSettingsModel) helpText() string {
+	if m.editMode != 0 {
+		return "Enter: save   Esc: cancel"
+	}
+	return "up/down: navigate   Enter: add   d: delete last   s: save   Esc: back"
 }
 
 func sandboxListOrNone(items []string) string {

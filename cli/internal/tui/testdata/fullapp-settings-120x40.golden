@@ -10,7 +10,7 @@ syllago           │Home > Settings
   Hooks         1 │
   Commands      1 │ ─────────────────────────────────────────────
   Loadouts      0 │
-  My Tools      1 │up/down navigate • enter/space edit • s save • esc back
+  My Tools      1 │
   ─────────────   │
   Configuration   │
   Import          │
@@ -37,4 +37,4 @@ syllago           │Home > Settings
 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-Esc: back   ?: help                                                                                             Settings
+up/down: navigate   Enter/Space: edit   s: save   Esc: back                                                     Settings

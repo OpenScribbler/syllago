@@ -129,16 +129,14 @@ func TestFileBrowserSelectAllUsesKeyMatches(t *testing.T) {
 }
 
 func TestFileBrowserHelpTextShowsDone(t *testing.T) {
-	tmp := t.TempDir()
-	fb := newFileBrowser(tmp, catalog.Skills)
-	fb.width = 80
-	fb.height = 30
-
-	view := fb.View()
-	if !strings.Contains(view, "d done") {
-		t.Fatal("help text should show 'd done' instead of 'c confirm'")
+	// File browser help text is now shown in the global footer via importModel.helpText().
+	// Verify the import model (stepBrowse) returns the expected help text.
+	m := importModel{step: stepBrowse}
+	helpText := m.helpText()
+	if !strings.Contains(helpText, "d: done") {
+		t.Fatalf("help text should show 'd: done', got: %q", helpText)
 	}
-	if strings.Contains(view, "c confirm") {
+	if strings.Contains(helpText, "c confirm") {
 		t.Fatal("help text should no longer show 'c confirm'")
 	}
 }

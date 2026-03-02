@@ -13,9 +13,9 @@ syllago           │Home > Skills > alpha-skill
   My Tools      1 │
   ─────────────   │Actions
   Configuration   │────────────────────
-  Import          │[i]nstall  [u]ninstall  [c]opy  [s]ave
+  Import          │ Install    Uninstall
   Update          │
-  Settings        │esc back • tab switch tab • up/down navigate • enter/space toggle • i install • u uninstall • ctrl+n/p next/prev
+  Settings        │
   Registries      │
   Sandbox         │
                   │
@@ -27,4 +27,5 @@ syllago           │Home > Skills > alpha-skill
 
 
 ────────────────────────────────────────────────────────────────────────────────
-Esc: back   Tab: switch tab   ?: help                       Skills > alpha-skill
+esc back • tab switch tab • up/down navigate • enter/space toggle • i install •
+u uninstall • ctrl+n/p next/prev Skills > alpha-skill

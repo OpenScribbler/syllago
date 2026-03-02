@@ -386,12 +386,21 @@ func (m detailModel) renderInstallTab() string {
 	s += labelStyle.Render("Actions") + "\n"
 	s += helpStyle.Render(strings.Repeat("─", 20)) + "\n"
 
-	// Action button bar — rendered in the content area so mouse clicks are targetable
-	installBtn := zone.Mark("detail-btn-install", helpStyle.Render("[i]nstall"))
-	uninstallBtn := zone.Mark("detail-btn-uninstall", helpStyle.Render("[u]ninstall"))
-	copyBtn := zone.Mark("detail-btn-copy", helpStyle.Render("[c]opy"))
-	saveBtn := zone.Mark("detail-btn-save", helpStyle.Render("[s]ave"))
-	actionBar := installBtn + "  " + uninstallBtn + "  " + copyBtn + "  " + saveBtn
+	// Action buttons — styled with background color, conditionally shown
+	installBtn := zone.Mark("detail-btn-install", buttonStyle.Render("Install"))
+	uninstallBtn := zone.Mark("detail-btn-uninstall", buttonStyle.Render("Uninstall"))
+
+	actionBar := installBtn + "  " + uninstallBtn
+
+	// Copy and Save are only functional for Prompts (and local items with LLM prompts)
+	if m.item.Type == catalog.Prompts || m.item.Local {
+		copyBtn := zone.Mark("detail-btn-copy", buttonStyle.Render("Copy"))
+		actionBar += "  " + copyBtn
+	}
+	if m.item.Type == catalog.Prompts {
+		saveBtn := zone.Mark("detail-btn-save", buttonStyle.Render("Save"))
+		actionBar += "  " + saveBtn
+	}
 	s += actionBar + "\n"
 
 	return s
@@ -494,7 +503,6 @@ func (m detailModel) View() string {
 	pinnedHeight := len(pinnedLines)
 
 	bodyLines := strings.Split(body, "\n")
-	helpBar := m.renderHelp()
 
 	messageLines := 0
 	if m.message != "" {
@@ -549,7 +557,6 @@ func (m detailModel) View() string {
 		}
 	}
 
-	s += "\n" + helpBar
 	return s
 }
 
@@ -602,5 +609,5 @@ func (m detailModel) renderHelp() string {
 		helpParts = append(helpParts, "ctrl+n/p next/prev")
 	}
 
-	return helpStyle.Render(strings.Join(helpParts, " • "))
+	return strings.Join(helpParts, " • ")
 }

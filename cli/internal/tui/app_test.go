@@ -194,7 +194,7 @@ func TestFooterHelpText_ItemsShowsEscBack(t *testing.T) {
 }
 
 // TestFooterHelpText_DetailShowsEscBack verifies that the detail screen footer
-// shows "Esc: back" and does NOT show "q: quit".
+// shows "esc back" and does NOT show "q: quit".
 func TestFooterHelpText_DetailShowsEscBack(t *testing.T) {
 	a := App{
 		width:  80,
@@ -205,8 +205,8 @@ func TestFooterHelpText_DetailShowsEscBack(t *testing.T) {
 	if strings.Contains(view, "q: quit") {
 		t.Error("screenDetail footer should NOT contain 'q: quit'")
 	}
-	if !strings.Contains(view, "Esc: back") {
-		t.Error("screenDetail footer should contain 'Esc: back'")
+	if !strings.Contains(view, "esc back") {
+		t.Error("screenDetail footer should contain 'esc back'")
 	}
 }
 

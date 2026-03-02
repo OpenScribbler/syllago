@@ -669,8 +669,6 @@ func (m importModel) View() string {
 			row := prefix + style.Render(opt)
 			s += zone.Mark(fmt.Sprintf("import-opt-%d", i), row) + "\n"
 		}
-		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
-
 	case stepType:
 		s += helpStyle.Render("Select content type") + "\n\n"
 		for i, ct := range m.types {
@@ -684,8 +682,6 @@ func (m importModel) View() string {
 			row := prefix + style.Render(label)
 			s += zone.Mark(fmt.Sprintf("import-opt-%d", i), row) + "\n"
 		}
-		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
-
 	case stepProvider:
 		s += helpStyle.Render("Select provider for "+m.contentType.Label()) + "\n\n"
 		for i, name := range m.providerNames {
@@ -698,8 +694,6 @@ func (m importModel) View() string {
 			row := prefix + style.Render(name)
 			s += zone.Mark(fmt.Sprintf("import-opt-%d", i), row) + "\n"
 		}
-		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
-
 	case stepBrowseStart:
 		s += helpStyle.Render("Where do you want to browse?") + "\n\n"
 		options := []struct{ label, desc string }{
@@ -717,15 +711,12 @@ func (m importModel) View() string {
 			row := prefix + style.Render(opt.label) + " " + countStyle.Render(opt.desc)
 			s += zone.Mark(fmt.Sprintf("import-opt-%d", i), row) + "\n"
 		}
-		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
-
 	case stepBrowse:
 		s += m.browser.View()
 
 	case stepPath:
 		s += helpStyle.Render("Enter starting path for browser") + "\n\n"
 		s += m.pathInput.View() + "\n"
-		s += "\n" + helpStyle.Render("enter open browser • esc back")
 
 	case stepValidate:
 		s += m.viewValidate()
@@ -733,7 +724,6 @@ func (m importModel) View() string {
 	case stepGitURL:
 		s += helpStyle.Render("Enter git repository URL") + "\n\n"
 		s += m.urlInput.View() + "\n"
-		s += "\n" + helpStyle.Render("enter clone • esc back")
 
 	case stepGitPick:
 		s += helpStyle.Render("Select item to import") + "\n\n"
@@ -774,12 +764,9 @@ func (m importModel) View() string {
 		if end < len(m.clonedItems) {
 			s += helpStyle.Render("  (more items below)") + "\n"
 		}
-		s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
-
 	case stepName:
 		s += helpStyle.Render("Enter a name for your new "+m.contentType.Label()+" item") + "\n\n"
 		s += m.nameInput.View() + "\n"
-		s += "\n" + helpStyle.Render("enter confirm • esc back")
 
 	case stepConfirm:
 		if m.isCreate {
@@ -789,7 +776,6 @@ func (m importModel) View() string {
 			s += labelStyle.Render("Type:  ") + valueStyle.Render(m.contentType.Label()) + "\n"
 			s += labelStyle.Render("To:    ") + valueStyle.Render(dest) + " " + helpStyle.Render("(local, not git-tracked)") + "\n"
 			s += "\n" + helpStyle.Render("Scaffolds from template with LLM prompt for content creation.")
-			s += "\n\n" + helpStyle.Render("enter create • esc back")
 		} else {
 			s += helpStyle.Render("Confirm import") + "\n\n"
 			dest := m.destinationPath()
@@ -800,7 +786,6 @@ func (m importModel) View() string {
 			}
 			s += labelStyle.Render("From:  ") + valueStyle.Render(m.sourcePath) + "\n"
 			s += labelStyle.Render("To:    ") + valueStyle.Render(dest) + " " + helpStyle.Render("(local, not git-tracked)") + "\n"
-			s += "\n" + helpStyle.Render("enter import • esc back")
 		}
 
 	case stepConflict:
@@ -817,6 +802,41 @@ func (m importModel) View() string {
 	}
 
 	return s
+}
+
+func (m importModel) helpText() string {
+	switch m.step {
+	case stepSource, stepType, stepProvider, stepBrowseStart, stepGitPick:
+		return "up/down: navigate   Enter: select   Esc: back"
+	case stepPath:
+		return "Enter: open browser   Esc: back"
+	case stepGitURL:
+		return "Enter: clone   Esc: back"
+	case stepName:
+		return "Enter: confirm   Esc: back"
+	case stepConfirm:
+		if m.isCreate {
+			return "Enter: create   Esc: back"
+		}
+		return "Enter: import   Esc: back"
+	case stepValidate:
+		return "up/down: navigate   Space: toggle   Enter: import   Esc: back"
+	case stepBrowse:
+		if m.browser.previewing {
+			return "Esc: back   up/down: scroll   Space: select"
+		}
+		return "up/down: navigate   Enter: open/preview   Space: select   a: select all   d: done   Esc: back"
+	case stepConflict:
+		footer := "↑↓: scroll   ←→: scroll"
+		if len(m.batchConflicts) > 0 {
+			footer += "   y: overwrite   n: skip"
+		} else {
+			footer += "   y: overwrite   Esc: cancel"
+		}
+		return footer
+	default:
+		return "Esc: back"
+	}
 }
 
 // destinationPath computes where the content will be copied to (always local/).
@@ -1218,21 +1238,6 @@ func (m importModel) viewConflict() string {
 		}
 	}
 
-	// Footer
-	s += "\n"
-	footer := "↑↓ scroll • "
-	if m.conflict.hOffset > 0 {
-		footer += fmt.Sprintf("←→ scroll (col %d) • ", m.conflict.hOffset)
-	} else {
-		footer += "←→ scroll • "
-	}
-	if len(m.batchConflicts) > 0 {
-		footer += "y overwrite • n skip"
-	} else {
-		footer += "y overwrite • esc cancel"
-	}
-	s += helpStyle.Render(footer)
-
 	return s
 }
 
@@ -1613,6 +1618,5 @@ func (m importModel) viewValidate() string {
 	}
 
 	s += "\n" + helpStyle.Render(fmt.Sprintf("  %d of %d items will be imported", includedCount, len(m.validationItems)))
-	s += "\n" + helpStyle.Render("up/down navigate • space toggle • enter import • esc back")
 	return s
 }
