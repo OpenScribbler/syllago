@@ -11,10 +11,10 @@ func TestNameFromURL(t *testing.T) {
 		url  string
 		want string
 	}{
-		{"git@github.com:acme/syllago-tools.git", "syllago-tools"},
-		{"https://github.com/acme/syllago-tools.git", "syllago-tools"},
-		{"https://github.com/acme/syllago-tools", "syllago-tools"},
-		{"https://github.com/acme/syllago-tools/", "syllago-tools"},
+		{"git@github.com:acme/my-tools.git", "my-tools"},
+		{"https://github.com/acme/my-tools.git", "my-tools"},
+		{"https://github.com/acme/my-tools", "my-tools"},
+		{"https://github.com/acme/my-tools/", "my-tools"},
 		{"git@github.com:acme/my_tools.git", "my_tools"},
 	}
 	for _, tt := range tests {

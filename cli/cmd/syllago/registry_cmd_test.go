@@ -141,13 +141,19 @@ func TestRegistryListShowsManifest(t *testing.T) {
 // TestRegistryAddExpandsAlias verifies that alias expansion happens before
 // the allowedRegistries check so the expanded full URL is what gets checked.
 func TestRegistryAddExpandsAlias(t *testing.T) {
+	// Temporarily inject a test alias so we can exercise the expansion path.
+	const testAlias = "test-alias"
+	const testURL = "https://github.com/acme/test-tools.git"
+	registry.KnownAliases[testAlias] = testURL
+	defer delete(registry.KnownAliases, testAlias)
+
 	tmp := t.TempDir()
 	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
 
-	// Config restricts to the expanded syllago-tools URL
+	// Config restricts to the expanded alias URL
 	cfg := &config.Config{
 		Providers:         []string{"claude-code"},
-		AllowedRegistries: []string{"https://github.com/OpenScribbler/syllago-tools.git"},
+		AllowedRegistries: []string{testURL},
 	}
 	if err := config.Save(tmp, cfg); err != nil {
 		t.Fatalf("config.Save: %v", err)
@@ -159,7 +165,7 @@ func TestRegistryAddExpandsAlias(t *testing.T) {
 
 	// Pass the short alias — it should expand and pass the allowedRegistries check,
 	// then fail at git clone (no network), but NOT with an allowedRegistries error.
-	err := registryAddCmd.RunE(registryAddCmd, []string{"syllago-tools"})
+	err := registryAddCmd.RunE(registryAddCmd, []string{testAlias})
 	if err != nil && strings.Contains(err.Error(), "allowedRegistries") {
 		t.Errorf("alias should expand before allowedRegistries check, got: %v", err)
 	}

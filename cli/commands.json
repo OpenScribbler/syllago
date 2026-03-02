@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-01T22:35:35Z",
-  "syllagoVersion": "0.6.0",
+  "generatedAt": "2026-03-02T00:56:49Z",
+  "syllagoVersion": "0.6.1",
   "commands": [
     {
       "name": "completion",
@@ -1467,7 +1467,7 @@
       "parent": null,
       "synopsis": "syllago promote",
       "description": "Promote content to shared or registry",
-      "longDescription": "Promote local content for sharing with others.\n\nUse \"to-registry\" to contribute content to a git registry via a PR workflow.\nThe command creates a branch in the registry clone, copies the content, commits,\npushes, and optionally opens a PR if the gh CLI is installed.\n\nExample:\n  syllago promote to-registry syllago-tools skills/my-skill",
+      "longDescription": "Promote local content for sharing with others.\n\nUse \"to-registry\" to contribute content to a git registry via a PR workflow.\nThe command creates a branch in the registry clone, copies the content, commits,\npushes, and optionally opens a PR if the gh CLI is installed.\n\nExample:\n  syllago promote to-registry my-registry skills/my-skill",
       "aliases": [],
       "flags": [],
       "inheritedFlags": [
@@ -1518,7 +1518,7 @@
       "parent": "promote",
       "synopsis": "syllago promote to-registry \u003cregistry-name\u003e \u003ctype/name\u003e",
       "description": "Contribute content to a registry via PR",
-      "longDescription": "Copies a local content item into a registry's clone directory, creates a\ncontribution branch, commits, pushes, and opens a PR (if gh CLI is available).\n\nThe item path uses the format \"type/name\" for universal content (skills, agents,\nprompts, mcp, apps) or \"type/provider/name\" for provider-specific content\n(rules, hooks, commands).\n\nExamples:\n  syllago promote to-registry syllago-tools skills/my-skill\n  syllago promote to-registry team-rules rules/claude-code/no-console-log",
+      "longDescription": "Copies a local content item into a registry's clone directory, creates a\ncontribution branch, commits, pushes, and opens a PR (if gh CLI is available).\n\nThe item path uses the format \"type/name\" for universal content (skills, agents,\nprompts, mcp, apps) or \"type/provider/name\" for provider-specific content\n(rules, hooks, commands).\n\nExamples:\n  syllago promote to-registry my-registry skills/my-skill\n  syllago promote to-registry team-rules rules/claude-code/no-console-log",
       "aliases": [],
       "flags": [],
       "inheritedFlags": [
