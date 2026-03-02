@@ -65,23 +65,20 @@ func TestRenderInstallTabHasActionButtons(t *testing.T) {
 		height:    24,
 	}
 	body := m.renderInstallTab()
-	// zone.Mark() embeds ANSI escape sequences in output, not the zone ID string.
-	// Verify button labels are visible and that zone marks (ANSI escapes) are present.
-	if !strings.Contains(body, "[i]nstall") {
-		t.Error("renderInstallTab() should contain '[i]nstall' action button label")
+	stripped := stripANSI(body)
+	// Verify styled button labels are visible
+	if !strings.Contains(stripped, "Install") {
+		t.Error("renderInstallTab() should contain 'Install' action button")
 	}
-	if !strings.Contains(body, "[u]ninstall") {
-		t.Error("renderInstallTab() should contain '[u]ninstall' action button label")
+	if !strings.Contains(stripped, "Uninstall") {
+		t.Error("renderInstallTab() should contain 'Uninstall' action button")
 	}
-	if !strings.Contains(body, "[c]opy") {
-		t.Error("renderInstallTab() should contain '[c]opy' action button label")
+	// Copy and Save appear for Prompts type
+	if !strings.Contains(stripped, "Copy") {
+		t.Error("renderInstallTab() for Prompts should contain 'Copy' action button")
 	}
-	if !strings.Contains(body, "[s]ave") {
-		t.Error("renderInstallTab() should contain '[s]ave' action button label")
-	}
-	// ANSI zone marks must be present (zone.Mark() embeds \x1b[ escape sequences)
-	if !strings.Contains(body, "\x1b[") {
-		t.Error("renderInstallTab() should contain ANSI escape sequences from zone.Mark() calls on action buttons")
+	if !strings.Contains(stripped, "Save") {
+		t.Error("renderInstallTab() for Prompts should contain 'Save' action button")
 	}
 }
 

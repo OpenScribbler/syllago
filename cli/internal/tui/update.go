@@ -275,6 +275,22 @@ func (m updateModel) menuItemCount() int {
 	return 2 // always 2: release notes + update/check
 }
 
+func (m updateModel) helpText() string {
+	switch m.step {
+	case stepUpdateMenu:
+		return "up/down: navigate   Enter: select   Esc: back"
+	case stepUpdatePreview:
+		if m.updateAvail {
+			return "up/down/jk: scroll   Enter: update now   Esc: back"
+		}
+		return "up/down/jk: scroll   Esc: back"
+	case stepUpdateDone:
+		return "Esc: back"
+	default:
+		return "Esc: back"
+	}
+}
+
 func (m updateModel) View() string {
 	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + " " + helpStyle.Render(">") + " " + titleStyle.Render("Update syllago") + "\n"
 
@@ -295,8 +311,7 @@ func (m updateModel) View() string {
 				row := prefix + style.Render(opt)
 				s += zone.Mark(fmt.Sprintf("update-opt-%d", i), row) + "\n"
 			}
-			s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
-		} else {
+			} else {
 			s += helpStyle.Render(fmt.Sprintf("You're on v%s (latest)", m.localVersion)) + "\n\n"
 			options := []string{"View release notes", "Check for updates"}
 			for i, opt := range options {
@@ -309,13 +324,11 @@ func (m updateModel) View() string {
 				row := prefix + style.Render(opt)
 				s += zone.Mark(fmt.Sprintf("update-opt-%d", i), row) + "\n"
 			}
-			s += "\n" + helpStyle.Render("up/down navigate • enter select • esc back")
 		}
 
 	case stepUpdatePreview:
 		if m.previewErr != nil {
 			s += errorMsgStyle.Render(fmt.Sprintf("Error: %s", m.previewErr)) + "\n"
-			s += "\n" + helpStyle.Render("esc back")
 			break
 		}
 
@@ -367,11 +380,6 @@ func (m updateModel) View() string {
 			s += helpStyle.Render("  (more below)") + "\n"
 		}
 
-		if m.updateAvail {
-			s += "\n" + helpStyle.Render("up/down/jk scroll • enter update now • esc back")
-		} else {
-			s += "\n" + helpStyle.Render("up/down/jk scroll • esc back")
-		}
 
 	case stepUpdatePull:
 		s += "\n" + m.spinner.View() + " " + helpStyle.Render("Updating syllago...") + "\n"
@@ -384,7 +392,6 @@ func (m updateModel) View() string {
 			s += "\n" + successMsgStyle.Render(fmt.Sprintf("Updated to v%s", m.remoteVersion)) + "\n"
 			s += helpStyle.Render("Restart syllago to complete the update.") + "\n"
 		}
-		s += "\n" + helpStyle.Render("esc to return")
 	}
 
 	return s

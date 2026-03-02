@@ -12,7 +12,7 @@ syllago           │Home > Skills > alpha-skill
   Loadouts      0 │  Readme │                                        │
   My Tools      1 │         │  Confirm Uninstall                     │
   ─────────────   │         │                                        │
-  Configuration   │esc back │  Remove alpha-skill from all           │/p next/prev
+  Configuration   │         │  Remove alpha-skill from all           │
   Import          │         │  providers?                            │
   Update          │         │                                        │
   Settings        │         │  [Enter/y] Confirm   [Esc/n] Cancel    │
@@ -27,4 +27,5 @@ syllago           │Home > Skills > alpha-skill
 
 
 ────────────────────────────────────────────────────────────────────────────────
-Esc: back   Tab: switch tab   ?: help                       Skills > alpha-skill
+esc back • tab switch tab • up/down scroll • ctrl+n/p next/prev Skills > alpha-
+skill

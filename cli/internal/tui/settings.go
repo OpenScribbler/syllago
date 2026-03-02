@@ -248,7 +248,6 @@ func (m settingsModel) View() string {
 			row := fmt.Sprintf("  %s%s %s", prefix, check, style.Render(item.label))
 			s += zone.Mark(fmt.Sprintf("settings-sub-%d", i), row) + "\n"
 		}
-		s += "\n" + helpStyle.Render("up/down navigate • space toggle • esc done") + "\n"
 	}
 
 	// Status message
@@ -277,10 +276,6 @@ func (m settingsModel) View() string {
 		s += " " + helpStyle.Render(strings.Repeat("─", 45)) + "\n"
 	}
 
-	if m.editMode == editNone {
-		s += "\n" + helpStyle.Render("up/down navigate • enter/space edit • s save • esc back")
-	}
-
 	return s
 }
 
@@ -293,6 +288,13 @@ func (m settingsModel) renderRow(index int, label, value string) string {
 	}
 	row := fmt.Sprintf("%s%s  %s", prefix, style.Render(label), helpStyle.Render(value))
 	return zone.Mark(fmt.Sprintf("settings-row-%d", index), row) + "\n"
+}
+
+func (m settingsModel) helpText() string {
+	if m.editMode != editNone {
+		return "up/down: navigate   Space: toggle   Esc: done"
+	}
+	return "up/down: navigate   Enter/Space: edit   s: save   Esc: back"
 }
 
 // HasPendingAction returns true if a sub-picker is open.
