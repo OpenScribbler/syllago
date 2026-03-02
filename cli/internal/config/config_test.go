@@ -239,3 +239,45 @@ func TestIsRegistryAllowed(t *testing.T) {
 		t.Error("non-allowed URL should be rejected")
 	}
 }
+
+func TestMerge_ProjectProvidersOverrideGlobal(t *testing.T) {
+	t.Parallel()
+	global := &Config{Providers: []string{"claude-code", "cursor"}}
+	project := &Config{Providers: []string{"gemini-cli"}}
+	merged := Merge(global, project)
+	if len(merged.Providers) != 1 || merged.Providers[0] != "gemini-cli" {
+		t.Errorf("Merge: project providers should win, got %v", merged.Providers)
+	}
+}
+
+func TestMerge_RegistriesMerged(t *testing.T) {
+	t.Parallel()
+	global := &Config{
+		Registries: []Registry{{Name: "global-reg", URL: "https://github.com/g/g.git"}},
+	}
+	project := &Config{
+		Registries: []Registry{{Name: "project-reg", URL: "https://github.com/p/p.git"}},
+	}
+	merged := Merge(global, project)
+	if len(merged.Registries) != 2 {
+		t.Errorf("Merge: registries should be merged, got %d", len(merged.Registries))
+	}
+}
+
+func TestMerge_EmptyProjectUsesGlobal(t *testing.T) {
+	t.Parallel()
+	global := &Config{Providers: []string{"claude-code"}}
+	project := &Config{}
+	merged := Merge(global, project)
+	if len(merged.Providers) != 1 || merged.Providers[0] != "claude-code" {
+		t.Errorf("Merge: empty project should inherit global providers, got %v", merged.Providers)
+	}
+}
+
+func TestMerge_NilInputs(t *testing.T) {
+	t.Parallel()
+	merged := Merge(nil, nil)
+	if merged == nil {
+		t.Fatal("Merge(nil, nil) should return non-nil Config")
+	}
+}
