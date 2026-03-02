@@ -108,3 +108,79 @@ func Exists(projectRoot string) bool {
 	_, err := os.Stat(FilePath(projectRoot))
 	return err == nil
 }
+
+// GlobalDirPath returns the global syllago config directory (~/.syllago/).
+func GlobalDirPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("getting home directory: %w", err)
+	}
+	return filepath.Join(home, DirName), nil
+}
+
+// GlobalFilePath returns the path to the global config file (~/.syllago/config.json).
+func GlobalFilePath() (string, error) {
+	dir, err := GlobalDirPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, FileName), nil
+}
+
+// LoadGlobal loads the global config from ~/.syllago/config.json.
+// Returns an empty Config if the file does not exist.
+func LoadGlobal() (*Config, error) {
+	path, err := GlobalFilePath()
+	if err != nil {
+		return nil, fmt.Errorf("global config path: %w", err)
+	}
+	return LoadFromPath(path)
+}
+
+// LoadFromPath loads a config from an explicit file path.
+// Returns an empty Config if the file does not exist.
+func LoadFromPath(path string) (*Config, error) {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return &Config{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+// SaveGlobal writes cfg to ~/.syllago/config.json, creating the directory if needed.
+func SaveGlobal(cfg *Config) error {
+	dir, err := GlobalDirPath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	target := filepath.Join(dir, FileName)
+	suffix := make([]byte, 8)
+	if _, err := rand.Read(suffix); err != nil {
+		return fmt.Errorf("generating temp suffix: %w", err)
+	}
+	tempPath := target + ".tmp." + hex.EncodeToString(suffix)
+
+	if err := os.WriteFile(tempPath, data, 0644); err != nil {
+		return err
+	}
+	if err := os.Rename(tempPath, target); err != nil {
+		os.Remove(tempPath)
+		return err
+	}
+	return nil
+}

@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -166,6 +167,59 @@ func TestAllowedRegistriesOmittedWhenEmpty(t *testing.T) {
 	data, _ := os.ReadFile(FilePath(dir))
 	if strings.Contains(string(data), "allowed_registries") {
 		t.Error("JSON should not contain allowed_registries when empty")
+	}
+}
+
+func TestGlobalDirPath_ContainsHomeDotSyllago(t *testing.T) {
+	t.Parallel()
+	got, err := GlobalDirPath()
+	if err != nil {
+		t.Fatalf("GlobalDirPath: %v", err)
+	}
+	home, _ := os.UserHomeDir()
+	want := filepath.Join(home, ".syllago")
+	if got != want {
+		t.Errorf("GlobalDirPath() = %q, want %q", got, want)
+	}
+}
+
+func TestGlobalFilePath_EndsWithConfigJSON(t *testing.T) {
+	t.Parallel()
+	got, err := GlobalFilePath()
+	if err != nil {
+		t.Fatalf("GlobalFilePath: %v", err)
+	}
+	if !strings.HasSuffix(got, "config.json") {
+		t.Errorf("GlobalFilePath() = %q, want suffix 'config.json'", got)
+	}
+}
+
+func TestLoadFromPath_ReturnsEmptyConfigWhenMissing(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	cfg, err := LoadFromPath(filepath.Join(tmp, "config.json"))
+	if err != nil {
+		t.Fatalf("LoadFromPath: %v", err)
+	}
+	if cfg == nil {
+		t.Fatal("LoadFromPath should return empty config, not nil")
+	}
+}
+
+func TestLoadFromPath_RoundTrip(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "config.json")
+
+	// Write JSON directly to the file
+	os.WriteFile(path, []byte(`{"providers":["test-provider"]}`), 0644)
+
+	loaded, err := LoadFromPath(path)
+	if err != nil {
+		t.Fatalf("LoadFromPath: %v", err)
+	}
+	if len(loaded.Providers) != 1 || loaded.Providers[0] != "test-provider" {
+		t.Errorf("loaded config providers = %v, want [test-provider]", loaded.Providers)
 	}
 }
 
