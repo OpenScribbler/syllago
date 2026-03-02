@@ -207,11 +207,18 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("could not find syllago content repository.\n\nTo get started:\n  syllago init    Create a new content repo in the current directory\n\nFor more info: syllago --help")
 	}
 
-	// Load config to get registry list and preferences
-	cfg, cfgErr := config.Load(root)
+	// Load project config to get registry list and preferences
+	projectCfg, cfgErr := config.Load(root)
 	if cfgErr != nil {
-		cfg = &config.Config{}
+		projectCfg = &config.Config{}
 	}
+
+	// Load global config and merge with project config
+	globalCfg, _ := config.LoadGlobal()
+	if globalCfg == nil {
+		globalCfg = &config.Config{}
+	}
+	cfg := config.Merge(globalCfg, projectCfg)
 
 	// Auto-sync registries if enabled (5-second timeout; failure is non-fatal)
 	if cfgErr == nil && cfg.Preferences["registryAutoSync"] == "true" && len(cfg.Registries) > 0 {
@@ -248,7 +255,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		projectRoot = root
 	}
 
-	cat, err := catalog.ScanWithRegistries(root, projectRoot, regSources)
+	cat, err := catalog.ScanWithGlobalAndRegistries(root, projectRoot, regSources)
 	if err != nil {
 		return fmt.Errorf("catalog scan failed: %w", err)
 	}
@@ -260,7 +267,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "Cleaned up promoted item: %s (%s)\n", c.Name, c.Type)
 		}
 		// Rescan after cleanup
-		cat, err = catalog.ScanWithRegistries(root, projectRoot, regSources)
+		cat, err = catalog.ScanWithGlobalAndRegistries(root, projectRoot, regSources)
 		if err != nil {
 			return fmt.Errorf("error rescanning catalog: %w", err)
 		}
