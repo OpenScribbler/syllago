@@ -277,7 +277,7 @@ func (m envSetupModal) overlayView(background string) string {
 	if !m.active {
 		return background
 	}
-	return overlay.Composite(m.View(), background, overlay.Center, overlay.Center, 0, 0)
+	return overlay.Composite(zone.Mark("modal-zone", m.View()), background, overlay.Center, overlay.Center, 0, 0)
 }
 
 // modalPurpose identifies what action the confirmModal is confirming.
@@ -367,7 +367,7 @@ func (m confirmModal) overlayView(background string) string {
 	if !m.active {
 		return background
 	}
-	return overlay.Composite(m.View(), background, overlay.Center, overlay.Center, 0, 0)
+	return overlay.Composite(zone.Mark("modal-zone", m.View()), background, overlay.Center, overlay.Center, 0, 0)
 }
 
 // saveModal is a modal dialog with a text input for entering a filename.
@@ -431,7 +431,7 @@ func (m saveModal) overlayView(background string) string {
 	if !m.active {
 		return background
 	}
-	return overlay.Composite(m.View(), background, overlay.Center, overlay.Center, 0, 0)
+	return overlay.Composite(zone.Mark("modal-zone", m.View()), background, overlay.Center, overlay.Center, 0, 0)
 }
 
 // ---------------------------------------------------------------------------
@@ -735,5 +735,5 @@ func (m installModal) overlayView(background string) string {
 	if !m.active {
 		return background
 	}
-	return overlay.Composite(m.View(), background, overlay.Center, overlay.Center, 0, 0)
+	return overlay.Composite(zone.Mark("modal-zone", m.View()), background, overlay.Center, overlay.Center, 0, 0)
 }
