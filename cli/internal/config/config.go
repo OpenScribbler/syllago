@@ -184,3 +184,80 @@ func SaveGlobal(cfg *Config) error {
 	}
 	return nil
 }
+
+// Merge combines global and project configs.
+// Rules:
+//   - Providers: project wins if non-empty, else global
+//   - Registries: global + project (deduplicated by name, project entries after global)
+//   - ContentRoot: project wins if non-empty, else global
+//   - AllowedRegistries: project wins if non-empty, else global
+//   - Preferences: merged per-key, project overrides global
+//   - Sandbox: project wins if any sandbox fields set, else global
+func Merge(global, project *Config) *Config {
+	if global == nil {
+		global = &Config{}
+	}
+	if project == nil {
+		project = &Config{}
+	}
+
+	merged := &Config{}
+
+	// Providers: project wins if set
+	if len(project.Providers) > 0 {
+		merged.Providers = project.Providers
+	} else {
+		merged.Providers = global.Providers
+	}
+
+	// Registries: merge both (global first, then project), deduplicate by name
+	seen := map[string]bool{}
+	for _, r := range global.Registries {
+		if !seen[r.Name] {
+			merged.Registries = append(merged.Registries, r)
+			seen[r.Name] = true
+		}
+	}
+	for _, r := range project.Registries {
+		if !seen[r.Name] {
+			merged.Registries = append(merged.Registries, r)
+			seen[r.Name] = true
+		}
+	}
+
+	// ContentRoot: project wins
+	if project.ContentRoot != "" {
+		merged.ContentRoot = project.ContentRoot
+	} else {
+		merged.ContentRoot = global.ContentRoot
+	}
+
+	// AllowedRegistries: project wins
+	if len(project.AllowedRegistries) > 0 {
+		merged.AllowedRegistries = project.AllowedRegistries
+	} else {
+		merged.AllowedRegistries = global.AllowedRegistries
+	}
+
+	// Preferences: merge per-key, project overrides
+	if len(global.Preferences) > 0 || len(project.Preferences) > 0 {
+		merged.Preferences = make(map[string]string)
+		for k, v := range global.Preferences {
+			merged.Preferences[k] = v
+		}
+		for k, v := range project.Preferences {
+			merged.Preferences[k] = v
+		}
+	}
+
+	// Sandbox: project wins if non-zero
+	if len(project.Sandbox.AllowedDomains) > 0 ||
+		len(project.Sandbox.AllowedEnv) > 0 ||
+		len(project.Sandbox.AllowedPorts) > 0 {
+		merged.Sandbox = project.Sandbox
+	} else {
+		merged.Sandbox = global.Sandbox
+	}
+
+	return merged
+}
