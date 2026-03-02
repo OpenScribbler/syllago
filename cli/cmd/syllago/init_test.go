@@ -6,7 +6,10 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 func TestEnsureGlobalContentDir_CreatesDirectory(t *testing.T) {
@@ -194,5 +197,124 @@ func TestInitGitignoreNoDuplicates(t *testing.T) {
 	count := strings.Count(string(data), "local/")
 	if count != 1 {
 		t.Errorf(".gitignore should contain local/ exactly once, got %d", count)
+	}
+}
+
+// --- initWizard unit tests ---
+
+func TestInitWizard_DefaultsSelectDetectedProviders(t *testing.T) {
+	detected := []provider.Provider{
+		{Name: "Claude Code", Slug: "claude-code", Detected: true},
+	}
+	allProviders := []provider.Provider{
+		{Name: "Claude Code", Slug: "claude-code", Detected: true},
+		{Name: "Cursor", Slug: "cursor", Detected: false},
+	}
+	w := newInitWizard(detected, allProviders)
+
+	if !w.isChecked(0) {
+		t.Error("detected provider should be checked by default")
+	}
+	if w.isChecked(1) {
+		t.Error("non-detected provider should be unchecked by default")
+	}
+}
+
+func TestInitWizard_SpaceTogglesProvider(t *testing.T) {
+	detected := []provider.Provider{{Name: "Claude Code", Slug: "claude-code", Detected: true}}
+	w := newInitWizard(detected, detected)
+
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeySpace})
+	if w.isChecked(0) {
+		t.Error("space should uncheck a checked provider")
+	}
+
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeySpace})
+	if !w.isChecked(0) {
+		t.Error("space should re-check an unchecked provider")
+	}
+}
+
+func TestInitWizard_EnterMarksDone(t *testing.T) {
+	detected := []provider.Provider{{Name: "Claude Code", Slug: "claude-code", Detected: true}}
+	w := newInitWizard(detected, detected)
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if !w.done {
+		t.Error("Enter should mark wizard as done")
+	}
+	slugs := w.selectedSlugs()
+	if len(slugs) != 1 || slugs[0] != "claude-code" {
+		t.Errorf("selectedSlugs should return ['claude-code'], got %v", slugs)
+	}
+}
+
+func TestInitWizard_EscCancels(t *testing.T) {
+	detected := []provider.Provider{{Name: "Claude Code", Slug: "claude-code", Detected: true}}
+	w := newInitWizard(detected, detected)
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEsc})
+
+	if !w.cancelled {
+		t.Error("Esc should set cancelled to true")
+	}
+	if !w.done {
+		t.Error("Esc should also mark wizard as done")
+	}
+}
+
+func TestInitWizard_CursorNavigation(t *testing.T) {
+	allProviders := []provider.Provider{
+		{Name: "Claude Code", Slug: "claude-code"},
+		{Name: "Cursor", Slug: "cursor"},
+		{Name: "Windsurf", Slug: "windsurf"},
+	}
+	w := newInitWizard(nil, allProviders)
+
+	if w.cursor != 0 {
+		t.Fatalf("cursor should start at 0, got %d", w.cursor)
+	}
+
+	// Move down
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if w.cursor != 1 {
+		t.Errorf("cursor should be 1 after down, got %d", w.cursor)
+	}
+
+	// Move down again
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if w.cursor != 2 {
+		t.Errorf("cursor should be 2 after second down, got %d", w.cursor)
+	}
+
+	// Can't go past the end
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if w.cursor != 2 {
+		t.Errorf("cursor should stay at 2 at bottom, got %d", w.cursor)
+	}
+
+	// Move up
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyUp})
+	if w.cursor != 1 {
+		t.Errorf("cursor should be 1 after up, got %d", w.cursor)
+	}
+
+	// Can't go above 0
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyUp})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyUp})
+	if w.cursor != 0 {
+		t.Errorf("cursor should stay at 0 at top, got %d", w.cursor)
+	}
+}
+
+func TestInitWizard_SelectedSlugsEmpty(t *testing.T) {
+	allProviders := []provider.Provider{
+		{Name: "Claude Code", Slug: "claude-code"},
+		{Name: "Cursor", Slug: "cursor"},
+	}
+	w := newInitWizard(nil, allProviders)
+
+	slugs := w.selectedSlugs()
+	if len(slugs) != 0 {
+		t.Errorf("no providers selected, expected empty slugs, got %v", slugs)
 	}
 }
