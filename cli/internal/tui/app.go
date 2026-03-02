@@ -415,47 +415,38 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Action != tea.MouseActionRelease || msg.Button != tea.MouseButtonLeft {
 			return a, nil
 		}
-		// Click-away: any click while a modal is active closes the modal.
-		// For confirmModal and saveModal, clicks are not used for interaction
-		// (they use Enter/Esc/y/n), so any click is a click-away dismiss.
+		// Click-away: if any modal is active, check whether the click landed
+		// inside the modal bounds (zone "modal-zone"). If inside, forward to
+		// the modal's own handler. If outside, dismiss the modal.
 		if a.modal.active {
+			if zone.Get("modal-zone").InBounds(msg) {
+				return a, nil // click inside modal — ignore (confirm uses keys)
+			}
 			a.modal.active = false
 			a.modal.confirmed = false
 			a.focus = focusContent
 			return a, nil
 		}
 		if a.saveModal.active {
+			if zone.Get("modal-zone").InBounds(msg) {
+				return a, nil // click inside modal — ignore (save uses keys)
+			}
 			a.saveModal.active = false
 			a.saveModal.confirmed = false
 			a.focus = focusContent
 			return a, nil
 		}
 		if a.envModal.active {
+			if zone.Get("modal-zone").InBounds(msg) {
+				return a, nil // click inside modal — ignore
+			}
 			a.envModal.active = false
 			a.focus = focusContent
 			return a, nil
 		}
-		// For installModal, check if click hits a modal option zone first.
-		// If it does, forward to the modal. If not, close it (click-away).
 		if a.instModal.active {
-			// Check if click lands on any install modal zone
-			onModalZone := false
-			for i := 0; i < 3; i++ {
-				if zone.Get(fmt.Sprintf("install-loc-%d", i)).InBounds(msg) {
-					onModalZone = true
-					break
-				}
-			}
-			if !onModalZone {
-				for i := 0; i < 2; i++ {
-					if zone.Get(fmt.Sprintf("install-method-%d", i)).InBounds(msg) {
-						onModalZone = true
-						break
-					}
-				}
-			}
-			if onModalZone {
-				// Forward to installModal's own mouse handler
+			if zone.Get("modal-zone").InBounds(msg) {
+				// Click is inside the install modal — forward to its handler
 				var cmd tea.Cmd
 				a.instModal, cmd = a.instModal.Update(msg)
 				if !a.instModal.active {
