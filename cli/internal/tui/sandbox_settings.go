@@ -48,6 +48,18 @@ const (
 
 func (m sandboxSettingsModel) Update(msg tea.Msg) (sandboxSettingsModel, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		if msg.Action == tea.MouseActionRelease && msg.Button == tea.MouseButtonLeft {
+			for i := 0; i < sandboxRowCount; i++ {
+				if zone.Get(fmt.Sprintf("sandbox-row-%d", i)).InBounds(msg) {
+					m.cursor = i
+					m.editMode = i + 1
+					m.editInput = ""
+					return m, nil
+				}
+			}
+		}
+		return m, nil
 	case tea.KeyMsg:
 		m.message = ""
 
