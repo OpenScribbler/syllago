@@ -80,6 +80,7 @@ type ContentItem struct {
 	Meta               *metadata.Meta // loaded from .syllago.yaml if present
 	Local              bool           // true if item lives in local/
 	Registry           string         // non-empty if item came from a git registry (value is the registry name)
+	Source             string         // "project", "global", "local", or registry name
 }
 
 // IsExample returns true if this item is tagged as example content.

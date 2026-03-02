@@ -492,3 +492,69 @@ func readDescription(path string) string {
 
 	return ""
 }
+
+// GlobalContentDir returns the path to the global syllago content directory.
+// Returns "" if home directory cannot be determined.
+func GlobalContentDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".syllago", "content")
+}
+
+// ScanWithGlobalAndRegistries scans the global content dir, project content,
+// and registry sources. Global items are tagged Source="global", project items
+// Source="project". Project items shadow global items of the same name+type.
+func ScanWithGlobalAndRegistries(contentRoot string, projectRoot string, registries []RegistrySource) (*Catalog, error) {
+	// Scan project content first (takes precedence)
+	cat, err := ScanWithRegistries(contentRoot, projectRoot, registries)
+	if err != nil {
+		return nil, err
+	}
+
+	// Tag existing items with their source
+	for i := range cat.Items {
+		if cat.Items[i].Source == "" {
+			if cat.Items[i].Local {
+				cat.Items[i].Source = "local"
+			} else if cat.Items[i].Registry != "" {
+				cat.Items[i].Source = cat.Items[i].Registry
+			} else {
+				cat.Items[i].Source = "project"
+			}
+		}
+	}
+
+	// Scan global content dir
+	globalDir := GlobalContentDir()
+	if globalDir == "" {
+		return cat, nil
+	}
+	if _, err := os.Stat(globalDir); os.IsNotExist(err) {
+		return cat, nil
+	}
+
+	globalCat := &Catalog{RepoRoot: globalDir}
+	if err := scanRoot(globalCat, globalDir, false); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: global content scan error: %s\n", err)
+		return cat, nil
+	}
+
+	// Tag global items and append only those not already in project
+	projectNames := make(map[string]bool)
+	for _, item := range cat.Items {
+		projectNames[string(item.Type)+"/"+item.Name] = true
+	}
+
+	for i := range globalCat.Items {
+		globalCat.Items[i].Source = "global"
+		key := string(globalCat.Items[i].Type) + "/" + globalCat.Items[i].Name
+		if !projectNames[key] {
+			cat.Items = append(cat.Items, globalCat.Items[i])
+		}
+	}
+
+	applyPrecedence(cat)
+	return cat, nil
+}
