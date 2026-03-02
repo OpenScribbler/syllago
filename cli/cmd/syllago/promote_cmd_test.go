@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -28,6 +29,26 @@ func TestPromoteCmdRegisters(t *testing.T) {
 	if !found {
 		t.Error("expected promote command registered on rootCmd")
 	}
+}
+
+func TestPromoteCmdHelp_NoSyllagoToolsReference(t *testing.T) {
+	// Ensure the promote to-registry command doesn't reference syllago-tools.
+	for _, sub := range promoteCmd.Commands() {
+		if sub.Name() == "to-registry" {
+			if strings.Contains(sub.Long, "syllago-tools") {
+				t.Error("promote to-registry Long should not reference 'syllago-tools'")
+			}
+			if strings.Contains(sub.Example, "syllago-tools") {
+				t.Error("promote to-registry Example should not reference 'syllago-tools'")
+			}
+			// Also check the parent command's Long field.
+			if strings.Contains(promoteCmd.Long, "syllago-tools") {
+				t.Error("promote Long should not reference 'syllago-tools'")
+			}
+			return
+		}
+	}
+	t.Error("could not find to-registry subcommand")
 }
 
 func TestPromoteToRegistryValidatesArgs(t *testing.T) {
