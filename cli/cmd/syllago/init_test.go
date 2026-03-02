@@ -9,6 +9,18 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 )
 
+func TestEnsureGlobalContentDir_CreatesDirectory(t *testing.T) {
+	tmp := t.TempDir()
+	err := ensureGlobalContentDir(tmp)
+	if err != nil {
+		t.Fatalf("ensureGlobalContentDir: %v", err)
+	}
+	contentDir := filepath.Join(tmp, ".syllago", "content")
+	if _, statErr := os.Stat(contentDir); os.IsNotExist(statErr) {
+		t.Errorf("global content dir should exist at %s", contentDir)
+	}
+}
+
 func TestInitCreatesConfig(t *testing.T) {
 	tmp := t.TempDir()
 	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)

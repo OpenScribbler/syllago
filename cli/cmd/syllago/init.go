@@ -97,6 +97,24 @@ func runInit(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "warning: could not update .gitignore: %s\n", err)
 	}
 
+	// Ensure global content dir exists (first-time setup)
+	if home != "" {
+		if mkdirErr := ensureGlobalContentDir(home); mkdirErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not create global content dir: %s\n", mkdirErr)
+		}
+		// Create global config if it doesn't exist yet
+		globalCfgPath := filepath.Join(home, ".syllago", config.FileName)
+		if _, statErr := os.Stat(globalCfgPath); os.IsNotExist(statErr) {
+			globalCfg := &config.Config{Providers: slugs}
+			if saveErr := config.SaveGlobal(globalCfg); saveErr != nil {
+				fmt.Fprintf(os.Stderr, "warning: could not create global config: %s\n", saveErr)
+			} else if !output.JSON {
+				fmt.Printf("  Created ~/.syllago/config.json\n")
+				fmt.Printf("  Created ~/.syllago/content/\n")
+			}
+		}
+	}
+
 	// Install built-in content if we're in a syllago repo
 	var installed []installedItem
 	repoRoot, repoErr := findContentRepoRoot()
@@ -141,6 +159,13 @@ func ensureGitignoreEntries(projectRoot string, entries []string) error {
 	}
 	content := existing + strings.Join(toAdd, "\n") + "\n"
 	return os.WriteFile(gitignorePath, []byte(content), 0644)
+}
+
+// ensureGlobalContentDir creates the global content directory at homeDir/.syllago/content/
+// if it doesn't already exist.
+func ensureGlobalContentDir(homeDir string) error {
+	dir := filepath.Join(homeDir, ".syllago", "content")
+	return os.MkdirAll(dir, 0755)
 }
 
 // installBuiltins discovers items tagged "builtin" and installs them to detected providers.
