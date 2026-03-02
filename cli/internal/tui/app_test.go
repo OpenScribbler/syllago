@@ -287,3 +287,30 @@ func TestHKeyTogglesShowHidden(t *testing.T) {
 		}
 	}
 }
+
+func TestFirstRunScreen_NoSyllagoToolsReference(t *testing.T) {
+	a := testApp(t)
+	// Force first-run by clearing catalog items
+	a.catalog = &catalog.Catalog{Items: nil}
+	a.width = 80
+	a.height = 30
+
+	view := a.View()
+	stripped := stripANSI(view)
+	if strings.Contains(stripped, "syllago-tools") {
+		t.Error("first-run screen must not reference 'syllago-tools'")
+	}
+}
+
+func TestFirstRunScreen_ContainsRegistryCreateStep(t *testing.T) {
+	a := testApp(t)
+	a.catalog = &catalog.Catalog{Items: nil}
+	a.width = 80
+	a.height = 30
+
+	view := a.View()
+	stripped := stripANSI(view)
+	if !strings.Contains(stripped, "registry create") {
+		t.Error("first-run screen should show 'registry create' step")
+	}
+}
