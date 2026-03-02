@@ -415,6 +415,24 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Action != tea.MouseActionRelease || msg.Button != tea.MouseButtonLeft {
 			return a, nil
 		}
+		// Forward clicks to install modal when active
+		if a.instModal.active {
+			var cmd tea.Cmd
+			a.instModal, cmd = a.instModal.Update(msg)
+			if !a.instModal.active {
+				a.focus = focusContent
+				if a.instModal.confirmed {
+					envCmd := a.detail.doInstallFromModal(a.instModal)
+					a.resetInstallModal()
+					if envCmd != nil {
+						return a, envCmd
+					}
+				} else {
+					a.resetInstallModal()
+				}
+			}
+			return a, cmd
+		}
 		// Check sidebar zones
 		for i := 0; i < a.sidebar.totalItems(); i++ {
 			if zone.Get(fmt.Sprintf("sidebar-%d", i)).InBounds(msg) {

@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -499,6 +500,41 @@ func (m installModal) Update(msg tea.Msg) (installModal, tea.Cmd) {
 		return m, nil
 	}
 	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		if msg.Action != tea.MouseActionRelease || msg.Button != tea.MouseButtonLeft {
+			return m, nil
+		}
+		if m.step == installStepLocation {
+			for i := 0; i < 3; i++ {
+				if zone.Get(fmt.Sprintf("install-loc-%d", i)).InBounds(msg) {
+					m.locationCursor = i
+					if i == 2 { // Custom
+						m.customPathInput = textinput.New()
+						m.customPathInput.Placeholder = "/path/to/install/dir"
+						m.customPathInput.CharLimit = 200
+						m.customPathInput.Width = 40
+						m.customPathInput.Focus()
+						m.step = installStepCustomPath
+					} else {
+						m.step = installStepMethod
+						m.methodCursor = 0
+					}
+					return m, nil
+				}
+			}
+		}
+		if m.step == installStepMethod {
+			for i := 0; i < 2; i++ {
+				if zone.Get(fmt.Sprintf("install-method-%d", i)).InBounds(msg) {
+					m.methodCursor = i
+					m.confirmed = true
+					m.active = false
+					return m, nil
+				}
+			}
+		}
+		return m, nil
+
 	case tea.KeyMsg:
 		// Custom path text input captures all keys
 		if m.step == installStepCustomPath {
@@ -606,8 +642,9 @@ func (m installModal) View() string {
 				prefix = "> "
 				nameStyle = selectedItemStyle
 			}
-			content += fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(o.name))
-			content += fmt.Sprintf("      %s\n", helpStyle.Render(o.desc))
+			row := fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(o.name))
+			row += fmt.Sprintf("      %s\n", helpStyle.Render(o.desc))
+			content += zone.Mark(fmt.Sprintf("install-loc-%d", i), row)
 		}
 
 		// Destination preview
@@ -636,8 +673,9 @@ func (m installModal) View() string {
 				prefix = "> "
 				nameStyle = selectedItemStyle
 			}
-			content += fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(o.name))
-			content += fmt.Sprintf("      %s\n", helpStyle.Render(o.desc))
+			row := fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(o.name))
+			row += fmt.Sprintf("      %s\n", helpStyle.Render(o.desc))
+			content += zone.Mark(fmt.Sprintf("install-method-%d", i), row)
 		}
 
 		// Destination paths
