@@ -68,6 +68,10 @@ var (
 	builtinStyle = lipgloss.NewStyle().
 			Foreground(accentColor)
 
+	// Global content badge (amber — distinct from project and registry)
+	globalStyle = lipgloss.NewStyle().
+			Foreground(warningColor)
+
 	// Example content badge (dim purple, distinct from builtinStyle)
 	exampleStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.AdaptiveColor{Light: "#9D7ACC", Dark: "#A78BFA"})
