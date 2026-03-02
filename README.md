@@ -198,7 +198,7 @@ Registries are git repositories of syllago content that you can browse and insta
 
 ```bash
 # Add a registry
-syllago registry add https://github.com/OpenScribbler/syllago-tools.git
+syllago registry add <git-url>
 
 # List registered registries
 syllago registry list
@@ -279,9 +279,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute. Syllago accepts id
 
 ## Security
 
-Syllago does not operate any registry or marketplace. The built-in content comes from
-the [syllago-tools](https://github.com/OpenScribbler/syllago-tools) repository, which you
-can audit directly.
+Syllago does not operate any registry or marketplace. You can add registries from any
+git repository that follows the syllago repository structure.
 
 **Third-party registries are unverified.** When you run `syllago registry add <url>`,
 you are trusting the owner of that repository. Review the content before installing
