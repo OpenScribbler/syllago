@@ -172,11 +172,10 @@ func LoadManifest(name string) (*Manifest, error) {
 	return loadManifestFromDir(dir)
 }
 
-// KnownAliases maps short names to full git URLs for official syllago registries.
-// Users can always use full URLs directly.
-var KnownAliases = map[string]string{
-	"syllago-tools": "https://github.com/OpenScribbler/syllago-tools.git",
-}
+// KnownAliases maps short names to full git URLs.
+// Empty by default — syllago is a platform, not a content source.
+// Users bring their own registries.
+var KnownAliases = map[string]string{}
 
 // ExpandAlias returns the full URL for a known alias, or the input unchanged if not an alias.
 // An alias is identified by not containing "/" or ":" — these characters appear in all valid git URLs.
