@@ -19,7 +19,7 @@ The command creates a branch in the registry clone, copies the content, commits,
 pushes, and optionally opens a PR if the gh CLI is installed.
 
 Example:
-  syllago promote to-registry syllago-tools skills/my-skill`,
+  syllago promote to-registry my-registry skills/my-skill`,
 }
 
 var promoteToRegistryCmd = &cobra.Command{
@@ -33,7 +33,7 @@ prompts, mcp, apps) or "type/provider/name" for provider-specific content
 (rules, hooks, commands).
 
 Examples:
-  syllago promote to-registry syllago-tools skills/my-skill
+  syllago promote to-registry my-registry skills/my-skill
   syllago promote to-registry team-rules rules/claude-code/no-console-log`,
 	Args: cobra.ExactArgs(2),
 	RunE: runPromoteToRegistry,
