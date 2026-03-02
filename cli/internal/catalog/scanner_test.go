@@ -3,6 +3,7 @@ package catalog
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
@@ -429,4 +430,37 @@ func TestScanLocalRootSeparate(t *testing.T) {
 	if !foundLocal {
 		t.Error("local skill was not discovered")
 	}
+}
+
+func TestGlobalContentDir_ContainsExpectedPath(t *testing.T) {
+	dir := GlobalContentDir()
+	if dir == "" {
+		t.Skip("cannot determine home directory")
+	}
+	if !strings.HasSuffix(dir, filepath.Join(".syllago", "content")) {
+		t.Errorf("GlobalContentDir() = %q, want suffix .syllago/content", dir)
+	}
+}
+
+func TestScanWithGlobalAndRegistries_TagsProjectItems(t *testing.T) {
+	// Create a project with a skill
+	projectDir := t.TempDir()
+	skillDir := filepath.Join(projectDir, "skills", "test-skill")
+	os.MkdirAll(skillDir, 0755)
+	os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# test-skill"), 0644)
+
+	cat, err := ScanWithGlobalAndRegistries(projectDir, projectDir, nil)
+	if err != nil {
+		t.Fatalf("ScanWithGlobalAndRegistries: %v", err)
+	}
+
+	for _, item := range cat.Items {
+		if item.Name == "test-skill" {
+			if item.Source != "project" {
+				t.Errorf("project item should have Source='project', got %q", item.Source)
+			}
+			return
+		}
+	}
+	t.Error("test-skill not found in catalog")
 }
