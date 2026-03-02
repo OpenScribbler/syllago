@@ -336,8 +336,8 @@ func (m itemsModel) View() string {
 			localPrefix = countStyle.Render(tag) + " "
 			localPrefixLen = len(tag) + 1 // tag + space
 		} else if item.Source == "global" {
-			localPrefix = globalStyle.Render("[G]") + " "
-			localPrefixLen = 4 // "[G] "
+			localPrefix = globalStyle.Render("[GLOBAL]") + " "
+			localPrefixLen = 9 // "[GLOBAL] "
 		}
 
 		if showProvCol {
