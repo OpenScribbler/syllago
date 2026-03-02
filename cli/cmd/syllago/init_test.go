@@ -236,12 +236,24 @@ func TestInitWizard_SpaceTogglesProvider(t *testing.T) {
 }
 
 func TestInitWizard_EnterMarksDone(t *testing.T) {
+	// Enter on the provider step now advances to the registry step, then
+	// selecting "Skip for now" finishes the wizard.
 	detected := []provider.Provider{{Name: "Claude Code", Slug: "claude-code", Detected: true}}
 	w := newInitWizard(detected, detected)
+
+	// Advance past provider step
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if w.done {
+		t.Fatal("Enter on provider step should advance to registry step, not finish")
+	}
+
+	// Move cursor to "Skip for now" (index 2) and confirm
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
 	if !w.done {
-		t.Error("Enter should mark wizard as done")
+		t.Error("Selecting skip on registry step should mark wizard as done")
 	}
 	slugs := w.selectedSlugs()
 	if len(slugs) != 1 || slugs[0] != "claude-code" {
@@ -316,5 +328,40 @@ func TestInitWizard_SelectedSlugsEmpty(t *testing.T) {
 	slugs := w.selectedSlugs()
 	if len(slugs) != 0 {
 		t.Errorf("no providers selected, expected empty slugs, got %v", slugs)
+	}
+}
+
+func TestInitWizard_EnterAdvancesToRegistryStep(t *testing.T) {
+	detected := []provider.Provider{{Name: "Claude Code", Slug: "claude-code", Detected: true}}
+	w := newInitWizard(detected, detected)
+
+	// Provider step: Enter should advance to registry step, not set done
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if w.done {
+		t.Error("Enter on provider step should not mark done")
+	}
+	if w.step != stepRegistry {
+		t.Errorf("step should be stepRegistry (%d) after Enter, got %d", stepRegistry, w.step)
+	}
+}
+
+func TestInitWizard_SkipRegistryMarksDone(t *testing.T) {
+	detected := []provider.Provider{{Name: "Claude Code", Slug: "claude-code", Detected: true}}
+	w := newInitWizard(detected, detected)
+
+	// Advance past provider step
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	// Move cursor to "Skip for now" (index 2) and select it
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if !w.done {
+		t.Error("selecting Skip should mark wizard as done")
+	}
+	if w.registryAction != "skip" {
+		t.Errorf("registryAction should be 'skip', got %q", w.registryAction)
 	}
 }
