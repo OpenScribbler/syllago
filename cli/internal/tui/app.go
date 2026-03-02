@@ -227,7 +227,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.detail, cmd = a.detail.Update(msg)
 			// Rescan catalog after promote
 			if msg.err == nil {
-				cat, err := catalog.ScanWithRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
+				cat, err := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
 				if err == nil {
 					a.catalog = cat
 					a.refreshSidebarCounts()
@@ -258,7 +258,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		// Rescan catalog
-		cat, err := catalog.ScanWithRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
+		cat, err := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
 		if err == nil {
 			a.catalog = cat
 			a.statusMessage = fmt.Sprintf("Imported %q successfully", msg.name)
@@ -313,7 +313,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.updater, cmd = a.updater.Update(msg)
 			// On successful pull, rescan catalog
 			if msg.err == nil {
-				cat, err := catalog.ScanWithRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
+				cat, err := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
 				if err == nil {
 					a.catalog = cat
 					a.refreshSidebarCounts()
