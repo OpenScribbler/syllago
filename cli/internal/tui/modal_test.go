@@ -24,9 +24,23 @@ func TestConfirmModalViewContainsTitle(t *testing.T) {
 
 func TestConfirmModalEnterConfirms(t *testing.T) {
 	m := newConfirmModal("Confirm?", "")
+	// Default btnCursor is Cancel (1); press Left to move to Confirm first
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if !updated.confirmed {
-		t.Error("Enter should set confirmed=true")
+		t.Error("Enter on Confirm button should set confirmed=true")
+	}
+	if updated.active {
+		t.Error("Enter should set active=false")
+	}
+}
+
+func TestConfirmModalEnterDefaultCancels(t *testing.T) {
+	m := newConfirmModal("Confirm?", "")
+	// Default btnCursor is Cancel; Enter without navigating should cancel
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if updated.confirmed {
+		t.Error("Enter on default Cancel button should leave confirmed=false")
 	}
 	if updated.active {
 		t.Error("Enter should set active=false")

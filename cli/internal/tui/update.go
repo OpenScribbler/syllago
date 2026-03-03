@@ -278,21 +278,21 @@ func (m updateModel) menuItemCount() int {
 func (m updateModel) helpText() string {
 	switch m.step {
 	case stepUpdateMenu:
-		return "up/down: navigate   Enter: select   Esc: back"
+		return "up/down navigate • enter select • esc back"
 	case stepUpdatePreview:
 		if m.updateAvail {
-			return "up/down/jk: scroll   Enter: update now   Esc: back"
+			return "up/down scroll • enter update now • esc back"
 		}
-		return "up/down/jk: scroll   Esc: back"
+		return "up/down scroll • esc back"
 	case stepUpdateDone:
-		return "Esc: back"
+		return "esc back"
 	default:
-		return "Esc: back"
+		return "esc back"
 	}
 }
 
 func (m updateModel) View() string {
-	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + " " + helpStyle.Render(">") + " " + titleStyle.Render("Update syllago") + "\n"
+	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + helpStyle.Render(" > ") + titleStyle.Render("Update syllago") + "\n"
 
 	switch m.step {
 	case stepUpdateMenu:
@@ -302,26 +302,26 @@ func (m updateModel) View() string {
 			s += helpStyle.Render(fmt.Sprintf("You're on v%s. Version v%s is available.", m.localVersion, m.remoteVersion)) + "\n\n"
 			options := []string{"See what's new", "Update now"}
 			for i, opt := range options {
-				prefix := "   "
+				prefix := "  "
 				style := itemStyle
 				if i == m.cursor {
-					prefix = " > "
+					prefix = "> "
 					style = selectedItemStyle
 				}
-				row := prefix + style.Render(opt)
+				row := fmt.Sprintf("  %s%s", prefix, style.Render(opt))
 				s += zone.Mark(fmt.Sprintf("update-opt-%d", i), row) + "\n"
 			}
 			} else {
 			s += helpStyle.Render(fmt.Sprintf("You're on v%s (latest)", m.localVersion)) + "\n\n"
 			options := []string{"View release notes", "Check for updates"}
 			for i, opt := range options {
-				prefix := "   "
+				prefix := "  "
 				style := itemStyle
 				if i == m.cursor {
-					prefix = " > "
+					prefix = "> "
 					style = selectedItemStyle
 				}
-				row := prefix + style.Render(opt)
+				row := fmt.Sprintf("  %s%s", prefix, style.Render(opt))
 				s += zone.Mark(fmt.Sprintf("update-opt-%d", i), row) + "\n"
 			}
 		}

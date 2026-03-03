@@ -1095,7 +1095,7 @@ func TestConflictViewDiff(t *testing.T) {
 	assertContains(t, view, "1 modified")
 	// help text is now in footer via helpText(), not inline in the view
 	helpText := app.importer.helpText()
-	assertContains(t, helpText, "y: overwrite")
+	assertContains(t, helpText, "y overwrite")
 }
 
 func TestConflictViewBatchHeader(t *testing.T) {

@@ -391,10 +391,10 @@ func (fb fileBrowserModel) View() string {
 
 	for i := fb.offset; i < end; i++ {
 		entry := fb.entries[i]
-		prefix := "   "
+		prefix := "  "
 		style := itemStyle
 		if i == fb.cursor {
-			prefix = " > "
+			prefix = "> "
 			style = selectedItemStyle
 		}
 
@@ -416,7 +416,7 @@ func (fb fileBrowserModel) View() string {
 			sel = " " // can't select ..
 		}
 
-		line := prefix + sel + " " + style.Render(StripControlChars(name))
+		line := fmt.Sprintf("  %s%s %s", prefix, sel, style.Render(StripControlChars(name)))
 
 		// Detection tag
 		if entry.detection != "" && entry.name != ".." {

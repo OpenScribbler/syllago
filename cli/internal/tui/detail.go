@@ -190,25 +190,25 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 
 		// Tab switching (blocked during file viewing)
 		if !m.fileViewer.viewing {
+			var newTab detailTab = -1
 			switch msg.String() {
 			case "tab":
-				m.activeTab = (m.activeTab + 1) % 3
-				m.scrollOffset = 0
-				return m, nil
+				newTab = (m.activeTab + 1) % 3
 			case "shift+tab":
-				m.activeTab = (m.activeTab + 2) % 3
-				m.scrollOffset = 0
-				return m, nil
+				newTab = (m.activeTab + 2) % 3
 			case "1":
-				m.activeTab = tabOverview
-				m.scrollOffset = 0
-				return m, nil
+				newTab = tabOverview
 			case "2":
-				m.activeTab = tabFiles
-				m.scrollOffset = 0
-				return m, nil
+				newTab = tabFiles
 			case "3":
-				m.activeTab = tabInstall
+				newTab = tabInstall
+			}
+			if newTab >= 0 {
+				// Reset file viewer when leaving Files tab
+				if m.activeTab == tabFiles && newTab != tabFiles {
+					m.CancelAction()
+				}
+				m.activeTab = newTab
 				m.scrollOffset = 0
 				return m, nil
 			}

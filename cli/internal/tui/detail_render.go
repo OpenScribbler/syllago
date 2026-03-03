@@ -239,7 +239,8 @@ func (m detailModel) renderFileList() string {
 			prefix = "> "
 			style = selectedItemStyle
 		}
-		s += fmt.Sprintf("  %s%s\n", prefix, style.Render(f))
+		entry := fmt.Sprintf("  %s%s", prefix, style.Render(f))
+		s += zone.Mark(fmt.Sprintf("file-%d", i), entry) + "\n"
 	}
 	return s
 }
@@ -251,7 +252,8 @@ func (m detailModel) renderFileContent() string {
 	}
 
 	relPath := m.item.Files[m.fileViewer.cursor]
-	s := labelStyle.Render(relPath) + "\n\n"
+	backLink := zone.Mark("file-back", backLinkStyle.Render("← Back to files"))
+	s := backLink + "  " + labelStyle.Render(relPath) + "\n\n"
 
 	lines := strings.Split(m.fileViewer.content, "\n")
 

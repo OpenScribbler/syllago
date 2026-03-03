@@ -124,6 +124,30 @@ func (a App) Init() tea.Cmd {
 	return checkForUpdate(a.catalog.RepoRoot, a.version)
 }
 
+// handleConfirmAction dispatches the action for a confirmed modal based on its
+// purpose. Called from both the keyboard and mouse input paths.
+func (a *App) handleConfirmAction() tea.Cmd {
+	if !a.modal.confirmed {
+		return nil
+	}
+	switch a.modal.purpose {
+	case modalUninstall:
+		a.detail.doUninstallAll()
+	case modalPromote:
+		repoRoot := a.detail.repoRoot
+		item := a.detail.item
+		return func() tea.Msg {
+			result, err := promote.Promote(repoRoot, item)
+			return promoteDoneMsg{result: result, err: err}
+		}
+	case modalAppScript:
+		return a.detail.runAppScript()
+	case modalLoadoutApply:
+		return a.runLoadoutApply(a.loadoutApplyItem, a.loadoutApplyMode)
+	}
+	return nil
+}
+
 // panelHeight returns the usable height for sidebar and content panels,
 // reserving space for the footer bar (border line + text = 2 rows).
 func (a App) panelHeight() int {
@@ -419,9 +443,39 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// inside the modal bounds (zone "modal-zone"). If inside, forward to
 		// the modal's own handler. If outside, dismiss the modal.
 		if a.modal.active {
-			if zone.Get("modal-zone").InBounds(msg) {
-				return a, nil // click inside modal — ignore (confirm uses keys)
+			// Use the zone registered by the previous View()/zone.Scan() pass.
+			// This gives us the actual on-screen position of the modal after
+			// overlay compositing — no centering formula to replicate.
+			z := zone.Get("modal-zone")
+			if z.InBounds(msg) {
+				relX, relY := z.Pos(msg)
+				modalH := z.EndY - z.StartY + 1
+				modalW := z.EndX - z.StartX + 1
+
+				// Button row: last content line before bottom padding(1)+border(1)
+				buttonRelY := modalH - 3
+				if relY == buttonRelY {
+					contentLeft := 3            // border(1) + padding(2)
+					contentW := modalW - 6      // minus borders(2) and padding(4)
+					midX := contentLeft + contentW/2
+					if relX < midX {
+						a.modal.btnCursor = 0 // Confirm
+					} else {
+						a.modal.btnCursor = 1 // Cancel
+					}
+					// Activate the clicked button
+					a.modal.confirmed = a.modal.btnCursor == 0
+					a.modal.active = false
+					a.focus = focusContent
+					if cmd := a.handleConfirmAction(); cmd != nil {
+						return a, cmd
+					}
+					return a, nil
+				}
+				// Click inside modal but not on buttons — ignore
+				return a, nil
 			}
+			// Click outside — dismiss
 			a.modal.active = false
 			a.modal.confirmed = false
 			a.focus = focusContent
@@ -445,45 +499,77 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		if a.instModal.active {
-			// Check specific option zones first (most reliable hit-testing)
-			onOptionZone := false
-			for i := 0; i < 3; i++ {
-				if zone.Get(fmt.Sprintf("install-loc-%d", i)).InBounds(msg) {
-					onOptionZone = true
-					break
-				}
-			}
-			if !onOptionZone {
-				for i := 0; i < 2; i++ {
-					if zone.Get(fmt.Sprintf("install-method-%d", i)).InBounds(msg) {
-						onOptionZone = true
-						break
-					}
-				}
-			}
-			if onOptionZone {
-				// Forward click to the install modal's own handler
-				var cmd tea.Cmd
-				a.instModal, cmd = a.instModal.Update(msg)
-				if !a.instModal.active {
-					a.focus = focusContent
-					if a.instModal.confirmed {
-						envCmd := a.detail.doInstallFromModal(a.instModal)
-						a.resetInstallModal()
-						if envCmd != nil {
-							return a, envCmd
-						}
+			// Use the zone registered by the previous View()/zone.Scan() pass
+			// for accurate hit-testing (inner zone marks don't survive overlay
+			// compositing, but the outer "modal-zone" wrapping the whole
+			// foreground does).
+			z := zone.Get("modal-zone")
+			if z.InBounds(msg) {
+				relX, relY := z.Pos(msg)
+				modalH := z.EndY - z.StartY + 1
+				modalW := z.EndX - z.StartX + 1
+
+				// Options start at relY=4: border(1)+padding(1)+title(1)+blank(1)
+				optionRelY := 4
+
+				// Button row: last content line before bottom padding(1)+border(1)
+				buttonRelY := modalH - 3
+
+				// Check button row click first
+				if relY == buttonRelY {
+					contentLeft := 3            // border(1) + padding(2)
+					contentW := modalW - 6      // minus borders(2) and padding(4)
+					midX := contentLeft + contentW/2
+					if relX < midX {
+						a.instModal.btnCursor = 0
 					} else {
-						a.resetInstallModal()
+						a.instModal.btnCursor = 1
+					}
+					// Synthesize Enter to activate the clicked button
+					enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+					var cmd tea.Cmd
+					a.instModal, cmd = a.instModal.Update(enterMsg)
+					if !a.instModal.active {
+						a.focus = focusContent
+						if a.instModal.confirmed {
+							envCmd := a.detail.doInstallFromModal(a.instModal)
+							a.resetInstallModal()
+							if envCmd != nil {
+								return a, envCmd
+							}
+						} else {
+							a.resetInstallModal()
+						}
+					}
+					return a, cmd
+				}
+
+				// Check option row clicks — highlight only, don't advance
+				numOptions := 0
+				switch a.instModal.step {
+				case installStepLocation:
+					numOptions = 3
+				case installStepMethod:
+					numOptions = 2
+				}
+
+				for i := 0; i < numOptions; i++ {
+					rowTop := optionRelY + i*2
+					if relY >= rowTop && relY < rowTop+2 {
+						switch a.instModal.step {
+						case installStepLocation:
+							a.instModal.locationCursor = i
+						case installStepMethod:
+							a.instModal.methodCursor = i
+						}
+						return a, nil
 					}
 				}
-				return a, cmd
-			}
-			// Click inside modal body but not on an option — ignore
-			if zone.Get("modal-zone").InBounds(msg) {
+
+				// Click inside modal but not on an option or button — ignore
 				return a, nil
 			}
-			// Click-away: close the install modal
+			// Click outside modal — close it
 			a.resetInstallModal()
 			a.focus = focusContent
 			return a, nil
@@ -565,8 +651,30 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			tabs := []detailTab{tabOverview, tabFiles, tabInstall}
 			for _, tab := range tabs {
 				if zone.Get(fmt.Sprintf("tab-%d", int(tab))).InBounds(msg) {
+					// Reset file viewer when switching away from Files tab
+					if a.detail.activeTab == tabFiles && tab != tabFiles {
+						a.detail.CancelAction()
+					}
 					a.detail.activeTab = tab
 					return a, nil
+				}
+			}
+		}
+		// Check file list entry zones (Files tab)
+		if a.screen == screenDetail && a.detail.activeTab == tabFiles {
+			if a.detail.fileViewer.viewing {
+				// Back link in file content view
+				if zone.Get("file-back").InBounds(msg) {
+					a.detail.CancelAction()
+					return a, nil
+				}
+			} else {
+				// File list entries — click to open
+				for i := range a.detail.item.Files {
+					if zone.Get(fmt.Sprintf("file-%d", i)).InBounds(msg) {
+						a.detail.fileViewer.cursor = i
+						return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+					}
 				}
 			}
 		}
@@ -631,22 +739,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.modal, cmd = a.modal.Update(msg)
 			if !a.modal.active {
 				a.focus = focusContent // return focus after dismiss
-				if a.modal.confirmed {
-					switch a.modal.purpose {
-					case modalUninstall:
-						a.detail.doUninstallAll()
-					case modalPromote:
-						repoRoot := a.detail.repoRoot
-						item := a.detail.item
-						return a, func() tea.Msg {
-							result, err := promote.Promote(repoRoot, item)
-							return promoteDoneMsg{result: result, err: err}
-						}
-					case modalAppScript:
-						return a, a.detail.runAppScript()
-					case modalLoadoutApply:
-						return a, a.runLoadoutApply(a.loadoutApplyItem, a.loadoutApplyMode)
-					}
+				if actionCmd := a.handleConfirmAction(); actionCmd != nil {
+					return a, actionCmd
 				}
 			}
 			return a, cmd
@@ -1589,11 +1683,11 @@ func renderCategoryLine(ct catalog.ContentType, count int, maxW int) string {
 func (a App) contextHelpText() string {
 	switch a.screen {
 	case screenCategory:
-		return "Tab: switch panel   /: search   ?: help   q: quit"
+		return "tab switch panel • / search • ? help • q quit"
 	case screenDetail:
 		return a.detail.renderHelp()
 	case screenItems:
-		return "/: search   Enter: detail   Esc: back   ?: help"
+		return "/ search • enter detail • esc back • ? help"
 	case screenRegistries:
 		return a.registries.helpText()
 	case screenSettings:
@@ -1605,7 +1699,7 @@ func (a App) contextHelpText() string {
 	case screenSandbox:
 		return a.sandboxSettings.helpText()
 	default:
-		return "Esc: back   ?: help"
+		return "esc back • ? help"
 	}
 }
 

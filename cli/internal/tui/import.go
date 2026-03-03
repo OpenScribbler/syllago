@@ -807,35 +807,35 @@ func (m importModel) View() string {
 func (m importModel) helpText() string {
 	switch m.step {
 	case stepSource, stepType, stepProvider, stepBrowseStart, stepGitPick:
-		return "up/down: navigate   Enter: select   Esc: back"
+		return "up/down navigate • enter select • esc back"
 	case stepPath:
-		return "Enter: open browser   Esc: back"
+		return "enter open browser • esc back"
 	case stepGitURL:
-		return "Enter: clone   Esc: back"
+		return "enter clone • esc back"
 	case stepName:
-		return "Enter: confirm   Esc: back"
+		return "enter confirm • esc back"
 	case stepConfirm:
 		if m.isCreate {
-			return "Enter: create   Esc: back"
+			return "enter create • esc back"
 		}
-		return "Enter: import   Esc: back"
+		return "enter import • esc back"
 	case stepValidate:
-		return "up/down: navigate   Space: toggle   Enter: import   Esc: back"
+		return "up/down navigate • space toggle • enter import • esc back"
 	case stepBrowse:
 		if m.browser.previewing {
-			return "Esc: back   up/down: scroll   Space: select"
+			return "esc back • up/down scroll • space select"
 		}
-		return "up/down: navigate   Enter: open/preview   Space: select   a: select all   d: done   Esc: back"
+		return "up/down navigate • enter open/preview • space select • a select all • d done • esc back"
 	case stepConflict:
-		footer := "↑↓: scroll   ←→: scroll"
+		footer := "up/down scroll • left/right scroll"
 		if len(m.batchConflicts) > 0 {
-			footer += "   y: overwrite   n: skip"
+			footer += " • y overwrite • n skip"
 		} else {
-			footer += "   y: overwrite   Esc: cancel"
+			footer += " • y overwrite • esc cancel"
 		}
 		return footer
 	default:
-		return "Esc: back"
+		return "esc back"
 	}
 }
 

@@ -133,8 +133,8 @@ func TestFileBrowserHelpTextShowsDone(t *testing.T) {
 	// Verify the import model (stepBrowse) returns the expected help text.
 	m := importModel{step: stepBrowse}
 	helpText := m.helpText()
-	if !strings.Contains(helpText, "d: done") {
-		t.Fatalf("help text should show 'd: done', got: %q", helpText)
+	if !strings.Contains(helpText, "d done") {
+		t.Fatalf("help text should show 'd done', got: %q", helpText)
 	}
 	if strings.Contains(helpText, "c confirm") {
 		t.Fatal("help text should no longer show 'c confirm'")

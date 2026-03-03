@@ -1,8 +1,8 @@
 syllago           │Home > Settings
                   │
-  AI Tools        │ > Auto-update  off
-  Skills        3 │   Providers  (none)
-  Agents        1 │   Registry auto-sync  off
+  AI Tools        │  > Auto-update  off
+  Skills        3 │    Providers  (none)
+  Agents        1 │    Registry auto-sync  off
   Prompts       1 │
   MCP Configs   1 │ ─────────────────────────────────────────────
   Apps          1 │ Pull updates automatically when a new version is detected on the remote.
@@ -37,4 +37,4 @@ syllago           │Home > Settings
 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-up/down: navigate   Enter/Space: edit   s: save   Esc: back                                                     Settings
+up/down navigate • enter/space edit • s save • esc back                                                   Settings

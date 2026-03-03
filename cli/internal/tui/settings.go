@@ -204,7 +204,7 @@ var settingsDescriptions = []string{
 }
 
 func (m settingsModel) View() string {
-	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + " " + helpStyle.Render(">") + " " + titleStyle.Render("Settings") + "\n\n"
+	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + helpStyle.Render(" > ") + titleStyle.Render("Settings") + "\n\n"
 
 	// Row 0: Auto-update
 	autoVal := "off"
@@ -280,21 +280,21 @@ func (m settingsModel) View() string {
 }
 
 func (m settingsModel) renderRow(index int, label, value string) string {
-	prefix := "   "
+	prefix := "  "
 	style := itemStyle
 	if index == m.cursor && m.editMode == editNone {
-		prefix = " > "
+		prefix = "> "
 		style = selectedItemStyle
 	}
-	row := fmt.Sprintf("%s%s  %s", prefix, style.Render(label), helpStyle.Render(value))
+	row := fmt.Sprintf("  %s%s  %s", prefix, style.Render(label), helpStyle.Render(value))
 	return zone.Mark(fmt.Sprintf("settings-row-%d", index), row) + "\n"
 }
 
 func (m settingsModel) helpText() string {
 	if m.editMode != editNone {
-		return "up/down: navigate   Space: toggle   Esc: done"
+		return "up/down navigate • space toggle • esc done"
 	}
-	return "up/down: navigate   Enter/Space: edit   s: save   Esc: back"
+	return "up/down navigate • enter/space edit • s save • esc back"
 }
 
 // HasPendingAction returns true if a sub-picker is open.

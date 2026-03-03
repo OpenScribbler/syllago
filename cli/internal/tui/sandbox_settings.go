@@ -166,13 +166,13 @@ func (m sandboxSettingsModel) View() string {
 	}
 
 	for i := 0; i < sandboxRowCount; i++ {
-		prefix := "   "
+		prefix := "  "
 		style := itemStyle
 		if i == m.cursor {
-			prefix = " > "
+			prefix = "> "
 			style = selectedItemStyle
 		}
-		row := fmt.Sprintf("%s%s  %s", prefix, style.Render(labels[i]), helpStyle.Render(values[i]))
+		row := fmt.Sprintf("  %s%s  %s", prefix, style.Render(labels[i]), helpStyle.Render(values[i]))
 		s += zone.Mark(fmt.Sprintf("sandbox-row-%d", i), row) + "\n"
 	}
 
@@ -196,9 +196,9 @@ func (m sandboxSettingsModel) View() string {
 
 func (m sandboxSettingsModel) helpText() string {
 	if m.editMode != 0 {
-		return "Enter: save   Esc: cancel"
+		return "enter save • esc cancel"
 	}
-	return "up/down: navigate   Enter: add   d: delete last   s: save   Esc: back"
+	return "up/down navigate • enter add • d delete last • s save • esc back"
 }
 
 func sandboxListOrNone(items []string) string {

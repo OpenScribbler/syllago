@@ -1,8 +1,8 @@
 syllago           │Home > Search Results (1)
                   │
-  AI Tools        │   Name         Description                                             Provider
-▸ Skills        3 │   ───────────  ──────────────────────────────────────────────────────  ────────
-  Agents        1 │ > alpha-skill (Skills)  A helpful skill
+  AI Tools        │    Name         Description                                            Provider
+▸ Skills        3 │    ───────────  ─────────────────────────────────────────────────────  ────────
+  Agents        1 │  > alpha-skill (Skills)  A helpful skill
   Prompts       1 │
   MCP Configs   1 │up/down navigate • enter detail • esc back • / search
   Apps          1 │
@@ -27,4 +27,4 @@ syllago           │Home > Search Results (1)
 
 
 ────────────────────────────────────────────────────────────────────────────────
-/: search   Enter: detail   Esc: back   ?: help                           Skills
+/ search • enter detail • esc back • ? help                         Skills
