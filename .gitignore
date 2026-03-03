@@ -18,8 +18,9 @@ local/
 # Backups
 *.bak
 
-# Review docs (local reference)
+# Review docs (local reference) and temporary files
 docs/
+tmp/
 
 # Development workflow state
 .develop/
