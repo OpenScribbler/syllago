@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/parse"
@@ -42,6 +44,10 @@ func init() {
 	importCmd.Flags().String("name", "", "Filter to items whose path contains this substring (case-insensitive)")
 	importCmd.Flags().Bool("preview", false, "Show discovery report without parsing")
 	importCmd.Flags().Bool("dry-run", false, "Show what would be written without actually writing")
+	// Hooks-specific flags.
+	importCmd.Flags().StringArray("exclude", nil, "Skip hooks by auto-derived name (hooks only)")
+	importCmd.Flags().Bool("force", false, "Overwrite existing items with the same name (hooks only)")
+	importCmd.Flags().String("scope", "global", "Settings scope to read from: global, project, or all (hooks only)")
 	rootCmd.AddCommand(importCmd)
 }
 
@@ -63,6 +69,16 @@ func runImport(cmd *cobra.Command, args []string) error {
 	nameFilter, _ := cmd.Flags().GetString("name")
 	preview, _ := cmd.Flags().GetBool("preview")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+	// Hooks are stored in settings.json and must be split into individual items.
+	// The normal file-discovery flow treats the entire settings.json as one item,
+	// which is wrong for hooks. Handle this type separately.
+	if typeFilter == string(catalog.Hooks) {
+		exclude, _ := cmd.Flags().GetStringArray("exclude")
+		force, _ := cmd.Flags().GetBool("force")
+		scope, _ := cmd.Flags().GetString("scope")
+		return runImportHooks(root, fromSlug, preview || dryRun, exclude, force, scope)
+	}
 
 	report := parse.Discover(*prov, root)
 
@@ -267,6 +283,134 @@ func printDiscoveryReport(report parse.DiscoveryReport) {
 	if len(report.Unclassified) > 0 {
 		fmt.Fprintf(output.Writer, "  %d file(s) couldn't be classified.\n", len(report.Unclassified))
 	}
+}
+
+// runImportHooks handles "syllago import --type hooks". It reads settings.json
+// for the given provider, splits it into individual hook groups, filters by
+// --exclude, and either prints a preview or writes each hook to local/.
+func runImportHooks(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string) error {
+	prov := findProviderBySlug(fromSlug)
+	if prov == nil {
+		return fmt.Errorf("unknown provider: %s", fromSlug)
+	}
+
+	locations, err := installer.FindSettingsLocations(*prov, root)
+	if err != nil {
+		return fmt.Errorf("finding settings locations: %w", err)
+	}
+
+	// Filter by --scope.
+	var targets []installer.SettingsLocation
+	for _, loc := range locations {
+		if scope == "all" || loc.Scope.String() == scope {
+			targets = append(targets, loc)
+		}
+	}
+
+	if len(targets) == 0 {
+		fmt.Fprintf(output.Writer, "No settings.json found for %s (scope: %s).\n", fromSlug, scope)
+		return nil
+	}
+
+	excludeSet := make(map[string]bool, len(exclude))
+	for _, ex := range exclude {
+		excludeSet[ex] = true
+	}
+
+	for _, loc := range targets {
+		if err := importHooksFromLocation(root, fromSlug, loc, previewOnly, excludeSet, force); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to import hooks from %s: %v\n", loc.Path, err)
+		}
+	}
+	return nil
+}
+
+// importHooksFromLocation reads a single settings.json, splits it into hooks,
+// and either previews or writes them.
+func importHooksFromLocation(root, fromSlug string, loc installer.SettingsLocation, previewOnly bool, excludeSet map[string]bool, force bool) error {
+	data, err := os.ReadFile(loc.Path)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", loc.Path, err)
+	}
+
+	candidates, err := converter.SplitSettingsHooks(data, fromSlug)
+	if err != nil {
+		return fmt.Errorf("splitting hooks from %s: %w", loc.Path, err)
+	}
+
+	// Apply --exclude filter.
+	var filtered []converter.HookData
+	for _, hook := range candidates {
+		name := converter.DeriveHookName(hook)
+		if !excludeSet[name] {
+			filtered = append(filtered, hook)
+		}
+	}
+
+	if previewOnly {
+		fmt.Fprintf(output.Writer, "Hooks in %s (%s):\n", loc.Path, loc.Scope)
+		for _, hook := range filtered {
+			name := converter.DeriveHookName(hook)
+			matcher := hook.Matcher
+			if matcher == "" {
+				matcher = "*"
+			}
+			fmt.Fprintf(output.Writer, "  %s   (%s/%s)\n", name, hook.Event, matcher)
+		}
+		fmt.Fprintf(output.Writer, "\n%d hooks would be imported.\n", len(filtered))
+		return nil
+	}
+
+	count := 0
+	for _, hook := range filtered {
+		name := converter.DeriveHookName(hook)
+		itemDir := filepath.Join(root, "local", string(catalog.Hooks), fromSlug, name)
+
+		if !force {
+			if _, err := os.Stat(itemDir); err == nil {
+				fmt.Fprintf(output.Writer, "  SKIP %s (already exists, use --force to overwrite)\n", name)
+				continue
+			}
+		}
+
+		if err := os.MkdirAll(itemDir, 0755); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to create %s: %v\n", itemDir, err)
+			continue
+		}
+
+		hookJSON, err := json.MarshalIndent(hook, "", "  ")
+		if err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to marshal hook %s: %v\n", name, err)
+			continue
+		}
+		if err := os.WriteFile(filepath.Join(itemDir, "hook.json"), hookJSON, 0644); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to write hook.json for %s: %v\n", name, err)
+			continue
+		}
+
+		now := time.Now().UTC()
+		meta := &metadata.Meta{
+			ID:             metadata.NewID(),
+			Name:           name,
+			Type:           string(catalog.Hooks),
+			ImportedAt:     &now,
+			SourceProvider: fromSlug,
+			SourceFormat:   "json",
+		}
+		if err := metadata.Save(itemDir, meta); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to write metadata for %s: %v\n", name, err)
+			continue
+		}
+
+		matcher := hook.Matcher
+		if matcher == "" {
+			matcher = "*"
+		}
+		fmt.Fprintf(output.Writer, "  %s   (%s/%s)\n", name, hook.Event, matcher)
+		count++
+	}
+	fmt.Fprintf(output.Writer, "\nImported %d hooks to local/hooks/%s/\n", count, fromSlug)
+	return nil
 }
 
 // printDiscoveryDiagnostics explains why no content was found by showing

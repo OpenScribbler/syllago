@@ -202,6 +202,28 @@ func TestParseHookFile_Valid(t *testing.T) {
 	}
 }
 
+func TestParseHookFile_DirectoryFormat(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo hi"}]}`
+	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(hookJSON), 0644)
+
+	event, matcherGroup, err := parseHookFile(dir)
+	if err != nil {
+		t.Fatalf("parseHookFile with directory: %v", err)
+	}
+	if event != "PreToolUse" {
+		t.Errorf("event: got %q, want PreToolUse", event)
+	}
+	if gjson.GetBytes(matcherGroup, "event").Exists() {
+		t.Error("event field should be stripped from matcher group")
+	}
+	if gjson.GetBytes(matcherGroup, "matcher").String() != "Bash" {
+		t.Error("matcher field should be preserved")
+	}
+}
+
 func TestParseHookFile_MissingEvent(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -213,5 +235,128 @@ func TestParseHookFile_MissingEvent(t *testing.T) {
 	_, _, err := parseHookFile(hookFile)
 	if err == nil {
 		t.Fatal("expected error for missing event field")
+	}
+}
+
+func TestComputeGroupHash_Deterministic(t *testing.T) {
+	t.Parallel()
+	data := []byte(`{"matcher":"Bash","hooks":[{"type":"command","command":"echo hi"}]}`)
+	h1 := computeGroupHash(data)
+	h2 := computeGroupHash(data)
+	if h1 != h2 {
+		t.Error("hash should be deterministic")
+	}
+	if len(h1) != 64 {
+		t.Errorf("expected 64 char hex, got %d", len(h1))
+	}
+}
+
+func TestComputeGroupHash_DifferentContent(t *testing.T) {
+	t.Parallel()
+	d1 := []byte(`{"hooks":[{"type":"command","command":"echo a"}]}`)
+	d2 := []byte(`{"hooks":[{"type":"command","command":"echo b"}]}`)
+	if computeGroupHash(d1) == computeGroupHash(d2) {
+		t.Error("different content should have different hash")
+	}
+}
+
+func TestInstallHook_HashComputation(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
+
+	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo hash-test"}]}`
+
+	// Simulate what installHook does: parse, compute hash, record
+	hookFile := filepath.Join(projectRoot, "hook.json")
+	os.WriteFile(hookFile, []byte(hookJSON), 0644)
+
+	_, matcherGroup, err := parseHookFile(hookFile)
+	if err != nil {
+		t.Fatalf("parseHookFile: %v", err)
+	}
+
+	groupHash := computeGroupHash(matcherGroup)
+	if len(groupHash) != 64 {
+		t.Errorf("expected 64-char hex hash, got %d chars", len(groupHash))
+	}
+
+	inst := &Installed{}
+	inst.Hooks = append(inst.Hooks, InstalledHook{
+		Name:      "hash-test-hook",
+		Event:     "PreToolUse",
+		GroupHash: groupHash,
+		Command:   "echo hash-test",
+		Source:    "export",
+		Scope:     "global",
+	})
+	if err := SaveInstalled(projectRoot, inst); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
+
+	// Reload and verify GroupHash is persisted
+	inst2, err := LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("LoadInstalled: %v", err)
+	}
+	idx := inst2.FindHook("hash-test-hook", "PreToolUse")
+	if idx < 0 {
+		t.Fatal("hook not found after save")
+	}
+	if inst2.Hooks[idx].GroupHash != groupHash {
+		t.Errorf("GroupHash: got %q, want %q", inst2.Hooks[idx].GroupHash, groupHash)
+	}
+	if inst2.Hooks[idx].Scope != "global" {
+		t.Errorf("Scope: got %q, want %q", inst2.Hooks[idx].Scope, "global")
+	}
+}
+
+func TestUninstallHook_HashMatching(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
+
+	// The matcher group JSON as it would appear in settings.json
+	entryJSON := `{"matcher":"Bash","hooks":[{"type":"command","command":"echo hi"}]}`
+	groupHash := computeGroupHash([]byte(entryJSON))
+
+	// Create installed.json with the stored hash
+	inst := &Installed{
+		Hooks: []InstalledHook{
+			{
+				Name:      "hash-match-hook",
+				Event:     "PreToolUse",
+				GroupHash: groupHash,
+				Command:   "echo hi",
+				Source:    "export",
+				Scope:     "global",
+			},
+		},
+	}
+	if err := SaveInstalled(projectRoot, inst); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
+
+	// Reload and verify we can find the hook and its hash matches the entry
+	inst2, err := LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("LoadInstalled: %v", err)
+	}
+	idx := inst2.FindHook("hash-match-hook", "PreToolUse")
+	if idx < 0 {
+		t.Fatal("hook not found in installed.json")
+	}
+
+	storedHash := inst2.Hooks[idx].GroupHash
+	recomputedHash := computeGroupHash([]byte(entryJSON))
+	if storedHash != recomputedHash {
+		t.Errorf("hash mismatch: stored %q, recomputed %q", storedHash, recomputedHash)
+	}
+
+	// Verify a different entry does NOT match
+	differentEntry := `{"matcher":"Bash","hooks":[{"type":"command","command":"echo bye"}]}`
+	differentHash := computeGroupHash([]byte(differentEntry))
+	if storedHash == differentHash {
+		t.Error("different entry should produce a different hash")
 	}
 }

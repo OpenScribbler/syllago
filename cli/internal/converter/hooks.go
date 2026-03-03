@@ -3,6 +3,8 @@ package converter
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -13,8 +15,8 @@ func init() {
 	Register(&HooksConverter{})
 }
 
-// hookEntry represents a single hook action in canonical (Claude Code) format.
-type hookEntry struct {
+// HookEntry represents a single hook action in canonical (Claude Code) format.
+type HookEntry struct {
 	Type          string `json:"type"`
 	Command       string `json:"command,omitempty"`
 	Timeout       int    `json:"timeout,omitempty"`
@@ -24,13 +26,113 @@ type hookEntry struct {
 
 // hookMatcher represents an event matcher with its hooks in canonical format.
 type hookMatcher struct {
-	Matcher string      `json:"matcher,omitempty"`
-	Hooks   []hookEntry `json:"hooks"`
+	Matcher string       `json:"matcher,omitempty"`
+	Hooks   []HookEntry  `json:"hooks"`
 }
 
 // hooksConfig is the top-level hooks structure (canonical = Claude Code format).
 type hooksConfig struct {
 	Hooks map[string][]hookMatcher `json:"hooks"`
+}
+
+// HookData is the canonical representation of a single hook group (flat format).
+// One event + one matcher + one or more hook entries. Used by the compatibility
+// engine, TUI rendering, and import splitting.
+type HookData struct {
+	Event   string      `json:"event"`
+	Matcher string      `json:"matcher,omitempty"`
+	Hooks   []HookEntry `json:"hooks"`
+}
+
+// DetectHookFormat returns "flat" if content has a top-level "event" field,
+// or "nested" if it has a top-level "hooks" object.
+func DetectHookFormat(content []byte) string {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(content, &raw); err != nil {
+		return "nested" // default
+	}
+	if _, ok := raw["event"]; ok {
+		return "flat"
+	}
+	return "nested"
+}
+
+// ParseFlat parses a flat-format hook file into a HookData.
+func ParseFlat(content []byte) (HookData, error) {
+	var hd HookData
+	if err := json.Unmarshal(content, &hd); err != nil {
+		return HookData{}, fmt.Errorf("parsing flat hook: %w", err)
+	}
+	if hd.Event == "" {
+		return HookData{}, fmt.Errorf("flat hook missing 'event' field")
+	}
+	return hd, nil
+}
+
+// ParseNested parses the nested {"hooks":{"EventName":[...]}} format and returns
+// all hook groups as individual HookData items.
+func ParseNested(content []byte) ([]HookData, error) {
+	var cfg hooksConfig
+	if err := json.Unmarshal(content, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing nested hooks: %w", err)
+	}
+	var items []HookData
+	for event, matchers := range cfg.Hooks {
+		for _, m := range matchers {
+			items = append(items, HookData{
+				Event:   event,
+				Matcher: m.Matcher,
+				Hooks:   m.Hooks,
+			})
+		}
+	}
+	return items, nil
+}
+
+// LoadHookData reads and parses the hook.json from a hook content item.
+// If item.Path is a directory, resolves hook.json inside it.
+// Returns a HookData for flat format, or the first group for nested format.
+func LoadHookData(item catalog.ContentItem) (HookData, error) {
+	if item.Type != catalog.Hooks {
+		return HookData{}, fmt.Errorf("item is not a hook")
+	}
+	hookPath := item.Path
+	fi, err := os.Stat(hookPath)
+	if err != nil {
+		return HookData{}, err
+	}
+	if fi.IsDir() {
+		hookPath = filepath.Join(hookPath, "hook.json")
+	}
+	data, err := os.ReadFile(hookPath)
+	if err != nil {
+		return HookData{}, err
+	}
+	if DetectHookFormat(data) == "flat" {
+		return ParseFlat(data)
+	}
+	// Nested: return first group
+	items, err := ParseNested(data)
+	if err != nil {
+		return HookData{}, err
+	}
+	if len(items) == 0 {
+		return HookData{}, fmt.Errorf("no hook groups found in nested format")
+	}
+	return items[0], nil
+}
+
+// RenderFlat converts a HookData into the target provider's format for a single hook.
+func (c *HooksConverter) RenderFlat(hook HookData, target provider.Provider) (*Result, error) {
+	// Wrap the single hook in a hooksConfig so we can reuse existing render logic
+	cfg := hooksConfig{Hooks: map[string][]hookMatcher{
+		hook.Event: {{Matcher: hook.Matcher, Hooks: hook.Hooks}},
+	}}
+	content, err := json.Marshal(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return c.Render(content, target)
 }
 
 // copilotHookEntry represents a single hook in Copilot CLI format.
@@ -63,6 +165,10 @@ func (c *HooksConverter) ContentType() catalog.ContentType {
 }
 
 func (c *HooksConverter) Canonicalize(content []byte, sourceProvider string) (*Result, error) {
+	// Auto-detect flat vs nested format
+	if DetectHookFormat(content) == "flat" {
+		return canonicalizeFlatHook(content, sourceProvider)
+	}
 	switch sourceProvider {
 	case "copilot-cli":
 		return canonicalizeCopilotHooks(content)
@@ -70,6 +176,27 @@ func (c *HooksConverter) Canonicalize(content []byte, sourceProvider string) (*R
 		// Claude Code and Gemini CLI share the same structure, just different event/tool names
 		return canonicalizeStandardHooks(content, sourceProvider)
 	}
+}
+
+// canonicalizeFlatHook translates a flat-format hook's event and tool names to canonical.
+func canonicalizeFlatHook(content []byte, sourceProvider string) (*Result, error) {
+	hd, err := ParseFlat(content)
+	if err != nil {
+		return nil, err
+	}
+
+	if sourceProvider != "claude-code" {
+		hd.Event = ReverseTranslateHookEvent(hd.Event, sourceProvider)
+		if hd.Matcher != "" {
+			hd.Matcher = ReverseTranslateTool(hd.Matcher, sourceProvider)
+		}
+	}
+
+	out, err := json.MarshalIndent(hd, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: out, Filename: "hook.json"}, nil
 }
 
 // hooklessProviders lists providers that have no hook system.
@@ -168,14 +295,14 @@ func canonicalizeCopilotHooks(content []byte) (*Result, error) {
 			}
 			timeout := e.TimeoutSec * 1000 // Convert seconds to milliseconds
 
-			he := hookEntry{
+			he := HookEntry{
 				Type:          "command",
 				Command:       cmd,
 				Timeout:       timeout,
 				StatusMessage: e.Comment,
 			}
 			matchers = append(matchers, hookMatcher{
-				Hooks: []hookEntry{he},
+				Hooks: []HookEntry{he},
 			})
 		}
 		canonical.Hooks[canonicalEvent] = matchers
@@ -214,7 +341,7 @@ func renderStandardHooks(cfg hooksConfig, targetSlug string, llmMode string) (*R
 		for _, m := range matchers {
 			tm := hookMatcher{
 				Matcher: m.Matcher,
-				Hooks:   make([]hookEntry, len(m.Hooks)),
+				Hooks:   make([]HookEntry, len(m.Hooks)),
 			}
 			// Translate matcher tool name
 			if tm.Matcher != "" {
@@ -222,14 +349,14 @@ func renderStandardHooks(cfg hooksConfig, targetSlug string, llmMode string) (*R
 			}
 			copy(tm.Hooks, m.Hooks)
 
-			var kept []hookEntry
+			var kept []HookEntry
 			for _, h := range tm.Hooks {
 				if h.Type == "prompt" || h.Type == "agent" {
 					if llmMode == LLMHooksModeGenerate {
 						scriptName, scriptContent := generateLLMWrapperScript(h, targetSlug, event, scriptIdx)
 						scriptIdx++
 						extraFiles[scriptName] = scriptContent
-						kept = append(kept, hookEntry{
+						kept = append(kept, HookEntry{
 							Type:          "command",
 							Command:       "./" + scriptName,
 							Timeout:       30000, // LLM calls need more time
@@ -412,7 +539,7 @@ var cliCommands = map[string]string{
 
 // generateLLMWrapperScript creates a shell script that calls the target provider's
 // CLI to evaluate an LLM hook. Returns (filename, content).
-func generateLLMWrapperScript(h hookEntry, targetSlug string, event string, idx int) (string, []byte) {
+func generateLLMWrapperScript(h HookEntry, targetSlug string, event string, idx int) (string, []byte) {
 	scriptName := fmt.Sprintf("syllago-llm-hook-%s-%d.sh", sanitizeForFilename(event), idx)
 
 	cli := cliCommands[targetSlug]

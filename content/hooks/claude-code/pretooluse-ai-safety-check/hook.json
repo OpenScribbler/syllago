@@ -1,0 +1,12 @@
+{
+  "event": "PreToolUse",
+  "matcher": "",
+  "hooks": [
+    {
+      "type": "prompt",
+      "command": "Evaluate whether this tool invocation is safe and appropriate. Respond with JSON: {\"decision\": \"allow\"} or {\"decision\": \"deny\", \"reason\": \"...\"}",
+      "timeout": 15000,
+      "statusMessage": "AI safety check..."
+    }
+  ]
+}

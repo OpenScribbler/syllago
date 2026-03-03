@@ -1,10 +1,10 @@
 {
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "command": "echo 'Lint check placeholder - replace with your linter command'"
-      }
-    ]
-  }
+  "event": "PostToolUse",
+  "matcher": "Write|Edit",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "echo 'Lint check placeholder - replace with your linter command'"
+    }
+  ]
 }

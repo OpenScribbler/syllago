@@ -1,6 +1,8 @@
 package installer
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,9 +10,16 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
+
+// computeGroupHash computes the SHA256 hex hash of a matcher group JSON blob.
+func computeGroupHash(matcherGroup []byte) string {
+	hash := sha256.Sum256(matcherGroup)
+	return hex.EncodeToString(hash[:])
+}
 
 // hookSettingsPath returns the path to the provider's settings.json
 func hookSettingsPath(prov provider.Provider) (string, error) {
@@ -23,7 +32,16 @@ func hookSettingsPath(prov provider.Provider) (string, error) {
 
 // parseHookFile reads a hook JSON file and extracts the event + the matcher group.
 // The event field is stripped from the returned matcher group data.
+// If path is a directory, resolves hook.json inside it.
 func parseHookFile(path string) (event string, matcherGroup []byte, err error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return "", nil, err
+	}
+	if fi.IsDir() {
+		path = filepath.Join(path, "hook.json")
+	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", nil, err
@@ -65,14 +83,19 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return "", err
 	}
 
-	if err := backupFile(settingsPath); err != nil {
-		return "", fmt.Errorf("backing up %s: %w", settingsPath, err)
+	snapshotDir, err := snapshot.CreateForHook(repoRoot, "hook-install:"+item.Name, []string{settingsPath})
+	if err != nil {
+		return "", fmt.Errorf("creating snapshot: %w", err)
 	}
 
 	fileData, err := readJSONFile(settingsPath)
 	if err != nil {
 		return "", fmt.Errorf("reading %s: %w", settingsPath, err)
 	}
+
+	// Compute hash of the matcher group before appending
+	hash := sha256.Sum256(matcherGroup)
+	groupHash := hex.EncodeToString(hash[:])
 
 	// Append to hooks.<event> array using sjson's -1 (append) syntax
 	key := "hooks." + event + ".-1"
@@ -82,6 +105,10 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	}
 
 	if err := writeJSONFile(settingsPath, fileData); err != nil {
+		// Auto-rollback using the snapshot we just created
+		if manifest, _, loadErr := snapshot.Load(repoRoot); loadErr == nil {
+			_ = snapshot.Restore(snapshotDir, manifest)
+		}
 		return "", fmt.Errorf("writing %s: %w", settingsPath, err)
 	}
 
@@ -92,8 +119,10 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	inst.Hooks = append(inst.Hooks, InstalledHook{
 		Name:        item.Name,
 		Event:       event,
+		GroupHash:   groupHash,
 		Command:     command,
 		Source:      "export",
+		Scope:       "global",
 		InstalledAt: time.Now(),
 	})
 	if err := SaveInstalled(repoRoot, inst); err != nil {
@@ -128,7 +157,7 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 
 	instIdx := inst.FindHook(item.Name, event)
 
-	// Find the hook entry in settings.json by matching the command string
+	// Find the hook entry in settings.json
 	hooksArray := gjson.GetBytes(fileData, "hooks."+event)
 	if !hooksArray.Exists() || !hooksArray.IsArray() {
 		return "", fmt.Errorf("no hooks.%s array in %s", event, settingsPath)
@@ -136,12 +165,28 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 
 	found := -1
 	if instIdx >= 0 {
-		// Match by command string from installed.json
-		cmd := inst.Hooks[instIdx].Command
-		for i, entry := range hooksArray.Array() {
-			if entry.Get("hooks.0.command").String() == cmd {
-				found = i
-				break
+		storedHash := inst.Hooks[instIdx].GroupHash
+		if storedHash != "" {
+			// Hash-based matching: compare stored hash against hash of each entry
+			for i, entry := range hooksArray.Array() {
+				entryBytes := []byte(entry.Raw)
+				h := sha256.Sum256(entryBytes)
+				if hex.EncodeToString(h[:]) == storedHash {
+					found = i
+					break
+				}
+			}
+			if found == -1 {
+				return "", fmt.Errorf("hook %s was modified since installation; use 'syllago restore' to revert", item.Name)
+			}
+		} else {
+			// Fallback: command-string matching for pre-hash installed hooks
+			cmd := inst.Hooks[instIdx].Command
+			for i, entry := range hooksArray.Array() {
+				if entry.Get("hooks.0.command").String() == cmd {
+					found = i
+					break
+				}
 			}
 		}
 	}
@@ -149,8 +194,9 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 		return "", fmt.Errorf("hook %s not found in hooks.%s (not installed by syllago)", item.Name, event)
 	}
 
-	if err := backupFile(settingsPath); err != nil {
-		return "", fmt.Errorf("backing up %s: %w", settingsPath, err)
+	snapshotDir, err := snapshot.CreateForHook(repoRoot, "hook-uninstall:"+item.Name, []string{settingsPath})
+	if err != nil {
+		return "", fmt.Errorf("creating snapshot: %w", err)
 	}
 
 	// Delete by index
@@ -161,10 +207,14 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 	}
 
 	if err := writeJSONFile(settingsPath, fileData); err != nil {
+		// Auto-rollback using the snapshot we just created
+		if manifest, _, loadErr := snapshot.Load(repoRoot); loadErr == nil {
+			_ = snapshot.Restore(snapshotDir, manifest)
+		}
 		return "", fmt.Errorf("writing %s: %w", settingsPath, err)
 	}
 
-	// Remove from installed.json
+	// Remove from installed.json only after successful write
 	if instIdx >= 0 {
 		inst.RemoveHook(instIdx)
 		if err := SaveInstalled(repoRoot, inst); err != nil {

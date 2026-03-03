@@ -1,0 +1,13 @@
+{
+  "event": "PreToolUse",
+  "matcher": "Bash",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "echo 'Pre-tool check: validating Bash command'",
+      "timeout": 5000,
+      "statusMessage": "Validating shell command...",
+      "async": false
+    }
+  ]
+}

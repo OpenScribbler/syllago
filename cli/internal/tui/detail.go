@@ -16,6 +16,7 @@ import (
 	"github.com/charmbracelet/glamour"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/loadout"
 	"github.com/OpenScribbler/syllago/cli/internal/promote"
@@ -40,6 +41,12 @@ type openEnvModalMsg struct {
 	envTypes []string
 }
 
+// openHookBrokenWarningMsg is sent by detailModel when installing a hook with CompatBroken.
+type openHookBrokenWarningMsg struct {
+	providerName string
+	notes        string
+}
+
 // openLoadoutApplyMsg is sent by detailModel to ask App to run a loadout apply.
 type openLoadoutApplyMsg struct {
 	item catalog.ContentItem
@@ -57,7 +64,8 @@ type loadoutApplyDoneMsg struct {
 type detailTab int
 
 const (
-	tabOverview detailTab = iota
+	tabOverview      detailTab = iota
+	tabCompatibility           // hooks only
 	tabFiles
 	tabInstall
 )
@@ -92,6 +100,9 @@ type detailModel struct {
 	loadoutManifest    *loadout.Manifest // parsed manifest (for Loadouts type)
 	loadoutManifestErr string            // error from parsing manifest
 	loadoutModeCursor  int               // 0=preview, 1=try, 2=keep (Apply tab)
+	// Hook-specific state
+	hookData   *converter.HookData      // loaded for hook items (nil for all others)
+	hookCompat []converter.CompatResult // computed for all 4 providers
 }
 
 func newDetailModel(item catalog.ContentItem, providers []provider.Provider, repoRoot string) detailModel {
@@ -138,6 +149,16 @@ func newDetailModel(item catalog.ContentItem, providers []provider.Provider, rep
 			m.loadoutManifestErr = err.Error()
 		} else {
 			m.loadoutManifest = manifest
+		}
+	}
+	// Load hook data and compute compatibility for hook items
+	if item.Type == catalog.Hooks {
+		hd, err := converter.LoadHookData(item)
+		if err == nil {
+			m.hookData = &hd
+			for _, slug := range converter.HookProviders() {
+				m.hookCompat = append(m.hookCompat, converter.AnalyzeHookCompat(hd, slug))
+			}
 		}
 	}
 	// Initialize provider checkboxes for non-prompt items
@@ -191,17 +212,43 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 		// Tab switching (blocked during file viewing)
 		if !m.fileViewer.viewing {
 			var newTab detailTab = -1
+			// Build ordered list of valid tabs for this item type.
+			// Hooks have 4 tabs; all other types have 3 (no Compat tab).
+			validTabs := []detailTab{tabOverview, tabFiles, tabInstall}
+			if m.item.Type == catalog.Hooks {
+				validTabs = []detailTab{tabOverview, tabCompatibility, tabFiles, tabInstall}
+			}
+			// Find cursor position within validTabs for cycle navigation.
+			curIdx := 0
+			for i, t := range validTabs {
+				if t == m.activeTab {
+					curIdx = i
+					break
+				}
+			}
 			switch msg.String() {
 			case "tab":
-				newTab = (m.activeTab + 1) % 3
+				newTab = validTabs[(curIdx+1)%len(validTabs)]
 			case "shift+tab":
-				newTab = (m.activeTab + 2) % 3
+				newTab = validTabs[(curIdx+len(validTabs)-1)%len(validTabs)]
 			case "1":
 				newTab = tabOverview
 			case "2":
-				newTab = tabFiles
+				if m.item.Type == catalog.Hooks {
+					newTab = tabCompatibility
+				} else {
+					newTab = tabFiles
+				}
 			case "3":
-				newTab = tabInstall
+				if m.item.Type == catalog.Hooks {
+					newTab = tabFiles
+				} else {
+					newTab = tabInstall
+				}
+			case "4":
+				if m.item.Type == catalog.Hooks {
+					newTab = tabInstall
+				}
 			}
 			if newTab >= 0 {
 				// Reset file viewer when leaving Files tab
@@ -310,6 +357,31 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 					}
 				} else if len(m.provCheck.checks) > 0 && m.provCheck.cursor > 0 {
 					m.provCheck.cursor--
+					// Skip CompatNone providers when navigating up (hooks only)
+					if m.item.Type == catalog.Hooks {
+						detected := m.detectedProviders()
+						for m.provCheck.cursor > 0 {
+							slug := detected[m.provCheck.cursor].Slug
+							if cr := m.hookCompatForProvider(slug); cr != nil && cr.Level == converter.CompatNone {
+								m.provCheck.cursor--
+							} else {
+								break
+							}
+						}
+						// If stuck on CompatNone at index 0, skip forward to first selectable
+						if m.provCheck.cursor < len(detected) {
+							slug := detected[m.provCheck.cursor].Slug
+							if cr := m.hookCompatForProvider(slug); cr != nil && cr.Level == converter.CompatNone {
+								for m.provCheck.cursor < len(detected)-1 {
+									m.provCheck.cursor++
+									slug = detected[m.provCheck.cursor].Slug
+									if cr2 := m.hookCompatForProvider(slug); cr2 == nil || cr2.Level != converter.CompatNone {
+										break
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 
@@ -331,6 +403,31 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 					m.clampScroll()
 				} else if len(m.provCheck.checks) > 0 && m.provCheck.cursor < len(m.provCheck.checks)-1 {
 					m.provCheck.cursor++
+					// Skip CompatNone providers when navigating down (hooks only)
+					if m.item.Type == catalog.Hooks {
+						detected := m.detectedProviders()
+						for m.provCheck.cursor < len(detected)-1 {
+							slug := detected[m.provCheck.cursor].Slug
+							if cr := m.hookCompatForProvider(slug); cr != nil && cr.Level == converter.CompatNone {
+								m.provCheck.cursor++
+							} else {
+								break
+							}
+						}
+						// If stuck on CompatNone at the last index, skip back to last selectable
+						if m.provCheck.cursor < len(detected) {
+							slug := detected[m.provCheck.cursor].Slug
+							if cr := m.hookCompatForProvider(slug); cr != nil && cr.Level == converter.CompatNone {
+								for m.provCheck.cursor > 0 {
+									m.provCheck.cursor--
+									slug = detected[m.provCheck.cursor].Slug
+									if cr2 := m.hookCompatForProvider(slug); cr2 == nil || cr2.Level != converter.CompatNone {
+										break
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 
@@ -390,6 +487,20 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 				m.message = "No providers detected for this content type"
 				m.messageIsErr = true
 				return m, nil
+			}
+			// For hooks: warn before installing to a CompatBroken provider
+			if m.item.Type == catalog.Hooks {
+				detected := m.detectedProviders()
+				if m.provCheck.cursor < len(detected) {
+					selectedProv := detected[m.provCheck.cursor]
+					if cr := m.hookCompatForProvider(selectedProv.Slug); cr != nil && cr.Level == converter.CompatBroken {
+						provName := selectedProv.Name
+						notes := cr.Notes
+						return m, func() tea.Msg {
+							return openHookBrokenWarningMsg{providerName: provName, notes: notes}
+						}
+					}
+				}
 			}
 			return m, m.startInstall()
 
@@ -853,6 +964,21 @@ func (m detailModel) installedProviders() []provider.Provider {
 		}
 	}
 	return installed
+}
+
+// hookCompatForProvider returns the CompatResult for the given provider slug,
+// or nil if m.hookCompat is not loaded or the slug is not found.
+func (m detailModel) hookCompatForProvider(slug string) *converter.CompatResult {
+	if m.hookCompat == nil {
+		return nil
+	}
+	providers := converter.HookProviders()
+	for i, p := range providers {
+		if p == slug && i < len(m.hookCompat) {
+			return &m.hookCompat[i]
+		}
+	}
+	return nil
 }
 
 // clampScroll ensures scrollOffset stays within valid bounds.

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,6 +16,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/gitutil"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
@@ -37,6 +39,7 @@ const (
 	stepConfirm                       // review and execute
 	stepName                          // (create only) enter item name
 	stepConflict                      // conflict resolution (overwrite/skip)
+	stepHookSelect                    // (hook import only) multi-select which hooks to import
 )
 
 type importCloneDoneMsg struct {
@@ -120,6 +123,12 @@ type importModel struct {
 	batchConflictIdx int             // index into batchConflicts
 	batchOverwrite   map[string]bool // srcPath → true means overwrite
 
+	// Hook import state
+	hookCandidates   []converter.HookData
+	hookNames        []string
+	hookSelected     []bool
+	hookSelectCursor int
+
 	// Result messaging
 	message      string
 	messageIsErr bool
@@ -156,6 +165,41 @@ func newImportModel(providers []provider.Provider, repoRoot string) importModel 
 func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case fileBrowserDoneMsg:
+		// For hooks, if a single .json file was selected, split it into individual hooks.
+		if m.contentType == catalog.Hooks && len(msg.paths) == 1 && strings.HasSuffix(msg.paths[0], ".json") {
+			content, err := os.ReadFile(msg.paths[0])
+			if err != nil {
+				m.message = fmt.Sprintf("Cannot read file: %s", err)
+				m.messageIsErr = true
+				m.step = stepBrowse
+				return m, nil
+			}
+			hooks, err := converter.SplitSettingsHooks(content, m.providerName)
+			if err != nil {
+				m.message = fmt.Sprintf("Cannot split hooks: %s", err)
+				m.messageIsErr = true
+				m.step = stepBrowse
+				return m, nil
+			}
+			if len(hooks) == 0 {
+				m.message = "No hooks found in file"
+				m.messageIsErr = true
+				m.step = stepBrowse
+				return m, nil
+			}
+			m.hookCandidates = hooks
+			m.hookNames = make([]string, len(hooks))
+			for i, h := range hooks {
+				m.hookNames[i] = converter.DeriveHookName(h)
+			}
+			m.hookSelected = make([]bool, len(hooks))
+			for i := range m.hookSelected {
+				m.hookSelected[i] = true
+			}
+			m.hookSelectCursor = 0
+			m.step = stepHookSelect
+			return m, nil
+		}
 		m.selectedPaths = msg.paths
 		m.validationItems = m.validateSelections(msg.paths)
 		m.validateCursor = 0
@@ -246,6 +290,8 @@ func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
 			return m.updateName(msg)
 		case stepConflict:
 			return m.updateConflict(msg)
+		case stepHookSelect:
+			return m.updateHookSelect(msg)
 		}
 	}
 	return m, nil
@@ -639,6 +685,8 @@ func (m importModel) stepLabel() string {
 			return fmt.Sprintf("Conflict %d of %d", m.batchConflictIdx+1, len(m.batchConflicts))
 		}
 		return "Conflict"
+	case stepHookSelect:
+		return "Step 4 of 4: Select Hooks"
 	}
 	return ""
 }
@@ -790,6 +838,34 @@ func (m importModel) View() string {
 
 	case stepConflict:
 		s += m.viewConflict()
+
+	case stepHookSelect:
+		count := 0
+		for _, sel := range m.hookSelected {
+			if sel {
+				count++
+			}
+		}
+		s += labelStyle.Render(fmt.Sprintf("Found %d hooks in settings.json:", len(m.hookCandidates))) + "\n\n"
+		for i, hook := range m.hookCandidates {
+			check := "[ ]"
+			if m.hookSelected[i] {
+				check = installedStyle.Render("[✓]")
+			}
+			prefix := "  "
+			style := itemStyle
+			if i == m.hookSelectCursor {
+				prefix = "> "
+				style = selectedItemStyle
+			}
+			matcher := hook.Matcher
+			if matcher == "" {
+				matcher = "*"
+			}
+			s += fmt.Sprintf("  %s%s %s  %s\n", prefix, check, style.Render(m.hookNames[i]), helpStyle.Render("("+hook.Event+"/"+matcher+")"))
+		}
+		s += "\n"
+		s += fmt.Sprintf("  Import Selected (%d)  •  space toggle  •  a all  •  n none\n", count)
 	}
 
 	// Status message
@@ -834,6 +910,8 @@ func (m importModel) helpText() string {
 			footer += " • y overwrite • esc cancel"
 		}
 		return footer
+	case stepHookSelect:
+		return "up/down navigate • space toggle • a all • n none • enter import • esc back"
 	default:
 		return "esc back"
 	}
@@ -1471,6 +1549,76 @@ func (m importModel) advanceConflict() (importModel, tea.Cmd) {
 	return m, func() tea.Msg {
 		name, warnings, err := m.doBatchImportWithOverwrite(included, overwrite)
 		return importDoneMsg{name: name, warnings: warnings, err: err}
+	}
+}
+
+func (m importModel) updateHookSelect(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case key.Matches(msg, keys.Up):
+		if m.hookSelectCursor > 0 {
+			m.hookSelectCursor--
+		}
+	case key.Matches(msg, keys.Down):
+		if m.hookSelectCursor < len(m.hookCandidates)-1 {
+			m.hookSelectCursor++
+		}
+	case msg.String() == " ":
+		m.hookSelected[m.hookSelectCursor] = !m.hookSelected[m.hookSelectCursor]
+	case msg.String() == "a":
+		for i := range m.hookSelected {
+			m.hookSelected[i] = true
+		}
+	case msg.String() == "n":
+		for i := range m.hookSelected {
+			m.hookSelected[i] = false
+		}
+	case key.Matches(msg, keys.Enter):
+		return m, m.importSelectedHooks()
+	case key.Matches(msg, keys.Back):
+		m.step = stepBrowse
+	}
+	return m, nil
+}
+
+func (m importModel) importSelectedHooks() tea.Cmd {
+	return func() tea.Msg {
+		var imported []string
+		var errs []string
+
+		providerName := m.providerName
+		if providerName == "" {
+			providerName = "claude-code"
+		}
+
+		for i, hook := range m.hookCandidates {
+			if !m.hookSelected[i] {
+				continue
+			}
+			name := m.hookNames[i]
+
+			itemDir := filepath.Join(m.repoRoot, "local", "hooks", providerName, name)
+			if err := os.MkdirAll(itemDir, 0755); err != nil {
+				errs = append(errs, fmt.Sprintf("%s: %v", name, err))
+				continue
+			}
+
+			hookJSON, _ := json.MarshalIndent(hook, "", "  ")
+			if err := os.WriteFile(filepath.Join(itemDir, "hook.json"), hookJSON, 0644); err != nil {
+				errs = append(errs, fmt.Sprintf("%s: %v", name, err))
+				continue
+			}
+
+			// Write minimal .syllago.yaml
+			yamlContent := fmt.Sprintf("name: %s\ndescription: Imported hook (%s)\n", name, hook.Event)
+			os.WriteFile(filepath.Join(itemDir, ".syllago.yaml"), []byte(yamlContent), 0644) //nolint:errcheck
+
+			imported = append(imported, name)
+		}
+
+		if len(errs) > 0 {
+			return importDoneMsg{err: fmt.Errorf("partial import: %s", strings.Join(errs, "; "))}
+		}
+		return importDoneMsg{name: strings.Join(imported, ", ")}
 	}
 }
 

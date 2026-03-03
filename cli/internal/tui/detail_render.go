@@ -9,6 +9,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 )
 
@@ -97,6 +98,8 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 	switch m.activeTab {
 	case tabOverview:
 		body = m.renderOverviewTab()
+	case tabCompatibility:
+		body = m.renderCompatibilityTab()
 	case tabFiles:
 		if m.item.Type == catalog.Loadouts {
 			body = m.renderLoadoutContentsTab()
@@ -116,6 +119,7 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 
 // renderTabBar renders the tab selector (Overview | Files | Install).
 // For loadouts, tabs are (Overview | Contents | Apply).
+// For hooks, tabs are (Overview | Compat | Files | Install).
 func (m detailModel) renderTabBar() string {
 	var tabs []struct {
 		label string
@@ -129,6 +133,16 @@ func (m detailModel) renderTabBar() string {
 			{"Overview", tabOverview},
 			{"Contents", tabFiles},
 			{"Apply", tabInstall},
+		}
+	} else if m.item.Type == catalog.Hooks {
+		tabs = []struct {
+			label string
+			tab   detailTab
+		}{
+			{"Overview", tabOverview},
+			{"Compat", tabCompatibility},
+			{"Files", tabFiles},
+			{"Install", tabInstall},
 		}
 	} else {
 		tabs = []struct {
@@ -159,6 +173,34 @@ func (m detailModel) renderTabBar() string {
 // renderOverviewTab renders the README.md content (or falls back to description/body).
 func (m detailModel) renderOverviewTab() string {
 	var s string
+
+	// Hook-specific metadata (shown at top for hook items)
+	if m.item.Type == catalog.Hooks && m.hookData != nil {
+		hd := m.hookData
+		s += labelStyle.Render("Event:   ") + valueStyle.Render(hd.Event) + "\n"
+		if hd.Matcher != "" {
+			s += labelStyle.Render("Matcher: ") + valueStyle.Render(hd.Matcher) + "\n"
+		}
+		if len(hd.Hooks) > 0 {
+			h := hd.Hooks[0]
+			s += labelStyle.Render("Type:    ") + valueStyle.Render(h.Type) + "\n"
+			if h.Command != "" {
+				cmdDisplay := h.Command
+				maxW := m.width - 12
+				if maxW > 0 && len(cmdDisplay) > maxW {
+					cmdDisplay = cmdDisplay[:maxW-3] + "..."
+				}
+				s += labelStyle.Render("Command: ") + valueStyle.Render(cmdDisplay) + "\n"
+			}
+			if h.Timeout > 0 {
+				s += labelStyle.Render("Timeout: ") + valueStyle.Render(fmt.Sprintf("%dms", h.Timeout)) + "\n"
+			}
+			if h.Async {
+				s += labelStyle.Render("Async:   ") + valueStyle.Render("true") + "\n"
+			}
+		}
+		s += "\n"
+	}
 
 	// Prompt body (for prompts type)
 	if m.item.Type == catalog.Prompts && m.item.Body != "" {
@@ -211,6 +253,57 @@ func (m detailModel) renderOverviewTab() string {
 		}
 		if len(lines) > 8 {
 			s += helpStyle.Render(fmt.Sprintf("  ... (%d more lines)", len(lines)-8)) + "\n"
+		}
+	}
+
+	return s
+}
+
+// renderCompatibilityTab renders the hook compatibility table and feature warnings.
+func (m detailModel) renderCompatibilityTab() string {
+	if m.item.Type != catalog.Hooks || m.hookData == nil {
+		return helpStyle.Render("Compatibility data not available.") + "\n"
+	}
+
+	var s string
+	s += labelStyle.Render("Provider Compatibility") + "\n\n"
+
+	// Provider summary table
+	providerNames := map[string]string{
+		"claude-code": "Claude Code",
+		"gemini-cli":  "Gemini CLI",
+		"copilot-cli": "Copilot CLI",
+		"kiro":        "Kiro",
+	}
+
+	for _, result := range m.hookCompat {
+		sym := compatCellStyle(result.Level).Render(result.Level.Symbol())
+		name := providerNames[result.Provider]
+		if name == "" {
+			name = result.Provider
+		}
+		level := result.Level.Label()
+		note := result.Notes
+
+		s += fmt.Sprintf("  %s %-12s  %-10s", sym, name, level)
+		if note != "" {
+			s += "  " + helpStyle.Render(note)
+		}
+		s += "\n"
+	}
+
+	// Feature warnings for broken/none features
+	hasWarnings := false
+	for _, result := range m.hookCompat {
+		for _, fr := range result.Features {
+			if !fr.Supported && fr.Present && fr.Impact >= converter.CompatBroken {
+				if !hasWarnings {
+					s += "\n" + warningStyle.Render("Warnings") + "\n"
+					hasWarnings = true
+				}
+				name := providerNames[result.Provider]
+				s += "  " + compatCellStyle(fr.Impact).Render(result.Level.Symbol()+" "+name+": "+fr.Notes) + "\n"
+			}
 		}
 	}
 
@@ -343,8 +436,17 @@ func (m detailModel) renderInstallTab() string {
 			for i, p := range detected {
 				status := installer.CheckStatus(m.item, p, m.repoRoot)
 
+				// For hooks: check compat level — CompatNone providers are non-selectable
+				var provCompat *converter.CompatResult
+				if m.item.Type == catalog.Hooks {
+					provCompat = m.hookCompatForProvider(p.Slug)
+				}
+				isCompatNone := provCompat != nil && provCompat.Level == converter.CompatNone
+
 				check := "[ ]"
-				if i < len(m.provCheck.checks) && m.provCheck.checks[i] {
+				if isCompatNone {
+					check = compatCellStyle(converter.CompatNone).Render("[✗]")
+				} else if i < len(m.provCheck.checks) && m.provCheck.checks[i] {
 					check = installedStyle.Render("[✓]")
 				}
 
@@ -366,7 +468,15 @@ func (m detailModel) renderInstallTab() string {
 					indicator = notInstalledStyle.Render("[--] available")
 				}
 
-				row := fmt.Sprintf("  %s%s %s  %s", prefix, check, nameStyle.Render(p.Name), indicator)
+				row := fmt.Sprintf("  %s%s %s", prefix, check, nameStyle.Render(p.Name))
+
+				// For hooks: append compat symbol and level label inline
+				if m.item.Type == catalog.Hooks && provCompat != nil {
+					sym := compatCellStyle(provCompat.Level).Render(provCompat.Level.Symbol())
+					row += "  " + sym + " " + provCompat.Level.Label()
+				}
+
+				row += "  " + indicator
 				s += zone.Mark(fmt.Sprintf("prov-check-%d", i), row) + "\n"
 			}
 
@@ -375,8 +485,16 @@ func (m detailModel) renderInstallTab() string {
 					continue
 				}
 				name := helpStyle.Render(p.Name)
+				// For hooks: show compat for non-detected providers too
+				compatPart := ""
+				if m.item.Type == catalog.Hooks {
+					if cr := m.hookCompatForProvider(p.Slug); cr != nil {
+						sym := compatCellStyle(cr.Level).Render(cr.Level.Symbol())
+						compatPart = "  " + sym + " " + cr.Level.Label()
+					}
+				}
 				tag := helpStyle.Render("(not detected)")
-				s += fmt.Sprintf("      %s  %s\n", name, tag)
+				s += fmt.Sprintf("      %s%s  %s\n", name, compatPart, tag)
 			}
 		} else {
 			s += helpStyle.Render("No providers support installing this content type yet.") + "\n"
@@ -572,6 +690,8 @@ func (m detailModel) renderHelp() string {
 		if m.item.Type == catalog.Prompts && m.item.Body != "" {
 			helpParts = append(helpParts, "c copy")
 		}
+	case tabCompatibility:
+		// no additional help for placeholder
 	case tabFiles:
 		if m.item.Type == catalog.Loadouts {
 			helpParts = append(helpParts, "up/down scroll")

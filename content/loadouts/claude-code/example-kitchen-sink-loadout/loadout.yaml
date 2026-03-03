@@ -9,7 +9,11 @@ description: >
 rules:
   - example-kitchen-sink-rules
 hooks:
-  - example-kitchen-sink-hooks
+  - validating-shell-command
+  - pretooluse-ai-safety-check
+  - running-linter
+  - logging-tool-usage
+  - processing-notification
 skills:
   - syllago-guide
 agents:
