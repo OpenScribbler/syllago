@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/loadout"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -33,6 +34,7 @@ func init() {
 	loadoutApplyCmd.Flags().Bool("try", false, "Apply temporarily; auto-revert on session end")
 	loadoutApplyCmd.Flags().Bool("keep", false, "Apply permanently")
 	loadoutApplyCmd.Flags().Bool("preview", false, "Dry run: show planned actions without applying")
+	loadoutApplyCmd.Flags().String("base-dir", "", "Override base directory for content installation")
 	loadoutCmd.AddCommand(loadoutApplyCmd)
 }
 
@@ -142,12 +144,29 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Build resolver from merged config + CLI flag.
+	baseDir, _ := cmd.Flags().GetString("base-dir")
+	globalCfg, cfgErr := config.LoadGlobal()
+	if cfgErr != nil {
+		return fmt.Errorf("loading global config: %w", cfgErr)
+	}
+	projectCfg, cfgErr := config.Load(projectRoot)
+	if cfgErr != nil {
+		return fmt.Errorf("loading project config: %w", cfgErr)
+	}
+	mergedCfg := config.Merge(globalCfg, projectCfg)
+	resolver := config.NewResolver(mergedCfg, baseDir)
+	if err := resolver.ExpandPaths(); err != nil {
+		return fmt.Errorf("expanding paths: %w", err)
+	}
+
 	// Apply
 	prov := provider.ClaudeCode
 	opts := loadout.ApplyOptions{
 		Mode:        mode,
 		ProjectRoot: projectRoot,
 		RepoRoot:    root,
+		Resolver:    resolver,
 	}
 
 	result, err := loadout.Apply(manifest, cat, prov, opts)

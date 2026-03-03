@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
@@ -101,6 +102,52 @@ func CheckStatus(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	}
 
 	// Also check if target exists as a regular file (e.g., installed via copy)
+	if _, err := os.Lstat(targetPath); err == nil {
+		return StatusInstalled
+	}
+
+	return StatusNotInstalled
+}
+
+// CheckStatusWithResolver checks whether an item is installed, using the resolver
+// for path resolution instead of the default home directory.
+func CheckStatusWithResolver(item catalog.ContentItem, prov provider.Provider, repoRoot string, resolver *config.PathResolver, registryPaths ...string) Status {
+	// Dispatch to JSON merge handlers for types that need it
+	if IsJSONMerge(prov, item.Type) {
+		switch item.Type {
+		case catalog.MCP:
+			return checkMCPStatus(item, prov, repoRoot)
+		case catalog.Hooks:
+			return checkHookStatus(item, prov, repoRoot)
+		}
+		return StatusNotAvailable
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return StatusNotAvailable
+	}
+
+	installDir := resolver.InstallDir(prov, item.Type, home)
+	if installDir == "" || installDir == provider.JSONMergeSentinel || installDir == provider.ProjectScopeSentinel {
+		return StatusNotAvailable
+	}
+
+	// Compute target path directly from the resolved install dir.
+	var targetPath string
+	if item.Type == catalog.Agents {
+		targetPath = filepath.Join(installDir, item.Name+".md")
+	} else if item.Type.IsUniversal() {
+		targetPath = filepath.Join(installDir, item.Name)
+	} else {
+		targetPath = filepath.Join(installDir, filepath.Base(item.Path))
+	}
+
+	allRoots := append([]string{repoRoot}, registryPaths...)
+	if IsSymlinkedToAny(targetPath, allRoots) {
+		return StatusInstalled
+	}
+
 	if _, err := os.Lstat(targetPath); err == nil {
 		return StatusInstalled
 	}

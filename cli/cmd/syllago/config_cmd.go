@@ -39,6 +39,12 @@ var configListCmd = &cobra.Command{
 					fmt.Printf("  - %s\n", p)
 				}
 			}
+
+			// Check global config for path overrides
+			globalCfg, gErr := config.LoadGlobal()
+			if gErr == nil && len(globalCfg.ProviderPaths) > 0 {
+				fmt.Println("\nPath overrides configured. Run 'syllago config paths show' for details.")
+			}
 		}
 		return nil
 	},
@@ -119,6 +125,6 @@ var configRemoveCmd = &cobra.Command{
 }
 
 func init() {
-	configCmd.AddCommand(configListCmd, configAddCmd, configRemoveCmd)
+	configCmd.AddCommand(configListCmd, configAddCmd, configRemoveCmd, configPathsCmd)
 	rootCmd.AddCommand(configCmd)
 }

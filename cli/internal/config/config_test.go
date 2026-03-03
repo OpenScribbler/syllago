@@ -281,3 +281,134 @@ func TestMerge_NilInputs(t *testing.T) {
 		t.Fatal("Merge(nil, nil) should return non-nil Config")
 	}
 }
+
+func TestProviderPathsRoundTrip(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cfg := &Config{
+		Providers: []string{"claude-code"},
+		ProviderPaths: map[string]ProviderPathConfig{
+			"claude-code": {
+				BaseDir: "/custom/base",
+				Paths:   map[string]string{"skills": "/custom/skills", "hooks": "/custom/hooks"},
+			},
+		},
+	}
+	if err := Save(dir, cfg); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	loaded, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	ppc, ok := loaded.ProviderPaths["claude-code"]
+	if !ok {
+		t.Fatal("ProviderPaths missing claude-code entry")
+	}
+	if ppc.BaseDir != "/custom/base" {
+		t.Errorf("BaseDir = %q, want /custom/base", ppc.BaseDir)
+	}
+	if ppc.Paths["skills"] != "/custom/skills" {
+		t.Errorf("Paths[skills] = %q, want /custom/skills", ppc.Paths["skills"])
+	}
+	if ppc.Paths["hooks"] != "/custom/hooks" {
+		t.Errorf("Paths[hooks] = %q, want /custom/hooks", ppc.Paths["hooks"])
+	}
+}
+
+func TestProviderPathsOmittedWhenEmpty(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cfg := &Config{Providers: []string{"claude-code"}}
+	if err := Save(dir, cfg); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	data, _ := os.ReadFile(FilePath(dir))
+	if strings.Contains(string(data), "provider_paths") {
+		t.Error("JSON should not contain provider_paths when empty")
+	}
+}
+
+func TestMerge_ProviderPathsGlobalOnly(t *testing.T) {
+	t.Parallel()
+	global := &Config{
+		ProviderPaths: map[string]ProviderPathConfig{
+			"claude-code": {BaseDir: "/global/base"},
+		},
+	}
+	project := &Config{}
+	merged := Merge(global, project)
+	ppc, ok := merged.ProviderPaths["claude-code"]
+	if !ok {
+		t.Fatal("expected claude-code in merged ProviderPaths")
+	}
+	if ppc.BaseDir != "/global/base" {
+		t.Errorf("BaseDir = %q, want /global/base", ppc.BaseDir)
+	}
+}
+
+func TestMerge_ProviderPathsProjectOverride(t *testing.T) {
+	t.Parallel()
+	global := &Config{
+		ProviderPaths: map[string]ProviderPathConfig{
+			"claude-code": {
+				BaseDir: "/global/base",
+				Paths:   map[string]string{"skills": "/global/skills"},
+			},
+		},
+	}
+	project := &Config{
+		ProviderPaths: map[string]ProviderPathConfig{
+			"claude-code": {BaseDir: "/project/base"},
+		},
+	}
+	merged := Merge(global, project)
+	ppc := merged.ProviderPaths["claude-code"]
+	if ppc.BaseDir != "/project/base" {
+		t.Errorf("BaseDir = %q, want /project/base (project override)", ppc.BaseDir)
+	}
+	// Global per-type path should survive when project doesn't override it
+	if ppc.Paths["skills"] != "/global/skills" {
+		t.Errorf("Paths[skills] = %q, want /global/skills (preserved from global)", ppc.Paths["skills"])
+	}
+}
+
+func TestMerge_ProviderPathsDeepMerge(t *testing.T) {
+	t.Parallel()
+	global := &Config{
+		ProviderPaths: map[string]ProviderPathConfig{
+			"claude-code": {
+				Paths: map[string]string{"skills": "/global/skills", "hooks": "/global/hooks"},
+			},
+			"cursor": {
+				BaseDir: "/cursor/base",
+			},
+		},
+	}
+	project := &Config{
+		ProviderPaths: map[string]ProviderPathConfig{
+			"claude-code": {
+				Paths: map[string]string{"skills": "/project/skills"}, // override skills, keep hooks
+			},
+		},
+	}
+	merged := Merge(global, project)
+
+	// claude-code: skills overridden, hooks preserved
+	cc := merged.ProviderPaths["claude-code"]
+	if cc.Paths["skills"] != "/project/skills" {
+		t.Errorf("claude-code skills = %q, want /project/skills", cc.Paths["skills"])
+	}
+	if cc.Paths["hooks"] != "/global/hooks" {
+		t.Errorf("claude-code hooks = %q, want /global/hooks (preserved)", cc.Paths["hooks"])
+	}
+
+	// cursor: untouched by project
+	cur, ok := merged.ProviderPaths["cursor"]
+	if !ok {
+		t.Fatal("expected cursor in merged ProviderPaths")
+	}
+	if cur.BaseDir != "/cursor/base" {
+		t.Errorf("cursor BaseDir = %q, want /cursor/base", cur.BaseDir)
+	}
+}

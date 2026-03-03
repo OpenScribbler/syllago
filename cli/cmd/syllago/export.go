@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -53,6 +54,7 @@ func init() {
 	exportCmd.Flags().String("name", "", "Filter by item name (substring match)")
 	exportCmd.Flags().String("source", "local", "Which items to export: local (default), shared, registry, builtin, all")
 	exportCmd.Flags().String("llm-hooks", "skip", "How to handle LLM-evaluated hooks: skip (drop with warning) or generate (create wrapper scripts)")
+	exportCmd.Flags().String("base-dir", "", "Override base directory for content installation")
 	rootCmd.AddCommand(exportCmd)
 }
 
@@ -101,6 +103,26 @@ func runExport(cmd *cobra.Command, args []string) error {
 	nameFilter, _ := cmd.Flags().GetString("name")
 	sourceFilter, _ := cmd.Flags().GetString("source")
 	llmHooksMode, _ := cmd.Flags().GetString("llm-hooks")
+	baseDir, _ := cmd.Flags().GetString("base-dir")
+
+	// Build resolver from merged config + CLI flag.
+	globalCfg, err := config.LoadGlobal()
+	if err != nil {
+		return fmt.Errorf("loading global config: %w", err)
+	}
+	projectRoot, _ := findProjectRoot()
+	if projectRoot == "" {
+		projectRoot = root
+	}
+	projectCfg, err := config.Load(projectRoot)
+	if err != nil {
+		return fmt.Errorf("loading project config: %w", err)
+	}
+	mergedCfg := config.Merge(globalCfg, projectCfg)
+	resolver := config.NewResolver(mergedCfg, baseDir)
+	if err := resolver.ExpandPaths(); err != nil {
+		return fmt.Errorf("expanding paths: %w", err)
+	}
 
 	// Configure the hooks converter with the LLM hooks mode.
 	if hooksConv, ok := converter.For(catalog.Hooks).(*converter.HooksConverter); ok {
@@ -108,10 +130,6 @@ func runExport(cmd *cobra.Command, args []string) error {
 	}
 
 	// Scan the catalog. Use ScanWithRegistries when we need non-local sources.
-	projectRoot, _ := findProjectRoot()
-	if projectRoot == "" {
-		projectRoot = root
-	}
 	cat, err := catalog.Scan(root, projectRoot)
 	if err != nil {
 		return fmt.Errorf("scanning catalog: %w", err)
@@ -176,7 +194,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 		// merging rather than filesystem copy. If a converter exists and this
 		// is a cross-provider export, let the converter handle format transformation
 		// and write the converted JSON to a standalone file.
-		installDir := prov.InstallDir(homeDir, item.Type)
+		installDir := resolver.InstallDir(*prov, item.Type, homeDir)
 		if installDir == provider.JSONMergeSentinel {
 			// Allow converter-based cross-provider export for JSON merge types
 			srcProv := effectiveProvider(item)
@@ -241,7 +259,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("getting working directory: %w", cwdErr)
 			}
 			if prov.DiscoveryPaths != nil {
-				paths := prov.DiscoveryPaths(cwd, item.Type)
+				paths := resolver.DiscoveryPaths(*prov, item.Type, cwd)
 				if len(paths) > 0 {
 					installDir = paths[0]
 				}

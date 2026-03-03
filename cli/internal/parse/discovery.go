@@ -1,10 +1,12 @@
 package parse
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -27,6 +29,12 @@ type DiscoveryReport struct {
 
 // Discover finds all content files for a provider in a project directory.
 func Discover(prov provider.Provider, projectRoot string) DiscoveryReport {
+	return DiscoverWithResolver(prov, projectRoot, nil)
+}
+
+// DiscoverWithResolver finds content files using a resolver for path lookup.
+// When resolver is nil, falls back to standard provider paths.
+func DiscoverWithResolver(prov provider.Provider, projectRoot string, resolver *config.PathResolver) DiscoveryReport {
 	report := DiscoveryReport{
 		Provider:      prov.Slug,
 		Counts:        make(map[catalog.ContentType]int),
@@ -43,11 +51,23 @@ func Discover(prov provider.Provider, projectRoot string) DiscoveryReport {
 		if prov.DiscoveryPaths == nil {
 			continue
 		}
-		paths := prov.DiscoveryPaths(projectRoot, ct)
+
+		var paths []string
+		if resolver != nil {
+			paths = resolver.DiscoveryPaths(prov, ct, projectRoot)
+		} else {
+			paths = prov.DiscoveryPaths(projectRoot, ct)
+		}
 		if len(paths) > 0 {
 			report.SearchedPaths[ct] = paths
 		}
 		for _, p := range paths {
+			// Warn when a per-type override path doesn't exist on disk
+			if resolver != nil && resolver.HasPerTypePath(prov.Slug, ct) {
+				if _, err := os.Stat(p); err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: configured %s path does not exist: %s\n", ct, p)
+				}
+			}
 			files := findFiles(p)
 			for _, f := range files {
 				report.Files = append(report.Files, DiscoveredFile{
