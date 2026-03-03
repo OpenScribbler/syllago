@@ -1,6 +1,0 @@
-{
-  "providers": [
-    "claude-code",
-    "gemini-cli"
-  ]
-}

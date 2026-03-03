@@ -1,7 +1,7 @@
 # Syllago v1.0 Release Strategy
 
 *Design date: 2026-02-25*
-*Status: In Progress — updated 2026-02-27*
+*Status: In Progress — updated 2026-03-01*
 
 ## Positioning
 
@@ -39,7 +39,7 @@ V1.0 must work well for both from day one.
 
 ## Decided Priority Order
 
-*Decided: 2026-02-26 | Status updated: 2026-02-27*
+*Decided: 2026-02-26 | Status updated: 2026-03-01*
 
 Based on risk profiles and unblocking dependencies:
 
@@ -51,26 +51,23 @@ Based on risk profiles and unblocking dependencies:
 6. ~~**Content Model Restructure**~~ ✅ b7a415f — 42 tasks across 6 phases. `content/` directory, scanner refactor, kitchen-sink examples, CLI fixes (import/export/create/list/inspect), registry features, TUI polish.
 7. ~~**SEC-001 Fix**~~ ✅ — Symlink checks in `copyFile` and `copyDir` (Lstat guard + source tree skip).
 8. ~~**Sandbox Wrapper**~~ ✅ v0.5.0 — Bubblewrap isolation, egress proxy, config diff-and-approve, TUI settings.
-9. **Loadouts** — Session config packaging. Claude Code only for v1. Design: `docs/syllago-loadouts-design.md` (renamed from "starters").
+9. ~~**Loadouts**~~ ✅ v0.6.0 — Session config packaging. 35 beads across 7 phases. CLI commands, snapshot system, TUI integration, Claude Code emitter. Design: `docs/syllago-loadouts-design.md`.
 10. **TUI Polish + Registry Experience** — Audit for remaining gaps after content model restructure.
 11. **Documentation Site (Content)** — Scaffolding done. Write actual docs content last, once features are stable.
 
 ---
 
-## Remaining Work (as of 2026-02-28)
+## Remaining Work (as of 2026-03-01)
 
-Eight of ten original workstreams are complete. Two workstreams remain plus a new Starters feature added for v1.
+Nine of eleven workstreams are complete. Two workstreams remain before v1.
 
 | # | Workstream | Status | Key Items |
 |---|-----------|--------|-----------|
-| ~~NEW~~ | ~~Content Model Restructure~~ | ✅ Complete (b7a415f) | 42 tasks, 6 phases, 120 files changed |
-| ~~NEW~~ | ~~Critical CLI Fixes~~ | ✅ Complete (b7a415f) | Import to local/, export --source, syllago create/list/inspect |
-| ~~NEW~~ | ~~Registry & Team Features~~ | ✅ Complete (b7a415f) | allowedRegistries, inspect, precedence, manifest, promote --to-registry |
-| NEW | **Starters** | Designed, not started | Session config packaging — `syllago start/stop/revert/bundle` |
-| 2+5 | TUI Polish + Registry Experience | Partially done (most items done via content model) | Audit for remaining gaps |
-| 8 | Documentation Site Content | Not started (blocked by features) | Getting started, provider ref, authoring guide, CLI ref |
+| ~~9~~ | ~~Loadouts~~ | ✅ Complete (v0.6.0) | 35 beads, 7 phases. CLI commands, snapshot system, TUI integration, Claude Code emitter |
+| 2+5 | **TUI Polish + Registry Experience** | Partially done — needs audit | Registry browser, first-run experience, bug fixes |
+| 8 | **Documentation Site Content** | Not started (blocked by features) | Getting started, provider ref, authoring guide, loadouts guide, CLI ref |
 
-**Implementation order:** Starters → TUI Audit → Docs.
+**Implementation order:** TUI Audit → Docs.
 
 ---
 
@@ -170,29 +167,21 @@ Full design: `docs/plans/2026-02-25-sandbox-wrapper-design.md`
 - ✅ **Skill rendering consolidation** — `renderPlainMarkdownSkill` with prose embedding for metadata (used by Kiro, OpenCode).
 - ✅ **Field preservation tests** — Round-trip tests for converter fidelity.
 
-### 9. Starters (Must-Have)
+### 9. Loadouts ✅
 
-**Status:** Designed, not started
+**Status:** Complete (v0.6.0) — renamed from "Starters"
 
 **Goal:** Package entire session configurations — rules, hooks, skills, agents, MCP servers — into shareable artifacts that work across providers.
 
-**Full design:** `docs/syllago-starters-design.md`
+**Full design:** `docs/syllago-loadouts-design.md`
 
-**V1 Scope Decisions (2026-02-28):**
-
-- **Claude Code only for v1** — other provider emitters are post-v1 roadmap
-- **Platform, not prescription** — ship the tools to create/apply/revert starters; no pre-built opinionated packages
-- **No `permissions` section** — enforcement varies too much across providers; post-v1
-- **No `extends` composition** — deep merge semantics need more design; post-v1
-- **Kitchen-sink starter for testing only** — validates the system, not shipped as recommended content
-
-**V1 deliverables:**
-- CLI commands: `syllago start`, `syllago stop`, `syllago revert`, `syllago bundle`
-- Three-mode model: preview (default), `--try` (temporary, auto-revert), `--keep` (permanent)
-- Starter manifest format (YAML with `ref:` and `inline:` content references)
-- Snapshot system for backup/restore of modified files
-- Symlink placement for standalone content, merge+markers for shared files (CLAUDE.md, settings.json)
-- Per-provider `ConfigureSession` capability (Claude Code only for v1)
+Implemented across 35 beads in 7 phases (A through G):
+- ✅ Installer refactoring and content type infrastructure (phases A+B)
+- ✅ Core engine and CLI commands (phases C+D)
+- ✅ TUI integration, tests, and formatting (phases E+F+G)
+- ✅ Claude Code emitter (v1 scope)
+- ✅ Snapshot system for backup/restore
+- ✅ Loadout manifest format with `ref:` and `inline:` content references
 
 **Post-v1 roadmap:**
 - Additional provider emitters (Gemini CLI, Cursor, etc.)
@@ -223,7 +212,7 @@ Docs content is written last, after all features are implemented and stable. Thi
 - Getting started (install, first run, basic usage)
 - Provider reference (supported tools, what content types each supports, format details)
 - Content authoring guide (how to create skills, agents, rules, etc. in syllago-canonical format)
-- Starters guide (how to create, apply, and share session configurations)
+- Loadouts guide (how to create, apply, and share session configurations)
 - Registry guide (how to create, publish, and consume registries)
 - Sandbox guide (setup, usage, security model)
 - CLI reference (all commands and flags)
