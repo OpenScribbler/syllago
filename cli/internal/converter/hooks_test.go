@@ -2,8 +2,11 @@ package converter
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -461,6 +464,178 @@ func TestHooklessProviderWarning(t *testing.T) {
 			assertContains(t, result.Warnings[0], "does not support hooks")
 			assertContains(t, result.Warnings[0], tt.name)
 		})
+	}
+}
+
+// --- Flat format tests (Task 1.3) ---
+
+func TestDetectHookFormat(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		input  string
+		expect string
+	}{
+		{"flat", `{"event":"PreToolUse","hooks":[]}`, "flat"},
+		{"nested", `{"hooks":{"PreToolUse":[]}}`, "nested"},
+		{"flat with matcher", `{"event":"PostToolUse","matcher":"Bash","hooks":[]}`, "flat"},
+		{"invalid json", `not json`, "nested"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := DetectHookFormat([]byte(tt.input))
+			if got != tt.expect {
+				t.Errorf("DetectHookFormat: got %q, want %q", got, tt.expect)
+			}
+		})
+	}
+}
+
+func TestParseFlat(t *testing.T) {
+	t.Parallel()
+	input := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"go vet ./...","timeout":5000}]}`
+	hd, err := ParseFlat([]byte(input))
+	if err != nil {
+		t.Fatalf("ParseFlat: %v", err)
+	}
+	if hd.Event != "PreToolUse" {
+		t.Errorf("event: got %q", hd.Event)
+	}
+	if hd.Matcher != "Bash" {
+		t.Errorf("matcher: got %q", hd.Matcher)
+	}
+	if len(hd.Hooks) != 1 {
+		t.Fatalf("hooks count: got %d", len(hd.Hooks))
+	}
+	if hd.Hooks[0].Command != "go vet ./..." {
+		t.Errorf("command: got %q", hd.Hooks[0].Command)
+	}
+}
+
+func TestParseFlat_MissingEvent(t *testing.T) {
+	t.Parallel()
+	input := `{"matcher":"Bash","hooks":[{"type":"command","command":"echo"}]}`
+	_, err := ParseFlat([]byte(input))
+	if err == nil {
+		t.Fatal("expected error for missing event")
+	}
+}
+
+func TestParseNested(t *testing.T) {
+	t.Parallel()
+	input := `{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"echo"}]}],"PostToolUse":[{"hooks":[{"type":"command","command":"echo done"}]}]}}`
+	items, err := ParseNested([]byte(input))
+	if err != nil {
+		t.Fatalf("ParseNested: %v", err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(items))
+	}
+	// Verify we got both events (order is map-iteration dependent)
+	events := map[string]bool{}
+	for _, item := range items {
+		events[item.Event] = true
+	}
+	if !events["PreToolUse"] || !events["PostToolUse"] {
+		t.Errorf("expected PreToolUse and PostToolUse, got %v", events)
+	}
+}
+
+func TestCanonicalizeFlatHook_GeminiCLI(t *testing.T) {
+	t.Parallel()
+	input := `{"event":"BeforeTool","matcher":"run_shell_command","hooks":[{"type":"command","command":"echo safe"}]}`
+	conv := &HooksConverter{}
+	result, err := conv.Canonicalize([]byte(input), "gemini-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize flat: %v", err)
+	}
+	var hd HookData
+	json.Unmarshal(result.Content, &hd)
+	if hd.Event != "PreToolUse" {
+		t.Errorf("event not translated: got %q", hd.Event)
+	}
+	if hd.Matcher != "Bash" {
+		t.Errorf("matcher not translated: got %q", hd.Matcher)
+	}
+}
+
+func TestCanonicalizeFlatHook_ClaudeCode(t *testing.T) {
+	t.Parallel()
+	input := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo check"}]}`
+	conv := &HooksConverter{}
+	result, err := conv.Canonicalize([]byte(input), "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize flat: %v", err)
+	}
+	var hd HookData
+	json.Unmarshal(result.Content, &hd)
+	if hd.Event != "PreToolUse" {
+		t.Errorf("event should pass through: got %q", hd.Event)
+	}
+	if hd.Matcher != "Bash" {
+		t.Errorf("matcher should pass through: got %q", hd.Matcher)
+	}
+}
+
+func TestRenderFlat_Copilot(t *testing.T) {
+	t.Parallel()
+	hook := HookData{
+		Event:   "PreToolUse",
+		Matcher: "Bash",
+		Hooks:   []HookEntry{{Type: "command", Command: "echo check", Timeout: 3000, StatusMessage: "Checking..."}},
+	}
+	conv := &HooksConverter{}
+	result, err := conv.RenderFlat(hook, provider.CopilotCLI)
+	if err != nil {
+		t.Fatalf("RenderFlat: %v", err)
+	}
+	out := string(result.Content)
+	assertContains(t, out, "preToolUse")
+	assertContains(t, out, "echo check")
+	// Matcher dropped with warning
+	hasMatcherWarning := false
+	for _, w := range result.Warnings {
+		if containsStr(w, "matcher") {
+			hasMatcherWarning = true
+		}
+	}
+	if !hasMatcherWarning {
+		t.Error("expected matcher dropped warning for copilot")
+	}
+}
+
+func TestLoadHookData_DirectoryFormat(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"go vet ./..."}]}`
+	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(hookJSON), 0644)
+	item := catalog.ContentItem{Type: catalog.Hooks, Path: dir}
+
+	hd, err := LoadHookData(item)
+	if err != nil {
+		t.Fatalf("LoadHookData: %v", err)
+	}
+	if hd.Event != "PreToolUse" {
+		t.Errorf("event: %q", hd.Event)
+	}
+	if hd.Matcher != "Bash" {
+		t.Errorf("matcher: %q", hd.Matcher)
+	}
+}
+
+func TestLoadHookData_NestedFallback(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	hookJSON := `{"hooks":{"PostToolUse":[{"matcher":"Write","hooks":[{"type":"command","command":"echo lint"}]}]}}`
+	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(hookJSON), 0644)
+	item := catalog.ContentItem{Type: catalog.Hooks, Path: dir}
+
+	hd, err := LoadHookData(item)
+	if err != nil {
+		t.Fatalf("LoadHookData nested: %v", err)
+	}
+	if hd.Event != "PostToolUse" {
+		t.Errorf("event: %q", hd.Event)
 	}
 }
 

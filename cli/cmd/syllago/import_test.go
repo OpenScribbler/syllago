@@ -11,6 +11,37 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/parse"
 )
 
+// settingsJSON is a minimal claude-code settings.json with two hook groups.
+const settingsJSON = `{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{"type": "command", "command": "echo pre-bash", "statusMessage": "pre-bash-check"}]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [{"type": "command", "command": "echo post-edit", "statusMessage": "post-edit-check"}]
+      }
+    ]
+  }
+}`
+
+// setupHooksProject creates a temp dir with a project-scoped .claude/settings.json.
+// Returns the temp dir path.
+func setupHooksProject(t *testing.T) string {
+	t.Helper()
+	tmp := t.TempDir()
+
+	claudeDir := filepath.Join(tmp, ".claude")
+	os.MkdirAll(claudeDir, 0755)
+	os.WriteFile(filepath.Join(claudeDir, "settings.json"), []byte(settingsJSON), 0644)
+
+	return tmp
+}
+
 func TestImportRequiresFrom(t *testing.T) {
 	// Reset flags
 	importCmd.Flags().Set("from", "")
@@ -207,4 +238,186 @@ func TestImportDryRunDoesNotWrite(t *testing.T) {
 	if !strings.Contains(out, "dry-run") {
 		t.Errorf("expected 'dry-run' in output, got: %s", out)
 	}
+}
+
+func TestImportHooksPreview(t *testing.T) {
+	tmp := setupHooksProject(t)
+
+	stdout, _ := output.SetForTest(t)
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	importCmd.Flags().Set("from", "claude-code")
+	importCmd.Flags().Set("type", "hooks")
+	importCmd.Flags().Set("name", "")
+	importCmd.Flags().Set("preview", "true")
+	importCmd.Flags().Set("dry-run", "false")
+	importCmd.Flags().Set("scope", "project")
+	importCmd.Flags().Set("force", "false")
+	// Reset exclude to empty.
+	importCmd.Flags().Set("exclude", "")
+
+	if err := importCmd.RunE(importCmd, []string{}); err != nil {
+		t.Fatalf("import --type hooks --preview failed: %v", err)
+	}
+
+	// No files should be written.
+	localDir := filepath.Join(tmp, "local")
+	if _, err := os.Stat(localDir); err == nil {
+		t.Errorf("expected local/ to not exist during --preview, but it does")
+	}
+
+	// Output should list the hook names and mention "would be imported".
+	out := stdout.String()
+	if !strings.Contains(out, "would be imported") {
+		t.Errorf("expected 'would be imported' in preview output, got: %s", out)
+	}
+	// Both hooks should be listed.
+	if !strings.Contains(out, "pre-bash-check") {
+		t.Errorf("expected 'pre-bash-check' hook in preview output, got: %s", out)
+	}
+	if !strings.Contains(out, "post-edit-check") {
+		t.Errorf("expected 'post-edit-check' hook in preview output, got: %s", out)
+	}
+}
+
+func TestImportHooksWritesToLocal(t *testing.T) {
+	tmp := setupHooksProject(t)
+
+	_, _ = output.SetForTest(t)
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	importCmd.Flags().Set("from", "claude-code")
+	importCmd.Flags().Set("type", "hooks")
+	importCmd.Flags().Set("name", "")
+	importCmd.Flags().Set("preview", "false")
+	importCmd.Flags().Set("dry-run", "false")
+	importCmd.Flags().Set("scope", "project")
+	importCmd.Flags().Set("force", "false")
+	importCmd.Flags().Set("exclude", "")
+
+	if err := importCmd.RunE(importCmd, []string{}); err != nil {
+		t.Fatalf("import --type hooks failed: %v", err)
+	}
+
+	// Both hooks should have been written to local/hooks/claude-code/<name>/.
+	hooksBase := filepath.Join(tmp, "local", "hooks", "claude-code")
+	entries, err := os.ReadDir(hooksBase)
+	if err != nil {
+		t.Fatalf("expected local/hooks/claude-code/ to exist, got error: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 hook directories, got %d", len(entries))
+	}
+
+	// Each directory should contain hook.json and .syllago.yaml.
+	for _, entry := range entries {
+		itemDir := filepath.Join(hooksBase, entry.Name())
+		if _, err := os.Stat(filepath.Join(itemDir, "hook.json")); err != nil {
+			t.Errorf("expected hook.json in %s, got error: %v", itemDir, err)
+		}
+		if _, err := os.Stat(filepath.Join(itemDir, ".syllago.yaml")); err != nil {
+			t.Errorf("expected .syllago.yaml in %s, got error: %v", itemDir, err)
+		}
+	}
+}
+
+func TestImportHooksExclude(t *testing.T) {
+	tmp := setupHooksProject(t)
+
+	_, _ = output.SetForTest(t)
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	importCmd.Flags().Set("from", "claude-code")
+	importCmd.Flags().Set("type", "hooks")
+	importCmd.Flags().Set("name", "")
+	importCmd.Flags().Set("preview", "false")
+	importCmd.Flags().Set("dry-run", "false")
+	importCmd.Flags().Set("scope", "project")
+	importCmd.Flags().Set("force", "false")
+	// Exclude the pre-bash-check hook by its derived name.
+	importCmd.Flags().Set("exclude", "pre-bash-check")
+
+	if err := importCmd.RunE(importCmd, []string{}); err != nil {
+		t.Fatalf("import --type hooks --exclude failed: %v", err)
+	}
+
+	hooksBase := filepath.Join(tmp, "local", "hooks", "claude-code")
+	entries, err := os.ReadDir(hooksBase)
+	if err != nil {
+		t.Fatalf("expected local/hooks/claude-code/ to exist, got error: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 hook after --exclude, got %d", len(entries))
+	}
+	if entries[0].Name() == "pre-bash-check" {
+		t.Errorf("excluded hook 'pre-bash-check' was still imported")
+	}
+}
+
+func TestImportHooksForce(t *testing.T) {
+	// Call runImportHooks directly to avoid cobra StringArray flag accumulation
+	// across tests (pflag StringArray.Set appends rather than replaces).
+	t.Run("skip without force", func(t *testing.T) {
+		tmp := setupHooksProject(t)
+		_, _ = output.SetForTest(t)
+
+		origRoot := findProjectRoot
+		findProjectRoot = func() (string, error) { return tmp, nil }
+		t.Cleanup(func() { findProjectRoot = origRoot })
+
+		// Pre-create one of the hook directories to simulate an existing item.
+		existingDir := filepath.Join(tmp, "local", "hooks", "claude-code", "pre-bash-check")
+		os.MkdirAll(existingDir, 0755)
+		os.WriteFile(filepath.Join(existingDir, "hook.json"), []byte(`{"event":"old"}`), 0644)
+
+		stdout, _ := output.SetForTest(t)
+		if err := runImportHooks(tmp, "claude-code", false, nil, false, "project"); err != nil {
+			t.Fatalf("runImportHooks without force failed: %v", err)
+		}
+		out := stdout.String()
+		if !strings.Contains(out, "SKIP") {
+			t.Errorf("expected SKIP message for existing hook, got: %s", out)
+		}
+		// The old content should still be there.
+		data, _ := os.ReadFile(filepath.Join(existingDir, "hook.json"))
+		if !strings.Contains(string(data), "old") {
+			t.Errorf("expected existing hook.json to be unchanged without force")
+		}
+	})
+
+	t.Run("overwrite with force", func(t *testing.T) {
+		tmp := setupHooksProject(t)
+		_, _ = output.SetForTest(t)
+
+		origRoot := findProjectRoot
+		findProjectRoot = func() (string, error) { return tmp, nil }
+		t.Cleanup(func() { findProjectRoot = origRoot })
+
+		// Pre-create the hook directory.
+		existingDir := filepath.Join(tmp, "local", "hooks", "claude-code", "pre-bash-check")
+		os.MkdirAll(existingDir, 0755)
+		os.WriteFile(filepath.Join(existingDir, "hook.json"), []byte(`{"event":"old"}`), 0644)
+
+		_, _ = output.SetForTest(t)
+		if err := runImportHooks(tmp, "claude-code", false, nil, true, "project"); err != nil {
+			t.Fatalf("runImportHooks with force failed: %v", err)
+		}
+		data, _ := os.ReadFile(filepath.Join(existingDir, "hook.json"))
+		if strings.Contains(string(data), `"event":"old"`) {
+			t.Errorf("expected hook.json to be overwritten with force, still has old content")
+		}
+		// Verify new content has the correct event field.
+		if !strings.Contains(string(data), "PreToolUse") {
+			t.Errorf("expected overwritten hook.json to contain 'PreToolUse', got: %s", data)
+		}
+	})
 }

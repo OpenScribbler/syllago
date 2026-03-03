@@ -2,6 +2,8 @@ package tui
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -353,6 +355,125 @@ func TestItemsTruncation(t *testing.T) {
 			break
 		}
 	}
+}
+
+func TestItemsHooksMatrix(t *testing.T) {
+	tmp := t.TempDir()
+
+	// Create a hook item with a real hook.json so LoadHookData succeeds.
+	hookDir := tmp + "/hooks/claude-code/simple-hook"
+	if err := os.MkdirAll(hookDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo test"}]}`
+	if err := os.WriteFile(hookDir+"/hook.json", []byte(hookJSON), 0o644); err != nil {
+		t.Fatalf("write hook.json: %v", err)
+	}
+
+	items := []catalog.ContentItem{
+		{
+			Name:        "simple-hook",
+			Description: "A simple hook for testing",
+			Type:        catalog.Hooks,
+			Path:        hookDir,
+			Provider:    "claude-code",
+		},
+	}
+
+	// Width=80 uses abbreviated headers (< 101)
+	m := newItemsModel(catalog.Hooks, items, nil, tmp)
+	m.width = 80
+	m.height = 30
+
+	view := m.View()
+
+	// Abbreviated matrix column headers should appear at width 80
+	assertContains(t, view, "CC")
+	assertContains(t, view, "GC")
+	assertContains(t, view, "Cp")
+	assertContains(t, view, "Ki")
+
+	// Provider header should NOT appear (matrix replaces it)
+	assertNotContains(t, view, "Provider")
+
+	// At least one compat symbol should appear
+	hasSymbol := strings.Contains(view, "✓") ||
+		strings.Contains(view, "~") ||
+		strings.Contains(view, "!") ||
+		strings.Contains(view, "✗")
+	if !hasSymbol {
+		t.Fatal("expected at least one compat symbol in hooks matrix view")
+	}
+}
+
+func TestItemsHooksMatrixAbbrHeaders(t *testing.T) {
+	tmp := t.TempDir()
+
+	hookDir := tmp + "/hooks/claude-code/simple-hook"
+	if err := os.MkdirAll(hookDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo test"}]}`
+	if err := os.WriteFile(hookDir+"/hook.json", []byte(hookJSON), 0o644); err != nil {
+		t.Fatalf("write hook.json: %v", err)
+	}
+
+	items := []catalog.ContentItem{
+		{
+			Name:        "simple-hook",
+			Description: "A simple hook for testing",
+			Type:        catalog.Hooks,
+			Path:        hookDir,
+			Provider:    "claude-code",
+		},
+	}
+
+	// Narrow terminal (< 101 cols) should use abbreviated headers
+	m := newItemsModel(catalog.Hooks, items, nil, tmp)
+	m.width = 80
+	m.height = 30
+
+	view := m.View()
+	assertContains(t, view, "CC")
+	assertContains(t, view, "GC")
+	assertContains(t, view, "Cp")
+	assertContains(t, view, "Ki")
+	assertNotContains(t, view, "Provider")
+}
+
+func TestItemsHooksMatrixFullHeaders(t *testing.T) {
+	tmp := t.TempDir()
+
+	hookDir := tmp + "/hooks/claude-code/simple-hook"
+	if err := os.MkdirAll(hookDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo test"}]}`
+	if err := os.WriteFile(hookDir+"/hook.json", []byte(hookJSON), 0o644); err != nil {
+		t.Fatalf("write hook.json: %v", err)
+	}
+
+	items := []catalog.ContentItem{
+		{
+			Name:        "simple-hook",
+			Description: "A simple hook for testing",
+			Type:        catalog.Hooks,
+			Path:        hookDir,
+			Provider:    "claude-code",
+		},
+	}
+
+	// Wide terminal (>= 101 cols) should use full headers
+	m := newItemsModel(catalog.Hooks, items, nil, tmp)
+	m.width = 120
+	m.height = 30
+
+	view := m.View()
+	assertContains(t, view, "Claude")
+	assertContains(t, view, "Gemini")
+	assertContains(t, view, "Copilot")
+	assertContains(t, view, "Kiro")
+	assertNotContains(t, view, "Provider")
 }
 
 // splitLines splits a string into lines, handling both \n and \r\n.

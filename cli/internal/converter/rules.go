@@ -503,19 +503,24 @@ func renderOpenCodeRule(meta RuleMeta, body string) (*Result, error) {
 	return &Result{Content: []byte(result + "\n"), Filename: "AGENTS.md"}, nil
 }
 
-// slugify converts a description string into a safe filename slug.
+// slugify converts a string into a filesystem-safe slug.
+// All non-alphanumeric characters become hyphens; consecutive hyphens are
+// collapsed; leading/trailing hyphens are trimmed.
 func slugify(s string) string {
 	s = strings.ToLower(s)
 	var b strings.Builder
 	for _, r := range s {
-		switch {
-		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
 			b.WriteRune(r)
-		case r == ' ' || r == '-' || r == '_':
+		} else {
 			b.WriteRune('-')
 		}
 	}
-	result := strings.Trim(b.String(), "-")
+	result := b.String()
+	for strings.Contains(result, "--") {
+		result = strings.ReplaceAll(result, "--", "-")
+	}
+	result = strings.Trim(result, "-")
 	if result == "" {
 		return "rule"
 	}

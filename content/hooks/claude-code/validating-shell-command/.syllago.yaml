@@ -1,0 +1,6 @@
+name: validating-shell-command
+description: Example hook that validates Bash commands before execution
+hidden: true
+tags:
+  - builtin
+  - example

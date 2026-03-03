@@ -86,6 +86,12 @@ var (
 				Foreground(primaryColor).
 				Bold(true)
 
+	// Compatibility matrix (hooks list view)
+	compatFullStyle     = lipgloss.NewStyle().Foreground(successColor)
+	compatDegradedStyle = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#CA8A04", Dark: "#FDE68A"})
+	compatBrokenStyle   = lipgloss.NewStyle().Foreground(warningColor)
+	compatNoneStyle     = lipgloss.NewStyle().Foreground(dangerColor)
+
 	// Update notification
 	updateBannerStyle = lipgloss.NewStyle().
 				Foreground(warningColor)

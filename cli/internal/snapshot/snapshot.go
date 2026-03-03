@@ -19,6 +19,7 @@ var ErrNoSnapshot = errors.New("no active snapshot")
 
 // SnapshotManifest is written to .syllago/snapshots/<timestamp>/manifest.json.
 type SnapshotManifest struct {
+	Source        string          `json:"source"`
 	LoadoutName   string          `json:"loadoutName"`
 	Mode          string          `json:"mode"` // "try" or "keep"
 	CreatedAt     time.Time       `json:"createdAt"`
@@ -79,6 +80,7 @@ func Create(projectRoot string, loadoutName string, mode string,
 	}
 
 	manifest := SnapshotManifest{
+		Source:        loadoutName,
 		LoadoutName:   loadoutName,
 		Mode:          mode,
 		CreatedAt:     time.Now().UTC(),
@@ -98,6 +100,13 @@ func Create(projectRoot string, loadoutName string, mode string,
 	}
 
 	return snapshotDir, nil
+}
+
+// CreateForHook creates a snapshot for a hook operation. It records the source
+// identifier (e.g. "hook:some-hook-name") and backs up the given files.
+// Mode is always "keep" since hook snapshots are not trial installs.
+func CreateForHook(projectRoot, source string, filesToBackup []string) (string, error) {
+	return Create(projectRoot, source, "keep", filesToBackup, nil, nil)
 }
 
 // Load reads the manifest from the most recent snapshot directory.
@@ -138,6 +147,11 @@ func Load(projectRoot string) (*SnapshotManifest, string, error) {
 	var manifest SnapshotManifest
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		return nil, "", fmt.Errorf("parsing manifest: %w", err)
+	}
+
+	// Backwards compat: old manifests have LoadoutName but no Source.
+	if manifest.Source == "" && manifest.LoadoutName != "" {
+		manifest.Source = "loadout:" + manifest.LoadoutName
 	}
 
 	return &manifest, snapshotDir, nil

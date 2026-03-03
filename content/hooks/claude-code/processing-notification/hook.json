@@ -1,0 +1,12 @@
+{
+  "event": "Notification",
+  "matcher": "",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "echo 'Notification received'",
+      "timeout": 2000,
+      "statusMessage": "Processing notification..."
+    }
+  ]
+}

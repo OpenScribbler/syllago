@@ -144,6 +144,8 @@ func (a *App) handleConfirmAction() tea.Cmd {
 		return a.detail.runAppScript()
 	case modalLoadoutApply:
 		return a.runLoadoutApply(a.loadoutApplyItem, a.loadoutApplyMode)
+	case modalHookBrokenWarning:
+		return a.detail.startInstall()
 	}
 	return nil
 }
@@ -364,6 +366,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case openInstallModalMsg:
 		a.instModal = newInstallModal(msg.item, msg.providers, msg.repoRoot)
+		a.focus = focusModal
+		return a, nil
+
+	case openHookBrokenWarningMsg:
+		body := fmt.Sprintf("%s has broken compatibility:\n\n%s\n\nInstall anyway?", msg.providerName, msg.notes)
+		a.modal = newConfirmModal("Compatibility Warning", body)
+		a.modal.purpose = modalHookBrokenWarning
 		a.focus = focusModal
 		return a, nil
 

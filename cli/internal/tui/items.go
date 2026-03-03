@@ -6,10 +6,12 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/lipgloss"
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
@@ -49,6 +51,60 @@ func displayName(item catalog.ContentItem) string {
 type provCell struct {
 	plain  string
 	styled string
+}
+
+// hookMatrixCell holds the symbol and styled version for one cell of the compat matrix.
+type hookMatrixCell struct {
+	plain  string // single char: ✓ ~ ! ✗
+	styled string // with lipgloss color applied
+}
+
+// hookCompatMatrix is the precomputed 4-column matrix for one hook item.
+type hookCompatMatrix [4]hookMatrixCell
+
+// matrixProviders is the fixed order for the compatibility matrix columns.
+var matrixProviders = converter.HookProviders() // ["claude-code", "gemini-cli", "copilot-cli", "kiro"]
+
+// matrixHeadersFull are the full column headers (panel width >= 101).
+var matrixHeadersFull = []string{"Claude", "Gemini", "Copilot", "Kiro"}
+
+// matrixHeadersAbbr are the abbreviated column headers (panel width < 101).
+var matrixHeadersAbbr = []string{"CC", "GC", "Cp", "Ki"}
+
+// compatCellStyle returns the lipgloss style for a compat level.
+func compatCellStyle(level converter.CompatLevel) lipgloss.Style {
+	switch level {
+	case converter.CompatFull:
+		return compatFullStyle
+	case converter.CompatDegraded:
+		return compatDegradedStyle
+	case converter.CompatBroken:
+		return compatBrokenStyle
+	case converter.CompatNone:
+		return compatNoneStyle
+	}
+	return lipgloss.NewStyle()
+}
+
+// buildHookMatrix computes the compatibility matrix for a hook item.
+func buildHookMatrix(item catalog.ContentItem) hookCompatMatrix {
+	var m hookCompatMatrix
+	hd, err := converter.LoadHookData(item)
+	if err != nil {
+		for i := range m {
+			m[i] = hookMatrixCell{plain: "?", styled: "?"}
+		}
+		return m
+	}
+	for i, slug := range matrixProviders {
+		result := converter.AnalyzeHookCompat(hd, slug)
+		sym := result.Level.Symbol()
+		m[i] = hookMatrixCell{
+			plain:  sym,
+			styled: compatCellStyle(result.Level).Render(sym),
+		}
+	}
+	return m
 }
 
 type itemsModel struct {
@@ -218,8 +274,32 @@ func (m itemsModel) View() string {
 	if m.contentType == catalog.MyTools {
 		showProvCol = false // grouped headers replace provider column
 	}
+	isHooks := m.contentType == catalog.Hooks
+	if isHooks {
+		showProvCol = false // matrix columns replace provider column
+	}
 	nameW := m.maxNameLen()
 	tw := m.termWidth()
+
+	// For hooks: precompute compat matrices and determine column headers/widths.
+	var hookMatrices map[int]hookCompatMatrix
+	var matrixColWidths [4]int
+	var activeMatrixHeaders []string
+	if isHooks {
+		hookMatrices = make(map[int]hookCompatMatrix, len(m.items))
+		for i, item := range m.items {
+			hookMatrices[i] = buildHookMatrix(item)
+		}
+		// Choose full vs abbreviated headers based on panel width.
+		if tw >= 101 {
+			activeMatrixHeaders = matrixHeadersFull
+		} else {
+			activeMatrixHeaders = matrixHeadersAbbr
+		}
+		for i, hdr := range activeMatrixHeaders {
+			matrixColWidths[i] = len(hdr)
+		}
+	}
 
 	// Precompute provider column for each item and measure max width
 	provCells := make([]provCell, len(m.items))
@@ -241,6 +321,12 @@ func (m itemsModel) View() string {
 	if showProvCol {
 		descW -= colGap + maxProvW
 	}
+	if isHooks {
+		// Subtract the 4 matrix columns (each colW + colGap)
+		for _, colW := range matrixColWidths {
+			descW -= colGap + colW
+		}
+	}
 	if descW < 10 {
 		descW = 10
 	}
@@ -248,7 +334,12 @@ func (m itemsModel) View() string {
 	// Table header (skip for MyTools — group headers replace it)
 	if m.contentType != catalog.MyTools {
 		hdr := strings.Repeat(" ", cursorWidth)
-		if showProvCol {
+		if isHooks {
+			hdr += fmt.Sprintf("%-*s  %-*s", nameW, "Name", descW, "Description")
+			for i, colHdr := range activeMatrixHeaders {
+				hdr += fmt.Sprintf("  %-*s", matrixColWidths[i], colHdr)
+			}
+		} else if showProvCol {
 			hdr += fmt.Sprintf("%-*s  %-*s  %s", nameW, "Name", descW, "Description", "Provider")
 		} else {
 			hdr += fmt.Sprintf("%-*s  %s", nameW, "Name", "Description")
@@ -260,6 +351,11 @@ func (m itemsModel) View() string {
 		sep += strings.Repeat("─", nameW) + "  " + strings.Repeat("─", descW)
 		if showProvCol {
 			sep += "  " + strings.Repeat("─", maxProvW)
+		}
+		if isHooks {
+			for _, colW := range matrixColWidths {
+				sep += "  " + strings.Repeat("─", colW)
+			}
 		}
 		s += helpStyle.Render(sep) + "\n"
 	}
@@ -340,7 +436,21 @@ func (m itemsModel) View() string {
 			localPrefixLen = 9 // "[GLOBAL] "
 		}
 
-		if showProvCol {
+		if isHooks {
+			paddedDesc := fmt.Sprintf("%-*s", descW, truncate(item.Description, descW-localPrefixLen))
+			rowStr := fmt.Sprintf("  %s%s%s  %s%s",
+				prefix,
+				styledName,
+				typeTag,
+				localPrefix,
+				helpStyle.Render(paddedDesc),
+			)
+			mat := hookMatrices[i]
+			for j, cell := range mat {
+				rowStr += fmt.Sprintf("  %-*s", matrixColWidths[j], cell.styled)
+			}
+			s += zone.Mark(fmt.Sprintf("item-%d", i), rowStr) + "\n"
+		} else if showProvCol {
 			paddedDesc := fmt.Sprintf("%-*s", descW, truncate(item.Description, descW-localPrefixLen))
 			rowStr := fmt.Sprintf("  %s%s%s  %s%s  %s",
 				prefix,

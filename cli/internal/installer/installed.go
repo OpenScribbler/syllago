@@ -15,8 +15,10 @@ import (
 type InstalledHook struct {
 	Name        string    `json:"name"`
 	Event       string    `json:"event"`
-	Command     string    `json:"command"`
-	Source      string    `json:"source"` // "export" or "loadout:<name>"
+	GroupHash   string    `json:"groupHash,omitempty"`   // SHA256 of the matcher group JSON
+	Command     string    `json:"command"`               // kept for display/debugging
+	Source      string    `json:"source"`                // "export" or "loadout:<name>"
+	Scope       string    `json:"scope,omitempty"`       // "global" or "project"
 	InstalledAt time.Time `json:"installedAt"`
 }
 

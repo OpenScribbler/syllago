@@ -1,0 +1,13 @@
+{
+  "event": "PostToolUse",
+  "matcher": "",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "echo 'Post-tool telemetry placeholder'",
+      "timeout": 3000,
+      "statusMessage": "Logging tool usage...",
+      "async": true
+    }
+  ]
+}
