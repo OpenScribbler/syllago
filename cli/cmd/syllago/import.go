@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
@@ -48,6 +49,7 @@ func init() {
 	importCmd.Flags().StringArray("exclude", nil, "Skip hooks by auto-derived name (hooks only)")
 	importCmd.Flags().Bool("force", false, "Overwrite existing items with the same name (hooks only)")
 	importCmd.Flags().String("scope", "global", "Settings scope to read from: global, project, or all (hooks only)")
+	importCmd.Flags().String("base-dir", "", "Override base directory for content discovery")
 	rootCmd.AddCommand(importCmd)
 }
 
@@ -69,6 +71,22 @@ func runImport(cmd *cobra.Command, args []string) error {
 	nameFilter, _ := cmd.Flags().GetString("name")
 	preview, _ := cmd.Flags().GetBool("preview")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	baseDir, _ := cmd.Flags().GetString("base-dir")
+
+	// Build resolver from merged config + CLI flag.
+	globalCfg, err := config.LoadGlobal()
+	if err != nil {
+		return fmt.Errorf("loading global config: %w", err)
+	}
+	projectCfg, err := config.Load(root)
+	if err != nil {
+		return fmt.Errorf("loading project config: %w", err)
+	}
+	mergedCfg := config.Merge(globalCfg, projectCfg)
+	resolver := config.NewResolver(mergedCfg, baseDir)
+	if err := resolver.ExpandPaths(); err != nil {
+		return fmt.Errorf("expanding paths: %w", err)
+	}
 
 	// Hooks are stored in settings.json and must be split into individual items.
 	// The normal file-discovery flow treats the entire settings.json as one item,
@@ -77,10 +95,10 @@ func runImport(cmd *cobra.Command, args []string) error {
 		exclude, _ := cmd.Flags().GetStringArray("exclude")
 		force, _ := cmd.Flags().GetBool("force")
 		scope, _ := cmd.Flags().GetString("scope")
-		return runImportHooks(root, fromSlug, preview || dryRun, exclude, force, scope)
+		return runImportHooks(root, fromSlug, preview || dryRun, exclude, force, scope, resolver)
 	}
 
-	report := parse.Discover(*prov, root)
+	report := parse.DiscoverWithResolver(*prov, root, resolver)
 
 	if typeFilter != "" {
 		ct := catalog.ContentType(typeFilter)
@@ -288,13 +306,19 @@ func printDiscoveryReport(report parse.DiscoveryReport) {
 // runImportHooks handles "syllago import --type hooks". It reads settings.json
 // for the given provider, splits it into individual hook groups, filters by
 // --exclude, and either prints a preview or writes each hook to local/.
-func runImportHooks(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string) error {
+func runImportHooks(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string, resolver *config.PathResolver) error {
 	prov := findProviderBySlug(fromSlug)
 	if prov == nil {
 		return fmt.Errorf("unknown provider: %s", fromSlug)
 	}
 
-	locations, err := installer.FindSettingsLocations(*prov, root)
+	// Use resolver's effective base dir for settings discovery.
+	// This respects the full priority chain: CLI --base-dir > config baseDir > default.
+	baseDir := ""
+	if resolver != nil {
+		baseDir = resolver.BaseDir(prov.Slug)
+	}
+	locations, err := installer.FindSettingsLocationsWithBase(*prov, root, baseDir)
 	if err != nil {
 		return fmt.Errorf("finding settings locations: %w", err)
 	}

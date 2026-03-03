@@ -21,6 +21,15 @@ type Registry struct {
 	Ref  string `json:"ref,omitempty"` // branch/tag/commit, defaults to default branch
 }
 
+// ProviderPathConfig holds custom path overrides for a single provider.
+// BaseDir replaces the default home directory as the root for provider paths.
+// Paths maps content type names (e.g., "skills") to absolute directory paths,
+// bypassing the provider's directory structure entirely.
+type ProviderPathConfig struct {
+	BaseDir string            `json:"base_dir,omitempty"`
+	Paths   map[string]string `json:"paths,omitempty"` // keyed by content type (e.g., "skills")
+}
+
 // SandboxConfig holds project-level sandbox policy.
 // Git-tracked so teams share the same sandbox settings.
 type SandboxConfig struct {
@@ -34,8 +43,9 @@ type Config struct {
 	ContentRoot       string            `json:"content_root,omitempty"` // relative path to content directory (default: project root)
 	Registries        []Registry        `json:"registries,omitempty"`
 	AllowedRegistries []string          `json:"allowed_registries,omitempty"` // URL allowlist; empty means any URL is permitted
-	Preferences       map[string]string `json:"preferences,omitempty"`
-	Sandbox           SandboxConfig     `json:"sandbox,omitempty"`
+	Preferences       map[string]string                `json:"preferences,omitempty"`
+	Sandbox           SandboxConfig                    `json:"sandbox,omitempty"`
+	ProviderPaths     map[string]ProviderPathConfig    `json:"provider_paths,omitempty"` // keyed by provider slug
 }
 
 // IsRegistryAllowed returns true if url is permitted given the config.
@@ -257,6 +267,29 @@ func Merge(global, project *Config) *Config {
 		merged.Sandbox = project.Sandbox
 	} else {
 		merged.Sandbox = global.Sandbox
+	}
+
+	// ProviderPaths: deep merge per-provider, project overrides within each
+	if len(global.ProviderPaths) > 0 || len(project.ProviderPaths) > 0 {
+		merged.ProviderPaths = make(map[string]ProviderPathConfig)
+		for slug, gpc := range global.ProviderPaths {
+			merged.ProviderPaths[slug] = gpc
+		}
+		for slug, ppc := range project.ProviderPaths {
+			existing := merged.ProviderPaths[slug]
+			if ppc.BaseDir != "" {
+				existing.BaseDir = ppc.BaseDir
+			}
+			if len(ppc.Paths) > 0 {
+				if existing.Paths == nil {
+					existing.Paths = make(map[string]string)
+				}
+				for k, v := range ppc.Paths {
+					existing.Paths[k] = v
+				}
+			}
+			merged.ProviderPaths[slug] = existing
+		}
 	}
 
 	return merged

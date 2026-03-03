@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
@@ -29,7 +30,7 @@ type PlannedAction struct {
 //   - For merge types (Hooks, MCP): checks installed.json for an existing entry.
 //   - Conflicts are encoded in PlannedAction.Action, NOT returned as errors.
 //     This lets callers decide whether to abort or show a warning.
-func Preview(refs []ResolvedRef, prov provider.Provider, repoRoot string, homeDir string) ([]PlannedAction, error) {
+func Preview(refs []ResolvedRef, prov provider.Provider, repoRoot string, homeDir string, resolver *config.PathResolver) ([]PlannedAction, error) {
 	// Load installed.json once for merge-type checks
 	inst, err := installer.LoadInstalled(repoRoot)
 	if err != nil {
@@ -38,7 +39,7 @@ func Preview(refs []ResolvedRef, prov provider.Provider, repoRoot string, homeDi
 
 	var actions []PlannedAction
 	for _, ref := range refs {
-		action, err := previewOne(ref, prov, homeDir, inst)
+		action, err := previewOne(ref, prov, homeDir, inst, resolver)
 		if err != nil {
 			return nil, err
 		}
@@ -47,20 +48,25 @@ func Preview(refs []ResolvedRef, prov provider.Provider, repoRoot string, homeDi
 	return actions, nil
 }
 
-func previewOne(ref ResolvedRef, prov provider.Provider, homeDir string, inst *installer.Installed) (PlannedAction, error) {
+func previewOne(ref ResolvedRef, prov provider.Provider, homeDir string, inst *installer.Installed, resolver *config.PathResolver) (PlannedAction, error) {
 	switch ref.Type {
 	case catalog.Hooks:
 		return previewHook(ref, inst), nil
 	case catalog.MCP:
 		return previewMCP(ref, inst), nil
 	default:
-		return previewSymlink(ref, prov, homeDir)
+		return previewSymlink(ref, prov, homeDir, resolver)
 	}
 }
 
 // previewSymlink checks whether a symlink target path already exists.
-func previewSymlink(ref ResolvedRef, prov provider.Provider, homeDir string) (PlannedAction, error) {
-	installDir := prov.InstallDir(homeDir, ref.Type)
+func previewSymlink(ref ResolvedRef, prov provider.Provider, homeDir string, resolver *config.PathResolver) (PlannedAction, error) {
+	var installDir string
+	if resolver != nil {
+		installDir = resolver.InstallDir(prov, ref.Type, homeDir)
+	} else {
+		installDir = prov.InstallDir(homeDir, ref.Type)
+	}
 	if installDir == "" || installDir == provider.JSONMergeSentinel || installDir == provider.ProjectScopeSentinel {
 		return PlannedAction{
 			Type:    ref.Type,

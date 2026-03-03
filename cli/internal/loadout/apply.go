@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
@@ -17,10 +18,11 @@ import (
 
 // ApplyOptions configures a loadout apply operation.
 type ApplyOptions struct {
-	Mode        string // "preview", "try", or "keep"
+	Mode        string                // "preview", "try", or "keep"
 	ProjectRoot string
-	HomeDir     string // defaults to os.UserHomeDir() if empty
-	RepoRoot    string // catalog repo root for symlink source resolution
+	HomeDir     string                // defaults to os.UserHomeDir() if empty
+	RepoRoot    string                // catalog repo root for symlink source resolution
+	Resolver    *config.PathResolver  // optional path resolver for custom locations
 }
 
 // ApplyResult describes what happened during apply.
@@ -70,7 +72,7 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 	}
 
 	// Step 3: Preview what would happen
-	actions, err := Preview(refs, prov, opts.ProjectRoot, opts.HomeDir)
+	actions, err := Preview(refs, prov, opts.ProjectRoot, opts.HomeDir, opts.Resolver)
 	if err != nil {
 		return nil, fmt.Errorf("previewing: %w", err)
 	}
@@ -130,7 +132,7 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 
 	// Step 6 (C7): For "try" mode, inject SessionEnd hook for auto-revert
 	if opts.Mode == "try" {
-		if err := injectSessionEndHook(prov, opts.HomeDir); err != nil {
+		if err := injectSessionEndHook(prov, opts.HomeDir, opts.Resolver); err != nil {
 			warnings = append(warnings, fmt.Sprintf("failed to inject SessionEnd hook: %v", err))
 		}
 	}
@@ -175,7 +177,7 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 			})
 
 		case "merge-hook":
-			if err := applyHook(*ref, prov, opts.HomeDir, inst, source); err != nil {
+			if err := applyHook(*ref, prov, opts.HomeDir, opts.Resolver, inst, source); err != nil {
 				return fmt.Errorf("merging hook %s: %w", a.Name, err)
 			}
 
@@ -194,6 +196,17 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 	return nil
 }
 
+// settingsPathFor computes the settings.json path for a provider, using the
+// resolver's base dir if configured, otherwise falling back to homeDir.
+func settingsPathFor(prov provider.Provider, homeDir string, resolver *config.PathResolver) string {
+	if resolver != nil {
+		if bd := resolver.BaseDir(prov.Slug); bd != "" {
+			return filepath.Join(bd, prov.ConfigDir, "settings.json")
+		}
+	}
+	return filepath.Join(homeDir, prov.ConfigDir, "settings.json")
+}
+
 // applyHook reads a hook JSON file and appends it to settings.json.
 // This is the lower-level helper that works with raw hook data, avoiding the
 // catalog.ContentItem-dependent installHook in the installer package.
@@ -203,7 +216,7 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 // installer package, but that creates a tighter coupling. Since the loadout engine
 // has different tracking needs (source is "loadout:<name>" vs "export"), it's cleaner
 // to keep this self-contained.
-func applyHook(ref ResolvedRef, prov provider.Provider, homeDir string, inst *installer.Installed, source string) error {
+func applyHook(ref ResolvedRef, prov provider.Provider, homeDir string, resolver *config.PathResolver, inst *installer.Installed, source string) error {
 	// Find the hook JSON file in the item directory
 	hookFile := findHookFile(ref.Item.Path)
 	if hookFile == "" {
@@ -231,7 +244,7 @@ func applyHook(ref ResolvedRef, prov provider.Provider, homeDir string, inst *in
 	matcherGroup = resolveHookCommands(matcherGroup, ref.Item.Path)
 
 	// Append to settings.json
-	settingsPath := filepath.Join(homeDir, prov.ConfigDir, "settings.json")
+	settingsPath := settingsPathFor(prov, homeDir, resolver)
 	if err := appendHookEntry(settingsPath, event, matcherGroup); err != nil {
 		return err
 	}
@@ -327,8 +340,8 @@ func applyMCP(ref ResolvedRef, prov provider.Provider, projectRoot string, inst 
 // injectSessionEndHook appends a SessionEnd hook that runs "syllago loadout remove --auto".
 // This hook is NOT tracked in installed.json -- it gets reverted when the snapshot restores
 // settings.json.
-func injectSessionEndHook(prov provider.Provider, homeDir string) error {
-	settingsPath := filepath.Join(homeDir, prov.ConfigDir, "settings.json")
+func injectSessionEndHook(prov provider.Provider, homeDir string, resolver *config.PathResolver) error {
+	settingsPath := settingsPathFor(prov, homeDir, resolver)
 
 	// Build the SessionEnd hook entry
 	hookEntry := map[string]interface{}{
@@ -370,7 +383,7 @@ func collectBackupFiles(actions []PlannedAction, prov provider.Provider, opts Ap
 	}
 
 	if needsSettings {
-		files = append(files, filepath.Join(opts.HomeDir, prov.ConfigDir, "settings.json"))
+		files = append(files, settingsPathFor(prov, opts.HomeDir, opts.Resolver))
 	}
 	if needsMCPConfig {
 		home, err := os.UserHomeDir()

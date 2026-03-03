@@ -56,6 +56,34 @@ func FindSettingsLocations(prov provider.Provider, projectRoot string) ([]Settin
 	return locations, nil
 }
 
+// FindSettingsLocationsWithBase works like FindSettingsLocations but uses
+// baseDir instead of the user's home directory for the global scope path.
+func FindSettingsLocationsWithBase(prov provider.Provider, projectRoot, baseDir string) ([]SettingsLocation, error) {
+	if baseDir == "" {
+		return FindSettingsLocations(prov, projectRoot)
+	}
+
+	var locations []SettingsLocation
+
+	globalPath := filepath.Join(baseDir, prov.ConfigDir, "settings.json")
+	if _, err := os.Stat(globalPath); err == nil {
+		locations = append(locations, SettingsLocation{Scope: ScopeGlobal, Path: globalPath})
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	if projectRoot != "" && projectRoot != home {
+		projectPath := filepath.Join(projectRoot, prov.ConfigDir, "settings.json")
+		if _, err := os.Stat(projectPath); err == nil {
+			locations = append(locations, SettingsLocation{Scope: ScopeProject, Path: projectPath})
+		}
+	}
+
+	return locations, nil
+}
+
 // hookSettingsPathForScope returns the settings.json path for a given scope.
 func hookSettingsPathForScope(prov provider.Provider, scope SettingsScope, projectRoot string) (string, error) {
 	switch scope {

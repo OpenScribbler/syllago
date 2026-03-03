@@ -41,7 +41,7 @@ func TestPreview_AllNew(t *testing.T) {
 		}},
 	}
 
-	actions, err := Preview(refs, prov, repoRoot, homeDir)
+	actions, err := Preview(refs, prov, repoRoot, homeDir, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestPreview_ExistingSameTarget(t *testing.T) {
 		}},
 	}
 
-	actions, err := Preview(refs, prov, repoRoot, homeDir)
+	actions, err := Preview(refs, prov, repoRoot, homeDir, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestPreview_Conflict(t *testing.T) {
 		}},
 	}
 
-	actions, err := Preview(refs, prov, repoRoot, homeDir)
+	actions, err := Preview(refs, prov, repoRoot, homeDir, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestPreview_HookAlreadyInstalled(t *testing.T) {
 		}},
 	}
 
-	actions, err := Preview(refs, prov, repoRoot, t.TempDir())
+	actions, err := Preview(refs, prov, repoRoot, t.TempDir(), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestPreview_NewHook(t *testing.T) {
 		}},
 	}
 
-	actions, err := Preview(refs, prov, repoRoot, t.TempDir())
+	actions, err := Preview(refs, prov, repoRoot, t.TempDir(), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -237,7 +237,7 @@ func TestPreview_NewMCP(t *testing.T) {
 		}},
 	}
 
-	actions, err := Preview(refs, prov, repoRoot, t.TempDir())
+	actions, err := Preview(refs, prov, repoRoot, t.TempDir(), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -276,7 +276,7 @@ func TestPreview_MCPAlreadyInstalled(t *testing.T) {
 		}},
 	}
 
-	actions, err := Preview(refs, prov, repoRoot, t.TempDir())
+	actions, err := Preview(refs, prov, repoRoot, t.TempDir(), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -317,7 +317,7 @@ func TestPreview_RegularFileConflict(t *testing.T) {
 		}},
 	}
 
-	actions, err := Preview(refs, prov, repoRoot, homeDir)
+	actions, err := Preview(refs, prov, repoRoot, homeDir, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
