@@ -91,7 +91,7 @@ func (m registriesModel) Update(msg tea.Msg) (registriesModel, tea.Cmd) {
 }
 
 func (m registriesModel) helpText() string {
-	return "up/down: navigate   Enter: browse items   Esc: back"
+	return "up/down navigate • enter browse items • esc back"
 }
 
 func (m registriesModel) selectedName() string {
@@ -112,14 +112,14 @@ func (m registriesModel) View() string {
 	}
 
 	// Header
-	s += tableHeaderStyle.Render(fmt.Sprintf("   %-20s  %-8s  %-6s  %-8s  %s", "Name", "Status", "Items", "Version", "URL")) + "\n"
-	s += helpStyle.Render("   "+strings.Repeat("─", 20)+"  "+strings.Repeat("─", 8)+"  "+strings.Repeat("─", 6)+"  "+strings.Repeat("─", 8)+"  "+strings.Repeat("─", 30)) + "\n"
+	s += tableHeaderStyle.Render(fmt.Sprintf("    %-20s  %-8s  %-6s  %-8s  %s", "Name", "Status", "Items", "Version", "URL")) + "\n"
+	s += helpStyle.Render("    "+strings.Repeat("─", 20)+"  "+strings.Repeat("─", 8)+"  "+strings.Repeat("─", 6)+"  "+strings.Repeat("─", 8)+"  "+strings.Repeat("─", 30)) + "\n"
 
 	for i, entry := range m.entries {
-		prefix := "   "
+		prefix := "  "
 		nameStyle := itemStyle
 		if i == m.cursor {
-			prefix = " > "
+			prefix = "> "
 			nameStyle = selectedItemStyle
 		}
 
@@ -139,7 +139,7 @@ func (m registriesModel) View() string {
 			version = entry.version
 		}
 
-		row := fmt.Sprintf("%s%-20s  %s  %s  %-8s  %s",
+		row := fmt.Sprintf("  %s%-20s  %s  %s  %-8s  %s",
 			prefix,
 			nameStyle.Render(truncate(entry.name, 20)),
 			status,

@@ -303,9 +303,9 @@ func TestSearchLiveFilterCategoryShowsCount(t *testing.T) {
 func TestSearchReplacesHelpBar(t *testing.T) {
 	app := testApp(t)
 
-	// Before search: help bar is visible (footer shows /: search hint)
+	// Before search: help bar is visible (footer shows / search hint)
 	view := app.View()
-	assertContains(t, view, "/: search")
+	assertContains(t, view, "/ search")
 
 	// Activate search
 	m, _ := app.Update(keyRune('/'))
@@ -314,5 +314,5 @@ func TestSearchReplacesHelpBar(t *testing.T) {
 	view = app.View()
 	assertContains(t, view, "Search:")
 	// Help bar should be replaced, not both showing
-	assertNotContains(t, view, "/: search")
+	assertNotContains(t, view, "/ search")
 }

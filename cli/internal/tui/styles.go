@@ -107,8 +107,8 @@ var (
 
 	// Action buttons (Install tab)
 	buttonStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#FFFFFF"}).
-			Background(accentColor).
+			Foreground(lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#1E1B2E"}).
+			Background(lipgloss.AdaptiveColor{Light: "#6D28D9", Dark: "#C4B5FD"}).
 			Padding(0, 1)
 
 	buttonDisabledStyle = lipgloss.NewStyle().

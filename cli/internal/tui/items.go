@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	cursorWidth = 3 // "   " or " > "
+	cursorWidth = 4 // "  " + "  " or "  " + "> "
 	colGap      = 2 // spaces between columns
 )
 
@@ -302,10 +302,10 @@ func (m itemsModel) View() string {
 			s += labelStyle.Render("  "+item.Type.Label()) + "\n"
 			prevGroupType = item.Type
 		}
-		prefix := "   "
+		prefix := "  "
 		style := itemStyle
 		if i == m.cursor {
-			prefix = " > "
+			prefix = "> "
 			style = selectedItemStyle
 		}
 
@@ -342,7 +342,7 @@ func (m itemsModel) View() string {
 
 		if showProvCol {
 			paddedDesc := fmt.Sprintf("%-*s", descW, truncate(item.Description, descW-localPrefixLen))
-			rowStr := fmt.Sprintf("%s%s%s  %s%s  %s",
+			rowStr := fmt.Sprintf("  %s%s%s  %s%s  %s",
 				prefix,
 				styledName,
 				typeTag,
@@ -354,7 +354,7 @@ func (m itemsModel) View() string {
 		} else {
 			desc := truncate(item.Description, descW-localPrefixLen)
 			paddedDesc := fmt.Sprintf("%-*s", descW-localPrefixLen, desc)
-			rowStr := fmt.Sprintf("%s%s%s  %s%s",
+			rowStr := fmt.Sprintf("  %s%s%s  %s%s",
 				prefix,
 				styledName,
 				typeTag,

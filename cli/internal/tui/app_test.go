@@ -163,7 +163,7 @@ func TestHiddenItemsFilteredByDefault(t *testing.T) {
 }
 
 // TestFooterHelpText_CategoryShowsQuit verifies that the home screen footer
-// includes "q: quit" (the only screen where quit is shown).
+// includes "q quit" (the only screen where quit is shown).
 func TestFooterHelpText_CategoryShowsQuit(t *testing.T) {
 	a := App{
 		width:  80,
@@ -171,13 +171,13 @@ func TestFooterHelpText_CategoryShowsQuit(t *testing.T) {
 		screen: screenCategory,
 	}
 	view := a.View()
-	if !strings.Contains(view, "q: quit") {
-		t.Error("screenCategory footer should contain 'q: quit'")
+	if !strings.Contains(view, "q quit") {
+		t.Error("screenCategory footer should contain 'q quit'")
 	}
 }
 
 // TestFooterHelpText_ItemsShowsEscBack verifies that the items screen footer
-// shows "Esc: back" and does NOT show "q: quit".
+// shows "esc back" and does NOT show "q quit".
 func TestFooterHelpText_ItemsShowsEscBack(t *testing.T) {
 	a := App{
 		width:  80,
@@ -185,16 +185,16 @@ func TestFooterHelpText_ItemsShowsEscBack(t *testing.T) {
 		screen: screenItems,
 	}
 	view := a.View()
-	if strings.Contains(view, "q: quit") {
-		t.Error("screenItems footer should NOT contain 'q: quit'")
+	if strings.Contains(view, "q quit") {
+		t.Error("screenItems footer should NOT contain 'q quit'")
 	}
-	if !strings.Contains(view, "Esc: back") {
-		t.Error("screenItems footer should contain 'Esc: back'")
+	if !strings.Contains(view, "esc back") {
+		t.Error("screenItems footer should contain 'esc back'")
 	}
 }
 
 // TestFooterHelpText_DetailShowsEscBack verifies that the detail screen footer
-// shows "esc back" and does NOT show "q: quit".
+// shows "esc back" and does NOT show "q quit".
 func TestFooterHelpText_DetailShowsEscBack(t *testing.T) {
 	a := App{
 		width:  80,
@@ -202,8 +202,8 @@ func TestFooterHelpText_DetailShowsEscBack(t *testing.T) {
 		screen: screenDetail,
 	}
 	view := a.View()
-	if strings.Contains(view, "q: quit") {
-		t.Error("screenDetail footer should NOT contain 'q: quit'")
+	if strings.Contains(view, "q quit") {
+		t.Error("screenDetail footer should NOT contain 'q quit'")
 	}
 	if !strings.Contains(view, "esc back") {
 		t.Error("screenDetail footer should contain 'esc back'")
@@ -211,7 +211,7 @@ func TestFooterHelpText_DetailShowsEscBack(t *testing.T) {
 }
 
 // TestFooterHelpText_RegistriesShowsEscBack verifies that the registries screen
-// footer shows "Esc: back" and does NOT show "q: quit".
+// footer shows "esc back" and does NOT show "q quit".
 func TestFooterHelpText_RegistriesShowsEscBack(t *testing.T) {
 	a := App{
 		width:  80,
@@ -219,11 +219,11 @@ func TestFooterHelpText_RegistriesShowsEscBack(t *testing.T) {
 		screen: screenRegistries,
 	}
 	view := a.View()
-	if strings.Contains(view, "q: quit") {
-		t.Error("screenRegistries footer should NOT contain 'q: quit'")
+	if strings.Contains(view, "q quit") {
+		t.Error("screenRegistries footer should NOT contain 'q quit'")
 	}
-	if !strings.Contains(view, "Esc: back") {
-		t.Error("screenRegistries footer should contain 'Esc: back'")
+	if !strings.Contains(view, "esc back") {
+		t.Error("screenRegistries footer should contain 'esc back'")
 	}
 }
 

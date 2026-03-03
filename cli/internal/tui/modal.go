@@ -280,6 +280,25 @@ func (m envSetupModal) overlayView(background string) string {
 	return overlay.Composite(zone.Mark("modal-zone", m.View()), background, overlay.Center, overlay.Center, 0, 0)
 }
 
+// renderButtons renders a pair of centered action buttons with a cursor indicator.
+// cursor 0 = left button active, cursor 1 = right button active.
+// contentWidth is the available width for centering (0 = no centering).
+func renderButtons(left, right string, cursor, contentWidth int) string {
+	var l, r string
+	if cursor == 0 {
+		l = "▸ " + buttonStyle.Render(left)
+		r = "  " + buttonDisabledStyle.Render(right)
+	} else {
+		l = "  " + buttonDisabledStyle.Render(left)
+		r = "▸ " + buttonStyle.Render(right)
+	}
+	bar := l + "   " + r
+	if contentWidth > 0 {
+		bar = lipgloss.PlaceHorizontal(contentWidth, lipgloss.Center, bar)
+	}
+	return bar
+}
+
 // modalPurpose identifies what action the confirmModal is confirming.
 type modalPurpose int
 
@@ -308,10 +327,11 @@ type confirmModal struct {
 	active    bool
 	confirmed bool
 	purpose   modalPurpose
+	btnCursor int // 0=Confirm, 1=Cancel (default 1)
 }
 
 func newConfirmModal(title, body string) confirmModal {
-	return confirmModal{title: title, body: body, active: true}
+	return confirmModal{title: title, body: body, active: true, btnCursor: 1}
 }
 
 func (m confirmModal) Update(msg tea.Msg) (confirmModal, tea.Cmd) {
@@ -322,11 +342,19 @@ func (m confirmModal) Update(msg tea.Msg) (confirmModal, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
-			m.confirmed = true
+			m.confirmed = m.btnCursor == 0
 			m.active = false
 		case tea.KeyEsc:
 			m.confirmed = false
 			m.active = false
+		case tea.KeyLeft:
+			if m.btnCursor > 0 {
+				m.btnCursor--
+			}
+		case tea.KeyRight:
+			if m.btnCursor < 1 {
+				m.btnCursor++
+			}
 		}
 		switch msg.String() {
 		case "y", "Y":
@@ -345,18 +373,32 @@ func (m confirmModal) View() string {
 		return ""
 	}
 
+	const modalWidth = 40
+	const modalHeight = 10
+	const innerHeight = modalHeight - 2
+
 	modalStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(modalBorderColor).
 		Background(modalBgColor).
 		Padding(1, 2).
-		Width(40)
+		Width(modalWidth).
+		Height(modalHeight)
 
 	content := labelStyle.Render(m.title) + "\n\n"
 	if m.body != "" {
 		content += valueStyle.Render(m.body) + "\n\n"
 	}
-	content += helpStyle.Render("[Enter/y] Confirm   [Esc/n] Cancel")
+
+	buttons := renderButtons("Confirm", "Cancel", m.btnCursor, 36)
+
+	// Pin buttons to bottom
+	contentLines := strings.Count(content, "\n")
+	spacer := innerHeight - contentLines - 1
+	if spacer < 0 {
+		spacer = 0
+	}
+	content += strings.Repeat("\n", spacer) + buttons
 
 	return modalStyle.Render(content)
 }
@@ -458,6 +500,7 @@ type installModal struct {
 	active    bool
 	confirmed bool
 	step      installStep
+	btnCursor int // 0=Select/Install, 1=Cancel (default 0)
 
 	// Context for rendering
 	item      catalog.ContentItem
@@ -500,41 +543,6 @@ func (m installModal) Update(msg tea.Msg) (installModal, tea.Cmd) {
 		return m, nil
 	}
 	switch msg := msg.(type) {
-	case tea.MouseMsg:
-		if msg.Action != tea.MouseActionRelease || msg.Button != tea.MouseButtonLeft {
-			return m, nil
-		}
-		if m.step == installStepLocation {
-			for i := 0; i < 3; i++ {
-				if zone.Get(fmt.Sprintf("install-loc-%d", i)).InBounds(msg) {
-					m.locationCursor = i
-					if i == 2 { // Custom
-						m.customPathInput = textinput.New()
-						m.customPathInput.Placeholder = "/path/to/install/dir"
-						m.customPathInput.CharLimit = 200
-						m.customPathInput.Width = 40
-						m.customPathInput.Focus()
-						m.step = installStepCustomPath
-					} else {
-						m.step = installStepMethod
-						m.methodCursor = 0
-					}
-					return m, nil
-				}
-			}
-		}
-		if m.step == installStepMethod {
-			for i := 0; i < 2; i++ {
-				if zone.Get(fmt.Sprintf("install-method-%d", i)).InBounds(msg) {
-					m.methodCursor = i
-					m.confirmed = true
-					m.active = false
-					return m, nil
-				}
-			}
-		}
-		return m, nil
-
 	case tea.KeyMsg:
 		// Custom path text input captures all keys
 		if m.step == installStepCustomPath {
@@ -561,6 +569,14 @@ func (m installModal) Update(msg tea.Msg) (installModal, tea.Cmd) {
 			switch {
 			case msg.Type == tea.KeyEsc:
 				m.active = false
+			case msg.Type == tea.KeyLeft:
+				if m.btnCursor > 0 {
+					m.btnCursor--
+				}
+			case msg.Type == tea.KeyRight:
+				if m.btnCursor < 1 {
+					m.btnCursor++
+				}
 			case key.Matches(msg, keys.Up) || msg.Type == tea.KeyUp:
 				if m.locationCursor > 0 {
 					m.locationCursor--
@@ -569,7 +585,11 @@ func (m installModal) Update(msg tea.Msg) (installModal, tea.Cmd) {
 				if m.locationCursor < 2 {
 					m.locationCursor++
 				}
-			case msg.Type == tea.KeyEnter || msg.String() == "i":
+			case msg.Type == tea.KeyEnter:
+				if m.btnCursor == 1 { // Cancel
+					m.active = false
+					return m, nil
+				}
 				if m.locationCursor == 2 { // Custom
 					m.customPathInput = textinput.New()
 					m.customPathInput.Placeholder = "/path/to/install/dir"
@@ -580,6 +600,7 @@ func (m installModal) Update(msg tea.Msg) (installModal, tea.Cmd) {
 				} else {
 					m.step = installStepMethod
 					m.methodCursor = 0
+					m.btnCursor = 0
 				}
 			}
 
@@ -587,6 +608,15 @@ func (m installModal) Update(msg tea.Msg) (installModal, tea.Cmd) {
 			switch {
 			case msg.Type == tea.KeyEsc:
 				m.step = installStepLocation
+				m.btnCursor = 0
+			case msg.Type == tea.KeyLeft:
+				if m.btnCursor > 0 {
+					m.btnCursor--
+				}
+			case msg.Type == tea.KeyRight:
+				if m.btnCursor < 1 {
+					m.btnCursor++
+				}
 			case key.Matches(msg, keys.Up) || msg.Type == tea.KeyUp:
 				if m.methodCursor > 0 {
 					m.methodCursor--
@@ -595,7 +625,12 @@ func (m installModal) Update(msg tea.Msg) (installModal, tea.Cmd) {
 				if m.methodCursor < 1 {
 					m.methodCursor++
 				}
-			case msg.Type == tea.KeyEnter || msg.String() == "i":
+			case msg.Type == tea.KeyEnter:
+				if m.btnCursor == 1 { // Cancel/Back
+					m.step = installStepLocation
+					m.btnCursor = 0
+					return m, nil
+				}
 				m.confirmed = true
 				m.active = false
 			}
@@ -609,10 +644,11 @@ func (m installModal) View() string {
 		return ""
 	}
 
-	// Fixed dimensions prevent jitter when switching between steps.
-	// The tallest step (location with 3 options + dest preview) determines the height.
+	// Fixed dimensions — every step uses the same box size to prevent jitter.
 	const modalWidth = 56
 	const modalHeight = 18
+	// Inner height = modalHeight - 2 (1 top + 1 bottom padding)
+	const innerHeight = modalHeight - 2
 
 	modalStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -623,8 +659,7 @@ func (m installModal) View() string {
 		Height(modalHeight)
 
 	var content string
-
-	var hint string
+	var buttons string
 
 	switch m.step {
 	case installStepLocation:
@@ -646,18 +681,17 @@ func (m installModal) View() string {
 			}
 			row := fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(o.name))
 			row += fmt.Sprintf("      %s\n", helpStyle.Render(o.desc))
-			content += zone.Mark(fmt.Sprintf("install-loc-%d", i), row)
+			content += row
 		}
 
-		// Destination preview
 		content += m.destinationPreview()
 
-		hint = helpStyle.Render("[↑↓] Navigate   [Enter] Select   [Esc] Cancel")
+		buttons = renderButtons("Select", "Cancel", m.btnCursor, 52)
 
 	case installStepCustomPath:
 		content = labelStyle.Render("Custom Install Path") + "\n\n"
 		content += m.customPathInput.View() + "\n\n"
-		hint = helpStyle.Render("[Enter] Confirm   [Esc] Back")
+		buttons = renderButtons("Confirm", "Back", m.btnCursor, 52)
 
 	case installStepMethod:
 		content = labelStyle.Render("Install Method") + "\n\n"
@@ -677,24 +711,21 @@ func (m installModal) View() string {
 			}
 			row := fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(o.name))
 			row += fmt.Sprintf("      %s\n", helpStyle.Render(o.desc))
-			content += zone.Mark(fmt.Sprintf("install-method-%d", i), row)
+			content += row
 		}
 
-		// Destination paths
 		content += m.destinationPreview()
 
-		hint = helpStyle.Render("[↑↓] Navigate   [Enter] Install   [Esc] Back")
+		buttons = renderButtons("Install", "Back", m.btnCursor, 52)
 	}
 
-	// Pin hint to the bottom of the fixed-height modal frame.
-	// Inner area = modalHeight - 2 (1 top + 1 bottom padding) = 16 lines.
-	// We want: contentLines + spacer + 1 (hint) = 16, so spacer = 15 - contentLines.
+	// Pin buttons to bottom: fill remaining space with blank lines
 	contentLines := strings.Count(content, "\n")
-	spacer := (modalHeight - 2 - 1) - contentLines
+	spacer := innerHeight - contentLines - 1
 	if spacer < 0 {
 		spacer = 0
 	}
-	content += strings.Repeat("\n", spacer) + hint
+	content += strings.Repeat("\n", spacer) + buttons
 
 	return modalStyle.Render(content)
 }
@@ -718,14 +749,27 @@ func (m installModal) destinationPreview() string {
 		return ""
 	}
 
+	// Content area is modalWidth(56) - 4(padding) = 52 chars.
+	// Truncate paths to prevent terminal wrapping which breaks layout.
+	const maxLineWidth = 52
+
 	s := "\n" + helpStyle.Render("Destination:") + "\n"
 	for _, p := range m.providers {
+		prefix := "  " + p.Name + ": "
 		if installer.IsJSONMerge(p, m.item.Type) {
-			s += "  " + helpStyle.Render(p.Name+": ") + valueStyle.Render("(merged into config)") + "\n"
+			s += helpStyle.Render(prefix) + valueStyle.Render("(merged into config)") + "\n"
 		} else {
 			destDir := p.InstallDir(baseDir, m.item.Type)
 			dest := filepath.Join(destDir, m.item.Name)
-			s += "  " + helpStyle.Render(p.Name+": ") + valueStyle.Render(dest) + "\n"
+			// Truncate path if it would cause the line to wrap
+			maxPath := maxLineWidth - len(prefix)
+			if maxPath < 10 {
+				maxPath = 10
+			}
+			if len(dest) > maxPath {
+				dest = "…" + dest[len(dest)-maxPath+1:]
+			}
+			s += helpStyle.Render(prefix) + valueStyle.Render(dest) + "\n"
 		}
 	}
 	return s
