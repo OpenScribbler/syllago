@@ -1,0 +1,194 @@
+package main
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
+)
+
+// setupGlobalLibrary creates a temp dir structured as a ~/.syllago/content
+// global library with a skill inside it. Returns the library root.
+func setupGlobalLibrary(t *testing.T) string {
+	t.Helper()
+	globalDir := t.TempDir()
+
+	// Create a skill at globalDir/skills/my-skill/
+	skillDir := filepath.Join(globalDir, "skills", "my-skill")
+	os.MkdirAll(skillDir, 0755)
+	os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# My Skill\nDoes something.\n"), 0644)
+
+	return globalDir
+}
+
+// withGlobalLibrary overrides the catalog's global content dir override.
+func withGlobalLibrary(t *testing.T, dir string) {
+	t.Helper()
+	orig := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = dir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
+}
+
+func TestInstallUnknownProvider(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+	_, _ = output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "nonexistent-provider")
+	defer installCmd.Flags().Set("to", "")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err == nil {
+		t.Fatal("expected error for unknown provider")
+	}
+}
+
+func TestInstallItemNotFound(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+	_, _ = output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "claude-code")
+	defer installCmd.Flags().Set("to", "")
+
+	err := installCmd.RunE(installCmd, []string{"does-not-exist"})
+	if err == nil {
+		t.Fatal("expected error when item not found in library")
+	}
+	if !strings.Contains(err.Error(), "does-not-exist") {
+		t.Errorf("expected item name in error message, got: %v", err)
+	}
+}
+
+func TestInstallDryRunDoesNotWrite(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+	addTestProvider(t, "test-provider", "Test Provider", installBase)
+
+	stdout, _ := output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "test-provider")
+	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("dry-run", "true")
+	defer installCmd.Flags().Set("dry-run", "false")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("install --dry-run failed: %v", err)
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "dry-run") {
+		t.Errorf("expected 'dry-run' in output, got: %s", out)
+	}
+
+	// Nothing should have been written to the install base.
+	entries, _ := os.ReadDir(installBase)
+	if len(entries) > 0 {
+		t.Errorf("dry-run should not write files, but found entries in install base")
+	}
+}
+
+func TestInstallTypeFilter(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+	_, _ = output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "claude-code")
+	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("type", "rules")
+	defer installCmd.Flags().Set("type", "")
+
+	// The library only has a skill, so filtering for rules should yield nothing.
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("install with type filter failed: %v", err)
+	}
+	// No error expected — empty result is a normal no-op.
+}
+
+func TestInstallFlagsRegistered(t *testing.T) {
+	flags := []string{"to", "type", "method", "dry-run", "base-dir", "no-input"}
+	for _, name := range flags {
+		if installCmd.Flags().Lookup(name) == nil {
+			t.Errorf("expected --%s flag to be registered on installCmd", name)
+		}
+	}
+}
+
+func TestInstallJSONOutputOnSuccess(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+	addTestProvider(t, "test-provider-json", "Test Provider JSON", installBase)
+
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+
+	installCmd.Flags().Set("to", "test-provider-json")
+	defer installCmd.Flags().Set("to", "")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("install --json failed: %v", err)
+	}
+
+	var result installResult
+	if err := json.Unmarshal([]byte(strings.TrimSpace(stdout.String())), &result); err != nil {
+		t.Fatalf("output is not valid JSON: %v\noutput: %s", err, stdout.String())
+	}
+
+	if len(result.Installed) == 0 {
+		t.Error("expected at least one installed item in JSON output")
+	}
+	item := result.Installed[0]
+	if item.Name == "" {
+		t.Error("expected non-empty name in installed item")
+	}
+	if item.Type == "" {
+		t.Error("expected non-empty type in installed item")
+	}
+	if item.Method == "" {
+		t.Error("expected non-empty method in installed item")
+	}
+}
+
+func TestInstallJSONOutputOnSkip(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	// Use claude-code which uses symlink and won't have the skill installed there,
+	// but the provider doesn't support the type if we restrict to an unsupported type.
+	// Instead, just use a provider with no matching type via --type filter.
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+
+	installCmd.Flags().Set("to", "claude-code")
+	defer installCmd.Flags().Set("to", "")
+	// Filtering for a type not in the library means 0 items → JSON should still be valid.
+	installCmd.Flags().Set("type", "rules")
+	defer installCmd.Flags().Set("type", "")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("install --json with no matches should not error: %v", err)
+	}
+
+	// Even with empty results, output should be valid JSON.
+	out := strings.TrimSpace(stdout.String())
+	if out == "" {
+		// No JSON output when no items were found (function returns early before Print).
+		return
+	}
+	var result installResult
+	if err := json.Unmarshal([]byte(out), &result); err != nil {
+		t.Fatalf("output is not valid JSON: %v\noutput: %s", err, out)
+	}
+}

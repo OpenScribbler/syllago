@@ -195,20 +195,20 @@ func TestItemsProviderColumn(t *testing.T) {
 	assertContains(t, view, "Claude Code")
 }
 
-func TestItemsLocalPrefix(t *testing.T) {
+func TestItemsLibraryPrefix(t *testing.T) {
 	app := testApp(t)
-	// Navigate to My Tools
+	// Navigate to Library
 	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes) // My Tools
+	app = pressN(app, keyDown, nTypes) // Library
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
 	if len(app.items.items) == 0 {
-		t.Fatal("expected at least one local item in My Tools")
+		t.Fatal("expected at least one library item")
 	}
 
 	view := app.View()
-	assertContains(t, view, "[LOCAL]")
+	assertContains(t, view, "[LIBRARY]")
 }
 
 func TestItemsSearchResultsTypeTag(t *testing.T) {
@@ -229,20 +229,20 @@ func TestItemsSearchResultsTypeTag(t *testing.T) {
 	assertContains(t, view, catalog.Skills.Label())
 }
 
-func TestItemsMyToolsTypeTag(t *testing.T) {
+func TestItemsLibraryTypeTag(t *testing.T) {
 	app := testApp(t)
-	// Navigate to My Tools
+	// Navigate to Library
 	nTypes := len(catalog.AllContentTypes())
 	app = pressN(app, keyDown, nTypes)
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
 	if len(app.items.items) == 0 {
-		t.Fatal("expected at least one My Tools item")
+		t.Fatal("expected at least one Library item")
 	}
 
 	view := app.View()
-	assertContains(t, view, "My Tools")
+	assertContains(t, view, "Library")
 	// Type tags should appear
 	assertContains(t, view, catalog.Skills.Label())
 }
@@ -279,13 +279,13 @@ func TestTableHeaderStyleIsBold(t *testing.T) {
 	}
 }
 
-func TestMyToolsEmptyGuidance(t *testing.T) {
-	m := newItemsModel(catalog.MyTools, nil, nil, "/tmp")
+func TestLibraryEmptyGuidance(t *testing.T) {
+	m := newItemsModel(catalog.Library, nil, nil, "/tmp")
 	m.width = 80
 	m.height = 30
 
 	view := m.View()
-	assertContains(t, view, "Import")
+	assertContains(t, view, "Add")
 	assertContains(t, view, "syllago add")
 }
 

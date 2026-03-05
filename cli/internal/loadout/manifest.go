@@ -10,9 +10,9 @@ import (
 
 // Manifest represents a parsed loadout.yaml file.
 type Manifest struct {
-	Kind        string   `yaml:"kind"`     // must be "loadout"
-	Version     int      `yaml:"version"`  // must be 1
-	Provider    string   `yaml:"provider"` // e.g. "claude-code"
+	Kind        string   `yaml:"kind"`               // must be "loadout"
+	Version     int      `yaml:"version"`            // must be 1
+	Provider    string   `yaml:"provider,omitempty"` // e.g. "claude-code"; optional, can be set via --to flag
 	Name        string   `yaml:"name"`
 	Description string   `yaml:"description"`
 	Rules       []string `yaml:"rules,omitempty"`
@@ -26,7 +26,8 @@ type Manifest struct {
 }
 
 // Parse reads and validates a loadout.yaml file.
-// Returns an error if kind != "loadout", version != 1, provider is empty, or name is empty.
+// Returns an error if kind != "loadout", version != 1, or name is empty.
+// Provider is optional — it can be specified at apply time via --to flag.
 func Parse(path string) (*Manifest, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -43,9 +44,6 @@ func Parse(path string) (*Manifest, error) {
 	}
 	if m.Version != 1 {
 		return nil, fmt.Errorf("%s: version must be 1, got %d", path, m.Version)
-	}
-	if m.Provider == "" {
-		return nil, fmt.Errorf("%s: provider is required", path)
 	}
 	if m.Name == "" {
 		return nil, fmt.Errorf("%s: name is required", path)

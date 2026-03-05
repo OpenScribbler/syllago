@@ -19,12 +19,13 @@ type RegistryResult struct {
 	CompareURL string // fallback browser URL for manual PR creation
 }
 
-// PromoteToRegistry copies a local content item into a registry clone, creates a
+// PromoteToRegistry copies a library content item into a registry clone, creates a
 // contribution branch, commits, pushes, and optionally opens a PR via the gh CLI.
 //
 // This is the external-contribution workflow: the user forks a registry, clones it
 // locally, and this function creates a branch with their content ready to PR upstream.
-func PromoteToRegistry(repoRoot string, registryName string, item catalog.ContentItem) (*RegistryResult, error) {
+// noInput suppresses interactive prompts even on a TTY (e.g. when --no-input is passed).
+func PromoteToRegistry(repoRoot string, registryName string, item catalog.ContentItem, noInput bool) (*RegistryResult, error) {
 	// 1. Get registry clone directory
 	cloneDir, err := registry.CloneDir(registryName)
 	if err != nil {

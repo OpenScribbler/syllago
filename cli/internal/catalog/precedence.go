@@ -4,7 +4,7 @@ import "strings"
 
 // itemPrecedence returns the precedence level for an item (lower number = higher priority).
 func itemPrecedence(item ContentItem) int {
-	if item.Local {
+	if item.Library {
 		return 0 // highest
 	}
 	if item.Registry == "" && !item.IsBuiltin() {

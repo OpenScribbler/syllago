@@ -47,6 +47,11 @@ type Provider struct {
 	EmitPath func(projectRoot string) string
 	// SupportsType returns true if this provider handles the given content type.
 	SupportsType func(ct catalog.ContentType) bool
+
+	// SymlinkSupport maps content types to whether symlinks are supported.
+	// If nil, symlinks are assumed supported for filesystem types.
+	// Hooks and MCP are always false (JSON merge, not filesystem).
+	SymlinkSupport map[catalog.ContentType]bool
 }
 
 // AllProviders returns the full list of known providers (detected or not).

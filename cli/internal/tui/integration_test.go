@@ -157,7 +157,7 @@ func TestTeatestImportStart(t *testing.T) {
 	tm := newTestModel(t)
 	waitFor(t, tm, "syllago")
 
-	// Navigate to Import (8 types + My Tools = nTypes+1 presses)
+	// Navigate to Add (8 types + Library = nTypes+1 presses)
 	nTypes := len(catalog.AllContentTypes())
 	for i := 0; i < nTypes+1; i++ {
 		tm.Send(keyDown)

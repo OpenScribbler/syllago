@@ -11,9 +11,9 @@ type CleanupResult struct {
 	Path string
 }
 
-// CleanupPromotedItems removes local (local/) items whose ID, name, and type
+// CleanupPromotedItems removes library items whose ID, name, and type
 // all match a shared item. This happens after a promote PR is merged and pulled —
-// the shared copy now exists, so the local copy is redundant.
+// the shared copy now exists, so the library copy is redundant.
 //
 // Requiring all three fields to match (not just ID) prevents accidental deletion
 // from UUID collisions or malicious ID duplication.
@@ -27,14 +27,15 @@ func CleanupPromotedItems(cat *Catalog) ([]CleanupResult, error) {
 	}
 	sharedByID := make(map[string]sharedInfo)
 	for _, item := range append(cat.Items, cat.Overridden...) {
-		if !item.Local && item.Registry == "" && item.Meta != nil && item.Meta.ID != "" {
+		if !item.Library && item.Registry == "" && item.Meta != nil && item.Meta.ID != "" {
 			sharedByID[item.Meta.ID] = sharedInfo{Name: item.Name, Type: item.Type}
 		}
 	}
 
 	var cleaned []CleanupResult
-	for _, item := range cat.Items {
-		if !item.Local || item.Meta == nil || item.Meta.ID == "" {
+	allItems := append(cat.Items, cat.Overridden...)
+	for _, item := range allItems {
+		if !item.Library || item.Meta == nil || item.Meta.ID == "" {
 			continue
 		}
 		if shared, exists := sharedByID[item.Meta.ID]; exists {

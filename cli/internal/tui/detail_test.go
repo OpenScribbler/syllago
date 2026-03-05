@@ -339,7 +339,7 @@ func TestDetailOverviewLLMPrompt(t *testing.T) {
 	// Navigate to the local skill which has LLM-PROMPT.md
 	app := testApp(t)
 	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes) // My Tools
+	app = pressN(app, keyDown, nTypes) // Library
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenItems)
@@ -764,57 +764,57 @@ func TestDetailPromptSavePath(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Install tab (promote)
+// Install tab (share)
 // ---------------------------------------------------------------------------
 
-func TestDetailPromoteLocal(t *testing.T) {
-	// Navigate to local item
+func TestDetailShareLibrary(t *testing.T) {
+	// Navigate to library item
 	app := testApp(t)
 	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes) // My Tools
+	app = pressN(app, keyDown, nTypes) // Library
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
-	m, _ = app.Update(keyEnter) // → detail of local item
+	m, _ = app.Update(keyEnter) // → detail of library item
 	app = m.(App)
 	assertScreen(t, app, screenDetail)
 
-	if !app.detail.item.Local {
-		t.Fatal("expected local item")
+	if !app.detail.item.Library {
+		t.Fatal("expected library item")
 	}
 
 	// 'p' now emits openModalMsg instead of setting confirmAction
 	m, cmd := app.Update(keyRune('p'))
 	app = m.(App)
 	if cmd == nil {
-		t.Fatal("pressing p should return a cmd (openModalMsg) to open the promote modal")
+		t.Fatal("pressing p should return a cmd (openModalMsg) to open the share modal")
 	}
-	// Verify the cmd produces an openModalMsg with modalPromote purpose
+	// Verify the cmd produces an openModalMsg with modalShare purpose
 	if msg := cmd(); msg != nil {
 		oMsg, ok := msg.(openModalMsg)
 		if !ok {
 			t.Fatalf("cmd should return openModalMsg, got %T", msg)
 		}
-		if oMsg.purpose != modalPromote {
-			t.Errorf("openModalMsg.purpose should be modalPromote, got %d", oMsg.purpose)
+		if oMsg.purpose != modalShare {
+			t.Errorf("openModalMsg.purpose should be modalShare, got %d", oMsg.purpose)
 		}
 	}
 }
 
-func TestDetailPromoteNonLocal(t *testing.T) {
+func TestDetailShareNonLibrary(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 
-	if app.detail.item.Local {
-		t.Skip("first skill is local, can't test non-local promote blocking")
+	if app.detail.item.Library {
+		t.Skip("first skill is library item, can't test non-library share blocking")
 	}
 
-	// 'p' should do nothing for non-local items (no cmd returned)
+	// 'p' should do nothing for non-library items (no cmd returned)
 	_, cmd := app.Update(keyRune('p'))
 	if cmd != nil {
-		t.Fatal("promote should not activate for non-local items")
+		t.Fatal("share should not activate for non-library items")
 	}
 }
 
-// TestDetailPromoteEscCancels was removed — promote confirmation is now
+// TestDetailShareEscCancels was removed — share confirmation is now
 // handled by the centralized confirmModal. Esc behavior is tested in modal_test.go.
 
 // ---------------------------------------------------------------------------

@@ -34,10 +34,10 @@ func init() {
 type initResult struct {
 	Detected   []string        `json:"detected"`
 	ConfigPath string          `json:"configPath"`
-	Installed  []installedItem `json:"installed,omitempty"`
+	Installed  []initInstalledItem `json:"installed,omitempty"`
 }
 
-type installedItem struct {
+type initInstalledItem struct {
 	Name     string `json:"name"`
 	Provider string `json:"provider"`
 	Path     string `json:"path"`
@@ -155,7 +155,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	// Install built-in content if we're in a syllago repo
-	var installed []installedItem
+	var installed []initInstalledItem
 	repoRoot, repoErr := findContentRepoRoot()
 	if repoErr == nil {
 		installed = installBuiltins(cmd, repoRoot, detected)
@@ -208,7 +208,7 @@ func ensureGlobalContentDir(homeDir string) error {
 }
 
 // installBuiltins discovers items tagged "builtin" and installs them to detected providers.
-func installBuiltins(cmd *cobra.Command, repoRoot string, detected []provider.Provider) []installedItem {
+func installBuiltins(cmd *cobra.Command, repoRoot string, detected []provider.Provider) []initInstalledItem {
 	cat, err := catalog.Scan(repoRoot, repoRoot)
 	if err != nil {
 		return nil
@@ -242,7 +242,7 @@ func installBuiltins(cmd *cobra.Command, repoRoot string, detected []provider.Pr
 		}
 	}
 
-	var installed []installedItem
+	var installed []initInstalledItem
 	for _, item := range builtins {
 		for _, prov := range detected {
 			// Check if provider supports this content type
@@ -262,7 +262,7 @@ func installBuiltins(cmd *cobra.Command, repoRoot string, detected []provider.Pr
 				continue
 			}
 
-			installed = append(installed, installedItem{
+			installed = append(installed, initInstalledItem{
 				Name:     item.Name,
 				Provider: prov.Slug,
 				Path:     desc,

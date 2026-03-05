@@ -28,7 +28,7 @@ type appInstallDoneMsg struct {
 	action string // "install" or "uninstall"
 }
 
-type promoteDoneMsg struct {
+type shareDoneMsg struct {
 	result *promote.Result
 	err    error
 }
@@ -135,8 +135,8 @@ func newDetailModel(item catalog.ContentItem, providers []provider.Provider, rep
 			m.renderedReadme = rendered
 		}
 	}
-	// Load LLM prompt for local items
-	if item.Local {
+	// Load LLM prompt for library items
+	if item.Library {
 		llmPath := filepath.Join(item.Path, "LLM-PROMPT.md")
 		if data, err := os.ReadFile(llmPath); err == nil {
 			m.llmPrompt = string(data)
@@ -185,9 +185,9 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			m.messageIsErr = false
 		}
 		return m, nil
-	case promoteDoneMsg:
+	case shareDoneMsg:
 		if msg.err != nil {
-			m.message = fmt.Sprintf("Promote failed: %s", msg.err)
+			m.message = fmt.Sprintf("Share failed: %s", msg.err)
 			m.messageIsErr = true
 		} else {
 			url := msg.result.PRUrl
@@ -195,9 +195,9 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 				url = msg.result.CompareURL
 			}
 			if url != "" {
-				m.message = fmt.Sprintf("Promoted! Branch: %s\nPR: %s", msg.result.Branch, url)
+				m.message = fmt.Sprintf("Shared! Branch: %s\nPR: %s", msg.result.Branch, url)
 			} else {
-				m.message = fmt.Sprintf("Promoted! Branch: %s (push manually to create PR)", msg.result.Branch)
+				m.message = fmt.Sprintf("Shared! Branch: %s (push manually to create PR)", msg.result.Branch)
 			}
 			m.messageIsErr = false
 		}
@@ -569,7 +569,7 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.Copy):
-			if m.item.Local && m.llmPrompt != "" {
+			if m.item.Library && m.llmPrompt != "" {
 				m.doCopyLLMPrompt()
 			} else if m.item.Type == catalog.Prompts && m.item.Body != "" {
 				m.doCopy()
@@ -597,12 +597,12 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 				return m, func() tea.Msg { return openEnvModalMsg{envTypes: envTypes} }
 			}
 
-		case key.Matches(msg, keys.Promote):
-			if m.item.Local {
+		case key.Matches(msg, keys.Share):
+			if m.item.Library {
 				return m, func() tea.Msg {
 					return openModalMsg{
-						purpose: modalPromote,
-						title:   fmt.Sprintf("Promote %q to shared?", m.item.Name),
+						purpose: modalShare,
+						title:   fmt.Sprintf("Share %q to team repo?", m.item.Name),
 						body:    "Creates a branch, commits, pushes, and opens a PR.",
 					}
 				}

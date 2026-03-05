@@ -10,10 +10,10 @@ syllago           │  AI Tools
   Hooks         1 │  Loadouts    0 - Curated content bundles
   Commands      1 │
   Loadouts      0 │  Configuration
-  My Tools      1 │  Import       - Import your own AI tools
+  Library       1 │  Import       - Import your own AI tools
   ─────────────   │  Update       - Check for updates and pu
   Configuration   │  Settings     - Configure paths and prov
-  Import          │  Registries   - Manage git-based content
+  Add             │  Registries   - Manage git-based content
   Update          │
   Settings        │
   Registries      │

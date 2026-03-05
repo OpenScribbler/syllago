@@ -49,7 +49,7 @@ func (m helpOverlayModel) View(s screen) string {
 		lines = append(lines, "  "+helpStyle.Render("c         copy prompt"))
 		lines = append(lines, "  "+helpStyle.Render("s         save prompt"))
 		lines = append(lines, "  "+helpStyle.Render("e         env var setup (MCP)"))
-		lines = append(lines, "  "+helpStyle.Render("p         promote (local)"))
+		lines = append(lines, "  "+helpStyle.Render("p         share (library)"))
 
 	case screenImport:
 		lines = append(lines, labelStyle.Render("Import Screen:"))

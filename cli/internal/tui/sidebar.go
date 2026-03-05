@@ -16,7 +16,7 @@ const sidebarWidth = 18 // fixed width including border character
 type sidebarModel struct {
 	types         []catalog.ContentType
 	counts        map[catalog.ContentType]int
-	localCount    int
+	libraryCount  int
 	registryCount int // number of configured registries
 	cursor        int
 	focused       bool
@@ -33,14 +33,14 @@ func newSidebarModel(cat *catalog.Catalog, version string, registryCount int) si
 	return sidebarModel{
 		types:         catalog.AllContentTypes(),
 		counts:        cat.CountByType(),
-		localCount:    cat.CountLocal(),
+		libraryCount:  cat.CountLibrary(),
 		registryCount: registryCount,
 		version:       version,
 	}
 }
 
 // totalItems returns the total number of navigable items in the sidebar
-// (content types + My Tools + Import + Update + Settings + Registries + Sandbox).
+// (content types + Library + Add + Update + Settings + Registries + Sandbox).
 func (m sidebarModel) totalItems() int {
 	return len(m.types) + 6
 }
@@ -101,10 +101,10 @@ func (m sidebarModel) View() string {
 		s += zone.Mark(fmt.Sprintf("sidebar-%d", i), rowContent) + "\n"
 	}
 
-	// My Tools (end of AI Tools section)
+	// Library (end of AI Tools section)
 	myIdx := len(m.types)
-	myCountStr := fmt.Sprintf("%2d", m.localCount)
-	myLine := fmt.Sprintf("%-*s%s", inner-len(myCountStr)-2, "My Tools", myCountStr)
+	myCountStr := fmt.Sprintf("%2d", m.libraryCount)
+	myLine := fmt.Sprintf("%-*s%s", inner-len(myCountStr)-2, "Library", myCountStr)
 	if len(myLine) > inner {
 		myLine = myLine[:inner]
 	}
@@ -127,7 +127,7 @@ func (m sidebarModel) View() string {
 		label string
 		index int
 	}{
-		{"Import", len(m.types) + 1},
+		{"Add", len(m.types) + 1},
 		{"Update", len(m.types) + 2},
 		{"Settings", len(m.types) + 3},
 		{"Registries", len(m.types) + 4},
@@ -179,8 +179,8 @@ func (m sidebarModel) View() string {
 }
 
 // Selector methods for use in App.Update routing
-func (m sidebarModel) isMyToolsSelected() bool    { return m.cursor == len(m.types) }
-func (m sidebarModel) isImportSelected() bool     { return m.cursor == len(m.types)+1 }
+func (m sidebarModel) isLibrarySelected() bool    { return m.cursor == len(m.types) }
+func (m sidebarModel) isAddSelected() bool        { return m.cursor == len(m.types)+1 }
 func (m sidebarModel) isUpdateSelected() bool     { return m.cursor == len(m.types)+2 }
 func (m sidebarModel) isSettingsSelected() bool   { return m.cursor == len(m.types)+3 }
 func (m sidebarModel) isRegistriesSelected() bool { return m.cursor == len(m.types)+4 }

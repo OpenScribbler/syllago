@@ -76,4 +76,11 @@ var OpenCode = Provider{
 			return false
 		}
 	},
+	SymlinkSupport: map[catalog.ContentType]bool{
+		catalog.Rules:    true,
+		catalog.Commands: true,
+		catalog.Agents:   true,
+		catalog.Skills:   true,
+		catalog.MCP:      false, // JSON merge
+	},
 }

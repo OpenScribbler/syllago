@@ -77,4 +77,11 @@ var CopilotCLI = Provider{
 			return false
 		}
 	},
+	SymlinkSupport: map[catalog.ContentType]bool{
+		catalog.Rules:    true,
+		catalog.Commands: true,
+		catalog.Agents:   true,
+		catalog.Hooks:    false, // JSON merge
+		catalog.MCP:      false, // JSON merge
+	},
 }

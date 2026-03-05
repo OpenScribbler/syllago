@@ -15,7 +15,7 @@ type keyMap struct {
 	Save         key.Binding
 	Space        key.Binding
 	EnvSetup     key.Binding
-	Promote      key.Binding
+	Share        key.Binding
 	Tab          key.Binding
 	ShiftTab     key.Binding
 	Help         key.Binding
@@ -77,9 +77,9 @@ var keys = keyMap{
 		key.WithKeys("e"),
 		key.WithHelp("e", "env setup"),
 	),
-	Promote: key.NewBinding(
+	Share: key.NewBinding(
 		key.WithKeys("p"),
-		key.WithHelp("p", "promote"),
+		key.WithHelp("p", "share"),
 	),
 	Tab: key.NewBinding(
 		key.WithKeys("tab"),

@@ -10,8 +10,8 @@ import (
 )
 
 // makeItem is a test helper for building ContentItem values concisely.
-func makeItem(name string, ct ContentType, local bool, registry string, builtin bool) ContentItem {
-	item := ContentItem{Name: name, Type: ct, Local: local, Registry: registry}
+func makeItem(name string, ct ContentType, library bool, registry string, builtin bool) ContentItem {
+	item := ContentItem{Name: name, Type: ct, Library: library, Registry: registry}
 	if builtin {
 		item.Meta = &metadata.Meta{Tags: []string{"builtin"}}
 	}
@@ -237,13 +237,13 @@ func TestApplyPrecedence(t *testing.T) {
 		if len(cat.Items) != 1 {
 			t.Fatalf("expected 1 item, got %d", len(cat.Items))
 		}
-		if !cat.Items[0].Local {
-			t.Error("local item should win")
+		if !cat.Items[0].Library {
+			t.Error("library item should win")
 		}
 		if len(cat.Overridden) != 1 {
 			t.Fatalf("expected 1 overridden item, got %d", len(cat.Overridden))
 		}
-		if cat.Overridden[0].Local {
+		if cat.Overridden[0].Library {
 			t.Error("shared item should be overridden")
 		}
 	})
@@ -317,8 +317,8 @@ func TestApplyPrecedence(t *testing.T) {
 		if len(cat.Items) != 1 {
 			t.Fatalf("expected 1 item after case-insensitive dedup, got %d", len(cat.Items))
 		}
-		if !cat.Items[0].Local {
-			t.Error("local item should win (case-insensitive match)")
+		if !cat.Items[0].Library {
+			t.Error("library item should win (case-insensitive match)")
 		}
 		if len(cat.Overridden) != 1 {
 			t.Fatalf("expected 1 overridden item, got %d", len(cat.Overridden))
@@ -390,7 +390,7 @@ func TestOverridesFor(t *testing.T) {
 	})
 }
 
-func TestScanLocalRootSeparate(t *testing.T) {
+func TestScanIgnoresLocalDir(t *testing.T) {
 	t.Parallel()
 	projectRoot := t.TempDir()
 	contentRoot := filepath.Join(projectRoot, "content")
@@ -399,7 +399,7 @@ func TestScanLocalRootSeparate(t *testing.T) {
 	writeFile(t, filepath.Join(contentRoot, "skills", "shared-skill", "SKILL.md"),
 		"---\nname: Shared Skill\ndescription: A shared skill\n---\n")
 
-	// Local item under projectRoot/local/ (NOT under contentRoot/local/)
+	// A local/ directory that used to be scanned — should now be ignored
 	writeFile(t, filepath.Join(projectRoot, "local", "skills", "my-local-skill", "SKILL.md"),
 		"---\nname: My Local Skill\ndescription: A local skill\n---\n")
 
@@ -409,26 +409,15 @@ func TestScanLocalRootSeparate(t *testing.T) {
 	}
 
 	skills := cat.ByType(Skills)
-	if len(skills) != 2 {
+	if len(skills) != 1 {
 		var names []string
 		for _, s := range skills {
 			names = append(names, s.Name)
 		}
-		t.Fatalf("expected 2 skills (1 shared + 1 local), got %d: %v", len(skills), names)
+		t.Fatalf("expected 1 skill (local/ is no longer scanned), got %d: %v", len(skills), names)
 	}
-
-	// Find the local item and verify it's marked Local
-	var foundLocal bool
-	for _, s := range skills {
-		if s.Name == "my-local-skill" {
-			if !s.Local {
-				t.Error("my-local-skill should be marked Local=true")
-			}
-			foundLocal = true
-		}
-	}
-	if !foundLocal {
-		t.Error("local skill was not discovered")
+	if skills[0].Name != "shared-skill" {
+		t.Errorf("expected shared-skill, got %q", skills[0].Name)
 	}
 }
 
@@ -440,6 +429,53 @@ func TestGlobalContentDir_ContainsExpectedPath(t *testing.T) {
 	if !strings.HasSuffix(dir, filepath.Join(".syllago", "content")) {
 		t.Errorf("GlobalContentDir() = %q, want suffix .syllago/content", dir)
 	}
+}
+
+func TestGlobalContentDirOverride(t *testing.T) {
+	tmp := t.TempDir()
+
+	original := GlobalContentDirOverride
+	GlobalContentDirOverride = tmp
+	t.Cleanup(func() { GlobalContentDirOverride = original })
+
+	got := GlobalContentDir()
+	if got != tmp {
+		t.Errorf("GlobalContentDir() = %q, want %q", got, tmp)
+	}
+}
+
+func TestScanWithGlobalTagsSource(t *testing.T) {
+	tmp := t.TempDir()
+
+	original := GlobalContentDirOverride
+	GlobalContentDirOverride = tmp
+	t.Cleanup(func() { GlobalContentDirOverride = original })
+
+	// Create a skill under the global content dir override
+	skillDir := filepath.Join(tmp, "skills", "test-skill")
+	if err := os.MkdirAll(skillDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# Test\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Use empty project dirs so the only discovered item is the global one
+	emptyProject := t.TempDir()
+	cat, err := ScanWithGlobalAndRegistries(emptyProject, emptyProject, nil)
+	if err != nil {
+		t.Fatalf("ScanWithGlobalAndRegistries: %v", err)
+	}
+
+	for _, item := range cat.Items {
+		if item.Name == "test-skill" {
+			if item.Source != "global" {
+				t.Errorf("global item Source = %q, want %q", item.Source, "global")
+			}
+			return
+		}
+	}
+	t.Error("test-skill not found in catalog — global content dir was not scanned")
 }
 
 func TestScanWithGlobalAndRegistries_TagsProjectItems(t *testing.T) {

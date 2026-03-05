@@ -42,13 +42,19 @@ Run without arguments for interactive mode (TUI). Use subcommands for
 automation and scripting.
 
 Workflow:
-  1. syllago import    Bring content in from a provider, path, or git URL
-  2. syllago export    Send content out to any provider's install location
-  3. syllago promote   Share local content to a registry (PR workflow)
+  1. syllago add       Bring content into your library from a path or git URL
+  2. syllago install    Install library content to a provider's location
+  3. syllago share      Contribute library content to a team repo (PR workflow)
+  4. syllago publish    Submit library content to a public registry
 
-Content lives in local/ after import. Syllago handles format conversion
-automatically — a Claude Code skill becomes a Kiro steering file, a Cursor
-rule becomes a Windsurf rule, etc.
+Content lives in your global library (~/.syllago/content/) after adding.
+Syllago handles format conversion automatically — a Claude Code skill becomes
+a Kiro steering file, a Cursor rule becomes a Windsurf rule, etc.
+
+Other useful commands:
+  syllago convert      Convert content between provider formats
+  syllago remove       Remove content from your library
+  syllago uninstall    Deactivate content from a provider
 
 Browse registries with "syllago registry items" and sync with "syllago registry sync".
 
@@ -124,8 +130,8 @@ var backfillCmd = &cobra.Command{
 
 		count := 0
 		for _, item := range cat.Items {
-			if item.Local || item.Meta != nil {
-				continue // skip local items and items that already have metadata
+			if item.Library || item.Meta != nil {
+				continue // skip library items and items that already have metadata
 			}
 			// Only backfill universal items (they have a directory)
 			if !item.Type.IsUniversal() {

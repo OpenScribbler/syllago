@@ -40,6 +40,11 @@ type Meta struct {
 	PRBranch       string       `yaml:"pr_branch,omitempty"`
 	SourceProvider string       `yaml:"source_provider,omitempty"` // provider slug content was imported from
 	SourceFormat   string       `yaml:"source_format,omitempty"`   // original file extension (e.g. "mdc", "md")
+	SourceType     string       `yaml:"source_type,omitempty"`     // git | filesystem | registry | provider
+	SourceURL      string       `yaml:"source_url,omitempty"`      // for future syllago update capability
+	HasSource      bool         `yaml:"has_source,omitempty"`      // whether .source/ directory exists
+	AddedAt        *time.Time   `yaml:"added_at,omitempty"`        // when content was added to library
+	AddedBy        string       `yaml:"added_by,omitempty"`        // e.g. "syllago v0.1.0"
 }
 
 // MetaPath returns the path to the metadata file in the given directory.

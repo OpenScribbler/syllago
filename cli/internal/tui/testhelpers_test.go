@@ -55,12 +55,12 @@ func pressN(app App, msg tea.KeyMsg, n int) App {
 // ---------------------------------------------------------------------------
 
 // testCatalog creates a catalog with items covering all 8 content types plus
-// a local item. Uses t.TempDir() with real files so the file viewer works.
+// a library item. Uses t.TempDir() with real files so the file viewer works.
 func testCatalog(t *testing.T) *catalog.Catalog {
 	t.Helper()
 	tmp := t.TempDir()
 
-	// Create local directory for local items
+	// Create local directory for library items (simulating global content)
 	os.MkdirAll(filepath.Join(tmp, "local", "skills"), 0o755)
 
 	items := []catalog.ContentItem{
@@ -73,7 +73,7 @@ func testCatalog(t *testing.T) *catalog.Catalog {
 		makeProviderSpecific(t, tmp, "test-rule", catalog.Rules, "claude-code", "A coding rule"),
 		makeProviderSpecific(t, tmp, "test-hook", catalog.Hooks, "claude-code", "A hook"),
 		makeProviderSpecific(t, tmp, "test-cmd", catalog.Commands, "claude-code", "A command"),
-		makeLocalSkill(t, tmp, "local-skill", "A local skill with LLM prompt"),
+		makeLocalSkill(t, tmp, "local-skill", "A library skill with LLM prompt"),
 	}
 
 	return &catalog.Catalog{
@@ -98,7 +98,7 @@ func makeSkill(t *testing.T, root, name, desc string, local bool) catalog.Conten
 		Path:        dir,
 		ReadmeBody:  "# " + name + "\n\nReadme body for " + name,
 		Files:       []string{"SKILL.md", "README.md"},
-		Local:       local,
+		Library:     local,
 	}
 }
 
@@ -255,7 +255,7 @@ func testAppSize(t *testing.T, width, height int) App {
 	cat := testCatalog(t)
 	providers := testProviders(t)
 
-	app := NewApp(cat, providers, "1.0.0", false, nil, nil, false, "")
+	app := NewApp(cat, providers, "1.0.0", false, nil, nil, false, cat.RepoRoot)
 	app.width = width
 	app.height = height
 	// Propagate dimensions to sub-models that need them

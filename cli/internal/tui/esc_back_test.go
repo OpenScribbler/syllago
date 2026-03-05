@@ -101,7 +101,7 @@ func TestEscapeFromUpdate(t *testing.T) {
 func TestEscapeFromImport(t *testing.T) {
 	app := testApp(t)
 	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes+1) // Import is types+1
+	app = pressN(app, keyDown, nTypes+1) // Add is types+1
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenImport)

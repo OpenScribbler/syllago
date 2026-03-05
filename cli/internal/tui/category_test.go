@@ -12,8 +12,8 @@ func TestCategoryNavigation(t *testing.T) {
 	app := testApp(t)
 	assertScreen(t, app, screenCategory)
 
-	// Sidebar navigation: 8 content types + My Tools + Import + Update + Settings + Registries + Sandbox = 14 rows (indices 0-13)
-	totalRows := len(catalog.AllContentTypes()) + 5 // types + My Tools + Import + Update + Settings + Registries + Sandbox
+	// Sidebar navigation: 8 content types + Library + Add + Update + Settings + Registries + Sandbox = 14 rows (indices 0-13)
+	totalRows := len(catalog.AllContentTypes()) + 5 // types + Library + Add + Update + Settings + Registries + Sandbox
 	if app.sidebar.cursor != 0 {
 		t.Fatalf("expected initial cursor 0, got %d", app.sidebar.cursor)
 	}
@@ -52,21 +52,21 @@ func TestCategorySelectEachType(t *testing.T) {
 	}
 }
 
-func TestCategorySelectMyTools(t *testing.T) {
+func TestCategorySelectLibrary(t *testing.T) {
 	app := testApp(t)
 	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes) // My Tools is right after all types
+	app = pressN(app, keyDown, nTypes) // Library is right after all types
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
 	assertScreen(t, app, screenItems)
-	if app.items.contentType != catalog.MyTools {
-		t.Fatalf("expected MyTools contentType, got %s", app.items.contentType)
+	if app.items.contentType != catalog.Library {
+		t.Fatalf("expected Library contentType, got %s", app.items.contentType)
 	}
-	// Should only contain local items
+	// Should only contain library items
 	for _, item := range app.items.items {
-		if !item.Local {
-			t.Fatalf("My Tools should only contain local items, found non-local: %s", item.Name)
+		if !item.Library {
+			t.Fatalf("Library should only contain library items, found non-library: %s", item.Name)
 		}
 	}
 }
@@ -74,7 +74,7 @@ func TestCategorySelectMyTools(t *testing.T) {
 func TestCategorySelectImport(t *testing.T) {
 	app := testApp(t)
 	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes+1) // Import is types+1
+	app = pressN(app, keyDown, nTypes+1) // Add is types+1
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 

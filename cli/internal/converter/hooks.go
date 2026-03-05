@@ -15,7 +15,7 @@ func init() {
 	Register(&HooksConverter{})
 }
 
-// HookEntry represents a single hook action in canonical (Claude Code) format.
+// HookEntry represents a single hook action in syllago canonical format.
 type HookEntry struct {
 	Type          string `json:"type"`
 	Command       string `json:"command,omitempty"`
@@ -30,7 +30,7 @@ type hookMatcher struct {
 	Hooks   []HookEntry  `json:"hooks"`
 }
 
-// hooksConfig is the top-level hooks structure (canonical = Claude Code format).
+// hooksConfig is the top-level hooks structure (syllago canonical format).
 type hooksConfig struct {
 	Hooks map[string][]hookMatcher `json:"hooks"`
 }

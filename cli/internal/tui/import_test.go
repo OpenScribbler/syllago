@@ -15,7 +15,7 @@ func navigateToImport(t *testing.T) App {
 	t.Helper()
 	app := testApp(t)
 	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes+1) // Import
+	app = pressN(app, keyDown, nTypes+1) // Add
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenImport)
@@ -616,7 +616,7 @@ func TestImportDoneError(t *testing.T) {
 	app = m.(App)
 
 	assertScreen(t, app, screenImport) // stays on import screen
-	assertContains(t, app.importer.message, "Import failed")
+	assertContains(t, app.importer.message, "Add failed")
 }
 
 // ---------------------------------------------------------------------------
@@ -768,6 +768,12 @@ func TestBuildConflictInfoCreateFlow(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestConflictDetectionOnConfirm(t *testing.T) {
+	// Override global content dir so destination path is predictable in tests
+	globalDir := t.TempDir()
+	orig := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
+
 	app := navigateToImport(t)
 	app.importer.step = stepConfirm
 	app.importer.contentType = catalog.Skills
@@ -779,8 +785,8 @@ func TestConflictDetectionOnConfirm(t *testing.T) {
 	app.importer.sourcePath = srcDir
 	app.importer.itemName = "conflict-test"
 
-	// Create the destination so it conflicts
-	dest := filepath.Join(app.catalog.RepoRoot, "local", "skills", "conflict-test")
+	// Create the destination in the global library so it conflicts
+	dest := filepath.Join(globalDir, "skills", "conflict-test")
 	os.MkdirAll(dest, 0o755)
 	os.WriteFile(filepath.Join(dest, "SKILL.md"), []byte("existing"), 0o644)
 
@@ -889,6 +895,12 @@ func TestConflictScrolling(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestBatchConflictDetection(t *testing.T) {
+	// Override global content dir so destination paths are predictable in tests
+	globalDir := t.TempDir()
+	orig := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
+
 	app := navigateToImport(t)
 	app.importer.step = stepValidate
 	app.importer.contentType = catalog.Skills
@@ -908,9 +920,9 @@ func TestBatchConflictDetection(t *testing.T) {
 		{path: src3, name: "item-3", included: true},
 	}
 
-	// Create destinations for item-1 and item-3 so they conflict
+	// Create destinations in the global library for item-1 and item-3 so they conflict
 	for _, name := range []string{"item-1", "item-3"} {
-		dest := filepath.Join(app.catalog.RepoRoot, "local", "skills", name)
+		dest := filepath.Join(globalDir, "skills", name)
 		os.MkdirAll(dest, 0o755)
 		os.WriteFile(filepath.Join(dest, "SKILL.md"), []byte("existing"), 0o644)
 	}

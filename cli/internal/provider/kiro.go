@@ -69,4 +69,11 @@ var Kiro = Provider{
 			return false
 		}
 	},
+	SymlinkSupport: map[catalog.ContentType]bool{
+		catalog.Rules:  true,
+		catalog.Agents: true,
+		catalog.Skills: true,
+		catalog.Hooks:  false, // JSON merge
+		catalog.MCP:    false, // JSON merge
+	},
 }

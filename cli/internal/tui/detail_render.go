@@ -33,8 +33,8 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 	current := titleStyle.Render(name)
 	if m.item.IsBuiltin() {
 		current += " " + builtinStyle.Render("[BUILT-IN]")
-	} else if m.item.Local {
-		current += " " + warningStyle.Render("[LOCAL]")
+	} else if m.item.Library {
+		current += " " + warningStyle.Render("[LIBRARY]")
 	} else if m.item.Registry != "" {
 		current += " " + countStyle.Render("["+m.item.Registry+"]")
 	} else if m.item.Source == "global" {
@@ -49,8 +49,8 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 	pinned += labelStyle.Render("Type: ") + valueStyle.Render(m.item.Type.Label())
 	if m.item.IsBuiltin() {
 		pinned += "  " + builtinStyle.Render("[Built-in]")
-	} else if m.item.Local {
-		pinned += "  " + warningStyle.Render("[Local]")
+	} else if m.item.Library {
+		pinned += "  " + warningStyle.Render("[Library]")
 	}
 	pinned += "\n"
 	if m.item.Registry != "" {
@@ -78,8 +78,8 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 			source := "built-in"
 			if ov.Registry != "" {
 				source = ov.Registry
-			} else if ov.Local {
-				source = "local"
+			} else if ov.Library {
+				source = "library"
 			} else if !ov.IsBuiltin() {
 				source = "shared"
 			}
@@ -240,8 +240,8 @@ func (m detailModel) renderOverviewTab() string {
 		s += helpStyle.Render("No README.md available for this item.") + "\n"
 	}
 
-	// LLM Prompt (for scaffolded local items)
-	if m.item.Local && m.llmPrompt != "" {
+	// LLM Prompt (for scaffolded library items)
+	if m.item.Library && m.llmPrompt != "" {
 		s += "\n" + labelStyle.Render("LLM Prompt Available") + " " + helpStyle.Render("(press c to copy)") + "\n"
 		lines := strings.Split(m.llmPrompt, "\n")
 		preview := lines
@@ -512,8 +512,8 @@ func (m detailModel) renderInstallTab() string {
 
 	actionBar := installBtn + "  " + uninstallBtn
 
-	// Copy and Save are only functional for Prompts (and local items with LLM prompts)
-	if m.item.Type == catalog.Prompts || m.item.Local {
+	// Copy and Save are only functional for Prompts (and library items with LLM prompts)
+	if m.item.Type == catalog.Prompts || m.item.Library {
 		copyBtn := zone.Mark("detail-btn-copy", buttonStyle.Render("Copy"))
 		actionBar += "  " + copyBtn
 	}
@@ -720,11 +720,11 @@ func (m detailModel) renderHelp() string {
 		}
 	}
 
-	if m.item.Local {
+	if m.item.Library {
 		if m.llmPrompt != "" {
 			helpParts = append(helpParts, "c copy prompt")
 		}
-		helpParts = append(helpParts, "p promote")
+		helpParts = append(helpParts, "p share")
 	}
 
 	if m.listTotal > 1 {

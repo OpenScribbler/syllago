@@ -9,8 +9,12 @@ import (
 )
 
 func TestCleanupPromotedItems_RequiresNameMatch(t *testing.T) {
-	t.Parallel()
+	// Note: not parallel — modifies GlobalContentDirOverride global
 	root := t.TempDir()
+	globalDir := t.TempDir()
+	orig := GlobalContentDirOverride
+	GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { GlobalContentDirOverride = orig })
 
 	// Create shared skill with ID "uuid-123"
 	sharedDir := filepath.Join(root, "skills", "shared-tool")
@@ -26,13 +30,13 @@ func TestCleanupPromotedItems_RequiresNameMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create local item with same ID but DIFFERENT name (ID collision)
-	localDir := filepath.Join(root, "local", "skills", "different-name")
-	if err := os.MkdirAll(localDir, 0755); err != nil {
+	// Create library item with same ID but DIFFERENT name (ID collision)
+	libDir := filepath.Join(globalDir, "skills", "different-name")
+	if err := os.MkdirAll(libDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, filepath.Join(localDir, "SKILL.md"), "---\nname: different-name\n---\n")
-	if err := metadata.Save(localDir, &metadata.Meta{
+	writeFile(t, filepath.Join(libDir, "SKILL.md"), "---\nname: different-name\n---\n")
+	if err := metadata.Save(libDir, &metadata.Meta{
 		ID:   "uuid-123",
 		Name: "different-name",
 		Type: "skill",
@@ -40,7 +44,7 @@ func TestCleanupPromotedItems_RequiresNameMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cat, err := Scan(root, root)
+	cat, err := ScanWithGlobalAndRegistries(root, root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,15 +59,19 @@ func TestCleanupPromotedItems_RequiresNameMatch(t *testing.T) {
 		t.Errorf("expected 0 items cleaned (name mismatch), got %d", len(cleaned))
 	}
 
-	// Local item should still exist
-	if _, err := os.Stat(localDir); err != nil {
-		t.Error("local item should not have been deleted")
+	// Library item should still exist
+	if _, err := os.Stat(libDir); err != nil {
+		t.Error("library item should not have been deleted")
 	}
 }
 
 func TestCleanupPromotedItems_RequiresTypeMatch(t *testing.T) {
-	t.Parallel()
+	// Note: not parallel — modifies GlobalContentDirOverride global
 	root := t.TempDir()
+	globalDir := t.TempDir()
+	orig := GlobalContentDirOverride
+	GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { GlobalContentDirOverride = orig })
 
 	// Create shared skill
 	sharedDir := filepath.Join(root, "skills", "tool-name")
@@ -79,13 +87,13 @@ func TestCleanupPromotedItems_RequiresTypeMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create local agent with same ID and name but different type
-	localDir := filepath.Join(root, "local", "agents", "tool-name")
-	if err := os.MkdirAll(localDir, 0755); err != nil {
+	// Create library agent with same ID and name but different type
+	libDir := filepath.Join(globalDir, "agents", "tool-name")
+	if err := os.MkdirAll(libDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, filepath.Join(localDir, "AGENT.md"), "---\nname: tool-name\n---\n")
-	if err := metadata.Save(localDir, &metadata.Meta{
+	writeFile(t, filepath.Join(libDir, "AGENT.md"), "---\nname: tool-name\n---\n")
+	if err := metadata.Save(libDir, &metadata.Meta{
 		ID:   "uuid-456",
 		Name: "tool-name",
 		Type: "agent",
@@ -93,7 +101,7 @@ func TestCleanupPromotedItems_RequiresTypeMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cat, err := Scan(root, root)
+	cat, err := ScanWithGlobalAndRegistries(root, root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,14 +116,18 @@ func TestCleanupPromotedItems_RequiresTypeMatch(t *testing.T) {
 		t.Errorf("expected 0 items cleaned (type mismatch), got %d", len(cleaned))
 	}
 
-	if _, err := os.Stat(localDir); err != nil {
-		t.Error("local item should not have been deleted")
+	if _, err := os.Stat(libDir); err != nil {
+		t.Error("library item should not have been deleted")
 	}
 }
 
 func TestCleanupPromotedItems_CleansExactMatch(t *testing.T) {
-	t.Parallel()
+	// Note: not parallel — modifies GlobalContentDirOverride global
 	root := t.TempDir()
+	globalDir := t.TempDir()
+	orig := GlobalContentDirOverride
+	GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { GlobalContentDirOverride = orig })
 
 	// Create shared skill
 	sharedDir := filepath.Join(root, "skills", "promoted-tool")
@@ -131,13 +143,13 @@ func TestCleanupPromotedItems_CleansExactMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create local item with matching ID, name, and type
-	localDir := filepath.Join(root, "local", "skills", "promoted-tool")
-	if err := os.MkdirAll(localDir, 0755); err != nil {
+	// Create library item with matching ID, name, and type
+	libDir := filepath.Join(globalDir, "skills", "promoted-tool")
+	if err := os.MkdirAll(libDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, filepath.Join(localDir, "SKILL.md"), "---\nname: promoted-tool\n---\n")
-	if err := metadata.Save(localDir, &metadata.Meta{
+	writeFile(t, filepath.Join(libDir, "SKILL.md"), "---\nname: promoted-tool\n---\n")
+	if err := metadata.Save(libDir, &metadata.Meta{
 		ID:   "uuid-789",
 		Name: "promoted-tool",
 		Type: "skill",
@@ -145,7 +157,7 @@ func TestCleanupPromotedItems_CleansExactMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cat, err := Scan(root, root)
+	cat, err := ScanWithGlobalAndRegistries(root, root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,8 +172,8 @@ func TestCleanupPromotedItems_CleansExactMatch(t *testing.T) {
 		t.Errorf("expected 1 item cleaned, got %d", len(cleaned))
 	}
 
-	// Local item should be deleted
-	if _, err := os.Stat(localDir); err == nil {
-		t.Error("local item should have been deleted")
+	// Library item should be deleted
+	if _, err := os.Stat(libDir); err == nil {
+		t.Error("library item should have been deleted")
 	}
 }

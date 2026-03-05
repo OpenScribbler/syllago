@@ -215,7 +215,7 @@ func TestInstallMethodDescriptionNoOrphanedWords(t *testing.T) {
 func TestModalPurposesAreDefined(t *testing.T) {
 	// All required modal purposes must be defined and distinct
 	purposes := []modalPurpose{
-		modalNone, modalInstall, modalUninstall, modalSave, modalPromote, modalAppScript,
+		modalNone, modalInstall, modalUninstall, modalSave, modalShare, modalAppScript,
 	}
 	seen := map[modalPurpose]bool{}
 	for _, p := range purposes {
@@ -236,7 +236,7 @@ func makeDetailModel(itemType catalog.ContentType, local bool, installed bool) d
 		Name:  "test-item",
 		Type:  itemType,
 		Path:  "/tmp/test-item",
-		Local: local,
+		Library: local,
 	}
 	var providers []provider.Provider
 	if installed {
@@ -313,8 +313,8 @@ func TestUninstallKeyEmitsOpenModalMsg(t *testing.T) {
 	}
 }
 
-func TestPromoteKeyEmitsOpenModalMsg(t *testing.T) {
-	// 'p' on a local item should emit openModalMsg{purpose: modalPromote}
+func TestShareKeyEmitsOpenModalMsg(t *testing.T) {
+	// 'p' on a library item should emit openModalMsg{purpose: modalShare}
 	// instead of setting confirmAction=actionPromoteConfirm.
 	m := makeDetailModel(catalog.MCP, true, false)
 	pMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")}
@@ -324,8 +324,8 @@ func TestPromoteKeyEmitsOpenModalMsg(t *testing.T) {
 	if !ok {
 		t.Fatalf("pressing p should return openModalMsg, got %T", msg)
 	}
-	if oMsg.purpose != modalPromote {
-		t.Errorf("openModalMsg.purpose should be modalPromote, got %d", oMsg.purpose)
+	if oMsg.purpose != modalShare {
+		t.Errorf("openModalMsg.purpose should be modalShare, got %d", oMsg.purpose)
 	}
 }
 
@@ -740,5 +740,154 @@ func TestClickAway_ClosesInstallModal(t *testing.T) {
 	}
 	if updated.instModal.confirmed {
 		t.Error("click-away should not confirm install modal")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SymlinkSupport-driven method step tests
+// ---------------------------------------------------------------------------
+
+func TestInstallModal_SymlinkDisabled_DefaultsCopy(t *testing.T) {
+	// When a provider marks the content type as symlink-unsupported, the method
+	// step should pre-select Copy (cursor=1), not Symlink (cursor=0).
+	item := catalog.ContentItem{
+		Name: "test-item",
+		Type: catalog.Rules,
+		Path: "/tmp/test",
+	}
+	p := provider.Provider{
+		Name:     "TestProvider",
+		Slug:     "test",
+		Detected: true,
+		SupportsType: func(ct catalog.ContentType) bool { return true },
+		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
+		SymlinkSupport: map[catalog.ContentType]bool{
+			catalog.Rules: false,
+		},
+	}
+	m := newInstallModal(item, []provider.Provider{p}, "/tmp/repo")
+
+	// Simulate advancing from location step to method step.
+	m.step = installStepLocation
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter}) // Select
+
+	if m.step != installStepMethod {
+		t.Fatalf("expected installStepMethod after Enter, got step %d", m.step)
+	}
+	if m.methodCursor != 1 {
+		t.Errorf("expected methodCursor=1 (copy) when symlink disabled, got %d", m.methodCursor)
+	}
+}
+
+func TestInstallModal_SymlinkEnabled_DefaultsSymlink(t *testing.T) {
+	// When no provider restricts symlinks, the method step should pre-select
+	// Symlink (cursor=0).
+	item := catalog.ContentItem{
+		Name: "test-item",
+		Type: catalog.Skills,
+		Path: "/tmp/test",
+	}
+	p := provider.Provider{
+		Name:     "TestProvider",
+		Slug:     "test",
+		Detected: true,
+		SupportsType: func(ct catalog.ContentType) bool { return true },
+		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
+		SymlinkSupport: map[catalog.ContentType]bool{
+			catalog.Skills: true,
+		},
+	}
+	m := newInstallModal(item, []provider.Provider{p}, "/tmp/repo")
+	m.step = installStepLocation
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if m.step != installStepMethod {
+		t.Fatalf("expected installStepMethod after Enter, got step %d", m.step)
+	}
+	if m.methodCursor != 0 {
+		t.Errorf("expected methodCursor=0 (symlink) when symlink enabled, got %d", m.methodCursor)
+	}
+}
+
+func TestInstallModal_SymlinkDisabled_UpKeyCannotSelectSymlink(t *testing.T) {
+	// When symlink is disabled, pressing Up from Copy (1) must not move to Symlink (0).
+	item := catalog.ContentItem{
+		Name: "test-item",
+		Type: catalog.Rules,
+		Path: "/tmp/test",
+	}
+	p := provider.Provider{
+		Name:     "TestProvider",
+		Slug:     "test",
+		Detected: true,
+		SupportsType: func(ct catalog.ContentType) bool { return true },
+		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
+		SymlinkSupport: map[catalog.ContentType]bool{
+			catalog.Rules: false,
+		},
+	}
+	m := newInstallModal(item, []provider.Provider{p}, "/tmp/repo")
+	m.step = installStepMethod
+	m.methodCursor = 1 // copy
+
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+
+	if m.methodCursor != 1 {
+		t.Errorf("Up key should not move cursor to disabled symlink option, got methodCursor=%d", m.methodCursor)
+	}
+}
+
+func TestInstallModal_SymlinkDisabled_ViewShowsNote(t *testing.T) {
+	// The symlink option in the view must show the "(not supported for this content type)"
+	// note when symlink is disabled.
+	item := catalog.ContentItem{
+		Name: "test-item",
+		Type: catalog.Rules,
+		Path: "/tmp/test",
+	}
+	p := provider.Provider{
+		Name:     "TestProvider",
+		Slug:     "test",
+		Detected: true,
+		SupportsType: func(ct catalog.ContentType) bool { return true },
+		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
+		SymlinkSupport: map[catalog.ContentType]bool{
+			catalog.Rules: false,
+		},
+	}
+	m := newInstallModal(item, []provider.Provider{p}, "/tmp/repo")
+	m.step = installStepMethod
+	m.methodCursor = 1
+
+	// Strip ANSI codes and check each line for the note text — the phrase may
+	// span a line boundary due to lipgloss word-wrapping within the modal box.
+	view := StripControlChars(m.View())
+	if !strings.Contains(view, "not supported") {
+		t.Error("View should contain 'not supported' note on the symlink option when symlink is disabled")
+	}
+}
+
+func TestInstallModal_NilSymlinkSupport_DefaultsSymlink(t *testing.T) {
+	// A provider with nil SymlinkSupport map should not disable symlinks.
+	item := catalog.ContentItem{
+		Name: "test-item",
+		Type: catalog.Skills,
+		Path: "/tmp/test",
+	}
+	p := provider.Provider{
+		Name:           "TestProvider",
+		Slug:           "test",
+		Detected:       true,
+		SymlinkSupport: nil, // nil = assumed supported
+		SupportsType:   func(ct catalog.ContentType) bool { return true },
+		InstallDir:     func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
+	}
+	m := newInstallModal(item, []provider.Provider{p}, "/tmp/repo")
+
+	if m.symlinkDisabled() {
+		t.Error("symlinkDisabled() should return false when SymlinkSupport map is nil")
+	}
+	if m.defaultMethodCursor() != 0 {
+		t.Errorf("defaultMethodCursor() should return 0 (symlink) with nil SymlinkSupport, got %d", m.defaultMethodCursor())
 	}
 }
