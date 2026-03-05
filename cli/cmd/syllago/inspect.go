@@ -56,7 +56,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 	if projectRoot == "" {
 		projectRoot = root
 	}
-	cat, err := catalog.Scan(root, projectRoot)
+	cat, err := catalog.ScanWithGlobalAndRegistries(root, projectRoot, nil)
 	if err != nil {
 		return fmt.Errorf("scanning catalog: %w", err)
 	}

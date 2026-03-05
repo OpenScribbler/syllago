@@ -38,6 +38,7 @@ func setupListRepo(t *testing.T) string {
 func TestListShowsAllItems(t *testing.T) {
 	root := setupListRepo(t)
 	withFakeRepoRoot(t, root)
+	withGlobalLibrary(t, t.TempDir())
 
 	stdout, _ := output.SetForTest(t)
 
@@ -78,6 +79,7 @@ func TestListShowsAllItems(t *testing.T) {
 func TestListFilterByType(t *testing.T) {
 	root := setupListRepo(t)
 	withFakeRepoRoot(t, root)
+	withGlobalLibrary(t, t.TempDir())
 
 	stdout, _ := output.SetForTest(t)
 
@@ -111,6 +113,7 @@ func TestListFilterByType(t *testing.T) {
 func TestListFilterBySource(t *testing.T) {
 	root := setupListRepo(t)
 	withFakeRepoRoot(t, root)
+	withGlobalLibrary(t, t.TempDir())
 
 	_, stderr := output.SetForTest(t)
 
@@ -129,6 +132,8 @@ func TestListFilterBySource(t *testing.T) {
 func TestListJSON(t *testing.T) {
 	root := setupListRepo(t)
 	withFakeRepoRoot(t, root)
+	// Isolate from real global library
+	withGlobalLibrary(t, t.TempDir())
 
 	stdout, _ := output.SetForTest(t)
 	output.JSON = true
@@ -167,6 +172,8 @@ func TestListEmpty(t *testing.T) {
 	// Create a minimal marker so the root resolves.
 	os.MkdirAll(filepath.Join(root, "skills"), 0755)
 	withFakeRepoRoot(t, root)
+	// Isolate from real global library
+	withGlobalLibrary(t, t.TempDir())
 
 	_, stderr := output.SetForTest(t)
 
