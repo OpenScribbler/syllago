@@ -307,7 +307,7 @@ const (
 	modalInstall
 	modalUninstall
 	modalSave
-	modalPromote
+	modalShare
 	modalAppScript
 	modalLoadoutApply
 	modalHookBrokenWarning
@@ -518,6 +518,27 @@ type installModal struct {
 	methodCursor int
 }
 
+// symlinkDisabled returns true if any checked provider explicitly marks the
+// item's content type as not supporting symlinks. A nil map or absent key
+// means "assumed supported" (per Provider.SymlinkSupport docs).
+func (m installModal) symlinkDisabled() bool {
+	for _, p := range m.providers {
+		if supported, ok := p.SymlinkSupport[m.item.Type]; ok && !supported {
+			return true
+		}
+	}
+	return false
+}
+
+// defaultMethodCursor returns the cursor position to use when entering the
+// method step: 0 (symlink) normally, 1 (copy) when symlink is disabled.
+func (m installModal) defaultMethodCursor() int {
+	if m.symlinkDisabled() {
+		return 1
+	}
+	return 0
+}
+
 func newInstallModal(item catalog.ContentItem, providers []provider.Provider, repoRoot string) installModal {
 	return installModal{
 		active:    true,
@@ -555,7 +576,7 @@ func (m installModal) Update(msg tea.Msg) (installModal, tea.Cmd) {
 			case tea.KeyEnter:
 				if strings.TrimSpace(m.customPathInput.Value()) != "" {
 					m.step = installStepMethod
-					m.methodCursor = 0
+					m.methodCursor = m.defaultMethodCursor()
 					m.customPathInput.Blur()
 				}
 				return m, nil
@@ -600,7 +621,7 @@ func (m installModal) Update(msg tea.Msg) (installModal, tea.Cmd) {
 					m.step = installStepCustomPath
 				} else {
 					m.step = installStepMethod
-					m.methodCursor = 0
+					m.methodCursor = m.defaultMethodCursor()
 					m.btnCursor = 0
 				}
 			}
@@ -619,7 +640,8 @@ func (m installModal) Update(msg tea.Msg) (installModal, tea.Cmd) {
 					m.btnCursor++
 				}
 			case key.Matches(msg, keys.Up) || msg.Type == tea.KeyUp:
-				if m.methodCursor > 0 {
+				// Don't navigate to symlink (0) when it's disabled for this content type
+				if m.methodCursor > 0 && !m.symlinkDisabled() {
 					m.methodCursor--
 				}
 			case key.Matches(msg, keys.Down) || msg.Type == tea.KeyDown:
@@ -697,6 +719,7 @@ func (m installModal) View() string {
 	case installStepMethod:
 		content = labelStyle.Render("Install Method") + "\n\n"
 
+		symlinkOff := m.symlinkDisabled()
 		type opt struct{ name, desc string }
 		options := []opt{
 			{"Symlink (recommended)", "Stays in sync with repo, auto-updates on pull"},
@@ -704,6 +727,13 @@ func (m installModal) View() string {
 		}
 
 		for i, o := range options {
+			if i == 0 && symlinkOff {
+				// Symlink disabled — render as muted, non-selectable
+				row := fmt.Sprintf("    %s\n", helpStyle.Render(o.name+" (not supported for this content type)"))
+				row += fmt.Sprintf("      %s\n", helpStyle.Render(o.desc))
+				content += row
+				continue
+			}
 			prefix := "  "
 			nameStyle := itemStyle
 			if i == m.methodCursor {

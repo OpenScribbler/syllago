@@ -19,6 +19,7 @@ import (
 // ApplyOptions configures a loadout apply operation.
 type ApplyOptions struct {
 	Mode        string                // "preview", "try", or "keep"
+	Method      installer.InstallMethod // "symlink" (default) or "copy"
 	ProjectRoot string
 	HomeDir     string                // defaults to os.UserHomeDir() if empty
 	RepoRoot    string                // catalog repo root for symlink source resolution
@@ -166,8 +167,14 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 		switch a.Action {
 		case "create-symlink":
 			srcPath := symlinkSource(*ref)
-			if err := installer.CreateSymlink(srcPath, a.Detail); err != nil {
-				return fmt.Errorf("creating symlink for %s: %w", a.Name, err)
+			if opts.Method == installer.MethodCopy {
+				if err := installer.CopyContent(srcPath, a.Detail); err != nil {
+					return fmt.Errorf("copying %s: %w", a.Name, err)
+				}
+			} else {
+				if err := installer.CreateSymlink(srcPath, a.Detail); err != nil {
+					return fmt.Errorf("creating symlink for %s: %w", a.Name, err)
+				}
 			}
 			inst.Symlinks = append(inst.Symlinks, installer.InstalledSymlink{
 				Path:        a.Detail,

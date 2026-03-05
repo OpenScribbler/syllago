@@ -66,4 +66,9 @@ var RooCode = Provider{
 			return false
 		}
 	},
+	SymlinkSupport: map[catalog.ContentType]bool{
+		catalog.Rules:  true,
+		catalog.Agents: true,
+		catalog.MCP:    false, // JSON merge
+	},
 }

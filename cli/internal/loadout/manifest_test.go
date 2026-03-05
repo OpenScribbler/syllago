@@ -67,9 +67,13 @@ func TestParse_MissingProvider(t *testing.T) {
 	f := filepath.Join(tmp, "loadout.yaml")
 	os.WriteFile(f, []byte("kind: loadout\nversion: 1\nname: test\n"), 0644)
 
-	_, err := Parse(f)
-	if err == nil {
-		t.Fatal("expected error for missing provider")
+	// Provider is now optional — missing provider should succeed
+	m, err := Parse(f)
+	if err != nil {
+		t.Fatalf("unexpected error for missing provider: %v", err)
+	}
+	if m.Provider != "" {
+		t.Errorf("expected empty provider, got %q", m.Provider)
 	}
 }
 

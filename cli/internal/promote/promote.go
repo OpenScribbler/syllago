@@ -21,8 +21,9 @@ type Result struct {
 	CompareURL string // fallback browser URL
 }
 
-// Promote copies a local item to the shared directory, creates a git branch, commits, pushes, and opens a PR.
-func Promote(repoRoot string, item catalog.ContentItem) (*Result, error) {
+// Promote copies a library item to the shared directory, creates a git branch, commits, pushes, and opens a PR.
+// noInput suppresses interactive prompts even on a TTY (e.g. when --no-input is passed).
+func Promote(repoRoot string, item catalog.ContentItem, noInput bool) (*Result, error) {
 	// 1. Check clean tree
 	dirty, err := isTreeDirty(repoRoot)
 	if err != nil {
@@ -104,7 +105,7 @@ func Promote(repoRoot string, item catalog.ContentItem) (*Result, error) {
 	// 10. PR creation (adaptive)
 	if ghPath, err := exec.LookPath("gh"); err == nil && ghPath != "" {
 		prTitle := fmt.Sprintf("Add %s: %s", item.Type, item.Name)
-		prBody := fmt.Sprintf("Promotes `%s` from local/ to shared.\n\nType: %s\nSource: %s",
+		prBody := fmt.Sprintf("Contributes `%s` from library to shared.\n\nType: %s\nSource: %s",
 			item.Name, item.Type, item.Meta.Source)
 		out, err := commandOutput(repoRoot, "gh", "pr", "create",
 			"--title", prTitle,

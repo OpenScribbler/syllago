@@ -64,4 +64,9 @@ var Codex = Provider{
 			return false
 		}
 	},
+	SymlinkSupport: map[catalog.ContentType]bool{
+		catalog.Rules:    true,
+		catalog.Commands: true,
+		catalog.Agents:   true,
+	},
 }

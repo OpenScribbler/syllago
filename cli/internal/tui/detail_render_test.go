@@ -131,7 +131,7 @@ func TestRenderOverrideInfoShown(t *testing.T) {
 		item: catalog.ContentItem{
 			Name:  "my-skill",
 			Type:  catalog.Skills,
-			Local: true,
+			Library: true,
 		},
 		overrides: []catalog.ContentItem{
 			{
@@ -157,7 +157,7 @@ func TestRenderOverrideInfoBuiltIn(t *testing.T) {
 		item: catalog.ContentItem{
 			Name:  "my-skill",
 			Type:  catalog.Skills,
-			Local: true,
+			Library: true,
 		},
 		overrides: []catalog.ContentItem{
 			{

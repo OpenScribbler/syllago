@@ -147,7 +147,7 @@ func TestImportBrowseFlow(t *testing.T) {
 	app.width = 80
 	app.height = 30
 
-	// Navigate to Import (types + My Tools + Import = types+1)
+	// Navigate to Add (types + Library + Add = types+1)
 	down := tea.KeyMsg{Type: tea.KeyDown}
 	enter := tea.KeyMsg{Type: tea.KeyEnter}
 

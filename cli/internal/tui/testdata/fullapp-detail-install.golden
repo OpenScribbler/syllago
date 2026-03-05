@@ -10,10 +10,10 @@ syllago           │Home > Skills > alpha-skill
   Hooks         1 │────────────────────
   Commands      1 │  > [ ] Claude Code  [--] available
   Loadouts      0 │      Cursor  (not detected)
-  My Tools      1 │
+  Library       1 │
   ─────────────   │Actions
   Configuration   │────────────────────
-  Import          │ Install    Uninstall
+  Add             │ Install    Uninstall
   Update          │
   Settings        │
   Registries      │

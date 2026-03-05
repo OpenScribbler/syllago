@@ -15,8 +15,8 @@ const (
 	Hooks         ContentType = "hooks"
 	Commands      ContentType = "commands"
 	Loadouts      ContentType = "loadouts"
-	SearchResults ContentType = "search" // virtual type for cross-category search results
-	MyTools       ContentType = "local"  // virtual type for local items view
+	SearchResults ContentType = "search"  // virtual type for cross-category search results
+	Library       ContentType = "library" // virtual type for global library items view
 )
 
 // AllContentTypes returns all content types in display order.
@@ -78,9 +78,9 @@ type ContentItem struct {
 	Files              []string       // relative paths of all files in item directory
 	SupportedProviders []string       // provider slugs this item works with (apps only), e.g. ["claude-code", "gemini-cli"]
 	Meta               *metadata.Meta // loaded from .syllago.yaml if present
-	Local              bool           // true if item lives in local/
+	Library            bool           // true if item lives in the global content library (~/.syllago/content/)
 	Registry           string         // non-empty if item came from a git registry (value is the registry name)
-	Source             string         // "project", "global", "local", or registry name
+	Source             string         // "project", "global", "library", or registry name
 }
 
 // IsExample returns true if this item is tagged as example content.
@@ -136,37 +136,15 @@ func (c *Catalog) CountByType() map[ContentType]int {
 	return counts
 }
 
-// ByTypeLocal returns local-only items of a given type.
-func (c *Catalog) ByTypeLocal(ct ContentType) []ContentItem {
-	var result []ContentItem
-	for _, item := range c.Items {
-		if item.Type == ct && item.Local {
-			result = append(result, item)
-		}
-	}
-	return result
-}
-
 // ByTypeShared returns shared-only items of a given type (from the main repo, not registries).
 func (c *Catalog) ByTypeShared(ct ContentType) []ContentItem {
 	var result []ContentItem
 	for _, item := range c.Items {
-		if item.Type == ct && !item.Local && item.Registry == "" {
+		if item.Type == ct && !item.Library && item.Registry == "" {
 			result = append(result, item)
 		}
 	}
 	return result
-}
-
-// CountLocal returns the total number of local items across all types.
-func (c *Catalog) CountLocal() int {
-	count := 0
-	for _, item := range c.Items {
-		if item.Local {
-			count++
-		}
-	}
-	return count
 }
 
 // ByRegistry returns all items from a specific named registry.
@@ -174,6 +152,28 @@ func (c *Catalog) ByRegistry(name string) []ContentItem {
 	var result []ContentItem
 	for _, item := range c.Items {
 		if item.Registry == name {
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
+// CountLibrary returns the number of items sourced from the global content library.
+func (c *Catalog) CountLibrary() int {
+	count := 0
+	for _, item := range c.Items {
+		if item.Library {
+			count++
+		}
+	}
+	return count
+}
+
+// ByTypeLibrary returns items of the given type that came from the global library.
+func (c *Catalog) ByTypeLibrary(ct ContentType) []ContentItem {
+	var result []ContentItem
+	for _, item := range c.Items {
+		if item.Type == ct && item.Library {
 			result = append(result, item)
 		}
 	}

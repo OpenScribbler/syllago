@@ -158,7 +158,7 @@ func TestResolve_PrecedenceFirstWins(t *testing.T) {
 	// Catalog items are ordered by precedence — first match should win
 	cat := &catalog.Catalog{
 		Items: []catalog.ContentItem{
-			{Name: "my-skill", Type: catalog.Skills, Path: "/local/skills/my-skill", Local: true},
+			{Name: "my-skill", Type: catalog.Skills, Path: "/local/skills/my-skill", Library: true},
 			{Name: "my-skill", Type: catalog.Skills, Path: "/repo/skills/my-skill"},
 		},
 	}

@@ -44,4 +44,7 @@ var Windsurf = Provider{
 			return false
 		}
 	},
+	SymlinkSupport: map[catalog.ContentType]bool{
+		catalog.Rules: true,
+	},
 }

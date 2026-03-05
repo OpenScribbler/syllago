@@ -76,8 +76,9 @@ type conflictInfo struct {
 }
 
 type importModel struct {
-	repoRoot  string
-	providers []provider.Provider
+	repoRoot    string // content root (shared content, templates)
+	projectRoot string // project root (local/ lives here)
+	providers   []provider.Provider
 	step      importStep
 
 	// Source picker (0=local, 1=git, 2=create)
@@ -136,7 +137,7 @@ type importModel struct {
 	width, height int
 }
 
-func newImportModel(providers []provider.Provider, repoRoot string) importModel {
+func newImportModel(providers []provider.Provider, repoRoot, projectRoot string) importModel {
 	pi := textinput.New()
 	pi.Prompt = labelStyle.Render("Path: ")
 	pi.Placeholder = "/path/to/content"
@@ -153,8 +154,9 @@ func newImportModel(providers []provider.Provider, repoRoot string) importModel 
 	ni.CharLimit = 100
 
 	return importModel{
-		repoRoot:  repoRoot,
-		providers: providers,
+		repoRoot:    repoRoot,
+		projectRoot: projectRoot,
+		providers:   providers,
 		types:     catalog.AllContentTypes(),
 		pathInput: pi,
 		urlInput:  ui,
@@ -822,7 +824,7 @@ func (m importModel) View() string {
 			dest := m.destinationPath()
 			s += labelStyle.Render("Item:  ") + valueStyle.Render(m.itemName) + "\n"
 			s += labelStyle.Render("Type:  ") + valueStyle.Render(m.contentType.Label()) + "\n"
-			s += labelStyle.Render("To:    ") + valueStyle.Render(dest) + " " + helpStyle.Render("(local, not git-tracked)") + "\n"
+			s += labelStyle.Render("To:    ") + valueStyle.Render(dest) + " " + helpStyle.Render("(global library)") + "\n"
 			s += "\n" + helpStyle.Render("Scaffolds from template with LLM prompt for content creation.")
 		} else {
 			s += helpStyle.Render("Confirm import") + "\n\n"
@@ -833,7 +835,7 @@ func (m importModel) View() string {
 				s += labelStyle.Render("Provider: ") + valueStyle.Render(m.providerName) + "\n"
 			}
 			s += labelStyle.Render("From:  ") + valueStyle.Render(m.sourcePath) + "\n"
-			s += labelStyle.Render("To:    ") + valueStyle.Render(dest) + " " + helpStyle.Render("(local, not git-tracked)") + "\n"
+			s += labelStyle.Render("To:    ") + valueStyle.Render(dest) + " " + helpStyle.Render("(global library)") + "\n"
 		}
 
 	case stepConflict:
@@ -917,12 +919,16 @@ func (m importModel) helpText() string {
 	}
 }
 
-// destinationPath computes where the content will be copied to (always local/).
+// destinationPath computes where the content will be copied to (global library).
 func (m importModel) destinationPath() string {
-	if m.contentType.IsUniversal() {
-		return filepath.Join(m.repoRoot, "local", string(m.contentType), m.itemName)
+	globalDir := catalog.GlobalContentDir()
+	if globalDir == "" {
+		globalDir = m.projectRoot // fallback
 	}
-	return filepath.Join(m.repoRoot, "local", string(m.contentType), m.providerName, m.itemName)
+	if m.contentType.IsUniversal() {
+		return filepath.Join(globalDir, string(m.contentType), m.itemName)
+	}
+	return filepath.Join(globalDir, string(m.contentType), m.providerName, m.itemName)
 }
 
 // doImport executes the copy, generates metadata, and returns the item name.
@@ -1525,10 +1531,14 @@ func (m importModel) doImportOverwrite() (string, []string, error) {
 // batchDestForSource computes the destination path for a batch source path.
 func (m importModel) batchDestForSource(srcPath string) string {
 	itemName := filepath.Base(srcPath)
-	if m.contentType.IsUniversal() {
-		return filepath.Join(m.repoRoot, "local", string(m.contentType), itemName)
+	globalDir := catalog.GlobalContentDir()
+	if globalDir == "" {
+		globalDir = m.projectRoot // fallback
 	}
-	return filepath.Join(m.repoRoot, "local", string(m.contentType), m.providerName, itemName)
+	if m.contentType.IsUniversal() {
+		return filepath.Join(globalDir, string(m.contentType), itemName)
+	}
+	return filepath.Join(globalDir, string(m.contentType), m.providerName, itemName)
 }
 
 // advanceConflict moves to the next batch conflict, or launches the batch import
@@ -1596,7 +1606,11 @@ func (m importModel) importSelectedHooks() tea.Cmd {
 			}
 			name := m.hookNames[i]
 
-			itemDir := filepath.Join(m.repoRoot, "local", "hooks", providerName, name)
+				globalDir := catalog.GlobalContentDir()
+			if globalDir == "" {
+				globalDir = m.projectRoot // fallback
+			}
+			itemDir := filepath.Join(globalDir, "hooks", providerName, name)
 			if err := os.MkdirAll(itemDir, 0755); err != nil {
 				errs = append(errs, fmt.Sprintf("%s: %v", name, err))
 				continue
@@ -1685,20 +1699,18 @@ func isValidGitURL(url string) bool {
 }
 
 // discoverProviderDirs reads the existing provider subdirectories for a content type.
-// Checks both the shared directory and local/ for provider dirs.
+// Checks both the shared directory and the global library for provider dirs.
 func (m importModel) discoverProviderDirs(ct catalog.ContentType) []string {
 	seen := make(map[string]bool)
 	var names []string
 
-	// Check shared directory
-	dirs := []string{
-		filepath.Join(m.repoRoot, string(ct)),
-		filepath.Join(m.repoRoot, "local", string(ct)),
-	}
-	for _, typeDir := range dirs {
-		entries, err := os.ReadDir(typeDir)
+	globalDir := catalog.GlobalContentDir()
+
+	// Check shared content dir (the repo)
+	checkDir := func(root string) {
+		entries, err := os.ReadDir(filepath.Join(root, string(ct)))
 		if err != nil {
-			continue
+			return
 		}
 		for _, e := range entries {
 			if e.IsDir() && e.Name() != ".gitkeep" && !seen[e.Name()] {
@@ -1706,6 +1718,12 @@ func (m importModel) discoverProviderDirs(ct catalog.ContentType) []string {
 				names = append(names, e.Name())
 			}
 		}
+	}
+
+	checkDir(m.repoRoot)
+	// Check global library
+	if globalDir != "" {
+		checkDir(globalDir)
 	}
 	return names
 }

@@ -5,14 +5,22 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
 
+// withGlobalContentDir sets catalog.GlobalContentDirOverride for test isolation
+// and restores the original value via t.Cleanup.
+func withGlobalContentDir(t *testing.T, dir string) {
+	t.Helper()
+	orig := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = dir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
+}
+
 func TestCreateSkill(t *testing.T) {
-	root := setupGoProject(t)
-	// Create a skills/ marker so findContentRepoRoot works
-	os.MkdirAll(filepath.Join(root, "skills"), 0755)
-	withFakeRepoRoot(t, root)
+	globalDir := t.TempDir()
+	withGlobalContentDir(t, globalDir)
 
 	createCmd.SetArgs([]string{"skills", "my-test-skill"})
 	err := createCmd.RunE(createCmd, []string{"skills", "my-test-skill"})
@@ -20,8 +28,8 @@ func TestCreateSkill(t *testing.T) {
 		t.Fatalf("create skill should succeed: %v", err)
 	}
 
-	// Verify the directory was created
-	dest := filepath.Join(root, "local", "skills", "my-test-skill")
+	// Verify the directory was created under globalDir
+	dest := filepath.Join(globalDir, "skills", "my-test-skill")
 	if _, err := os.Stat(dest); os.IsNotExist(err) {
 		t.Fatalf("expected directory %s to exist", dest)
 	}
@@ -46,9 +54,8 @@ func TestCreateSkill(t *testing.T) {
 }
 
 func TestCreateWritesSyllagoYaml(t *testing.T) {
-	root := setupGoProject(t)
-	os.MkdirAll(filepath.Join(root, "skills"), 0755)
-	withFakeRepoRoot(t, root)
+	globalDir := t.TempDir()
+	withGlobalContentDir(t, globalDir)
 
 	createCmd.SetArgs([]string{"skills", "yaml-test-skill"})
 	err := createCmd.RunE(createCmd, []string{"skills", "yaml-test-skill"})
@@ -56,7 +63,7 @@ func TestCreateWritesSyllagoYaml(t *testing.T) {
 		t.Fatalf("create should succeed: %v", err)
 	}
 
-	dest := filepath.Join(root, "local", "skills", "yaml-test-skill")
+	dest := filepath.Join(globalDir, "skills", "yaml-test-skill")
 	meta, err := metadata.Load(dest)
 	if err != nil {
 		t.Fatalf("loading metadata: %v", err)
@@ -76,9 +83,8 @@ func TestCreateWritesSyllagoYaml(t *testing.T) {
 }
 
 func TestCreateRuleRequiresProvider(t *testing.T) {
-	root := setupGoProject(t)
-	os.MkdirAll(filepath.Join(root, "skills"), 0755)
-	withFakeRepoRoot(t, root)
+	globalDir := t.TempDir()
+	withGlobalContentDir(t, globalDir)
 
 	err := createCmd.RunE(createCmd, []string{"rules", "my-rule"})
 	if err == nil {
@@ -87,12 +93,11 @@ func TestCreateRuleRequiresProvider(t *testing.T) {
 }
 
 func TestCreateFailsIfExists(t *testing.T) {
-	root := setupGoProject(t)
-	os.MkdirAll(filepath.Join(root, "skills"), 0755)
-	withFakeRepoRoot(t, root)
+	globalDir := t.TempDir()
+	withGlobalContentDir(t, globalDir)
 
 	// Pre-create the directory
-	dest := filepath.Join(root, "local", "skills", "existing-skill")
+	dest := filepath.Join(globalDir, "skills", "existing-skill")
 	os.MkdirAll(dest, 0755)
 
 	err := createCmd.RunE(createCmd, []string{"skills", "existing-skill"})
@@ -102,9 +107,8 @@ func TestCreateFailsIfExists(t *testing.T) {
 }
 
 func TestCreateWithProvider(t *testing.T) {
-	root := setupGoProject(t)
-	os.MkdirAll(filepath.Join(root, "skills"), 0755)
-	withFakeRepoRoot(t, root)
+	globalDir := t.TempDir()
+	withGlobalContentDir(t, globalDir)
 
 	createCmd.Flags().Set("provider", "claude-code")
 	t.Cleanup(func() { createCmd.Flags().Set("provider", "") })
@@ -114,8 +118,8 @@ func TestCreateWithProvider(t *testing.T) {
 		t.Fatalf("create rule with --provider should succeed: %v", err)
 	}
 
-	// Verify provider-specific path: local/rules/claude-code/my-rule/
-	dest := filepath.Join(root, "local", "rules", "claude-code", "my-rule")
+	// Verify provider-specific path: <globalDir>/rules/claude-code/my-rule/
+	dest := filepath.Join(globalDir, "rules", "claude-code", "my-rule")
 	if _, err := os.Stat(dest); os.IsNotExist(err) {
 		t.Fatalf("expected directory %s to exist", dest)
 	}

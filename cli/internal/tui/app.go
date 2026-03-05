@@ -133,12 +133,12 @@ func (a *App) handleConfirmAction() tea.Cmd {
 	switch a.modal.purpose {
 	case modalUninstall:
 		a.detail.doUninstallAll()
-	case modalPromote:
+	case modalShare:
 		repoRoot := a.detail.repoRoot
 		item := a.detail.item
 		return func() tea.Msg {
-			result, err := promote.Promote(repoRoot, item)
-			return promoteDoneMsg{result: result, err: err}
+			result, err := promote.Promote(repoRoot, item, false)
+			return shareDoneMsg{result: result, err: err}
 		}
 	case modalAppScript:
 		return a.detail.runAppScript()
@@ -194,14 +194,14 @@ func (a *App) refreshSidebarCounts() {
 		counts[ct] = len(a.visibleItems(a.catalog.ByType(ct)))
 	}
 	a.sidebar.counts = counts
-	a.sidebar.localCount = len(a.visibleItems(a.localItems()))
+	a.sidebar.libraryCount = len(a.visibleItems(a.libraryItems()))
 }
 
-// localItems returns all local items from the catalog.
-func (a App) localItems() []catalog.ContentItem {
+// libraryItems returns all library items from the catalog.
+func (a App) libraryItems() []catalog.ContentItem {
 	var result []catalog.ContentItem
 	for _, item := range a.catalog.Items {
-		if item.Local {
+		if item.Library {
 			result = append(result, item)
 		}
 	}
@@ -246,12 +246,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, cmd
 		}
 
-	case promoteDoneMsg:
+	case shareDoneMsg:
 		if a.screen == screenDetail {
 			a.cachedDetail = nil // invalidate cache
 			var cmd tea.Cmd
 			a.detail, cmd = a.detail.Update(msg)
-			// Rescan catalog after promote
+			// Rescan catalog after share
 			if msg.err == nil {
 				cat, err := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
 				if err == nil {
@@ -279,7 +279,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case importDoneMsg:
 		a.cachedDetail = nil // invalidate cache
 		if msg.err != nil {
-			a.importer.message = fmt.Sprintf("Import failed: %s", msg.err)
+			a.importer.message = fmt.Sprintf("Add failed: %s", msg.err)
 			a.importer.messageIsErr = true
 			return a, nil
 		}
@@ -287,7 +287,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cat, err := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
 		if err == nil {
 			a.catalog = cat
-			a.statusMessage = fmt.Sprintf("Imported %q successfully", msg.name)
+			a.statusMessage = fmt.Sprintf("Added %q to library", msg.name)
 		} else {
 			a.statusMessage = fmt.Sprintf("Imported %q but catalog rescan failed: %s", msg.name, err)
 		}
@@ -886,9 +886,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				var source []catalog.ContentItem
 				if ct == catalog.SearchResults {
 					source = a.visibleItems(a.catalog.Items)
-				} else if ct == catalog.MyTools {
+				} else if ct == catalog.Library {
 					for _, item := range a.visibleItems(a.catalog.Items) {
-						if item.Local {
+						if item.Library {
 							source = append(source, item)
 						}
 					}
@@ -962,8 +962,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						a.focus = focusContent
 						return a, nil
 					}
-					if a.sidebar.isImportSelected() {
-						a.importer = newImportModel(a.providers, a.catalog.RepoRoot)
+					if a.sidebar.isAddSelected() {
+						a.importer = newImportModel(a.providers, a.catalog.RepoRoot, a.projectRoot)
 						a.importer.width = a.width - sidebarWidth - 1
 						a.importer.height = a.panelHeight()
 						a.screen = screenImport
@@ -986,14 +986,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						a.focus = focusContent
 						return a, nil
 					}
-					if a.sidebar.isMyToolsSelected() {
+					if a.sidebar.isLibrarySelected() {
 						var localItems []catalog.ContentItem
 						for _, item := range a.visibleItems(a.catalog.Items) {
-							if item.Local {
+							if item.Library {
 								localItems = append(localItems, item)
 							}
 						}
-						items := newItemsModel(catalog.MyTools, localItems, a.providers, a.catalog.RepoRoot)
+						items := newItemsModel(catalog.Library, localItems, a.providers, a.catalog.RepoRoot)
 						items.hiddenCount = countHidden(a.catalog.Items)
 						items.width = a.width - sidebarWidth - 1
 						items.height = a.panelHeight()
@@ -1038,14 +1038,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.showHidden = !a.showHidden
 				a.refreshSidebarCounts()
 				ct := a.items.contentType
-				if ct == catalog.MyTools {
+				if ct == catalog.Library {
 					var localItems []catalog.ContentItem
 					for _, item := range a.visibleItems(a.catalog.Items) {
-						if item.Local {
+						if item.Library {
 							localItems = append(localItems, item)
 						}
 					}
-					items := newItemsModel(catalog.MyTools, localItems, a.providers, a.catalog.RepoRoot)
+					items := newItemsModel(catalog.Library, localItems, a.providers, a.catalog.RepoRoot)
 					items.hiddenCount = countHidden(a.catalog.Items)
 					items.width = a.items.width
 					items.height = a.items.height
@@ -1115,14 +1115,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return a, nil
 				}
 				// Refresh items to show updated install status, unless search results
-				if a.items.contentType == catalog.MyTools {
+				if a.items.contentType == catalog.Library {
 					var localItems []catalog.ContentItem
 					for _, item := range a.visibleItems(a.catalog.Items) {
-						if item.Local {
+						if item.Library {
 							localItems = append(localItems, item)
 						}
 					}
-					items := newItemsModel(catalog.MyTools, localItems, a.providers, a.catalog.RepoRoot)
+					items := newItemsModel(catalog.Library, localItems, a.providers, a.catalog.RepoRoot)
 					items.hiddenCount = countHidden(a.catalog.Items)
 					items.width = a.width
 					items.height = a.panelHeight()

@@ -16,11 +16,8 @@ func setupInspectRepo(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 
-	// Create the skills/ marker.
-	os.MkdirAll(filepath.Join(root, "skills"), 0755)
-
-	// Create a skill in local/.
-	skillDir := filepath.Join(root, "local", "skills", "my-skill")
+	// Create a shared skill (directly in skills/).
+	skillDir := filepath.Join(root, "skills", "my-skill")
 	os.MkdirAll(skillDir, 0755)
 	os.WriteFile(filepath.Join(skillDir, "SKILL.md"),
 		[]byte("---\nname: My Skill\ndescription: Reviews Go code\n---\nUse the Bash tool to run tests.\n"), 0644)
@@ -50,8 +47,8 @@ func TestInspectShowsItemDetails(t *testing.T) {
 	if !strings.Contains(out, "Type:    Skills") {
 		t.Errorf("expected 'Type:    Skills' in output, got:\n%s", out)
 	}
-	if !strings.Contains(out, "Source:  local") {
-		t.Errorf("expected 'Source:  local' in output, got:\n%s", out)
+	if !strings.Contains(out, "Source:  shared") {
+		t.Errorf("expected 'Source:  shared' in output, got:\n%s", out)
 	}
 	if !strings.Contains(out, "Desc:    Reviews Go code") {
 		t.Errorf("expected description in output, got:\n%s", out)
@@ -109,8 +106,8 @@ func TestInspectJSON(t *testing.T) {
 	if result.Type != "Skills" {
 		t.Errorf("type = %q, want %q", result.Type, "Skills")
 	}
-	if result.Source != "local" {
-		t.Errorf("source = %q, want %q", result.Source, "local")
+	if result.Source != "shared" {
+		t.Errorf("source = %q, want %q", result.Source, "shared")
 	}
 	if len(result.Risks) == 0 {
 		t.Error("expected at least one risk indicator in JSON output")
@@ -135,9 +132,8 @@ func TestInspectInvalidPath(t *testing.T) {
 func TestInspectProviderSpecific(t *testing.T) {
 	root := t.TempDir()
 
-	// Create marker and provider-specific rule.
-	os.MkdirAll(filepath.Join(root, "skills"), 0755)
-	ruleDir := filepath.Join(root, "local", "rules", "claude-code", "my-rule")
+	// Create a shared provider-specific rule.
+	ruleDir := filepath.Join(root, "rules", "claude-code", "my-rule")
 	os.MkdirAll(ruleDir, 0755)
 	os.WriteFile(filepath.Join(ruleDir, "rule.md"), []byte("# My Rule\nAlways use tests.\n"), 0644)
 	os.WriteFile(filepath.Join(ruleDir, "README.md"), []byte("# my-rule\nA testing rule.\n"), 0644)

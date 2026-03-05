@@ -110,3 +110,48 @@ func findItemByPath(cat *catalog.Catalog, path string) (*catalog.ContentItem, er
 
 	return nil, fmt.Errorf("item not found: %s", path)
 }
+
+// effectiveProvider returns the source provider for an item. For provider-specific
+// types (rules, hooks, commands) this comes from the directory structure. For universal
+// types (skills, agents, mcp) it comes from .syllago.yaml metadata.
+func effectiveProvider(item catalog.ContentItem) string {
+	if item.Provider != "" {
+		return item.Provider
+	}
+	if item.Meta != nil && item.Meta.SourceProvider != "" {
+		return item.Meta.SourceProvider
+	}
+	return ""
+}
+
+// exportWarnMessage returns a warning string if the item is example or built-in
+// content. These items are provided by syllago and may conflict with provider defaults
+// or aren't intended for direct use. Returns "" for normal items.
+func exportWarnMessage(item catalog.ContentItem) string {
+	if item.IsExample() {
+		return "example content (for reference, not intended for direct use)"
+	}
+	if item.IsBuiltin() {
+		return "built-in syllago content (may conflict with provider defaults)"
+	}
+	return ""
+}
+
+// filterBySource returns true if the item matches the given source filter.
+// Valid source values: "library", "shared", "registry", "builtin", "all".
+func filterBySource(item catalog.ContentItem, source string) bool {
+	switch source {
+	case "library":
+		return item.Library
+	case "shared":
+		return !item.Library && item.Registry == "" && !item.IsBuiltin()
+	case "registry":
+		return item.Registry != ""
+	case "builtin":
+		return item.IsBuiltin()
+	case "all":
+		return true
+	default:
+		return item.Library
+	}
+}

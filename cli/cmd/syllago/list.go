@@ -14,15 +14,15 @@ var listCmd = &cobra.Command{
 	Long: `Show a quick inventory of all content without launching the TUI.
 
 By default, lists all content grouped by type. Use flags to filter:
-  syllago list                    All content, grouped by type
-  syllago list --source local     Only local items
-  syllago list --type skills      Only skills
-  syllago list --json             JSON output`,
+  syllago list                      All content, grouped by type
+  syllago list --source library     Only library items
+  syllago list --type skills        Only skills
+  syllago list --json               JSON output`,
 	RunE: runList,
 }
 
 func init() {
-	listCmd.Flags().String("source", "all", "Filter by source: local, shared, registry, builtin, all")
+	listCmd.Flags().String("source", "all", "Filter by source: library, shared, registry, builtin, all")
 	listCmd.Flags().String("type", "", "Filter to one content type (e.g., skills, rules)")
 	rootCmd.AddCommand(listCmd)
 }
@@ -123,8 +123,8 @@ func sourceLabel(item catalog.ContentItem) string {
 		return "builtin"
 	case item.Registry != "":
 		return "registry"
-	case item.Local:
-		return "local"
+	case item.Library:
+		return "library"
 	default:
 		return "shared"
 	}

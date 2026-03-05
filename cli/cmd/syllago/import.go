@@ -252,38 +252,7 @@ func writeImportedContent(projectRoot string, file parse.DiscoveredFile, sourceP
 	return destDir, nil
 }
 
-// itemNameFromPath derives an item name from a file path.
-// Uses the filename without extension (e.g. "security.md" -> "security").
-func itemNameFromPath(path string) string {
-	base := filepath.Base(path)
-	ext := filepath.Ext(base)
-	return strings.TrimSuffix(base, ext)
-}
-
-// contentFileForType returns the canonical content filename for a content type.
-func contentFileForType(ct catalog.ContentType, name string, ext string) string {
-	if ext == "" {
-		ext = ".md"
-	}
-	switch ct {
-	case catalog.Rules:
-		return "rule" + ext
-	case catalog.Hooks:
-		return "hook.json"
-	case catalog.Commands:
-		return "command" + ext
-	case catalog.Skills:
-		return "SKILL.md"
-	case catalog.Agents:
-		return "agent.md"
-	case catalog.Prompts:
-		return "PROMPT.md"
-	case catalog.MCP:
-		return "mcp.json"
-	default:
-		return name + ext
-	}
-}
+// itemNameFromPath and contentFileForType are defined in add_cmd.go.
 
 func printDiscoveryReport(report parse.DiscoveryReport) {
 	fmt.Fprintf(output.Writer, "Import from %s:\n", report.Provider)

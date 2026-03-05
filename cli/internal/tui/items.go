@@ -121,7 +121,7 @@ type itemsModel struct {
 
 func newItemsModel(ct catalog.ContentType, items []catalog.ContentItem, providers []provider.Provider, repoRoot string) itemsModel {
 	// Sort My Tools by type (in display order) so grouped rendering shows contiguous sections
-	if ct == catalog.MyTools && len(items) > 1 {
+	if ct == catalog.Library && len(items) > 1 {
 		typeOrder := make(map[catalog.ContentType]int)
 		for idx, t := range catalog.AllContentTypes() {
 			typeOrder[t] = idx
@@ -253,16 +253,16 @@ func (m itemsModel) View() string {
 		s = home + arrow + reg + arrow + titleStyle.Render(m.sourceRegistry) + "\n\n"
 	case m.contentType == catalog.SearchResults:
 		s = home + arrow + titleStyle.Render(fmt.Sprintf("Search Results (%d)", len(m.items))) + "\n\n"
-	case m.contentType == catalog.MyTools:
-		s = home + arrow + titleStyle.Render(fmt.Sprintf("My Tools (%d)", len(m.items))) + "\n\n"
+	case m.contentType == catalog.Library:
+		s = home + arrow + titleStyle.Render(fmt.Sprintf("Library (%d)", len(m.items))) + "\n\n"
 	default:
 		s = home + arrow + titleStyle.Render(m.contentType.Label()) + "\n\n"
 	}
 
 	if len(m.items) == 0 {
 		s += helpStyle.Render("  No items found") + "\n"
-		if m.contentType == catalog.MyTools {
-			s += "\n" + helpStyle.Render("  Use Import to add content, or run 'syllago add' from the command line.") + "\n"
+		if m.contentType == catalog.Library {
+			s += "\n" + helpStyle.Render("  Use Add to add content, or run 'syllago add' from the command line.") + "\n"
 		}
 		s += "\n" + helpStyle.Render("esc back")
 		return s
@@ -271,7 +271,7 @@ func (m itemsModel) View() string {
 	relevant := m.relevantProviders()
 	isProvSpecific := !m.contentType.IsUniversal()
 	showProvCol := isProvSpecific || len(relevant) > 0
-	if m.contentType == catalog.MyTools {
+	if m.contentType == catalog.Library {
 		showProvCol = false // grouped headers replace provider column
 	}
 	isHooks := m.contentType == catalog.Hooks
@@ -331,8 +331,8 @@ func (m itemsModel) View() string {
 		descW = 10
 	}
 
-	// Table header (skip for MyTools — group headers replace it)
-	if m.contentType != catalog.MyTools {
+	// Table header (skip for Library — group headers replace it)
+	if m.contentType != catalog.Library {
 		hdr := strings.Repeat(" ", cursorWidth)
 		if isHooks {
 			hdr += fmt.Sprintf("%-*s  %-*s", nameW, "Name", descW, "Description")
@@ -390,8 +390,8 @@ func (m itemsModel) View() string {
 	for i := offset; i < end; i++ {
 		item := m.items[i]
 
-		// Group headers for MyTools — insert section label when type changes
-		if m.contentType == catalog.MyTools && item.Type != prevGroupType {
+		// Group headers for Library — insert section label when type changes
+		if m.contentType == catalog.Library && item.Type != prevGroupType {
 			if prevGroupType != "" {
 				s += "\n"
 			}
@@ -424,9 +424,9 @@ func (m itemsModel) View() string {
 		} else if item.IsBuiltin() {
 			localPrefix = builtinStyle.Render("[BUILT-IN]") + " "
 			localPrefixLen = 11 // "[BUILT-IN] "
-		} else if item.Local {
-			localPrefix = warningStyle.Render("[LOCAL]") + " "
-			localPrefixLen = 8 // "[LOCAL] "
+		} else if item.Library {
+			localPrefix = warningStyle.Render("[LIBRARY]") + " "
+			localPrefixLen = 10 // "[LIBRARY] "
 		} else if item.Registry != "" {
 			tag := "[" + item.Registry + "]"
 			localPrefix = countStyle.Render(tag) + " "

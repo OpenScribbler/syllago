@@ -18,6 +18,13 @@ For TUI visual changes, regenerate golden baselines after tests pass:
 cd cli && go test ./internal/tui/ -update-golden
 ```
 
+## Project Status
+
+Syllago is **pre-release and unpublished**. No users depend on current APIs, CLI commands, or file formats. This means:
+- No backwards compatibility, migration paths, or deprecation periods needed
+- Commands, terminology, and file layouts can change freely
+- Optimize for getting it right, not for preserving what exists
+
 ## Key Conventions
 
 - **Hooks and MCP configs** merge into provider settings files (JSON merge). All other content types use filesystem (files, dirs, symlinks).

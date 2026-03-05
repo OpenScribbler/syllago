@@ -24,10 +24,9 @@ func IsValidItemName(name string) bool {
 	return validItemNameRe.MatchString(name)
 }
 
-// Scan walks contentRoot and projectRoot/local/ to discover all content items.
+// Scan walks contentRoot to discover all content items.
 // contentRoot is the directory containing shared content directories (skills/, agents/, etc.).
-// projectRoot is the project root where local/ lives. Pass the same value for both when
-// the project has not been restructured (contentRoot == projectRoot).
+// projectRoot is unused but kept for API compatibility.
 func Scan(contentRoot string, projectRoot string) (*Catalog, error) {
 	cat := &Catalog{RepoRoot: contentRoot}
 
@@ -36,19 +35,11 @@ func Scan(contentRoot string, projectRoot string) (*Catalog, error) {
 		return nil, err
 	}
 
-	// Scan local content from projectRoot/local/ (gitignored, never under contentRoot)
-	myToolsDir := filepath.Join(projectRoot, "local")
-	if _, err := os.Stat(myToolsDir); err == nil {
-		if err := scanRoot(cat, myToolsDir, true); err != nil {
-			return nil, err
-		}
-	}
-
 	applyPrecedence(cat)
 	return cat, nil
 }
 
-// ScanWithRegistries scans contentRoot (including projectRoot/local/) plus any provided
+// ScanWithRegistries scans contentRoot plus the global library plus any provided
 // registry sources. Registry items are tagged with their registry name.
 // Per-registry scan errors are logged to stderr but do not fail the overall scan.
 func ScanWithRegistries(contentRoot string, projectRoot string, registries []RegistrySource) (*Catalog, error) {
@@ -92,7 +83,7 @@ func ScanRegistriesOnly(registries []RegistrySource) (*Catalog, error) {
 }
 
 // scanRoot scans a base directory for content items of all types.
-// If local is true, discovered items are marked as local (local/).
+// If local is true, discovered items are marked as Library items.
 func scanRoot(cat *Catalog, baseDir string, local bool) error {
 	for _, ct := range AllContentTypes() {
 		typeDir := filepath.Join(baseDir, string(ct))
@@ -132,10 +123,10 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 
 		itemDir := filepath.Join(typeDir, entry.Name())
 		item := ContentItem{
-			Name:  entry.Name(),
-			Type:  ct,
-			Path:  itemDir,
-			Local: local,
+			Name:    entry.Name(),
+			Type:    ct,
+			Path:    itemDir,
+			Library: local,
 		}
 
 		switch ct {
@@ -271,7 +262,7 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 					Type:     ct,
 					Path:     filePath,
 					Provider: providerName,
-					Local:    local,
+					Library:  local,
 				}
 				if strings.HasSuffix(child.Name(), ".md") {
 					item.Description = readDescription(filePath)
@@ -306,7 +297,7 @@ func scanProviderDir(itemDir string, ct ContentType, providerName string, local 
 		Type:     ct,
 		Path:     itemDir,
 		Provider: providerName,
-		Local:    local,
+		Library:  local,
 	}
 
 	// Find the content file by type
@@ -446,7 +437,7 @@ func collectFiles(itemDir string, baseDir string) []string {
 }
 
 // describeHookJSON generates a description from hook JSON content.
-// Handles Claude Code format: {"hooks":{"Event":[{"matcher":"..."}]}}
+// Handles canonical format: {"hooks":{"Event":[{"matcher":"..."}]}}
 // Falls back to flat format: {"event":"...", "matcher":"..."}
 func describeHookJSON(data []byte) string {
 	// Try Claude Code hooks format: {"hooks":{"PostToolUse":[...]}}
@@ -493,9 +484,16 @@ func readDescription(path string) string {
 	return ""
 }
 
+// GlobalContentDirOverride overrides the default global content directory for testing.
+// When non-empty, GlobalContentDir returns this value instead of ~/.syllago/content.
+var GlobalContentDirOverride string
+
 // GlobalContentDir returns the path to the global syllago content directory.
 // Returns "" if home directory cannot be determined.
 func GlobalContentDir() string {
+	if GlobalContentDirOverride != "" {
+		return GlobalContentDirOverride
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ""
@@ -516,8 +514,8 @@ func ScanWithGlobalAndRegistries(contentRoot string, projectRoot string, registr
 	// Tag existing items with their source
 	for i := range cat.Items {
 		if cat.Items[i].Source == "" {
-			if cat.Items[i].Local {
-				cat.Items[i].Source = "local"
+			if cat.Items[i].Library {
+				cat.Items[i].Source = "library"
 			} else if cat.Items[i].Registry != "" {
 				cat.Items[i].Source = cat.Items[i].Registry
 			} else {
@@ -547,14 +545,27 @@ func ScanWithGlobalAndRegistries(contentRoot string, projectRoot string, registr
 		projectNames[string(item.Type)+"/"+item.Name] = true
 	}
 
+	// applyPrecedence must run before processing global items so that its
+	// replacement of cat.Overridden does not discard global shadow entries.
+	applyPrecedence(cat)
+
+	// Re-build projectNames from the post-precedence Items list.
+	projectNames = make(map[string]bool)
+	for _, item := range cat.Items {
+		projectNames[string(item.Type)+"/"+item.Name] = true
+	}
+
 	for i := range globalCat.Items {
 		globalCat.Items[i].Source = "global"
+		globalCat.Items[i].Library = true
 		key := string(globalCat.Items[i].Type) + "/" + globalCat.Items[i].Name
 		if !projectNames[key] {
 			cat.Items = append(cat.Items, globalCat.Items[i])
+		} else {
+			// Project item takes precedence; keep global item in Overridden
+			// so CleanupPromotedItems can find and remove it if needed.
+			cat.Overridden = append(cat.Overridden, globalCat.Items[i])
 		}
 	}
-
-	applyPrecedence(cat)
 	return cat, nil
 }

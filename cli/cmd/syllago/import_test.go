@@ -11,36 +11,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/parse"
 )
 
-// settingsJSON is a minimal claude-code settings.json with two hook groups.
-const settingsJSON = `{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [{"type": "command", "command": "echo pre-bash", "statusMessage": "pre-bash-check"}]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit",
-        "hooks": [{"type": "command", "command": "echo post-edit", "statusMessage": "post-edit-check"}]
-      }
-    ]
-  }
-}`
-
-// setupHooksProject creates a temp dir with a project-scoped .claude/settings.json.
-// Returns the temp dir path.
-func setupHooksProject(t *testing.T) string {
-	t.Helper()
-	tmp := t.TempDir()
-
-	claudeDir := filepath.Join(tmp, ".claude")
-	os.MkdirAll(claudeDir, 0755)
-	os.WriteFile(filepath.Join(claudeDir, "settings.json"), []byte(settingsJSON), 0644)
-
-	return tmp
-}
+// settingsJSON and setupHooksProject are defined in add_cmd_test.go.
 
 func TestImportRequiresFrom(t *testing.T) {
 	// Reset flags

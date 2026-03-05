@@ -69,6 +69,8 @@ func TestSyncAndExportNoRegistries(t *testing.T) {
 	defer syncAndExportCmd.Flags().Set("to", "")
 	syncAndExportCmd.Flags().Set("type", "skills")
 	defer syncAndExportCmd.Flags().Set("type", "")
+	syncAndExportCmd.Flags().Set("source", "shared")
+	defer syncAndExportCmd.Flags().Set("source", "local")
 
 	err := syncAndExportCmd.RunE(syncAndExportCmd, []string{})
 	if err != nil {

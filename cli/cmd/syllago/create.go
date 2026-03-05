@@ -15,9 +15,9 @@ import (
 
 var createCmd = &cobra.Command{
 	Use:   "create <type> <name>",
-	Short: "Scaffold a new content item in local/",
-	Long: `Creates a new content item directory under local/ with template files
-and .syllago.yaml metadata.
+	Short: "Scaffold a new content item in the global library",
+	Long: `Creates a new content item directory under ~/.syllago/content/ with
+.syllago.yaml metadata.
 
 Examples:
   syllago create skills my-new-skill
@@ -66,14 +66,14 @@ func validateCreateArgs(typeName, name, providerSlug string) (catalog.ContentTyp
 	return ct, nil
 }
 
-// destDirForCreate returns the target directory for a new item.
-// Universal types: local/<type>/<name>/
-// Provider-specific types: local/<type>/<provider>/<name>/
-func destDirForCreate(root string, ct catalog.ContentType, name, providerSlug string) string {
+// destDirForCreate returns the target directory for a new item in the global library.
+// Universal types: <globalDir>/<type>/<name>/
+// Provider-specific types: <globalDir>/<type>/<provider>/<name>/
+func destDirForCreate(globalDir string, ct catalog.ContentType, name, providerSlug string) string {
 	if ct.IsUniversal() {
-		return filepath.Join(root, "local", string(ct), name)
+		return filepath.Join(globalDir, string(ct), name)
 	}
-	return filepath.Join(root, "local", string(ct), providerSlug, name)
+	return filepath.Join(globalDir, string(ct), providerSlug, name)
 }
 
 // scaffoldFromTemplate copies template files from templates/<type>/ into dest,
@@ -143,20 +143,20 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	root, err := findContentRepoRoot()
-	if err != nil {
-		return fmt.Errorf("could not find syllago content repository: %w", err)
+	globalDir := catalog.GlobalContentDir()
+	if globalDir == "" {
+		return fmt.Errorf("cannot determine home directory")
 	}
 
-	dest := destDirForCreate(root, ct, name, providerSlug)
+	dest := destDirForCreate(globalDir, ct, name, providerSlug)
 
 	// Check if item already exists
 	if _, err := os.Stat(dest); err == nil {
 		return fmt.Errorf("item already exists at %s", dest)
 	}
 
-	// Scaffold from template (or create empty directory)
-	if err := scaffoldFromTemplate(root, dest, name, ct); err != nil {
+	// Create the item directory (with optional template scaffold)
+	if err := scaffoldFromTemplate(globalDir, dest, name, ct); err != nil {
 		return fmt.Errorf("scaffolding template: %w", err)
 	}
 

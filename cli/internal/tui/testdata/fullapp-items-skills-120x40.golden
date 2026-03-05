@@ -4,16 +4,16 @@ syllago           │Home > Skills
 ▸ Skills        3 │    ───────────  ──────────────────────────────────────────────────────────────────────────  ────────
   Agents        1 │  > alpha-skill  A helpful skill
   Prompts       1 │    beta-skill   Another skill
-  MCP Configs   1 │    local-skill  [LOCAL] A local skill with LLM prompt
+  MCP Configs   1 │    local-skill  [LIBRARY] A library skill with LLM prompt
   Apps          1 │
   Rules         1 │up/down navigate • enter detail • esc back • / search
   Hooks         1 │
   Commands      1 │
   Loadouts      0 │
-  My Tools      1 │
+  Library       1 │
   ─────────────   │
   Configuration   │
-  Import          │
+  Add             │
   Update          │
   Settings        │
   Registries      │

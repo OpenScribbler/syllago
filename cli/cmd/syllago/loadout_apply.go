@@ -11,6 +11,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/loadout"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -35,6 +36,8 @@ func init() {
 	loadoutApplyCmd.Flags().Bool("keep", false, "Apply permanently")
 	loadoutApplyCmd.Flags().Bool("preview", false, "Dry run: show planned actions without applying")
 	loadoutApplyCmd.Flags().String("base-dir", "", "Override base directory for content installation")
+	loadoutApplyCmd.Flags().String("to", "", "Target provider (overrides manifest provider; defaults to claude-code if unset)")
+	loadoutApplyCmd.Flags().String("method", "symlink", "Install method: symlink (default) or copy")
 	loadoutCmd.AddCommand(loadoutApplyCmd)
 }
 
@@ -160,10 +163,38 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("expanding paths: %w", err)
 	}
 
-	// Apply
-	prov := provider.ClaudeCode
+	// Resolve target provider: --to flag > manifest field > default to claude-code
+	toSlug, _ := cmd.Flags().GetString("to")
+	methodStr, _ := cmd.Flags().GetString("method")
+	method := installer.MethodSymlink
+	if methodStr == "copy" {
+		method = installer.MethodCopy
+	}
+
+	var prov provider.Provider
+	if toSlug != "" {
+		p := findProviderBySlug(toSlug)
+		if p == nil {
+			slugs := providerSlugs()
+			output.PrintError(1, "unknown provider: "+toSlug,
+				"Available: "+strings.Join(slugs, ", "))
+			return output.SilentError(fmt.Errorf("unknown provider: %s", toSlug))
+		}
+		prov = *p
+	} else if manifest.Provider != "" {
+		p := findProviderBySlug(manifest.Provider)
+		if p == nil {
+			return fmt.Errorf("loadout manifest specifies unknown provider: %s", manifest.Provider)
+		}
+		prov = *p
+	} else {
+		// Default to ClaudeCode for backwards compatibility
+		prov = provider.ClaudeCode
+	}
+
 	opts := loadout.ApplyOptions{
 		Mode:        mode,
+		Method:      method,
 		ProjectRoot: projectRoot,
 		RepoRoot:    root,
 		Resolver:    resolver,
