@@ -77,8 +77,8 @@ func TestCreateWritesSyllagoYaml(t *testing.T) {
 	if meta.CreatedAt == nil {
 		t.Error("expected CreatedAt to be set")
 	}
-	if meta.ImportedAt != nil {
-		t.Errorf("expected ImportedAt to be nil for created items, got %v", meta.ImportedAt)
+	if meta.AddedAt != nil {
+		t.Errorf("expected AddedAt to be nil for created items, got %v", meta.AddedAt)
 	}
 }
 

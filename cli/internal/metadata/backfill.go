@@ -17,12 +17,12 @@ func Backfill(itemDir, name, contentType, author string) error {
 
 	now := time.Now()
 	meta := &Meta{
-		ID:         NewID(),
-		Name:       name,
-		Type:       contentType,
-		Author:     author,
-		Source:     "created",
-		ImportedAt: &now,
+		ID:      NewID(),
+		Name:    name,
+		Type:    contentType,
+		Author:  author,
+		Source:  "created",
+		AddedAt: &now,
 	}
 	return Save(itemDir, meta)
 }

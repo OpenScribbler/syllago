@@ -963,12 +963,12 @@ func (m importModel) doImport() (string, []string, error) {
 		source = m.urlInput.Value()
 	}
 	meta := &metadata.Meta{
-		ID:         metadata.NewID(),
-		Name:       m.itemName,
-		Type:       string(m.contentType),
-		Source:     source,
-		ImportedAt: &now,
-		ImportedBy: gitutil.Username(),
+		ID:      metadata.NewID(),
+		Name:    m.itemName,
+		Type:    string(m.contentType),
+		Source:  source,
+		AddedAt: &now,
+		AddedBy: gitutil.Username(),
 	}
 	// For universal types, save in the item directory.
 	// For provider-specific types, save as provider-specific metadata.
@@ -1042,12 +1042,12 @@ func (m importModel) doScaffold() (string, []string, error) {
 	// Generate .syllago.yaml
 	now := time.Now()
 	meta := &metadata.Meta{
-		ID:         metadata.NewID(),
-		Name:       m.itemName,
-		Type:       string(m.contentType),
-		Source:     "created",
-		ImportedAt: &now,
-		ImportedBy: gitutil.Username(),
+		ID:      metadata.NewID(),
+		Name:    m.itemName,
+		Type:    string(m.contentType),
+		Source:  "created",
+		AddedAt: &now,
+		AddedBy: gitutil.Username(),
 	}
 	if err := metadata.Save(dest, meta); err != nil {
 		warnings = append(warnings, fmt.Sprintf("Failed to save metadata for %s: %s", m.itemName, err))
@@ -1174,12 +1174,12 @@ func (m importModel) doBatchImportWithOverwrite(paths []string, overwrite map[st
 		// Generate metadata
 		now := time.Now()
 		meta := &metadata.Meta{
-			ID:         metadata.NewID(),
-			Name:       itemName,
-			Type:       string(m.contentType),
-			Source:     srcPath,
-			ImportedAt: &now,
-			ImportedBy: gitutil.Username(),
+			ID:      metadata.NewID(),
+			Name:    itemName,
+			Type:    string(m.contentType),
+			Source:  srcPath,
+			AddedAt: &now,
+			AddedBy: gitutil.Username(),
 		}
 		if m.contentType.IsUniversal() {
 			if err := metadata.Save(dest, meta); err != nil {
