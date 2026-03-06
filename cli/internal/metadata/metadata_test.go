@@ -28,13 +28,13 @@ func TestSaveAndLoad(t *testing.T) {
 
 	now := time.Now().Truncate(time.Second)
 	m := &Meta{
-		ID:         NewID(),
-		Name:       "test-skill",
-		Type:       "skills",
-		Author:     "tester",
-		Source:     "/some/path",
-		ImportedAt: &now,
-		ImportedBy: "test-user",
+		ID:      NewID(),
+		Name:    "test-skill",
+		Type:    "skills",
+		Author:  "tester",
+		Source:  "/some/path",
+		AddedAt: &now,
+		AddedBy: "test-user",
 	}
 
 	if err := Save(itemDir, m); err != nil {
@@ -127,9 +127,26 @@ func TestMetaCreatedAt(t *testing.T) {
 	if !loaded.CreatedAt.Equal(now) {
 		t.Errorf("CreatedAt: got %v, want %v", *loaded.CreatedAt, now)
 	}
-	// ImportedAt should be nil — CreatedAt and ImportedAt are independent
-	if loaded.ImportedAt != nil {
-		t.Error("ImportedAt should be nil for a created (not imported) item")
+}
+
+func TestMetaSourceHash(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	const hash = "abc123def456"
+	m := &Meta{
+		ID:         NewID(),
+		Name:       "test",
+		SourceHash: hash,
+	}
+	if err := Save(dir, m); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	loaded, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if loaded.SourceHash != hash {
+		t.Errorf("SourceHash: got %q, want %q", loaded.SourceHash, hash)
 	}
 }
 

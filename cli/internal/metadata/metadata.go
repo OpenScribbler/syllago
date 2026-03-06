@@ -33,9 +33,7 @@ type Meta struct {
 	Tags           []string     `yaml:"tags,omitempty"`
 	Hidden         bool         `yaml:"hidden,omitempty"`
 	Dependencies   []Dependency `yaml:"dependencies,omitempty"`
-	CreatedAt      *time.Time   `yaml:"created_at,omitempty"`  // when item was scaffolded via syllago create
-	ImportedAt     *time.Time   `yaml:"imported_at,omitempty"` // when item was imported from a provider
-	ImportedBy     string       `yaml:"imported_by,omitempty"`
+	CreatedAt      *time.Time   `yaml:"created_at,omitempty"`      // when item was scaffolded via syllago create
 	PromotedAt     *time.Time   `yaml:"promoted_at,omitempty"`
 	PRBranch       string       `yaml:"pr_branch,omitempty"`
 	SourceProvider string       `yaml:"source_provider,omitempty"` // provider slug content was imported from
@@ -43,6 +41,7 @@ type Meta struct {
 	SourceType     string       `yaml:"source_type,omitempty"`     // git | filesystem | registry | provider
 	SourceURL      string       `yaml:"source_url,omitempty"`      // for future syllago update capability
 	HasSource      bool         `yaml:"has_source,omitempty"`      // whether .source/ directory exists
+	SourceHash     string       `yaml:"source_hash,omitempty"`     // SHA-256 of source content at import time
 	AddedAt        *time.Time   `yaml:"added_at,omitempty"`        // when content was added to library
 	AddedBy        string       `yaml:"added_by,omitempty"`        // e.g. "syllago v0.1.0"
 }
