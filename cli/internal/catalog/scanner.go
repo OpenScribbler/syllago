@@ -159,42 +159,6 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 			if item.Description == "" {
 				item.Description = readDescription(filepath.Join(itemDir, "README.md"))
 			}
-		case Prompts:
-			// Try to parse PROMPT.md for name, description, and body.
-			promptPath := filepath.Join(itemDir, "PROMPT.md")
-			data, err := os.ReadFile(promptPath)
-			if err == nil {
-				fm, body, fmErr := ParseFrontmatterWithBody(data)
-				if fmErr == nil {
-					if fm.Name != "" {
-						item.DisplayName = fm.Name
-					}
-					item.Description = fm.Description
-					item.Body = body
-				}
-			}
-			if item.Description == "" {
-				item.Description = readDescription(filepath.Join(itemDir, "README.md"))
-			}
-		case Apps:
-			readmePath := filepath.Join(itemDir, "README.md")
-			data, err := os.ReadFile(readmePath)
-			if err == nil {
-				fm, body, fmErr := ParseFrontmatterWithBody(data)
-				if fmErr == nil {
-					if fm.Name != "" {
-						item.DisplayName = fm.Name
-					}
-					if fm.Description != "" {
-						item.Description = fm.Description
-					}
-					item.SupportedProviders = fm.Providers
-					item.Body = body
-				} else {
-					item.Description = readDescription(readmePath)
-					item.Body = string(data)
-				}
-			}
 		default:
 			// For other universal types, try README.md for description.
 			item.Description = readDescription(filepath.Join(itemDir, "README.md"))

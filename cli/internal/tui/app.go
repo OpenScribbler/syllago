@@ -1372,9 +1372,7 @@ func (a App) View() string {
 var categoryDesc = map[catalog.ContentType]string{
 	catalog.Skills:   "Reusable skill definitions that extend AI tool capabilities",
 	catalog.Agents:   "Agent configurations with specialized roles and personalities",
-	catalog.Prompts:  "Prompt templates for common tasks and workflows",
 	catalog.MCP:      "Model Context Protocol server configurations",
-	catalog.Apps:     "Application scaffolds and project templates",
 	catalog.Rules:    "Rule files that guide AI coding tool behavior",
 	catalog.Hooks:    "Event-driven hooks for automation and validation",
 	catalog.Commands: "Custom slash commands for AI coding tools",

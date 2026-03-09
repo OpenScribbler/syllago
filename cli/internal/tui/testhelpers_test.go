@@ -67,9 +67,7 @@ func testCatalog(t *testing.T) *catalog.Catalog {
 		makeSkill(t, tmp, "alpha-skill", "A helpful skill", false),
 		makeSkill(t, tmp, "beta-skill", "Another skill", false),
 		makeAgent(t, tmp, "test-agent", "An AI agent"),
-		makePrompt(t, tmp, "test-prompt", "A useful prompt"),
 		makeMCP(t, tmp, "test-mcp", "An MCP server"),
-		makeApp(t, tmp, "test-app", "An app with install.sh"),
 		makeProviderSpecific(t, tmp, "test-rule", catalog.Rules, "claude-code", "A coding rule"),
 		makeProviderSpecific(t, tmp, "test-hook", catalog.Hooks, "claude-code", "A hook"),
 		makeProviderSpecific(t, tmp, "test-cmd", catalog.Commands, "claude-code", "A command"),
@@ -116,22 +114,6 @@ func makeAgent(t *testing.T, root, name, desc string) catalog.ContentItem {
 	}
 }
 
-func makePrompt(t *testing.T, root, name, desc string) catalog.ContentItem {
-	t.Helper()
-	dir := filepath.Join(root, "prompts", name)
-	os.MkdirAll(dir, 0o755)
-	body := "You are a helpful assistant.\nDo the thing."
-	os.WriteFile(filepath.Join(dir, "prompt.md"), []byte(body), 0o644)
-	return catalog.ContentItem{
-		Name:        name,
-		Description: desc,
-		Type:        catalog.Prompts,
-		Path:        dir,
-		Body:        body,
-		Files:       []string{"prompt.md"},
-	}
-}
-
 func makeMCP(t *testing.T, root, name, desc string) catalog.ContentItem {
 	t.Helper()
 	dir := filepath.Join(root, "mcp", name)
@@ -155,24 +137,6 @@ func makeMCP(t *testing.T, root, name, desc string) catalog.ContentItem {
 		Path:        dir,
 		ReadmeBody:  "# " + name,
 		Files:       []string{"config.json", "README.md"},
-	}
-}
-
-func makeApp(t *testing.T, root, name, desc string) catalog.ContentItem {
-	t.Helper()
-	dir := filepath.Join(root, "apps", name)
-	os.MkdirAll(dir, 0o755)
-	os.WriteFile(filepath.Join(dir, "install.sh"), []byte("#!/bin/sh\necho installed"), 0o755)
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# "+name+"\n\nApp readme"), 0o644)
-	return catalog.ContentItem{
-		Name:               name,
-		Description:        desc,
-		Type:               catalog.Apps,
-		Path:               dir,
-		Body:               "# " + name + "\n\nApp readme",
-		ReadmeBody:         "# " + name + "\n\nApp readme",
-		SupportedProviders: []string{"claude-code", "cursor"},
-		Files:              []string{"install.sh", "README.md"},
 	}
 }
 

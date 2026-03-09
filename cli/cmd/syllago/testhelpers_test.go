@@ -72,7 +72,7 @@ func addTestProvider(t *testing.T, slug, name, installBase string) {
 		InstallDir: func(homeDir string, ct catalog.ContentType) string {
 			// Use installBase directly (ignoring homeDir) for test isolation.
 			switch ct {
-			case catalog.Skills, catalog.Agents, catalog.Prompts, catalog.Apps,
+			case catalog.Skills, catalog.Agents,
 				catalog.Rules, catalog.Commands:
 				return filepath.Join(installBase, string(ct))
 			}
@@ -80,7 +80,7 @@ func addTestProvider(t *testing.T, slug, name, installBase string) {
 		},
 		SupportsType: func(ct catalog.ContentType) bool {
 			switch ct {
-			case catalog.Skills, catalog.Agents, catalog.Prompts, catalog.Apps,
+			case catalog.Skills, catalog.Agents,
 				catalog.Rules, catalog.Commands:
 				return true
 			}

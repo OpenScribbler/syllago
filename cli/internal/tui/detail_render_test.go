@@ -14,7 +14,7 @@ func TestRenderContentSplitHasSeparator(t *testing.T) {
 	m := detailModel{
 		item: catalog.ContentItem{
 			Name: "test-tool",
-			Type: catalog.Prompts,
+			Type: catalog.Skills,
 		},
 		width:  60,
 		height: 24,
@@ -30,15 +30,15 @@ func TestRenderContentSplitMetadataInPinned(t *testing.T) {
 	m := detailModel{
 		item: catalog.ContentItem{
 			Name: "test-tool",
-			Type: catalog.Prompts,
+			Type: catalog.Skills,
 		},
 		width:  60,
 		height: 24,
 	}
 	pinned, _ := m.renderContentSplit()
-	// Type label must appear in pinned breadcrumb (Home > Prompts > test-tool)
-	if !strings.Contains(pinned, "Prompts") {
-		t.Error("renderContentSplit pinned section should contain type label in breadcrumb (e.g. 'Prompts')")
+	// Type label must appear in pinned breadcrumb (Home > Skills > test-tool)
+	if !strings.Contains(pinned, "Skills") {
+		t.Error("renderContentSplit pinned section should contain type label in breadcrumb (e.g. 'Skills')")
 	}
 }
 
@@ -46,7 +46,7 @@ func TestRenderContentSplitMetadataInPinned(t *testing.T) {
 // entry with zone.Mark(), which embeds ANSI escape sequences in the output.
 func TestRenderTabBarHasZoneMarks(t *testing.T) {
 	m := detailModel{
-		item:      catalog.ContentItem{Name: "test", Type: catalog.Prompts},
+		item:      catalog.ContentItem{Name: "test", Type: catalog.Skills},
 		activeTab: tabOverview,
 	}
 	tabBar := m.renderTabBar()
@@ -59,7 +59,7 @@ func TestRenderTabBarHasZoneMarks(t *testing.T) {
 
 func TestRenderInstallTabHasActionButtons(t *testing.T) {
 	m := detailModel{
-		item:      catalog.ContentItem{Name: "test-tool", Type: catalog.Prompts},
+		item:      catalog.ContentItem{Name: "test-tool", Type: catalog.Skills},
 		activeTab: tabInstall,
 		width:     60,
 		height:    24,
@@ -73,13 +73,7 @@ func TestRenderInstallTabHasActionButtons(t *testing.T) {
 	if !strings.Contains(stripped, "Uninstall") {
 		t.Error("renderInstallTab() should contain 'Uninstall' action button")
 	}
-	// Copy and Save appear for Prompts type
-	if !strings.Contains(stripped, "Copy") {
-		t.Error("renderInstallTab() for Prompts should contain 'Copy' action button")
-	}
-	if !strings.Contains(stripped, "Save") {
-		t.Error("renderInstallTab() for Prompts should contain 'Save' action button")
-	}
+	// Copy and Save were removed (only appeared for Prompts which is removed)
 }
 
 // TestRenderOverviewTabShowsRiskIndicators verifies that hook items with command
@@ -107,22 +101,21 @@ func TestRenderOverviewTabShowsRiskIndicators(t *testing.T) {
 	}
 }
 
-// TestRenderOverviewTabNoRiskForPrompts verifies that prompt items (which have
+// TestRenderOverviewTabNoRiskForSkills verifies that skill items (which have
 // no risk signals) show nothing extra in the Overview tab.
-func TestRenderOverviewTabNoRiskForPrompts(t *testing.T) {
+func TestRenderOverviewTabNoRiskForSkills(t *testing.T) {
 	m := detailModel{
 		item: catalog.ContentItem{
-			Name:  "safe-prompt",
-			Type:  catalog.Prompts,
-			Body:  "You are a helpful assistant.",
-			Files: []string{"PROMPT.md"},
+			Name:  "safe-skill",
+			Type:  catalog.Skills,
+			Files: []string{"SKILL.md"},
 		},
 		width:  60,
 		height: 24,
 	}
 	body := m.renderOverviewTab()
 	if strings.Contains(body, "⚠") {
-		t.Errorf("Overview tab should not show risk indicators for Prompts, got:\n%s", body)
+		t.Errorf("Overview tab should not show risk indicators for Skills, got:\n%s", body)
 	}
 }
 

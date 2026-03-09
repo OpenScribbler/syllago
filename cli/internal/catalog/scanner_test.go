@@ -187,10 +187,6 @@ func TestScan(t *testing.T) {
 		writeFile(t, filepath.Join(root, "agents", "agent-b", "AGENT.md"),
 			"---\nname: Agent B\ndescription: An agent\n---\n")
 
-		// Prompt
-		writeFile(t, filepath.Join(root, "prompts", "prompt-c", "PROMPT.md"),
-			"---\nname: Prompt C\ndescription: A prompt\n---\nPrompt body here.")
-
 		// Rule (provider-specific)
 		writeFile(t, filepath.Join(root, "rules", "gemini-cli", "setup.md"),
 			"# Setup\nConfigure gemini.\n")
@@ -207,17 +203,8 @@ func TestScan(t *testing.T) {
 		if counts[Agents] != 1 {
 			t.Errorf("Agents count = %d, want 1", counts[Agents])
 		}
-		if counts[Prompts] != 1 {
-			t.Errorf("Prompts count = %d, want 1", counts[Prompts])
-		}
 		if counts[Rules] != 1 {
 			t.Errorf("Rules count = %d, want 1", counts[Rules])
-		}
-
-		// Verify prompt body was captured.
-		prompts := cat.ByType(Prompts)
-		if prompts[0].Body != "Prompt body here." {
-			t.Errorf("Prompt Body = %q, want %q", prompts[0].Body, "Prompt body here.")
 		}
 	})
 }

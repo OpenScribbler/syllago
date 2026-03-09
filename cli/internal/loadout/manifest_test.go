@@ -148,10 +148,6 @@ mcp:
   - mcp-a
 commands:
   - cmd-a
-prompts:
-  - prompt-a
-apps:
-  - app-a
 `
 	os.WriteFile(f, []byte(content), 0644)
 
@@ -159,12 +155,12 @@ apps:
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if m.ItemCount() != 8 {
-		t.Errorf("expected 8 items, got %d", m.ItemCount())
+	if m.ItemCount() != 6 {
+		t.Errorf("expected 6 items, got %d", m.ItemCount())
 	}
 	refs := m.RefsByType()
-	if len(refs) != 8 {
-		t.Errorf("expected 8 content types, got %d", len(refs))
+	if len(refs) != 6 {
+		t.Errorf("expected 6 content types, got %d", len(refs))
 	}
 }
 

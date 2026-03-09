@@ -86,9 +86,8 @@ func TestGoldenFullApp_Modal(t *testing.T) {
 func TestGoldenFullApp_Settings(t *testing.T) {
 	app := testApp(t)
 	// Navigate sidebar to Settings: len(AllContentTypes()) + 3 presses down.
-	// AllContentTypes() has 9 types, then Library (+1), Add (+2), Update (+3), Settings (+4).
-	// Index of Settings = 9 + 3 = 12 (0-based), so 12 down presses from cursor=0.
-	nTypes := 9 // catalog.AllContentTypes() length
+	// AllContentTypes() has 7 types, then Library (+1), Add (+2), Update (+3), Settings (+4).
+	nTypes := len(catalog.AllContentTypes())
 	app = pressN(app, keyDown, nTypes+3)
 	m, _ := app.Update(keyEnter)
 	app = m.(App)

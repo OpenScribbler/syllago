@@ -1,11 +1,9 @@
 syllago           │  AI Tools
                   │  Skills      3 - Reusable skill definiti
   AI Tools        │  Agents      1 - Agent configurations wi
-▸ Skills        3 │  Prompts     1 - Prompt templates for co
-  Agents        1 │  MCP Configs  1 - Model Context Protocol
-  Prompts       1 │  Apps        1 - Application scaffolds a
-  MCP Configs   1 │  Rules       1 - Rule files that guide A
-  Apps          1 │  Hooks       1 - Event-driven hooks for
+▸ Skills        3 │  MCP Configs  1 - Model Context Protocol
+  Agents        1 │  Rules       1 - Rule files that guide A
+  MCP Configs   1 │  Hooks       1 - Event-driven hooks for
   Rules         1 │  Commands    1 - Custom slash commands f
   Hooks         1 │  Loadouts    0 - Curated content bundles
   Commands      1 │

@@ -84,7 +84,6 @@ type detailModel struct {
 	// Sub-models for grouped concerns
 	provCheck        provCheckModel // provider checkbox state (Install tab)
 	appScriptPreview string         // first N lines of install.sh for preview
-	renderedBody     string         // cached glamour-rendered README body (apps only)
 	renderedReadme   string         // cached glamour-rendered README.md (all types)
 	llmPrompt        string         // loaded from LLM-PROMPT.md for local scaffolded items
 	// Override info
@@ -121,13 +120,6 @@ func newDetailModel(item catalog.ContentItem, providers []provider.Provider, rep
 		cfg, _ := installer.ParseMCPConfig(item.Path)
 		m.mcpConfig = cfg
 	}
-	// Pre-render app README body with glamour (cached for performance)
-	if item.Type == catalog.Apps && item.Body != "" {
-		rendered, err := glamour.Render(item.Body, "auto")
-		if err == nil {
-			m.renderedBody = rendered
-		}
-	}
 	// Pre-render ReadmeBody for all types (used in Overview tab)
 	if item.ReadmeBody != "" {
 		rendered, err := glamour.Render(item.ReadmeBody, "auto")
@@ -161,9 +153,9 @@ func newDetailModel(item catalog.ContentItem, providers []provider.Provider, rep
 			}
 		}
 	}
-	// Initialize provider checkboxes for non-prompt items
+	// Initialize provider checkboxes
 	// Pre-check any providers where the item is already installed
-	if item.Type != catalog.Prompts {
+	{
 		detected := m.detectedProviders()
 		m.provCheck.checks = make([]bool, len(detected))
 		for i, p := range detected {
@@ -351,10 +343,6 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 					if m.loadoutModeCursor > 0 {
 						m.loadoutModeCursor--
 					}
-				} else if m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps {
-					if m.scrollOffset > 0 {
-						m.scrollOffset--
-					}
 				} else if len(m.provCheck.checks) > 0 && m.provCheck.cursor > 0 {
 					m.provCheck.cursor--
 					// Skip CompatNone providers when navigating up (hooks only)
@@ -398,9 +386,6 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 					if m.loadoutModeCursor < 2 {
 						m.loadoutModeCursor++
 					}
-				} else if m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps {
-					m.scrollOffset++
-					m.clampScroll()
 				} else if len(m.provCheck.checks) > 0 && m.provCheck.cursor < len(m.provCheck.checks)-1 {
 					m.provCheck.cursor++
 					// Skip CompatNone providers when navigating down (hooks only)
@@ -433,7 +418,6 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 
 		case key.Matches(msg, keys.PageUp):
 			scrollable := m.activeTab == tabOverview ||
-				(m.activeTab == tabInstall && (m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps)) ||
 				(m.activeTab == tabFiles && m.item.Type == catalog.Loadouts)
 			if scrollable {
 				pageSize := m.height - 6
@@ -448,7 +432,6 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 
 		case key.Matches(msg, keys.PageDown):
 			scrollable := m.activeTab == tabOverview ||
-				(m.activeTab == tabInstall && (m.item.Type == catalog.Prompts || m.item.Type == catalog.Apps)) ||
 				(m.activeTab == tabFiles && m.item.Type == catalog.Loadouts)
 			if scrollable {
 				pageSize := m.height - 6
@@ -468,19 +451,8 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			if m.activeTab != tabInstall {
 				break
 			}
-			if m.item.Type == catalog.Prompts || m.item.Type == catalog.Loadouts {
+			if m.item.Type == catalog.Loadouts {
 				break
-			}
-			if m.item.Type == catalog.Apps {
-				itemPath := m.item.Path
-				return m, func() tea.Msg {
-					scriptPreview := loadScriptPreview(itemPath)
-					return openModalMsg{
-						purpose: modalAppScript,
-						title:   "Run install.sh?",
-						body:    "WARNING: executes a shell script.\n\n" + scriptPreview,
-					}
-				}
 			}
 			// Guard: no providers detected
 			if len(m.detectedProviders()) == 0 {
@@ -531,11 +503,8 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			if m.activeTab != tabInstall {
 				break
 			}
-			if m.item.Type == catalog.Prompts || m.item.Type == catalog.Loadouts {
+			if m.item.Type == catalog.Loadouts {
 				break
-			}
-			if m.item.Type == catalog.Apps {
-				return m, m.runAppScript("--uninstall")
 			}
 			// Guard: nothing selected
 			hasChecked := false
@@ -571,17 +540,11 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 		case key.Matches(msg, keys.Copy):
 			if m.item.Library && m.llmPrompt != "" {
 				m.doCopyLLMPrompt()
-			} else if m.item.Type == catalog.Prompts && m.item.Body != "" {
-				m.doCopy()
 			}
 
 		case key.Matches(msg, keys.Save):
-			if m.activeTab != tabInstall {
-				break
-			}
-			if m.item.Type == catalog.Prompts && m.item.Body != "" {
-				return m, func() tea.Msg { return openSaveModalMsg{} }
-			}
+			// Save key currently unused — was for Prompts body save
+			break
 
 		case key.Matches(msg, keys.EnvSetup):
 			if m.activeTab != tabInstall {
@@ -847,16 +810,6 @@ func loadScriptPreview(itemPath string) string {
 		lines = lines[:10]
 	}
 	return strings.Join(lines, "\n")
-}
-
-func (m *detailModel) doCopy() {
-	if err := clipboard.WriteAll(m.item.Body); err != nil {
-		m.message = fmt.Sprintf("Copy failed: %s", err)
-		m.messageIsErr = true
-	} else {
-		m.message = "Prompt copied to clipboard"
-		m.messageIsErr = false
-	}
 }
 
 func (m *detailModel) doCopyLLMPrompt() {

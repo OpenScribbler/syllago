@@ -25,9 +25,8 @@ func TestScanRealRepo(t *testing.T) {
 		t.Fatalf("Scan failed: %v", err)
 	}
 	counts := cat.CountByType()
-	fmt.Printf("Skills: %d, Agents: %d, Prompts: %d, MCP: %d, Apps: %d\n",
-		counts[Skills], counts[Agents], counts[Prompts],
-		counts[MCP], counts[Apps])
+	fmt.Printf("Skills: %d, Agents: %d, MCP: %d\n",
+		counts[Skills], counts[Agents], counts[MCP])
 	fmt.Printf("Rules: %d, Hooks: %d, Commands: %d\n",
 		counts[Rules], counts[Hooks], counts[Commands])
 	for _, item := range cat.Items {

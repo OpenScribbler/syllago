@@ -315,19 +315,6 @@ func TestDetailOverviewNoReadme(t *testing.T) {
 	_ = view
 }
 
-func TestDetailOverviewPromptBody(t *testing.T) {
-	app := navigateToDetail(t, catalog.Prompts)
-	view := app.View()
-	assertContains(t, view, "helpful assistant")
-}
-
-func TestDetailOverviewAppProviders(t *testing.T) {
-	app := navigateToDetail(t, catalog.Apps)
-	view := app.View()
-	// App has SupportedProviders: ["claude-code", "cursor"]
-	assertContains(t, view, "Claude Code")
-}
-
 func TestDetailOverviewMetadata(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 	view := app.View()
@@ -731,37 +718,11 @@ func TestDetailUninstallNothingSelected(t *testing.T) {
 // handled by the centralized confirmModal. Esc behavior is tested in modal_test.go.
 
 // ---------------------------------------------------------------------------
-// Install tab (prompts)
+// Install tab (copy/save)
 // ---------------------------------------------------------------------------
 
-func TestDetailPromptCopy(t *testing.T) {
-	app := navigateToDetail(t, catalog.Prompts)
-
-	// Press 'c' to copy prompt
-	m, _ := app.Update(keyRune('c'))
-	app = m.(App)
-
-	// Should set a message (success or clipboard error)
-	if app.detail.message == "" {
-		t.Fatal("expected message after copy attempt")
-	}
-}
-
-func TestDetailPromptSavePath(t *testing.T) {
-	app := navigateToDetail(t, catalog.Prompts)
-	m, _ := app.Update(keyRune('3')) // Install tab
-	app = m.(App)
-
-	// Press 's' to start save flow — now opens a modal via openSaveModalMsg cmd
-	m, cmd := app.Update(keyRune('s'))
-	app = m.(App)
-
-	// The save flow is modal-based: pressing 's' emits an openSaveModalMsg cmd.
-	// Verify the cmd was returned (the modal will be opened by App.Update on cmd exec).
-	if cmd == nil {
-		t.Fatal("expected 's' to return a cmd (openSaveModalMsg) for the save modal")
-	}
-}
+// TestDetailCopy and TestDetailSavePath removed — they tested Prompts body copy/save
+// which no longer exists. Copy is now only for Library items with LLM prompts.
 
 // ---------------------------------------------------------------------------
 // Install tab (share)
@@ -928,11 +889,12 @@ func TestDetailNextPrevShowsInHelpBar(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestHelpBarNoSaveOnOverviewTab(t *testing.T) {
-	app := navigateToDetail(t, catalog.Prompts)
+	app := navigateToDetail(t, catalog.Skills)
 	// Should be on Overview tab by default
 	view := app.detail.renderHelp()
 	assertNotContains(t, view, "s save")
-	assertContains(t, view, "c copy")
+	// Copy is only shown for library items, not regular Skills
+	assertNotContains(t, view, "c copy")
 }
 
 // ---------------------------------------------------------------------------

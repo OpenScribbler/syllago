@@ -8,9 +8,7 @@ type ContentType string
 const (
 	Skills        ContentType = "skills"
 	Agents        ContentType = "agents"
-	Prompts       ContentType = "prompts"
 	MCP           ContentType = "mcp"
-	Apps          ContentType = "apps"
 	Rules         ContentType = "rules"
 	Hooks         ContentType = "hooks"
 	Commands      ContentType = "commands"
@@ -21,14 +19,14 @@ const (
 
 // AllContentTypes returns all content types in display order.
 func AllContentTypes() []ContentType {
-	return []ContentType{Skills, Agents, Prompts, MCP, Apps, Rules, Hooks, Commands, Loadouts}
+	return []ContentType{Skills, Agents, MCP, Rules, Hooks, Commands, Loadouts}
 }
 
 // IsUniversal returns true if this content type works with any AI tool
 // (as opposed to provider-specific types like rules, hooks, commands).
 func (ct ContentType) IsUniversal() bool {
 	switch ct {
-	case Skills, Agents, Prompts, MCP, Apps:
+	case Skills, Agents, MCP:
 		return true
 	}
 	return false
@@ -41,12 +39,8 @@ func (ct ContentType) Label() string {
 		return "Skills"
 	case Agents:
 		return "Agents"
-	case Prompts:
-		return "Prompts"
 	case MCP:
 		return "MCP Configs"
-	case Apps:
-		return "Apps"
 	case Rules:
 		return "Rules"
 	case Hooks:
@@ -73,10 +67,8 @@ type ContentItem struct {
 	Type               ContentType
 	Path               string         // absolute path to the item directory or file
 	Provider           string         // for provider-specific content (rules, hooks, commands), which provider
-	Body               string         // full text content (used by Prompts for display/clipboard)
 	ReadmeBody         string         // raw README.md content (for rendering in detail view)
 	Files              []string       // relative paths of all files in item directory
-	SupportedProviders []string       // provider slugs this item works with (apps only), e.g. ["claude-code", "gemini-cli"]
 	Meta               *metadata.Meta // loaded from .syllago.yaml if present
 	Library            bool           // true if item lives in the global content library (~/.syllago/content/)
 	Registry           string         // non-empty if item came from a git registry (value is the registry name)
