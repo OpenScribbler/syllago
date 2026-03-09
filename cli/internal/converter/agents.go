@@ -454,16 +454,17 @@ func renderKiroAgent(meta AgentMeta, body string) (*Result, error) {
 	if agentName == "" {
 		agentName = "agent"
 	}
-	promptFilename := slugify(agentName) + ".md"
-	promptRef := "file://./prompts/" + promptFilename
 
 	// Translate tools to Kiro names
 	kiroTools := TranslateTools(meta.Tools, "kiro")
 
+	// Inline the prompt body directly in the JSON. Kiro supports both inline
+	// prompts and file:// references; inline produces a self-contained file
+	// that works for both convert (sharing) and install.
 	ka := kiroAgentConfig{
 		Name:        meta.Name,
 		Description: meta.Description,
-		Prompt:      promptRef,
+		Prompt:      cleanBody,
 		Tools:       kiroTools,
 		Model:       meta.Model,
 	}
@@ -483,15 +484,10 @@ func renderKiroAgent(meta AgentMeta, body string) (*Result, error) {
 		return nil, err
 	}
 
-	promptPath := "prompts/" + promptFilename
-
 	return &Result{
-		Content:  agentJSON,
+		Content:  append(agentJSON, '\n'),
 		Filename: slugify(agentName) + ".json",
 		Warnings: warnings,
-		ExtraFiles: map[string][]byte{
-			promptPath: []byte(cleanBody + "\n"),
-		},
 	}, nil
 }
 

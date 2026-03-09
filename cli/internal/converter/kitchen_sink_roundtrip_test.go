@@ -217,8 +217,8 @@ func TestKitchenSinkAgentRoundTrip(t *testing.T) {
 			name:          "kiro",
 			provider:      provider.Kiro,
 			sourceSlug:    "kiro",
-			bodySubstring: "kiro:prompt-file", // Kiro moves body to ExtraFiles; re-canonicalized body is a file reference
-			minWarnings:   1,                  // maxTurns, permissionMode, disallowedTools
+			bodySubstring: "Kitchen Sink Agent", // Prompt inlined in JSON, survives round-trip
+			minWarnings:   1,                    // maxTurns, permissionMode, disallowedTools
 		},
 		{
 			name:          "codex",

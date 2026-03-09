@@ -286,24 +286,19 @@ func TestFieldPreservation_Agents(t *testing.T) {
 		},
 	})
 
-	// Kiro agents also produce ExtraFiles with prompt
-	t.Run("Kiro ExtraFiles", func(t *testing.T) {
+	// Kiro agents inline the prompt — no ExtraFiles
+	t.Run("Kiro Inline Prompt", func(t *testing.T) {
 		result, err := conv.Render(canonical.Content, provider.Kiro)
 		if err != nil {
 			t.Fatalf("Render: %v", err)
 		}
-		if result.ExtraFiles == nil {
-			t.Fatal("expected ExtraFiles for Kiro agent")
+		if result.ExtraFiles != nil {
+			t.Errorf("expected no ExtraFiles (prompt inlined), got %d", len(result.ExtraFiles))
 		}
-		found := false
-		for _, content := range result.ExtraFiles {
-			if containsStr(string(content), "comprehensive test agent") {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Error("expected prompt body in ExtraFiles")
+		// Prompt body should be in the JSON content
+		out := string(result.Content)
+		if !containsStr(out, "comprehensive test agent") {
+			t.Error("expected prompt body inlined in JSON content")
 		}
 	})
 }
@@ -1070,19 +1065,10 @@ func TestCrossProvider_GeminiAgentToKiro(t *testing.T) {
 	assertContains(t, out, `"name": "researcher"`)
 	// Gemini read_file → canonical Read → Kiro read
 	assertContains(t, out, `"read"`)
-	// Body goes to ExtraFiles for Kiro (prompt file)
-	if result.ExtraFiles == nil {
-		t.Fatal("expected ExtraFiles for Kiro agent")
-	}
-	foundBody := false
-	for _, content := range result.ExtraFiles {
-		if containsStr(string(content), "Research and summarize") {
-			foundBody = true
-			break
-		}
-	}
-	if !foundBody {
-		t.Error("expected 'Research and summarize' in ExtraFiles prompt")
+	// Prompt body inlined in JSON
+	assertContains(t, out, "Research and summarize")
+	if result.ExtraFiles != nil {
+		t.Errorf("expected no ExtraFiles (prompt inlined), got %d", len(result.ExtraFiles))
 	}
 }
 

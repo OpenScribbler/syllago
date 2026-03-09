@@ -152,7 +152,7 @@ func TestClaudeAgentToKiro(t *testing.T) {
 	out := string(result.Content)
 	assertContains(t, out, `"name": "AWS Expert"`)
 	assertContains(t, out, `"description"`)
-	assertContains(t, out, `"prompt": "file://./prompts/aws-expert.md"`)
+	assertContains(t, out, `"prompt": "You are an expert in AWS and Rust development."`)
 	assertContains(t, out, `"model": "claude-sonnet-4"`)
 	// Tool names translated to Kiro
 	assertContains(t, out, `"read"`)
@@ -160,16 +160,9 @@ func TestClaudeAgentToKiro(t *testing.T) {
 	assertContains(t, out, `"shell"`)
 	assertEqual(t, "aws-expert.json", result.Filename)
 
-	// Prompt body goes to ExtraFiles
-	if result.ExtraFiles == nil {
-		t.Fatal("expected ExtraFiles with prompt file")
-	}
-	promptContent, ok := result.ExtraFiles["prompts/aws-expert.md"]
-	if !ok {
-		t.Fatal("expected prompts/aws-expert.md in ExtraFiles")
-	}
-	if !strings.Contains(string(promptContent), "AWS and Rust") {
-		t.Error("expected prompt body in prompts/aws-expert.md")
+	// Prompt body is inlined — no ExtraFiles
+	if result.ExtraFiles != nil {
+		t.Errorf("expected no ExtraFiles (prompt inlined), got %d", len(result.ExtraFiles))
 	}
 
 	// maxTurns should warn
@@ -365,14 +358,13 @@ func TestGeminiToCodexRoundtrip(t *testing.T) {
 	}
 
 	codexStr := string(codex.Content)
-	assertContains(t, codexStr, "[agents.planner]")
+	assertContains(t, codexStr, "[agent]")
+	assertContains(t, codexStr, "name = 'planner'")
+	assertContains(t, codexStr, "[agent.instructions]")
 	assertContains(t, codexStr, "Plan the implementation strategy")
 	// Tools in Codex vocabulary (same as Copilot CLI)
 	assertContains(t, codexStr, "view")  // Read → view
 	assertContains(t, codexStr, "shell") // Bash → shell
-
-	// Should have warning for temperature (not supported in Codex)
-	// temperature is in Gemini-specific fields but Codex doesn't have it
 }
 
 func TestAgentAcrossAllNewProviders(t *testing.T) {
