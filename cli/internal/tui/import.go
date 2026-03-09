@@ -15,6 +15,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
+	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/gitutil"
@@ -40,6 +41,8 @@ const (
 	stepName                          // (create only) enter item name
 	stepConflict                      // conflict resolution (overwrite/skip)
 	stepHookSelect                    // (hook import only) multi-select which hooks to import
+	stepProviderPick                  // (provider discovery) pick detected provider
+	stepDiscoverySelect               // (provider discovery) multi-select discovered items
 )
 
 type importCloneDoneMsg struct {
@@ -51,6 +54,11 @@ type importDoneMsg struct {
 	name     string
 	err      error
 	warnings []string
+}
+
+type discoveryDoneMsg struct {
+	items []add.DiscoveryItem
+	err   error
 }
 
 type validationItem struct {
@@ -129,6 +137,13 @@ type importModel struct {
 	hookNames        []string
 	hookSelected     []bool
 	hookSelectCursor int
+
+	// Provider discovery state
+	discoveryProvCursor int                 // cursor for stepProviderPick
+	discoveryItems      []add.DiscoveryItem // results from DiscoverFromProvider
+	discoverySelected   []bool              // checkbox state per item
+	discoveryCursor     int                 // cursor for stepDiscoverySelect
+	discoveryProvider   provider.Provider   // selected provider
 
 	// Result messaging
 	message      string
@@ -242,6 +257,29 @@ func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
 		m.message = ""
 		return m, nil
 
+	case discoveryDoneMsg:
+		if msg.err != nil {
+			m.message = fmt.Sprintf("Discovery failed: %s", msg.err)
+			m.messageIsErr = true
+			m.step = stepProviderPick
+			return m, nil
+		}
+		if len(msg.items) == 0 {
+			m.message = fmt.Sprintf("No content found in %s", m.discoveryProvider.Name)
+			m.messageIsErr = true
+			m.step = stepProviderPick
+			return m, nil
+		}
+		m.discoveryItems = msg.items
+		m.discoverySelected = make([]bool, len(msg.items))
+		for i, item := range msg.items {
+			m.discoverySelected[i] = item.Status == add.StatusNew || item.Status == add.StatusOutdated
+		}
+		m.discoveryCursor = 0
+		m.step = stepDiscoverySelect
+		m.message = ""
+		return m, nil
+
 	case tea.MouseMsg:
 		if m.step == stepBrowse {
 			m.browser, _ = m.browser.Update(msg)
@@ -294,6 +332,10 @@ func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
 			return m.updateConflict(msg)
 		case stepHookSelect:
 			return m.updateHookSelect(msg)
+		case stepProviderPick:
+			return m.updateProviderPick(msg)
+		case stepDiscoverySelect:
+			return m.updateDiscoverySelect(msg)
 		}
 	}
 	return m, nil
@@ -306,21 +348,29 @@ func (m importModel) updateSource(msg tea.KeyMsg) (importModel, tea.Cmd) {
 			m.sourceCursor--
 		}
 	case key.Matches(msg, keys.Down):
-		if m.sourceCursor < 2 {
+		if m.sourceCursor < 3 {
 			m.sourceCursor++
 		}
 	case key.Matches(msg, keys.Enter):
 		switch m.sourceCursor {
-		case 0: // Local path
+		case 0: // From Provider
+			if len(m.providers) == 0 {
+				m.message = "No providers detected. Install a supported AI coding tool first."
+				m.messageIsErr = true
+				return m, nil
+			}
+			m.discoveryProvCursor = 0
+			m.step = stepProviderPick
+		case 1: // Local path
 			m.isCreate = false
 			m.step = stepType
 			m.typeCursor = 0
-		case 1: // Git URL
+		case 2: // Git URL
 			m.isCreate = false
 			m.step = stepGitURL
 			m.urlInput.SetValue("")
 			m.urlInput.Focus()
-		case 2: // Create New
+		case 3: // Create New
 			m.isCreate = true
 			m.step = stepType
 			m.typeCursor = 0
@@ -689,6 +739,10 @@ func (m importModel) stepLabel() string {
 		return "Conflict"
 	case stepHookSelect:
 		return "Step 4 of 4: Select Hooks"
+	case stepProviderPick:
+		return "Select Provider"
+	case stepDiscoverySelect:
+		return "Select Items to Add"
 	}
 	return ""
 }
@@ -708,7 +762,7 @@ func (m importModel) View() string {
 	case stepSource:
 		s += "\n" + helpStyle.Render("Add content from an installed provider, local files, or a git repository.") + "\n"
 		s += helpStyle.Render("Create New scaffolds a blank template.") + "\n\n"
-		options := []string{"Local Path", "Git URL", "Create New"}
+		options := []string{"From Provider", "Local Path", "Git URL", "Create New"}
 		for i, opt := range options {
 			prefix := "   "
 			style := itemStyle
@@ -864,10 +918,78 @@ func (m importModel) View() string {
 			if matcher == "" {
 				matcher = "*"
 			}
-			s += fmt.Sprintf("  %s%s %s  %s\n", prefix, check, style.Render(m.hookNames[i]), helpStyle.Render("("+hook.Event+"/"+matcher+")"))
+			row := fmt.Sprintf("  %s%s %s  %s", prefix, check, style.Render(m.hookNames[i]), helpStyle.Render("("+hook.Event+"/"+matcher+")"))
+			s += zone.Mark(fmt.Sprintf("hook-item-%d", i), row) + "\n"
 		}
+
+		// Action bar
 		s += "\n"
-		s += fmt.Sprintf("  Add Selected (%d)  •  space toggle  •  a all  •  n none\n", count)
+		s += labelStyle.Render("Actions") + "\n"
+		s += helpStyle.Render(strings.Repeat("─", 20)) + "\n"
+		selectAllBtn := zone.Mark("hook-btn-select-all", buttonStyle.Render("Select All"))
+		deselectAllBtn := zone.Mark("hook-btn-deselect-all", buttonStyle.Render("Deselect All"))
+		addBtn := zone.Mark("hook-btn-add", buttonStyle.Render(fmt.Sprintf("Add Selected (%d)", count)))
+		s += selectAllBtn + "  " + deselectAllBtn + "  " + addBtn + "\n"
+
+	case stepProviderPick:
+		s += helpStyle.Render("Select a provider to discover content from.") + "\n\n"
+		for i, prov := range m.providers {
+			prefix := "   "
+			style := itemStyle
+			if i == m.discoveryProvCursor {
+				prefix = " > "
+				style = selectedItemStyle
+			}
+			row := prefix + style.Render(prov.Name)
+			s += zone.Mark(fmt.Sprintf("import-opt-%d", i), row) + "\n"
+		}
+
+	case stepDiscoverySelect:
+		if len(m.discoveryItems) == 0 {
+			s += helpStyle.Render("No items found from "+m.discoveryProvider.Name+".") + "\n"
+		} else {
+			selectedCount := 0
+			for _, sel := range m.discoverySelected {
+				if sel {
+					selectedCount++
+				}
+			}
+			s += labelStyle.Render(fmt.Sprintf("Found %d items from %s:", len(m.discoveryItems), m.discoveryProvider.Name)) + "\n\n"
+			for i, item := range m.discoveryItems {
+				check := "[ ]"
+				if m.discoverySelected[i] {
+					check = installedStyle.Render("[✓]")
+				}
+				prefix := "  "
+				style := itemStyle
+				if i == m.discoveryCursor {
+					prefix = "> "
+					style = selectedItemStyle
+				}
+				// Status badge
+				var badge string
+				switch item.Status {
+				case add.StatusNew:
+					badge = installedStyle.Render("new")
+				case add.StatusOutdated:
+					badge = warningStyle.Render("outdated")
+				case add.StatusInLibrary:
+					badge = helpStyle.Render("in library")
+				}
+				typeTag := countStyle.Render("(" + item.Type.Label() + ")")
+				row := fmt.Sprintf("  %s%s %s %s %s", prefix, check, style.Render(item.Name), typeTag, badge)
+				s += zone.Mark(fmt.Sprintf("discovery-item-%d", i), row) + "\n"
+			}
+
+			// Action bar (matches detail_render.go pattern)
+			s += "\n"
+			s += labelStyle.Render("Actions") + "\n"
+			s += helpStyle.Render(strings.Repeat("─", 20)) + "\n"
+			selectAllBtn := zone.Mark("discovery-btn-select-all", buttonStyle.Render("Select All"))
+			deselectAllBtn := zone.Mark("discovery-btn-deselect-all", buttonStyle.Render("Deselect All"))
+			addBtn := zone.Mark("discovery-btn-add", buttonStyle.Render(fmt.Sprintf("Add Selected (%d)", selectedCount)))
+			s += selectAllBtn + "  " + deselectAllBtn + "  " + addBtn + "\n"
+		}
 	}
 
 	// Status message
@@ -913,7 +1035,11 @@ func (m importModel) helpText() string {
 		}
 		return footer
 	case stepHookSelect:
-		return "up/down navigate • space toggle • a all • n none • enter add • esc back"
+		return "up/down navigate • space toggle • a select all • n deselect all • enter add selected • esc back"
+	case stepProviderPick:
+		return "up/down navigate • enter select • esc back"
+	case stepDiscoverySelect:
+		return "up/down navigate • space toggle • a select all • n deselect all • enter add selected • esc back"
 	default:
 		return "esc back"
 	}
@@ -1590,6 +1716,97 @@ func (m importModel) updateHookSelect(msg tea.KeyMsg) (importModel, tea.Cmd) {
 	return m, nil
 }
 
+func (m importModel) updateProviderPick(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case key.Matches(msg, keys.Back):
+		m.step = stepSource
+	case key.Matches(msg, keys.Up):
+		if m.discoveryProvCursor > 0 {
+			m.discoveryProvCursor--
+		}
+	case key.Matches(msg, keys.Down):
+		if m.discoveryProvCursor < len(m.providers)-1 {
+			m.discoveryProvCursor++
+		}
+	case key.Matches(msg, keys.Enter):
+		if len(m.providers) == 0 {
+			return m, nil
+		}
+		prov := m.providers[m.discoveryProvCursor]
+		m.discoveryProvider = prov
+		m.message = ""
+		return m, func() tea.Msg {
+			globalDir := catalog.GlobalContentDir()
+			items, err := add.DiscoverFromProvider(prov, m.projectRoot, nil, globalDir)
+			return discoveryDoneMsg{items: items, err: err}
+		}
+	}
+	return m, nil
+}
+
+func (m importModel) updateDiscoverySelect(msg tea.KeyMsg) (importModel, tea.Cmd) {
+	switch {
+	case key.Matches(msg, keys.Back):
+		m.step = stepProviderPick
+	case key.Matches(msg, keys.Up):
+		if m.discoveryCursor > 0 {
+			m.discoveryCursor--
+		}
+	case key.Matches(msg, keys.Down):
+		if m.discoveryCursor < len(m.discoveryItems)-1 {
+			m.discoveryCursor++
+		}
+	case msg.String() == " ":
+		if len(m.discoverySelected) > 0 {
+			m.discoverySelected[m.discoveryCursor] = !m.discoverySelected[m.discoveryCursor]
+		}
+	case msg.String() == "a":
+		for i := range m.discoverySelected {
+			m.discoverySelected[i] = true
+		}
+	case msg.String() == "n":
+		for i := range m.discoverySelected {
+			m.discoverySelected[i] = false
+		}
+	case key.Matches(msg, keys.Enter):
+		// Collect selected items
+		var selected []add.DiscoveryItem
+		for i, item := range m.discoveryItems {
+			if m.discoverySelected[i] {
+				selected = append(selected, item)
+			}
+		}
+		if len(selected) == 0 {
+			m.message = "No items selected"
+			m.messageIsErr = true
+			return m, nil
+		}
+		return m, func() tea.Msg {
+			globalDir := catalog.GlobalContentDir()
+			opts := add.AddOptions{Force: true}
+			results := add.AddItems(selected, opts, globalDir, nil, "syllago")
+			var added, errs []string
+			for _, r := range results {
+				if r.Error != nil {
+					errs = append(errs, fmt.Sprintf("%s: %v", r.Name, r.Error))
+				} else {
+					added = append(added, r.Name)
+				}
+			}
+			if len(errs) > 0 && len(added) == 0 {
+				return importDoneMsg{err: fmt.Errorf("add failed: %s", strings.Join(errs, "; "))}
+			}
+			name := strings.Join(added, ", ")
+			var warnings []string
+			if len(errs) > 0 {
+				warnings = append(warnings, fmt.Sprintf("Some items failed: %s", strings.Join(errs, "; ")))
+			}
+			return importDoneMsg{name: name, warnings: warnings}
+		}
+	}
+	return m, nil
+}
+
 func (m importModel) importSelectedHooks() tea.Cmd {
 	return func() tea.Msg {
 		var imported []string
@@ -1643,7 +1860,7 @@ func (m importModel) handleMouseClick(msg tea.MouseMsg) (importModel, tea.Cmd) {
 	var maxItems int
 	switch m.step {
 	case stepSource:
-		maxItems = 3
+		maxItems = 4
 	case stepType:
 		maxItems = len(m.types)
 	case stepProvider:
@@ -1654,6 +1871,46 @@ func (m importModel) handleMouseClick(msg tea.MouseMsg) (importModel, tea.Cmd) {
 		maxItems = len(m.clonedItems)
 	case stepValidate:
 		maxItems = len(m.validationItems)
+	case stepProviderPick:
+		maxItems = len(m.providers)
+	case stepDiscoverySelect:
+		// Discovery select has special handling: item clicks toggle, button clicks act
+		for i := 0; i < len(m.discoveryItems); i++ {
+			if zone.Get(fmt.Sprintf("discovery-item-%d", i)).InBounds(msg) {
+				m.discoveryCursor = i
+				m.discoverySelected[i] = !m.discoverySelected[i]
+				return m, nil
+			}
+		}
+		if zone.Get("discovery-btn-select-all").InBounds(msg) {
+			return m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+		}
+		if zone.Get("discovery-btn-deselect-all").InBounds(msg) {
+			return m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+		}
+		if zone.Get("discovery-btn-add").InBounds(msg) {
+			return m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		}
+		return m, nil
+	case stepHookSelect:
+		// Hook select: item clicks toggle, button clicks act
+		for i := 0; i < len(m.hookCandidates); i++ {
+			if zone.Get(fmt.Sprintf("hook-item-%d", i)).InBounds(msg) {
+				m.hookSelectCursor = i
+				m.hookSelected[i] = !m.hookSelected[i]
+				return m, nil
+			}
+		}
+		if zone.Get("hook-btn-select-all").InBounds(msg) {
+			return m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+		}
+		if zone.Get("hook-btn-deselect-all").InBounds(msg) {
+			return m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+		}
+		if zone.Get("hook-btn-add").InBounds(msg) {
+			return m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		}
+		return m, nil
 	default:
 		return m, nil
 	}
@@ -1673,6 +1930,8 @@ func (m importModel) handleMouseClick(msg tea.MouseMsg) (importModel, tea.Cmd) {
 				m.pickCursor = i
 			case stepValidate:
 				m.validateCursor = i
+			case stepProviderPick:
+				m.discoveryProvCursor = i
 			}
 			// Synthesize Enter to activate the selection
 			return m.Update(tea.KeyMsg{Type: tea.KeyEnter})

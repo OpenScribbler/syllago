@@ -163,7 +163,9 @@ func TestImportBrowseFlow(t *testing.T) {
 		t.Fatalf("expected screenImport, got %d", app.screen)
 	}
 
-	// Source: pick Local Path (cursor=0, just Enter)
+	// Source: pick Local Path (cursor=1, down then Enter)
+	model, _ = app.Update(down)
+	app = model.(App)
 	model, _ = app.Update(enter)
 	app = model.(App)
 	if app.importer.step != stepType {

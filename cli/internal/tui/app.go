@@ -276,6 +276,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, cmd
 		}
 
+	case discoveryDoneMsg:
+		if a.screen == screenImport {
+			var cmd tea.Cmd
+			a.importer, cmd = a.importer.Update(msg)
+			return a, cmd
+		}
+
 	case importDoneMsg:
 		a.cachedDetail = nil // invalidate cache
 		if msg.err != nil {

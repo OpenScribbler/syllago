@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
@@ -22,6 +23,20 @@ func navigateToImport(t *testing.T) App {
 	return app
 }
 
+// navigateToLocalPath navigates to the import screen and selects "Local Path"
+// (source cursor 1) to reach stepType.
+func navigateToLocalPath(t *testing.T) App {
+	t.Helper()
+	app := navigateToImport(t)
+	app = pressN(app, keyDown, 1) // Local Path
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+	if app.importer.step != stepType {
+		t.Fatalf("navigateToLocalPath: expected stepType, got %d", app.importer.step)
+	}
+	return app
+}
+
 // ---------------------------------------------------------------------------
 // Source selection (step 0)
 // ---------------------------------------------------------------------------
@@ -32,7 +47,7 @@ func TestImportSourceNavigation(t *testing.T) {
 		t.Fatalf("expected stepSource, got %d", app.importer.step)
 	}
 
-	// 3 options: Local(0), Git(1), Create(2)
+	// 4 options: From Provider(0), Local(1), Git(2), Create(3)
 	m, _ := app.Update(keyDown)
 	app = m.(App)
 	if app.importer.sourceCursor != 1 {
@@ -45,17 +60,47 @@ func TestImportSourceNavigation(t *testing.T) {
 		t.Fatalf("expected sourceCursor 2, got %d", app.importer.sourceCursor)
 	}
 
+	m, _ = app.Update(keyDown)
+	app = m.(App)
+	if app.importer.sourceCursor != 3 {
+		t.Fatalf("expected sourceCursor 3, got %d", app.importer.sourceCursor)
+	}
+
 	// Bounds clamping
 	m, _ = app.Update(keyDown)
 	app = m.(App)
-	if app.importer.sourceCursor != 2 {
-		t.Fatal("sourceCursor should clamp at 2")
+	if app.importer.sourceCursor != 3 {
+		t.Fatal("sourceCursor should clamp at 3")
+	}
+}
+
+func TestImportSourceSelectFromProvider(t *testing.T) {
+	app := navigateToImport(t)
+	// From Provider = cursor 0, just Enter
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+	if app.importer.step != stepProviderPick {
+		t.Fatalf("expected stepProviderPick after From Provider, got %d", app.importer.step)
+	}
+}
+
+func TestImportSourceFromProviderNoProviders(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.providers = nil // empty provider list
+
+	m, _ := app.Update(keyEnter) // cursor 0 = From Provider
+	app = m.(App)
+	if app.importer.step != stepSource {
+		t.Fatalf("expected to stay on stepSource with no providers, got %d", app.importer.step)
+	}
+	if app.importer.message == "" || !app.importer.messageIsErr {
+		t.Fatal("expected error message about no providers detected")
 	}
 }
 
 func TestImportSourceSelectLocal(t *testing.T) {
 	app := navigateToImport(t)
-	// Local = cursor 0, just Enter
+	app = pressN(app, keyDown, 1) // Local
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	if app.importer.step != stepType {
@@ -68,7 +113,7 @@ func TestImportSourceSelectLocal(t *testing.T) {
 
 func TestImportSourceSelectGit(t *testing.T) {
 	app := navigateToImport(t)
-	app = pressN(app, keyDown, 1) // Git
+	app = pressN(app, keyDown, 2) // Git
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	if app.importer.step != stepGitURL {
@@ -78,7 +123,7 @@ func TestImportSourceSelectGit(t *testing.T) {
 
 func TestImportSourceSelectCreate(t *testing.T) {
 	app := navigateToImport(t)
-	app = pressN(app, keyDown, 2) // Create
+	app = pressN(app, keyDown, 3) // Create
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	if app.importer.step != stepType {
@@ -97,13 +142,222 @@ func TestImportSourceEscBack(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Provider pick (From Provider flow)
+// ---------------------------------------------------------------------------
+
+func TestProviderPickNavigation(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepProviderPick
+	if len(app.importer.providers) < 2 {
+		t.Skip("need at least 2 providers for navigation test")
+	}
+
+	m, _ := app.Update(keyDown)
+	app = m.(App)
+	if app.importer.discoveryProvCursor != 1 {
+		t.Fatalf("expected discoveryProvCursor 1, got %d", app.importer.discoveryProvCursor)
+	}
+}
+
+func TestProviderPickEscBack(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepProviderPick
+
+	m, _ := app.Update(keyEsc)
+	app = m.(App)
+	if app.importer.step != stepSource {
+		t.Fatalf("expected stepSource after esc, got %d", app.importer.step)
+	}
+}
+
+func TestProviderPickSelectDispatchesDiscovery(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepProviderPick
+	if len(app.importer.providers) == 0 {
+		t.Skip("no providers available")
+	}
+
+	_, cmd := app.Update(keyEnter)
+	if cmd == nil {
+		t.Fatal("expected async discovery command on provider select")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Discovery select (multi-select checklist)
+// ---------------------------------------------------------------------------
+
+// setupDiscoverySelect creates an app at stepDiscoverySelect with test items.
+func setupDiscoverySelect(t *testing.T) App {
+	t.Helper()
+	app := navigateToImport(t)
+	app.importer.step = stepDiscoverySelect
+	app.importer.discoveryItems = []add.DiscoveryItem{
+		{Name: "rule-one", Type: catalog.Rules, Path: "/tmp/r1", Status: add.StatusNew},
+		{Name: "skill-two", Type: catalog.Skills, Path: "/tmp/s2", Status: add.StatusInLibrary},
+		{Name: "agent-three", Type: catalog.Agents, Path: "/tmp/a3", Status: add.StatusOutdated},
+	}
+	// Pre-select: new and outdated selected, in-library deselected
+	app.importer.discoverySelected = []bool{true, false, true}
+	app.importer.discoveryCursor = 0
+	return app
+}
+
+func TestDiscoverySelectNavigation(t *testing.T) {
+	app := setupDiscoverySelect(t)
+
+	m, _ := app.Update(keyDown)
+	app = m.(App)
+	if app.importer.discoveryCursor != 1 {
+		t.Fatalf("expected cursor 1, got %d", app.importer.discoveryCursor)
+	}
+
+	m, _ = app.Update(keyDown)
+	app = m.(App)
+	if app.importer.discoveryCursor != 2 {
+		t.Fatalf("expected cursor 2, got %d", app.importer.discoveryCursor)
+	}
+
+	// Clamp at end
+	m, _ = app.Update(keyDown)
+	app = m.(App)
+	if app.importer.discoveryCursor != 2 {
+		t.Fatal("cursor should clamp at last item")
+	}
+}
+
+func TestDiscoverySelectSpaceToggle(t *testing.T) {
+	app := setupDiscoverySelect(t)
+
+	// Item 0 is selected (new), toggle off
+	m, _ := app.Update(keySpace)
+	app = m.(App)
+	if app.importer.discoverySelected[0] {
+		t.Fatal("item 0 should be deselected after space")
+	}
+
+	// Toggle back on
+	m, _ = app.Update(keySpace)
+	app = m.(App)
+	if !app.importer.discoverySelected[0] {
+		t.Fatal("item 0 should be selected after second space")
+	}
+}
+
+func TestDiscoverySelectAll(t *testing.T) {
+	app := setupDiscoverySelect(t)
+
+	// Press 'a' to select all
+	m, _ := app.Update(keyRune('a'))
+	app = m.(App)
+	for i, sel := range app.importer.discoverySelected {
+		if !sel {
+			t.Fatalf("item %d should be selected after 'a'", i)
+		}
+	}
+}
+
+func TestDiscoveryDeselectAll(t *testing.T) {
+	app := setupDiscoverySelect(t)
+
+	// Press 'n' to deselect all
+	m, _ := app.Update(keyRune('n'))
+	app = m.(App)
+	for i, sel := range app.importer.discoverySelected {
+		if sel {
+			t.Fatalf("item %d should be deselected after 'n'", i)
+		}
+	}
+}
+
+func TestDiscoverySelectEscBack(t *testing.T) {
+	app := setupDiscoverySelect(t)
+
+	m, _ := app.Update(keyEsc)
+	app = m.(App)
+	if app.importer.step != stepProviderPick {
+		t.Fatalf("expected stepProviderPick after esc, got %d", app.importer.step)
+	}
+}
+
+func TestDiscoverySelectEnterNoSelection(t *testing.T) {
+	app := setupDiscoverySelect(t)
+	// Deselect all
+	app.importer.discoverySelected = []bool{false, false, false}
+
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+	// Should stay on same step with error message
+	if app.importer.step != stepDiscoverySelect {
+		t.Fatalf("expected to stay on stepDiscoverySelect with no selection, got %d", app.importer.step)
+	}
+	if app.importer.message == "" || !app.importer.messageIsErr {
+		t.Fatal("expected error message about no items selected")
+	}
+}
+
+func TestDiscoverySelectViewRendering(t *testing.T) {
+	app := setupDiscoverySelect(t)
+	app.width = 80
+	app.height = 30
+
+	view := app.View()
+	assertContains(t, view, "rule-one")
+	assertContains(t, view, "skill-two")
+	assertContains(t, view, "agent-three")
+	assertContains(t, view, "Select All")
+	assertContains(t, view, "Deselect All")
+	assertContains(t, view, "Add Selected")
+	assertContains(t, view, "Actions")
+}
+
+func TestDiscoveryDoneMsgPreselection(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepProviderPick
+
+	// Simulate discoveryDoneMsg
+	msg := discoveryDoneMsg{
+		items: []add.DiscoveryItem{
+			{Name: "new-item", Status: add.StatusNew},
+			{Name: "lib-item", Status: add.StatusInLibrary},
+			{Name: "old-item", Status: add.StatusOutdated},
+		},
+	}
+	m, _ := app.Update(msg)
+	app = m.(App)
+
+	if app.importer.step != stepDiscoverySelect {
+		t.Fatalf("expected stepDiscoverySelect, got %d", app.importer.step)
+	}
+	// New and outdated should be pre-selected, in-library should not
+	expected := []bool{true, false, true}
+	for i, sel := range app.importer.discoverySelected {
+		if sel != expected[i] {
+			t.Fatalf("item %d: expected selected=%v, got %v", i, expected[i], sel)
+		}
+	}
+}
+
+func TestDiscoveryDoneMsgError(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepProviderPick
+
+	msg := discoveryDoneMsg{err: fmt.Errorf("discovery failed")}
+	m, _ := app.Update(msg)
+	app = m.(App)
+
+	if app.importer.step != stepProviderPick {
+		t.Fatalf("expected to stay on stepProviderPick on error, got %d", app.importer.step)
+	}
+	assertContains(t, app.importer.message, "discovery failed")
+}
+
+// ---------------------------------------------------------------------------
 // Type selection (step 1)
 // ---------------------------------------------------------------------------
 
 func TestImportTypeNavigation(t *testing.T) {
-	app := navigateToImport(t)
-	m, _ := app.Update(keyEnter) // → stepType
-	app = m.(App)
+	app := navigateToLocalPath(t)
 
 	nTypes := len(app.importer.types)
 	app = pressN(app, keyDown, nTypes+5)
@@ -113,12 +367,10 @@ func TestImportTypeNavigation(t *testing.T) {
 }
 
 func TestImportTypeUniversalToBrowse(t *testing.T) {
-	app := navigateToImport(t)
-	m, _ := app.Update(keyEnter) // → stepType
-	app = m.(App)
+	app := navigateToLocalPath(t)
 
 	// Skills is universal and at cursor 0
-	m, _ = app.Update(keyEnter) // select Skills
+	m, _ := app.Update(keyEnter) // select Skills
 	app = m.(App)
 	if app.importer.step != stepBrowseStart {
 		t.Fatalf("expected stepBrowseStart for universal type, got %d", app.importer.step)
@@ -126,9 +378,7 @@ func TestImportTypeUniversalToBrowse(t *testing.T) {
 }
 
 func TestImportTypeProviderSpecificToProvider(t *testing.T) {
-	app := navigateToImport(t)
-	m, _ := app.Update(keyEnter) // → stepType
-	app = m.(App)
+	app := navigateToLocalPath(t)
 
 	// Find a provider-specific type (e.g., Rules)
 	for i, ct := range app.importer.types {
@@ -138,7 +388,7 @@ func TestImportTypeProviderSpecificToProvider(t *testing.T) {
 		}
 	}
 
-	m, _ = app.Update(keyEnter)
+	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
 	// Should go to stepProvider or show "no provider dirs" message
@@ -153,7 +403,7 @@ func TestImportTypeProviderSpecificToProvider(t *testing.T) {
 
 func TestImportTypeCreateToName(t *testing.T) {
 	app := navigateToImport(t)
-	app = pressN(app, keyDown, 2) // Create
+	app = pressN(app, keyDown, 3) // Create
 	m, _ := app.Update(keyEnter)  // → stepType (create flow)
 	app = m.(App)
 
@@ -166,11 +416,9 @@ func TestImportTypeCreateToName(t *testing.T) {
 }
 
 func TestImportTypeEscBack(t *testing.T) {
-	app := navigateToImport(t)
-	m, _ := app.Update(keyEnter) // → stepType
-	app = m.(App)
+	app := navigateToLocalPath(t)
 
-	m, _ = app.Update(keyEsc) // back to source
+	m, _ := app.Update(keyEsc) // back to source
 	app = m.(App)
 	if app.importer.step != stepSource {
 		t.Fatalf("expected stepSource after esc, got %d", app.importer.step)
@@ -182,10 +430,8 @@ func TestImportTypeEscBack(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestImportBrowseStartOptions(t *testing.T) {
-	app := navigateToImport(t)
-	m, _ := app.Update(keyEnter) // → stepType
-	app = m.(App)
-	m, _ = app.Update(keyEnter) // → stepBrowseStart (Skills)
+	app := navigateToLocalPath(t)
+	m, _ := app.Update(keyEnter) // → stepBrowseStart (Skills)
 	app = m.(App)
 
 	if app.importer.step != stepBrowseStart {
@@ -200,10 +446,8 @@ func TestImportBrowseStartOptions(t *testing.T) {
 }
 
 func TestImportBrowseStartEsc(t *testing.T) {
-	app := navigateToImport(t)
-	m, _ := app.Update(keyEnter) // → stepType
-	app = m.(App)
-	m, _ = app.Update(keyEnter) // → stepBrowseStart
+	app := navigateToLocalPath(t)
+	m, _ := app.Update(keyEnter) // → stepBrowseStart
 	app = m.(App)
 
 	m, _ = app.Update(keyEsc) // back
@@ -218,10 +462,8 @@ func TestImportBrowseStartEsc(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestImportPathInput(t *testing.T) {
-	app := navigateToImport(t)
-	m, _ := app.Update(keyEnter) // → stepType
-	app = m.(App)
-	m, _ = app.Update(keyEnter) // → stepBrowseStart
+	app := navigateToLocalPath(t)
+	m, _ := app.Update(keyEnter) // → stepBrowseStart
 	app = m.(App)
 
 	// Select custom path (option 2)
@@ -242,10 +484,8 @@ func TestImportPathInput(t *testing.T) {
 }
 
 func TestImportPathInvalid(t *testing.T) {
-	app := navigateToImport(t)
-	m, _ := app.Update(keyEnter) // → stepType
-	app = m.(App)
-	m, _ = app.Update(keyEnter) // → stepBrowseStart
+	app := navigateToLocalPath(t)
+	m, _ := app.Update(keyEnter) // → stepBrowseStart
 	app = m.(App)
 	app = pressN(app, keyDown, 2)
 	m, _ = app.Update(keyEnter) // → stepPath
@@ -262,10 +502,8 @@ func TestImportPathInvalid(t *testing.T) {
 }
 
 func TestImportPathEsc(t *testing.T) {
-	app := navigateToImport(t)
-	m, _ := app.Update(keyEnter) // → stepType
-	app = m.(App)
-	m, _ = app.Update(keyEnter) // → stepBrowseStart
+	app := navigateToLocalPath(t)
+	m, _ := app.Update(keyEnter) // → stepBrowseStart
 	app = m.(App)
 	app = pressN(app, keyDown, 2)
 	m, _ = app.Update(keyEnter) // → stepPath
@@ -284,7 +522,7 @@ func TestImportPathEsc(t *testing.T) {
 
 func TestImportGitURLEmpty(t *testing.T) {
 	app := navigateToImport(t)
-	app = pressN(app, keyDown, 1) // Git
+	app = pressN(app, keyDown, 2) // Git
 	m, _ := app.Update(keyEnter)  // → stepGitURL
 	app = m.(App)
 
@@ -298,7 +536,7 @@ func TestImportGitURLEmpty(t *testing.T) {
 
 func TestImportGitURLInvalid(t *testing.T) {
 	app := navigateToImport(t)
-	app = pressN(app, keyDown, 1)
+	app = pressN(app, keyDown, 2)
 	m, _ := app.Update(keyEnter) // → stepGitURL
 	app = m.(App)
 
@@ -312,7 +550,7 @@ func TestImportGitURLInvalid(t *testing.T) {
 
 func TestImportGitURLEsc(t *testing.T) {
 	app := navigateToImport(t)
-	app = pressN(app, keyDown, 1)
+	app = pressN(app, keyDown, 2)
 	m, _ := app.Update(keyEnter) // → stepGitURL
 	app = m.(App)
 
@@ -627,6 +865,7 @@ func TestImportViewSource(t *testing.T) {
 	app := navigateToImport(t)
 	view := app.View()
 	assertContains(t, view, "Add Content")
+	assertContains(t, view, "From Provider")
 	assertContains(t, view, "Local Path")
 	assertContains(t, view, "Git URL")
 	assertContains(t, view, "Create New")
