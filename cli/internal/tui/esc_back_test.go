@@ -13,8 +13,8 @@ import (
 func navigateToRegistries(t *testing.T) App {
 	t.Helper()
 	app := testApp(t)
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes+4) // Registries is types+4
+	nTypes := sidebarContentCount()
+	app = pressN(app, keyDown, nTypes+5) // Registries
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenRegistries)
@@ -24,8 +24,8 @@ func navigateToRegistries(t *testing.T) App {
 func navigateToSandbox(t *testing.T) App {
 	t.Helper()
 	app := testApp(t)
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes+5) // Sandbox is types+5
+	nTypes := sidebarContentCount()
+	app = pressN(app, keyDown, nTypes+6) // Sandbox
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenSandbox)
@@ -100,8 +100,8 @@ func TestEscapeFromUpdate(t *testing.T) {
 // initial step (stepSource) navigates back to the category (home) screen.
 func TestEscapeFromImport(t *testing.T) {
 	app := testApp(t)
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes+1) // Add is types+1
+	nTypes := sidebarContentCount()
+	app = pressN(app, keyDown, nTypes+2) // Add
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenImport)

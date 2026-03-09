@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -29,6 +30,8 @@ const (
 	screenSettings
 	screenRegistries
 	screenSandbox
+	screenLibraryCards
+	screenLoadoutCards
 )
 
 type focusTarget int
@@ -78,6 +81,8 @@ type App struct {
 	commitsBehind int
 
 	showHidden bool // when true, hidden items are included in lists
+	cardCursor  int    // selected card index on card view screens
+	cardParent  screen // which card screen the items list was entered from (0 = none)
 
 	// Loadout apply state
 	loadoutApplyItem catalog.ContentItem // the loadout item being applied
@@ -195,6 +200,7 @@ func (a *App) refreshSidebarCounts() {
 	}
 	a.sidebar.counts = counts
 	a.sidebar.libraryCount = len(a.visibleItems(a.libraryItems()))
+	a.sidebar.loadoutsCount = counts[catalog.Loadouts]
 }
 
 // libraryItems returns all library items from the catalog.
@@ -641,6 +647,24 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
 			}
 		}
+		// Check library card clicks
+		if a.screen == screenLibraryCards {
+			for i, ct := range a.libraryCardTypes() {
+				if zone.Get(fmt.Sprintf("library-card-%s", ct)).InBounds(msg) {
+					a.cardCursor = i
+					return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+				}
+			}
+		}
+		// Check loadout card clicks
+		if a.screen == screenLoadoutCards {
+			for i, prov := range a.loadoutCardProviders() {
+				if zone.Get(fmt.Sprintf("loadout-card-%s", prov)).InBounds(msg) {
+					a.cardCursor = i
+					return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+				}
+			}
+		}
 		// Check breadcrumb zones (detail and items screens)
 		if zone.Get("crumb-home").InBounds(msg) {
 			a.resetInstallModal() // cancel any in-progress install when navigating away
@@ -809,8 +833,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// fall through to normal handling
 			} else if a.screen == screenImport && a.importer.hasTextInput() {
 				// fall through to normal handling
-			} else if a.screen == screenSettings && a.settings.editMode != editNone {
-				// fall through to normal handling
 			} else {
 				// Synthesize esc key to navigate back
 				return a.Update(tea.KeyMsg{Type: tea.KeyEsc})
@@ -870,6 +892,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					items.width = a.width
 					items.height = a.panelHeight()
 					a.items = items
+					a.cardParent = 0
 					a.screen = screenItems
 				} else if a.screen == screenItems {
 					ct := a.sidebar.selectedType()
@@ -905,6 +928,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				filtered := filterItems(source, query)
 				items := newItemsModel(ct, filtered, a.providers, a.catalog.RepoRoot)
 				items.hiddenCount = countHidden(a.catalog.ByType(ct))
+				items.hideLibraryBadge = ct == catalog.Library
 				items.width = a.width
 				items.height = a.panelHeight()
 				a.items = items
@@ -962,7 +986,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return a, nil
 					}
 					if a.sidebar.isSettingsSelected() {
-						a.settings = newSettingsModel(a.catalog.RepoRoot, a.providers)
+						a.settings = newSettingsModel(a.catalog.RepoRoot)
 						a.settings.width = a.width - sidebarWidth - 1
 						a.settings.height = a.panelHeight()
 						a.screen = screenSettings
@@ -994,19 +1018,28 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return a, nil
 					}
 					if a.sidebar.isLibrarySelected() {
-						var localItems []catalog.ContentItem
-						for _, item := range a.visibleItems(a.catalog.Items) {
-							if item.Library {
-								localItems = append(localItems, item)
-							}
-						}
-						items := newItemsModel(catalog.Library, localItems, a.providers, a.catalog.RepoRoot)
-						items.hiddenCount = countHidden(a.catalog.Items)
-						items.width = a.width - sidebarWidth - 1
-						items.height = a.panelHeight()
-						a.items = items
-						a.screen = screenItems
+						a.cardCursor = 0
+						a.screen = screenLibraryCards
 						a.focus = focusContent
+						return a, nil
+					}
+					if a.sidebar.isLoadoutsSelected() {
+						loadoutItems := a.visibleItems(a.catalog.ByType(catalog.Loadouts))
+						if len(loadoutItems) == 0 {
+							// No loadouts — go directly to empty items view
+							items := newItemsModel(catalog.Loadouts, loadoutItems, a.providers, a.catalog.RepoRoot)
+							items.hiddenCount = countHidden(a.catalog.ByType(catalog.Loadouts))
+							items.width = a.width - sidebarWidth - 1
+							items.height = a.panelHeight()
+							a.items = items
+							a.cardParent = 0
+							a.screen = screenItems
+							a.focus = focusContent
+						} else {
+							a.cardCursor = 0
+							a.screen = screenLoadoutCards
+							a.focus = focusContent
+						}
 						return a, nil
 					}
 					ct := a.sidebar.selectedType()
@@ -1016,6 +1049,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					items.width = a.width - sidebarWidth - 1
 					items.height = a.panelHeight()
 					a.items = items
+					a.cardParent = 0
 					a.screen = screenItems
 					a.focus = focusContent
 					return a, nil
@@ -1031,6 +1065,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if a.items.sourceRegistry != "" {
 					// Came from registry drill-in — go back to registries
 					a.screen = screenRegistries
+					a.focus = focusContent
+					return a, nil
+				}
+				if a.cardParent == screenLibraryCards || a.cardParent == screenLoadoutCards {
+					// Came from card drill-in — go back to card screen
+					a.screen = a.cardParent
+					a.cardParent = 0
 					a.focus = focusContent
 					return a, nil
 				}
@@ -1054,6 +1095,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					items := newItemsModel(catalog.Library, localItems, a.providers, a.catalog.RepoRoot)
 					items.hiddenCount = countHidden(a.catalog.Items)
+					items.hideLibraryBadge = true
 					items.width = a.items.width
 					items.height = a.items.height
 					a.items = items
@@ -1085,6 +1127,107 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			a.items, cmd = a.items.Update(msg)
 			return a, cmd
+
+		case screenLibraryCards:
+			if key.Matches(msg, keys.Back) {
+				a.screen = screenCategory
+				a.focus = focusSidebar
+				return a, nil
+			}
+			cards := a.libraryCardTypes()
+			if key.Matches(msg, keys.Up) {
+				if a.cardCursor >= 2 {
+					a.cardCursor -= 2
+				}
+				return a, nil
+			}
+			if key.Matches(msg, keys.Down) {
+				if a.cardCursor+2 < len(cards) {
+					a.cardCursor += 2
+				}
+				return a, nil
+			}
+			if key.Matches(msg, keys.Left) {
+				if a.cardCursor > 0 {
+					a.cardCursor--
+				}
+				return a, nil
+			}
+			if key.Matches(msg, keys.Right) {
+				if a.cardCursor+1 < len(cards) {
+					a.cardCursor++
+				}
+				return a, nil
+			}
+			if key.Matches(msg, keys.Enter) && len(cards) > 0 {
+				ct := cards[a.cardCursor]
+				var filtered []catalog.ContentItem
+				for _, item := range a.visibleItems(a.catalog.Items) {
+					if item.Library && item.Type == ct {
+						filtered = append(filtered, item)
+					}
+				}
+				items := newItemsModel(ct, filtered, a.providers, a.catalog.RepoRoot)
+				items.hiddenCount = countHidden(a.catalog.Items)
+				items.hideLibraryBadge = true
+				items.width = a.width - sidebarWidth - 1
+				items.height = a.panelHeight()
+				a.items = items
+				a.cardParent = screenLibraryCards
+				a.screen = screenItems
+				return a, nil
+			}
+			return a, nil
+
+		case screenLoadoutCards:
+			if key.Matches(msg, keys.Back) {
+				a.screen = screenCategory
+				a.focus = focusSidebar
+				return a, nil
+			}
+			providers := a.loadoutCardProviders()
+			if key.Matches(msg, keys.Up) {
+				if a.cardCursor >= 2 {
+					a.cardCursor -= 2
+				}
+				return a, nil
+			}
+			if key.Matches(msg, keys.Down) {
+				if a.cardCursor+2 < len(providers) {
+					a.cardCursor += 2
+				}
+				return a, nil
+			}
+			if key.Matches(msg, keys.Left) {
+				if a.cardCursor > 0 {
+					a.cardCursor--
+				}
+				return a, nil
+			}
+			if key.Matches(msg, keys.Right) {
+				if a.cardCursor+1 < len(providers) {
+					a.cardCursor++
+				}
+				return a, nil
+			}
+			if key.Matches(msg, keys.Enter) && len(providers) > 0 {
+				prov := providers[a.cardCursor]
+				var filtered []catalog.ContentItem
+				for _, item := range a.visibleItems(a.catalog.ByType(catalog.Loadouts)) {
+					if item.Provider == prov {
+						filtered = append(filtered, item)
+					}
+				}
+				items := newItemsModel(catalog.Loadouts, filtered, a.providers, a.catalog.RepoRoot)
+				items.hiddenCount = countHidden(a.catalog.ByType(catalog.Loadouts))
+				items.width = a.width - sidebarWidth - 1
+				items.height = a.panelHeight()
+				a.items = items
+				a.cardParent = screenLoadoutCards
+				a.screen = screenItems
+				return a, nil
+			}
+			return a, nil
 
 		case screenDetail:
 			// Next/previous item navigation (ctrl+n / ctrl+p)
@@ -1131,6 +1274,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					items := newItemsModel(catalog.Library, localItems, a.providers, a.catalog.RepoRoot)
 					items.hiddenCount = countHidden(a.catalog.Items)
+					items.hideLibraryBadge = true
 					items.width = a.width
 					items.height = a.panelHeight()
 					items.cursor = a.items.cursor
@@ -1179,13 +1323,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case screenSettings:
 			if key.Matches(msg, keys.Back) {
-				if a.settings.HasPendingAction() {
-					a.settings.CancelAction()
-					return a, nil
-				}
-				if a.settings.dirty {
-					a.settings.save()
-				}
 				a.screen = screenCategory
 				a.focus = focusSidebar
 				return a, nil
@@ -1225,6 +1362,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					items.width = a.width - sidebarWidth - 1
 					items.height = a.panelHeight()
 					a.items = items
+					a.cardParent = 0
 					a.screen = screenItems
 					a.focus = focusContent
 					return a, nil
@@ -1323,6 +1461,10 @@ func (a App) View() string {
 		contentView = a.registries.View()
 	case screenSandbox:
 		contentView = a.sandboxSettings.View()
+	case screenLibraryCards:
+		contentView = a.renderLibraryCards()
+	case screenLoadoutCards:
+		contentView = a.renderLoadoutCards()
 	default:
 		// screenCategory: sidebar is the primary UI; show welcome guidance in content
 		contentView = a.renderContentWelcome()
@@ -1693,6 +1835,174 @@ func renderCategoryLine(ct catalog.ContentType, count int, maxW int) string {
 	return line
 }
 
+// libraryCardTypes returns the content types that have library items, in display order.
+func (a App) libraryCardTypes() []catalog.ContentType {
+	typeCounts := make(map[catalog.ContentType]int)
+	for _, item := range a.visibleItems(a.catalog.Items) {
+		if item.Library {
+			typeCounts[item.Type]++
+		}
+	}
+	// Preserve AllContentTypes display order, only include types with items.
+	var result []catalog.ContentType
+	for _, ct := range catalog.AllContentTypes() {
+		if typeCounts[ct] > 0 {
+			result = append(result, ct)
+		}
+	}
+	return result
+}
+
+// loadoutCardProviders returns the unique provider names for loadout items, sorted.
+func (a App) loadoutCardProviders() []string {
+	seen := make(map[string]bool)
+	for _, item := range a.visibleItems(a.catalog.ByType(catalog.Loadouts)) {
+		if item.Provider != "" {
+			seen[item.Provider] = true
+		}
+	}
+	var result []string
+	for p := range seen {
+		result = append(result, p)
+	}
+	sort.Strings(result)
+	return result
+}
+
+// renderLibraryCards renders a card grid grouping library items by content type.
+func (a App) renderLibraryCards() string {
+	cards := a.libraryCardTypes()
+	if len(cards) == 0 {
+		return "\n" + helpStyle.Render("  No library items found.")
+	}
+
+	// Count items per type
+	typeCounts := make(map[catalog.ContentType]int)
+	for _, item := range a.visibleItems(a.catalog.Items) {
+		if item.Library {
+			typeCounts[item.Type]++
+		}
+	}
+
+	contentW := a.width - sidebarWidth - 1
+	var s string
+	s += "\n" + titleStyle.Render("  Library") + "\n"
+	s += helpStyle.Render("  Browse library items by content type") + "\n\n"
+
+	singleCol := contentW < 42
+	cardW := (contentW - 5) / 2
+	if singleCol {
+		cardW = contentW - 2
+	}
+	if cardW < 18 {
+		cardW = 18
+	}
+
+	cardBase := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		Width(cardW).
+		Padding(0, 1)
+	if !singleCol {
+		cardBase = cardBase.Height(3)
+	}
+
+	renderCard := func(idx int, ct catalog.ContentType) string {
+		inner := labelStyle.Render(ct.Label()) + " " + countStyle.Render(fmt.Sprintf("(%d)", typeCounts[ct]))
+		desc := categoryDesc[ct]
+		if desc == "" {
+			desc = "Browse " + ct.Label() + " content"
+		}
+		inner += "\n" + helpStyle.Render(desc)
+
+		style := cardBase.BorderForeground(borderColor)
+		if idx == a.cardCursor {
+			style = cardBase.BorderForeground(accentColor)
+		}
+		return zone.Mark(fmt.Sprintf("library-card-%s", ct), style.Render(inner))
+	}
+
+	if singleCol {
+		for i, ct := range cards {
+			s += renderCard(i, ct) + "\n"
+		}
+	} else {
+		for i := 0; i < len(cards); i += 2 {
+			left := renderCard(i, cards[i])
+			var right string
+			if i+1 < len(cards) {
+				right = renderCard(i+1, cards[i+1])
+			}
+			s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
+		}
+	}
+
+	return s
+}
+
+// renderLoadoutCards renders a card grid grouping loadout items by provider.
+func (a App) renderLoadoutCards() string {
+	providers := a.loadoutCardProviders()
+	if len(providers) == 0 {
+		return "\n" + helpStyle.Render("  No loadouts found.")
+	}
+
+	// Count items per provider
+	provCounts := make(map[string]int)
+	for _, item := range a.visibleItems(a.catalog.ByType(catalog.Loadouts)) {
+		provCounts[item.Provider]++
+	}
+
+	contentW := a.width - sidebarWidth - 1
+	var s string
+	s += "\n" + titleStyle.Render("  Loadouts") + "\n"
+	s += helpStyle.Render("  Browse loadouts by provider") + "\n\n"
+
+	singleCol := contentW < 42
+	cardW := (contentW - 5) / 2
+	if singleCol {
+		cardW = contentW - 2
+	}
+	if cardW < 18 {
+		cardW = 18
+	}
+
+	cardBase := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		Width(cardW).
+		Padding(0, 1)
+	if !singleCol {
+		cardBase = cardBase.Height(3)
+	}
+
+	renderCard := func(idx int, prov string) string {
+		inner := labelStyle.Render(prov) + " " + countStyle.Render(fmt.Sprintf("(%d)", provCounts[prov]))
+		inner += "\n" + helpStyle.Render("Loadouts for "+prov)
+
+		style := cardBase.BorderForeground(borderColor)
+		if idx == a.cardCursor {
+			style = cardBase.BorderForeground(accentColor)
+		}
+		return zone.Mark(fmt.Sprintf("loadout-card-%s", prov), style.Render(inner))
+	}
+
+	if singleCol {
+		for i, prov := range providers {
+			s += renderCard(i, prov) + "\n"
+		}
+	} else {
+		for i := 0; i < len(providers); i += 2 {
+			left := renderCard(i, providers[i])
+			var right string
+			if i+1 < len(providers) {
+				right = renderCard(i+1, providers[i+1])
+			}
+			s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
+		}
+	}
+
+	return s
+}
+
 // contextHelpText returns the appropriate help text for the current screen state.
 func (a App) contextHelpText() string {
 	switch a.screen {
@@ -1712,6 +2022,8 @@ func (a App) contextHelpText() string {
 		return a.updater.helpText()
 	case screenSandbox:
 		return a.sandboxSettings.helpText()
+	case screenLibraryCards, screenLoadoutCards:
+		return "up/down navigate • enter browse • esc back"
 	default:
 		return "esc back • ? help"
 	}
@@ -1753,6 +2065,10 @@ func (a App) breadcrumb() string {
 		return "Registries"
 	case screenSandbox:
 		return "Sandbox"
+	case screenLibraryCards:
+		return "Library"
+	case screenLoadoutCards:
+		return "Loadouts"
 	default:
 		return "syllago"
 	}

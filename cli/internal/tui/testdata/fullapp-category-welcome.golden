@@ -1,24 +1,24 @@
 syllago           │  AI Tools
                   │  Skills      3 - Reusable skill definitions that extend AI t
-  AI Tools        │  Agents      1 - Agent configurations with specialized roles
+  Content         │  Agents      1 - Agent configurations with specialized roles
 ▸ Skills        3 │  MCP Configs  1 - Model Context Protocol server configuratio
   Agents        1 │  Rules       1 - Rule files that guide AI coding tool behavi
   MCP Configs   1 │  Hooks       1 - Event-driven hooks for automation and valid
   Rules         1 │  Commands    1 - Custom slash commands for AI coding tools
   Hooks         1 │  Loadouts    0 - Curated content bundles for quick session s
   Commands      1 │
-  Loadouts      0 │  Configuration
-  Library       1 │  Add          - Add content from providers, local files, or
-  ─────────────   │  Update       - Check for updates and pull latest changes
-  Configuration   │  Settings     - Configure paths and providers
-  Add             │  Registries   - Manage git-based content sources from your t
+  ─────────────   │  Configuration
+  Collections     │  Add          - Add content from providers, local files, or
+  Library       1 │  Update       - Check for updates and pull latest changes
+  Loadouts      0 │  Settings     - Configure paths and providers
+  ─────────────   │  Registries   - Manage git-based content sources from your t
+  Configuration   │
+  Add             │
   Update          │
   Settings        │
   Registries      │
   Sandbox         │
                   │
-
-
 
 
 

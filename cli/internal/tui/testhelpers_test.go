@@ -203,6 +203,35 @@ func testProviders(t *testing.T) []provider.Provider {
 	}
 }
 
+// navigateToLibraryItems navigates to Library items via the card view.
+// Presses Enter on the first card (Skills) to get to the items list.
+func navigateToLibraryItems(t *testing.T) App {
+	t.Helper()
+	app := testApp(t)
+	nTypes := sidebarContentCount()
+	app = pressN(app, keyDown, nTypes) // Library
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+	assertScreen(t, app, screenLibraryCards)
+	// Press Enter to drill into the first card
+	m, _ = app.Update(keyEnter)
+	app = m.(App)
+	assertScreen(t, app, screenItems)
+	return app
+}
+
+// sidebarContentCount returns the number of content type rows in the sidebar.
+// Loadouts is shown in the Collections section, not with content types.
+func sidebarContentCount() int {
+	count := 0
+	for _, ct := range catalog.AllContentTypes() {
+		if ct != catalog.Loadouts {
+			count++
+		}
+	}
+	return count
+}
+
 // ---------------------------------------------------------------------------
 // Test app factory
 // ---------------------------------------------------------------------------

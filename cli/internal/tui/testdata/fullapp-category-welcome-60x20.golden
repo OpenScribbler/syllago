@@ -1,17 +1,19 @@
 syllago           │  AI Tools
                   │  Skills      3 - Reusable skill definiti
-  AI Tools        │  Agents      1 - Agent configurations wi
+  Content         │  Agents      1 - Agent configurations wi
 ▸ Skills        3 │  MCP Configs  1 - Model Context Protocol
   Agents        1 │  Rules       1 - Rule files that guide A
   MCP Configs   1 │  Hooks       1 - Event-driven hooks for
   Rules         1 │  Commands    1 - Custom slash commands f
   Hooks         1 │  Loadouts    0 - Curated content bundles
   Commands      1 │
-  Loadouts      0 │  Configuration
-  Library       1 │  Add          - Add content from provide
-  ─────────────   │  Update       - Check for updates and pu
-  Configuration   │  Settings     - Configure paths and prov
-  Add             │  Registries   - Manage git-based content
+  ─────────────   │  Configuration
+  Collections     │  Add          - Add content from provide
+  Library       1 │  Update       - Check for updates and pu
+  Loadouts      0 │  Settings     - Configure paths and prov
+  ─────────────   │  Registries   - Manage git-based content
+  Configuration   │
+  Add             │
   Update          │
   Settings        │
   Registries      │

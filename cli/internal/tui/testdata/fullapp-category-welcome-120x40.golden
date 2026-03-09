@@ -1,24 +1,24 @@
 syllago           │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
                   ││ Skills (3)                                     │ │ Agents (1)                                     │
-  AI Tools        ││ Reusable skill definitions that extend AI tool │ │ Agent configurations with specialized roles    │
+  Content         ││ Reusable skill definitions that extend AI tool │ │ Agent configurations with specialized roles    │
 ▸ Skills        3 ││ capabilities                                   │ │ and personalities                              │
   Agents        1 │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
   MCP Configs   1 │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
   Rules         1 ││ MCP Configs (1)                                │ │ Rules (1)                                      │
   Hooks         1 ││ Model Context Protocol server configurations   │ │ Rule files that guide AI coding tool behavior  │
   Commands      1 ││                                                │ │                                                │
-  Loadouts      0 │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
-  Library       1 │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
-  ─────────────   ││ Hooks (1)                                      │ │ Commands (1)                                   │
-  Configuration   ││ Event-driven hooks for automation and          │ │ Custom slash commands for AI coding tools      │
-  Add             ││ validation                                     │ │                                                │
-  Update          │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
-  Settings        │╭────────────────────────────────────────────────╮
-  Registries      ││ Loadouts (0)                                   │
-  Sandbox         ││ Curated content bundles for quick session      │
-                  ││ setup                                          │
-                   ╰────────────────────────────────────────────────╯
-
+  ─────────────   │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
+  Collections     │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
+  Library       1 ││ Hooks (1)                                      │ │ Commands (1)                                   │
+  Loadouts      0 ││ Event-driven hooks for automation and          │ │ Custom slash commands for AI coding tools      │
+  ─────────────   ││ validation                                     │ │                                                │
+  Configuration   │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
+  Add             │╭────────────────────────────────────────────────╮
+  Update          ││ Loadouts (0)                                   │
+  Settings        ││ Curated content bundles for quick session      │
+  Registries      ││ setup                                          │
+  Sandbox         │╰────────────────────────────────────────────────╯
+                  │
                      Configuration
 
                    ╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮

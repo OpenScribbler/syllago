@@ -1,14 +1,16 @@
 syllago           │Home > Skills > alpha-skill
                   │
-  AI Tools        │ Overview  |  Files  |  Install
+  Content         │ Overview  |  Files  |  Install
 ▸ Skills        3 │Type: Skills
   Agents        1 │Path: <TESTDIR>/skills/alpha-skill
   MCP Configs   1 │Providers: Claude Code
   Rules         1 │────────────────────────────────────────────────────────────────────────────────
   Hooks         1 │
   Commands      1 │  > SKILL.md
-  Loadouts      0 │    README.md
+  ─────────────   │    README.md
+  Collections     │
   Library       1 │
+  Loadouts      0 │
   ─────────────   │
   Configuration   │
   Add             │
@@ -17,8 +19,6 @@ syllago           │Home > Skills > alpha-skill
   Registries      │
   Sandbox         │
                   │
-
-
 
 
 
