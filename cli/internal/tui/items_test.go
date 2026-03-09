@@ -171,7 +171,7 @@ func TestItemsScrollShowsCounts(t *testing.T) {
 func TestItemsProviderColumn(t *testing.T) {
 	app := testApp(t)
 	// Navigate to Rules (provider-specific type)
-	nTypes := len(catalog.AllContentTypes())
+	nTypes := sidebarContentCount()
 	// Rules is one of the types — find its index
 	for i, ct := range catalog.AllContentTypes() {
 		if ct == catalog.Rules {
@@ -196,19 +196,15 @@ func TestItemsProviderColumn(t *testing.T) {
 }
 
 func TestItemsLibraryPrefix(t *testing.T) {
-	app := testApp(t)
-	// Navigate to Library
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes) // Library
-	m, _ := app.Update(keyEnter)
-	app = m.(App)
+	app := navigateToLibraryItems(t)
 
 	if len(app.items.items) == 0 {
 		t.Fatal("expected at least one library item")
 	}
 
+	// In Library view, the [LIBRARY] badge should be hidden (redundant)
 	view := app.View()
-	assertContains(t, view, "[LIBRARY]")
+	assertNotContains(t, view, "[LIBRARY]")
 }
 
 func TestItemsSearchResultsTypeTag(t *testing.T) {
@@ -230,20 +226,14 @@ func TestItemsSearchResultsTypeTag(t *testing.T) {
 }
 
 func TestItemsLibraryTypeTag(t *testing.T) {
-	app := testApp(t)
-	// Navigate to Library
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes)
-	m, _ := app.Update(keyEnter)
-	app = m.(App)
+	app := navigateToLibraryItems(t)
 
 	if len(app.items.items) == 0 {
 		t.Fatal("expected at least one Library item")
 	}
 
 	view := app.View()
-	assertContains(t, view, "Library")
-	// Type tags should appear
+	// Type label should appear in the breadcrumb/header
 	assertContains(t, view, catalog.Skills.Label())
 }
 

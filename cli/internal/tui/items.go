@@ -108,15 +108,16 @@ func buildHookMatrix(item catalog.ContentItem) hookCompatMatrix {
 }
 
 type itemsModel struct {
-	contentType    catalog.ContentType
-	items          []catalog.ContentItem
-	providers      []provider.Provider
-	repoRoot       string
-	sourceRegistry string // set when browsing items from a specific registry
-	cursor         int
-	hiddenCount    int // number of hidden items filtered out
-	width          int
-	height         int
+	contentType      catalog.ContentType
+	items            []catalog.ContentItem
+	providers        []provider.Provider
+	repoRoot         string
+	sourceRegistry   string // set when browsing items from a specific registry
+	cursor           int
+	hiddenCount      int // number of hidden items filtered out
+	hideLibraryBadge bool // suppress [LIBRARY] badge (when already in Library view)
+	width            int
+	height           int
 }
 
 func newItemsModel(ct catalog.ContentType, items []catalog.ContentItem, providers []provider.Provider, repoRoot string) itemsModel {
@@ -411,7 +412,7 @@ func (m itemsModel) View() string {
 		} else if item.IsBuiltin() {
 			localPrefix = builtinStyle.Render("[BUILT-IN]") + " "
 			localPrefixLen = 11 // "[BUILT-IN] "
-		} else if item.Library {
+		} else if item.Library && !m.hideLibraryBadge {
 			localPrefix = warningStyle.Render("[LIBRARY]") + " "
 			localPrefixLen = 10 // "[LIBRARY] "
 		} else if item.Registry != "" {

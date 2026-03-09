@@ -3,16 +3,14 @@ package tui
 import (
 	"fmt"
 	"testing"
-
-	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 // navigateToUpdate creates a test app and navigates to the update screen.
 func navigateToUpdate(t *testing.T) App {
 	t.Helper()
 	app := testApp(t)
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes+2) // Update
+	nTypes := sidebarContentCount()
+	app = pressN(app, keyDown, nTypes+3) // Update
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenUpdate)
@@ -28,8 +26,8 @@ func navigateToUpdateWithRemote(t *testing.T) App {
 	app.sidebar.remoteVersion = "2.0.0"
 	app.sidebar.updateAvailable = true
 
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes+2)
+	nTypes := sidebarContentCount()
+	app = pressN(app, keyDown, nTypes+3)
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenUpdate)

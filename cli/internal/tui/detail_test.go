@@ -324,18 +324,13 @@ func TestDetailOverviewMetadata(t *testing.T) {
 
 func TestDetailOverviewLLMPrompt(t *testing.T) {
 	// Navigate to the local skill which has LLM-PROMPT.md
-	app := testApp(t)
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes) // Library
-	m, _ := app.Update(keyEnter)
-	app = m.(App)
-	assertScreen(t, app, screenItems)
+	app := navigateToLibraryItems(t)
 
 	if len(app.items.items) == 0 {
 		t.Fatal("expected local items in My Tools")
 	}
 
-	m, _ = app.Update(keyEnter) // → detail of first local item
+	m, _ := app.Update(keyEnter) // → detail of first local item
 	app = m.(App)
 	assertScreen(t, app, screenDetail)
 
@@ -729,13 +724,9 @@ func TestDetailUninstallNothingSelected(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestDetailShareLibrary(t *testing.T) {
-	// Navigate to library item
-	app := testApp(t)
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes) // Library
-	m, _ := app.Update(keyEnter)
-	app = m.(App)
-	m, _ = app.Update(keyEnter) // → detail of library item
+	// Navigate to library item via card view
+	app := navigateToLibraryItems(t)
+	m, _ := app.Update(keyEnter) // → detail of library item
 	app = m.(App)
 	assertScreen(t, app, screenDetail)
 

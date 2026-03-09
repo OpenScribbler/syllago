@@ -8,8 +8,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/exp/teatest"
-
-	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 // testModel wraps App to suppress Init() — prevents git fetch during tests.
@@ -130,8 +128,8 @@ func TestTeatestSettingsToggle(t *testing.T) {
 	waitFor(t, tm, "syllago")
 
 	// Navigate to Settings (last row)
-	nTypes := len(catalog.AllContentTypes())
-	for i := 0; i < nTypes+3; i++ {
+	nTypes := sidebarContentCount()
+	for i := 0; i < nTypes+4; i++ {
 		tm.Send(keyDown)
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -157,9 +155,9 @@ func TestTeatestImportStart(t *testing.T) {
 	tm := newTestModel(t)
 	waitFor(t, tm, "syllago")
 
-	// Navigate to Add (8 types + Library = nTypes+1 presses)
-	nTypes := len(catalog.AllContentTypes())
-	for i := 0; i < nTypes+1; i++ {
+	// Navigate to Add
+	nTypes := sidebarContentCount()
+	for i := 0; i < nTypes+2; i++ {
 		tm.Send(keyDown)
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -167,8 +165,8 @@ func TestTeatestImportStart(t *testing.T) {
 
 	tm.Send(keyEnter)
 
-	// Should see import source options
-	waitFor(t, tm, "Add Content")
+	// Should see import breadcrumb
+	waitFor(t, tm, "From Provider")
 
 	tm.Send(keyEsc)
 	waitFor(t, tm, "syllago")

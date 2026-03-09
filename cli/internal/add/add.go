@@ -50,6 +50,7 @@ type DiscoveryItem struct {
 	Type   catalog.ContentType
 	Path   string // absolute path to source file
 	Status ItemStatus
+	Scope  string // "project" or "global" (set by caller)
 }
 
 // AddStatus tracks the outcome of a single write operation.

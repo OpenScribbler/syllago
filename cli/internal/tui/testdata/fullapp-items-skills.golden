@@ -1,14 +1,16 @@
 syllago           │Home > Skills
                   │
-  AI Tools        │    Name         Description                         Provider
+  Content         │    Name         Description                         Provider
 ▸ Skills        3 │    ───────────  ──────────────────────────────────  ────────
   Agents        1 │  > alpha-skill  A helpful skill
   MCP Configs   1 │    beta-skill   Another skill
   Rules         1 │    local-skill  [LIBRARY] A library skill with ...
   Hooks         1 │
   Commands      1 │up/down navigate • enter detail • esc back • / search
-  Loadouts      0 │
+  ─────────────   │
+  Collections     │
   Library       1 │
+  Loadouts      0 │
   ─────────────   │
   Configuration   │
   Add             │
@@ -17,8 +19,6 @@ syllago           │Home > Skills
   Registries      │
   Sandbox         │
                   │
-
-
 
 
 

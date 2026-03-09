@@ -1,24 +1,24 @@
 syllago           │Home > Skills > alpha-skill
                   │
-  AI Tools        │ Overview  |  Files  |  Install
+  Content         │ Overview  |  Files  |  Install
 ▸ Skills        3 │Type: Skills
   Agents        1 │Path: <TESTDIR>/skills/alpha-skill
   MCP Configs   1 │Providers: Claude Code
   Rules         1 │────────────────────────────────────────────────────────────────────────────────
   Hooks         1 │
   Commands      1 │
-  Loadouts      0 │  # alpha╭────────────────────────────────────────╮
-  Library       1 │         │                                        │
-  ─────────────   │  Readme │  Confirm Uninstall                     │
-  Configuration   │         │                                        │
-  Add             │         │  Remove alpha-skill from all           │
-  Update          │         │  providers?                            │
+  ─────────────   │  # alpha╭────────────────────────────────────────╮
+  Collections     │         │                                        │
+  Library       1 │  Readme │  Confirm Uninstall                     │
+  Loadouts      0 │         │                                        │
+  ─────────────   │         │  Remove alpha-skill from all           │
+  Configuration   │         │  providers?                            │
+  Add             │         │                                        │
+  Update          │         │                                        │
   Settings        │         │                                        │
   Registries      │         │                                        │
-  Sandbox         │         │                                        │
+  Sandbox         │         │           Confirm    ▸  Cancel         │
                   │         │                                        │
-                            │           Confirm    ▸  Cancel         │
-                            │                                        │
                             ╰────────────────────────────────────────╯
 
 

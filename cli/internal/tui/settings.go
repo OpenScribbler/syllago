@@ -9,77 +9,44 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
-	"github.com/OpenScribbler/syllago/cli/internal/provider"
-)
-
-// settingsEditMode represents which sub-picker is open.
-type settingsEditMode int
-
-const (
-	editNone      settingsEditMode = iota
-	editProviders                  // multi-select picker for providers
 )
 
 type settingsModel struct {
-	repoRoot  string
-	cfg       *config.Config
-	providers []provider.Provider
+	repoRoot string
+	cfg      *config.Config
 
-	cursor   int              // main settings row cursor
-	editMode settingsEditMode // which sub-picker is active
-	subItems []settingsPickerItem
-	subCur   int // cursor within sub-picker
-
-	dirty      bool // true if any setting changed since load/save
+	cursor     int // main settings row cursor
 	message    string
 	messageErr bool
 	width      int
 	height     int
 }
 
-type settingsPickerItem struct {
-	label   string
-	checked bool
-}
-
-func newSettingsModel(repoRoot string, providers []provider.Provider) settingsModel {
+func newSettingsModel(repoRoot string) settingsModel {
 	cfg, err := config.Load(repoRoot)
 	if err != nil {
 		cfg = &config.Config{}
 	}
 	return settingsModel{
-		repoRoot:  repoRoot,
-		cfg:       cfg,
-		providers: providers,
+		repoRoot: repoRoot,
+		cfg:      cfg,
 	}
 }
 
 // settingsRowCount returns the number of configurable rows.
 func (m settingsModel) settingsRowCount() int {
-	return 3 // auto-update, providers, registry-auto-sync
+	return 2 // auto-update, registry-auto-sync
 }
 
 func (m settingsModel) Update(msg tea.Msg) (settingsModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
 		if msg.Action == tea.MouseActionRelease && msg.Button == tea.MouseButtonLeft {
-			if m.editMode != editNone {
-				// Sub-picker: click toggles item
-				for i := range m.subItems {
-					if zone.Get(fmt.Sprintf("settings-sub-%d", i)).InBounds(msg) {
-						m.subCur = i
-						m.subItems[i].checked = !m.subItems[i].checked
-						return m, nil
-					}
-				}
-			} else {
-				// Main rows: click activates
-				for i := 0; i < m.settingsRowCount(); i++ {
-					if zone.Get(fmt.Sprintf("settings-row-%d", i)).InBounds(msg) {
-						m.cursor = i
-						m.activateRow()
-						return m, nil
-					}
+			for i := 0; i < m.settingsRowCount(); i++ {
+				if zone.Get(fmt.Sprintf("settings-row-%d", i)).InBounds(msg) {
+					m.cursor = i
+					m.activateRow()
+					return m, nil
 				}
 			}
 		}
@@ -87,31 +54,6 @@ func (m settingsModel) Update(msg tea.Msg) (settingsModel, tea.Cmd) {
 	case tea.KeyMsg:
 		m.message = ""
 
-		// Sub-picker active: handle sub-picker keys
-		if m.editMode != editNone {
-			switch {
-			case msg.Type == tea.KeyEsc:
-				m.applySubPicker()
-				m.editMode = editNone
-				m.subItems = nil
-				m.subCur = 0
-			case key.Matches(msg, keys.Up):
-				if m.subCur > 0 {
-					m.subCur--
-				}
-			case key.Matches(msg, keys.Down):
-				if m.subCur < len(m.subItems)-1 {
-					m.subCur++
-				}
-			case key.Matches(msg, keys.Space), msg.Type == tea.KeyEnter:
-				if m.subCur < len(m.subItems) {
-					m.subItems[m.subCur].checked = !m.subItems[m.subCur].checked
-				}
-			}
-			return m, nil
-		}
-
-		// Main settings view
 		switch {
 		case key.Matches(msg, keys.Up):
 			if m.cursor > 0 {
@@ -123,8 +65,6 @@ func (m settingsModel) Update(msg tea.Msg) (settingsModel, tea.Cmd) {
 			}
 		case key.Matches(msg, keys.Space), msg.Type == tea.KeyEnter:
 			m.activateRow()
-		case key.Matches(msg, keys.Save):
-			m.save()
 		}
 	}
 	return m, nil
@@ -142,22 +82,7 @@ func (m *settingsModel) activateRow() {
 		} else {
 			m.cfg.Preferences["autoUpdate"] = "true"
 		}
-		m.dirty = true
-	case 1: // providers multi-select
-		m.editMode = editProviders
-		m.subCur = 0
-		enabled := make(map[string]bool)
-		for _, slug := range m.cfg.Providers {
-			enabled[slug] = true
-		}
-		m.subItems = nil
-		for _, p := range m.providers {
-			m.subItems = append(m.subItems, settingsPickerItem{
-				label:   p.Name + " (" + p.Slug + ")",
-				checked: enabled[p.Slug],
-			})
-		}
-	case 2: // registry auto-sync toggle
+	case 1: // registry auto-sync toggle
 		if m.cfg.Preferences == nil {
 			m.cfg.Preferences = make(map[string]string)
 		}
@@ -166,23 +91,8 @@ func (m *settingsModel) activateRow() {
 		} else {
 			m.cfg.Preferences["registryAutoSync"] = "true"
 		}
-		m.dirty = true
 	}
-}
-
-// applySubPicker writes sub-picker state back to cfg.
-func (m *settingsModel) applySubPicker() {
-	switch m.editMode {
-	case editProviders:
-		var slugs []string
-		for i, item := range m.subItems {
-			if item.checked && i < len(m.providers) {
-				slugs = append(slugs, m.providers[i].Slug)
-			}
-		}
-		m.cfg.Providers = slugs
-	}
-	m.dirty = true
+	m.save()
 }
 
 // save persists config to disk.
@@ -199,7 +109,6 @@ func (m *settingsModel) save() {
 // settingsDescriptions maps cursor index to a description shown in the bottom detail area.
 var settingsDescriptions = []string{
 	"Pull updates automatically when a new version is detected on the remote.",
-	"Providers are AI coding tools (Claude Code, Cursor, Gemini CLI, etc.).\nEnable the ones you use -- syllago adds their existing content\nand can install your catalog items back to them.",
 	"Sync git registries automatically when syllago launches (5-second timeout).\nRegistries must be added via `syllago registry add` first.",
 }
 
@@ -213,42 +122,12 @@ func (m settingsModel) View() string {
 	}
 	s += m.renderRow(0, "Auto-update", autoVal)
 
-	// Row 1: Providers
-	provVal := "(none)"
-	if len(m.cfg.Providers) > 0 {
-		provVal = strings.Join(m.cfg.Providers, ", ")
-	}
-	s += m.renderRow(1, "Providers", provVal)
-
-	// Row 2: Registry auto-sync
+	// Row 1: Registry auto-sync
 	autoSyncVal := "off"
 	if m.cfg.Preferences["registryAutoSync"] == "true" {
 		autoSyncVal = "on"
 	}
-	s += m.renderRow(2, "Registry auto-sync", autoSyncVal)
-
-	// Sub-picker overlay
-	if m.editMode != editNone {
-		s += "\n"
-		s += labelStyle.Render("Select providers:") + "\n\n"
-
-		for i, item := range m.subItems {
-			prefix := "  "
-			style := itemStyle
-			if i == m.subCur {
-				prefix = "> "
-				style = selectedItemStyle
-			}
-
-			check := "[ ]"
-			if item.checked {
-				check = installedStyle.Render("[✓]")
-			}
-
-			row := fmt.Sprintf("  %s%s %s", prefix, check, style.Render(item.label))
-			s += zone.Mark(fmt.Sprintf("settings-sub-%d", i), row) + "\n"
-		}
-	}
+	s += m.renderRow(1, "Registry auto-sync", autoSyncVal)
 
 	// Status message
 	if m.message != "" {
@@ -262,7 +141,7 @@ func (m settingsModel) View() string {
 	}
 
 	// Bottom detail area (fixed 3-line height to prevent jitter)
-	if m.editMode == editNone && m.cursor >= 0 && m.cursor < len(settingsDescriptions) {
+	if m.cursor >= 0 && m.cursor < len(settingsDescriptions) {
 		const detailLines = 3
 		s += "\n " + helpStyle.Render(strings.Repeat("─", 45)) + "\n"
 		lines := strings.Split(settingsDescriptions[m.cursor], "\n")
@@ -282,7 +161,7 @@ func (m settingsModel) View() string {
 func (m settingsModel) renderRow(index int, label, value string) string {
 	prefix := "  "
 	style := itemStyle
-	if index == m.cursor && m.editMode == editNone {
+	if index == m.cursor {
 		prefix = "> "
 		style = selectedItemStyle
 	}
@@ -291,21 +170,5 @@ func (m settingsModel) renderRow(index int, label, value string) string {
 }
 
 func (m settingsModel) helpText() string {
-	if m.editMode != editNone {
-		return "up/down navigate • space toggle • esc done"
-	}
-	return "up/down navigate • enter/space edit • s save • esc back"
-}
-
-// HasPendingAction returns true if a sub-picker is open.
-func (m settingsModel) HasPendingAction() bool {
-	return m.editMode != editNone
-}
-
-// CancelAction closes any open sub-picker.
-func (m *settingsModel) CancelAction() {
-	m.applySubPicker()
-	m.editMode = editNone
-	m.subItems = nil
-	m.subCur = 0
+	return "up/down navigate • enter/space toggle • esc back"
 }

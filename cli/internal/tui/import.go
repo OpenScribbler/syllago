@@ -747,16 +747,77 @@ func (m importModel) stepLabel() string {
 	return ""
 }
 
+// sourceLabel returns a human-readable label for the selected source option.
+func (m importModel) sourceLabel() string {
+	switch m.sourceCursor {
+	case 0:
+		return "From Provider"
+	case 1:
+		return "Local Path"
+	case 2:
+		return "Git URL"
+	case 3:
+		return "Create New"
+	}
+	return "Source"
+}
+
+// breadcrumb returns clickable breadcrumb navigation for the import wizard.
+// Earlier segments are clickable (muted style with zone marks), the current
+// segment is rendered with titleStyle (bold/colored, not clickable).
+func (m importModel) breadcrumb() string {
+	home := zone.Mark("crumb-home", helpStyle.Render("Home"))
+	arrow := helpStyle.Render(" > ")
+
+	// Step 1: source selection — just "Home > Add"
+	if m.step == stepSource {
+		return home + arrow + titleStyle.Render("Add")
+	}
+
+	// All other steps: "Home > Add > [source] > [current]"
+	addCrumb := zone.Mark("add-crumb-source", helpStyle.Render("Add"))
+
+	// Determine the current (final) segment label based on step.
+	var current string
+	switch m.step {
+	case stepType:
+		current = "Content Type"
+	case stepProvider:
+		current = "Provider"
+	case stepBrowseStart, stepBrowse, stepPath:
+		current = "Browse"
+	case stepValidate:
+		current = "Review"
+	case stepGitURL:
+		current = "Repository URL"
+	case stepGitPick:
+		current = "Select Item"
+	case stepName:
+		current = "Name"
+	case stepConfirm:
+		current = "Confirm"
+	case stepConflict:
+		if len(m.batchConflicts) > 0 {
+			current = fmt.Sprintf("Conflict %d of %d", m.batchConflictIdx+1, len(m.batchConflicts))
+		} else {
+			current = "Conflict"
+		}
+	case stepHookSelect:
+		current = "Select Hooks"
+	case stepProviderPick:
+		current = "Select Provider"
+	case stepDiscoverySelect:
+		current = "Select Items"
+	default:
+		current = "Add"
+	}
+
+	return home + arrow + addCrumb + arrow + helpStyle.Render(m.sourceLabel()) + arrow + titleStyle.Render(current)
+}
+
 // View renders the current step's UI.
 func (m importModel) View() string {
-	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + " " + helpStyle.Render(">") + " " + titleStyle.Render("Add Content") + "\n"
-	if label := m.stepLabel(); label != "" {
-		if m.step == stepConflict {
-			s += "\n" + warningStyle.Render(label) + "\n"
-		} else {
-			s += helpStyle.Render(label) + "\n"
-		}
-	}
+	s := m.breadcrumb() + "\n"
 
 	switch m.step {
 	case stepSource:
@@ -977,7 +1038,11 @@ func (m importModel) View() string {
 					badge = helpStyle.Render("in library")
 				}
 				typeTag := countStyle.Render("(" + item.Type.Label() + ")")
-				row := fmt.Sprintf("  %s%s %s %s %s", prefix, check, style.Render(item.Name), typeTag, badge)
+				scopeTag := ""
+				if item.Scope == "global" {
+					scopeTag = " " + helpStyle.Render("[global]")
+				}
+				row := fmt.Sprintf("  %s%s %s %s %s%s", prefix, check, style.Render(item.Name), typeTag, badge, scopeTag)
 				s += zone.Mark(fmt.Sprintf("discovery-item-%d", i), row) + "\n"
 			}
 
@@ -1737,8 +1802,45 @@ func (m importModel) updateProviderPick(msg tea.KeyMsg) (importModel, tea.Cmd) {
 		m.message = ""
 		return m, func() tea.Msg {
 			globalDir := catalog.GlobalContentDir()
-			items, err := add.DiscoverFromProvider(prov, m.projectRoot, nil, globalDir)
-			return discoveryDoneMsg{items: items, err: err}
+			cwd, _ := os.Getwd()
+			if cwd == "" {
+				cwd = m.projectRoot
+			}
+			homeDir, _ := os.UserHomeDir()
+
+			// Project-scope discovery
+			projectItems, err := add.DiscoverFromProvider(prov, cwd, nil, globalDir)
+			if err != nil {
+				return discoveryDoneMsg{err: err}
+			}
+			for i := range projectItems {
+				projectItems[i].Scope = "project"
+			}
+
+			// Global-scope discovery (skip if cwd == home)
+			var globalItems []add.DiscoveryItem
+			if homeDir != "" && homeDir != cwd {
+				globalItems, _ = add.DiscoverFromProvider(prov, homeDir, nil, globalDir)
+				for i := range globalItems {
+					globalItems[i].Scope = "global"
+				}
+			}
+
+			// Merge: project wins for same type/name
+			seen := make(map[string]bool)
+			var merged []add.DiscoveryItem
+			for _, item := range projectItems {
+				k := string(item.Type) + "/" + item.Name
+				seen[k] = true
+				merged = append(merged, item)
+			}
+			for _, item := range globalItems {
+				k := string(item.Type) + "/" + item.Name
+				if !seen[k] {
+					merged = append(merged, item)
+				}
+			}
+			return discoveryDoneMsg{items: merged}
 		}
 	}
 	return m, nil
@@ -1856,6 +1958,13 @@ func (m importModel) importSelectedHooks() tea.Cmd {
 // handleMouseClick processes a left-click on zone-marked import options.
 // Clicking an option sets the cursor and triggers Enter (select).
 func (m importModel) handleMouseClick(msg tea.MouseMsg) (importModel, tea.Cmd) {
+	// Breadcrumb click: navigate back to source selection step
+	if zone.Get("add-crumb-source").InBounds(msg) {
+		m.step = stepSource
+		m.message = ""
+		return m, nil
+	}
+
 	// Check how many options are in the current step
 	var maxItems int
 	switch m.step {

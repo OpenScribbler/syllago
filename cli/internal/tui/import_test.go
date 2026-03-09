@@ -15,8 +15,8 @@ import (
 func navigateToImport(t *testing.T) App {
 	t.Helper()
 	app := testApp(t)
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes+1) // Add
+	nTypes := sidebarContentCount()
+	app = pressN(app, keyDown, nTypes+2) // Add
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenImport)
@@ -864,23 +864,18 @@ func TestImportDoneError(t *testing.T) {
 func TestImportViewSource(t *testing.T) {
 	app := navigateToImport(t)
 	view := app.View()
-	assertContains(t, view, "Add Content")
+	assertContains(t, view, "Add")
 	assertContains(t, view, "From Provider")
 	assertContains(t, view, "Local Path")
 	assertContains(t, view, "Git URL")
 	assertContains(t, view, "Create New")
 }
 
-func TestImportShowsStepIndicator(t *testing.T) {
-	app := navigateToImport(t)
-	view := app.View()
-	assertContains(t, view, "Step 1")
-}
-
 func TestImportShowsBreadcrumb(t *testing.T) {
 	app := navigateToImport(t)
 	view := app.View()
 	assertContains(t, view, "Home")
+	assertContains(t, view, "Add")
 }
 
 // ---------------------------------------------------------------------------

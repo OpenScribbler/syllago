@@ -12,8 +12,8 @@ func TestCategoryNavigation(t *testing.T) {
 	app := testApp(t)
 	assertScreen(t, app, screenCategory)
 
-	// Sidebar navigation: 8 content types + Library + Add + Update + Settings + Registries + Sandbox = 14 rows (indices 0-13)
-	totalRows := len(catalog.AllContentTypes()) + 5 // types + Library + Add + Update + Settings + Registries + Sandbox
+	// Sidebar: 6 content types + Library + Loadouts + Add + Update + Settings + Registries + Sandbox = 13 rows (indices 0-12)
+	totalRows := app.sidebar.totalItems() - 1
 	if app.sidebar.cursor != 0 {
 		t.Fatalf("expected initial cursor 0, got %d", app.sidebar.cursor)
 	}
@@ -38,8 +38,18 @@ func TestCategoryNavigation(t *testing.T) {
 }
 
 func TestCategorySelectEachType(t *testing.T) {
-	types := catalog.AllContentTypes()
-	for i, ct := range types {
+	// Sidebar content types (excludes Loadouts which is in Collections section)
+	sidebarTypes := func() []catalog.ContentType {
+		var types []catalog.ContentType
+		for _, ct := range catalog.AllContentTypes() {
+			if ct != catalog.Loadouts {
+				types = append(types, ct)
+			}
+		}
+		return types
+	}()
+
+	for i, ct := range sidebarTypes {
 		app := testApp(t)
 		app = pressN(app, keyDown, i)
 		m, _ := app.Update(keyEnter)
@@ -50,19 +60,34 @@ func TestCategorySelectEachType(t *testing.T) {
 			t.Fatalf("type %s: expected contentType %s, got %s", ct, ct, app.items.contentType)
 		}
 	}
+
+	// Test Loadouts separately (in Collections section, after Library)
+	app := testApp(t)
+	nTypes := sidebarContentCount()
+	app = pressN(app, keyDown, nTypes+1) // Loadouts
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+	assertScreen(t, app, screenItems)
+	if app.items.contentType != catalog.Loadouts {
+		t.Fatalf("expected Loadouts contentType, got %s", app.items.contentType)
+	}
 }
 
 func TestCategorySelectLibrary(t *testing.T) {
 	app := testApp(t)
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes) // Library is right after all types
+	nTypes := sidebarContentCount()
+	app = pressN(app, keyDown, nTypes) // Library is right after content types
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
+	// Library now shows a card view first
+	assertScreen(t, app, screenLibraryCards)
+
+	// Drill into first card to get items
+	m, _ = app.Update(keyEnter)
+	app = m.(App)
 	assertScreen(t, app, screenItems)
-	if app.items.contentType != catalog.Library {
-		t.Fatalf("expected Library contentType, got %s", app.items.contentType)
-	}
+
 	// Should only contain library items
 	for _, item := range app.items.items {
 		if !item.Library {
@@ -73,8 +98,8 @@ func TestCategorySelectLibrary(t *testing.T) {
 
 func TestCategorySelectImport(t *testing.T) {
 	app := testApp(t)
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes+1) // Add is types+1
+	nTypes := sidebarContentCount()
+	app = pressN(app, keyDown, nTypes+2) // Add
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
@@ -86,8 +111,8 @@ func TestCategorySelectImport(t *testing.T) {
 
 func TestCategorySelectUpdate(t *testing.T) {
 	app := testApp(t)
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes+2) // Update is types+2
+	nTypes := sidebarContentCount()
+	app = pressN(app, keyDown, nTypes+3) // Update
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
@@ -99,8 +124,8 @@ func TestCategorySelectUpdate(t *testing.T) {
 
 func TestCategorySelectSettings(t *testing.T) {
 	app := testApp(t)
-	nTypes := len(catalog.AllContentTypes())
-	app = pressN(app, keyDown, nTypes+3) // Settings is types+3
+	nTypes := sidebarContentCount()
+	app = pressN(app, keyDown, nTypes+4) // Settings
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
