@@ -122,7 +122,7 @@ func (m sidebarModel) View() string {
 	// ── Configuration section ──
 	s += labelStyle.Render("  Configuration") + "\n"
 
-	// Utility items: Import, Update, Settings, Registries
+	// Utility items: Add, Update, Settings, Registries
 	utilItems := []struct {
 		label string
 		index int

@@ -85,8 +85,8 @@ func TestFirstRunScreenAppearsWhenEmpty(t *testing.T) {
 	if !strings.Contains(view, "Welcome to syllago") {
 		t.Error("first-run screen should show 'Welcome to syllago' when catalog is empty")
 	}
-	if !strings.Contains(view, "syllago import") {
-		t.Error("first-run screen should show 'syllago import' step")
+	if !strings.Contains(view, "syllago add") {
+		t.Error("first-run screen should show 'syllago add' step")
 	}
 	if !strings.Contains(view, "syllago registry add") {
 		t.Error("first-run screen should show 'syllago registry add' step")

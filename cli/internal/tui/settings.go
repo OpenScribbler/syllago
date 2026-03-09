@@ -199,7 +199,7 @@ func (m *settingsModel) save() {
 // settingsDescriptions maps cursor index to a description shown in the bottom detail area.
 var settingsDescriptions = []string{
 	"Pull updates automatically when a new version is detected on the remote.",
-	"Providers are AI coding tools (Claude Code, Cursor, Gemini CLI, etc.).\nEnable the ones you use -- syllago imports their existing configs\nand can export your catalog items back to them.",
+	"Providers are AI coding tools (Claude Code, Cursor, Gemini CLI, etc.).\nEnable the ones you use -- syllago adds their existing content\nand can install your catalog items back to them.",
 	"Sync git registries automatically when syllago launches (5-second timeout).\nRegistries must be added via `syllago registry add` first.",
 }
 

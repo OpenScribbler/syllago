@@ -622,7 +622,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Check welcome page configuration links
 		welcomeConfigMap := map[string]int{
-			"welcome-import":     len(a.sidebar.types) + 1,
+			"welcome-add":        len(a.sidebar.types) + 1,
 			"welcome-update":     len(a.sidebar.types) + 2,
 			"welcome-settings":   len(a.sidebar.types) + 3,
 			"welcome-registries": len(a.sidebar.types) + 4,
@@ -1466,7 +1466,7 @@ func (a App) renderFirstRun(contentW int) string {
 		head string
 		cmd  string
 	}{
-		{"1.", "Import existing content:", "syllago import --from claude-code"},
+		{"1.", "Add existing content:", "syllago add --from claude-code"},
 		{"2.", "Add a registry:", "syllago registry add <git-url>"},
 		{"3.", "Create new content:", "syllago create skill my-first-skill"},
 		{"4.", "Create a registry:", "syllago registry create my-registry"},
@@ -1520,7 +1520,7 @@ func (a App) renderContentWelcome() string {
 		desc   string
 		zoneID string
 	}{
-		{"Import", "Import your own AI tools from local files or git repos", "welcome-import"},
+		{"Add", "Add content from providers, local files, or git repos", "welcome-add"},
 		{"Update", "Check for updates and pull latest changes", "welcome-update"},
 		{"Settings", "Configure paths and providers", "welcome-settings"},
 		{"Registries", "Manage git-based content sources from your team or organization", "welcome-registries"},
@@ -1739,7 +1739,7 @@ func (a App) breadcrumb() string {
 		}
 		return a.sidebar.selectedType().Label()
 	case screenImport:
-		return "Import"
+		return "Add"
 	case screenUpdate:
 		return "Update"
 	case screenSettings:
