@@ -95,21 +95,20 @@ You are a helpful agent that reviews code and suggests improvements.
 	}
 
 	out := string(result.Content)
-	// Should contain TOML structure
-	assertContains(t, out, "[features]")
-	assertContains(t, out, "multi_agent = true")
-	assertContains(t, out, "[agents.my-agent]")
-	assertContains(t, out, `model = "claude-sonnet-4-6"`)
+	// Should contain single-agent TOML structure
+	assertContains(t, out, "[agent]")
+	assertContains(t, out, "name = 'my-agent'")
+	assertContains(t, out, "description = 'A test agent'")
+	assertContains(t, out, "claude-sonnet-4-6")
 	// Tools translated: Read→view, Bash→shell, Grep→rg
 	assertContains(t, out, "view")
 	assertContains(t, out, "shell")
 	assertContains(t, out, "rg")
-	assertNotContains(t, out, "\"Read\"")
-	assertNotContains(t, out, "\"Bash\"")
-	// Prompt from body
+	// Prompt in instructions section
+	assertContains(t, out, "[agent.instructions]")
 	assertContains(t, out, "reviews code")
-	// Filename
-	assertEqual(t, "config.toml", result.Filename)
+	// Filename uses agent slug
+	assertEqual(t, "my-agent.toml", result.Filename)
 
 	// Should warn about dropped fields
 	hasMaxTurnsWarning := false
@@ -131,7 +130,7 @@ You are a helpful agent that reviews code and suggests improvements.
 }
 
 func TestCodexAgentRoundtrip(t *testing.T) {
-	// Start with Codex TOML → canonicalize → render back to Codex
+	// Start with Codex multi-agent TOML → canonicalize → render to single-agent → canonicalize again
 	input := []byte(`[features]
 multi_agent = true
 
@@ -143,7 +142,7 @@ tools = ["shell", "apply_patch"]
 
 	conv := &AgentsConverter{}
 
-	// Canonicalize
+	// Canonicalize from multi-agent format
 	canonical, err := conv.Canonicalize(input, "codex")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
@@ -158,23 +157,32 @@ tools = ["shell", "apply_patch"]
 		t.Fatal("expected either Write or Edit for apply_patch reverse translation")
 	}
 
-	// Render back to Codex
+	// Render to single-agent Codex format
 	result, err := conv.Render(canonical.Content, provider.Codex)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
 
 	out := string(result.Content)
-	// Should have TOML structure
-	assertContains(t, out, "[features]")
-	assertContains(t, out, "multi_agent = true")
-	assertContains(t, out, "[agents.coder]")
-	assertContains(t, out, `model = "o4-mini"`)
+	// Should have single-agent TOML structure
+	assertContains(t, out, "[agent]")
+	assertContains(t, out, "name = 'coder'")
+	assertContains(t, out, "o4-mini")
+	assertContains(t, out, "[agent.instructions]")
 	// Tools should be back in Codex vocabulary
 	assertContains(t, out, "shell")
 	assertContains(t, out, "apply_patch")
-	// Prompt preserved
+	// Prompt preserved in instructions
 	assertContains(t, out, "Write clean, tested code.")
+
+	// Re-canonicalize from single-agent format (the real round-trip test)
+	canonical2, err := conv.Canonicalize(result.Content, "codex")
+	if err != nil {
+		t.Fatalf("Canonicalize pass 2: %v", err)
+	}
+	canonical2Str := string(canonical2.Content)
+	assertContains(t, canonical2Str, "Bash")
+	assertContains(t, canonical2Str, "Write clean, tested code.")
 }
 
 func TestRenderCodexAgent_DropsAllUnsupportedFields(t *testing.T) {

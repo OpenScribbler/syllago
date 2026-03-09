@@ -21,18 +21,61 @@ type codexConfig struct {
 	Agents   map[string]codexAgentConfig `toml:"agents,omitempty"`
 }
 
-// canonicalizeCodexAgents parses Codex TOML multi-agent config into canonical agents.
-// Returns the first agent as the primary result, additional agents in ExtraFiles.
+// canonicalizeCodexAgents parses Codex agent TOML into canonical agents.
+// Handles both formats:
+//   - Multi-agent (AGENTS.toml): [features] + [agents.<name>] sections
+//   - Single-agent (.codex/agents/*.toml): [agent] + [agent.instructions]
 func canonicalizeCodexAgents(content []byte) (*Result, error) {
+	// Try single-agent format first (more specific structure)
+	var single codexSingleAgent
+	if err := toml.Unmarshal(content, &single); err == nil && single.Agent.Name != "" {
+		return canonicalizeSingleCodexAgent(single)
+	}
+
+	// Fall back to multi-agent format
 	var cfg codexConfig
 	if err := toml.Unmarshal(content, &cfg); err != nil {
 		return nil, fmt.Errorf("parsing Codex TOML: %w", err)
 	}
 
 	if len(cfg.Agents) == 0 {
-		return nil, fmt.Errorf("no [agents.*] sections found in Codex TOML")
+		return nil, fmt.Errorf("no [agent] or [agents.*] sections found in Codex TOML")
 	}
 
+	return canonicalizeMultiCodexAgents(cfg)
+}
+
+// canonicalizeSingleCodexAgent handles the [agent] + [agent.instructions] format.
+func canonicalizeSingleCodexAgent(single codexSingleAgent) (*Result, error) {
+	meta := AgentMeta{
+		Name:        single.Agent.Name,
+		Description: single.Agent.Description,
+		Model:       single.Agent.Model,
+	}
+
+	if len(single.Agent.Tools) > 0 {
+		canonical := make([]string, len(single.Agent.Tools))
+		for i, t := range single.Agent.Tools {
+			canonical[i] = ReverseTranslateTool(t, "copilot-cli")
+		}
+		meta.Tools = canonical
+	}
+
+	body := strings.TrimSpace(single.Agent.Instructions.Content)
+
+	data, err := buildAgentCanonical(meta, body)
+	if err != nil {
+		return nil, fmt.Errorf("building canonical for agent %q: %w", meta.Name, err)
+	}
+
+	return &Result{
+		Content:  data,
+		Filename: meta.Name + ".md",
+	}, nil
+}
+
+// canonicalizeMultiCodexAgents handles the [features] + [agents.<name>] format.
+func canonicalizeMultiCodexAgents(cfg codexConfig) (*Result, error) {
 	var results []struct {
 		name    string
 		content []byte
@@ -44,8 +87,6 @@ func canonicalizeCodexAgents(content []byte) (*Result, error) {
 			Model: agent.Model,
 		}
 
-		// Reverse-translate Codex tool names to canonical.
-		// Codex shares tool vocabulary with Copilot CLI.
 		if len(agent.Tools) > 0 {
 			canonical := make([]string, len(agent.Tools))
 			for i, t := range agent.Tools {
@@ -67,14 +108,12 @@ func canonicalizeCodexAgents(content []byte) (*Result, error) {
 		}{name: name, content: data})
 	}
 
-	// First agent is the primary result
 	primary := results[0]
 	result := &Result{
 		Content:  primary.content,
 		Filename: primary.name + ".md",
 	}
 
-	// Additional agents go into ExtraFiles
 	if len(results) > 1 {
 		result.ExtraFiles = make(map[string][]byte)
 		for _, r := range results[1:] {
@@ -85,7 +124,26 @@ func canonicalizeCodexAgents(content []byte) (*Result, error) {
 	return result, nil
 }
 
-// renderCodexAgents renders a canonical agent to Codex TOML format.
+// codexSingleAgent is the single-agent TOML format used for .codex/agents/<name>.toml files.
+type codexSingleAgent struct {
+	Agent codexSingleAgentBody `toml:"agent"`
+}
+
+type codexSingleAgentBody struct {
+	Name         string                    `toml:"name"`
+	Description  string                    `toml:"description,omitempty"`
+	Model        string                    `toml:"model,omitempty"`
+	Tools        []string                  `toml:"tools,omitempty"`
+	Instructions codexAgentInstructions    `toml:"instructions,omitempty"`
+}
+
+type codexAgentInstructions struct {
+	Content string `toml:"content,omitempty"`
+}
+
+// renderCodexAgents renders a canonical agent to Codex single-agent TOML format.
+// Outputs the per-file format ([agent] + [agent.instructions]) used by .codex/agents/<name>.toml,
+// not the multi-agent format ([agents.<name>]) used by AGENTS.toml.
 func renderCodexAgents(meta AgentMeta, body string) (*Result, error) {
 	var warnings []string
 
@@ -121,39 +179,35 @@ func renderCodexAgents(meta AgentMeta, body string) (*Result, error) {
 		codexTools = TranslateTools(meta.Tools, "copilot-cli")
 	}
 
-	// Strip any previous conversion notes from the body
 	cleanBody := StripConversionNotes(body)
 
-	// Build TOML
 	slug := slugify(meta.Name)
 	if slug == "" {
 		slug = "agent"
 	}
 
-	var buf bytes.Buffer
-	buf.WriteString("[features]\nmulti_agent = true\n\n")
-	buf.WriteString(fmt.Sprintf("[agents.%s]\n", slug))
+	cfg := codexSingleAgent{
+		Agent: codexSingleAgentBody{
+			Name:        meta.Name,
+			Description: meta.Description,
+			Model:       meta.Model,
+			Tools:       codexTools,
+			Instructions: codexAgentInstructions{
+				Content: cleanBody,
+			},
+		},
+	}
 
-	if meta.Model != "" {
-		buf.WriteString(fmt.Sprintf("model = %q\n", meta.Model))
-	}
-	if cleanBody != "" {
-		buf.WriteString(fmt.Sprintf("prompt = %q\n", cleanBody))
-	}
-	if len(codexTools) > 0 {
-		buf.WriteString("tools = [")
-		for i, t := range codexTools {
-			if i > 0 {
-				buf.WriteString(", ")
-			}
-			buf.WriteString(fmt.Sprintf("%q", t))
-		}
-		buf.WriteString("]\n")
+	var buf bytes.Buffer
+	enc := toml.NewEncoder(&buf)
+	enc.SetIndentTables(true)
+	if err := enc.Encode(cfg); err != nil {
+		return nil, fmt.Errorf("encoding Codex agent TOML: %w", err)
 	}
 
 	return &Result{
 		Content:  buf.Bytes(),
-		Filename: "config.toml",
+		Filename: slug + ".toml",
 		Warnings: warnings,
 	}, nil
 }
