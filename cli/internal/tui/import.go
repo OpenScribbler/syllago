@@ -695,7 +695,7 @@ func (m importModel) stepLabel() string {
 
 // View renders the current step's UI.
 func (m importModel) View() string {
-	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + " " + helpStyle.Render(">") + " " + titleStyle.Render("Import AI Tools") + "\n"
+	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + " " + helpStyle.Render(">") + " " + titleStyle.Render("Add Content") + "\n"
 	if label := m.stepLabel(); label != "" {
 		if m.step == stepConflict {
 			s += "\n" + warningStyle.Render(label) + "\n"
@@ -706,8 +706,8 @@ func (m importModel) View() string {
 
 	switch m.step {
 	case stepSource:
-		s += "\n" + helpStyle.Render("Bring in skills, agents, prompts, rules, hooks, commands, and MCP configs") + "\n"
-		s += helpStyle.Render("from your filesystem or a git repository. Create New scaffolds a blank template.") + "\n\n"
+		s += "\n" + helpStyle.Render("Add content from an installed provider, local files, or a git repository.") + "\n"
+		s += helpStyle.Render("Create New scaffolds a blank template.") + "\n\n"
 		options := []string{"Local Path", "Git URL", "Create New"}
 		for i, opt := range options {
 			prefix := "   "
@@ -867,7 +867,7 @@ func (m importModel) View() string {
 			s += fmt.Sprintf("  %s%s %s  %s\n", prefix, check, style.Render(m.hookNames[i]), helpStyle.Render("("+hook.Event+"/"+matcher+")"))
 		}
 		s += "\n"
-		s += fmt.Sprintf("  Import Selected (%d)  •  space toggle  •  a all  •  n none\n", count)
+		s += fmt.Sprintf("  Add Selected (%d)  •  space toggle  •  a all  •  n none\n", count)
 	}
 
 	// Status message
@@ -896,9 +896,9 @@ func (m importModel) helpText() string {
 		if m.isCreate {
 			return "enter create • esc back"
 		}
-		return "enter import • esc back"
+		return "enter add • esc back"
 	case stepValidate:
-		return "up/down navigate • space toggle • enter import • esc back"
+		return "up/down navigate • space toggle • enter add • esc back"
 	case stepBrowse:
 		if m.browser.previewing {
 			return "esc back • up/down scroll • space select"
@@ -913,7 +913,7 @@ func (m importModel) helpText() string {
 		}
 		return footer
 	case stepHookSelect:
-		return "up/down navigate • space toggle • a all • n none • enter import • esc back"
+		return "up/down navigate • space toggle • a all • n none • enter add • esc back"
 	default:
 		return "esc back"
 	}

@@ -168,7 +168,7 @@ func TestTeatestImportStart(t *testing.T) {
 	tm.Send(keyEnter)
 
 	// Should see import source options
-	waitFor(t, tm, "Import AI Tools")
+	waitFor(t, tm, "Add Content")
 
 	tm.Send(keyEsc)
 	waitFor(t, tm, "syllago")
