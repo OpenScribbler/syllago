@@ -36,15 +36,15 @@ func TestValidate_UnsupportedType(t *testing.T) {
 	}
 	refs := []ResolvedRef{
 		{Type: catalog.Rules, Name: "my-rule", Item: catalog.ContentItem{Name: "my-rule", Type: catalog.Rules}},
-		{Type: catalog.Prompts, Name: "my-prompt", Item: catalog.ContentItem{Name: "my-prompt", Type: catalog.Prompts}},
+		{Type: catalog.Skills, Name: "my-skill", Item: catalog.ContentItem{Name: "my-skill", Type: catalog.Skills}},
 	}
 
 	results := Validate(refs, prov)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 issue, got %d", len(results))
 	}
-	if results[0].Ref.Name != "my-prompt" {
-		t.Errorf("expected issue for my-prompt, got %s", results[0].Ref.Name)
+	if results[0].Ref.Name != "my-skill" {
+		t.Errorf("expected issue for my-skill, got %s", results[0].Ref.Name)
 	}
 }
 

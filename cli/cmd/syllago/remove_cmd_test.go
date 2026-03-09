@@ -224,13 +224,13 @@ func TestRemoveNonInteractiveDeletesWithoutPrompt(t *testing.T) {
 func TestRemoveAmbiguousTypeRequiresFlag(t *testing.T) {
 	globalDir := t.TempDir()
 
-	// Create same name in two content types: skills and prompts.
+	// Create same name in two content types: skills and agents.
 	skillDir := filepath.Join(globalDir, "skills", "dual-name")
-	promptDir := filepath.Join(globalDir, "prompts", "dual-name")
+	agentDir := filepath.Join(globalDir, "agents", "dual-name")
 	os.MkdirAll(skillDir, 0755)
-	os.MkdirAll(promptDir, 0755)
+	os.MkdirAll(agentDir, 0755)
 	os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# dual-name\n"), 0644)
-	os.WriteFile(filepath.Join(promptDir, "PROMPT.md"), []byte("# dual-name\n"), 0644)
+	os.WriteFile(filepath.Join(agentDir, "AGENT.md"), []byte("# dual-name\n"), 0644)
 
 	withGlobalDirOverride(t, globalDir)
 	withNonInteractive(t)
@@ -253,11 +253,11 @@ func TestRemoveTypeFilterDisambiguates(t *testing.T) {
 
 	// Same name in two types.
 	skillDir := filepath.Join(globalDir, "skills", "dual-name")
-	promptDir := filepath.Join(globalDir, "prompts", "dual-name")
+	agentDir := filepath.Join(globalDir, "agents", "dual-name")
 	os.MkdirAll(skillDir, 0755)
-	os.MkdirAll(promptDir, 0755)
+	os.MkdirAll(agentDir, 0755)
 	os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# dual-name\n"), 0644)
-	os.WriteFile(filepath.Join(promptDir, "PROMPT.md"), []byte("# dual-name\n"), 0644)
+	os.WriteFile(filepath.Join(agentDir, "AGENT.md"), []byte("# dual-name\n"), 0644)
 
 	withGlobalDirOverride(t, globalDir)
 	withNonInteractive(t)
@@ -273,12 +273,12 @@ func TestRemoveTypeFilterDisambiguates(t *testing.T) {
 		t.Fatalf("remove with --type failed: %v", err)
 	}
 
-	// skills/dual-name should be gone; prompts/dual-name should remain.
+	// skills/dual-name should be gone; agents/dual-name should remain.
 	if _, statErr := os.Stat(skillDir); !os.IsNotExist(statErr) {
 		t.Error("skills/dual-name still exists after targeted remove")
 	}
-	if _, statErr := os.Stat(promptDir); os.IsNotExist(statErr) {
-		t.Error("prompts/dual-name was removed when it should have been preserved")
+	if _, statErr := os.Stat(agentDir); os.IsNotExist(statErr) {
+		t.Error("agents/dual-name was removed when it should have been preserved")
 	}
 }
 

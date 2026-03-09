@@ -213,19 +213,6 @@ func (m itemsModel) buildProvCell(item catalog.ContentItem, relevant []provider.
 		name := providerDisplayName(item.Provider)
 		return provCell{plain: name, styled: name}
 	}
-	// Apps: show supported providers from frontmatter
-	if item.Type == catalog.Apps && len(item.SupportedProviders) > 0 {
-		var plainParts, styledParts []string
-		for _, slug := range item.SupportedProviders {
-			name := providerDisplayName(slug)
-			plainParts = append(plainParts, name)
-			styledParts = append(styledParts, helpStyle.Render(name))
-		}
-		return provCell{
-			plain:  strings.Join(plainParts, ", "),
-			styled: strings.Join(styledParts, helpStyle.Render(", ")),
-		}
-	}
 	// Universal: only show providers where the item IS installed
 	var plainParts, styledParts []string
 	for _, p := range relevant {

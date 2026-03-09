@@ -319,8 +319,6 @@ func contentFilename(ct catalog.ContentType, name, ext string) string {
 		return "SKILL.md"
 	case catalog.Agents:
 		return "agent.md"
-	case catalog.Prompts:
-		return "PROMPT.md"
 	case catalog.MCP:
 		return "mcp.json"
 	default:

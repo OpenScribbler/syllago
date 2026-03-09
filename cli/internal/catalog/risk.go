@@ -24,8 +24,6 @@ func RiskIndicators(item ContentItem) []RiskIndicator {
 		risks = append(risks, hookRisks(item)...)
 	case MCP:
 		risks = append(risks, mcpRisks(item)...)
-	case Apps:
-		risks = append(risks, appRisks(item)...)
 	case Skills, Agents:
 		risks = append(risks, skillAgentRisks(item)...)
 	}
@@ -91,20 +89,6 @@ func mcpRisks(item ContentItem) []RiskIndicator {
 			}
 			return true
 		})
-	}
-	return risks
-}
-
-func appRisks(item ContentItem) []RiskIndicator {
-	var risks []RiskIndicator
-	for _, f := range item.Files {
-		if strings.HasSuffix(f, "install.sh") || strings.HasSuffix(f, "setup.sh") {
-			risks = appendIfMissing(risks, RiskIndicator{
-				Label:       "Runs commands",
-				Description: "App has an install script that executes on your machine",
-			})
-			break
-		}
 	}
 	return risks
 }

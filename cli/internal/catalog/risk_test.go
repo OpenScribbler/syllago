@@ -119,61 +119,6 @@ func TestRiskIndicators_MCP_NoEnv(t *testing.T) {
 	}
 }
 
-func TestRiskIndicators_App_InstallScript(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "install.sh"), []byte("#!/bin/sh\necho installed"), 0755); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-
-	item := ContentItem{
-		Type:  Apps,
-		Path:  dir,
-		Files: []string{"install.sh", "README.md"},
-	}
-	risks := RiskIndicators(item)
-	if len(risks) != 1 {
-		t.Fatalf("expected 1 risk, got %d: %+v", len(risks), risks)
-	}
-	if risks[0].Label != "Runs commands" {
-		t.Errorf("Label = %q, want %q", risks[0].Label, "Runs commands")
-	}
-}
-
-func TestRiskIndicators_App_SetupScript(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "setup.sh"), []byte("#!/bin/sh\necho setup"), 0755); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-
-	item := ContentItem{
-		Type:  Apps,
-		Path:  dir,
-		Files: []string{"setup.sh"},
-	}
-	risks := RiskIndicators(item)
-	if len(risks) != 1 {
-		t.Fatalf("expected 1 risk, got %d: %+v", len(risks), risks)
-	}
-	if risks[0].Label != "Runs commands" {
-		t.Errorf("Label = %q, want %q", risks[0].Label, "Runs commands")
-	}
-}
-
-func TestRiskIndicators_App_NoScript(t *testing.T) {
-	t.Parallel()
-	item := ContentItem{
-		Type:  Apps,
-		Path:  t.TempDir(),
-		Files: []string{"README.md", "config.json"},
-	}
-	risks := RiskIndicators(item)
-	if len(risks) != 0 {
-		t.Errorf("expected no risks for app without install script, got %d: %+v", len(risks), risks)
-	}
-}
-
 func TestRiskIndicators_Skill_WithBash(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -239,7 +184,7 @@ func TestRiskIndicators_Skill_NoBash(t *testing.T) {
 
 func TestRiskIndicators_NoRisk(t *testing.T) {
 	t.Parallel()
-	item := ContentItem{Type: Prompts, Path: t.TempDir(), Files: []string{"PROMPT.md"}}
+	item := ContentItem{Type: Rules, Path: t.TempDir(), Files: []string{"rule.md"}}
 	risks := RiskIndicators(item)
 	if len(risks) != 0 {
 		t.Errorf("expected no risks, got %d: %+v", len(risks), risks)

@@ -21,8 +21,6 @@ type Manifest struct {
 	Agents      []string `yaml:"agents,omitempty"`
 	MCP         []string `yaml:"mcp,omitempty"`
 	Commands    []string `yaml:"commands,omitempty"`
-	Prompts     []string `yaml:"prompts,omitempty"`
-	Apps        []string `yaml:"apps,omitempty"`
 }
 
 // Parse reads and validates a loadout.yaml file.
@@ -55,7 +53,7 @@ func Parse(path string) (*Manifest, error) {
 // ItemCount returns the total number of referenced items across all sections.
 func (m *Manifest) ItemCount() int {
 	return len(m.Rules) + len(m.Hooks) + len(m.Skills) + len(m.Agents) +
-		len(m.MCP) + len(m.Commands) + len(m.Prompts) + len(m.Apps)
+		len(m.MCP) + len(m.Commands)
 }
 
 // RefsByType returns a map of ContentType -> []name for all non-empty sections.
@@ -78,12 +76,6 @@ func (m *Manifest) RefsByType() map[catalog.ContentType][]string {
 	}
 	if len(m.Commands) > 0 {
 		result[catalog.Commands] = m.Commands
-	}
-	if len(m.Prompts) > 0 {
-		result[catalog.Prompts] = m.Prompts
-	}
-	if len(m.Apps) > 0 {
-		result[catalog.Apps] = m.Apps
 	}
 	return result
 }

@@ -106,7 +106,7 @@ func TestGoldenSized_Settings(t *testing.T) {
 	for _, sz := range testSizes {
 		t.Run(sz.tag, func(t *testing.T) {
 			app := testAppSize(t, sz.width, sz.height)
-			nTypes := 9 // catalog.AllContentTypes() length
+			nTypes := len(catalog.AllContentTypes())
 			app = pressN(app, keyDown, nTypes+3)
 			m, _ := app.Update(keyEnter)
 			app = m.(App)

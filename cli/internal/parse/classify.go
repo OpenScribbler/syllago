@@ -33,7 +33,6 @@ func ClassifyByExtension(filePath string) (catalog.ContentType, bool) {
 		"agents":   catalog.Agents,
 		"commands": catalog.Commands,
 		"hooks":    catalog.Hooks,
-		"prompts":  catalog.Prompts,
 	}
 	for d := dir; d != filepath.Dir(d); d = filepath.Dir(d) {
 		if ct, ok := knownDirs[filepath.Base(d)]; ok {

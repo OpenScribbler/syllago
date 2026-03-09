@@ -103,7 +103,7 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 	// Step 4: For each content type, let user select items
 	selectableTypes := []catalog.ContentType{
 		catalog.Rules, catalog.Hooks, catalog.Skills, catalog.Agents,
-		catalog.MCP, catalog.Commands, catalog.Prompts, catalog.Apps,
+		catalog.MCP, catalog.Commands,
 	}
 
 	for _, ct := range selectableTypes {
@@ -169,10 +169,6 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 			manifest.MCP = selected
 		case catalog.Commands:
 			manifest.Commands = selected
-		case catalog.Prompts:
-			manifest.Prompts = selected
-		case catalog.Apps:
-			manifest.Apps = selected
 		}
 	}
 

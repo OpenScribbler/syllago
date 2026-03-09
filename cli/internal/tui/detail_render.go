@@ -202,21 +202,6 @@ func (m detailModel) renderOverviewTab() string {
 		s += "\n"
 	}
 
-	// Prompt body (for prompts type)
-	if m.item.Type == catalog.Prompts && m.item.Body != "" {
-		s += labelStyle.Render("Prompt:") + "\n"
-		s += valueStyle.Render(StripControlChars(m.item.Body)) + "\n\n"
-	}
-
-	// App supported providers
-	if m.item.Type == catalog.Apps && len(m.item.SupportedProviders) > 0 {
-		var names []string
-		for _, slug := range m.item.SupportedProviders {
-			names = append(names, providerDisplayName(slug))
-		}
-		s += labelStyle.Render("Supported Providers: ") + valueStyle.Render(strings.Join(names, ", ")) + "\n\n"
-	}
-
 	// Risk indicators (shown after description, before README)
 	risks := catalog.RiskIndicators(m.item)
 	if len(risks) > 0 {
@@ -231,11 +216,6 @@ func (m detailModel) renderOverviewTab() string {
 	// Rendered README (if available)
 	if m.renderedReadme != "" {
 		s += m.renderedReadme
-	} else if m.item.Type == catalog.Apps && m.renderedBody != "" {
-		// Apps use Body field (from README.md frontmatter body)
-		s += m.renderedBody
-	} else if m.item.Type == catalog.Apps && m.item.Body != "" {
-		s += valueStyle.Render(m.item.Body) + "\n"
 	} else {
 		s += helpStyle.Render("No README.md available for this item.") + "\n"
 	}
@@ -427,8 +407,8 @@ func (m detailModel) renderInstallTab() string {
 	s += labelStyle.Render("Providers") + "\n"
 	s += helpStyle.Render(strings.Repeat("─", 20)) + "\n"
 
-	// Provider section — interactive checkboxes for non-prompt items
-	if m.item.Type != catalog.Prompts {
+	// Provider section — interactive checkboxes
+	{
 		supportedProviders := m.supportedProviders()
 		detected := m.detectedProviders()
 
@@ -512,14 +492,10 @@ func (m detailModel) renderInstallTab() string {
 
 	actionBar := installBtn + "  " + uninstallBtn
 
-	// Copy and Save are only functional for Prompts (and library items with LLM prompts)
-	if m.item.Type == catalog.Prompts || m.item.Library {
+	// Copy is functional for library items with LLM prompts
+	if m.item.Library {
 		copyBtn := zone.Mark("detail-btn-copy", buttonStyle.Render("Copy"))
 		actionBar += "  " + copyBtn
-	}
-	if m.item.Type == catalog.Prompts {
-		saveBtn := zone.Mark("detail-btn-save", buttonStyle.Render("Save"))
-		actionBar += "  " + saveBtn
 	}
 	s += actionBar + "\n"
 
@@ -555,8 +531,6 @@ func (m detailModel) renderLoadoutContentsTab() string {
 		{"Agents", manifest.Agents},
 		{"MCP Configs", manifest.MCP},
 		{"Commands", manifest.Commands},
-		{"Prompts", manifest.Prompts},
-		{"Apps", manifest.Apps},
 	}
 
 	for _, group := range typeOrder {
@@ -687,9 +661,6 @@ func (m detailModel) renderHelp() string {
 	switch m.activeTab {
 	case tabOverview:
 		helpParts = append(helpParts, "up/down scroll")
-		if m.item.Type == catalog.Prompts && m.item.Body != "" {
-			helpParts = append(helpParts, "c copy")
-		}
 	case tabCompatibility:
 		// no additional help for placeholder
 	case tabFiles:
@@ -703,13 +674,6 @@ func (m detailModel) renderHelp() string {
 	case tabInstall:
 		if m.item.Type == catalog.Loadouts {
 			helpParts = append(helpParts, "up/down navigate", "enter apply")
-		} else if m.item.Type == catalog.Prompts {
-			helpParts = append(helpParts, "up/down scroll")
-			if m.item.Body != "" {
-				helpParts = append(helpParts, "c copy", "s save")
-			}
-		} else if m.item.Type == catalog.Apps {
-			helpParts = append(helpParts, "up/down scroll", "i install", "u uninstall")
 		} else {
 			if len(m.provCheck.checks) > 0 {
 				helpParts = append(helpParts, "up/down navigate", "enter/space toggle", "i install", "u uninstall")

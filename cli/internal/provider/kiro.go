@@ -38,7 +38,6 @@ var Kiro = Provider{
 		case catalog.Agents:
 			return []string{
 				filepath.Join(projectRoot, ".kiro", "agents"),
-				filepath.Join(projectRoot, ".kiro", "prompts"),
 			}
 		case catalog.Skills:
 			return []string{filepath.Join(projectRoot, ".kiro", "steering")}

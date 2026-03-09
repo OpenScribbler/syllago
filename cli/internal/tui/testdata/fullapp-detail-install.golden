@@ -3,22 +3,22 @@ syllago           │Home > Skills > alpha-skill
   AI Tools        │ Overview  |  Files  |  Install
 ▸ Skills        3 │Type: Skills
   Agents        1 │Path: <TESTDIR>/skills/alpha-skill
-  Prompts       1 │Providers: Claude Code
-  MCP Configs   1 │────────────────────────────────────────────────────────────────────────────────
-  Apps          1 │
-  Rules         1 │Providers
-  Hooks         1 │────────────────────
-  Commands      1 │  > [ ] Claude Code  [--] available
-  Loadouts      0 │      Cursor  (not detected)
-  Library       1 │
-  ─────────────   │Actions
-  Configuration   │────────────────────
-  Add             │ Install    Uninstall
-  Update          │
-  Settings        │
+  MCP Configs   1 │Providers: Claude Code
+  Rules         1 │────────────────────────────────────────────────────────────────────────────────
+  Hooks         1 │
+  Commands      1 │Providers
+  Loadouts      0 │────────────────────
+  Library       1 │  > [ ] Claude Code  [--] available
+  ─────────────   │      Cursor  (not detected)
+  Configuration   │
+  Add             │Actions
+  Update          │────────────────────
+  Settings        │ Install    Uninstall
   Registries      │
   Sandbox         │
                   │
+
+
 
 
 

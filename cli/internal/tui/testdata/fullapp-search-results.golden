@@ -3,10 +3,8 @@ syllago           │Home > Search Results (1)
   AI Tools        │    Name         Description                                            Provider
 ▸ Skills        3 │    ───────────  ─────────────────────────────────────────────────────  ────────
   Agents        1 │  > alpha-skill (Skills)  A helpful skill
-  Prompts       1 │
-  MCP Configs   1 │up/down navigate • enter detail • esc back • / search
-  Apps          1 │
-  Rules         1 │
+  MCP Configs   1 │
+  Rules         1 │up/down navigate • enter detail • esc back • / search
   Hooks         1 │
   Commands      1 │
   Loadouts      0 │
@@ -19,6 +17,8 @@ syllago           │Home > Search Results (1)
   Registries      │
   Sandbox         │
                   │
+
+
 
 
 

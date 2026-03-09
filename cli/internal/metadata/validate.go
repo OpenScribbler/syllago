@@ -58,13 +58,8 @@ func Validate(itemDir string, contentType string, repoRoot string) []ValidationE
 		errs = append(errs, validateFrontmatterFile(itemDir, "SKILL.md", []string{"name", "description"})...)
 	case "agents":
 		errs = append(errs, validateFrontmatterFile(itemDir, "AGENT.md", []string{"name", "description"})...)
-	case "prompts":
-		errs = append(errs, validateFrontmatterFile(itemDir, "PROMPT.md", []string{"name", "description"})...)
 	case "mcp":
 		errs = append(errs, validateJSONFile(itemDir, "config.json")...)
-	case "apps":
-		errs = append(errs, validateFrontmatterFile(itemDir, "README.md", []string{"name", "description"})...)
-		errs = append(errs, validateFileExists(itemDir, "install.sh")...)
 	}
 
 	return errs

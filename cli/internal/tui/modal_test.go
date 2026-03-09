@@ -215,7 +215,7 @@ func TestInstallMethodDescriptionNoOrphanedWords(t *testing.T) {
 func TestModalPurposesAreDefined(t *testing.T) {
 	// All required modal purposes must be defined and distinct
 	purposes := []modalPurpose{
-		modalNone, modalInstall, modalUninstall, modalSave, modalShare, modalAppScript,
+		modalNone, modalInstall, modalUninstall, modalSave, modalShare,
 	}
 	seen := map[modalPurpose]bool{}
 	for _, p := range purposes {
@@ -224,8 +224,8 @@ func TestModalPurposesAreDefined(t *testing.T) {
 		}
 		seen[p] = true
 	}
-	if len(seen) != 6 {
-		t.Errorf("expected 6 distinct modal purposes, got %d", len(seen))
+	if len(seen) != 5 {
+		t.Errorf("expected 5 distinct modal purposes, got %d", len(seen))
 	}
 }
 
@@ -271,7 +271,7 @@ func extractCmd(cmd tea.Cmd) tea.Msg {
 }
 
 func TestUninstallKeyEmitsOpenModalMsg(t *testing.T) {
-	// 'u' on a non-Apps, non-Prompts item with installed providers should
+	// 'u' on an item with installed providers should
 	// emit openModalMsg{purpose: modalUninstall} instead of setting confirmAction.
 	//
 	// We need installedProviders() to return something. For Agents (IsUniversal=true),
@@ -326,22 +326,6 @@ func TestShareKeyEmitsOpenModalMsg(t *testing.T) {
 	}
 	if oMsg.purpose != modalShare {
 		t.Errorf("openModalMsg.purpose should be modalShare, got %d", oMsg.purpose)
-	}
-}
-
-func TestAppScriptKeyEmitsOpenModalMsg(t *testing.T) {
-	// 'i' on an Apps item should emit openModalMsg{purpose: modalAppScript}
-	// instead of setting confirmAction=actionAppScriptConfirm.
-	m := makeDetailModel(catalog.Apps, false, false)
-	iMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("i")}
-	_, cmd := m.Update(iMsg)
-	msg := extractCmd(cmd)
-	oMsg, ok := msg.(openModalMsg)
-	if !ok {
-		t.Fatalf("pressing i on Apps should return openModalMsg, got %T", msg)
-	}
-	if oMsg.purpose != modalAppScript {
-		t.Errorf("openModalMsg.purpose should be modalAppScript, got %d", oMsg.purpose)
 	}
 }
 
