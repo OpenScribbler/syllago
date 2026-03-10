@@ -1301,6 +1301,19 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.statusMessage = "Create loadout wizard coming soon"
 				return a, nil
 			}
+			if key.Matches(msg, keys.Add) {
+				ct := a.items.contentType
+				regFilter := a.items.sourceRegistry
+				if ct == catalog.SearchResults || ct == catalog.Library {
+					ct = ""
+				}
+				a.importer = newImportModelWithFilter(a.providers, a.catalog.RepoRoot, a.projectRoot, ct, regFilter)
+				a.importer.width = a.width - sidebarWidth - 1
+				a.importer.height = a.panelHeight()
+				a.screen = screenImport
+				a.focus = focusContent
+				return a, nil
+			}
 			if key.Matches(msg, keys.Enter) && len(a.items.items) > 0 {
 				item := a.items.selectedItem()
 				if a.cachedDetailPath == item.Path && a.cachedDetail != nil {
@@ -1371,6 +1384,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.screen = screenItems
 				return a, nil
 			}
+			if key.Matches(msg, keys.Add) {
+				a.importer = newImportModel(a.providers, a.catalog.RepoRoot, a.projectRoot)
+				a.importer.width = a.width - sidebarWidth - 1
+				a.importer.height = a.panelHeight()
+				a.screen = screenImport
+				a.focus = focusContent
+				return a, nil
+			}
 			return a, nil
 
 		case screenLoadoutCards:
@@ -1420,6 +1441,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.items = items
 				a.cardParent = screenLoadoutCards
 				a.screen = screenItems
+				return a, nil
+			}
+			if key.Matches(msg, keys.Add) {
+				// TODO(Phase 7): open create-loadout wizard (full, with provider picker).
+				a.statusMessage = "Create loadout wizard coming soon"
 				return a, nil
 			}
 			return a, nil

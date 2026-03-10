@@ -145,6 +145,10 @@ type importModel struct {
 	discoveryCursor     int                 // cursor for stepDiscoverySelect
 	discoveryProvider   provider.Provider   // selected provider
 
+	// Pre-filter fields: when set, the corresponding wizard step is skipped.
+	preFilterType     catalog.ContentType // when non-zero, skip stepType
+	preFilterRegistry string              // when set, scope to this registry's items
+
 	// Result messaging
 	message      string
 	messageIsErr bool
@@ -177,6 +181,53 @@ func newImportModel(providers []provider.Provider, repoRoot, projectRoot string)
 		urlInput:  ui,
 		nameInput: ni,
 	}
+}
+
+// newImportModelWithFilter creates an importModel pre-filtered for a specific
+// context. Set typeFilter to skip the type selection step; set registryFilter
+// to scope the source to a specific registry.
+func newImportModelWithFilter(
+	providers []provider.Provider,
+	repoRoot, projectRoot string,
+	typeFilter catalog.ContentType,
+	registryFilter string,
+) importModel {
+	m := newImportModel(providers, repoRoot, projectRoot)
+	m.preFilterType = typeFilter
+	m.preFilterRegistry = registryFilter
+	if typeFilter != "" {
+		m.contentType = typeFilter
+		for i, t := range m.types {
+			if t == typeFilter {
+				m.typeCursor = i
+				break
+			}
+		}
+	}
+	return m
+}
+
+// nextStepFromSource returns the next step after stepSource, respecting pre-filters.
+func (m importModel) nextStepFromSource() importStep {
+	if m.preFilterType != "" {
+		return m.nextStepAfterType()
+	}
+	return stepType
+}
+
+func (m importModel) nextStepAfterType() importStep {
+	switch m.sourceCursor {
+	case 1: // Local path
+		if !m.contentType.IsUniversal() {
+			return stepProvider
+		}
+		return stepBrowseStart
+	case 2: // Git URL
+		return stepGitURL
+	case 3: // Create new
+		return stepName
+	}
+	return stepType
 }
 
 func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
@@ -363,7 +414,7 @@ func (m importModel) updateSource(msg tea.KeyMsg) (importModel, tea.Cmd) {
 			m.step = stepProviderPick
 		case 1: // Local path
 			m.isCreate = false
-			m.step = stepType
+			m.step = m.nextStepFromSource()
 			m.typeCursor = 0
 		case 2: // Git URL
 			m.isCreate = false
@@ -372,7 +423,7 @@ func (m importModel) updateSource(msg tea.KeyMsg) (importModel, tea.Cmd) {
 			m.urlInput.Focus()
 		case 3: // Create New
 			m.isCreate = true
-			m.step = stepType
+			m.step = m.nextStepFromSource()
 			m.typeCursor = 0
 		}
 	}
@@ -421,7 +472,11 @@ func (m importModel) updateType(msg tea.KeyMsg) (importModel, tea.Cmd) {
 func (m importModel) updateProvider(msg tea.KeyMsg) (importModel, tea.Cmd) {
 	switch {
 	case key.Matches(msg, keys.Back):
-		m.step = stepType
+		if m.preFilterType != "" {
+			m.step = stepSource
+		} else {
+			m.step = stepType
+		}
 	case key.Matches(msg, keys.Up):
 		if m.provCursor > 0 {
 			m.provCursor--
@@ -441,7 +496,9 @@ func (m importModel) updateProvider(msg tea.KeyMsg) (importModel, tea.Cmd) {
 func (m importModel) updateBrowseStart(msg tea.KeyMsg) (importModel, tea.Cmd) {
 	switch {
 	case key.Matches(msg, keys.Back):
-		if m.contentType.IsUniversal() {
+		if m.preFilterType != "" {
+			m.step = stepSource
+		} else if m.contentType.IsUniversal() {
 			m.step = stepType
 		} else {
 			m.step = stepProvider
@@ -1186,7 +1243,11 @@ func (m importModel) updateName(msg tea.KeyMsg) (importModel, tea.Cmd) {
 	switch {
 	case msg.Type == tea.KeyEsc:
 		m.nameInput.Blur()
-		m.step = stepType
+		if m.preFilterType != "" {
+			m.step = stepSource
+		} else {
+			m.step = stepType
+		}
 		return m, nil
 	case msg.Type == tea.KeyEnter:
 		name := strings.TrimSpace(m.nameInput.Value())
