@@ -144,41 +144,51 @@ func (m sidebarModel) View() string {
 	}
 	s += zone.Mark(fmt.Sprintf("sidebar-%d", loadIdx), rowContent) + "\n"
 
+	// Registries
+	regIdx := len(m.types) + 2
+	if m.registryCount > 0 {
+		regCountStr := fmt.Sprintf("%2d", m.registryCount)
+		regLine := fmt.Sprintf("%-*s%s", inner-len(regCountStr)-2, "Registries", regCountStr)
+		if len(regLine) > inner {
+			regLine = regLine[:inner]
+		}
+		if regIdx == m.cursor {
+			rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, regLine))
+		} else {
+			rowContent = "  " + itemStyle.Render(regLine)
+		}
+	} else {
+		if regIdx == m.cursor {
+			rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, "Registries"))
+		} else {
+			rowContent = "  " + itemStyle.Render(fmt.Sprintf("%-*s", inner-2, "Registries"))
+		}
+	}
+	s += zone.Mark(fmt.Sprintf("sidebar-%d", regIdx), rowContent) + "\n"
+
 	// Separator
 	s += helpStyle.Render("  " + "─────────────") + "\n"
 
 	// ── Configuration section ──
 	s += labelStyle.Render("  Configuration") + "\n"
 
-	// Utility items: Add, Update, Settings, Registries, Sandbox
+	// Utility items: Add, Update, Settings, Sandbox
 	utilItems := []struct {
 		label string
 		index int
 	}{
-		{"Add", len(m.types) + 2},
-		{"Update", len(m.types) + 3},
-		{"Settings", len(m.types) + 4},
-		{"Registries", len(m.types) + 5},
+		{"Add", len(m.types) + 3},
+		{"Update", len(m.types) + 4},
+		{"Settings", len(m.types) + 5},
 		{"Sandbox", len(m.types) + 6},
 	}
 
 	for _, u := range utilItems {
 		var rowContent string
-		// Registries shows item count like content types
-		if u.label == "Registries" && m.registryCount > 0 {
-			countStr := fmt.Sprintf("%2d", m.registryCount)
-			line := fmt.Sprintf("%-*s%s", inner-len(countStr)-2, u.label, countStr)
-			if u.index == m.cursor {
-				rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, line))
-			} else {
-				rowContent = "  " + itemStyle.Render(line)
-			}
+		if u.index == m.cursor {
+			rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, u.label))
 		} else {
-			if u.index == m.cursor {
-				rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, u.label))
-			} else {
-				rowContent = "  " + itemStyle.Render(fmt.Sprintf("%-*s", inner-2, u.label))
-			}
+			rowContent = "  " + itemStyle.Render(fmt.Sprintf("%-*s", inner-2, u.label))
 		}
 		s += zone.Mark(fmt.Sprintf("sidebar-%d", u.index), rowContent) + "\n"
 	}
@@ -209,10 +219,10 @@ func (m sidebarModel) View() string {
 // Selector methods for use in App.Update routing
 func (m sidebarModel) isLibrarySelected() bool    { return m.cursor == len(m.types) }
 func (m sidebarModel) isLoadoutsSelected() bool   { return m.cursor == len(m.types)+1 }
-func (m sidebarModel) isAddSelected() bool        { return m.cursor == len(m.types)+2 }
-func (m sidebarModel) isUpdateSelected() bool     { return m.cursor == len(m.types)+3 }
-func (m sidebarModel) isSettingsSelected() bool   { return m.cursor == len(m.types)+4 }
-func (m sidebarModel) isRegistriesSelected() bool { return m.cursor == len(m.types)+5 }
+func (m sidebarModel) isRegistriesSelected() bool { return m.cursor == len(m.types)+2 }
+func (m sidebarModel) isAddSelected() bool        { return m.cursor == len(m.types)+3 }
+func (m sidebarModel) isUpdateSelected() bool     { return m.cursor == len(m.types)+4 }
+func (m sidebarModel) isSettingsSelected() bool   { return m.cursor == len(m.types)+5 }
 func (m sidebarModel) isSandboxSelected() bool    { return m.cursor == len(m.types)+6 }
 func (m sidebarModel) selectedType() catalog.ContentType {
 	if m.cursor >= len(m.types) {

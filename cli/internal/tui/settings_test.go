@@ -12,7 +12,7 @@ func navigateToSettings(t *testing.T) App {
 	t.Helper()
 	app := testApp(t)
 	nTypes := sidebarContentCount()
-	app = pressN(app, keyDown, nTypes+4) // Settings
+	app = pressN(app, keyDown, nTypes+5) // Settings
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenSettings)

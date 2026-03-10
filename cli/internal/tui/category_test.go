@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -94,12 +95,43 @@ func TestCategorySelectLibrary(t *testing.T) {
 			t.Fatalf("Library should only contain library items, found non-library: %s", item.Name)
 		}
 	}
+
+	// Breadcrumb should include Library parent
+	crumb := app.breadcrumb()
+	if !strings.Contains(crumb, "Library > ") {
+		t.Fatalf("expected breadcrumb to contain 'Library > ', got %q", crumb)
+	}
+}
+
+func TestLibraryDetailBreadcrumb(t *testing.T) {
+	// Library → card → items → detail should show "Library > Skills > item"
+	app := navigateToLibraryItems(t)
+
+	// Enter first item → detail
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+	assertScreen(t, app, screenDetail)
+
+	// Footer breadcrumb
+	crumb := app.breadcrumb()
+	assertContains(t, crumb, "Library > Skills")
+
+	// Header breadcrumb in the view
+	view := app.View()
+	assertContains(t, view, "Library")
+}
+
+func TestLibraryItemsParentLabel(t *testing.T) {
+	app := navigateToLibraryItems(t)
+	if app.items.parentLabel != "Library" {
+		t.Fatalf("expected parentLabel 'Library', got %q", app.items.parentLabel)
+	}
 }
 
 func TestCategorySelectImport(t *testing.T) {
 	app := testApp(t)
 	nTypes := sidebarContentCount()
-	app = pressN(app, keyDown, nTypes+2) // Add
+	app = pressN(app, keyDown, nTypes+3) // Add
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
@@ -112,7 +144,7 @@ func TestCategorySelectImport(t *testing.T) {
 func TestCategorySelectUpdate(t *testing.T) {
 	app := testApp(t)
 	nTypes := sidebarContentCount()
-	app = pressN(app, keyDown, nTypes+3) // Update
+	app = pressN(app, keyDown, nTypes+4) // Update
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
@@ -125,7 +157,7 @@ func TestCategorySelectUpdate(t *testing.T) {
 func TestCategorySelectSettings(t *testing.T) {
 	app := testApp(t)
 	nTypes := sidebarContentCount()
-	app = pressN(app, keyDown, nTypes+4) // Settings
+	app = pressN(app, keyDown, nTypes+5) // Settings
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 

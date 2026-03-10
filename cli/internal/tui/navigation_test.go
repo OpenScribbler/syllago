@@ -147,12 +147,12 @@ func TestImportBrowseFlow(t *testing.T) {
 	app.width = 80
 	app.height = 30
 
-	// Navigate to Add (content types + Library + Loadouts + Add)
+	// Navigate to Add (content types + Library + Loadouts + Registries + Add)
 	down := tea.KeyMsg{Type: tea.KeyDown}
 	enter := tea.KeyMsg{Type: tea.KeyEnter}
 
 	// Move cursor to Add option
-	for i := 0; i < sidebarContentCount()+2; i++ {
+	for i := 0; i < sidebarContentCount()+3; i++ {
 		model, _ := app.Update(down)
 		app = model.(App)
 	}

@@ -113,6 +113,7 @@ type itemsModel struct {
 	providers        []provider.Provider
 	repoRoot         string
 	sourceRegistry   string // set when browsing items from a specific registry
+	parentLabel      string // intermediate breadcrumb (e.g. "Library", "Loadouts")
 	cursor           int
 	hiddenCount      int // number of hidden items filtered out
 	hideLibraryBadge bool // suppress [LIBRARY] badge (when already in Library view)
@@ -243,6 +244,9 @@ func (m itemsModel) View() string {
 		s = home + arrow + titleStyle.Render(fmt.Sprintf("Search Results (%d)", len(m.items))) + "\n\n"
 	case m.contentType == catalog.Library:
 		s = home + arrow + titleStyle.Render(fmt.Sprintf("Library (%d)", len(m.items))) + "\n\n"
+	case m.parentLabel != "":
+		parent := zone.Mark("crumb-parent", helpStyle.Render(m.parentLabel))
+		s = home + arrow + parent + arrow + titleStyle.Render(m.contentType.Label()) + "\n\n"
 	default:
 		s = home + arrow + titleStyle.Render(m.contentType.Label()) + "\n\n"
 	}

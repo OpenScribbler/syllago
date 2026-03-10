@@ -26,10 +26,14 @@ func (m detailModel) renderContent() string {
 func (m detailModel) renderContentSplit() (pinned string, body string) {
 	name := StripControlChars(displayName(m.item))
 
-	// Breadcrumb: Home > Category > Item Name
+	// Breadcrumb: Home > [Parent >] Category > Item Name
 	home := zone.Mark("crumb-home", helpStyle.Render("Home"))
-	cat := zone.Mark("crumb-category", helpStyle.Render(m.item.Type.Label()))
 	arrow := helpStyle.Render(" > ")
+	crumb := home + arrow
+	if m.parentLabel != "" {
+		crumb += zone.Mark("crumb-parent", helpStyle.Render(m.parentLabel)) + arrow
+	}
+	cat := zone.Mark("crumb-category", helpStyle.Render(m.item.Type.Label()))
 	current := titleStyle.Render(name)
 	if m.item.IsBuiltin() {
 		current += " " + builtinStyle.Render("[BUILT-IN]")
@@ -40,7 +44,7 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 	} else if m.item.Source == "global" {
 		current += " " + globalStyle.Render("[GLOBAL]")
 	}
-	pinned += home + arrow + cat + arrow + current + "\n\n"
+	pinned += crumb + cat + arrow + current + "\n\n"
 
 	// Tab bar
 	pinned += m.renderTabBar() + "\n"

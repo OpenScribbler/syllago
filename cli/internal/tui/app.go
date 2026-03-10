@@ -686,6 +686,21 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a, nil
 			}
 		}
+		if zone.Get("crumb-parent").InBounds(msg) {
+			if a.cardParent != 0 {
+				if a.screen == screenDetail {
+					// Detail → items first (Esc behavior)
+					a.screen = screenItems
+					return a, nil
+				}
+				if a.screen == screenItems {
+					a.screen = a.cardParent
+					a.cardParent = 0
+					a.focus = focusContent
+					return a, nil
+				}
+			}
+		}
 		// Check detail tab zones
 		if a.screen == screenDetail {
 			tabs := []detailTab{tabOverview, tabFiles, tabInstall}
@@ -1117,6 +1132,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
 					a.detail.overrides = a.catalog.OverridesFor(item.Name, item.Type)
 				}
+				a.detail.parentLabel = a.items.parentLabel
 				a.detail.width = a.width
 				a.detail.height = a.panelHeight()
 				a.detail.listPosition = a.items.cursor
@@ -1170,6 +1186,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				items := newItemsModel(ct, filtered, a.providers, a.catalog.RepoRoot)
 				items.hiddenCount = countHidden(a.catalog.Items)
 				items.hideLibraryBadge = true
+				items.parentLabel = "Library"
 				items.width = a.width - sidebarWidth - 1
 				items.height = a.panelHeight()
 				a.items = items
@@ -1220,6 +1237,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				items := newItemsModel(catalog.Loadouts, filtered, a.providers, a.catalog.RepoRoot)
 				items.hiddenCount = countHidden(a.catalog.ByType(catalog.Loadouts))
+				items.parentLabel = "Loadouts"
 				items.width = a.width - sidebarWidth - 1
 				items.height = a.panelHeight()
 				a.items = items
@@ -2049,12 +2067,10 @@ func (a App) renderFooter() string {
 func (a App) breadcrumb() string {
 	switch a.screen {
 	case screenDetail:
-		return a.sidebar.selectedType().Label() + " > " + displayName(a.detail.item)
+		parent := a.itemsBreadcrumb()
+		return parent + " > " + displayName(a.detail.item)
 	case screenItems:
-		if a.items.sourceRegistry != "" {
-			return "Registries > " + a.items.sourceRegistry
-		}
-		return a.sidebar.selectedType().Label()
+		return a.itemsBreadcrumb()
 	case screenImport:
 		return "Add"
 	case screenUpdate:
@@ -2071,5 +2087,22 @@ func (a App) breadcrumb() string {
 		return "Loadouts"
 	default:
 		return "syllago"
+	}
+}
+
+// itemsBreadcrumb returns the breadcrumb for the items screen, including
+// the parent context (Library, Loadouts, Registries) when applicable.
+func (a App) itemsBreadcrumb() string {
+	if a.items.sourceRegistry != "" {
+		return "Registries > " + a.items.sourceRegistry
+	}
+	label := a.items.contentType.Label()
+	switch a.cardParent {
+	case screenLibraryCards:
+		return "Library > " + label
+	case screenLoadoutCards:
+		return "Loadouts > " + label
+	default:
+		return label
 	}
 }

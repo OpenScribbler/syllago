@@ -107,7 +107,7 @@ func TestGoldenSized_Settings(t *testing.T) {
 		t.Run(sz.tag, func(t *testing.T) {
 			app := testAppSize(t, sz.width, sz.height)
 			nTypes := sidebarContentCount()
-			app = pressN(app, keyDown, nTypes+4)
+			app = pressN(app, keyDown, nTypes+5)
 			m, _ := app.Update(keyEnter)
 			app = m.(App)
 			assertScreen(t, app, screenSettings)

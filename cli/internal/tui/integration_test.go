@@ -129,7 +129,7 @@ func TestTeatestSettingsToggle(t *testing.T) {
 
 	// Navigate to Settings (last row)
 	nTypes := sidebarContentCount()
-	for i := 0; i < nTypes+4; i++ {
+	for i := 0; i < nTypes+5; i++ {
 		tm.Send(keyDown)
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -157,7 +157,7 @@ func TestTeatestImportStart(t *testing.T) {
 
 	// Navigate to Add
 	nTypes := sidebarContentCount()
-	for i := 0; i < nTypes+2; i++ {
+	for i := 0; i < nTypes+3; i++ {
 		tm.Send(keyDown)
 		time.Sleep(10 * time.Millisecond)
 	}
