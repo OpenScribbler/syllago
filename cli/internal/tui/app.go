@@ -773,9 +773,20 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.settings, cmd = a.settings.Update(msg)
 			return a, cmd
 		case screenRegistries:
-			var cmd tea.Cmd
-			a.registries, cmd = a.registries.Update(msg)
-			return a, cmd
+			// Check registry card clicks
+			if msg.Action == tea.MouseActionRelease && msg.Button == tea.MouseButtonLeft {
+				for i := range a.registries.entries {
+					if zone.Get(fmt.Sprintf("registry-card-%d", i)).InBounds(msg) {
+						if i == a.cardCursor {
+							// Second click on already-selected card → drill in
+							return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+						}
+						a.cardCursor = i
+						return a, nil
+					}
+				}
+			}
+			return a, nil
 		case screenSandbox:
 			var cmd tea.Cmd
 			a.sandboxSettings, cmd = a.sandboxSettings.Update(msg)
@@ -1370,25 +1381,48 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.focus = focusSidebar
 				return a, nil
 			}
-			// Enter on a registry → show its items
-			if key.Matches(msg, keys.Enter) && len(a.registries.entries) > 0 {
-				name := a.registries.selectedName()
-				if name != "" {
-					regItems := a.visibleItems(a.catalog.ByRegistry(name))
-					items := newItemsModel(catalog.SearchResults, regItems, a.providers, a.catalog.RepoRoot)
-					items.sourceRegistry = name
-					items.width = a.width - sidebarWidth - 1
-					items.height = a.panelHeight()
-					a.items = items
-					a.cardParent = 0
-					a.screen = screenItems
-					a.focus = focusContent
-					return a, nil
-				}
+			cols := 2
+			if a.width < 80 {
+				cols = 1
 			}
-			var cmd tea.Cmd
-			a.registries, cmd = a.registries.Update(msg)
-			return a, cmd
+			if key.Matches(msg, keys.Up) {
+				if a.cardCursor >= cols {
+					a.cardCursor -= cols
+				}
+				return a, nil
+			}
+			if key.Matches(msg, keys.Down) {
+				if a.cardCursor+cols < len(a.registries.entries) {
+					a.cardCursor += cols
+				}
+				return a, nil
+			}
+			if key.Matches(msg, keys.Left) {
+				if a.cardCursor > 0 {
+					a.cardCursor--
+				}
+				return a, nil
+			}
+			if key.Matches(msg, keys.Right) {
+				if a.cardCursor+1 < len(a.registries.entries) {
+					a.cardCursor++
+				}
+				return a, nil
+			}
+			if key.Matches(msg, keys.Enter) && len(a.registries.entries) > 0 {
+				entry := a.registries.entries[a.cardCursor]
+				regItems := a.visibleItems(a.catalog.ByRegistry(entry.name))
+				items := newItemsModel(catalog.SearchResults, regItems, a.providers, a.catalog.RepoRoot)
+				items.sourceRegistry = entry.name
+				items.width = a.width - sidebarWidth - 1
+				items.height = a.panelHeight()
+				a.items = items
+				a.cardParent = 0
+				a.screen = screenItems
+				a.focus = focusContent
+				return a, nil
+			}
+			return a, nil
 		}
 	}
 
@@ -1476,7 +1510,7 @@ func (a App) View() string {
 	case screenSettings:
 		contentView = a.settings.View()
 	case screenRegistries:
-		contentView = a.registries.View()
+		contentView = a.registries.View(a.cardCursor)
 	case screenSandbox:
 		contentView = a.sandboxSettings.View()
 	case screenLibraryCards:

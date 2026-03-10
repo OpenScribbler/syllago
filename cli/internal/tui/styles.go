@@ -147,4 +147,16 @@ var (
 	// Clickable back link
 	backLinkStyle = lipgloss.NewStyle().
 			Foreground(mutedColor)
+
+	// Card grid styles (registries, library, loadouts)
+	cardNormalStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(mutedColor).
+			Padding(0, 1)
+
+	cardSelectedStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(accentColor).
+				Padding(0, 1).
+				Bold(true)
 )
