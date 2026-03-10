@@ -24,6 +24,16 @@ func IsValidItemName(name string) bool {
 	return validItemNameRe.MatchString(name)
 }
 
+// validRegistryNameRe matches registry names in owner/repo format.
+// Allows letters, numbers, - and _ in each segment, with an optional / separator.
+var validRegistryNameRe = regexp.MustCompile(`^[a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)?$`)
+
+// IsValidRegistryName checks if a name is valid for use as a registry name.
+// Allows the owner/repo format in addition to plain names.
+func IsValidRegistryName(name string) bool {
+	return validRegistryNameRe.MatchString(name)
+}
+
 // Scan walks contentRoot to discover all content items.
 // contentRoot is the directory containing shared content directories (skills/, agents/, etc.).
 // projectRoot is unused but kept for API compatibility.

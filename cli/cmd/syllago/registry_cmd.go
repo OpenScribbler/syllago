@@ -58,8 +58,8 @@ var registryAddCmd = &cobra.Command{
 		if name == "" {
 			name = registry.NameFromURL(gitURL)
 		}
-		if !catalog.IsValidItemName(name) {
-			return fmt.Errorf("registry name %q contains invalid characters (use letters, numbers, - and _)", name)
+		if !catalog.IsValidRegistryName(name) {
+			return fmt.Errorf("registry name %q is invalid (use letters, numbers, - and _ with optional owner/repo format)", name)
 		}
 
 		cfg, err := config.Load(root)

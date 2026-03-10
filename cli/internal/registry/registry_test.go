@@ -11,17 +11,21 @@ func TestNameFromURL(t *testing.T) {
 		url  string
 		want string
 	}{
-		{"git@github.com:acme/my-tools.git", "my-tools"},
-		{"https://github.com/acme/my-tools.git", "my-tools"},
-		{"https://github.com/acme/my-tools", "my-tools"},
-		{"https://github.com/acme/my-tools/", "my-tools"},
-		{"git@github.com:acme/my_tools.git", "my_tools"},
+		{"https://github.com/acme/my-tools.git", "acme/my-tools"},
+		{"https://github.com/acme/my-tools", "acme/my-tools"},
+		{"https://github.com/acme/my-tools/", "acme/my-tools"},
+		{"git@github.com:acme/my-tools.git", "acme/my-tools"},
+		{"git@github.com:acme/my-tools", "acme/my-tools"},
+		{"git@github.com:acme/my_tools.git", "acme/my_tools"},
+		{"https://example.com/my-tools.git", "my-tools"},
+		{"https://example.com/my-tools", "my-tools"},
 	}
 	for _, tt := range tests {
-		got := NameFromURL(tt.url)
-		if got != tt.want {
-			t.Errorf("NameFromURL(%q) = %q, want %q", tt.url, got, tt.want)
-		}
+		t.Run(tt.url, func(t *testing.T) {
+			if got := NameFromURL(tt.url); got != tt.want {
+				t.Errorf("NameFromURL(%q) = %q, want %q", tt.url, got, tt.want)
+			}
+		})
 	}
 }
 

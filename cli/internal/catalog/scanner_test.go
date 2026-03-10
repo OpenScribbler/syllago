@@ -487,3 +487,18 @@ func TestScanWithGlobalAndRegistries_TagsProjectItems(t *testing.T) {
 	}
 	t.Error("test-skill not found in catalog")
 }
+
+func TestIsValidRegistryName(t *testing.T) {
+	valid := []string{"acme/my-tools", "my-tools", "acme/my_tools-v2", "user123/repo-name"}
+	for _, name := range valid {
+		if !IsValidRegistryName(name) {
+			t.Errorf("IsValidRegistryName(%q) = false, want true", name)
+		}
+	}
+	invalid := []string{"", "a/b/c", "a b", "a.b", "a*b"}
+	for _, name := range invalid {
+		if IsValidRegistryName(name) {
+			t.Errorf("IsValidRegistryName(%q) = true, want false", name)
+		}
+	}
+}
