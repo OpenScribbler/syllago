@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/loadout"
 	"github.com/OpenScribbler/syllago/cli/internal/promote"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 type screen int
@@ -42,6 +44,24 @@ const (
 	focusModal
 )
 
+// registryAddDoneMsg is sent when a background registry clone completes.
+type registryAddDoneMsg struct {
+	name string
+	err  error
+}
+
+// registryRemoveDoneMsg is sent when a registry remove operation completes.
+type registryRemoveDoneMsg struct {
+	name string
+	err  error
+}
+
+// registrySyncDoneMsg is sent when a registry sync operation completes.
+type registrySyncDoneMsg struct {
+	name string
+	err  error
+}
+
 // App is the root bubbletea model.
 type App struct {
 	catalog         *catalog.Catalog
@@ -54,10 +74,12 @@ type App struct {
 
 	screen          screen
 	focus           focusTarget
-	modal           confirmModal
-	saveModal       saveModal
-	envModal        envSetupModal
-	instModal       installModal
+	modal                confirmModal
+	saveModal            saveModal
+	envModal             envSetupModal
+	instModal            installModal
+	registryAddModal     registryAddModal
+	registryOpInProgress bool
 	sidebar         sidebarModel
 	items           itemsModel
 	detail          detailModel
@@ -151,8 +173,62 @@ func (a *App) handleConfirmAction() tea.Cmd {
 		return a.runLoadoutApply(a.loadoutApplyItem, a.loadoutApplyMode)
 	case modalHookBrokenWarning:
 		return a.detail.startInstall()
+	case modalRegistryRemove:
+		a.registryOpInProgress = true
+		a.statusMessage = fmt.Sprintf("Removing registry: %s...", a.registries.entries[a.cardCursor].name)
+		name := a.registries.entries[a.cardCursor].name
+		root := a.catalog.RepoRoot
+		cfg := a.registryCfg
+		return func() tea.Msg {
+			var filtered []config.Registry
+			for _, r := range cfg.Registries {
+				if r.Name != name {
+					filtered = append(filtered, r)
+				}
+			}
+			cfg.Registries = filtered
+			if err := config.Save(root, cfg); err != nil {
+				return registryRemoveDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
+			}
+			if err := registry.Remove(name); err != nil {
+				return registryRemoveDoneMsg{name: name, err: fmt.Errorf("removing clone: %w", err)}
+			}
+			return registryRemoveDoneMsg{name: name}
+		}
 	}
 	return nil
+}
+
+// doRegistryAdd starts an async registry clone and config save.
+func (a *App) doRegistryAdd(gitURL, nameOverride string) tea.Cmd {
+	a.statusMessage = fmt.Sprintf("Adding registry: %s...", gitURL)
+	a.registryOpInProgress = true
+	root := a.catalog.RepoRoot
+	cfg := a.registryCfg
+	return func() tea.Msg {
+		name := nameOverride
+		if name == "" {
+			name = registry.NameFromURL(gitURL)
+		}
+		if !catalog.IsValidRegistryName(name) {
+			return registryAddDoneMsg{err: fmt.Errorf("invalid registry name %q", name)}
+		}
+		for _, r := range cfg.Registries {
+			if r.Name == name {
+				return registryAddDoneMsg{err: fmt.Errorf("registry %q already exists", name)}
+			}
+		}
+		if err := registry.Clone(gitURL, name, ""); err != nil {
+			return registryAddDoneMsg{name: name, err: err}
+		}
+		cfg.Registries = append(cfg.Registries, config.Registry{Name: name, URL: gitURL})
+		if err := config.Save(root, cfg); err != nil {
+			dir, _ := registry.CloneDir(name)
+			os.RemoveAll(dir)
+			return registryAddDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
+		}
+		return registryAddDoneMsg{name: name}
+	}
 }
 
 // panelHeight returns the usable height for sidebar and content panels,
@@ -428,6 +504,70 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, nil
 
+	case registryAddDoneMsg:
+		a.registryOpInProgress = false
+		if msg.err != nil {
+			a.statusMessage = fmt.Sprintf("Add failed: %s", msg.err)
+		} else {
+			a.statusMessage = fmt.Sprintf("Added registry: %s", msg.name)
+			cfg, err := config.Load(a.catalog.RepoRoot)
+			if err == nil {
+				a.registryCfg = cfg
+			}
+			a.registries = newRegistriesModel(a.catalog.RepoRoot, a.registryCfg, a.catalog)
+			a.registries.width = a.width - sidebarWidth - 1
+			a.registries.height = a.panelHeight()
+			a.sidebar.registryCount = len(a.registryCfg.Registries)
+			cat, scanErr := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
+			if scanErr == nil {
+				a.catalog = cat
+				a.refreshSidebarCounts()
+			}
+		}
+		return a, nil
+
+	case registryRemoveDoneMsg:
+		a.registryOpInProgress = false
+		if msg.err != nil {
+			a.statusMessage = fmt.Sprintf("Remove failed: %s", msg.err)
+		} else {
+			a.statusMessage = fmt.Sprintf("Removed registry: %s", msg.name)
+			cfg, err := config.Load(a.catalog.RepoRoot)
+			if err == nil {
+				a.registryCfg = cfg
+			}
+			a.registries = newRegistriesModel(a.catalog.RepoRoot, a.registryCfg, a.catalog)
+			a.registries.width = a.width - sidebarWidth - 1
+			a.registries.height = a.panelHeight()
+			a.sidebar.registryCount = len(a.registryCfg.Registries)
+			if a.cardCursor >= len(a.registries.entries) && a.cardCursor > 0 {
+				a.cardCursor--
+			}
+			cat, scanErr := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
+			if scanErr == nil {
+				a.catalog = cat
+				a.refreshSidebarCounts()
+			}
+		}
+		return a, nil
+
+	case registrySyncDoneMsg:
+		a.registryOpInProgress = false
+		if msg.err != nil {
+			a.statusMessage = fmt.Sprintf("Sync failed for %s: %s", msg.name, msg.err)
+		} else {
+			a.statusMessage = fmt.Sprintf("Synced: %s", msg.name)
+			cat, scanErr := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
+			if scanErr == nil {
+				a.catalog = cat
+				a.refreshSidebarCounts()
+			}
+			a.registries = newRegistriesModel(a.catalog.RepoRoot, a.registryCfg, a.catalog)
+			a.registries.width = a.width - sidebarWidth - 1
+			a.registries.height = a.panelHeight()
+		}
+		return a, nil
+
 	case tea.MouseMsg:
 		// Forward wheel events to active screen for scroll support
 		if msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown {
@@ -593,6 +733,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			// Click outside modal — close it
 			a.resetInstallModal()
+			a.focus = focusContent
+			return a, nil
+		}
+		if a.registryAddModal.active {
+			if zone.Get("modal-zone").InBounds(msg) {
+				return a, nil // click inside modal — ignore
+			}
+			a.registryAddModal.active = false
 			a.focus = focusContent
 			return a, nil
 		}
@@ -844,6 +992,19 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				} else {
 					a.resetInstallModal() // prevent ghost installs from stale state
+				}
+			}
+			return a, cmd
+		}
+		if a.registryAddModal.active {
+			var cmd tea.Cmd
+			a.registryAddModal, cmd = a.registryAddModal.Update(msg)
+			if !a.registryAddModal.active {
+				a.focus = focusContent
+				url := strings.TrimSpace(a.registryAddModal.urlInput.Value())
+				if url != "" {
+					nameOverride := strings.TrimSpace(a.registryAddModal.nameInput.Value())
+					return a, a.doRegistryAdd(url, nameOverride)
 				}
 			}
 			return a, cmd
@@ -1135,6 +1296,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return a, nil
 			}
+			if key.Matches(msg, keys.CreateLoadout) && a.items.sourceRegistry != "" {
+				// TODO(Phase 7): open create-loadout wizard scoped to this registry
+				a.statusMessage = "Create loadout wizard coming soon"
+				return a, nil
+			}
 			if key.Matches(msg, keys.Enter) && len(a.items.items) > 0 {
 				item := a.items.selectedItem()
 				if a.cachedDetailPath == item.Path && a.cachedDetail != nil {
@@ -1422,6 +1588,28 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.focus = focusContent
 				return a, nil
 			}
+			if key.Matches(msg, keys.Add) && !a.registryOpInProgress {
+				a.registryAddModal = newRegistryAddModal()
+				a.focus = focusModal
+				return a, nil
+			}
+			if key.Matches(msg, keys.Delete) && len(a.registries.entries) > 0 && !a.registryOpInProgress {
+				entry := a.registries.entries[a.cardCursor]
+				body := fmt.Sprintf("Remove registry %q?\n\nThis deletes the local clone.\nInstalled content is not affected.", entry.name)
+				a.modal = newConfirmModal("Remove Registry", body)
+				a.modal.purpose = modalRegistryRemove
+				a.focus = focusModal
+				return a, nil
+			}
+			if key.Matches(msg, keys.Refresh) && len(a.registries.entries) > 0 && !a.registryOpInProgress {
+				entry := a.registries.entries[a.cardCursor]
+				a.statusMessage = fmt.Sprintf("Syncing %s...", entry.name)
+				a.registryOpInProgress = true
+				return a, func() tea.Msg {
+					err := registry.Sync(entry.name)
+					return registrySyncDoneMsg{name: entry.name, err: err}
+				}
+			}
 			return a, nil
 		}
 	}
@@ -1557,6 +1745,10 @@ func (a App) View() string {
 
 	if a.instModal.active {
 		body = a.instModal.overlayView(body)
+	}
+
+	if a.registryAddModal.active {
+		body = a.registryAddModal.overlayView(body)
 	}
 
 	return zone.Scan(body)
