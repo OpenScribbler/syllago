@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
@@ -13,20 +12,19 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
-// registryEntry holds display data for one registry row.
+// registryEntry holds display data for one registry card.
 type registryEntry struct {
 	name        string
 	url         string
 	ref         string
 	cloned      bool
 	itemCount   int
-	version     string // from manifest.Version, empty if no manifest
-	description string // from manifest.Description, empty if no manifest
+	version     string
+	description string
 }
 
 type registriesModel struct {
 	entries  []registryEntry
-	cursor   int
 	width    int
 	height   int
 	repoRoot string
@@ -55,106 +53,85 @@ func newRegistriesModel(repoRoot string, cfg *config.Config, cat *catalog.Catalo
 }
 
 func (m registriesModel) Update(msg tea.Msg) (registriesModel, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.MouseMsg:
-		if msg.Action == tea.MouseActionRelease && msg.Button == tea.MouseButtonLeft {
-			for i := range m.entries {
-				if zone.Get(fmt.Sprintf("registry-row-%d", i)).InBounds(msg) {
-					m.cursor = i
-					// Synthesize Enter to drill in
-					return m, func() tea.Msg {
-						return tea.KeyMsg{Type: tea.KeyEnter}
-					}
-				}
-			}
-		}
-		return m, nil
-	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, keys.Up):
-			if m.cursor > 0 {
-				m.cursor--
-			}
-		case key.Matches(msg, keys.Down):
-			if m.cursor < len(m.entries)-1 {
-				m.cursor++
-			}
-		case key.Matches(msg, keys.Home):
-			m.cursor = 0
-		case key.Matches(msg, keys.End):
-			if len(m.entries) > 0 {
-				m.cursor = len(m.entries) - 1
-			}
-		}
-	}
+	// Navigation is handled by App.Update(). This model has no cursor state.
 	return m, nil
 }
 
 func (m registriesModel) helpText() string {
-	return "up/down navigate • enter browse items • esc back"
+	return "arrows navigate • enter browse • a add • d remove • r sync • esc back"
 }
 
-func (m registriesModel) selectedName() string {
-	if len(m.entries) == 0 || m.cursor >= len(m.entries) {
-		return ""
-	}
-	return m.entries[m.cursor].name
-}
-
-func (m registriesModel) View() string {
+func (m registriesModel) View(cursor int) string {
 	home := zone.Mark("crumb-home", helpStyle.Render("Home"))
 	s := home + helpStyle.Render(" > ") + titleStyle.Render("Registries") + "\n\n"
 
 	if len(m.entries) == 0 {
 		s += helpStyle.Render("  No registries configured.") + "\n\n"
-		s += helpStyle.Render("  Add one with: syllago registry add <git-url>") + "\n"
+		s += helpStyle.Render("  Press a to add a registry.") + "\n"
 		return s
 	}
 
-	// Header
-	s += tableHeaderStyle.Render(fmt.Sprintf("    %-20s  %-8s  %-6s  %-8s  %s", "Name", "Status", "Items", "Version", "URL")) + "\n"
-	s += helpStyle.Render("    "+strings.Repeat("─", 20)+"  "+strings.Repeat("─", 8)+"  "+strings.Repeat("─", 6)+"  "+strings.Repeat("─", 8)+"  "+strings.Repeat("─", 30)) + "\n"
+	cardWidth := 36
+	cols := 2
+	if m.width < 80 {
+		cols = 1
+	}
 
 	for i, entry := range m.entries {
-		prefix := "  "
-		nameStyle := itemStyle
-		if i == m.cursor {
-			prefix = "> "
-			nameStyle = selectedItemStyle
+		if i > 0 && i%cols == 0 {
+			s += "\n"
 		}
 
-		status := helpStyle.Render("missing")
-		if entry.cloned {
-			status = installedStyle.Render("cloned ")
-		}
-
-		countStr := fmt.Sprintf("%6d", entry.itemCount)
-		url := entry.url
-		if len(url) > 40 {
-			url = url[:37] + "..."
-		}
-
-		version := "─"
-		if entry.version != "" {
-			version = entry.version
-		}
-
-		row := fmt.Sprintf("  %s%-20s  %s  %s  %-8s  %s",
-			prefix,
-			nameStyle.Render(truncate(entry.name, 20)),
-			status,
-			helpStyle.Render(countStr),
-			helpStyle.Render(truncate(version, 8)),
-			helpStyle.Render(url),
-		)
-		s += zone.Mark(fmt.Sprintf("registry-row-%d", i), row) + "\n"
-		if entry.description != "" {
-			s += helpStyle.Render("      "+entry.description) + "\n"
+		selected := i == cursor
+		card := renderRegistryCard(entry, cardWidth, selected)
+		s += zone.Mark(fmt.Sprintf("registry-card-%d", i), card)
+		if cols > 1 && i%cols == 0 && i+1 < len(m.entries) {
+			s += "  "
+		} else if i%cols == cols-1 || i == len(m.entries)-1 {
+			s += "\n"
 		}
 	}
 
-	s += "\n"
-	s += helpStyle.Render("add: syllago registry add <url> • sync: syllago registry sync • remove: syllago registry remove <name>") + "\n"
-
 	return s
+}
+
+func renderRegistryCard(entry registryEntry, width int, selected bool) string {
+	cardStyle := cardNormalStyle
+	if selected {
+		cardStyle = cardSelectedStyle
+	}
+
+	status := helpStyle.Render("missing")
+	if entry.cloned {
+		status = installedStyle.Render("cloned")
+	}
+
+	version := "─"
+	if entry.version != "" {
+		version = entry.version
+	}
+
+	urlDisplay := entry.url
+	maxURL := width - 4
+	if len(urlDisplay) > maxURL {
+		urlDisplay = urlDisplay[:maxURL-3] + "..."
+	}
+
+	desc := entry.description
+	if len(desc) > width-4 {
+		desc = desc[:width-7] + "..."
+	}
+
+	title := truncate(entry.name, width-4)
+	meta := fmt.Sprintf("%s  v%s  %d items", status, helpStyle.Render(version), entry.itemCount)
+
+	var lines []string
+	lines = append(lines, titleStyle.Render(title))
+	lines = append(lines, meta)
+	lines = append(lines, helpStyle.Render(urlDisplay))
+	if desc != "" {
+		lines = append(lines, helpStyle.Render(desc))
+	}
+
+	return cardStyle.Width(width).Render(strings.Join(lines, "\n"))
 }
