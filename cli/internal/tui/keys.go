@@ -25,7 +25,11 @@ type keyMap struct {
 	Right        key.Binding
 	PageUp       key.Binding
 	PageDown     key.Binding
-	ToggleHidden key.Binding
+	ToggleHidden  key.Binding
+	Add           key.Binding
+	Delete        key.Binding
+	Refresh       key.Binding
+	CreateLoadout key.Binding
 }
 
 var keys = keyMap{
@@ -106,8 +110,8 @@ var keys = keyMap{
 		key.WithHelp("left/h", "scroll left"),
 	),
 	Right: key.NewBinding(
-		key.WithKeys("right", "l"),
-		key.WithHelp("right/l", "enter"),
+		key.WithKeys("right"),
+		key.WithHelp("right", "enter"),
 	),
 	PageUp: key.NewBinding(
 		key.WithKeys("pgup"),
@@ -120,5 +124,21 @@ var keys = keyMap{
 	ToggleHidden: key.NewBinding(
 		key.WithKeys("H"),
 		key.WithHelp("H", "show/hide hidden"),
+	),
+	Add: key.NewBinding(
+		key.WithKeys("a"),
+		key.WithHelp("a", "add"),
+	),
+	Delete: key.NewBinding(
+		key.WithKeys("d"),
+		key.WithHelp("d", "remove"),
+	),
+	Refresh: key.NewBinding(
+		key.WithKeys("r"),
+		key.WithHelp("r", "sync"),
+	),
+	CreateLoadout: key.NewBinding(
+		key.WithKeys("l"),
+		key.WithHelp("l", "create loadout"),
 	),
 }
