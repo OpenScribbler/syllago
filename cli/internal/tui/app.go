@@ -2124,18 +2124,28 @@ func (a App) libraryCardTypes() []catalog.ContentType {
 }
 
 // loadoutCardProviders returns the unique provider names for loadout items, sorted.
+// loadoutCardProviders returns providers to show on the loadouts card screen.
+// Shows all detected providers — even those with no loadouts — so the grid
+// is always populated and the user can create loadouts for any provider.
 func (a App) loadoutCardProviders() []string {
-	seen := make(map[string]bool)
-	for _, item := range a.visibleItems(a.catalog.ByType(catalog.Loadouts)) {
+	hasLoadouts := make(map[string]bool)
+	for _, item := range a.catalog.ByType(catalog.Loadouts) {
 		if item.Provider != "" {
-			seen[item.Provider] = true
+			hasLoadouts[item.Provider] = true
 		}
 	}
 	var result []string
-	for p := range seen {
-		result = append(result, p)
+	for _, prov := range a.providers {
+		if prov.Detected {
+			result = append(result, prov.Slug)
+		}
 	}
-	sort.Strings(result)
+	if len(result) == 0 {
+		for slug := range hasLoadouts {
+			result = append(result, slug)
+		}
+		sort.Strings(result)
+	}
 	return result
 }
 
@@ -2245,8 +2255,15 @@ func (a App) renderLoadoutCards() string {
 	}
 
 	renderCard := func(idx int, prov string) string {
-		inner := labelStyle.Render(prov) + " " + countStyle.Render(fmt.Sprintf("(%d)", provCounts[prov]))
-		inner += "\n" + helpStyle.Render("Loadouts for "+prov)
+		count := provCounts[prov]
+		var inner string
+		if count > 0 {
+			inner = labelStyle.Render(prov) + " " + countStyle.Render(fmt.Sprintf("(%d)", count))
+			inner += "\n" + helpStyle.Render("Loadouts for "+prov)
+		} else {
+			inner = labelStyle.Render(prov)
+			inner += "\n" + helpStyle.Render("No loadouts")
+		}
 
 		style := cardBase.BorderForeground(borderColor)
 		if idx == a.cardCursor {
