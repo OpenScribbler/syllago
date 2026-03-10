@@ -88,7 +88,7 @@ var registryAddCmd = &cobra.Command{
 │                   SECURITY NOTICE                    │
 │                                                      │
 │  Registries contain AI tool content (skills, rules,  │
-│  hooks, prompts) that will be available for install.  │
+│  hooks, commands) that will be available for install.  │
 │  This content can influence how AI tools behave.     │
 │                                                      │
 │  Syllago does not operate, verify, or audit any      │
