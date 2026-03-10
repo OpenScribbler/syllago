@@ -131,6 +131,9 @@ var registryAddCmd = &cobra.Command{
 			Ref:  refFlag,
 		})
 		if err := config.Save(root, cfg); err != nil {
+			// Config save failed — clean up the clone so it doesn't become orphaned.
+			dir, _ := registry.CloneDir(name)
+			os.RemoveAll(dir)
 			return fmt.Errorf("saving config: %w", err)
 		}
 
