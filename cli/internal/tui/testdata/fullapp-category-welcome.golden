@@ -11,12 +11,12 @@ syllago           │  AI Tools
   Collections     │  Add          - Add content from providers, local files, or
   Library       1 │  Update       - Check for updates and pull latest changes
   Loadouts      0 │  Settings     - Configure paths and providers
-  ─────────────   │  Registries   - Manage git-based content sources from your t
+  Registries      │  Registries   - Manage git-based content sources from your t
+  ─────────────   │
   Configuration   │
   Add             │
   Update          │
   Settings        │
-  Registries      │
   Sandbox         │
                   │
 

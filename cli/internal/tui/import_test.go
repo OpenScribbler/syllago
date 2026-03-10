@@ -16,7 +16,7 @@ func navigateToImport(t *testing.T) App {
 	t.Helper()
 	app := testApp(t)
 	nTypes := sidebarContentCount()
-	app = pressN(app, keyDown, nTypes+2) // Add
+	app = pressN(app, keyDown, nTypes+3) // Add
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenImport)

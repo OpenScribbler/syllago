@@ -36,7 +36,7 @@ func TestSearchBlockedImport(t *testing.T) {
 	app := testApp(t)
 	// Navigate to import screen
 	nTypes := sidebarContentCount()
-	app = pressN(app, keyDown, nTypes+2)
+	app = pressN(app, keyDown, nTypes+3)
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenImport)
@@ -51,7 +51,7 @@ func TestSearchBlockedImport(t *testing.T) {
 func TestSearchBlockedUpdate(t *testing.T) {
 	app := testApp(t)
 	nTypes := sidebarContentCount()
-	app = pressN(app, keyDown, nTypes+3)
+	app = pressN(app, keyDown, nTypes+4)
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenUpdate)
@@ -66,7 +66,7 @@ func TestSearchBlockedUpdate(t *testing.T) {
 func TestSearchBlockedSettings(t *testing.T) {
 	app := testApp(t)
 	nTypes := sidebarContentCount()
-	app = pressN(app, keyDown, nTypes+4)
+	app = pressN(app, keyDown, nTypes+5)
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenSettings)

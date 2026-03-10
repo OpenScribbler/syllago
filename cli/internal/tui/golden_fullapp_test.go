@@ -85,10 +85,10 @@ func TestGoldenFullApp_Modal(t *testing.T) {
 
 func TestGoldenFullApp_Settings(t *testing.T) {
 	app := testApp(t)
-	// Navigate sidebar to Settings: sidebarContentCount() + 4 presses down.
-	// 6 content types, then Library (+0), Loadouts (+1), Add (+2), Update (+3), Settings (+4).
+	// Navigate sidebar to Settings: sidebarContentCount() + 5 presses down.
+	// 6 content types, then Library (+0), Loadouts (+1), Registries (+2), Add (+3), Update (+4), Settings (+5).
 	nTypes := sidebarContentCount()
-	app = pressN(app, keyDown, nTypes+4)
+	app = pressN(app, keyDown, nTypes+5)
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenSettings)

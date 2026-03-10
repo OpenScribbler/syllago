@@ -11,12 +11,12 @@ syllago           │  AI Tools
   Collections     │  Add          - Add content from provide
   Library       1 │  Update       - Check for updates and pu
   Loadouts      0 │  Settings     - Configure paths and prov
-  ─────────────   │  Registries   - Manage git-based content
+  Registries      │  Registries   - Manage git-based content
+  ─────────────   │
   Configuration   │
   Add             │
   Update          │
   Settings        │
-  Registries      │
   Sandbox         │
                   │
 ────────────────────────────────────────────────────────────

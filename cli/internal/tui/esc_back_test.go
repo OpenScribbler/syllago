@@ -14,7 +14,7 @@ func navigateToRegistries(t *testing.T) App {
 	t.Helper()
 	app := testApp(t)
 	nTypes := sidebarContentCount()
-	app = pressN(app, keyDown, nTypes+5) // Registries
+	app = pressN(app, keyDown, nTypes+2) // Registries
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenRegistries)
@@ -101,7 +101,7 @@ func TestEscapeFromUpdate(t *testing.T) {
 func TestEscapeFromImport(t *testing.T) {
 	app := testApp(t)
 	nTypes := sidebarContentCount()
-	app = pressN(app, keyDown, nTypes+2) // Add
+	app = pressN(app, keyDown, nTypes+3) // Add
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	assertScreen(t, app, screenImport)
