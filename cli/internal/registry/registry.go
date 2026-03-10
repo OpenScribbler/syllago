@@ -42,19 +42,51 @@ func IsCloned(name string) bool {
 }
 
 // NameFromURL derives a registry name from a git URL.
+// Returns "owner/repo" format when the URL has an org/owner prefix,
+// or just "repo" for bare single-segment names.
 // Examples:
 //
-//	"git@github.com:acme/my-tools.git" → "my-tools"
-//	"https://github.com/acme/my-tools"  → "my-tools"
+//	"git@github.com:acme/my-tools.git"          → "acme/my-tools"
+//	"https://github.com/acme/my-tools"           → "acme/my-tools"
+//	"https://github.com/acme/my-tools.git"       → "acme/my-tools"
+//	"https://example.com/my-tools.git"           → "my-tools"
 func NameFromURL(url string) string {
-	// Take the last path segment
 	url = strings.TrimSuffix(url, "/")
+	url = strings.TrimSuffix(url, ".git")
+
+	// HTTPS format: https://host/owner/repo or https://host/repo
+	// Check this BEFORE SSH to avoid matching the colon in "https:"
+	if i := strings.Index(url, "://"); i >= 0 {
+		path := url[i+3:]
+		// strip host
+		if j := strings.Index(path, "/"); j >= 0 {
+			path = path[j+1:]
+		}
+		parts := strings.Split(strings.Trim(path, "/"), "/")
+		if len(parts) >= 2 {
+			return parts[len(parts)-2] + "/" + parts[len(parts)-1]
+		}
+		if len(parts) == 1 && parts[0] != "" {
+			return parts[0]
+		}
+	}
+
+	// git@ SSH format: git@host:owner/repo
+	if i := strings.Index(url, ":"); i >= 0 {
+		path := url[i+1:]
+		parts := strings.Split(path, "/")
+		if len(parts) >= 2 {
+			return parts[len(parts)-2] + "/" + parts[len(parts)-1]
+		}
+		return parts[len(parts)-1]
+	}
+
+	// Fallback: last segment after any / or :
 	last := url
 	if i := strings.LastIndexAny(url, "/:"); i >= 0 {
 		last = url[i+1:]
 	}
-	// Strip .git suffix
-	return strings.TrimSuffix(last, ".git")
+	return last
 }
 
 // checkGit returns an error if git is not on PATH.
@@ -69,8 +101,8 @@ func checkGit() error {
 // Clone clones the given URL into the registry cache as name.
 // If ref is non-empty, checks out that branch/tag after cloning.
 func Clone(url, name, ref string) error {
-	if !catalog.IsValidItemName(name) {
-		return fmt.Errorf("registry name %q contains invalid characters (use letters, numbers, - and _)", name)
+	if !catalog.IsValidRegistryName(name) {
+		return fmt.Errorf("registry name %q is invalid (use letters, numbers, - and _ with optional owner/repo format)", name)
 	}
 	if err := checkGit(); err != nil {
 		return err
