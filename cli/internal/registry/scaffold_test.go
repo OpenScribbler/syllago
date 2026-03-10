@@ -97,6 +97,81 @@ func TestScaffold_ErrorsIfDirectoryAlreadyExists(t *testing.T) {
 	}
 }
 
+func TestScaffold_CreatesGitignore(t *testing.T) {
+	tmp := t.TempDir()
+	if err := Scaffold(tmp, "my-reg", ""); err != nil {
+		t.Fatalf("Scaffold: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(tmp, "my-reg", ".gitignore"))
+	if err != nil {
+		t.Fatalf("reading .gitignore: %v", err)
+	}
+	content := string(data)
+	for _, expected := range []string{".DS_Store", "Thumbs.db", "*.swp", ".vscode/", ".idea/"} {
+		if !strings.Contains(content, expected) {
+			t.Errorf(".gitignore missing %q", expected)
+		}
+	}
+}
+
+func TestScaffold_CreatesExampleSkill(t *testing.T) {
+	tmp := t.TempDir()
+	if err := Scaffold(tmp, "my-reg", ""); err != nil {
+		t.Fatalf("Scaffold: %v", err)
+	}
+	base := filepath.Join(tmp, "my-reg", "skills", "hello-world")
+	for _, f := range []string{"SKILL.md", ".syllago.yaml"} {
+		if _, err := os.Stat(filepath.Join(base, f)); os.IsNotExist(err) {
+			t.Errorf("expected %s to exist", f)
+		}
+	}
+	data, _ := os.ReadFile(filepath.Join(base, "SKILL.md"))
+	if !strings.Contains(string(data), "name:") {
+		t.Error("SKILL.md should contain frontmatter with 'name:'")
+	}
+	meta, _ := os.ReadFile(filepath.Join(base, ".syllago.yaml"))
+	if !strings.Contains(string(meta), "example") {
+		t.Error(".syllago.yaml should contain 'example' tag")
+	}
+}
+
+func TestScaffold_CreatesExampleRule(t *testing.T) {
+	tmp := t.TempDir()
+	if err := Scaffold(tmp, "my-reg", ""); err != nil {
+		t.Fatalf("Scaffold: %v", err)
+	}
+	base := filepath.Join(tmp, "my-reg", "rules", "claude-code", "example-rule")
+	for _, f := range []string{"rule.md", "README.md", ".syllago.yaml"} {
+		if _, err := os.Stat(filepath.Join(base, f)); os.IsNotExist(err) {
+			t.Errorf("expected %s to exist in example rule", f)
+		}
+	}
+}
+
+func TestScaffold_CreatesContributing(t *testing.T) {
+	tmp := t.TempDir()
+	if err := Scaffold(tmp, "my-reg", ""); err != nil {
+		t.Fatalf("Scaffold: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(tmp, "my-reg", "CONTRIBUTING.md"))
+	if err != nil {
+		t.Fatalf("reading CONTRIBUTING.md: %v", err)
+	}
+	content := string(data)
+	for _, expected := range []string{
+		"# Contributing to my-reg",
+		"SKILL.md",
+		"rule.md",
+		"hook.json",
+		"registry.yaml",
+		"claude-code",
+	} {
+		if !strings.Contains(content, expected) {
+			t.Errorf("CONTRIBUTING.md missing %q", expected)
+		}
+	}
+}
+
 func TestScaffold_CreatesREADME(t *testing.T) {
 	tmp := t.TempDir()
 	err := Scaffold(tmp, "readme-test", "Check the readme")

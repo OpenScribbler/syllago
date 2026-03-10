@@ -9,6 +9,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/gitutil"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/spf13/cobra"
@@ -461,11 +462,15 @@ Example:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 		desc, _ := cmd.Flags().GetString("description")
+		noGit, _ := cmd.Flags().GetBool("no-git")
 
 		cwd, err := os.Getwd()
 		if err != nil {
 			return fmt.Errorf("getting working directory: %w", err)
 		}
+
+		// Check if already inside a git repo before creating anything.
+		alreadyInGit := gitutil.IsInsideGitRepo(cwd)
 
 		if err := registry.Scaffold(cwd, name, desc); err != nil {
 			return err
@@ -484,9 +489,31 @@ Example:
 			}
 		}
 
+		// Git init + commit.
+		didGitInit := false
+		if !noGit && !alreadyInGit {
+			if gitErr := gitutil.InitAndCommit(dir, "Initial registry scaffold"); gitErr != nil {
+				fmt.Fprintf(output.ErrWriter, "Warning: git init failed: %s\n", gitErr)
+			} else {
+				fmt.Fprintf(output.Writer, "\nInitialized git repository and created initial commit.\n")
+				didGitInit = true
+			}
+		} else if alreadyInGit && !noGit {
+			fmt.Fprintf(output.Writer, "\nNote: already inside a git repo — skipping git init.\n")
+		}
+
 		fmt.Fprintf(output.Writer, "\nNext steps:\n")
 		fmt.Fprintf(output.Writer, "  cd %s\n", name)
-		fmt.Fprintf(output.Writer, "  git init && git add . && git commit -m 'Initial registry scaffold'\n")
+		if didGitInit {
+			fmt.Fprintf(output.Writer, "  git remote add origin <your-git-url>\n")
+			fmt.Fprintf(output.Writer, "  git push -u origin main\n")
+		} else {
+			fmt.Fprintf(output.Writer, "  git init && git add . && git commit -m 'Initial registry scaffold'\n")
+			fmt.Fprintf(output.Writer, "  git remote add origin <your-git-url>\n")
+			fmt.Fprintf(output.Writer, "  git push -u origin main\n")
+		}
+		fmt.Fprintf(output.Writer, "\nThen add your registry locally:\n")
+		fmt.Fprintf(output.Writer, "  syllago registry add <your-git-url>\n")
 		return nil
 	},
 }
@@ -508,6 +535,7 @@ func init() {
 	registryItemsCmd.Flags().String("type", "", "Filter by content type (skills, rules, hooks, etc.)")
 
 	registryCreateCmd.Flags().String("description", "", "Short description of the registry")
+	registryCreateCmd.Flags().Bool("no-git", false, "Skip git init and initial commit")
 
 	registryCmd.AddCommand(registryAddCmd, registryRemoveCmd, registryListCmd, registrySyncCmd, registryItemsCmd, registryCreateCmd)
 	rootCmd.AddCommand(registryCmd)
