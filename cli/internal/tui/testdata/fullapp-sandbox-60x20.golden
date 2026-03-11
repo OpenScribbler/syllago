@@ -1,0 +1,24 @@
+syllago           │Home > Sandbox
+                  │
+  Content         │  > Allowed Domains  (none)
+  Skills        3 │    Allowed Env Vars  (none)
+  Agents        1 │    Allowed Ports  (none)
+  MCP Configs   1 │
+  Rules         1 │ ─────────────────────────────────────────────
+  Hooks         1 │ Domains the sandbox allows network access to.
+  Commands      1 │ Add domains like api.example.com or *.github.com.
+  ─────────────   │
+  Collections     │ ─────────────────────────────────────────────
+  Library       1 │
+  Loadouts      2 │
+  Registries      │
+  ─────────────   │
+  Configuration   │
+  Add             │
+  Update          │
+  Settings        │
+> Sandbox         │
+                  │
+────────────────────────────────────────────────────────────
+up/down navigate • enter add • d delete last • s save • esc
+back Sandbox
