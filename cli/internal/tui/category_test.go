@@ -193,6 +193,65 @@ func TestCategoryQuitFromCategory(t *testing.T) {
 	}
 }
 
+// TestCategoryWelcomeCardKeyboardNav verifies that Tab focuses the welcome card
+// grid and arrow keys navigate the flat card list across all three sections.
+func TestCategoryWelcomeCardKeyboardNav(t *testing.T) {
+	app := testAppSize(t, 80, 40) // tall enough for cards
+	assertScreen(t, app, screenCategory)
+
+	// Tab should switch focus to content
+	m, _ := app.Update(keyTab)
+	app = m.(App)
+	if app.focus != focusContent {
+		t.Fatalf("expected focusContent after Tab, got %d", app.focus)
+	}
+	if app.cardCursor != 0 {
+		t.Fatalf("expected cardCursor 0, got %d", app.cardCursor)
+	}
+
+	// Down moves by column count (2 in two-col)
+	m, _ = app.Update(keyDown)
+	app = m.(App)
+	if app.cardCursor != 2 {
+		t.Fatalf("expected cardCursor 2 after Down, got %d", app.cardCursor)
+	}
+
+	// Right moves by 1
+	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyRight})
+	app = m.(App)
+	if app.cardCursor != 3 {
+		t.Fatalf("expected cardCursor 3 after Right, got %d", app.cardCursor)
+	}
+
+	// Left moves by 1
+	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	app = m.(App)
+	if app.cardCursor != 2 {
+		t.Fatalf("expected cardCursor 2 after Left, got %d", app.cardCursor)
+	}
+
+	// Tab back to sidebar
+	m, _ = app.Update(keyTab)
+	app = m.(App)
+	if app.focus != focusSidebar {
+		t.Fatalf("expected focusSidebar after second Tab, got %d", app.focus)
+	}
+}
+
+// TestCategoryWelcomeCardEnterDrillsIn verifies that pressing Enter on a
+// focused welcome card navigates to the correct screen.
+func TestCategoryWelcomeCardEnterDrillsIn(t *testing.T) {
+	app := testAppSize(t, 80, 40)
+
+	// Tab to focus content, cursor at 0 = first content type (Skills)
+	m, _ := app.Update(keyTab)
+	app = m.(App)
+
+	m, _ = app.Update(keyEnter)
+	app = m.(App)
+	assertScreen(t, app, screenItems)
+}
+
 func TestCategoryQuitOnlyFromCategory(t *testing.T) {
 	app := testApp(t)
 

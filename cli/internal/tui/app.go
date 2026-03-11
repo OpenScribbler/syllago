@@ -1533,6 +1533,47 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.sidebar, cmd = a.sidebar.Update(msg)
 				return a, cmd
 			}
+			if a.focus == focusContent {
+				totalCards := a.welcomeCardCount()
+				if a.cardCursor >= totalCards {
+					a.cardCursor = max(0, totalCards-1)
+				}
+				contentW := a.width - sidebarWidth - 1
+				singleCol := contentW < 42 || a.height < 35
+				cols := 2
+				if singleCol {
+					cols = 1
+				}
+				if key.Matches(msg, keys.Up) {
+					if a.cardCursor >= cols {
+						a.cardCursor -= cols
+					}
+					return a, nil
+				}
+				if key.Matches(msg, keys.Down) {
+					if a.cardCursor+cols < totalCards {
+						a.cardCursor += cols
+					}
+					return a, nil
+				}
+				if key.Matches(msg, keys.Left) {
+					if a.cardCursor > 0 {
+						a.cardCursor--
+					}
+					return a, nil
+				}
+				if key.Matches(msg, keys.Right) {
+					if a.cardCursor+1 < totalCards {
+						a.cardCursor++
+					}
+					return a, nil
+				}
+				if key.Matches(msg, keys.Enter) && totalCards > 0 {
+					a.activateWelcomeCard()
+					return a, nil
+				}
+				return a, nil
+			}
 
 		case screenItems:
 			if key.Matches(msg, keys.Back) {
@@ -2315,6 +2356,68 @@ type welcomeConfigItem struct {
 	zoneID string
 }
 
+// welcomeCardCount returns the total number of welcome cards across all three sections.
+func (a App) welcomeCardCount() int {
+	return len(a.sidebar.types) + 3 + 4 // content types + collections + config
+}
+
+// activateWelcomeCard triggers the action for the welcome card at a.cardCursor.
+// Cards are laid out as: [content types...] [library, loadouts, registries] [add, update, settings, sandbox].
+func (a *App) activateWelcomeCard() {
+	nContent := len(a.sidebar.types)
+	idx := a.cardCursor
+
+	if idx < nContent {
+		// Content type card — navigate via sidebar
+		a.sidebar.cursor = idx
+		a.focus = focusSidebar
+		// Simulate Enter to drill into the selected content type
+		ct := a.sidebar.selectedType()
+		src := a.visibleItems(a.catalog.ByType(ct))
+		items := newItemsModel(ct, src, a.providers, a.catalog.RepoRoot)
+		items.hiddenCount = countHidden(a.catalog.ByType(ct))
+		items.width = a.width - sidebarWidth - 1
+		items.height = a.panelHeight()
+		a.items = items
+		a.cardParent = 0
+		a.screen = screenItems
+		a.focus = focusContent
+		return
+	}
+	idx -= nContent
+
+	// Collection cards: Library, Loadouts, Registries
+	collectionSidebarMap := []int{
+		a.sidebar.libraryIdx(),
+		a.sidebar.loadoutsIdx(),
+		a.sidebar.registriesIdx(),
+	}
+	if idx < 3 {
+		a.sidebar.cursor = collectionSidebarMap[idx]
+		a.focus = focusSidebar
+		// Use the same dispatch as sidebar Enter
+		m, _ := a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		*a = m.(App)
+		return
+	}
+	idx -= 3
+
+	// Config cards: Add, Update, Settings, Sandbox
+	configSidebarMap := []int{
+		a.sidebar.addIdx(),
+		a.sidebar.updateIdx(),
+		a.sidebar.settingsIdx(),
+		a.sidebar.sandboxIdx(),
+	}
+	if idx < 4 {
+		a.sidebar.cursor = configSidebarMap[idx]
+		a.focus = focusSidebar
+		m, _ := a.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		*a = m.(App)
+		return
+	}
+}
+
 // renderWelcomeCards renders the three-section welcome page as bordered cards.
 func (a App) renderWelcomeCards(contentTypes []catalog.ContentType, counts map[catalog.ContentType]int, contentW int, collectionItems []welcomeCollectionItem, configItems []welcomeConfigItem) string {
 	var s string
@@ -2328,9 +2431,20 @@ func (a App) renderWelcomeCards(contentTypes []catalog.ContentType, counts map[c
 		cardW = 18
 	}
 
-	cardStyle := cardNormalStyle.Width(cardW)
+	normalStyle := cardNormalStyle.Width(cardW)
+	selectedStyle := cardSelectedStyle.Width(cardW)
 	if !singleCol {
-		cardStyle = cardStyle.Height(3)
+		normalStyle = normalStyle.Height(3)
+		selectedStyle = selectedStyle.Height(3)
+	}
+
+	// cardStyleFor returns selected or normal card style based on focus and cursor.
+	focused := a.focus == focusContent
+	cardStyleFor := func(flatIdx int) lipgloss.Style {
+		if focused && flatIdx == a.cardCursor {
+			return selectedStyle
+		}
+		return normalStyle
 	}
 
 	// ── Content section ──
@@ -2339,17 +2453,17 @@ func (a App) renderWelcomeCards(contentTypes []catalog.ContentType, counts map[c
 	if singleCol {
 		for i, ct := range contentTypes {
 			inner := renderCategoryCardInner(ct, counts[ct])
-			s += zone.Mark(fmt.Sprintf("welcome-%d", i), cardStyle.Render(inner)) + "\n"
+			s += zone.Mark(fmt.Sprintf("welcome-%d", i), cardStyleFor(i).Render(inner)) + "\n"
 		}
 	} else {
 		for i := 0; i < len(contentTypes); i += 2 {
 			left := renderCategoryCardInner(contentTypes[i], counts[contentTypes[i]])
-			left = zone.Mark(fmt.Sprintf("welcome-%d", i), cardStyle.Render(left))
+			left = zone.Mark(fmt.Sprintf("welcome-%d", i), cardStyleFor(i).Render(left))
 
 			var right string
 			if i+1 < len(contentTypes) {
 				right = renderCategoryCardInner(contentTypes[i+1], counts[contentTypes[i+1]])
-				right = zone.Mark(fmt.Sprintf("welcome-%d", i+1), cardStyle.Render(right))
+				right = zone.Mark(fmt.Sprintf("welcome-%d", i+1), cardStyleFor(i+1).Render(right))
 			}
 
 			s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
@@ -2357,23 +2471,24 @@ func (a App) renderWelcomeCards(contentTypes []catalog.ContentType, counts map[c
 	}
 
 	// ── Collections section ──
+	collOffset := len(contentTypes)
 	s += "\n"
 	s += labelStyle.Render("  Collections") + "\n\n"
 
 	if singleCol {
-		for _, ci := range collectionItems {
+		for i, ci := range collectionItems {
 			inner := renderCollectionCardInner(ci.label, ci.count, ci.desc)
-			s += zone.Mark(ci.zoneID, cardStyle.Render(inner)) + "\n"
+			s += zone.Mark(ci.zoneID, cardStyleFor(collOffset+i).Render(inner)) + "\n"
 		}
 	} else {
 		for i := 0; i < len(collectionItems); i += 2 {
 			leftInner := renderCollectionCardInner(collectionItems[i].label, collectionItems[i].count, collectionItems[i].desc)
-			left := zone.Mark(collectionItems[i].zoneID, cardStyle.Render(leftInner))
+			left := zone.Mark(collectionItems[i].zoneID, cardStyleFor(collOffset+i).Render(leftInner))
 
 			var right string
 			if i+1 < len(collectionItems) {
 				rightInner := renderCollectionCardInner(collectionItems[i+1].label, collectionItems[i+1].count, collectionItems[i+1].desc)
-				right = zone.Mark(collectionItems[i+1].zoneID, cardStyle.Render(rightInner))
+				right = zone.Mark(collectionItems[i+1].zoneID, cardStyleFor(collOffset+i+1).Render(rightInner))
 			}
 
 			s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
@@ -2381,34 +2496,35 @@ func (a App) renderWelcomeCards(contentTypes []catalog.ContentType, counts map[c
 	}
 
 	// ── Configuration section ──
+	cfgOffset := collOffset + len(collectionItems)
 	s += "\n"
 	s += labelStyle.Render("  Configuration") + "\n\n"
 
-	singleColConfig := contentW < 42
-	configCardW := (contentW - 5) / 2
-	if singleColConfig {
-		configCardW = contentW - 2
+	configNormal := cardNormalStyle.Width(cardW)
+	configSelected := cardSelectedStyle.Width(cardW)
+	if !singleCol {
+		configNormal = configNormal.Height(3)
+		configSelected = configSelected.Height(3)
 	}
-	if configCardW < 18 {
-		configCardW = 18
-	}
-	configCardStyle := cardNormalStyle.Width(configCardW)
-	if !singleColConfig {
-		configCardStyle = configCardStyle.Height(3)
+	cfgStyleFor := func(flatIdx int) lipgloss.Style {
+		if focused && flatIdx == a.cardCursor {
+			return configSelected
+		}
+		return configNormal
 	}
 
-	if singleColConfig {
-		for _, ci := range configItems {
+	if singleCol {
+		for i, ci := range configItems {
 			inner := labelStyle.Render(ci.label) + "\n" + helpStyle.Render(ci.desc)
-			s += zone.Mark(ci.zoneID, configCardStyle.Render(inner)) + "\n"
+			s += zone.Mark(ci.zoneID, cfgStyleFor(cfgOffset+i).Render(inner)) + "\n"
 		}
 	} else {
 		for i := 0; i < len(configItems); i += 2 {
 			leftInner := labelStyle.Render(configItems[i].label) + "\n" + helpStyle.Render(configItems[i].desc)
-			left := zone.Mark(configItems[i].zoneID, configCardStyle.Render(leftInner))
+			left := zone.Mark(configItems[i].zoneID, cfgStyleFor(cfgOffset+i).Render(leftInner))
 			if i+1 < len(configItems) {
 				rightInner := labelStyle.Render(configItems[i+1].label) + "\n" + helpStyle.Render(configItems[i+1].desc)
-				right := zone.Mark(configItems[i+1].zoneID, configCardStyle.Render(rightInner))
+				right := zone.Mark(configItems[i+1].zoneID, cfgStyleFor(cfgOffset+i+1).Render(rightInner))
 				s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
 			} else {
 				s += left + "\n"
