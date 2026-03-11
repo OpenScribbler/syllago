@@ -1,11 +1,11 @@
 ---
 paths:
-  - "cli/internal/tui/styles.go"
+  - "cli/internal/tui/**"
 ---
 
 # Style Definition Gate
 
-This file is the single source of truth for all TUI colors and styles.
+`styles.go` is the single source of truth for all TUI colors and styles.
 
 ## Adding a New Color
 
@@ -28,6 +28,14 @@ Check these before adding a new color — reuse when possible:
 - `successColor` (green) — installed, success
 - `dangerColor` (red) — errors
 - `warningColor` (amber) — warnings, global
+
+## Card Styles
+
+ALL card rendering uses `cardNormalStyle` / `cardSelectedStyle` from styles.go:
+- `cardNormalStyle` — rounded border, `mutedColor` border, `Padding(0, 1)`
+- `cardSelectedStyle` — rounded border, `accentColor` border, `Padding(0, 1)`, bold
+
+Never build card styles inline with `lipgloss.NewStyle()`.
 
 ## Conventions
 

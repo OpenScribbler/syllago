@@ -18,6 +18,15 @@
             "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/tui-convention-check.sh\""
           }
         ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/tui-rules-reminder.sh\""
+          }
+        ]
       }
     ]
   }

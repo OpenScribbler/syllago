@@ -18,8 +18,9 @@ local/
 # Backups
 *.bak
 
-# Review docs (local reference) and temporary files
-docs/
+# Working docs — ignore all except design specs
+docs/*
+!docs/design/
 tmp/
 
 # Development workflow state
