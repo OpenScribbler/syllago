@@ -380,7 +380,11 @@ func (m createLoadoutModal) View() string {
 			if start+innerH > len(shown) {
 				start = len(shown) - innerH
 			}
-			shown = shown[start : start+innerH]
+			end := start + innerH
+			if end > len(shown) {
+				end = len(shown)
+			}
+			shown = shown[start:end]
 		}
 		for i, e := range shown {
 			checkBox := "[ ]"
