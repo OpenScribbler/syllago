@@ -1,8 +1,8 @@
-syllago           │Home > Search Results (1)
+syllago           │Home > Registries
                   │
-  Content         │    Name         Description                                            Provider
-> Skills        3 │    ───────────  ─────────────────────────────────────────────────────  ────────
-  Agents        1 │  > alpha-skill (Skills)  A helpful skill
+  Content         │  No registries configured.
+  Skills        3 │
+  Agents        1 │  Press a to add a registry.
   MCP Configs   1 │
   Rules         1 │
   Hooks         1 │
@@ -11,7 +11,7 @@ syllago           │Home > Search Results (1)
   Collections     │
   Library       1 │
   Loadouts      2 │
-  Registries      │
+> Registries      │
   ─────────────   │
   Configuration   │
   Add             │
@@ -27,4 +27,4 @@ syllago           │Home > Search Results (1)
 
 
 ────────────────────────────────────────────────────────────────────────────────
-/ search • enter detail • a add • esc back • ? help               search
+arrows navigate • enter browse • a add • d remove • r sync • esc back Registries

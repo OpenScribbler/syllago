@@ -94,3 +94,43 @@ func TestGoldenFullApp_Settings(t *testing.T) {
 	assertScreen(t, app, screenSettings)
 	requireGolden(t, "fullapp-settings", snapshotApp(t, app))
 }
+
+func TestGoldenFullApp_LibraryCards(t *testing.T) {
+	app := testApp(t)
+	nTypes := sidebarContentCount()
+	app = pressN(app, keyDown, nTypes) // Library
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+	assertScreen(t, app, screenLibraryCards)
+	requireGolden(t, "fullapp-library-cards", snapshotApp(t, app))
+}
+
+func TestGoldenFullApp_LoadoutCards(t *testing.T) {
+	app := testApp(t)
+	nTypes := sidebarContentCount()
+	app = pressN(app, keyDown, nTypes+1) // Loadouts
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+	assertScreen(t, app, screenLoadoutCards)
+	requireGolden(t, "fullapp-loadout-cards", snapshotApp(t, app))
+}
+
+func TestGoldenFullApp_Registries(t *testing.T) {
+	app := navigateToRegistries(t)
+	requireGolden(t, "fullapp-registries", snapshotApp(t, app))
+}
+
+func TestGoldenFullApp_Import(t *testing.T) {
+	app := navigateToImport(t)
+	requireGolden(t, "fullapp-import", snapshotApp(t, app))
+}
+
+func TestGoldenFullApp_Update(t *testing.T) {
+	app := navigateToUpdate(t)
+	requireGolden(t, "fullapp-update", snapshotApp(t, app))
+}
+
+func TestGoldenFullApp_Sandbox(t *testing.T) {
+	app := navigateToSandbox(t)
+	requireGolden(t, "fullapp-sandbox", snapshotApp(t, app))
+}

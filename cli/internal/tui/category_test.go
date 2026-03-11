@@ -62,16 +62,14 @@ func TestCategorySelectEachType(t *testing.T) {
 		}
 	}
 
-	// Test Loadouts separately (in Collections section, after Library)
+	// Test Loadouts separately (in Collections section, after Library).
+	// With loadout items in the catalog, navigates to card grid first.
 	app := testApp(t)
 	nTypes := sidebarContentCount()
 	app = pressN(app, keyDown, nTypes+1) // Loadouts
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
-	assertScreen(t, app, screenItems)
-	if app.items.contentType != catalog.Loadouts {
-		t.Fatalf("expected Loadouts contentType, got %s", app.items.contentType)
-	}
+	assertScreen(t, app, screenLoadoutCards)
 }
 
 func TestCategorySelectLibrary(t *testing.T) {

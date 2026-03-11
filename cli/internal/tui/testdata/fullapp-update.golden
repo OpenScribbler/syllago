@@ -1,8 +1,8 @@
-syllago           │Home > Search Results (1)
-                  │
-  Content         │    Name         Description                                            Provider
-> Skills        3 │    ───────────  ─────────────────────────────────────────────────────  ────────
-  Agents        1 │  > alpha-skill (Skills)  A helpful skill
+syllago           │Home > Update
+                  │You're on v1.0.0 (latest)
+  Content         │
+  Skills        3 │  > View release notes
+  Agents        1 │    Check for updates
   MCP Configs   1 │
   Rules         1 │
   Hooks         1 │
@@ -15,7 +15,7 @@ syllago           │Home > Search Results (1)
   ─────────────   │
   Configuration   │
   Add             │
-  Update          │
+> Update          │
   Settings        │
   Sandbox         │
                   │
@@ -27,4 +27,4 @@ syllago           │Home > Search Results (1)
 
 
 ────────────────────────────────────────────────────────────────────────────────
-/ search • enter detail • a add • esc back • ? help               search
+up/down navigate • enter select • esc back                            Update

@@ -1,22 +1,22 @@
-syllago           │Home > Settings
+syllago           │Home > Registries
                   │
-  Content         │  > Auto-update  off
-  Skills        3 │    Registry auto-sync  off
-  Agents        1 │
-  MCP Configs   1 │ ─────────────────────────────────────────────
-  Rules         1 │ Pull updates automatically when a new version is detected on the remote.
+  Content         │  No registries configured.
+  Skills        3 │
+  Agents        1 │  Press a to add a registry.
+  MCP Configs   1 │
+  Rules         1 │
   Hooks         1 │
   Commands      1 │
-  ─────────────   │ ─────────────────────────────────────────────
+  ─────────────   │
   Collections     │
   Library       1 │
   Loadouts      2 │
-  Registries      │
+> Registries      │
   ─────────────   │
   Configuration   │
   Add             │
   Update          │
-> Settings        │
+  Settings        │
   Sandbox         │
                   │
 
@@ -47,4 +47,4 @@ syllago           │Home > Settings
 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-up/down navigate • enter/space toggle • esc back                                                                                                    Settings
+arrows navigate • enter browse • a add • d remove • r sync • esc back                                                                       Registries
