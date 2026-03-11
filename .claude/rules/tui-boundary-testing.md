@@ -1,6 +1,6 @@
 ---
 paths:
-  - "cli/internal/tui/*_test.go"
+  - "cli/internal/tui/**"
 ---
 
 # TUI Boundary-Condition Testing
@@ -15,6 +15,8 @@ For any new page model or significant visual change, test:
 2. **Empty state (0 items):** Use `testAppEmpty(t)` — verifies graceful empty message, no index-out-of-range
 3. **Long text:** Items with 200+ char names/descriptions — verifies truncation works
 4. **Minimum terminal:** Use `testAppLargeSize(t, 60, 20)` — verifies nothing breaks at tiny dimensions with lots of data
+5. **Responsive sizes:** Test at 60x20, 80x30, 120x40, 160x50 for layout breakpoint coverage
+6. **Mouse interaction:** Click on clickable elements, click-away on modals, scroll wheel
 
 ## Test Helpers
 
@@ -32,3 +34,5 @@ For any component with `scrollOffset` or `cursor`:
 - Pressing Up at cursor=0 should stay at 0
 - Switching tabs or navigating away should reset scroll to 0
 - Home/End should jump to first/last item
+- Mouse wheel scrolls the viewport
+- Scroll indicators appear when content overflows

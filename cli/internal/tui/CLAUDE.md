@@ -2,6 +2,10 @@
 
 This directory is the BubbleTea terminal UI for syllago. All components follow strict conventions to maintain visual and behavioral consistency.
 
+**Design spec:** `docs/design/tui-spec.md` — comprehensive human-readable reference covering all pages, components, and interaction patterns.
+
+**Claude rules:** `.claude/rules/tui-*.md` — machine-enforced rules that auto-load when touching any file in this directory. These cover cards, modals, keyboard, mouse, scroll, styles, responsive layout, text handling, pages, and testing.
+
 ## Before You Edit
 
 Run this checklist before modifying any TUI file:
@@ -9,8 +13,10 @@ Run this checklist before modifying any TUI file:
 1. **Read `styles.go`** — all colors and named styles are defined there. If you need a color, it already exists or should be added there.
 2. **Check `keys.go`** — all key bindings are defined as `key.Binding` objects. Use `key.Matches(msg, keys.Foo)` instead of `msg.String() == "x"`.
 3. **Use shared helpers** — `pagehelpers.go` provides `renderBreadcrumb()`, `renderStatusMsg()`, `cursorPrefix()`, `renderScrollUp/Down()`, `renderDescriptionBox()`. Don't reimplement these patterns.
-4. **Run golden tests after visual changes** — `go test ./cli/internal/tui/ -update-golden`, then review the diff.
-5. **Test with the large dataset** — use `testAppLarge(t)` (85+ items) to verify overflow, scroll, and truncation. Use `testAppEmpty(t)` for empty states.
+4. **Review the design rules** — `.claude/rules/tui-*.md` files define required patterns for cards, modals, scroll, mouse, etc.
+5. **Run golden tests after visual changes** — `go test ./cli/internal/tui/ -update-golden`, then review the diff.
+6. **Test with the large dataset** — use `testAppLarge(t)` (85+ items) to verify overflow, scroll, and truncation. Use `testAppEmpty(t)` for empty states.
+7. **Test at multiple sizes** — verify at 60x20, 80x30, 120x40, and 160x50.
 
 ## Architecture
 

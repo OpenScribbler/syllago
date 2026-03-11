@@ -1,22 +1,28 @@
 ---
 paths:
-  - "cli/internal/tui/sidebar.go"
-  - "cli/internal/tui/items.go"
-  - "cli/internal/tui/detail.go"
-  - "cli/internal/tui/detail_render.go"
-  - "cli/internal/tui/registries.go"
-  - "cli/internal/tui/settings.go"
-  - "cli/internal/tui/sandbox_settings.go"
-  - "cli/internal/tui/filebrowser.go"
-  - "cli/internal/tui/loadout_create.go"
-  - "cli/internal/tui/import.go"
+  - "cli/internal/tui/**"
 ---
 
-# TUI Page Model Pattern
+# TUI Page Patterns
 
-Every page model follows the same structure. Use shared helpers from `pagehelpers.go` instead of reimplementing.
+There are two page patterns: **list pages** and **card grid pages**. Every page uses shared helpers from `pagehelpers.go`.
 
-## Canonical Structure
+## Page Inventory
+
+| Page | Screen Enum | Pattern | File | Breadcrumb | Tab Focus | Search |
+|------|-------------|---------|------|------------|-----------|--------|
+| Homepage | `screenCategory` | Card grid | app.go | No (is home) | Yes | Yes |
+| Items | `screenItems` | List | items.go | Yes | Yes | Yes |
+| Detail | `screenDetail` | Tabbed | detail.go | Yes | Tabs only | No |
+| Library | `screenLibraryCards` | Card grid | app.go | Yes | Yes | Yes |
+| Loadouts | `screenLoadoutCards` | Card grid | app.go | Yes | Yes | Yes |
+| Registries | `screenRegistries` | Card grid | registries.go | Yes | Yes | Yes |
+| Import | `screenImport` | Wizard | import.go | Custom | No | No |
+| Update | `screenUpdate` | Simple | update.go | Yes | No | No |
+| Settings | `screenSettings` | Form | settings.go | Yes | No | No |
+| Sandbox | `screenSandbox` | Form | sandbox_settings.go | Yes | No | No |
+
+## List Page Pattern
 
 ```go
 type fooModel struct {
@@ -28,32 +34,16 @@ type fooModel struct {
     height       int
 }
 
-func (m fooModel) Update(msg tea.Msg) (fooModel, tea.Cmd) {
-    switch msg := msg.(type) {
-    case tea.KeyMsg:
-        m.message = ""  // clear on keypress
-        switch {
-        case key.Matches(msg, keys.Up):
-            if m.cursor > 0 { m.cursor-- }
-        case key.Matches(msg, keys.Down):
-            if m.cursor < m.itemCount()-1 { m.cursor++ }
-        }
-    }
-    return m, nil
-}
-
 func (m fooModel) View() string {
     s := renderBreadcrumb(
         BreadcrumbSegment{"Home", "crumb-home"},
         BreadcrumbSegment{"Foo", ""},
     ) + "\n\n"
 
-    for i, item := range m.items {
+    for i, item := range m.visibleItems() {
         prefix, style := cursorPrefix(i == m.cursor)
         s += fmt.Sprintf("  %s%s\n", prefix, style.Render(item.Name))
     }
-
-    // Don't render messages inline — App handles toast rendering
     return s
 }
 
@@ -62,10 +52,24 @@ func (m fooModel) helpText() string {
 }
 ```
 
-## Key Points
+## Card Grid Page Pattern
 
-- Use `cursorPrefix()` for selection indicators — produces "> " / "  "
-- Use `renderBreadcrumb()` for navigation headers
-- Use `renderScrollUp/Down()` for scroll indicators
-- Messages go to toast via promotion — don't call `renderStatusMsg()` in View
-- Provide `helpText()` for the App footer bar
+See `tui-card-grid.md` for full card spec. Card pages use `cardNormalStyle`/`cardSelectedStyle`, dynamic sizing, and `renderBreadcrumb()` (except Homepage).
+
+## Required Elements
+
+Every page MUST have:
+1. **Breadcrumb** — via `renderBreadcrumb()` (except Homepage)
+2. **Keyboard navigation** — Up/Down minimum, Left/Right for grids
+3. **Mouse support** — clickable elements via `zone.Mark()`
+4. **helpText()** — context-sensitive help for the footer bar
+5. **Scroll support** — when content can exceed viewport (see `tui-scroll.md`)
+6. **Toast integration** — messages via `message`/`messageIsErr` fields, promoted by App
+
+## Shared Helpers (pagehelpers.go)
+
+- `renderBreadcrumb(segments...)` — clickable navigation trail
+- `cursorPrefix(selected bool)` — returns `"> "` / `"  "` with appropriate style
+- `renderScrollUp(count, isContentView)` / `renderScrollDown(count, isContentView)`
+- `renderDescriptionBox(text, width, maxLines)` — bordered context box
+- `renderStatusMsg(msg, isErr)` — toast message styling (used by toast, not pages)

@@ -1,6 +1,6 @@
 ---
 paths:
-  - "cli/internal/tui/*_test.go"
+  - "cli/internal/tui/**"
 ---
 
 # TUI Test Conventions
