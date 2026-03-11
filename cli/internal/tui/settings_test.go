@@ -85,8 +85,8 @@ func TestSettingsAutoSaveOnToggle(t *testing.T) {
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
-	if app.settings.message != "Settings saved" {
-		t.Fatalf("expected auto-save message, got %q", app.settings.message)
+	if app.toast.text != "Settings saved" {
+		t.Fatalf("expected auto-save message in toast, got %q", app.toast.text)
 	}
 }
 

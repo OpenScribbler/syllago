@@ -1,0 +1,30 @@
+syllago           │Welcome to syllago!
+                  │
+  Content         │No content found. Here's how to get started:
+> Skills        0 │
+  Agents        0 │1. Add existing content:
+  MCP Configs   0 │   syllago add --from claude-code
+  Rules         0 │
+  Hooks         0 │2. Add a registry:
+  Commands      0 │   syllago registry add <git-url>
+  ─────────────   │
+  Collections     │3. Create new content:
+  Library       0 │   syllago create skill my-first-skill
+  Loadouts      0 │
+  Registries      │4. Create a registry:
+  ─────────────   │   syllago registry create my-registry
+  Configuration   │
+  Add             │Press ? for help, q to quit.
+  Update          │
+  Settings        │
+  Sandbox         │
+                  │
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+tab switch panel • / search • ? help • q quit                      syllago

@@ -131,11 +131,6 @@ func (m settingsModel) View() string {
 	}
 	s += m.renderRow(1, "Registry auto-sync", autoSyncVal)
 
-	// Status message
-	if m.message != "" {
-		s += "\n" + renderStatusMsg(m.message, m.messageIsErr) + "\n"
-	}
-
 	// Bottom detail area (fixed 3-line height to prevent jitter)
 	if m.cursor >= 0 && m.cursor < len(settingsDescriptions) {
 		s += renderDescriptionBox(settingsDescriptions[m.cursor], 45, 3)

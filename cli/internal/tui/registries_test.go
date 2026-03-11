@@ -36,7 +36,7 @@ func TestRegistriesViewShowsVersionAndDescription(t *testing.T) {
 	_ = cfg
 	_ = cat
 
-	view := m.View(0, "", false)
+	view := m.View(0)
 	if !strings.Contains(view, "2.0.1") {
 		t.Errorf("registries view should show manifest version '2.0.1', got:\n%s", view)
 	}
@@ -60,7 +60,7 @@ func TestRegistriesViewShowsDashWhenNoManifest(t *testing.T) {
 		width:  80,
 		height: 30,
 	}
-	view := m.View(0, "", false)
+	view := m.View(0)
 	if !strings.Contains(view, "─") {
 		t.Errorf("registries view should show '─' when no manifest version, got:\n%s", view)
 	}

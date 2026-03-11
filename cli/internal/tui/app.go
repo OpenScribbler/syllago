@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+	overlay "github.com/rmhubbert/bubbletea-overlay"
 
 	"gopkg.in/yaml.v3"
 
@@ -109,9 +110,7 @@ type App struct {
 	registries      registriesModel
 	sandboxSettings sandboxSettingsModel
 	registryCfg     *config.Config
-	statusMessage   string
-	statusIsErr     bool
-	statusWarnings  []string
+	toast toastModel
 
 	// Pending non-syllago redirect (between detection and user confirmation)
 	pendingNonSyllagoClone string                  // temp clone path
@@ -198,8 +197,7 @@ func (a *App) handleConfirmAction() tea.Cmd {
 		return a.detail.startInstall()
 	case modalRegistryRemove:
 		a.registryOpInProgress = true
-		a.statusMessage = fmt.Sprintf("Removing registry: %s...", a.registries.entries[a.cardCursor].name)
-		a.statusIsErr = false
+		a.toast.show(toastMsg{text: fmt.Sprintf("Removing registry: %s...", a.registries.entries[a.cardCursor].name)})
 		name := a.registries.entries[a.cardCursor].name
 		root := a.catalog.RepoRoot
 		return func() tea.Msg {
@@ -262,8 +260,7 @@ func (a *App) rebuildRegistryState() {
 
 // doRegistryAdd starts an async registry clone and config save.
 func (a *App) doRegistryAdd(gitURL, nameOverride string) tea.Cmd {
-	a.statusMessage = fmt.Sprintf("Adding registry: %s...", gitURL)
-	a.statusIsErr = false
+	a.toast.show(toastMsg{text: fmt.Sprintf("Adding registry: %s...", gitURL)})
 	a.registryOpInProgress = true
 	root := a.catalog.RepoRoot
 	return func() tea.Msg {
@@ -460,6 +457,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.registries.height = ph
 		a.sandboxSettings.width = contentW
 		a.sandboxSettings.height = ph
+		a.toast.width = contentW
+		return a, nil
+
+	case toastMsg:
+		a.toast.show(msg)
 		return a, nil
 
 	case appInstallDoneMsg:
@@ -467,6 +469,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.screen == screenDetail {
 			var cmd tea.Cmd
 			a.detail, cmd = a.detail.Update(msg)
+			a.promoteDetailMessage()
 			return a, cmd
 		}
 
@@ -475,6 +478,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.cachedDetail = nil // invalidate cache
 			var cmd tea.Cmd
 			a.detail, cmd = a.detail.Update(msg)
+			a.promoteDetailMessage()
 			// Rescan catalog after share
 			if msg.err == nil {
 				cat, err := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
@@ -522,13 +526,18 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cat, err := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
 		if err == nil {
 			a.catalog = cat
-			a.statusMessage = fmt.Sprintf("Added %q to library", msg.name)
-			a.statusIsErr = false
+			text := fmt.Sprintf("Added %q to library", msg.name)
+			if len(msg.warnings) > 0 {
+				text += "\n" + strings.Join(msg.warnings, "\n")
+			}
+			a.toast.show(toastMsg{text: text})
 		} else {
-			a.statusMessage = fmt.Sprintf("Added %q but catalog rescan failed: %s", msg.name, err)
-			a.statusIsErr = true
+			text := fmt.Sprintf("Added %q but catalog rescan failed: %s", msg.name, err)
+			if len(msg.warnings) > 0 {
+				text += "\n" + strings.Join(msg.warnings, "\n")
+			}
+			a.toast.show(toastMsg{text: text, isErr: true})
 		}
-		a.statusWarnings = msg.warnings
 		a.refreshSidebarCounts()
 		a.screen = screenCategory
 		a.importer.cleanup()
@@ -655,15 +664,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case registryAddDoneMsg:
 		a.registryOpInProgress = false
 		if msg.err != nil {
-			a.statusMessage = fmt.Sprintf("Add failed: %s", msg.err)
-			a.statusIsErr = true
+			a.toast.show(toastMsg{text: fmt.Sprintf("Add failed: %s", msg.err), isErr: true})
 		} else {
 			if msg.empty {
-				a.statusMessage = fmt.Sprintf("Added registry: %s (empty — no content found)", msg.name)
+				a.toast.show(toastMsg{text: fmt.Sprintf("Added registry: %s (empty — no content found)", msg.name)})
 			} else {
-				a.statusMessage = fmt.Sprintf("Added registry: %s", msg.name)
+				a.toast.show(toastMsg{text: fmt.Sprintf("Added registry: %s", msg.name)})
 			}
-			a.statusIsErr = false
 			a.rebuildRegistryState()
 		}
 		return a, nil
@@ -685,11 +692,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case registryRemoveDoneMsg:
 		a.registryOpInProgress = false
 		if msg.err != nil {
-			a.statusMessage = fmt.Sprintf("Remove failed: %s", msg.err)
-			a.statusIsErr = true
+			a.toast.show(toastMsg{text: fmt.Sprintf("Remove failed: %s", msg.err), isErr: true})
 		} else {
-			a.statusMessage = fmt.Sprintf("Removed registry: %s", msg.name)
-			a.statusIsErr = false
+			a.toast.show(toastMsg{text: fmt.Sprintf("Removed registry: %s", msg.name)})
 			a.rebuildRegistryState()
 			if a.cardCursor >= len(a.registries.entries) && a.cardCursor > 0 {
 				a.cardCursor--
@@ -700,22 +705,18 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case registrySyncDoneMsg:
 		a.registryOpInProgress = false
 		if msg.err != nil {
-			a.statusMessage = fmt.Sprintf("Sync failed for %s: %s", msg.name, msg.err)
-			a.statusIsErr = true
+			a.toast.show(toastMsg{text: fmt.Sprintf("Sync failed for %s: %s", msg.name, msg.err), isErr: true})
 		} else {
-			a.statusMessage = fmt.Sprintf("Synced: %s", msg.name)
-			a.statusIsErr = false
+			a.toast.show(toastMsg{text: fmt.Sprintf("Synced: %s", msg.name)})
 			a.rebuildRegistryState()
 		}
 		return a, nil
 
 	case doCreateLoadoutMsg:
 		if msg.err != nil {
-			a.statusMessage = fmt.Sprintf("Create loadout failed: %s", msg.err)
-			a.statusIsErr = true
+			a.toast.show(toastMsg{text: fmt.Sprintf("Create loadout failed: %s", msg.err), isErr: true})
 		} else {
-			a.statusMessage = fmt.Sprintf("Created loadout: %s", msg.name)
-			a.statusIsErr = false
+			a.toast.show(toastMsg{text: fmt.Sprintf("Created loadout: %s", msg.name)})
 			cat, err := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
 			if err == nil {
 				a.catalog = cat
@@ -1130,6 +1131,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case screenSettings:
 			var cmd tea.Cmd
 			a.settings, cmd = a.settings.Update(msg)
+			a.promoteSettingsMessage()
 			return a, cmd
 		case screenRegistries:
 			// Check registry card clicks
@@ -1149,16 +1151,34 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case screenSandbox:
 			var cmd tea.Cmd
 			a.sandboxSettings, cmd = a.sandboxSettings.Update(msg)
+			a.promoteSandboxMessage()
 			return a, cmd
 		}
 		return a, nil
 
 	case tea.KeyMsg:
-		// Clear transient status on any keypress
-		if a.statusMessage != "" {
-			a.statusMessage = ""
-			a.statusIsErr = false
-			a.statusWarnings = nil
+		// Toast key routing (before modal routing)
+		if a.toast.active {
+			if a.toast.isErr {
+				// Error toast: Esc dismisses, c copies. All other keys pass through.
+				switch {
+				case key.Matches(msg, keys.Back):
+					a.toast.dismiss()
+					return a, nil
+				case msg.String() == "c":
+					if errMsg := a.toast.copyToClipboard(); errMsg != "" {
+						a.toast.text = errMsg
+					} else {
+						a.toast.dismiss()
+					}
+					return a, nil
+				}
+				// Other keys fall through — toast stays visible
+			} else {
+				// Success toast: dismiss on any keypress, don't consume
+				a.toast.dismiss()
+				// Fall through so the key also triggers its normal action
+			}
 		}
 		// ctrl+c always quits from any screen
 		if msg.String() == "ctrl+c" {
@@ -1777,6 +1797,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			a.detail, cmd = a.detail.Update(msg)
+			a.promoteDetailMessage()
 			return a, cmd
 
 		case screenImport:
@@ -1808,6 +1829,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			a.settings, cmd = a.settings.Update(msg)
+			a.promoteSettingsMessage()
 			return a, cmd
 
 		case screenSandbox:
@@ -1823,6 +1845,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			a.sandboxSettings, cmd = a.sandboxSettings.Update(msg)
+			a.promoteSandboxMessage()
 			return a, cmd
 
 		case screenRegistries:
@@ -1887,8 +1910,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if key.Matches(msg, keys.Refresh) && len(a.registries.entries) > 0 && !a.registryOpInProgress {
 				entry := a.registries.entries[a.cardCursor]
-				a.statusMessage = fmt.Sprintf("Syncing %s...", entry.name)
-				a.statusIsErr = false
+				a.toast.show(toastMsg{text: fmt.Sprintf("Syncing %s...", entry.name)})
 				a.registryOpInProgress = true
 				return a, func() tea.Msg {
 					err := registry.Sync(entry.name)
@@ -1983,7 +2005,7 @@ func (a App) View() string {
 	case screenSettings:
 		contentView = a.settings.View()
 	case screenRegistries:
-		contentView = a.registries.View(a.cardCursor, a.statusMessage, a.statusIsErr)
+		contentView = a.registries.View(a.cardCursor)
 	case screenSandbox:
 		contentView = a.sandboxSettings.View()
 	case screenLibraryCards:
@@ -2016,6 +2038,15 @@ func (a App) View() string {
 
 	body := lipgloss.JoinVertical(lipgloss.Left, panels, footer)
 
+	// Toast overlay (after panels, before modals)
+	if a.toast.active {
+		toastView := a.toast.view()
+		if toastView != "" {
+			// Position toast at bottom-center of the content pane
+			body = a.overlayToast(body, toastView)
+		}
+	}
+
 	if a.modal.active {
 		body = a.modal.overlayView(body)
 	}
@@ -2041,6 +2072,39 @@ func (a App) View() string {
 	}
 
 	return zone.Scan(body)
+}
+
+// promoteDetailMessage checks if the detail model has a pending message
+// and promotes it to the centralized toast system.
+func (a *App) promoteDetailMessage() {
+	if a.detail.message != "" {
+		a.toast.show(toastMsg{text: a.detail.message, isErr: a.detail.messageIsErr})
+		a.detail.message = ""
+		a.detail.messageIsErr = false
+	}
+}
+
+// promoteSettingsMessage checks if the settings model has a pending message.
+func (a *App) promoteSettingsMessage() {
+	if a.settings.message != "" {
+		a.toast.show(toastMsg{text: a.settings.message, isErr: a.settings.messageIsErr})
+		a.settings.message = ""
+		a.settings.messageIsErr = false
+	}
+}
+
+// promoteSandboxMessage checks if the sandbox settings model has a pending message.
+func (a *App) promoteSandboxMessage() {
+	if a.sandboxSettings.message != "" {
+		a.toast.show(toastMsg{text: a.sandboxSettings.message, isErr: a.sandboxSettings.messageIsErr})
+		a.sandboxSettings.message = ""
+		a.sandboxSettings.messageIsErr = false
+	}
+}
+
+// overlayToast positions the toast at bottom-center of the body.
+func (a App) overlayToast(body, toastView string) string {
+	return overlay.Composite(toastView, body, overlay.Center, overlay.Bottom, 0, -2)
 }
 
 // categoryDesc maps content types to short descriptions for the welcome cards.
@@ -2178,19 +2242,6 @@ func (a App) renderContentWelcome() string {
 	}
 
 	var s string
-
-	// Status message (from import, etc.)
-	if a.statusMessage != "" {
-		if a.statusIsErr {
-			s += errorMsgStyle.Render(a.statusMessage) + "\n"
-		} else {
-			s += successMsgStyle.Render(a.statusMessage) + "\n"
-		}
-		for _, w := range a.statusWarnings {
-			s += warningStyle.Render("Warning: "+w) + "\n"
-		}
-		s += "\n"
-	}
 
 	// Content types match sidebar (excludes Loadouts — it appears in Collections)
 	contentTypes := a.sidebar.types
