@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -73,24 +74,30 @@ func (m registriesModel) View(cursor int) string {
 		return s
 	}
 
-	cardWidth := 36
-	cols := 2
-	if m.width < 80 {
-		cols = 1
+	contentW := m.width
+	singleCol := contentW < 42
+	cardW := (contentW - 5) / 2
+	if singleCol {
+		cardW = contentW - 2
+	}
+	if cardW < 18 {
+		cardW = 18
 	}
 
-	for i, entry := range m.entries {
-		if i > 0 && i%cols == 0 {
-			s += "\n"
+	if singleCol {
+		for i, entry := range m.entries {
+			selected := i == cursor
+			card := renderRegistryCard(entry, cardW, selected)
+			s += zone.Mark(fmt.Sprintf("registry-card-%d", i), card) + "\n"
 		}
-
-		selected := i == cursor
-		card := renderRegistryCard(entry, cardWidth, selected)
-		s += zone.Mark(fmt.Sprintf("registry-card-%d", i), card)
-		if cols > 1 && i%cols == 0 && i+1 < len(m.entries) {
-			s += "  "
-		} else if i%cols == cols-1 || i == len(m.entries)-1 {
-			s += "\n"
+	} else {
+		for i := 0; i < len(m.entries); i += 2 {
+			left := zone.Mark(fmt.Sprintf("registry-card-%d", i), renderRegistryCard(m.entries[i], cardW, i == cursor))
+			var right string
+			if i+1 < len(m.entries) {
+				right = zone.Mark(fmt.Sprintf("registry-card-%d", i+1), renderRegistryCard(m.entries[i+1], cardW, i+1 == cursor))
+			}
+			s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
 		}
 	}
 
