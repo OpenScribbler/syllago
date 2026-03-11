@@ -648,11 +648,6 @@ func (m detailModel) View() string {
 		s += "\n" + renderScrollDown(len(bodyLines)-end, true)
 	}
 
-	// Status message — rendered outside scrollable area so it's always visible
-	if m.message != "" {
-		s += "\n" + renderStatusMsg(m.message, m.messageIsErr)
-	}
-
 	return s
 }
 

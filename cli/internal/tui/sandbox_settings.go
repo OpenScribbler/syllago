@@ -189,10 +189,6 @@ func (m sandboxSettingsModel) View() string {
 		s += "\n" + labelStyle.Render(prompt) + m.editInput + "_\n"
 	}
 
-	if m.message != "" {
-		s += "\n" + renderStatusMsg(m.message, m.messageIsErr) + "\n"
-	}
-
 	// Description box for the currently highlighted option
 	if m.cursor >= 0 && m.cursor < len(sandboxDescriptions) {
 		s += renderDescriptionBox(sandboxDescriptions[m.cursor], 45, 3)

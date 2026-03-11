@@ -197,14 +197,8 @@ func TestMessagePrefixes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := testApp(t)
-			app = pressN(app, keyEnter, 1) // → items
-			app = pressN(app, keyEnter, 1) // → detail
-
-			app.detail.message = tt.message
-			app.detail.messageIsErr = tt.isError
-
-			view := app.detail.View()
+			tm := toastModel{active: true, text: tt.message, isErr: tt.isError, width: 60}
+			view := tm.view()
 			assertContains(t, view, tt.wantPrefix+" "+tt.message)
 		})
 	}

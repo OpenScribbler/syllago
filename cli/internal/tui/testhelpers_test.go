@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -201,6 +202,145 @@ func testProviders(t *testing.T) []provider.Provider {
 			},
 		},
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Large test catalog (overflow/boundary testing)
+// ---------------------------------------------------------------------------
+
+// testCatalogLarge creates a catalog with 85+ items across content types to
+// test scroll, truncation, and overflow behavior. Constructs ContentItem
+// structs directly (no filesystem I/O) since only list rendering is tested.
+func testCatalogLarge(t *testing.T) *catalog.Catalog {
+	t.Helper()
+	tmp := t.TempDir()
+
+	var items []catalog.ContentItem
+
+	// 50 skills with varying name lengths
+	for i := 0; i < 50; i++ {
+		name := fmt.Sprintf("skill-%03d", i)
+		desc := fmt.Sprintf("Description for skill %d", i)
+
+		// Some very long names that need truncation
+		if i%10 == 0 {
+			name = fmt.Sprintf("extremely-long-skill-name-that-should-be-truncated-in-narrow-terminals-%03d", i)
+		}
+		// Some very long descriptions (200+ chars)
+		if i%7 == 0 {
+			desc = strings.Repeat("Long description text. ", 12)
+		}
+		// Some empty descriptions
+		if i%13 == 0 {
+			desc = ""
+		}
+		// Some with special characters in names
+		if i == 5 {
+			name = "skill-with-dashes-and-123"
+		}
+
+		items = append(items, catalog.ContentItem{
+			Name:        name,
+			Description: desc,
+			Type:        catalog.Skills,
+			Path:        filepath.Join(tmp, "skills", name),
+			Files:       []string{"SKILL.md"},
+		})
+	}
+
+	// 20 agents
+	for i := 0; i < 20; i++ {
+		name := fmt.Sprintf("agent-%03d", i)
+		items = append(items, catalog.ContentItem{
+			Name:        name,
+			Description: fmt.Sprintf("Agent number %d", i),
+			Type:        catalog.Agents,
+			Path:        filepath.Join(tmp, "agents", name),
+			Files:       []string{"AGENT.md"},
+		})
+	}
+
+	// 15 MCP configs
+	for i := 0; i < 15; i++ {
+		name := fmt.Sprintf("mcp-%03d", i)
+		items = append(items, catalog.ContentItem{
+			Name:        name,
+			Description: fmt.Sprintf("MCP server %d", i),
+			Type:        catalog.MCP,
+			Path:        filepath.Join(tmp, "mcp", name),
+			Files:       []string{"config.json"},
+		})
+	}
+
+	return &catalog.Catalog{
+		RepoRoot: tmp,
+		Items:    items,
+	}
+}
+
+// testAppLarge creates a fully-wired App with the large catalog at 80x30.
+func testAppLarge(t *testing.T) App {
+	t.Helper()
+	return testAppLargeSize(t, 80, 30)
+}
+
+// testAppLargeSize creates a fully-wired App with the large catalog
+// at the specified terminal dimensions.
+func testAppLargeSize(t *testing.T, width, height int) App {
+	t.Helper()
+	cat := testCatalogLarge(t)
+	providers := testProviders(t)
+
+	app := NewApp(cat, providers, "1.0.0", false, nil, nil, false, cat.RepoRoot)
+	app.width = width
+	app.height = height
+	app.items.width = width
+	app.items.height = height
+	app.detail.width = width
+	app.detail.height = height
+	app.settings.width = width
+	app.settings.height = height
+	app.importer.width = width
+	app.importer.height = height
+	app.updater.width = width
+	app.updater.height = height
+	return app
+}
+
+// testCatalogEmpty creates a catalog with no items (empty registry).
+func testCatalogEmpty(t *testing.T) *catalog.Catalog {
+	t.Helper()
+	return &catalog.Catalog{
+		RepoRoot: t.TempDir(),
+		Items:    nil,
+	}
+}
+
+// testAppEmpty creates a fully-wired App with an empty catalog at 80x30.
+func testAppEmpty(t *testing.T) App {
+	t.Helper()
+	return testAppEmptySize(t, 80, 30)
+}
+
+func testAppEmptySize(t *testing.T, width, height int) App {
+	t.Helper()
+	cat := testCatalogEmpty(t)
+	providers := testProviders(t)
+
+	app := NewApp(cat, providers, "1.0.0", false, nil, nil, false, cat.RepoRoot)
+	app.width = width
+	app.height = height
+	app.items.width = width
+	app.items.height = height
+	app.detail.width = width
+	app.detail.height = height
+	app.settings.width = width
+	app.settings.height = height
+	app.importer.width = width
+	app.importer.height = height
+	app.updater.width = width
+	app.updater.height = height
+	return app
 }
 
 // navigateToLibraryItems navigates to Library items via the card view.

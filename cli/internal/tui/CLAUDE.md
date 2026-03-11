@@ -2,6 +2,16 @@
 
 This directory is the BubbleTea terminal UI for syllago. All components follow strict conventions to maintain visual and behavioral consistency.
 
+## Before You Edit
+
+Run this checklist before modifying any TUI file:
+
+1. **Read `styles.go`** — all colors and named styles are defined there. If you need a color, it already exists or should be added there.
+2. **Check `keys.go`** — all key bindings are defined as `key.Binding` objects. Use `key.Matches(msg, keys.Foo)` instead of `msg.String() == "x"`.
+3. **Use shared helpers** — `pagehelpers.go` provides `renderBreadcrumb()`, `renderStatusMsg()`, `cursorPrefix()`, `renderScrollUp/Down()`, `renderDescriptionBox()`. Don't reimplement these patterns.
+4. **Run golden tests after visual changes** — `go test ./cli/internal/tui/ -update-golden`, then review the diff.
+5. **Test with the large dataset** — use `testAppLarge(t)` (85+ items) to verify overflow, scroll, and truncation. Use `testAppEmpty(t)` for empty states.
+
 ## Architecture
 
 Root model is `App` (app.go) — central event hub and state orchestrator. Sub-models own their state and are composed into App. Messages flow upward to App, which dispatches back down.
@@ -9,12 +19,53 @@ Root model is `App` (app.go) — central event hub and state orchestrator. Sub-m
 **File organization:**
 - One model per file (sidebar.go, items.go, detail.go, modal.go, etc.)
 - Rendering split from logic when large (detail.go + detail_render.go)
-- All styles in styles.go — never define colors or styles inline in component files
+- All styles in styles.go — never define colors or styles inline
 - All key bindings in keys.go — never hardcode key strings in Update methods
+
+## Shared Helpers (pagehelpers.go)
+
+Every page model should use these instead of reimplementing:
+
+```go
+// Breadcrumb navigation — variadic segments, last one is title style
+renderBreadcrumb(
+    BreadcrumbSegment{"Home", "crumb-home"},
+    BreadcrumbSegment{"Skills", "crumb-category"},
+    BreadcrumbSegment{"my-skill", ""},  // empty ZoneID = final segment
+)
+
+// Cursor prefix for navigable lists
+prefix, style := cursorPrefix(i == cursor)
+// Returns ("> ", selectedItemStyle) or ("  ", itemStyle)
+
+// Scroll indicators
+renderScrollUp(count, isContentView)   // "(N more above)"
+renderScrollDown(count, isContentView) // "(N more below)"
+
+// Description box with fixed height (prevents jitter)
+renderDescriptionBox(text, width, maxLines)
+```
+
+## Toast System (toast.go)
+
+All transient feedback (success/error messages) goes through the centralized toast overlay. Components do not render messages inline.
+
+**How it works:** Components set `message`/`messageIsErr` fields. After dispatching Update, App promotes these to the toast via `promoteDetailMessage()`, `promoteSettingsMessage()`, etc.
+
+```go
+// In your component's save/action method:
+m.message = "Settings saved"
+m.messageIsErr = false
+
+// App handles promotion and rendering — you don't render messages in View()
+```
+
+**Error toasts** are semi-modal: `Esc` dismisses, `c` copies sanitized text to clipboard. Other keys pass through.
+**Success toasts** dismiss on any keypress without consuming the key.
 
 ## Color and Styling
 
-**All colors are defined once in styles.go using `lipgloss.AdaptiveColor` for light/dark themes.** Never create new color values outside styles.go.
+All colors are defined in `styles.go` using `lipgloss.AdaptiveColor` for light/dark themes.
 
 Color palette:
 - `primaryColor` (mint) — titles, labels, headings
@@ -24,32 +75,34 @@ Color palette:
 - `dangerColor` (red) — error messages
 - `warningColor` (amber) — warnings, global badge, update banner
 
+**Adding a new color:**
+```go
+// In styles.go — define the adaptive color pair
+var newColor = lipgloss.AdaptiveColor{Light: "#hexLight", Dark: "#hexDark"}
+
+// Then create a named style that uses it
+var newStyle = lipgloss.NewStyle().Foreground(newColor)
+```
+
 **Style rules:**
-- Use existing named styles (titleStyle, labelStyle, valueStyle, helpStyle, etc.) — don't create one-off lipgloss.NewStyle() calls for colors that already have a style
-- No emojis in UI — use colored symbols instead (✓, ✗, ▸, >, ─, ←, ⚠)
+- Use existing named styles (titleStyle, labelStyle, valueStyle, helpStyle, etc.)
+- No emojis in UI — use colored symbols instead (checkmark, X, >, dash, arrow, warning)
 - Padding is applied via lipgloss styles, not manual spaces (except for list indentation with cursor prefix)
 
 ## Selection Cursor Pattern
 
-All navigable lists use the same cursor rendering:
+All navigable lists use the shared `cursorPrefix()` helper:
 
 ```go
-prefix := "  "
-style := itemStyle
-if i == cursor {
-    prefix = "> "
-    style = selectedItemStyle
-}
+prefix, style := cursorPrefix(i == cursor)
 entry := fmt.Sprintf("  %s%s", prefix, style.Render(text))
 ```
 
-- `"> "` for selected item, `"  "` for unselected (2-char prefix)
+- `"> "` for selected, `"  "` for unselected (2-char prefix)
 - `selectedItemStyle` applies bold + accent color + selected background
-- Always indent with 2 leading spaces before the prefix (total 4 chars for unselected)
+- Always indent with 2 leading spaces before the prefix
 
 ## Modal Conventions
-
-All modals share these structural rules:
 
 **Dimensions:**
 - Simple dialogs (confirm, save): `modalWidth = 40`
@@ -69,46 +122,33 @@ modalStyle := lipgloss.NewStyle().
 
 **Buttons:**
 - Use `renderButtons(left, right string, cursor, contentWidth int)` for all two-button modal footers
-- Active button: `▸ ` prefix + `buttonStyle` (white on viola)
-- Inactive button: `  ` prefix + `buttonDisabledStyle` (muted on gray)
-- Buttons are pinned to the bottom of the modal using spacer lines:
-
-```go
-contentLines := strings.Count(content, "\n")
-spacer := innerHeight - contentLines - 1
-if spacer < 0 { spacer = 0 }
-content += strings.Repeat("\n", spacer) + buttons
-```
+- Active button: `buttonStyle` (white on viola). Inactive: `buttonDisabledStyle` (muted on gray)
+- Buttons are pinned to bottom using spacer lines
 
 **Overlay:**
 - Every modal implements `overlayView(background string) string`
 - Uses `overlay.Composite(zone.Mark("modal-zone", m.View()), background, overlay.Center, overlay.Center, 0, 0)`
-- Click-away dismissal: clicks outside modal-zone dismiss it; clicks inside do NOT dismiss
+- Click-away dismissal: clicks outside modal-zone dismiss; clicks inside do not
 
 **Keyboard in modals:**
-- `Enter` confirms (when button cursor is on confirm)
-- `Esc` cancels/goes back
-- `Left/Right` arrows switch between buttons
-- `Up/Down` navigate options within the modal
-- Confirm modal also supports `y/Y` and `n/N` shortcuts
-
-**Multi-step wizards:**
-- Track step with typed enum (e.g., `installStep`, `envSetupStep`)
-- Show progress indicator: `"(N of M)"` for sequential steps
-- `Esc` goes back one step (not dismiss), except on first step where it dismisses
-- Each step uses the same fixed modal dimensions
+- `Enter` confirms, `Esc` cancels/goes back
+- `Left/Right` switch between buttons, `Up/Down` navigate options
+- Confirm modal supports `y/Y` and `n/N` shortcuts via `keys.ConfirmYes`/`keys.ConfirmNo`
+- When `focusModal` is active, modals take priority over all other key handling
 
 ## Keyboard Handling
 
-**All key bindings are defined in keys.go** as `key.Binding` objects in the global `keys` keyMap struct. Check keys with `key.Matches(msg, keys.Foo)`.
+All key bindings are defined in `keys.go` as `key.Binding` objects:
 
-- Navigation: up/k, down/j, home/g, end/G, pgup, pgdown
-- Vim-like alternatives are built into the bindings (hjkl)
-- Tab switching: tab, shift+tab (cycle), 1/2/3 (jump directly)
-- Actions are single letters: i=install, u=uninstall, c=copy, s=save, e=env, p=promote, a=add, d=delete, r=refresh, l=create loadout
-- Global: q=quit, ctrl+c=quit, /=search, ?=help overlay, esc=back
+```go
+// Right way — use the binding from keys.go
+case key.Matches(msg, keys.Up):
 
-**When focus is `focusModal`, all keyboard input goes to the active modal.** Other components must not handle keys when a modal is active.
+// Wrong way — don't hardcode key strings
+case msg.String() == "k":
+```
+
+**Exception:** `msg.Type == tea.KeyEnter` and `msg.Type == tea.KeyEsc` are acceptable for BubbleTea special key types that don't map cleanly to key.Binding.
 
 **Active key bindings by screen:**
 
@@ -131,16 +171,8 @@ content += strings.Repeat("\n", spacer) + buttons
 
 **Footer help bar** (global, rendered by App) shows context-sensitive key hints:
 - Format: `"key action"` pairs joined with `" • "` separator
-- Example: `"esc back • tab switch tab • up/down scroll • c copy"`
-- Each component provides its help via a `renderHelp() string` method
+- Each component provides its help via a `helpText()` method
 - Help overlay (`?` key) shows full keyboard shortcuts organized by screen
-
-## Status Messages
-
-- Transient feedback: `message string` + `messageIsErr bool` on the model
-- Rendered with `successMsgStyle` or `errorMsgStyle`
-- Cleared on next keypress (not timer-based)
-- Rendered outside the scrollable area so always visible
 
 ## Layout Rules
 
@@ -161,21 +193,38 @@ title = truncateString(title, maxTextWidth)
 - Both keyboard (up/down/pgup/pgdown) and mouse wheel supported
 - Reset scroll offset to 0 when switching tabs or navigating to new content
 
+## Accessibility
+
+- `NO_COLOR=1` is supported automatically via the Charm stack
+- All status indicators use text+symbol alongside color: "Done: ..." with green, "Error: ..." with red
+- Meaning is never color-only — symbols and text prefixes carry the semantics
+
 ## Testing
 
-**Golden file tests** compare rendered output against expected baselines in `testdata/`:
-
+**Golden file tests** compare rendered output against baselines in `testdata/`:
 - Component tests: `component-*.golden`
 - Full app tests: `fullapp-*.golden`
 - Size variants: `-60x20`, `-120x40`, `-160x50` for responsive testing
-- Run with `-update-golden` flag to regenerate baselines
-- Path normalization: temp paths → `<TESTDIR>`, trailing whitespace stripped
+- Overflow tests: `fullapp-*-overflow*.golden` (large dataset)
+- Empty tests: `fullapp-*-empty*.golden` (empty catalog)
 
-**After any visual change, update golden files:**
+**After any visual change:**
 ```bash
 go test ./cli/internal/tui/ -update-golden
+# Then: git diff cli/internal/tui/testdata/ to verify changes are intentional
 ```
-Then verify the diff looks correct before committing.
+
+**Boundary condition checklist:**
+- What happens with 50+ items? Use `testAppLarge(t)`.
+- What happens with 0 items? Use `testAppEmpty(t)`.
+- What happens at 60x20 terminal? Use `testAppLargeSize(t, 60, 20)`.
+- What happens with very long text (200+ chars)?
+
+**Test structure:**
+- Table-driven tests with `t.Run()` subtests
+- Test both keyboard and mouse interactions
+- Modal tests: open, navigate, confirm/cancel, state after close
+- Always test Esc dismissal and click-away
 
 ## Message Passing
 
@@ -192,5 +241,6 @@ Then verify the diff looks correct before committing.
 3. Add key bindings to keys.go if needed
 4. Add a new `screen` enum value if it's a full screen
 5. Wire it into App.Update() message routing and App.View() rendering
-6. Add golden file tests for visual output
-7. Add `renderHelp()` method returning context-sensitive help text
+6. Add golden file tests for visual output, including overflow and empty states
+7. Add `helpText()` method returning context-sensitive help text
+8. Use shared helpers from pagehelpers.go for breadcrumbs, cursors, scroll indicators

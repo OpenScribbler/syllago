@@ -9,7 +9,8 @@ paths:
 
 - Return errors up the call stack — never panic for recoverable errors
 - Wrap with context: `fmt.Errorf("doing X: %w", err)`
-- TUI components store errors as `message string` + `messageIsErr bool` for user display
+- TUI components store errors as `message string` + `messageIsErr bool` fields
+- App promotes these to the centralized toast system after each Update dispatch
 - Non-TUI code (commands, installer, catalog) returns `error` to the caller
 
 ## Naming

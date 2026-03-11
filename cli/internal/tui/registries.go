@@ -61,19 +61,11 @@ func (m registriesModel) helpText() string {
 	return "arrows navigate • enter browse • a add • d remove • r sync • esc back"
 }
 
-func (m registriesModel) View(cursor int, statusMsg string, statusIsErr bool) string {
+func (m registriesModel) View(cursor int) string {
 	s := renderBreadcrumb(
 		BreadcrumbSegment{"Home", "crumb-home"},
 		BreadcrumbSegment{"Registries", ""},
 	) + "\n\n"
-
-	if statusMsg != "" {
-		if statusIsErr {
-			s += errorMsgStyle.Render(statusMsg) + "\n\n"
-		} else {
-			s += successMsgStyle.Render(statusMsg) + "\n\n"
-		}
-	}
 
 	if len(m.entries) == 0 {
 		s += helpStyle.Render("  No registries configured.") + "\n\n"

@@ -574,7 +574,7 @@ func TestDetailInstallStart(t *testing.T) {
 
 	// startInstall() returns a cmd (openInstallModalMsg) for filesystem providers,
 	// or installs directly and sets a message for JSON-merge-only providers.
-	if cmd == nil && app.detail.message == "" {
+	if cmd == nil && app.toast.text == "" {
 		t.Fatal("expected a cmd (install modal) or a result message after pressing i")
 	}
 }
@@ -653,7 +653,7 @@ func TestDetailInstallNoProviders(t *testing.T) {
 	// Press 'i'
 	m, _ := app.Update(keyRune('i'))
 	app = m.(App)
-	assertContains(t, app.detail.message, "No providers detected")
+	assertContains(t, app.toast.text, "No providers detected")
 }
 
 // ---------------------------------------------------------------------------
@@ -673,7 +673,7 @@ func TestDetailUninstallFlow(t *testing.T) {
 	// 'u' with nothing installed → "Not installed" message
 	m, _ = app.Update(keyRune('u'))
 	app = m.(App)
-	assertContains(t, app.detail.message, "Not installed")
+	assertContains(t, app.toast.text, "Not installed")
 }
 
 func TestDetailUninstallNotInstalled(t *testing.T) {
@@ -690,7 +690,7 @@ func TestDetailUninstallNotInstalled(t *testing.T) {
 	app = m.(App)
 
 	// No items are installed in test providers — message should indicate this
-	assertContains(t, app.detail.message, "Not installed")
+	assertContains(t, app.toast.text, "Not installed")
 }
 
 func TestDetailUninstallNothingSelected(t *testing.T) {
@@ -706,7 +706,7 @@ func TestDetailUninstallNothingSelected(t *testing.T) {
 	m, _ = app.Update(keyRune('u'))
 	app = m.(App)
 
-	assertContains(t, app.detail.message, "No providers selected")
+	assertContains(t, app.toast.text, "No providers selected")
 }
 
 // TestDetailUninstallEscCancels was removed — uninstall confirmation is now

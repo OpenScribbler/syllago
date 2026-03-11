@@ -844,7 +844,7 @@ func TestImportDoneSuccess(t *testing.T) {
 	app = m.(App)
 
 	assertScreen(t, app, screenCategory)
-	assertContains(t, app.statusMessage, "imported-item")
+	assertContains(t, app.toast.text, "imported-item")
 }
 
 func TestImportDoneError(t *testing.T) {
