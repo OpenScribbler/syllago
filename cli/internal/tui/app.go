@@ -2312,11 +2312,7 @@ func (a App) renderWelcomeCards(contentTypes []catalog.ContentType, counts map[c
 		cardW = 18
 	}
 
-	cardStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(borderColor).
-		Width(cardW).
-		Padding(0, 1)
+	cardStyle := cardNormalStyle.Width(cardW)
 	if !singleCol {
 		cardStyle = cardStyle.Height(3)
 	}
@@ -2372,19 +2368,15 @@ func (a App) renderWelcomeCards(contentTypes []catalog.ContentType, counts map[c
 	s += "\n"
 	s += labelStyle.Render("  Configuration") + "\n\n"
 
-	singleColConfig := contentW < 56
+	singleColConfig := contentW < 42
 	configCardW := (contentW - 5) / 2
 	if singleColConfig {
 		configCardW = contentW - 2
 	}
-	if configCardW < 16 {
-		configCardW = 16
+	if configCardW < 18 {
+		configCardW = 18
 	}
-	configCardStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(borderColor).
-		Width(configCardW).
-		Padding(0, 1)
+	configCardStyle := cardNormalStyle.Width(configCardW)
 	if !singleColConfig {
 		configCardStyle = configCardStyle.Height(3)
 	}
@@ -2550,12 +2542,13 @@ func (a App) renderLibraryCards() string {
 		cardW = 18
 	}
 
-	cardBase := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		Width(cardW).
-		Padding(0, 1)
+	cardBase := cardNormalStyle.Width(cardW)
 	if !singleCol {
 		cardBase = cardBase.Height(3)
+	}
+	cardSel := cardSelectedStyle.Width(cardW)
+	if !singleCol {
+		cardSel = cardSel.Height(3)
 	}
 
 	renderCard := func(idx int, ct catalog.ContentType) string {
@@ -2566,9 +2559,9 @@ func (a App) renderLibraryCards() string {
 		}
 		inner += "\n" + helpStyle.Render(desc)
 
-		style := cardBase.BorderForeground(borderColor)
+		style := cardBase
 		if idx == a.cardCursor {
-			style = cardBase.BorderForeground(accentColor)
+			style = cardSel
 		}
 		return zone.Mark(fmt.Sprintf("library-card-%s", ct), style.Render(inner))
 	}
@@ -2618,12 +2611,13 @@ func (a App) renderLoadoutCards() string {
 		cardW = 18
 	}
 
-	cardBase := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		Width(cardW).
-		Padding(0, 1)
+	cardBase := cardNormalStyle.Width(cardW)
 	if !singleCol {
 		cardBase = cardBase.Height(3)
+	}
+	cardSel := cardSelectedStyle.Width(cardW)
+	if !singleCol {
+		cardSel = cardSel.Height(3)
 	}
 
 	renderCard := func(idx int, prov string) string {
@@ -2637,9 +2631,9 @@ func (a App) renderLoadoutCards() string {
 			inner += "\n" + helpStyle.Render("No loadouts")
 		}
 
-		style := cardBase.BorderForeground(borderColor)
+		style := cardBase
 		if idx == a.cardCursor {
-			style = cardBase.BorderForeground(accentColor)
+			style = cardSel
 		}
 		return zone.Mark(fmt.Sprintf("loadout-card-%s", prov), style.Render(inner))
 	}
