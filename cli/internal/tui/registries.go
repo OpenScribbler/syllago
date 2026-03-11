@@ -25,10 +25,11 @@ type registryEntry struct {
 }
 
 type registriesModel struct {
-	entries  []registryEntry
-	width    int
-	height   int
-	repoRoot string
+	entries    []registryEntry
+	allEntries []registryEntry // unfiltered entries for search reset
+	width      int
+	height     int
+	repoRoot   string
 }
 
 func newRegistriesModel(repoRoot string, cfg *config.Config, cat *catalog.Catalog) registriesModel {
@@ -48,8 +49,9 @@ func newRegistriesModel(repoRoot string, cfg *config.Config, cat *catalog.Catalo
 		entries[i] = entry
 	}
 	return registriesModel{
-		entries:  entries,
-		repoRoot: repoRoot,
+		entries:    entries,
+		allEntries: entries,
+		repoRoot:   repoRoot,
 	}
 }
 
@@ -143,4 +145,20 @@ func renderRegistryCard(entry registryEntry, width int, selected bool) string {
 	}
 
 	return cardStyle.Width(width).Render(strings.Join(lines, "\n"))
+}
+
+func filterRegistryEntries(entries []registryEntry, query string) []registryEntry {
+	if query == "" {
+		return entries
+	}
+	q := strings.ToLower(query)
+	var result []registryEntry
+	for _, e := range entries {
+		if strings.Contains(strings.ToLower(e.name), q) ||
+			strings.Contains(strings.ToLower(e.url), q) ||
+			strings.Contains(strings.ToLower(e.description), q) {
+			result = append(result, e)
+		}
+	}
+	return result
 }
