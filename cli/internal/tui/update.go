@@ -292,7 +292,10 @@ func (m updateModel) helpText() string {
 }
 
 func (m updateModel) View() string {
-	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + helpStyle.Render(" > ") + titleStyle.Render("Update syllago") + "\n"
+	s := renderBreadcrumb(
+		BreadcrumbSegment{"Home", "crumb-home"},
+		BreadcrumbSegment{"Update", ""},
+	) + "\n"
 
 	switch m.step {
 	case stepUpdateMenu:

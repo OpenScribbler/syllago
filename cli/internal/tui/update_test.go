@@ -565,7 +565,7 @@ func TestUpdateLoadingClearedOnPullMsg(t *testing.T) {
 func TestUpdateViewMenu(t *testing.T) {
 	app := navigateToUpdateWithRemote(t)
 	view := app.View()
-	assertContains(t, view, "Update syllago")
+	assertContains(t, view, "Update")
 	assertContains(t, view, "See what's new")
 	assertContains(t, view, "Update now")
 }
@@ -573,7 +573,7 @@ func TestUpdateViewMenu(t *testing.T) {
 func TestUpdateViewMenuLatest(t *testing.T) {
 	app := navigateToUpdate(t)
 	view := app.View()
-	assertContains(t, view, "Update syllago")
+	assertContains(t, view, "Update")
 	assertContains(t, view, "View release notes")
 	assertContains(t, view, "Check for updates")
 }
