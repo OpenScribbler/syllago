@@ -167,3 +167,54 @@ func TestGoldenSized_Registries(t *testing.T) {
 		})
 	}
 }
+
+// --- Import/Add (wizard with text inputs) ---
+
+func TestGoldenSized_Import(t *testing.T) {
+	for _, sz := range testSizes {
+		t.Run(sz.tag, func(t *testing.T) {
+			app := testAppSize(t, sz.width, sz.height)
+			nTypes := sidebarContentCount()
+			app = pressN(app, keyDown, nTypes+3) // Add
+			m, _ := app.Update(keyEnter)
+			app = m.(App)
+			assertScreen(t, app, screenImport)
+			requireGolden(t, fmt.Sprintf("fullapp-import-%s", sz.tag),
+				normalizeSnapshot(snapshotApp(t, app)))
+		})
+	}
+}
+
+// --- Update (version info + menu) ---
+
+func TestGoldenSized_Update(t *testing.T) {
+	for _, sz := range testSizes {
+		t.Run(sz.tag, func(t *testing.T) {
+			app := testAppSize(t, sz.width, sz.height)
+			nTypes := sidebarContentCount()
+			app = pressN(app, keyDown, nTypes+4) // Update
+			m, _ := app.Update(keyEnter)
+			app = m.(App)
+			assertScreen(t, app, screenUpdate)
+			requireGolden(t, fmt.Sprintf("fullapp-update-%s", sz.tag),
+				normalizeSnapshot(snapshotApp(t, app)))
+		})
+	}
+}
+
+// --- Sandbox (form-like settings) ---
+
+func TestGoldenSized_Sandbox(t *testing.T) {
+	for _, sz := range testSizes {
+		t.Run(sz.tag, func(t *testing.T) {
+			app := testAppSize(t, sz.width, sz.height)
+			nTypes := sidebarContentCount()
+			app = pressN(app, keyDown, nTypes+6) // Sandbox
+			m, _ := app.Update(keyEnter)
+			app = m.(App)
+			assertScreen(t, app, screenSandbox)
+			requireGolden(t, fmt.Sprintf("fullapp-sandbox-%s", sz.tag),
+				normalizeSnapshot(snapshotApp(t, app)))
+		})
+	}
+}
