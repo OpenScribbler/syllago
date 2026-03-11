@@ -13,6 +13,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/loadout"
@@ -62,6 +64,12 @@ type registrySyncDoneMsg struct {
 	err  error
 }
 
+// doCreateLoadoutMsg is sent when the loadout create operation completes.
+type doCreateLoadoutMsg struct {
+	name string
+	err  error
+}
+
 // App is the root bubbletea model.
 type App struct {
 	catalog         *catalog.Catalog
@@ -79,6 +87,7 @@ type App struct {
 	envModal             envSetupModal
 	instModal            installModal
 	registryAddModal     registryAddModal
+	createLoadoutModal   createLoadoutModal
 	registryOpInProgress bool
 	sidebar         sidebarModel
 	items           itemsModel
@@ -231,6 +240,73 @@ func (a *App) doRegistryAdd(gitURL, nameOverride string) tea.Cmd {
 	}
 }
 
+// doCreateLoadout writes a loadout.yaml to the chosen destination.
+func (a *App) doCreateLoadout(m createLoadoutModal) tea.Cmd {
+	projectRoot := a.projectRoot
+	scopeRegistry := m.scopeRegistry
+	return func() tea.Msg {
+		name := strings.TrimSpace(m.nameInput.Value())
+		desc := strings.TrimSpace(m.descInput.Value())
+		provSlug := m.prefilledProvider
+
+		manifest := loadout.Manifest{
+			Kind:        "loadout",
+			Version:     1,
+			Provider:    provSlug,
+			Name:        name,
+			Description: desc,
+		}
+		for _, e := range m.selectedItems() {
+			switch e.item.Type {
+			case catalog.Rules:
+				manifest.Rules = append(manifest.Rules, e.item.Name)
+			case catalog.Hooks:
+				manifest.Hooks = append(manifest.Hooks, e.item.Name)
+			case catalog.Skills:
+				manifest.Skills = append(manifest.Skills, e.item.Name)
+			case catalog.Agents:
+				manifest.Agents = append(manifest.Agents, e.item.Name)
+			case catalog.MCP:
+				manifest.MCP = append(manifest.MCP, e.item.Name)
+			case catalog.Commands:
+				manifest.Commands = append(manifest.Commands, e.item.Name)
+			}
+		}
+
+		var destDir string
+		switch m.destCursor {
+		case 0: // Project
+			destDir = filepath.Join(projectRoot, "loadouts", provSlug)
+		case 1: // Library
+			home, _ := os.UserHomeDir()
+			destDir = filepath.Join(home, ".syllago", "content", "loadouts", provSlug)
+		case 2: // Registry
+			dir, err := registry.CloneDir(scopeRegistry)
+			if err != nil {
+				return doCreateLoadoutMsg{err: err}
+			}
+			destDir = filepath.Join(dir, "loadouts", provSlug)
+		}
+
+		itemDir := filepath.Join(destDir, name)
+		if err := os.MkdirAll(itemDir, 0755); err != nil {
+			return doCreateLoadoutMsg{err: fmt.Errorf("creating loadout dir: %w", err)}
+		}
+
+		data, err := yaml.Marshal(manifest)
+		if err != nil {
+			return doCreateLoadoutMsg{err: fmt.Errorf("marshaling manifest: %w", err)}
+		}
+
+		outPath := filepath.Join(itemDir, "loadout.yaml")
+		if err := os.WriteFile(outPath, data, 0644); err != nil {
+			return doCreateLoadoutMsg{err: fmt.Errorf("writing loadout.yaml: %w", err)}
+		}
+
+		return doCreateLoadoutMsg{name: name}
+	}
+}
+
 // panelHeight returns the usable height for sidebar and content panels,
 // reserving space for the footer bar (border line + text = 2 rows).
 func (a App) panelHeight() int {
@@ -378,7 +454,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.catalog = cat
 			a.statusMessage = fmt.Sprintf("Added %q to library", msg.name)
 		} else {
-			a.statusMessage = fmt.Sprintf("Imported %q but catalog rescan failed: %s", msg.name, err)
+			a.statusMessage = fmt.Sprintf("Added %q but catalog rescan failed: %s", msg.name, err)
 		}
 		a.statusWarnings = msg.warnings
 		a.refreshSidebarCounts()
@@ -565,6 +641,19 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.registries = newRegistriesModel(a.catalog.RepoRoot, a.registryCfg, a.catalog)
 			a.registries.width = a.width - sidebarWidth - 1
 			a.registries.height = a.panelHeight()
+		}
+		return a, nil
+
+	case doCreateLoadoutMsg:
+		if msg.err != nil {
+			a.statusMessage = fmt.Sprintf("Create loadout failed: %s", msg.err)
+		} else {
+			a.statusMessage = fmt.Sprintf("Created loadout: %s", msg.name)
+			cat, err := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
+			if err == nil {
+				a.catalog = cat
+				a.refreshSidebarCounts()
+			}
 		}
 		return a, nil
 
@@ -1009,6 +1098,17 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return a, cmd
 		}
+		if a.createLoadoutModal.active {
+			var cmd tea.Cmd
+			a.createLoadoutModal, cmd = a.createLoadoutModal.Update(msg)
+			if !a.createLoadoutModal.active {
+				a.focus = focusContent
+				if strings.TrimSpace(a.createLoadoutModal.nameInput.Value()) != "" {
+					return a, a.doCreateLoadout(a.createLoadoutModal)
+				}
+			}
+			return a, cmd
+		}
 		// q quits from sidebar, navigates back from content screens
 		if key.Matches(msg, keys.Quit) && !a.search.active {
 			// Quit when focus is on the sidebar (home base) or on the root category screen
@@ -1297,11 +1397,17 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a, nil
 			}
 			if key.Matches(msg, keys.CreateLoadout) && a.items.sourceRegistry != "" {
-				// TODO(Phase 7): open create-loadout wizard scoped to this registry
-				a.statusMessage = "Create loadout wizard coming soon"
+				a.createLoadoutModal = newCreateLoadoutModal("", a.items.sourceRegistry, a.providers, a.catalog)
+				a.focus = focusModal
 				return a, nil
 			}
 			if key.Matches(msg, keys.Add) {
+				// If we drilled in from a loadout card, open create loadout wizard
+				if a.cardParent == screenLoadoutCards && a.items.sourceProvider != "" {
+					a.createLoadoutModal = newCreateLoadoutModal(a.items.sourceProvider, a.items.sourceRegistry, a.providers, a.catalog)
+					a.focus = focusModal
+					return a, nil
+				}
 				ct := a.items.contentType
 				regFilter := a.items.sourceRegistry
 				if ct == catalog.SearchResults || ct == catalog.Library {
@@ -1435,6 +1541,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				items := newItemsModel(catalog.Loadouts, filtered, a.providers, a.catalog.RepoRoot)
 				items.hiddenCount = countHidden(a.catalog.ByType(catalog.Loadouts))
+				items.sourceProvider = prov
 				items.parentLabel = "Loadouts"
 				items.width = a.width - sidebarWidth - 1
 				items.height = a.panelHeight()
@@ -1444,8 +1551,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a, nil
 			}
 			if key.Matches(msg, keys.Add) {
-				// TODO(Phase 7): open create-loadout wizard (full, with provider picker).
-				a.statusMessage = "Create loadout wizard coming soon"
+				a.createLoadoutModal = newCreateLoadoutModal("", "", a.providers, a.catalog)
+				a.focus = focusModal
 				return a, nil
 			}
 			return a, nil
@@ -1775,6 +1882,10 @@ func (a App) View() string {
 
 	if a.registryAddModal.active {
 		body = a.registryAddModal.overlayView(body)
+	}
+
+	if a.createLoadoutModal.active {
+		body = a.createLoadoutModal.overlayView(body)
 	}
 
 	return zone.Scan(body)
@@ -2298,7 +2409,11 @@ func (a App) contextHelpText() string {
 	case screenDetail:
 		return a.detail.renderHelp()
 	case screenItems:
-		return "/ search • enter detail • esc back • ? help"
+		help := "/ search • enter detail • a add • esc back • ? help"
+		if a.items.sourceRegistry != "" {
+			help = "/ search • enter detail • a add • l create loadout • esc back • ? help"
+		}
+		return help
 	case screenRegistries:
 		return a.registries.helpText()
 	case screenSettings:
@@ -2309,8 +2424,10 @@ func (a App) contextHelpText() string {
 		return a.updater.helpText()
 	case screenSandbox:
 		return a.sandboxSettings.helpText()
-	case screenLibraryCards, screenLoadoutCards:
-		return "up/down navigate • enter browse • esc back"
+	case screenLibraryCards:
+		return "arrows navigate • enter browse • a add • esc back"
+	case screenLoadoutCards:
+		return "arrows navigate • enter browse • a create loadout • esc back"
 	default:
 		return "esc back • ? help"
 	}

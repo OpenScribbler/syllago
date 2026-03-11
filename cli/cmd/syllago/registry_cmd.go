@@ -110,18 +110,25 @@ var registryAddCmd = &cobra.Command{
 			return err
 		}
 
-		// Scan to verify it has content — warn but don't fail
+		// Smart detection: check if this is a proper syllago registry.
 		dir, _ := registry.CloneDir(name)
-		hasDirs := false
-		for _, ct := range catalog.AllContentTypes() {
-			info, statErr := os.Stat(filepath.Join(dir, string(ct)))
-			if statErr == nil && info.IsDir() {
-				hasDirs = true
-				break
+		scanResult := catalog.ScanNativeContent(dir)
+
+		if !scanResult.HasSyllagoStructure && len(scanResult.Providers) > 0 {
+			fmt.Fprintf(output.ErrWriter, "\nThis repo doesn't appear to be a syllago registry.\n")
+			fmt.Fprintf(output.ErrWriter, "Found provider-native content:\n\n")
+			for _, pc := range scanResult.Providers {
+				fmt.Fprintf(output.ErrWriter, "  %s:\n", pc.ProviderName)
+				for typeLabel, files := range pc.ByType {
+					fmt.Fprintf(output.ErrWriter, "    %s: %d file(s)\n", typeLabel, len(files))
+				}
 			}
-		}
-		if !hasDirs {
-			fmt.Fprintf(output.ErrWriter, "Warning: registry %q doesn't appear to contain content directories (skills/, rules/, etc.). Added anyway.\n", name)
+			fmt.Fprintf(output.ErrWriter, "\nThis content cannot be added as a registry (registries require syllago format).\n")
+			fmt.Fprintf(output.ErrWriter, "To add this content to your library, use: syllago add <path> (coming soon)\n")
+			os.RemoveAll(dir)
+			return fmt.Errorf("not a syllago registry -- clone removed")
+		} else if !scanResult.HasSyllagoStructure && len(scanResult.Providers) == 0 {
+			fmt.Fprintf(output.ErrWriter, "Warning: registry %q doesn't appear to contain any recognized content. Added anyway.\n", name)
 		}
 
 		// Save to config

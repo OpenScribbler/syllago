@@ -636,7 +636,7 @@ func (m importModel) updateValidate(msg tea.KeyMsg) (importModel, tea.Cmd) {
 			}
 		}
 		if len(included) == 0 {
-			m.message = "No items selected for import"
+			m.message = "No items selected"
 			m.messageIsErr = true
 			return m, nil
 		}
@@ -948,7 +948,7 @@ func (m importModel) View() string {
 		s += m.urlInput.View() + "\n"
 
 	case stepGitPick:
-		s += helpStyle.Render("Select item to import") + "\n\n"
+		s += helpStyle.Render("Select item to add") + "\n\n"
 
 		// Calculate visible window for scrolling
 		visibleRows := m.height - 6 // header + subtitle + blank + footer
@@ -999,7 +999,7 @@ func (m importModel) View() string {
 			s += labelStyle.Render("To:    ") + valueStyle.Render(dest) + " " + helpStyle.Render("(global library)") + "\n"
 			s += "\n" + helpStyle.Render("Scaffolds from template with LLM prompt for content creation.")
 		} else {
-			s += helpStyle.Render("Confirm import") + "\n\n"
+			s += helpStyle.Render("Confirm add") + "\n\n"
 			dest := m.destinationPath()
 			s += labelStyle.Render("Item:  ") + valueStyle.Render(m.itemName) + "\n"
 			s += labelStyle.Render("Type:  ") + valueStyle.Render(m.contentType.Label()) + "\n"
@@ -2174,7 +2174,7 @@ func homeDir() string {
 }
 
 func (m importModel) viewValidate() string {
-	s := helpStyle.Render("Review selections before import") + "\n\n"
+	s := helpStyle.Render("Review selections before adding") + "\n\n"
 
 	for i, vi := range m.validationItems {
 		prefix := "   "
@@ -2212,6 +2212,6 @@ func (m importModel) viewValidate() string {
 		}
 	}
 
-	s += "\n" + helpStyle.Render(fmt.Sprintf("  %d of %d items will be imported", includedCount, len(m.validationItems)))
+	s += "\n" + helpStyle.Render(fmt.Sprintf("  %d of %d items will be added", includedCount, len(m.validationItems)))
 	return s
 }

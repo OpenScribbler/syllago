@@ -113,6 +113,7 @@ type itemsModel struct {
 	providers        []provider.Provider
 	repoRoot         string
 	sourceRegistry   string // set when browsing items from a specific registry
+	sourceProvider   string // provider slug when drilled in from loadout cards
 	parentLabel      string // intermediate breadcrumb (e.g. "Library", "Loadouts")
 	cursor           int
 	hiddenCount      int // number of hidden items filtered out
