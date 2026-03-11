@@ -2530,8 +2530,10 @@ func (a App) renderLibraryCards() string {
 
 	contentW := a.width - sidebarWidth - 1
 	var s string
-	s += "\n" + titleStyle.Render("  Library") + "\n"
-	s += helpStyle.Render("  Browse library items by content type") + "\n\n"
+	s += renderBreadcrumb(
+		BreadcrumbSegment{"Home", "crumb-home"},
+		BreadcrumbSegment{"Library", ""},
+	) + "\n\n"
 
 	singleCol := contentW < 42
 	cardW := (contentW - 5) / 2
@@ -2599,8 +2601,10 @@ func (a App) renderLoadoutCards() string {
 
 	contentW := a.width - sidebarWidth - 1
 	var s string
-	s += "\n" + titleStyle.Render("  Loadouts") + "\n"
-	s += helpStyle.Render("  Browse loadouts by provider") + "\n\n"
+	s += renderBreadcrumb(
+		BreadcrumbSegment{"Home", "crumb-home"},
+		BreadcrumbSegment{"Loadouts", ""},
+	) + "\n\n"
 
 	singleCol := contentW < 42
 	cardW := (contentW - 5) / 2
