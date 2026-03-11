@@ -27,24 +27,26 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 	name := StripControlChars(displayName(m.item))
 
 	// Breadcrumb: Home > [Parent >] Category > Item Name
-	home := zone.Mark("crumb-home", helpStyle.Render("Home"))
-	arrow := helpStyle.Render(" > ")
-	crumb := home + arrow
-	if m.parentLabel != "" {
-		crumb += zone.Mark("crumb-parent", helpStyle.Render(m.parentLabel)) + arrow
-	}
-	cat := zone.Mark("crumb-category", helpStyle.Render(m.item.Type.Label()))
-	current := titleStyle.Render(name)
+	// Build the current item label with badge suffix
+	currentLabel := name
+	var badgeSuffix string
 	if m.item.IsBuiltin() {
-		current += " " + builtinStyle.Render("[BUILT-IN]")
+		badgeSuffix = " " + builtinStyle.Render("[BUILT-IN]")
 	} else if m.item.Library {
-		current += " " + warningStyle.Render("[LIBRARY]")
+		badgeSuffix = " " + warningStyle.Render("[LIBRARY]")
 	} else if m.item.Registry != "" {
-		current += " " + countStyle.Render("["+m.item.Registry+"]")
+		badgeSuffix = " " + countStyle.Render("["+m.item.Registry+"]")
 	} else if m.item.Source == "global" {
-		current += " " + globalStyle.Render("[GLOBAL]")
+		badgeSuffix = " " + globalStyle.Render("[GLOBAL]")
 	}
-	pinned += crumb + cat + arrow + current + "\n\n"
+
+	segments := []BreadcrumbSegment{{"Home", "crumb-home"}}
+	if m.parentLabel != "" {
+		segments = append(segments, BreadcrumbSegment{m.parentLabel, "crumb-parent"})
+	}
+	segments = append(segments, BreadcrumbSegment{m.item.Type.Label(), "crumb-category"})
+	segments = append(segments, BreadcrumbSegment{currentLabel, ""})
+	pinned += renderBreadcrumb(segments...) + badgeSuffix + "\n\n"
 
 	// Tab bar
 	pinned += m.renderTabBar() + "\n"
@@ -355,7 +357,7 @@ func (m detailModel) renderFileContent() string {
 	}
 
 	if offset > 0 {
-		s += helpStyle.Render(fmt.Sprintf("(%d lines above)", offset)) + "\n"
+		s += renderScrollUp(offset, true) + "\n"
 	}
 
 	for i := offset; i < end; i++ {
@@ -364,7 +366,7 @@ func (m detailModel) renderFileContent() string {
 	}
 
 	if end < len(lines) {
-		s += helpStyle.Render(fmt.Sprintf("(%d lines below)", len(lines)-end)) + "\n"
+		s += renderScrollDown(len(lines)-end, true) + "\n"
 	}
 
 	return s
@@ -636,29 +638,25 @@ func (m detailModel) View() string {
 	s := pinned // always show pinned header
 
 	if offset > 0 {
-		s += helpStyle.Render(fmt.Sprintf("(%d lines above)", offset)) + "\n"
+		s += renderScrollUp(offset, true) + "\n"
 		s += strings.Join(bodyLines[offset:end], "\n")
 	} else {
 		s += strings.Join(bodyLines[offset:end], "\n")
 	}
 
 	if end < len(bodyLines) {
-		s += "\n" + helpStyle.Render(fmt.Sprintf("(%d lines below)", len(bodyLines)-end))
+		s += "\n" + renderScrollDown(len(bodyLines)-end, true)
 	}
 
 	// Status message — rendered outside scrollable area so it's always visible
 	if m.message != "" {
-		if m.messageIsErr {
-			s += "\n" + errorMsgStyle.Render("Error: "+m.message)
-		} else {
-			s += "\n" + successMsgStyle.Render("Done: "+m.message)
-		}
+		s += "\n" + renderStatusMsg(m.message, m.messageIsErr)
 	}
 
 	return s
 }
 
-func (m detailModel) renderHelp() string {
+func (m detailModel) helpText() string {
 	var helpParts []string
 	helpParts = append(helpParts, "esc back", "tab switch tab")
 

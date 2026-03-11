@@ -386,7 +386,7 @@ func (fb fileBrowserModel) View() string {
 	}
 
 	if fb.offset > 0 {
-		s += helpStyle.Render(fmt.Sprintf("  (%d more above)", fb.offset)) + "\n"
+		s += "  " + renderScrollUp(fb.offset, false) + "\n"
 	}
 
 	for i := fb.offset; i < end; i++ {
@@ -434,7 +434,7 @@ func (fb fileBrowserModel) View() string {
 	}
 
 	if end < len(fb.entries) {
-		s += helpStyle.Render(fmt.Sprintf("  (%d more below)", len(fb.entries)-end)) + "\n"
+		s += "  " + renderScrollDown(len(fb.entries)-end, false) + "\n"
 	}
 
 	s += "\n"
@@ -474,7 +474,7 @@ func (fb fileBrowserModel) viewPreview() string {
 	}
 
 	if offset > 0 {
-		s += helpStyle.Render(fmt.Sprintf("(%d lines above)", offset)) + "\n"
+		s += renderScrollUp(offset, true) + "\n"
 	}
 
 	for i := offset; i < end; i++ {
@@ -483,7 +483,7 @@ func (fb fileBrowserModel) viewPreview() string {
 	}
 
 	if end < len(lines) {
-		s += helpStyle.Render(fmt.Sprintf("(%d lines below)", len(lines)-end)) + "\n"
+		s += renderScrollDown(len(lines)-end, true) + "\n"
 	}
 
 	// Selection status

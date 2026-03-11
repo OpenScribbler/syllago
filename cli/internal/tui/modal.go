@@ -359,11 +359,11 @@ func (m confirmModal) Update(msg tea.Msg) (confirmModal, tea.Cmd) {
 				m.btnCursor++
 			}
 		}
-		switch msg.String() {
-		case "y", "Y":
+		switch {
+		case key.Matches(msg, keys.ConfirmYes):
 			m.confirmed = true
 			m.active = false
-		case "n", "N":
+		case key.Matches(msg, keys.ConfirmNo):
 			m.confirmed = false
 			m.active = false
 		}

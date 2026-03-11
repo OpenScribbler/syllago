@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -17,7 +16,7 @@ type settingsModel struct {
 
 	cursor     int // main settings row cursor
 	message    string
-	messageErr bool
+	messageIsErr bool
 	width      int
 	height     int
 }
@@ -99,10 +98,10 @@ func (m *settingsModel) activateRow() {
 func (m *settingsModel) save() {
 	if err := config.Save(m.repoRoot, m.cfg); err != nil {
 		m.message = fmt.Sprintf("Save failed: %s", err)
-		m.messageErr = true
+		m.messageIsErr = true
 	} else {
 		m.message = "Settings saved"
-		m.messageErr = false
+		m.messageIsErr = false
 	}
 }
 
@@ -113,7 +112,10 @@ var settingsDescriptions = []string{
 }
 
 func (m settingsModel) View() string {
-	s := zone.Mark("crumb-home", helpStyle.Render("Home")) + helpStyle.Render(" > ") + titleStyle.Render("Settings") + "\n\n"
+	s := renderBreadcrumb(
+		BreadcrumbSegment{"Home", "crumb-home"},
+		BreadcrumbSegment{"Settings", ""},
+	) + "\n\n"
 
 	// Row 0: Auto-update
 	autoVal := "off"
@@ -131,28 +133,12 @@ func (m settingsModel) View() string {
 
 	// Status message
 	if m.message != "" {
-		s += "\n"
-		if m.messageErr {
-			s += errorMsgStyle.Render("Error: " + m.message)
-		} else {
-			s += successMsgStyle.Render("Done: " + m.message)
-		}
-		s += "\n"
+		s += "\n" + renderStatusMsg(m.message, m.messageIsErr) + "\n"
 	}
 
 	// Bottom detail area (fixed 3-line height to prevent jitter)
 	if m.cursor >= 0 && m.cursor < len(settingsDescriptions) {
-		const detailLines = 3
-		s += "\n " + helpStyle.Render(strings.Repeat("─", 45)) + "\n"
-		lines := strings.Split(settingsDescriptions[m.cursor], "\n")
-		for i := 0; i < detailLines; i++ {
-			if i < len(lines) {
-				s += " " + helpStyle.Render(lines[i]) + "\n"
-			} else {
-				s += "\n"
-			}
-		}
-		s += " " + helpStyle.Render(strings.Repeat("─", 45)) + "\n"
+		s += renderDescriptionBox(settingsDescriptions[m.cursor], 45, 3)
 	}
 
 	return s

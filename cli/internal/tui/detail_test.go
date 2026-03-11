@@ -871,7 +871,7 @@ func TestDetailNextPrevShowsInHelpBar(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 	// Set listTotal > 1 so the help bar shows ctrl+n/p
 	app.detail.listTotal = 5
-	view := app.detail.renderHelp()
+	view := app.detail.helpText()
 	assertContains(t, view, "ctrl+n/p")
 }
 
@@ -882,7 +882,7 @@ func TestDetailNextPrevShowsInHelpBar(t *testing.T) {
 func TestHelpBarNoSaveOnOverviewTab(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 	// Should be on Overview tab by default
-	view := app.detail.renderHelp()
+	view := app.detail.helpText()
 	assertNotContains(t, view, "s save")
 	// Copy is only shown for library items, not regular Skills
 	assertNotContains(t, view, "c copy")

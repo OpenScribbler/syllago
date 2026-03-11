@@ -1,7 +1,7 @@
 syllago           │  Content
                   │
   Content         │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
-▸ Skills        3 ││ Skills (3)                                     │ │ Agents (1)                                     │
+> Skills        3 ││ Skills (3)                                     │ │ Agents (1)                                     │
   Agents        1 ││ Reusable skill definitions that extend AI tool │ │ Agent configurations with specialized roles    │
   MCP Configs   1 ││ capabilities                                   │ │ and personalities                              │
   Rules         1 │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯

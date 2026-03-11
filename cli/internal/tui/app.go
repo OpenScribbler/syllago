@@ -2617,13 +2617,9 @@ func (a App) contextHelpText() string {
 	case screenCategory:
 		return "tab switch panel • / search • ? help • q quit"
 	case screenDetail:
-		return a.detail.renderHelp()
+		return a.detail.helpText()
 	case screenItems:
-		help := "/ search • enter detail • a add • esc back • ? help"
-		if a.items.sourceRegistry != "" {
-			help = "/ search • enter detail • a add • l create loadout • esc back • ? help"
-		}
-		return help
+		return a.items.helpText()
 	case screenRegistries:
 		return a.registries.helpText()
 	case screenSettings:
