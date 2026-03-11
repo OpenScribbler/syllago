@@ -52,7 +52,7 @@ func (m helpOverlayModel) View(s screen) string {
 		lines = append(lines, "  "+helpStyle.Render("p         share (library)"))
 
 	case screenImport:
-		lines = append(lines, labelStyle.Render("Import Screen:"))
+		lines = append(lines, labelStyle.Render("Add Screen:"))
 		lines = append(lines, "  "+helpStyle.Render("up/down   navigate options"))
 		lines = append(lines, "  "+helpStyle.Render("enter     select"))
 		lines = append(lines, "  "+helpStyle.Render("space     toggle selection"))

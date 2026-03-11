@@ -105,10 +105,20 @@ content += strings.Repeat("\n", spacer) + buttons
 - Navigation: up/k, down/j, home/g, end/G, pgup, pgdown
 - Vim-like alternatives are built into the bindings (hjkl)
 - Tab switching: tab, shift+tab (cycle), 1/2/3 (jump directly)
-- Actions are single letters: i=install, u=uninstall, c=copy, s=save, e=env, p=promote
+- Actions are single letters: i=install, u=uninstall, c=copy, s=save, e=env, p=promote, a=add, d=delete, r=refresh, l=create loadout
 - Global: q=quit, ctrl+c=quit, /=search, ?=help overlay, esc=back
 
 **When focus is `focusModal`, all keyboard input goes to the active modal.** Other components must not handle keys when a modal is active.
+
+**Active key bindings by screen:**
+
+| Key | Category | Items | Library Cards | Loadout Cards | Registries | Detail |
+|-----|----------|-------|---------------|---------------|------------|--------|
+| a   | --       | add   | add           | create loadout| add registry| --    |
+| d   | --       | --    | --            | --            | remove      | --    |
+| r   | --       | --    | --            | --            | sync        | --    |
+| l   | --       | create loadout (registry context) | -- | -- | -- | --    |
+| H   | toggle hidden | toggle hidden | -- | --       | --          | --    |
 
 ## Mouse Handling
 
