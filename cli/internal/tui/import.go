@@ -61,6 +61,10 @@ type discoveryDoneMsg struct {
 	err   error
 }
 
+// importBackToRegistriesMsg is sent when Esc is pressed in the import picker
+// after entering via a registry redirect. App.Update switches to screenRegistries.
+type importBackToRegistriesMsg struct{}
+
 type validationItem struct {
 	path        string
 	name        string
@@ -148,6 +152,9 @@ type importModel struct {
 	// Pre-filter fields: when set, the corresponding wizard step is skipped.
 	preFilterType     catalog.ContentType // when non-zero, skip stepType
 	preFilterRegistry string              // when set, scope to this registry's items
+
+	// Registry redirect state
+	fromRegistryRedirect bool // true when entered via registry add redirect
 
 	// Result messaging
 	message      string
@@ -707,6 +714,12 @@ func (m importModel) updateGitURL(msg tea.KeyMsg) (importModel, tea.Cmd) {
 func (m importModel) updateGitPick(msg tea.KeyMsg) (importModel, tea.Cmd) {
 	switch {
 	case key.Matches(msg, keys.Back):
+		if m.fromRegistryRedirect {
+			m.clonedItems = nil
+			m.cleanup()
+			m.fromRegistryRedirect = false
+			return m, func() tea.Msg { return importBackToRegistriesMsg{} }
+		}
 		m.step = stepGitURL
 		m.urlInput.Focus()
 		m.clonedItems = nil
@@ -1329,6 +1342,31 @@ func (m *importModel) cleanup() {
 		os.RemoveAll(m.clonedPath)
 		m.clonedPath = ""
 	}
+}
+
+// initFromExternalClone sets up the import model to browse an already-cloned
+// repository. Used when a registry add detects non-syllago provider content
+// and the user chooses to browse and import individual items.
+func (m *importModel) initFromExternalClone(path string) {
+	m.clonedPath = path // takes ownership for cleanup
+	m.fromRegistryRedirect = true
+	m.message = ""
+	m.messageIsErr = false
+	m.pickCursor = 0
+
+	cat, err := catalog.Scan(path, path)
+	if err != nil || len(cat.Items) == 0 {
+		// Content detected by native scan but not importable via catalog.Scan.
+		// Raw provider files (.cursorrules, CLAUDE.md) need CLI conversion.
+		m.step = stepGitURL
+		m.message = "Detected provider content but no importable items. Use CLI: syllago add <path>"
+		m.messageIsErr = true
+		m.fromRegistryRedirect = false
+		m.cleanup()
+		return
+	}
+	m.clonedItems = cat.Items
+	m.step = stepGitPick
 }
 
 // validateSelections checks each selected path and returns validation results.
