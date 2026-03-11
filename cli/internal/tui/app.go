@@ -48,8 +48,9 @@ const (
 
 // registryAddDoneMsg is sent when a background registry clone completes.
 type registryAddDoneMsg struct {
-	name string
-	err  error
+	name  string
+	err   error
+	empty bool // true when the repo has no syllago structure and no native content
 }
 
 // registryRemoveDoneMsg is sent when a registry remove operation completes.
@@ -62,6 +63,14 @@ type registryRemoveDoneMsg struct {
 type registrySyncDoneMsg struct {
 	name string
 	err  error
+}
+
+// registryAddNonSyllagoMsg is sent when a registry clone contains provider
+// content but no syllago structure, offering a redirect to the import flow.
+type registryAddNonSyllagoMsg struct {
+	name      string
+	clonePath string
+	scan      catalog.NativeScanResult
 }
 
 // doCreateLoadoutMsg is sent when the loadout create operation completes.
@@ -101,7 +110,12 @@ type App struct {
 	sandboxSettings sandboxSettingsModel
 	registryCfg     *config.Config
 	statusMessage   string
+	statusIsErr     bool
 	statusWarnings  []string
+
+	// Pending non-syllago redirect (between detection and user confirmation)
+	pendingNonSyllagoClone string                  // temp clone path
+	pendingNonSyllagoScan  catalog.NativeScanResult // what was detected
 
 	// Detail model cache (preserves state when re-entering same item)
 	cachedDetail     *detailModel
@@ -185,18 +199,22 @@ func (a *App) handleConfirmAction() tea.Cmd {
 	case modalRegistryRemove:
 		a.registryOpInProgress = true
 		a.statusMessage = fmt.Sprintf("Removing registry: %s...", a.registries.entries[a.cardCursor].name)
+		a.statusIsErr = false
 		name := a.registries.entries[a.cardCursor].name
 		root := a.catalog.RepoRoot
-		cfg := a.registryCfg
 		return func() tea.Msg {
+			freshCfg, err := config.Load(root)
+			if err != nil {
+				return registryRemoveDoneMsg{name: name, err: fmt.Errorf("loading config: %w", err)}
+			}
 			var filtered []config.Registry
-			for _, r := range cfg.Registries {
+			for _, r := range freshCfg.Registries {
 				if r.Name != name {
 					filtered = append(filtered, r)
 				}
 			}
-			cfg.Registries = filtered
-			if err := config.Save(root, cfg); err != nil {
+			freshCfg.Registries = filtered
+			if err := config.Save(root, freshCfg); err != nil {
 				return registryRemoveDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
 			}
 			if err := registry.Remove(name); err != nil {
@@ -204,39 +222,87 @@ func (a *App) handleConfirmAction() tea.Cmd {
 			}
 			return registryRemoveDoneMsg{name: name}
 		}
+	case modalNonSyllagoRedirect:
+		a.importer.cleanup() // clean up any previous clone
+		a.importer.initFromExternalClone(a.pendingNonSyllagoClone)
+		a.pendingNonSyllagoClone = ""
+		a.pendingNonSyllagoScan = catalog.NativeScanResult{}
+		a.screen = screenImport
 	}
 	return nil
+}
+
+// cleanupDismissedModal handles cleanup when a modal is dismissed without confirming.
+// Currently only needed for the non-syllago redirect modal (clone cleanup).
+func (a *App) cleanupDismissedModal() {
+	if a.pendingNonSyllagoClone != "" {
+		os.RemoveAll(a.pendingNonSyllagoClone)
+		a.pendingNonSyllagoClone = ""
+		a.pendingNonSyllagoScan = catalog.NativeScanResult{}
+	}
+}
+
+// rebuildRegistryState reloads config from disk, rebuilds the registries model,
+// and rescans the catalog. Called by all registry done-message handlers.
+func (a *App) rebuildRegistryState() {
+	cfg, err := config.Load(a.catalog.RepoRoot)
+	if err == nil {
+		a.registryCfg = cfg
+	}
+	a.registries = newRegistriesModel(a.catalog.RepoRoot, a.registryCfg, a.catalog)
+	a.registries.width = a.width - sidebarWidth - 1
+	a.registries.height = a.panelHeight()
+	a.sidebar.registryCount = len(a.registryCfg.Registries)
+	cat, scanErr := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
+	if scanErr == nil {
+		a.catalog = cat
+		a.refreshSidebarCounts()
+	}
 }
 
 // doRegistryAdd starts an async registry clone and config save.
 func (a *App) doRegistryAdd(gitURL, nameOverride string) tea.Cmd {
 	a.statusMessage = fmt.Sprintf("Adding registry: %s...", gitURL)
+	a.statusIsErr = false
 	a.registryOpInProgress = true
 	root := a.catalog.RepoRoot
-	cfg := a.registryCfg
 	return func() tea.Msg {
+		var empty bool
 		name := nameOverride
 		if name == "" {
 			name = registry.NameFromURL(gitURL)
 		}
-		if !catalog.IsValidRegistryName(name) {
-			return registryAddDoneMsg{err: fmt.Errorf("invalid registry name %q", name)}
-		}
-		for _, r := range cfg.Registries {
-			if r.Name == name {
-				return registryAddDoneMsg{err: fmt.Errorf("registry %q already exists", name)}
-			}
-		}
 		if err := registry.Clone(gitURL, name, ""); err != nil {
 			return registryAddDoneMsg{name: name, err: err}
 		}
-		cfg.Registries = append(cfg.Registries, config.Registry{Name: name, URL: gitURL})
-		if err := config.Save(root, cfg); err != nil {
+
+		// Smart detection: reject non-syllago repos.
+		dir, _ := registry.CloneDir(name)
+		scanResult := catalog.ScanNativeContent(dir)
+		if !scanResult.HasSyllagoStructure && len(scanResult.Providers) > 0 {
+			return registryAddNonSyllagoMsg{
+				name:      name,
+				clonePath: dir,
+				scan:      scanResult,
+			}
+		} else if !scanResult.HasSyllagoStructure && len(scanResult.Providers) == 0 {
+			// No content at all — flag for warning message
+			empty = true
+		}
+
+		freshCfg, err := config.Load(root)
+		if err != nil {
+			dir, _ := registry.CloneDir(name)
+			os.RemoveAll(dir)
+			return registryAddDoneMsg{name: name, err: fmt.Errorf("loading config: %w", err)}
+		}
+		freshCfg.Registries = append(freshCfg.Registries, config.Registry{Name: name, URL: gitURL})
+		if err := config.Save(root, freshCfg); err != nil {
 			dir, _ := registry.CloneDir(name)
 			os.RemoveAll(dir)
 			return registryAddDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
 		}
-		return registryAddDoneMsg{name: name}
+		return registryAddDoneMsg{name: name, empty: empty}
 	}
 }
 
@@ -441,6 +507,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, cmd
 		}
 
+	case importBackToRegistriesMsg:
+		a.screen = screenRegistries
+		return a, nil
+
 	case importDoneMsg:
 		a.cachedDetail = nil // invalidate cache
 		if msg.err != nil {
@@ -453,8 +523,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err == nil {
 			a.catalog = cat
 			a.statusMessage = fmt.Sprintf("Added %q to library", msg.name)
+			a.statusIsErr = false
 		} else {
 			a.statusMessage = fmt.Sprintf("Added %q but catalog rescan failed: %s", msg.name, err)
+			a.statusIsErr = true
 		}
 		a.statusWarnings = msg.warnings
 		a.refreshSidebarCounts()
@@ -584,45 +656,43 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.registryOpInProgress = false
 		if msg.err != nil {
 			a.statusMessage = fmt.Sprintf("Add failed: %s", msg.err)
+			a.statusIsErr = true
 		} else {
-			a.statusMessage = fmt.Sprintf("Added registry: %s", msg.name)
-			cfg, err := config.Load(a.catalog.RepoRoot)
-			if err == nil {
-				a.registryCfg = cfg
+			if msg.empty {
+				a.statusMessage = fmt.Sprintf("Added registry: %s (empty — no content found)", msg.name)
+			} else {
+				a.statusMessage = fmt.Sprintf("Added registry: %s", msg.name)
 			}
-			a.registries = newRegistriesModel(a.catalog.RepoRoot, a.registryCfg, a.catalog)
-			a.registries.width = a.width - sidebarWidth - 1
-			a.registries.height = a.panelHeight()
-			a.sidebar.registryCount = len(a.registryCfg.Registries)
-			cat, scanErr := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
-			if scanErr == nil {
-				a.catalog = cat
-				a.refreshSidebarCounts()
-			}
+			a.statusIsErr = false
+			a.rebuildRegistryState()
 		}
+		return a, nil
+
+	case registryAddNonSyllagoMsg:
+		a.registryOpInProgress = false
+		a.pendingNonSyllagoClone = msg.clonePath
+		a.pendingNonSyllagoScan = msg.scan
+		var provNames []string
+		for _, pc := range msg.scan.Providers {
+			provNames = append(provNames, pc.ProviderName)
+		}
+		body := fmt.Sprintf("This repository contains %s content\nbut isn't a syllago registry.\n\nBrowse and import individual items?", strings.Join(provNames, ", "))
+		a.modal = newConfirmModal("Not a Syllago Registry", body)
+		a.modal.purpose = modalNonSyllagoRedirect
+		a.focus = focusModal
 		return a, nil
 
 	case registryRemoveDoneMsg:
 		a.registryOpInProgress = false
 		if msg.err != nil {
 			a.statusMessage = fmt.Sprintf("Remove failed: %s", msg.err)
+			a.statusIsErr = true
 		} else {
 			a.statusMessage = fmt.Sprintf("Removed registry: %s", msg.name)
-			cfg, err := config.Load(a.catalog.RepoRoot)
-			if err == nil {
-				a.registryCfg = cfg
-			}
-			a.registries = newRegistriesModel(a.catalog.RepoRoot, a.registryCfg, a.catalog)
-			a.registries.width = a.width - sidebarWidth - 1
-			a.registries.height = a.panelHeight()
-			a.sidebar.registryCount = len(a.registryCfg.Registries)
+			a.statusIsErr = false
+			a.rebuildRegistryState()
 			if a.cardCursor >= len(a.registries.entries) && a.cardCursor > 0 {
 				a.cardCursor--
-			}
-			cat, scanErr := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
-			if scanErr == nil {
-				a.catalog = cat
-				a.refreshSidebarCounts()
 			}
 		}
 		return a, nil
@@ -631,24 +701,21 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.registryOpInProgress = false
 		if msg.err != nil {
 			a.statusMessage = fmt.Sprintf("Sync failed for %s: %s", msg.name, msg.err)
+			a.statusIsErr = true
 		} else {
 			a.statusMessage = fmt.Sprintf("Synced: %s", msg.name)
-			cat, scanErr := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
-			if scanErr == nil {
-				a.catalog = cat
-				a.refreshSidebarCounts()
-			}
-			a.registries = newRegistriesModel(a.catalog.RepoRoot, a.registryCfg, a.catalog)
-			a.registries.width = a.width - sidebarWidth - 1
-			a.registries.height = a.panelHeight()
+			a.statusIsErr = false
+			a.rebuildRegistryState()
 		}
 		return a, nil
 
 	case doCreateLoadoutMsg:
 		if msg.err != nil {
 			a.statusMessage = fmt.Sprintf("Create loadout failed: %s", msg.err)
+			a.statusIsErr = true
 		} else {
 			a.statusMessage = fmt.Sprintf("Created loadout: %s", msg.name)
+			a.statusIsErr = false
 			cat, err := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
 			if err == nil {
 				a.catalog = cat
@@ -730,6 +797,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.modal.active = false
 			a.modal.confirmed = false
 			a.focus = focusContent
+			a.cleanupDismissedModal()
 			return a, nil
 		}
 		if a.saveModal.active {
@@ -826,10 +894,68 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		if a.registryAddModal.active {
+			z := zone.Get("modal-zone")
+			if z.InBounds(msg) {
+				relX, relY := z.Pos(msg)
+				modalH := z.EndY - z.StartY + 1
+				modalW := z.EndX - z.StartX + 1
+
+				// Button row: last content line before bottom padding(1)+border(1)
+				buttonRelY := modalH - 3
+				if relY == buttonRelY {
+					contentLeft := 3
+					contentW := modalW - 6
+					midX := contentLeft + contentW/2
+					if relX < midX {
+						a.registryAddModal.btnCursor = 0
+					} else {
+						a.registryAddModal.btnCursor = 1
+					}
+					enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+					var cmd tea.Cmd
+					a.registryAddModal, cmd = a.registryAddModal.Update(enterMsg)
+					if !a.registryAddModal.active {
+						a.focus = focusContent
+						if a.registryAddModal.confirmed {
+							url := strings.TrimSpace(a.registryAddModal.urlInput.Value())
+							nameOverride := strings.TrimSpace(a.registryAddModal.nameInput.Value())
+							return a, a.doRegistryAdd(url, nameOverride)
+						}
+					}
+					return a, cmd
+				}
+
+				// URL field click (relY ~= 4: border+padding+title+blank)
+				if relY >= 4 && relY <= 4 {
+					if a.registryAddModal.focusedField != 0 {
+						a.registryAddModal.focusedField = 0
+						a.registryAddModal.nameInput.Blur()
+						a.registryAddModal.urlInput.Focus()
+					}
+					return a, nil
+				}
+				// Name field click (relY ~= 5)
+				if relY >= 5 && relY <= 5 {
+					if a.registryAddModal.focusedField != 1 {
+						a.registryAddModal.focusedField = 1
+						a.registryAddModal.urlInput.Blur()
+						a.registryAddModal.nameInput.Focus()
+					}
+					return a, nil
+				}
+
+				return a, nil // click inside modal elsewhere — ignore
+			}
+			// Click outside modal — close it
+			a.registryAddModal.active = false
+			a.focus = focusContent
+			return a, nil
+		}
+		if a.createLoadoutModal.active {
 			if zone.Get("modal-zone").InBounds(msg) {
 				return a, nil // click inside modal — ignore
 			}
-			a.registryAddModal.active = false
+			a.createLoadoutModal.active = false
 			a.focus = focusContent
 			return a, nil
 		}
@@ -854,30 +980,26 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-		// Check welcome page category links
-		allTypes := catalog.AllContentTypes()
-		for i, ct := range allTypes {
+		// Check welcome page content type links
+		for i := range a.sidebar.types {
 			if zone.Get(fmt.Sprintf("welcome-%d", i)).InBounds(msg) {
-				// Find the sidebar index for this type and select it
-				for j, st := range a.sidebar.types {
-					if st == ct {
-						a.sidebar.cursor = j
-						break
-					}
-				}
+				a.sidebar.cursor = i
 				a.screen = screenCategory
 				a.focus = focusSidebar
 				return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
 			}
 		}
-		// Check welcome page configuration links
-		welcomeConfigMap := map[string]int{
-			"welcome-add":        len(a.sidebar.types) + 1,
-			"welcome-update":     len(a.sidebar.types) + 2,
-			"welcome-settings":   len(a.sidebar.types) + 3,
-			"welcome-registries": len(a.sidebar.types) + 4,
+		// Check welcome page collection/configuration links (mapped to sidebar indices)
+		welcomeZoneMap := map[string]int{
+			"welcome-library":    a.sidebar.libraryIdx(),
+			"welcome-loadouts":   a.sidebar.loadoutsIdx(),
+			"welcome-registries": a.sidebar.registriesIdx(),
+			"welcome-add":        a.sidebar.addIdx(),
+			"welcome-update":     a.sidebar.updateIdx(),
+			"welcome-settings":   a.sidebar.settingsIdx(),
+			"welcome-sandbox":    a.sidebar.sandboxIdx(),
 		}
-		for zoneID, sidebarIdx := range welcomeConfigMap {
+		for zoneID, sidebarIdx := range welcomeZoneMap {
 			if zone.Get(zoneID).InBounds(msg) {
 				a.sidebar.cursor = sidebarIdx
 				a.focus = focusSidebar
@@ -1032,6 +1154,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.KeyMsg:
+		// Clear transient status on any keypress
+		if a.statusMessage != "" {
+			a.statusMessage = ""
+			a.statusIsErr = false
+			a.statusWarnings = nil
+		}
 		// ctrl+c always quits from any screen
 		if msg.String() == "ctrl+c" {
 			return a, tea.Quit
@@ -1045,6 +1173,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if actionCmd := a.handleConfirmAction(); actionCmd != nil {
 					return a, actionCmd
 				}
+				a.cleanupDismissedModal()
 			}
 			return a, cmd
 		}
@@ -1090,9 +1219,31 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.registryAddModal, cmd = a.registryAddModal.Update(msg)
 			if !a.registryAddModal.active {
 				a.focus = focusContent
-				url := strings.TrimSpace(a.registryAddModal.urlInput.Value())
-				if url != "" {
+				if a.registryAddModal.confirmed {
+					url := strings.TrimSpace(a.registryAddModal.urlInput.Value())
 					nameOverride := strings.TrimSpace(a.registryAddModal.nameInput.Value())
+					name := nameOverride
+					if name == "" {
+						name = registry.NameFromURL(url)
+					}
+					if !catalog.IsValidRegistryName(name) {
+						a.registryAddModal.message = fmt.Sprintf("Invalid registry name: %s", name)
+						a.registryAddModal.messageIsErr = true
+						a.registryAddModal.active = true
+						a.registryAddModal.confirmed = false
+						a.focus = focusModal
+						return a, nil
+					}
+					for _, r := range a.registryCfg.Registries {
+						if r.Name == name {
+							a.registryAddModal.message = fmt.Sprintf("Registry %q already exists", name)
+							a.registryAddModal.messageIsErr = true
+							a.registryAddModal.active = true
+							a.registryAddModal.confirmed = false
+							a.focus = focusModal
+							return a, nil
+						}
+					}
 					return a, a.doRegistryAdd(url, nameOverride)
 				}
 			}
@@ -1737,6 +1888,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if key.Matches(msg, keys.Refresh) && len(a.registries.entries) > 0 && !a.registryOpInProgress {
 				entry := a.registries.entries[a.cardCursor]
 				a.statusMessage = fmt.Sprintf("Syncing %s...", entry.name)
+				a.statusIsErr = false
 				a.registryOpInProgress = true
 				return a, func() tea.Msg {
 					err := registry.Sync(entry.name)
@@ -1831,7 +1983,7 @@ func (a App) View() string {
 	case screenSettings:
 		contentView = a.settings.View()
 	case screenRegistries:
-		contentView = a.registries.View(a.cardCursor)
+		contentView = a.registries.View(a.cardCursor, a.statusMessage, a.statusIsErr)
 	case screenSandbox:
 		contentView = a.sandboxSettings.View()
 	case screenLibraryCards:
@@ -2029,29 +2181,36 @@ func (a App) renderContentWelcome() string {
 
 	// Status message (from import, etc.)
 	if a.statusMessage != "" {
-		s += successMsgStyle.Render("Done: "+a.statusMessage) + "\n"
+		if a.statusIsErr {
+			s += errorMsgStyle.Render(a.statusMessage) + "\n"
+		} else {
+			s += successMsgStyle.Render(a.statusMessage) + "\n"
+		}
 		for _, w := range a.statusWarnings {
 			s += warningStyle.Render("Warning: "+w) + "\n"
 		}
 		s += "\n"
 	}
 
-	allTypes := catalog.AllContentTypes()
+	// Content types match sidebar (excludes Loadouts — it appears in Collections)
+	contentTypes := a.sidebar.types
 	// Use sidebar counts (already filtered by showHidden state)
 	counts := a.sidebar.counts
 	if counts == nil {
 		counts = make(map[catalog.ContentType]int)
 	}
 
-	configItems := []struct {
-		label  string
-		desc   string
-		zoneID string
-	}{
+	collectionItems := []welcomeCollectionItem{
+		{"Library", a.sidebar.libraryCount, "All content across categories in one view", "welcome-library"},
+		{"Loadouts", a.sidebar.loadoutsCount, "Curated content bundles for quick session setup", "welcome-loadouts"},
+		{"Registries", a.sidebar.registryCount, "Manage git-based content sources from your team or organization", "welcome-registries"},
+	}
+
+	configItems := []welcomeConfigItem{
 		{"Add", "Add content from providers, local files, or git repos", "welcome-add"},
 		{"Update", "Check for updates and pull latest changes", "welcome-update"},
 		{"Settings", "Configure paths and providers", "welcome-settings"},
-		{"Registries", "Manage git-based content sources from your team or organization", "welcome-registries"},
+		{"Sandbox", "Isolated environment for testing content", "welcome-sandbox"},
 	}
 
 	// Cards need ~33 lines of panel height. With ASCII art (+13), ~46 total.
@@ -2066,20 +2225,31 @@ func (a App) renderContentWelcome() string {
 	}
 
 	if useCards {
-		s += a.renderWelcomeCards(allTypes, counts, contentW, configItems)
+		s += a.renderWelcomeCards(contentTypes, counts, contentW, collectionItems, configItems)
 	} else {
-		s += a.renderWelcomeList(allTypes, counts, contentW, configItems)
+		s += a.renderWelcomeList(contentTypes, counts, contentW, collectionItems, configItems)
 	}
 
 	return s
 }
 
-// renderWelcomeCards renders the category and config sections as bordered cards.
-func (a App) renderWelcomeCards(allTypes []catalog.ContentType, counts map[catalog.ContentType]int, contentW int, configItems []struct {
+// welcomeCollectionItem describes a collection entry on the welcome page.
+type welcomeCollectionItem struct {
+	label  string
+	count  int
+	desc   string
+	zoneID string
+}
+
+// welcomeConfigItem describes a configuration entry on the welcome page.
+type welcomeConfigItem struct {
 	label  string
 	desc   string
 	zoneID string
-}) string {
+}
+
+// renderWelcomeCards renders the three-section welcome page as bordered cards.
+func (a App) renderWelcomeCards(contentTypes []catalog.ContentType, counts map[catalog.ContentType]int, contentW int, collectionItems []welcomeCollectionItem, configItems []welcomeConfigItem) string {
 	var s string
 
 	singleCol := contentW < 42
@@ -2100,19 +2270,22 @@ func (a App) renderWelcomeCards(allTypes []catalog.ContentType, counts map[catal
 		cardStyle = cardStyle.Height(3)
 	}
 
+	// ── Content section ──
+	s += labelStyle.Render("  Content") + "\n\n"
+
 	if singleCol {
-		for i, ct := range allTypes {
+		for i, ct := range contentTypes {
 			inner := renderCategoryCardInner(ct, counts[ct])
 			s += zone.Mark(fmt.Sprintf("welcome-%d", i), cardStyle.Render(inner)) + "\n"
 		}
 	} else {
-		for i := 0; i < len(allTypes); i += 2 {
-			left := renderCategoryCardInner(allTypes[i], counts[allTypes[i]])
+		for i := 0; i < len(contentTypes); i += 2 {
+			left := renderCategoryCardInner(contentTypes[i], counts[contentTypes[i]])
 			left = zone.Mark(fmt.Sprintf("welcome-%d", i), cardStyle.Render(left))
 
 			var right string
-			if i+1 < len(allTypes) {
-				right = renderCategoryCardInner(allTypes[i+1], counts[allTypes[i+1]])
+			if i+1 < len(contentTypes) {
+				right = renderCategoryCardInner(contentTypes[i+1], counts[contentTypes[i+1]])
 				right = zone.Mark(fmt.Sprintf("welcome-%d", i+1), cardStyle.Render(right))
 			}
 
@@ -2120,7 +2293,31 @@ func (a App) renderWelcomeCards(allTypes []catalog.ContentType, counts map[catal
 		}
 	}
 
-	// Configuration section
+	// ── Collections section ──
+	s += "\n"
+	s += labelStyle.Render("  Collections") + "\n\n"
+
+	if singleCol {
+		for _, ci := range collectionItems {
+			inner := renderCollectionCardInner(ci.label, ci.count, ci.desc)
+			s += zone.Mark(ci.zoneID, cardStyle.Render(inner)) + "\n"
+		}
+	} else {
+		for i := 0; i < len(collectionItems); i += 2 {
+			leftInner := renderCollectionCardInner(collectionItems[i].label, collectionItems[i].count, collectionItems[i].desc)
+			left := zone.Mark(collectionItems[i].zoneID, cardStyle.Render(leftInner))
+
+			var right string
+			if i+1 < len(collectionItems) {
+				rightInner := renderCollectionCardInner(collectionItems[i+1].label, collectionItems[i+1].count, collectionItems[i+1].desc)
+				right = zone.Mark(collectionItems[i+1].zoneID, cardStyle.Render(rightInner))
+			}
+
+			s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
+		}
+	}
+
+	// ── Configuration section ──
 	s += "\n"
 	s += labelStyle.Render("  Configuration") + "\n\n"
 
@@ -2147,7 +2344,6 @@ func (a App) renderWelcomeCards(allTypes []catalog.ContentType, counts map[catal
 			s += zone.Mark(ci.zoneID, configCardStyle.Render(inner)) + "\n"
 		}
 	} else {
-		// Render config cards in rows of 2
 		for i := 0; i < len(configItems); i += 2 {
 			leftInner := labelStyle.Render(configItems[i].label) + "\n" + helpStyle.Render(configItems[i].desc)
 			left := zone.Mark(configItems[i].zoneID, configCardStyle.Render(leftInner))
@@ -2165,22 +2361,31 @@ func (a App) renderWelcomeCards(allTypes []catalog.ContentType, counts map[catal
 }
 
 // renderWelcomeList renders a compact text list when cards won't fit.
-func (a App) renderWelcomeList(allTypes []catalog.ContentType, counts map[catalog.ContentType]int, contentW int, configItems []struct {
-	label  string
-	desc   string
-	zoneID string
-}) string {
+func (a App) renderWelcomeList(contentTypes []catalog.ContentType, counts map[catalog.ContentType]int, contentW int, collectionItems []welcomeCollectionItem, configItems []welcomeConfigItem) string {
 	var s string
 
-	s += labelStyle.Render("  AI Tools") + "\n"
-	for i, ct := range allTypes {
+	// ── Content ──
+	s += labelStyle.Render("  Content") + "\n"
+	for i, ct := range contentTypes {
 		line := renderCategoryLine(ct, counts[ct], contentW)
 		s += zone.Mark(fmt.Sprintf("welcome-%d", i), line) + "\n"
 	}
 
+	// ── Collections ──
+	s += "\n"
+	s += labelStyle.Render("  Collections") + "\n"
+	for _, ci := range collectionItems {
+		countStr := fmt.Sprintf("(%d)", ci.count)
+		line := fmt.Sprintf("  %-12s %s", ci.label, countStr)
+		if len(line) > contentW {
+			line = line[:contentW]
+		}
+		s += zone.Mark(ci.zoneID, line) + "\n"
+	}
+
+	// ── Configuration ──
 	s += "\n"
 	s += labelStyle.Render("  Configuration") + "\n"
-
 	for _, ci := range configItems {
 		line := fmt.Sprintf("  %-12s - %s", ci.label, helpStyle.Render(ci.desc))
 		if len(line) > contentW {
@@ -2199,6 +2404,12 @@ func renderCategoryCardInner(ct catalog.ContentType, count int) string {
 	if desc == "" {
 		desc = "Browse " + ct.Label() + " content"
 	}
+	return title + "\n" + helpStyle.Render(desc)
+}
+
+// renderCollectionCardInner builds the inner content for a collection card.
+func renderCollectionCardInner(label string, count int, desc string) string {
+	title := labelStyle.Render(label) + " " + countStyle.Render(fmt.Sprintf("(%d)", count))
 	return title + "\n" + helpStyle.Render(desc)
 }
 
@@ -2234,7 +2445,6 @@ func (a App) libraryCardTypes() []catalog.ContentType {
 	return result
 }
 
-// loadoutCardProviders returns the unique provider names for loadout items, sorted.
 // loadoutCardProviders returns providers to show on the loadouts card screen.
 // Shows all detected providers — even those with no loadouts — so the grid
 // is always populated and the user can create loadouts for any provider.

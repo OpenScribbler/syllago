@@ -312,6 +312,7 @@ const (
 	modalLoadoutApply
 	modalHookBrokenWarning
 	modalRegistryRemove
+	modalNonSyllagoRedirect
 )
 
 // openModalMsg is sent by sub-models (e.g. detailModel) to ask App to open a modal.
@@ -821,24 +822,34 @@ func (m installModal) overlayView(background string) string {
 // registryAddModal is a single-step modal for entering a git URL to add as a registry.
 type registryAddModal struct {
 	active       bool
+	confirmed    bool
 	urlInput     textinput.Model
 	nameInput    textinput.Model
 	focusedField int // 0 = url, 1 = name (optional override)
+	btnCursor    int // 0 = Add, 1 = Cancel
 	message      string
 	messageIsErr bool
 }
 
+const (
+	registryAddModalWidth  = 56
+	registryAddModalHeight = 14
+	registryAddInnerHeight = registryAddModalHeight - 2
+)
+
 func newRegistryAddModal() registryAddModal {
 	ui := textinput.New()
 	ui.Prompt = labelStyle.Render("URL: ")
-	ui.Placeholder = "https://github.com/owner/repo.git"
+	ui.Placeholder = "https://github.com/owner/repo"
 	ui.CharLimit = 500
+	ui.Width = 40
 	ui.Focus()
 
 	ni := textinput.New()
-	ni.Prompt = labelStyle.Render("Name (optional): ")
-	ni.Placeholder = "auto-derived from URL"
+	ni.Prompt = labelStyle.Render("Name: ")
+	ni.Placeholder = "optional — auto-derived from URL"
 	ni.CharLimit = 100
+	ni.Width = 40
 
 	return registryAddModal{
 		active:   true,
@@ -853,6 +864,7 @@ func (m registryAddModal) Update(msg tea.Msg) (registryAddModal, tea.Cmd) {
 	}
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		m.message = ""
 		switch {
 		case msg.Type == tea.KeyEsc:
 			m.active = false
@@ -868,13 +880,28 @@ func (m registryAddModal) Update(msg tea.Msg) (registryAddModal, tea.Cmd) {
 				m.urlInput.Focus()
 			}
 			return m, nil
+		case msg.Type == tea.KeyLeft:
+			if m.btnCursor > 0 {
+				m.btnCursor--
+			}
+			return m, nil
+		case msg.Type == tea.KeyRight:
+			if m.btnCursor < 1 {
+				m.btnCursor++
+			}
+			return m, nil
 		case msg.Type == tea.KeyEnter:
+			if m.btnCursor == 1 { // Cancel
+				m.active = false
+				return m, nil
+			}
 			url := strings.TrimSpace(m.urlInput.Value())
 			if url == "" {
 				m.message = "URL is required"
 				m.messageIsErr = true
 				return m, nil
 			}
+			m.confirmed = true
 			m.active = false
 			return m, nil
 		}
@@ -889,28 +916,35 @@ func (m registryAddModal) Update(msg tea.Msg) (registryAddModal, tea.Cmd) {
 	return m, nil
 }
 
-const registryAddModalWidth = 56
-
 func (m registryAddModal) View() string {
-	title := titleStyle.Render("Add Registry")
-	body := labelStyle.Render("Enter a git URL to add as a registry.\n")
-	body += "Tab to set an optional name override.\n\n"
-	body += m.urlInput.View() + "\n"
-	body += m.nameInput.View()
-	if m.message != "" {
-		if m.messageIsErr {
-			body += "\n" + errorMsgStyle.Render(m.message)
-		} else {
-			body += "\n" + successMsgStyle.Render(m.message)
-		}
+	if !m.active {
+		return ""
 	}
-	content := title + "\n\n" + body
+
+	content := labelStyle.Render("Add Registry") + "\n\n"
+	content += m.urlInput.View() + "\n"
+	content += m.nameInput.View()
+	if m.message != "" && m.messageIsErr {
+		content += "\n" + errorMsgStyle.Render(m.message)
+	}
+	content += "\n" + helpStyle.Render("tab switch field")
+
+	buttons := renderButtons("Add", "Cancel", m.btnCursor, 52)
+
+	contentLines := strings.Count(content, "\n")
+	spacer := registryAddInnerHeight - contentLines - 1
+	if spacer < 0 {
+		spacer = 0
+	}
+	content += strings.Repeat("\n", spacer) + buttons
+
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(modalBorderColor).
 		Background(modalBgColor).
 		Padding(1, 2).
 		Width(registryAddModalWidth).
+		Height(registryAddModalHeight).
 		Render(content)
 }
 
