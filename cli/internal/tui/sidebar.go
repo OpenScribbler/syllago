@@ -100,13 +100,7 @@ func (m sidebarModel) View() string {
 			line = line[:inner]
 		}
 
-		var rowContent string
-		if i == m.cursor {
-			rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, line))
-		} else {
-			rowContent = "  " + itemStyle.Render(line)
-		}
-		s += zone.Mark(fmt.Sprintf("sidebar-%d", i), rowContent) + "\n"
+		s += m.renderSidebarRow(i, line, inner)
 	}
 
 	// Separator
@@ -122,13 +116,7 @@ func (m sidebarModel) View() string {
 	if len(libLine) > inner {
 		libLine = libLine[:inner]
 	}
-	var rowContent string
-	if libIdx == m.cursor {
-		rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, libLine))
-	} else {
-		rowContent = "  " + itemStyle.Render(libLine)
-	}
-	s += zone.Mark(fmt.Sprintf("sidebar-%d", libIdx), rowContent) + "\n"
+	s += m.renderSidebarRow(libIdx, libLine, inner)
 
 	// Loadouts
 	loadIdx := m.loadoutsIdx()
@@ -137,34 +125,21 @@ func (m sidebarModel) View() string {
 	if len(loadLine) > inner {
 		loadLine = loadLine[:inner]
 	}
-	if loadIdx == m.cursor {
-		rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, loadLine))
-	} else {
-		rowContent = "  " + itemStyle.Render(loadLine)
-	}
-	s += zone.Mark(fmt.Sprintf("sidebar-%d", loadIdx), rowContent) + "\n"
+	s += m.renderSidebarRow(loadIdx, loadLine, inner)
 
 	// Registries
 	regIdx := m.registriesIdx()
+	var regLine string
 	if m.registryCount > 0 {
 		regCountStr := fmt.Sprintf("%2d", m.registryCount)
-		regLine := fmt.Sprintf("%-*s%s", inner-len(regCountStr)-2, "Registries", regCountStr)
+		regLine = fmt.Sprintf("%-*s%s", inner-len(regCountStr)-2, "Registries", regCountStr)
 		if len(regLine) > inner {
 			regLine = regLine[:inner]
 		}
-		if regIdx == m.cursor {
-			rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, regLine))
-		} else {
-			rowContent = "  " + itemStyle.Render(regLine)
-		}
 	} else {
-		if regIdx == m.cursor {
-			rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, "Registries"))
-		} else {
-			rowContent = "  " + itemStyle.Render(fmt.Sprintf("%-*s", inner-2, "Registries"))
-		}
+		regLine = fmt.Sprintf("%-*s", inner-2, "Registries")
 	}
-	s += zone.Mark(fmt.Sprintf("sidebar-%d", regIdx), rowContent) + "\n"
+	s += m.renderSidebarRow(regIdx, regLine, inner)
 
 	// Separator
 	s += helpStyle.Render("  " + "─────────────") + "\n"
@@ -184,13 +159,7 @@ func (m sidebarModel) View() string {
 	}
 
 	for _, u := range utilItems {
-		var rowContent string
-		if u.index == m.cursor {
-			rowContent = selectedItemStyle.Render(fmt.Sprintf("▸ %-*s", inner-2, u.label))
-		} else {
-			rowContent = "  " + itemStyle.Render(fmt.Sprintf("%-*s", inner-2, u.label))
-		}
-		s += zone.Mark(fmt.Sprintf("sidebar-%d", u.index), rowContent) + "\n"
+		s += m.renderSidebarRow(u.index, fmt.Sprintf("%-*s", inner-2, u.label), inner)
 	}
 
 	// Version pinned to bottom-right of sidebar, only when it fits
@@ -239,4 +208,16 @@ func (m sidebarModel) selectedType() catalog.ContentType {
 		return ""
 	}
 	return m.types[m.cursor]
+}
+
+// renderSidebarRow renders a single sidebar row with consistent cursor prefix.
+func (m sidebarModel) renderSidebarRow(index int, line string, inner int) string {
+	prefix, style := cursorPrefix(index == m.cursor)
+	var rowContent string
+	if index == m.cursor {
+		rowContent = style.Render(fmt.Sprintf("%s%-*s", prefix, inner-2, line))
+	} else {
+		rowContent = prefix + style.Render(line)
+	}
+	return zone.Mark(fmt.Sprintf("sidebar-%d", index), rowContent) + "\n"
 }

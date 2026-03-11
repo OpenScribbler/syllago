@@ -30,6 +30,8 @@ type keyMap struct {
 	Delete        key.Binding
 	Refresh       key.Binding
 	CreateLoadout key.Binding
+	ConfirmYes   key.Binding
+	ConfirmNo    key.Binding
 }
 
 var keys = keyMap{
@@ -140,5 +142,13 @@ var keys = keyMap{
 	CreateLoadout: key.NewBinding(
 		key.WithKeys("l"),
 		key.WithHelp("l", "create loadout"),
+	),
+	ConfirmYes: key.NewBinding(
+		key.WithKeys("y", "Y"),
+		key.WithHelp("y", "confirm"),
+	),
+	ConfirmNo: key.NewBinding(
+		key.WithKeys("n", "N"),
+		key.WithHelp("n", "cancel"),
 	),
 }

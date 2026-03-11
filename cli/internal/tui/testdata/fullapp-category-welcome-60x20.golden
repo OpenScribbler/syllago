@@ -1,7 +1,7 @@
 syllago           │  Content
                   │  Skills      3 - Reusable skill definiti
   Content         │  Agents      1 - Agent configurations wi
-▸ Skills        3 │  MCP Configs  1 - Model Context Protocol
+> Skills        3 │  MCP Configs  1 - Model Context Protocol
   Agents        1 │  Rules       1 - Rule files that guide A
   MCP Configs   1 │  Hooks       1 - Event-driven hooks for
   Rules         1 │  Commands    1 - Custom slash commands f

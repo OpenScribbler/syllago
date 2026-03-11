@@ -233,23 +233,20 @@ func (m itemsModel) buildProvCell(item catalog.ContentItem, relevant []provider.
 
 func (m itemsModel) View() string {
 	// Breadcrumb: Home > Category
-	home := zone.Mark("crumb-home", helpStyle.Render("Home"))
-	arrow := helpStyle.Render(" > ")
+	home := BreadcrumbSegment{"Home", "crumb-home"}
 
 	var s string
 	switch {
 	case m.sourceRegistry != "":
-		reg := zone.Mark("crumb-registries", helpStyle.Render("Registries"))
-		s = home + arrow + reg + arrow + titleStyle.Render(m.sourceRegistry) + "\n\n"
+		s = renderBreadcrumb(home, BreadcrumbSegment{"Registries", "crumb-registries"}, BreadcrumbSegment{m.sourceRegistry, ""}) + "\n\n"
 	case m.contentType == catalog.SearchResults:
-		s = home + arrow + titleStyle.Render(fmt.Sprintf("Search Results (%d)", len(m.items))) + "\n\n"
+		s = renderBreadcrumb(home, BreadcrumbSegment{fmt.Sprintf("Search Results (%d)", len(m.items)), ""}) + "\n\n"
 	case m.contentType == catalog.Library:
-		s = home + arrow + titleStyle.Render(fmt.Sprintf("Library (%d)", len(m.items))) + "\n\n"
+		s = renderBreadcrumb(home, BreadcrumbSegment{fmt.Sprintf("Library (%d)", len(m.items)), ""}) + "\n\n"
 	case m.parentLabel != "":
-		parent := zone.Mark("crumb-parent", helpStyle.Render(m.parentLabel))
-		s = home + arrow + parent + arrow + titleStyle.Render(m.contentType.Label()) + "\n\n"
+		s = renderBreadcrumb(home, BreadcrumbSegment{m.parentLabel, "crumb-parent"}, BreadcrumbSegment{m.contentType.Label(), ""}) + "\n\n"
 	default:
-		s = home + arrow + titleStyle.Render(m.contentType.Label()) + "\n\n"
+		s = renderBreadcrumb(home, BreadcrumbSegment{m.contentType.Label(), ""}) + "\n\n"
 	}
 
 	if len(m.items) == 0 {
@@ -257,7 +254,6 @@ func (m itemsModel) View() string {
 		if m.contentType == catalog.Library {
 			s += "\n" + helpStyle.Render("  Use Add to add content, or run 'syllago add' from the command line.") + "\n"
 		}
-		s += "\n" + helpStyle.Render("esc back")
 		return s
 	}
 
@@ -372,7 +368,7 @@ func (m itemsModel) View() string {
 
 	// Scroll indicators
 	if offset > 0 {
-		s += helpStyle.Render(fmt.Sprintf("  (%d more above)", offset)) + "\n"
+		s += "  " + renderScrollUp(offset, false) + "\n"
 	}
 
 	// Whether to show a type tag per item (for mixed-type views)
@@ -470,15 +466,21 @@ func (m itemsModel) View() string {
 
 	// Scroll indicator for items below
 	if end < len(m.items) {
-		s += helpStyle.Render(fmt.Sprintf("  (%d more below)", len(m.items)-end)) + "\n"
+		s += "  " + renderScrollDown(len(m.items)-end, false) + "\n"
 	}
 
-	footer := "up/down navigate • enter detail • esc back • / search"
-	if m.hiddenCount > 0 {
-		footer += fmt.Sprintf(" • H show %d hidden", m.hiddenCount)
-	}
-	s += "\n" + helpStyle.Render(footer)
 	return s
+}
+
+func (m itemsModel) helpText() string {
+	help := "/ search • enter detail • a add • esc back • ? help"
+	if m.sourceRegistry != "" {
+		help = "/ search • enter detail • a add • l create loadout • esc back • ? help"
+	}
+	if m.hiddenCount > 0 {
+		help += fmt.Sprintf(" • H show %d hidden", m.hiddenCount)
+	}
+	return help
 }
 
 func (m itemsModel) selectedItem() catalog.ContentItem {

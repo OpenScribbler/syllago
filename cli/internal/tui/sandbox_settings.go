@@ -23,7 +23,7 @@ type sandboxSettingsModel struct {
 	editInput string
 
 	message    string
-	messageErr bool
+	messageIsErr bool
 	width      int
 	height     int
 }
@@ -147,16 +147,24 @@ func (m *sandboxSettingsModel) save() {
 	cfg.Sandbox = m.sb
 	if err := config.Save(m.repoRoot, cfg); err != nil {
 		m.message = fmt.Sprintf("Save failed: %s", err)
-		m.messageErr = true
+		m.messageIsErr = true
 	} else {
 		m.message = "Sandbox settings saved"
-		m.messageErr = false
+		m.messageIsErr = false
 	}
 }
 
+var sandboxDescriptions = []string{
+	"Domains the sandbox allows network access to.\nAdd domains like api.example.com or *.github.com.",
+	"Environment variables passed through to sandboxed processes.\nVariables not listed here are hidden from sandboxed tools.",
+	"Network ports the sandbox allows outbound connections on.\nCommon ports: 443 (HTTPS), 80 (HTTP), 5432 (Postgres).",
+}
+
 func (m sandboxSettingsModel) View() string {
-	home := zone.Mark("crumb-home", helpStyle.Render("Home"))
-	s := home + helpStyle.Render(" > ") + titleStyle.Render("Sandbox") + "\n\n"
+	s := renderBreadcrumb(
+		BreadcrumbSegment{"Home", "crumb-home"},
+		BreadcrumbSegment{"Sandbox", ""},
+	) + "\n\n"
 
 	labels := []string{"Allowed Domains", "Allowed Env Vars", "Allowed Ports"}
 	values := []string{
@@ -182,13 +190,12 @@ func (m sandboxSettingsModel) View() string {
 	}
 
 	if m.message != "" {
-		s += "\n"
-		if m.messageErr {
-			s += errorMsgStyle.Render("Error: " + m.message)
-		} else {
-			s += successMsgStyle.Render("Done: " + m.message)
-		}
-		s += "\n"
+		s += "\n" + renderStatusMsg(m.message, m.messageIsErr) + "\n"
+	}
+
+	// Description box for the currently highlighted option
+	if m.cursor >= 0 && m.cursor < len(sandboxDescriptions) {
+		s += renderDescriptionBox(sandboxDescriptions[m.cursor], 45, 3)
 	}
 
 	return s

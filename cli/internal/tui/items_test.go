@@ -540,8 +540,8 @@ func TestHiddenCountInFooter(t *testing.T) {
 	m.height = 30
 	m.hiddenCount = 3
 
-	view := m.View()
-	assertContains(t, view, "H show 3 hidden")
+	help := m.helpText()
+	assertContains(t, help, "H show 3 hidden")
 }
 
 func TestNoHiddenCountWhenZero(t *testing.T) {
@@ -558,6 +558,6 @@ func TestNoHiddenCountWhenZero(t *testing.T) {
 	m.height = 30
 	m.hiddenCount = 0
 
-	view := m.View()
-	assertNotContains(t, view, "hidden")
+	help := m.helpText()
+	assertNotContains(t, help, "hidden")
 }

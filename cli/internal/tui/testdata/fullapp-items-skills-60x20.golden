@@ -1,12 +1,12 @@
 syllago           │Home > Skills
                   │
   Content         │    Name         Description     Provider
-▸ Skills        3 │    ───────────  ──────────────  ────────
+> Skills        3 │    ───────────  ──────────────  ────────
   Agents        1 │  > alpha-skill  A helpful s...
   MCP Configs   1 │    beta-skill   Another skill
   Rules         1 │    local-skill  [LIBRARY] A...
   Hooks         1 │
-  Commands      1 │up/down navigate • enter detail • esc back • / search
+  Commands      1 │
   ─────────────   │
   Collections     │
   Library       1 │

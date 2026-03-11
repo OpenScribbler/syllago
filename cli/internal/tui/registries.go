@@ -62,8 +62,10 @@ func (m registriesModel) helpText() string {
 }
 
 func (m registriesModel) View(cursor int, statusMsg string, statusIsErr bool) string {
-	home := zone.Mark("crumb-home", helpStyle.Render("Home"))
-	s := home + helpStyle.Render(" > ") + titleStyle.Render("Registries") + "\n\n"
+	s := renderBreadcrumb(
+		BreadcrumbSegment{"Home", "crumb-home"},
+		BreadcrumbSegment{"Registries", ""},
+	) + "\n\n"
 
 	if statusMsg != "" {
 		if statusIsErr {
