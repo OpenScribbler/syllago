@@ -116,3 +116,54 @@ func TestGoldenSized_Settings(t *testing.T) {
 		})
 	}
 }
+
+// --- Library cards (responsive card grid) ---
+
+func TestGoldenSized_LibraryCards(t *testing.T) {
+	for _, sz := range testSizes {
+		t.Run(sz.tag, func(t *testing.T) {
+			app := testAppSize(t, sz.width, sz.height)
+			nTypes := sidebarContentCount()
+			app = pressN(app, keyDown, nTypes) // Library
+			m, _ := app.Update(keyEnter)
+			app = m.(App)
+			assertScreen(t, app, screenLibraryCards)
+			requireGolden(t, fmt.Sprintf("fullapp-library-cards-%s", sz.tag),
+				normalizeSnapshot(snapshotApp(t, app)))
+		})
+	}
+}
+
+// --- Loadout cards (responsive card grid) ---
+
+func TestGoldenSized_LoadoutCards(t *testing.T) {
+	for _, sz := range testSizes {
+		t.Run(sz.tag, func(t *testing.T) {
+			app := testAppSize(t, sz.width, sz.height)
+			nTypes := sidebarContentCount()
+			app = pressN(app, keyDown, nTypes+1) // Loadouts
+			m, _ := app.Update(keyEnter)
+			app = m.(App)
+			assertScreen(t, app, screenLoadoutCards)
+			requireGolden(t, fmt.Sprintf("fullapp-loadout-cards-%s", sz.tag),
+				normalizeSnapshot(snapshotApp(t, app)))
+		})
+	}
+}
+
+// --- Registries (responsive card grid) ---
+
+func TestGoldenSized_Registries(t *testing.T) {
+	for _, sz := range testSizes {
+		t.Run(sz.tag, func(t *testing.T) {
+			app := testAppSize(t, sz.width, sz.height)
+			nTypes := sidebarContentCount()
+			app = pressN(app, keyDown, nTypes+2) // Registries
+			m, _ := app.Update(keyEnter)
+			app = m.(App)
+			assertScreen(t, app, screenRegistries)
+			requireGolden(t, fmt.Sprintf("fullapp-registries-%s", sz.tag),
+				normalizeSnapshot(snapshotApp(t, app)))
+		})
+	}
+}

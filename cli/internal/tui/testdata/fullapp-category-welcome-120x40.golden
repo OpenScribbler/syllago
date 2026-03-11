@@ -10,7 +10,7 @@ syllago           │  Content
   ─────────────   ││ Model Context Protocol server configurations   │ │ Rule files that guide AI coding tool behavior  │
   Collections     ││                                                │ │                                                │
   Library       1 │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
-  Loadouts      0 │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
+  Loadouts      2 │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
   Registries      ││ Hooks (1)                                      │ │ Commands (1)                                   │
   ─────────────   ││ Event-driven hooks for automation and          │ │ Custom slash commands for AI coding tools      │
   Configuration   ││ validation                                     │ │                                                │
@@ -19,7 +19,7 @@ syllago           │  Content
   Settings        │  Collections
   Sandbox         │
                   │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
-                   │ Library (1)                                    │ │ Loadouts (0)                                   │
+                   │ Library (1)                                    │ │ Loadouts (2)                                   │
                    │ All content across categories in one view      │ │ Curated content bundles for quick session      │
                    │                                                │ │ setup                                          │
                    ╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯

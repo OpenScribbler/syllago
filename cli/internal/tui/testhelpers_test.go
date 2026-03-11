@@ -73,6 +73,8 @@ func testCatalog(t *testing.T) *catalog.Catalog {
 		makeProviderSpecific(t, tmp, "test-hook", catalog.Hooks, "claude-code", "A hook"),
 		makeProviderSpecific(t, tmp, "test-cmd", catalog.Commands, "claude-code", "A command"),
 		makeLocalSkill(t, tmp, "local-skill", "A library skill with LLM prompt"),
+		makeLoadout(t, tmp, "starter-loadout", "claude-code", "Essential tools for getting started"),
+		makeLoadout(t, tmp, "advanced-loadout", "claude-code", "Advanced workflow configuration"),
 	}
 
 	return &catalog.Catalog{
@@ -164,6 +166,21 @@ func makeLocalSkill(t *testing.T, root, name, desc string) catalog.ContentItem {
 		[]byte("Describe this skill for an LLM."), 0o644)
 	item.Files = append(item.Files, "LLM-PROMPT.md")
 	return item
+}
+
+func makeLoadout(t *testing.T, root, name, provSlug, desc string) catalog.ContentItem {
+	t.Helper()
+	dir := filepath.Join(root, "loadouts", provSlug, name)
+	os.MkdirAll(dir, 0o755)
+	os.WriteFile(filepath.Join(dir, "loadout.yaml"), []byte("name: "+name+"\n"), 0o644)
+	return catalog.ContentItem{
+		Name:        name,
+		Description: desc,
+		Type:        catalog.Loadouts,
+		Path:        dir,
+		Provider:    provSlug,
+		Files:       []string{"loadout.yaml"},
+	}
 }
 
 // ---------------------------------------------------------------------------
