@@ -1320,7 +1320,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Search toggle (skip on import/update/settings screens and when detail has active textinput)
-		if key.Matches(msg, keys.Search) && !a.search.active && a.screen != screenImport && a.screen != screenUpdate && a.screen != screenSettings && a.screen != screenRegistries && a.screen != screenSandbox && !a.detail.HasTextInput() {
+		if key.Matches(msg, keys.Search) && !a.search.active && a.screen != screenImport && a.screen != screenUpdate && a.screen != screenSettings && a.screen != screenSandbox && !a.detail.HasTextInput() {
 			a.search = a.search.activated()
 			return a, nil
 		}
@@ -1338,6 +1338,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					items.width = a.width
 					items.height = a.panelHeight()
 					a.items = items
+				}
+				// If on registries screen, reset entries
+				if a.screen == screenRegistries {
+					a.registries.entries = a.registries.allEntries
+					if a.cardCursor >= len(a.registries.entries) {
+						a.cardCursor = max(0, len(a.registries.entries)-1)
+					}
 				}
 				return a, nil
 			}
@@ -1392,6 +1399,15 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.items = items
 			}
 
+			// Live-filter registries while typing
+			if a.screen == screenRegistries {
+				query := a.search.query()
+				a.registries.entries = filterRegistryEntries(a.registries.allEntries, query)
+				if a.cardCursor >= len(a.registries.entries) && a.cardCursor > 0 {
+					a.cardCursor = len(a.registries.entries) - 1
+				}
+			}
+
 			// Show match count preview on category screen
 			if a.screen == screenCategory {
 				query := a.search.query()
@@ -1412,7 +1428,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if (key.Matches(msg, keys.Tab) || key.Matches(msg, keys.ShiftTab)) &&
 			!a.search.active && !a.helpOverlay.active &&
 			a.screen != screenDetail {
-			if a.screen != screenImport && a.screen != screenUpdate && a.screen != screenSettings && a.screen != screenRegistries && a.screen != screenSandbox {
+			if a.screen != screenImport && a.screen != screenUpdate && a.screen != screenSettings && a.screen != screenSandbox {
 				if !a.detail.HasTextInput() {
 					if a.focus == focusSidebar {
 						a.focus = focusContent
