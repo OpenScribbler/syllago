@@ -51,7 +51,7 @@ func newSidebarModel(cat *catalog.Catalog, version string, registryCount int) si
 // totalItems returns the total number of navigable items in the sidebar
 // (content types + Library + Loadouts + Add + Update + Settings + Registries + Sandbox).
 func (m sidebarModel) totalItems() int {
-	return len(m.types) + 7
+	return m.sandboxIdx() + 1
 }
 
 func (m sidebarModel) Update(msg tea.Msg) (sidebarModel, tea.Cmd) {
@@ -116,7 +116,7 @@ func (m sidebarModel) View() string {
 	s += labelStyle.Render("  Collections") + "\n"
 
 	// Library
-	libIdx := len(m.types)
+	libIdx := m.libraryIdx()
 	libCountStr := fmt.Sprintf("%2d", m.libraryCount)
 	libLine := fmt.Sprintf("%-*s%s", inner-len(libCountStr)-2, "Library", libCountStr)
 	if len(libLine) > inner {
@@ -131,7 +131,7 @@ func (m sidebarModel) View() string {
 	s += zone.Mark(fmt.Sprintf("sidebar-%d", libIdx), rowContent) + "\n"
 
 	// Loadouts
-	loadIdx := len(m.types) + 1
+	loadIdx := m.loadoutsIdx()
 	loadCountStr := fmt.Sprintf("%2d", m.loadoutsCount)
 	loadLine := fmt.Sprintf("%-*s%s", inner-len(loadCountStr)-2, "Loadouts", loadCountStr)
 	if len(loadLine) > inner {
@@ -145,7 +145,7 @@ func (m sidebarModel) View() string {
 	s += zone.Mark(fmt.Sprintf("sidebar-%d", loadIdx), rowContent) + "\n"
 
 	// Registries
-	regIdx := len(m.types) + 2
+	regIdx := m.registriesIdx()
 	if m.registryCount > 0 {
 		regCountStr := fmt.Sprintf("%2d", m.registryCount)
 		regLine := fmt.Sprintf("%-*s%s", inner-len(regCountStr)-2, "Registries", regCountStr)
@@ -177,10 +177,10 @@ func (m sidebarModel) View() string {
 		label string
 		index int
 	}{
-		{"Add", len(m.types) + 3},
-		{"Update", len(m.types) + 4},
-		{"Settings", len(m.types) + 5},
-		{"Sandbox", len(m.types) + 6},
+		{"Add", m.addIdx()},
+		{"Update", m.updateIdx()},
+		{"Settings", m.settingsIdx()},
+		{"Sandbox", m.sandboxIdx()},
 	}
 
 	for _, u := range utilItems {
@@ -216,14 +216,24 @@ func (m sidebarModel) View() string {
 	return style.Render(s)
 }
 
+// Index methods — single source of truth for sidebar item positions.
+// All code that needs a sidebar index must use these methods.
+func (m sidebarModel) libraryIdx() int    { return len(m.types) }
+func (m sidebarModel) loadoutsIdx() int   { return len(m.types) + 1 }
+func (m sidebarModel) registriesIdx() int { return len(m.types) + 2 }
+func (m sidebarModel) addIdx() int        { return len(m.types) + 3 }
+func (m sidebarModel) updateIdx() int     { return len(m.types) + 4 }
+func (m sidebarModel) settingsIdx() int   { return len(m.types) + 5 }
+func (m sidebarModel) sandboxIdx() int    { return len(m.types) + 6 }
+
 // Selector methods for use in App.Update routing
-func (m sidebarModel) isLibrarySelected() bool    { return m.cursor == len(m.types) }
-func (m sidebarModel) isLoadoutsSelected() bool   { return m.cursor == len(m.types)+1 }
-func (m sidebarModel) isRegistriesSelected() bool { return m.cursor == len(m.types)+2 }
-func (m sidebarModel) isAddSelected() bool        { return m.cursor == len(m.types)+3 }
-func (m sidebarModel) isUpdateSelected() bool     { return m.cursor == len(m.types)+4 }
-func (m sidebarModel) isSettingsSelected() bool   { return m.cursor == len(m.types)+5 }
-func (m sidebarModel) isSandboxSelected() bool    { return m.cursor == len(m.types)+6 }
+func (m sidebarModel) isLibrarySelected() bool    { return m.cursor == m.libraryIdx() }
+func (m sidebarModel) isLoadoutsSelected() bool   { return m.cursor == m.loadoutsIdx() }
+func (m sidebarModel) isRegistriesSelected() bool { return m.cursor == m.registriesIdx() }
+func (m sidebarModel) isAddSelected() bool        { return m.cursor == m.addIdx() }
+func (m sidebarModel) isUpdateSelected() bool     { return m.cursor == m.updateIdx() }
+func (m sidebarModel) isSettingsSelected() bool   { return m.cursor == m.settingsIdx() }
+func (m sidebarModel) isSandboxSelected() bool    { return m.cursor == m.sandboxIdx() }
 func (m sidebarModel) selectedType() catalog.ContentType {
 	if m.cursor >= len(m.types) {
 		return ""
