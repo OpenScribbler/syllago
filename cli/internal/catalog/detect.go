@@ -16,8 +16,6 @@ var markerFiles = []struct {
 }{
 	{"SKILL.md", "Skill"},
 	{"AGENT.md", "Agent"},
-	{"PROMPT.md", "Prompt"},
-	{"APP.md", "App"},
 }
 
 // DetectContent performs a lightweight check on a path to determine if it
@@ -37,13 +35,6 @@ func DetectContent(path string) (string, bool) {
 		for _, mf := range markerFiles {
 			if _, err := os.Stat(filepath.Join(path, mf.marker)); err == nil {
 				return mf.label, true
-			}
-		}
-		// Check for README.md with frontmatter (apps pattern)
-		readmePath := filepath.Join(path, "README.md")
-		if data, err := os.ReadFile(readmePath); err == nil {
-			if _, fmErr := ParseFrontmatter(data); fmErr == nil {
-				return "App", true
 			}
 		}
 		return "", false

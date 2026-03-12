@@ -18,6 +18,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/loadout"
 	"github.com/OpenScribbler/syllago/cli/internal/promote"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -72,6 +73,12 @@ type registryAddNonSyllagoMsg struct {
 	name      string
 	clonePath string
 	scan      catalog.NativeScanResult
+}
+
+// itemRemoveDoneMsg is sent when a library item remove operation completes.
+type itemRemoveDoneMsg struct {
+	name string
+	err  error
 }
 
 // doCreateLoadoutMsg is sent when the loadout create operation completes.
@@ -196,6 +203,24 @@ func (a *App) handleConfirmAction() tea.Cmd {
 		return a.runLoadoutApply(a.loadoutApplyItem, a.loadoutApplyMode)
 	case modalHookBrokenWarning:
 		return a.detail.startInstall()
+	case modalItemRemove:
+		item := a.detail.item
+		repoRoot := a.catalog.RepoRoot
+		providers := a.providers
+		return func() tea.Msg {
+			// Uninstall from all providers where installed
+			for _, p := range providers {
+				if p.Detected && p.SupportsType(item.Type) {
+					status := installer.CheckStatus(item, p, repoRoot)
+					if status == installer.StatusInstalled {
+						installer.Uninstall(item, p, repoRoot)
+					}
+				}
+			}
+			// Delete the library directory
+			err := os.RemoveAll(item.Path)
+			return itemRemoveDoneMsg{name: item.Name, err: err}
+		}
 	case modalRegistryRemove:
 		a.registryOpInProgress = true
 		a.toast.show(toastMsg{text: fmt.Sprintf("Removing registry: %s...", a.registries.entries[a.cardCursor].name)})
@@ -659,6 +684,77 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.activeLoadout = a.loadoutApplyItem.Name
 			}
 			a.detail.messageIsErr = false
+		}
+		return a, nil
+
+	case itemRemoveDoneMsg:
+		if msg.err != nil {
+			a.toast.show(toastMsg{text: fmt.Sprintf("Remove failed: %s", msg.err), isErr: true})
+		} else {
+			a.toast.show(toastMsg{text: fmt.Sprintf("Removed %q from library", msg.name)})
+			a.cachedDetail = nil
+			cat, err := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
+			if err == nil {
+				a.catalog = cat
+				a.refreshSidebarCounts()
+			}
+			// If on detail screen, navigate back to items
+			if a.screen == screenDetail {
+				a.screen = screenItems
+				// Rebuild items list
+				ct := a.items.contentType
+				if ct == catalog.Library {
+					var localItems []catalog.ContentItem
+					for _, item := range a.visibleItems(a.catalog.Items) {
+						if item.Library {
+							localItems = append(localItems, item)
+						}
+					}
+					items := newItemsModel(catalog.Library, localItems, a.providers, a.catalog.RepoRoot)
+					items.hideLibraryBadge = true
+					items.width = a.items.width
+					items.height = a.items.height
+					a.items = items
+				} else if ct != catalog.SearchResults {
+					src := a.visibleItems(a.catalog.ByType(ct))
+					items := newItemsModel(ct, src, a.providers, a.catalog.RepoRoot)
+					items.width = a.items.width
+					items.height = a.items.height
+					a.items = items
+				}
+			} else if a.screen == screenItems {
+				// Rebuild items list in place
+				ct := a.items.contentType
+				if ct == catalog.Library {
+					var localItems []catalog.ContentItem
+					for _, item := range a.visibleItems(a.catalog.Items) {
+						if item.Library {
+							localItems = append(localItems, item)
+						}
+					}
+					items := newItemsModel(catalog.Library, localItems, a.providers, a.catalog.RepoRoot)
+					items.hideLibraryBadge = true
+					items.width = a.items.width
+					items.height = a.items.height
+					if a.items.cursor >= len(items.items) && len(items.items) > 0 {
+						items.cursor = len(items.items) - 1
+					} else {
+						items.cursor = a.items.cursor
+					}
+					a.items = items
+				} else if ct != catalog.SearchResults {
+					src := a.visibleItems(a.catalog.ByType(ct))
+					items := newItemsModel(ct, src, a.providers, a.catalog.RepoRoot)
+					items.width = a.items.width
+					items.height = a.items.height
+					if a.items.cursor >= len(items.items) && len(items.items) > 0 {
+						items.cursor = len(items.items) - 1
+					} else {
+						items.cursor = a.items.cursor
+					}
+					a.items = items
+				}
+			}
 		}
 		return a, nil
 
@@ -1254,12 +1350,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.Action == tea.MouseActionRelease && msg.Button == tea.MouseButtonLeft {
 				for i := range a.registries.entries {
 					if zone.Get(fmt.Sprintf("registry-card-%d", i)).InBounds(msg) {
-						if i == a.cardCursor {
-							// Second click on already-selected card → drill in
-							return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
-						}
 						a.cardCursor = i
-						return a, nil
+						return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
 					}
 				}
 			}
@@ -1490,6 +1582,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.items = items
 					a.cardParent = 0
 					a.screen = screenItems
+					a.focus = focusContent
 				} else if a.screen == screenItems {
 					ct := a.sidebar.selectedType()
 					filtered := filterItems(a.visibleItems(a.catalog.ByType(ct)), a.search.query())
@@ -1571,100 +1664,105 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// Sidebar-focused: route input to sidebar on ANY screen.
+		// Enter/Right drills into the selected sidebar section regardless of current screen.
+		// Excluded: Detail (Tab switches tabs there), and single-pane screens.
+		if a.focus == focusSidebar &&
+			a.screen != screenDetail && a.screen != screenImport &&
+			a.screen != screenUpdate && a.screen != screenSettings &&
+			a.screen != screenSandbox {
+			if key.Matches(msg, keys.Enter) || key.Matches(msg, keys.Right) {
+				if a.sidebar.isUpdateSelected() {
+					a.updater = newUpdateModel(a.catalog.RepoRoot, a.version, a.remoteVersion, a.commitsBehind, a.isReleaseBuild)
+					a.updater.width = a.width - sidebarWidth - 1
+					a.updater.height = a.panelHeight()
+					a.screen = screenUpdate
+					a.focus = focusContent
+					return a, nil
+				}
+				if a.sidebar.isSettingsSelected() {
+					a.settings = newSettingsModel(a.catalog.RepoRoot)
+					a.settings.width = a.width - sidebarWidth - 1
+					a.settings.height = a.panelHeight()
+					a.screen = screenSettings
+					a.focus = focusContent
+					return a, nil
+				}
+				if a.sidebar.isAddSelected() {
+					a.importer = newImportModel(a.providers, a.catalog.RepoRoot, a.projectRoot)
+					a.importer.width = a.width - sidebarWidth - 1
+					a.importer.height = a.panelHeight()
+					a.screen = screenImport
+					a.focus = focusContent
+					return a, nil
+				}
+				if a.sidebar.isRegistriesSelected() {
+					a.registries = newRegistriesModel(a.catalog.RepoRoot, a.registryCfg, a.catalog)
+					a.registries.width = a.width - sidebarWidth - 1
+					a.registries.height = a.panelHeight()
+					a.screen = screenRegistries
+					a.focus = focusContent
+					return a, nil
+				}
+				if a.sidebar.isSandboxSelected() {
+					a.sandboxSettings = newSandboxSettingsModel(a.catalog.RepoRoot)
+					a.sandboxSettings.width = a.width - sidebarWidth - 1
+					a.sandboxSettings.height = a.panelHeight()
+					a.screen = screenSandbox
+					a.focus = focusContent
+					return a, nil
+				}
+				if a.sidebar.isLibrarySelected() {
+					a.cardCursor = 0
+					a.cardScrollOffset = 0
+					a.screen = screenLibraryCards
+					a.focus = focusContent
+					return a, nil
+				}
+				if a.sidebar.isLoadoutsSelected() {
+					loadoutItems := a.visibleItems(a.catalog.ByType(catalog.Loadouts))
+					if len(loadoutItems) == 0 {
+						items := newItemsModel(catalog.Loadouts, loadoutItems, a.providers, a.catalog.RepoRoot)
+						items.hiddenCount = countHidden(a.catalog.ByType(catalog.Loadouts))
+						items.width = a.width - sidebarWidth - 1
+						items.height = a.panelHeight()
+						a.items = items
+						a.cardParent = 0
+						a.screen = screenItems
+						a.focus = focusContent
+					} else {
+						a.cardCursor = 0
+						a.cardScrollOffset = 0
+						a.screen = screenLoadoutCards
+						a.focus = focusContent
+					}
+					return a, nil
+				}
+				ct := a.sidebar.selectedType()
+				src := a.visibleItems(a.catalog.ByType(ct))
+				items := newItemsModel(ct, src, a.providers, a.catalog.RepoRoot)
+				items.hiddenCount = countHidden(a.catalog.ByType(ct))
+				items.width = a.width - sidebarWidth - 1
+				items.height = a.panelHeight()
+				a.items = items
+				a.cardParent = 0
+				a.screen = screenItems
+				a.focus = focusContent
+				return a, nil
+			}
+			a.sidebar.focused = true
+			var cmd tea.Cmd
+			a.sidebar, cmd = a.sidebar.Update(msg)
+			return a, cmd
+		}
+
 		// Screen-specific key handling
 		switch a.screen {
-		// Sidebar-focused: route input to sidebar; Enter/Right drills into content
 		case screenCategory:
 			if key.Matches(msg, keys.ToggleHidden) {
 				a.showHidden = !a.showHidden
 				a.refreshSidebarCounts()
 				return a, nil
-			}
-			if a.focus == focusSidebar {
-				if key.Matches(msg, keys.Enter) || key.Matches(msg, keys.Right) {
-					if a.sidebar.isUpdateSelected() {
-						a.updater = newUpdateModel(a.catalog.RepoRoot, a.version, a.remoteVersion, a.commitsBehind, a.isReleaseBuild)
-						a.updater.width = a.width - sidebarWidth - 1
-						a.updater.height = a.panelHeight()
-						a.screen = screenUpdate
-						a.focus = focusContent
-						return a, nil
-					}
-					if a.sidebar.isSettingsSelected() {
-						a.settings = newSettingsModel(a.catalog.RepoRoot)
-						a.settings.width = a.width - sidebarWidth - 1
-						a.settings.height = a.panelHeight()
-						a.screen = screenSettings
-						a.focus = focusContent
-						return a, nil
-					}
-					if a.sidebar.isAddSelected() {
-						a.importer = newImportModel(a.providers, a.catalog.RepoRoot, a.projectRoot)
-						a.importer.width = a.width - sidebarWidth - 1
-						a.importer.height = a.panelHeight()
-						a.screen = screenImport
-						a.focus = focusContent
-						return a, nil
-					}
-					if a.sidebar.isRegistriesSelected() {
-						a.registries = newRegistriesModel(a.catalog.RepoRoot, a.registryCfg, a.catalog)
-						a.registries.width = a.width - sidebarWidth - 1
-						a.registries.height = a.panelHeight()
-						a.screen = screenRegistries
-						a.focus = focusContent
-						return a, nil
-					}
-					if a.sidebar.isSandboxSelected() {
-						a.sandboxSettings = newSandboxSettingsModel(a.catalog.RepoRoot)
-						a.sandboxSettings.width = a.width - sidebarWidth - 1
-						a.sandboxSettings.height = a.panelHeight()
-						a.screen = screenSandbox
-						a.focus = focusContent
-						return a, nil
-					}
-					if a.sidebar.isLibrarySelected() {
-						a.cardCursor = 0
-						a.cardScrollOffset = 0
-						a.screen = screenLibraryCards
-						a.focus = focusContent
-						return a, nil
-					}
-					if a.sidebar.isLoadoutsSelected() {
-						loadoutItems := a.visibleItems(a.catalog.ByType(catalog.Loadouts))
-						if len(loadoutItems) == 0 {
-							// No loadouts — go directly to empty items view
-							items := newItemsModel(catalog.Loadouts, loadoutItems, a.providers, a.catalog.RepoRoot)
-							items.hiddenCount = countHidden(a.catalog.ByType(catalog.Loadouts))
-							items.width = a.width - sidebarWidth - 1
-							items.height = a.panelHeight()
-							a.items = items
-							a.cardParent = 0
-							a.screen = screenItems
-							a.focus = focusContent
-						} else {
-							a.cardCursor = 0
-						a.cardScrollOffset = 0
-							a.screen = screenLoadoutCards
-							a.focus = focusContent
-						}
-						return a, nil
-					}
-					ct := a.sidebar.selectedType()
-					src := a.visibleItems(a.catalog.ByType(ct))
-					items := newItemsModel(ct, src, a.providers, a.catalog.RepoRoot)
-					items.hiddenCount = countHidden(a.catalog.ByType(ct))
-					items.width = a.width - sidebarWidth - 1
-					items.height = a.panelHeight()
-					a.items = items
-					a.cardParent = 0
-					a.screen = screenItems
-					a.focus = focusContent
-					return a, nil
-				}
-				a.sidebar.focused = true
-				var cmd tea.Cmd
-				a.sidebar, cmd = a.sidebar.Update(msg)
-				return a, cmd
 			}
 			if a.focus == focusContent {
 				totalCards := a.welcomeCardCount()
@@ -1780,6 +1878,28 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.screen = screenImport
 				a.focus = focusContent
 				return a, nil
+			}
+			if key.Matches(msg, keys.Delete) && len(a.items.items) > 0 {
+				item := a.items.selectedItem()
+				if isRemovable(item) {
+					// Populate detail so handleConfirmAction can access item info
+					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
+					installed := a.detail.installedProviders()
+					var body string
+					if len(installed) > 0 {
+						var names []string
+						for _, p := range installed {
+							names = append(names, p.Name)
+						}
+						body = fmt.Sprintf("Remove %q from your library?\n\nThis will uninstall from %s\nand delete the content directory.", item.Name, strings.Join(names, ", "))
+					} else {
+						body = fmt.Sprintf("Remove %q from your library?\n\nThis will delete the content directory.", item.Name)
+					}
+					a.modal = newConfirmModal("Remove from Library", body)
+					a.modal.purpose = modalItemRemove
+					a.focus = focusModal
+					return a, nil
+				}
 			}
 			if key.Matches(msg, keys.Enter) && len(a.items.items) > 0 {
 				item := a.items.selectedItem()
@@ -1944,6 +2064,23 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.detail.listPosition = a.items.cursor
 					a.detail.listTotal = len(a.items.items)
 				}
+				return a, nil
+			}
+			if key.Matches(msg, keys.Delete) && isRemovable(a.detail.item) {
+				installed := a.detail.installedProviders()
+				var body string
+				if len(installed) > 0 {
+					var names []string
+					for _, p := range installed {
+						names = append(names, p.Name)
+					}
+					body = fmt.Sprintf("Remove %q from your library?\n\nThis will uninstall from %s\nand delete the content directory.", a.detail.item.Name, strings.Join(names, ", "))
+				} else {
+					body = fmt.Sprintf("Remove %q from your library?\n\nThis will delete the content directory.", a.detail.item.Name)
+				}
+				a.modal = newConfirmModal("Remove from Library", body)
+				a.modal.purpose = modalItemRemove
+				a.focus = focusModal
 				return a, nil
 			}
 			if key.Matches(msg, keys.Back) {

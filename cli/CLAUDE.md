@@ -51,6 +51,6 @@ go test ./internal/tui/ -update-golden   # Regenerate golden files after visual 
 ## Content Types
 
 Syllago manages these AI tool content types:
-- Rules, Skills, Agents, Commands, Hooks, MCP configs, Prompts, Apps, Loadouts
+- Rules, Skills, Agents, Commands, Hooks, MCP configs, Loadouts
 
 Content is provider-agnostic at the catalog level. Provider-specific handling (install paths, format conversion) lives in the `provider` and `installer` packages.

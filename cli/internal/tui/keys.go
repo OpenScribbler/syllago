@@ -132,12 +132,12 @@ var keys = keyMap{
 		key.WithHelp("a", "add"),
 	),
 	Delete: key.NewBinding(
-		key.WithKeys("d"),
-		key.WithHelp("d", "remove"),
+		key.WithKeys("r"),
+		key.WithHelp("r", "remove"),
 	),
 	Refresh: key.NewBinding(
-		key.WithKeys("r"),
-		key.WithHelp("r", "sync"),
+		key.WithKeys("s"),
+		key.WithHelp("s", "sync"),
 	),
 	CreateLoadout: key.NewBinding(
 		key.WithKeys("l"),

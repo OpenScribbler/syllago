@@ -73,7 +73,6 @@ func TestRenderInstallTabHasActionButtons(t *testing.T) {
 	if !strings.Contains(stripped, "Uninstall") {
 		t.Error("renderInstallTab() should contain 'Uninstall' action button")
 	}
-	// Copy and Save were removed (only appeared for Prompts which is removed)
 }
 
 // TestRenderOverviewTabShowsRiskIndicators verifies that hook items with command

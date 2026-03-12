@@ -544,7 +544,6 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.Save):
-			// Save key currently unused — was for Prompts body save
 			break
 
 		case key.Matches(msg, keys.EnvSetup):

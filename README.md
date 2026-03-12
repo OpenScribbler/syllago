@@ -18,7 +18,7 @@
 
 </div>
 
-A CLI and TUI for managing AI coding tool content. Browse, install, and export skills, agents, prompts, rules, hooks, commands, and MCP configs across Claude Code, Gemini CLI, Codex, Cursor, Windsurf, and Copilot CLI. Content is automatically converted between provider formats when you install or export.
+A CLI and TUI for managing AI coding tool content. Browse, install, and export skills, agents, rules, hooks, commands, and MCP configs across Claude Code, Gemini CLI, Codex, Cursor, Windsurf, and Copilot CLI. Content is automatically converted between provider formats when you install or export.
 
 ## Installation
 
@@ -64,7 +64,7 @@ Running `syllago` with no arguments launches a full terminal UI for browsing and
 
 ### Layout
 
-The interface uses a persistent sidebar + content panel layout. The sidebar lists content categories (Skills, Agents, Prompts, MCP, Apps, Rules, Hooks, Commands), and the content panel shows item lists, detail views, or workflow screens.
+The interface uses a persistent sidebar + content panel layout. The sidebar lists content categories (Skills, Agents, MCP, Rules, Hooks, Commands), and the content panel shows item lists, detail views, or workflow screens.
 
 ### Navigation
 
@@ -218,7 +218,6 @@ Registries also appear in the TUI — browse by category, preview content, and i
 syllago/
 ├── skills/          # Multi-file skill packages
 ├── agents/          # Agent definitions
-├── prompts/         # Prompt templates
 ├── rules/           # Per-tool rule files
 │   ├── claude-code/
 │   ├── cursor/
@@ -233,7 +232,6 @@ syllago/
 │   ├── codex/
 │   └── gemini-cli/
 ├── mcp/             # MCP server configurations
-├── apps/            # Full application packages
 ├── memory/          # Context files for AI assistants
 ├── templates/       # Scaffolding for new content
 ├── local/           # Local content (gitignored)

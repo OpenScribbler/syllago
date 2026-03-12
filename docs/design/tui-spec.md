@@ -97,7 +97,7 @@ Cards display items in a responsive grid layout. Used on Homepage, Library, Load
 - Two columns when content width >= 42 characters, single column below
 - Card width: `(contentWidth - 5) / 2` in two-column mode, `contentWidth - 2` in single-column
 - Minimum card width: 18 characters
-- Fixed height of 3 lines in two-column mode, dynamic in single-column
+- **Fixed height in two-column mode** (set via `cardStyle.Height()`), dynamic in single-column. This is critical for correct click zones — bubblezone calculates `zone.Mark()` regions from rendered string positions, so variable-height cards in the same row cause click targets to misalign. Single-column mode doesn't need fixed height because cards stack vertically with no side-by-side alignment.
 - 1-character gap between columns
 
 **Visual:**
@@ -191,8 +191,8 @@ Transient feedback messages overlaid at the bottom of the content area.
 
 **Success Toast:**
 - Green border, `"Done: "` prefix
-- Dismisses on any keypress (the key passes through to the underlying page)
-- 1-2 lines, no scroll
+- Short messages (1-2 lines): dismiss on any keypress (the key passes through to the underlying page)
+- Long messages (e.g., bulk operations with warnings): scrollable with Up/Down, Esc dismisses. Fixed 5 visible lines.
 
 **Error Toast:**
 - Red border, `"Error: "` prefix
@@ -270,6 +270,7 @@ Full keyboard shortcut reference.
 - Activated by `?` key
 - Dismissed by `?` or Esc
 - Must include a section for EVERY screen type — no gaps
+- Scrollable with Up/Down/PgUp/PgDown on small terminals where content overflows
 
 ---
 
@@ -324,6 +325,7 @@ Visual cues that content extends beyond the visible viewport.
 | Scroll | Yes — Up/Down/PgUp/PgDown/Home/End + mouse wheel |
 | Badges | Inline: `[EXAMPLE]`, `[LIBRARY]`, `[REGISTRY]`, `[GLOBAL]`, `[BUILT-IN]` |
 | Description box | Fixed-height box below list shows selected item's description |
+| Action keys | `a` add/import, `l` create loadout (registry context only), `H` toggle hidden |
 
 ---
 
@@ -337,7 +339,7 @@ Visual cues that content extends beyond the visible viewport.
 | Breadcrumb | `Home > [Category] > [Item Name] [badge]` |
 | Tabs | Overview, Files, Install — navigated by Tab/Shift-Tab/1-2-3 |
 | Tab focus | Tab switches between tabs (NOT sidebar) |
-| Search | No |
+| Search | Yes (not available when text input is active) |
 | Action keys | `i` install, `u` uninstall, `c` copy, `s` save, `e` env setup, `p` share |
 | Mouse | Click tabs, breadcrumbs, provider checkboxes, action buttons |
 
@@ -383,8 +385,8 @@ Visual cues that content extends beyond the visible viewport.
 | Breadcrumb | `Home > Registries` |
 | Tab focus | Yes |
 | Search | Yes |
-| Cards | Dynamic sizing (NOT hardcoded), shows name/status/version/URL/description |
-| Action keys | `a` add, `d` remove, `r` sync |
+| Cards | Dynamic sizing (NOT hardcoded), fixed height in two-col mode for click zone alignment, shows name/status/version/URL/description |
+| Action keys | `a` add, `r` remove, `s` sync |
 
 ---
 
@@ -457,15 +459,16 @@ All key bindings are defined in `keys.go` as named bindings. Never hardcode key 
 
 **Navigation keys** (include vim alternatives):
 - `Up/k`, `Down/j` — Move cursor
-- `Left/h`, `Right` — Navigate horizontally (cards, tabs)
+- `Left/h`, `Right/l` — Navigate horizontally (cards, tabs)
 - `Enter` — Select / drill in
 - `Home/g`, `End/G` — Jump to first/last item
 - `PgUp`, `PgDown` — Page scroll
 - `Tab` — Toggle sidebar/content focus (or switch tabs on Detail)
 
 **Action keys:**
-- `i` install, `u` uninstall, `c` copy, `s` save, `e` env setup, `p` share
-- `a` add, `d` remove, `r` sync (card pages)
+- `i` install, `u` uninstall, `c` copy, `e` env setup, `p` share
+- `a` add, `r` remove, `s` sync (card pages and items/detail)
+- `l` create loadout (Items page, registry context only)
 - `H` toggle hidden content
 - `y/Y` confirm, `n/N` cancel (in confirm modals)
 
@@ -477,7 +480,7 @@ Every interactive element supports both keyboard AND mouse. No keyboard-only or 
 
 **Click targets:**
 - Cards: select and drill in
-- List items: select (click) or drill in
+- List items: click selects and drills in (same as Enter)
 - Breadcrumb segments: navigate to that level
 - Tabs: switch to that tab
 - Modal buttons: activate the button
@@ -496,7 +499,10 @@ Three focus targets:
 2. **`focusContent`** — Content area handles input (cards, lists, detail tabs).
 3. **`focusSidebar`** — Sidebar handles input (navigation list).
 
-Toast sits between modal and content focus — error toasts capture Esc and `c`, other keys pass through.
+Toast sits between modal and content focus:
+- **Error toast:** Esc dismisses, `c` copies to clipboard. Other keys pass through.
+- **Short success toast:** Any keypress dismisses (the key passes through to the underlying page).
+- **Long scrollable success toast:** Up/Down scroll content, Esc dismisses. Other keys pass through.
 
 ---
 
@@ -535,6 +541,7 @@ Single-line labels in constrained spaces: card titles, card descriptions, list i
 - Truncate to available width minus border/padding
 - Suffix: `"..."` (3 characters)
 - Minimum 10 characters before truncating
+- **OSC 8 hyperlinks for truncated URLs:** When a URL is truncated with `"..."`, wrap the display text in an OSC 8 hyperlink (`\x1b]8;;FULL_URL\x1b\\DISPLAY\x1b]8;;\x1b\\`) so terminals that support it link to the full URL, not the truncated text
 
 ### When to Word-Wrap
 

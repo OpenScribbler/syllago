@@ -48,4 +48,5 @@ contentW := a.width - sidebarWidth - 1  // -1 for sidebar border
 
 - Suffix: `"..."` (3 characters)
 - Minimum display: at least 10 characters before truncating
+- **OSC 8 hyperlinks:** When truncating URLs, wrap in OSC 8 hyperlink so terminals link to the full URL: `\x1b]8;;FULL_URL\x1b\\DISPLAY\x1b]8;;\x1b\\`
 - Never truncate and word-wrap the same text — pick one strategy per context

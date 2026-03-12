@@ -108,6 +108,7 @@ func TestItemsEmptyList(t *testing.T) {
 	emptyItems.height = 30
 	app.items = emptyItems
 	app.screen = screenItems
+	app.focus = focusContent
 
 	view := app.View()
 	assertContains(t, view, "No items found")
@@ -136,6 +137,7 @@ func TestItemsScrollIndicators(t *testing.T) {
 	app.items.width = 80
 	app.items.height = 30
 	app.screen = screenItems
+	app.focus = focusContent
 
 	// At the top, no "above" indicator but should have "below" indicator
 	view := app.View()
@@ -218,6 +220,7 @@ func TestItemsSearchResultsTypeTag(t *testing.T) {
 	app.items.width = 80
 	app.items.height = 30
 	app.screen = screenItems
+	app.focus = focusContent
 
 	view := app.View()
 	assertContains(t, view, "Search Results")
@@ -332,6 +335,7 @@ func TestItemsTruncation(t *testing.T) {
 	app.items.width = 60 // narrow terminal
 	app.items.height = 30
 	app.screen = screenItems
+	app.focus = focusContent
 
 	view := app.View()
 	// The view should not be wider than what's reasonable

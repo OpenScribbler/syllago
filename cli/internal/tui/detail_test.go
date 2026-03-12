@@ -716,8 +716,6 @@ func TestDetailUninstallNothingSelected(t *testing.T) {
 // Install tab (copy/save)
 // ---------------------------------------------------------------------------
 
-// TestDetailCopy and TestDetailSavePath removed — they tested Prompts body copy/save
-// which no longer exists. Copy is now only for Library items with LLM prompts.
 
 // ---------------------------------------------------------------------------
 // Install tab (share)

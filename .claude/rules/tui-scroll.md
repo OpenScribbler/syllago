@@ -13,10 +13,10 @@ These areas require scroll support:
 - Item lists (items.go) — implemented
 - Detail content (detail.go) — implemented
 - Card grids (Homepage, Library, Loadouts, Registries) — all must scroll when cards overflow
-- Sidebar (sidebar.go) — implemented
+- Sidebar (sidebar.go) — not yet implemented
 - Help overlay (help_overlay.go) — must scroll on small terminals
 - Settings (settings.go) — must scroll if fields exceed viewport
-- Toast error messages — implemented (5 visible lines)
+- Toast messages — implemented (5 visible lines). Both error toasts and long success toasts (e.g., bulk operations with warnings) scroll with Up/Down.
 
 ## Implementation Checklist
 
