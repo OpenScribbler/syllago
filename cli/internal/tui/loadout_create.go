@@ -25,7 +25,7 @@ const (
 )
 
 const (
-	createLoadoutModalWidth  = 64
+	createLoadoutModalWidth  = 56
 	createLoadoutModalHeight = 24
 )
 
