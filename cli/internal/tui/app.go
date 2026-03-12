@@ -124,9 +124,10 @@ type App struct {
 	remoteVersion string
 	commitsBehind int
 
-	showHidden bool // when true, hidden items are included in lists
-	cardCursor  int    // selected card index on card view screens
-	cardParent  screen // which card screen the items list was entered from (0 = none)
+	showHidden      bool   // when true, hidden items are included in lists
+	cardCursor      int    // selected card index on card view screens
+	cardScrollOffset int   // first visible card row on card grid pages
+	cardParent      screen // which card screen the items list was entered from (0 = none)
 
 	// Loadout apply state
 	loadoutApplyItem catalog.ContentItem // the loadout item being applied
@@ -1544,6 +1545,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					if a.sidebar.isLibrarySelected() {
 						a.cardCursor = 0
+						a.cardScrollOffset = 0
 						a.screen = screenLibraryCards
 						a.focus = focusContent
 						return a, nil
@@ -1562,6 +1564,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							a.focus = focusContent
 						} else {
 							a.cardCursor = 0
+						a.cardScrollOffset = 0
 							a.screen = screenLoadoutCards
 							a.focus = focusContent
 						}
@@ -2113,7 +2116,7 @@ func (a App) View() string {
 	case screenSettings:
 		contentView = a.settings.View()
 	case screenRegistries:
-		contentView = a.registries.View(a.cardCursor)
+		contentView, a.cardScrollOffset = a.registries.View(a.cardCursor, a.cardScrollOffset)
 	case screenSandbox:
 		contentView = a.sandboxSettings.View()
 	case screenLibraryCards:
@@ -2498,89 +2501,122 @@ func (a App) renderWelcomeCards(contentTypes []catalog.ContentType, counts map[c
 		return normalStyle
 	}
 
-	// ── Content section ──
-	s += labelStyle.Render("  Content") + "\n\n"
-
-	if singleCol {
-		for i, ct := range contentTypes {
-			inner := renderCategoryCardInner(ct, counts[ct])
-			s += zone.Mark(fmt.Sprintf("welcome-%d", i), cardStyleFor(i).Render(inner)) + "\n"
-		}
-	} else {
-		for i := 0; i < len(contentTypes); i += 2 {
-			left := renderCategoryCardInner(contentTypes[i], counts[contentTypes[i]])
-			left = zone.Mark(fmt.Sprintf("welcome-%d", i), cardStyleFor(i).Render(left))
-
-			var right string
-			if i+1 < len(contentTypes) {
-				right = renderCategoryCardInner(contentTypes[i+1], counts[contentTypes[i+1]])
-				right = zone.Mark(fmt.Sprintf("welcome-%d", i+1), cardStyleFor(i+1).Render(right))
-			}
-
-			s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
-		}
-	}
-
-	// ── Collections section ──
 	collOffset := len(contentTypes)
-	s += "\n"
-	s += labelStyle.Render("  Collections") + "\n\n"
-
-	if singleCol {
-		for i, ci := range collectionItems {
-			inner := renderCollectionCardInner(ci.label, ci.count, ci.desc)
-			s += zone.Mark(ci.zoneID, cardStyleFor(collOffset+i).Render(inner)) + "\n"
-		}
-	} else {
-		for i := 0; i < len(collectionItems); i += 2 {
-			leftInner := renderCollectionCardInner(collectionItems[i].label, collectionItems[i].count, collectionItems[i].desc)
-			left := zone.Mark(collectionItems[i].zoneID, cardStyleFor(collOffset+i).Render(leftInner))
-
-			var right string
-			if i+1 < len(collectionItems) {
-				rightInner := renderCollectionCardInner(collectionItems[i+1].label, collectionItems[i+1].count, collectionItems[i+1].desc)
-				right = zone.Mark(collectionItems[i+1].zoneID, cardStyleFor(collOffset+i+1).Render(rightInner))
-			}
-
-			s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
-		}
-	}
-
-	// ── Configuration section ──
 	cfgOffset := collOffset + len(collectionItems)
-	s += "\n"
-	s += labelStyle.Render("  Configuration") + "\n\n"
 
-	configNormal := cardNormalStyle.Width(cardW)
-	configSelected := cardSelectedStyle.Width(cardW)
-	if !singleCol {
-		configNormal = configNormal.Height(3)
-		configSelected = configSelected.Height(3)
-	}
-	cfgStyleFor := func(flatIdx int) lipgloss.Style {
-		if focused && flatIdx == a.cardCursor {
-			return configSelected
-		}
-		return configNormal
-	}
-
-	if singleCol {
-		for i, ci := range configItems {
+	renderCardAt := func(flatIdx int) string {
+		if flatIdx < collOffset {
+			ct := contentTypes[flatIdx]
+			inner := renderCategoryCardInner(ct, counts[ct])
+			return zone.Mark(fmt.Sprintf("welcome-%d", flatIdx), cardStyleFor(flatIdx).Render(inner))
+		} else if flatIdx < cfgOffset {
+			ci := collectionItems[flatIdx-collOffset]
+			inner := renderCollectionCardInner(ci.label, ci.count, ci.desc)
+			return zone.Mark(ci.zoneID, cardStyleFor(flatIdx).Render(inner))
+		} else {
+			ci := configItems[flatIdx-cfgOffset]
 			inner := labelStyle.Render(ci.label) + "\n" + helpStyle.Render(ci.desc)
-			s += zone.Mark(ci.zoneID, cfgStyleFor(cfgOffset+i).Render(inner)) + "\n"
+			return zone.Mark(ci.zoneID, cardStyleFor(flatIdx).Render(inner))
 		}
-	} else {
-		for i := 0; i < len(configItems); i += 2 {
-			leftInner := labelStyle.Render(configItems[i].label) + "\n" + helpStyle.Render(configItems[i].desc)
-			left := zone.Mark(configItems[i].zoneID, cfgStyleFor(cfgOffset+i).Render(leftInner))
-			if i+1 < len(configItems) {
-				rightInner := labelStyle.Render(configItems[i+1].label) + "\n" + helpStyle.Render(configItems[i+1].desc)
-				right := zone.Mark(configItems[i+1].zoneID, cfgStyleFor(cfgOffset+i+1).Render(rightInner))
-				s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
-			} else {
-				s += left + "\n"
+	}
+
+	// Build per-section row ranges. Each section renders its own cards independently,
+	// so odd-count sections don't bleed into the next section's row.
+	type sectionInfo struct {
+		label string
+		start int // first flat index
+		count int // number of cards
+	}
+	sections := []sectionInfo{
+		{"Content", 0, len(contentTypes)},
+		{"Collections", collOffset, len(collectionItems)},
+		{"Configuration", cfgOffset, len(configItems)},
+	}
+
+	// Compute total visual rows across all sections.
+	cols := 2
+	if singleCol {
+		cols = 1
+	}
+	totalCards := len(contentTypes) + len(collectionItems) + len(configItems)
+
+	// For scroll, treat all cards as flat and use cardScrollRange to determine viewport.
+	cardRowHeight := 6
+	availH := a.panelHeight()
+	_, _, newOffset := cardScrollRange(a.cardCursor, totalCards, cols, availH, cardRowHeight, a.cardScrollOffset)
+	a.cardScrollOffset = newOffset
+
+	// Render all sections, then do line-based viewport clipping.
+	var body string
+	for si, sec := range sections {
+		if sec.count == 0 {
+			continue
+		}
+		if si > 0 {
+			body += "\n"
+		}
+		body += labelStyle.Render("  "+sec.label) + "\n\n"
+		if singleCol {
+			for i := 0; i < sec.count; i++ {
+				body += renderCardAt(sec.start+i) + "\n"
+			}
+		} else {
+			for i := 0; i < sec.count; i += 2 {
+				left := renderCardAt(sec.start + i)
+				var right string
+				if i+1 < sec.count {
+					right = renderCardAt(sec.start + i + 1)
+				}
+				body += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
 			}
 		}
+	}
+
+	// Line-based scroll clipping
+	lines := strings.Split(body, "\n")
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	if len(lines) > availH {
+		// Cursor-following: estimate which line the cursor card is on
+		cursorLine := 0
+		cardsSeen := 0
+		for i, line := range lines {
+			_ = line
+			// Approximate: each card row is ~cardRowHeight lines, section headers are 2-3 lines
+			if cardsSeen > a.cardCursor {
+				break
+			}
+			cursorLine = i
+			// Count rendered cards by looking for zone marks (rough heuristic)
+			if strings.Contains(line, "╭") || strings.Contains(line, "welcome-") || strings.Contains(line, "loadout-card") {
+				cardsSeen += cols
+			}
+		}
+		startLine := newOffset * cardRowHeight
+		if startLine > cursorLine {
+			startLine = cursorLine
+		}
+		if startLine+availH > len(lines) {
+			startLine = len(lines) - availH
+		}
+		if startLine < 0 {
+			startLine = 0
+		}
+		endLine := startLine + availH
+		if endLine > len(lines) {
+			endLine = len(lines)
+		}
+		if startLine > 0 {
+			s += "  " + renderScrollUp(startLine, true) + "\n"
+		}
+		s += strings.Join(lines[startLine:endLine], "\n") + "\n"
+		remaining := len(lines) - endLine
+		if remaining > 0 {
+			s += "  " + renderScrollDown(remaining, true) + "\n"
+		}
+	} else {
+		s += body
 	}
 
 	return s
@@ -2751,12 +2787,39 @@ func (a App) renderLibraryCards() string {
 		return zone.Mark(fmt.Sprintf("library-card-%s", ct), style.Render(inner))
 	}
 
+	cols := 2
 	if singleCol {
-		for i, ct := range cards {
-			s += renderCard(i, ct) + "\n"
+		cols = 1
+	}
+	totalRows := (len(cards) + cols - 1) / cols
+	cardRowHeight := 6
+	headerLines := 3
+	availH := a.panelHeight() - headerLines
+	firstRow, visibleRows, newOffset := cardScrollRange(a.cardCursor, len(cards), cols, availH, cardRowHeight, a.cardScrollOffset)
+	a.cardScrollOffset = newOffset
+
+	if firstRow > 0 {
+		s += "  " + renderScrollUp(firstRow*cols, false) + "\n"
+	}
+
+	lastRow := firstRow + visibleRows
+	if lastRow > totalRows {
+		lastRow = totalRows
+	}
+
+	if singleCol {
+		for row := firstRow; row < lastRow; row++ {
+			if row >= len(cards) {
+				break
+			}
+			s += renderCard(row, cards[row]) + "\n"
 		}
 	} else {
-		for i := 0; i < len(cards); i += 2 {
+		for row := firstRow; row < lastRow; row++ {
+			i := row * 2
+			if i >= len(cards) {
+				break
+			}
 			left := renderCard(i, cards[i])
 			var right string
 			if i+1 < len(cards) {
@@ -2764,6 +2827,14 @@ func (a App) renderLibraryCards() string {
 			}
 			s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
 		}
+	}
+
+	hiddenBelow := len(cards) - lastRow*cols
+	if hiddenBelow < 0 {
+		hiddenBelow = 0
+	}
+	if hiddenBelow > 0 {
+		s += "  " + renderScrollDown(hiddenBelow, false) + "\n"
 	}
 
 	return s
@@ -2825,12 +2896,39 @@ func (a App) renderLoadoutCards() string {
 		return zone.Mark(fmt.Sprintf("loadout-card-%s", prov), style.Render(inner))
 	}
 
+	cols := 2
 	if singleCol {
-		for i, prov := range providers {
-			s += renderCard(i, prov) + "\n"
+		cols = 1
+	}
+	totalRows := (len(providers) + cols - 1) / cols
+	cardRowHeight := 6
+	headerLines := 3
+	availH := a.panelHeight() - headerLines
+	firstRow, visibleRows, newOffset := cardScrollRange(a.cardCursor, len(providers), cols, availH, cardRowHeight, a.cardScrollOffset)
+	a.cardScrollOffset = newOffset
+
+	if firstRow > 0 {
+		s += "  " + renderScrollUp(firstRow*cols, false) + "\n"
+	}
+
+	lastRow := firstRow + visibleRows
+	if lastRow > totalRows {
+		lastRow = totalRows
+	}
+
+	if singleCol {
+		for row := firstRow; row < lastRow; row++ {
+			if row >= len(providers) {
+				break
+			}
+			s += renderCard(row, providers[row]) + "\n"
 		}
 	} else {
-		for i := 0; i < len(providers); i += 2 {
+		for row := firstRow; row < lastRow; row++ {
+			i := row * 2
+			if i >= len(providers) {
+				break
+			}
 			left := renderCard(i, providers[i])
 			var right string
 			if i+1 < len(providers) {
@@ -2838,6 +2936,14 @@ func (a App) renderLoadoutCards() string {
 			}
 			s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
 		}
+	}
+
+	hiddenBelow := len(providers) - lastRow*cols
+	if hiddenBelow < 0 {
+		hiddenBelow = 0
+	}
+	if hiddenBelow > 0 {
+		s += "  " + renderScrollDown(hiddenBelow, false) + "\n"
 	}
 
 	return s

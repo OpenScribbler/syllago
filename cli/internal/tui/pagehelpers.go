@@ -90,6 +90,43 @@ func renderScrollDown(count int, isContentView bool) string {
 	return helpStyle.Render(fmt.Sprintf("(%d %s below)", count, word))
 }
 
+// cardScrollRange calculates which card rows to render given viewport constraints.
+// Returns (firstRow, rowCount, scrollOffset) where firstRow is the first visible
+// row index and rowCount is the number of visible rows.
+// cardRowHeight is the estimated lines per card row (including borders and gap).
+func cardScrollRange(cursor, totalCards, cols, availableHeight, cardRowHeight, scrollOffset int) (firstRow, visibleRows, newOffset int) {
+	totalRows := (totalCards + cols - 1) / cols
+	if cardRowHeight < 1 {
+		cardRowHeight = 6
+	}
+	visibleRows = availableHeight / cardRowHeight
+	if visibleRows < 1 {
+		visibleRows = 1
+	}
+	if visibleRows >= totalRows {
+		return 0, totalRows, 0
+	}
+
+	cursorRow := cursor / cols
+
+	// Auto-scroll to keep cursor visible
+	newOffset = scrollOffset
+	if cursorRow < newOffset {
+		newOffset = cursorRow
+	}
+	if cursorRow >= newOffset+visibleRows {
+		newOffset = cursorRow - visibleRows + 1
+	}
+	if newOffset+visibleRows > totalRows {
+		newOffset = totalRows - visibleRows
+	}
+	if newOffset < 0 {
+		newOffset = 0
+	}
+
+	return newOffset, visibleRows, newOffset
+}
+
 // renderDescriptionBox renders a separator-bounded context box for the currently
 // highlighted item. Fixed height prevents layout jitter when switching between items.
 // maxLines controls the box height (3 for normal terminals, 1-2 for small).
