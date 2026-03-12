@@ -59,7 +59,7 @@ func TestHelpOverlayContextSensitive(t *testing.T) {
 	m, _ := app.Update(keyRune('?'))
 	app = m.(App)
 	view := app.View()
-	assertContains(t, view, "Category Screen")
+	assertContains(t, view, "Home:")
 
 	// Close and navigate to detail
 	m, _ = app.Update(keyEsc)
@@ -72,7 +72,7 @@ func TestHelpOverlayContextSensitive(t *testing.T) {
 	m, _ = app.Update(keyRune('?'))
 	app = m.(App)
 	view = app.View()
-	assertContains(t, view, "Detail Screen")
+	assertContains(t, view, "Detail:")
 }
 
 func TestHelpOverlayBlockedDuringSearch(t *testing.T) {

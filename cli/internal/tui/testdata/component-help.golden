@@ -6,10 +6,12 @@ Global:
   /         search
   esc       back / cancel
 
-Category Screen:
+Home:
   up/k      move up
   down/j    move down
   enter     select
+  tab       toggle sidebar / cards
+  H         toggle hidden items
   q         quit
 
 Press ? or esc to close
