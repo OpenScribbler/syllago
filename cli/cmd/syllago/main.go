@@ -352,9 +352,15 @@ func validateVersion(v string) error {
 // If not, it rebuilds the binary and re-execs — replacing this process seamlessly.
 // Every failure is graceful: the old binary just keeps running.
 func ensureUpToDate() {
-	root, err := findContentRepoRoot()
-	if err != nil {
-		return
+	// Use the project root (where cli/ lives), not the content root.
+	// findContentRepoRoot() may return a subdirectory like content/.
+	root := repoRoot
+	if root == "" {
+		var err error
+		root, err = findProjectRoot()
+		if err != nil {
+			return
+		}
 	}
 
 	// Get current repo HEAD
