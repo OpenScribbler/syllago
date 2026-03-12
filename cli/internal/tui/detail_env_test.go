@@ -45,7 +45,7 @@ func TestEnvModalOpensFromKey(t *testing.T) {
 	}
 
 	// Switch to install tab
-	m, _ := app.Update(keyRune('3'))
+	m, _ := app.Update(keyRune('2'))
 	app = m.(App)
 
 	// Press 'e' to open env setup

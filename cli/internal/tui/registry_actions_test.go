@@ -35,6 +35,7 @@ func testAppWithRegistries(t *testing.T) App {
 	app.items.height = 30
 	app.detail.width = 80
 	app.detail.height = 30
+	app.detail.fileViewer.splitView.width = 80
 	app.settings.width = 80
 	app.settings.height = 30
 	app.importer.width = 80

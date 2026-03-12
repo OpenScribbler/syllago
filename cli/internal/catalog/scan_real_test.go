@@ -31,8 +31,8 @@ func TestScanRealRepo(t *testing.T) {
 		counts[Rules], counts[Hooks], counts[Commands])
 	for _, item := range cat.Items {
 		if !item.Type.IsUniversal() {
-			fmt.Printf("  %-10s %-15s %-25s desc=%q files=%d readme=%d\n",
-				item.Type, item.Provider, item.Name, item.Description, len(item.Files), len(item.ReadmeBody))
+			fmt.Printf("  %-10s %-15s %-25s desc=%q files=%d\n",
+				item.Type, item.Provider, item.Name, item.Description, len(item.Files))
 		}
 	}
 

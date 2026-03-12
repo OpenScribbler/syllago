@@ -29,24 +29,16 @@ func TestGoldenFullApp_ItemsSkills(t *testing.T) {
 	requireGolden(t, "fullapp-items-skills", snapshotApp(t, app))
 }
 
-func TestGoldenFullApp_DetailOverview(t *testing.T) {
-	app := navigateToDetail(t, catalog.Skills)
-	// navigateToDetail lands on the first skill's overview tab
-	requireGolden(t, "fullapp-detail-overview", snapshotApp(t, app))
-}
-
 func TestGoldenFullApp_DetailFiles(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	// Switch to Files tab (key "2")
-	m, _ := app.Update(keyRune('2'))
-	app = m.(App)
+	// navigateToDetail lands on the Files tab (now default)
 	requireGolden(t, "fullapp-detail-files", snapshotApp(t, app))
 }
 
 func TestGoldenFullApp_DetailInstall(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	// Switch to Install tab (key "3")
-	m, _ := app.Update(keyRune('3'))
+	// Switch to Install tab (key "2")
+	m, _ := app.Update(keyRune('2'))
 	app = m.(App)
 	requireGolden(t, "fullapp-detail-install", snapshotApp(t, app))
 }

@@ -95,11 +95,11 @@ func navigateToDetailItem(t *testing.T, ct catalog.ContentType, name string) App
 func TestDetailStatePreservedOnReenter(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 
-	// Switch to Files tab
+	// Switch to Install tab
 	m, _ := app.Update(keyRune('2'))
 	app = m.(App)
-	if app.detail.activeTab != tabFiles {
-		t.Fatal("expected tabFiles")
+	if app.detail.activeTab != tabInstall {
+		t.Fatal("expected tabInstall")
 	}
 
 	// Navigate back
@@ -113,15 +113,15 @@ func TestDetailStatePreservedOnReenter(t *testing.T) {
 	assertScreen(t, app, screenDetail)
 
 	// Tab should be preserved
-	if app.detail.activeTab != tabFiles {
-		t.Fatalf("expected tabFiles preserved, got %d", app.detail.activeTab)
+	if app.detail.activeTab != tabInstall {
+		t.Fatalf("expected tabInstall preserved, got %d", app.detail.activeTab)
 	}
 }
 
 func TestDetailStateClearedOnDifferentItem(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 
-	m, _ := app.Update(keyRune('2')) // Files tab
+	m, _ := app.Update(keyRune('2')) // Install tab
 	app = m.(App)
 
 	// Back
@@ -141,8 +141,8 @@ func TestDetailStateClearedOnDifferentItem(t *testing.T) {
 	app = m.(App)
 
 	// Should NOT preserve previous tab
-	if app.detail.activeTab != tabOverview {
-		t.Fatalf("expected tabOverview for new item, got %d", app.detail.activeTab)
+	if app.detail.activeTab != tabFiles {
+		t.Fatalf("expected tabFiles for new item, got %d", app.detail.activeTab)
 	}
 }
 
@@ -177,52 +177,39 @@ func TestDetailMessagePreservedDuringModal(t *testing.T) {
 func TestDetailTabCycle(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 
-	if app.detail.activeTab != tabOverview {
-		t.Fatalf("expected initial tab tabOverview, got %d", app.detail.activeTab)
-	}
-
-	// Tab cycles: Overview → Files → Install → Overview
-	m, _ := app.Update(keyTab)
-	app = m.(App)
 	if app.detail.activeTab != tabFiles {
-		t.Fatalf("expected tabFiles after 1 tab, got %d", app.detail.activeTab)
+		t.Fatalf("expected initial tab tabFiles, got %d", app.detail.activeTab)
 	}
 
-	m, _ = app.Update(keyTab)
+	// Number keys switch tabs: 1=Files, 2=Install
+	m, _ := app.Update(keyRune('2'))
 	app = m.(App)
 	if app.detail.activeTab != tabInstall {
-		t.Fatalf("expected tabInstall after 2 tabs, got %d", app.detail.activeTab)
+		t.Fatalf("expected tabInstall after '2', got %d", app.detail.activeTab)
 	}
 
-	m, _ = app.Update(keyTab)
+	m, _ = app.Update(keyRune('1'))
 	app = m.(App)
-	if app.detail.activeTab != tabOverview {
-		t.Fatalf("expected tabOverview after 3 tabs, got %d", app.detail.activeTab)
+	if app.detail.activeTab != tabFiles {
+		t.Fatalf("expected tabFiles after '1', got %d", app.detail.activeTab)
 	}
 }
 
 func TestDetailTabShortcuts(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 
-	// '2' → Files
+	// '2' → Install
 	m, _ := app.Update(keyRune('2'))
 	app = m.(App)
-	if app.detail.activeTab != tabFiles {
-		t.Fatalf("expected tabFiles from '2', got %d", app.detail.activeTab)
-	}
-
-	// '3' → Install
-	m, _ = app.Update(keyRune('3'))
-	app = m.(App)
 	if app.detail.activeTab != tabInstall {
-		t.Fatalf("expected tabInstall from '3', got %d", app.detail.activeTab)
+		t.Fatalf("expected tabInstall from '2', got %d", app.detail.activeTab)
 	}
 
-	// '1' → Overview
+	// '1' → Files
 	m, _ = app.Update(keyRune('1'))
 	app = m.(App)
-	if app.detail.activeTab != tabOverview {
-		t.Fatalf("expected tabOverview from '1', got %d", app.detail.activeTab)
+	if app.detail.activeTab != tabFiles {
+		t.Fatalf("expected tabFiles from '1', got %d", app.detail.activeTab)
 	}
 }
 
@@ -236,38 +223,31 @@ func TestDetailTabBlockedDuringModal(t *testing.T) {
 	// Tab should not switch when a modal is active (keys go to modal)
 	m, _ := app.Update(keyTab)
 	app = m.(App)
-	if app.detail.activeTab != tabOverview {
+	if app.detail.activeTab != tabFiles {
 		t.Fatal("tab switching should be blocked during active modal")
 	}
 }
 
-func TestDetailShiftTabReverseCycle(t *testing.T) {
+func TestDetailTabSwitchesNumberKeys(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 
-	// Start at Overview (0)
-	if app.detail.activeTab != tabOverview {
-		t.Fatalf("expected tabOverview, got %d", app.detail.activeTab)
+	// Start at Files (0)
+	if app.detail.activeTab != tabFiles {
+		t.Fatalf("expected tabFiles, got %d", app.detail.activeTab)
 	}
 
-	// Shift+Tab: Overview -> Install (wraps backward)
-	m, _ := app.Update(keyShiftTab)
+	// '2' → Install
+	m, _ := app.Update(keyRune('2'))
 	app = m.(App)
 	if app.detail.activeTab != tabInstall {
-		t.Fatalf("expected tabInstall after shift+tab from Overview, got %d", app.detail.activeTab)
+		t.Fatalf("expected tabInstall from '2', got %d", app.detail.activeTab)
 	}
 
-	// Shift+Tab: Install -> Files
-	m, _ = app.Update(keyShiftTab)
+	// '1' → Files
+	m, _ = app.Update(keyRune('1'))
 	app = m.(App)
 	if app.detail.activeTab != tabFiles {
 		t.Fatalf("expected tabFiles after shift+tab from Install, got %d", app.detail.activeTab)
-	}
-
-	// Shift+Tab: Files -> Overview
-	m, _ = app.Update(keyShiftTab)
-	app = m.(App)
-	if app.detail.activeTab != tabOverview {
-		t.Fatalf("expected tabOverview after shift+tab from Files, got %d", app.detail.activeTab)
 	}
 }
 
@@ -279,50 +259,45 @@ func TestDetailShiftTabBlockedDuringModal(t *testing.T) {
 
 	m, _ := app.Update(keyShiftTab)
 	app = m.(App)
-	if app.detail.activeTab != tabOverview {
+	if app.detail.activeTab != tabFiles {
 		t.Fatal("shift+tab should be blocked during active modal")
 	}
 }
 
 func TestDetailTabBlockedDuringFileView(t *testing.T) {
+	// In single-pane mode (width < 70), tab switching is blocked during preview
 	app := navigateToDetail(t, catalog.Skills)
-	app.detail.fileViewer.viewing = true
+	app.detail.width = 60 // force single-pane mode
+	app.detail.fileViewer.splitView.width = 60
+	app.detail.fileViewer.splitView.showingPreview = true
 
-	m, _ := app.Update(keyTab)
+	m, _ := app.Update(keyRune('2')) // try to switch to Install tab
 	app = m.(App)
-	if app.detail.activeTab != tabOverview {
-		t.Fatal("tab switching should be blocked while viewing file")
+	if app.detail.activeTab != tabFiles {
+		t.Fatal("tab switching should be blocked while in single-pane preview")
 	}
 }
 
 // ---------------------------------------------------------------------------
-// Overview tab
+// Files tab
 // ---------------------------------------------------------------------------
 
-func TestDetailOverviewReadme(t *testing.T) {
+func TestDetailFilesShowsMetadata(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 	view := app.View()
-	// README content should appear (glamour-rendered)
-	assertContains(t, view, "Readme body")
+	// Metadata (type, path) should appear in the pinned section
+	assertContains(t, view, "Skills")
+	assertContains(t, view, "skills/alpha-skill")
 }
 
-func TestDetailOverviewNoReadme(t *testing.T) {
-	app := navigateToDetail(t, catalog.Agents)
-	// Agent has no ReadmeBody set
-	view := app.View()
-	// Should show fallback text or just no readme content
-	// (exact text depends on render, but shouldn't crash)
-	_ = view
-}
-
-func TestDetailOverviewMetadata(t *testing.T) {
+func TestDetailFilesShowsFileList(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
 	view := app.View()
-	// Should show the item type and path
-	assertContains(t, view, "skills")
+	// Files tab is default — file list should appear
+	assertContains(t, view, "SKILL.md")
 }
 
-func TestDetailOverviewLLMPrompt(t *testing.T) {
+func TestDetailLLMPrompt(t *testing.T) {
 	// Navigate to the local skill which has LLM-PROMPT.md
 	app := navigateToLibraryItems(t)
 
@@ -339,23 +314,14 @@ func TestDetailOverviewLLMPrompt(t *testing.T) {
 	}
 }
 
-func TestDetailOverviewScroll(t *testing.T) {
+func TestDetailFilesCursorClamps(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	initialOffset := app.detail.scrollOffset
 
-	// Scroll down
-	m, _ := app.Update(keyDown)
+	// Pressing Up at cursor 0 should stay at 0
+	m, _ := app.Update(keyUp)
 	app = m.(App)
-	if app.detail.scrollOffset < initialOffset {
-		t.Fatal("expected scroll offset to increase or stay on down")
-	}
-
-	// Scroll up
-	app.detail.scrollOffset = 5
-	m, _ = app.Update(keyUp)
-	app = m.(App)
-	if app.detail.scrollOffset != 4 {
-		t.Fatalf("expected scroll offset 4, got %d", app.detail.scrollOffset)
+	if app.detail.fileViewer.splitView.cursor != 0 {
+		t.Fatalf("expected cursor 0 after up at start, got %d", app.detail.fileViewer.splitView.cursor)
 	}
 }
 
@@ -365,97 +331,95 @@ func TestDetailOverviewScroll(t *testing.T) {
 
 func TestDetailFilesNavigation(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	// Switch to files tab
-	m, _ := app.Update(keyRune('2'))
-	app = m.(App)
+	// Files tab is default — no tab switch needed
 
-	nFiles := len(app.detail.item.Files)
-	if nFiles < 2 {
-		t.Skipf("need at least 2 files, got %d", nFiles)
+	nItems := len(app.detail.fileViewer.splitView.items)
+	if nItems < 2 {
+		t.Skipf("need at least 2 items in split view, got %d", nItems)
 	}
 
-	// Navigate down
-	m, _ = app.Update(keyDown)
+	initialCursor := app.detail.fileViewer.splitView.cursor
+
+	// Navigate down — cursor should move to next selectable item
+	m, _ := app.Update(keyDown)
 	app = m.(App)
-	if app.detail.fileViewer.cursor != 1 {
-		t.Fatalf("expected fileCursor 1, got %d", app.detail.fileViewer.cursor)
+	if app.detail.fileViewer.splitView.cursor <= initialCursor {
+		t.Fatalf("expected cursor to advance past %d, got %d",
+			initialCursor, app.detail.fileViewer.splitView.cursor)
 	}
 
-	// Bounds clamping
-	app = pressN(app, keyDown, nFiles+5)
-	if app.detail.fileViewer.cursor != nFiles-1 {
-		t.Fatalf("expected fileCursor clamped at %d, got %d", nFiles-1, app.detail.fileViewer.cursor)
+	// Bounds clamping: pressing down many times should stop at last item
+	app = pressN(app, keyDown, nItems+5)
+	lastIdx := app.detail.fileViewer.splitView.cursor
+	app = pressN(app, keyDown, 3)
+	if app.detail.fileViewer.splitView.cursor != lastIdx {
+		t.Fatalf("expected cursor clamped at %d, got %d", lastIdx, app.detail.fileViewer.splitView.cursor)
 	}
 }
 
 func TestDetailFilesEnterOpens(t *testing.T) {
+	// In single-pane mode (width < 70), Enter opens full-width preview
 	app := navigateToDetail(t, catalog.Skills)
-	m, _ := app.Update(keyRune('2')) // → Files tab
+	app.detail.width = 60
+	app.detail.fileViewer.splitView.width = 60
+
+	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
-	// Enter opens file viewer
-	m, _ = app.Update(keyEnter)
-	app = m.(App)
-
-	if !app.detail.fileViewer.viewing {
-		t.Fatal("expected viewingFile=true after enter on file")
-	}
-	if app.detail.fileViewer.content == "" {
-		t.Fatal("expected fileContent to be loaded")
+	if !app.detail.fileViewer.splitView.showingPreview {
+		t.Fatal("expected showingPreview=true after enter in single-pane mode")
 	}
 }
 
-func TestDetailFilesViewerLineNumbers(t *testing.T) {
+func TestDetailFilesSplitViewShowsPreview(t *testing.T) {
+	// In split mode (width >= 70), the preview pane is always visible
 	app := navigateToDetail(t, catalog.Skills)
-	m, _ := app.Update(keyRune('2')) // → Files tab
-	app = m.(App)
-	m, _ = app.Update(keyEnter) // open file
-	app = m.(App)
-
 	view := app.View()
-	// File viewer should show line numbers or file content
-	assertContains(t, view, "SKILL.md")
+	// Preview should show primary file content (SKILL.md content loaded automatically)
+	assertContains(t, view, "Preview")
+	assertContains(t, view, "Files")
 }
 
-func TestDetailFilesViewerScroll(t *testing.T) {
+func TestDetailFilesSinglePaneScroll(t *testing.T) {
+	// In single-pane mode, Enter opens preview, then Down scrolls
 	app := navigateToDetail(t, catalog.Skills)
-	m, _ := app.Update(keyRune('2'))
-	app = m.(App)
-	m, _ = app.Update(keyEnter) // open file
+	app.detail.width = 60
+	app.detail.fileViewer.splitView.width = 60
+
+	m, _ := app.Update(keyEnter) // open file in single-pane
 	app = m.(App)
 
-	// Scroll down in viewer
 	m, _ = app.Update(keyDown)
 	app = m.(App)
-	if app.detail.fileViewer.scrollOffset != 1 {
-		t.Fatalf("expected fileScrollOffset 1, got %d", app.detail.fileViewer.scrollOffset)
+	if app.detail.fileViewer.splitView.previewScroll != 1 {
+		t.Fatalf("expected previewScroll 1, got %d", app.detail.fileViewer.splitView.previewScroll)
 	}
 }
 
-func TestDetailFilesViewerEsc(t *testing.T) {
+func TestDetailFilesSinglePaneEsc(t *testing.T) {
+	// In single-pane mode, Esc returns from preview to file tree
 	app := navigateToDetail(t, catalog.Skills)
-	m, _ := app.Update(keyRune('2'))
-	app = m.(App)
-	m, _ = app.Update(keyEnter) // open file
+	app.detail.width = 60
+	app.detail.fileViewer.splitView.width = 60
+
+	m, _ := app.Update(keyEnter) // open file
 	app = m.(App)
 
-	if !app.detail.fileViewer.viewing {
-		t.Fatal("expected viewingFile=true")
+	if !app.detail.fileViewer.splitView.showingPreview {
+		t.Fatal("expected showingPreview=true")
 	}
 
-	// Esc closes file viewer (not back to items — handled by app level)
 	m, _ = app.Update(keyEsc)
 	app = m.(App)
-	if app.detail.fileViewer.viewing {
-		t.Fatal("expected viewingFile=false after esc")
+	if app.detail.fileViewer.splitView.showingPreview {
+		t.Fatal("expected showingPreview=false after esc")
 	}
 }
 
 func TestDetailFilesEmpty(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	app.detail.item.Files = nil      // clear files
-	m, _ := app.Update(keyRune('2')) // → Files tab
-	app = m.(App)
+	app.detail.item.Files = nil // clear files
+	// Files tab is default — just re-render
 
 	view := app.View()
 	// Should not crash with empty files
@@ -468,7 +432,7 @@ func TestDetailFilesEmpty(t *testing.T) {
 
 func TestDetailInstallCheckboxNav(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	m, _ := app.Update(keyRune('3')) // → Install tab
+	m, _ := app.Update(keyRune('2')) // → Install tab
 	app = m.(App)
 
 	nChecks := len(app.detail.provCheck.checks)
@@ -487,7 +451,7 @@ func TestDetailInstallCheckboxNav(t *testing.T) {
 
 func TestDetailInstallCheckboxToggle(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	m, _ := app.Update(keyRune('3')) // → Install tab
+	m, _ := app.Update(keyRune('2')) // → Install tab
 	app = m.(App)
 
 	if len(app.detail.provCheck.checks) < 1 {
@@ -524,7 +488,7 @@ func TestDetailInstallPreChecked(t *testing.T) {
 
 func TestProviderCheckboxClickToggle(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	m, _ := app.Update(keyRune('3')) // → Install tab
+	m, _ := app.Update(keyRune('2')) // → Install tab
 	app = m.(App)
 
 	if len(app.detail.provCheck.checks) < 1 {
@@ -565,7 +529,7 @@ func TestProviderCheckboxClickToggle(t *testing.T) {
 
 func TestDetailInstallStart(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	m, _ := app.Update(keyRune('3')) // → Install tab
+	m, _ := app.Update(keyRune('2')) // → Install tab
 	app = m.(App)
 
 	// Press 'i' to start install — should return a cmd to open install modal
@@ -624,7 +588,7 @@ func TestDetailInstallModalNavigation(t *testing.T) {
 
 func TestDetailInstallAlreadyInstalled(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	m, _ := app.Update(keyRune('3'))
+	m, _ := app.Update(keyRune('2'))
 	app = m.(App)
 
 	// Mark all checkboxes as checked (simulating already installed)
@@ -647,7 +611,9 @@ func TestDetailInstallNoProviders(t *testing.T) {
 	app.detail = newDetailModel(item, nil, app.catalog.RepoRoot)
 	app.detail.width = 80
 	app.detail.height = 30
+	app.detail.fileViewer.splitView.width = 80
 	app.screen = screenDetail
+	app.focus = focusContent
 	app.detail.activeTab = tabInstall
 
 	// Press 'i'
@@ -662,7 +628,7 @@ func TestDetailInstallNoProviders(t *testing.T) {
 
 func TestDetailUninstallFlow(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	m, _ := app.Update(keyRune('3'))
+	m, _ := app.Update(keyRune('2'))
 	app = m.(App)
 
 	// Check a provider so we pass the "nothing selected" guard
@@ -678,7 +644,7 @@ func TestDetailUninstallFlow(t *testing.T) {
 
 func TestDetailUninstallNotInstalled(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	m, _ := app.Update(keyRune('3'))
+	m, _ := app.Update(keyRune('2'))
 	app = m.(App)
 
 	// Check a provider checkbox so we pass the "nothing selected" guard
@@ -695,7 +661,7 @@ func TestDetailUninstallNotInstalled(t *testing.T) {
 
 func TestDetailUninstallNothingSelected(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	m, _ := app.Update(keyRune('3'))
+	m, _ := app.Update(keyRune('2'))
 	app = m.(App)
 
 	// Ensure no checkboxes are checked
@@ -877,9 +843,9 @@ func TestDetailNextPrevShowsInHelpBar(t *testing.T) {
 // Help bar audit (4.19)
 // ---------------------------------------------------------------------------
 
-func TestHelpBarNoSaveOnOverviewTab(t *testing.T) {
+func TestHelpBarNoSaveOnFilesTab(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
-	// Should be on Overview tab by default
+	// Should be on Files tab by default
 	view := app.detail.helpText()
 	assertNotContains(t, view, "s save")
 	// Copy is only shown for library items, not regular Skills

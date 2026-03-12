@@ -423,7 +423,7 @@ func TestDetailLoadoutModeClickSelect(t *testing.T) {
 	app = m.(App)
 	assertScreen(t, app, screenDetail)
 
-	m, _ = app.Update(keyRune('3')) // → Install tab
+	m, _ = app.Update(keyRune('2')) // → Install tab
 	app = m.(App)
 
 	if app.detail.loadoutManifest == nil {
