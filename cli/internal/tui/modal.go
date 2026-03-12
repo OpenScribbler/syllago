@@ -376,7 +376,7 @@ func (m confirmModal) View() string {
 		return ""
 	}
 
-	const modalWidth = 40
+	const modalWidth = 56
 	const modalHeight = 10
 	const innerHeight = modalHeight - 2
 
@@ -393,7 +393,7 @@ func (m confirmModal) View() string {
 		content += valueStyle.Render(m.body) + "\n\n"
 	}
 
-	buttons := renderButtons("Confirm", "Cancel", m.btnCursor, 36)
+	buttons := renderButtons("Confirm", "Cancel", m.btnCursor, 52)
 
 	// Pin buttons to bottom
 	contentLines := strings.Count(content, "\n")
@@ -428,7 +428,7 @@ func newSaveModal(placeholder string) saveModal {
 	ti.Placeholder = placeholder
 	ti.Focus()
 	ti.CharLimit = 100
-	ti.Width = 36
+	ti.Width = 50
 	return saveModal{active: true, input: ti}
 }
 
@@ -465,7 +465,7 @@ func (m saveModal) View() string {
 		BorderForeground(modalBorderColor).
 		Background(modalBgColor).
 		Padding(1, 2).
-		Width(40)
+		Width(56)
 	content := labelStyle.Render("Save prompt as:") + "\n\n"
 	content += m.input.View() + "\n\n"
 	content += helpStyle.Render("[Enter] Save   [Esc] Cancel")
