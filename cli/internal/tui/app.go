@@ -344,7 +344,7 @@ func (a *App) doRegistryAdd(gitURL, nameOverride string) tea.Cmd {
 
 // doCreateLoadout writes a loadout.yaml to the chosen destination.
 func (a *App) doCreateLoadout(m createLoadoutModal) tea.Cmd {
-	projectRoot := a.projectRoot
+	contentRoot := a.catalog.RepoRoot
 	scopeRegistry := m.scopeRegistry
 	return func() tea.Msg {
 		name := strings.TrimSpace(m.nameInput.Value())
@@ -378,9 +378,12 @@ func (a *App) doCreateLoadout(m createLoadoutModal) tea.Cmd {
 		var destDir string
 		switch m.destCursor {
 		case 0: // Project
-			destDir = filepath.Join(projectRoot, "loadouts", provSlug)
+			destDir = filepath.Join(contentRoot, "loadouts", provSlug)
 		case 1: // Library
-			home, _ := os.UserHomeDir()
+			home, homeErr := os.UserHomeDir()
+			if homeErr != nil {
+				return doCreateLoadoutMsg{err: fmt.Errorf("finding home directory: %w", homeErr)}
+			}
 			destDir = filepath.Join(home, ".syllago", "content", "loadouts", provSlug)
 		case 2: // Registry
 			dir, err := registry.CloneDir(scopeRegistry)
@@ -1225,8 +1228,83 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		if a.createLoadoutModal.active {
-			if zone.Get("modal-zone").InBounds(msg) {
-				return a, nil // click inside modal — ignore
+			z := zone.Get("modal-zone")
+			if z.InBounds(msg) {
+				relX, relY := z.Pos(msg)
+				_ = relX
+				// Layout: border(1)+padding(1)=2 overhead
+				// relY=2: title, relY=3: blank, relY=4+: body content
+				switch a.createLoadoutModal.step {
+				case clStepProvider:
+					// Provider list starts at relY=6 (title+blank+subtitle+blank)
+					for i := range a.createLoadoutModal.providerList {
+						if relY == 6+i {
+							a.createLoadoutModal.providerCursor = i
+							// Synthesize Enter to select
+							m, cmd := a.createLoadoutModal.Update(tea.KeyMsg{Type: tea.KeyEnter})
+							a.createLoadoutModal = m
+							return a, cmd
+						}
+					}
+				case clStepItems:
+					// relY=4: search input
+					if relY == 4 {
+						a.createLoadoutModal.searchInput.Focus()
+						return a, nil
+					}
+					// Items start at relY=6 (search+blank+blank)
+					innerH := createLoadoutModalHeight - 8
+					filtered := a.createLoadoutModal.filteredEntries()
+					shown := filtered
+					start := 0
+					if len(shown) > innerH {
+						start = a.createLoadoutModal.itemCursor - innerH/2
+						if start < 0 {
+							start = 0
+						}
+						if start+innerH > len(shown) {
+							start = len(shown) - innerH
+						}
+					}
+					clickRow := relY - 6
+					if clickRow >= 0 && clickRow < innerH && clickRow < len(shown)-start {
+						absIdx := start + clickRow
+						a.createLoadoutModal.itemCursor = absIdx
+						// Toggle selection
+						targetItem := filtered[absIdx].item
+						for j, e := range a.createLoadoutModal.entries {
+							if e.item.Path == targetItem.Path {
+								a.createLoadoutModal.entries[j].selected = !a.createLoadoutModal.entries[j].selected
+								break
+							}
+						}
+						a.createLoadoutModal.updateDestConstraints()
+						return a, nil
+					}
+				case clStepName:
+					// relY=6: nameInput, relY=7: descInput
+					if relY == 6 {
+						a.createLoadoutModal.nameFirst = true
+						a.createLoadoutModal.descInput.Blur()
+						a.createLoadoutModal.nameInput.Focus()
+						return a, nil
+					}
+					if relY == 7 {
+						a.createLoadoutModal.nameFirst = false
+						a.createLoadoutModal.nameInput.Blur()
+						a.createLoadoutModal.descInput.Focus()
+						return a, nil
+					}
+				case clStepDest:
+					// Destination options start at relY=6
+					for i := range a.createLoadoutModal.destOptions {
+						if relY == 6+i && !a.createLoadoutModal.destDisabled[i] {
+							a.createLoadoutModal.destCursor = i
+							return a, nil
+						}
+					}
+				}
+				return a, nil // click inside modal but not on interactive element
 			}
 			a.createLoadoutModal.active = false
 			a.focus = focusContent
@@ -1387,6 +1465,15 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.detail.provCheck.cursor = i
 					a.detail.provCheck.checks[i] = !a.detail.provCheck.checks[i]
 					return a, nil
+				}
+			}
+			// Loadout mode selector (Preview/Try/Keep)
+			if a.detail.item.Type == catalog.Loadouts {
+				for i := 0; i < 3; i++ {
+					if zone.Get(fmt.Sprintf("detail-mode-%d", i)).InBounds(msg) {
+						a.detail.loadoutModeCursor = i
+						return a, nil
+					}
 				}
 			}
 		}
@@ -1559,7 +1646,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.createLoadoutModal, cmd = a.createLoadoutModal.Update(msg)
 			if !a.createLoadoutModal.active {
 				a.focus = focusContent
-				if strings.TrimSpace(a.createLoadoutModal.nameInput.Value()) != "" {
+				if a.createLoadoutModal.confirmed {
 					return a, a.doCreateLoadout(a.createLoadoutModal)
 				}
 			}
@@ -2508,9 +2595,55 @@ var categoryDesc = map[catalog.ContentType]string{
 	catalog.Loadouts: "Curated content bundles for quick session setup",
 }
 
+// sylSplitCols defines the rune column where "SYL" ends on each line of syllagoFontRaw.
+// Left of the split (SYL) gets title/mint color, right (LAGO) gets accent/purple color.
+// The split falls in the whitespace gap between the first "l" and the second "l" on every row.
+// Note: line 0 loses its leading space via TrimSpace, shifting columns left by 1.
+var sylSplitCols = []int{28, 28, 28, 28, 28, 28, 29, 28, 22, 21, 20}
+
+// renderSyllagoArt renders the ASCII art with "SYL" in mint and "LAGO" in purple,
+// centered within the given width.
+func renderSyllagoArt(width int) string {
+	art := strings.Trim(syllagoFontRaw, "\n")
+	lines := strings.Split(art, "\n")
+
+	// Find the widest line (in runes, since all chars are single-width display).
+	maxW := 0
+	for _, line := range lines {
+		if w := len([]rune(line)); w > maxW {
+			maxW = w
+		}
+	}
+	pad := (width - maxW) / 2
+	if pad < 0 {
+		pad = 0
+	}
+	padStr := strings.Repeat(" ", pad)
+
+	var result []string
+	for i, line := range lines {
+		runes := []rune(line)
+		// Pad line to maxW so all lines have uniform width.
+		if len(runes) < maxW {
+			runes = append(runes, []rune(strings.Repeat(" ", maxW-len(runes)))...)
+		}
+		var styled string
+		if i >= len(sylSplitCols) || sylSplitCols[i] >= len(runes) {
+			styled = titleStyle.Render(string(runes))
+		} else {
+			col := sylSplitCols[i]
+			styled = titleStyle.Render(string(runes[:col])) + artAccentStyle.Render(string(runes[col:]))
+		}
+		result = append(result, padStr+styled)
+	}
+	return strings.Join(result, "\n")
+}
+
 // syllagoFontRaw is the "Syllago" text in block letter style.
-const syllagoFontRaw = ` █████████             ████  ████
-███░░░░░███           ░░███ ░░███
+// Leading newline ensures TrimSpace doesn't eat alignment spaces on line 0.
+const syllagoFontRaw = `
+  █████████             ████  ████
+ ███░░░░░███           ░░███ ░░███
 ░███    ░░░  █████ ████ ░███  ░███   ██████    ███████  ██████
 ░░█████████ ░░███ ░███  ░███  ░███  ░░░░░███  ███░░███ ███░░███
  ░░░░░░░░███ ░███ ░███  ░███  ░███   ███████ ░███ ░███░███ ░███
@@ -2660,8 +2793,7 @@ func (a App) renderContentWelcome() string {
 
 	// --- ASCII art title (only when cards are showing and terminal is large) ---
 	if useCards && a.height >= 48 && contentW >= 75 {
-		font := trimArt(syllagoFontRaw)
-		s += lipgloss.PlaceHorizontal(contentW, lipgloss.Center, titleStyle.Render(font))
+		s += renderSyllagoArt(contentW)
 		s += "\n\n"
 	}
 
