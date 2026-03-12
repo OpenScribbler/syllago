@@ -13,8 +13,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// CacheDirOverride overrides the default cache directory for testing.
+// When non-empty, CacheDir returns this value instead of ~/.syllago/registries.
+var CacheDirOverride string
+
 // CacheDir returns the global registry cache directory (~/.syllago/registries).
 func CacheDir() (string, error) {
+	if CacheDirOverride != "" {
+		return CacheDirOverride, nil
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("getting home directory: %w", err)
