@@ -64,6 +64,7 @@ type createLoadoutModal struct {
 	destDisabled []bool   // parallel: true = option grayed out
 	destHints    []string // parallel: explanation for disabled options
 
+	confirmed    bool // true = user pressed Enter on dest step; false = Esc cancelled
 	message      string
 	messageIsErr bool
 }
@@ -277,6 +278,7 @@ func (m createLoadoutModal) Update(msg tea.Msg) (createLoadoutModal, tea.Cmd) {
 				if m.destDisabled[m.destCursor] {
 					return m, nil
 				}
+				m.confirmed = true
 				m.active = false
 				return m, nil
 			}
@@ -360,12 +362,13 @@ func (m createLoadoutModal) View() string {
 			if prov.Detected {
 				detected = " " + installedStyle.Render("(detected)")
 			}
-			body += fmt.Sprintf("  %s%s%s\n", prefix, style.Render(prov.Name), detected)
+			row := fmt.Sprintf("  %s%s%s", prefix, style.Render(prov.Name), detected)
+			body += zone.Mark(fmt.Sprintf("modal-opt-%d", i), row) + "\n"
 		}
 
 	case clStepItems:
 		filtered := m.filteredEntries()
-		searchLine := m.searchInput.View()
+		searchLine := zone.Mark("modal-field-search", m.searchInput.View())
 		body = searchLine + "\n\n"
 		if len(filtered) == 0 {
 			body += helpStyle.Render("  No items found.")
@@ -411,20 +414,21 @@ func (m createLoadoutModal) View() string {
 				source = helpStyle.Render(" (library)")
 			}
 			typeLabel := helpStyle.Render("[" + string(e.item.Type) + "]")
-			body += fmt.Sprintf("  %s%s %s %s%s\n",
+			row := fmt.Sprintf("  %s%s %s %s%s",
 				prefix,
 				helpStyle.Render(checkBox),
 				typeLabel,
 				style.Render(e.item.Name),
 				source,
 			)
+			body += zone.Mark(fmt.Sprintf("modal-opt-%d", absIdx), row) + "\n"
 		}
 		body += "\n" + helpStyle.Render("space select • / filter • enter next")
 
 	case clStepName:
 		body = labelStyle.Render("Name your loadout:") + "\n\n"
-		body += m.nameInput.View() + "\n"
-		body += m.descInput.View() + "\n"
+		body += zone.Mark("modal-field-name", m.nameInput.View()) + "\n"
+		body += zone.Mark("modal-field-desc", m.descInput.View()) + "\n"
 		body += "\n" + helpStyle.Render("tab switch field • enter next")
 		if m.message != "" && m.messageIsErr {
 			body += "\n" + errorMsgStyle.Render(m.message)
@@ -441,10 +445,11 @@ func (m createLoadoutModal) View() string {
 				prefix = "> "
 				style = selectedItemStyle
 			}
-			body += fmt.Sprintf("  %s%s\n", prefix, style.Render(opt))
+			row := fmt.Sprintf("  %s%s", prefix, style.Render(opt))
 			if m.destDisabled[i] && m.destHints[i] != "" {
-				body += "      " + helpStyle.Render(m.destHints[i]) + "\n"
+				row += "\n      " + helpStyle.Render(m.destHints[i])
 			}
+			body += zone.Mark(fmt.Sprintf("modal-opt-%d", i), row) + "\n"
 		}
 		body += "\n" + helpStyle.Render("enter confirm • esc back")
 	}

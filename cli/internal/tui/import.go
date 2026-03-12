@@ -961,14 +961,14 @@ func (m importModel) View() string {
 
 	case stepPath:
 		s += helpStyle.Render("Enter starting path for browser") + "\n\n"
-		s += m.pathInput.View() + "\n"
+		s += zone.Mark("import-field-path", m.pathInput.View()) + "\n"
 
 	case stepValidate:
 		s += m.viewValidate()
 
 	case stepGitURL:
 		s += helpStyle.Render("Enter git repository URL") + "\n\n"
-		s += m.urlInput.View() + "\n"
+		s += zone.Mark("import-field-url", m.urlInput.View()) + "\n"
 
 	case stepGitPick:
 		s += helpStyle.Render("Select item to add") + "\n\n"
@@ -1011,7 +1011,7 @@ func (m importModel) View() string {
 		}
 	case stepName:
 		s += helpStyle.Render("Enter a name for your new "+m.contentType.Label()+" item") + "\n\n"
-		s += m.nameInput.View() + "\n"
+		s += zone.Mark("import-field-name", m.nameInput.View()) + "\n"
 
 	case stepConfirm:
 		if m.isCreate {
@@ -2179,6 +2179,21 @@ func (m importModel) handleMouseClick(msg tea.MouseMsg) (importModel, tea.Cmd) {
 		}
 		if zone.Get("hook-btn-add").InBounds(msg) {
 			return m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		}
+		return m, nil
+	case stepPath:
+		if zone.Get("import-field-path").InBounds(msg) {
+			m.pathInput.Focus()
+		}
+		return m, nil
+	case stepGitURL:
+		if zone.Get("import-field-url").InBounds(msg) {
+			m.urlInput.Focus()
+		}
+		return m, nil
+	case stepName:
+		if zone.Get("import-field-name").InBounds(msg) {
+			m.nameInput.Focus()
 		}
 		return m, nil
 	default:

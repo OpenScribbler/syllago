@@ -585,7 +585,8 @@ func (m detailModel) renderLoadoutApplyTab() string {
 			prefix = "> "
 			nameStyle = selectedItemStyle
 		}
-		s += fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(mode.name))
+		nameLine := fmt.Sprintf("  %s%s", prefix, nameStyle.Render(mode.name))
+		s += zone.Mark(fmt.Sprintf("detail-mode-%d", i), nameLine) + "\n"
 		s += fmt.Sprintf("      %s\n", helpStyle.Render(mode.desc))
 	}
 
