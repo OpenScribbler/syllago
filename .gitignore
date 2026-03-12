@@ -2,11 +2,12 @@
 cli/syllago
 cli/syllago.*
 cli/syllago-*
-cli/syll
-cli/syll.exe
+cli/syl
+cli/syl.exe
 
 # Local user content
 local/
+content/.syllago/
 
 # OS
 .DS_Store

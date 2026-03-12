@@ -34,7 +34,7 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:     "syllago",
-	Aliases: []string{"syll"},
+	Aliases: []string{"syl"},
 	Short:   "AI coding tool content manager",
 	Long: `Syllago manages AI tool configurations across providers.
 

@@ -90,13 +90,13 @@ cp "${TMP_DIR}/${BINARY}" "$DEST"
 chmod 755 "$DEST"
 
 # Create short alias symlink
-SYLL_DEST="${INSTALL_DIR}/syll"
+SYL_DEST="${INSTALL_DIR}/syl"
 if [ "$OS" = "windows" ]; then
-  SYLL_DEST="${INSTALL_DIR}/syll.exe"
+  SYL_DEST="${INSTALL_DIR}/syl.exe"
 fi
-ln -sf "$(basename "$DEST")" "$SYLL_DEST"
+ln -sf "$(basename "$DEST")" "$SYL_DEST"
 
-echo "Installed syllago to ${DEST} (also available as 'syll')"
+echo "Installed syllago to ${DEST} (also available as 'syl')"
 
 # PATH guidance
 case ":$PATH:" in
