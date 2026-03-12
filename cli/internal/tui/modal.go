@@ -302,6 +302,8 @@ func renderButtons(left, right string, cursor, contentWidth int) string {
 		l = "  " + buttonDisabledStyle.Render(left)
 		r = "▸ " + buttonStyle.Render(right)
 	}
+	l = zone.Mark("modal-btn-left", l)
+	r = zone.Mark("modal-btn-right", r)
 	bar := l + "   " + r
 	if contentWidth > 0 {
 		bar = lipgloss.PlaceHorizontal(contentWidth, lipgloss.Center, bar)
