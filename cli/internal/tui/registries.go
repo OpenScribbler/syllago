@@ -64,7 +64,7 @@ func (m registriesModel) helpText() string {
 	return "arrows navigate • enter browse • a add • d remove • r sync • esc back"
 }
 
-func (m registriesModel) View(cursor int) string {
+func (m registriesModel) View(cursor, scrollOffset int) (string, int) {
 	s := renderBreadcrumb(
 		BreadcrumbSegment{"Home", "crumb-home"},
 		BreadcrumbSegment{"Registries", ""},
@@ -73,7 +73,7 @@ func (m registriesModel) View(cursor int) string {
 	if len(m.entries) == 0 {
 		s += helpStyle.Render("  No registries configured.") + "\n\n"
 		s += helpStyle.Render("  Press a to add a registry.") + "\n"
-		return s
+		return s, 0
 	}
 
 	contentW := m.width
@@ -86,14 +86,48 @@ func (m registriesModel) View(cursor int) string {
 		cardW = 18
 	}
 
+	cols := 2
 	if singleCol {
-		for i, entry := range m.entries {
+		cols = 1
+	}
+	totalRows := (len(m.entries) + cols - 1) / cols
+	cardRowHeight := 7 // registry cards are ~5 lines + 2 border
+	if singleCol {
+		cardRowHeight = 8
+	}
+	headerLines := 3 // breadcrumb + blank line
+	availH := m.height - headerLines
+	firstRow, visibleRows, newOffset := cardScrollRange(cursor, len(m.entries), cols, availH, cardRowHeight, scrollOffset)
+
+	if firstRow > 0 {
+		hiddenAbove := firstRow * cols
+		if hiddenAbove > len(m.entries) {
+			hiddenAbove = len(m.entries)
+		}
+		s += "  " + renderScrollUp(hiddenAbove, false) + "\n"
+	}
+
+	lastRow := firstRow + visibleRows
+	if lastRow > totalRows {
+		lastRow = totalRows
+	}
+
+	if singleCol {
+		for row := firstRow; row < lastRow; row++ {
+			i := row
+			if i >= len(m.entries) {
+				break
+			}
 			selected := i == cursor
-			card := renderRegistryCard(entry, cardW, selected)
+			card := renderRegistryCard(m.entries[i], cardW, selected)
 			s += zone.Mark(fmt.Sprintf("registry-card-%d", i), card) + "\n"
 		}
 	} else {
-		for i := 0; i < len(m.entries); i += 2 {
+		for row := firstRow; row < lastRow; row++ {
+			i := row * 2
+			if i >= len(m.entries) {
+				break
+			}
 			left := zone.Mark(fmt.Sprintf("registry-card-%d", i), renderRegistryCard(m.entries[i], cardW, i == cursor))
 			var right string
 			if i+1 < len(m.entries) {
@@ -103,7 +137,15 @@ func (m registriesModel) View(cursor int) string {
 		}
 	}
 
-	return s
+	hiddenBelow := len(m.entries) - lastRow*cols
+	if hiddenBelow < 0 {
+		hiddenBelow = 0
+	}
+	if hiddenBelow > 0 {
+		s += "  " + renderScrollDown(hiddenBelow, false) + "\n"
+	}
+
+	return s, newOffset
 }
 
 func renderRegistryCard(entry registryEntry, width int, selected bool) string {

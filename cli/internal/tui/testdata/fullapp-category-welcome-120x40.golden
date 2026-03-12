@@ -36,11 +36,7 @@ syllago           │  Content
                    │ Add content from providers, local files, or    │ │ Check for updates and pull latest changes      │
                    │ git repos                                      │ │                                                │
                    ╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
-                   ╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
-                   │ Settings                                       │ │ Sandbox                                        │
-                   │ Configure paths and providers                  │ │ Isolated environment for testing content       │
-                   │                                                │ │                                                │
-                   ╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
+                     (5 lines below)
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 tab switch panel • / search • ? help • q quit                                                              syllago
