@@ -1,9 +1,41 @@
 package tui
 
-import "strings"
+import (
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbles/key"
+)
 
 type helpOverlayModel struct {
-	active bool
+	active       bool
+	scrollOffset int
+	height       int // available viewport height
+}
+
+func (m *helpOverlayModel) Update(msg tea.KeyMsg) {
+	switch {
+	case key.Matches(msg, keys.Up):
+		if m.scrollOffset > 0 {
+			m.scrollOffset--
+		}
+	case key.Matches(msg, keys.Down):
+		m.scrollOffset++
+	case key.Matches(msg, keys.PageUp):
+		m.scrollOffset -= m.height / 2
+		if m.scrollOffset < 0 {
+			m.scrollOffset = 0
+		}
+	case key.Matches(msg, keys.PageDown):
+		m.scrollOffset += m.height / 2
+	case msg.Type == tea.KeyHome:
+		m.scrollOffset = 0
+	case msg.Type == tea.KeyEnd:
+		m.scrollOffset = 99999 // clamped below
+	case msg.Type == tea.KeyEsc:
+		m.active = false
+		m.scrollOffset = 0
+	}
 }
 
 func (m helpOverlayModel) View(s screen) string {
@@ -104,6 +136,31 @@ func (m helpOverlayModel) View(s screen) string {
 
 	lines = append(lines, "")
 	lines = append(lines, helpStyle.Render("Press ? or esc to close"))
+
+	// Scroll if content exceeds available height
+	if m.height > 0 && len(lines) > m.height {
+		offset := m.scrollOffset
+		if offset > len(lines)-m.height {
+			offset = len(lines) - m.height
+		}
+		if offset < 0 {
+			offset = 0
+		}
+		end := offset + m.height
+		if end > len(lines) {
+			end = len(lines)
+		}
+		var s string
+		if offset > 0 {
+			s += renderScrollUp(offset, true) + "\n"
+		}
+		s += strings.Join(lines[offset:end], "\n")
+		remaining := len(lines) - end
+		if remaining > 0 {
+			s += "\n" + renderScrollDown(remaining, true)
+		}
+		return s
+	}
 
 	return strings.Join(lines, "\n")
 }
