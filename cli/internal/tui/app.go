@@ -1291,7 +1291,22 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				// Other keys fall through — toast stays visible
 			} else {
-				// Success toast: dismiss on any keypress, don't consume
+				// Success toast: if scrollable, handle scroll keys; otherwise dismiss
+				if a.toast.isScrollable() {
+					switch {
+					case key.Matches(msg, keys.Back):
+						a.toast.dismiss()
+						return a, nil
+					case key.Matches(msg, keys.Up):
+						a.toast.scrollOffset--
+						a.toast.clampScroll()
+						return a, nil
+					case key.Matches(msg, keys.Down):
+						a.toast.scrollOffset++
+						a.toast.clampScroll()
+						return a, nil
+					}
+				}
 				a.toast.dismiss()
 				// Fall through so the key also triggers its normal action
 			}
