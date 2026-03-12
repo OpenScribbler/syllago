@@ -39,8 +39,6 @@ type loadoutCreateManifest struct {
 	Agents      []string `yaml:"agents,omitempty"`
 	MCP         []string `yaml:"mcp,omitempty"`
 	Commands    []string `yaml:"commands,omitempty"`
-	Prompts     []string `yaml:"prompts,omitempty"`
-	Apps        []string `yaml:"apps,omitempty"`
 }
 
 func runLoadoutCreate(cmd *cobra.Command, args []string) error {
@@ -179,8 +177,7 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(output.Writer, "Description: %s\n", manifest.Description)
 
 	totalItems := len(manifest.Rules) + len(manifest.Hooks) + len(manifest.Skills) +
-		len(manifest.Agents) + len(manifest.MCP) + len(manifest.Commands) +
-		len(manifest.Prompts) + len(manifest.Apps)
+		len(manifest.Agents) + len(manifest.MCP) + len(manifest.Commands)
 	fmt.Fprintf(output.Writer, "Total items: %d\n", totalItems)
 
 	if totalItems == 0 {

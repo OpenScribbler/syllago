@@ -473,14 +473,20 @@ func (m itemsModel) View() string {
 }
 
 func (m itemsModel) helpText() string {
-	help := "/ search • enter detail • a add • esc back • ? help"
+	help := "tab sidebar • / search • enter detail • a add • r remove • esc back • ? help"
 	if m.sourceRegistry != "" {
-		help = "/ search • enter detail • a add • l create loadout • esc back • ? help"
+		help = "tab sidebar • / search • enter detail • a add • r remove • l create loadout • esc back • ? help"
 	}
 	if m.hiddenCount > 0 {
 		help += fmt.Sprintf(" • H show %d hidden", m.hiddenCount)
 	}
 	return help
+}
+
+// isRemovable returns true if the item can be removed from the library.
+// Only library items (Source == "global") are removable — registry items are not.
+func isRemovable(item catalog.ContentItem) bool {
+	return item.Source == "global" && item.Library
 }
 
 func (m itemsModel) selectedItem() catalog.ContentItem {

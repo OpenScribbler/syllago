@@ -13,7 +13,7 @@ There are two page patterns: **list pages** and **card grid pages**. Every page 
 |------|-------------|---------|------|------------|-----------|--------|
 | Homepage | `screenCategory` | Card grid | app.go | No (is home) | Yes | Yes |
 | Items | `screenItems` | List | items.go | Yes | Yes | Yes |
-| Detail | `screenDetail` | Tabbed | detail.go | Yes | Tabs only | No |
+| Detail | `screenDetail` | Tabbed | detail.go | Yes | Tabs only | Yes (not when text input active) |
 | Library | `screenLibraryCards` | Card grid | app.go | Yes | Yes | Yes |
 | Loadouts | `screenLoadoutCards` | Card grid | app.go | Yes | Yes | Yes |
 | Registries | `screenRegistries` | Card grid | registries.go | Yes | Yes | Yes |

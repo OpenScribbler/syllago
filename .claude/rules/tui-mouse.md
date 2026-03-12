@@ -9,7 +9,9 @@ Every interactive element in the TUI must support both keyboard AND mouse intera
 
 ## Zone Marking
 
-All clickable elements use `zone.Mark(id, content)` from bubblezone:
+All clickable elements use `zone.Mark(id, content)` from bubblezone.
+
+**Critical:** In two-column card grids, cards MUST use fixed height (`cardStyle.Height()`) so that `zone.Mark()` regions align correctly within each row. Variable-height cards cause click targets to shift because bubblezone calculates zones from rendered string positions. Single-column grids don't need this since cards stack vertically.
 
 ```go
 // Cards
@@ -46,7 +48,7 @@ zone.Mark("modal-btn-cancel", buttonDisabledStyle.Render("Cancel"))
 ## Click Behaviors
 
 - **Cards:** Click selects and drills into the card (same as Enter)
-- **List items:** Click selects; can also drill into on click
+- **List items:** Click selects and drills in (same as Enter)
 - **Breadcrumbs:** Click navigates to that level
 - **Tabs:** Click switches to that tab
 - **Modal buttons:** Click activates the button action

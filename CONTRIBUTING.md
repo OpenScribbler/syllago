@@ -11,7 +11,7 @@ When you open an issue, you'll be guided through a structured set of questions d
 - **Bug Report** — Something isn't working the way it should
 - **Feature Idea** — Something that should exist but doesn't yet
 - **Improvement** — Something that works but could be better
-- **Content Request** — A suggestion for new built-in AI content (skills, agents, prompts, rules, hooks, etc.) that helps people use or understand syllago
+- **Content Request** — A suggestion for new built-in AI content (skills, agents, rules, hooks, etc.) that helps people use or understand syllago
 
 Each template walks you through the right questions. Just follow the prompts.
 
@@ -23,7 +23,7 @@ Each template walks you through the right questions. Just follow the prompts.
 
 ## About syllago's built-in content
 
-syllago ships with AI content — skills, agents, prompts, rules, hooks, and more — that help users work with and understand the CLI itself. These are meta-tools: they exist to make syllago better, not for general-purpose distribution. When suggesting new content, think about what would make syllago easier to learn, use, or extend.
+syllago ships with AI content — skills, agents, rules, hooks, and more — that help users work with and understand the CLI itself. These are meta-tools: they exist to make syllago better, not for general-purpose distribution. When suggesting new content, think about what would make syllago easier to learn, use, or extend.
 
 ## Getting started
 

@@ -119,7 +119,7 @@ func scanRoot(cat *Catalog, baseDir string, local bool) error {
 	return nil
 }
 
-// scanUniversal discovers items for universal types (skills, agents, prompts, mcp, apps).
+// scanUniversal discovers items for universal types (skills, agents, mcp).
 // Each subdirectory inside the type directory is one item.
 func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.DirEntry, local bool) error {
 	for _, entry := range entries {

@@ -33,7 +33,7 @@ var infoCmd = &cobra.Command{
 			for _, ct := range catalog.AllContentTypes() {
 				fmt.Fprintf(output.Writer, "  - %s\n", ct.Label())
 			}
-			fmt.Fprintln(output.Writer, "\n  Note: Prompts and Apps are standalone types (not installable to providers)")
+			fmt.Fprintln(output.Writer)
 			fmt.Fprintf(output.Writer, "\nProviders: %d\n", len(provider.AllProviders))
 			for _, p := range provider.AllProviders {
 				fmt.Fprintf(output.Writer, "  - %s (%s)\n", p.Name, p.Slug)

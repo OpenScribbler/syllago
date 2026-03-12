@@ -105,7 +105,7 @@ func validateJSONFile(itemDir, filename string) []ValidationError {
 func validateFileExists(itemDir, filename string) []ValidationError {
 	filePath := filepath.Join(itemDir, filename)
 	if _, err := os.Stat(filePath); err != nil {
-		return []ValidationError{{filename, fmt.Sprintf("Missing. Apps need an %s file.", filename)}}
+		return []ValidationError{{filename, fmt.Sprintf("Missing %s file.", filename)}}
 	}
 	return nil
 }

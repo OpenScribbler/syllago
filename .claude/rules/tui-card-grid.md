@@ -7,12 +7,14 @@ paths:
 
 Cards are used on Homepage, Library, Loadouts, and Registries pages. All card grids follow the same layout, style, and interaction rules.
 
+**Note:** Homepage is structurally different — it has multiple card sections (Content, Collections, Configuration) with section headers between them, rather than one continuous grid. This affects cursor navigation and scroll behavior. The rules below apply to each section individually.
+
 ## Layout
 
 - Two columns when `contentW >= 42`, single column below
 - Card width: `(contentW - 5) / 2` (two-col) or `contentW - 2` (single-col)
 - Minimum card width: 18
-- Fixed height: 3 lines in two-column mode, dynamic in single-column
+- **Fixed height in two-column mode** (set via `cardStyle.Height()`), dynamic in single-column. Fixed height is required so that bubblezone `zone.Mark()` click regions align correctly — variable-height cards in the same row cause click targets to shift or overlap.
 - Gap: 1 character between columns (via `lipgloss.JoinHorizontal` with `" "` spacer)
 
 ## Styles

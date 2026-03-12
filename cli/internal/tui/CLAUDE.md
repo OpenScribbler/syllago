@@ -111,9 +111,8 @@ entry := fmt.Sprintf("  %s%s", prefix, style.Render(text))
 ## Modal Conventions
 
 **Dimensions:**
-- Simple dialogs (confirm, save): `modalWidth = 40`
-- Complex wizards (install, env setup): `modalWidth = 56`, `modalHeight` as needed
-- Use fixed dimensions per modal type to prevent jitter between steps
+- **All modals use `modalWidth = 56`** — one standard size, no exceptions
+- Use fixed height when buttons are pinned to bottom (prevents jitter between steps)
 
 **Style:**
 ```go
@@ -161,8 +160,8 @@ case msg.String() == "k":
 | Key | Category | Items | Library Cards | Loadout Cards | Registries | Detail |
 |-----|----------|-------|---------------|---------------|------------|--------|
 | a   | --       | add   | add           | create loadout| add registry| --    |
-| d   | --       | --    | --            | --            | remove      | --    |
-| r   | --       | --    | --            | --            | sync        | --    |
+| r   | --       | remove| --            | --            | remove      | remove |
+| s   | --       | --    | --            | --            | sync        | --    |
 | l   | --       | create loadout (registry context) | -- | -- | -- | --    |
 | H   | toggle hidden | toggle hidden | -- | --       | --          | --    |
 

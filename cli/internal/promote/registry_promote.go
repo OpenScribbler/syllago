@@ -36,7 +36,7 @@ func PromoteToRegistry(repoRoot string, registryName string, item catalog.Conten
 	}
 
 	// 2. Determine destination path within the registry.
-	// Universal types (skills, agents, prompts, mcp, apps): type/name
+	// Universal types (skills, agents, mcp): type/name
 	// Provider-specific types (rules, hooks, commands): type/provider/name
 	var destPath string
 	if item.Type.IsUniversal() {

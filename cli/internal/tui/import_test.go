@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
@@ -335,6 +337,73 @@ func TestDiscoveryDoneMsgPreselection(t *testing.T) {
 		if sel != expected[i] {
 			t.Fatalf("item %d: expected selected=%v, got %v", i, expected[i], sel)
 		}
+	}
+}
+
+func TestDiscoverySelectScrollOverflow(t *testing.T) {
+	app := navigateToImport(t)
+	app.importer.step = stepDiscoverySelect
+	app.importer.height = 20 // small panel height
+
+	// Create 30 items to overflow the viewport
+	items := make([]add.DiscoveryItem, 30)
+	selected := make([]bool, 30)
+	for i := range items {
+		items[i] = add.DiscoveryItem{
+			Name:   fmt.Sprintf("item-%02d", i),
+			Type:   catalog.Rules,
+			Path:   fmt.Sprintf("/tmp/item-%02d", i),
+			Status: add.StatusNew,
+		}
+		selected[i] = true
+	}
+	app.importer.discoveryItems = items
+	app.importer.discoverySelected = selected
+	app.importer.discoveryCursor = 0
+	app.importer.discoveryScrollOffset = 0
+
+	// Buttons should be visible even with overflow
+	view := app.View()
+	assertContains(t, view, "Select All")
+	assertContains(t, view, "Deselect All")
+	assertContains(t, view, "Add Selected")
+	// Scroll down indicator should appear
+	assertContains(t, view, "more below")
+	// First item visible
+	assertContains(t, view, "item-00")
+
+	// Navigate cursor down past viewport — scroll should follow
+	for i := 0; i < 15; i++ {
+		m, _ := app.Update(keyDown)
+		app = m.(App)
+	}
+	if app.importer.discoveryCursor != 15 {
+		t.Fatalf("expected cursor 15, got %d", app.importer.discoveryCursor)
+	}
+	if app.importer.discoveryScrollOffset == 0 {
+		t.Fatal("expected scrollOffset to advance past 0 after navigating down")
+	}
+
+	// Buttons should still be visible after scrolling
+	view = app.View()
+	assertContains(t, view, "Select All")
+	assertContains(t, view, "Add Selected")
+
+	// Home key should jump to top
+	m, _ := app.Update(tea.KeyMsg{Type: tea.KeyHome})
+	app = m.(App)
+	if app.importer.discoveryCursor != 0 {
+		t.Fatalf("expected cursor 0 after Home, got %d", app.importer.discoveryCursor)
+	}
+	if app.importer.discoveryScrollOffset != 0 {
+		t.Fatalf("expected scrollOffset 0 after Home, got %d", app.importer.discoveryScrollOffset)
+	}
+
+	// End key should jump to last
+	m, _ = app.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	app = m.(App)
+	if app.importer.discoveryCursor != 29 {
+		t.Fatalf("expected cursor 29 after End, got %d", app.importer.discoveryCursor)
 	}
 }
 

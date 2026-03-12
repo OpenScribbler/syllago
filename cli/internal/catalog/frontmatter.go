@@ -9,11 +9,11 @@ import (
 )
 
 // Frontmatter holds the YAML frontmatter parsed from content definition files
-// (SKILL.md, AGENT.md, PROMPT.md, or app README.md).
+// (SKILL.md, AGENT.md).
 type Frontmatter struct {
 	Name        string   `yaml:"name"`
 	Description string   `yaml:"description"`
-	Providers   []string `yaml:"providers"` // provider slugs (apps only), e.g. ["claude-code", "gemini-cli"]
+	Providers   []string `yaml:"providers"` // provider slugs, e.g. ["claude-code", "gemini-cli"]
 }
 
 // ParseFrontmatter extracts YAML frontmatter from a markdown file's content.

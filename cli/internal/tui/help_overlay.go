@@ -71,6 +71,8 @@ func (m helpOverlayModel) View(s screen) string {
 		lines = append(lines, "  "+helpStyle.Render("up/k      move up"))
 		lines = append(lines, "  "+helpStyle.Render("down/j    move down"))
 		lines = append(lines, "  "+helpStyle.Render("enter     view details"))
+		lines = append(lines, "  "+helpStyle.Render("r         remove (library items)"))
+		lines = append(lines, "  "+helpStyle.Render("tab       toggle sidebar"))
 
 	case screenDetail:
 		lines = append(lines, labelStyle.Render("Detail:"))
@@ -80,8 +82,8 @@ func (m helpOverlayModel) View(s screen) string {
 		lines = append(lines, "  "+helpStyle.Render("up/down   scroll / navigate"))
 		lines = append(lines, "  "+helpStyle.Render("i         install"))
 		lines = append(lines, "  "+helpStyle.Render("u         uninstall"))
+		lines = append(lines, "  "+helpStyle.Render("r         remove from library"))
 		lines = append(lines, "  "+helpStyle.Render("c         copy prompt"))
-		lines = append(lines, "  "+helpStyle.Render("s         save prompt"))
 		lines = append(lines, "  "+helpStyle.Render("e         env var setup (MCP)"))
 		lines = append(lines, "  "+helpStyle.Render("p         share (library)"))
 
@@ -105,8 +107,8 @@ func (m helpOverlayModel) View(s screen) string {
 		lines = append(lines, "  "+helpStyle.Render("enter     browse registry"))
 		lines = append(lines, "  "+helpStyle.Render("tab       toggle sidebar / cards"))
 		lines = append(lines, "  "+helpStyle.Render("a         add registry"))
-		lines = append(lines, "  "+helpStyle.Render("d         remove registry"))
-		lines = append(lines, "  "+helpStyle.Render("r         sync registry"))
+		lines = append(lines, "  "+helpStyle.Render("r         remove registry"))
+		lines = append(lines, "  "+helpStyle.Render("s         sync registry"))
 
 	case screenImport:
 		lines = append(lines, labelStyle.Render("Add:"))

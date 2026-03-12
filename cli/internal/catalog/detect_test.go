@@ -21,16 +21,6 @@ func TestDetectContent(t *testing.T) {
 	os.MkdirAll(agentDir, 0755)
 	os.WriteFile(filepath.Join(agentDir, "AGENT.md"), []byte("---\nname: test-agent\n---\n"), 0644)
 
-	// Create a valid prompt directory
-	promptDir := filepath.Join(tmp, "my-prompt")
-	os.MkdirAll(promptDir, 0755)
-	os.WriteFile(filepath.Join(promptDir, "PROMPT.md"), []byte("---\nname: test-prompt\n---\n"), 0644)
-
-	// Create a valid app directory (README.md with frontmatter)
-	appDir := filepath.Join(tmp, "my-app")
-	os.MkdirAll(appDir, 0755)
-	os.WriteFile(filepath.Join(appDir, "README.md"), []byte("---\nname: test-app\ndescription: A test app\n---\n# App"), 0644)
-
 	// Create a directory with no recognized content
 	emptyDir := filepath.Join(tmp, "random")
 	os.MkdirAll(emptyDir, 0755)
@@ -48,8 +38,6 @@ func TestDetectContent(t *testing.T) {
 	}{
 		{"skill dir", skillDir, "Skill", true},
 		{"agent dir", agentDir, "Agent", true},
-		{"prompt dir", promptDir, "Prompt", true},
-		{"app dir", appDir, "App", true},
 		{"no content dir", emptyDir, "", false},
 		{"markdown file", plainFile, ".md", true},
 	}

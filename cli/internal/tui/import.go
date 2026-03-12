@@ -146,8 +146,9 @@ type importModel struct {
 	discoveryProvCursor int                 // cursor for stepProviderPick
 	discoveryItems      []add.DiscoveryItem // results from DiscoverFromProvider
 	discoverySelected   []bool              // checkbox state per item
-	discoveryCursor     int                 // cursor for stepDiscoverySelect
-	discoveryProvider   provider.Provider   // selected provider
+	discoveryCursor       int                 // cursor for stepDiscoverySelect
+	discoveryScrollOffset int                 // scroll offset for stepDiscoverySelect
+	discoveryProvider     provider.Provider   // selected provider
 
 	// Pre-filter fields: when set, the corresponding wizard step is skipped.
 	preFilterType     catalog.ContentType // when non-zero, skip stepType
@@ -334,6 +335,7 @@ func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
 			m.discoverySelected[i] = item.Status == add.StatusNew || item.Status == add.StatusOutdated
 		}
 		m.discoveryCursor = 0
+		m.discoveryScrollOffset = 0
 		m.step = stepDiscoverySelect
 		m.message = ""
 		return m, nil
@@ -348,6 +350,14 @@ func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
 			}
 			if msg.Button == tea.MouseButtonWheelDown {
 				m.conflict.scrollOffset++
+			}
+		}
+		if m.step == stepDiscoverySelect {
+			if msg.Button == tea.MouseButtonWheelUp && m.discoveryScrollOffset > 0 {
+				m.discoveryScrollOffset--
+			}
+			if msg.Button == tea.MouseButtonWheelDown {
+				m.discoveryScrollOffset++
 			}
 		}
 		// Handle left-clicks on zone-marked list items
@@ -1086,7 +1096,36 @@ func (m importModel) View() string {
 				}
 			}
 			s += labelStyle.Render(fmt.Sprintf("Found %d items from %s:", len(m.discoveryItems), m.discoveryProvider.Name)) + "\n\n"
-			for i, item := range m.discoveryItems {
+
+			// Calculate visible rows: panel height minus overhead
+			// Overhead: breadcrumb(1) + header+blank(2) + action bar(4) + scroll indicators(2) + footer(2)
+			visibleRows := m.height - 11
+			if visibleRows < 3 {
+				visibleRows = 3
+			}
+			totalItems := len(m.discoveryItems)
+
+			// Clamp scroll offset
+			maxOffset := totalItems - visibleRows
+			if maxOffset < 0 {
+				maxOffset = 0
+			}
+			if m.discoveryScrollOffset > maxOffset {
+				m.discoveryScrollOffset = maxOffset
+			}
+
+			// Scroll up indicator
+			if m.discoveryScrollOffset > 0 {
+				s += renderScrollUp(m.discoveryScrollOffset, false) + "\n"
+			}
+
+			// Render visible window of items
+			end := m.discoveryScrollOffset + visibleRows
+			if end > totalItems {
+				end = totalItems
+			}
+			for i := m.discoveryScrollOffset; i < end; i++ {
+				item := m.discoveryItems[i]
 				check := "[ ]"
 				if m.discoverySelected[i] {
 					check = installedStyle.Render("[✓]")
@@ -1114,6 +1153,11 @@ func (m importModel) View() string {
 				}
 				row := fmt.Sprintf("  %s%s %s %s %s%s", prefix, check, style.Render(item.Name), typeTag, badge, scopeTag)
 				s += zone.Mark(fmt.Sprintf("discovery-item-%d", i), row) + "\n"
+			}
+
+			// Scroll down indicator
+			if end < totalItems {
+				s += renderScrollDown(totalItems-end, false) + "\n"
 			}
 
 			// Action bar (matches detail_render.go pattern)
@@ -1957,6 +2001,13 @@ func (m importModel) updateDiscoverySelect(msg tea.KeyMsg) (importModel, tea.Cmd
 		if m.discoveryCursor < len(m.discoveryItems)-1 {
 			m.discoveryCursor++
 		}
+	case key.Matches(msg, keys.Home):
+		m.discoveryCursor = 0
+	case key.Matches(msg, keys.End):
+		m.discoveryCursor = len(m.discoveryItems) - 1
+		if m.discoveryCursor < 0 {
+			m.discoveryCursor = 0
+		}
 	case msg.String() == " ":
 		if len(m.discoverySelected) > 0 {
 			m.discoverySelected[m.discoveryCursor] = !m.discoverySelected[m.discoveryCursor]
@@ -2004,6 +2055,17 @@ func (m importModel) updateDiscoverySelect(msg tea.KeyMsg) (importModel, tea.Cmd
 			}
 			return importDoneMsg{name: name, warnings: warnings}
 		}
+	}
+	// Keep cursor visible within scroll window
+	visibleRows := m.height - 11
+	if visibleRows < 3 {
+		visibleRows = 3
+	}
+	if m.discoveryCursor < m.discoveryScrollOffset {
+		m.discoveryScrollOffset = m.discoveryCursor
+	}
+	if m.discoveryCursor >= m.discoveryScrollOffset+visibleRows {
+		m.discoveryScrollOffset = m.discoveryCursor - visibleRows + 1
 	}
 	return m, nil
 }

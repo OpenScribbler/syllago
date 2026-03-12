@@ -324,6 +324,7 @@ const (
 	modalLoadoutApply
 	modalHookBrokenWarning
 	modalRegistryRemove
+	modalItemRemove
 	modalNonSyllagoRedirect
 )
 

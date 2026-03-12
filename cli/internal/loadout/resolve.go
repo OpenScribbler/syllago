@@ -24,7 +24,7 @@ type ResolvedRef struct {
 // Resolution strategy:
 //   - Provider-specific types (Rules, Hooks, Commands): match by type + provider + name.
 //     These live under content/<type>/<provider>/<name>/ so provider scoping is required.
-//   - Universal types (Skills, Agents, Prompts, MCP, Apps): match by type + name only.
+//   - Universal types (Skills, Agents, MCP): match by type + name only.
 //     These are provider-agnostic and live under content/<type>/<name>/.
 //   - The catalog's Items slice is already ordered by precedence (local > content > registry),
 //     so the first match wins.

@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -179,6 +180,9 @@ func (m sidebarModel) View() string {
 	}
 
 	style := sidebarBorderStyle.Width(sidebarWidth)
+	if m.focused {
+		style = style.BorderForeground(accentColor)
+	}
 	if m.height > 0 {
 		style = style.Height(m.height)
 	}
@@ -212,9 +216,14 @@ func (m sidebarModel) selectedType() catalog.ContentType {
 
 // renderSidebarRow renders a single sidebar row with consistent cursor prefix.
 func (m sidebarModel) renderSidebarRow(index int, line string, inner int) string {
-	prefix, style := cursorPrefix(index == m.cursor)
+	selected := index == m.cursor
+	prefix, style := cursorPrefix(selected)
 	var rowContent string
-	if index == m.cursor {
+	if selected && !m.focused {
+		// Unfocused + selected: keep cursor but use muted style instead of accent
+		style = lipgloss.NewStyle().Foreground(mutedColor)
+	}
+	if selected {
 		rowContent = style.Render(fmt.Sprintf("%s%-*s", prefix, inner-2, line))
 	} else {
 		rowContent = prefix + style.Render(line)

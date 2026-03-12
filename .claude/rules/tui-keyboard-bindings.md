@@ -22,15 +22,15 @@ case msg.String() == "i":
 ## Binding Conventions
 
 - Navigation: up/k, down/j, left/h, right/l (vim alternatives)
-- Actions: single lowercase — i=install, u=uninstall, c=copy, s=save, e=env, p=promote
-- Card pages: a=add, d=remove, r=sync
+- Actions: single lowercase — i=install, u=uninstall, c=copy, s=save, e=env, p=share
+- Card pages: a=add, r=remove, s=sync
 - Toggles: uppercase — H=toggle hidden
 - Confirm/cancel: `keys.ConfirmYes` (y/Y), `keys.ConfirmNo` (n/N)
 
 ## Focus Priority
 
 1. `focusModal` — ALL input goes to the active modal
-2. Toast key handling — error toast: Esc/c; success toast: any key dismisses (passes through)
+2. Toast key handling — error toast: Esc/c; short success toast: any key dismisses (passes through); long scrollable success toast: Up/Down scroll, Esc dismisses
 3. Search bar — when active, captures text input
 4. `focusContent` / `focusSidebar` — normal page-level routing
 
