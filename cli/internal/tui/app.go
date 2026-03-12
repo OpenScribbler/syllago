@@ -1359,15 +1359,15 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Don't activate during text input
 			} else {
 				a.helpOverlay.active = true
+				a.helpOverlay.scrollOffset = 0
+				a.helpOverlay.height = a.panelHeight()
 				return a, nil
 			}
 		}
 
-		// If help overlay is active, esc closes it; all other keys are swallowed
+		// If help overlay is active, delegate to its Update (handles scroll + esc)
 		if a.helpOverlay.active {
-			if msg.Type == tea.KeyEsc {
-				a.helpOverlay.active = false
-			}
+			a.helpOverlay.Update(msg)
 			return a, nil
 		}
 
