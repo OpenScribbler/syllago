@@ -67,7 +67,6 @@ type ContentItem struct {
 	Type               ContentType
 	Path               string         // absolute path to the item directory or file
 	Provider           string         // for provider-specific content (rules, hooks, commands), which provider
-	ReadmeBody         string         // raw README.md content (for rendering in detail view)
 	Files              []string       // relative paths of all files in item directory
 	Meta               *metadata.Meta // loaded from .syllago.yaml if present
 	Library            bool           // true if item lives in the global content library (~/.syllago/content/)

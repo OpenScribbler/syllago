@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -47,7 +45,7 @@ func TestRenderContentSplitMetadataInPinned(t *testing.T) {
 func TestRenderTabBarHasZoneMarks(t *testing.T) {
 	m := detailModel{
 		item:      catalog.ContentItem{Name: "test", Type: catalog.Skills},
-		activeTab: tabOverview,
+		activeTab: tabFiles,
 	}
 	tabBar := m.renderTabBar()
 	// zone.Mark() wraps content with ANSI escape sequences (\x1b[NNNNz...\x1b[NNNNz).
@@ -72,49 +70,6 @@ func TestRenderInstallTabHasActionButtons(t *testing.T) {
 	}
 	if !strings.Contains(stripped, "Uninstall") {
 		t.Error("renderInstallTab() should contain 'Uninstall' action button")
-	}
-}
-
-// TestRenderOverviewTabShowsRiskIndicators verifies that hook items with command
-// hooks display a risk indicator in the Overview tab.
-func TestRenderOverviewTabShowsRiskIndicators(t *testing.T) {
-	dir := t.TempDir()
-	hookJSON := `{"hooks":{"PostToolUse":[{"matcher":"Write","command":"echo hi"}]}}`
-	if err := os.WriteFile(filepath.Join(dir, "hook.json"), []byte(hookJSON), 0644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-
-	m := detailModel{
-		item: catalog.ContentItem{
-			Name:  "test-hook",
-			Type:  catalog.Hooks,
-			Path:  dir,
-			Files: []string{"hook.json"},
-		},
-		width:  60,
-		height: 24,
-	}
-	body := m.renderOverviewTab()
-	if !strings.Contains(body, "Runs commands") {
-		t.Errorf("Overview tab should show 'Runs commands' risk indicator, got:\n%s", body)
-	}
-}
-
-// TestRenderOverviewTabNoRiskForSkills verifies that skill items (which have
-// no risk signals) show nothing extra in the Overview tab.
-func TestRenderOverviewTabNoRiskForSkills(t *testing.T) {
-	m := detailModel{
-		item: catalog.ContentItem{
-			Name:  "safe-skill",
-			Type:  catalog.Skills,
-			Files: []string{"SKILL.md"},
-		},
-		width:  60,
-		height: 24,
-	}
-	body := m.renderOverviewTab()
-	if strings.Contains(body, "⚠") {
-		t.Errorf("Overview tab should not show risk indicators for Skills, got:\n%s", body)
 	}
 }
 

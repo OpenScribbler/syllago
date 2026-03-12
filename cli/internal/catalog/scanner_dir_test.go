@@ -15,14 +15,12 @@ func TestScanProviderDirectoryFormat(t *testing.T) {
 	hookDir := filepath.Join(tmp, "hooks", "claude-code", "my-hook")
 	os.MkdirAll(hookDir, 0755)
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"hooks":{"PostToolUse":[{"matcher":"Write","command":"echo hi"}]}}`), 0644)
-	os.WriteFile(filepath.Join(hookDir, "README.md"), []byte("# My Hook\n\nA test hook.\n"), 0644)
 	os.WriteFile(filepath.Join(hookDir, ".syllago.yaml"), []byte("name: my-hook\ndescription: Runs a linter after file edits\nversion: \"1.0\"\n"), 0644)
 
 	// rules/claude-code/my-rule/rule.md
 	ruleDir := filepath.Join(tmp, "rules", "claude-code", "my-rule")
 	os.MkdirAll(ruleDir, 0755)
 	os.WriteFile(filepath.Join(ruleDir, "rule.md"), []byte("# My Rule\n\nKeep it short.\n"), 0644)
-	os.WriteFile(filepath.Join(ruleDir, "README.md"), []byte("# My Rule\n\nA test rule.\n"), 0644)
 
 	// commands/claude-code/my-cmd/command.md
 	cmdDir := filepath.Join(tmp, "commands", "claude-code", "my-cmd")
@@ -59,9 +57,6 @@ func TestScanProviderDirectoryFormat(t *testing.T) {
 	}
 	if h.Provider != "claude-code" {
 		t.Errorf("hook provider = %q, want %q", h.Provider, "claude-code")
-	}
-	if h.ReadmeBody == "" {
-		t.Error("hook ReadmeBody is empty, expected README content")
 	}
 	if len(h.Files) == 0 {
 		t.Error("hook Files is empty, expected file listing")

@@ -1,31 +1,32 @@
 syllago           │Home > Skills > extremely-long-skill-name-that-should-be-truncated-in-narrow-terminals-010
                   │
-  Content         │ Overview  |  Files  |  Install
+  Content         │ Files  |  Install
 > Skills       50 │Type: Skills
   Agents       20 │Path: <TESTDIR>/skills/extremely-long-skill-name-that-should-be-truncated-in-narrow-terminals-010
   MCP Configs  15 │Providers: Claude Code
   Rules         0 │────────────────────────────────────────────────────────────────────────────────
   Hooks         0 │
-  Commands      0 │No README.md available for this item.
-  ─────────────   │
-  Collections     │
-  Library       0 │
-  Loadouts      0 │
-  Registries      │
-  ─────────────   │
-  Configuration   │
-  Add             │
-  Update          │
-  Settings        │
-  Sandbox         │
-                  │
-
-
-
-
-
+  Commands      0 │Files│Preview
+  ─────────────   │  > SKILL.md│   1 Cannot read file: open /tmp/TestGoldenOve
+  Collections     ││
+  Library       0 │                                │
+  Loadouts      0 │                                │
+  Registries      │                                │
+  ─────────────   │                                │
+  Configuration   │                                │
+  Add             │                                │
+  Update          │                                │
+  Settings        │                                │
+  Sandbox         │                                │
+                  │                                │
+                                                   │
+                                                   │
+                                                   │
+                                                   │
+                   (1 lines below)
 
 
 ────────────────────────────────────────────────────────────────────────────────
-esc back • tab switch tab • up/down scroll • ctrl+n/p next/prev Skills >
-extremely-long-skill-name-that-should-be-truncated-in-narrow-terminals-010
+esc back • tab switch tab • up/down navigate • l/right preview • ctrl+n/p
+next/prev Skills > extremely-long-skill-name-that-should-be-truncated-in-narrow-
+terminals-010

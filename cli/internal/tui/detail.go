@@ -13,7 +13,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
@@ -64,9 +63,8 @@ type loadoutApplyDoneMsg struct {
 type detailTab int
 
 const (
-	tabOverview      detailTab = iota
+	tabFiles         detailTab = iota
 	tabCompatibility           // hooks only
-	tabFiles
 	tabInstall
 )
 
@@ -83,9 +81,8 @@ type detailModel struct {
 	savePath     string // confirmed save destination (after path input)
 	// Sub-models for grouped concerns
 	provCheck        provCheckModel // provider checkbox state (Install tab)
-	appScriptPreview string         // first N lines of install.sh for preview
-	renderedReadme   string         // cached glamour-rendered README.md (all types)
-	llmPrompt        string         // loaded from LLM-PROMPT.md for local scaffolded items
+	appScriptPreview string // first N lines of install.sh for preview
+	llmPrompt        string // loaded from LLM-PROMPT.md for local scaffolded items
 	// Override info
 	overrides []catalog.ContentItem // lower-precedence items this one shadows
 	// Tab state
@@ -111,22 +108,16 @@ func newDetailModel(item catalog.ContentItem, providers []provider.Provider, rep
 	ti.CharLimit = 200
 
 	m := detailModel{
-		item:      item,
-		providers: providers,
-		repoRoot:  repoRoot,
-		saveInput: ti,
+		item:       item,
+		providers:  providers,
+		repoRoot:   repoRoot,
+		saveInput:  ti,
+		fileViewer: newFileViewer(item),
 	}
 	// Parse MCP config for preview
 	if item.Type == catalog.MCP {
 		cfg, _ := installer.ParseMCPConfig(item.Path)
 		m.mcpConfig = cfg
-	}
-	// Pre-render ReadmeBody for all types (used in Overview tab)
-	if item.ReadmeBody != "" {
-		rendered, err := glamour.Render(item.ReadmeBody, "auto")
-		if err == nil {
-			m.renderedReadme = rendered
-		}
 	}
 	// Load LLM prompt for library items
 	if item.Library {
@@ -195,6 +186,19 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			m.messageIsErr = false
 		}
 		return m, nil
+	case splitViewCursorMsg:
+		// Load preview content when the split view cursor moves
+		m.fileViewer.loadPreview(msg.index)
+		return m, nil
+
+	case tea.MouseMsg:
+		// Delegate mouse events to split view when on Files tab
+		if m.activeTab == tabFiles && m.item.Type != catalog.Loadouts {
+			sv, cmd := m.fileViewer.splitView.Update(msg)
+			m.fileViewer.splitView = sv
+			return m, cmd
+		}
+
 	case tea.KeyMsg:
 		// Clear transient message on any keypress (consistent with other screens)
 		if m.message != "" && msg.Type != tea.KeyEsc && !m.HasTextInput() {
@@ -202,125 +206,49 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			m.messageIsErr = false
 		}
 
-		// Tab switching (blocked during file viewing)
-		if !m.fileViewer.viewing {
+		// Tab switching (blocked during single-pane file preview)
+		if !m.fileViewer.splitView.showingPreview {
 			var newTab detailTab = -1
-			// Build ordered list of valid tabs for this item type.
-			// Hooks have 4 tabs; all other types have 3 (no Compat tab).
-			validTabs := []detailTab{tabOverview, tabFiles, tabInstall}
-			if m.item.Type == catalog.Hooks {
-				validTabs = []detailTab{tabOverview, tabCompatibility, tabFiles, tabInstall}
-			}
-			// Find cursor position within validTabs for cycle navigation.
-			curIdx := 0
-			for i, t := range validTabs {
-				if t == m.activeTab {
-					curIdx = i
-					break
-				}
-			}
+			// Number keys always switch tabs regardless of pane focus.
 			switch msg.String() {
-			case "tab":
-				newTab = validTabs[(curIdx+1)%len(validTabs)]
-			case "shift+tab":
-				newTab = validTabs[(curIdx+len(validTabs)-1)%len(validTabs)]
 			case "1":
-				newTab = tabOverview
+				newTab = tabFiles
 			case "2":
 				if m.item.Type == catalog.Hooks {
 					newTab = tabCompatibility
 				} else {
-					newTab = tabFiles
-				}
-			case "3":
-				if m.item.Type == catalog.Hooks {
-					newTab = tabFiles
-				} else {
 					newTab = tabInstall
 				}
-			case "4":
+			case "3":
 				if m.item.Type == catalog.Hooks {
 					newTab = tabInstall
 				}
 			}
 			if newTab >= 0 {
-				// Reset file viewer when leaving Files tab
 				if m.activeTab == tabFiles && newTab != tabFiles {
 					m.CancelAction()
 				}
 				m.activeTab = newTab
 				m.scrollOffset = 0
+				m.fileViewer.splitView.focusedPane = paneList
 				return m, nil
 			}
 		}
 
-		// File viewer: viewing file content
-		if m.activeTab == tabFiles && m.fileViewer.viewing {
-			switch {
-			case key.Matches(msg, keys.Back):
-				m.fileViewer.viewing = false
-				m.fileViewer.content = ""
-				m.fileViewer.scrollOffset = 0
-				return m, nil
-			case key.Matches(msg, keys.Up):
-				if m.fileViewer.scrollOffset > 0 {
-					m.fileViewer.scrollOffset--
-				}
-				return m, nil
-			case key.Matches(msg, keys.Down):
-				m.fileViewer.scrollOffset++
-				return m, nil
-			case key.Matches(msg, keys.PageUp):
-				pageSize := m.height - 8
-				if pageSize < 1 {
-					pageSize = 10
-				}
-				m.fileViewer.scrollOffset -= pageSize
-				if m.fileViewer.scrollOffset < 0 {
-					m.fileViewer.scrollOffset = 0
-				}
-				return m, nil
-			case key.Matches(msg, keys.PageDown):
-				pageSize := m.height - 8
-				if pageSize < 1 {
-					pageSize = 10
-				}
-				m.fileViewer.scrollOffset += pageSize
-				return m, nil
+		// Delegate navigation keys to split view when on Files tab (for non-loadout types).
+		// Non-navigation keys (p, r, i, u, c, e, etc.) fall through to detail handlers below.
+		if m.activeTab == tabFiles && m.item.Type != catalog.Loadouts {
+			isSplitViewKey := key.Matches(msg, keys.Up, keys.Down, keys.Left, keys.Right,
+				keys.Enter, keys.PageUp, keys.PageDown, keys.Home, keys.End) ||
+				msg.String() == "l"
+			// In single-pane preview, Esc exits the preview
+			if m.fileViewer.splitView.showingPreview && key.Matches(msg, keys.Back) {
+				isSplitViewKey = true
 			}
-			return m, nil
-		}
-
-		// File viewer: navigating file list
-		if m.activeTab == tabFiles && !m.fileViewer.viewing {
-			switch {
-			case key.Matches(msg, keys.Back):
-				// Let the outer handler deal with Esc (navigate back)
-			case key.Matches(msg, keys.Up):
-				if m.fileViewer.cursor > 0 {
-					m.fileViewer.cursor--
-				}
-				return m, nil
-			case key.Matches(msg, keys.Down):
-				if m.fileViewer.cursor < len(m.item.Files)-1 {
-					m.fileViewer.cursor++
-				}
-				return m, nil
-			case key.Matches(msg, keys.Enter):
-				if m.fileViewer.cursor < len(m.item.Files) {
-					relPath := m.item.Files[m.fileViewer.cursor]
-					absPath := filepath.Join(m.item.Path, relPath)
-					data, readErr := os.ReadFile(absPath)
-					if readErr != nil {
-						m.message = fmt.Sprintf("Cannot read file: %s", readErr)
-						m.messageIsErr = true
-					} else {
-						m.fileViewer.content = string(data)
-						m.fileViewer.scrollOffset = 0
-						m.fileViewer.viewing = true
-					}
-				}
-				return m, nil
+			if isSplitViewKey {
+				sv, cmd := m.fileViewer.splitView.Update(msg)
+				m.fileViewer.splitView = sv
+				return m, cmd
 			}
 		}
 
@@ -329,12 +257,7 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			// Back key is handled by App (navigates to items list or cancels file viewer)
 
 		case key.Matches(msg, keys.Up):
-			// Overview tab and scrollable content: scroll
-			if m.activeTab == tabOverview {
-				if m.scrollOffset > 0 {
-					m.scrollOffset--
-				}
-			} else if m.activeTab == tabFiles && m.item.Type == catalog.Loadouts {
+			if m.activeTab == tabFiles && m.item.Type == catalog.Loadouts {
 				// Contents tab for loadouts: scroll
 				if m.scrollOffset > 0 {
 					m.scrollOffset--
@@ -375,10 +298,7 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.Down):
-			if m.activeTab == tabOverview {
-				m.scrollOffset++
-				m.clampScroll()
-			} else if m.activeTab == tabFiles && m.item.Type == catalog.Loadouts {
+			if m.activeTab == tabFiles && m.item.Type == catalog.Loadouts {
 				// Contents tab for loadouts: scroll
 				m.scrollOffset++
 				m.clampScroll()
@@ -418,8 +338,7 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.PageUp):
-			scrollable := m.activeTab == tabOverview ||
-				(m.activeTab == tabFiles && m.item.Type == catalog.Loadouts)
+			scrollable := m.activeTab == tabFiles && m.item.Type == catalog.Loadouts
 			if scrollable {
 				pageSize := m.height - 6
 				if pageSize < 1 {
@@ -432,8 +351,7 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 			}
 
 		case key.Matches(msg, keys.PageDown):
-			scrollable := m.activeTab == tabOverview ||
-				(m.activeTab == tabFiles && m.item.Type == catalog.Loadouts)
+			scrollable := m.activeTab == tabFiles && m.item.Type == catalog.Loadouts
 			if scrollable {
 				pageSize := m.height - 6
 				if pageSize < 1 {
@@ -861,10 +779,10 @@ func (m *detailModel) doSavePrompt(filename string) {
 	m.doSave()
 }
 
-// HasPendingAction returns true if the detail view has an active file viewer
-// that should consume the Back key instead of navigating away.
+// HasPendingAction returns true if the detail view has an active single-pane
+// preview that should consume the Back key instead of navigating away.
 func (m detailModel) HasPendingAction() bool {
-	return m.fileViewer.viewing
+	return m.fileViewer.splitView.showingPreview
 }
 
 // HasTextInput returns true if the detail view has an active text input
@@ -874,13 +792,10 @@ func (m detailModel) HasTextInput() bool {
 	return false
 }
 
-// CancelAction clears the file viewer state.
+// CancelAction resets the file viewer to its initial state.
 func (m *detailModel) CancelAction() {
-	if m.fileViewer.viewing {
-		m.fileViewer.viewing = false
-		m.fileViewer.content = ""
-		m.fileViewer.scrollOffset = 0
-	}
+	m.fileViewer.splitView.showingPreview = false
+	m.fileViewer.splitView.focusedPane = paneList
 }
 
 // supportedProviders returns all providers that support this item's content type.

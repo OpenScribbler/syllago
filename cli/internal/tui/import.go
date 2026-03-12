@@ -22,7 +22,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
-	"github.com/OpenScribbler/syllago/cli/internal/readme"
 )
 
 type importStep int
@@ -1288,11 +1287,6 @@ func (m importModel) doImport() (string, []string, error) {
 		}
 	}
 
-	// Generate placeholder README if the source didn't include one
-	if created, _ := readme.EnsureReadme(dest, m.itemName, string(m.contentType), ""); created {
-		warnings = append(warnings, fmt.Sprintf("Generated placeholder README.md for %s — an LLM can improve it", m.itemName))
-	}
-
 	return m.itemName, warnings, nil
 }
 
@@ -1523,11 +1517,6 @@ func (m importModel) doBatchImportWithOverwrite(paths []string, overwrite map[st
 			if err := metadata.SaveProvider(filepath.Dir(dest), itemName, meta); err != nil {
 				warnings = append(warnings, fmt.Sprintf("Failed to save metadata for %s: %s", itemName, err))
 			}
-		}
-
-		// Generate placeholder README if source didn't include one
-		if _, err := readme.EnsureReadme(dest, itemName, string(m.contentType), ""); err != nil {
-			warnings = append(warnings, fmt.Sprintf("Failed to generate README for %s: %s", itemName, err))
 		}
 
 		imported = append(imported, itemName)

@@ -112,29 +112,27 @@ func TestScrollDetail_TabSwitchResetsScroll(t *testing.T) {
 
 func TestScrollDetail_FileViewerBackResetsScroll(t *testing.T) {
 	app := navigateToDetail(t, catalog.Skills)
+	// Force single-pane mode for Enter→preview behavior
+	app.detail.width = 60
+	app.detail.fileViewer.splitView.width = 60
 
-	// Switch to Files tab
-	m, _ := app.Update(keyRune('2'))
+	// Enter a file (single-pane preview)
+	m, _ := app.Update(keyEnter)
 	app = m.(App)
 
-	// Enter a file
-	m, _ = app.Update(keyEnter)
-	app = m.(App)
-
-	if !app.detail.fileViewer.viewing {
-		t.Skip("file viewer not activated — file may not be readable in test")
+	if !app.detail.fileViewer.splitView.showingPreview {
+		t.Skip("preview not activated — file may not be readable in test")
 	}
 
-	// Scroll down in file viewer
+	// Scroll down in preview
 	app = pressN(app, keyDown, 3)
 
 	// Press Esc to go back to file list
 	m, _ = app.Update(keyEsc)
 	app = m.(App)
 
-	if app.detail.fileViewer.scrollOffset != 0 {
-		t.Errorf("exiting file viewer should reset scrollOffset to 0, got %d",
-			app.detail.fileViewer.scrollOffset)
+	if app.detail.fileViewer.splitView.showingPreview {
+		t.Error("expected showingPreview=false after Esc")
 	}
 }
 

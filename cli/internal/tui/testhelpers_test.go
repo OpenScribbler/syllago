@@ -91,14 +91,13 @@ func makeSkill(t *testing.T, root, name, desc string, local bool) catalog.Conten
 	}
 	os.MkdirAll(dir, 0o755)
 	os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("# "+name+"\n"+desc), 0o644)
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# "+name+"\n\nReadme body for "+name), 0o644)
+	os.WriteFile(filepath.Join(dir, "helpers.md"), []byte("# Helpers\nHelper content"), 0o644)
 	return catalog.ContentItem{
 		Name:        name,
 		Description: desc,
 		Type:        catalog.Skills,
 		Path:        dir,
-		ReadmeBody:  "# " + name + "\n\nReadme body for " + name,
-		Files:       []string{"SKILL.md", "README.md"},
+		Files:       []string{"SKILL.md", "helpers.md"},
 		Library:     local,
 	}
 }
@@ -132,14 +131,12 @@ func makeMCP(t *testing.T, root, name, desc string) catalog.ContentItem {
   }
 }`
 	os.WriteFile(filepath.Join(dir, "config.json"), []byte(configJSON), 0o644)
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# "+name), 0o644)
 	return catalog.ContentItem{
 		Name:        name,
 		Description: desc,
 		Type:        catalog.MCP,
 		Path:        dir,
-		ReadmeBody:  "# " + name,
-		Files:       []string{"config.json", "README.md"},
+		Files:       []string{"config.json"},
 	}
 }
 
@@ -315,6 +312,7 @@ func testAppLargeSize(t *testing.T, width, height int) App {
 	app.items.height = height
 	app.detail.width = width
 	app.detail.height = height
+	app.detail.fileViewer.splitView.width = width
 	app.settings.width = width
 	app.settings.height = height
 	app.importer.width = width
@@ -351,6 +349,7 @@ func testAppEmptySize(t *testing.T, width, height int) App {
 	app.items.height = height
 	app.detail.width = width
 	app.detail.height = height
+	app.detail.fileViewer.splitView.width = width
 	app.settings.width = width
 	app.settings.height = height
 	app.importer.width = width
@@ -413,6 +412,7 @@ func testAppSize(t *testing.T, width, height int) App {
 	app.items.height = height
 	app.detail.width = width
 	app.detail.height = height
+	app.detail.fileViewer.splitView.width = width
 	app.settings.width = width
 	app.settings.height = height
 	app.importer.width = width

@@ -1,15 +1,15 @@
 syllago           │Home > Skills > alpha-skill
                   │
-  Content         │ Overview  |  Files  |  Install
+  Content         │ Files  |  Install
 > Skills        3 │Type: Skills
   Agents        1 │Path: <TESTDIR>/skills/alpha-skill
   MCP Configs   1 │Providers: Claude Code
   Rules         1 │────────────────────────────────────────────────────────────────────────────────
   Hooks         1 │
-  Commands      1 │
+  Commands      1 │Files│Preview
   ─────────────   │ ╭────────────────────────────────────────────────────────╮
   Collections     │ │                                                        │
-  Library       1 │ │  Confirm Uninstall                                     │
+  Library       1 │││  Confirm Uninstall                                     │
   Loadouts      2 │ │                                                        │
   Registries      │ │  Remove alpha-skill from all providers?                │
   ─────────────   │ │                                                        │
@@ -19,13 +19,13 @@ syllago           │Home > Skills > alpha-skill
   Settings        │ │                   Confirm    ▸  Cancel                 │
   Sandbox         │ │                                                        │
                   │ ╰────────────────────────────────────────────────────────╯
-
-
-
-
-
+                                                   │
+                                                   │
+                                                   │
+                                                   │
+                   (1 lines below)
 
 
 ────────────────────────────────────────────────────────────────────────────────
-esc back • tab switch tab • up/down scroll • ctrl+n/p next/prev Skills > alpha-
-skill
+esc back • tab switch tab • up/down navigate • l/right preview • ctrl+n/p
+next/prev Skills > alpha-skill

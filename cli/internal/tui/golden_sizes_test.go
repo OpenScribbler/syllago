@@ -88,18 +88,6 @@ func TestGoldenSized_ItemsSkills(t *testing.T) {
 	}
 }
 
-// --- Detail overview (width affects content rendering) ---
-
-func TestGoldenSized_DetailOverview(t *testing.T) {
-	for _, sz := range testSizes {
-		t.Run(sz.tag, func(t *testing.T) {
-			app := navigateToDetailSize(t, catalog.Skills, sz.width, sz.height)
-			requireGolden(t, fmt.Sprintf("fullapp-detail-overview-%s", sz.tag),
-				normalizeSnapshot(snapshotApp(t, app)))
-		})
-	}
-}
-
 // --- Settings (width affects layout) ---
 
 func TestGoldenSized_Settings(t *testing.T) {

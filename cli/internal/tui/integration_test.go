@@ -103,15 +103,11 @@ func TestTeatestDetailTabs(t *testing.T) {
 	// Enter first item → detail screen
 	tm.Send(keyEnter)
 
-	// Should see overview tab content (README)
-	waitFor(t, tm, "Readme body")
-
-	// Tab to files
-	tm.Send(keyRune('2'))
+	// Should see Files tab content (default tab)
 	waitFor(t, tm, "SKILL.md")
 
 	// Tab to install
-	tm.Send(keyRune('3'))
+	tm.Send(keyRune('2'))
 	waitFor(t, tm, "Install")
 
 	// Back to category
@@ -196,7 +192,7 @@ func TestTeatestCtrlCAnywhere(t *testing.T) {
 	waitFor(t, tm, "alpha-skill")
 
 	tm.Send(keyEnter)
-	waitFor(t, tm, "Readme body")
+	waitFor(t, tm, "SKILL.md")
 
 	// Ctrl+C from detail should quit
 	tm.Send(keyCtrlC)

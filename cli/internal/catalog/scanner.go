@@ -166,16 +166,9 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 					item.Description = fm.Description
 				}
 			}
-			if item.Description == "" {
-				item.Description = readDescription(filepath.Join(itemDir, "README.md"))
-			}
 		default:
-			// For other universal types, try README.md for description.
-			item.Description = readDescription(filepath.Join(itemDir, "README.md"))
+			// For other universal types, no additional description extraction.
 		}
-
-		// Load README.md into ReadmeBody (for all universal types)
-		item.ReadmeBody = loadReadme(itemDir)
 
 		// Collect file listing
 		item.Files = collectFiles(itemDir, itemDir)
@@ -194,7 +187,7 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 
 // scanProviderSpecific discovers items for provider-specific types (rules, hooks, commands).
 // Supports two layouts:
-//   - Directory-per-item (new): <type>/<provider>/<item-name>/ with content file + README.md + .syllago.yaml
+//   - Directory-per-item (new): <type>/<provider>/<item-name>/ with content file + .syllago.yaml
 //   - Single file (legacy):    <type>/<provider>/<file> with .syllago.<file>.yaml alongside
 func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries []os.DirEntry, local bool) error {
 	for _, providerEntry := range entries {
@@ -226,9 +219,6 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 					return err
 				}
 				if item != nil {
-					if item.ReadmeBody == "" {
-						cat.Warnings = append(cat.Warnings, fmt.Sprintf("%s/%s/%s missing README.md", ct, providerName, child.Name()))
-					}
 					cat.Items = append(cat.Items, *item)
 				}
 			} else {
@@ -266,7 +256,7 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 }
 
 // scanProviderDir scans a directory-format provider-specific item.
-// Looks for the content file by type convention and loads README + metadata.
+// Looks for the content file by type convention and loads metadata.
 func scanProviderDir(itemDir string, ct ContentType, providerName string, local bool) (*ContentItem, error) {
 	dirName := filepath.Base(itemDir)
 	item := ContentItem{
@@ -286,7 +276,7 @@ func scanProviderDir(itemDir string, ct ContentType, providerName string, local 
 			// Try any .md file
 			entries, _ := os.ReadDir(itemDir)
 			for _, e := range entries {
-				if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") && e.Name() != "README.md" && e.Name() != "LLM-PROMPT.md" {
+				if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") && e.Name() != "LLM-PROMPT.md" {
 					item.Description = readDescription(filepath.Join(itemDir, e.Name()))
 					break
 				}
@@ -315,7 +305,7 @@ func scanProviderDir(itemDir string, ct ContentType, providerName string, local 
 		if item.Description == "" {
 			entries, _ := os.ReadDir(itemDir)
 			for _, e := range entries {
-				if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") && e.Name() != "README.md" && e.Name() != "LLM-PROMPT.md" {
+				if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") && e.Name() != "LLM-PROMPT.md" {
 					item.Description = readDescription(filepath.Join(itemDir, e.Name()))
 					break
 				}
@@ -335,9 +325,6 @@ func scanProviderDir(itemDir string, ct ContentType, providerName string, local 
 			}
 		}
 	}
-
-	// Load README.md
-	item.ReadmeBody = loadReadme(itemDir)
 
 	// Collect file listing
 	item.Files = collectFiles(itemDir, itemDir)
@@ -359,23 +346,13 @@ func scanProviderDir(itemDir string, ct ContentType, providerName string, local 
 
 // shouldSkip returns true for files/dirs that should always be ignored.
 func shouldSkip(name string) bool {
-	if name == ".gitkeep" || name == "README.md" || name == "LLM-PROMPT.md" {
+	if name == ".gitkeep" || name == "LLM-PROMPT.md" {
 		return true
 	}
 	if name == metadata.FileName || strings.HasPrefix(name, ".syllago.") {
 		return true
 	}
 	return false
-}
-
-// loadReadme reads README.md from an item directory.
-// Returns the raw content or "" if not found.
-func loadReadme(itemDir string) string {
-	data, err := os.ReadFile(filepath.Join(itemDir, "README.md"))
-	if err != nil {
-		return ""
-	}
-	return string(data)
 }
 
 // collectFiles returns relative paths of all non-hidden files in an item directory.

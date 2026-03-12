@@ -488,6 +488,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.items.height = ph
 		a.detail.width = contentW
 		a.detail.height = ph
+		a.detail.fileViewer.splitView.width = contentW
 		a.detail.clampScroll()
 		a.importer.width = contentW
 		a.importer.height = ph
@@ -1430,7 +1431,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Check detail tab zones
 		if a.screen == screenDetail {
-			tabs := []detailTab{tabOverview, tabFiles, tabInstall}
+			tabs := []detailTab{tabFiles, tabCompatibility, tabInstall}
 			for _, tab := range tabs {
 				if zone.Get(fmt.Sprintf("tab-%d", int(tab))).InBounds(msg) {
 					// Reset file viewer when switching away from Files tab
@@ -1442,23 +1443,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-		// Check file list entry zones (Files tab)
+		// Split view mouse events (Files tab) — delegated to split view via detail Update
 		if a.screen == screenDetail && a.detail.activeTab == tabFiles {
-			if a.detail.fileViewer.viewing {
-				// Back link in file content view
-				if zone.Get("file-back").InBounds(msg) {
-					a.detail.CancelAction()
-					return a, nil
-				}
-			} else {
-				// File list entries — click to open
-				for i := range a.detail.item.Files {
-					if zone.Get(fmt.Sprintf("file-%d", i)).InBounds(msg) {
-						a.detail.fileViewer.cursor = i
-						return a.Update(tea.KeyMsg{Type: tea.KeyEnter})
-					}
-				}
+			// Back link in single-pane preview
+			if zone.Get("sv-files-back").InBounds(msg) {
+				a.detail.fileViewer.splitView.showingPreview = false
+				return a, nil
 			}
+			// Item clicks handled by split view via detail.Update
 		}
 		// Check detail action button zones
 		if a.screen == screenDetail {
@@ -1812,12 +1804,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Tab/Shift+Tab: switch focus between sidebar and content.
-		// Guard: NOT on screenDetail (Tab still switches detail tabs when content is focused).
-		// On screenDetail, Tab is handled by detail.Update() to switch Overview/Files/Install tabs.
-		// Panel-focus Tab only fires when sidebar is focused OR when on screens other than screenDetail.
+		// Works on all screens with sidebar (excluding single-pane screens).
 		if (key.Matches(msg, keys.Tab) || key.Matches(msg, keys.ShiftTab)) &&
-			!a.search.active && !a.helpOverlay.active &&
-			a.screen != screenDetail {
+			!a.search.active && !a.helpOverlay.active {
 			if a.screen != screenImport && a.screen != screenUpdate && a.screen != screenSettings && a.screen != screenSandbox {
 				if !a.detail.HasTextInput() {
 					if a.focus == focusSidebar {
@@ -1832,9 +1821,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Sidebar-focused: route input to sidebar on ANY screen.
 		// Enter/Right drills into the selected sidebar section regardless of current screen.
-		// Excluded: Detail (Tab switches tabs there), and single-pane screens.
+		// Excluded: single-pane screens (Import, Update, Settings, Sandbox).
 		if a.focus == focusSidebar &&
-			a.screen != screenDetail && a.screen != screenImport &&
+			a.screen != screenImport &&
 			a.screen != screenUpdate && a.screen != screenSettings &&
 			a.screen != screenSandbox {
 			if key.Matches(msg, keys.Enter) || key.Matches(msg, keys.Right) {
@@ -2078,6 +2067,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.detail.parentLabel = a.items.parentLabel
 				a.detail.width = a.width
 				a.detail.height = a.panelHeight()
+				a.detail.fileViewer.splitView.width = a.width
 				a.detail.listPosition = a.items.cursor
 				a.detail.listTotal = len(a.items.items)
 				a.screen = screenDetail
@@ -2214,6 +2204,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.detail.overrides = a.catalog.OverridesFor(item.Name, item.Type)
 					a.detail.width = a.width
 					a.detail.height = a.panelHeight()
+					a.detail.fileViewer.splitView.width = a.width
 					a.detail.listPosition = a.items.cursor
 					a.detail.listTotal = len(a.items.items)
 				}
@@ -2227,6 +2218,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.detail.overrides = a.catalog.OverridesFor(item.Name, item.Type)
 					a.detail.width = a.width
 					a.detail.height = a.panelHeight()
+					a.detail.fileViewer.splitView.width = a.width
 					a.detail.listPosition = a.items.cursor
 					a.detail.listTotal = len(a.items.items)
 				}

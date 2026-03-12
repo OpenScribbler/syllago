@@ -1,13 +1,13 @@
 syllago           │Home > Skills > extremely-long-skill-name-that-should-be-truncated-in-narrow-terminals-000
                   │
-  Content         │ Overview  |  Files  |  Install
+  Content         │ Files  |  Install
 > Skills       50 │Type: Skills
   Agents       20 │Path: <TESTDIR>/skills/extremely-long-skill-name-that-should-be-truncated-in-narrow-terminals-000
   MCP Configs  15 │Providers: Claude Code
   Rules         0 │────────────────────────────────────────────────────────────
   Hooks         0 │
-  Commands      0 │No README.md available for this item.
-  ─────────────   │
+  Commands      0 │Files
+  ─────────────   │  > SKILL.md
   Collections     │
   Library       0 │
   Loadouts      0 │
@@ -20,6 +20,6 @@ syllago           │Home > Skills > extremely-long-skill-name-that-should-be-tr
   Sandbox         │
                   │
 ────────────────────────────────────────────────────────────
-esc back • tab switch tab • up/down scroll • ctrl+n/p
-next/prev Skills > extremely-long-skill-name-that-should-be-
-truncated-in-narrow-terminals-000
+esc back • tab switch tab • up/down navigate • enter view •
+ctrl+n/p next/prev Skills > extremely-long-skill-name-that-
+should-be-truncated-in-narrow-terminals-000

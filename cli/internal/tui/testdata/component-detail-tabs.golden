@@ -1,13 +1,26 @@
 Home > Skills > alpha-skill
 
- Overview  |  Files  |  Install
+ Files  |  Install
 Type: Skills
 Path: <TESTDIR>/skills/alpha-skill
 Providers: Claude Code
 ────────────────────────────────────────────────────────────────────────────────
 
-
-  # alpha-skill
-
-  Readme body for alpha-skill
-
+Files│Preview
+  > SKILL.md│   1 # alpha-skill
+    helpers.md│   2 A helpful skill
+│
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+(1 lines below)
