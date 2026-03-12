@@ -51,6 +51,11 @@ Default cursor: 1 (Cancel) for destructive actions, 0 (Confirm) for safe actions
   ```
 - Click outside `modal-zone` dismisses the modal
 - Clickable options (radio items in Install/Env modals) respond to click
+- **Form fields:** Any modal with multiple Tab-navigable inputs MUST wrap each input in `zone.Mark("modal-field-{name}", ...)`. Clicking a field focuses it — the same result as Tab-navigating to it. This is required, not optional.
+  ```go
+  zone.Mark("modal-field-url", inputStyle.Render(m.urlInput.View()))
+  zone.Mark("modal-field-name", inputStyle.Render(m.nameInput.View()))
+  ```
 
 ## Keyboard Behavior
 

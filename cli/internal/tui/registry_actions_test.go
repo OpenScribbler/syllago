@@ -90,6 +90,11 @@ func TestRegistryAddModalOpenClose(t *testing.T) {
 		m, _ := app.Update(keyRune('a'))
 		app = m.(App)
 
+		// Tab to buttons (url→name→buttons)
+		m, _ = app.Update(keyTab)
+		app = m.(App)
+		m, _ = app.Update(keyTab)
+		app = m.(App)
 		// Move to Cancel button (right)
 		m, _ = app.Update(tea.KeyMsg{Type: tea.KeyRight})
 		app = m.(App)
@@ -197,13 +202,19 @@ func TestRegistryAddModalTabSwitchesFields(t *testing.T) {
 	m, _ = app.Update(keyTab)
 	app = m.(App)
 	if app.registryAddModal.focusedField != 1 {
-		t.Fatal("Name field should be focused after Tab")
+		t.Fatal("Name field should be focused after first Tab")
+	}
+
+	m, _ = app.Update(keyTab)
+	app = m.(App)
+	if app.registryAddModal.focusedField != 2 {
+		t.Fatal("Buttons should be focused after second Tab")
 	}
 
 	m, _ = app.Update(keyTab)
 	app = m.(App)
 	if app.registryAddModal.focusedField != 0 {
-		t.Fatal("URL field should be focused after second Tab")
+		t.Fatal("URL field should be focused after third Tab (wraps around)")
 	}
 }
 
