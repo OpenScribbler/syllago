@@ -105,6 +105,7 @@ func (ci ContentItem) IsBuiltin() bool {
 type Catalog struct {
 	Items      []ContentItem
 	Overridden []ContentItem // lower-precedence items shadowed by higher-precedence ones
+	Warnings   []string      // non-fatal scan warnings (collected instead of printing to stderr)
 	RepoRoot   string
 }
 
