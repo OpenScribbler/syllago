@@ -418,6 +418,7 @@ Examples:
 		if scanErr != nil {
 			return scanErr
 		}
+		cat.PrintWarnings()
 
 		// Filter by type if requested
 		var items []catalog.ContentItem

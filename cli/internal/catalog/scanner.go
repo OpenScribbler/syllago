@@ -63,7 +63,7 @@ func ScanWithRegistries(contentRoot string, projectRoot string, registries []Reg
 	for _, reg := range registries {
 		before := len(cat.Items)
 		if err := scanRoot(cat, reg.Path, false); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: registry %q scan error: %s\n", reg.Name, err)
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("registry %q scan error: %s", reg.Name, err))
 			continue
 		}
 		// Tag all newly-appended items with the registry name
@@ -82,7 +82,7 @@ func ScanRegistriesOnly(registries []RegistrySource) (*Catalog, error) {
 	for _, reg := range registries {
 		before := len(cat.Items)
 		if err := scanRoot(cat, reg.Path, false); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: registry %q scan error: %s\n", reg.Name, err)
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("registry %q scan error: %s", reg.Name, err))
 			continue
 		}
 		for i := before; i < len(cat.Items); i++ {
@@ -127,7 +127,7 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 			continue
 		}
 		if !IsValidItemName(entry.Name()) {
-			fmt.Fprintf(os.Stderr, "Warning: skipping item %q — name contains characters unsafe for JSON key paths\n", entry.Name())
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("skipping item %q — name contains characters unsafe for JSON key paths", entry.Name()))
 			continue
 		}
 
@@ -215,7 +215,7 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 				continue
 			}
 			if child.IsDir() && !IsValidItemName(child.Name()) {
-				fmt.Fprintf(os.Stderr, "Warning: skipping item %q — name contains characters unsafe for JSON key paths\n", child.Name())
+				cat.Warnings = append(cat.Warnings, fmt.Sprintf("skipping item %q — name contains characters unsafe for JSON key paths", child.Name()))
 				continue
 			}
 
@@ -226,6 +226,9 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 					return err
 				}
 				if item != nil {
+					if item.ReadmeBody == "" {
+						cat.Warnings = append(cat.Warnings, fmt.Sprintf("%s/%s/%s missing README.md", ct, providerName, child.Name()))
+					}
 					cat.Items = append(cat.Items, *item)
 				}
 			} else {
@@ -349,11 +352,6 @@ func scanProviderDir(itemDir string, ct ContentType, providerName string, local 
 	// Use metadata description as primary source (overrides content-file parsing)
 	if meta != nil && meta.Description != "" {
 		item.Description = meta.Description
-	}
-
-	// Warn to stderr if README.md is missing (non-fatal)
-	if item.ReadmeBody == "" {
-		fmt.Fprintf(os.Stderr, "warning: %s/%s/%s missing README.md\n", ct, providerName, dirName)
 	}
 
 	return &item, nil
@@ -509,9 +507,11 @@ func ScanWithGlobalAndRegistries(contentRoot string, projectRoot string, registr
 
 	globalCat := &Catalog{RepoRoot: globalDir}
 	if err := scanRoot(globalCat, globalDir, false); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: global content scan error: %s\n", err)
+		cat.Warnings = append(cat.Warnings, fmt.Sprintf("global content scan error: %s", err))
 		return cat, nil
 	}
+	// Merge warnings from global scan into main catalog
+	cat.Warnings = append(cat.Warnings, globalCat.Warnings...)
 
 	// Tag global items and append only those not already in project
 	projectNames := make(map[string]bool)
@@ -542,4 +542,12 @@ func ScanWithGlobalAndRegistries(contentRoot string, projectRoot string, registr
 		}
 	}
 	return cat, nil
+}
+
+// PrintWarnings writes any collected scan warnings to stderr.
+// CLI commands should call this after scanning; TUI code should not.
+func (c *Catalog) PrintWarnings() {
+	for _, w := range c.Warnings {
+		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
+	}
 }

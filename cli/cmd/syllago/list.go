@@ -61,6 +61,7 @@ func runList(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("scanning catalog: %w", err)
 	}
+	cat.PrintWarnings()
 
 	// Build grouped output across all content types.
 	var result listResult
