@@ -30,7 +30,9 @@ type keyMap struct {
 	Delete        key.Binding
 	Refresh       key.Binding
 	CreateLoadout key.Binding
-	ConfirmYes   key.Binding
+	ToggleAll       key.Binding
+	ToggleCompat    key.Binding
+	ConfirmYes      key.Binding
 	ConfirmNo    key.Binding
 }
 
@@ -142,6 +144,14 @@ var keys = keyMap{
 	CreateLoadout: key.NewBinding(
 		key.WithKeys("l"),
 		key.WithHelp("l", "create loadout"),
+	),
+	ToggleAll: key.NewBinding(
+		key.WithKeys("a"),
+		key.WithHelp("a", "toggle all"),
+	),
+	ToggleCompat: key.NewBinding(
+		key.WithKeys("t"),
+		key.WithHelp("t", "toggle filter"),
 	),
 	ConfirmYes: key.NewBinding(
 		key.WithKeys("y", "Y"),

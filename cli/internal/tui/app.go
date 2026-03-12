@@ -1246,39 +1246,44 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							return a, cmd
 						}
 					}
+				case clStepTypes:
+					// Type checkboxes start at relY=6 (title+blank+subtitle+blank)
+					for i := range a.createLoadoutModal.typeEntries {
+						if relY == 6+i {
+							a.createLoadoutModal.typeCursor = i
+							a.createLoadoutModal.typeEntries[i].checked = !a.createLoadoutModal.typeEntries[i].checked
+							return a, nil
+						}
+					}
 				case clStepItems:
-					// relY=4: search input
-					if relY == 4 {
-						a.createLoadoutModal.searchInput.Focus()
+					ct := a.createLoadoutModal.currentType()
+					// relY=4: search input (when focused) or blank
+					if relY == 4 && a.createLoadoutModal.searchInput.Focused() {
 						return a, nil
 					}
-					// Items start at relY=6 (search+blank+blank)
-					innerH := createLoadoutModalHeight - 8
-					filtered := a.createLoadoutModal.filteredEntries()
-					shown := filtered
+					// Items start at relY=6 (title+blank+body)
+					filtered := a.createLoadoutModal.filteredTypeItems()
+					cursor := a.createLoadoutModal.perTypeCursor[ct]
+					innerH := createLoadoutModalHeight - 9
 					start := 0
-					if len(shown) > innerH {
-						start = a.createLoadoutModal.itemCursor - innerH/2
+					if len(filtered) > innerH {
+						start = cursor - innerH/2
 						if start < 0 {
 							start = 0
 						}
-						if start+innerH > len(shown) {
-							start = len(shown) - innerH
+						if start+innerH > len(filtered) {
+							start = len(filtered) - innerH
 						}
 					}
 					clickRow := relY - 6
-					if clickRow >= 0 && clickRow < innerH && clickRow < len(shown)-start {
+					if clickRow >= 0 && clickRow < innerH && clickRow < len(filtered)-start {
 						absIdx := start + clickRow
-						a.createLoadoutModal.itemCursor = absIdx
-						// Toggle selection
-						targetItem := filtered[absIdx].item
-						for j, e := range a.createLoadoutModal.entries {
-							if e.item.Path == targetItem.Path {
-								a.createLoadoutModal.entries[j].selected = !a.createLoadoutModal.entries[j].selected
-								break
-							}
+						entryIdx := filtered[absIdx]
+						a.createLoadoutModal.perTypeCursor[ct] = absIdx
+						if a.createLoadoutModal.isItemCompatible(entryIdx) {
+							a.createLoadoutModal.entries[entryIdx].selected = !a.createLoadoutModal.entries[entryIdx].selected
+							a.createLoadoutModal.updateDestConstraints()
 						}
-						a.createLoadoutModal.updateDestConstraints()
 						return a, nil
 					}
 				case clStepName:
@@ -1302,6 +1307,18 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							a.createLoadoutModal.destCursor = i
 							return a, nil
 						}
+					}
+				case clStepReview:
+					// Button clicks via zone marks
+					if zone.Get("modal-btn-left").InBounds(msg) {
+						a.createLoadoutModal.reviewCursor = 0
+						a.createLoadoutModal, _ = a.createLoadoutModal.Update(tea.KeyMsg{Type: tea.KeyEnter})
+						return a, nil
+					}
+					if zone.Get("modal-btn-right").InBounds(msg) {
+						a.createLoadoutModal.reviewCursor = 1
+						a.createLoadoutModal, _ = a.createLoadoutModal.Update(tea.KeyMsg{Type: tea.KeyEnter})
+						return a, nil
 					}
 				}
 				return a, nil // click inside modal but not on interactive element
