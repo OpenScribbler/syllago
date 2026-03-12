@@ -191,11 +191,7 @@ func (m detailModel) renderOverviewTab() string {
 			h := hd.Hooks[0]
 			s += labelStyle.Render("Type:    ") + valueStyle.Render(h.Type) + "\n"
 			if h.Command != "" {
-				cmdDisplay := h.Command
-				maxW := m.width - 12
-				if maxW > 0 && len(cmdDisplay) > maxW {
-					cmdDisplay = cmdDisplay[:maxW-3] + "..."
-				}
+				cmdDisplay := truncate(h.Command, m.width-12)
 				s += labelStyle.Render("Command: ") + valueStyle.Render(cmdDisplay) + "\n"
 			}
 			if h.Timeout > 0 {
@@ -387,10 +383,10 @@ func (m detailModel) renderInstallTab() string {
 			if len(m.mcpConfig.Args) > 0 {
 				cmd += " " + strings.Join(m.mcpConfig.Args, " ")
 			}
-			s += "  " + helpStyle.Render("Command: ") + valueStyle.Render(cmd) + "\n"
+			s += "  " + helpStyle.Render("Command: ") + valueStyle.Render(truncate(cmd, m.width-14)) + "\n"
 		}
 		if m.mcpConfig.URL != "" {
-			s += "  " + helpStyle.Render("URL:     ") + valueStyle.Render(m.mcpConfig.URL) + "\n"
+			s += "  " + helpStyle.Render("URL:     ") + valueStyle.Render(truncate(m.mcpConfig.URL, m.width-14)) + "\n"
 		}
 		if len(m.mcpConfig.Env) > 0 {
 			envNames := make([]string, 0, len(m.mcpConfig.Env))
