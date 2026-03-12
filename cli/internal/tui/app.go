@@ -802,8 +802,33 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		if a.saveModal.active {
-			if zone.Get("modal-zone").InBounds(msg) {
-				return a, nil // click inside modal — ignore (save uses keys)
+			z := zone.Get("modal-zone")
+			if z.InBounds(msg) {
+				relX, relY := z.Pos(msg)
+				modalH := z.EndY - z.StartY + 1
+				modalW := z.EndX - z.StartX + 1
+				buttonRelY := modalH - 3
+				if relY == buttonRelY {
+					contentLeft := 3
+					contentW := modalW - 6
+					midX := contentLeft + contentW/2
+					if relX < midX {
+						// Save button
+						if strings.TrimSpace(a.saveModal.input.Value()) != "" {
+							a.saveModal.value = strings.TrimSpace(a.saveModal.input.Value())
+							a.saveModal.confirmed = true
+							a.saveModal.active = false
+							a.focus = focusContent
+						}
+					} else {
+						// Cancel button
+						a.saveModal.active = false
+						a.saveModal.confirmed = false
+						a.focus = focusContent
+					}
+					return a, nil
+				}
+				return a, nil // click inside modal but not on buttons
 			}
 			a.saveModal.active = false
 			a.saveModal.confirmed = false
@@ -811,8 +836,34 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 		if a.envModal.active {
-			if zone.Get("modal-zone").InBounds(msg) {
-				return a, nil // click inside modal — ignore
+			z := zone.Get("modal-zone")
+			if z.InBounds(msg) {
+				relX, relY := z.Pos(msg)
+				modalH := z.EndY - z.StartY + 1
+				modalW := z.EndX - z.StartX + 1
+				buttonRelY := modalH - 3
+				if relY == buttonRelY && a.envModal.step == envStepChoose {
+					contentLeft := 3
+					contentW := modalW - 6
+					midX := contentLeft + contentW/2
+					if relX < midX {
+						// Select — same as Enter with btnCursor=0
+						a.envModal.btnCursor = 0
+						m, cmd := a.envModal.Update(tea.KeyMsg{Type: tea.KeyEnter})
+						a.envModal = m
+						return a, cmd
+					} else {
+						// Skip — same as Enter with btnCursor=1
+						a.envModal.btnCursor = 1
+						m, cmd := a.envModal.Update(tea.KeyMsg{Type: tea.KeyEnter})
+						a.envModal = m
+						if !a.envModal.active {
+							a.focus = focusContent
+						}
+						return a, cmd
+					}
+				}
+				return a, nil // click inside modal but not on buttons
 			}
 			a.envModal.active = false
 			a.focus = focusContent
