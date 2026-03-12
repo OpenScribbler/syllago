@@ -112,6 +112,13 @@ func (m registriesModel) View(cursor, scrollOffset int) (string, int) {
 		lastRow = totalRows
 	}
 
+	// Fixed height for two-column mode ensures uniform card alignment.
+	// cardRowHeight includes border (2) + newline gap (1), so inner = cardRowHeight - 3.
+	fixedH := 0
+	if !singleCol {
+		fixedH = cardRowHeight - 3
+	}
+
 	if singleCol {
 		for row := firstRow; row < lastRow; row++ {
 			i := row
@@ -119,7 +126,7 @@ func (m registriesModel) View(cursor, scrollOffset int) (string, int) {
 				break
 			}
 			selected := i == cursor
-			card := renderRegistryCard(m.entries[i], cardW, selected)
+			card := renderRegistryCard(m.entries[i], cardW, selected, fixedH)
 			s += zone.Mark(fmt.Sprintf("registry-card-%d", i), card) + "\n"
 		}
 	} else {
@@ -128,10 +135,10 @@ func (m registriesModel) View(cursor, scrollOffset int) (string, int) {
 			if i >= len(m.entries) {
 				break
 			}
-			left := zone.Mark(fmt.Sprintf("registry-card-%d", i), renderRegistryCard(m.entries[i], cardW, i == cursor))
+			left := zone.Mark(fmt.Sprintf("registry-card-%d", i), renderRegistryCard(m.entries[i], cardW, i == cursor, fixedH))
 			var right string
 			if i+1 < len(m.entries) {
-				right = zone.Mark(fmt.Sprintf("registry-card-%d", i+1), renderRegistryCard(m.entries[i+1], cardW, i+1 == cursor))
+				right = zone.Mark(fmt.Sprintf("registry-card-%d", i+1), renderRegistryCard(m.entries[i+1], cardW, i+1 == cursor, fixedH))
 			}
 			s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
 		}
@@ -148,10 +155,13 @@ func (m registriesModel) View(cursor, scrollOffset int) (string, int) {
 	return s, newOffset
 }
 
-func renderRegistryCard(entry registryEntry, width int, selected bool) string {
+func renderRegistryCard(entry registryEntry, width int, selected bool, fixedHeight int) string {
 	cardStyle := cardNormalStyle
 	if selected {
 		cardStyle = cardSelectedStyle
+	}
+	if fixedHeight > 0 {
+		cardStyle = cardStyle.Height(fixedHeight)
 	}
 
 	status := helpStyle.Render("missing")
@@ -159,20 +169,27 @@ func renderRegistryCard(entry registryEntry, width int, selected bool) string {
 		status = installedStyle.Render("cloned")
 	}
 
-	version := "─"
-	if entry.version != "" {
-		version = entry.version
-	}
-
 	urlDisplay := truncate(entry.url, width-4)
 	desc := truncate(entry.description, width-4)
 	title := truncate(entry.name, width-4)
-	meta := fmt.Sprintf("%s  v%s  %d items", status, helpStyle.Render(version), entry.itemCount)
+
+	var meta string
+	if entry.version != "" {
+		meta = fmt.Sprintf("%s  v%s  %d items", status, helpStyle.Render(entry.version), entry.itemCount)
+	} else {
+		meta = fmt.Sprintf("%s  %d items", status, entry.itemCount)
+	}
 
 	var lines []string
 	lines = append(lines, titleStyle.Render(title))
 	lines = append(lines, meta)
-	lines = append(lines, helpStyle.Render(urlDisplay))
+	// Wrap URL in OSC 8 hyperlink so terminals link to the full URL,
+	// not the truncated display text.
+	urlRendered := helpStyle.Render(urlDisplay)
+	if urlDisplay != entry.url {
+		urlRendered = fmt.Sprintf("\x1b]8;;%s\x1b\\%s\x1b]8;;\x1b\\", entry.url, urlRendered)
+	}
+	lines = append(lines, urlRendered)
 	if desc != "" {
 		lines = append(lines, helpStyle.Render(desc))
 	}

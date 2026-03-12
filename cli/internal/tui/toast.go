@@ -50,6 +50,47 @@ func (t *toastModel) copyToClipboard() string {
 	return ""
 }
 
+// isScrollable returns true if the toast content exceeds the visible line limit.
+func (t *toastModel) isScrollable() bool {
+	if !t.active || t.text == "" {
+		return false
+	}
+	innerW := t.width - 8
+	if innerW < 20 {
+		innerW = 20
+	}
+	prefix := "Done: "
+	if t.isErr {
+		prefix = "Error: "
+	}
+	wrapped := wordwrap.String(prefix+t.text, innerW)
+	return len(strings.Split(wrapped, "\n")) > 5
+}
+
+// clampScroll ensures scrollOffset stays within valid bounds.
+func (t *toastModel) clampScroll() {
+	if t.scrollOffset < 0 {
+		t.scrollOffset = 0
+	}
+	innerW := t.width - 8
+	if innerW < 20 {
+		innerW = 20
+	}
+	prefix := "Done: "
+	if t.isErr {
+		prefix = "Error: "
+	}
+	wrapped := wordwrap.String(prefix+t.text, innerW)
+	lines := strings.Split(wrapped, "\n")
+	maxOffset := len(lines) - 5
+	if maxOffset < 0 {
+		maxOffset = 0
+	}
+	if t.scrollOffset > maxOffset {
+		t.scrollOffset = maxOffset
+	}
+}
+
 // view renders the toast box.
 func (t toastModel) view() string {
 	if !t.active || t.text == "" {
@@ -105,8 +146,31 @@ func (t toastModel) view() string {
 		}
 		content += "\n" + helpStyle.Render("c copy • esc dismiss")
 	} else {
-		// Success toast: 1-2 lines, no scroll
-		content = wrapped
+		lines := strings.Split(wrapped, "\n")
+		visibleLines := 5
+		if len(lines) <= visibleLines {
+			content = wrapped
+		} else {
+			offset := t.scrollOffset
+			maxOffset := len(lines) - visibleLines
+			if offset > maxOffset {
+				offset = maxOffset
+			}
+			if offset < 0 {
+				offset = 0
+			}
+			end := offset + visibleLines
+			if end > len(lines) {
+				end = len(lines)
+			}
+			content = strings.Join(lines[offset:end], "\n")
+			if offset > 0 {
+				content = renderScrollUp(offset, true) + "\n" + content
+			}
+			if end < len(lines) {
+				content += "\n" + renderScrollDown(len(lines)-end, true)
+			}
+		}
 	}
 
 	style := lipgloss.NewStyle().
