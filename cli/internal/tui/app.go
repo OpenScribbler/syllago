@@ -729,13 +729,25 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		// Forward wheel events to active screen for scroll support
 		if msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown {
+			up := msg.Button == tea.MouseButtonWheelUp
+
+			// Sidebar wheel: scroll sidebar when mouse is within sidebar bounds
+			if msg.X < sidebarWidth {
+				if up && a.sidebar.cursor > 0 {
+					a.sidebar.cursor--
+				} else if !up && a.sidebar.cursor < a.sidebar.totalItems()-1 {
+					a.sidebar.cursor++
+				}
+				return a, nil
+			}
+
 			switch a.screen {
 			case screenImport:
 				var cmd tea.Cmd
 				a.importer, cmd = a.importer.Update(msg)
 				return a, cmd
 			case screenDetail:
-				if msg.Button == tea.MouseButtonWheelUp {
+				if up {
 					a.detail.scrollOffset--
 				} else {
 					a.detail.scrollOffset++
@@ -744,12 +756,64 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a, nil
 			case screenUpdate:
 				if a.updater.step == stepUpdatePreview {
-					if msg.Button == tea.MouseButtonWheelUp {
+					if up {
 						if a.updater.scrollOffset > 0 {
 							a.updater.scrollOffset--
 						}
 					} else {
 						a.updater.scrollOffset++
+					}
+				}
+				return a, nil
+			case screenItems:
+				if up && a.items.cursor > 0 {
+					a.items.cursor--
+				} else if !up && a.items.cursor < len(a.items.items)-1 {
+					a.items.cursor++
+				}
+				return a, nil
+			case screenCategory, screenLibraryCards, screenLoadoutCards:
+				contentW := a.width - sidebarWidth - 1
+				cols := 2
+				if contentW < 42 {
+					cols = 1
+				}
+				var maxCards int
+				switch a.screen {
+				case screenCategory:
+					maxCards = a.welcomeCardCount()
+				case screenLibraryCards:
+					maxCards = len(a.libraryCardTypes())
+				case screenLoadoutCards:
+					maxCards = len(a.loadoutCardProviders())
+				}
+				if up {
+					a.cardCursor -= cols
+					if a.cardCursor < 0 {
+						a.cardCursor = 0
+					}
+				} else {
+					a.cardCursor += cols
+					if a.cardCursor >= maxCards {
+						a.cardCursor = maxCards - 1
+					}
+				}
+				return a, nil
+			case screenRegistries:
+				cols := 2
+				if a.registries.width < 42 {
+					cols = 1
+				}
+				maxCards := len(a.registries.entries)
+				if up {
+					a.cardCursor -= cols
+					if a.cardCursor < 0 {
+						a.cardCursor = 0
+					}
+				} else {
+					a.cardCursor += cols
+					if a.cardCursor >= maxCards {
+						a.cardCursor = maxCards - 1
 					}
 				}
 				return a, nil
