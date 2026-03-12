@@ -164,17 +164,8 @@ func renderRegistryCard(entry registryEntry, width int, selected bool) string {
 		version = entry.version
 	}
 
-	urlDisplay := entry.url
-	maxURL := width - 4
-	if len(urlDisplay) > maxURL {
-		urlDisplay = urlDisplay[:maxURL-3] + "..."
-	}
-
-	desc := entry.description
-	if len(desc) > width-4 {
-		desc = desc[:width-7] + "..."
-	}
-
+	urlDisplay := truncate(entry.url, width-4)
+	desc := truncate(entry.description, width-4)
 	title := truncate(entry.name, width-4)
 	meta := fmt.Sprintf("%s  v%s  %d items", status, helpStyle.Render(version), entry.itemCount)
 
