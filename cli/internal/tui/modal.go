@@ -36,6 +36,7 @@ type envSetupModal struct {
 	varIdx       int      // current var being prompted
 	step         envSetupStep
 	methodCursor int             // 0=set up new, 1=already configured
+	btnCursor    int             // 0=left (confirm), 1=right (back/skip)
 	input        textinput.Model // shared text input for value/location/source
 	value        string          // temporarily holds entered value between steps
 	message      string          // feedback message after each operation
@@ -64,6 +65,7 @@ func (m *envSetupModal) advance() {
 	}
 	m.step = envStepChoose
 	m.methodCursor = 0
+	m.btnCursor = 0
 }
 
 func (m envSetupModal) Update(msg tea.Msg) (envSetupModal, tea.Cmd) {
@@ -83,6 +85,10 @@ func (m envSetupModal) Update(msg tea.Msg) (envSetupModal, tea.Cmd) {
 			switch {
 			case msg.Type == tea.KeyEsc:
 				m.advance() // skip this var
+			case key.Matches(msg, keys.Left):
+				m.btnCursor = 0
+			case key.Matches(msg, keys.Right):
+				m.btnCursor = 1
 			case key.Matches(msg, keys.Up) || msg.Type == tea.KeyUp:
 				if m.methodCursor > 0 {
 					m.methodCursor--
@@ -92,6 +98,10 @@ func (m envSetupModal) Update(msg tea.Msg) (envSetupModal, tea.Cmd) {
 					m.methodCursor++
 				}
 			case msg.Type == tea.KeyEnter:
+				if m.btnCursor == 1 {
+					m.advance() // skip this var
+					return m, nil
+				}
 				varName := m.varNames[m.varIdx]
 				if m.methodCursor == 0 {
 					// "Set up new value"
@@ -241,25 +251,25 @@ func (m envSetupModal) View() string {
 			}
 			content += fmt.Sprintf("  %s%s\n", prefix, style.Render(opt))
 		}
-		content += "\n" + helpStyle.Render("[↑↓] Navigate   [Enter] Select   [Esc] Skip")
+		content += "\n" + renderButtons("Select", "Skip", m.btnCursor, 52)
 
 	case envStepValue:
 		content = labelStyle.Render("Environment Variable Setup") + "\n"
 		content += helpStyle.Render(fmt.Sprintf("  %s %s", varName, progress)) + "\n\n"
 		content += "  " + m.input.View() + "\n\n"
-		content += helpStyle.Render("[Enter] Next   [Esc] Back")
+		content += renderButtons("Next", "Back", 0, 52)
 
 	case envStepLocation:
 		content = labelStyle.Render("Environment Variable Setup") + "\n"
 		content += helpStyle.Render(fmt.Sprintf("  Save %s to:", varName)) + "\n\n"
 		content += "  " + m.input.View() + "\n\n"
-		content += helpStyle.Render("[Enter] Save   [Esc] Back")
+		content += renderButtons("Save", "Back", 0, 52)
 
 	case envStepSource:
 		content = labelStyle.Render("Environment Variable Setup") + "\n"
 		content += helpStyle.Render(fmt.Sprintf("  Load %s from an existing file:", varName)) + "\n\n"
 		content += "  " + m.input.View() + "\n\n"
-		content += helpStyle.Render("[Enter] Load   [Esc] Back")
+		content += renderButtons("Load", "Back", 0, 52)
 	}
 
 	if m.message != "" {
@@ -421,6 +431,7 @@ type saveModal struct {
 	input     textinput.Model
 	confirmed bool
 	value     string // set on confirm
+	btnCursor int    // 0=Save, 1=Cancel
 }
 
 func newSaveModal(placeholder string) saveModal {
@@ -438,8 +449,21 @@ func (m saveModal) Update(msg tea.Msg) (saveModal, tea.Cmd) {
 	}
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if key.Matches(msg, keys.Left) {
+			m.btnCursor = 0
+			return m, nil
+		}
+		if key.Matches(msg, keys.Right) {
+			m.btnCursor = 1
+			return m, nil
+		}
 		switch msg.Type {
 		case tea.KeyEnter:
+			if m.btnCursor == 1 {
+				// Cancel
+				m.active = false
+				return m, nil
+			}
 			if strings.TrimSpace(m.input.Value()) != "" {
 				m.value = strings.TrimSpace(m.input.Value())
 				m.confirmed = true
@@ -468,7 +492,7 @@ func (m saveModal) View() string {
 		Width(56)
 	content := labelStyle.Render("Save prompt as:") + "\n\n"
 	content += m.input.View() + "\n\n"
-	content += helpStyle.Render("[Enter] Save   [Esc] Cancel")
+	content += renderButtons("Save", "Cancel", m.btnCursor, 52)
 	return modalStyle.Render(content)
 }
 
