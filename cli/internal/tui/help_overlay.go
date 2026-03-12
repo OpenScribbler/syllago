@@ -92,7 +92,7 @@ func (m helpOverlayModel) View(s screen) string {
 		lines = append(lines, "  "+helpStyle.Render("arrows    navigate cards"))
 		lines = append(lines, "  "+helpStyle.Render("enter     browse category"))
 		lines = append(lines, "  "+helpStyle.Render("tab       toggle sidebar / cards"))
-		lines = append(lines, "  "+helpStyle.Render("a         add content"))
+		lines = append(lines, "  "+helpStyle.Render("a         add content to library"))
 
 	case screenLoadoutCards:
 		lines = append(lines, labelStyle.Render("Loadouts:"))

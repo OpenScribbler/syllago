@@ -473,20 +473,68 @@ func (m itemsModel) View() string {
 }
 
 func (m itemsModel) helpText() string {
-	help := "tab sidebar • / search • enter detail • a add • r remove • esc back • ? help"
-	if m.sourceRegistry != "" {
-		help = "tab sidebar • / search • enter detail • a add • r remove • l create loadout • esc back • ? help"
+	parts := []string{"/ search", "enter detail"}
+
+	switch {
+	case m.sourceRegistry != "":
+		// Browsing a registry's items
+		parts = append(parts, "a add", "l create loadout")
+	case m.contentType == catalog.Library:
+		// Browsing library items
+		parts = append(parts, "a add", "r remove")
+	default:
+		// Browsing a content type (from homepage or library card)
+		typeLabel := contentTypeSingular(m.contentType)
+		parts = append(parts, "a add "+typeLabel)
+		if m.hasRemovableItems() {
+			parts = append(parts, "r remove "+typeLabel)
+		}
 	}
+
+	parts = append(parts, "esc back", "? help")
+
 	if m.hiddenCount > 0 {
-		help += fmt.Sprintf(" • H show %d hidden", m.hiddenCount)
+		parts = append(parts, fmt.Sprintf("H show %d hidden", m.hiddenCount))
 	}
-	return help
+	return strings.Join(parts, " • ")
+}
+
+// hasRemovableItems returns true if any item in the list is removable.
+func (m itemsModel) hasRemovableItems() bool {
+	for _, item := range m.items {
+		if isRemovable(item) {
+			return true
+		}
+	}
+	return false
 }
 
 // isRemovable returns true if the item can be removed from the library.
 // Only library items (Source == "global") are removable — registry items are not.
 func isRemovable(item catalog.ContentItem) bool {
 	return item.Source == "global" && item.Library
+}
+
+// contentTypeSingular returns the lowercase singular form of a content type for help text.
+func contentTypeSingular(ct catalog.ContentType) string {
+	switch ct {
+	case catalog.Skills:
+		return "skill"
+	case catalog.Agents:
+		return "agent"
+	case catalog.Rules:
+		return "rule"
+	case catalog.Hooks:
+		return "hook"
+	case catalog.Commands:
+		return "command"
+	case catalog.MCP:
+		return "mcp config"
+	case catalog.Loadouts:
+		return "loadout"
+	default:
+		return "content"
+	}
 }
 
 func (m itemsModel) selectedItem() catalog.ContentItem {

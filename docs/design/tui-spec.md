@@ -325,7 +325,7 @@ Visual cues that content extends beyond the visible viewport.
 | Scroll | Yes — Up/Down/PgUp/PgDown/Home/End + mouse wheel |
 | Badges | Inline: `[EXAMPLE]`, `[LIBRARY]`, `[REGISTRY]`, `[GLOBAL]`, `[BUILT-IN]` |
 | Description box | Fixed-height box below list shows selected item's description |
-| Action keys | `a` add/import, `l` create loadout (registry context only), `H` toggle hidden |
+| Action keys | `a` add {type}, `r` remove {type} (library items only), `l` create loadout (registry context only), `H` toggle hidden |
 
 ---
 
@@ -386,7 +386,7 @@ Visual cues that content extends beyond the visible viewport.
 | Tab focus | Yes |
 | Search | Yes |
 | Cards | Dynamic sizing (NOT hardcoded), fixed height in two-col mode for click zone alignment, shows name/status/version/URL/description |
-| Action keys | `a` add, `r` remove, `s` sync |
+| Action keys | `a` add registry, `r` remove registry, `s` sync registry |
 
 ---
 
@@ -467,7 +467,7 @@ All key bindings are defined in `keys.go` as named bindings. Never hardcode key 
 
 **Action keys:**
 - `i` install, `u` uninstall, `c` copy, `e` env setup, `p` share
-- `a` add, `r` remove, `s` sync (card pages and items/detail)
+- `a` add {context}, `r` remove {context} (library items and registries), `s` sync (registries only)
 - `l` create loadout (Items page, registry context only)
 - `H` toggle hidden content
 - `y/Y` confirm, `n/N` cancel (in confirm modals)

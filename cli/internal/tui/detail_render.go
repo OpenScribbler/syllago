@@ -677,6 +677,10 @@ func (m detailModel) helpText() string {
 		}
 	}
 
+	if isRemovable(m.item) {
+		helpParts = append(helpParts, "r remove "+contentTypeSingular(m.item.Type))
+	}
+
 	if m.item.Library {
 		if m.llmPrompt != "" {
 			helpParts = append(helpParts, "c copy prompt")
