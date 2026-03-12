@@ -61,7 +61,7 @@ func (m registriesModel) Update(msg tea.Msg) (registriesModel, tea.Cmd) {
 }
 
 func (m registriesModel) helpText() string {
-	return "arrows navigate • enter browse • a add • d remove • r sync • esc back"
+	return "arrows navigate • enter browse • a add registry • r remove registry • s sync registry • esc back"
 }
 
 func (m registriesModel) View(cursor, scrollOffset int) (string, int) {

@@ -23,7 +23,8 @@ case msg.String() == "i":
 
 - Navigation: up/k, down/j, left/h, right/l (vim alternatives)
 - Actions: single lowercase — i=install, u=uninstall, c=copy, s=save, e=env, p=share
-- Card pages: a=add, r=remove, s=sync
+- Card/list pages: a=add {context}, r=remove {context}, s=sync (registries only)
+- Help text must be context-specific: "a add skill", "r remove registry", not just "a add"
 - Toggles: uppercase — H=toggle hidden
 - Confirm/cancel: `keys.ConfirmYes` (y/Y), `keys.ConfirmNo` (n/N)
 

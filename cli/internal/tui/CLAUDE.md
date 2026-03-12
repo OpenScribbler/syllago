@@ -159,9 +159,9 @@ case msg.String() == "k":
 
 | Key | Category | Items | Library Cards | Loadout Cards | Registries | Detail |
 |-----|----------|-------|---------------|---------------|------------|--------|
-| a   | --       | add   | add           | create loadout| add registry| --    |
-| r   | --       | remove| --            | --            | remove      | remove |
-| s   | --       | --    | --            | --            | sync        | --    |
+| a   | --       | add {type} | add content | create loadout | add registry | -- |
+| r   | --       | remove {type} (library only) | -- | -- | remove registry | remove {type} (library only) |
+| s   | --       | --    | --            | --            | sync registry | --    |
 | l   | --       | create loadout (registry context) | -- | -- | -- | --    |
 | H   | toggle hidden | toggle hidden | -- | --       | --          | --    |
 

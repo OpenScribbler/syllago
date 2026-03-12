@@ -3185,7 +3185,7 @@ func (a App) contextHelpText() string {
 	case screenSandbox:
 		return a.sandboxSettings.helpText()
 	case screenLibraryCards:
-		return "arrows navigate • enter browse • a add • esc back"
+		return "arrows navigate • enter browse • a add content • esc back"
 	case screenLoadoutCards:
 		return "arrows navigate • enter browse • a create loadout • esc back"
 	default:
