@@ -223,10 +223,10 @@ func (a *App) handleConfirmAction() tea.Cmd {
 		}
 	case modalRegistryRemove:
 		a.registryOpInProgress = true
-		a.toast.show(toastMsg{text: fmt.Sprintf("Removing registry: %s...", a.registries.entries[a.cardCursor].name)})
+		a.toast.show(toastMsg{text: fmt.Sprintf("Removing registry: %s...", a.registries.entries[a.cardCursor].name), isProgress: true})
 		name := a.registries.entries[a.cardCursor].name
 		root := a.catalog.RepoRoot
-		return func() tea.Msg {
+		removeCmd := func() tea.Msg {
 			freshCfg, err := config.Load(root)
 			if err != nil {
 				return registryRemoveDoneMsg{name: name, err: fmt.Errorf("loading config: %w", err)}
@@ -246,6 +246,7 @@ func (a *App) handleConfirmAction() tea.Cmd {
 			}
 			return registryRemoveDoneMsg{name: name}
 		}
+		return tea.Batch(removeCmd, a.toast.tickSpinner())
 	case modalNonSyllagoRedirect:
 		a.importer.cleanup() // clean up any previous clone
 		a.importer.initFromExternalClone(a.pendingNonSyllagoClone)
@@ -273,23 +274,34 @@ func (a *App) rebuildRegistryState() {
 	if err == nil {
 		a.registryCfg = cfg
 	}
-	a.registries = newRegistriesModel(a.catalog.RepoRoot, a.registryCfg, a.catalog)
-	a.registries.width = a.width - sidebarWidth - 1
-	a.registries.height = a.panelHeight()
-	a.sidebar.registryCount = len(a.registryCfg.Registries)
+	// Rebuild registry sources from fresh config so newly added/removed
+	// registries are included in the catalog scan.
+	var sources []catalog.RegistrySource
+	for _, r := range a.registryCfg.Registries {
+		if registry.IsCloned(r.Name) {
+			dir, _ := registry.CloneDir(r.Name)
+			sources = append(sources, catalog.RegistrySource{Name: r.Name, Path: dir})
+		}
+	}
+	a.registrySources = sources
+	// Rescan catalog first so the registries model sees correct item counts.
 	cat, scanErr := catalog.ScanWithGlobalAndRegistries(a.catalog.RepoRoot, a.projectRoot, a.registrySources)
 	if scanErr == nil {
 		a.catalog = cat
 		a.refreshSidebarCounts()
 	}
+	a.registries = newRegistriesModel(a.catalog.RepoRoot, a.registryCfg, a.catalog)
+	a.registries.width = a.width - sidebarWidth - 1
+	a.registries.height = a.panelHeight()
+	a.sidebar.registryCount = len(a.registryCfg.Registries)
 }
 
 // doRegistryAdd starts an async registry clone and config save.
 func (a *App) doRegistryAdd(gitURL, nameOverride string) tea.Cmd {
-	a.toast.show(toastMsg{text: fmt.Sprintf("Adding registry: %s...", gitURL)})
+	a.toast.show(toastMsg{text: fmt.Sprintf("Cloning registry: %s...", gitURL), isProgress: true})
 	a.registryOpInProgress = true
 	root := a.catalog.RepoRoot
-	return func() tea.Msg {
+	cloneCmd := func() tea.Msg {
 		var empty bool
 		name := nameOverride
 		if name == "" {
@@ -327,6 +339,7 @@ func (a *App) doRegistryAdd(gitURL, nameOverride string) tea.Cmd {
 		}
 		return registryAddDoneMsg{name: name, empty: empty}
 	}
+	return tea.Batch(cloneCmd, a.toast.tickSpinner())
 }
 
 // doCreateLoadout writes a loadout.yaml to the chosen destination.
@@ -592,10 +605,17 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case spinner.TickMsg:
+		var cmds []tea.Cmd
+		if a.toast.active && a.toast.isProgress {
+			cmds = append(cmds, a.toast.updateSpinner(msg))
+		}
 		if a.screen == screenUpdate {
 			var cmd tea.Cmd
 			a.updater, cmd = a.updater.Update(msg)
-			return a, cmd
+			cmds = append(cmds, cmd)
+		}
+		if len(cmds) > 0 {
+			return a, tea.Batch(cmds...)
 		}
 
 	case updatePreviewMsg:
@@ -763,12 +783,15 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			a.toast.show(toastMsg{text: fmt.Sprintf("Add failed: %s", msg.err), isErr: true})
 		} else {
+			a.rebuildRegistryState()
+			count := a.catalog.CountRegistry(msg.name)
 			if msg.empty {
 				a.toast.show(toastMsg{text: fmt.Sprintf("Added registry: %s (empty — no content found)", msg.name)})
+			} else if count == 1 {
+				a.toast.show(toastMsg{text: fmt.Sprintf("Added registry: %s (1 item)", msg.name)})
 			} else {
-				a.toast.show(toastMsg{text: fmt.Sprintf("Added registry: %s", msg.name)})
+				a.toast.show(toastMsg{text: fmt.Sprintf("Added registry: %s (%d items)", msg.name, count)})
 			}
-			a.rebuildRegistryState()
 		}
 		return a, nil
 
@@ -989,6 +1012,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					return a, nil
 				}
+				// Input field click (relY=4: border+padding+title+blank)
+				if relY == 4 {
+					a.saveModal.focusedField = 0
+					a.saveModal.input.Focus()
+					return a, nil
+				}
 				return a, nil // click inside modal but not on buttons
 			}
 			a.saveModal.active = false
@@ -1003,28 +1032,54 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				modalH := z.EndY - z.StartY + 1
 				modalW := z.EndX - z.StartX + 1
 				buttonRelY := modalH - 3
-				if relY == buttonRelY && a.envModal.step == envStepChoose {
+
+				// Button row clicks — all steps
+				if relY == buttonRelY {
 					contentLeft := 3
 					contentW := modalW - 6
 					midX := contentLeft + contentW/2
 					if relX < midX {
-						// Select — same as Enter with btnCursor=0
 						a.envModal.btnCursor = 0
-						m, cmd := a.envModal.Update(tea.KeyMsg{Type: tea.KeyEnter})
-						a.envModal = m
-						return a, cmd
 					} else {
-						// Skip — same as Enter with btnCursor=1
 						a.envModal.btnCursor = 1
+					}
+					switch a.envModal.step {
+					case envStepChoose:
 						m, cmd := a.envModal.Update(tea.KeyMsg{Type: tea.KeyEnter})
 						a.envModal = m
 						if !a.envModal.active {
 							a.focus = focusContent
 						}
 						return a, cmd
+					default:
+						// Value/Location/Source: left button = Enter, right button = Esc (back)
+						if a.envModal.btnCursor == 0 {
+							m, cmd := a.envModal.Update(tea.KeyMsg{Type: tea.KeyEnter})
+							a.envModal = m
+							if !a.envModal.active {
+								a.focus = focusContent
+							}
+							return a, cmd
+						}
+						m, cmd := a.envModal.Update(tea.KeyMsg{Type: tea.KeyEsc})
+						a.envModal = m
+						return a, cmd
 					}
 				}
-				return a, nil // click inside modal but not on buttons
+
+				// Radio option clicks — envStepChoose only (relY 5-6)
+				if a.envModal.step == envStepChoose {
+					if relY == 5 {
+						a.envModal.methodCursor = 0
+						return a, nil
+					}
+					if relY == 6 {
+						a.envModal.methodCursor = 1
+						return a, nil
+					}
+				}
+
+				return a, nil // click inside modal but not on interactive elements
 			}
 			a.envModal.active = false
 			a.focus = focusContent
@@ -1076,6 +1131,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return a, cmd
 				}
 
+				// Custom path step: click on input field (relY=4) focuses it
+				if a.instModal.step == installStepCustomPath && relY == 4 {
+					a.instModal.customPathInput.Focus()
+					return a, nil
+				}
+
 				// Check option row clicks — highlight only, don't advance
 				numOptions := 0
 				switch a.instModal.step {
@@ -1116,6 +1177,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Button row: last content line before bottom padding(1)+border(1)
 				buttonRelY := modalH - 3
 				if relY == buttonRelY {
+					a.registryAddModal.focusedField = 2
+					a.registryAddModal.urlInput.Blur()
+					a.registryAddModal.nameInput.Blur()
 					contentLeft := 3
 					contentW := modalW - 6
 					midX := contentLeft + contentW/2
@@ -1140,20 +1204,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				// URL field click (relY ~= 4: border+padding+title+blank)
 				if relY >= 4 && relY <= 4 {
-					if a.registryAddModal.focusedField != 0 {
-						a.registryAddModal.focusedField = 0
-						a.registryAddModal.nameInput.Blur()
-						a.registryAddModal.urlInput.Focus()
-					}
+					a.registryAddModal.focusedField = 0
+					a.registryAddModal.nameInput.Blur()
+					a.registryAddModal.urlInput.Focus()
 					return a, nil
 				}
 				// Name field click (relY ~= 5)
 				if relY >= 5 && relY <= 5 {
-					if a.registryAddModal.focusedField != 1 {
-						a.registryAddModal.focusedField = 1
-						a.registryAddModal.urlInput.Blur()
-						a.registryAddModal.nameInput.Focus()
-					}
+					a.registryAddModal.focusedField = 1
+					a.registryAddModal.urlInput.Blur()
+					a.registryAddModal.nameInput.Focus()
 					return a, nil
 				}
 
@@ -1367,7 +1427,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		// Toast key routing (before modal routing)
 		if a.toast.active {
-			if a.toast.isErr {
+			if a.toast.isProgress {
+				// Progress toast: not dismissable — persists until replaced
+			} else if a.toast.isErr {
 				// Error toast: Esc dismisses, c copies. All other keys pass through.
 				switch {
 				case key.Matches(msg, keys.Back):
@@ -2237,12 +2299,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if key.Matches(msg, keys.Refresh) && len(a.registries.entries) > 0 && !a.registryOpInProgress {
 				entry := a.registries.entries[a.cardCursor]
-				a.toast.show(toastMsg{text: fmt.Sprintf("Syncing %s...", entry.name)})
+				a.toast.show(toastMsg{text: fmt.Sprintf("Syncing %s...", entry.name), isProgress: true})
 				a.registryOpInProgress = true
-				return a, func() tea.Msg {
+				syncCmd := func() tea.Msg {
 					err := registry.Sync(entry.name)
 					return registrySyncDoneMsg{name: entry.name, err: err}
 				}
+				return a, tea.Batch(syncCmd, a.toast.tickSpinner())
 			}
 			return a, nil
 		}

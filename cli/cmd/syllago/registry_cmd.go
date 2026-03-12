@@ -39,7 +39,7 @@ var registryAddCmd = &cobra.Command{
 	Short: "Add a git registry",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		root, err := findProjectRoot()
+		root, err := findContentRepoRoot()
 		if err != nil {
 			return err
 		}
@@ -183,7 +183,7 @@ var registryRemoveCmd = &cobra.Command{
 	Short: "Remove a registry and delete its local clone",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		root, err := findProjectRoot()
+		root, err := findContentRepoRoot()
 		if err != nil {
 			return err
 		}
@@ -233,7 +233,7 @@ var registryListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List registered registries",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		root, err := findProjectRoot()
+		root, err := findContentRepoRoot()
 		if err != nil {
 			return err
 		}
@@ -305,7 +305,7 @@ Examples:
   syllago registry sync my-rules     Sync a specific registry`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		root, err := findProjectRoot()
+		root, err := findContentRepoRoot()
 		if err != nil {
 			return err
 		}
@@ -370,7 +370,7 @@ Examples:
   syllago registry items --type skills       List only skills`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		root, err := findProjectRoot()
+		root, err := findContentRepoRoot()
 		if err != nil {
 			return err
 		}

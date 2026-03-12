@@ -249,26 +249,27 @@ func (m envSetupModal) View() string {
 				prefix = "> "
 				style = selectedItemStyle
 			}
-			content += fmt.Sprintf("  %s%s\n", prefix, style.Render(opt))
+			row := fmt.Sprintf("  %s%s", prefix, style.Render(opt))
+			content += zone.Mark(fmt.Sprintf("modal-opt-%d", i), row) + "\n"
 		}
 		content += "\n" + renderButtons("Select", "Skip", m.btnCursor, 52)
 
 	case envStepValue:
 		content = labelStyle.Render("Environment Variable Setup") + "\n"
 		content += helpStyle.Render(fmt.Sprintf("  %s %s", varName, progress)) + "\n\n"
-		content += "  " + m.input.View() + "\n\n"
+		content += "  " + zone.Mark("modal-field-input", m.input.View()) + "\n\n"
 		content += renderButtons("Next", "Back", 0, 52)
 
 	case envStepLocation:
 		content = labelStyle.Render("Environment Variable Setup") + "\n"
 		content += helpStyle.Render(fmt.Sprintf("  Save %s to:", varName)) + "\n\n"
-		content += "  " + m.input.View() + "\n\n"
+		content += "  " + zone.Mark("modal-field-input", m.input.View()) + "\n\n"
 		content += renderButtons("Save", "Back", 0, 52)
 
 	case envStepSource:
 		content = labelStyle.Render("Environment Variable Setup") + "\n"
 		content += helpStyle.Render(fmt.Sprintf("  Load %s from an existing file:", varName)) + "\n\n"
-		content += "  " + m.input.View() + "\n\n"
+		content += "  " + zone.Mark("modal-field-input", m.input.View()) + "\n\n"
 		content += renderButtons("Load", "Back", 0, 52)
 	}
 
@@ -304,6 +305,18 @@ func renderButtons(left, right string, cursor, contentWidth int) string {
 	}
 	l = zone.Mark("modal-btn-left", l)
 	r = zone.Mark("modal-btn-right", r)
+	bar := l + "   " + r
+	if contentWidth > 0 {
+		bar = lipgloss.PlaceHorizontal(contentWidth, lipgloss.Center, bar)
+	}
+	return bar
+}
+
+// renderButtonsInactive renders a pair of buttons with neither highlighted.
+// Used when focus is on a text field rather than the button area.
+func renderButtonsInactive(left, right string, contentWidth int) string {
+	l := zone.Mark("modal-btn-left", "  "+buttonDisabledStyle.Render(left))
+	r := zone.Mark("modal-btn-right", "  "+buttonDisabledStyle.Render(right))
 	bar := l + "   " + r
 	if contentWidth > 0 {
 		bar = lipgloss.PlaceHorizontal(contentWidth, lipgloss.Center, bar)
@@ -430,11 +443,12 @@ func (m confirmModal) overlayView(background string) string {
 
 // saveModal is a modal dialog with a text input for entering a filename.
 type saveModal struct {
-	active    bool
-	input     textinput.Model
-	confirmed bool
-	value     string // set on confirm
-	btnCursor int    // 0=Save, 1=Cancel
+	active       bool
+	input        textinput.Model
+	confirmed    bool
+	value        string // set on confirm
+	btnCursor    int    // 0=Save, 1=Cancel
+	focusedField int    // 0=input, 1=buttons
 }
 
 func newSaveModal(placeholder string) saveModal {
@@ -452,18 +466,24 @@ func (m saveModal) Update(msg tea.Msg) (saveModal, tea.Cmd) {
 	}
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if key.Matches(msg, keys.Left) {
-			m.btnCursor = 0
+		if msg.Type == tea.KeyEsc {
+			m.active = false
 			return m, nil
 		}
-		if key.Matches(msg, keys.Right) {
-			m.btnCursor = 1
+
+		// Tab toggles: input(0) → buttons(1) → input(0)
+		if msg.Type == tea.KeyTab || msg.Type == tea.KeyShiftTab {
+			m.focusedField = 1 - m.focusedField
+			if m.focusedField == 0 {
+				m.input.Focus()
+			} else {
+				m.input.Blur()
+			}
 			return m, nil
 		}
-		switch msg.Type {
-		case tea.KeyEnter:
+
+		if msg.Type == tea.KeyEnter {
 			if m.btnCursor == 1 {
-				// Cancel
 				m.active = false
 				return m, nil
 			}
@@ -473,14 +493,30 @@ func (m saveModal) Update(msg tea.Msg) (saveModal, tea.Cmd) {
 				m.active = false
 				return m, nil
 			}
-		case tea.KeyEsc:
-			m.active = false
 			return m, nil
 		}
+
+		// Buttons focused: Left/Right switch buttons
+		if m.focusedField == 1 {
+			switch {
+			case key.Matches(msg, keys.Left):
+				if m.btnCursor > 0 {
+					m.btnCursor--
+				}
+			case key.Matches(msg, keys.Right):
+				if m.btnCursor < 1 {
+					m.btnCursor++
+				}
+			}
+			return m, nil
+		}
+
+		// Input focused: pass all keys to text input
+		var cmd tea.Cmd
+		m.input, cmd = m.input.Update(msg)
+		return m, cmd
 	}
-	var cmd tea.Cmd
-	m.input, cmd = m.input.Update(msg)
-	return m, cmd
+	return m, nil
 }
 
 func (m saveModal) View() string {
@@ -494,8 +530,14 @@ func (m saveModal) View() string {
 		Padding(1, 2).
 		Width(56)
 	content := labelStyle.Render("Save prompt as:") + "\n\n"
-	content += m.input.View() + "\n\n"
-	content += renderButtons("Save", "Cancel", m.btnCursor, 52)
+	content += zone.Mark("modal-field-input", m.input.View()) + "\n\n"
+	var buttons string
+	if m.focusedField == 1 {
+		buttons = renderButtons("Save", "Cancel", m.btnCursor, 52)
+	} else {
+		buttons = renderButtonsInactive("Save", "Cancel", 52)
+	}
+	content += buttons
 	return modalStyle.Render(content)
 }
 
@@ -733,7 +775,7 @@ func (m installModal) View() string {
 			}
 			row := fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(o.name))
 			row += fmt.Sprintf("      %s\n", helpStyle.Render(o.desc))
-			content += row
+			content += zone.Mark(fmt.Sprintf("modal-opt-%d", i), row)
 		}
 
 		content += m.destinationPreview()
@@ -742,7 +784,7 @@ func (m installModal) View() string {
 
 	case installStepCustomPath:
 		content = labelStyle.Render("Custom Install Path") + "\n\n"
-		content += m.customPathInput.View() + "\n\n"
+		content += zone.Mark("modal-field-input", m.customPathInput.View()) + "\n\n"
 		buttons = renderButtons("Confirm", "Back", m.btnCursor, 52)
 
 	case installStepMethod:
@@ -771,7 +813,7 @@ func (m installModal) View() string {
 			}
 			row := fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(o.name))
 			row += fmt.Sprintf("      %s\n", helpStyle.Render(o.desc))
-			content += row
+			content += zone.Mark(fmt.Sprintf("modal-opt-%d", i), row)
 		}
 
 		content += m.destinationPreview()
@@ -852,7 +894,7 @@ type registryAddModal struct {
 	confirmed    bool
 	urlInput     textinput.Model
 	nameInput    textinput.Model
-	focusedField int // 0 = url, 1 = name (optional override)
+	focusedField int // 0 = url, 1 = name, 2 = buttons
 	btnCursor    int // 0 = Add, 1 = Cancel
 	message      string
 	messageIsErr bool
@@ -892,32 +934,34 @@ func (m registryAddModal) Update(msg tea.Msg) (registryAddModal, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		m.message = ""
-		switch {
-		case msg.Type == tea.KeyEsc:
+
+		// Esc always dismisses
+		if msg.Type == tea.KeyEsc {
 			m.active = false
 			return m, nil
-		case msg.Type == tea.KeyTab:
-			if m.focusedField == 0 {
-				m.focusedField = 1
-				m.urlInput.Blur()
-				m.nameInput.Focus()
+		}
+
+		// Tab cycles: url(0) → name(1) → buttons(2) → url(0)
+		// Shift+Tab goes backwards
+		if msg.Type == tea.KeyTab || msg.Type == tea.KeyShiftTab {
+			if msg.Type == tea.KeyShiftTab {
+				m.focusedField = (m.focusedField + 2) % 3 // backwards
 			} else {
-				m.focusedField = 0
-				m.nameInput.Blur()
+				m.focusedField = (m.focusedField + 1) % 3
+			}
+			m.urlInput.Blur()
+			m.nameInput.Blur()
+			switch m.focusedField {
+			case 0:
 				m.urlInput.Focus()
+			case 1:
+				m.nameInput.Focus()
 			}
 			return m, nil
-		case msg.Type == tea.KeyLeft:
-			if m.btnCursor > 0 {
-				m.btnCursor--
-			}
-			return m, nil
-		case msg.Type == tea.KeyRight:
-			if m.btnCursor < 1 {
-				m.btnCursor++
-			}
-			return m, nil
-		case msg.Type == tea.KeyEnter:
+		}
+
+		// Enter always submits (regardless of focus)
+		if msg.Type == tea.KeyEnter {
 			if m.btnCursor == 1 { // Cancel
 				m.active = false
 				return m, nil
@@ -932,6 +976,25 @@ func (m registryAddModal) Update(msg tea.Msg) (registryAddModal, tea.Cmd) {
 			m.active = false
 			return m, nil
 		}
+
+		// When buttons are focused, Left/Right switch buttons
+		if m.focusedField == 2 {
+			switch {
+			case msg.Type == tea.KeyLeft:
+				if m.btnCursor > 0 {
+					m.btnCursor--
+				}
+				return m, nil
+			case msg.Type == tea.KeyRight:
+				if m.btnCursor < 1 {
+					m.btnCursor++
+				}
+				return m, nil
+			}
+			return m, nil
+		}
+
+		// When a text field is focused, pass all keys to it (including arrows)
 		var cmd tea.Cmd
 		if m.focusedField == 0 {
 			m.urlInput, cmd = m.urlInput.Update(msg)
@@ -949,14 +1012,20 @@ func (m registryAddModal) View() string {
 	}
 
 	content := labelStyle.Render("Add Registry") + "\n\n"
-	content += m.urlInput.View() + "\n"
-	content += m.nameInput.View()
+	content += zone.Mark("modal-field-url", m.urlInput.View()) + "\n"
+	content += zone.Mark("modal-field-name", m.nameInput.View())
 	if m.message != "" && m.messageIsErr {
 		content += "\n" + errorMsgStyle.Render(m.message)
 	}
 	content += "\n" + helpStyle.Render("tab switch field")
 
-	buttons := renderButtons("Add", "Cancel", m.btnCursor, 52)
+	var buttons string
+	if m.focusedField == 2 {
+		buttons = renderButtons("Add", "Cancel", m.btnCursor, 52)
+	} else {
+		// Both buttons appear inactive when a text field is focused
+		buttons = renderButtonsInactive("Add", "Cancel", 52)
+	}
 
 	contentLines := strings.Count(content, "\n")
 	spacer := registryAddInnerHeight - contentLines - 1

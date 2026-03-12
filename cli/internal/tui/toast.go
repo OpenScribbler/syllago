@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/atotto/clipboard"
+	"github.com/charmbracelet/bubbles/spinner"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/wordwrap"
 )
@@ -12,8 +14,9 @@ import (
 // toastMsg is sent by any component to trigger a toast notification.
 // App.Update() catches this and sets the active toast state.
 type toastMsg struct {
-	text  string
-	isErr bool
+	text       string
+	isErr      bool
+	isProgress bool // in-progress indicator (no "Done:" prefix, accent border)
 }
 
 // toastModel holds the state for the active toast overlay.
@@ -21,6 +24,8 @@ type toastModel struct {
 	active       bool
 	text         string
 	isErr        bool
+	isProgress   bool
+	spinner      spinner.Model
 	scrollOffset int // for long error messages
 	width        int // content pane width (updated on WindowSizeMsg)
 }
@@ -30,7 +35,33 @@ func (t *toastModel) show(msg toastMsg) {
 	t.active = true
 	t.text = msg.text
 	t.isErr = msg.isErr
+	t.isProgress = msg.isProgress
 	t.scrollOffset = 0
+	if msg.isProgress {
+		sp := spinner.New()
+		sp.Spinner = spinner.Dot
+		sp.Style = lipgloss.NewStyle().Foreground(accentColor)
+		t.spinner = sp
+	}
+}
+
+// tickSpinner returns the tea.Cmd to start spinner animation.
+// Should be called after show() when isProgress is true.
+func (t *toastModel) tickSpinner() tea.Cmd {
+	if !t.isProgress {
+		return nil
+	}
+	return t.spinner.Tick
+}
+
+// updateSpinner forwards a spinner tick message and returns the next tick cmd.
+func (t *toastModel) updateSpinner(msg tea.Msg) tea.Cmd {
+	if !t.active || !t.isProgress {
+		return nil
+	}
+	var cmd tea.Cmd
+	t.spinner, cmd = t.spinner.Update(msg)
+	return cmd
 }
 
 // dismiss clears the toast.
@@ -62,6 +93,8 @@ func (t *toastModel) isScrollable() bool {
 	prefix := "Done: "
 	if t.isErr {
 		prefix = "Error: "
+	} else if t.isProgress {
+		prefix = ""
 	}
 	wrapped := wordwrap.String(prefix+t.text, innerW)
 	return len(strings.Split(wrapped, "\n")) > 5
@@ -79,6 +112,8 @@ func (t *toastModel) clampScroll() {
 	prefix := "Done: "
 	if t.isErr {
 		prefix = "Error: "
+	} else if t.isProgress {
+		prefix = ""
 	}
 	wrapped := wordwrap.String(prefix+t.text, innerW)
 	lines := strings.Split(wrapped, "\n")
@@ -108,6 +143,9 @@ func (t toastModel) view() string {
 	if t.isErr {
 		prefix = "Error: "
 		borderColor = dangerColor
+	} else if t.isProgress {
+		prefix = t.spinner.View() + " "
+		borderColor = accentColor
 	} else {
 		prefix = "Done: "
 		borderColor = successColor
@@ -117,7 +155,9 @@ func (t toastModel) view() string {
 	wrapped := wordwrap.String(fullText, innerW)
 
 	var content string
-	if t.isErr {
+	if t.isProgress {
+		content = wrapped
+	} else if t.isErr {
 		lines := strings.Split(wrapped, "\n")
 		// Error toast: fixed 5 visible lines, scrollable
 		visibleLines := 5
