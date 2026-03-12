@@ -283,9 +283,9 @@ func TestCreateLoadoutModal_ClickProvider(t *testing.T) {
 	m, _ := app.Update(click)
 	updated := m.(App)
 
-	// Clicking a provider selects + Enter, so step should advance to clStepItems.
-	if updated.createLoadoutModal.step != clStepItems {
-		t.Errorf("clicking a provider should advance to clStepItems, got step %d", updated.createLoadoutModal.step)
+	// Clicking a provider selects + Enter, so step should advance to clStepTypes.
+	if updated.createLoadoutModal.step != clStepTypes {
+		t.Errorf("clicking a provider should advance to clStepTypes, got step %d", updated.createLoadoutModal.step)
 	}
 }
 
