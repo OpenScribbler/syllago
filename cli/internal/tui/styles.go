@@ -23,6 +23,11 @@ var (
 			Bold(true).
 			Foreground(primaryColor)
 
+	// ASCII art accent (SYL highlight in landing page art)
+	artAccentStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(accentColor)
+
 	// Help bar at bottom
 	helpStyle = lipgloss.NewStyle().
 			Foreground(mutedColor)
