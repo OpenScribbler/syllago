@@ -88,9 +88,8 @@ Click to select sidebar items, content list items, detail tabs, action buttons, 
 
 Each content item has a tabbed detail view:
 
-- **Overview** — Description, metadata, tags, and provider compatibility status.
-- **Files** — Browse the item's file tree, open files in a scrollable viewer, copy content, or save to disk.
-- **Install** — Check/uncheck target providers, then press `i` to install. Environment variable setup for MCP servers with inline `.env` editing.
+- **Files** — Browse the item's file tree with split-view preview (file list on left, content on right). Copy content or save to disk. Loadouts show a **Contents** tab with items grouped by type.
+- **Install** — Check/uncheck target providers, then press `i` to install. Environment variable setup for MCP servers with inline `.env` editing. Loadouts show an **Apply** tab.
 
 ### Import
 

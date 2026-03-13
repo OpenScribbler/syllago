@@ -357,18 +357,23 @@ func (m detailModel) renderInstallTab() string {
 	s += labelStyle.Render("Actions") + "\n"
 	s += helpStyle.Render(strings.Repeat("─", 20)) + "\n"
 
-	// Action buttons — styled with background color, conditionally shown
-	installBtn := zone.Mark("detail-btn-install", buttonStyle.Render("Install"))
-	uninstallBtn := zone.Mark("detail-btn-uninstall", buttonStyle.Render("Uninstall"))
-
-	actionBar := installBtn + "  " + uninstallBtn
-
-	// Copy is functional for library items with LLM prompts
+	// Action buttons — built from item context using semantic styles
+	var actionBtns []ActionButton
+	actionBtns = append(actionBtns, ActionButton{"i", "Install", "detail-btn-install", actionBtnAddStyle})
+	actionBtns = append(actionBtns, ActionButton{"u", "Uninstall", "detail-btn-uninstall", actionBtnUninstallStyle})
 	if m.item.Library {
-		copyBtn := zone.Mark("detail-btn-copy", buttonStyle.Render("Copy"))
-		actionBar += "  " + copyBtn
+		actionBtns = append(actionBtns, ActionButton{"c", "Copy", "detail-btn-copy", actionBtnDefaultStyle})
 	}
-	s += actionBar + "\n"
+	if m.item.Library {
+		actionBtns = append(actionBtns, ActionButton{"s", "Save", "detail-btn-save", actionBtnDefaultStyle})
+	}
+	if m.item.Type == catalog.MCP && m.hasUnsetEnvVars() {
+		actionBtns = append(actionBtns, ActionButton{"e", "Env Setup", "detail-btn-env", actionBtnDefaultStyle})
+	}
+	if m.item.Library {
+		actionBtns = append(actionBtns, ActionButton{"p", "Share", "detail-btn-share", actionBtnDefaultStyle})
+	}
+	s += renderActionButtons(actionBtns...) + "\n"
 
 	return s
 }

@@ -6,10 +6,10 @@ syllago           │Home > Skills > alpha-skill
   MCP Configs   1 │Providers: Claude Code
   Rules         1 │────────────────────────────────────────────────────────────────────────────────
   Hooks         1 │
-  Commands      1 │Files│Preview
+  Commands      1 │ Files  |  Preview
   ─────────────   │ ╭────────────────────────────────────────────────────────╮
   Collections     │ │                                                        │
-  Library       1 │││  Confirm Uninstall                                     │
+  Library       1 │ │  Confirm Uninstall                                     │
   Loadouts      2 │ │                                                        │
   Registries      │ │  Remove alpha-skill from all providers?                │
   ─────────────   │ │                                                        │

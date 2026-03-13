@@ -220,6 +220,22 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 		// Tab switching (blocked during single-pane file preview)
 		if !m.fileViewer.splitView.showingPreview {
 			var newTab detailTab = -1
+
+			// Tab/Shift+Tab cycles through detail tabs.
+			if key.Matches(msg, keys.Tab) || key.Matches(msg, keys.ShiftTab) {
+				tabs := m.tabOrder()
+				for i, t := range tabs {
+					if t == m.activeTab {
+						if key.Matches(msg, keys.Tab) {
+							newTab = tabs[(i+1)%len(tabs)]
+						} else {
+							newTab = tabs[(i-1+len(tabs))%len(tabs)]
+						}
+						break
+					}
+				}
+			}
+
 			// Number keys always switch tabs regardless of pane focus.
 			switch msg.String() {
 			case "1":
@@ -789,6 +805,14 @@ func (m detailModel) HasPendingAction() bool {
 // at the modal level.
 func (m detailModel) HasTextInput() bool {
 	return false
+}
+
+// tabOrder returns the ordered list of tabs for the current item type.
+func (m detailModel) tabOrder() []detailTab {
+	if m.item.Type == catalog.Hooks {
+		return []detailTab{tabFiles, tabCompatibility, tabInstall}
+	}
+	return []detailTab{tabFiles, tabInstall}
 }
 
 // CancelAction resets the file viewer to its initial state.

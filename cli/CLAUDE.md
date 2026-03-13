@@ -36,7 +36,7 @@ go test ./internal/tui/ -update-golden   # Regenerate golden files after visual 
 | `internal/model` | Shared data types |
 | `internal/output` | CLI output formatting (non-TUI) |
 | `internal/parse` | File parsing utilities |
-| `internal/readme` | README rendering |
+| `internal/readme` | *(removed)* |
 | `internal/sandbox` | Sandbox configuration |
 | `internal/snapshot` | Snapshot management |
 | `internal/updater` | Self-update logic |

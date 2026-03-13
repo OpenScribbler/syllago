@@ -238,15 +238,38 @@ func (m itemsModel) View() string {
 	var s string
 	switch {
 	case m.sourceRegistry != "":
-		s = renderBreadcrumb(home, BreadcrumbSegment{"Registries", "crumb-registries"}, BreadcrumbSegment{m.sourceRegistry, ""}) + "\n\n"
+		s = renderBreadcrumb(home, BreadcrumbSegment{"Registries", "crumb-registries"}, BreadcrumbSegment{m.sourceRegistry, ""}) + "\n"
 	case m.contentType == catalog.SearchResults:
-		s = renderBreadcrumb(home, BreadcrumbSegment{fmt.Sprintf("Search Results (%d)", len(m.items)), ""}) + "\n\n"
+		s = renderBreadcrumb(home, BreadcrumbSegment{fmt.Sprintf("Search Results (%d)", len(m.items)), ""}) + "\n"
 	case m.contentType == catalog.Library:
-		s = renderBreadcrumb(home, BreadcrumbSegment{fmt.Sprintf("Library (%d)", len(m.items)), ""}) + "\n\n"
+		s = renderBreadcrumb(home, BreadcrumbSegment{fmt.Sprintf("Library (%d)", len(m.items)), ""}) + "\n"
 	case m.parentLabel != "":
-		s = renderBreadcrumb(home, BreadcrumbSegment{m.parentLabel, "crumb-parent"}, BreadcrumbSegment{m.contentType.Label(), ""}) + "\n\n"
+		s = renderBreadcrumb(home, BreadcrumbSegment{m.parentLabel, "crumb-parent"}, BreadcrumbSegment{m.contentType.Label(), ""}) + "\n"
 	default:
-		s = renderBreadcrumb(home, BreadcrumbSegment{m.contentType.Label(), ""}) + "\n\n"
+		s = renderBreadcrumb(home, BreadcrumbSegment{m.contentType.Label(), ""}) + "\n"
+	}
+
+	// Action buttons below breadcrumb — context-dependent
+	if m.contentType == catalog.Loadouts {
+		// Task 1.4: loadout items list — Phase 2 (Task 2.7) will update to new createLoadoutScreen.
+		s += renderActionButtons(
+			ActionButton{"a", "Create Loadout", "action-a", actionBtnAddStyle},
+		) + "\n"
+	} else if m.hideLibraryBadge {
+		// Task 1.6: library items list — show Add {Type} and Remove
+		typeLabel := m.contentType.Label()
+		s += renderActionButtons(
+			ActionButton{"a", "Add " + typeLabel, "action-a", actionBtnAddStyle},
+			ActionButton{"r", "Remove", "action-r", actionBtnRemoveStyle},
+		) + "\n"
+	} else if m.contentType != catalog.SearchResults && m.contentType != catalog.Library && m.sourceRegistry == "" {
+		// Task 1.6: non-library, non-loadout, non-search, non-registry items — show Add {Type}
+		typeLabel := m.contentType.Label()
+		s += renderActionButtons(
+			ActionButton{"a", "Add " + typeLabel, "action-a", actionBtnAddStyle},
+		) + "\n"
+	} else {
+		s += "\n"
 	}
 
 	if len(m.items) == 0 {

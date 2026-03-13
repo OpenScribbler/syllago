@@ -164,4 +164,36 @@ var (
 				BorderForeground(accentColor).
 				Padding(0, 1).
 				Bold(true)
+
+	// Action buttons (page-level, below breadcrumb)
+	// Format: [hotkey] Label — chip-style with semantic background colors.
+	// actionBtnAddStyle — constructive action (install, add, create)
+	actionBtnAddStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#052E16"}).
+				Background(lipgloss.AdaptiveColor{Light: "#16A34A", Dark: "#4ADE80"}).
+				Padding(0, 1)
+
+	// actionBtnRemoveStyle — destructive action (remove, delete)
+	actionBtnRemoveStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#450A0A"}).
+				Background(lipgloss.AdaptiveColor{Light: "#B91C1C", Dark: "#FCA5A5"}).
+				Padding(0, 1)
+
+	// actionBtnUninstallStyle — destructive action (uninstall)
+	actionBtnUninstallStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#431407"}).
+				Background(lipgloss.AdaptiveColor{Light: "#C2410C", Dark: "#FDBA74"}).
+				Padding(0, 1)
+
+	// actionBtnSyncStyle — data synchronization action (sync registries)
+	actionBtnSyncStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#2E1065"}).
+				Background(lipgloss.AdaptiveColor{Light: "#7C3AED", Dark: "#C4B5FD"}).
+				Padding(0, 1)
+
+	// actionBtnDefaultStyle — neutral action (copy, save, env, share)
+	actionBtnDefaultStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.AdaptiveColor{Light: "#374151", Dark: "#D1D5DB"}).
+				Background(lipgloss.AdaptiveColor{Light: "#E5E7EB", Dark: "#374151"}).
+				Padding(0, 1)
 )

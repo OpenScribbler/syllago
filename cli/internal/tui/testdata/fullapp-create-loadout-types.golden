@@ -1,16 +1,16 @@
-syllago           │Home > Skills
+syllago           │Home > Loadouts > Create  (1 of 5)
                   │
-  Content         │ [a] Add Skills
-> Skills        0 │
-  Agents        0 │  No items found
-  MCP Configs   0 │
-  Rules         0 │
-  Hooks         0 │
-  Commands      0 │
+  Content         │Pick a provider:
+  Skills        3 │
+  Agents        1 │  > Claude Code (detected)
+  MCP Configs   1 │    Cursor
+  Rules         1 │
+  Hooks         1 │
+  Commands      1 │
   ─────────────   │
   Collections     │
-  Library       0 │
-  Loadouts      0 │
+  Library       1 │
+> Loadouts      2 │
   Registries      │
   ─────────────   │
   Configuration   │
@@ -27,4 +27,4 @@ syllago           │Home > Skills
 
 
 ────────────────────────────────────────────────────────────────────────────────
-/ search • enter detail • a add skill • esc back • ? help         Skills
+up/down navigate • enter next • esc back                   Loadouts > Create

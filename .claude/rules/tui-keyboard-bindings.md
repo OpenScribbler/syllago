@@ -38,10 +38,36 @@ case msg.String() == "i":
 ## Tab Behavior
 
 Tab toggles focus between sidebar and content on ALL pages except:
-- `screenDetail` — Tab switches between Overview/Files/Install tabs instead
+- `screenDetail` — Tab switches between Files/Install tabs (Contents/Apply for loadouts) instead
 - `screenImport`, `screenUpdate`, `screenSettings`, `screenSandbox` — single-pane screens, no Tab toggle
 
 Card pages (Homepage, Library, Loadouts, Registries) ALL support Tab focus toggling.
+
+## Create Loadout Screen
+
+The create loadout wizard (`screenCreateLoadout`) has step-specific bindings:
+
+| Step | Key | Action |
+|------|-----|--------|
+| Provider | up/down | Navigate providers |
+| Provider | enter | Select provider |
+| Types | up/down | Navigate type checkboxes |
+| Types | space | Toggle type |
+| Types | enter | Advance to items |
+| Items | up/down | Navigate items |
+| Items | space | Toggle item selection |
+| Items | a | Toggle all items |
+| Items | t | Toggle compatibility filter |
+| Items | / | Search items |
+| Items | h/l | Switch pane focus (split view) |
+| Items | enter | Advance to next type or step |
+| Name | tab | Switch between name/description fields |
+| Name | enter | Advance to destination |
+| Dest | up/down | Navigate destination options |
+| Dest | enter | Advance to review |
+| Review | left/right | Switch Back/Create buttons |
+| Review | enter | Confirm selected button |
+| All | esc | Go back one step (first step exits) |
 
 ## Search Availability
 

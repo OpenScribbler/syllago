@@ -68,7 +68,12 @@ func (m registriesModel) View(cursor, scrollOffset int) (string, int) {
 	s := renderBreadcrumb(
 		BreadcrumbSegment{"Home", "crumb-home"},
 		BreadcrumbSegment{"Registries", ""},
-	) + "\n\n"
+	) + "\n"
+	s += renderActionButtons(
+		ActionButton{"a", "Add Registry", "action-a", actionBtnAddStyle},
+		ActionButton{"s", "Sync", "action-s", actionBtnSyncStyle},
+		ActionButton{"r", "Remove", "action-r", actionBtnRemoveStyle},
+	) + "\n"
 
 	if len(m.entries) == 0 {
 		s += helpStyle.Render("  No registries configured.") + "\n\n"

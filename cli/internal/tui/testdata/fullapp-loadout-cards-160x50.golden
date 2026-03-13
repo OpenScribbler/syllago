@@ -1,12 +1,12 @@
 syllago           │Home > Loadouts
                   │
-  Content         │╭────────────────────────────────────────────────────────────────────╮
-  Skills        3 ││ claude-code (2)                                                    │
-  Agents        1 ││ Loadouts for claude-code                                           │
-  MCP Configs   1 ││                                                                    │
-  Rules         1 │╰────────────────────────────────────────────────────────────────────╯
-  Hooks         1 │
-  Commands      1 │
+  Content         │ [a] Create Loadout
+  Skills        3 │
+  Agents        1 │╭────────────────────────────────────────────────────────────────────╮
+  MCP Configs   1 ││ claude-code (2)                                                    │
+  Rules         1 ││ Loadouts for claude-code                                           │
+  Hooks         1 ││                                                                    │
+  Commands      1 │╰────────────────────────────────────────────────────────────────────╯
   ─────────────   │
   Collections     │
   Library       1 │

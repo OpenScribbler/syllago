@@ -38,6 +38,7 @@ const (
 	screenSandbox
 	screenLibraryCards
 	screenLoadoutCards
+	screenCreateLoadout
 )
 
 type focusTarget int
@@ -83,8 +84,9 @@ type itemRemoveDoneMsg struct {
 
 // doCreateLoadoutMsg is sent when the loadout create operation completes.
 type doCreateLoadoutMsg struct {
-	name string
-	err  error
+	name     string
+	provider string // provider slug used during creation
+	err      error
 }
 
 // App is the root bubbletea model.
@@ -104,7 +106,7 @@ type App struct {
 	envModal             envSetupModal
 	instModal            installModal
 	registryAddModal     registryAddModal
-	createLoadoutModal   createLoadoutModal
+	createLoadout createLoadoutScreen
 	registryOpInProgress bool
 	sidebar         sidebarModel
 	items           itemsModel
@@ -342,8 +344,8 @@ func (a *App) doRegistryAdd(gitURL, nameOverride string) tea.Cmd {
 	return tea.Batch(cloneCmd, a.toast.tickSpinner())
 }
 
-// doCreateLoadout writes a loadout.yaml to the chosen destination.
-func (a *App) doCreateLoadout(m createLoadoutModal) tea.Cmd {
+// doCreateLoadoutFromScreen writes a loadout.yaml from the screen wizard state.
+func (a *App) doCreateLoadoutFromScreen(m createLoadoutScreen) tea.Cmd {
 	contentRoot := a.catalog.RepoRoot
 	scopeRegistry := m.scopeRegistry
 	return func() tea.Msg {
@@ -377,15 +379,15 @@ func (a *App) doCreateLoadout(m createLoadoutModal) tea.Cmd {
 
 		var destDir string
 		switch m.destCursor {
-		case 0: // Project
+		case 0:
 			destDir = filepath.Join(contentRoot, "loadouts", provSlug)
-		case 1: // Library
+		case 1:
 			home, homeErr := os.UserHomeDir()
 			if homeErr != nil {
 				return doCreateLoadoutMsg{err: fmt.Errorf("finding home directory: %w", homeErr)}
 			}
 			destDir = filepath.Join(home, ".syllago", "content", "loadouts", provSlug)
-		case 2: // Registry
+		case 2:
 			dir, err := registry.CloneDir(scopeRegistry)
 			if err != nil {
 				return doCreateLoadoutMsg{err: err}
@@ -408,7 +410,7 @@ func (a *App) doCreateLoadout(m createLoadoutModal) tea.Cmd {
 			return doCreateLoadoutMsg{err: fmt.Errorf("writing loadout.yaml: %w", err)}
 		}
 
-		return doCreateLoadoutMsg{name: name}
+		return doCreateLoadoutMsg{name: name, provider: provSlug}
 	}
 }
 
@@ -501,6 +503,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.registries.height = ph
 		a.sandboxSettings.width = contentW
 		a.sandboxSettings.height = ph
+		a.createLoadout.width = contentW
+		a.createLoadout.height = ph
+		a.createLoadout.splitView.width = contentW
+		a.createLoadout.splitView.height = ph - 5
 		a.toast.width = contentW
 		return a, nil
 
@@ -532,6 +538,26 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			return a, cmd
+		}
+
+	case splitViewCursorMsg:
+		if a.screen == screenDetail {
+			var cmd tea.Cmd
+			a.detail, cmd = a.detail.Update(msg)
+			return a, cmd
+		}
+		if a.screen == screenCreateLoadout {
+			if msg.item.Path != "" {
+				content, err := os.ReadFile(msg.item.Path)
+				if err != nil {
+					a.createLoadout.splitView.SetPreview("")
+				} else {
+					a.createLoadout.splitView.SetPreview(string(content))
+				}
+			} else {
+				a.createLoadout.splitView.SetPreview("")
+			}
+			return a, nil
 		}
 
 	case fileBrowserDoneMsg:
@@ -846,25 +872,43 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err == nil {
 				a.catalog = cat
 				a.refreshSidebarCounts()
-				// Refresh the items list if we're viewing loadouts
-				if a.screen == screenItems && a.items.contentType == catalog.Loadouts {
-					src := a.visibleItems(cat.ByType(catalog.Loadouts))
-					if a.items.sourceProvider != "" {
-						var filtered []catalog.ContentItem
-						for _, item := range src {
-							if item.Provider == a.items.sourceProvider {
-								filtered = append(filtered, item)
-							}
-						}
-						src = filtered
+
+				// Build items list for this provider's loadouts
+				prov := msg.provider
+				src := a.visibleItems(cat.ByType(catalog.Loadouts))
+				var filtered []catalog.ContentItem
+				for _, item := range src {
+					if item.Provider == prov {
+						filtered = append(filtered, item)
 					}
-					items := newItemsModel(catalog.Loadouts, src, a.providers, cat.RepoRoot)
-					items.sourceProvider = a.items.sourceProvider
-					items.parentLabel = a.items.parentLabel
-					items.width = a.items.width
-					items.height = a.items.height
-					a.items = items
 				}
+				items := newItemsModel(catalog.Loadouts, filtered, a.providers, cat.RepoRoot)
+				items.sourceProvider = prov
+				items.parentLabel = "Loadouts"
+				items.width = a.width - sidebarWidth - 1
+				items.height = a.panelHeight()
+				a.items = items
+				a.cardParent = screenLoadoutCards
+
+				// Find the new loadout and navigate to its detail view
+				for i, item := range filtered {
+					if item.Name == msg.name {
+						a.items.cursor = i
+						a.detail = newDetailModel(item, a.providers, cat.RepoRoot, cat)
+						a.detail.overrides = cat.OverridesFor(item.Name, item.Type)
+						a.detail.parentLabel = "Loadouts"
+						a.detail.width = a.width
+						a.detail.height = a.panelHeight()
+						a.detail.fileViewer.splitView.width = a.width
+						a.detail.loadoutContents.splitView.width = a.width
+						a.detail.listPosition = i
+						a.detail.listTotal = len(filtered)
+						a.screen = screenDetail
+						return a, nil
+					}
+				}
+				// Fallback: loadout not found in catalog, show provider's list
+				a.screen = screenItems
 			}
 		}
 		return a, nil
@@ -1248,106 +1292,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.focus = focusContent
 			return a, nil
 		}
-		if a.createLoadoutModal.active {
-			z := zone.Get("modal-zone")
-			if z.InBounds(msg) {
-				relX, relY := z.Pos(msg)
-				_ = relX
-				// Layout: border(1)+padding(1)=2 overhead
-				// relY=2: title, relY=3: blank, relY=4+: body content
-				switch a.createLoadoutModal.step {
-				case clStepProvider:
-					// Provider list starts at relY=6 (title+blank+subtitle+blank)
-					for i := range a.createLoadoutModal.providerList {
-						if relY == 6+i {
-							a.createLoadoutModal.providerCursor = i
-							// Synthesize Enter to select
-							m, cmd := a.createLoadoutModal.Update(tea.KeyMsg{Type: tea.KeyEnter})
-							a.createLoadoutModal = m
-							return a, cmd
-						}
-					}
-				case clStepTypes:
-					// Type checkboxes start at relY=6 (title+blank+subtitle+blank)
-					for i := range a.createLoadoutModal.typeEntries {
-						if relY == 6+i {
-							a.createLoadoutModal.typeCursor = i
-							a.createLoadoutModal.typeEntries[i].checked = !a.createLoadoutModal.typeEntries[i].checked
-							return a, nil
-						}
-					}
-				case clStepItems:
-					ct := a.createLoadoutModal.currentType()
-					// relY=4: search input (when focused) or blank
-					if relY == 4 && a.createLoadoutModal.searchInput.Focused() {
-						return a, nil
-					}
-					// Items start at relY=6 (title+blank+body)
-					filtered := a.createLoadoutModal.filteredTypeItems()
-					cursor := a.createLoadoutModal.perTypeCursor[ct]
-					innerH := createLoadoutModalHeight - 9
-					start := 0
-					if len(filtered) > innerH {
-						start = cursor - innerH/2
-						if start < 0 {
-							start = 0
-						}
-						if start+innerH > len(filtered) {
-							start = len(filtered) - innerH
-						}
-					}
-					clickRow := relY - 6
-					if clickRow >= 0 && clickRow < innerH && clickRow < len(filtered)-start {
-						absIdx := start + clickRow
-						entryIdx := filtered[absIdx]
-						a.createLoadoutModal.perTypeCursor[ct] = absIdx
-						if a.createLoadoutModal.isItemCompatible(entryIdx) {
-							a.createLoadoutModal.entries[entryIdx].selected = !a.createLoadoutModal.entries[entryIdx].selected
-							a.createLoadoutModal.updateDestConstraints()
-						}
-						return a, nil
-					}
-				case clStepName:
-					// relY=6: nameInput, relY=7: descInput
-					if relY == 6 {
-						a.createLoadoutModal.nameFirst = true
-						a.createLoadoutModal.descInput.Blur()
-						a.createLoadoutModal.nameInput.Focus()
-						return a, nil
-					}
-					if relY == 7 {
-						a.createLoadoutModal.nameFirst = false
-						a.createLoadoutModal.nameInput.Blur()
-						a.createLoadoutModal.descInput.Focus()
-						return a, nil
-					}
-				case clStepDest:
-					// Destination options start at relY=6
-					for i := range a.createLoadoutModal.destOptions {
-						if relY == 6+i && !a.createLoadoutModal.destDisabled[i] {
-							a.createLoadoutModal.destCursor = i
-							return a, nil
-						}
-					}
-				case clStepReview:
-					// Button clicks via zone marks
-					if zone.Get("modal-btn-left").InBounds(msg) {
-						a.createLoadoutModal.reviewCursor = 0
-						a.createLoadoutModal, _ = a.createLoadoutModal.Update(tea.KeyMsg{Type: tea.KeyEnter})
-						return a, nil
-					}
-					if zone.Get("modal-btn-right").InBounds(msg) {
-						a.createLoadoutModal.reviewCursor = 1
-						a.createLoadoutModal, _ = a.createLoadoutModal.Update(tea.KeyMsg{Type: tea.KeyEnter})
-						return a, nil
-					}
-				}
-				return a, nil // click inside modal but not on interactive element
-			}
-			a.createLoadoutModal.active = false
-			a.focus = focusContent
-			return a, nil
-		}
 		// Check sidebar zones
 		for i := 0; i < a.sidebar.totalItems(); i++ {
 			if zone.Get(fmt.Sprintf("sidebar-%d", i)).InBounds(msg) {
@@ -1361,6 +1305,23 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Check item list zones
 		if a.screen == screenItems {
+			if a.items.contentType == catalog.Loadouts {
+				if zone.Get("action-a").InBounds(msg) {
+					provider := a.items.sourceProvider
+					contentW := a.width - sidebarWidth - 1
+					a.createLoadout = newCreateLoadoutScreen(provider, a.items.sourceRegistry, a.providers, a.catalog, contentW, a.panelHeight())
+					a.screen = screenCreateLoadout
+					a.focus = focusContent
+					return a, nil
+				}
+			}
+			// Task 1.6: library items list action buttons
+			if zone.Get("action-a").InBounds(msg) {
+				return a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+			}
+			if zone.Get("action-r").InBounds(msg) {
+				return a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
+			}
 			for i := range a.items.items {
 				if zone.Get(fmt.Sprintf("item-%d", i)).InBounds(msg) {
 					a.items.cursor = i
@@ -1397,6 +1358,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Check library card clicks
 		if a.screen == screenLibraryCards {
+			if zone.Get("action-a").InBounds(msg) {
+				a.importer = newImportModel(a.providers, a.catalog.RepoRoot, a.projectRoot)
+				a.importer.width = a.width - sidebarWidth - 1
+				a.importer.height = a.panelHeight()
+				a.screen = screenImport
+				a.focus = focusContent
+				return a, nil
+			}
 			for i, ct := range a.libraryCardTypes() {
 				if zone.Get(fmt.Sprintf("library-card-%s", ct)).InBounds(msg) {
 					a.cardCursor = i
@@ -1406,6 +1375,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Check loadout card clicks
 		if a.screen == screenLoadoutCards {
+			if zone.Get("action-a").InBounds(msg) {
+				contentW := a.width - sidebarWidth - 1
+				a.createLoadout = newCreateLoadoutScreen("", "", a.providers, a.catalog, contentW, a.panelHeight())
+				a.screen = screenCreateLoadout
+				a.focus = focusContent
+				return a, nil
+			}
 			for i, prov := range a.loadoutCardProviders() {
 				if zone.Get(fmt.Sprintf("loadout-card-%s", prov)).InBounds(msg) {
 					a.cardCursor = i
@@ -1479,6 +1455,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				"detail-btn-uninstall": "u",
 				"detail-btn-copy":      "c",
 				"detail-btn-save":      "s",
+				"detail-btn-env":       "e",
+				"detail-btn-share":     "p",
 			}
 			for zoneID, char := range btnChars {
 				if zone.Get(zoneID).InBounds(msg) {
@@ -1522,6 +1500,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.promoteSettingsMessage()
 			return a, cmd
 		case screenRegistries:
+			// Action buttons
+			if zone.Get("action-a").InBounds(msg) {
+				return a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+			}
+			if zone.Get("action-s").InBounds(msg) {
+				return a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+			}
+			if zone.Get("action-r").InBounds(msg) {
+				return a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
+			}
 			// Check registry card clicks
 			if msg.Action == tea.MouseActionRelease && msg.Button == tea.MouseButtonLeft {
 				for i := range a.registries.entries {
@@ -1670,17 +1658,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return a, cmd
 		}
-		if a.createLoadoutModal.active {
-			var cmd tea.Cmd
-			a.createLoadoutModal, cmd = a.createLoadoutModal.Update(msg)
-			if !a.createLoadoutModal.active {
-				a.focus = focusContent
-				if a.createLoadoutModal.confirmed {
-					return a, a.doCreateLoadout(a.createLoadoutModal)
-				}
-			}
-			return a, cmd
-		}
 		// q quits from sidebar, navigates back from content screens
 		if key.Matches(msg, keys.Quit) && !a.search.active {
 			// Quit when focus is on the sidebar (home base) or on the root category screen
@@ -1824,10 +1801,18 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Tab/Shift+Tab: switch focus between sidebar and content.
-		// Works on all screens with sidebar (excluding single-pane screens).
+		// Works on all screens with sidebar (excluding single-pane and detail screens).
+		// Detail screen uses Tab for cycling its own tabs (Files/Install, Contents/Apply).
 		if (key.Matches(msg, keys.Tab) || key.Matches(msg, keys.ShiftTab)) &&
 			!a.search.active && !a.helpOverlay.active {
-			if a.screen != screenImport && a.screen != screenUpdate && a.screen != screenSettings && a.screen != screenSandbox {
+			if a.screen == screenDetail {
+				// Cycle detail tabs: tabFiles -> tabInstall (or tabCompatibility for hooks)
+				if !a.detail.HasTextInput() {
+					var cmd tea.Cmd
+					a.detail, cmd = a.detail.Update(msg)
+					return a, cmd
+				}
+			} else if a.screen != screenImport && a.screen != screenUpdate && a.screen != screenSettings && a.screen != screenSandbox {
 				if !a.detail.HasTextInput() {
 					if a.focus == focusSidebar {
 						a.focus = focusContent
@@ -2031,16 +2016,20 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a, nil
 			}
 			if key.Matches(msg, keys.CreateLoadout) && a.items.sourceRegistry != "" {
-				a.createLoadoutModal = newCreateLoadoutModal("", a.items.sourceRegistry, a.providers, a.catalog)
-				a.focus = focusModal
+				contentW := a.width - sidebarWidth - 1
+				a.createLoadout = newCreateLoadoutScreen("", a.items.sourceRegistry, a.providers, a.catalog, contentW, a.panelHeight())
+				a.screen = screenCreateLoadout
+				a.focus = focusContent
 				return a, nil
 			}
 			if key.Matches(msg, keys.Add) {
 				// If we're on a loadout items list, open create loadout wizard
 				if a.items.contentType == catalog.Loadouts {
 					provider := a.items.sourceProvider
-					a.createLoadoutModal = newCreateLoadoutModal(provider, a.items.sourceRegistry, a.providers, a.catalog)
-					a.focus = focusModal
+					contentW := a.width - sidebarWidth - 1
+					a.createLoadout = newCreateLoadoutScreen(provider, a.items.sourceRegistry, a.providers, a.catalog, contentW, a.panelHeight())
+					a.screen = screenCreateLoadout
+					a.focus = focusContent
 					return a, nil
 				}
 				ct := a.items.contentType
@@ -2210,11 +2199,30 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a, nil
 			}
 			if key.Matches(msg, keys.Add) {
-				a.createLoadoutModal = newCreateLoadoutModal("", "", a.providers, a.catalog)
-				a.focus = focusModal
+				contentW := a.width - sidebarWidth - 1
+				a.createLoadout = newCreateLoadoutScreen("", "", a.providers, a.catalog, contentW, a.panelHeight())
+				a.screen = screenCreateLoadout
+				a.focus = focusContent
 				return a, nil
 			}
 			return a, nil
+
+		case screenCreateLoadout:
+			// Esc on first step navigates back
+			if msg.Type == tea.KeyEsc {
+				if a.createLoadout.step == clStepProvider ||
+					(a.createLoadout.step == clStepTypes && a.createLoadout.prefilledProvider != "") {
+					a.screen = screenLoadoutCards
+					a.focus = focusContent
+					return a, nil
+				}
+			}
+			var cmd tea.Cmd
+			a.createLoadout, cmd = a.createLoadout.Update(msg)
+			if a.createLoadout.confirmed {
+				return a, a.doCreateLoadoutFromScreen(a.createLoadout)
+			}
+			return a, cmd
 
 		case screenDetail:
 			// Next/previous item navigation (ctrl+n / ctrl+p)
@@ -2522,6 +2530,8 @@ func (a App) View() string {
 		contentView = a.renderLibraryCards()
 	case screenLoadoutCards:
 		contentView = a.renderLoadoutCards()
+	case screenCreateLoadout:
+		contentView = a.createLoadout.View()
 	default:
 		// screenCategory: sidebar is the primary UI; show welcome guidance in content
 		contentView = a.renderContentWelcome()
@@ -2575,10 +2585,6 @@ func (a App) View() string {
 
 	if a.registryAddModal.active {
 		body = a.registryAddModal.overlayView(body)
-	}
-
-	if a.createLoadoutModal.active {
-		body = a.createLoadoutModal.overlayView(body)
 	}
 
 	return zone.Scan(body)
@@ -3196,7 +3202,10 @@ func (a App) renderLibraryCards() string {
 	s += renderBreadcrumb(
 		BreadcrumbSegment{"Home", "crumb-home"},
 		BreadcrumbSegment{"Library", ""},
-	) + "\n\n"
+	) + "\n"
+	s += renderActionButtons(
+		ActionButton{"a", "Add Content", "action-a", actionBtnAddStyle},
+	) + "\n"
 
 	singleCol := contentW < 42
 	cardW := (contentW - 5) / 2
@@ -3302,7 +3311,10 @@ func (a App) renderLoadoutCards() string {
 	s += renderBreadcrumb(
 		BreadcrumbSegment{"Home", "crumb-home"},
 		BreadcrumbSegment{"Loadouts", ""},
-	) + "\n\n"
+	) + "\n"
+	s += renderActionButtons(
+		ActionButton{"a", "Create Loadout", "action-a", actionBtnAddStyle},
+	) + "\n"
 
 	singleCol := contentW < 42
 	cardW := (contentW - 5) / 2
@@ -3416,6 +3428,17 @@ func (a App) contextHelpText() string {
 		return "arrows navigate • enter browse • a add content • esc back"
 	case screenLoadoutCards:
 		return "arrows navigate • enter browse • a create loadout • esc back"
+	case screenCreateLoadout:
+		switch a.createLoadout.step {
+		case clStepItems:
+			return "space select • a toggle all • t filter • / search • h/l panes • esc back"
+		case clStepName:
+			return "tab switch field • enter next • esc back"
+		case clStepReview:
+			return "left/right buttons • enter confirm • esc back"
+		default:
+			return "up/down navigate • enter next • esc back"
+		}
 	default:
 		return "esc back • ? help"
 	}
@@ -3459,6 +3482,8 @@ func (a App) breadcrumb() string {
 		return "Library"
 	case screenLoadoutCards:
 		return "Loadouts"
+	case screenCreateLoadout:
+		return "Loadouts > Create"
 	default:
 		return "syllago"
 	}
@@ -3475,6 +3500,9 @@ func (a App) itemsBreadcrumb() string {
 	case screenLibraryCards:
 		return "Library > " + label
 	case screenLoadoutCards:
+		if a.items.sourceProvider != "" {
+			return "Loadouts > " + a.items.sourceProvider
+		}
 		return "Loadouts > " + label
 	default:
 		return label

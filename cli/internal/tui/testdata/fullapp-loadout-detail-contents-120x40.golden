@@ -6,13 +6,13 @@ syllago           │Home > Loadouts > Loadouts > starter-loadout
   MCP Configs   1 │Provider: Claude Code
   Rules         1 │────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
   Hooks         1 │
-  Commands      1 │Contents│Preview
-  ─────────────   │  Rules (1)│   1 # test-rule
-  Collections     │  > test-rule│   2 A coding rule
-  Library       1 │  Skills (2)│
-> Loadouts      2 │    alpha-skill│
-  Registries      │    beta-skill│
-  ─────────────   ││
+  Commands      1 │ Contents  |  Preview
+  ─────────────   │
+  Collections     │  Rules (1)                               │   1 # test-rule
+  Library       1 │  > test-rule                             │   2 A coding rule
+> Loadouts      2 │  Skills (2)                              │
+  Registries      │    alpha-skill                           │
+  ─────────────   │    beta-skill                            │
   Configuration   │                                          │
   Add             │                                          │
   Update          │                                          │
@@ -37,5 +37,5 @@ syllago           │Home > Loadouts > Loadouts > starter-loadout
 
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-esc back • tab switch tab • up/down navigate • l/right preview • ctrl+n/p next/prev Loadouts > Loadouts > starter-
+esc back • tab switch tab • up/down navigate • l/right preview • ctrl+n/p next/prev Loadouts > claude-code > starter-
 loadout
