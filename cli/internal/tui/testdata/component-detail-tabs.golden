@@ -6,10 +6,10 @@ Path: <TESTDIR>/skills/alpha-skill
 Providers: Claude Code
 ────────────────────────────────────────────────────────────────────────────────
 
-Files│Preview
-  > SKILL.md│   1 # alpha-skill
-    helpers.md│   2 A helpful skill
-│
+ Files  |  Preview
+
+  > SKILL.md                    │   1 # alpha-skill
+    helpers.md                  │   2 A helpful skill
                                 │
                                 │
                                 │

@@ -157,3 +157,30 @@ func TestRenderDescriptionBox(t *testing.T) {
 		}
 	})
 }
+
+func TestRenderActionButtons(t *testing.T) {
+	t.Run("empty buttons returns empty string", func(t *testing.T) {
+		got := renderActionButtons()
+		if got != "" {
+			t.Errorf("empty buttons should return empty string, got %q", got)
+		}
+	})
+	t.Run("single button contains hotkey and label", func(t *testing.T) {
+		got := renderActionButtons(ActionButton{"a", "Create Loadout", "action-a", actionBtnAddStyle})
+		if !strings.Contains(got, "[a]") {
+			t.Error("button should contain hotkey")
+		}
+		if !strings.Contains(got, "Create Loadout") {
+			t.Error("button should contain label")
+		}
+	})
+	t.Run("multiple buttons are separated", func(t *testing.T) {
+		got := renderActionButtons(
+			ActionButton{"a", "Add", "action-a", actionBtnAddStyle},
+			ActionButton{"r", "Remove", "action-r", actionBtnRemoveStyle},
+		)
+		if !strings.Contains(got, "[a]") || !strings.Contains(got, "[r]") {
+			t.Error("both buttons should appear")
+		}
+	})
+}

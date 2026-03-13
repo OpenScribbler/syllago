@@ -267,16 +267,16 @@ func TestLoadoutAddKeyOpensWizard(t *testing.T) {
 	t.Logf("sourceProvider=%q", app.items.sourceProvider)
 	t.Logf("contentType=%s", app.items.contentType)
 
-	// Press 'a' — should open create loadout wizard
+	// Press 'a' — should open create loadout screen
 	m, _ = app.Update(keyRune('a'))
 	app = m.(App)
 
-	if app.createLoadoutModal.active {
-		t.Log("create loadout wizard opened (correct)")
+	if app.screen == screenCreateLoadout {
+		t.Log("create loadout screen opened (correct)")
 	} else if app.screen == screenImport {
-		t.Error("import wizard opened instead of create loadout wizard")
+		t.Error("import wizard opened instead of create loadout screen")
 	} else {
-		t.Errorf("unexpected state: screen=%d, createLoadoutModal.active=%v", app.screen, app.createLoadoutModal.active)
+		t.Errorf("unexpected state: screen=%d, want screenCreateLoadout(%d)", app.screen, screenCreateLoadout)
 	}
 }
 

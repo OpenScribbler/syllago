@@ -18,6 +18,7 @@ There are two page patterns: **list pages** and **card grid pages**. Every page 
 | Loadouts | `screenLoadoutCards` | Card grid | app.go | Yes | Yes | Yes |
 | Registries | `screenRegistries` | Card grid | registries.go | Yes | Yes | Yes |
 | Import | `screenImport` | Wizard | import.go | Custom | No | No |
+| Create Loadout | `screenCreateLoadout` | Wizard | loadout_create.go | Yes | No | No |
 | Update | `screenUpdate` | Simple | update.go | Yes | No | No |
 | Settings | `screenSettings` | Form | settings.go | Yes | No | No |
 | Sandbox | `screenSandbox` | Form | sandbox_settings.go | Yes | No | No |

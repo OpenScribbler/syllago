@@ -6,9 +6,9 @@ syllago           │Home > Skills > extremely-long-skill-name-that-should-be-tr
   MCP Configs  15 │Providers: Claude Code
   Rules         0 │────────────────────────────────────────────────────────────────────────────────
   Hooks         0 │
-  Commands      0 │Files│Preview
-  ─────────────   │  > SKILL.md│   1 Cannot read file: open /tmp/TestGoldenOve
-  Collections     ││
+  Commands      0 │ Files  |  Preview
+  ─────────────   │
+  Collections     │  > SKILL.md                    │   1 Cannot read file: open /tmp/TestGoldenOve
   Library       0 │                                │
   Loadouts      0 │                                │
   Registries      │                                │

@@ -148,3 +148,27 @@ func renderDescriptionBox(text string, width int, maxLines int) string {
 	s += " " + helpStyle.Render(strings.Repeat("\u2500", width)) + "\n"
 	return s
 }
+
+// ActionButton describes a single clickable action button.
+type ActionButton struct {
+	Hotkey string         // single character, e.g. "a"
+	Label  string         // display text after hotkey, e.g. "Create Loadout"
+	ZoneID string         // zone.Mark ID, e.g. "action-a"
+	Style  lipgloss.Style // semantic background color
+}
+
+// renderActionButtons renders a row of chip-style action buttons.
+// Each button is formatted as "[key] Label" with a semantic background color.
+// Buttons are separated by a single space. The row is preceded and followed by a blank line.
+func renderActionButtons(buttons ...ActionButton) string {
+	if len(buttons) == 0 {
+		return ""
+	}
+	var parts []string
+	for _, btn := range buttons {
+		label := "[" + btn.Hotkey + "] " + btn.Label
+		rendered := btn.Style.Render(label)
+		parts = append(parts, zone.Mark(btn.ZoneID, rendered))
+	}
+	return "\n" + strings.Join(parts, " ") + "\n"
+}

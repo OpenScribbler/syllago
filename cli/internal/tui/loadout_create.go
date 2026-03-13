@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -9,7 +10,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	overlay "github.com/rmhubbert/bubbletea-overlay"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -33,24 +33,35 @@ type typeCheckEntry struct {
 	count   int // number of available items for this type
 }
 
-const (
-	createLoadoutModalWidth  = 56
-	createLoadoutModalHeight = 24
-)
-
 // loadoutItemEntry is one item in the checkbox picker.
 type loadoutItemEntry struct {
 	item     catalog.ContentItem
 	selected bool
 }
 
-type createLoadoutModal struct {
-	active bool
-	step   createLoadoutStep
+// buildLoadoutItemEntries creates entry list from catalog items.
+func buildLoadoutItemEntries(cat *catalog.Catalog, scopeRegistry string) []loadoutItemEntry {
+	var entries []loadoutItemEntry
+	for _, item := range cat.Items {
+		if scopeRegistry != "" && item.Registry != scopeRegistry {
+			continue
+		}
+		entries = append(entries, loadoutItemEntry{item: item, selected: false})
+	}
+	return entries
+}
+
+// ---------------------------------------------------------------------------
+// createLoadoutScreen — full-screen replacement for the old modal wizard.
+// Renders in the content pane (sidebar visible) with a persistent split-view.
+// ---------------------------------------------------------------------------
+
+type createLoadoutScreen struct {
+	step createLoadoutStep
 
 	// Context passed in at creation
-	prefilledProvider string // non-empty = skip provider step
-	scopeRegistry    string // non-empty = scope items to this registry
+	prefilledProvider string
+	scopeRegistry    string
 
 	// Step 1: provider picker
 	providerList   []provider.Provider
@@ -61,43 +72,54 @@ type createLoadoutModal struct {
 	typeCursor  int
 
 	// Step 3: per-type item selection
-	entries        []loadoutItemEntry              // all items from catalog
-	selectedTypes  []catalog.ContentType           // types chosen in step 2 (ordered)
-	typeStepIndex  int                             // which type we're currently on
-	typeItemMap    map[catalog.ContentType][]int   // type -> indices into entries (compatible)
-	typeItemMapAll map[catalog.ContentType][]int   // type -> indices into entries (all, including incompatible)
-	showAllCompat  bool                            // true = show incompatible items grayed out
-	perTypeCursor  map[catalog.ContentType]int     // preserved cursor per type
-	perTypeScroll  map[catalog.ContentType]int     // preserved scroll offset per type
-	perTypeSearch  map[catalog.ContentType]string  // preserved search query per type
+	entries        []loadoutItemEntry
+	selectedTypes  []catalog.ContentType
+	typeStepIndex  int
+	typeItemMap    map[catalog.ContentType][]int
+	typeItemMapAll map[catalog.ContentType][]int
+	showAllCompat  bool
+	perTypeCursor  map[catalog.ContentType]int
+	perTypeScroll  map[catalog.ContentType]int
+	perTypeSearch  map[catalog.ContentType]string
+	searchActive   bool
 	searchInput    textinput.Model
 
-	// Step 3: name/desc
+	// Step 4: name/description
 	nameInput textinput.Model
 	descInput textinput.Model
-	nameFirst bool // true = nameInput focused
+	nameFirst bool
 
-	// Step 4: destination
-	destOptions  []string // "Project", "Library", optionally "Registry: <name>"
+	// Step 5: destination
+	destOptions  []string
 	destCursor   int
-	destDisabled []bool   // parallel: true = option grayed out
-	destHints    []string // parallel: explanation for disabled options
+	destDisabled []bool
+	destHints    []string
 
 	// Step 6: review
-	reviewCursor int // 0=Back, 1=Create
+	reviewItemCursor int // cursor over the item list in review step
+	reviewBtnCursor  int // 0=Back, 1=Create
 
-	confirmed    bool // true = user pressed Create on review step; false = Esc cancelled
+	// Split-view preview
+	splitView      splitViewModel
+	previewLoading bool
+
+	// Outcome
+	confirmed    bool
 	message      string
 	messageIsErr bool
+
+	// Layout
+	width  int
+	height int
 }
 
-// newCreateLoadoutModal creates a new Create Loadout wizard.
-func newCreateLoadoutModal(
+func newCreateLoadoutScreen(
 	prefilledProvider string,
 	scopeRegistry string,
 	allProviders []provider.Provider,
 	cat *catalog.Catalog,
-) createLoadoutModal {
+	width, height int,
+) createLoadoutScreen {
 	si := textinput.New()
 	si.Placeholder = "filter items..."
 	si.CharLimit = 100
@@ -113,8 +135,7 @@ func newCreateLoadoutModal(
 	di.Placeholder = "What this loadout does"
 	di.CharLimit = 300
 
-	m := createLoadoutModal{
-		active:           true,
+	m := createLoadoutScreen{
 		prefilledProvider: prefilledProvider,
 		scopeRegistry:    scopeRegistry,
 		providerList:     allProviders,
@@ -127,6 +148,8 @@ func newCreateLoadoutModal(
 		perTypeSearch:    make(map[catalog.ContentType]string),
 		typeItemMap:      make(map[catalog.ContentType][]int),
 		typeItemMapAll:   make(map[catalog.ContentType][]int),
+		width:            width,
+		height:           height,
 	}
 
 	m.destOptions = []string{"Project (loadouts/ in repo)", "Library (~/.syllago/content/loadouts/)"}
@@ -139,6 +162,9 @@ func newCreateLoadoutModal(
 	}
 
 	m.entries = buildLoadoutItemEntries(cat, scopeRegistry)
+	m.splitView = newSplitView(nil, "wiz")
+	m.splitView.width = width
+	m.splitView.height = height - 5 // reserve space for header + help bar
 
 	if prefilledProvider != "" {
 		m.buildTypeEntries()
@@ -150,10 +176,9 @@ func newCreateLoadoutModal(
 	return m
 }
 
-// buildTypeEntries populates typeEntries for the selected provider.
-// Only includes content types that have available items AND are supported by the provider.
-// Loadouts are excluded (you don't nest loadouts).
-func (m *createLoadoutModal) buildTypeEntries() {
+// --- Helper methods ---
+
+func (m *createLoadoutScreen) buildTypeEntries() {
 	provSlug := m.prefilledProvider
 	var prov *provider.Provider
 	for i := range m.providerList {
@@ -163,7 +188,6 @@ func (m *createLoadoutModal) buildTypeEntries() {
 		}
 	}
 
-	// Count items per type from catalog entries
 	typeCounts := make(map[catalog.ContentType]int)
 	for _, e := range m.entries {
 		typeCounts[e.item.Type]++
@@ -172,27 +196,25 @@ func (m *createLoadoutModal) buildTypeEntries() {
 	m.typeEntries = nil
 	for _, ct := range catalog.AllContentTypes() {
 		if ct == catalog.Loadouts {
-			continue // don't nest loadouts
+			continue
 		}
 		count := typeCounts[ct]
 		if count == 0 {
-			continue // skip types with no available items
+			continue
 		}
 		if prov != nil && prov.SupportsType != nil && !prov.SupportsType(ct) {
-			continue // skip types the provider doesn't support
+			continue
 		}
 		m.typeEntries = append(m.typeEntries, typeCheckEntry{
 			ct:      ct,
-			checked: true, // default all checked
+			checked: true,
 			count:   count,
 		})
 	}
 	m.typeCursor = 0
 }
 
-// buildTypeItemMaps pre-filters entries by type and provider compatibility.
-// Called when transitioning from types step to items step.
-func (m *createLoadoutModal) buildTypeItemMaps() {
+func (m *createLoadoutScreen) buildTypeItemMaps() {
 	m.selectedTypes = nil
 	for _, te := range m.typeEntries {
 		if te.checked {
@@ -214,7 +236,6 @@ func (m *createLoadoutModal) buildTypeItemMaps() {
 	for i, e := range m.entries {
 		ct := e.item.Type
 		m.typeItemMapAll[ct] = append(m.typeItemMapAll[ct], i)
-		// Compatible = provider supports this type
 		if prov == nil || prov.SupportsType == nil || prov.SupportsType(ct) {
 			m.typeItemMap[ct] = append(m.typeItemMap[ct], i)
 		}
@@ -222,8 +243,7 @@ func (m *createLoadoutModal) buildTypeItemMaps() {
 	m.typeStepIndex = 0
 }
 
-// currentTypeItems returns the indices into m.entries for the current type step.
-func (m createLoadoutModal) currentTypeItems() []int {
+func (m createLoadoutScreen) currentTypeItems() []int {
 	if m.typeStepIndex >= len(m.selectedTypes) {
 		return nil
 	}
@@ -234,16 +254,14 @@ func (m createLoadoutModal) currentTypeItems() []int {
 	return m.typeItemMap[ct]
 }
 
-// currentType returns the content type for the current type step.
-func (m createLoadoutModal) currentType() catalog.ContentType {
+func (m createLoadoutScreen) currentType() catalog.ContentType {
 	if m.typeStepIndex >= len(m.selectedTypes) {
 		return ""
 	}
 	return m.selectedTypes[m.typeStepIndex]
 }
 
-// currentTypeSelectedCount returns how many items are selected for the current type.
-func (m createLoadoutModal) currentTypeSelectedCount() int {
+func (m createLoadoutScreen) currentTypeSelectedCount() int {
 	count := 0
 	ct := m.currentType()
 	for _, e := range m.entries {
@@ -254,8 +272,7 @@ func (m createLoadoutModal) currentTypeSelectedCount() int {
 	return count
 }
 
-// isItemCompatible checks if an entry index is compatible with the selected provider.
-func (m createLoadoutModal) isItemCompatible(idx int) bool {
+func (m createLoadoutScreen) isItemCompatible(idx int) bool {
 	ct := m.entries[idx].item.Type
 	indices := m.typeItemMap[ct]
 	for _, i := range indices {
@@ -266,8 +283,7 @@ func (m createLoadoutModal) isItemCompatible(idx int) bool {
 	return false
 }
 
-// filteredTypeItems applies the search query to the current type's items.
-func (m createLoadoutModal) filteredTypeItems() []int {
+func (m createLoadoutScreen) filteredTypeItems() []int {
 	items := m.currentTypeItems()
 	ct := m.currentType()
 	query := strings.ToLower(m.perTypeSearch[ct])
@@ -285,21 +301,51 @@ func (m createLoadoutModal) filteredTypeItems() []int {
 	return out
 }
 
-func buildLoadoutItemEntries(cat *catalog.Catalog, scopeRegistry string) []loadoutItemEntry {
-	var entries []loadoutItemEntry
-	for _, item := range cat.Items {
-		if scopeRegistry != "" && item.Registry != scopeRegistry {
-			continue
+func (m createLoadoutScreen) selectedItems() []loadoutItemEntry {
+	var out []loadoutItemEntry
+	for _, e := range m.entries {
+		if e.selected {
+			out = append(out, e)
 		}
-		entries = append(entries, loadoutItemEntry{item: item, selected: false})
 	}
-	return entries
+	return out
 }
 
-func (m createLoadoutModal) currentStepNum() int {
-	fixedBefore := 2 // provider + types (or just types if pre-filled)
+func (m *createLoadoutScreen) updateDestConstraints() {
+	if len(m.destOptions) < 3 {
+		return
+	}
+	selected := m.selectedItems()
+	registries := make(map[string]bool)
+	providers := make(map[string]bool)
+	for _, e := range selected {
+		if e.item.Registry != "" {
+			registries[e.item.Registry] = true
+		}
+		if e.item.Provider != "" {
+			providers[e.item.Provider] = true
+		}
+	}
+	regIdx := 2
+	if len(registries) > 1 {
+		m.destDisabled[regIdx] = true
+		m.destHints[regIdx] = "Items span multiple registries"
+	} else if len(providers) > 1 {
+		m.destDisabled[regIdx] = true
+		m.destHints[regIdx] = "Items target multiple providers"
+	} else {
+		m.destDisabled[regIdx] = false
+		m.destHints[regIdx] = ""
+	}
+	if m.destDisabled[regIdx] && m.destCursor == regIdx {
+		m.destCursor--
+	}
+}
+
+func (m createLoadoutScreen) currentStepNum() int {
+	fixedBefore := 2
 	if m.prefilledProvider != "" {
-		fixedBefore = 1 // just types
+		fixedBefore = 1
 	}
 	switch m.step {
 	case clStepProvider:
@@ -321,23 +367,51 @@ func (m createLoadoutModal) currentStepNum() int {
 	return 1
 }
 
-func (m createLoadoutModal) dynamicTotalSteps() int {
-	fixedBefore := 2 // provider + types
+func (m createLoadoutScreen) dynamicTotalSteps() int {
+	fixedBefore := 2
 	if m.prefilledProvider != "" {
-		fixedBefore = 1 // just types
+		fixedBefore = 1
 	}
 	nTypes := len(m.selectedTypes)
 	if nTypes == 0 {
-		// Before types are selected, estimate from typeEntries
 		nTypes = len(m.typeEntries)
 	}
-	return fixedBefore + nTypes + 3 // + name + dest + review
+	return fixedBefore + nTypes + 3
 }
 
-func (m createLoadoutModal) Update(msg tea.Msg) (createLoadoutModal, tea.Cmd) {
-	if !m.active {
-		return m, nil
+// primaryFilePath returns the absolute path to the primary file for a content item.
+func primaryFilePath(item catalog.ContentItem) string {
+	if len(item.Files) == 0 || item.Path == "" {
+		return ""
 	}
+	primary := findPrimaryFile(item)
+	if primary == "" {
+		return ""
+	}
+	return filepath.Join(item.Path, primary)
+}
+
+// previewCmdForCursor emits a splitViewCursorMsg for the current cursor item.
+// App uses this to load the primary file preview into the right pane.
+func (m createLoadoutScreen) previewCmdForCursor() tea.Cmd {
+	ct := m.currentType()
+	filtered := m.filteredTypeItems()
+	cursor := m.perTypeCursor[ct]
+	if cursor < 0 || cursor >= len(filtered) {
+		return nil
+	}
+	idx := filtered[cursor]
+	e := m.entries[idx]
+	item := splitViewItem{
+		Label: e.item.Name,
+		Path:  primaryFilePath(e.item),
+	}
+	return func() tea.Msg {
+		return splitViewCursorMsg{index: cursor, item: item}
+	}
+}
+
+func (m createLoadoutScreen) Update(msg tea.Msg) (createLoadoutScreen, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		m.message = ""
@@ -346,7 +420,8 @@ func (m createLoadoutModal) Update(msg tea.Msg) (createLoadoutModal, tea.Cmd) {
 		case clStepProvider:
 			switch {
 			case msg.Type == tea.KeyEsc:
-				m.active = false
+				// Esc on provider step signals cancellation — App handles navigation
+				m.confirmed = false
 				return m, nil
 			case key.Matches(msg, keys.Up):
 				if m.providerCursor > 0 {
@@ -366,8 +441,8 @@ func (m createLoadoutModal) Update(msg tea.Msg) (createLoadoutModal, tea.Cmd) {
 			switch {
 			case msg.Type == tea.KeyEsc:
 				if m.prefilledProvider != "" {
-					// Pre-filled provider — Esc dismisses
-					m.active = false
+					// Pre-filled provider — Esc signals cancellation
+					m.confirmed = false
 				} else {
 					m.step = clStepProvider
 				}
@@ -385,7 +460,6 @@ func (m createLoadoutModal) Update(msg tea.Msg) (createLoadoutModal, tea.Cmd) {
 					m.typeEntries[m.typeCursor].checked = !m.typeEntries[m.typeCursor].checked
 				}
 			case key.Matches(msg, keys.ToggleAll):
-				// Toggle all: if any are unchecked, check all; otherwise uncheck all
 				allChecked := true
 				for _, te := range m.typeEntries {
 					if !te.checked {
@@ -397,7 +471,6 @@ func (m createLoadoutModal) Update(msg tea.Msg) (createLoadoutModal, tea.Cmd) {
 					m.typeEntries[i].checked = !allChecked
 				}
 			case msg.Type == tea.KeyEnter:
-				// Validate: at least one type selected
 				anySelected := false
 				for _, te := range m.typeEntries {
 					if te.checked {
@@ -412,12 +485,14 @@ func (m createLoadoutModal) Update(msg tea.Msg) (createLoadoutModal, tea.Cmd) {
 				}
 				m.buildTypeItemMaps()
 				m.step = clStepItems
+				return m, m.previewCmdForCursor()
 			}
 
 		case clStepItems:
 			ct := m.currentType()
-			if m.searchInput.Focused() {
+			if m.searchActive {
 				if msg.Type == tea.KeyEsc {
+					m.searchActive = false
 					m.searchInput.Blur()
 					m.searchInput.SetValue("")
 					m.perTypeSearch[ct] = ""
@@ -432,13 +507,11 @@ func (m createLoadoutModal) Update(msg tea.Msg) (createLoadoutModal, tea.Cmd) {
 			cursor := m.perTypeCursor[ct]
 			switch {
 			case msg.Type == tea.KeyEsc:
-				// Save state before leaving
 				m.perTypeCursor[ct] = cursor
 				if m.typeStepIndex == 0 {
 					m.step = clStepTypes
 				} else {
 					m.typeStepIndex--
-					// Restore search for previous type
 					prevCt := m.currentType()
 					m.searchInput.SetValue(m.perTypeSearch[prevCt])
 				}
@@ -446,21 +519,23 @@ func (m createLoadoutModal) Update(msg tea.Msg) (createLoadoutModal, tea.Cmd) {
 			case key.Matches(msg, keys.Up):
 				if cursor > 0 {
 					m.perTypeCursor[ct] = cursor - 1
+					return m, m.previewCmdForCursor()
 				}
 			case key.Matches(msg, keys.Down):
 				if cursor < len(filtered)-1 {
 					m.perTypeCursor[ct] = cursor + 1
+					return m, m.previewCmdForCursor()
 				}
 			case key.Matches(msg, keys.Space):
-				if cursor < len(filtered) {
+				if cursor >= 0 && cursor < len(filtered) {
 					entryIdx := filtered[cursor]
 					if m.isItemCompatible(entryIdx) {
 						m.entries[entryIdx].selected = !m.entries[entryIdx].selected
 						m.updateDestConstraints()
 					}
 				}
+				return m, nil
 			case key.Matches(msg, keys.ToggleAll):
-				// Toggle all compatible items for this type
 				compatible := m.typeItemMap[ct]
 				allSelected := true
 				for _, idx := range compatible {
@@ -473,27 +548,37 @@ func (m createLoadoutModal) Update(msg tea.Msg) (createLoadoutModal, tea.Cmd) {
 					m.entries[idx].selected = !allSelected
 				}
 				m.updateDestConstraints()
+				return m, nil
 			case key.Matches(msg, keys.ToggleCompat):
 				m.showAllCompat = !m.showAllCompat
-				// Clamp cursor after filter change
 				newFiltered := m.filteredTypeItems()
 				if cursor >= len(newFiltered) && len(newFiltered) > 0 {
 					m.perTypeCursor[ct] = len(newFiltered) - 1
 				}
+				return m, nil
 			case msg.String() == "/":
+				m.searchActive = true
 				m.searchInput.SetValue(m.perTypeSearch[ct])
 				m.searchInput.Focus()
+				return m, nil
+			case msg.String() == "l":
+				m.splitView.focusedPane = panePreview
+				return m, nil
+			case msg.String() == "h":
+				m.splitView.focusedPane = paneList
+				return m, nil
 			case msg.Type == tea.KeyEnter:
 				m.perTypeCursor[ct] = cursor
 				if m.typeStepIndex < len(m.selectedTypes)-1 {
 					m.typeStepIndex++
-					// Restore search for next type
 					nextCt := m.currentType()
 					m.searchInput.SetValue(m.perTypeSearch[nextCt])
 					m.searchInput.Blur()
+					m.searchActive = false
 				} else {
 					m.step = clStepName
 				}
+				return m, m.previewCmdForCursor()
 			}
 
 		case clStepName:
@@ -552,7 +637,7 @@ func (m createLoadoutModal) Update(msg tea.Msg) (createLoadoutModal, tea.Cmd) {
 				if m.destDisabled[m.destCursor] {
 					return m, nil
 				}
-				m.reviewCursor = 1 // default to Create button
+				m.reviewBtnCursor = 1 // default to Create button
 				m.step = clStepReview
 				return m, nil
 			}
@@ -563,22 +648,98 @@ func (m createLoadoutModal) Update(msg tea.Msg) (createLoadoutModal, tea.Cmd) {
 				m.step = clStepDest
 				return m, nil
 			case key.Matches(msg, keys.Left):
-				if m.reviewCursor > 0 {
-					m.reviewCursor--
+				if m.reviewBtnCursor > 0 {
+					m.reviewBtnCursor--
 				}
 			case key.Matches(msg, keys.Right):
-				if m.reviewCursor < 1 {
-					m.reviewCursor++
+				if m.reviewBtnCursor < 1 {
+					m.reviewBtnCursor++
 				}
 			case msg.Type == tea.KeyEnter:
-				if m.reviewCursor == 0 {
+				if m.reviewBtnCursor == 0 {
 					// Back
 					m.step = clStepDest
 				} else {
 					// Create
 					m.confirmed = true
-					m.active = false
 				}
+				return m, nil
+			}
+		}
+
+	case tea.MouseMsg:
+		if msg.Action != tea.MouseActionRelease || msg.Button != tea.MouseButtonLeft {
+			return m, nil
+		}
+
+		switch m.step {
+		case clStepProvider:
+			for i := range m.providerList {
+				if zone.Get(fmt.Sprintf("wiz-opt-%d", i)).InBounds(msg) {
+					m.providerCursor = i
+					m.prefilledProvider = m.providerList[i].Slug
+					m.buildTypeEntries()
+					m.step = clStepTypes
+					return m, nil
+				}
+			}
+
+		case clStepTypes:
+			for i := range m.typeEntries {
+				if zone.Get(fmt.Sprintf("wiz-opt-%d", i)).InBounds(msg) {
+					m.typeEntries[i].checked = !m.typeEntries[i].checked
+					return m, nil
+				}
+			}
+
+		case clStepItems:
+			if zone.Get("wiz-field-search").InBounds(msg) {
+				m.searchInput.Focus()
+				return m, nil
+			}
+			filtered := m.filteredTypeItems()
+			for vi, absIdx := range filtered {
+				if zone.Get(fmt.Sprintf("wiz-opt-%d", absIdx)).InBounds(msg) {
+					ct := m.currentType()
+					m.perTypeCursor[ct] = vi
+					if m.isItemCompatible(absIdx) {
+						m.entries[absIdx].selected = !m.entries[absIdx].selected
+					}
+					return m, m.previewCmdForCursor()
+				}
+			}
+
+		case clStepName:
+			if zone.Get("wiz-field-name").InBounds(msg) {
+				m.nameFirst = true
+				m.nameInput.Focus()
+				m.descInput.Blur()
+				return m, nil
+			}
+			if zone.Get("wiz-field-desc").InBounds(msg) {
+				m.nameFirst = false
+				m.descInput.Focus()
+				m.nameInput.Blur()
+				return m, nil
+			}
+
+		case clStepDest:
+			for i := range m.destOptions {
+				if zone.Get(fmt.Sprintf("wiz-opt-%d", i)).InBounds(msg) {
+					if !m.destDisabled[i] {
+						m.destCursor = i
+					}
+					return m, nil
+				}
+			}
+
+		case clStepReview:
+			if zone.Get("wiz-btn-back").InBounds(msg) {
+				m.step = clStepDest
+				return m, nil
+			}
+			if zone.Get("wiz-btn-create").InBounds(msg) {
+				m.confirmed = true
 				return m, nil
 			}
 		}
@@ -586,108 +747,64 @@ func (m createLoadoutModal) Update(msg tea.Msg) (createLoadoutModal, tea.Cmd) {
 	return m, nil
 }
 
-func (m createLoadoutModal) filteredEntries() []loadoutItemEntry {
-	query := strings.ToLower(m.searchInput.Value())
-	if query == "" {
-		return m.entries
+func (m createLoadoutScreen) View() string {
+	breadcrumbSegments := []BreadcrumbSegment{
+		{"Home", "crumb-home"},
+		{"Loadouts", "crumb-parent"},
 	}
-	var out []loadoutItemEntry
-	for _, e := range m.entries {
-		if strings.Contains(strings.ToLower(e.item.Name), query) ||
-			strings.Contains(strings.ToLower(e.item.Description), query) {
-			out = append(out, e)
-		}
-	}
-	return out
-}
-
-func (m createLoadoutModal) selectedItems() []loadoutItemEntry {
-	var out []loadoutItemEntry
-	for _, e := range m.entries {
-		if e.selected {
-			out = append(out, e)
-		}
-	}
-	return out
-}
-
-func (m *createLoadoutModal) updateDestConstraints() {
-	if len(m.destOptions) < 3 {
-		return
-	}
-	selected := m.selectedItems()
-	registries := make(map[string]bool)
-	providers := make(map[string]bool)
-	for _, e := range selected {
-		if e.item.Registry != "" {
-			registries[e.item.Registry] = true
-		}
-		if e.item.Provider != "" {
-			providers[e.item.Provider] = true
-		}
-	}
-	regIdx := 2
-	if len(registries) > 1 {
-		m.destDisabled[regIdx] = true
-		m.destHints[regIdx] = "Items span multiple registries"
-	} else if len(providers) > 1 {
-		m.destDisabled[regIdx] = true
-		m.destHints[regIdx] = "Items target multiple providers"
-	} else {
-		m.destDisabled[regIdx] = false
-		m.destHints[regIdx] = ""
-	}
-	if m.destDisabled[regIdx] && m.destCursor == regIdx {
-		m.destCursor--
-	}
-}
-
-func (m createLoadoutModal) View() string {
 	stepLabel := fmt.Sprintf("(%d of %d)", m.currentStepNum(), m.dynamicTotalSteps())
-	title := titleStyle.Render("Create Loadout") + "  " + helpStyle.Render(stepLabel)
+	if m.step == clStepItems {
+		breadcrumbSegments = append(breadcrumbSegments,
+			BreadcrumbSegment{m.currentType().Label(), ""})
+	} else {
+		breadcrumbSegments = append(breadcrumbSegments,
+			BreadcrumbSegment{"Create", ""})
+	}
+	s := renderBreadcrumb(breadcrumbSegments...) + "  " + helpStyle.Render(stepLabel) + "\n\n"
+	s += m.renderSplitTitleBar()
+	left := m.renderLeftPane()
+	s += m.renderSplitView(left)
+	return s
+}
+
+func (m createLoadoutScreen) renderLeftPane() string {
+	leftW := m.splitView.leftWidth()
+	if leftW < 20 {
+		leftW = 20
+	}
 	var body string
 
 	switch m.step {
 	case clStepProvider:
 		body = labelStyle.Render("Pick a provider:") + "\n\n"
 		for i, prov := range m.providerList {
-			prefix := "  "
-			style := itemStyle
-			if i == m.providerCursor {
-				prefix = "> "
-				style = selectedItemStyle
-			}
+			prefix, style := cursorPrefix(i == m.providerCursor)
 			detected := ""
 			if prov.Detected {
 				detected = " " + installedStyle.Render("(detected)")
 			}
 			row := fmt.Sprintf("  %s%s%s", prefix, style.Render(prov.Name), detected)
-			body += zone.Mark(fmt.Sprintf("modal-opt-%d", i), row) + "\n"
+			body += zone.Mark(fmt.Sprintf("wiz-opt-%d", i), row) + "\n"
 		}
 
 	case clStepTypes:
-		body = labelStyle.Render("Uncheck any content types you want to skip.") + "\n\n"
+		body = labelStyle.Render("Uncheck any types to skip.") + "\n\n"
 		for i, te := range m.typeEntries {
-			checkBox := "[x]"
+			checkBox := helpStyle.Render("[x]")
 			if !te.checked {
-				checkBox = "[ ]"
+				checkBox = helpStyle.Render("[ ]")
 			}
-			prefix := "  "
-			style := itemStyle
-			if i == m.typeCursor {
-				prefix = "> "
-				style = selectedItemStyle
+			prefix, style := cursorPrefix(i == m.typeCursor)
+			badge := ""
+			if te.ct == catalog.Hooks || te.ct == catalog.MCP {
+				badge = " " + warningStyle.Render("!!")
 			}
 			countLabel := helpStyle.Render(fmt.Sprintf("(%d)", te.count))
-			row := fmt.Sprintf("  %s%s %s %s",
-				prefix,
-				helpStyle.Render(checkBox),
-				style.Render(te.ct.Label()),
-				countLabel,
-			)
-			body += zone.Mark(fmt.Sprintf("modal-opt-%d", i), row) + "\n"
+			row := fmt.Sprintf("  %s%s %s%s %s",
+				prefix, checkBox, style.Render(te.ct.Label()), badge, countLabel)
+			body += zone.Mark(fmt.Sprintf("wiz-opt-%d", i), row) + "\n"
 		}
-		body += "\n" + helpStyle.Render("space toggle \u2022 a toggle all \u2022 enter next")
+		body += "\n" + helpStyle.Render("space toggle • a toggle all • enter next")
 		if m.message != "" && m.messageIsErr {
 			body += "\n" + errorMsgStyle.Render(m.message)
 		}
@@ -696,85 +813,80 @@ func (m createLoadoutModal) View() string {
 		ct := m.currentType()
 		selCount := m.currentTypeSelectedCount()
 		body = labelStyle.Render(fmt.Sprintf("Select %s (%d selected)", ct.Label(), selCount)) + "\n"
-		if m.searchInput.Focused() {
-			body += zone.Mark("modal-field-search", m.searchInput.View()) + "\n"
+		if m.searchActive {
+			body += zone.Mark("wiz-field-search", m.searchInput.View()) + "\n"
 		} else {
 			body += "\n"
 		}
-
 		filtered := m.filteredTypeItems()
 		cursor := m.perTypeCursor[ct]
-		if len(filtered) == 0 {
-			body += helpStyle.Render(fmt.Sprintf("  No %s available for %s", ct.Label(), m.prefilledProvider))
-		} else {
-			innerH := createLoadoutModalHeight - 9
-			start := 0
-			if len(filtered) > innerH {
-				start = cursor - innerH/2
-				if start < 0 {
-					start = 0
-				}
-				if start+innerH > len(filtered) {
-					start = len(filtered) - innerH
-				}
+		visibleH := m.splitView.visibleListRows() - 4
+		if visibleH < 3 {
+			visibleH = 3
+		}
+		start := 0
+		if len(filtered) > visibleH {
+			start = cursor - visibleH/2
+			if start < 0 {
+				start = 0
 			}
-			end := start + innerH
-			if end > len(filtered) {
-				end = len(filtered)
+			if start+visibleH > len(filtered) {
+				start = len(filtered) - visibleH
 			}
-			for vi, fi := range filtered[start:end] {
-				e := m.entries[fi]
-				absIdx := start + vi
-				compatible := m.isItemCompatible(fi)
-
-				checkBox := "[ ]"
-				if e.selected {
-					checkBox = "[x]"
-				}
-				prefix := "  "
-				style := itemStyle
-				if absIdx == cursor {
-					prefix = "> "
-					style = selectedItemStyle
-				}
-
-				source := ""
-				if e.item.Registry != "" {
-					source = " (" + e.item.Registry + ")"
-				} else if e.item.Library {
-					source = " (library)"
-				}
-
-				if !compatible {
-					// Incompatible: muted + strikethrough + suffix
-					row := fmt.Sprintf("  %s%s %s%s (incompatible)",
-						prefix,
-						helpStyle.Render(checkBox),
-						helpStyle.Render(strikethrough(e.item.Name)),
-						helpStyle.Render(source),
-					)
-					body += zone.Mark(fmt.Sprintf("modal-opt-%d", absIdx), row) + "\n"
-				} else {
-					row := fmt.Sprintf("  %s%s %s%s",
-						prefix,
-						helpStyle.Render(checkBox),
-						style.Render(e.item.Name),
-						helpStyle.Render(source),
-					)
-					body += zone.Mark(fmt.Sprintf("modal-opt-%d", absIdx), row) + "\n"
-				}
+		}
+		end := start + visibleH
+		if end > len(filtered) {
+			end = len(filtered)
+		}
+		if start > 0 {
+			body += "  " + renderScrollUp(start, false) + "\n"
+		}
+		maxNameW := leftW - 10
+		if maxNameW < 10 {
+			maxNameW = 10
+		}
+		for vi, fi := range filtered[start:end] {
+			e := m.entries[fi]
+			absIdx := start + vi
+			compatible := m.isItemCompatible(fi)
+			checkBox := helpStyle.Render("[ ]")
+			if e.selected {
+				checkBox = helpStyle.Render("[x]")
 			}
+			prefix, style := cursorPrefix(absIdx == cursor)
+			name := e.item.Name
+			if len(name) > maxNameW {
+				name = name[:maxNameW-3] + "..."
+			}
+			source := ""
+			if e.item.Registry != "" {
+				source = " (" + e.item.Registry + ")"
+			} else if e.item.Library {
+				source = " (library)"
+			}
+			var row string
+			if !compatible {
+				row = fmt.Sprintf("  %s%s %s%s (incompatible)",
+					prefix, checkBox, helpStyle.Render(name), helpStyle.Render(source))
+			} else {
+				row = fmt.Sprintf("  %s%s %s%s",
+					prefix, checkBox, style.Render(name), helpStyle.Render(source))
+			}
+			body += zone.Mark(fmt.Sprintf("wiz-opt-%d", absIdx), row) + "\n"
+		}
+		if end < len(filtered) {
+			body += "  " + renderScrollDown(len(filtered)-end, false) + "\n"
 		}
 		filterMode := "compatible only"
 		if m.showAllCompat {
 			filterMode = "showing all"
 		}
-		body += "\n" + helpStyle.Render(fmt.Sprintf("space select \u2022 a all \u2022 t filter (%s) \u2022 / search \u2022 enter next", filterMode))
+		body += "\n" + helpStyle.Render(fmt.Sprintf("space select • a all • t filter (%s) • / search • enter next", filterMode))
 
 	case clStepName:
 		body = labelStyle.Render("Name your loadout:") + "\n\n"
-		body += zone.Mark("modal-field-name", m.nameInput.View()) + "\n"
-		body += zone.Mark("modal-field-desc", m.descInput.View()) + "\n"
+		body += zone.Mark("wiz-field-name", m.nameInput.View()) + "\n"
+		body += zone.Mark("wiz-field-desc", m.descInput.View()) + "\n"
 		body += "\n" + helpStyle.Render("tab switch field • enter next")
 		if m.message != "" && m.messageIsErr {
 			body += "\n" + errorMsgStyle.Render(m.message)
@@ -783,42 +895,30 @@ func (m createLoadoutModal) View() string {
 	case clStepDest:
 		body = labelStyle.Render("Choose destination:") + "\n\n"
 		for i, opt := range m.destOptions {
-			prefix := "  "
-			style := itemStyle
+			prefix, style := cursorPrefix(i == m.destCursor)
 			if m.destDisabled[i] {
 				style = helpStyle
-			} else if i == m.destCursor {
-				prefix = "> "
-				style = selectedItemStyle
+				prefix = "  "
 			}
 			row := fmt.Sprintf("  %s%s", prefix, style.Render(opt))
 			if m.destDisabled[i] && m.destHints[i] != "" {
 				row += "\n      " + helpStyle.Render(m.destHints[i])
 			}
-			body += zone.Mark(fmt.Sprintf("modal-opt-%d", i), row) + "\n"
+			body += zone.Mark(fmt.Sprintf("wiz-opt-%d", i), row) + "\n"
 		}
 		body += "\n" + helpStyle.Render("enter next • esc back")
 
 	case clStepReview:
-		body = m.reviewBody()
+		body = m.renderReviewLeftPane(leftW)
 	}
 
-	content := title + "\n\n" + body
-	return lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(modalBorderColor).
-		Background(modalBgColor).
-		Padding(1, 2).
-		Width(createLoadoutModalWidth).
-		Height(createLoadoutModalHeight).
-		Render(content)
+	return body
 }
 
-// reviewBody builds the review step content with grouped summary and buttons.
-func (m createLoadoutModal) reviewBody() string {
-	innerWidth := createLoadoutModalWidth - 6 // borders + padding
+// renderReviewLeftPane renders the review step left pane.
+func (m createLoadoutScreen) renderReviewLeftPane(leftW int) string {
+	body := labelStyle.Render("Review & Create") + "\n\n"
 
-	// Provider display name
 	provName := m.prefilledProvider
 	for _, p := range m.providerList {
 		if p.Slug == m.prefilledProvider {
@@ -826,92 +926,131 @@ func (m createLoadoutModal) reviewBody() string {
 			break
 		}
 	}
-
-	// Destination label
-	destLabel := "Project"
-	if m.destCursor < len(m.destOptions) {
-		destLabel = m.destOptions[m.destCursor]
+	body += fmt.Sprintf("  %s %s\n", labelStyle.Render("Provider:"), provName)
+	body += fmt.Sprintf("  %s %s\n", labelStyle.Render("Name:"), m.nameInput.Value())
+	if desc := m.descInput.Value(); desc != "" {
+		body += fmt.Sprintf("  %s %s\n", labelStyle.Render("Description:"), desc)
 	}
+	body += fmt.Sprintf("  %s %s\n", labelStyle.Render("Destination:"), m.destOptions[m.destCursor])
 
-	var b strings.Builder
-	b.WriteString(fmt.Sprintf("  %s  %s\n", labelStyle.Render("Name:"), m.nameInput.Value()))
-	if desc := strings.TrimSpace(m.descInput.Value()); desc != "" {
-		b.WriteString(fmt.Sprintf("  %s  %s\n", labelStyle.Render("Desc:"), desc))
-	}
-	b.WriteString(fmt.Sprintf("  %s  %s\n", labelStyle.Render("Provider:"), provName))
-	b.WriteString(fmt.Sprintf("  %s  %s\n", labelStyle.Render("Dest:"), destLabel))
-
-	// Group selected items by type
-	grouped := make(map[catalog.ContentType][]string)
-	hasExecutable := false
-	for _, e := range m.entries {
-		if !e.selected {
-			continue
-		}
-		name := e.item.Name
-		if e.item.Registry != "" {
-			name += " (" + e.item.Registry + ")"
-		}
-		grouped[e.item.Type] = append(grouped[e.item.Type], name)
-		if e.item.Type == catalog.Hooks || e.item.Type == catalog.MCP {
-			hasExecutable = true
-		}
-	}
-
-	if len(grouped) == 0 {
-		b.WriteString("\n" + warningStyle.Render("  No items selected"))
+	selected := m.selectedItems()
+	if len(selected) == 0 {
+		body += "\n  " + warningStyle.Render("No items selected") + "\n"
 	} else {
-		b.WriteString("\n  " + labelStyle.Render("Contents:") + "\n")
-		maxNamesWidth := innerWidth - 8 // indent + type label overhead
+		body += fmt.Sprintf("\n  %s\n", labelStyle.Render(fmt.Sprintf("Items (%d):", len(selected))))
+		byType := make(map[catalog.ContentType][]loadoutItemEntry)
+		for _, e := range selected {
+			byType[e.item.Type] = append(byType[e.item.Type], e)
+		}
 		for _, ct := range catalog.AllContentTypes() {
-			names := grouped[ct]
-			if len(names) == 0 {
+			items := byType[ct]
+			if len(items) == 0 {
 				continue
 			}
-			line := strings.Join(names, ", ")
-			if len(line) > maxNamesWidth && len(names) > 3 {
-				line = strings.Join(names[:3], ", ") + fmt.Sprintf(" + %d more", len(names)-3)
+			badge := ""
+			if ct == catalog.Hooks || ct == catalog.MCP {
+				badge = " " + warningStyle.Render("!!")
 			}
-			b.WriteString(fmt.Sprintf("    %s (%d): %s\n",
-				ct.Label(), len(names), helpStyle.Render(line)))
+			body += fmt.Sprintf("\n  %s%s\n", labelStyle.Render(ct.Label()), badge)
+			maxNameW := leftW - 6
+			if maxNameW < 10 {
+				maxNameW = 10
+			}
+			for _, e := range items {
+				name := e.item.Name
+				if len(name) > maxNameW {
+					name = name[:maxNameW-3] + "..."
+				}
+				body += fmt.Sprintf("    %s\n", name)
+			}
+		}
+
+		hasSecurityContent := false
+		for _, e := range selected {
+			if e.item.Type == catalog.Hooks || e.item.Type == catalog.MCP {
+				hasSecurityContent = true
+				break
+			}
+		}
+		if hasSecurityContent {
+			body += "\n  " + warningStyle.Render("Security Notice: Hooks and MCP configs run code.") + "\n"
+			body += "  " + warningStyle.Render("Review content before applying this loadout.") + "\n"
 		}
 	}
 
-	// Security warning for hooks/MCP
-	if hasExecutable {
-		b.WriteString("\n" + warningStyle.Render("  !! Security Notice !!") + "\n")
-		b.WriteString(helpStyle.Render("  This loadout includes executable content.") + "\n")
-		b.WriteString(helpStyle.Render("  Review commands before installing."))
+	// Buttons
+	body += "\n"
+	backStyle := buttonDisabledStyle
+	createStyle := buttonDisabledStyle
+	if m.reviewBtnCursor == 0 {
+		backStyle = buttonStyle
+	} else {
+		createStyle = buttonStyle
 	}
-
-	body := b.String()
-
-	// Buttons pinned to bottom
-	contentLines := strings.Count(body, "\n") + 1
-	innerH := createLoadoutModalHeight - 6 // title+spacing+border+padding
-	spacer := innerH - contentLines - 1
-	if spacer < 0 {
-		spacer = 0
-	}
-	body += strings.Repeat("\n", spacer)
-	body += renderButtons("Back", "Create", m.reviewCursor, innerWidth)
+	body += "  " + zone.Mark("wiz-btn-back", backStyle.Render("Back"))
+	body += "  " + zone.Mark("wiz-btn-create", createStyle.Render("Create"))
+	body += "\n"
 
 	return body
 }
 
-// strikethrough applies Unicode combining strikethrough to each character.
-func strikethrough(s string) string {
-	var b strings.Builder
-	for _, r := range s {
-		b.WriteRune(r)
-		b.WriteRune('\u0336') // combining long stroke overlay
+// renderSplitTitleBar renders "Items | Preview" tab bar on items and review steps.
+func (m createLoadoutScreen) renderSplitTitleBar() string {
+	if m.step != clStepItems && m.step != clStepReview {
+		return ""
 	}
-	return b.String()
+	if m.width < splitViewMinWidth {
+		return ""
+	}
+	listLabel := "Items"
+	if m.step == clStepReview {
+		listLabel = "Review"
+	}
+	sep := helpStyle.Render(" | ")
+	leftStyle := activeTabStyle
+	rightStyle := inactiveTabStyle
+	if m.splitView.focusedPane == panePreview {
+		leftStyle = inactiveTabStyle
+		rightStyle = activeTabStyle
+	}
+	return leftStyle.Render(listLabel) + sep + rightStyle.Render("Preview") + "\n\n"
 }
 
-func (m createLoadoutModal) overlayView(background string) string {
-	if !m.active {
-		return background
+// renderSplitView composes the left wizard pane and right preview pane.
+func (m createLoadoutScreen) renderSplitView(leftContent string) string {
+	contentW := m.width
+	if contentW < splitViewMinWidth {
+		return leftContent
 	}
-	return overlay.Composite(zone.Mark("modal-zone", m.View()), background, overlay.Center, overlay.Center, 0, 0)
+
+	leftW := m.splitView.leftWidth()
+	rightW := contentW - leftW - 1
+
+	leftLines := strings.Split(leftContent, "\n")
+	rightLines := strings.Split(m.splitView.renderPreviewContent(rightW), "\n")
+
+	displayH := m.height - 5
+	if displayH < 5 {
+		displayH = 5
+	}
+
+	for len(leftLines) < displayH {
+		leftLines = append(leftLines, "")
+	}
+	for len(rightLines) < displayH {
+		rightLines = append(rightLines, "")
+	}
+
+	sep := helpStyle.Render("│")
+	var rows []string
+	for i := 0; i < displayH; i++ {
+		l := leftLines[i]
+		r := rightLines[i]
+		visW := lipgloss.Width(l)
+		if visW < leftW {
+			l = l + strings.Repeat(" ", leftW-visW)
+		}
+		rows = append(rows, l+sep+r)
+	}
+	return strings.Join(rows, "\n")
 }

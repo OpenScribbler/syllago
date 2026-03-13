@@ -337,7 +337,7 @@ Visual cues that content extends beyond the visible viewport.
 |----------|-------|
 | Screen enum | `screenDetail` |
 | Breadcrumb | `Home > [Category] > [Item Name] [badge]` |
-| Tabs | Overview, Files, Install — navigated by Tab/Shift-Tab/1-2-3 |
+| Tabs | Files, Install — navigated by Tab/Shift-Tab/1-2 (Contents, Apply for loadouts) |
 | Tab focus | Tab switches between tabs (NOT sidebar) |
 | Search | Yes (not available when text input is active) |
 | Action keys | `i` install, `u` uninstall, `c` copy, `s` save, `e` env setup, `p` share |
@@ -372,6 +372,37 @@ Visual cues that content extends beyond the visible viewport.
 | Search | Yes |
 | Cards | One card per provider with loadout count |
 | Action keys | `a` creates loadout |
+
+---
+
+### Create Loadout
+
+**Purpose:** Multi-step wizard for building and installing new loadouts, rendered as a full-screen split-view with persistent sidebar.
+
+**Layout:**
+- Split-view with wizard steps on the left pane and preview on the right pane
+- Sidebar remains visible throughout all steps
+- Breadcrumb: `Home > Loadouts > Create (step N of M)`
+
+**Step Flow:**
+1. **Provider** — Select target provider (skipped if pre-filled from Loadout Cards page)
+2. **Types** — Select which content types to include
+3. **Items** — Per-type selection with search, compatibility filter toggle, and toggle-all feature
+4. **Name** — Loadout name and description text input
+5. **Destination** — Path selection or auto-install option
+6. **Review** — Grouped item display by type with security notices for Hooks/MCP configs
+
+| Property | Value |
+|----------|-------|
+| Screen enum | `screenLoadoutCreate` |
+| Breadcrumb | `Home > Loadouts > Create (N of M)` |
+| Layout | Full-screen split-view (left: wizard, right: preview) with sidebar |
+| Tab focus | No (input focus within wizard steps) |
+| Search | Yes (on Items step only) |
+| Navigation | Enter advance/create, Esc/Back button go back, Up/Down select options |
+| Buttons | Back (all steps except first), Create/Next (varies by step) |
+| Mouse | Zone marks on: checkboxes, buttons, filter toggles, toggle-all |
+| Special | Provider step skipped if pre-filled; Items step shows compatibility badge filter; Review step shows security warnings for Hooks/MCP |
 
 ---
 

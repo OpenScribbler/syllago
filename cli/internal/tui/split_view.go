@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 )
 
@@ -400,49 +401,58 @@ func (m splitViewModel) View() string {
 		return m.renderList(m.width)
 	}
 
-	// Split mode: left + separator + right
+	// Split mode: title bar + two-column body
 	leftW := m.leftWidth()
 	rightW := m.rightWidth()
 
-	left := m.renderList(leftW)
-	right := m.renderPreview(rightW)
+	var s strings.Builder
 
-	// Pad each pane to full height for proper alignment
-	leftLines := strings.Split(left, "\n")
-	rightLines := strings.Split(right, "\n")
+	// Title bar (tab-styled, spanning full width)
+	s.WriteString(m.renderSplitTitleBar())
+	s.WriteString("\n\n") // blank line after title bar
 
-	// Determine actual display height
-	displayHeight := m.height
+	// Body content (no titles)
+	leftBody := m.renderListContent(leftW)
+	rightBody := m.renderPreviewContent(rightW)
+
+	leftLines := strings.Split(leftBody, "\n")
+	rightLines := strings.Split(rightBody, "\n")
+
+	// Display height for body area (title bar uses 2 lines: title + blank)
+	displayHeight := m.height - 2
 	if displayHeight < 1 {
 		displayHeight = max(len(leftLines), len(rightLines))
 	}
 
-	// Pad to equal length
+	// Pad to equal line count
 	for len(leftLines) < displayHeight {
-		leftLines = append(leftLines, strings.Repeat(" ", leftW))
+		leftLines = append(leftLines, "")
 	}
 	for len(rightLines) < displayHeight {
-		rightLines = append(rightLines, strings.Repeat(" ", rightW))
+		rightLines = append(rightLines, "")
 	}
 
-	// Join line by line with separator
+	// Join line by line, padding each left line to exact visual width
 	sep := helpStyle.Render("│")
-	var combined strings.Builder
 	for i := 0; i < displayHeight; i++ {
 		l := leftLines[i]
-		r := ""
-		if i < len(rightLines) {
-			r = rightLines[i]
+		r := rightLines[i]
+
+		// Pad left line to exact visual width for separator alignment
+		visW := lipgloss.Width(l)
+		if visW < leftW {
+			l = l + strings.Repeat(" ", leftW-visW)
 		}
-		combined.WriteString(l)
-		combined.WriteString(sep)
-		combined.WriteString(r)
+
+		s.WriteString(l)
+		s.WriteString(sep)
+		s.WriteString(r)
 		if i < displayHeight-1 {
-			combined.WriteString("\n")
+			s.WriteString("\n")
 		}
 	}
 
-	return combined.String()
+	return s.String()
 }
 
 // renderList renders the left pane (file tree / item list).
@@ -617,6 +627,128 @@ func (m splitViewModel) renderSinglePanePreview() string {
 	for i := offset; i < end; i++ {
 		lineNum := helpStyle.Render(fmt.Sprintf("%*d ", lineNumW, i+1))
 		s.WriteString(lineNum + valueStyle.Render(StripControlChars(lines[i])) + "\n")
+	}
+
+	if end < len(lines) {
+		s.WriteString(renderScrollDown(len(lines)-end, true) + "\n")
+	}
+
+	return s.String()
+}
+
+// renderSplitTitleBar renders a combined "Contents | Preview" title bar with tab-like styling.
+func (m splitViewModel) renderSplitTitleBar() string {
+	title := m.listTitle
+	if title == "" {
+		title = "Files"
+	}
+	var leftStyle, rightStyle lipgloss.Style
+	if m.focusedPane == paneList {
+		leftStyle = activeTabStyle
+		rightStyle = inactiveTabStyle
+	} else {
+		leftStyle = inactiveTabStyle
+		rightStyle = activeTabStyle
+	}
+	sep := helpStyle.Render(" | ")
+	return leftStyle.Render(title) + sep + rightStyle.Render("Preview")
+}
+
+// renderListContent renders the list pane body without a title line (for split mode).
+func (m splitViewModel) renderListContent(width int) string {
+	var s strings.Builder
+
+	visible := m.visibleListRows()
+	end := m.scrollOffset + visible
+	if end > len(m.items) {
+		end = len(m.items)
+	}
+
+	if m.scrollOffset > 0 {
+		s.WriteString("  " + renderScrollUp(m.scrollOffset, false) + "\n")
+	}
+
+	maxLabelW := width - 6
+	if maxLabelW < 10 {
+		maxLabelW = 10
+	}
+
+	for i := m.scrollOffset; i < end; i++ {
+		item := m.items[i]
+		indent := strings.Repeat("  ", item.Indent)
+
+		if item.Disabled {
+			line := fmt.Sprintf("  %s%s", indent, helpStyle.Render(item.Label))
+			s.WriteString(line + "\n")
+			continue
+		}
+
+		prefix, style := cursorPrefix(i == m.cursor)
+		label := item.Label
+		if item.IsDir {
+			label += "/"
+		}
+		if len(label) > maxLabelW {
+			label = label[:maxLabelW-3] + "..."
+		}
+		line := fmt.Sprintf("  %s%s%s", indent, prefix, style.Render(label))
+		zoneID := fmt.Sprintf("%s-item-%d", m.zonePrefix, i-m.scrollOffset)
+		s.WriteString(zone.Mark(zoneID, line) + "\n")
+	}
+
+	if end < len(m.items) {
+		s.WriteString("  " + renderScrollDown(len(m.items)-end, false) + "\n")
+	}
+
+	return s.String()
+}
+
+// renderPreviewContent renders the preview pane body without a title line (for split mode).
+func (m splitViewModel) renderPreviewContent(width int) string {
+	var s strings.Builder
+
+	if m.previewContent == "" {
+		s.WriteString(helpStyle.Render("  (no preview)") + "\n")
+		return s.String()
+	}
+
+	lines := strings.Split(m.previewContent, "\n")
+	visible := m.visiblePreviewRows()
+
+	maxOffset := len(lines) - visible
+	if maxOffset < 0 {
+		maxOffset = 0
+	}
+	offset := m.previewScroll
+	if offset > maxOffset {
+		offset = maxOffset
+	}
+
+	end := offset + visible
+	if end > len(lines) {
+		end = len(lines)
+	}
+
+	if offset > 0 {
+		s.WriteString(renderScrollUp(offset, true) + "\n")
+	}
+
+	lineNumW := len(fmt.Sprintf("%d", len(lines)))
+	if lineNumW < 4 {
+		lineNumW = 4
+	}
+	maxContentW := width - lineNumW - 2
+	if maxContentW < 10 {
+		maxContentW = 10
+	}
+
+	for i := offset; i < end; i++ {
+		lineNum := helpStyle.Render(fmt.Sprintf("%*d ", lineNumW, i+1))
+		lineContent := lines[i]
+		if len(lineContent) > maxContentW {
+			lineContent = lineContent[:maxContentW]
+		}
+		s.WriteString(lineNum + valueStyle.Render(StripControlChars(lineContent)) + "\n")
 	}
 
 	if end < len(lines) {

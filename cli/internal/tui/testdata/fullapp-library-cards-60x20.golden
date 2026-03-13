@@ -1,12 +1,12 @@
 syllago           │Home > Library
                   │
-  Content         │╭───────────────────────────────────────╮
-  Skills        3 ││ Skills (1)                            │
-  Agents        1 ││ Reusable skill definitions that       │
-  MCP Configs   1 ││ extend AI tool capabilities           │
-  Rules         1 │╰───────────────────────────────────────╯
-  Hooks         1 │
-  Commands      1 │
+  Content         │ [a] Add Content
+  Skills        3 │
+  Agents        1 │╭───────────────────────────────────────╮
+  MCP Configs   1 ││ Skills (1)                            │
+  Rules         1 ││ Reusable skill definitions that       │
+  Hooks         1 ││ extend AI tool capabilities           │
+  Commands      1 │╰───────────────────────────────────────╯
   ─────────────   │
   Collections     │
 > Library       1 │

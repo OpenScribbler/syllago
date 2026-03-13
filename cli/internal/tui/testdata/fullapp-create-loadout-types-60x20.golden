@@ -1,17 +1,17 @@
-syllago           │Home > Registries
+syllago           │Home > Loadouts > Create  (1 of 5)
                   │
-  Content         │ [a] Add Registry   [s] Sync   [r] Remove
+  Content         │Pick a provider:
   Skills        3 │
-  Agents        1 │  No registries configured.
-  MCP Configs   1 │
-  Rules         1 │  Press a to add a registry.
+  Agents        1 │  > Claude Code (detected)
+  MCP Configs   1 │    Cursor
+  Rules         1 │
   Hooks         1 │
   Commands      1 │
   ─────────────   │
   Collections     │
   Library       1 │
-  Loadouts      2 │
-> Registries      │
+> Loadouts      2 │
+  Registries      │
   ─────────────   │
   Configuration   │
   Add             │
@@ -20,5 +20,4 @@ syllago           │Home > Registries
   Sandbox         │
                   │
 ────────────────────────────────────────────────────────────
-arrows navigate • enter browse • a add registry • r remove
-registry • s sync registry • esc back Registries
+up/down navigate • enter next • esc back Loadouts > Create

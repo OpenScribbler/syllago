@@ -58,6 +58,17 @@ func (m sandboxSettingsModel) Update(msg tea.Msg) (sandboxSettingsModel, tea.Cmd
 					return m, nil
 				}
 			}
+			// Action button clicks
+			if zone.Get("sandbox-btn-add").InBounds(msg) {
+				m.editMode = m.cursor + 1
+				m.editInput = ""
+				return m, nil
+			}
+			if zone.Get("sandbox-btn-delete").InBounds(msg) {
+				m.deleteSelected()
+				m.save()
+				return m, nil
+			}
 		}
 		return m, nil
 	case tea.KeyMsg:
@@ -164,7 +175,11 @@ func (m sandboxSettingsModel) View() string {
 	s := renderBreadcrumb(
 		BreadcrumbSegment{"Home", "crumb-home"},
 		BreadcrumbSegment{"Sandbox", ""},
-	) + "\n\n"
+	) + "\n"
+	s += renderActionButtons(
+		ActionButton{"a", "Add", "sandbox-btn-add", actionBtnAddStyle},
+		ActionButton{"d", "Delete Last", "sandbox-btn-delete", actionBtnRemoveStyle},
+	) + "\n"
 
 	labels := []string{"Allowed Domains", "Allowed Env Vars", "Allowed Ports"}
 	values := []string{
