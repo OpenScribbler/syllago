@@ -253,7 +253,7 @@ func makeDetailModel(itemType catalog.ContentType, local bool, installed bool) d
 		}
 		providers = []provider.Provider{p}
 	}
-	m := newDetailModel(item, providers, "/tmp/repo")
+	m := newDetailModel(item, providers, "/tmp/repo", nil)
 	m.activeTab = tabInstall
 	// If installed, mark the provider checkbox true
 	if installed && len(m.provCheck.checks) > 0 {
@@ -299,7 +299,7 @@ func TestUninstallKeyEmitsOpenModalMsg(t *testing.T) {
 			return installDir
 		},
 	}
-	m := newDetailModel(item, []provider.Provider{p}, itemDir)
+	m := newDetailModel(item, []provider.Provider{p}, itemDir, nil)
 	m.activeTab = tabInstall
 	uMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("u")}
 	_, cmd := m.Update(uMsg)
