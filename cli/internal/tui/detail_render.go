@@ -105,15 +105,17 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 	case tabCompatibility:
 		body = m.renderCompatibilityTab()
 	case tabFiles:
+		// Update split view dimensions before rendering
+		pinnedLines := strings.Count(pinned, "\n")
+		bodyHeight := m.height - pinnedLines - 2 // -2 for help bar + margin
+		if bodyHeight < 5 {
+			bodyHeight = 5
+		}
 		if m.item.Type == catalog.Loadouts {
+			m.loadoutContents.splitView.width = m.width
+			m.loadoutContents.splitView.height = bodyHeight
 			body = m.renderLoadoutContentsTab()
 		} else {
-			// Update split view dimensions before rendering
-			pinnedLines := strings.Count(pinned, "\n")
-			bodyHeight := m.height - pinnedLines - 2 // -2 for help bar + margin
-			if bodyHeight < 5 {
-				bodyHeight = 5
-			}
 			m.fileViewer.splitView.width = m.width
 			m.fileViewer.splitView.height = bodyHeight
 			body = m.renderFilesTab()
@@ -371,9 +373,7 @@ func (m detailModel) renderInstallTab() string {
 	return s
 }
 
-// renderLoadoutContentsTab shows the loadout manifest items grouped by type.
-// This gives the user a quick overview of what a loadout includes without
-// needing to read the raw loadout.yaml file.
+// renderLoadoutContentsTab renders the split-view contents browser for loadouts.
 func (m detailModel) renderLoadoutContentsTab() string {
 	if m.loadoutManifestErr != "" {
 		return errorMsgStyle.Render("Error parsing loadout: "+m.loadoutManifestErr) + "\n"
@@ -382,38 +382,7 @@ func (m detailModel) renderLoadoutContentsTab() string {
 		return helpStyle.Render("No loadout manifest found.") + "\n"
 	}
 
-	manifest := m.loadoutManifest
-	var s string
-
-	s += labelStyle.Render("Loadout Contents") + "\n"
-	s += helpStyle.Render(fmt.Sprintf("  Provider: %s  |  %d items total", manifest.Provider, manifest.ItemCount())) + "\n\n"
-
-	// Show items grouped by type, in display order. The order matches
-	// AllContentTypes() so the user sees a consistent layout.
-	typeOrder := []struct {
-		label string
-		items []string
-	}{
-		{"Rules", manifest.Rules},
-		{"Hooks", manifest.Hooks},
-		{"Skills", manifest.Skills},
-		{"Agents", manifest.Agents},
-		{"MCP Configs", manifest.MCP},
-		{"Commands", manifest.Commands},
-	}
-
-	for _, group := range typeOrder {
-		if len(group.items) == 0 {
-			continue
-		}
-		s += labelStyle.Render(fmt.Sprintf("  %s (%d):", group.label, len(group.items))) + "\n"
-		for _, name := range group.items {
-			s += "    " + valueStyle.Render(name) + "\n"
-		}
-		s += "\n"
-	}
-
-	return s
+	return m.loadoutContents.splitView.View()
 }
 
 // renderLoadoutApplyTab shows the apply mode selector (Preview / Try / Keep).
@@ -524,7 +493,17 @@ func (m detailModel) helpText() string {
 		// no additional help for placeholder
 	case tabFiles:
 		if m.item.Type == catalog.Loadouts {
-			helpParts = append(helpParts, "up/down scroll")
+			if m.loadoutContents.splitView.showingPreview {
+				helpParts = append(helpParts, "up/down scroll", "esc back to contents")
+			} else if m.loadoutContents.splitView.IsSplit() {
+				if m.loadoutContents.splitView.FocusedPane() == panePreview {
+					helpParts = append(helpParts, "up/down scroll", "h/left contents")
+				} else {
+					helpParts = append(helpParts, "up/down navigate", "l/right preview")
+				}
+			} else if len(m.loadoutContents.splitView.items) > 0 {
+				helpParts = append(helpParts, "up/down navigate", "enter view")
+			}
 		} else if m.fileViewer.splitView.showingPreview {
 			helpParts = append(helpParts, "up/down scroll", "esc back to files")
 		} else if m.fileViewer.splitView.IsSplit() {

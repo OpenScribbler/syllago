@@ -51,6 +51,8 @@ type splitViewModel struct {
 	showingPreview bool // true when Enter opens full-width preview in collapsed mode
 	// Zone prefix for unique zone IDs (e.g. "sv-files" or "sv-contents")
 	zonePrefix string
+	// Custom title for the left pane (defaults to "Files")
+	listTitle string
 }
 
 const splitViewMinWidth = 70 // content width threshold for split vs single-pane
@@ -381,7 +383,11 @@ func (m splitViewModel) cursorCmd() tea.Cmd {
 // View renders the split view.
 func (m splitViewModel) View() string {
 	if len(m.items) == 0 {
-		return helpStyle.Render("No files in this item.") + "\n"
+		emptyMsg := "No files in this item."
+		if m.listTitle == "Contents" {
+			emptyMsg = "No items in this loadout."
+		}
+		return helpStyle.Render(emptyMsg) + "\n"
 	}
 
 	// Single-pane: showing preview
@@ -444,11 +450,15 @@ func (m splitViewModel) renderList(width int) string {
 	var s strings.Builder
 
 	// Title
+	title := m.listTitle
+	if title == "" {
+		title = "Files"
+	}
 	titleStyle := labelStyle
 	if m.IsSplit() && m.focusedPane != paneList {
 		titleStyle = helpStyle
 	}
-	s.WriteString(titleStyle.Render("Files"))
+	s.WriteString(titleStyle.Render(title))
 	s.WriteString("\n")
 
 	visible := m.visibleListRows()

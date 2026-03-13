@@ -608,7 +608,7 @@ func TestDetailInstallNoProviders(t *testing.T) {
 	app := testApp(t)
 	// Create a detail model with no providers
 	item := app.catalog.Items[0]
-	app.detail = newDetailModel(item, nil, app.catalog.RepoRoot)
+	app.detail = newDetailModel(item, nil, app.catalog.RepoRoot, app.catalog)
 	app.detail.width = 80
 	app.detail.height = 30
 	app.detail.fileViewer.splitView.width = 80

@@ -30,6 +30,8 @@ func init() {
 var (
 	keyUp       = tea.KeyMsg{Type: tea.KeyUp}
 	keyDown     = tea.KeyMsg{Type: tea.KeyDown}
+	keyLeft     = tea.KeyMsg{Type: tea.KeyLeft}
+	keyRight    = tea.KeyMsg{Type: tea.KeyRight}
 	keyEnter    = tea.KeyMsg{Type: tea.KeyEnter}
 	keyEsc      = tea.KeyMsg{Type: tea.KeyEsc}
 	keySpace    = tea.KeyMsg{Type: tea.KeySpace}
@@ -169,7 +171,13 @@ func makeLoadout(t *testing.T, root, name, provSlug, desc string) catalog.Conten
 	t.Helper()
 	dir := filepath.Join(root, "loadouts", provSlug, name)
 	os.MkdirAll(dir, 0o755)
-	os.WriteFile(filepath.Join(dir, "loadout.yaml"), []byte("name: "+name+"\n"), 0o644)
+	// Write a valid loadout manifest that references items from the test catalog.
+	// The "starter-loadout" references items that exist; "advanced-loadout" keeps it minimal.
+	manifest := fmt.Sprintf("kind: loadout\nversion: 1\nname: %s\nprovider: %s\n", name, provSlug)
+	if name == "starter-loadout" {
+		manifest += "skills:\n  - alpha-skill\n  - beta-skill\nrules:\n  - test-rule\n"
+	}
+	os.WriteFile(filepath.Join(dir, "loadout.yaml"), []byte(manifest), 0o644)
 	return catalog.ContentItem{
 		Name:        name,
 		Description: desc,
@@ -313,6 +321,7 @@ func testAppLargeSize(t *testing.T, width, height int) App {
 	app.detail.width = width
 	app.detail.height = height
 	app.detail.fileViewer.splitView.width = width
+	app.detail.loadoutContents.splitView.width = width
 	app.settings.width = width
 	app.settings.height = height
 	app.importer.width = width
@@ -350,6 +359,7 @@ func testAppEmptySize(t *testing.T, width, height int) App {
 	app.detail.width = width
 	app.detail.height = height
 	app.detail.fileViewer.splitView.width = width
+	app.detail.loadoutContents.splitView.width = width
 	app.settings.width = width
 	app.settings.height = height
 	app.importer.width = width
@@ -413,6 +423,7 @@ func testAppSize(t *testing.T, width, height int) App {
 	app.detail.width = width
 	app.detail.height = height
 	app.detail.fileViewer.splitView.width = width
+	app.detail.loadoutContents.splitView.width = width
 	app.settings.width = width
 	app.settings.height = height
 	app.importer.width = width

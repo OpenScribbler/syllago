@@ -1,0 +1,31 @@
+syllago           │Home > Loadouts > Loadouts > starter-loadout
+                  │
+  Content         │ Contents  |  Apply
+  Skills        3 │Type: Loadouts
+  Agents        1 │Path: <TESTDIR>/loadouts/claude-code/starter-loadout
+  MCP Configs   1 │Provider: Claude Code
+  Rules         1 │────────────────────────────────────────────────────────────────────────────────
+  Hooks         1 │
+  Commands      1 │Contents│Preview
+  ─────────────   │  Rules (1)│   1 # test-rule
+  Collections     │  > test-rule│   2 A coding rule
+  Library       1 │  Skills (2)│
+> Loadouts      2 │    alpha-skill│
+  Registries      │    beta-skill│
+  ─────────────   ││
+  Configuration   │                                │
+  Add             │                                │
+  Update          │                                │
+  Settings        │                                │
+  Sandbox         │                                │
+                  │                                │
+                                                   │
+                                                   │
+                                                   │
+                                                   │
+                   (1 lines below)
+
+
+────────────────────────────────────────────────────────────────────────────────
+esc back • tab switch tab • up/down navigate • l/right preview • ctrl+n/p
+next/prev Loadouts > Loadouts > starter-loadout

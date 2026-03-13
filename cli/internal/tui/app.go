@@ -489,6 +489,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.detail.width = contentW
 		a.detail.height = ph
 		a.detail.fileViewer.splitView.width = contentW
+		a.detail.loadoutContents.splitView.width = contentW
 		a.detail.clampScroll()
 		a.importer.width = contentW
 		a.importer.height = ph
@@ -845,6 +846,25 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err == nil {
 				a.catalog = cat
 				a.refreshSidebarCounts()
+				// Refresh the items list if we're viewing loadouts
+				if a.screen == screenItems && a.items.contentType == catalog.Loadouts {
+					src := a.visibleItems(cat.ByType(catalog.Loadouts))
+					if a.items.sourceProvider != "" {
+						var filtered []catalog.ContentItem
+						for _, item := range src {
+							if item.Provider == a.items.sourceProvider {
+								filtered = append(filtered, item)
+							}
+						}
+						src = filtered
+					}
+					items := newItemsModel(catalog.Loadouts, src, a.providers, cat.RepoRoot)
+					items.sourceProvider = a.items.sourceProvider
+					items.parentLabel = a.items.parentLabel
+					items.width = a.items.width
+					items.height = a.items.height
+					a.items = items
+				}
 			}
 		}
 		return a, nil
@@ -2016,9 +2036,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a, nil
 			}
 			if key.Matches(msg, keys.Add) {
-				// If we drilled in from a loadout card, open create loadout wizard
-				if a.cardParent == screenLoadoutCards && a.items.sourceProvider != "" {
-					a.createLoadoutModal = newCreateLoadoutModal(a.items.sourceProvider, a.items.sourceRegistry, a.providers, a.catalog)
+				// If we're on a loadout items list, open create loadout wizard
+				if a.items.contentType == catalog.Loadouts {
+					provider := a.items.sourceProvider
+					a.createLoadoutModal = newCreateLoadoutModal(provider, a.items.sourceRegistry, a.providers, a.catalog)
 					a.focus = focusModal
 					return a, nil
 				}
@@ -2038,7 +2059,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				item := a.items.selectedItem()
 				if isRemovable(item) {
 					// Populate detail so handleConfirmAction can access item info
-					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
+					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot, a.catalog)
 					installed := a.detail.installedProviders()
 					var body string
 					if len(installed) > 0 {
@@ -2061,13 +2082,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if a.cachedDetailPath == item.Path && a.cachedDetail != nil {
 					a.detail = *a.cachedDetail
 				} else {
-					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
+					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot, a.catalog)
 					a.detail.overrides = a.catalog.OverridesFor(item.Name, item.Type)
 				}
 				a.detail.parentLabel = a.items.parentLabel
 				a.detail.width = a.width
 				a.detail.height = a.panelHeight()
 				a.detail.fileViewer.splitView.width = a.width
+				a.detail.loadoutContents.splitView.width = a.width
 				a.detail.listPosition = a.items.cursor
 				a.detail.listTotal = len(a.items.items)
 				a.screen = screenDetail
@@ -2200,11 +2222,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if a.items.cursor < len(a.items.items)-1 {
 					a.items.cursor++
 					item := a.items.selectedItem()
-					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
+					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot, a.catalog)
 					a.detail.overrides = a.catalog.OverridesFor(item.Name, item.Type)
 					a.detail.width = a.width
 					a.detail.height = a.panelHeight()
 					a.detail.fileViewer.splitView.width = a.width
+				a.detail.loadoutContents.splitView.width = a.width
 					a.detail.listPosition = a.items.cursor
 					a.detail.listTotal = len(a.items.items)
 				}
@@ -2214,11 +2237,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if a.items.cursor > 0 {
 					a.items.cursor--
 					item := a.items.selectedItem()
-					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot)
+					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot, a.catalog)
 					a.detail.overrides = a.catalog.OverridesFor(item.Name, item.Type)
 					a.detail.width = a.width
 					a.detail.height = a.panelHeight()
 					a.detail.fileViewer.splitView.width = a.width
+				a.detail.loadoutContents.splitView.width = a.width
 					a.detail.listPosition = a.items.cursor
 					a.detail.listTotal = len(a.items.items)
 				}
