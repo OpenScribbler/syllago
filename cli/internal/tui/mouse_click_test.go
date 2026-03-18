@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -387,5 +388,96 @@ func TestImportTextFieldClickFocuses(t *testing.T) {
 	// Just verify we're still on the same step (no crash, no navigation)
 	if app.importer.step != stepGitURL {
 		t.Errorf("clicking URL field should not change step, got %d", app.importer.step)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Phase 5: detail.go / split_view.go — Tab Click Handling
+// ---------------------------------------------------------------------------
+
+func TestDetailTabBarClickSwitchesTab(t *testing.T) {
+	// Clicking the zone-marked tabs in the detail tab bar should switch tabs.
+	app := navigateToDetailSize(t, catalog.Skills, 120, 40)
+	assertScreen(t, app, screenDetail)
+
+	if app.detail.activeTab != tabFiles {
+		t.Fatalf("expected initial tab=tabFiles, got %d", app.detail.activeTab)
+	}
+
+	renderAndWait(app)
+
+	// Click the Install tab (tab-2, since tabInstall=2 in the enum)
+	click, ok := clickAtZone(t, fmt.Sprintf("tab-%d", int(tabInstall)))
+	if !ok {
+		t.Skip("tabInstall zone not registered after View()")
+	}
+
+	m, _ := app.Update(click)
+	app = m.(App)
+
+	if app.detail.activeTab != tabInstall {
+		t.Errorf("clicking tab-1 should switch to tabInstall, got %d", app.detail.activeTab)
+	}
+
+	// Click back to Files tab
+	renderAndWait(app)
+	click, ok = clickAtZone(t, fmt.Sprintf("tab-%d", int(tabFiles)))
+	if !ok {
+		t.Skip("tabFiles zone not registered after View()")
+	}
+
+	m, _ = app.Update(click)
+	app = m.(App)
+
+	if app.detail.activeTab != tabFiles {
+		t.Errorf("clicking tab-0 should switch to tabFiles, got %d", app.detail.activeTab)
+	}
+}
+
+func TestSplitViewTabClickSwitchesPane(t *testing.T) {
+	// Clicking the "Files" / "Preview" title bar tabs in split view should
+	// switch focusedPane.
+	app := navigateToDetailSize(t, catalog.Skills, 120, 40)
+	assertScreen(t, app, screenDetail)
+
+	if !app.detail.fileViewer.splitView.IsSplit() {
+		t.Skip("split view not active at this width")
+	}
+	if app.detail.fileViewer.splitView.focusedPane != paneList {
+		t.Fatalf("expected initial pane=paneList, got %d", app.detail.fileViewer.splitView.focusedPane)
+	}
+
+	renderAndWait(app)
+
+	// The split view zones use the zonePrefix (e.g. "sv-files") + "-tab-preview"
+	prefix := app.detail.fileViewer.splitView.zonePrefix
+	previewZone := prefix + "-tab-preview"
+	listZone := prefix + "-tab-list"
+
+	// Click the Preview tab
+	click, ok := clickAtZone(t, previewZone)
+	if !ok {
+		t.Skip(previewZone + " zone not registered after View()")
+	}
+
+	m, _ := app.Update(click)
+	app = m.(App)
+
+	if app.detail.fileViewer.splitView.focusedPane != panePreview {
+		t.Errorf("clicking Preview tab should switch to panePreview, got %d", app.detail.fileViewer.splitView.focusedPane)
+	}
+
+	// Click the Files/list tab back
+	renderAndWait(app)
+	click, ok = clickAtZone(t, listZone)
+	if !ok {
+		t.Skip(listZone + " zone not registered after View()")
+	}
+
+	m, _ = app.Update(click)
+	app = m.(App)
+
+	if app.detail.fileViewer.splitView.focusedPane != paneList {
+		t.Errorf("clicking Files tab should switch to paneList, got %d", app.detail.fileViewer.splitView.focusedPane)
 	}
 }
