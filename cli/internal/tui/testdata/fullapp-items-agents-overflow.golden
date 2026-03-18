@@ -19,12 +19,12 @@ syllago           │Home > Agents
   Settings        │    agent-012  Agent number 12
   Sandbox         │    agent-013  Agent number 13
                   │    agent-014  Agent number 14
-                       agent-015  Agent number 15
-                       agent-016  Agent number 16
-                       agent-017  Agent number 17
-                       agent-018  Agent number 18
-                       agent-019  Agent number 19
-
-
+                  │    agent-015  Agent number 15
+                  │    agent-016  Agent number 16
+                  │    agent-017  Agent number 17
+                  │    agent-018  Agent number 18
+                  │    agent-019  Agent number 19
+                  │
+           v1.0.0 │
 ────────────────────────────────────────────────────────────────────────────────
 / search • enter detail • a add agent • esc back • ? help         Agents

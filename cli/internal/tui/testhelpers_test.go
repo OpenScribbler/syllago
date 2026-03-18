@@ -316,18 +316,32 @@ func testAppLargeSize(t *testing.T, width, height int) App {
 	app := NewApp(cat, providers, "1.0.0", false, nil, nil, false, cat.RepoRoot)
 	app.width = width
 	app.height = height
-	app.items.width = width
-	app.items.height = height
-	app.detail.width = width
-	app.detail.height = height
-	app.detail.fileViewer.splitView.width = width
-	app.detail.loadoutContents.splitView.width = width
-	app.settings.width = width
-	app.settings.height = height
-	app.importer.width = width
-	app.importer.height = height
-	app.updater.width = width
-	app.updater.height = height
+
+	contentW := width - sidebarWidth - 1
+	if contentW < 20 {
+		contentW = 20
+	}
+	ph := app.panelHeight()
+	app.sidebar.height = ph
+	app.items.width = contentW
+	app.items.height = ph
+	app.detail.width = contentW
+	app.detail.height = ph
+	app.detail.fileViewer.splitView.width = contentW
+	app.detail.loadoutContents.splitView.width = contentW
+	app.importer.width = contentW
+	app.importer.height = ph
+	app.updater.width = contentW
+	app.updater.height = ph
+	app.settings.width = contentW
+	app.settings.height = ph
+	app.registries.width = contentW
+	app.registries.height = ph
+	app.sandboxSettings.width = contentW
+	app.sandboxSettings.height = ph
+	app.createLoadout.width = contentW
+	app.createLoadout.height = ph
+	app.toast.width = contentW
 	return app
 }
 
@@ -354,18 +368,32 @@ func testAppEmptySize(t *testing.T, width, height int) App {
 	app := NewApp(cat, providers, "1.0.0", false, nil, nil, false, cat.RepoRoot)
 	app.width = width
 	app.height = height
-	app.items.width = width
-	app.items.height = height
-	app.detail.width = width
-	app.detail.height = height
-	app.detail.fileViewer.splitView.width = width
-	app.detail.loadoutContents.splitView.width = width
-	app.settings.width = width
-	app.settings.height = height
-	app.importer.width = width
-	app.importer.height = height
-	app.updater.width = width
-	app.updater.height = height
+
+	contentW := width - sidebarWidth - 1
+	if contentW < 20 {
+		contentW = 20
+	}
+	ph := app.panelHeight()
+	app.sidebar.height = ph
+	app.items.width = contentW
+	app.items.height = ph
+	app.detail.width = contentW
+	app.detail.height = ph
+	app.detail.fileViewer.splitView.width = contentW
+	app.detail.loadoutContents.splitView.width = contentW
+	app.importer.width = contentW
+	app.importer.height = ph
+	app.updater.width = contentW
+	app.updater.height = ph
+	app.settings.width = contentW
+	app.settings.height = ph
+	app.registries.width = contentW
+	app.registries.height = ph
+	app.sandboxSettings.width = contentW
+	app.sandboxSettings.height = ph
+	app.createLoadout.width = contentW
+	app.createLoadout.height = ph
+	app.toast.width = contentW
 	return app
 }
 
@@ -417,19 +445,33 @@ func testAppSize(t *testing.T, width, height int) App {
 	app := NewApp(cat, providers, "1.0.0", false, nil, nil, false, cat.RepoRoot)
 	app.width = width
 	app.height = height
-	// Propagate dimensions to sub-models that need them
-	app.items.width = width
-	app.items.height = height
-	app.detail.width = width
-	app.detail.height = height
-	app.detail.fileViewer.splitView.width = width
-	app.detail.loadoutContents.splitView.width = width
-	app.settings.width = width
-	app.settings.height = height
-	app.importer.width = width
-	app.importer.height = height
-	app.updater.width = width
-	app.updater.height = height
+
+	// Mirror WindowSizeMsg propagation so test rendering matches production.
+	contentW := width - sidebarWidth - 1
+	if contentW < 20 {
+		contentW = 20
+	}
+	ph := app.panelHeight()
+	app.sidebar.height = ph
+	app.items.width = contentW
+	app.items.height = ph
+	app.detail.width = contentW
+	app.detail.height = ph
+	app.detail.fileViewer.splitView.width = contentW
+	app.detail.loadoutContents.splitView.width = contentW
+	app.importer.width = contentW
+	app.importer.height = ph
+	app.updater.width = contentW
+	app.updater.height = ph
+	app.settings.width = contentW
+	app.settings.height = ph
+	app.registries.width = contentW
+	app.registries.height = ph
+	app.sandboxSettings.width = contentW
+	app.sandboxSettings.height = ph
+	app.createLoadout.width = contentW
+	app.createLoadout.height = ph
+	app.toast.width = contentW
 	return app
 }
 

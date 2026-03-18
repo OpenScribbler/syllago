@@ -264,7 +264,7 @@ func TestLoadoutAddKeyOpensWizard(t *testing.T) {
 	assertScreen(t, app, screenItems)
 
 	t.Logf("cardParent=%d (want %d=screenLoadoutCards)", app.cardParent, screenLoadoutCards)
-	t.Logf("sourceProvider=%q", app.items.sourceProvider)
+	t.Logf("sourceProvider=%q", app.items.ctx.sourceProvider)
 	t.Logf("contentType=%s", app.items.contentType)
 
 	// Press 'a' — should open create loadout screen

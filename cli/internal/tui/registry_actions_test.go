@@ -621,8 +621,8 @@ func TestRegistryCardNavigation(t *testing.T) {
 		m, _ := app.Update(keyEnter)
 		drilled := m.(App)
 		assertScreen(t, drilled, screenItems)
-		if drilled.items.sourceRegistry != "test-registry" {
-			t.Fatalf("expected sourceRegistry 'test-registry', got %q", drilled.items.sourceRegistry)
+		if drilled.items.ctx.sourceRegistry != "test-registry" {
+			t.Fatalf("expected sourceRegistry 'test-registry', got %q", drilled.items.ctx.sourceRegistry)
 		}
 	})
 }

@@ -44,7 +44,11 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 	if m.parentLabel != "" {
 		segments = append(segments, BreadcrumbSegment{m.parentLabel, "crumb-parent"})
 	}
-	segments = append(segments, BreadcrumbSegment{m.item.Type.Label(), "crumb-category"})
+	catLabel := m.item.Type.Label()
+	if m.categoryLabel != "" {
+		catLabel = m.categoryLabel
+	}
+	segments = append(segments, BreadcrumbSegment{catLabel, "crumb-category"})
 	segments = append(segments, BreadcrumbSegment{currentLabel, ""})
 	pinned += renderBreadcrumb(segments...) + badgeSuffix + "\n\n"
 
@@ -105,9 +109,11 @@ func (m detailModel) renderContentSplit() (pinned string, body string) {
 	case tabCompatibility:
 		body = m.renderCompatibilityTab()
 	case tabFiles:
-		// Update split view dimensions before rendering
-		pinnedLines := strings.Count(pinned, "\n")
-		bodyHeight := m.height - pinnedLines - 2 // -2 for help bar + margin
+		// Update split view dimensions before rendering.
+		// Use len(Split()) to match View()'s pinnedHeight calculation — Split includes
+		// a trailing empty string so this equals Count()+1, keeping heights aligned.
+		pinnedLineCount := len(strings.Split(pinned, "\n"))
+		bodyHeight := m.height - pinnedLineCount - 2 // -2 for help bar + margin
 		if bodyHeight < 5 {
 			bodyHeight = 5
 		}
@@ -191,19 +197,9 @@ func (m detailModel) renderCompatibilityTab() string {
 	s += labelStyle.Render("Provider Compatibility") + "\n\n"
 
 	// Provider summary table
-	providerNames := map[string]string{
-		"claude-code": "Claude Code",
-		"gemini-cli":  "Gemini CLI",
-		"copilot-cli": "Copilot CLI",
-		"kiro":        "Kiro",
-	}
-
 	for _, result := range m.hookCompat {
 		sym := compatCellStyle(result.Level).Render(result.Level.Symbol())
-		name := providerNames[result.Provider]
-		if name == "" {
-			name = result.Provider
-		}
+		name := providerDisplayName(result.Provider)
 		level := result.Level.Label()
 		note := result.Notes
 
@@ -223,7 +219,7 @@ func (m detailModel) renderCompatibilityTab() string {
 					s += "\n" + warningStyle.Render("Warnings") + "\n"
 					hasWarnings = true
 				}
-				name := providerNames[result.Provider]
+				name := providerDisplayName(result.Provider)
 				s += "  " + compatCellStyle(fr.Impact).Render(result.Level.Symbol()+" "+name+": "+fr.Notes) + "\n"
 			}
 		}
@@ -407,7 +403,7 @@ func (m detailModel) renderLoadoutApplyTab() string {
 
 	var s string
 	s += labelStyle.Render("Apply Loadout") + "\n"
-	s += helpStyle.Render("  Choose a mode and press Enter:") + "\n\n"
+	s += helpStyle.Render("  Choose a mode:") + "\n\n"
 
 	type modeOpt struct {
 		name string
@@ -430,6 +426,12 @@ func (m detailModel) renderLoadoutApplyTab() string {
 		s += zone.Mark(fmt.Sprintf("detail-mode-%d", i), nameLine) + "\n"
 		s += fmt.Sprintf("      %s\n", helpStyle.Render(mode.desc))
 	}
+
+	s += "\n"
+	applyBtns := []ActionButton{
+		{"enter", "Apply", "detail-btn-apply", actionBtnAddStyle},
+	}
+	s += renderActionButtons(applyBtns...)
 
 	return s
 }

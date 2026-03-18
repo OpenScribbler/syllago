@@ -433,6 +433,8 @@ Visual cues that content extends beyond the visible viewport.
 | Search | No |
 | Navigation | Up/Down options, Enter/Space select, Esc back |
 
+**Post-completion navigation:** See [Post-Action Navigation](#post-action-navigation) for where the user lands after adding content.
+
 ---
 
 ### Update
@@ -534,6 +536,24 @@ Toast sits between modal and content focus:
 - **Error toast:** Esc dismisses, `c` copies to clipboard. Other keys pass through.
 - **Short success toast:** Any keypress dismisses (the key passes through to the underlying page).
 - **Long scrollable success toast:** Up/Down scroll content, Esc dismisses. Other keys pass through.
+
+---
+
+### Post-Action Navigation
+
+After completing a state-changing action (add, create, install), the TUI navigates the user to the most specific view of the result.
+
+| Action | Destination | Rationale |
+|--------|-------------|-----------|
+| Import single item (known type) | Detail view of that item | User sees exactly what they added |
+| Import batch (known type) | Items list for that type | User can browse all imported items |
+| Import (unknown/mixed types) | Library cards page | No single type to filter by |
+| Create loadout | Detail view of that loadout | User sees exactly what they created |
+| Install to provider | Stay on Detail (status message) | User is already viewing the item |
+| Apply loadout | Stay on Detail (status message) | User is already viewing the loadout |
+| Add registry | Stay on Registries (async clone) | Registry needs to sync before browsing |
+
+**Principle:** Always navigate as close to the result as possible. A single item lands on its detail view. Multiple items land on a filtered list. Unknown scope lands on the broadest relevant page.
 
 ---
 

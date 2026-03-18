@@ -134,8 +134,8 @@ func TestItemsScrollIndicators(t *testing.T) {
 
 	app := testApp(t)
 	app.items = newItemsModel(catalog.Skills, items, nil, "/tmp")
-	app.items.width = 80
-	app.items.height = 30
+	app.items.width = app.width - sidebarWidth - 1
+	app.items.height = app.panelHeight()
 	app.screen = screenItems
 	app.focus = focusContent
 
@@ -542,7 +542,7 @@ func TestHiddenCountInFooter(t *testing.T) {
 	m := newItemsModel(catalog.Skills, items, nil, "/tmp")
 	m.width = 100
 	m.height = 30
-	m.hiddenCount = 3
+	m.ctx.hiddenCount = 3
 
 	help := m.helpText()
 	assertContains(t, help, "H show 3 hidden")
@@ -560,7 +560,7 @@ func TestNoHiddenCountWhenZero(t *testing.T) {
 	m := newItemsModel(catalog.Skills, items, nil, "/tmp")
 	m.width = 100
 	m.height = 30
-	m.hiddenCount = 0
+	m.ctx.hiddenCount = 0
 
 	help := m.helpText()
 	assertNotContains(t, help, "hidden")

@@ -66,6 +66,8 @@ Every page MUST have:
 4. **helpText()** — context-sensitive help for the footer bar
 5. **Scroll support** — when content can exceed viewport (see `tui-scroll.md`)
 6. **Toast integration** — messages via `message`/`messageIsErr` fields, promoted by App
+7. **Items rebuild** — when refreshing item data, use `a.rebuildItems()` not `newItemsModel()` (see `tui-items-rebuild.md`)
+8. **Post-action navigation** — wizard/action completion messages must navigate to the result, not the homepage (see `tui/CLAUDE.md` Post-Action Navigation section)
 
 ## Shared Helpers (pagehelpers.go)
 

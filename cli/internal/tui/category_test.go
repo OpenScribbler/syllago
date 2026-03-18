@@ -121,8 +121,8 @@ func TestLibraryDetailBreadcrumb(t *testing.T) {
 
 func TestLibraryItemsParentLabel(t *testing.T) {
 	app := navigateToLibraryItems(t)
-	if app.items.parentLabel != "Library" {
-		t.Fatalf("expected parentLabel 'Library', got %q", app.items.parentLabel)
+	if app.items.ctx.parentLabel != "Library" {
+		t.Fatalf("expected parentLabel 'Library', got %q", app.items.ctx.parentLabel)
 	}
 }
 

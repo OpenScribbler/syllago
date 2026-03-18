@@ -28,6 +28,12 @@ Root model is `App` (app.go) — central event hub and state orchestrator. Sub-m
 - All styles in styles.go — never define colors or styles inline
 - All key bindings in keys.go — never hardcode key strings in Update methods
 
+**Items model rebuild pattern:**
+- `itemsModel` separates data (items, providers) from navigation context (`itemsContext` — breadcrumbs, provider filter, display flags)
+- When refreshing items data, always use `a.rebuildItems()` or `a.rebuildItemsFiltered(query)` — never construct a new `itemsModel` directly
+- Only use `newItemsModel()` for initial navigation (first time entering items from a card or sidebar)
+- See `.claude/rules/tui-items-rebuild.md` for full pattern
+
 ## Shared Helpers (pagehelpers.go)
 
 Every page model should use these instead of reimplementing:
@@ -68,6 +74,16 @@ m.messageIsErr = false
 
 **Error toasts** are semi-modal: `Esc` dismisses, `c` copies sanitized text to clipboard. Other keys pass through.
 **Success toasts** dismiss on any keypress without consuming the key.
+
+## Post-Action Navigation
+
+After completing a state-changing action (import, create loadout), navigate the user to the most specific view of the result — not the homepage. See `docs/design/tui-spec.md` (Post-Action Navigation section) for the full table. The pattern:
+
+- **Single item** → detail view of that item
+- **Batch (same type)** → items list for that type
+- **Mixed types / unknown** → Library cards page
+
+The `importDoneMsg` carries `contentType` to enable this routing. The `doCreateLoadoutMsg` already follows this pattern. When adding new wizards that create content, follow the same pattern: include enough metadata in the completion message to navigate to the result.
 
 ## Color and Styling
 

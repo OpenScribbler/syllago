@@ -157,7 +157,7 @@ func TestHiddenItemsFilteredByDefault(t *testing.T) {
 	}
 
 	// But the hidden count should be tracked
-	if app.items.hiddenCount == 0 {
+	if app.items.ctx.hiddenCount == 0 {
 		t.Fatal("expected hiddenCount > 0 when hidden items exist")
 	}
 }

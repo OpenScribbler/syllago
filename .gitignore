@@ -27,5 +27,8 @@ tmp/
 # Development workflow state
 .develop/
 
+# Session handoff (ephemeral, not for sharing)
+.handoff.json
+
 # Release state (ephemeral, created by /release skill)
 .release-pending.yml
