@@ -190,15 +190,27 @@ func Remove(name string) error {
 	return os.RemoveAll(dir)
 }
 
+// ManifestItem maps a provider-native content item to its location in the repo.
+type ManifestItem struct {
+	Name      string   `yaml:"name"`
+	Type      string   `yaml:"type"`                // skills, agents, rules, hooks, commands, mcp
+	Provider  string   `yaml:"provider"`            // provider slug
+	Path      string   `yaml:"path"`                // relative to repo root
+	HookEvent string   `yaml:"hookEvent,omitempty"` // for hooks: event name
+	HookIndex int      `yaml:"hookIndex,omitempty"` // for hooks: index in event array
+	Scripts   []string `yaml:"scripts,omitempty"`   // for hooks: associated script files
+}
+
 // Manifest holds optional metadata from registry.yaml at the registry root.
 // Its purpose is display-only: teams can describe their registry for the TUI
 // and CLI output. Registries without a manifest still work normally.
 type Manifest struct {
-	Name            string   `yaml:"name"`
-	Description     string   `yaml:"description,omitempty"`
-	Maintainers     []string `yaml:"maintainers,omitempty"`
-	Version         string   `yaml:"version,omitempty"`
-	MinSyllagoVersion string `yaml:"min_syllago_version,omitempty"`
+	Name              string         `yaml:"name"`
+	Description       string         `yaml:"description,omitempty"`
+	Maintainers       []string       `yaml:"maintainers,omitempty"`
+	Version           string         `yaml:"version,omitempty"`
+	MinSyllagoVersion string         `yaml:"min_syllago_version,omitempty"`
+	Items             []ManifestItem `yaml:"items,omitempty"`
 }
 
 // LoadManifest reads registry.yaml from the clone directory for the named registry.
@@ -208,7 +220,7 @@ func LoadManifest(name string) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	return loadManifestFromDir(dir)
+	return LoadManifestFromDir(dir)
 }
 
 // KnownAliases maps short names to full git URLs.
@@ -227,9 +239,10 @@ func ExpandAlias(input string) (url string, expanded bool) {
 	return input, false
 }
 
-// loadManifestFromDir reads registry.yaml from an explicit directory path.
-// Extracted as a helper so tests can call it without needing a real clone.
-func loadManifestFromDir(dir string) (*Manifest, error) {
+// LoadManifestFromDir reads registry.yaml from an explicit directory path.
+// Exported so callers (e.g., the native scanner) can load a manifest without
+// needing a named registry clone — useful for local directories and tests.
+func LoadManifestFromDir(dir string) (*Manifest, error) {
 	data, err := os.ReadFile(filepath.Join(dir, "registry.yaml"))
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil

@@ -52,9 +52,9 @@ func TestScaffold_CreatesRegistryYAML(t *testing.T) {
 	}
 
 	// Verify it can be loaded by the existing manifest loader.
-	manifest, loadErr := loadManifestFromDir(filepath.Join(tmp, "test-reg"))
+	manifest, loadErr := LoadManifestFromDir(filepath.Join(tmp, "test-reg"))
 	if loadErr != nil {
-		t.Fatalf("loadManifestFromDir: %v", loadErr)
+		t.Fatalf("LoadManifestFromDir: %v", loadErr)
 	}
 	if manifest.Name != "test-reg" {
 		t.Errorf("manifest name = %q, want %q", manifest.Name, "test-reg")
@@ -68,9 +68,9 @@ func TestScaffold_DefaultDescription(t *testing.T) {
 		t.Fatalf("Scaffold: %v", err)
 	}
 
-	manifest, loadErr := loadManifestFromDir(filepath.Join(tmp, "team-rules"))
+	manifest, loadErr := LoadManifestFromDir(filepath.Join(tmp, "team-rules"))
 	if loadErr != nil {
-		t.Fatalf("loadManifestFromDir: %v", loadErr)
+		t.Fatalf("LoadManifestFromDir: %v", loadErr)
 	}
 	if manifest.Description != "team-rules registry" {
 		t.Errorf("default description = %q, want %q", manifest.Description, "team-rules registry")

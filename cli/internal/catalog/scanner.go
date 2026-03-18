@@ -117,9 +117,50 @@ func ScanRegistriesOnly(registries []RegistrySource) (*Catalog, error) {
 	return cat, nil
 }
 
+// manifestItem mirrors registry.ManifestItem for use within the catalog
+// package. It is intentionally unexported to avoid an import cycle: the
+// registry package already imports catalog (for IsValidRegistryName), so
+// catalog cannot import registry.
+type manifestItem struct {
+	Name      string   `yaml:"name"`
+	Type      string   `yaml:"type"`
+	Provider  string   `yaml:"provider"`
+	Path      string   `yaml:"path"`
+	HookEvent string   `yaml:"hookEvent,omitempty"`
+	HookIndex int      `yaml:"hookIndex,omitempty"`
+	Scripts   []string `yaml:"scripts,omitempty"`
+}
+
+type catalogManifest struct {
+	Items []manifestItem `yaml:"items"`
+}
+
+// loadManifestItems reads registry.yaml from dir and returns its items list.
+// Returns nil, nil if the file does not exist (manifest is optional).
+func loadManifestItems(dir string) ([]manifestItem, error) {
+	data, err := os.ReadFile(filepath.Join(dir, "registry.yaml"))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("reading registry.yaml in %q: %w", dir, err)
+	}
+	var m catalogManifest
+	if err := yaml.Unmarshal(data, &m); err != nil {
+		return nil, fmt.Errorf("parsing registry.yaml in %q: %w", dir, err)
+	}
+	return m.Items, nil
+}
+
 // scanRoot scans a base directory for content items of all types.
 // If local is true, discovered items are marked as Library items.
 func scanRoot(cat *Catalog, baseDir string, local bool) error {
+	// Check for registry.yaml with indexed items; if present, use index-based scan.
+	items, _ := loadManifestItems(baseDir)
+	if len(items) > 0 {
+		return scanFromIndex(cat, baseDir, items, local)
+	}
+
 	for _, ct := range AllContentTypes() {
 		typeDir := filepath.Join(baseDir, string(ct))
 
@@ -140,6 +181,120 @@ func scanRoot(cat *Catalog, baseDir string, local bool) error {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+// scanFromIndex builds ContentItems from a registry manifest's Items list.
+// Each manifestItem maps a name/type/provider to a relative path in the registry.
+// Missing paths produce a warning and are skipped (not an error), so a partial
+// index doesn't abort the whole scan.
+func scanFromIndex(cat *Catalog, baseDir string, items []manifestItem, local bool) error {
+	for _, mi := range items {
+		itemPath := filepath.Join(baseDir, mi.Path)
+		ct := ContentType(mi.Type)
+
+		info, err := os.Stat(itemPath)
+		if err != nil {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("index item %q: path %q not found, skipping", mi.Name, mi.Path))
+			continue
+		}
+
+		item := ContentItem{
+			Name:     mi.Name,
+			Type:     ct,
+			Path:     itemPath,
+			Provider: mi.Provider,
+			Library:  local,
+		}
+
+		if info.IsDir() {
+			// Directory items: extract metadata based on type.
+			switch ct {
+			case Skills:
+				data, readErr := os.ReadFile(filepath.Join(itemPath, "SKILL.md"))
+				if readErr == nil {
+					fm, fmErr := ParseFrontmatter(data)
+					if fmErr == nil {
+						if fm.Name != "" {
+							item.DisplayName = fm.Name
+						}
+						item.Description = fm.Description
+					}
+				}
+			case Agents:
+				data, readErr := os.ReadFile(filepath.Join(itemPath, "AGENT.md"))
+				if readErr == nil {
+					fm, fmErr := ParseFrontmatter(data)
+					if fmErr == nil {
+						if fm.Name != "" {
+							item.DisplayName = fm.Name
+						}
+						item.Description = fm.Description
+					}
+				}
+			case Hooks:
+				hookPath := filepath.Join(itemPath, "hook.json")
+				data, readErr := os.ReadFile(hookPath)
+				if readErr == nil {
+					item.Description = describeHookJSON(data)
+				}
+			case Commands:
+				item.Description = readDescription(filepath.Join(itemPath, "command.md"))
+				if item.Description == "" {
+					entries, _ := os.ReadDir(itemPath)
+					for _, e := range entries {
+						if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") && e.Name() != "LLM-PROMPT.md" {
+							item.Description = readDescription(filepath.Join(itemPath, e.Name()))
+							break
+						}
+					}
+				}
+			case Rules:
+				item.Description = readDescription(filepath.Join(itemPath, "rule.md"))
+				if item.Description == "" {
+					entries, _ := os.ReadDir(itemPath)
+					for _, e := range entries {
+						if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") && e.Name() != "LLM-PROMPT.md" {
+							item.Description = readDescription(filepath.Join(itemPath, e.Name()))
+							break
+						}
+					}
+				}
+			}
+			item.Files = collectFiles(itemPath, itemPath)
+
+			// Load .syllago.yaml metadata if present (directory items only).
+			meta, metaErr := metadata.Load(itemPath)
+			if metaErr == nil {
+				item.Meta = meta
+			}
+		} else {
+			// Single file items.
+			switch ct {
+			case Agents:
+				data, readErr := os.ReadFile(itemPath)
+				if readErr == nil {
+					fm, fmErr := ParseFrontmatter(data)
+					if fmErr == nil {
+						if fm.Name != "" {
+							item.DisplayName = fm.Name
+						}
+						item.Description = fm.Description
+					}
+				}
+			case Rules, Commands:
+				item.Description = readDescription(itemPath)
+			case Hooks:
+				data, readErr := os.ReadFile(itemPath)
+				if readErr == nil {
+					item.Description = describeHookJSON(data)
+				}
+			}
+			item.Files = []string{filepath.Base(itemPath)}
+		}
+
+		cat.Items = append(cat.Items, item)
 	}
 	return nil
 }
