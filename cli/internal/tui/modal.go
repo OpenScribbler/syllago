@@ -68,10 +68,34 @@ func (m *envSetupModal) advance() {
 	m.btnCursor = 0
 }
 
+// validateStep checks entry-prerequisites for the current step.
+func (m envSetupModal) validateStep() {
+	switch m.step {
+	case envStepChoose:
+		if len(m.varNames) == 0 {
+			panic("wizard invariant: envStepChoose entered with empty varNames")
+		}
+		if m.varIdx >= len(m.varNames) {
+			panic("wizard invariant: envStepChoose entered with varIdx out of range")
+		}
+	case envStepValue:
+		if len(m.varNames) == 0 || m.varIdx >= len(m.varNames) {
+			panic("wizard invariant: envStepValue entered with invalid var state")
+		}
+	case envStepLocation:
+		if m.value == "" {
+			panic("wizard invariant: envStepLocation entered with empty value")
+		}
+	case envStepSource:
+		// Text input for existing file path — no prerequisite beyond constructor.
+	}
+}
+
 func (m envSetupModal) Update(msg tea.Msg) (envSetupModal, tea.Cmd) {
 	if !m.active {
 		return m, nil
 	}
+	m.validateStep()
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		// Clear message on any keypress
@@ -631,10 +655,25 @@ func (m installModal) CustomPath() string {
 	return strings.TrimSpace(m.customPathInput.Value())
 }
 
+// validateStep checks entry-prerequisites for the current step.
+func (m installModal) validateStep() {
+	switch m.step {
+	case installStepLocation:
+		// Entry step — no prerequisites beyond constructor state (item, providers set).
+	case installStepCustomPath:
+		if m.locationCursor != 2 {
+			panic("wizard invariant: installStepCustomPath entered without Custom location selected")
+		}
+	case installStepMethod:
+		// Method selection — location already chosen.
+	}
+}
+
 func (m installModal) Update(msg tea.Msg) (installModal, tea.Cmd) {
 	if !m.active {
 		return m, nil
 	}
+	m.validateStep()
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		// Custom path text input captures all keys

@@ -120,7 +120,24 @@ func parseVersion(v string) [3]int {
 	return out
 }
 
+// validateStep checks entry-prerequisites for the current step.
+func (m updateModel) validateStep() {
+	switch m.step {
+	case stepUpdateMenu:
+		// Entry step — no prerequisites.
+	case stepUpdatePreview:
+		if m.releaseNotes == "" && m.fallbackLog == "" {
+			panic("wizard invariant: stepUpdatePreview entered with no release notes or fallback log")
+		}
+	case stepUpdatePull:
+		// Async operation — triggered by menu selection.
+	case stepUpdateDone:
+		// Terminal step — shows result.
+	}
+}
+
 func (m updateModel) Update(msg tea.Msg) (updateModel, tea.Cmd) {
+	m.validateStep()
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
 		if msg.Action == tea.MouseActionRelease && msg.Button == tea.MouseButtonLeft && m.step == stepUpdateMenu && !m.loading {

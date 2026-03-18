@@ -50,9 +50,10 @@ type importCloneDoneMsg struct {
 }
 
 type importDoneMsg struct {
-	name     string
-	err      error
-	warnings []string
+	name        string
+	contentType catalog.ContentType
+	err         error
+	warnings    []string
 }
 
 type discoveryDoneMsg struct {
@@ -232,12 +233,112 @@ func (m importModel) nextStepAfterType() importStep {
 	case 2: // Git URL
 		return stepGitURL
 	case 3: // Create new
+		if !m.contentType.IsUniversal() {
+			return stepProvider
+		}
 		return stepName
 	}
 	return stepType
 }
 
+// ensureProviderNames populates providerNames for the current contentType.
+// Called when pre-filter skips the type step, which normally does this setup.
+// Returns the updated model and true if providers are available.
+func (m importModel) ensureProviderNames() (importModel, bool) {
+	m.providerNames = m.discoverProviderDirs(m.contentType)
+	if len(m.providerNames) == 0 {
+		for _, p := range m.providers {
+			m.providerNames = append(m.providerNames, p.Slug)
+		}
+	}
+	if len(m.providerNames) == 0 {
+		label := m.contentType.Label()
+		if m.isCreate {
+			m.message = "No providers available for " + label
+		} else {
+			m.message = "No provider directories found for " + label
+		}
+		m.messageIsErr = true
+		m.step = stepSource
+		return m, false
+	}
+	m.provCursor = 0
+	return m, true
+}
+
+// validateStep checks entry-prerequisites for the current step.
+// These are programmer-error assertions — panic on violation.
+func (m importModel) validateStep() {
+	switch m.step {
+	case stepSource:
+		// Entry point — no prerequisites beyond constructor state.
+	case stepType:
+		if len(m.types) == 0 {
+			panic("wizard invariant: stepType entered with empty types")
+		}
+	case stepProvider:
+		if len(m.providerNames) == 0 {
+			panic("wizard invariant: stepProvider entered with empty providerNames")
+		}
+	case stepBrowseStart:
+		if m.contentType == "" {
+			panic("wizard invariant: stepBrowseStart entered with empty contentType")
+		}
+	case stepBrowse:
+		// browser initialized by updateBrowseStart — checked at construction site.
+	case stepValidate:
+		if len(m.selectedPaths) == 0 && len(m.validationItems) == 0 {
+			panic("wizard invariant: stepValidate entered with no selectedPaths or validationItems")
+		}
+	case stepPath:
+		// pathInput initialized by constructor — no runtime prerequisite.
+	case stepGitURL:
+		// urlInput initialized by constructor — no runtime prerequisite.
+	case stepGitPick:
+		if len(m.clonedItems) == 0 || m.clonedPath == "" {
+			panic("wizard invariant: stepGitPick entered with empty clonedItems or clonedPath")
+		}
+	case stepConfirm:
+		if m.contentType == "" {
+			panic("wizard invariant: stepConfirm entered with empty contentType")
+		}
+		if !m.contentType.IsUniversal() && m.providerName == "" {
+			panic("wizard invariant: stepConfirm entered with provider-specific type but empty providerName")
+		}
+	case stepName:
+		if m.contentType == "" {
+			panic("wizard invariant: stepName entered with empty contentType")
+		}
+		if !m.contentType.IsUniversal() && len(m.providerNames) == 0 {
+			panic("wizard invariant: stepName entered with provider-specific type but empty providerNames")
+		}
+	case stepConflict:
+		if m.conflict.itemName == "" && len(m.batchConflicts) == 0 {
+			panic("wizard invariant: stepConflict entered with no conflict info")
+		}
+	case stepHookSelect:
+		if len(m.hookCandidates) == 0 {
+			panic("wizard invariant: stepHookSelect entered with empty hookCandidates")
+		}
+		if len(m.hookCandidates) != len(m.hookSelected) || len(m.hookCandidates) != len(m.hookNames) {
+			panic("wizard invariant: stepHookSelect parallel arrays have mismatched lengths")
+		}
+	case stepProviderPick:
+		if len(m.providers) == 0 {
+			panic("wizard invariant: stepProviderPick entered with empty providers")
+		}
+	case stepDiscoverySelect:
+		if len(m.discoveryItems) == 0 {
+			panic("wizard invariant: stepDiscoverySelect entered with empty discoveryItems")
+		}
+		if len(m.discoveryItems) != len(m.discoverySelected) {
+			panic("wizard invariant: stepDiscoverySelect parallel arrays have mismatched lengths")
+		}
+	}
+}
+
 func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
+	m.validateStep()
 	switch msg := msg.(type) {
 	case fileBrowserDoneMsg:
 		// For hooks, if a single .json file was selected, split it into individual hooks.
@@ -322,15 +423,30 @@ func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
 			m.step = stepProviderPick
 			return m, nil
 		}
-		if len(msg.items) == 0 {
-			m.message = fmt.Sprintf("No content found in %s", m.discoveryProvider.Name)
+		items := msg.items
+		// Filter by pre-selected content type when entering from a specific type context
+		if m.preFilterType != "" {
+			var filtered []add.DiscoveryItem
+			for _, item := range items {
+				if item.Type == m.preFilterType {
+					filtered = append(filtered, item)
+				}
+			}
+			items = filtered
+		}
+		if len(items) == 0 {
+			label := m.discoveryProvider.Name
+			if m.preFilterType != "" {
+				label = m.preFilterType.Label() + " in " + label
+			}
+			m.message = fmt.Sprintf("No content found in %s", label)
 			m.messageIsErr = true
 			m.step = stepProviderPick
 			return m, nil
 		}
-		m.discoveryItems = msg.items
-		m.discoverySelected = make([]bool, len(msg.items))
-		for i, item := range msg.items {
+		m.discoveryItems = items
+		m.discoverySelected = make([]bool, len(items))
+		for i, item := range items {
 			m.discoverySelected[i] = item.Status == add.StatusNew || item.Status == add.StatusOutdated
 		}
 		m.discoveryCursor = 0
@@ -432,6 +548,13 @@ func (m importModel) updateSource(msg tea.KeyMsg) (importModel, tea.Cmd) {
 			m.isCreate = false
 			m.step = m.nextStepFromSource()
 			m.typeCursor = 0
+			if m.step == stepProvider {
+				var ok bool
+				m, ok = m.ensureProviderNames()
+				if !ok {
+					return m, nil
+				}
+			}
 		case 2: // Git URL
 			m.isCreate = false
 			m.step = stepGitURL
@@ -441,6 +564,17 @@ func (m importModel) updateSource(msg tea.KeyMsg) (importModel, tea.Cmd) {
 			m.isCreate = true
 			m.step = m.nextStepFromSource()
 			m.typeCursor = 0
+			if m.step == stepProvider {
+				var ok bool
+				m, ok = m.ensureProviderNames()
+				if !ok {
+					return m, nil
+				}
+			}
+			if m.step == stepName {
+				m.nameInput.SetValue("")
+				m.nameInput.Focus()
+			}
 		}
 	}
 	return m, nil
@@ -461,11 +595,27 @@ func (m importModel) updateType(msg tea.KeyMsg) (importModel, tea.Cmd) {
 	case key.Matches(msg, keys.Enter):
 		ct := m.types[m.typeCursor]
 		m.contentType = ct
-		if m.isCreate {
-			// Create flow: go to name input (skip provider for all types)
+		if m.isCreate && ct.IsUniversal() {
+			// Create flow for universal types: skip provider, go to name input
 			m.step = stepName
 			m.nameInput.SetValue("")
 			m.nameInput.Focus()
+		} else if m.isCreate {
+			// Create flow for provider-specific types: need provider first
+			m.providerNames = m.discoverProviderDirs(ct)
+			if len(m.providerNames) == 0 {
+				// No existing provider dirs — default to detected providers
+				for _, p := range m.providers {
+					m.providerNames = append(m.providerNames, p.Slug)
+				}
+			}
+			if len(m.providerNames) == 0 {
+				m.message = "No providers available for " + ct.Label()
+				m.messageIsErr = true
+			} else {
+				m.provCursor = 0
+				m.step = stepProvider
+			}
 		} else if ct.IsUniversal() {
 			// Universal types skip provider selection
 			m.browseCursor = 0
@@ -503,8 +653,15 @@ func (m importModel) updateProvider(msg tea.KeyMsg) (importModel, tea.Cmd) {
 		}
 	case key.Matches(msg, keys.Enter):
 		m.providerName = m.providerNames[m.provCursor]
-		m.browseCursor = 0
-		m.step = stepBrowseStart
+		if m.isCreate {
+			// Create flow: provider selected, go to name input
+			m.step = stepName
+			m.nameInput.SetValue("")
+			m.nameInput.Focus()
+		} else {
+			m.browseCursor = 0
+			m.step = stepBrowseStart
+		}
 	}
 	return m, nil
 }
@@ -685,9 +842,10 @@ func (m importModel) updateValidate(msg tea.KeyMsg) (importModel, tea.Cmd) {
 			return m, nil
 		}
 		// No conflicts — go directly to import
+		ct := m.contentType
 		return m, func() tea.Msg {
 			name, warnings, err := m.doBatchImportWithOverwrite(included, nil)
-			return importDoneMsg{name: name, warnings: warnings, err: err}
+			return importDoneMsg{name: name, contentType: ct, warnings: warnings, err: err}
 		}
 	}
 	return m, nil
@@ -774,17 +932,18 @@ func (m importModel) updateConfirm(msg tea.KeyMsg) (importModel, tea.Cmd) {
 			m.step = stepConflict
 			return m, nil
 		}
+		ct := m.contentType
 		if m.isCreate {
 			return m, func() tea.Msg {
 				name, warnings, err := m.doScaffold()
-				return importDoneMsg{name: name, warnings: warnings, err: err}
+				return importDoneMsg{name: name, contentType: ct, warnings: warnings, err: err}
 			}
 		}
 		// Run the copy in the Cmd closure so it doesn't block the UI.
 		// m is a value copy, so doImport reads from an immutable snapshot.
 		return m, func() tea.Msg {
 			name, warnings, err := m.doImport()
-			return importDoneMsg{name: name, warnings: warnings, err: err}
+			return importDoneMsg{name: name, contentType: ct, warnings: warnings, err: err}
 		}
 	}
 	return m, nil
@@ -1000,7 +1159,7 @@ func (m importModel) View() string {
 			label := item.Name
 			typeTag := countStyle.Render("(" + item.Type.Label() + ")")
 			if item.Provider != "" {
-				typeTag = countStyle.Render("(" + item.Type.Label() + "/" + item.Provider + ")")
+				typeTag = countStyle.Render("(" + item.Type.Label() + "/" + providerDisplayName(item.Provider) + ")")
 			}
 			row := prefix + style.Render(label) + " " + typeTag
 			s += zone.Mark(fmt.Sprintf("import-opt-%d", i), row) + "\n"
@@ -1018,6 +1177,9 @@ func (m importModel) View() string {
 			dest := m.destinationPath()
 			s += labelStyle.Render("Item:  ") + valueStyle.Render(m.itemName) + "\n"
 			s += labelStyle.Render("Type:  ") + valueStyle.Render(m.contentType.Label()) + "\n"
+			if m.providerName != "" {
+				s += labelStyle.Render("Provider: ") + valueStyle.Render(m.providerName) + "\n"
+			}
 			s += labelStyle.Render("To:    ") + valueStyle.Render(dest) + " " + helpStyle.Render("(global library)") + "\n"
 			s += "\n" + helpStyle.Render("Scaffolds from template with LLM prompt for content creation.")
 		} else {
@@ -1296,6 +1458,9 @@ func (m importModel) updateName(msg tea.KeyMsg) (importModel, tea.Cmd) {
 		m.nameInput.Blur()
 		if m.preFilterType != "" {
 			m.step = stepSource
+		} else if m.isCreate && !m.contentType.IsUniversal() {
+			// Create flow for provider-specific types: go back to provider picker
+			m.step = stepProvider
 		} else {
 			m.step = stepType
 		}
@@ -1570,9 +1735,10 @@ func (m importModel) updateConflict(msg tea.KeyMsg) (importModel, tea.Cmd) {
 			m.batchOverwrite[m.batchConflicts[m.batchConflictIdx]] = true
 			return m.advanceConflict()
 		}
+		ct := m.contentType
 		return m, func() tea.Msg {
 			name, warnings, err := m.doImportOverwrite()
-			return importDoneMsg{name: name, warnings: warnings, err: err}
+			return importDoneMsg{name: name, contentType: ct, warnings: warnings, err: err}
 		}
 	case msg.Type == tea.KeyRunes && string(msg.Runes) == "n":
 		if len(m.batchConflicts) > 0 {
@@ -1879,9 +2045,10 @@ func (m importModel) advanceConflict() (importModel, tea.Cmd) {
 	// All conflicts resolved — launch batch import with overwrite decisions
 	overwrite := m.batchOverwrite
 	included := m.selectedPaths
+	ct := m.contentType
 	return m, func() tea.Msg {
 		name, warnings, err := m.doBatchImportWithOverwrite(included, overwrite)
-		return importDoneMsg{name: name, warnings: warnings, err: err}
+		return importDoneMsg{name: name, contentType: ct, warnings: warnings, err: err}
 	}
 }
 
@@ -2022,6 +2189,20 @@ func (m importModel) updateDiscoverySelect(msg tea.KeyMsg) (importModel, tea.Cmd
 			m.messageIsErr = true
 			return m, nil
 		}
+		// Determine content type: use it if all selected items share the same type
+		var discoveredType catalog.ContentType
+		allSameType := true
+		for _, item := range selected {
+			if discoveredType == "" {
+				discoveredType = item.Type
+			} else if item.Type != discoveredType {
+				allSameType = false
+				break
+			}
+		}
+		if !allSameType {
+			discoveredType = ""
+		}
 		return m, func() tea.Msg {
 			globalDir := catalog.GlobalContentDir()
 			opts := add.AddOptions{Force: true}
@@ -2042,7 +2223,7 @@ func (m importModel) updateDiscoverySelect(msg tea.KeyMsg) (importModel, tea.Cmd
 			if len(errs) > 0 {
 				warnings = append(warnings, fmt.Sprintf("Some items failed: %s", strings.Join(errs, "; ")))
 			}
-			return importDoneMsg{name: name, warnings: warnings}
+			return importDoneMsg{name: name, contentType: discoveredType, warnings: warnings}
 		}
 	}
 	// Keep cursor visible within scroll window
@@ -2099,9 +2280,9 @@ func (m importModel) importSelectedHooks() tea.Cmd {
 		}
 
 		if len(errs) > 0 {
-			return importDoneMsg{err: fmt.Errorf("partial import: %s", strings.Join(errs, "; "))}
+			return importDoneMsg{contentType: catalog.Hooks, err: fmt.Errorf("partial import: %s", strings.Join(errs, "; "))}
 		}
-		return importDoneMsg{name: strings.Join(imported, ", ")}
+		return importDoneMsg{name: strings.Join(imported, ", "), contentType: catalog.Hooks}
 	}
 }
 

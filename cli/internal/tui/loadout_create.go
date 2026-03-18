@@ -411,7 +411,37 @@ func (m createLoadoutScreen) previewCmdForCursor() tea.Cmd {
 	}
 }
 
+// validateStep checks entry-prerequisites for the current step.
+func (m createLoadoutScreen) validateStep() {
+	switch m.step {
+	case clStepProvider:
+		if len(m.providerList) == 0 {
+			panic("wizard invariant: clStepProvider entered with empty providerList")
+		}
+	case clStepTypes:
+		if m.prefilledProvider == "" {
+			panic("wizard invariant: clStepTypes entered with empty prefilledProvider")
+		}
+		if len(m.typeEntries) == 0 {
+			panic("wizard invariant: clStepTypes entered with empty typeEntries")
+		}
+	case clStepItems:
+		if len(m.selectedTypes) == 0 {
+			panic("wizard invariant: clStepItems entered with empty selectedTypes")
+		}
+	case clStepName:
+		// Name/desc inputs initialized by constructor.
+	case clStepDest:
+		if len(m.destOptions) == 0 {
+			panic("wizard invariant: clStepDest entered with empty destOptions")
+		}
+	case clStepReview:
+		// All state accumulated from prior steps.
+	}
+}
+
 func (m createLoadoutScreen) Update(msg tea.Msg) (createLoadoutScreen, tea.Cmd) {
+	m.validateStep()
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		m.message = ""
@@ -503,6 +533,48 @@ func (m createLoadoutScreen) Update(msg tea.Msg) (createLoadoutScreen, tea.Cmd) 
 				m.perTypeSearch[ct] = m.searchInput.Value()
 				return m, cmd
 			}
+			// Preview pane focused: arrow keys scroll preview, Enter/Space pass through
+			if m.splitView.focusedPane == panePreview {
+				switch {
+				case key.Matches(msg, keys.Up):
+					if m.splitView.previewScroll > 0 {
+						m.splitView.previewScroll--
+					}
+					return m, nil
+				case key.Matches(msg, keys.Down):
+					m.splitView.previewScroll++
+					return m, nil
+				case key.Matches(msg, keys.PageUp):
+					page := m.splitView.visiblePreviewRows() - 2
+					if page < 1 {
+						page = 10
+					}
+					m.splitView.previewScroll -= page
+					if m.splitView.previewScroll < 0 {
+						m.splitView.previewScroll = 0
+					}
+					return m, nil
+				case key.Matches(msg, keys.PageDown):
+					page := m.splitView.visiblePreviewRows() - 2
+					if page < 1 {
+						page = 10
+					}
+					m.splitView.previewScroll += page
+					return m, nil
+				case key.Matches(msg, keys.Left), msg.String() == "h":
+					m.splitView.focusedPane = paneList
+					return m, nil
+				case msg.Type == tea.KeyEsc:
+					m.splitView.focusedPane = paneList
+					return m, nil
+				case msg.Type == tea.KeyEnter, key.Matches(msg, keys.Space):
+					// Fall through to the list-pane handlers below so
+					// Enter (advance) and Space (toggle) work from either pane.
+				default:
+					return m, nil
+				}
+			}
+
 			filtered := m.filteredTypeItems()
 			cursor := m.perTypeCursor[ct]
 			switch {
@@ -561,11 +633,8 @@ func (m createLoadoutScreen) Update(msg tea.Msg) (createLoadoutScreen, tea.Cmd) 
 				m.searchInput.SetValue(m.perTypeSearch[ct])
 				m.searchInput.Focus()
 				return m, nil
-			case msg.String() == "l":
+			case key.Matches(msg, keys.Right), msg.String() == "l":
 				m.splitView.focusedPane = panePreview
-				return m, nil
-			case msg.String() == "h":
-				m.splitView.focusedPane = paneList
 				return m, nil
 			case msg.Type == tea.KeyEnter:
 				m.perTypeCursor[ct] = cursor
@@ -668,7 +737,39 @@ func (m createLoadoutScreen) Update(msg tea.Msg) (createLoadoutScreen, tea.Cmd) 
 		}
 
 	case tea.MouseMsg:
+		// Mouse wheel: scroll the active list or preview pane
+		if msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown {
+			up := msg.Button == tea.MouseButtonWheelUp
+			// Preview pane scroll (Items step only, when preview zone is hovered)
+			previewZoneID := m.splitView.zonePrefix + "-preview-zone"
+			if m.step == clStepItems && zone.Get(previewZoneID).InBounds(msg) {
+				if up {
+					if m.splitView.previewScroll > 0 {
+						m.splitView.previewScroll--
+					}
+				} else {
+					m.splitView.previewScroll++
+				}
+				return m, nil
+			}
+			// List/option scroll via synthesized Up/Down keys
+			if up {
+				return m.Update(tea.KeyMsg{Type: tea.KeyUp})
+			}
+			return m.Update(tea.KeyMsg{Type: tea.KeyDown})
+		}
+
 		if msg.Action != tea.MouseActionRelease || msg.Button != tea.MouseButtonLeft {
+			return m, nil
+		}
+
+		// Tab clicks (Items and Review steps have the split title bar)
+		if zone.Get("wiz-tab-list").InBounds(msg) {
+			m.splitView.focusedPane = paneList
+			return m, nil
+		}
+		if zone.Get("wiz-tab-preview").InBounds(msg) {
+			m.splitView.focusedPane = panePreview
 			return m, nil
 		}
 
@@ -685,6 +786,9 @@ func (m createLoadoutScreen) Update(msg tea.Msg) (createLoadoutScreen, tea.Cmd) 
 			}
 
 		case clStepTypes:
+			if zone.Get("wiz-btn-next").InBounds(msg) {
+				return m, func() tea.Msg { return tea.KeyMsg{Type: tea.KeyEnter} }
+			}
 			for i := range m.typeEntries {
 				if zone.Get(fmt.Sprintf("wiz-opt-%d", i)).InBounds(msg) {
 					m.typeEntries[i].checked = !m.typeEntries[i].checked
@@ -693,23 +797,29 @@ func (m createLoadoutScreen) Update(msg tea.Msg) (createLoadoutScreen, tea.Cmd) 
 			}
 
 		case clStepItems:
+			if zone.Get("wiz-btn-next").InBounds(msg) {
+				return m, func() tea.Msg { return tea.KeyMsg{Type: tea.KeyEnter} }
+			}
 			if zone.Get("wiz-field-search").InBounds(msg) {
 				m.searchInput.Focus()
 				return m, nil
 			}
 			filtered := m.filteredTypeItems()
-			for vi, absIdx := range filtered {
-				if zone.Get(fmt.Sprintf("wiz-opt-%d", absIdx)).InBounds(msg) {
+			for vi, entryIdx := range filtered {
+				if zone.Get(fmt.Sprintf("wiz-item-%d", entryIdx)).InBounds(msg) {
 					ct := m.currentType()
 					m.perTypeCursor[ct] = vi
-					if m.isItemCompatible(absIdx) {
-						m.entries[absIdx].selected = !m.entries[absIdx].selected
+					if m.isItemCompatible(entryIdx) {
+						m.entries[entryIdx].selected = !m.entries[entryIdx].selected
 					}
 					return m, m.previewCmdForCursor()
 				}
 			}
 
 		case clStepName:
+			if zone.Get("wiz-btn-next").InBounds(msg) {
+				return m, func() tea.Msg { return tea.KeyMsg{Type: tea.KeyEnter} }
+			}
 			if zone.Get("wiz-field-name").InBounds(msg) {
 				m.nameFirst = true
 				m.nameInput.Focus()
@@ -724,6 +834,9 @@ func (m createLoadoutScreen) Update(msg tea.Msg) (createLoadoutScreen, tea.Cmd) 
 			}
 
 		case clStepDest:
+			if zone.Get("wiz-btn-next").InBounds(msg) {
+				return m, func() tea.Msg { return tea.KeyMsg{Type: tea.KeyEnter} }
+			}
 			for i := range m.destOptions {
 				if zone.Get(fmt.Sprintf("wiz-opt-%d", i)).InBounds(msg) {
 					if !m.destDisabled[i] {
@@ -804,10 +917,10 @@ func (m createLoadoutScreen) renderLeftPane() string {
 				prefix, checkBox, style.Render(te.ct.Label()), badge, countLabel)
 			body += zone.Mark(fmt.Sprintf("wiz-opt-%d", i), row) + "\n"
 		}
-		body += "\n" + helpStyle.Render("space toggle • a toggle all • enter next")
 		if m.message != "" && m.messageIsErr {
 			body += "\n" + errorMsgStyle.Render(m.message)
 		}
+		body += "\n" + zone.Mark("wiz-btn-next", buttonStyle.Render("[enter] Next"))
 
 	case clStepItems:
 		ct := m.currentType()
@@ -847,13 +960,13 @@ func (m createLoadoutScreen) renderLeftPane() string {
 		}
 		for vi, fi := range filtered[start:end] {
 			e := m.entries[fi]
-			absIdx := start + vi
+			visIdx := start + vi
 			compatible := m.isItemCompatible(fi)
 			checkBox := helpStyle.Render("[ ]")
 			if e.selected {
 				checkBox = helpStyle.Render("[x]")
 			}
-			prefix, style := cursorPrefix(absIdx == cursor)
+			prefix, style := cursorPrefix(visIdx == cursor)
 			name := e.item.Name
 			if len(name) > maxNameW {
 				name = name[:maxNameW-3] + "..."
@@ -872,25 +985,22 @@ func (m createLoadoutScreen) renderLeftPane() string {
 				row = fmt.Sprintf("  %s%s %s%s",
 					prefix, checkBox, style.Render(name), helpStyle.Render(source))
 			}
-			body += zone.Mark(fmt.Sprintf("wiz-opt-%d", absIdx), row) + "\n"
+			// Use the absolute entry index (fi) for zone ID so click handler can match
+			body += zone.Mark(fmt.Sprintf("wiz-item-%d", fi), row) + "\n"
 		}
 		if end < len(filtered) {
 			body += "  " + renderScrollDown(len(filtered)-end, false) + "\n"
 		}
-		filterMode := "compatible only"
-		if m.showAllCompat {
-			filterMode = "showing all"
-		}
-		body += "\n" + helpStyle.Render(fmt.Sprintf("space select • a all • t filter (%s) • / search • enter next", filterMode))
+		body += "\n" + zone.Mark("wiz-btn-next", buttonStyle.Render("[enter] Next"))
 
 	case clStepName:
 		body = labelStyle.Render("Name your loadout:") + "\n\n"
 		body += zone.Mark("wiz-field-name", m.nameInput.View()) + "\n"
 		body += zone.Mark("wiz-field-desc", m.descInput.View()) + "\n"
-		body += "\n" + helpStyle.Render("tab switch field • enter next")
 		if m.message != "" && m.messageIsErr {
 			body += "\n" + errorMsgStyle.Render(m.message)
 		}
+		body += "\n" + zone.Mark("wiz-btn-next", buttonStyle.Render("[enter] Next"))
 
 	case clStepDest:
 		body = labelStyle.Render("Choose destination:") + "\n\n"
@@ -906,7 +1016,7 @@ func (m createLoadoutScreen) renderLeftPane() string {
 			}
 			body += zone.Mark(fmt.Sprintf("wiz-opt-%d", i), row) + "\n"
 		}
-		body += "\n" + helpStyle.Render("enter next • esc back")
+		body += "\n" + zone.Mark("wiz-btn-next", buttonStyle.Render("[enter] Next"))
 
 	case clStepReview:
 		body = m.renderReviewLeftPane(leftW)
@@ -1013,7 +1123,9 @@ func (m createLoadoutScreen) renderSplitTitleBar() string {
 		leftStyle = inactiveTabStyle
 		rightStyle = activeTabStyle
 	}
-	return leftStyle.Render(listLabel) + sep + rightStyle.Render("Preview") + "\n\n"
+	left := zone.Mark("wiz-tab-list", leftStyle.Render(listLabel))
+	right := zone.Mark("wiz-tab-preview", rightStyle.Render("Preview"))
+	return left + sep + right + "\n\n"
 }
 
 // renderSplitView composes the left wizard pane and right preview pane.
