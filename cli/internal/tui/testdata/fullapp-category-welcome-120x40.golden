@@ -19,24 +19,22 @@ syllago           │  Content
   Settings        │  Collections
   Sandbox         │
                   │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
-                   │ Library (1)                                    │ │ Loadouts (2)                                   │
-                   │ All content across categories in one view      │ │ Curated content bundles for quick session      │
-                   │                                                │ │ setup                                          │
-                   ╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
-                   ╭────────────────────────────────────────────────╮
-                   │ Registries (0)                                 │
-                   │ Manage git-based content sources from your     │
-                   │ team or organization                           │
-                   ╰────────────────────────────────────────────────╯
-
-                     Configuration
-
-                   ╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
-                   │ Add                                            │ │ Update                                         │
-                   │ Add content from providers, local files, or    │ │ Check for updates and pull latest changes      │
-                   │ git repos                                      │ │                                                │
-                   ╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
-                     (5 lines below)
-
+                  ││ Library (1)                                    │ │ Loadouts (2)                                   │
+                  ││ All content across categories in one view      │ │ Curated content bundles for quick session      │
+                  ││                                                │ │ setup                                          │
+                  │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
+                  │╭────────────────────────────────────────────────╮
+                  ││ Registries (0)                                 │
+                  ││ Manage git-based content sources from your     │
+                  ││ team or organization                           │
+                  │╰────────────────────────────────────────────────╯
+                  │
+                  │  Configuration
+                  │
+                  │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
+                  ││ Add                                            │ │ Update                                         │
+                  ││ Add content from providers, local files, or    │ │ Check for updates and pull latest changes      │
+                  ││ git repos                                      │ │                                                │
+           v1.0.0 │  (6 lines below)
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 tab switch panel • / search • ? help • q quit                                                              syllago

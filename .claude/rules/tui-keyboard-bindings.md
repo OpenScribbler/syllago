@@ -35,11 +35,25 @@ case msg.String() == "i":
 3. Search bar — when active, captures text input
 4. `focusContent` / `focusSidebar` — normal page-level routing
 
+## App-Level Key Interceptor Exclusions
+
+App.Update() has global interceptors that run BEFORE screen-specific handlers (Tab toggle, sidebar Enter routing, search toggle, quit). These interceptors MUST exclude screens that handle those keys internally:
+
+**Excluded screens (single-pane and wizard):** `screenImport`, `screenUpdate`, `screenSettings`, `screenSandbox`, `screenCreateLoadout`
+
+When adding a new full-screen wizard or single-pane screen:
+1. Add it to the Tab toggle exclusion list (~line 1869)
+2. Add it to the sidebar Enter/Right routing exclusion list (~line 1887)
+3. Add it to the search toggle exclusion list (~line 1755)
+4. Verify with a test that Enter on the new screen doesn't trigger sidebar navigation
+
+**Why this matters:** Without exclusions, app-level interceptors steal keys from screen-specific handlers. For example, Tab toggles sidebar focus, then Enter routes through the sidebar handler — triggering an import or navigation instead of advancing the wizard.
+
 ## Tab Behavior
 
 Tab toggles focus between sidebar and content on ALL pages except:
 - `screenDetail` — Tab switches between Files/Install tabs (Contents/Apply for loadouts) instead
-- `screenImport`, `screenUpdate`, `screenSettings`, `screenSandbox` — single-pane screens, no Tab toggle
+- `screenImport`, `screenUpdate`, `screenSettings`, `screenSandbox`, `screenCreateLoadout` — single-pane/wizard screens, no Tab toggle
 
 Card pages (Homepage, Library, Loadouts, Registries) ALL support Tab focus toggling.
 
@@ -72,7 +86,7 @@ The create loadout wizard (`screenCreateLoadout`) has step-specific bindings:
 ## Search Availability
 
 `/` activates search on: Homepage, Items, Library Cards, Loadout Cards, Registries, Detail.
-Not available on: Import, Update, Settings, Sandbox (form-based screens where `/` could conflict).
+Not available on: Import, Update, Settings, Sandbox, Create Loadout (form-based or wizard screens where `/` could conflict or is handled internally).
 
 ## Help Overlay
 

@@ -9,7 +9,7 @@ syllago           │Home > Loadouts > Create  (1 of 10)
   Commands      1 │    [x] Hooks !! (1)
   ─────────────   │    [x] Commands (1)
   Collections     │
-  Library       1 │space toggle • a toggle all • enter next
+  Library       1 │ [enter] Next
 > Loadouts      2 │
   Registries      │
   ─────────────   │
@@ -19,12 +19,12 @@ syllago           │Home > Loadouts > Create  (1 of 10)
   Settings        │
   Sandbox         │
                   │
-
-
-
-
-
-
-
+                  │
+                  │
+                  │
+                  │
+                  │
+                  │
+           v1.0.0 │
 ────────────────────────────────────────────────────────────────────────────────
 up/down navigate • enter next • esc back                   Loadouts > Create

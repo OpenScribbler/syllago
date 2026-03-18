@@ -40,6 +40,7 @@ echo "  - Styles: .claude/rules/tui-styles-gate.md"
 echo "  - Responsive: .claude/rules/tui-responsive.md"
 echo "  - Text: .claude/rules/tui-text-handling.md"
 echo "  - Pages: .claude/rules/tui-page-pattern.md"
+echo "  - Items rebuild: .claude/rules/tui-items-rebuild.md"
 echo "  - Testing: .claude/rules/tui-test-patterns.md, tui-boundary-testing.md"
 echo "  - Design doc: docs/design/tui-spec.md"
 exit 0

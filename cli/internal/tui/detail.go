@@ -88,7 +88,8 @@ type detailModel struct {
 	// Tab state
 	activeTab    detailTab
 	fileViewer   fileViewerModel // file viewer state (Files tab)
-	parentLabel  string          // intermediate breadcrumb (e.g. "Library", "Loadouts")
+	parentLabel   string // intermediate breadcrumb (e.g. "Library", "Loadouts")
+	categoryLabel string // overrides Type.Label() in breadcrumb (e.g. provider display name)
 	listPosition int             // 0-based position in the items list (for breadcrumb)
 	listTotal    int             // total items in the list
 	width        int

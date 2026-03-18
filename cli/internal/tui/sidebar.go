@@ -184,7 +184,7 @@ func (m sidebarModel) View() string {
 		style = style.BorderForeground(accentColor)
 	}
 	if m.height > 0 {
-		style = style.Height(m.height)
+		style = style.Height(m.height).MaxHeight(m.height)
 	}
 	return style.Render(s)
 }

@@ -21,13 +21,19 @@ const (
 	colGap      = 2 // spaces between columns
 )
 
-// displayName maps directory-style provider names to full display names.
+// displayNames maps directory-style provider slugs to full display names.
 var displayNames = map[string]string{
 	"claude-code": "Claude Code",
 	"gemini-cli":  "Gemini CLI",
 	"cursor":      "Cursor",
 	"windsurf":    "Windsurf",
 	"codex":       "Codex",
+	"copilot-cli": "Copilot CLI",
+	"zed":         "Zed",
+	"cline":       "Cline",
+	"roo-code":    "Roo Code",
+	"opencode":    "OpenCode",
+	"kiro":        "Kiro",
 }
 
 func providerDisplayName(name string) string {
@@ -107,19 +113,27 @@ func buildHookMatrix(item catalog.ContentItem) hookCompatMatrix {
 	return m
 }
 
-type itemsModel struct {
-	contentType      catalog.ContentType
-	items            []catalog.ContentItem
-	providers        []provider.Provider
-	repoRoot         string
+// itemsContext holds navigation context that must survive data refreshes.
+// When items are rebuilt (e.g., after install, remove, toggle-hidden, search cancel),
+// this context must be preserved — it controls breadcrumbs, provider filtering,
+// and display flags. See .claude/rules/tui-items-rebuild.md.
+type itemsContext struct {
 	sourceRegistry   string // set when browsing items from a specific registry
 	sourceProvider   string // provider slug when drilled in from loadout cards
 	parentLabel      string // intermediate breadcrumb (e.g. "Library", "Loadouts")
-	cursor           int
-	hiddenCount      int // number of hidden items filtered out
-	hideLibraryBadge bool // suppress [LIBRARY] badge (when already in Library view)
-	width            int
-	height           int
+	hiddenCount      int    // number of hidden items filtered out
+	hideLibraryBadge bool   // suppress [LIBRARY] badge (when already in Library view)
+}
+
+type itemsModel struct {
+	contentType catalog.ContentType
+	items       []catalog.ContentItem
+	providers   []provider.Provider
+	repoRoot    string
+	ctx         itemsContext
+	cursor      int
+	width       int
+	height      int
 }
 
 func newItemsModel(ct catalog.ContentType, items []catalog.ContentItem, providers []provider.Provider, repoRoot string) itemsModel {
@@ -237,14 +251,18 @@ func (m itemsModel) View() string {
 
 	var s string
 	switch {
-	case m.sourceRegistry != "":
-		s = renderBreadcrumb(home, BreadcrumbSegment{"Registries", "crumb-registries"}, BreadcrumbSegment{m.sourceRegistry, ""}) + "\n"
+	case m.ctx.sourceRegistry != "":
+		s = renderBreadcrumb(home, BreadcrumbSegment{"Registries", "crumb-registries"}, BreadcrumbSegment{m.ctx.sourceRegistry, ""}) + "\n"
 	case m.contentType == catalog.SearchResults:
 		s = renderBreadcrumb(home, BreadcrumbSegment{fmt.Sprintf("Search Results (%d)", len(m.items)), ""}) + "\n"
 	case m.contentType == catalog.Library:
 		s = renderBreadcrumb(home, BreadcrumbSegment{fmt.Sprintf("Library (%d)", len(m.items)), ""}) + "\n"
-	case m.parentLabel != "":
-		s = renderBreadcrumb(home, BreadcrumbSegment{m.parentLabel, "crumb-parent"}, BreadcrumbSegment{m.contentType.Label(), ""}) + "\n"
+	case m.ctx.parentLabel != "":
+		catLabel := m.contentType.Label()
+		if m.ctx.sourceProvider != "" {
+			catLabel = providerDisplayName(m.ctx.sourceProvider)
+		}
+		s = renderBreadcrumb(home, BreadcrumbSegment{m.ctx.parentLabel, "crumb-parent"}, BreadcrumbSegment{catLabel, ""}) + "\n"
 	default:
 		s = renderBreadcrumb(home, BreadcrumbSegment{m.contentType.Label(), ""}) + "\n"
 	}
@@ -255,14 +273,14 @@ func (m itemsModel) View() string {
 		s += renderActionButtons(
 			ActionButton{"a", "Create Loadout", "action-a", actionBtnAddStyle},
 		) + "\n"
-	} else if m.hideLibraryBadge {
+	} else if m.ctx.hideLibraryBadge {
 		// Task 1.6: library items list — show Add {Type} and Remove
 		typeLabel := m.contentType.Label()
 		s += renderActionButtons(
 			ActionButton{"a", "Add " + typeLabel, "action-a", actionBtnAddStyle},
 			ActionButton{"r", "Remove", "action-r", actionBtnRemoveStyle},
 		) + "\n"
-	} else if m.contentType != catalog.SearchResults && m.contentType != catalog.Library && m.sourceRegistry == "" {
+	} else if m.contentType != catalog.SearchResults && m.contentType != catalog.Library && m.ctx.sourceRegistry == "" {
 		// Task 1.6: non-library, non-loadout, non-search, non-registry items — show Add {Type}
 		typeLabel := m.contentType.Label()
 		s += renderActionButtons(
@@ -372,9 +390,10 @@ func (m itemsModel) View() string {
 		s += helpStyle.Render(sep) + "\n"
 	}
 
-	// Calculate viewport: show only items that fit in terminal height
-	// Header takes ~3 lines (title + header row + separator), footer takes ~2 lines (blank + help)
-	visibleRows := m.height - 5
+	// Calculate viewport: count actual header lines rendered above, then fill remaining
+	// height with items. Reserve 1 line for each potential scroll indicator.
+	headerLines := strings.Count(s, "\n")
+	visibleRows := m.height - headerLines
 	if visibleRows < 1 {
 		visibleRows = len(m.items) // fallback: show all if height unknown
 	}
@@ -385,6 +404,22 @@ func (m itemsModel) View() string {
 		offset = m.cursor - visibleRows + 1
 	}
 	end := offset + visibleRows
+	if end > len(m.items) {
+		end = len(m.items)
+	}
+
+	// Reserve lines for scroll indicators so total output stays within m.height
+	if offset > 0 {
+		visibleRows--
+	}
+	if end < len(m.items) {
+		visibleRows--
+	}
+	if visibleRows < 1 {
+		visibleRows = 1
+	}
+	// Recompute end after adjusting visibleRows
+	end = offset + visibleRows
 	if end > len(m.items) {
 		end = len(m.items)
 	}
@@ -436,7 +471,7 @@ func (m itemsModel) View() string {
 		} else if item.IsBuiltin() {
 			localPrefix = builtinStyle.Render("[BUILT-IN]") + " "
 			localPrefixLen = 11 // "[BUILT-IN] "
-		} else if item.Library && !m.hideLibraryBadge {
+		} else if item.Library && !m.ctx.hideLibraryBadge {
 			localPrefix = warningStyle.Render("[LIBRARY]") + " "
 			localPrefixLen = 10 // "[LIBRARY] "
 		} else if item.Registry != "" {
@@ -499,7 +534,7 @@ func (m itemsModel) helpText() string {
 	parts := []string{"/ search", "enter detail"}
 
 	switch {
-	case m.sourceRegistry != "":
+	case m.ctx.sourceRegistry != "":
 		// Browsing a registry's items
 		parts = append(parts, "a add", "l create loadout")
 	case m.contentType == catalog.Library:
@@ -516,8 +551,8 @@ func (m itemsModel) helpText() string {
 
 	parts = append(parts, "esc back", "? help")
 
-	if m.hiddenCount > 0 {
-		parts = append(parts, fmt.Sprintf("H show %d hidden", m.hiddenCount))
+	if m.ctx.hiddenCount > 0 {
+		parts = append(parts, fmt.Sprintf("H show %d hidden", m.ctx.hiddenCount))
 	}
 	return strings.Join(parts, " • ")
 }

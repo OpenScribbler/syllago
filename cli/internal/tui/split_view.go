@@ -314,9 +314,15 @@ func (m splitViewModel) handleKey(msg tea.KeyMsg) (splitViewModel, tea.Cmd) {
 }
 
 func (m splitViewModel) handleMouse(msg tea.MouseMsg) (splitViewModel, tea.Cmd) {
+	// Mouse scroll targets the pane the mouse is over, not the focused pane.
+	// This lets users scroll the preview with the mouse while keeping keyboard
+	// focus on the file list.
+	previewZoneID := m.zonePrefix + "-preview-zone"
+	mouseInPreview := zone.Get(previewZoneID).InBounds(msg)
+
 	switch msg.Button {
 	case tea.MouseButtonWheelUp:
-		if m.focusedPane == panePreview || (!m.IsSplit() && m.showingPreview) {
+		if mouseInPreview || (!m.IsSplit() && m.showingPreview) {
 			if m.previewScroll > 0 {
 				m.previewScroll--
 			}
@@ -329,7 +335,7 @@ func (m splitViewModel) handleMouse(msg tea.MouseMsg) (splitViewModel, tea.Cmd) 
 			}
 		}
 	case tea.MouseButtonWheelDown:
-		if m.focusedPane == panePreview || (!m.IsSplit() && m.showingPreview) {
+		if mouseInPreview || (!m.IsSplit() && m.showingPreview) {
 			m.previewScroll++
 		} else {
 			newCursor := m.nextSelectableItem(m.cursor, 1)
@@ -348,11 +354,21 @@ func (m splitViewModel) handleMouse(msg tea.MouseMsg) (splitViewModel, tea.Cmd) 
 }
 
 func (m splitViewModel) handleClick(msg tea.MouseMsg) (splitViewModel, tea.Cmd) {
-	// Check left-pane item clicks
-	visible := m.visibleListRows()
-	end := m.scrollOffset + visible
+	// Check left-pane item clicks (must match renderListContent's row calculation)
+	contentRows := m.visibleListRows()
+	if m.scrollOffset > 0 {
+		contentRows--
+	}
+	end := m.scrollOffset + contentRows
 	if end > len(m.items) {
 		end = len(m.items)
+	}
+	if end < len(m.items) {
+		contentRows--
+		end = m.scrollOffset + contentRows
+		if end > len(m.items) {
+			end = len(m.items)
+		}
 	}
 	for j := 0; j < end-m.scrollOffset; j++ {
 		zoneID := fmt.Sprintf("%s-item-%d", m.zonePrefix, j)
@@ -365,6 +381,12 @@ func (m splitViewModel) handleClick(msg tea.MouseMsg) (splitViewModel, tea.Cmd) 
 			}
 			break
 		}
+	}
+	// Click in the preview pane switches focus to it
+	previewZoneID := m.zonePrefix + "-preview-zone"
+	if zone.Get(previewZoneID).InBounds(msg) {
+		m.focusedPane = panePreview
+		return m, nil
 	}
 	return m, nil
 }
@@ -431,6 +453,12 @@ func (m splitViewModel) View() string {
 	for len(rightLines) < displayHeight {
 		rightLines = append(rightLines, "")
 	}
+
+	// Zone-mark the preview pane so mouse scroll targets it regardless of focus
+	previewZoneID := m.zonePrefix + "-preview-zone"
+	rightBlock := strings.Join(rightLines[:displayHeight], "\n")
+	rightBlock = zone.Mark(previewZoneID, rightBlock)
+	rightLines = strings.Split(rightBlock, "\n")
 
 	// Join line by line, padding each left line to exact visual width
 	sep := helpStyle.Render("│")
@@ -658,10 +686,21 @@ func (m splitViewModel) renderSplitTitleBar() string {
 func (m splitViewModel) renderListContent(width int) string {
 	var s strings.Builder
 
-	visible := m.visibleListRows()
-	end := m.scrollOffset + visible
+	// Start with full display area, then reserve lines for scroll indicators
+	contentRows := m.visibleListRows()
+	if m.scrollOffset > 0 {
+		contentRows-- // reserve line for up indicator
+	}
+	end := m.scrollOffset + contentRows
 	if end > len(m.items) {
 		end = len(m.items)
+	}
+	if end < len(m.items) {
+		contentRows-- // reserve line for down indicator
+		end = m.scrollOffset + contentRows
+		if end > len(m.items) {
+			end = len(m.items)
+		}
 	}
 
 	if m.scrollOffset > 0 {
@@ -713,9 +752,12 @@ func (m splitViewModel) renderPreviewContent(width int) string {
 	}
 
 	lines := strings.Split(m.previewContent, "\n")
-	visible := m.visiblePreviewRows()
 
-	maxOffset := len(lines) - visible
+	// Start with full display area, then reserve lines for scroll indicators
+	contentRows := m.visiblePreviewRows()
+
+	// Clamp scroll offset before computing indicators
+	maxOffset := len(lines) - contentRows
 	if maxOffset < 0 {
 		maxOffset = 0
 	}
@@ -724,9 +766,19 @@ func (m splitViewModel) renderPreviewContent(width int) string {
 		offset = maxOffset
 	}
 
-	end := offset + visible
+	if offset > 0 {
+		contentRows-- // reserve line for up indicator
+	}
+	end := offset + contentRows
 	if end > len(lines) {
 		end = len(lines)
+	}
+	if end < len(lines) {
+		contentRows-- // reserve line for down indicator
+		end = offset + contentRows
+		if end > len(lines) {
+			end = len(lines)
+		}
 	}
 
 	if offset > 0 {

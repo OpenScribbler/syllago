@@ -3,8 +3,8 @@ syllago           │Home > Loadouts
   Content         │ [a] Create Loadout
   Skills        3 │
   Agents        1 │╭───────────────────────────────────────╮
-  MCP Configs   1 ││ claude-code (2)                       │
-  Rules         1 ││ Loadouts for claude-code              │
+  MCP Configs   1 ││ Claude Code (2)                       │
+  Rules         1 ││ Loadouts for Claude Code              │
   Hooks         1 │╰───────────────────────────────────────╯
   Commands      1 │
   ─────────────   │
@@ -16,9 +16,6 @@ syllago           │Home > Loadouts
   Configuration   │
   Add             │
   Update          │
-  Settings        │
-  Sandbox         │
-                  │
 ────────────────────────────────────────────────────────────
 arrows navigate • enter browse • a create loadout • esc back
 Loadouts
