@@ -12,6 +12,8 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -96,8 +98,8 @@ type createLoadoutScreen struct {
 	destHints    []string
 
 	// Step 6: review
-	reviewItemCursor int // cursor over the item list in review step
-	reviewBtnCursor  int // 0=Back, 1=Create
+	reviewBtnCursor int // 0=Back, 1=Create
+	reviewScroll    int // scroll offset for review content
 
 	// Split-view preview
 	splitView      splitViewModel
@@ -707,6 +709,7 @@ func (m createLoadoutScreen) Update(msg tea.Msg) (createLoadoutScreen, tea.Cmd) 
 					return m, nil
 				}
 				m.reviewBtnCursor = 1 // default to Create button
+				m.reviewScroll = 0
 				m.step = clStepReview
 				return m, nil
 			}
@@ -716,6 +719,12 @@ func (m createLoadoutScreen) Update(msg tea.Msg) (createLoadoutScreen, tea.Cmd) 
 			case msg.Type == tea.KeyEsc:
 				m.step = clStepDest
 				return m, nil
+			case key.Matches(msg, keys.Up):
+				if m.reviewScroll > 0 {
+					m.reviewScroll--
+				}
+			case key.Matches(msg, keys.Down):
+				m.reviewScroll++ // clamped in render
 			case key.Matches(msg, keys.Left):
 				if m.reviewBtnCursor > 0 {
 					m.reviewBtnCursor--
@@ -1037,9 +1046,16 @@ func (m createLoadoutScreen) renderLeftPane() string {
 	return body
 }
 
-// renderReviewLeftPane renders the review step left pane.
+// reviewMaxItemsPerType is the max items shown per type before truncation.
+const reviewMaxItemsPerType = 3
+
+// renderReviewLeftPane renders the review step left pane with scrolling.
 func (m createLoadoutScreen) renderReviewLeftPane(leftW int) string {
-	body := labelStyle.Render("Review & Create") + "\n\n"
+	// Build full content, then apply scroll window.
+	var lines []string
+
+	lines = append(lines, labelStyle.Render("Review & Create"))
+	lines = append(lines, "")
 
 	provName := m.prefilledProvider
 	for _, p := range m.providerList {
@@ -1048,22 +1064,36 @@ func (m createLoadoutScreen) renderReviewLeftPane(leftW int) string {
 			break
 		}
 	}
-	body += fmt.Sprintf("  %s %s\n", labelStyle.Render("Provider:"), provName)
-	body += fmt.Sprintf("  %s %s\n", labelStyle.Render("Name:"), m.nameInput.Value())
+	lines = append(lines, fmt.Sprintf("  %s %s", labelStyle.Render("Provider:"), provName))
+	lines = append(lines, fmt.Sprintf("  %s %s", labelStyle.Render("Name:"), m.nameInput.Value()))
 	if desc := m.descInput.Value(); desc != "" {
-		body += fmt.Sprintf("  %s %s\n", labelStyle.Render("Description:"), desc)
+		lines = append(lines, fmt.Sprintf("  %s %s", labelStyle.Render("Description:"), desc))
 	}
-	body += fmt.Sprintf("  %s %s\n", labelStyle.Render("Destination:"), m.destOptions[m.destCursor])
+	lines = append(lines, fmt.Sprintf("  %s %s", labelStyle.Render("Destination:"), m.destOptions[m.destCursor]))
 
 	selected := m.selectedItems()
 	if len(selected) == 0 {
-		body += "\n  " + warningStyle.Render("No items selected") + "\n"
+		lines = append(lines, "")
+		lines = append(lines, "  "+warningStyle.Render("No items selected"))
 	} else {
-		body += fmt.Sprintf("\n  %s\n", labelStyle.Render(fmt.Sprintf("Items (%d):", len(selected))))
+		lines = append(lines, fmt.Sprintf("\n  %s", labelStyle.Render(fmt.Sprintf("Items (%d):", len(selected)))))
+
+		// Build name->source count for ambiguity detection
+		nameSourceCount := make(map[string]int)
+		for _, e := range selected {
+			nameSourceCount[e.item.Name]++
+		}
+
 		byType := make(map[catalog.ContentType][]loadoutItemEntry)
 		for _, e := range selected {
 			byType[e.item.Type] = append(byType[e.item.Type], e)
 		}
+
+		maxNameW := leftW - 6
+		if maxNameW < 10 {
+			maxNameW = 10
+		}
+
 		for _, ct := range catalog.AllContentTypes() {
 			items := byType[ct]
 			if len(items) == 0 {
@@ -1073,34 +1103,74 @@ func (m createLoadoutScreen) renderReviewLeftPane(leftW int) string {
 			if ct == catalog.Hooks || ct == catalog.MCP {
 				badge = " " + warningStyle.Render("!!")
 			}
-			body += fmt.Sprintf("\n  %s%s\n", labelStyle.Render(ct.Label()), badge)
-			maxNameW := leftW - 6
-			if maxNameW < 10 {
-				maxNameW = 10
+			lines = append(lines, fmt.Sprintf("\n  %s%s", labelStyle.Render(ct.Label()), badge))
+
+			shown := items
+			overflow := 0
+			if len(items) > reviewMaxItemsPerType {
+				shown = items[:reviewMaxItemsPerType]
+				overflow = len(items) - reviewMaxItemsPerType
 			}
-			for _, e := range items {
+			for _, e := range shown {
 				name := e.item.Name
+				// Disambiguate names that appear from multiple sources
+				if nameSourceCount[name] > 1 {
+					source := e.item.Registry
+					if source == "" {
+						source = e.item.Source
+					}
+					if source != "" {
+						name = fmt.Sprintf("%s (%s)", name, source)
+					}
+				}
 				if len(name) > maxNameW {
 					name = name[:maxNameW-3] + "..."
 				}
-				body += fmt.Sprintf("    %s\n", name)
+				lines = append(lines, fmt.Sprintf("    %s", name))
+			}
+			if overflow > 0 {
+				lines = append(lines, fmt.Sprintf("    %s", helpStyle.Render(fmt.Sprintf("+ %d more", overflow))))
 			}
 		}
 
-		hasSecurityContent := false
-		for _, e := range selected {
-			if e.item.Type == catalog.Hooks || e.item.Type == catalog.MCP {
-				hasSecurityContent = true
-				break
-			}
-		}
-		if hasSecurityContent {
-			body += "\n  " + warningStyle.Render("Security Notice: Hooks and MCP configs run code.") + "\n"
-			body += "  " + warningStyle.Render("Review content before applying this loadout.") + "\n"
-		}
+		// Security callout with actual commands
+		lines = append(lines, m.renderSecurityCallout(selected, maxNameW)...)
 	}
 
-	// Buttons
+	// Apply scroll window
+	visibleH := m.splitView.visibleListRows() - 4 // reserve for buttons
+	if visibleH < 5 {
+		visibleH = 5
+	}
+
+	// Clamp scroll (non-mutating — actual clamping happens in Update)
+	scroll := m.reviewScroll
+	maxScroll := len(lines) - visibleH
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if scroll > maxScroll {
+		scroll = maxScroll
+	}
+
+	var body string
+	if scroll > 0 {
+		body += "  " + renderScrollUp(scroll, true) + "\n"
+	}
+
+	end := scroll + visibleH
+	if end > len(lines) {
+		end = len(lines)
+	}
+	for _, line := range lines[scroll:end] {
+		body += line + "\n"
+	}
+
+	if end < len(lines) {
+		body += "  " + renderScrollDown(len(lines)-end, true) + "\n"
+	}
+
+	// Buttons (always pinned below scroll area)
 	body += "\n"
 	backStyle := buttonDisabledStyle
 	createStyle := buttonDisabledStyle
@@ -1114,6 +1184,75 @@ func (m createLoadoutScreen) renderReviewLeftPane(leftW int) string {
 	body += "\n"
 
 	return body
+}
+
+// renderSecurityCallout returns security warning lines with actual commands.
+func (m createLoadoutScreen) renderSecurityCallout(selected []loadoutItemEntry, maxW int) []string {
+	var hookCmds []string
+	var mcpCmds []string
+
+	for _, e := range selected {
+		switch e.item.Type {
+		case catalog.Hooks:
+			hd, err := converter.LoadHookData(e.item)
+			if err != nil {
+				continue
+			}
+			for _, h := range hd.Hooks {
+				if h.Command != "" {
+					label := fmt.Sprintf("Hook: %s -> %q", hd.Event, h.Command)
+					hookCmds = append(hookCmds, label)
+				}
+			}
+		case catalog.MCP:
+			cfg, err := installer.ParseMCPConfig(e.item.Path)
+			if err != nil || cfg == nil {
+				continue
+			}
+			if cfg.Command != "" {
+				cmd := cfg.Command
+				if len(cfg.Args) > 0 {
+					cmd += " " + strings.Join(cfg.Args, " ")
+				}
+				label := fmt.Sprintf("MCP:  %s -> %q", e.item.Name, cmd)
+				mcpCmds = append(mcpCmds, label)
+			}
+		}
+	}
+
+	hasSecurityContent := false
+	for _, e := range selected {
+		if e.item.Type == catalog.Hooks || e.item.Type == catalog.MCP {
+			hasSecurityContent = true
+			break
+		}
+	}
+	if !hasSecurityContent {
+		return nil
+	}
+
+	var lines []string
+	lines = append(lines, "")
+	lines = append(lines, "  "+warningStyle.Render("!! Security Notice !!"))
+	if len(hookCmds) > 0 || len(mcpCmds) > 0 {
+		lines = append(lines, "  "+warningStyle.Render("This loadout includes executable content:"))
+		for _, cmd := range hookCmds {
+			if len(cmd) > maxW {
+				cmd = cmd[:maxW-3] + "..."
+			}
+			lines = append(lines, "    "+warningStyle.Render(cmd))
+		}
+		for _, cmd := range mcpCmds {
+			if len(cmd) > maxW {
+				cmd = cmd[:maxW-3] + "..."
+			}
+			lines = append(lines, "    "+warningStyle.Render(cmd))
+		}
+	} else {
+		lines = append(lines, "  "+warningStyle.Render("This loadout includes hooks/MCP configs that run code."))
+	}
+	lines = append(lines, "  "+warningStyle.Render("Review content before installing."))
+	return lines
 }
 
 // renderSplitTitleBar renders "Items | Preview" tab bar on items and review steps.

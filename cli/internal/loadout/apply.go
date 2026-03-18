@@ -460,12 +460,19 @@ func resolveHookCommands(matcherGroup []byte, itemDir string) []byte {
 }
 
 // readJSONFileOrEmpty reads a JSON file, returning {} if it doesn't exist.
+// Returns an error if the file exists but contains invalid JSON.
 func readJSONFileOrEmpty(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return []byte("{}"), nil
 	}
-	return data, err
+	if err != nil {
+		return nil, err
+	}
+	if !json.Valid(data) {
+		return nil, fmt.Errorf("%s contains invalid JSON; fix or delete the file before applying a loadout", filepath.Base(path))
+	}
+	return data, nil
 }
 
 // writeJSONFileAtomic writes JSON data atomically using a temp file and rename.

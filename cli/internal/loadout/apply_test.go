@@ -3,6 +3,7 @@ package loadout
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -287,4 +288,77 @@ func TestApply_ResolveFails(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected resolve error")
 	}
+}
+
+func TestReadJSONFileOrEmpty(t *testing.T) {
+	t.Parallel()
+
+	t.Run("valid JSON returns contents", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join(t.TempDir(), "settings.json")
+		os.WriteFile(path, []byte(`{"hooks":[]}`), 0644)
+
+		data, err := readJSONFileOrEmpty(path)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if string(data) != `{"hooks":[]}` {
+			t.Errorf("got %q, want %q", string(data), `{"hooks":[]}`)
+		}
+	})
+
+	t.Run("missing file returns empty object", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join(t.TempDir(), "nonexistent.json")
+
+		data, err := readJSONFileOrEmpty(path)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if string(data) != "{}" {
+			t.Errorf("got %q, want %q", string(data), "{}")
+		}
+	})
+
+	t.Run("malformed JSON returns error", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join(t.TempDir(), "settings.json")
+		os.WriteFile(path, []byte(`{"hooks": [`), 0644)
+
+		_, err := readJSONFileOrEmpty(path)
+		if err == nil {
+			t.Fatal("expected error for malformed JSON")
+		}
+		if !strings.Contains(err.Error(), "invalid JSON") {
+			t.Errorf("error should mention invalid JSON, got: %v", err)
+		}
+	})
+
+	t.Run("empty file returns error", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join(t.TempDir(), "settings.json")
+		os.WriteFile(path, []byte(""), 0644)
+
+		_, err := readJSONFileOrEmpty(path)
+		if err == nil {
+			t.Fatal("expected error for empty file")
+		}
+		if !strings.Contains(err.Error(), "invalid JSON") {
+			t.Errorf("error should mention invalid JSON, got: %v", err)
+		}
+	})
+
+	t.Run("truncated JSON returns error", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join(t.TempDir(), "settings.json")
+		os.WriteFile(path, []byte(`{"hooks":[{"type":"command","command":"echo`), 0644)
+
+		_, err := readJSONFileOrEmpty(path)
+		if err == nil {
+			t.Fatal("expected error for truncated JSON")
+		}
+		if !strings.Contains(err.Error(), "invalid JSON") {
+			t.Errorf("error should mention invalid JSON, got: %v", err)
+		}
+	})
 }
