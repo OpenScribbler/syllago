@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
@@ -199,6 +200,23 @@ func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 		return m, nil
 
 	case tea.MouseMsg:
+		// Check detail tab bar clicks (zones marked in renderTabBar)
+		if msg.Button == tea.MouseButtonLeft && msg.Action == tea.MouseActionRelease {
+			for _, t := range m.tabOrder() {
+				zoneID := fmt.Sprintf("tab-%d", int(t))
+				if zone.Get(zoneID).InBounds(msg) && t != m.activeTab {
+					if m.activeTab == tabFiles {
+						m.CancelAction()
+					}
+					m.activeTab = t
+					m.scrollOffset = 0
+					m.fileViewer.splitView.focusedPane = paneList
+					m.loadoutContents.splitView.focusedPane = paneList
+					return m, nil
+				}
+			}
+		}
+
 		// Delegate mouse events to split view when on Files tab
 		if m.activeTab == tabFiles {
 			if m.item.Type == catalog.Loadouts {

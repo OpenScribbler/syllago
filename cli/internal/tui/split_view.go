@@ -314,15 +314,18 @@ func (m splitViewModel) handleKey(msg tea.KeyMsg) (splitViewModel, tea.Cmd) {
 }
 
 func (m splitViewModel) handleMouse(msg tea.MouseMsg) (splitViewModel, tea.Cmd) {
-	// Mouse scroll targets the pane the mouse is over, not the focused pane.
-	// This lets users scroll the preview with the mouse while keeping keyboard
-	// focus on the file list.
+	// Mouse scroll targets the pane the mouse is over. If the mouse isn't
+	// clearly inside the preview content zone, fall back to focusedPane —
+	// this way clicking the "Preview" tab header then scrolling works even
+	// though the tab header sits above the zone-marked content area.
 	previewZoneID := m.zonePrefix + "-preview-zone"
 	mouseInPreview := zone.Get(previewZoneID).InBounds(msg)
+	scrollPreview := mouseInPreview || (!m.IsSplit() && m.showingPreview) ||
+		(m.IsSplit() && m.focusedPane == panePreview && !m.mouseInList(msg))
 
 	switch msg.Button {
 	case tea.MouseButtonWheelUp:
-		if mouseInPreview || (!m.IsSplit() && m.showingPreview) {
+		if scrollPreview {
 			if m.previewScroll > 0 {
 				m.previewScroll--
 			}
@@ -335,7 +338,7 @@ func (m splitViewModel) handleMouse(msg tea.MouseMsg) (splitViewModel, tea.Cmd) 
 			}
 		}
 	case tea.MouseButtonWheelDown:
-		if mouseInPreview || (!m.IsSplit() && m.showingPreview) {
+		if scrollPreview {
 			m.previewScroll++
 		} else {
 			newCursor := m.nextSelectableItem(m.cursor, 1)
@@ -354,6 +357,16 @@ func (m splitViewModel) handleMouse(msg tea.MouseMsg) (splitViewModel, tea.Cmd) 
 }
 
 func (m splitViewModel) handleClick(msg tea.MouseMsg) (splitViewModel, tea.Cmd) {
+	// Check title bar tab clicks
+	if zone.Get(m.zonePrefix + "-tab-list").InBounds(msg) {
+		m.focusedPane = paneList
+		return m, nil
+	}
+	if zone.Get(m.zonePrefix + "-tab-preview").InBounds(msg) {
+		m.focusedPane = panePreview
+		return m, nil
+	}
+
 	// Check left-pane item clicks (must match renderListContent's row calculation)
 	contentRows := m.visibleListRows()
 	if m.scrollOffset > 0 {
@@ -389,6 +402,18 @@ func (m splitViewModel) handleClick(msg tea.MouseMsg) (splitViewModel, tea.Cmd) 
 		return m, nil
 	}
 	return m, nil
+}
+
+// mouseInList returns true if the mouse event is within any list item zone.
+func (m splitViewModel) mouseInList(msg tea.MouseMsg) bool {
+	// Check a reasonable number of visible item zones
+	for j := 0; j < len(m.items); j++ {
+		zoneID := fmt.Sprintf("%s-item-%d", m.zonePrefix, j)
+		if zone.Get(zoneID).InBounds(msg) {
+			return true
+		}
+	}
+	return false
 }
 
 // cursorCmd returns a command that emits a splitViewCursorMsg for the current cursor.
@@ -679,7 +704,9 @@ func (m splitViewModel) renderSplitTitleBar() string {
 		rightStyle = activeTabStyle
 	}
 	sep := helpStyle.Render(" | ")
-	return leftStyle.Render(title) + sep + rightStyle.Render("Preview")
+	leftTab := zone.Mark(m.zonePrefix+"-tab-list", leftStyle.Render(title))
+	rightTab := zone.Mark(m.zonePrefix+"-tab-preview", rightStyle.Render("Preview"))
+	return leftTab + sep + rightTab
 }
 
 // renderListContent renders the list pane body without a title line (for split mode).
