@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 	"github.com/tidwall/gjson"
@@ -67,6 +69,14 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	event, matcherGroup, err := parseHookFile(item.Path)
 	if err != nil {
 		return "", fmt.Errorf("parsing hook file: %w", err)
+	}
+
+	// Copy script files referenced by hook commands to a stable location.
+	// Without this, hooks from registries would point into the registry
+	// clone dir which can change on sync or vanish on remove.
+	matcherGroup, err = resolveHookScripts(matcherGroup, item, repoRoot)
+	if err != nil {
+		return "", err
 	}
 
 	// Check installed.json for duplicate
@@ -258,4 +268,107 @@ func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot 
 	}
 
 	return StatusNotInstalled
+}
+
+// hookScriptsDir returns ~/.syllago/hooks/<name>/ for storing copied scripts.
+func hookScriptsDir(name string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".syllago", "hooks", name), nil
+}
+
+// resolveHookScripts finds script file references in a hook's matcher group,
+// copies them to a stable location (~/.syllago/hooks/<name>/), and rewrites
+// the command paths in the JSON. This ensures hooks from registries don't
+// break when the registry cache changes.
+func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot string) ([]byte, error) {
+	// Resolve the item directory (hooks can be a file or directory)
+	itemDir := item.Path
+	fi, err := os.Stat(item.Path)
+	if err == nil && !fi.IsDir() {
+		itemDir = filepath.Dir(item.Path)
+	}
+
+	// Find all command fields in hooks array
+	hooksArray := gjson.GetBytes(matcherGroup, "hooks")
+	if !hooksArray.Exists() || !hooksArray.IsArray() {
+		return matcherGroup, nil
+	}
+
+	var scriptsCopied bool
+	result := matcherGroup
+
+	for i, entry := range hooksArray.Array() {
+		cmd := entry.Get("command").String()
+		if cmd == "" {
+			continue
+		}
+
+		// Determine if command references a script file
+		var scriptPath string
+		firstToken := cmd
+		if idx := strings.IndexByte(cmd, ' '); idx > 0 {
+			firstToken = cmd[:idx]
+		}
+
+		if strings.HasPrefix(firstToken, "./") || strings.HasPrefix(firstToken, "../") {
+			// Relative to item directory
+			scriptPath = filepath.Join(itemDir, firstToken)
+		} else if filepath.IsAbs(firstToken) {
+			scriptPath = firstToken
+		}
+
+		if scriptPath == "" {
+			continue // inline command like "echo lint"
+		}
+
+		// Check if the script exists
+		if _, statErr := os.Stat(scriptPath); statErr != nil {
+			continue // script doesn't exist, leave command as-is
+		}
+
+		// Show security warning on first script
+		if !scriptsCopied {
+			fmt.Fprintf(output.ErrWriter, "\n  SECURITY WARNING\n")
+			fmt.Fprintf(output.ErrWriter, "  Hook %q references executable script files.\n", item.Name)
+			fmt.Fprintf(output.ErrWriter, "  Scripts will be copied to ~/.syllago/hooks/%s/\n\n", item.Name)
+			scriptsCopied = true
+		}
+
+		// Copy script to stable location
+		destDir, err := hookScriptsDir(item.Name)
+		if err != nil {
+			return nil, fmt.Errorf("getting hook scripts dir: %w", err)
+		}
+		if err := os.MkdirAll(destDir, 0755); err != nil {
+			return nil, fmt.Errorf("creating hook scripts dir: %w", err)
+		}
+
+		scriptName := filepath.Base(scriptPath)
+		destPath := filepath.Join(destDir, scriptName)
+
+		scriptData, readErr := os.ReadFile(scriptPath)
+		if readErr != nil {
+			return nil, fmt.Errorf("reading script %s: %w", scriptPath, readErr)
+		}
+		if writeErr := os.WriteFile(destPath, scriptData, 0755); writeErr != nil {
+			return nil, fmt.Errorf("copying script to %s: %w", destPath, writeErr)
+		}
+
+		// Rewrite command in the matcher group JSON
+		newCmd := destPath
+		if len(cmd) > len(firstToken) {
+			// Preserve arguments after the script path
+			newCmd = destPath + cmd[len(firstToken):]
+		}
+		key := fmt.Sprintf("hooks.%d.command", i)
+		result, err = sjson.SetBytes(result, key, newCmd)
+		if err != nil {
+			return nil, fmt.Errorf("rewriting command for %s: %w", item.Name, err)
+		}
+	}
+
+	return result, nil
 }
