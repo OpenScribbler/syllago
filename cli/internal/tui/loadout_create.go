@@ -667,8 +667,8 @@ func (m createLoadoutScreen) Update(msg tea.Msg) (createLoadoutScreen, tea.Cmd) 
 				}
 				return m, nil
 			case msg.Type == tea.KeyEnter:
-				if strings.TrimSpace(m.nameInput.Value()) == "" {
-					m.message = "Name is required"
+				if errMsg := catalog.ValidateUserName(strings.TrimSpace(m.nameInput.Value())); errMsg != "" {
+					m.message = errMsg
 					m.messageIsErr = true
 					return m, nil
 				}

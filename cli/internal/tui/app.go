@@ -351,6 +351,9 @@ func (a *App) doCreateLoadoutFromScreen(m createLoadoutScreen) tea.Cmd {
 	scopeRegistry := m.scopeRegistry
 	return func() tea.Msg {
 		name := strings.TrimSpace(m.nameInput.Value())
+		if errMsg := catalog.ValidateUserName(name); errMsg != "" {
+			return doCreateLoadoutMsg{err: fmt.Errorf("invalid loadout name: %s", errMsg)}
+		}
 		desc := strings.TrimSpace(m.descInput.Value())
 		provSlug := m.prefilledProvider
 
@@ -383,11 +386,11 @@ func (a *App) doCreateLoadoutFromScreen(m createLoadoutScreen) tea.Cmd {
 		case 0:
 			destDir = filepath.Join(contentRoot, "loadouts", provSlug)
 		case 1:
-			home, homeErr := os.UserHomeDir()
-			if homeErr != nil {
-				return doCreateLoadoutMsg{err: fmt.Errorf("finding home directory: %w", homeErr)}
+			globalDir := catalog.GlobalContentDir()
+			if globalDir == "" {
+				return doCreateLoadoutMsg{err: fmt.Errorf("finding home directory")}
 			}
-			destDir = filepath.Join(home, ".syllago", "content", "loadouts", provSlug)
+			destDir = filepath.Join(globalDir, "loadouts", provSlug)
 		case 2:
 			dir, err := registry.CloneDir(scopeRegistry)
 			if err != nil {

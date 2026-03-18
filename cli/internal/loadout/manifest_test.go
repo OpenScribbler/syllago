@@ -184,6 +184,30 @@ func TestParse_InvalidYAML(t *testing.T) {
 	}
 }
 
+func TestParse_InvalidName(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		yaml string
+	}{
+		{"path traversal", "kind: loadout\nversion: 1\nname: ../../evil\n"},
+		{"leading dash", "kind: loadout\nversion: 1\nname: -bad\n"},
+		{"dots", "kind: loadout\nversion: 1\nname: foo.bar\n"},
+		{"spaces", "kind: loadout\nversion: 1\nname: has spaces\n"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmp := t.TempDir()
+			f := filepath.Join(tmp, "loadout.yaml")
+			os.WriteFile(f, []byte(tc.yaml), 0644)
+			_, err := Parse(f)
+			if err == nil {
+				t.Fatalf("expected error for name in %q", tc.name)
+			}
+		})
+	}
+}
+
 func TestRefsByType(t *testing.T) {
 	t.Parallel()
 	m := &Manifest{

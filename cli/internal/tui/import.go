@@ -1467,7 +1467,9 @@ func (m importModel) updateName(msg tea.KeyMsg) (importModel, tea.Cmd) {
 		return m, nil
 	case msg.Type == tea.KeyEnter:
 		name := strings.TrimSpace(m.nameInput.Value())
-		if name == "" {
+		if errMsg := catalog.ValidateUserName(name); errMsg != "" {
+			m.message = errMsg
+			m.messageIsErr = true
 			return m, nil
 		}
 		m.itemName = name

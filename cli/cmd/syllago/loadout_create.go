@@ -70,8 +70,8 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no input")
 	}
 	name := strings.TrimSpace(scanner.Text())
-	if name == "" {
-		return fmt.Errorf("name is required")
+	if errMsg := catalog.ValidateUserName(name); errMsg != "" {
+		return fmt.Errorf("invalid loadout name: %s", errMsg)
 	}
 
 	// Step 2: Description

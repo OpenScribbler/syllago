@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+
 // Manifest represents a parsed loadout.yaml file.
 type Manifest struct {
 	Kind        string   `yaml:"kind"`               // must be "loadout"
@@ -45,6 +46,9 @@ func Parse(path string) (*Manifest, error) {
 	}
 	if m.Name == "" {
 		return nil, fmt.Errorf("%s: name is required", path)
+	}
+	if !catalog.IsValidItemName(m.Name) {
+		return nil, fmt.Errorf("%s: invalid name %q — use only letters, numbers, hyphens, and underscores (no leading dash, max 100 chars)", path, m.Name)
 	}
 
 	return &m, nil

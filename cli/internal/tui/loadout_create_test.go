@@ -214,7 +214,33 @@ func TestCreateLoadoutScreenUpdate(t *testing.T) {
 		if s.step != clStepName {
 			t.Error("should stay on name step with empty name")
 		}
-		if s.message != "Name is required" {
+		if s.message != "name is required" {
+			t.Errorf("message = %q", s.message)
+		}
+	})
+
+	t.Run("enter on name with invalid chars shows error", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s.step = clStepName
+		s.nameInput.SetValue("../../evil")
+		s, _ = s.Update(keyEnter)
+		if s.step != clStepName {
+			t.Error("should stay on name step with invalid name")
+		}
+		if !s.messageIsErr {
+			t.Error("message should be error")
+		}
+	})
+
+	t.Run("enter on name with leading dash shows error", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s.step = clStepName
+		s.nameInput.SetValue("-bad")
+		s, _ = s.Update(keyEnter)
+		if s.step != clStepName {
+			t.Error("should stay on name step with leading dash")
+		}
+		if s.message != "name must not start with a dash" {
 			t.Errorf("message = %q", s.message)
 		}
 	})
@@ -561,5 +587,115 @@ func TestCreateLoadoutRescanFindsNewLoadout(t *testing.T) {
 	}
 	if !found {
 		t.Error("new-test-loadout not found in catalog after rescan")
+	}
+}
+
+// TestCreateLoadoutHandlerNavigatesToDetail verifies the full handler integration:
+// doCreateLoadoutMsg → catalog rescan → navigation to detail screen, toast, and sidebar update.
+func TestCreateLoadoutHandlerNavigatesToDetail(t *testing.T) {
+	app := testApp(t)
+	app.screen = screenCreateLoadout
+
+	beforeLoadoutCount := app.sidebar.loadoutsCount
+
+	// Set up wizard state and execute the create command
+	scr := newCreateLoadoutScreen("claude-code", "", app.providers, app.catalog, 80, 30)
+	scr.nameInput.SetValue("handler-test-loadout")
+	scr.descInput.SetValue("Tests handler integration")
+	scr.destCursor = 0
+	app.createLoadout = scr
+
+	cmd := app.doCreateLoadoutFromScreen(scr)
+	msg := cmd()
+
+	// Verify the Cmd produced a success message
+	result := msg.(doCreateLoadoutMsg)
+	if result.err != nil {
+		t.Fatalf("doCreateLoadout failed: %v", result.err)
+	}
+
+	// Feed the message into the App handler
+	newApp, _ := app.Update(result)
+	app = newApp.(App)
+
+	// 1. Should navigate to detail screen showing the new loadout
+	if app.screen != screenDetail {
+		t.Errorf("screen = %v, want screenDetail", app.screen)
+	}
+	if app.detail.item.Name != "handler-test-loadout" {
+		t.Errorf("detail item name = %q, want handler-test-loadout", app.detail.item.Name)
+	}
+	if app.detail.item.Provider != "claude-code" {
+		t.Errorf("detail item provider = %q, want claude-code", app.detail.item.Provider)
+	}
+
+	// 2. Toast should show success message
+	if !app.toast.active {
+		t.Error("toast should be active after creation")
+	}
+	if !strings.Contains(app.toast.text, "handler-test-loadout") {
+		t.Errorf("toast text = %q, should contain loadout name", app.toast.text)
+	}
+	if app.toast.isErr {
+		t.Error("toast should not be an error")
+	}
+
+	// 3. Sidebar loadout count should increase
+	if app.sidebar.loadoutsCount <= beforeLoadoutCount {
+		t.Errorf("sidebar loadoutsCount = %d, should be > %d", app.sidebar.loadoutsCount, beforeLoadoutCount)
+	}
+
+	// 4. Items model should be set up for this provider's loadouts
+	if app.items.ctx.sourceProvider != "claude-code" {
+		t.Errorf("items sourceProvider = %q, want claude-code", app.items.ctx.sourceProvider)
+	}
+	if app.cardParent != screenLoadoutCards {
+		t.Errorf("cardParent = %v, want screenLoadoutCards", app.cardParent)
+	}
+}
+
+// TestCreateLoadoutLibraryDestination verifies that creating a loadout to the
+// Library destination (~/.syllago/content/) is found by the global content scan.
+func TestCreateLoadoutLibraryDestination(t *testing.T) {
+	app := testApp(t)
+	app.screen = screenCreateLoadout
+
+	// Point GlobalContentDirOverride to a temp dir so the library write + rescan works
+	globalDir := t.TempDir()
+	origOverride := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origOverride })
+
+	// Set up wizard for Library destination (destCursor=1)
+	scr := newCreateLoadoutScreen("claude-code", "", app.providers, app.catalog, 80, 30)
+	scr.nameInput.SetValue("library-loadout")
+	scr.descInput.SetValue("Goes to library")
+	scr.destCursor = 1 // Library destination
+	app.createLoadout = scr
+
+	cmd := app.doCreateLoadoutFromScreen(scr)
+	msg := cmd()
+
+	result := msg.(doCreateLoadoutMsg)
+	if result.err != nil {
+		t.Fatalf("doCreateLoadout failed: %v", result.err)
+	}
+
+	// Verify file was written to the global content dir
+	loadoutPath := filepath.Join(globalDir, "loadouts", "claude-code", "library-loadout", "loadout.yaml")
+	if _, err := os.Stat(loadoutPath); err != nil {
+		t.Fatalf("loadout.yaml not found at library path %s: %v", loadoutPath, err)
+	}
+
+	// Feed the message into the App handler (uses ScanWithGlobalAndRegistries)
+	newApp, _ := app.Update(result)
+	app = newApp.(App)
+
+	// Should navigate to detail screen
+	if app.screen != screenDetail {
+		t.Errorf("screen = %v, want screenDetail", app.screen)
+	}
+	if app.detail.item.Name != "library-loadout" {
+		t.Errorf("detail item name = %q, want library-loadout", app.detail.item.Name)
 	}
 }

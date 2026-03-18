@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -31,9 +30,6 @@ func init() {
 	rootCmd.AddCommand(createCmd)
 }
 
-// nameRegex validates item names: letters, numbers, hyphens, underscores.
-var nameRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
-
 // validateCreateArgs checks that the content type is valid, the name is
 // well-formed, and --provider is supplied for provider-specific types.
 func validateCreateArgs(typeName, name, providerSlug string) (catalog.ContentType, error) {
@@ -54,8 +50,8 @@ func validateCreateArgs(typeName, name, providerSlug string) (catalog.ContentTyp
 	}
 
 	// Validate name
-	if !nameRegex.MatchString(name) {
-		return "", fmt.Errorf("invalid name %q (must contain only letters, numbers, hyphens, underscores)", name)
+	if errMsg := catalog.ValidateUserName(name); errMsg != "" {
+		return "", fmt.Errorf("invalid name %q: %s", name, errMsg)
 	}
 
 	// Provider-specific types require --provider

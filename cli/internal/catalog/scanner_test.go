@@ -159,7 +159,7 @@ func TestScan(t *testing.T) {
 	})
 
 	t.Run("IsValidItemName accepts valid names", func(t *testing.T) {
-		valid := []string{"my-skill", "skill_v2", "abc123", "CamelCase", "a"}
+		valid := []string{"my-skill", "skill_v2", "abc123", "CamelCase", "a", "my-loadout", "_leading", strings.Repeat("x", 100)}
 		for _, name := range valid {
 			if !IsValidItemName(name) {
 				t.Errorf("IsValidItemName(%q) = false, want true", name)
@@ -168,10 +168,44 @@ func TestScan(t *testing.T) {
 	})
 
 	t.Run("IsValidItemName rejects invalid names", func(t *testing.T) {
-		invalid := []string{"foo.bar", "a*b", "x#y", "a|b", "", "a b", "a/b"}
+		invalid := []string{
+			"foo.bar", "a*b", "x#y", "a|b", "", "a b", "a/b",
+			"../../.ssh/foo", "../evil", ".hidden", "-leading-dash",
+			strings.Repeat("x", 101),
+		}
 		for _, name := range invalid {
 			if IsValidItemName(name) {
 				t.Errorf("IsValidItemName(%q) = true, want false", name)
+			}
+		}
+	})
+
+	t.Run("ValidateUserName returns empty for valid names", func(t *testing.T) {
+		valid := []string{"my-loadout", "skill_v2", "abc123", "CamelCase", "a"}
+		for _, name := range valid {
+			if msg := ValidateUserName(name); msg != "" {
+				t.Errorf("ValidateUserName(%q) = %q, want empty", name, msg)
+			}
+		}
+	})
+
+	t.Run("ValidateUserName returns specific errors", func(t *testing.T) {
+		cases := []struct {
+			name string
+			want string
+		}{
+			{"", "name is required"},
+			{strings.Repeat("x", 101), "name must be 100 characters or fewer"},
+			{"-leading", "name must not start with a dash"},
+			{"../evil", "name may only contain letters, numbers, hyphens, and underscores"},
+			{"../../.ssh/foo", "name may only contain letters, numbers, hyphens, and underscores"},
+			{".hidden", "name may only contain letters, numbers, hyphens, and underscores"},
+			{"has spaces", "name may only contain letters, numbers, hyphens, and underscores"},
+		}
+		for _, tc := range cases {
+			got := ValidateUserName(tc.name)
+			if got != tc.want {
+				t.Errorf("ValidateUserName(%q) = %q, want %q", tc.name, got, tc.want)
 			}
 		}
 	})
