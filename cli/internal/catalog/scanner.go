@@ -14,14 +14,39 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// validItemNameRe matches names safe for use in sjson/gjson key paths.
-// Rejects . (path separator), * (wildcard), # (array modifier), | (pipe),
-// spaces, and slashes.
-var validItemNameRe = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+// validItemNameRe matches names safe for use as directory names and sjson/gjson
+// key paths. Allows letters, numbers, hyphens, and underscores. Must not start
+// with a dash (avoids flag-like names and potential CLI confusion).
+var validItemNameRe = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_-]*$`)
 
-// IsValidItemName checks if a name is safe for use as an sjson/gjson key.
+// maxItemNameLen is the maximum allowed length for user-entered names.
+const maxItemNameLen = 100
+
+// IsValidItemName checks if a name is safe for use as a directory name and
+// sjson/gjson key. Returns false for empty names, names starting with a dash,
+// names longer than 100 characters, or names containing dots, path separators,
+// spaces, or other special characters.
 func IsValidItemName(name string) bool {
-	return validItemNameRe.MatchString(name)
+	return len(name) <= maxItemNameLen && validItemNameRe.MatchString(name)
+}
+
+// ValidateUserName checks a user-entered name and returns a human-readable
+// error message. Returns empty string if the name is valid. Use this in UI
+// code where the user needs to know *why* their name was rejected.
+func ValidateUserName(name string) string {
+	if name == "" {
+		return "name is required"
+	}
+	if len(name) > maxItemNameLen {
+		return fmt.Sprintf("name must be %d characters or fewer", maxItemNameLen)
+	}
+	if name[0] == '-' {
+		return "name must not start with a dash"
+	}
+	if !validItemNameRe.MatchString(name) {
+		return "name may only contain letters, numbers, hyphens, and underscores"
+	}
+	return ""
 }
 
 // validRegistryNameRe matches registry names in owner/repo format.

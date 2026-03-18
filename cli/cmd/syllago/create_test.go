@@ -106,6 +106,27 @@ func TestCreateFailsIfExists(t *testing.T) {
 	}
 }
 
+func TestCreateRejectsInvalidNames(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+	}{
+		{"path traversal", "../../evil"},
+		{"leading dash", "-bad"},
+		{"dots", "foo.bar"},
+		{"spaces", "has spaces"},
+		{"empty", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := validateCreateArgs("skills", tc.input, "")
+			if err == nil {
+				t.Fatalf("expected error for name %q", tc.input)
+			}
+		})
+	}
+}
+
 func TestCreateWithProvider(t *testing.T) {
 	globalDir := t.TempDir()
 	withGlobalContentDir(t, globalDir)

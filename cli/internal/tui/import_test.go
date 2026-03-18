@@ -784,6 +784,38 @@ func TestImportNameEmpty(t *testing.T) {
 	if app.importer.step != stepName {
 		t.Fatal("expected to stay at stepName with empty name")
 	}
+	if app.importer.message != "name is required" {
+		t.Errorf("message = %q, want 'name is required'", app.importer.message)
+	}
+}
+
+func TestImportNameInvalid(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   string
+		wantMsg string
+	}{
+		{"path traversal", "../../evil", "name may only contain letters, numbers, hyphens, and underscores"},
+		{"leading dash", "-bad", "name must not start with a dash"},
+		{"dots", "foo.bar", "name may only contain letters, numbers, hyphens, and underscores"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			app := navigateToImport(t)
+			app.importer.step = stepName
+			app.importer.contentType = catalog.Skills
+			app.importer.nameInput.SetValue(tc.input)
+
+			m, _ := app.Update(keyEnter)
+			app = m.(App)
+			if app.importer.step != stepName {
+				t.Fatalf("expected to stay at stepName with invalid name %q", tc.input)
+			}
+			if app.importer.message != tc.wantMsg {
+				t.Errorf("message = %q, want %q", app.importer.message, tc.wantMsg)
+			}
+		})
+	}
 }
 
 func TestImportNameEsc(t *testing.T) {
