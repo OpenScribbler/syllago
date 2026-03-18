@@ -428,6 +428,15 @@ func (a App) panelHeight() int {
 	return h
 }
 
+// contentWidth returns the usable width for the content panel (right of sidebar).
+func (a App) contentWidth() int {
+	w := a.width - sidebarWidth - 1
+	if w < 20 {
+		w = 20
+	}
+	return w
+}
+
 // visibleItems filters out hidden items unless showHidden is true.
 func (a App) visibleItems(src []catalog.ContentItem) []catalog.ContentItem {
 	if a.showHidden {
@@ -710,10 +719,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						a.detail.overrides = cat.OverridesFor(item.Name, item.Type)
 						a.detail.parentLabel = "Library"
 						a.detail.categoryLabel = ct.Label()
-						a.detail.width = a.width
+						a.detail.width = a.contentWidth()
 						a.detail.height = a.panelHeight()
-						a.detail.fileViewer.splitView.width = a.width
-						a.detail.loadoutContents.splitView.width = a.width
+						a.detail.fileViewer.splitView.width = a.contentWidth()
+						a.detail.loadoutContents.splitView.width = a.contentWidth()
 						a.detail.listPosition = i
 						a.detail.listTotal = len(src)
 						a.screen = screenDetail
@@ -964,10 +973,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						a.detail.overrides = cat.OverridesFor(item.Name, item.Type)
 						a.detail.parentLabel = "Loadouts"
 						a.detail.categoryLabel = providerDisplayName(prov)
-						a.detail.width = a.width
+						a.detail.width = a.contentWidth()
 						a.detail.height = a.panelHeight()
-						a.detail.fileViewer.splitView.width = a.width
-						a.detail.loadoutContents.splitView.width = a.width
+						a.detail.fileViewer.splitView.width = a.contentWidth()
+						a.detail.loadoutContents.splitView.width = a.contentWidth()
 						a.detail.listPosition = i
 						a.detail.listTotal = len(filtered)
 						a.screen = screenDetail
@@ -2152,10 +2161,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if a.items.ctx.sourceProvider != "" {
 					a.detail.categoryLabel = providerDisplayName(a.items.ctx.sourceProvider)
 				}
-				a.detail.width = a.width
+				a.detail.width = a.contentWidth()
 				a.detail.height = a.panelHeight()
-				a.detail.fileViewer.splitView.width = a.width
-				a.detail.loadoutContents.splitView.width = a.width
+				a.detail.fileViewer.splitView.width = a.contentWidth()
+				a.detail.loadoutContents.splitView.width = a.contentWidth()
 				a.detail.listPosition = a.items.cursor
 				a.detail.listTotal = len(a.items.items)
 				a.screen = screenDetail
@@ -2309,10 +2318,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					item := a.items.selectedItem()
 					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot, a.catalog)
 					a.detail.overrides = a.catalog.OverridesFor(item.Name, item.Type)
-					a.detail.width = a.width
+					a.detail.width = a.contentWidth()
 					a.detail.height = a.panelHeight()
-					a.detail.fileViewer.splitView.width = a.width
-				a.detail.loadoutContents.splitView.width = a.width
+					a.detail.fileViewer.splitView.width = a.contentWidth()
+					a.detail.loadoutContents.splitView.width = a.contentWidth()
 					a.detail.listPosition = a.items.cursor
 					a.detail.listTotal = len(a.items.items)
 				}
@@ -2324,10 +2333,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					item := a.items.selectedItem()
 					a.detail = newDetailModel(item, a.providers, a.catalog.RepoRoot, a.catalog)
 					a.detail.overrides = a.catalog.OverridesFor(item.Name, item.Type)
-					a.detail.width = a.width
+					a.detail.width = a.contentWidth()
 					a.detail.height = a.panelHeight()
-					a.detail.fileViewer.splitView.width = a.width
-				a.detail.loadoutContents.splitView.width = a.width
+					a.detail.fileViewer.splitView.width = a.contentWidth()
+					a.detail.loadoutContents.splitView.width = a.contentWidth()
 					a.detail.listPosition = a.items.cursor
 					a.detail.listTotal = len(a.items.items)
 				}

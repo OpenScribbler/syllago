@@ -4,28 +4,28 @@ syllago           │Home > Skills > alpha-skill
 > Skills        3 │Type: Skills
   Agents        1 │Path: <TESTDIR>/skills/alpha-skill
   MCP Configs   1 │Providers: Claude Code
-  Rules         1 │────────────────────────────────────────────────────────────────────────────────
+  Rules         1 │─────────────────────────────────────────────────────────────
   Hooks         1 │
-  Commands      1 │ Files  |  Preview
-  ─────────────   │ ╭────────────────────────────────────────────────────────╮
-  Collections     │ │                                                        │
-  Library       1 │ │  Confirm Uninstall                                     │
-  Loadouts      2 │ │                                                        │
-  Registries      │ │  Remove alpha-skill from all providers?                │
-  ─────────────   │ │                                                        │
-  Configuration   │ │                                                        │
-  Add             │ │                                                        │
-  Update          │ │                                                        │
-  Settings        │ │                   Confirm    ▸  Cancel                 │
-  Sandbox         │ │                                                        │
-                  │ ╰────────────────────────────────────────────────────────╯
-                  │                                │
-                  │                                │
-                  │                                │
-                  │                                │
+  Commands      1 │Files
+  ────────────╭────────────────────────────────────────────────────────╮
+  Collections │                                                        │
+  Library     │  Confirm Uninstall                                     │
+  Loadouts    │                                                        │
+  Registries  │  Remove alpha-skill from all providers?                │
+  ────────────│                                                        │
+  Configuratio│                                                        │
+  Add         │                                                        │
+  Update      │                                                        │
+  Settings    │                   Confirm    ▸  Cancel                 │
+  Sandbox     │                                                        │
+              ╰────────────────────────────────────────────────────────╯
+                  │
+                  │
+                  │
+                  │
                   │
                   │
            v1.0.0 │
 ────────────────────────────────────────────────────────────────────────────────
-esc back • tab switch tab • up/down navigate • l/right preview • ctrl+n/p
-next/prev Skills > alpha-skill
+esc back • tab switch tab • up/down navigate • enter view • ctrl+n/p next/prev
+Skills > alpha-skill

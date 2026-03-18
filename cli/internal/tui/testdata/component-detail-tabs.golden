@@ -4,22 +4,8 @@ Home > Skills > alpha-skill
 Type: Skills
 Path: <TESTDIR>/skills/alpha-skill
 Providers: Claude Code
-────────────────────────────────────────────────────────────────────────────────
+─────────────────────────────────────────────────────────────
 
- Files  |  Preview
-
-  > SKILL.md                    │   1 # alpha-skill
-    helpers.md                  │   2 A helpful skill
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
+Files
+  > SKILL.md
+    helpers.md
