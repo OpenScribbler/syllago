@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -652,6 +653,204 @@ func TestCreateLoadoutScreenView(t *testing.T) {
 		got := s.View()
 		if !strings.Contains(got, "Security Notice") {
 			t.Error("review should show security warning when hooks selected")
+		}
+	})
+}
+
+func TestCreateLoadoutReview(t *testing.T) {
+	providers := testProviders(t)
+
+	t.Run("hooks with commands show in security callout", func(t *testing.T) {
+		tmp := t.TempDir()
+		hookDir := filepath.Join(tmp, "hooks", "claude-code", "my-hook")
+		os.MkdirAll(hookDir, 0o755)
+		os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{
+			"event": "PostToolUse",
+			"matcher": "Bash",
+			"hooks": [{"type": "command", "command": "./lint.sh"}]
+		}`), 0o644)
+		cat := &catalog.Catalog{
+			RepoRoot: tmp,
+			Items: []catalog.ContentItem{{
+				Name:     "my-hook",
+				Type:     catalog.Hooks,
+				Path:     hookDir,
+				Provider: "claude-code",
+				Files:    []string{"hook.json"},
+			}},
+		}
+		// Wide terminal so commands aren't truncated by split view
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 120, 30)
+		s.nameInput.SetValue("test")
+		for i := range s.entries {
+			s.entries[i].selected = true
+		}
+		s.step = clStepReview
+		got := s.View()
+		if !strings.Contains(got, "PostToolUse") {
+			t.Error("security callout should show hook event name")
+		}
+		if !strings.Contains(got, "lint.sh") {
+			t.Error("security callout should show hook command")
+		}
+	})
+
+	t.Run("MCP with commands show in security callout", func(t *testing.T) {
+		tmp := t.TempDir()
+		mcpDir := filepath.Join(tmp, "mcp", "srv")
+		os.MkdirAll(mcpDir, 0o755)
+		os.WriteFile(filepath.Join(mcpDir, "config.json"), []byte(`{
+			"type": "stdio",
+			"command": "node",
+			"args": ["srv.js"]
+		}`), 0o644)
+		cat := &catalog.Catalog{
+			RepoRoot: tmp,
+			Items: []catalog.ContentItem{{
+				Name:  "srv",
+				Type:  catalog.MCP,
+				Path:  mcpDir,
+				Files: []string{"config.json"},
+			}},
+		}
+		// Wide terminal so commands aren't truncated by split view
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 120, 30)
+		s.nameInput.SetValue("test")
+		for i := range s.entries {
+			s.entries[i].selected = true
+		}
+		s.step = clStepReview
+		got := s.View()
+		if !strings.Contains(got, "node") {
+			t.Error("security callout should show MCP command")
+		}
+		if !strings.Contains(got, "srv.js") {
+			t.Error("security callout should show MCP args")
+		}
+	})
+
+	t.Run("zero items shows warning", func(t *testing.T) {
+		cat := testCatalog(t)
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s.nameInput.SetValue("test")
+		// Don't select anything
+		s.step = clStepReview
+		got := s.View()
+		if !strings.Contains(got, "No items selected") {
+			t.Error("review with 0 items should show warning")
+		}
+	})
+
+	t.Run("Back button returns to dest step", func(t *testing.T) {
+		cat := testCatalog(t)
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s.step = clStepReview
+		s.reviewBtnCursor = 0 // Back
+		s, _ = s.Update(keyEnter)
+		if s.step != clStepDest {
+			t.Errorf("step = %v, want clStepDest", s.step)
+		}
+	})
+
+	t.Run("Esc returns to dest without confirming", func(t *testing.T) {
+		cat := testCatalog(t)
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s.step = clStepReview
+		s, _ = s.Update(keyEsc)
+		if s.step != clStepDest {
+			t.Errorf("step = %v, want clStepDest", s.step)
+		}
+		if s.confirmed {
+			t.Error("Esc should not set confirmed")
+		}
+	})
+
+	t.Run("Create sets confirmed true", func(t *testing.T) {
+		cat := testCatalog(t)
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s.step = clStepReview
+		s.reviewBtnCursor = 1 // Create
+		s, _ = s.Update(keyEnter)
+		if !s.confirmed {
+			t.Error("Create should set confirmed=true")
+		}
+	})
+
+	t.Run("long item list truncates with + N more", func(t *testing.T) {
+		tmp := t.TempDir()
+		var items []catalog.ContentItem
+		for i := 0; i < 6; i++ {
+			name := fmt.Sprintf("skill-%d", i)
+			dir := filepath.Join(tmp, "skills", name)
+			os.MkdirAll(dir, 0o755)
+			os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("# "+name), 0o644)
+			items = append(items, catalog.ContentItem{
+				Name:  name,
+				Type:  catalog.Skills,
+				Path:  dir,
+				Files: []string{"SKILL.md"},
+			})
+		}
+		cat := &catalog.Catalog{RepoRoot: tmp, Items: items}
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s.nameInput.SetValue("test")
+		for i := range s.entries {
+			s.entries[i].selected = true
+		}
+		s.step = clStepReview
+		got := s.View()
+		if !strings.Contains(got, "+ 3 more") {
+			t.Errorf("should truncate to '+ 3 more' for 6 items (show 3), got:\n%s", got)
+		}
+	})
+
+	t.Run("ambiguous names show source qualifier", func(t *testing.T) {
+		tmp := t.TempDir()
+		dir1 := filepath.Join(tmp, "skills", "my-skill-1")
+		dir2 := filepath.Join(tmp, "skills", "my-skill-2")
+		os.MkdirAll(dir1, 0o755)
+		os.MkdirAll(dir2, 0o755)
+		os.WriteFile(filepath.Join(dir1, "SKILL.md"), []byte("# same-name"), 0o644)
+		os.WriteFile(filepath.Join(dir2, "SKILL.md"), []byte("# same-name"), 0o644)
+		cat := &catalog.Catalog{
+			RepoRoot: tmp,
+			Items: []catalog.ContentItem{
+				{Name: "same-name", Type: catalog.Skills, Path: dir1, Registry: "acme-registry", Source: "acme-registry", Files: []string{"SKILL.md"}},
+				{Name: "same-name", Type: catalog.Skills, Path: dir2, Source: "project", Files: []string{"SKILL.md"}},
+			},
+		}
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s.nameInput.SetValue("test")
+		for i := range s.entries {
+			s.entries[i].selected = true
+		}
+		s.step = clStepReview
+		got := s.View()
+		if !strings.Contains(got, "acme-registry") {
+			t.Error("ambiguous name should show source qualifier (acme-registry)")
+		}
+		if !strings.Contains(got, "project") {
+			t.Error("ambiguous name should show source qualifier (project)")
+		}
+	})
+
+	t.Run("scroll up/down navigates review content", func(t *testing.T) {
+		cat := testCatalog(t)
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 15) // small height to force scroll
+		s.nameInput.SetValue("test")
+		for i := range s.entries {
+			s.entries[i].selected = true
+		}
+		s.step = clStepReview
+		s, _ = s.Update(keyDown)
+		s, _ = s.Update(keyDown)
+		s, _ = s.Update(keyDown)
+		if s.reviewScroll != 3 {
+			t.Errorf("reviewScroll = %d, want 3", s.reviewScroll)
+		}
+		s, _ = s.Update(keyUp)
+		if s.reviewScroll != 2 {
+			t.Errorf("reviewScroll = %d, want 2 after up", s.reviewScroll)
 		}
 	})
 }
