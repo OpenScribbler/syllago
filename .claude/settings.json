@@ -28,6 +28,17 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/wizard-invariant-gate.sh\""
+          }
+        ]
+      }
     ]
   }
 }

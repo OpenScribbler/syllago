@@ -206,6 +206,7 @@ func TestUpdatePreviewScroll(t *testing.T) {
 func TestUpdatePreviewEnterPull(t *testing.T) {
 	app := navigateToUpdateWithRemote(t)
 	app.updater.step = stepUpdatePreview
+	app.updater.fallbackLog = "commit1\ncommit2"
 
 	_, cmd := app.Update(keyEnter)
 	if cmd == nil {
@@ -216,6 +217,7 @@ func TestUpdatePreviewEnterPull(t *testing.T) {
 func TestUpdatePreviewEscBack(t *testing.T) {
 	app := navigateToUpdateWithRemote(t)
 	app.updater.step = stepUpdatePreview
+	app.updater.fallbackLog = "commit1\ncommit2"
 
 	m, _ := app.Update(keyEsc)
 	app = m.(App)

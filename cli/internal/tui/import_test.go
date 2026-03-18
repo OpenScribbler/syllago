@@ -484,6 +484,31 @@ func TestImportTypeCreateToName(t *testing.T) {
 	}
 }
 
+func TestImportTypeCreateProviderSpecificToProvider(t *testing.T) {
+	app := navigateToImport(t)
+	app = pressN(app, keyDown, 3) // Create
+	m, _ := app.Update(keyEnter)  // → stepType (create flow)
+	app = m.(App)
+
+	// Select Rules (index 3, first provider-specific type)
+	app = pressN(app, keyDown, 3)
+	m, _ = app.Update(keyEnter)
+	app = m.(App)
+	if app.importer.step != stepProvider {
+		t.Fatalf("expected stepProvider for create flow with provider-specific type, got %d", app.importer.step)
+	}
+
+	// Select a provider, should go to stepName
+	m, _ = app.Update(keyEnter)
+	app = m.(App)
+	if app.importer.step != stepName {
+		t.Fatalf("expected stepName after provider selection in create flow, got %d", app.importer.step)
+	}
+	if app.importer.providerName == "" {
+		t.Fatal("expected providerName to be set after provider selection")
+	}
+}
+
 func TestImportTypeEscBack(t *testing.T) {
 	app := navigateToLocalPath(t)
 
@@ -676,6 +701,7 @@ func TestImportCloneDoneError(t *testing.T) {
 func TestImportGitPickNavigation(t *testing.T) {
 	app := navigateToImport(t)
 	app.importer.step = stepGitPick
+	app.importer.clonedPath = t.TempDir()
 	app.importer.clonedItems = []catalog.ContentItem{
 		{Name: "item-1", Type: catalog.Skills},
 		{Name: "item-2", Type: catalog.Agents},
@@ -692,6 +718,7 @@ func TestImportGitPickNavigation(t *testing.T) {
 func TestImportGitPickSelect(t *testing.T) {
 	app := navigateToImport(t)
 	app.importer.step = stepGitPick
+	app.importer.clonedPath = t.TempDir()
 	app.importer.clonedItems = []catalog.ContentItem{
 		{Name: "picked-item", Type: catalog.Skills, Path: "/tmp/picked"},
 	}
@@ -749,6 +776,7 @@ func TestImportNameEnter(t *testing.T) {
 func TestImportNameEmpty(t *testing.T) {
 	app := navigateToImport(t)
 	app.importer.step = stepName
+	app.importer.contentType = catalog.Skills
 	app.importer.nameInput.SetValue("")
 
 	m, _ := app.Update(keyEnter)
@@ -761,6 +789,7 @@ func TestImportNameEmpty(t *testing.T) {
 func TestImportNameEsc(t *testing.T) {
 	app := navigateToImport(t)
 	app.importer.step = stepName
+	app.importer.contentType = catalog.Skills
 
 	m, _ := app.Update(keyEsc)
 	app = m.(App)
@@ -839,6 +868,7 @@ func TestImportValidateSingle(t *testing.T) {
 func TestImportValidateEsc(t *testing.T) {
 	app := navigateToImport(t)
 	app.importer.step = stepValidate
+	app.importer.validationItems = []validationItem{{path: "/tmp/test", name: "test", included: true}}
 
 	m, _ := app.Update(keyEsc)
 	app = m.(App)
@@ -867,6 +897,7 @@ func TestImportConfirmEnter(t *testing.T) {
 func TestImportConfirmEscLocal(t *testing.T) {
 	app := navigateToImport(t)
 	app.importer.step = stepConfirm
+	app.importer.contentType = catalog.Skills
 	app.importer.isCreate = false
 	app.importer.clonedPath = "" // not from git
 
@@ -880,6 +911,7 @@ func TestImportConfirmEscLocal(t *testing.T) {
 func TestImportConfirmEscGit(t *testing.T) {
 	app := navigateToImport(t)
 	app.importer.step = stepConfirm
+	app.importer.contentType = catalog.Skills
 	app.importer.isCreate = false
 	app.importer.clonedPath = "/tmp/fake-clone"
 
@@ -893,6 +925,7 @@ func TestImportConfirmEscGit(t *testing.T) {
 func TestImportConfirmEscCreate(t *testing.T) {
 	app := navigateToImport(t)
 	app.importer.step = stepConfirm
+	app.importer.contentType = catalog.Skills
 	app.importer.isCreate = true
 
 	m, _ := app.Update(keyEsc)
@@ -906,14 +939,42 @@ func TestImportConfirmEscCreate(t *testing.T) {
 // Import done message
 // ---------------------------------------------------------------------------
 
-func TestImportDoneSuccess(t *testing.T) {
+func TestImportDoneSingleItem(t *testing.T) {
 	app := navigateToImport(t)
-	msg := importDoneMsg{name: "imported-item", err: nil}
+	msg := importDoneMsg{name: "imported-item", contentType: catalog.Skills, err: nil}
 	m, _ := app.Update(msg)
 	app = m.(App)
 
-	assertScreen(t, app, screenCategory)
+	// Single item with known type navigates to detail or items list
+	// (detail if the item is found in the rescanned catalog, items list otherwise)
+	if app.screen != screenDetail && app.screen != screenItems {
+		t.Fatalf("expected screenDetail or screenItems, got %d", app.screen)
+	}
 	assertContains(t, app.toast.text, "imported-item")
+}
+
+func TestImportDoneBatch(t *testing.T) {
+	app := navigateToImport(t)
+	msg := importDoneMsg{name: "item-a, item-b", contentType: catalog.Skills, err: nil}
+	m, _ := app.Update(msg)
+	app = m.(App)
+
+	// Batch import with known type navigates to items list
+	if app.screen != screenItems && app.screen != screenLibraryCards {
+		t.Fatalf("expected screenItems or screenLibraryCards, got %d", app.screen)
+	}
+	assertContains(t, app.toast.text, "item-a, item-b")
+}
+
+func TestImportDoneNoContentType(t *testing.T) {
+	app := navigateToImport(t)
+	msg := importDoneMsg{name: "discovered-items", err: nil}
+	m, _ := app.Update(msg)
+	app = m.(App)
+
+	// No content type (discovery/mixed) navigates to Library cards
+	assertScreen(t, app, screenLibraryCards)
+	assertContains(t, app.toast.text, "discovered-items")
 }
 
 func TestImportDoneError(t *testing.T) {
@@ -1168,6 +1229,7 @@ func TestConflictScrolling(t *testing.T) {
 	app := navigateToImport(t)
 	app.importer.step = stepConflict
 	app.importer.conflict = conflictInfo{
+		itemName: "conflict-item",
 		diffText: "--- a/file.md\n+++ b/file.md\n@@ -1,1 +1,1 @@\n-old\n+new",
 	}
 
@@ -1450,4 +1512,179 @@ func TestConflictDiffComputation(t *testing.T) {
 	}
 	assertContains(t, ci.diffText, "--- a/keep.md")
 	assertContains(t, ci.diffText, "+++ b/keep.md")
+}
+
+// ---------------------------------------------------------------------------
+// Pre-filtered import flows (Bug fixes: provider selection & discovery)
+// ---------------------------------------------------------------------------
+
+// navigateToFilteredImport creates a test app and opens the import screen
+// pre-filtered to a specific content type (simulating 'a' from Items list).
+func navigateToFilteredImport(t *testing.T, ct catalog.ContentType) App {
+	t.Helper()
+	app := testApp(t)
+	app.importer = newImportModelWithFilter(app.providers, app.catalog.RepoRoot, app.projectRoot, ct, "")
+	app.importer.width = app.width - sidebarWidth - 1
+	app.importer.height = app.panelHeight()
+	app.screen = screenImport
+	app.focus = focusContent
+	return app
+}
+
+func TestPreFilteredCreateNewUniversalGoesToName(t *testing.T) {
+	app := navigateToFilteredImport(t, catalog.Skills)
+
+	// Source step: select Create New (cursor 3)
+	app = pressN(app, keyDown, 3)
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+
+	// Universal type should skip provider, go straight to name
+	if app.importer.step != stepName {
+		t.Fatalf("expected stepName for universal Create New, got %d", app.importer.step)
+	}
+}
+
+func TestPreFilteredCreateNewProviderSpecificGoesToProvider(t *testing.T) {
+	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Hooks, catalog.Commands} {
+		t.Run(string(ct), func(t *testing.T) {
+			app := navigateToFilteredImport(t, ct)
+
+			// Source step: select Create New (cursor 3)
+			app = pressN(app, keyDown, 3)
+			m, _ := app.Update(keyEnter)
+			app = m.(App)
+
+			// Provider-specific type should go to provider step (or error if no providers)
+			if app.importer.step == stepProvider {
+				// Good — found providers
+				if len(app.importer.providerNames) == 0 {
+					t.Fatal("providerNames should be populated when on stepProvider")
+				}
+			} else if app.importer.step == stepSource && app.importer.message != "" {
+				// Also acceptable — no providers available, returned to source with error
+			} else {
+				t.Fatalf("expected stepProvider or error, got step %d (msg: %q)", app.importer.step, app.importer.message)
+			}
+		})
+	}
+}
+
+func TestPreFilteredLocalPathProviderSpecificGoesToProvider(t *testing.T) {
+	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Hooks, catalog.Commands} {
+		t.Run(string(ct), func(t *testing.T) {
+			app := navigateToFilteredImport(t, ct)
+
+			// Source step: select Local Path (cursor 1)
+			app = pressN(app, keyDown, 1)
+			m, _ := app.Update(keyEnter)
+			app = m.(App)
+
+			// Provider-specific type should go to provider step (or error if no providers)
+			if app.importer.step == stepProvider {
+				if len(app.importer.providerNames) == 0 {
+					t.Fatal("providerNames should be populated when on stepProvider")
+				}
+			} else if app.importer.step == stepSource && app.importer.message != "" {
+				// No providers available
+			} else {
+				t.Fatalf("expected stepProvider or error, got step %d (msg: %q)", app.importer.step, app.importer.message)
+			}
+		})
+	}
+}
+
+func TestPreFilteredLocalPathUniversalSkipsProvider(t *testing.T) {
+	app := navigateToFilteredImport(t, catalog.Skills)
+
+	// Source step: select Local Path (cursor 1)
+	app = pressN(app, keyDown, 1)
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+
+	// Universal type should skip provider, go to browse start
+	if app.importer.step != stepBrowseStart {
+		t.Fatalf("expected stepBrowseStart for universal Local Path, got %d", app.importer.step)
+	}
+}
+
+func TestPreFilteredCreateProviderThenName(t *testing.T) {
+	app := navigateToFilteredImport(t, catalog.Commands)
+
+	// Navigate: Create New → provider step
+	app = pressN(app, keyDown, 3)
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+
+	if app.importer.step != stepProvider {
+		t.Skip("no providers available, skipping provider→name test")
+	}
+
+	// Select provider → should go to name
+	m, _ = app.Update(keyEnter)
+	app = m.(App)
+	if app.importer.step != stepName {
+		t.Fatalf("expected stepName after provider selection, got %d", app.importer.step)
+	}
+	if app.importer.providerName == "" {
+		t.Fatal("expected providerName to be set")
+	}
+}
+
+func TestDiscoveryFilteredMatchesSelected(t *testing.T) {
+	app := navigateToFilteredImport(t, catalog.Skills)
+
+	// Set up the import model to be on provider pick step
+	app.importer.step = stepProviderPick
+
+	// Simulate discoveryDoneMsg with mixed types
+	msg := discoveryDoneMsg{
+		items: []add.DiscoveryItem{
+			{Name: "skill-one", Type: catalog.Skills, Status: add.StatusNew},
+			{Name: "rule-one", Type: catalog.Rules, Status: add.StatusNew},
+			{Name: "skill-two", Type: catalog.Skills, Status: add.StatusInLibrary},
+			{Name: "rule-two", Type: catalog.Rules, Status: add.StatusOutdated},
+		},
+	}
+	m, _ := app.Update(msg)
+	app = m.(App)
+
+	// Should filter to only Skills (2 items)
+	if len(app.importer.discoveryItems) != 2 {
+		t.Fatalf("expected 2 filtered discovery items, got %d", len(app.importer.discoveryItems))
+	}
+	// discoverySelected should match filtered length
+	if len(app.importer.discoverySelected) != 2 {
+		t.Fatalf("expected discoverySelected length 2, got %d", len(app.importer.discoverySelected))
+	}
+	// First item (skill-one, StatusNew) should be pre-selected
+	if !app.importer.discoverySelected[0] {
+		t.Fatal("expected skill-one (StatusNew) to be pre-selected")
+	}
+	// Second item (skill-two, StatusCurrent) should NOT be pre-selected
+	if app.importer.discoverySelected[1] {
+		t.Fatal("expected skill-two (StatusCurrent) to NOT be pre-selected")
+	}
+}
+
+func TestDiscoveryUnfilteredKeepsAll(t *testing.T) {
+	// No pre-filter — discovery should keep all items
+	app := navigateToImport(t)
+	app.importer.step = stepProviderPick
+
+	msg := discoveryDoneMsg{
+		items: []add.DiscoveryItem{
+			{Name: "skill-one", Type: catalog.Skills, Status: add.StatusNew},
+			{Name: "rule-one", Type: catalog.Rules, Status: add.StatusNew},
+		},
+	}
+	m, _ := app.Update(msg)
+	app = m.(App)
+
+	if len(app.importer.discoveryItems) != 2 {
+		t.Fatalf("expected 2 unfiltered discovery items, got %d", len(app.importer.discoveryItems))
+	}
+	if len(app.importer.discoverySelected) != 2 {
+		t.Fatalf("expected discoverySelected length 2, got %d", len(app.importer.discoverySelected))
+	}
 }

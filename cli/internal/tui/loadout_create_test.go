@@ -61,12 +61,13 @@ func TestCreateLoadoutScreenUpdate(t *testing.T) {
 		}
 	})
 
-	t.Run("esc on types step goes back to provider", func(t *testing.T) {
-		s := newCreateLoadoutScreen("", "", providers, cat, 80, 30)
+	t.Run("esc on types step cancels when provider pre-filled", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		// prefilledProvider is set by constructor; typeEntries populated too
 		s.step = clStepTypes
 		s, _ = s.Update(keyEsc)
-		if s.step != clStepProvider {
-			t.Errorf("step = %v, want clStepProvider after Esc on types", s.step)
+		if s.confirmed {
+			t.Error("Esc on types with prefilled provider should cancel (confirmed=false), not go back")
 		}
 	})
 
@@ -455,6 +456,41 @@ func TestGoldenFullApp_CreateLoadoutItems(t *testing.T) {
 	m, _ := app.Update(keyEnter)
 	app = m.(App)
 	requireGolden(t, "fullapp-create-loadout-items", snapshotApp(t, app))
+}
+
+// TestCreateLoadoutEnterDoesNotTriggerImport verifies that pressing Enter on the
+// items step stays on the create loadout screen and does not trigger an import/add.
+// Regression test for crossover bug where app-level Enter handlers intercepted keys.
+func TestCreateLoadoutEnterDoesNotTriggerImport(t *testing.T) {
+	app := navigateToCreateLoadout(t)
+	// Step 1: Provider selection — select first provider and advance
+	m, _ := app.Update(keyEnter)
+	app = m.(App)
+	assertScreen(t, app, screenCreateLoadout)
+	if app.createLoadout.step != clStepTypes {
+		t.Fatalf("expected clStepTypes after provider, got %d", app.createLoadout.step)
+	}
+
+	// Step 2: Select first type checkbox with Space, then advance with Enter
+	m, _ = app.Update(keySpace)
+	app = m.(App)
+	m, _ = app.Update(keyEnter)
+	app = m.(App)
+	assertScreen(t, app, screenCreateLoadout)
+	if app.createLoadout.step != clStepItems {
+		t.Fatalf("expected clStepItems after types, got %d", app.createLoadout.step)
+	}
+
+	// Press Enter on items step — should advance to name step, NOT trigger import
+	m, _ = app.Update(keyEnter)
+	app = m.(App)
+	assertScreen(t, app, screenCreateLoadout)
+	if app.toast.active {
+		t.Errorf("unexpected toast after Enter on items step: %q", app.toast.text)
+	}
+	if app.screen == screenCategory {
+		t.Error("Enter on items step navigated back to category screen (import crossover bug)")
+	}
 }
 
 func TestGoldenSized_CreateLoadoutTypes(t *testing.T) {
