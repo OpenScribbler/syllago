@@ -932,6 +932,18 @@ func (m createLoadoutScreen) renderLeftPane() string {
 			body += "\n"
 		}
 		filtered := m.filteredTypeItems()
+		if len(filtered) == 0 {
+			provName := m.prefilledProvider
+			for _, p := range m.providerList {
+				if p.Slug == m.prefilledProvider {
+					provName = p.Name
+					break
+				}
+			}
+			body += "  " + helpStyle.Render(fmt.Sprintf("No %s available for %s", ct.Label(), provName)) + "\n"
+			body += "\n" + zone.Mark("wiz-btn-next", buttonStyle.Render("[enter] Next"))
+			break
+		}
 		cursor := m.perTypeCursor[ct]
 		visibleH := m.splitView.visibleListRows() - 4
 		if visibleH < 3 {

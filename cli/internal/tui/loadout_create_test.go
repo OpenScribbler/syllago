@@ -178,6 +178,262 @@ func TestCreateLoadoutScreenUpdate(t *testing.T) {
 		}
 	})
 
+	t.Run("a key selects all compatible items on items step", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s, _ = s.Update(keyEnter) // types -> items
+		if s.step != clStepItems {
+			t.Fatalf("expected clStepItems, got %d", s.step)
+		}
+		// Deselect all first
+		ct := s.currentType()
+		for _, idx := range s.typeItemMap[ct] {
+			s.entries[idx].selected = false
+		}
+		// Toggle all on
+		s, _ = s.Update(keyRune('a'))
+		for _, idx := range s.typeItemMap[ct] {
+			if !s.entries[idx].selected {
+				t.Errorf("item %d should be selected after toggle-all", idx)
+			}
+		}
+		// Toggle all off
+		s, _ = s.Update(keyRune('a'))
+		for _, idx := range s.typeItemMap[ct] {
+			if s.entries[idx].selected {
+				t.Errorf("item %d should be deselected after second toggle-all", idx)
+			}
+		}
+	})
+
+	t.Run("incompatible items render with suffix", func(t *testing.T) {
+		// Use cursor provider which only supports Skills + Rules
+		s := newCreateLoadoutScreen("cursor", "", providers, cat, 80, 30)
+		// Manually set up a type entry for Agents (which cursor doesn't support)
+		// to exercise the incompatible rendering path
+		s.typeEntries = []typeCheckEntry{
+			{ct: catalog.Agents, checked: true, count: 1},
+		}
+		s.step = clStepTypes
+		s, _ = s.Update(keyEnter) // advance to items
+
+		// Force showAllCompat to include items from typeItemMapAll
+		s.showAllCompat = true
+		got := s.View()
+		if !strings.Contains(got, "(incompatible)") {
+			t.Error("incompatible items should render with (incompatible) suffix")
+		}
+	})
+
+	t.Run("search reduces visible items on items step", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s, _ = s.Update(keyEnter) // types -> items
+		ct := s.currentType()
+		allCount := len(s.filteredTypeItems())
+		if allCount < 2 {
+			t.Skip("need at least 2 items to test search filtering")
+		}
+		// Get the name of the first item to use as search query
+		firstIdx := s.filteredTypeItems()[0]
+		query := s.entries[firstIdx].item.Name
+
+		s.perTypeSearch[ct] = query
+		filtered := s.filteredTypeItems()
+		if len(filtered) >= allCount {
+			t.Error("search should reduce visible items")
+		}
+		if len(filtered) == 0 {
+			t.Error("search for existing item name should return at least 1 result")
+		}
+	})
+
+	t.Run("selections persist after search clear", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s, _ = s.Update(keyEnter) // types -> items
+		ct := s.currentType()
+		filtered := s.filteredTypeItems()
+		if len(filtered) == 0 {
+			t.Skip("no items")
+		}
+		// Select the first item
+		idx := filtered[0]
+		s.entries[idx].selected = true
+
+		// Apply search, then clear it
+		s.perTypeSearch[ct] = "nonexistent-query-xyz"
+		s.perTypeSearch[ct] = ""
+
+		// Selection should persist
+		if !s.entries[idx].selected {
+			t.Error("selection should persist after search clear")
+		}
+	})
+
+	t.Run("esc from first type returns to type selection with selections preserved", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s, _ = s.Update(keyEnter) // types -> items
+		if s.step != clStepItems {
+			t.Fatalf("expected clStepItems, got %d", s.step)
+		}
+		// Select an item
+		filtered := s.filteredTypeItems()
+		if len(filtered) == 0 {
+			t.Skip("no items")
+		}
+		idx := filtered[0]
+		s.entries[idx].selected = true
+
+		// Esc back to type selection
+		s, _ = s.Update(keyEsc)
+		if s.step != clStepTypes {
+			t.Errorf("step = %v, want clStepTypes", s.step)
+		}
+
+		// Selection should be preserved
+		if !s.entries[idx].selected {
+			t.Error("item selection should be preserved after Esc to type selection")
+		}
+	})
+
+	t.Run("back-nav preserves cursor position", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s, _ = s.Update(keyEnter) // types -> items
+		ct := s.currentType()
+		filtered := s.filteredTypeItems()
+		if len(filtered) < 2 {
+			t.Skip("need at least 2 items")
+		}
+		// Move cursor down
+		s, _ = s.Update(keyDown)
+		savedCursor := s.perTypeCursor[ct]
+		if savedCursor != 1 {
+			t.Fatalf("cursor should be 1, got %d", savedCursor)
+		}
+
+		// Advance to next type (or name if only 1 type)
+		s, _ = s.Update(keyEnter)
+		// Go back
+		s, _ = s.Update(keyEsc)
+
+		// Cursor should be preserved
+		if s.perTypeCursor[ct] != savedCursor {
+			t.Errorf("cursor = %d, want %d (should be preserved on back-nav)",
+				s.perTypeCursor[ct], savedCursor)
+		}
+	})
+
+	t.Run("per-type scroll offset preserved on back-nav", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s, _ = s.Update(keyEnter) // types -> items
+		ct := s.currentType()
+
+		// Manually set a scroll offset
+		s.perTypeScroll[ct] = 5
+
+		// Advance and go back
+		s, _ = s.Update(keyEnter)
+		s, _ = s.Update(keyEsc)
+
+		if s.perTypeScroll[ct] != 5 {
+			t.Errorf("scroll offset = %d, want 5 (should be preserved on back-nav)",
+				s.perTypeScroll[ct])
+		}
+	})
+
+	t.Run("empty type shows message and Enter advances", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		// Set up a type with no items by manually adding a fake type entry
+		s.typeEntries = append(s.typeEntries, typeCheckEntry{
+			ct:      catalog.ContentType("prompts"),
+			checked: true,
+			count:   0,
+		})
+		s.step = clStepTypes
+		s, _ = s.Update(keyEnter) // advance to items
+
+		// Navigate to the Prompts type step (last one)
+		for s.currentType() != catalog.ContentType("prompts") && s.step == clStepItems {
+			s, _ = s.Update(keyEnter)
+		}
+		if s.currentType() != catalog.ContentType("prompts") {
+			t.Skip("could not reach Prompts type step")
+		}
+
+		got := s.View()
+		if !strings.Contains(got, "No ") || !strings.Contains(got, "available") {
+			t.Error("empty type should show 'No X available for Y' message")
+		}
+
+		// Enter should still advance past empty type
+		s, _ = s.Update(keyEnter)
+		if s.currentType() == catalog.ContentType("prompts") && s.step == clStepItems {
+			t.Error("Enter should advance past empty type")
+		}
+	})
+
+	t.Run("empty type Esc goes back", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s.typeEntries = append(s.typeEntries, typeCheckEntry{
+			ct:      catalog.ContentType("prompts"),
+			checked: true,
+			count:   0,
+		})
+		s.step = clStepTypes
+		s, _ = s.Update(keyEnter) // advance to items
+
+		// Navigate to the Prompts type step
+		for s.currentType() != catalog.ContentType("prompts") && s.step == clStepItems {
+			s, _ = s.Update(keyEnter)
+		}
+		if s.currentType() != catalog.ContentType("prompts") {
+			t.Skip("could not reach Prompts type step")
+		}
+
+		prevTypeIndex := s.typeStepIndex
+		s, _ = s.Update(keyEsc)
+		if s.typeStepIndex != prevTypeIndex-1 {
+			t.Errorf("typeStepIndex = %d, want %d after Esc",
+				s.typeStepIndex, prevTypeIndex-1)
+		}
+	})
+
+	t.Run("full flow through multiple types preserves all selections", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s, _ = s.Update(keyEnter) // types -> items
+		nTypes := len(s.selectedTypes)
+		if nTypes < 2 {
+			t.Skip("need at least 2 types to test full flow")
+		}
+
+		// Select first item in each type step
+		selectedIndices := make(map[int]bool)
+		for i := 0; i < nTypes; i++ {
+			filtered := s.filteredTypeItems()
+			if len(filtered) > 0 {
+				idx := filtered[0]
+				s.entries[idx].selected = true
+				selectedIndices[idx] = true
+			}
+			s, _ = s.Update(keyEnter) // advance to next type or name
+		}
+		if s.step != clStepName {
+			t.Fatalf("expected clStepName, got %d", s.step)
+		}
+
+		// Verify all selections survived
+		for idx := range selectedIndices {
+			if !s.entries[idx].selected {
+				t.Errorf("entry %d (%s) selection lost after full flow",
+					idx, s.entries[idx].item.Name)
+			}
+		}
+
+		// Verify selectedItems returns them
+		selected := s.selectedItems()
+		if len(selected) != len(selectedIndices) {
+			t.Errorf("selectedItems() = %d, want %d", len(selected), len(selectedIndices))
+		}
+	})
+
 	t.Run("enter advances through types to name", func(t *testing.T) {
 		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
 		s, _ = s.Update(keyEnter) // types -> items
