@@ -115,18 +115,23 @@ var registryAddCmd = &cobra.Command{
 		scanResult := catalog.ScanNativeContent(dir)
 
 		if !scanResult.HasSyllagoStructure && len(scanResult.Providers) > 0 {
-			fmt.Fprintf(output.ErrWriter, "\nThis repo doesn't appear to be a syllago registry.\n")
-			fmt.Fprintf(output.ErrWriter, "Found provider-native content:\n\n")
-			for _, pc := range scanResult.Providers {
-				fmt.Fprintf(output.ErrWriter, "  %s:\n", pc.ProviderName)
-				for typeLabel, files := range pc.ByType {
-					fmt.Fprintf(output.ErrWriter, "    %s: %d file(s)\n", typeLabel, len(files))
+			// Before rejecting, check if the repo has indexed items via registry.yaml.
+			// A repo with a manifest.Items list is a valid indexed native registry.
+			manifest, _ := registry.LoadManifestFromDir(dir)
+			if manifest == nil || len(manifest.Items) == 0 {
+				fmt.Fprintf(output.ErrWriter, "\nThis repo doesn't appear to be a syllago registry.\n")
+				fmt.Fprintf(output.ErrWriter, "Found provider-native content:\n\n")
+				for _, pc := range scanResult.Providers {
+					fmt.Fprintf(output.ErrWriter, "  %s:\n", pc.ProviderName)
+					for typeLabel, items := range pc.Items {
+						fmt.Fprintf(output.ErrWriter, "    %s: %d item(s)\n", typeLabel, len(items))
+					}
 				}
+				fmt.Fprintf(output.ErrWriter, "\nThis content cannot be added as a registry (registries require syllago format).\n")
+				fmt.Fprintf(output.ErrWriter, "To add this content to your library, use: syllago add <path> (coming soon)\n")
+				os.RemoveAll(dir)
+				return fmt.Errorf("not a syllago registry -- clone removed")
 			}
-			fmt.Fprintf(output.ErrWriter, "\nThis content cannot be added as a registry (registries require syllago format).\n")
-			fmt.Fprintf(output.ErrWriter, "To add this content to your library, use: syllago add <path> (coming soon)\n")
-			os.RemoveAll(dir)
-			return fmt.Errorf("not a syllago registry -- clone removed")
 		} else if !scanResult.HasSyllagoStructure && len(scanResult.Providers) == 0 {
 			fmt.Fprintf(output.ErrWriter, "Warning: registry %q doesn't appear to contain any recognized content. Added anyway.\n", name)
 		}
@@ -458,75 +463,91 @@ Examples:
 }
 
 var registryCreateCmd = &cobra.Command{
-	Use:   "create <name>",
-	Short: "Scaffold a new registry directory",
-	Long: `Creates a new registry directory with the standard structure:
-content type subdirectories, a registry.yaml manifest, and a README.
+	Use:   "create",
+	Short: "Create a new registry",
+	Long: `Create a new registry in one of two modes:
 
-This is for registry authors who want to create a new registry from
-scratch. The resulting directory can be committed to a git repo and
-shared via "syllago registry add <url>".
+  --new <name>          Scaffold an empty registry directory structure
+  --from-native         Index provider-native content in the current repo
 
-Example:
-  syllago registry create my-team-rules --description "Our team's shared rules"`,
-	Args: cobra.ExactArgs(1),
+Examples:
+  syllago registry create --new my-rules
+  syllago registry create --from-native`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		name := args[0]
-		desc, _ := cmd.Flags().GetString("description")
-		noGit, _ := cmd.Flags().GetBool("no-git")
+		newName, _ := cmd.Flags().GetString("new")
+		fromNative, _ := cmd.Flags().GetBool("from-native")
 
-		cwd, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("getting working directory: %w", err)
+		switch {
+		case newName != "":
+			return runRegistryCreateNew(cmd, newName)
+		case fromNative:
+			return runRegistryCreateFromNative(cmd)
+		default:
+			return cmd.Help()
 		}
-
-		// Check if already inside a git repo before creating anything.
-		alreadyInGit := gitutil.IsInsideGitRepo(cwd)
-
-		if err := registry.Scaffold(cwd, name, desc); err != nil {
-			return err
-		}
-
-		dir := filepath.Join(cwd, name)
-		fmt.Fprintf(output.Writer, "Created registry scaffold at %s\n", dir)
-		fmt.Fprintf(output.Writer, "\nStructure:\n")
-
-		entries, _ := os.ReadDir(dir)
-		for _, e := range entries {
-			if e.IsDir() {
-				fmt.Fprintf(output.Writer, "  %s/\n", e.Name())
-			} else {
-				fmt.Fprintf(output.Writer, "  %s\n", e.Name())
-			}
-		}
-
-		// Git init + commit.
-		didGitInit := false
-		if !noGit && !alreadyInGit {
-			if gitErr := gitutil.InitAndCommit(dir, "Initial registry scaffold"); gitErr != nil {
-				fmt.Fprintf(output.ErrWriter, "Warning: git init failed: %s\n", gitErr)
-			} else {
-				fmt.Fprintf(output.Writer, "\nInitialized git repository and created initial commit.\n")
-				didGitInit = true
-			}
-		} else if alreadyInGit && !noGit {
-			fmt.Fprintf(output.Writer, "\nNote: already inside a git repo — skipping git init.\n")
-		}
-
-		fmt.Fprintf(output.Writer, "\nNext steps:\n")
-		fmt.Fprintf(output.Writer, "  cd %s\n", name)
-		if didGitInit {
-			fmt.Fprintf(output.Writer, "  git remote add origin <your-git-url>\n")
-			fmt.Fprintf(output.Writer, "  git push -u origin main\n")
-		} else {
-			fmt.Fprintf(output.Writer, "  git init && git add . && git commit -m 'Initial registry scaffold'\n")
-			fmt.Fprintf(output.Writer, "  git remote add origin <your-git-url>\n")
-			fmt.Fprintf(output.Writer, "  git push -u origin main\n")
-		}
-		fmt.Fprintf(output.Writer, "\nThen add your registry locally:\n")
-		fmt.Fprintf(output.Writer, "  syllago registry add <your-git-url>\n")
-		return nil
 	},
+}
+
+func runRegistryCreateNew(cmd *cobra.Command, name string) error {
+	desc, _ := cmd.Flags().GetString("description")
+	noGit, _ := cmd.Flags().GetBool("no-git")
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("getting working directory: %w", err)
+	}
+
+	// Check if already inside a git repo before creating anything.
+	alreadyInGit := gitutil.IsInsideGitRepo(cwd)
+
+	if err := registry.Scaffold(cwd, name, desc); err != nil {
+		return err
+	}
+
+	dir := filepath.Join(cwd, name)
+	fmt.Fprintf(output.Writer, "Created registry scaffold at %s\n", dir)
+	fmt.Fprintf(output.Writer, "\nStructure:\n")
+
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if e.IsDir() {
+			fmt.Fprintf(output.Writer, "  %s/\n", e.Name())
+		} else {
+			fmt.Fprintf(output.Writer, "  %s\n", e.Name())
+		}
+	}
+
+	// Git init + commit.
+	didGitInit := false
+	if !noGit && !alreadyInGit {
+		if gitErr := gitutil.InitAndCommit(dir, "Initial registry scaffold"); gitErr != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: git init failed: %s\n", gitErr)
+		} else {
+			fmt.Fprintf(output.Writer, "\nInitialized git repository and created initial commit.\n")
+			didGitInit = true
+		}
+	} else if alreadyInGit && !noGit {
+		fmt.Fprintf(output.Writer, "\nNote: already inside a git repo — skipping git init.\n")
+	}
+
+	fmt.Fprintf(output.Writer, "\nNext steps:\n")
+	fmt.Fprintf(output.Writer, "  cd %s\n", name)
+	if didGitInit {
+		fmt.Fprintf(output.Writer, "  git remote add origin <your-git-url>\n")
+		fmt.Fprintf(output.Writer, "  git push -u origin main\n")
+	} else {
+		fmt.Fprintf(output.Writer, "  git init && git add . && git commit -m 'Initial registry scaffold'\n")
+		fmt.Fprintf(output.Writer, "  git remote add origin <your-git-url>\n")
+		fmt.Fprintf(output.Writer, "  git push -u origin main\n")
+	}
+	fmt.Fprintf(output.Writer, "\nThen add your registry locally:\n")
+	fmt.Fprintf(output.Writer, "  syllago registry add <your-git-url>\n")
+	return nil
+}
+
+func runRegistryCreateFromNative(cmd *cobra.Command) error {
+	desc, _ := cmd.Flags().GetString("description")
+	return registryCreateFromNative(desc)
 }
 
 // truncateStr cuts a string to max length with "..." suffix.
@@ -545,8 +566,10 @@ func init() {
 	registryAddCmd.Flags().String("ref", "", "Branch, tag, or commit to checkout (default: repo default branch)")
 	registryItemsCmd.Flags().String("type", "", "Filter by content type (skills, rules, hooks, etc.)")
 
-	registryCreateCmd.Flags().String("description", "", "Short description of the registry")
-	registryCreateCmd.Flags().Bool("no-git", false, "Skip git init and initial commit")
+	registryCreateCmd.Flags().String("new", "", "Scaffold an empty registry directory with this name")
+	registryCreateCmd.Flags().Bool("from-native", false, "Index provider-native content in the current repo")
+	registryCreateCmd.Flags().String("description", "", "Short description of the registry (used with --new)")
+	registryCreateCmd.Flags().Bool("no-git", false, "Skip git init and initial commit (used with --new)")
 
 	registryCmd.AddCommand(registryAddCmd, registryRemoveCmd, registryListCmd, registrySyncCmd, registryItemsCmd, registryCreateCmd)
 	rootCmd.AddCommand(registryCmd)

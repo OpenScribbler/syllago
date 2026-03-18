@@ -318,10 +318,15 @@ func (a *App) doRegistryAdd(gitURL, nameOverride string) tea.Cmd {
 		dir, _ := registry.CloneDir(name)
 		scanResult := catalog.ScanNativeContent(dir)
 		if !scanResult.HasSyllagoStructure && len(scanResult.Providers) > 0 {
-			return registryAddNonSyllagoMsg{
-				name:      name,
-				clonePath: dir,
-				scan:      scanResult,
+			// Before rejecting, check if the repo has indexed items via registry.yaml.
+			// A repo with a manifest.Items list is a valid indexed native registry.
+			manifest, _ := registry.LoadManifestFromDir(dir)
+			if manifest == nil || len(manifest.Items) == 0 {
+				return registryAddNonSyllagoMsg{
+					name:      name,
+					clonePath: dir,
+					scan:      scanResult,
+				}
 			}
 		} else if !scanResult.HasSyllagoStructure && len(scanResult.Providers) == 0 {
 			// No content at all — flag for warning message

@@ -71,9 +71,9 @@ func TestExpandAlias_SSHURL_NotExpanded(t *testing.T) {
 func TestLoadManifest_Missing(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir() // no registry.yaml
-	m, err := loadManifestFromDir(dir)
+	m, err := LoadManifestFromDir(dir)
 	if err != nil {
-		t.Fatalf("loadManifestFromDir: %v", err)
+		t.Fatalf("LoadManifestFromDir: %v", err)
 	}
 	if m != nil {
 		t.Errorf("expected nil manifest for missing file, got %+v", m)
@@ -87,9 +87,9 @@ func TestLoadManifest_Valid(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "registry.yaml"), []byte(content), 0644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
-	m, err := loadManifestFromDir(dir)
+	m, err := LoadManifestFromDir(dir)
 	if err != nil {
-		t.Fatalf("loadManifestFromDir: %v", err)
+		t.Fatalf("LoadManifestFromDir: %v", err)
 	}
 	if m == nil {
 		t.Fatal("expected non-nil manifest")
@@ -111,7 +111,7 @@ func TestLoadManifest_InvalidYAML(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "registry.yaml"), []byte(":\n  - bad: [yaml"), 0644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
-	_, err := loadManifestFromDir(dir)
+	_, err := LoadManifestFromDir(dir)
 	if err == nil {
 		t.Fatal("expected error for invalid YAML, got nil")
 	}
@@ -131,9 +131,9 @@ min_syllago_version: "0.5.0"
 	if err := os.WriteFile(filepath.Join(dir, "registry.yaml"), []byte(content), 0644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
-	m, err := loadManifestFromDir(dir)
+	m, err := LoadManifestFromDir(dir)
 	if err != nil {
-		t.Fatalf("loadManifestFromDir: %v", err)
+		t.Fatalf("LoadManifestFromDir: %v", err)
 	}
 	if m == nil {
 		t.Fatal("expected non-nil manifest")
@@ -143,5 +143,85 @@ min_syllago_version: "0.5.0"
 	}
 	if m.MinSyllagoVersion != "0.5.0" {
 		t.Errorf("MinSyllagoVersion = %q, want %q", m.MinSyllagoVersion, "0.5.0")
+	}
+}
+
+func TestLoadManifest_WithItems(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	content := `name: native-registry
+items:
+  - name: my-skill
+    type: skills
+    provider: claude-code
+    path: skills/my-skill.md
+  - name: on-save-hook
+    type: hooks
+    provider: claude-code
+    path: .claude/settings.json
+    hookEvent: PostToolUse
+    hookIndex: 0
+    scripts:
+      - hooks/on-save.sh
+`
+	if err := os.WriteFile(filepath.Join(dir, "registry.yaml"), []byte(content), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	m, err := LoadManifestFromDir(dir)
+	if err != nil {
+		t.Fatalf("LoadManifestFromDir: %v", err)
+	}
+	if m == nil {
+		t.Fatal("expected non-nil manifest")
+	}
+	if len(m.Items) != 2 {
+		t.Fatalf("Items len = %d, want 2", len(m.Items))
+	}
+
+	skill := m.Items[0]
+	if skill.Name != "my-skill" {
+		t.Errorf("Items[0].Name = %q, want %q", skill.Name, "my-skill")
+	}
+	if skill.Type != "skills" {
+		t.Errorf("Items[0].Type = %q, want %q", skill.Type, "skills")
+	}
+	if skill.Provider != "claude-code" {
+		t.Errorf("Items[0].Provider = %q, want %q", skill.Provider, "claude-code")
+	}
+	if skill.Path != "skills/my-skill.md" {
+		t.Errorf("Items[0].Path = %q, want %q", skill.Path, "skills/my-skill.md")
+	}
+	if skill.HookEvent != "" {
+		t.Errorf("Items[0].HookEvent = %q, want empty", skill.HookEvent)
+	}
+
+	hook := m.Items[1]
+	if hook.HookEvent != "PostToolUse" {
+		t.Errorf("Items[1].HookEvent = %q, want %q", hook.HookEvent, "PostToolUse")
+	}
+	if hook.HookIndex != 0 {
+		t.Errorf("Items[1].HookIndex = %d, want 0", hook.HookIndex)
+	}
+	if len(hook.Scripts) != 1 || hook.Scripts[0] != "hooks/on-save.sh" {
+		t.Errorf("Items[1].Scripts = %v, want [hooks/on-save.sh]", hook.Scripts)
+	}
+}
+
+func TestLoadManifest_WithoutItems(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	content := "name: legacy-registry\ndescription: No items section\n"
+	if err := os.WriteFile(filepath.Join(dir, "registry.yaml"), []byte(content), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	m, err := LoadManifestFromDir(dir)
+	if err != nil {
+		t.Fatalf("LoadManifestFromDir: %v", err)
+	}
+	if m == nil {
+		t.Fatal("expected non-nil manifest")
+	}
+	if m.Items != nil {
+		t.Errorf("Items = %v, want nil for registry.yaml without items section", m.Items)
 	}
 }
