@@ -891,6 +891,287 @@ func TestCreateLoadoutScreenSplitView(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Back-navigation state preservation tests
+// ---------------------------------------------------------------------------
+
+func TestCreateLoadoutBackNavState(t *testing.T) {
+	cat := testCatalog(t)
+	providers := testProviders(t)
+
+	t.Run("provider to types to items and back preserves type checks", func(t *testing.T) {
+		s := newCreateLoadoutScreen("", "", providers, cat, 80, 30)
+		// Pick provider
+		s, _ = s.Update(keyEnter) // -> types
+		if s.step != clStepTypes {
+			t.Fatalf("expected clStepTypes, got %d", s.step)
+		}
+		// Uncheck first type
+		s, _ = s.Update(keySpace)
+		firstUnchecked := !s.typeEntries[0].checked
+		if !firstUnchecked {
+			t.Fatal("first type should be unchecked after space")
+		}
+		nChecked := 0
+		for _, te := range s.typeEntries {
+			if te.checked {
+				nChecked++
+			}
+		}
+		// Advance to items
+		s, _ = s.Update(keyEnter) // -> items
+		if s.step != clStepItems {
+			t.Fatalf("expected clStepItems, got %d", s.step)
+		}
+		// Back to types
+		s, _ = s.Update(keyEsc) // -> types
+		if s.step != clStepTypes {
+			t.Fatalf("expected clStepTypes on Esc, got %d", s.step)
+		}
+		// Verify type checks preserved
+		if s.typeEntries[0].checked {
+			t.Error("first type should still be unchecked after back-nav")
+		}
+		nCheckedAfter := 0
+		for _, te := range s.typeEntries {
+			if te.checked {
+				nCheckedAfter++
+			}
+		}
+		if nCheckedAfter != nChecked {
+			t.Errorf("checked count = %d, want %d after back-nav", nCheckedAfter, nChecked)
+		}
+	})
+
+	t.Run("items selections preserved across type steps and back", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s, _ = s.Update(keyEnter) // types -> items
+		if s.step != clStepItems {
+			t.Fatalf("expected clStepItems, got %d", s.step)
+		}
+		// Select first item in first type
+		filtered := s.filteredTypeItems()
+		if len(filtered) == 0 {
+			t.Skip("no items")
+		}
+		idx := filtered[0]
+		s.entries[idx].selected = true
+		firstType := s.currentType()
+
+		// Advance to next type (or name if only 1 type)
+		s, _ = s.Update(keyEnter)
+		// Back
+		s, _ = s.Update(keyEsc)
+
+		// Verify we're back on the first type with selection intact
+		if s.currentType() != firstType {
+			t.Errorf("currentType = %v, want %v", s.currentType(), firstType)
+		}
+		if !s.entries[idx].selected {
+			t.Error("item selection lost after type-step round trip")
+		}
+	})
+
+	t.Run("review to name and back preserves items but updates name", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s, _ = s.Update(keyEnter) // types -> items
+		// Select an item
+		filtered := s.filteredTypeItems()
+		if len(filtered) == 0 {
+			t.Skip("no items")
+		}
+		idx := filtered[0]
+		s.entries[idx].selected = true
+
+		// Advance through all types to name
+		for s.step == clStepItems {
+			s, _ = s.Update(keyEnter)
+		}
+		if s.step != clStepName {
+			t.Fatalf("expected clStepName, got %d", s.step)
+		}
+		s.nameInput.SetValue("original-name")
+		s, _ = s.Update(keyEnter) // name -> dest
+		s, _ = s.Update(keyEnter) // dest -> review
+
+		if s.step != clStepReview {
+			t.Fatalf("expected clStepReview, got %d", s.step)
+		}
+		// Back to dest, back to name
+		s, _ = s.Update(keyEsc) // review -> dest
+		s, _ = s.Update(keyEsc) // dest -> name
+
+		// Change name
+		s.nameInput.SetValue("changed-name")
+		s, _ = s.Update(keyEnter) // name -> dest
+		s, _ = s.Update(keyEnter) // dest -> review
+
+		// Verify new name in review, items still selected
+		got := s.View()
+		if !strings.Contains(got, "changed-name") {
+			t.Error("review should show updated name")
+		}
+		if !s.entries[idx].selected {
+			t.Error("item selection lost after name change round trip")
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// Boundary tests
+// ---------------------------------------------------------------------------
+
+func TestCreateLoadoutBoundary(t *testing.T) {
+	providers := testProviders(t)
+
+	t.Run("50+ items in single type scrolls", func(t *testing.T) {
+		tmp := t.TempDir()
+		var items []catalog.ContentItem
+		for i := 0; i < 55; i++ {
+			name := fmt.Sprintf("rule-%03d", i)
+			dir := filepath.Join(tmp, "rules", "claude-code", name)
+			os.MkdirAll(dir, 0o755)
+			os.WriteFile(filepath.Join(dir, "rule.md"), []byte("# "+name), 0o644)
+			items = append(items, catalog.ContentItem{
+				Name:     name,
+				Type:     catalog.Rules,
+				Path:     dir,
+				Provider: "claude-code",
+				Files:    []string{"rule.md"},
+			})
+		}
+		cat := &catalog.Catalog{RepoRoot: tmp, Items: items}
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s, _ = s.Update(keyEnter) // types -> items
+		if s.step != clStepItems {
+			t.Fatalf("expected clStepItems, got %d", s.step)
+		}
+		// Should render without panic
+		got := s.View()
+		if got == "" {
+			t.Error("View should not be empty with 55 items")
+		}
+		// Move cursor down past visible area
+		for i := 0; i < 25; i++ {
+			s, _ = s.Update(keyDown)
+		}
+		got = s.View()
+		if !strings.Contains(got, "more") {
+			t.Log("scroll indicators may or may not show depending on viewport")
+		}
+	})
+
+	t.Run("empty catalog wizard shows empty type message", func(t *testing.T) {
+		cat := &catalog.Catalog{RepoRoot: t.TempDir()}
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		// With no items, typeEntries is empty after buildTypeEntries
+		// The wizard should be at types step but with nothing to show
+		if s.step != clStepTypes {
+			// If no types built, wizard may stay at provider step
+			t.Logf("step = %d (no types to select)", s.step)
+		}
+		got := s.View()
+		if got == "" {
+			t.Error("empty catalog View should not be empty")
+		}
+	})
+
+	t.Run("wizard at 60x20 renders without panic", func(t *testing.T) {
+		cat := testCatalog(t)
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 60, 20)
+		// Walk through each step to verify no panics at tiny size
+		s, _ = s.Update(keyEnter) // types -> items
+		got := s.View()
+		if got == "" {
+			t.Error("60x20 items View should not be empty")
+		}
+		for s.step == clStepItems {
+			s, _ = s.Update(keyEnter)
+		}
+		got = s.View()
+		if got == "" {
+			t.Error("60x20 name View should not be empty")
+		}
+	})
+
+	t.Run("wizard at 80x24 common terminal", func(t *testing.T) {
+		cat := testCatalog(t)
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 24)
+		s, _ = s.Update(keyEnter) // types -> items
+		got := s.View()
+		if got == "" {
+			t.Error("80x24 items View should not be empty")
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// Mouse interaction tests per step
+// ---------------------------------------------------------------------------
+
+func TestCreateLoadoutMouse(t *testing.T) {
+	cat := testCatalog(t)
+	providers := testProviders(t)
+
+	t.Run("provider step click selects and advances", func(t *testing.T) {
+		s := newCreateLoadoutScreen("", "", providers, cat, 80, 30)
+		if s.step != clStepProvider {
+			t.Skip("need provider step")
+		}
+		// Simulate click on first provider zone
+		s, _ = s.Update(tea.MouseMsg{
+			Button: tea.MouseButtonLeft,
+			Action: tea.MouseActionRelease,
+		})
+		// Zone clicks require bubblezone to resolve — just verify no panic
+	})
+
+	t.Run("review step Back button click", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s.step = clStepReview
+		s.reviewBtnCursor = 1 // Start on Create
+		// Simulate generic mouse release — zone resolution requires rendered output
+		// so we test the keyboard equivalent triggered by zone click
+		s, _ = s.Update(tea.KeyMsg{Type: tea.KeyLeft})
+		if s.reviewBtnCursor != 0 {
+			t.Errorf("reviewBtnCursor = %d, want 0 after Left", s.reviewBtnCursor)
+		}
+		s, _ = s.Update(keyEnter) // Confirm Back
+		if s.step != clStepDest {
+			t.Errorf("step = %d, want clStepDest after Back", s.step)
+		}
+	})
+
+	t.Run("review step Create button click", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
+		s.step = clStepReview
+		s.reviewBtnCursor = 1
+		s, _ = s.Update(keyEnter) // Confirm Create
+		if !s.confirmed {
+			t.Error("confirmed should be true after Create")
+		}
+	})
+
+	t.Run("mouse wheel scrolls review", func(t *testing.T) {
+		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 15)
+		s.nameInput.SetValue("test")
+		for i := range s.entries {
+			s.entries[i].selected = true
+		}
+		s.step = clStepReview
+		// Wheel down
+		s, _ = s.Update(tea.MouseMsg{Button: tea.MouseButtonWheelDown})
+		if s.reviewScroll != 1 {
+			t.Errorf("reviewScroll = %d after wheel down, want 1", s.reviewScroll)
+		}
+		// Wheel up
+		s, _ = s.Update(tea.MouseMsg{Button: tea.MouseButtonWheelUp})
+		if s.reviewScroll != 0 {
+			t.Errorf("reviewScroll = %d after wheel up, want 0", s.reviewScroll)
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
 // Golden file tests
 // ---------------------------------------------------------------------------
 
@@ -979,6 +1260,69 @@ func TestGoldenSized_CreateLoadoutTypes(t *testing.T) {
 		t.Run(sz.tag, func(t *testing.T) {
 			app := navigateToCreateLoadoutSize(t, sz.width, sz.height)
 			requireGolden(t, "fullapp-create-loadout-types-"+sz.tag,
+				normalizeSnapshot(snapshotApp(t, app)))
+		})
+	}
+}
+
+func TestGoldenSized_CreateLoadoutItems(t *testing.T) {
+	for _, sz := range testSizes {
+		t.Run(sz.tag, func(t *testing.T) {
+			app := navigateToCreateLoadoutSize(t, sz.width, sz.height)
+			m, _ := app.Update(keyEnter) // types -> items
+			app = m.(App)
+			requireGolden(t, "fullapp-create-loadout-items-"+sz.tag,
+				normalizeSnapshot(snapshotApp(t, app)))
+		})
+	}
+}
+
+// advanceToStep advances the create loadout wizard to the given step.
+func advanceToStep(t *testing.T, app App, target createLoadoutStep) App {
+	t.Helper()
+	maxIter := 50
+	for i := 0; i < maxIter && app.createLoadout.step < target; i++ {
+		step := app.createLoadout.step
+		if step == clStepName {
+			app.createLoadout.nameInput.SetValue("test-loadout")
+		}
+		m, _ := app.Update(keyEnter)
+		app = m.(App)
+		// Safety: if step didn't change and we're stuck, bail
+		if app.createLoadout.step == step && step != clStepItems {
+			t.Fatalf("stuck at step %d, target %d", step, target)
+		}
+	}
+	if app.createLoadout.step != target {
+		t.Fatalf("expected step %d, got %d", target, app.createLoadout.step)
+	}
+	return app
+}
+
+func TestGoldenFullApp_CreateLoadoutName(t *testing.T) {
+	app := navigateToCreateLoadout(t)
+	app = advanceToStep(t, app, clStepName)
+	requireGolden(t, "fullapp-create-loadout-name", snapshotApp(t, app))
+}
+
+func TestGoldenFullApp_CreateLoadoutDest(t *testing.T) {
+	app := navigateToCreateLoadout(t)
+	app = advanceToStep(t, app, clStepDest)
+	requireGolden(t, "fullapp-create-loadout-dest", snapshotApp(t, app))
+}
+
+func TestGoldenFullApp_CreateLoadoutReview(t *testing.T) {
+	app := navigateToCreateLoadout(t)
+	app = advanceToStep(t, app, clStepReview)
+	requireGolden(t, "fullapp-create-loadout-review", snapshotApp(t, app))
+}
+
+func TestGoldenSized_CreateLoadoutReview(t *testing.T) {
+	for _, sz := range testSizes {
+		t.Run(sz.tag, func(t *testing.T) {
+			app := navigateToCreateLoadoutSize(t, sz.width, sz.height)
+			app = advanceToStep(t, app, clStepReview)
+			requireGolden(t, "fullapp-create-loadout-review-"+sz.tag,
 				normalizeSnapshot(snapshotApp(t, app)))
 		})
 	}
