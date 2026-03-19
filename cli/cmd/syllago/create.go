@@ -16,11 +16,15 @@ var createCmd = &cobra.Command{
 	Use:   "create <type> <name>",
 	Short: "Scaffold a new content item in the global library",
 	Long: `Creates a new content item directory under ~/.syllago/content/ with
-.syllago.yaml metadata.
-
-Examples:
+.syllago.yaml metadata.`,
+	Example: `  # Create a new skill
   syllago create skills my-new-skill
-  syllago create rules my-rule --provider claude-code`,
+
+  # Create a provider-specific rule
+  syllago create rules my-rule --provider claude-code
+
+  # Create a new agent
+  syllago create agents my-agent`,
 	Args: cobra.ExactArgs(2),
 	RunE: runCreate,
 }

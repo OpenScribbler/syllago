@@ -19,12 +19,23 @@ var sandboxCmd = &cobra.Command{
 network egress, and environment variables.
 
 Linux only: requires bubblewrap >= 0.4.0 and socat >= 1.7.0.`,
+	Example: `  syllago sandbox run claude-code
+  syllago sandbox check
+  syllago sandbox allow-domain api.example.com`,
 }
 
 var sandboxRunCmd = &cobra.Command{
 	Use:   "run <provider>",
 	Short: "Run a provider in a sandbox",
-	Args:  cobra.ExactArgs(1),
+	Example: `  # Run Claude Code in a sandbox
+  syllago sandbox run claude-code
+
+  # Run with additional domain access
+  syllago sandbox run claude-code --allow-domain api.example.com
+
+  # Run with no network at all
+  syllago sandbox run gemini-cli --no-network`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findProjectRoot()
 		if err != nil {
@@ -78,7 +89,12 @@ var sandboxRunCmd = &cobra.Command{
 var sandboxCheckCmd = &cobra.Command{
 	Use:   "check [provider]",
 	Short: "Verify bubblewrap, socat, and optionally a provider",
-	Args:  cobra.MaximumNArgs(1),
+	Example: `  # Check sandbox prerequisites
+  syllago sandbox check
+
+  # Check prerequisites for a specific provider
+  syllago sandbox check claude-code`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -104,7 +120,12 @@ var sandboxCheckCmd = &cobra.Command{
 var sandboxInfoCmd = &cobra.Command{
 	Use:   "info [provider]",
 	Short: "Show effective sandbox configuration",
-	Args:  cobra.MaximumNArgs(1),
+	Example: `  # Show sandbox config
+  syllago sandbox info
+
+  # Show config with provider mount profile
+  syllago sandbox info claude-code`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findProjectRoot()
 		if err != nil {
@@ -137,9 +158,10 @@ var sandboxInfoCmd = &cobra.Command{
 }
 
 var sandboxAllowDomainCmd = &cobra.Command{
-	Use:   "allow-domain <domain>",
-	Short: "Add a domain to the sandbox allowlist",
-	Args:  cobra.ExactArgs(1),
+	Use:     "allow-domain <domain>",
+	Short:   "Add a domain to the sandbox allowlist",
+	Example: `  syllago sandbox allow-domain api.example.com`,
+	Args:    cobra.ExactArgs(1),
 	RunE: sandboxConfigMutator(func(sb *config.SandboxConfig, args []string) {
 		sb.AllowedDomains = appendUnique(sb.AllowedDomains, args[0])
 		fmt.Fprintf(output.Writer, "Added domain: %s\n", args[0])
@@ -147,9 +169,10 @@ var sandboxAllowDomainCmd = &cobra.Command{
 }
 
 var sandboxDenyDomainCmd = &cobra.Command{
-	Use:   "deny-domain <domain>",
-	Short: "Remove a domain from the sandbox allowlist",
-	Args:  cobra.ExactArgs(1),
+	Use:     "deny-domain <domain>",
+	Short:   "Remove a domain from the sandbox allowlist",
+	Example: `  syllago sandbox deny-domain api.example.com`,
+	Args:    cobra.ExactArgs(1),
 	RunE: sandboxConfigMutator(func(sb *config.SandboxConfig, args []string) {
 		sb.AllowedDomains = removeItem(sb.AllowedDomains, args[0])
 		fmt.Fprintf(output.Writer, "Removed domain: %s\n", args[0])
@@ -157,9 +180,10 @@ var sandboxDenyDomainCmd = &cobra.Command{
 }
 
 var sandboxAllowEnvCmd = &cobra.Command{
-	Use:   "allow-env <VAR>",
-	Short: "Add an env var to the sandbox allowlist",
-	Args:  cobra.ExactArgs(1),
+	Use:     "allow-env <VAR>",
+	Short:   "Add an env var to the sandbox allowlist",
+	Example: `  syllago sandbox allow-env OPENAI_API_KEY`,
+	Args:    cobra.ExactArgs(1),
 	RunE: sandboxConfigMutator(func(sb *config.SandboxConfig, args []string) {
 		sb.AllowedEnv = appendUnique(sb.AllowedEnv, args[0])
 		fmt.Fprintf(output.Writer, "Added env var: %s\n", args[0])
@@ -167,9 +191,10 @@ var sandboxAllowEnvCmd = &cobra.Command{
 }
 
 var sandboxDenyEnvCmd = &cobra.Command{
-	Use:   "deny-env <VAR>",
-	Short: "Remove an env var from the sandbox allowlist",
-	Args:  cobra.ExactArgs(1),
+	Use:     "deny-env <VAR>",
+	Short:   "Remove an env var from the sandbox allowlist",
+	Example: `  syllago sandbox deny-env OPENAI_API_KEY`,
+	Args:    cobra.ExactArgs(1),
 	RunE: sandboxConfigMutator(func(sb *config.SandboxConfig, args []string) {
 		sb.AllowedEnv = removeItem(sb.AllowedEnv, args[0])
 		fmt.Fprintf(output.Writer, "Removed env var: %s\n", args[0])
@@ -177,9 +202,10 @@ var sandboxDenyEnvCmd = &cobra.Command{
 }
 
 var sandboxAllowPortCmd = &cobra.Command{
-	Use:   "allow-port <port>",
-	Short: "Add a localhost port to the sandbox allowlist",
-	Args:  cobra.ExactArgs(1),
+	Use:     "allow-port <port>",
+	Short:   "Add a localhost port to the sandbox allowlist",
+	Example: `  syllago sandbox allow-port 8080`,
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		port, err := strconv.Atoi(args[0])
 		if err != nil {
@@ -203,9 +229,10 @@ var sandboxAllowPortCmd = &cobra.Command{
 }
 
 var sandboxDenyPortCmd = &cobra.Command{
-	Use:   "deny-port <port>",
-	Short: "Remove a localhost port from the sandbox allowlist",
-	Args:  cobra.ExactArgs(1),
+	Use:     "deny-port <port>",
+	Short:   "Remove a localhost port from the sandbox allowlist",
+	Example: `  syllago sandbox deny-port 8080`,
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		port, err := strconv.Atoi(args[0])
 		if err != nil {
@@ -229,8 +256,9 @@ var sandboxDenyPortCmd = &cobra.Command{
 }
 
 var sandboxDomainsCmd = &cobra.Command{
-	Use:   "domains",
-	Short: "List allowed domains",
+	Use:     "domains",
+	Short:   "List allowed domains",
+	Example: `  syllago sandbox domains`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findProjectRoot()
 		if err != nil {
@@ -252,8 +280,9 @@ var sandboxDomainsCmd = &cobra.Command{
 }
 
 var sandboxEnvCmd = &cobra.Command{
-	Use:   "env",
-	Short: "List allowed env vars",
+	Use:     "env",
+	Short:   "List allowed env vars",
+	Example: `  syllago sandbox env`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findProjectRoot()
 		if err != nil {
@@ -275,8 +304,9 @@ var sandboxEnvCmd = &cobra.Command{
 }
 
 var sandboxPortsCmd = &cobra.Command{
-	Use:   "ports",
-	Short: "List allowed localhost ports",
+	Use:     "ports",
+	Short:   "List allowed localhost ports",
+	Example: `  syllago sandbox ports`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findProjectRoot()
 		if err != nil {

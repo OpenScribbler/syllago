@@ -12,7 +12,12 @@ import (
 var loadoutStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show active loadout status",
-	RunE:  runLoadoutStatus,
+	Example: `  # Check if a loadout is active
+  syllago loadout status
+
+  # JSON output
+  syllago loadout status --json`,
+	RunE: runLoadoutStatus,
 }
 
 func init() {

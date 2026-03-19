@@ -25,11 +25,14 @@ Equivalent to running:
   syllago registry sync && syllago export --to <provider>
 
 This is useful in CI/CD or automation where you want a single command
-to ensure registries are up-to-date before exporting.
-
-Examples:
+to ensure registries are up-to-date before exporting.`,
+	Example: `  # Sync registries and export to Cursor
   syllago sync-and-export --to cursor
+
+  # Export to all providers
   syllago sync-and-export --to all --type skills
+
+  # Export only registry content to Kiro
   syllago sync-and-export --to kiro --source registry`,
 	RunE: runSyncAndExport,
 }

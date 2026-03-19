@@ -15,11 +15,14 @@ var inspectCmd = &cobra.Command{
 
 Path formats:
   skills/my-skill                   Universal content (type/name)
-  rules/claude-code/my-rule         Provider-specific (type/provider/name)
-
-Examples:
+  rules/claude-code/my-rule         Provider-specific (type/provider/name)`,
+	Example: `  # Inspect a universal skill
   syllago inspect skills/my-skill
+
+  # Inspect a provider-specific rule
   syllago inspect rules/claude-code/my-rule
+
+  # JSON output for scripting
   syllago inspect --json skills/my-skill`,
 	Args: cobra.ExactArgs(1),
 	RunE: runInspect,

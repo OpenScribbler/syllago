@@ -21,8 +21,16 @@ import (
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize syllago for this project",
-	Long:  "Detects AI coding tools in use, creates .syllago/config.json with provider selection.",
-	RunE:  runInit,
+	Long: "Detects AI coding tools in use, creates .syllago/config.json with provider selection.",
+	Example: `  # Interactive setup
+  syllago init
+
+  # Skip confirmation prompts
+  syllago init --yes
+
+  # Overwrite existing config
+  syllago init --force`,
+	RunE: runInit,
 }
 
 func init() {

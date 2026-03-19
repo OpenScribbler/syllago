@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-19T03:52:53Z",
-  "syllagoVersion": "dev",
+  "generatedAt": "2026-03-19T16:57:38Z",
+  "syllagoVersion": "0.6.1",
   "commands": [
     {
       "name": "add",
@@ -10,7 +10,7 @@
       "parent": null,
       "synopsis": "syllago add [\u003ctype\u003e[/\u003cname\u003e]] --from \u003cprovider\u003e [flags]",
       "description": "Add content to your library from a provider",
-      "longDescription": "Discovers content from a provider and adds it to your library (~/.syllago/content/).\n\nWithout a positional argument, shows what content is available (discovery mode).\nProvide a type or type/name to add content.\n\nSyllago handles format conversion automatically. Once added, content can be\ninstalled to any supported provider with \"syllago install --to \u003cprovider\u003e\".\n\nExamples:\n  syllago add --from claude-code                  Discover available content (read-only)\n  syllago add rules --from claude-code            Add all rules\n  syllago add rules/security --from claude-code   Add a specific rule\n  syllago add --all --from claude-code            Add everything\n  syllago add --from claude-code --dry-run        Show what would be written without writing\n\nAfter adding, use \"syllago install\" to activate content in a provider.\n\nHooks-specific flags (--exclude, --scope) are only meaningful when adding hooks.",
+      "longDescription": "Discovers content from a provider and adds it to your library (~/.syllago/content/).\n\nWithout a positional argument, shows what content is available (discovery mode).\nProvide a type or type/name to add content.\n\nSyllago handles format conversion automatically. Once added, content can be\ninstalled to any supported provider with \"syllago install --to \u003cprovider\u003e\".\n\nAfter adding, use \"syllago install\" to activate content in a provider.\n\nHooks-specific flags (--exclude, --scope) are only meaningful when adding hooks.",
       "aliases": [],
       "flags": [
         {
@@ -114,7 +114,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  # Discover available content (read-only)\n  syllago add --from claude-code\n\n  # Add all rules from a provider\n  syllago add rules --from claude-code\n\n  # Add a specific rule by name\n  syllago add rules/security --from claude-code\n\n  # Add everything\n  syllago add --all --from claude-code\n\n  # Preview what would be written\n  syllago add --from claude-code --dry-run",
       "source": "cli/cmd/syllago/add.go"
     },
     {
@@ -474,7 +474,7 @@
         "remove"
       ],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  syllago config list\n  syllago config add cursor\n  syllago config remove windsurf",
       "source": "cli/cmd/syllago/config_cmd.go"
     },
     {
@@ -528,7 +528,7 @@
         "config paths",
         "config remove"
       ],
-      "examples": null,
+      "examples": "  syllago config add cursor",
       "source": "cli/cmd/syllago/config_cmd.go"
     },
     {
@@ -582,7 +582,7 @@
         "config paths",
         "config remove"
       ],
-      "examples": null,
+      "examples": "  # Show configured providers\n  syllago config list\n\n  # JSON output\n  syllago config list --json",
       "source": "cli/cmd/syllago/config_cmd.go"
     },
     {
@@ -640,7 +640,7 @@
         "config list",
         "config remove"
       ],
-      "examples": null,
+      "examples": "  syllago config paths show\n  syllago config paths set claude-code --base-dir ~/custom/claude\n  syllago config paths clear claude-code",
       "source": "cli/cmd/syllago/config_cmd.go"
     },
     {
@@ -702,7 +702,7 @@
         "config paths set",
         "config paths show"
       ],
-      "examples": null,
+      "examples": "  # Clear all overrides for a provider\n  syllago config paths clear claude-code\n\n  # Clear only a specific type override\n  syllago config paths clear cursor --type rules",
       "source": "cli/cmd/syllago/paths_cmd.go"
     },
     {
@@ -780,7 +780,7 @@
         "config paths clear",
         "config paths show"
       ],
-      "examples": null,
+      "examples": "  # Set a base directory for a provider\n  syllago config paths set claude-code --base-dir ~/custom/claude\n\n  # Set a per-type path override\n  syllago config paths set cursor --type rules --path ~/my-rules",
       "source": "cli/cmd/syllago/paths_cmd.go"
     },
     {
@@ -842,7 +842,7 @@
         "config paths clear",
         "config paths set"
       ],
-      "examples": null,
+      "examples": "  # Show all path overrides\n  syllago config paths show\n\n  # Show overrides for a specific provider\n  syllago config paths show --provider claude-code",
       "source": "cli/cmd/syllago/paths_cmd.go"
     },
     {
@@ -896,7 +896,7 @@
         "config list",
         "config paths"
       ],
-      "examples": null,
+      "examples": "  syllago config remove windsurf",
       "source": "cli/cmd/syllago/config_cmd.go"
     },
     {
@@ -906,7 +906,7 @@
       "parent": null,
       "synopsis": "syllago convert \u003cname\u003e [flags]",
       "description": "Convert library content to a provider format",
-      "longDescription": "Renders a library item to a target provider's format without installing it.\nOutput goes to stdout by default, or to a file with --output.\n\nNo state changes are made — this is purely for ad-hoc sharing.\n\nExamples:\n  syllago convert my-skill --to cursor\n  syllago convert my-rule --to windsurf --output ./windsurf-rule.md",
+      "longDescription": "Renders a library item to a target provider's format without installing it.\nOutput goes to stdout by default, or to a file with --output.\n\nNo state changes are made — this is purely for ad-hoc sharing.",
       "aliases": [],
       "flags": [
         {
@@ -962,7 +962,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  # Convert a skill to Cursor format (stdout)\n  syllago convert my-skill --to cursor\n\n  # Convert and save to a file\n  syllago convert my-rule --to windsurf --output ./windsurf-rule.md\n\n  # Convert to JSON output\n  syllago convert my-skill --to cursor --json",
       "source": "cli/cmd/syllago/convert.go"
     },
     {
@@ -972,7 +972,7 @@
       "parent": null,
       "synopsis": "syllago create \u003ctype\u003e \u003cname\u003e [flags]",
       "description": "Scaffold a new content item in the global library",
-      "longDescription": "Creates a new content item directory under ~/.syllago/content/ with\n.syllago.yaml metadata.\n\nExamples:\n  syllago create skills my-new-skill\n  syllago create rules my-rule --provider claude-code",
+      "longDescription": "Creates a new content item directory under ~/.syllago/content/ with\n.syllago.yaml metadata.",
       "aliases": [],
       "flags": [
         {
@@ -1020,7 +1020,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  # Create a new skill\n  syllago create skills my-new-skill\n\n  # Create a provider-specific rule\n  syllago create rules my-rule --provider claude-code\n\n  # Create a new agent\n  syllago create agents my-agent",
       "source": "cli/cmd/syllago/create.go"
     },
     {
@@ -1030,7 +1030,7 @@
       "parent": null,
       "synopsis": "syllago import [flags]",
       "description": "Bring content into syllago from a provider, path, or git URL",
-      "longDescription": "Discovers content from a provider and imports it into local/.\n\nSyllago handles format conversion automatically. Once imported, content can be\nexported to any supported provider with \"syllago export --to \u003cprovider\u003e\".\n\nExamples:\n  syllago import --from claude-code                  Import all content from Claude Code\n  syllago import --from claude-code --type skills    Import only skills\n  syllago import --from cursor --name my-rule        Import a specific rule by name\n  syllago import --from claude-code --preview        Preview what would be imported (read-only)\n  syllago import --from claude-code --dry-run        Show what would be written without writing\n\nAfter import, use \"syllago export\" to install content into other providers,\nor browse in the TUI with \"syllago\".",
+      "longDescription": "Discovers content from a provider and imports it into local/.\n\nSyllago handles format conversion automatically. Once imported, content can be\nexported to any supported provider with \"syllago export --to \u003cprovider\u003e\".\n\nAfter import, use \"syllago export\" to install content into other providers,\nor browse in the TUI with \"syllago\".",
       "aliases": [],
       "flags": [
         {
@@ -1142,7 +1142,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  # Import all content from Claude Code\n  syllago import --from claude-code\n\n  # Import only skills\n  syllago import --from claude-code --type skills\n\n  # Import a specific rule by name\n  syllago import --from cursor --name my-rule\n\n  # Preview what would be imported\n  syllago import --from claude-code --preview\n\n  # Show what would be written without writing\n  syllago import --from claude-code --dry-run",
       "source": "cli/cmd/syllago/import.go"
     },
     {
@@ -1194,7 +1194,7 @@
         "providers"
       ],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  # Show capabilities summary\n  syllago info\n\n  # JSON output for agent consumption\n  syllago info --json",
       "source": "cli/cmd/syllago/info_cmd.go"
     },
     {
@@ -1246,7 +1246,7 @@
         "info",
         "info providers"
       ],
-      "examples": null,
+      "examples": "  syllago info formats",
       "source": "cli/cmd/syllago/info_cmd.go"
     },
     {
@@ -1298,7 +1298,7 @@
         "info",
         "info formats"
       ],
-      "examples": null,
+      "examples": "  # List providers and their supported types\n  syllago info providers\n\n  # JSON output\n  syllago info providers --json",
       "source": "cli/cmd/syllago/info_cmd.go"
     },
     {
@@ -1364,7 +1364,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  # Interactive setup\n  syllago init\n\n  # Skip confirmation prompts\n  syllago init --yes\n\n  # Overwrite existing config\n  syllago init --force",
       "source": "cli/cmd/syllago/init.go"
     },
     {
@@ -1374,7 +1374,7 @@
       "parent": null,
       "synopsis": "syllago inspect \u003ctype\u003e/\u003cname\u003e",
       "description": "Show details about a content item",
-      "longDescription": "Display full details about a content item for pre-install auditing.\n\nPath formats:\n  skills/my-skill                   Universal content (type/name)\n  rules/claude-code/my-rule         Provider-specific (type/provider/name)\n\nExamples:\n  syllago inspect skills/my-skill\n  syllago inspect rules/claude-code/my-rule\n  syllago inspect --json skills/my-skill",
+      "longDescription": "Display full details about a content item for pre-install auditing.\n\nPath formats:\n  skills/my-skill                   Universal content (type/name)\n  rules/claude-code/my-rule         Provider-specific (type/provider/name)",
       "aliases": [],
       "flags": [],
       "inheritedFlags": [
@@ -1413,7 +1413,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  # Inspect a universal skill\n  syllago inspect skills/my-skill\n\n  # Inspect a provider-specific rule\n  syllago inspect rules/claude-code/my-rule\n\n  # JSON output for scripting\n  syllago inspect --json skills/my-skill",
       "source": "cli/cmd/syllago/inspect.go"
     },
     {
@@ -1423,7 +1423,7 @@
       "parent": null,
       "synopsis": "syllago install [name] [flags]",
       "description": "Activate library content in a provider",
-      "longDescription": "Install content from your library into a provider's location.\n\nBy default uses a symlink so edits in your library are reflected immediately.\nUse --method copy to place a standalone copy instead.\n\nExamples:\n  syllago install my-skill --to claude-code\n  syllago install my-skill --to cursor --method copy\n  syllago install --to claude-code --type skills",
+      "longDescription": "Install content from your library into a provider's location.\n\nBy default uses a symlink so edits in your library are reflected immediately.\nUse --method copy to place a standalone copy instead.",
       "aliases": [],
       "flags": [
         {
@@ -1511,7 +1511,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  # Install a skill to Claude Code\n  syllago install my-skill --to claude-code\n\n  # Install with a standalone copy instead of symlink\n  syllago install my-skill --to cursor --method copy\n\n  # Install all skills to a provider\n  syllago install --to claude-code --type skills\n\n  # Preview what would happen\n  syllago install my-skill --to claude-code --dry-run",
       "source": "cli/cmd/syllago/install.go"
     },
     {
@@ -1521,7 +1521,7 @@
       "parent": null,
       "synopsis": "syllago list [flags]",
       "description": "List content items in the catalog",
-      "longDescription": "Show a quick inventory of all content without launching the TUI.\n\nBy default, lists all content grouped by type. Use flags to filter:\n  syllago list                      All content, grouped by type\n  syllago list --source library     Only library items\n  syllago list --type skills        Only skills\n  syllago list --json               JSON output",
+      "longDescription": "Show a quick inventory of all content without launching the TUI.\n\nBy default, lists all content grouped by type. Use flags to filter.",
       "aliases": [],
       "flags": [
         {
@@ -1577,7 +1577,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  # List all content grouped by type\n  syllago list\n\n  # Show only library items\n  syllago list --source library\n\n  # Show only skills\n  syllago list --type skills\n\n  # JSON output for scripting\n  syllago list --json",
       "source": "cli/cmd/syllago/list.go"
     },
     {
@@ -1632,7 +1632,7 @@
         "status"
       ],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  syllago loadout list\n  syllago loadout apply my-loadout --try\n  syllago loadout remove",
       "source": "cli/cmd/syllago/loadout_cmd.go"
     },
     {
@@ -1736,7 +1736,7 @@
         "loadout remove",
         "loadout status"
       ],
-      "examples": null,
+      "examples": "  # Preview what a loadout would do\n  syllago loadout apply my-loadout\n\n  # Try temporarily (auto-reverts on session end)\n  syllago loadout apply my-loadout --try\n\n  # Apply permanently\n  syllago loadout apply my-loadout --keep\n\n  # Apply to a specific provider\n  syllago loadout apply my-loadout --keep --to cursor",
       "source": "cli/cmd/syllago/loadout_apply.go"
     },
     {
@@ -1791,7 +1791,7 @@
         "loadout remove",
         "loadout status"
       ],
-      "examples": null,
+      "examples": "  syllago loadout create",
       "source": "cli/cmd/syllago/loadout_create.go"
     },
     {
@@ -1846,7 +1846,7 @@
         "loadout remove",
         "loadout status"
       ],
-      "examples": null,
+      "examples": "  # List all available loadouts\n  syllago loadout list\n\n  # JSON output\n  syllago loadout list --json",
       "source": "cli/cmd/syllago/loadout_list.go"
     },
     {
@@ -1910,7 +1910,7 @@
         "loadout list",
         "loadout status"
       ],
-      "examples": null,
+      "examples": "  syllago loadout remove",
       "source": "cli/cmd/syllago/loadout_remove.go"
     },
     {
@@ -1965,7 +1965,7 @@
         "loadout list",
         "loadout remove"
       ],
-      "examples": null,
+      "examples": "  # Check if a loadout is active\n  syllago loadout status\n\n  # JSON output\n  syllago loadout status --json",
       "source": "cli/cmd/syllago/loadout_status.go"
     },
     {
@@ -1975,7 +1975,7 @@
       "parent": null,
       "synopsis": "syllago publish \u003cname\u003e [flags]",
       "description": "Contribute library content to a registry",
-      "longDescription": "Copies a library item to a registry clone, stages the change, and\noptionally creates a branch and PR.\n\nExamples:\n  syllago publish my-skill --registry my-registry\n  syllago publish my-rule --registry team-rules --type rules",
+      "longDescription": "Copies a library item to a registry clone, stages the change, and\noptionally creates a branch and PR.",
       "aliases": [],
       "flags": [
         {
@@ -2039,7 +2039,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  # Publish a skill to a registry\n  syllago publish my-skill --registry my-registry\n\n  # Publish a specific rule type\n  syllago publish my-rule --registry team-rules --type rules\n\n  # Non-interactive mode\n  syllago publish my-skill --registry my-registry --no-input",
       "source": "cli/cmd/syllago/publish.go"
     },
     {
@@ -2049,7 +2049,7 @@
       "parent": null,
       "synopsis": "syllago registry",
       "description": "Manage git-based content registries",
-      "longDescription": "Add, remove, list, and sync git repositories as content registries.\n\nRegistries are read-only git repos containing shared content (skills, rules,\nhooks, MCP configs, etc.). Use \"registry sync\" to pull updates, and\n\"registry items\" to browse what's available.\n\nTo use registry content, browse it in the TUI (\"syllago\") or export it\ndirectly with \"syllago export --to \u003cprovider\u003e\".\n\nWorkflow:\n  syllago registry add \u003curl\u003e           Add a new registry\n  syllago registry sync                Pull latest from all registries\n  syllago registry items               Browse available content\n  syllago registry items --type skills Show only skills across registries",
+      "longDescription": "Add, remove, list, and sync git repositories as content registries.\n\nRegistries are read-only git repos containing shared content (skills, rules,\nhooks, MCP configs, etc.). Use \"registry sync\" to pull updates, and\n\"registry items\" to browse what's available.\n\nTo use registry content, browse it in the TUI (\"syllago\") or export it\ndirectly with \"syllago install --to \u003cprovider\u003e\".",
       "aliases": [],
       "flags": [],
       "inheritedFlags": [
@@ -2095,7 +2095,7 @@
         "sync"
       ],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  syllago registry add https://github.com/team/rules.git\n  syllago registry sync\n  syllago registry items --type skills",
       "source": "cli/cmd/syllago/registry_cmd.go"
     },
     {
@@ -2168,7 +2168,7 @@
         "registry remove",
         "registry sync"
       ],
-      "examples": null,
+      "examples": "  # Add a registry by URL\n  syllago registry add https://github.com/team/rules.git\n\n  # Add with a custom name\n  syllago registry add https://github.com/team/rules.git --name team-rules\n\n  # Pin to a specific branch\n  syllago registry add https://github.com/team/rules.git --ref main",
       "source": "cli/cmd/syllago/registry_cmd.go"
     },
     {
@@ -2178,7 +2178,7 @@
       "parent": "registry",
       "synopsis": "syllago registry create [flags]",
       "description": "Create a new registry",
-      "longDescription": "Create a new registry in one of two modes:\n\n  --new \u003cname\u003e          Scaffold an empty registry directory structure\n  --from-native         Index provider-native content in the current repo\n\nExamples:\n  syllago registry create --new my-rules\n  syllago registry create --from-native",
+      "longDescription": "Create a new registry in one of two modes:\n\n  --new \u003cname\u003e          Scaffold an empty registry directory structure\n  --from-native         Index provider-native content in the current repo",
       "aliases": [],
       "flags": [
         {
@@ -2257,7 +2257,7 @@
         "registry remove",
         "registry sync"
       ],
-      "examples": null,
+      "examples": "  # Scaffold an empty registry\n  syllago registry create --new my-rules\n\n  # Scaffold with a description\n  syllago registry create --new my-rules --description \"Team coding standards\"\n\n  # Index existing provider-native content\n  syllago registry create --from-native",
       "source": "cli/cmd/syllago/registry_cmd.go"
     },
     {
@@ -2267,7 +2267,7 @@
       "parent": "registry",
       "synopsis": "syllago registry items [name] [flags]",
       "description": "Browse content available in registries",
-      "longDescription": "Lists content items from one or all registries.\n\nUse --type to filter by content type. To install registry content, use\n\"syllago export --to \u003cprovider\u003e\" or browse in the TUI with \"syllago\".\n\nExamples:\n  syllago registry items                     List all items from all registries\n  syllago registry items my-rules            List items from a specific registry\n  syllago registry items --type skills       List only skills",
+      "longDescription": "Lists content items from one or all registries.\n\nUse --type to filter by content type. To install registry content, use\n\"syllago install --to \u003cprovider\u003e\" or browse in the TUI with \"syllago\".",
       "aliases": [],
       "flags": [
         {
@@ -2322,7 +2322,7 @@
         "registry remove",
         "registry sync"
       ],
-      "examples": null,
+      "examples": "  # List all items from all registries\n  syllago registry items\n\n  # List items from a specific registry\n  syllago registry items my-rules\n\n  # Filter by content type\n  syllago registry items --type skills",
       "source": "cli/cmd/syllago/registry_cmd.go"
     },
     {
@@ -2378,7 +2378,7 @@
         "registry remove",
         "registry sync"
       ],
-      "examples": null,
+      "examples": "  # List all configured registries\n  syllago registry list\n\n  # JSON output\n  syllago registry list --json",
       "source": "cli/cmd/syllago/registry_cmd.go"
     },
     {
@@ -2434,7 +2434,7 @@
         "registry list",
         "registry sync"
       ],
-      "examples": null,
+      "examples": "  syllago registry remove team-rules",
       "source": "cli/cmd/syllago/registry_cmd.go"
     },
     {
@@ -2444,7 +2444,7 @@
       "parent": "registry",
       "synopsis": "syllago registry sync [name]",
       "description": "Pull latest content from one or all registries",
-      "longDescription": "Runs git pull on registry clones to fetch the latest content.\n\nSync updates the local clone only — it does not modify your local/ or\ninstalled provider content. Use \"syllago registry items\" to see what changed,\nand \"syllago export\" to install updated content.\n\nExamples:\n  syllago registry sync              Sync all registries\n  syllago registry sync my-rules     Sync a specific registry",
+      "longDescription": "Runs git pull on registry clones to fetch the latest content.\n\nSync updates the local clone only — it does not modify your local/ or\ninstalled provider content. Use \"syllago registry items\" to see what changed,\nand \"syllago install\" to apply updated content.",
       "aliases": [],
       "flags": [],
       "inheritedFlags": [
@@ -2490,7 +2490,7 @@
         "registry list",
         "registry remove"
       ],
-      "examples": null,
+      "examples": "  # Sync all registries\n  syllago registry sync\n\n  # Sync a specific registry\n  syllago registry sync my-rules",
       "source": "cli/cmd/syllago/registry_cmd.go"
     },
     {
@@ -2500,7 +2500,7 @@
       "parent": null,
       "synopsis": "syllago remove \u003cname\u003e [flags]",
       "description": "Remove content from your library and uninstall from providers",
-      "longDescription": "Removes a content item from your library (~/.syllago/content/) and\nuninstalls it from any providers where it is currently installed.\n\nExamples:\n  syllago remove my-skill\n  syllago remove my-rule --type rules\n  syllago remove my-skill --force",
+      "longDescription": "Removes a content item from your library (~/.syllago/content/) and\nuninstalls it from any providers where it is currently installed.",
       "aliases": [],
       "flags": [
         {
@@ -2572,7 +2572,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  # Remove a skill from library and all providers\n  syllago remove my-skill\n\n  # Disambiguate by type when name exists in multiple types\n  syllago remove my-rule --type rules\n\n  # Skip confirmation prompt\n  syllago remove my-skill --force\n\n  # Preview what would happen\n  syllago remove my-skill --dry-run",
       "source": "cli/cmd/syllago/remove.go"
     },
     {
@@ -2634,7 +2634,7 @@
         "run"
       ],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  syllago sandbox run claude-code\n  syllago sandbox check\n  syllago sandbox allow-domain api.example.com",
       "source": "cli/cmd/syllago/sandbox_cmd.go"
     },
     {
@@ -2696,7 +2696,7 @@
         "sandbox ports",
         "sandbox run"
       ],
-      "examples": null,
+      "examples": "  syllago sandbox allow-domain api.example.com",
       "source": "cli/cmd/syllago/sandbox_cmd.go"
     },
     {
@@ -2758,7 +2758,7 @@
         "sandbox ports",
         "sandbox run"
       ],
-      "examples": null,
+      "examples": "  syllago sandbox allow-env OPENAI_API_KEY",
       "source": "cli/cmd/syllago/sandbox_cmd.go"
     },
     {
@@ -2820,7 +2820,7 @@
         "sandbox ports",
         "sandbox run"
       ],
-      "examples": null,
+      "examples": "  syllago sandbox allow-port 8080",
       "source": "cli/cmd/syllago/sandbox_cmd.go"
     },
     {
@@ -2882,7 +2882,7 @@
         "sandbox ports",
         "sandbox run"
       ],
-      "examples": null,
+      "examples": "  # Check sandbox prerequisites\n  syllago sandbox check\n\n  # Check prerequisites for a specific provider\n  syllago sandbox check claude-code",
       "source": "cli/cmd/syllago/sandbox_cmd.go"
     },
     {
@@ -2944,7 +2944,7 @@
         "sandbox ports",
         "sandbox run"
       ],
-      "examples": null,
+      "examples": "  syllago sandbox deny-domain api.example.com",
       "source": "cli/cmd/syllago/sandbox_cmd.go"
     },
     {
@@ -3006,7 +3006,7 @@
         "sandbox ports",
         "sandbox run"
       ],
-      "examples": null,
+      "examples": "  syllago sandbox deny-env OPENAI_API_KEY",
       "source": "cli/cmd/syllago/sandbox_cmd.go"
     },
     {
@@ -3068,7 +3068,7 @@
         "sandbox ports",
         "sandbox run"
       ],
-      "examples": null,
+      "examples": "  syllago sandbox deny-port 8080",
       "source": "cli/cmd/syllago/sandbox_cmd.go"
     },
     {
@@ -3130,7 +3130,7 @@
         "sandbox ports",
         "sandbox run"
       ],
-      "examples": null,
+      "examples": "  syllago sandbox domains",
       "source": "cli/cmd/syllago/sandbox_cmd.go"
     },
     {
@@ -3192,7 +3192,7 @@
         "sandbox ports",
         "sandbox run"
       ],
-      "examples": null,
+      "examples": "  syllago sandbox env",
       "source": "cli/cmd/syllago/sandbox_cmd.go"
     },
     {
@@ -3254,7 +3254,7 @@
         "sandbox ports",
         "sandbox run"
       ],
-      "examples": null,
+      "examples": "  # Show sandbox config\n  syllago sandbox info\n\n  # Show config with provider mount profile\n  syllago sandbox info claude-code",
       "source": "cli/cmd/syllago/sandbox_cmd.go"
     },
     {
@@ -3316,7 +3316,7 @@
         "sandbox info",
         "sandbox run"
       ],
-      "examples": null,
+      "examples": "  syllago sandbox ports",
       "source": "cli/cmd/syllago/sandbox_cmd.go"
     },
     {
@@ -3427,7 +3427,7 @@
         "sandbox info",
         "sandbox ports"
       ],
-      "examples": null,
+      "examples": "  # Run Claude Code in a sandbox\n  syllago sandbox run claude-code\n\n  # Run with additional domain access\n  syllago sandbox run claude-code --allow-domain api.example.com\n\n  # Run with no network at all\n  syllago sandbox run gemini-cli --no-network",
       "source": "cli/cmd/syllago/sandbox_cmd.go"
     },
     {
@@ -3437,7 +3437,7 @@
       "parent": null,
       "synopsis": "syllago share \u003cname\u003e [flags]",
       "description": "Contribute library content to a team repo",
-      "longDescription": "Copies a library item to your team repo, stages the change, and\noptionally creates a branch and PR.\n\nExamples:\n  syllago share my-skill\n  syllago share my-rule --type rules",
+      "longDescription": "Copies a library item to your team repo, stages the change, and\noptionally creates a branch and PR.",
       "aliases": [],
       "flags": [
         {
@@ -3493,7 +3493,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  # Share a skill to the team repo\n  syllago share my-skill\n\n  # Disambiguate by type\n  syllago share my-rule --type rules\n\n  # Non-interactive mode (stage only, no git prompts)\n  syllago share my-skill --no-input",
       "source": "cli/cmd/syllago/share.go"
     },
     {
@@ -3503,7 +3503,7 @@
       "parent": null,
       "synopsis": "syllago sync-and-export [flags]",
       "description": "Sync registries then export content to a provider",
-      "longDescription": "Convenience command that syncs all registries then exports.\n\nEquivalent to running:\n  syllago registry sync \u0026\u0026 syllago export --to \u003cprovider\u003e\n\nThis is useful in CI/CD or automation where you want a single command\nto ensure registries are up-to-date before exporting.\n\nExamples:\n  syllago sync-and-export --to cursor\n  syllago sync-and-export --to all --type skills\n  syllago sync-and-export --to kiro --source registry",
+      "longDescription": "Convenience command that syncs all registries then exports.\n\nEquivalent to running:\n  syllago registry sync \u0026\u0026 syllago export --to \u003cprovider\u003e\n\nThis is useful in CI/CD or automation where you want a single command\nto ensure registries are up-to-date before exporting.",
       "aliases": [],
       "flags": [
         {
@@ -3583,7 +3583,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  # Sync registries and export to Cursor\n  syllago sync-and-export --to cursor\n\n  # Export to all providers\n  syllago sync-and-export --to all --type skills\n\n  # Export only registry content to Kiro\n  syllago sync-and-export --to kiro --source registry",
       "source": "cli/cmd/syllago/sync-and-export.go"
     },
     {
@@ -3593,7 +3593,7 @@
       "parent": null,
       "synopsis": "syllago uninstall \u003cname\u003e [flags]",
       "description": "Deactivate content from a provider",
-      "longDescription": "Removes installed content from a provider's location.\n\nFor symlinked content: removes the symlink.\nFor copied content: removes the copied file or directory.\nFor hooks/MCP: reverses the JSON merge from the provider's settings file.\n\nThe content remains in your library (~/.syllago/content/) and can be\nreinstalled at any time with \"syllago install\".\n\nExamples:\n  syllago uninstall my-skill --from claude-code\n  syllago uninstall my-rule --from cursor --force\n  syllago uninstall my-agent                       (uninstall from all providers)",
+      "longDescription": "Removes installed content from a provider's location.\n\nFor symlinked content: removes the symlink.\nFor copied content: removes the copied file or directory.\nFor hooks/MCP: reverses the JSON merge from the provider's settings file.\n\nThe content remains in your library (~/.syllago/content/) and can be\nreinstalled at any time with \"syllago install\".",
       "aliases": [],
       "flags": [
         {
@@ -3673,7 +3673,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  # Uninstall from a specific provider\n  syllago uninstall my-skill --from claude-code\n\n  # Uninstall from all providers\n  syllago uninstall my-agent\n\n  # Skip confirmation prompt\n  syllago uninstall my-rule --from cursor --force\n\n  # Preview what would happen\n  syllago uninstall my-skill --dry-run",
       "source": "cli/cmd/syllago/uninstall.go"
     },
     {
@@ -3722,7 +3722,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  syllago update",
       "source": "cli/cmd/syllago/update.go"
     },
     {
@@ -3771,7 +3771,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": null,
+      "examples": "  syllago version",
       "source": "cli/cmd/syllago/version.go"
     }
   ]

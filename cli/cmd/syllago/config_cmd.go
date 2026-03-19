@@ -14,11 +14,19 @@ var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "View and edit syllago configuration",
 	Long:  "Manage provider selection and preferences in .syllago/config.json.",
+	Example: `  syllago config list
+  syllago config add cursor
+  syllago config remove windsurf`,
 }
 
 var configListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List current configuration",
+	Example: `  # Show configured providers
+  syllago config list
+
+  # JSON output
+  syllago config list --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findProjectRoot()
 		if err != nil {
@@ -51,9 +59,10 @@ var configListCmd = &cobra.Command{
 }
 
 var configAddCmd = &cobra.Command{
-	Use:   "add <provider-slug>",
-	Short: "Add a provider to the configuration",
-	Args:  cobra.ExactArgs(1),
+	Use:     "add <provider-slug>",
+	Short:   "Add a provider to the configuration",
+	Example: `  syllago config add cursor`,
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findProjectRoot()
 		if err != nil {
@@ -90,9 +99,10 @@ var configAddCmd = &cobra.Command{
 }
 
 var configRemoveCmd = &cobra.Command{
-	Use:   "remove <provider-slug>",
-	Short: "Remove a provider from the configuration",
-	Args:  cobra.ExactArgs(1),
+	Use:     "remove <provider-slug>",
+	Short:   "Remove a provider from the configuration",
+	Example: `  syllago config remove windsurf`,
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findProjectRoot()
 		if err != nil {

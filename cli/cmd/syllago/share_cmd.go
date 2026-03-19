@@ -22,11 +22,15 @@ var shareCmd = &cobra.Command{
 	Use:   "share <name>",
 	Short: "Contribute library content to a team repo",
 	Long: `Copies a library item to your team repo, stages the change, and
-optionally creates a branch and PR.
-
-Examples:
+optionally creates a branch and PR.`,
+	Example: `  # Share a skill to the team repo
   syllago share my-skill
-  syllago share my-rule --type rules`,
+
+  # Disambiguate by type
+  syllago share my-rule --type rules
+
+  # Non-interactive mode (stage only, no git prompts)
+  syllago share my-skill --no-input`,
 	Args: cobra.ExactArgs(1),
 	RunE: runShare,
 }

@@ -23,11 +23,15 @@ var publishCmd = &cobra.Command{
 	Use:   "publish <name>",
 	Short: "Contribute library content to a registry",
 	Long: `Copies a library item to a registry clone, stages the change, and
-optionally creates a branch and PR.
-
-Examples:
+optionally creates a branch and PR.`,
+	Example: `  # Publish a skill to a registry
   syllago publish my-skill --registry my-registry
-  syllago publish my-rule --registry team-rules --type rules`,
+
+  # Publish a specific rule type
+  syllago publish my-rule --registry team-rules --type rules
+
+  # Non-interactive mode
+  syllago publish my-skill --registry my-registry --no-input`,
 	Args: cobra.ExactArgs(1),
 	RunE: runPublish,
 }

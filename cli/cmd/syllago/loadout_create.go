@@ -14,9 +14,10 @@ import (
 )
 
 var loadoutCreateCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Interactively create a new loadout",
-	RunE:  runLoadoutCreate,
+	Use:     "create",
+	Short:   "Interactively create a new loadout",
+	Example: `  syllago loadout create`,
+	RunE:    runLoadoutCreate,
 }
 
 func init() {

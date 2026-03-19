@@ -35,12 +35,18 @@ var installCmd = &cobra.Command{
 	Long: `Install content from your library into a provider's location.
 
 By default uses a symlink so edits in your library are reflected immediately.
-Use --method copy to place a standalone copy instead.
-
-Examples:
+Use --method copy to place a standalone copy instead.`,
+	Example: `  # Install a skill to Claude Code
   syllago install my-skill --to claude-code
+
+  # Install with a standalone copy instead of symlink
   syllago install my-skill --to cursor --method copy
-  syllago install --to claude-code --type skills`,
+
+  # Install all skills to a provider
+  syllago install --to claude-code --type skills
+
+  # Preview what would happen
+  syllago install my-skill --to claude-code --dry-run`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runInstall,
 }

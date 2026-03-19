@@ -91,8 +91,9 @@ func init() {
 }
 
 var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print syllago version",
+	Use:     "version",
+	Short:   "Print syllago version",
+	Example: `  syllago version`,
 	Run: func(cmd *cobra.Command, args []string) {
 		v := version
 		if v == "" {
@@ -155,9 +156,10 @@ var backfillCmd = &cobra.Command{
 }
 
 var updateCmd = &cobra.Command{
-	Use:   "update",
-	Short: "Update syllago to the latest release",
-	RunE:  runUpdate,
+	Use:     "update",
+	Short:   "Update syllago to the latest release",
+	Example: `  syllago update`,
+	RunE:    runUpdate,
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {

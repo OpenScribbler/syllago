@@ -14,6 +14,11 @@ var infoCmd = &cobra.Command{
 	Use:   "info",
 	Short: "Show syllago capabilities",
 	Long:  "Machine-readable capability manifest. Useful for agents discovering syllago's features.",
+	Example: `  # Show capabilities summary
+  syllago info
+
+  # JSON output for agent consumption
+  syllago info --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		v := version
 		if v == "" {
@@ -46,6 +51,11 @@ var infoCmd = &cobra.Command{
 var infoProvidersCmd = &cobra.Command{
 	Use:   "providers",
 	Short: "List all known providers",
+	Example: `  # List providers and their supported types
+  syllago info providers
+
+  # JSON output
+  syllago info providers --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		type provInfo struct {
 			Name  string   `json:"name"`
@@ -81,6 +91,7 @@ var infoProvidersCmd = &cobra.Command{
 var infoFormatsCmd = &cobra.Command{
 	Use:   "formats",
 	Short: "List supported file formats",
+	Example: `  syllago info formats`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		type formatInfo struct {
 			Format    string   `json:"format"`

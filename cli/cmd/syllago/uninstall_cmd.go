@@ -28,12 +28,18 @@ For copied content: removes the copied file or directory.
 For hooks/MCP: reverses the JSON merge from the provider's settings file.
 
 The content remains in your library (~/.syllago/content/) and can be
-reinstalled at any time with "syllago install".
-
-Examples:
+reinstalled at any time with "syllago install".`,
+	Example: `  # Uninstall from a specific provider
   syllago uninstall my-skill --from claude-code
+
+  # Uninstall from all providers
+  syllago uninstall my-agent
+
+  # Skip confirmation prompt
   syllago uninstall my-rule --from cursor --force
-  syllago uninstall my-agent                       (uninstall from all providers)`,
+
+  # Preview what would happen
+  syllago uninstall my-skill --dry-run`,
 	Args: cobra.ExactArgs(1),
 	RunE: runUninstall,
 }
