@@ -1,0 +1,103 @@
+name: Provider Smoke Tests
+
+# Runs on release branches and manual trigger only — not every PR.
+# These tests install real CLI tools and verify syllago content integration.
+on:
+  workflow_dispatch:
+    inputs:
+      smoke_auth:
+        description: 'Enable LLM-based assertions (requires SSO/service account)'
+        type: boolean
+        default: false
+  push:
+    tags:
+      - 'v*'
+
+# Prevent concurrent runs against the same ref
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  claude-code:
+    name: Claude Code Smoke Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25.x'
+
+      - name: Build syllago
+        working-directory: cli
+        run: |
+          go build -o "$HOME/.local/bin/syllago" ./cmd/syllago
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install Claude Code
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude --version
+
+      # TODO: Configure SSO/service account auth for Claude Code.
+      # When auth is set up, add a step here to authenticate and set SMOKE_AUTH=1.
+      # See: https://docs.anthropic.com/en/docs/claude-code/enterprise
+      #
+      # - name: Authenticate Claude Code
+      #   env:
+      #     CLAUDE_AUTH_TOKEN: ${{ secrets.CLAUDE_AUTH_TOKEN }}
+      #   run: claude auth login --token "$CLAUDE_AUTH_TOKEN"
+
+      - name: Run smoke tests
+        env:
+          SMOKE_AUTH: "0"
+        run: |
+          chmod +x tests/smoke/claude-code.sh
+          tests/smoke/claude-code.sh
+
+  gemini-cli:
+    name: Gemini CLI Smoke Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25.x'
+
+      - name: Build syllago
+        working-directory: cli
+        run: |
+          go build -o "$HOME/.local/bin/syllago" ./cmd/syllago
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install Gemini CLI
+        run: |
+          npm install -g @anthropic-ai/gemini-cli || npm install -g @anthropic-ai/gemini || {
+            echo "Gemini CLI package name may have changed — update this step"
+            exit 1
+          }
+          gemini --version
+
+      # TODO: Configure SSO/service account auth for Gemini CLI.
+      #
+      # - name: Authenticate Gemini CLI
+      #   env:
+      #     GOOGLE_AUTH_TOKEN: ${{ secrets.GOOGLE_AUTH_TOKEN }}
+      #   run: gemini auth login ...
+
+      - name: Run smoke tests
+        env:
+          SMOKE_AUTH: "0"
+        run: |
+          chmod +x tests/smoke/gemini-cli.sh
+          tests/smoke/gemini-cli.sh
