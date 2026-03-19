@@ -268,16 +268,3 @@ summary() {
   fi
 }
 
-# ── Provider Auth Detection ───────────────────────────────────────────────────
-# These check whether a CLI tool is authenticated (SSO session active).
-# Used to gate LLM-based assertions that require a live session.
-
-claude_authenticated() {
-  # claude -p with a trivial prompt; if SSO session is active this succeeds
-  claude -p "say ok" --max-budget-usd 0.01 >/dev/null 2>&1
-}
-
-gemini_authenticated() {
-  # gemini -p with a trivial prompt; if SSO session is active this succeeds
-  gemini -p "say ok" >/dev/null 2>&1
-}

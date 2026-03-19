@@ -249,27 +249,8 @@ test_gemini_sequential() {
 
 run_test "Sequential loadouts (Gemini)" test_gemini_sequential
 
-# ── Test: LLM-based rule verification (requires auth) ────────────────────────
-
-test_gemini_rules_via_llm() {
-  _seed_gemini_auth
-  syllago loadout apply "$LOADOUT_NAME" --to gemini-cli --keep 2>&1
-
-  # Capture stdout only — gemini emits stderr noise (keychain warnings, etc.)
-  local response
-  response=$(gemini -p "List the names of your active rules or instructions. Just list the file/directory names, nothing else." \
-    2>/dev/null) || true
-  assert_contains "$response" "kitchen-sink" \
-    "Gemini should report the loadout's rules as active"
-
-  syllago loadout remove --auto 2>&1
-}
-
-if [[ "${SMOKE_AUTH:-}" == "1" ]]; then
-  run_test "Gemini rules via LLM (auth)" test_gemini_rules_via_llm
-else
-  skip_test "Gemini rules via LLM (auth)" "Set SMOKE_AUTH=1 to enable (requires SSO session)"
-fi
+# Gemini CLI has no deterministic rule introspection command (no `gemini rules list`).
+# Rules are verified via filesystem checks in the non-auth tests above.
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 
