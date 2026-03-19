@@ -1112,9 +1112,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Action != tea.MouseActionRelease || msg.Button != tea.MouseButtonLeft {
 			return a, nil
 		}
-		// Click-away: if any modal is active, check whether the click landed
-		// inside the modal bounds (zone "modal-zone"). If inside, forward to
-		// the modal's own handler. If outside, dismiss the modal.
+		// Modal mouse handling is centralized here in app.go, NOT in each
+		// modal's Update() method. Inner zone.Mark() calls in a modal's View()
+		// don't survive overlay.Composite() — only the outer "modal-zone"
+		// wrapper is usable. So we use coordinate-based hit testing (relX/relY)
+		// within the modal-zone bounds for buttons, options, and input fields.
+		//
+		// Click outside modal-zone → dismiss. Click inside → route by relY.
 		if a.modal.active {
 			// Use the zone registered by the previous View()/zone.Scan() pass.
 			// This gives us the actual on-screen position of the modal after

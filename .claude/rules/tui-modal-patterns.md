@@ -44,18 +44,47 @@ Default cursor: 1 (Cancel) for destructive actions, 0 (Confirm) for safe actions
 
 ## Mouse Support
 
-- Both buttons wrapped in `zone.Mark()` for click support:
-  ```go
-  zone.Mark("modal-btn-confirm", buttonStyle.Render("Confirm"))
-  zone.Mark("modal-btn-cancel", buttonDisabledStyle.Render("Cancel"))
-  ```
-- Click outside `modal-zone` dismisses the modal
-- Clickable options (radio items in Install/Env modals) respond to click
-- **Form fields:** Any modal with multiple Tab-navigable inputs MUST wrap each input in `zone.Mark("modal-field-{name}", ...)`. Clicking a field focuses it — the same result as Tab-navigating to it. This is required, not optional.
-  ```go
-  zone.Mark("modal-field-url", inputStyle.Render(m.urlInput.View()))
-  zone.Mark("modal-field-name", inputStyle.Render(m.nameInput.View()))
-  ```
+**Critical: Modal mouse handling lives in `app.go`, NOT in the modal's own `Update()` method.**
+
+Inner `zone.Mark()` calls inside a modal's `View()` do NOT survive `overlay.Composite()` — only the outer `zone.Mark("modal-zone", m.View())` wrapper survives. This means `zone.Get("modal-opt-0").InBounds(msg)` will always fail for modal content. Instead, app.go uses coordinate-based hit testing:
+
+```go
+z := zone.Get("modal-zone")
+if z.InBounds(msg) {
+    relX, relY := z.Pos(msg)
+    // Hit test using relative coordinates within the modal
+    // Options start at relY=4: border(1)+padding(1)+title(1)+blank(1)
+    // Button row: modalH - 3 (bottom padding(1)+border(1)+row itself)
+}
+```
+
+**Rendering side (modal's `View()`):** Still use `zone.Mark()` for semantic clarity and potential future use, but they are NOT used for hit testing:
+- Buttons: `zone.Mark("modal-btn-left", ...)` / `zone.Mark("modal-btn-right", ...)` via `renderButtons()`
+- Options: `zone.Mark(fmt.Sprintf("modal-opt-%d", i), row)`
+- Form fields: `zone.Mark("modal-field-{name}", input.View())`
+
+**Hit testing side (app.go mouse handler):** Coordinate math within `"modal-zone"` bounds:
+- Click outside `modal-zone` → dismiss the modal
+- Button row → `relY == modalH - 3`, left/right half determines which button
+- Option rows → `relY` mapped to option index (2 rows per option for name+desc)
+- Text inputs → `relY` mapped to specific field, then `.Focus()` the input
+
+**Form fields:** Any modal with multiple Tab-navigable inputs MUST support click-to-focus. Add coordinate-based hit testing in app.go's mouse handler alongside the zone marks in View():
+```go
+// In app.go mouse handler for the modal:
+if relY == 4 { // URL field row
+    m.focusedField = 0
+    m.urlInput.Focus()
+    m.nameInput.Blur()
+}
+if relY == 5 { // Name field row
+    m.focusedField = 1
+    m.urlInput.Blur()
+    m.nameInput.Focus()
+}
+```
+
+**When adding a new modal:** Add its mouse handling block to app.go's `tea.MouseMsg` handler (around line 1118), following the existing pattern for the other modals. Do NOT add `case tea.MouseMsg:` to the modal's own `Update()` — it won't work due to the overlay constraint.
 
 ## Keyboard Behavior
 
