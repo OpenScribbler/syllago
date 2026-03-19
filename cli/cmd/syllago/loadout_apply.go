@@ -27,6 +27,17 @@ var loadoutApplyCmd = &cobra.Command{
 Default mode (no flags): preview what would happen without making changes.
 --try: apply temporarily; reverts automatically when the session ends.
 --keep: apply permanently; run "syllago loadout remove" to undo.`,
+	Example: `  # Preview what a loadout would do
+  syllago loadout apply my-loadout
+
+  # Try temporarily (auto-reverts on session end)
+  syllago loadout apply my-loadout --try
+
+  # Apply permanently
+  syllago loadout apply my-loadout --keep
+
+  # Apply to a specific provider
+  syllago loadout apply my-loadout --keep --to cursor`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runLoadoutApply,
 }

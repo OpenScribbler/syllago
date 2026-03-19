@@ -17,6 +17,9 @@ agents, MCP servers — into a single shareable configuration.
 Use "syllago loadout apply" to try or apply a loadout.
 Use "syllago loadout create" to build a new loadout interactively.
 Use "syllago loadout remove" to revert an active loadout.`,
+	Example: `  syllago loadout list
+  syllago loadout apply my-loadout --try
+  syllago loadout remove`,
 }
 
 func init() {

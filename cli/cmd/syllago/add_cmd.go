@@ -29,16 +29,23 @@ Provide a type or type/name to add content.
 Syllago handles format conversion automatically. Once added, content can be
 installed to any supported provider with "syllago install --to <provider>".
 
-Examples:
-  syllago add --from claude-code                  Discover available content (read-only)
-  syllago add rules --from claude-code            Add all rules
-  syllago add rules/security --from claude-code   Add a specific rule
-  syllago add --all --from claude-code            Add everything
-  syllago add --from claude-code --dry-run        Show what would be written without writing
-
 After adding, use "syllago install" to activate content in a provider.
 
 Hooks-specific flags (--exclude, --scope) are only meaningful when adding hooks.`,
+	Example: `  # Discover available content (read-only)
+  syllago add --from claude-code
+
+  # Add all rules from a provider
+  syllago add rules --from claude-code
+
+  # Add a specific rule by name
+  syllago add rules/security --from claude-code
+
+  # Add everything
+  syllago add --all --from claude-code
+
+  # Preview what would be written
+  syllago add --from claude-code --dry-run`,
 	RunE: runAdd,
 }
 

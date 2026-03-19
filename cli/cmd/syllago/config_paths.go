@@ -17,11 +17,19 @@ var configPathsCmd = &cobra.Command{
 	Use:   "paths",
 	Short: "Manage custom provider path overrides",
 	Long:  "Configure custom base directories or per-type path overrides for providers.\nOverrides are stored in the global config (~/.syllago/config.json) since paths are machine-specific.",
+	Example: `  syllago config paths show
+  syllago config paths set claude-code --base-dir ~/custom/claude
+  syllago config paths clear claude-code`,
 }
 
 var configPathsShowCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Show configured path overrides",
+	Example: `  # Show all path overrides
+  syllago config paths show
+
+  # Show overrides for a specific provider
+  syllago config paths show --provider claude-code`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.LoadGlobal()
 		if err != nil {
@@ -75,7 +83,12 @@ var configPathsSetCmd = &cobra.Command{
 	Use:   "set <provider>",
 	Short: "Set path overrides for a provider",
 	Long:  "Set a base directory or per-type path override for a provider.\nPaths must be absolute (start with / or ~/).",
-	Args:  cobra.ExactArgs(1),
+	Example: `  # Set a base directory for a provider
+  syllago config paths set claude-code --base-dir ~/custom/claude
+
+  # Set a per-type path override
+  syllago config paths set cursor --type rules --path ~/my-rules`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		slug := args[0]
 		baseDir, _ := cmd.Flags().GetString("base-dir")
@@ -175,7 +188,12 @@ var configPathsSetCmd = &cobra.Command{
 var configPathsClearCmd = &cobra.Command{
 	Use:   "clear <provider>",
 	Short: "Clear path overrides for a provider",
-	Args:  cobra.ExactArgs(1),
+	Example: `  # Clear all overrides for a provider
+  syllago config paths clear claude-code
+
+  # Clear only a specific type override
+  syllago config paths clear cursor --type rules`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		slug := args[0]
 		typeName, _ := cmd.Flags().GetString("type")

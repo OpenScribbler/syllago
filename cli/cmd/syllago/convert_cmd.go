@@ -24,11 +24,15 @@ var convertCmd = &cobra.Command{
 	Long: `Renders a library item to a target provider's format without installing it.
 Output goes to stdout by default, or to a file with --output.
 
-No state changes are made — this is purely for ad-hoc sharing.
-
-Examples:
+No state changes are made — this is purely for ad-hoc sharing.`,
+	Example: `  # Convert a skill to Cursor format (stdout)
   syllago convert my-skill --to cursor
-  syllago convert my-rule --to windsurf --output ./windsurf-rule.md`,
+
+  # Convert and save to a file
+  syllago convert my-rule --to windsurf --output ./windsurf-rule.md
+
+  # Convert to JSON output
+  syllago convert my-skill --to cursor --json`,
 	Args: cobra.ExactArgs(1),
 	RunE: runConvert,
 }

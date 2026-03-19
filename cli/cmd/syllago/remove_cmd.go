@@ -25,12 +25,18 @@ var removeCmd = &cobra.Command{
 	Use:   "remove <name>",
 	Short: "Remove content from your library and uninstall from providers",
 	Long: `Removes a content item from your library (~/.syllago/content/) and
-uninstalls it from any providers where it is currently installed.
-
-Examples:
+uninstalls it from any providers where it is currently installed.`,
+	Example: `  # Remove a skill from library and all providers
   syllago remove my-skill
+
+  # Disambiguate by type when name exists in multiple types
   syllago remove my-rule --type rules
-  syllago remove my-skill --force`,
+
+  # Skip confirmation prompt
+  syllago remove my-skill --force
+
+  # Preview what would happen
+  syllago remove my-skill --dry-run`,
 	Args: cobra.ExactArgs(1),
 	RunE: runRemove,
 }

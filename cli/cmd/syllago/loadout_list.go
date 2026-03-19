@@ -13,7 +13,12 @@ import (
 var loadoutListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List available loadouts",
-	RunE:  runLoadoutList,
+	Example: `  # List all available loadouts
+  syllago loadout list
+
+  # JSON output
+  syllago loadout list --json`,
+	RunE: runLoadoutList,
 }
 
 func init() {

@@ -26,15 +26,22 @@ var importCmd = &cobra.Command{
 Syllago handles format conversion automatically. Once imported, content can be
 exported to any supported provider with "syllago export --to <provider>".
 
-Examples:
-  syllago import --from claude-code                  Import all content from Claude Code
-  syllago import --from claude-code --type skills    Import only skills
-  syllago import --from cursor --name my-rule        Import a specific rule by name
-  syllago import --from claude-code --preview        Preview what would be imported (read-only)
-  syllago import --from claude-code --dry-run        Show what would be written without writing
-
 After import, use "syllago export" to install content into other providers,
 or browse in the TUI with "syllago".`,
+	Example: `  # Import all content from Claude Code
+  syllago import --from claude-code
+
+  # Import only skills
+  syllago import --from claude-code --type skills
+
+  # Import a specific rule by name
+  syllago import --from cursor --name my-rule
+
+  # Preview what would be imported
+  syllago import --from claude-code --preview
+
+  # Show what would be written without writing
+  syllago import --from claude-code --dry-run`,
 	RunE: runImport,
 }
 

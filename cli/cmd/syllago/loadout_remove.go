@@ -14,9 +14,10 @@ import (
 )
 
 var loadoutRemoveCmd = &cobra.Command{
-	Use:   "remove",
-	Short: "Remove the active loadout and restore original configuration",
-	RunE:  runLoadoutRemove,
+	Use:     "remove",
+	Short:   "Remove the active loadout and restore original configuration",
+	Example: `  syllago loadout remove`,
+	RunE:    runLoadoutRemove,
 }
 
 func init() {

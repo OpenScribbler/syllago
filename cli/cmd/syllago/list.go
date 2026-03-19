@@ -13,11 +13,18 @@ var listCmd = &cobra.Command{
 	Short: "List content items in the catalog",
 	Long: `Show a quick inventory of all content without launching the TUI.
 
-By default, lists all content grouped by type. Use flags to filter:
-  syllago list                      All content, grouped by type
-  syllago list --source library     Only library items
-  syllago list --type skills        Only skills
-  syllago list --json               JSON output`,
+By default, lists all content grouped by type. Use flags to filter.`,
+	Example: `  # List all content grouped by type
+  syllago list
+
+  # Show only library items
+  syllago list --source library
+
+  # Show only skills
+  syllago list --type skills
+
+  # JSON output for scripting
+  syllago list --json`,
 	RunE: runList,
 }
 

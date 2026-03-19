@@ -25,19 +25,24 @@ hooks, MCP configs, etc.). Use "registry sync" to pull updates, and
 "registry items" to browse what's available.
 
 To use registry content, browse it in the TUI ("syllago") or export it
-directly with "syllago export --to <provider>".
-
-Workflow:
-  syllago registry add <url>           Add a new registry
-  syllago registry sync                Pull latest from all registries
-  syllago registry items               Browse available content
-  syllago registry items --type skills Show only skills across registries`,
+directly with "syllago install --to <provider>".`,
+	Example: `  syllago registry add https://github.com/team/rules.git
+  syllago registry sync
+  syllago registry items --type skills`,
 }
 
 var registryAddCmd = &cobra.Command{
 	Use:   "add <git-url>",
 	Short: "Add a git registry",
-	Args:  cobra.ExactArgs(1),
+	Example: `  # Add a registry by URL
+  syllago registry add https://github.com/team/rules.git
+
+  # Add with a custom name
+  syllago registry add https://github.com/team/rules.git --name team-rules
+
+  # Pin to a specific branch
+  syllago registry add https://github.com/team/rules.git --ref main`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findContentRepoRoot()
 		if err != nil {
@@ -184,9 +189,10 @@ var registryAddCmd = &cobra.Command{
 }
 
 var registryRemoveCmd = &cobra.Command{
-	Use:   "remove <name>",
-	Short: "Remove a registry and delete its local clone",
-	Args:  cobra.ExactArgs(1),
+	Use:     "remove <name>",
+	Short:   "Remove a registry and delete its local clone",
+	Example: `  syllago registry remove team-rules`,
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findContentRepoRoot()
 		if err != nil {
@@ -237,6 +243,11 @@ type registryListItem struct {
 var registryListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List registered registries",
+	Example: `  # List all configured registries
+  syllago registry list
+
+  # JSON output
+  syllago registry list --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findContentRepoRoot()
 		if err != nil {
@@ -303,11 +314,12 @@ var registrySyncCmd = &cobra.Command{
 
 Sync updates the local clone only — it does not modify your local/ or
 installed provider content. Use "syllago registry items" to see what changed,
-and "syllago export" to install updated content.
+and "syllago install" to apply updated content.`,
+	Example: `  # Sync all registries
+  syllago registry sync
 
-Examples:
-  syllago registry sync              Sync all registries
-  syllago registry sync my-rules     Sync a specific registry`,
+  # Sync a specific registry
+  syllago registry sync my-rules`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findContentRepoRoot()
@@ -367,12 +379,15 @@ var registryItemsCmd = &cobra.Command{
 	Long: `Lists content items from one or all registries.
 
 Use --type to filter by content type. To install registry content, use
-"syllago export --to <provider>" or browse in the TUI with "syllago".
+"syllago install --to <provider>" or browse in the TUI with "syllago".`,
+	Example: `  # List all items from all registries
+  syllago registry items
 
-Examples:
-  syllago registry items                     List all items from all registries
-  syllago registry items my-rules            List items from a specific registry
-  syllago registry items --type skills       List only skills`,
+  # List items from a specific registry
+  syllago registry items my-rules
+
+  # Filter by content type
+  syllago registry items --type skills`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findContentRepoRoot()
@@ -468,10 +483,14 @@ var registryCreateCmd = &cobra.Command{
 	Long: `Create a new registry in one of two modes:
 
   --new <name>          Scaffold an empty registry directory structure
-  --from-native         Index provider-native content in the current repo
-
-Examples:
+  --from-native         Index provider-native content in the current repo`,
+	Example: `  # Scaffold an empty registry
   syllago registry create --new my-rules
+
+  # Scaffold with a description
+  syllago registry create --new my-rules --description "Team coding standards"
+
+  # Index existing provider-native content
   syllago registry create --from-native`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		newName, _ := cmd.Flags().GetString("new")
