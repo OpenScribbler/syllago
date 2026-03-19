@@ -227,6 +227,75 @@ func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, 
 	}
 }
 
+// InstallWithResolver places the given item under the provider's install directory,
+// using the resolver for path resolution instead of a flat baseDir string.
+// This respects the full priority chain: per-type path > CLI --base-dir > config baseDir > default.
+func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoRoot string, method InstallMethod, resolver *config.PathResolver) (string, error) {
+	// Dispatch to JSON merge handlers for types that need it
+	if IsJSONMerge(prov, item.Type) {
+		switch item.Type {
+		case catalog.MCP:
+			return installMCP(item, prov, repoRoot)
+		case catalog.Hooks:
+			return installHook(item, prov, repoRoot)
+		}
+		return "", fmt.Errorf("%s does not support %s via JSON merge", prov.Name, item.Type.Label())
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("getting home directory: %w", err)
+	}
+
+	installDir := resolver.InstallDir(prov, item.Type, home)
+	if installDir == "" {
+		return "", fmt.Errorf("%s does not support %s", prov.Name, item.Type.Label())
+	}
+	if installDir == provider.JSONMergeSentinel {
+		return "", fmt.Errorf("%s uses JSON merge for %s (not filesystem install)", prov.Name, item.Type.Label())
+	}
+	if installDir == provider.ProjectScopeSentinel {
+		return "", fmt.Errorf("%s %s is project-scoped (use export with --to from within a project directory)", prov.Name, item.Type.Label())
+	}
+
+	// Compute target path from resolved install dir (same logic as CheckStatusWithResolver).
+	var targetPath string
+	if item.Type == catalog.Agents {
+		targetPath = filepath.Join(installDir, item.Name+".md")
+	} else if item.Type.IsUniversal() {
+		targetPath = filepath.Join(installDir, item.Name)
+	} else {
+		targetPath = filepath.Join(installDir, filepath.Base(item.Path))
+	}
+
+	// Check for cross-provider rendering via converter
+	if conv := converter.For(item.Type); conv != nil {
+		if item.Provider != "" && item.Provider != prov.Slug {
+			return installWithRenderTo(item, prov, conv, filepath.Dir(targetPath))
+		}
+		if converter.HasSourceFile(item) && item.Provider == prov.Slug {
+			return installFromSourceTo(item, prov, filepath.Dir(targetPath))
+		}
+	}
+
+	// Agents install the AGENT.md file, not the whole directory
+	sourcePath := item.Path
+	if item.Type == catalog.Agents {
+		sourcePath = filepath.Join(item.Path, "AGENT.md")
+	}
+
+	switch method {
+	case MethodCopy:
+		return targetPath, CopyContent(sourcePath, targetPath)
+	default:
+		if IsWindowsMount(targetPath) {
+			fmt.Fprintf(os.Stderr, "note: %s is on a Windows mount, using copy instead of symlink\n", targetPath)
+			return targetPath, CopyContent(sourcePath, targetPath)
+		}
+		return targetPath, CreateSymlink(sourcePath, targetPath)
+	}
+}
+
 // Uninstall removes the given item from the provider's install directory.
 // For JSON merge types, it removes the entry from the provider's config file.
 // For filesystem types, it removes the symlink.
