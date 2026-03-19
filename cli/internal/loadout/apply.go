@@ -293,42 +293,39 @@ func appendHookEntry(settingsPath string, event string, matcherGroup []byte) err
 
 // applyMCP reads MCP config.json and merges it into the provider's MCP config file.
 func applyMCP(ref ResolvedRef, prov provider.Provider, projectRoot string, inst *installer.Installed, source string) error {
-	_ = prov        // v1: Claude Code only, config path derived below
-	_ = projectRoot // v1: not needed for home-scoped config
-
 	rawData, err := os.ReadFile(filepath.Join(ref.Item.Path, "config.json"))
 	if err != nil {
 		return fmt.Errorf("reading config.json: %w", err)
 	}
 
-	// Parse and re-serialize to whitelist fields
-	var cfg installer.MCPConfig
-	if err := json.Unmarshal(rawData, &cfg); err != nil {
-		return fmt.Errorf("parsing config.json: %w", err)
-	}
-	configData, err := json.Marshal(cfg)
+	jsonKey := installer.MCPConfigKey(prov)
+
+	// Extract server entries — handles both nested and flat config.json formats
+	entries, err := installer.ExtractServerEntries(rawData, ref.Name, jsonKey)
 	if err != nil {
-		return fmt.Errorf("serializing config: %w", err)
+		return err
 	}
 
 	// Determine config file path
-	home, err := os.UserHomeDir()
+	cfgPath, err := installer.MCPConfigPathFor(prov, projectRoot)
 	if err != nil {
-		return fmt.Errorf("getting home dir: %w", err)
+		return fmt.Errorf("MCP config path: %w", err)
 	}
-
-	// Claude Code MCP config is at ~/.claude.json
-	cfgPath := filepath.Join(home, ".claude.json")
 
 	fileData, err := readJSONFileOrEmpty(cfgPath)
 	if err != nil {
 		return fmt.Errorf("reading %s: %w", cfgPath, err)
 	}
 
-	key := "mcpServers." + ref.Name
-	fileData, err = sjson.SetRawBytes(fileData, key, configData)
-	if err != nil {
-		return fmt.Errorf("setting %s: %w", key, err)
+	// Merge each server entry
+	var serverNames []string
+	for name, configData := range entries {
+		key := jsonKey + "." + name
+		fileData, err = sjson.SetRawBytes(fileData, key, configData)
+		if err != nil {
+			return fmt.Errorf("setting %s: %w", key, err)
+		}
+		serverNames = append(serverNames, name)
 	}
 
 	if err := writeJSONFileAtomic(cfgPath, fileData); err != nil {
@@ -337,6 +334,7 @@ func applyMCP(ref ResolvedRef, prov provider.Provider, projectRoot string, inst 
 
 	inst.MCP = append(inst.MCP, installer.InstalledMCP{
 		Name:        ref.Name,
+		ServerNames: serverNames,
 		Source:      source,
 		InstalledAt: time.Now(),
 	})

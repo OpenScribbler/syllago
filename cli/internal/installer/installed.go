@@ -25,6 +25,7 @@ type InstalledHook struct {
 // InstalledMCP records an MCP server placed into .claude.json by syllago.
 type InstalledMCP struct {
 	Name        string    `json:"name"`
+	ServerNames []string  `json:"serverNames,omitempty"` // actual server keys in provider config
 	Source      string    `json:"source"`
 	InstalledAt time.Time `json:"installedAt"`
 }
