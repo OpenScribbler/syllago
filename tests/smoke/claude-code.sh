@@ -66,8 +66,8 @@ test_first_time_apply() {
   # Verify MCP merged into .claude.json
   assert_file_exists "$HOME/.claude.json" \
     ".claude.json should exist after MCP merge"
-  assert_json_field "$HOME/.claude.json" '.mcpServers["example-kitchen-sink-mcp"]' \
-    ".claude.json should have the MCP server entry"
+  assert_json_field "$HOME/.claude.json" '.mcpServers["example-stdio-server"]' \
+    ".claude.json should have MCP server entries from config.json"
 
   # Verify loadout status shows active
   local status
@@ -157,7 +157,7 @@ MCP
     "existing user MCP server should survive merge"
 
   # Verify loadout content was also added
-  assert_json_field "$HOME/.claude.json" '.mcpServers["example-kitchen-sink-mcp"]' \
+  assert_json_field "$HOME/.claude.json" '.mcpServers["example-stdio-server"]' \
     "loadout MCP should be added alongside existing"
 
   # Remove and verify user content is restored
@@ -222,37 +222,27 @@ run_test "Double-apply prevention" test_double_apply_blocked
 test_claude_mcp_list() {
   syllago loadout apply "$LOADOUT_NAME" --keep 2>&1
 
-  # Verify MCP config was written to .claude.json.
-  # The kitchen-sink MCP config.json defines "example-stdio-server" and
-  # "example-http-server" inside mcpServers. After merge, these should
-  # appear in ~/.claude.json.
-  #
-  # NOTE: There is a known MCP merge bug where the item name is used as the
-  # server key instead of extracting server names from config.json. This test
-  # verifies what claude mcp list actually sees — if it shows "No MCP servers",
-  # the merge is producing malformed output.
+  # Verify MCP servers extracted from config.json appear in .claude.json.
+  # The kitchen-sink config.json defines "example-stdio-server" and
+  # "example-http-server" inside mcpServers.
   assert_file_exists "$HOME/.claude.json" ".claude.json should exist"
+  assert_json_field "$HOME/.claude.json" '.mcpServers["example-stdio-server"]' \
+    ".claude.json should have example-stdio-server"
+  assert_json_field "$HOME/.claude.json" '.mcpServers["example-http-server"]' \
+    ".claude.json should have example-http-server"
 
-  # Verify .claude.json has MCP content (item name or actual server names).
-  local mcpjson
-  mcpjson=$(cat "$HOME/.claude.json")
-  assert_contains "$mcpjson" "mcpServers" \
-    ".claude.json should have mcpServers section"
-
-  # Verify claude mcp list picks up the servers.
-  # Known issue: the MCP merge currently uses the item name as the server key
-  # with an empty config object, so claude may not recognize it. This assertion
-  # will start passing once the MCP merge correctly extracts server entries
-  # from config.json.
+  # Verify claude mcp list sees the servers.
+  # Note: claude mcp list may only show cloud/remote servers depending on
+  # project context. The file-level assertions above are the primary check.
   local mcp_output
   mcp_output=$(claude mcp list 2>&1 || true)
-  if echo "$mcp_output" | grep -qF "No MCP servers"; then
-    echo -e "  ${YELLOW}WARN${RESET}: claude mcp list sees no servers (known MCP merge issue)"
+  if ! echo "$mcp_output" | grep -qF "example-stdio-server"; then
+    echo -e "  ${YELLOW}INFO${RESET}: claude mcp list did not show local servers (cloud servers shown instead)"
   fi
 
   syllago loadout remove --auto 2>&1
 
-  # After removal, MCP entries should be gone from .claude.json
+  # After removal, MCP entries should be gone
   if [[ -f "$HOME/.claude.json" ]]; then
     local mcpjson
     mcpjson=$(cat "$HOME/.claude.json")

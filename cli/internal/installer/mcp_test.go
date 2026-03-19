@@ -150,10 +150,10 @@ func TestMCPConfigKey_Zed(t *testing.T) {
 	zed := provider.Provider{Slug: "zed"}
 	claude := provider.Provider{Slug: "claude-code"}
 
-	if got := mcpConfigKey(zed); got != "context_servers" {
+	if got := MCPConfigKey(zed); got != "context_servers" {
 		t.Errorf("zed key: want context_servers, got %s", got)
 	}
-	if got := mcpConfigKey(claude); got != "mcpServers" {
+	if got := MCPConfigKey(claude); got != "mcpServers" {
 		t.Errorf("claude key: want mcpServers, got %s", got)
 	}
 }
@@ -250,5 +250,159 @@ func TestInstallMCP_OpenCodeStripsJSONCComments(t *testing.T) {
 	existing := gjson.GetBytes(data, "mcpServers.existing")
 	if !existing.Exists() {
 		t.Fatal("existing server should be preserved after merge")
+	}
+}
+
+func TestInstallMCP_NestedFormat(t *testing.T) {
+	// Not parallel — mutates package-level mcpConfigPath
+	tmpDir := t.TempDir()
+
+	// Create MCP item with nested format (mcpServers wrapper)
+	itemDir := filepath.Join(tmpDir, "kitchen-sink-mcp")
+	os.MkdirAll(itemDir, 0755)
+	nestedConfig := `{
+		"mcpServers": {
+			"stdio-server": {
+				"type": "stdio",
+				"command": "npx",
+				"args": ["-y", "@example/server"],
+				"env": {"API_KEY": "test-key"}
+			},
+			"http-server": {
+				"url": "https://mcp.example.com",
+				"type": "streamable-http"
+			}
+		}
+	}`
+	os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(nestedConfig), 0644)
+
+	item := catalog.ContentItem{Name: "kitchen-sink-mcp", Type: catalog.MCP, Path: itemDir}
+
+	// Create target config file with existing server
+	configFile := filepath.Join(tmpDir, ".claude.json")
+	os.WriteFile(configFile, []byte(`{"mcpServers":{"existing":{"command":"keep-me"}}}`), 0644)
+
+	prov := provider.Provider{Slug: "claude-code"}
+
+	originalFunc := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = originalFunc }()
+
+	_, err := installMCP(item, prov, tmpDir)
+	if err != nil {
+		t.Fatalf("installMCP failed: %v", err)
+	}
+
+	data, _ := os.ReadFile(configFile)
+
+	// Both servers from the nested config should be present
+	stdio := gjson.GetBytes(data, "mcpServers.stdio-server")
+	if !stdio.Exists() {
+		t.Fatal("expected mcpServers.stdio-server")
+	}
+	if stdio.Get("command").String() != "npx" {
+		t.Error("stdio-server command should be npx")
+	}
+	if stdio.Get("env.API_KEY").String() != "test-key" {
+		t.Error("stdio-server env.API_KEY should be test-key")
+	}
+
+	http := gjson.GetBytes(data, `mcpServers.http-server`)
+	if !http.Exists() {
+		t.Fatal("expected mcpServers.http-server")
+	}
+	if http.Get("url").String() != "https://mcp.example.com" {
+		t.Error("http-server url should be https://mcp.example.com")
+	}
+
+	// Existing server should survive
+	if !gjson.GetBytes(data, "mcpServers.existing").Exists() {
+		t.Fatal("existing server should survive merge")
+	}
+
+	// Item name should NOT appear as a server key
+	if gjson.GetBytes(data, "mcpServers.kitchen-sink-mcp").Exists() {
+		t.Error("item name should not be used as server key for nested format")
+	}
+
+	// installed.json should track the actual server names
+	inst, _ := LoadInstalled(tmpDir)
+	idx := inst.FindMCP("kitchen-sink-mcp")
+	if idx < 0 {
+		t.Fatal("kitchen-sink-mcp not found in installed.json")
+	}
+	names := inst.MCP[idx].ServerNames
+	if len(names) != 2 {
+		t.Fatalf("expected 2 server names, got %d", len(names))
+	}
+}
+
+func TestUninstallMCP_NestedFormat(t *testing.T) {
+	// Not parallel — mutates package-level mcpConfigPath
+	tmpDir := t.TempDir()
+
+	// Create MCP item with nested format
+	itemDir := filepath.Join(tmpDir, "multi-mcp")
+	os.MkdirAll(itemDir, 0755)
+	nestedConfig := `{
+		"mcpServers": {
+			"server-a": {"command": "a"},
+			"server-b": {"command": "b"}
+		}
+	}`
+	os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(nestedConfig), 0644)
+
+	item := catalog.ContentItem{Name: "multi-mcp", Type: catalog.MCP, Path: itemDir}
+
+	configFile := filepath.Join(tmpDir, ".claude.json")
+	os.WriteFile(configFile, []byte(`{"mcpServers":{"keep-me":{"command":"stay"}}}`), 0644)
+
+	prov := provider.Provider{Slug: "claude-code"}
+
+	originalFunc := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = originalFunc }()
+
+	// Install
+	_, err := installMCP(item, prov, tmpDir)
+	if err != nil {
+		t.Fatalf("install: %v", err)
+	}
+
+	// Verify both servers exist
+	data, _ := os.ReadFile(configFile)
+	if !gjson.GetBytes(data, "mcpServers.server-a").Exists() {
+		t.Fatal("server-a should exist after install")
+	}
+
+	// Uninstall
+	_, err = uninstallMCP(item, prov, tmpDir)
+	if err != nil {
+		t.Fatalf("uninstall: %v", err)
+	}
+
+	data, _ = os.ReadFile(configFile)
+
+	// Both servers should be gone
+	if gjson.GetBytes(data, "mcpServers.server-a").Exists() {
+		t.Error("server-a should be removed")
+	}
+	if gjson.GetBytes(data, "mcpServers.server-b").Exists() {
+		t.Error("server-b should be removed")
+	}
+
+	// Existing server should survive
+	if !gjson.GetBytes(data, "mcpServers.keep-me").Exists() {
+		t.Fatal("keep-me should survive uninstall")
+	}
+
+	// installed.json should be clean
+	inst, _ := LoadInstalled(tmpDir)
+	if inst.FindMCP("multi-mcp") >= 0 {
+		t.Error("multi-mcp should be removed from installed.json")
 	}
 }
