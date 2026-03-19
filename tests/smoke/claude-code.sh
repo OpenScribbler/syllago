@@ -253,29 +253,8 @@ test_claude_mcp_list() {
 
 run_test "claude mcp list (introspection)" test_claude_mcp_list
 
-# ── Test: LLM-based rule verification (requires auth) ────────────────────────
-
-test_claude_rules_via_llm() {
-  syllago loadout apply "$LOADOUT_NAME" --keep 2>&1
-
-  # Ask Claude to list its active rules. The kitchen-sink rules content should
-  # appear in the response. Using --max-budget-usd to cap cost.
-  local response
-  response=$(claude -p "List the names of your active rules. Just list the file/directory names, nothing else." \
-    --max-budget-usd 0.05 \
-    --allowedTools "" \
-    2>&1)
-  assert_contains "$response" "kitchen-sink" \
-    "Claude should report the loadout's rules as active"
-
-  syllago loadout remove --auto 2>&1
-}
-
-if [[ "${SMOKE_AUTH:-}" == "1" ]]; then
-  run_test "Claude rules via LLM (auth)" test_claude_rules_via_llm
-else
-  skip_test "Claude rules via LLM (auth)" "Set SMOKE_AUTH=1 to enable (requires SSO session)"
-fi
+# Neither Claude Code nor Gemini CLI has a deterministic rule introspection command.
+# Rules are verified via filesystem checks in the tests above.
 
 # ── Test: Preview mode (no side effects) ─────────────────────────────────────
 
