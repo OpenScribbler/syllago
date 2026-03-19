@@ -161,6 +161,34 @@ setup_test_home() {
   # as the project root. Snapshots are stored at projectRoot/.syllago/snapshots/,
   # so without this, snapshots would pollute the actual repo.
   mkdir -p "$SMOKE_TEST_HOME/.git"
+
+  # Copy auth credentials from real HOME so CLI tools can authenticate.
+  # Claude Code stores SSO credentials in ~/.claude/.credentials.json
+  # Gemini CLI stores OAuth credentials in ~/.gemini/oauth_creds.json
+  if [[ -f "$ORIGINAL_HOME/.claude/.credentials.json" ]]; then
+    mkdir -p "$SMOKE_TEST_HOME/.claude"
+    cp "$ORIGINAL_HOME/.claude/.credentials.json" "$SMOKE_TEST_HOME/.claude/.credentials.json"
+  fi
+  if [[ -f "$ORIGINAL_HOME/.gemini/oauth_creds.json" ]]; then
+    mkdir -p "$SMOKE_TEST_HOME/.gemini"
+    cp "$ORIGINAL_HOME/.gemini/oauth_creds.json" "$SMOKE_TEST_HOME/.gemini/oauth_creds.json"
+    # Gemini CLI also requires auth config in settings.json (security.auth.selectedType).
+    # Seed the settings.json with the auth section so introspection commands work.
+    if [[ -f "$ORIGINAL_HOME/.gemini/settings.json" ]]; then
+      # Extract just the security section to seed auth without copying user's full config
+      local auth_json
+      auth_json=$(jq '{security: .security}' "$ORIGINAL_HOME/.gemini/settings.json" 2>/dev/null) || true
+      if [[ -n "$auth_json" && "$auth_json" != "null" ]]; then
+        echo "$auth_json" > "$SMOKE_TEST_HOME/.gemini/settings.json"
+      fi
+    fi
+  fi
+
+  # Preserve Go module cache in the real HOME to avoid re-downloading
+  # dependencies and creating read-only files in the temp dir.
+  export GOPATH="${ORIGINAL_HOME}/go"
+  export GOMODCACHE="${ORIGINAL_HOME}/go/pkg/mod"
+
   cd "$SMOKE_TEST_HOME"
 
   echo -e "${BOLD}Test HOME:${RESET} $SMOKE_TEST_HOME"
@@ -175,6 +203,8 @@ cleanup_test_home() {
   fi
 
   if [[ -n "$SMOKE_TEST_HOME" && -d "$SMOKE_TEST_HOME" ]]; then
+    # Go's module cache uses read-only directories. Fix permissions before removal.
+    chmod -R u+w "$SMOKE_TEST_HOME" 2>/dev/null || true
     rm -rf "$SMOKE_TEST_HOME"
   fi
 

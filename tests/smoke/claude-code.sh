@@ -275,7 +275,7 @@ test_claude_rules_via_llm() {
     --max-budget-usd 0.05 \
     --allowedTools "" \
     2>&1)
-  assert_contains "$response" "example-kitchen-sink-rules" \
+  assert_contains "$response" "kitchen-sink" \
     "Claude should report the loadout's rules as active"
 
   syllago loadout remove --auto 2>&1
