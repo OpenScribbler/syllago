@@ -137,7 +137,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			}
 			continue
 		}
-		desc, err := installer.Install(item, *prov, globalDir, method, resolver.BaseDir(prov.Slug))
+		desc, err := installer.InstallWithResolver(item, *prov, globalDir, method, resolver)
 		if err != nil {
 			result.Skipped = append(result.Skipped, skippedItem{Name: item.Name, Reason: err.Error()})
 			if !output.JSON {
