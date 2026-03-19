@@ -22,7 +22,9 @@ This applies to **all** interactive elements: cards, list items, tabs, breadcrum
 
 All clickable elements use `zone.Mark(id, content)` from bubblezone.
 
-**Critical:** In two-column card grids, cards MUST use fixed height (`cardStyle.Height()`) so that `zone.Mark()` regions align correctly within each row. Variable-height cards cause click targets to shift because bubblezone calculates zones from rendered string positions. Single-column grids don't need this since cards stack vertically.
+**Critical — two-column cards:** Cards MUST use fixed height (`cardStyle.Height()`) so that `zone.Mark()` regions align correctly within each row. Variable-height cards cause click targets to shift because bubblezone calculates zones from rendered string positions. Single-column grids don't need this since cards stack vertically.
+
+**Critical — overlay modals:** Inner `zone.Mark()` calls inside a modal's `View()` do NOT survive `overlay.Composite()`. Only the outer `zone.Mark("modal-zone", m.View())` wrapper is usable for hit testing. Modal mouse handling therefore uses **coordinate-based hit testing** in `app.go` (not `zone.Get().InBounds()` on inner zones). See `tui-modal-patterns.md` for the full pattern. Do NOT add `case tea.MouseMsg:` to a modal's own `Update()` method.
 
 ```go
 // Cards
@@ -37,9 +39,9 @@ zone.Mark("crumb-home", helpStyle.Render("Home"))
 // Tabs
 zone.Mark(fmt.Sprintf("tab-%d", i), tabContent)
 
-// Modal buttons
-zone.Mark("modal-btn-confirm", buttonStyle.Render("Confirm"))
-zone.Mark("modal-btn-cancel", buttonDisabledStyle.Render("Cancel"))
+// Modal buttons (semantic only — hit testing uses coordinates in app.go)
+zone.Mark("modal-btn-left", buttonStyle.Render("Confirm"))
+zone.Mark("modal-btn-right", buttonDisabledStyle.Render("Cancel"))
 ```
 
 ## Zone ID Conventions
@@ -50,7 +52,7 @@ zone.Mark("modal-btn-cancel", buttonDisabledStyle.Render("Cancel"))
 | List items | `"item-{index}"` | `"item-0"`, `"item-5"` |
 | Tabs | `"tab-{index}"` | `"tab-0"`, `"tab-1"` |
 | Breadcrumbs | `"crumb-{name}"` | `"crumb-home"`, `"crumb-category"` |
-| Modal buttons | `"modal-btn-{action}"` | `"modal-btn-confirm"`, `"modal-btn-cancel"` |
+| Modal buttons | `"modal-btn-{side}"` | `"modal-btn-left"`, `"modal-btn-right"` |
 | Modal form fields | `"modal-field-{name}"` | `"modal-field-url"`, `"modal-field-name"` |
 | Radio/option items | `"modal-opt-{index}"` | `"modal-opt-0"`, `"modal-opt-1"` |
 | Sidebar items | `"sidebar-{index}"` | `"sidebar-0"` |

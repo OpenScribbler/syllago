@@ -18,6 +18,11 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
+// Mouse handling note: Modal View() methods use zone.Mark() for semantic
+// labeling, but these inner zones don't survive overlay.Composite(). All modal
+// mouse click handling uses coordinate-based hit testing in app.go's
+// tea.MouseMsg handler — NOT in the modal's own Update() method.
+
 type envSetupStep int
 
 const (
