@@ -14,11 +14,11 @@ type settingsModel struct {
 	repoRoot string
 	cfg      *config.Config
 
-	cursor     int // main settings row cursor
-	message    string
+	cursor       int // main settings row cursor
+	message      string
 	messageIsErr bool
-	width      int
-	height     int
+	width        int
+	height       int
 }
 
 func newSettingsModel(repoRoot string) settingsModel {

@@ -33,7 +33,7 @@ type Meta struct {
 	Tags           []string     `yaml:"tags,omitempty"`
 	Hidden         bool         `yaml:"hidden,omitempty"`
 	Dependencies   []Dependency `yaml:"dependencies,omitempty"`
-	CreatedAt      *time.Time   `yaml:"created_at,omitempty"`      // when item was scaffolded via syllago create
+	CreatedAt      *time.Time   `yaml:"created_at,omitempty"` // when item was scaffolded via syllago create
 	PromotedAt     *time.Time   `yaml:"promoted_at,omitempty"`
 	PRBranch       string       `yaml:"pr_branch,omitempty"`
 	SourceProvider string       `yaml:"source_provider,omitempty"` // provider slug content was imported from

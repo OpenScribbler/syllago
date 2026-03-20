@@ -108,4 +108,3 @@ func DeriveHookName(hook HookData) string {
 
 	return slugify(hook.Event)
 }
-

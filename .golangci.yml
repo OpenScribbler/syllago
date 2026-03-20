@@ -1,3 +1,5 @@
+version: "2"
+
 # Minimal baseline linter configuration.
 # Goal: consistency, not exhaustive analysis.
 run:
@@ -5,12 +7,15 @@ run:
   modules-download-mode: readonly
 
 linters:
-  disable-all: true
+  default: none
   enable:
     - govet
-    - gofmt
     - ineffassign
     - unused
+
+formatters:
+  enable:
+    - gofmt
 
 linters-settings:
   govet:

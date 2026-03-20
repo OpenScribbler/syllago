@@ -26,8 +26,8 @@ type HookEntry struct {
 
 // hookMatcher represents an event matcher with its hooks in canonical format.
 type hookMatcher struct {
-	Matcher string       `json:"matcher,omitempty"`
-	Hooks   []HookEntry  `json:"hooks"`
+	Matcher string      `json:"matcher,omitempty"`
+	Hooks   []HookEntry `json:"hooks"`
 }
 
 // hooksConfig is the top-level hooks structure (syllago canonical format).

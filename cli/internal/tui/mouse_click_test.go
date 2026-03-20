@@ -253,7 +253,6 @@ func TestRegistryAddModal_ClickFieldFocuses(t *testing.T) {
 // Phase 3: loadout_create.go — Create Loadout Wizard
 // ---------------------------------------------------------------------------
 
-
 // ---------------------------------------------------------------------------
 // Phase 5: detail_render.go — Loadout Mode Selector
 // ---------------------------------------------------------------------------

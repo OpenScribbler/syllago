@@ -45,7 +45,7 @@ func (l CompatLevel) Label() string {
 type HookFeature int
 
 const (
-	FeatureMatcher       HookFeature = iota
+	FeatureMatcher HookFeature = iota
 	FeatureAsync
 	FeatureStatusMessage
 	FeatureLLMHook

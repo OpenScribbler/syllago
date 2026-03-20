@@ -53,11 +53,3 @@ func init() {
 	rootCmd.AddCommand(deprecatedExportCmd)
 	rootCmd.AddCommand(deprecatedPromoteCmd)
 }
-
-// registerDeprecatedStubs adds all deprecated command stubs to rootCmd.
-// Call this only after ALL real commands (export, import, promote) have been
-// removed. Calling it while any real command still exists will panic
-// with a Cobra duplicate command error.
-func registerDeprecatedStubs() {
-	rootCmd.AddCommand(deprecatedImportCmd)
-}

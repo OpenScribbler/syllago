@@ -130,11 +130,11 @@ type codexSingleAgent struct {
 }
 
 type codexSingleAgentBody struct {
-	Name         string                    `toml:"name"`
-	Description  string                    `toml:"description,omitempty"`
-	Model        string                    `toml:"model,omitempty"`
-	Tools        []string                  `toml:"tools,omitempty"`
-	Instructions codexAgentInstructions    `toml:"instructions,omitempty"`
+	Name         string                 `toml:"name"`
+	Description  string                 `toml:"description,omitempty"`
+	Model        string                 `toml:"model,omitempty"`
+	Tools        []string               `toml:"tools,omitempty"`
+	Instructions codexAgentInstructions `toml:"instructions,omitempty"`
 }
 
 type codexAgentInstructions struct {

@@ -92,8 +92,8 @@ func runSyncAndExport(cmd *cobra.Command, args []string) error {
 
 // exportResult is the JSON-serializable output for export operations.
 type exportResult struct {
-	Exported []exportedItem `json:"exported"`
-	Skipped  []exportSkippedItem  `json:"skipped,omitempty"`
+	Exported []exportedItem      `json:"exported"`
+	Skipped  []exportSkippedItem `json:"skipped,omitempty"`
 }
 
 type exportedItem struct {
