@@ -40,6 +40,7 @@ Before tagging:
 - [ ] `make test` passes locally
 - [ ] CI is green on main
 - [ ] Breaking changes documented in release notes and CHANGELOG.md
+- [ ] `go install` works: `go install github.com/OpenScribbler/syllago/cli/cmd/syllago@vX.Y.Z` (requires public repo)
 
 ## Version Discovery
 
