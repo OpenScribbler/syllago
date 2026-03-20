@@ -112,3 +112,12 @@ TOML agent ---+   (Claude Code)+--- Cline rule
 - `installed.json` tracks all installed items for clean uninstall
 - Tests: table-driven with `t.Run()`, `t.TempDir()` for fixtures, no mocking library (hand-crafted stubs)
 - Golden files for TUI visual regression; regenerate with `go test ./internal/tui/ -update-golden`
+
+## Development Workflow
+
+Syllago uses a two-layer tracking system:
+
+- **GitHub Issues** are the public intake channel. Bug reports, feature requests, and improvement ideas all start here. Issues are the source of truth for *what* gets built and *why*.
+- **Beads** (`.beads/`) are the internal execution tracker. When work begins on an issue, a bead is created to track implementation progress, dependencies, and blockers. Beads are optimized for AI-augmented development -- they persist across sessions and support dependency graphs.
+
+The flow is: **GitHub Issue** (problem/idea) -> **Bead** (implementation tracking) -> **Commit** (code change). Not every bead maps 1:1 to a GitHub issue -- some are discovered work, internal refactors, or subtasks that don't need public visibility.
