@@ -3486,6 +3486,12 @@ func (a App) renderFooter() string {
 	crumb := a.breadcrumb()
 	helpText := a.contextHelpText()
 
+	// Truncate breadcrumb so it never exceeds half the terminal width.
+	// Long item names (e.g. "Skills > extremely-long-skill-name-...") would
+	// otherwise cause the footer to wrap uncontrollably at small sizes.
+	maxCrumb := a.width / 2
+	crumb = truncate(crumb, maxCrumb)
+
 	// Check if everything fits on one line (help + gap + crumb)
 	singleLineLen := len(helpText) + 1 + len(crumb)
 	if singleLineLen <= a.width {
