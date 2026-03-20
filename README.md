@@ -1,7 +1,6 @@
 <div align="center">
 
-# Syllago
-
+<!-- New logo coming soon -->
 <pre>
  █████████             ████  ████
 ███░░░░░███           ░░███ ░░███
@@ -16,57 +15,135 @@
               ░░░░░░                          ░░░░░░
 </pre>
 
+**The package manager for AI coding tool content.**
+
 </div>
 
-A CLI and TUI for managing AI coding tool content. Browse, install, and export skills, agents, rules, hooks, commands, and MCP configs across Claude Code, Gemini CLI, Codex, Cursor, Windsurf, and Copilot CLI. Content is automatically converted between provider formats when you install or export.
+Syllago is a content manager for AI coding tools. It maintains a library of reusable configurations -- rules, skills, agents, hooks, MCP server configs, commands, and loadouts -- and handles format conversion automatically when you install to a provider or export to another tool. Browse and manage content through an interactive TUI or automate everything with CLI commands and `--json` output.
 
-## Installation
-
-### Install script (Linux, macOS, Windows)
+## Quick Start
 
 ```bash
+# Install
 curl -fsSL https://raw.githubusercontent.com/OpenScribbler/syllago/main/install.sh | sh
+
+# Launch the TUI
+syllago
+
+# Add content from your existing tools
+syllago add --from claude-code
+
+# Install to another provider
+syllago install my-rule --to cursor
 ```
 
-Downloads the latest release binary for your platform, verifies the SHA-256 checksum, and installs to `~/.local/bin`. Override the install location with `INSTALL_DIR`:
+## Features
+
+- **Interactive TUI** with card grids, search, mouse support, and keyboard navigation
+- **Cross-provider conversion** across 11 providers (hub-and-spoke via Claude Code canonical format)
+- **Git-based registries** -- browse and install from any compatible content repository
+- **Loadouts** -- curated content bundles that apply, preview (`--try`), or revert as a unit
+- **Sandbox** -- run AI CLI tools in bubblewrap isolation with filesystem, network, and env filtering (Linux)
+- **`--json` output** on all commands for scripting and CI integration
+
+## Supported Providers
+
+| Tool | Rules | Skills | Agents | MCP | Hooks | Commands |
+|------|:-----:|:------:|:------:|:---:|:-----:|:--------:|
+| Claude Code | x | x | x | x | x | x |
+| Gemini CLI | x | x | x | x | x | - |
+| Copilot CLI | x | - | x | x | x | - |
+| Codex | x | - | x | - | - | x |
+| Cursor | x | - | - | - | - | - |
+| Windsurf | x | - | - | - | - | - |
+| Zed | x | - | - | - | - | - |
+| Cline | x | - | - | x | - | - |
+| Roo Code | x | - | - | x | - | - |
+| OpenCode | x | x | - | x | - | - |
+| Kiro | x | x | x | x | - | - |
+
+## Content Types
+
+| Type | Description |
+|------|-------------|
+| Rules | System prompts and custom instructions |
+| Skills | Multi-file workflow packages |
+| Agents | AI agent definitions and personas |
+| MCP | MCP server configurations |
+| Hooks | Event-driven automation scripts |
+| Commands | Custom slash commands |
+| Loadouts | Curated content bundles |
+
+## Conversion Compatibility
+
+| Content Type | Coverage | Notes |
+|---|---|---|
+| Rules | All 11 providers | Format differs but content fully preserved |
+| Skills | All 11 providers | Metadata rendering varies by provider |
+| Agents | All 11 providers | Codex uses TOML format (auto-converted) |
+| MCP configs | 9 providers | Zed uses `context_servers` key (handled automatically) |
+| Hooks | 3 providers | Other providers don't have hook systems |
+| Commands | Claude Code | Provider-specific feature |
+| Loadouts | Claude Code (v1) | Additional provider emitters planned |
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `syllago` | Launch the interactive TUI |
+| `syllago add` | Add content to your library from a provider, path, or git URL |
+| `syllago install` | Activate library content in a provider |
+| `syllago uninstall` | Deactivate content from a provider |
+| `syllago remove` | Remove content from your library |
+| `syllago convert` | Convert library content to a provider format |
+| `syllago share` | Contribute library content to a team repo |
+| `syllago publish` | Contribute library content to a registry |
+| `syllago loadout` | Apply, create, and manage loadouts |
+| `syllago registry` | Manage git-based content registries |
+| `syllago sandbox` | Run AI CLI tools in bubblewrap sandboxes (Linux) |
+| `syllago init` | Initialize syllago for a project |
+| `syllago create` | Scaffold a new content item |
+| `syllago inspect` | Show details about a content item |
+| `syllago list` | List content items in the catalog |
+| `syllago config` | View and edit configuration |
+| `syllago update` | Update syllago to the latest release |
+| `syllago info` | Show capabilities (providers, formats) |
+| `syllago version` | Print version |
+
+### Global Flags
+
+```
+--json        Output in JSON format
+--no-color    Disable color output
+-q, --quiet   Suppress non-essential output
+-v, --verbose Verbose output
+```
+
+### Example Workflows
 
 ```bash
-INSTALL_DIR=/usr/local/bin sh install.sh
+# Add content from your Claude Code setup
+syllago add --from claude-code
+
+# Add only rules from Cursor
+syllago add --from cursor --type rules
+
+# Install a skill to Gemini CLI (auto-converts format)
+syllago install my-skill --to gemini-cli
+
+# Browse registry content
+syllago registry add https://github.com/your-team/ai-configs.git
+syllago registry sync
+syllago registry items --type skills
+
+# Apply a loadout temporarily (auto-reverts when session ends)
+syllago loadout apply my-loadout --try
+
+# Convert content for a specific provider without installing
+syllago convert my-rule --to windsurf
 ```
 
-### Homebrew (macOS, Linux)
-
-```bash
-brew install openscribbler/tap/syllago
-```
-
-### From source
-
-Requires Go 1.25 or later.
-
-```bash
-git clone https://github.com/OpenScribbler/syllago.git ~/.local/src/syllago
-cd ~/.local/src/syllago
-make build
-```
-
-See [Development](#development) for build details.
-
-## What It Does
-
-A centralized repository of reusable content for AI coding tools — custom instructions, agent definitions, prompt templates, hook scripts, and MCP server configs. The `syllago` TUI lets you browse, preview, and install content into any supported tool. When you install or export, Syllago detects which tools you have, converts formats between providers as needed (e.g., Cursor MDC to Claude Code Markdown), and places files in the correct locations.
-
-The `syllago import` command brings content from any provider into syllago, and `syllago export` installs it into any other provider's location with automatic format conversion.
-
-## The TUI
-
-Running `syllago` with no arguments launches a full terminal UI for browsing and managing content.
-
-### Layout
-
-The interface uses a persistent sidebar + content panel layout. The sidebar lists content categories (Skills, Agents, MCP, Rules, Hooks, Commands), and the content panel shows item lists, detail views, or workflow screens.
-
-### Navigation
+## TUI Keyboard Shortcuts
 
 | Key | Action |
 |-----|--------|
@@ -79,217 +156,87 @@ The interface uses a persistent sidebar + content panel layout. The sidebar list
 | `?` | Toggle keyboard shortcut help |
 | `Home`/`End` | Jump to first/last item |
 | `Ctrl+N`/`Ctrl+P` | Next/previous item in detail view |
+| `i` | Install selected item |
+| `u` | Uninstall selected item |
+| `a` | Add content (context-specific) |
+| `r` | Remove item |
+| `c` | Copy content to clipboard |
+| `H` | Toggle hidden items |
 
-### Mouse Support
+Mouse support: click to select cards, items, tabs, breadcrumbs, and modal buttons. Scroll wheel works in all scrollable areas.
 
-Click to select sidebar items, content list items, detail tabs, action buttons, import/update/settings options, and breadcrumb links. Scroll wheel works in all scrollable areas.
+## Demo
 
-### Detail View
+<!-- VHS demo GIFs coming in a future release -->
 
-Each content item has a tabbed detail view:
+## Installation
 
-- **Files** — Browse the item's file tree with split-view preview (file list on left, content on right). Copy content or save to disk. Loadouts show a **Contents** tab with items grouped by type.
-- **Install** — Check/uncheck target providers, then press `i` to install. Environment variable setup for MCP servers with inline `.env` editing. Loadouts show an **Apply** tab.
-
-### Import
-
-Import content from the local filesystem or a git repository:
-
-1. Choose source (Local filesystem or Git URL)
-2. Pick content type (or auto-detect for universal types)
-3. Browse and select files with inline content detection and file preview
-4. Name the item and confirm
-
-If the destination already exists, a **conflict resolution screen** shows a `git diff`-style unified diff with colored additions/removals and hunk headers. Overwrite with `y` or cancel with `Esc`. Batch imports step through each conflict individually.
-
-### Settings
-
-Configure the repository root path, content library location, and default providers. Changes auto-save on exit.
-
-### Update
-
-Check for updates, preview what's new (commit log + diffstat), and pull — all from within the TUI.
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `syllago` | Launch the TUI |
-| `syllago init` | Initialize syllago for a project (creates `.syllago/config.json`) |
-| `syllago import` | Bring content into syllago from a provider, path, or git URL |
-| `syllago export` | Export content to a provider's install location |
-| `syllago config` | Manage provider selection (`list`, `add`, `remove`) |
-| `syllago registry` | Manage git-based content registries (`add`, `remove`, `list`, `sync`, `items`) |
-| `syllago sandbox` | Run AI CLI tools in bubblewrap sandboxes (Linux only) |
-| `syllago update` | Update syllago to the latest release |
-| `syllago info` | Show capabilities (`providers`, `formats`) |
-| `syllago completion` | Generate shell autocompletion (bash, zsh, fish, powershell) |
-| `syllago version` | Print version |
-
-### Global Flags
-
-All commands accept these flags:
-
-```
---json        Output in JSON format
---no-color    Disable color output
--q, --quiet   Suppress non-essential output
--v, --verbose Verbose output
-```
-
-### Example Workflows
+### Install script (Linux, macOS, Windows)
 
 ```bash
-# Add content from a git repo
-syllago add --from https://github.com/user/repo.git --type skills --name my-skill
-
-# Export your local content to Claude Code
-syllago export --to claude-code
-
-# Export only rules to Cursor
-syllago export --to cursor --type rules
-
-# See what a provider already has configured
-syllago import --from claude-code
-syllago import --from cursor --type rules --preview
+curl -fsSL https://raw.githubusercontent.com/OpenScribbler/syllago/main/install.sh | sh
 ```
 
-## Supported Tools
-
-| Tool        | Rules | Skills | Agents | Commands | Hooks | MCP |
-|-------------|:-----:|:------:|:------:|:--------:|:-----:|:---:|
-| Claude Code |   ✓   |   ✓    |   ✓    |    ✓     |   ✓   |  ✓  |
-| Gemini CLI  |   ✓   |   ✓    |   ✓    |    ✓     |   ✓   |  ✓  |
-| Copilot CLI |   ✓   |   —    |   ✓    |    ✓     |   ✓   |  ✓  |
-| Codex       |   ✓   |   —    |   —    |    ✓     |   —   |  —  |
-| Cursor      |   ✓   |   —    |   —    |    —     |   —   |  —  |
-| Windsurf    |   ✓   |   —    |   —    |    —     |   —   |  —  |
-
-## Sandbox
-
-Syllago can wrap AI CLI tools in [bubblewrap](https://github.com/containers/bubblewrap) sandboxes that restrict filesystem access, network egress, and environment variables. Linux only.
+Downloads the latest release binary, verifies the SHA-256 checksum, and installs to `~/.local/bin`. Override the install location with `INSTALL_DIR`:
 
 ```bash
-# Run Claude Code in a sandbox
-syllago sandbox run claude-code
-
-# Check prerequisites
-syllago sandbox check claude-code
-
-# Manage the domain allowlist
-syllago sandbox allow-domain example.com
-syllago sandbox deny-domain example.com
-syllago sandbox domains
+INSTALL_DIR=/usr/local/bin sh install.sh
 ```
 
-The sandbox provides:
-
-- **Filesystem isolation** — The project directory is writable; everything else is read-only or hidden
-- **Network egress proxy** — Only allowed domains can be reached (provider API + ecosystem registries)
-- **Environment filtering** — Only explicitly allowed env vars are forwarded
-- **Config change review** — Provider config changes made inside the sandbox are diffed and require approval before being applied back
-
-Requires bubblewrap >= 0.4.0 and socat >= 1.7.0.
-
-## Registries
-
-Registries are git repositories of syllago content that you can browse and install from.
+### Homebrew (macOS, Linux)
 
 ```bash
-# Add a registry
-syllago registry add <git-url>
-
-# List registered registries
-syllago registry list
-
-# Sync (pull latest)
-syllago registry sync
-
-# Browse items across all registries
-syllago registry items
+brew install openscribbler/tap/syllago
 ```
 
-Registries also appear in the TUI — browse by category, preview content, and install with one keypress.
-
-## Repository Structure
-
-```
-syllago/
-├── skills/          # Multi-file skill packages
-├── agents/          # Agent definitions
-├── rules/           # Per-tool rule files
-│   ├── claude-code/
-│   ├── cursor/
-│   ├── windsurf/
-│   ├── codex/
-│   └── gemini-cli/
-├── hooks/           # Event-driven hooks
-│   ├── claude-code/
-│   └── gemini-cli/
-├── commands/        # Custom slash commands
-│   ├── claude-code/
-│   ├── codex/
-│   └── gemini-cli/
-├── mcp/             # MCP server configurations
-├── memory/          # Context files for AI assistants
-├── templates/       # Scaffolding for new content
-├── local/           # Local content (gitignored)
-└── cli/             # Go source code for syllago
-```
-
-## Adding Your Own Content
-
-Each content item is a directory (or file) with a `.syllago.yaml` metadata file:
-
-```yaml
-name: my-skill
-description: What this skill does
-version: "1.0"
-tags:
-  - productivity
-  - code-review
-```
-
-Place your content in the appropriate category directory and `syllago` will discover it automatically. Use the `local/` directory for content you don't want to commit to the repository.
-
-## Updating
-
-**Release builds** (installed via install script or Homebrew): run `syllago update` or use the Update screen in the TUI. Both use the same updater — downloads the latest release, verifies the checksum, and replaces the binary.
-
-**Dev builds** (built from source): `syllago` detects when its own source files have changed and automatically rebuilds before running. Just `git pull` — the next invocation handles the rest.
-
-## Development
-
-Requires Go 1.25 or later.
+### go install
 
 ```bash
-make build      # Build the syllago binary (output: cli/syllago)
-make test       # Run tests
-make fmt        # Format Go source
-make vet        # Run go vet
-make build-all  # Cross-compile for all 6 targets (linux/darwin/windows × amd64/arm64)
+go install github.com/OpenScribbler/syllago/cli/cmd/syllago@latest
 ```
 
-## Contributing
+### From source
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute. Syllago accepts ideas, not code — open an issue using one of the structured templates and describe what you'd like to see.
+Requires Go 1.25+.
+
+```bash
+git clone https://github.com/OpenScribbler/syllago.git
+cd syllago
+make build
+```
+
+## Configuration
+
+Syllago uses two config files:
+
+- **Project:** `.syllago/config.json` -- providers and registries for this project
+- **Global:** `~/.syllago/config.json` -- default providers, global library settings
+
+Run `syllago init` for first-time setup. The init wizard helps you select providers and add registries.
+
+### Custom Provider Paths
+
+If your AI tools are installed at non-default locations:
+
+```bash
+syllago config paths set claude-code --base-dir /custom/path
+syllago config paths show
+```
+
+## Accessibility
+
+All operations are available via CLI commands with `--json` output for scripting and assistive technology. The TUI uses ANSI rendering; for screen reader users, we recommend CLI commands directly. Colors can be disabled with `NO_COLOR=1` or `--no-color`. We're exploring a screen-reader-compatible TUI mode -- [feedback welcome](https://github.com/OpenScribbler/syllago/issues).
 
 ## Security
 
-Syllago does not operate any registry or marketplace. You can add registries from any
-git repository that follows the syllago repository structure.
+Syllago does not operate any registry or marketplace. Third-party registries are unverified -- review content before installing, especially hooks and MCP configs which execute code by design.
 
-**Third-party registries are unverified.** When you run `syllago registry add <url>`,
-you are trusting the owner of that repository. Review the content before installing
-anything from it.
+See [SECURITY.md](SECURITY.md) for the full security policy, threat model, and how to report vulnerabilities.
 
-**Hooks and MCP configs can execute arbitrary code.** A hook is a shell script that
-runs automatically in your AI coding session. An MCP server is a process that your AI
-tool connects to. Before installing either, read the source.
+## Contributing
 
-The syllago maintainers are not affiliated with and accept no liability for any
-third-party registry or its content.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Syllago accepts ideas, not code -- open an issue using one of the structured templates.
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE) for full text.
+Apache 2.0 -- see [LICENSE](LICENSE) for full text.

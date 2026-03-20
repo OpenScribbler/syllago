@@ -1,0 +1,32 @@
+name: PR Policy
+
+on:
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  close-external-prs:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Close external PRs
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const allowlist = ['holdenhewett', 'OpenScribblerOwner', 'dependabot[bot]'];
+            const sender = context.payload.sender.login;
+            if (!allowlist.includes(sender)) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: `Thank you for your interest in contributing to syllago!\n\nThis project doesn't accept external pull requests at this time. Instead, please:\n1. Open an issue describing the bug or feature\n2. Include reproduction steps for bugs, or a use case description for features\n\nWe review all issues and may implement your suggestion in a future release.`
+              });
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                state: 'closed'
+              });
+            }
