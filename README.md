@@ -64,21 +64,21 @@ make build
 **Scenario:** You have Claude Code rules and skills you want to use in Cursor and Gemini CLI.
 
 ```bash
-# Step 1: Add your Claude Code content to syllago's library
+# Step 1: See what content Claude Code has
 syllago add --from claude-code
-# Found 3 rules, 2 skills, 1 agent. Added to ~/.syllago/content/
+# Discovered content from Claude Code:
+#   Rules (3): my-coding-rules, typescript-standards, security-policy
+#   Skills (2): research-skill, code-review
+#   ...
 
-# Step 2: See what's in your library
-syllago list
-# my-coding-rules       rules    claude-code
-# typescript-standards   rules    claude-code
-# ...
+# Step 2: Add all of it to your syllago library
+syllago add --all --from claude-code
 
 # Step 3: Install a rule to Cursor (auto-converts to .mdc format)
 syllago install my-coding-rules --to cursor
 
 # Step 4: Install a skill to Gemini CLI (auto-converts to Gemini's SKILL.md format)
-syllago install my-research-skill --to gemini-cli
+syllago install research-skill --to gemini-cli
 ```
 
 Or skip the CLI and browse everything interactively:
@@ -136,6 +136,18 @@ Content in your library is provider-neutral. You add once, install anywhere.
 | Commands | Custom slash commands (e.g., `/deploy`) |
 | Loadouts | Bundles of the above, applied as a unit |
 
+## Conversion Compatibility
+
+| Content Type | Coverage | Notes |
+|---|---|---|
+| Rules | All providers | Format differs but content fully preserved |
+| Skills | All providers | Metadata rendering varies by provider |
+| Agents | All providers | Codex uses TOML format (auto-converted) |
+| MCP configs | Most providers | Zed uses `context_servers` key (handled automatically) |
+| Hooks | Claude Code, Gemini CLI, Copilot CLI | Other providers don't have hook systems |
+| Commands | Claude Code | Provider-specific feature |
+| Loadouts | Claude Code (v1) | Additional provider emitters planned |
+
 ## Commands
 
 | Command | Description |
@@ -177,7 +189,7 @@ Content in your library is provider-neutral. You add once, install anywhere.
 syllago add --from claude-code
 
 # Add only rules from Cursor
-syllago add --from cursor --type rules
+syllago add rules --from cursor
 
 # Install a skill to Gemini CLI (auto-converts format)
 syllago install my-skill --to gemini-cli
