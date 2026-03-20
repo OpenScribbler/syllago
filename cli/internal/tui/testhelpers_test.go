@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -21,6 +22,14 @@ func init() {
 	// Initialize the bubblezone global manager so zone.Mark() calls in View()
 	// don't panic during tests (in production this is called in main.go).
 	zone.NewGlobal()
+	// Warm up lipgloss default renderer by resolving an AdaptiveColor.
+	// AdaptiveColor triggers HasDarkBackground() detection, which mutates
+	// the renderer's cached color profile. Without this, the first test
+	// that renders an AdaptiveColor (e.g., modal Background) changes the
+	// profile mid-suite, causing ±1 char width shifts in golden tests.
+	lipgloss.NewStyle().
+		Background(lipgloss.AdaptiveColor{Light: "#000", Dark: "#FFF"}).
+		Render("")
 }
 
 // ---------------------------------------------------------------------------
