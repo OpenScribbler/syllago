@@ -8,6 +8,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/spf13/cobra"
 )
 
@@ -100,6 +101,19 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	resolver := config.NewResolver(mergedCfg, baseDir)
 	if err := resolver.ExpandPaths(); err != nil {
 		return fmt.Errorf("expanding paths: %w", err)
+	}
+
+	// Warn if the target provider is not detected on disk.
+	if !output.JSON && !output.Quiet {
+		detected := provider.DetectProvidersWithResolver(resolver)
+		for _, dp := range detected {
+			if dp.Slug == prov.Slug && !dp.Detected {
+				fmt.Fprintf(output.ErrWriter, "Warning: %s not detected at default locations.\n", prov.Name)
+				fmt.Fprintf(output.ErrWriter, "If installed at a custom path, configure it:\n")
+				fmt.Fprintf(output.ErrWriter, "  syllago config paths --provider %s --path /your/path\n", prov.Slug)
+				break
+			}
+		}
 	}
 
 	// Scan global library only.

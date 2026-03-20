@@ -2573,6 +2573,11 @@ func (a App) View() string {
 		contentView = a.helpOverlay.View(a.screen)
 	}
 
+	// Inject no-providers warning banner above content when no AI tools detected.
+	if banner := a.noProvidersWarning(); banner != "" {
+		contentView = banner + "\n" + contentView
+	}
+
 	// Constrain content to the same height as the sidebar so panels align.
 	// Height pads short content; MaxHeight truncates long content.
 	contentView = lipgloss.NewStyle().Height(a.panelHeight()).MaxHeight(a.panelHeight()).Render(contentView)
@@ -2725,31 +2730,71 @@ const syllagoFontRaw = `
              ░░██████                        ░░██████
               ░░░░░░                          ░░░░░░`
 
-// renderFirstRun returns a getting-started guide shown when the catalog is empty
-// and no registries are configured. This is the zero-state experience for new users.
+// noProvidersWarning returns a warning banner when no providers are detected.
+// Returns empty string if any provider is detected (no banner needed).
+func (a App) noProvidersWarning() string {
+	if a.anyProviderDetected() {
+		return ""
+	}
+	return warningStyle.Render("! No AI coding tools detected. Content can be browsed but won't activate until a tool is installed. Configure: syllago config paths")
+}
+
+// anyProviderDetected returns true if at least one provider was found on disk.
+func (a App) anyProviderDetected() bool {
+	for _, p := range a.providers {
+		if p.Detected {
+			return true
+		}
+	}
+	return false
+}
+
+// detectedProviderNames returns display names of all detected providers.
+func (a App) detectedProviderNames() []string {
+	var names []string
+	for _, p := range a.providers {
+		if p.Detected {
+			names = append(names, p.Name)
+		}
+	}
+	return names
+}
+
+// renderFirstRun returns a context-aware getting-started guide shown when the
+// catalog is empty. The content adapts based on what's already detected:
+//   - Journey A: providers detected — guide user to discover content for them
+//   - Journey B: registries exist but no providers (rare — registries bypass first-run)
+//   - Journey C: nothing detected — full onboarding from scratch
 func (a App) renderFirstRun(contentW int) string {
 	var s string
-
 	s += titleStyle.Render("Welcome to syllago!") + "\n\n"
-	s += helpStyle.Render("No content found. Here's how to get started:") + "\n\n"
 
-	steps := []struct {
-		num  string
-		head string
-		cmd  string
-	}{
-		{"1.", "Add existing content:", "syllago add --from claude-code"},
-		{"2.", "Add a registry:", "syllago registry add <git-url>"},
-		{"3.", "Create new content:", "syllago create skill my-first-skill"},
-		{"4.", "Create a registry:", "syllago registry create my-registry"},
+	hasProviders := a.anyProviderDetected()
+	hasRegistries := a.registryCfg != nil && len(a.registryCfg.Registries) > 0
+
+	switch {
+	case hasProviders:
+		// Journey A: providers detected — help user discover content
+		names := a.detectedProviderNames()
+		s += labelStyle.Render("Detected:") + " " + valueStyle.Render(strings.Join(names, ", ")) + "\n\n"
+		s += helpStyle.Render("Get started:") + "\n\n"
+		s += labelStyle.Render("  'a'") + " " + valueStyle.Render("to discover content for your providers") + "\n"
+		s += labelStyle.Render("  'R'") + " " + valueStyle.Render("to add a registry from your team") + "\n"
+
+	case hasRegistries:
+		// Journey B: registries configured but no providers found (rare path)
+		s += helpStyle.Render("Registries configured but no providers detected.") + "\n\n"
+		s += helpStyle.Render("Install a supported AI coding tool, then restart syllago.") + "\n"
+
+	default:
+		// Journey C: nothing detected — full onboarding
+		s += helpStyle.Render("No content or providers found. Here's how to get started:") + "\n\n"
+		s += labelStyle.Render("  'a'") + " " + valueStyle.Render("to add content from a provider or file") + "\n"
+		s += "   " + helpStyle.Render("or run: syllago loadout apply syllago-starter") + "\n\n"
+		s += labelStyle.Render("  '?'") + " " + valueStyle.Render("for keyboard shortcuts") + "\n"
 	}
 
-	for _, step := range steps {
-		s += labelStyle.Render(step.num) + " " + valueStyle.Render(step.head) + "\n"
-		s += "   " + helpStyle.Render(step.cmd) + "\n\n"
-	}
-
-	s += helpStyle.Render("Press ? for help, q to quit.") + "\n"
+	s += "\n"
 	return s
 }
 

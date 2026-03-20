@@ -48,10 +48,18 @@ func withFakeRepoRoot(t *testing.T, root string) {
 // Returns a cleanup function registered via t.Cleanup.
 func addTestProvider(t *testing.T, slug, name, installBase string) {
 	t.Helper()
+	addTestProviderOpts(t, slug, name, installBase, false)
+}
+
+// addTestProviderOpts is like addTestProvider but allows setting the Detected flag.
+func addTestProviderOpts(t *testing.T, slug, name, installBase string, detected bool) {
+	t.Helper()
 	orig := append([]provider.Provider(nil), provider.AllProviders...)
 	testProv := provider.Provider{
-		Name: name,
-		Slug: slug,
+		Name:     name,
+		Slug:     slug,
+		Detected: detected,
+		Detect:   func(string) bool { return detected },
 		InstallDir: func(homeDir string, ct catalog.ContentType) string {
 			// Use installBase directly (ignoring homeDir) for test isolation.
 			switch ct {
