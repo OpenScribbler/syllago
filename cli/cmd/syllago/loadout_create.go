@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/loadout"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 var loadoutCreateCmd = &cobra.Command{
@@ -22,24 +22,6 @@ var loadoutCreateCmd = &cobra.Command{
 
 func init() {
 	loadoutCmd.AddCommand(loadoutCreateCmd)
-}
-
-// loadoutCreateManifest mirrors loadout.Manifest for YAML output during creation.
-// We define it here rather than importing it to avoid coupling the CLI wizard
-// to internal parsing validation (which requires kind/version/provider to already
-// be valid). This struct is write-only — we marshal it, never unmarshal.
-type loadoutCreateManifest struct {
-	Kind        string   `yaml:"kind"`
-	Version     int      `yaml:"version"`
-	Provider    string   `yaml:"provider"`
-	Name        string   `yaml:"name"`
-	Description string   `yaml:"description"`
-	Rules       []string `yaml:"rules,omitempty"`
-	Hooks       []string `yaml:"hooks,omitempty"`
-	Skills      []string `yaml:"skills,omitempty"`
-	Agents      []string `yaml:"agents,omitempty"`
-	MCP         []string `yaml:"mcp,omitempty"`
-	Commands    []string `yaml:"commands,omitempty"`
 }
 
 func runLoadoutCreate(cmd *cobra.Command, args []string) error {
@@ -91,13 +73,7 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	manifest := loadoutCreateManifest{
-		Kind:        "loadout",
-		Version:     1,
-		Provider:    providerSlug,
-		Name:        name,
-		Description: description,
-	}
+	itemsByType := map[catalog.ContentType][]string{}
 
 	// Step 4: For each content type, let user select items
 	selectableTypes := []catalog.ContentType{
@@ -155,21 +131,10 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 			selected = append(selected, available[idx-1].Name)
 		}
 
-		switch ct {
-		case catalog.Rules:
-			manifest.Rules = selected
-		case catalog.Hooks:
-			manifest.Hooks = selected
-		case catalog.Skills:
-			manifest.Skills = selected
-		case catalog.Agents:
-			manifest.Agents = selected
-		case catalog.MCP:
-			manifest.MCP = selected
-		case catalog.Commands:
-			manifest.Commands = selected
-		}
+		itemsByType[ct] = selected
 	}
+
+	manifest := loadout.BuildManifest(providerSlug, name, description, itemsByType)
 
 	// Step 5: Review
 	fmt.Fprintf(output.Writer, "\n--- Loadout Review ---\n")
@@ -196,19 +161,10 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Step 6: Write loadout.yaml
-	outDir := filepath.Join(root, "content", "loadouts", providerSlug, name)
-	if err := os.MkdirAll(outDir, 0755); err != nil {
-		return fmt.Errorf("creating directory: %w", err)
-	}
-
-	data, err := yaml.Marshal(manifest)
+	parentDir := filepath.Join(root, "content", "loadouts", providerSlug)
+	outPath, err := loadout.WriteManifest(manifest, parentDir)
 	if err != nil {
-		return fmt.Errorf("marshaling YAML: %w", err)
-	}
-
-	outPath := filepath.Join(outDir, "loadout.yaml")
-	if err := os.WriteFile(outPath, data, 0644); err != nil {
-		return fmt.Errorf("writing loadout.yaml: %w", err)
+		return fmt.Errorf("writing loadout: %w", err)
 	}
 
 	fmt.Fprintf(output.Writer, "\nCreated loadout at: %s\n", outPath)

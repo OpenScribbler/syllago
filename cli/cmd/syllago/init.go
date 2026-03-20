@@ -74,7 +74,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	// Interactive wizard: let the user toggle providers before confirming.
 	// Falls through to auto-accept in non-interactive / --yes / --json modes.
 	if !yes && !output.JSON && isInteractive() && os.Getenv("SYLLAGO_NO_PROMPT") != "1" {
-		allProviders := provider.DetectProviders()
+		allProviders := provider.DetectProvidersWithResolver(nil)
 		wizard := newInitWizard(detected, allProviders)
 		model := initWizardModel{wizard: wizard}
 		p := tea.NewProgram(model)
