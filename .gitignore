@@ -22,6 +22,7 @@ content/.syllago/
 # Working docs — ignore all except design specs
 docs/*
 !docs/design/
+!docs/vhs/
 tmp/
 
 # Development workflow state
