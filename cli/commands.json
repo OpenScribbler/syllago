@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-19T16:57:38Z",
+  "generatedAt": "2026-03-20T15:27:29Z",
   "syllagoVersion": "0.6.1",
   "commands": [
     {
@@ -1030,7 +1030,7 @@
       "parent": null,
       "synopsis": "syllago import [flags]",
       "description": "Bring content into syllago from a provider, path, or git URL",
-      "longDescription": "Discovers content from a provider and imports it into local/.\n\nSyllago handles format conversion automatically. Once imported, content can be\nexported to any supported provider with \"syllago export --to \u003cprovider\u003e\".\n\nAfter import, use \"syllago export\" to install content into other providers,\nor browse in the TUI with \"syllago\".",
+      "longDescription": "Discovers content from a provider and imports it into your library.\n\nSyllago handles format conversion automatically. Once imported, content can be\ninstalled to any supported provider with \"syllago install --to \u003cprovider\u003e\".\n\nAfter import, use \"syllago install\" to activate content in other providers,\nor browse in the TUI with \"syllago\".",
       "aliases": [],
       "flags": [
         {
@@ -1372,11 +1372,36 @@
       "displayName": "Inspect",
       "slug": "inspect",
       "parent": null,
-      "synopsis": "syllago inspect \u003ctype\u003e/\u003cname\u003e",
+      "synopsis": "syllago inspect \u003ctype\u003e/\u003cname\u003e [flags]",
       "description": "Show details about a content item",
       "longDescription": "Display full details about a content item for pre-install auditing.\n\nPath formats:\n  skills/my-skill                   Universal content (type/name)\n  rules/claude-code/my-rule         Provider-specific (type/provider/name)",
       "aliases": [],
-      "flags": [],
+      "flags": [
+        {
+          "name": "--compatibility",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show per-provider compatibility matrix (hooks only)"
+        },
+        {
+          "name": "--files",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show file contents"
+        },
+        {
+          "name": "--risk",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show detailed risk analysis"
+        }
+      ],
       "inheritedFlags": [
         {
           "name": "--json",
@@ -2049,7 +2074,7 @@
       "parent": null,
       "synopsis": "syllago registry",
       "description": "Manage git-based content registries",
-      "longDescription": "Add, remove, list, and sync git repositories as content registries.\n\nRegistries are read-only git repos containing shared content (skills, rules,\nhooks, MCP configs, etc.). Use \"registry sync\" to pull updates, and\n\"registry items\" to browse what's available.\n\nTo use registry content, browse it in the TUI (\"syllago\") or export it\ndirectly with \"syllago install --to \u003cprovider\u003e\".",
+      "longDescription": "Add, remove, list, and sync git repositories as content registries.\n\nRegistries are read-only git repos containing shared content (skills, rules,\nhooks, MCP configs, etc.). Use \"registry sync\" to pull updates, and\n\"registry items\" to browse what's available.\n\nTo use registry content, browse it in the TUI (\"syllago\") or install it\ndirectly with \"syllago install --to \u003cprovider\u003e\".",
       "aliases": [],
       "flags": [],
       "inheritedFlags": [
@@ -2444,7 +2469,7 @@
       "parent": "registry",
       "synopsis": "syllago registry sync [name]",
       "description": "Pull latest content from one or all registries",
-      "longDescription": "Runs git pull on registry clones to fetch the latest content.\n\nSync updates the local clone only — it does not modify your local/ or\ninstalled provider content. Use \"syllago registry items\" to see what changed,\nand \"syllago install\" to apply updated content.",
+      "longDescription": "Runs git pull on registry clones to fetch the latest content.\n\nSync updates the local clone only — it does not modify your library or\ninstalled provider content. Use \"syllago registry items\" to see what changed,\nand \"syllago install\" to activate updated content.",
       "aliases": [],
       "flags": [],
       "inheritedFlags": [
@@ -3503,7 +3528,7 @@
       "parent": null,
       "synopsis": "syllago sync-and-export [flags]",
       "description": "Sync registries then export content to a provider",
-      "longDescription": "Convenience command that syncs all registries then exports.\n\nEquivalent to running:\n  syllago registry sync \u0026\u0026 syllago export --to \u003cprovider\u003e\n\nThis is useful in CI/CD or automation where you want a single command\nto ensure registries are up-to-date before exporting.",
+      "longDescription": "Convenience command that syncs all registries then installs.\n\nEquivalent to running:\n  syllago registry sync \u0026\u0026 syllago install --to \u003cprovider\u003e\n\nThis is useful in CI/CD or automation where you want a single command\nto ensure registries are up-to-date before installing.",
       "aliases": [],
       "flags": [
         {
