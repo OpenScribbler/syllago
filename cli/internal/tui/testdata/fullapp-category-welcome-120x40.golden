@@ -34,7 +34,6 @@ syllago           │  Content
                   │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
                   ││ Add                                            │ │ Update                                         │
                   ││ Add content from providers, local files, or    │ │ Check for updates and pull latest changes      │
-                  ││ git repos                                      │ │                                                │
-           v1.0.0 │  (6 lines below)
+           v1.0.0 │  (7 lines below)
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 tab switch panel • / search • ? help • q quit                                                              syllago

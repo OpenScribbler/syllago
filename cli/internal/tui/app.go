@@ -392,9 +392,9 @@ func (a *App) doCreateLoadoutFromScreen(m createLoadoutScreen) tea.Cmd {
 }
 
 // panelHeight returns the usable height for sidebar and content panels,
-// reserving space for the footer bar (border line + text = 2 rows).
+// reserving space for the footer bar (border top + 2 text lines = 3 rows).
 func (a App) panelHeight() int {
-	h := a.height - 2
+	h := a.height - 3
 	if h < 5 {
 		h = 5
 	}
@@ -3480,19 +3480,65 @@ func (a App) contextHelpText() string {
 }
 
 // renderFooter builds the breadcrumb + context-sensitive help bar.
+// The footer is always 2 lines: help text wraps at bullet separators
+// when it doesn't fit alongside the breadcrumb on a single line.
 func (a App) renderFooter() string {
 	crumb := a.breadcrumb()
 	helpText := a.contextHelpText()
 
-	// Pad the gap between help text and breadcrumb so crumb is right-aligned
-	gap := a.width - len(helpText) - len(crumb)
+	// Check if everything fits on one line (help + gap + crumb)
+	singleLineLen := len(helpText) + 1 + len(crumb)
+	if singleLineLen <= a.width {
+		// Fits on one line — pad between help and crumb, blank second line
+		gap := a.width - len(helpText) - len(crumb)
+		if gap < 1 {
+			gap = 1
+		}
+		line1 := helpText + strings.Repeat(" ", gap) + crumb
+		line2 := ""
+		content := line1 + "\n" + line2
+		return footerStyle.Width(a.width).Height(2).Render(content)
+	}
+
+	// Doesn't fit — wrap help text at a bullet separator to make 2 lines.
+	// Put the breadcrumb right-aligned on line 1 with as much help text as fits.
+	// Remaining help text goes on line 2.
+	parts := strings.Split(helpText, " • ")
+	line1Help := ""
+	line2Help := ""
+	minGap := 2 // minimum space between help text and breadcrumb
+
+	for i, part := range parts {
+		candidate := line1Help
+		if candidate != "" {
+			candidate += " • "
+		}
+		candidate += part
+		// Check if adding this part still leaves room for the crumb
+		if len(candidate)+minGap+len(crumb) <= a.width {
+			line1Help = candidate
+		} else {
+			// Remaining parts go to line 2
+			line2Help = strings.Join(parts[i:], " • ")
+			break
+		}
+	}
+
+	// If nothing fit on line 1 with the crumb, put all help on line 2
+	if line1Help == "" {
+		line1Help = ""
+		line2Help = helpText
+	}
+
+	// Build line 1: help text + gap + right-aligned breadcrumb
+	gap := a.width - len(line1Help) - len(crumb)
 	if gap < 1 {
 		gap = 1
 	}
-	line := helpText + strings.Repeat(" ", gap) + crumb
+	line1 := line1Help + strings.Repeat(" ", gap) + crumb
+	content := line1 + "\n" + line2Help
 
-	// Apply footer style (muted color + top border) to the full-width line
-	return footerStyle.Width(a.width).Render(line)
+	return footerStyle.Width(a.width).Height(2).Render(content)
 }
 
 // breadcrumb returns a "Category > Item" navigation string for the current screen.
