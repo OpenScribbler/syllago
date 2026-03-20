@@ -74,7 +74,7 @@ syllago install my-rule --to cursor
 ## Features
 
 - **Interactive TUI** with card grids, search, mouse support, and keyboard navigation
-- **Cross-provider conversion** with hub-and-spoke architecture (Claude Code as canonical format)
+- **Cross-provider conversion** with hub-and-spoke architecture
 - **Git-based registries** -- browse and install from any compatible content repository
 - **Loadouts** -- curated content bundles that apply, preview (`--try`), or revert as a unit
 - **Sandbox** -- run AI CLI tools in bubblewrap isolation with filesystem, network, and env filtering (Linux)

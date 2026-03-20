@@ -2,7 +2,7 @@
 
 ## Overview
 
-Syllago is a CLI and TUI for managing AI coding tool content (rules, skills, agents, hooks, MCP configs, commands, loadouts) across providers. Built in Go using the Cobra CLI framework and Bubble Tea TUI framework. The canonical content format is Claude Code; all provider conversions go through it as a hub.
+Syllago is a CLI and TUI for managing AI coding tool content (rules, skills, agents, hooks, MCP configs, commands, loadouts) across providers. Built in Go using the Cobra CLI framework and Bubble Tea TUI framework. All provider conversions go through syllago's own canonical format as a hub.
 
 ## Package Map
 
@@ -24,7 +24,7 @@ User configuration management. Stores provider selection, custom install paths, 
 
 ### internal/converter/
 
-Hub-and-spoke format conversion. Claude Code is the canonical format. All conversions go: source format -> canonical -> target format. Never converts directly between two non-canonical providers. Handles MDC (Cursor), TOML (Codex agents), JSON (Kiro), and YAML (OpenCode) edge cases automatically.
+Hub-and-spoke format conversion. All conversions go: source format -> canonical -> target format. Never converts directly between two non-canonical providers. Handles MDC (Cursor), TOML (Codex agents), JSON (Kiro), and YAML (OpenCode) edge cases automatically.
 
 ### internal/gitutil/
 
@@ -93,12 +93,12 @@ Loadout:    loadout.yaml -> Resolver -> Snapshot -> Installer (per item) -> Inst
 
 ## Conversion Model
 
-Hub-and-spoke with Claude Code as canonical format:
+Hub-and-spoke through syllago's canonical format:
 
 ```
 Cursor MDC ---+                +--- Windsurf rule
 Gemini YAML --+--> [Canonical] +--> Kiro JSON
-TOML agent ---+   (Claude Code)+--- Cline rule
+TOML agent ---+                +--- Cline rule
 ```
 
 - **Add**: Provider format -> canonicalize -> store in library

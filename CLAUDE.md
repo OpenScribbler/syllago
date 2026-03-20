@@ -1,6 +1,6 @@
 # Syllago
 
-A package manager for AI coding tool content. Import, export, and convert content (rules, skills, agents, prompts, hooks, commands, MCP configs) between providers. Hub-and-spoke conversion with Claude Code as canonical format.
+A package manager for AI coding tool content. Import, export, and convert content (rules, skills, agents, prompts, hooks, commands, MCP configs) between providers. Hub-and-spoke conversion through syllago's own canonical format.
 
 Content registries are community-driven — syllago provides the tooling but does not own or curate registry content.
 
