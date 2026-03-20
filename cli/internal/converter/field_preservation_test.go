@@ -340,15 +340,15 @@ func TestFieldPreservation_Skills(t *testing.T) {
 			contains: []string{
 				"name: code-review",
 				"description: Code review skill",
-				"read_file",         // allowed-tools translated
-				"grep_search",       // allowed-tools translated
-				"model: opus",       // embedded as prose
+				"read_file",          // allowed-tools translated
+				"grep_search",        // allowed-tools translated
+				"model: opus",        // embedded as prose
 				"Effort level: high", // effort embedded as prose
-				"isolated context",  // context: fork → prose
-				"command menu",      // user-invocable → prose
-				"<pr-url>",          // argument-hint → prose
-				"run_shell_command", // disallowed-tools translated
-				"Hooks:",            // hooks embedded as prose
+				"isolated context",   // context: fork → prose
+				"command menu",       // user-invocable → prose
+				"<pr-url>",           // argument-hint → prose
+				"run_shell_command",  // disallowed-tools translated
+				"Hooks:",             // hooks embedded as prose
 				"Review code for best practices",
 				"syllago:converted",
 			},
