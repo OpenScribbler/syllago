@@ -163,6 +163,7 @@ Content in your library is provider-neutral. You add once, install anywhere.
 | `syllago loadout` | Apply, create, and manage loadouts |
 | `syllago registry` | Manage git-based content registries |
 | `syllago sandbox` | Run AI CLI tools in isolated sandboxes (Linux) |
+| `syllago sync-and-export` | Sync registries then install content to a provider (CI/automation) |
 | `syllago init` | Initialize syllago for a project |
 | `syllago create` | Scaffold a new content item |
 | `syllago inspect` | Show details about a content item |
