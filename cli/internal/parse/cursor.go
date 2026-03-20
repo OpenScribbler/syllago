@@ -3,16 +3,10 @@ package parse
 import (
 	"bytes"
 	"errors"
-	"path/filepath"
 	"strings"
 
-	"github.com/OpenScribbler/syllago/cli/internal/catalog"
-	"github.com/OpenScribbler/syllago/cli/internal/model"
 	"gopkg.in/yaml.v3"
 )
-
-// CursorParser parses Cursor provider files (.mdc format).
-type CursorParser struct{}
 
 // CursorFrontmatter represents the YAML frontmatter in .mdc files.
 type CursorFrontmatter struct {
@@ -22,61 +16,6 @@ type CursorFrontmatter struct {
 }
 
 var errNoFrontmatter = errors.New("no frontmatter found")
-
-func (p CursorParser) ParseFile(file DiscoveredFile) ([]model.Section, error) {
-	content, err := readFileContent(file.Path)
-	if err != nil {
-		return nil, err
-	}
-
-	if file.ContentType == catalog.Rules && filepath.Ext(file.Path) == ".mdc" {
-		return p.parseMDC(file.Path, content)
-	}
-
-	name := filepath.Base(file.Path)
-	return []model.Section{
-		model.TextSection{
-			Category: model.CatConventions,
-			Origin:   model.OriginHuman,
-			Title:    string(file.ContentType) + ": " + name,
-			Body:     string(content),
-			Source:   "import:cursor:" + file.Path,
-		},
-	}, nil
-}
-
-func (p CursorParser) parseMDC(path string, content []byte) ([]model.Section, error) {
-	name := filepath.Base(path)
-	name = strings.TrimSuffix(name, ".mdc")
-
-	fm, body, err := ParseMDCFrontmatter(content)
-	if err != nil {
-		return []model.Section{
-			model.TextSection{
-				Category: model.CatConventions,
-				Origin:   model.OriginHuman,
-				Title:    "Cursor Rule: " + name,
-				Body:     string(content),
-				Source:   "import:cursor:" + path,
-			},
-		}, nil
-	}
-
-	title := "Cursor Rule: " + name
-	if fm.Description != "" {
-		title = "Cursor Rule: " + fm.Description
-	}
-
-	return []model.Section{
-		model.TextSection{
-			Category: model.CatConventions,
-			Origin:   model.OriginHuman,
-			Title:    title,
-			Body:     body,
-			Source:   "import:cursor:" + path,
-		},
-	}, nil
-}
 
 // ParseMDCFrontmatter extracts YAML frontmatter and body from .mdc content.
 // Returns the parsed frontmatter, the body text, and any error.
