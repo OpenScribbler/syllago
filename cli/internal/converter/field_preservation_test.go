@@ -308,7 +308,7 @@ func TestFieldPreservation_Agents(t *testing.T) {
 // =============================================================================
 
 func TestFieldPreservation_Skills(t *testing.T) {
-	input := []byte("---\nname: code-review\ndescription: Code review skill\nallowed-tools:\n  - Read\n  - Grep\ndisallowed-tools:\n  - Bash\nmodel: opus\ncontext: fork\nuser-invocable: true\nargument-hint: \"<pr-url>\"\n---\n\nReview code for best practices and security.\n")
+	input := []byte("---\nname: code-review\ndescription: Code review skill\nallowed-tools:\n  - Read\n  - Grep\ndisallowed-tools:\n  - Bash\nmodel: opus\neffort: high\ncontext: fork\nuser-invocable: true\nargument-hint: \"<pr-url>\"\nhooks:\n  pre_tool_use:\n    - command: \"echo check\"\n---\n\nReview code for best practices and security.\n")
 
 	conv := &SkillsConverter{}
 	canonical, err := conv.Canonicalize(input, "claude-code")
@@ -326,7 +326,10 @@ func TestFieldPreservation_Skills(t *testing.T) {
 				"Read",
 				"Grep",
 				"model: opus",
+				"effort: high",
 				"context: fork",
+				"hooks:",
+				"echo check",
 				"Review code for best practices",
 			},
 			filename: "SKILL.md",
@@ -340,14 +343,16 @@ func TestFieldPreservation_Skills(t *testing.T) {
 				"read_file",         // allowed-tools translated
 				"grep_search",       // allowed-tools translated
 				"model: opus",       // embedded as prose
+				"Effort level: high", // effort embedded as prose
 				"isolated context",  // context: fork → prose
 				"command menu",      // user-invocable → prose
 				"<pr-url>",          // argument-hint → prose
 				"run_shell_command", // disallowed-tools translated
+				"Hooks:",            // hooks embedded as prose
 				"Review code for best practices",
 				"syllago:converted",
 			},
-			absent:   []string{"allowed-tools:", "context: fork", "user-invocable:"},
+			absent:   []string{"allowed-tools:", "context: fork", "user-invocable:", "echo check"},
 			filename: "SKILL.md",
 		},
 		{
@@ -356,12 +361,14 @@ func TestFieldPreservation_Skills(t *testing.T) {
 			contains: []string{
 				"# code-review",
 				"Review code for best practices",
-				"Tool restriction", // allowed-tools embedded as prose
-				"isolated context", // context: fork embedded as prose
-				"model: opus",      // model embedded as prose
-				"command menu",     // user-invocable embedded as prose
+				"Tool restriction",   // allowed-tools embedded as prose
+				"isolated context",   // context: fork embedded as prose
+				"model: opus",        // model embedded as prose
+				"Effort level: high", // effort embedded as prose
+				"command menu",       // user-invocable embedded as prose
+				"Hooks:",             // hooks embedded as prose
 			},
-			absent:   []string{"allowed-tools:"},
+			absent:   []string{"allowed-tools:", "echo check"},
 			filename: "code-review.md",
 		},
 		{
@@ -373,8 +380,9 @@ func TestFieldPreservation_Skills(t *testing.T) {
 				"Tool restriction", // allowed-tools embedded as prose
 				"Do not use",       // disallowed-tools embedded as prose
 				"command menu",     // user-invocable embedded as prose
+				"Hooks:",           // hooks embedded as prose
 			},
-			absent:   []string{"allowed-tools:"},
+			absent:   []string{"allowed-tools:", "echo check"},
 			filename: "code-review.md",
 		},
 	})

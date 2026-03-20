@@ -11,9 +11,14 @@ disallowed-tools:
 context: fork
 agent: Explore
 model: claude-sonnet-4-20250514
+effort: high
 disable-model-invocation: true
 user-invocable: true
 argument-hint: <file-path> [--verbose]
+hooks:
+  pre_tool_use:
+    - command: "echo skill-hook-check"
+      timeout: 5000
 ---
 
 # Kitchen Sink Skill
@@ -33,6 +38,8 @@ Nothing practical. It serves as a living reference for the complete set of metad
 - **context**: Execution context ("fork" means isolated from main conversation)
 - **agent**: Which agent personality to use (Explore)
 - **model**: Preferred model for this skill
+- **effort**: Model effort level (low, medium, high, max)
 - **disable-model-invocation**: Prevents the model from invoking this skill automatically
 - **user-invocable**: Whether users can trigger this skill from the command menu
 - **argument-hint**: Usage hint shown when the skill appears in menus
+- **hooks**: Lifecycle hooks scoped to this skill (currently Claude Code only)
