@@ -225,6 +225,12 @@ Syllago does not operate any registry or marketplace. Third-party registries are
 
 See [SECURITY.md](SECURITY.md) for the full security policy, threat model, and how to report vulnerabilities.
 
+## Roadmap
+
+- Cross-provider skill hook conversion (Claude Code skill-scoped hooks to Gemini global hooks)
+- Additional loadout provider emitters beyond Claude Code
+- VHS demo GIFs for README
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Syllago accepts ideas, not code -- open an issue using one of the structured templates.

@@ -24,9 +24,11 @@ type SkillMeta struct {
 	Context                string   `yaml:"context,omitempty"`
 	Agent                  string   `yaml:"agent,omitempty"`
 	Model                  string   `yaml:"model,omitempty"`
+	Effort                 string   `yaml:"effort,omitempty"`
 	DisableModelInvocation bool     `yaml:"disable-model-invocation,omitempty"`
 	UserInvocable          *bool    `yaml:"user-invocable,omitempty"`
 	ArgumentHint           string   `yaml:"argument-hint,omitempty"`
+	Hooks                  any      `yaml:"hooks,omitempty"`
 }
 
 // geminiSkillMeta is the subset of fields Gemini CLI supports.
@@ -126,6 +128,9 @@ func renderGeminiSkill(meta SkillMeta, body string) (*Result, error) {
 	if meta.Model != "" {
 		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
 	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
 	if meta.DisableModelInvocation {
 		notes = append(notes, "Only invoke when the user explicitly requests it.")
 	}
@@ -134,6 +139,9 @@ func renderGeminiSkill(meta SkillMeta, body string) (*Result, error) {
 	}
 	if meta.ArgumentHint != "" {
 		notes = append(notes, fmt.Sprintf("Usage: %s", meta.ArgumentHint))
+	}
+	if meta.Hooks != nil {
+		notes = append(notes, "**Hooks:** This skill defines lifecycle hooks that execute shell commands. Hooks require a provider with skill-scoped hook support (currently only Claude Code).")
 	}
 
 	outBody := body
@@ -210,6 +218,9 @@ func buildSkillProseNotes(meta SkillMeta) []string {
 	if meta.Model != "" {
 		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
 	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
 	if meta.DisableModelInvocation {
 		notes = append(notes, "Only invoke when the user explicitly requests it.")
 	}
@@ -218,6 +229,9 @@ func buildSkillProseNotes(meta SkillMeta) []string {
 	}
 	if meta.ArgumentHint != "" {
 		notes = append(notes, fmt.Sprintf("Usage: %s", meta.ArgumentHint))
+	}
+	if meta.Hooks != nil {
+		notes = append(notes, "**Hooks:** This skill defines lifecycle hooks that execute shell commands. Hooks require a provider with skill-scoped hook support (currently only Claude Code).")
 	}
 	return notes
 }
