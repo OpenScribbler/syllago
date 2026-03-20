@@ -50,17 +50,17 @@ syllago install my-rule --to cursor
 
 | Tool | Rules | Skills | Agents | MCP | Hooks | Commands |
 |------|:-----:|:------:|:------:|:---:|:-----:|:--------:|
-| Claude Code | x | x | x | x | x | x |
-| Gemini CLI | x | x | x | x | x | - |
-| Copilot CLI | x | - | x | x | x | - |
-| Codex | x | - | x | - | - | x |
-| Cursor | x | - | - | - | - | - |
-| Windsurf | x | - | - | - | - | - |
-| Zed | x | - | - | - | - | - |
-| Cline | x | - | - | x | - | - |
-| Roo Code | x | - | - | x | - | - |
-| OpenCode | x | x | - | x | - | - |
-| Kiro | x | x | x | x | - | - |
+| Claude Code | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Gemini CLI | ✅ | ✅ | ✅ | ✅ | ✅ | - |
+| Copilot CLI | ✅ | - | ✅ | ✅ | ✅ | - |
+| Codex | ✅ | - | ✅ | - | - | ✅ |
+| Cursor | ✅ | - | - | - | - | - |
+| Windsurf | ✅ | - | - | - | - | - |
+| Zed | ✅ | - | - | - | - | - |
+| Cline | ✅ | - | - | ✅ | - | - |
+| Roo Code | ✅ | - | - | ✅ | - | - |
+| OpenCode | ✅ | ✅ | - | ✅ | - | - |
+| Kiro | ✅ | ✅ | ✅ | ✅ | - | - |
 
 ## Content Types
 
