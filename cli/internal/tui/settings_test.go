@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
 )
 
 // navigateToSettings creates a test app and navigates to the settings screen.

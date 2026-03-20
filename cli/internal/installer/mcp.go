@@ -110,6 +110,7 @@ func readMCPConfig(cfgPath string, prov provider.Provider) ([]byte, error) {
 //
 //   - Nested: {"mcpServers": {"name": {...}}} — extracts each entry
 //   - Flat: {"command": "node", ...} — uses itemName as the key
+//
 // ExtractServerEntries reads config.json and returns a map of server names to
 // their whitelisted config. Handles two formats:
 //

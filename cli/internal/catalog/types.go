@@ -61,17 +61,17 @@ type RegistrySource struct {
 
 // ContentItem represents a single discoverable piece of content in the repo.
 type ContentItem struct {
-	Name               string
-	DisplayName        string // human-readable name from frontmatter (skills only), falls back to Name
-	Description        string
-	Type               ContentType
-	Path               string         // absolute path to the item directory or file
-	Provider           string         // for provider-specific content (rules, hooks, commands), which provider
-	Files              []string       // relative paths of all files in item directory
-	Meta               *metadata.Meta // loaded from .syllago.yaml if present
-	Library            bool           // true if item lives in the global content library (~/.syllago/content/)
-	Registry           string         // non-empty if item came from a git registry (value is the registry name)
-	Source             string         // "project", "global", "library", or registry name
+	Name        string
+	DisplayName string // human-readable name from frontmatter (skills only), falls back to Name
+	Description string
+	Type        ContentType
+	Path        string         // absolute path to the item directory or file
+	Provider    string         // for provider-specific content (rules, hooks, commands), which provider
+	Files       []string       // relative paths of all files in item directory
+	Meta        *metadata.Meta // loaded from .syllago.yaml if present
+	Library     bool           // true if item lives in the global content library (~/.syllago/content/)
+	Registry    string         // non-empty if item came from a git registry (value is the registry name)
+	Source      string         // "project", "global", "library", or registry name
 }
 
 // IsExample returns true if this item is tagged as example content.

@@ -27,21 +27,21 @@ import (
 type importStep int
 
 const (
-	stepSource      importStep = iota // pick Local Path / Git URL / Create New
-	stepType                          // (local/create) pick content type
-	stepProvider                      // (local + provider-specific only) pick provider
-	stepBrowseStart                   // (local only) pick starting directory
-	stepBrowse                        // (local only) navigate filesystem
-	stepValidate                      // (local only) review selections before import
-	stepPath                          // (local only) custom path text input for browser start
-	stepGitURL                        // (git only) enter git URL
-	stepGitPick                       // (git only) pick item from scanned clone
-	stepConfirm                       // review and execute
-	stepName                          // (create only) enter item name
-	stepConflict                      // conflict resolution (overwrite/skip)
-	stepHookSelect                    // (hook import only) multi-select which hooks to import
-	stepProviderPick                  // (provider discovery) pick detected provider
-	stepDiscoverySelect               // (provider discovery) multi-select discovered items
+	stepSource          importStep = iota // pick Local Path / Git URL / Create New
+	stepType                              // (local/create) pick content type
+	stepProvider                          // (local + provider-specific only) pick provider
+	stepBrowseStart                       // (local only) pick starting directory
+	stepBrowse                            // (local only) navigate filesystem
+	stepValidate                          // (local only) review selections before import
+	stepPath                              // (local only) custom path text input for browser start
+	stepGitURL                            // (git only) enter git URL
+	stepGitPick                           // (git only) pick item from scanned clone
+	stepConfirm                           // review and execute
+	stepName                              // (create only) enter item name
+	stepConflict                          // conflict resolution (overwrite/skip)
+	stepHookSelect                        // (hook import only) multi-select which hooks to import
+	stepProviderPick                      // (provider discovery) pick detected provider
+	stepDiscoverySelect                   // (provider discovery) multi-select discovered items
 )
 
 type importCloneDoneMsg struct {
@@ -91,7 +91,7 @@ type importModel struct {
 	repoRoot    string // content root (shared content, templates)
 	projectRoot string // project root (local/ lives here)
 	providers   []provider.Provider
-	step      importStep
+	step        importStep
 
 	// Source picker (0=local, 1=git, 2=create)
 	sourceCursor int
@@ -143,9 +143,9 @@ type importModel struct {
 	hookSelectCursor int
 
 	// Provider discovery state
-	discoveryProvCursor int                 // cursor for stepProviderPick
-	discoveryItems      []add.DiscoveryItem // results from DiscoverFromProvider
-	discoverySelected   []bool              // checkbox state per item
+	discoveryProvCursor   int                 // cursor for stepProviderPick
+	discoveryItems        []add.DiscoveryItem // results from DiscoverFromProvider
+	discoverySelected     []bool              // checkbox state per item
 	discoveryCursor       int                 // cursor for stepDiscoverySelect
 	discoveryScrollOffset int                 // scroll offset for stepDiscoverySelect
 	discoveryProvider     provider.Provider   // selected provider
@@ -184,10 +184,10 @@ func newImportModel(providers []provider.Provider, repoRoot, projectRoot string)
 		repoRoot:    repoRoot,
 		projectRoot: projectRoot,
 		providers:   providers,
-		types:     catalog.AllContentTypes(),
-		pathInput: pi,
-		urlInput:  ui,
-		nameInput: ni,
+		types:       catalog.AllContentTypes(),
+		pathInput:   pi,
+		urlInput:    ui,
+		nameInput:   ni,
 	}
 }
 
@@ -1621,12 +1621,6 @@ func (m importModel) validateSelections(paths []string) []validationItem {
 	return items
 }
 
-// doBatchImport imports multiple selected paths, generating metadata for each.
-// Returns a comma-separated list of imported names.
-func (m importModel) doBatchImport(paths []string) (string, []string, error) {
-	return m.doBatchImportWithOverwrite(paths, nil)
-}
-
 // doBatchImportWithOverwrite imports multiple paths, with an optional overwrite map.
 // Paths in the overwrite map are removed before importing. Paths not in the map
 // that already exist are skipped.
@@ -2270,7 +2264,7 @@ func (m importModel) importSelectedHooks() tea.Cmd {
 			}
 			name := m.hookNames[i]
 
-				globalDir := catalog.GlobalContentDir()
+			globalDir := catalog.GlobalContentDir()
 			if globalDir == "" {
 				globalDir = m.projectRoot // fallback
 			}

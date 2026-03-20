@@ -20,12 +20,12 @@ import (
 
 // ApplyOptions configures a loadout apply operation.
 type ApplyOptions struct {
-	Mode        string                // "preview", "try", or "keep"
+	Mode        string                  // "preview", "try", or "keep"
 	Method      installer.InstallMethod // "symlink" (default) or "copy"
 	ProjectRoot string
-	HomeDir     string                // defaults to os.UserHomeDir() if empty
-	RepoRoot    string                // catalog repo root for symlink source resolution
-	Resolver    *config.PathResolver  // optional path resolver for custom locations
+	HomeDir     string               // defaults to os.UserHomeDir() if empty
+	RepoRoot    string               // catalog repo root for symlink source resolution
+	Resolver    *config.PathResolver // optional path resolver for custom locations
 }
 
 // ApplyResult describes what happened during apply.

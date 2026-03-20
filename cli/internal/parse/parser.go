@@ -1,7 +1,6 @@
 package parse
 
 import (
-	"encoding/json"
 	"os"
 
 	"github.com/OpenScribbler/syllago/cli/internal/model"
@@ -44,13 +43,4 @@ func Import(prov provider.Provider, parser Parser, projectRoot string) (*ImportR
 // readFileContent is a helper to read file content.
 func readFileContent(path string) ([]byte, error) {
 	return os.ReadFile(path)
-}
-
-// parseJSONFile reads a JSON file into the given target.
-func parseJSONFile(path string, target any) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(data, target)
 }

@@ -331,7 +331,7 @@ func (m updateModel) View() string {
 				row := fmt.Sprintf("  %s%s", prefix, style.Render(opt))
 				s += zone.Mark(fmt.Sprintf("update-opt-%d", i), row) + "\n"
 			}
-			} else {
+		} else {
 			s += helpStyle.Render(fmt.Sprintf("You're on v%s (latest)", m.localVersion)) + "\n\n"
 			options := []string{"View release notes", "Check for updates"}
 			for i, opt := range options {
@@ -399,7 +399,6 @@ func (m updateModel) View() string {
 		if end < len(lines) {
 			s += helpStyle.Render("  (more below)") + "\n"
 		}
-
 
 	case stepUpdatePull:
 		s += "\n" + m.spinner.View() + " " + helpStyle.Render("Updating syllago...") + "\n"

@@ -76,8 +76,8 @@ func TestRenderInstallTabHasActionButtons(t *testing.T) {
 func TestRenderOverrideInfoShown(t *testing.T) {
 	m := detailModel{
 		item: catalog.ContentItem{
-			Name:  "my-skill",
-			Type:  catalog.Skills,
+			Name:    "my-skill",
+			Type:    catalog.Skills,
 			Library: true,
 		},
 		overrides: []catalog.ContentItem{
@@ -102,8 +102,8 @@ func TestRenderOverrideInfoShown(t *testing.T) {
 func TestRenderOverrideInfoBuiltIn(t *testing.T) {
 	m := detailModel{
 		item: catalog.ContentItem{
-			Name:  "my-skill",
-			Type:  catalog.Skills,
+			Name:    "my-skill",
+			Type:    catalog.Skills,
 			Library: true,
 		},
 		overrides: []catalog.ContentItem{

@@ -231,7 +231,7 @@ func TestFieldPreservation_Agents(t *testing.T) {
 				"background task",            // background → prose
 				"separate git worktree",      // isolation → prose
 				"Do not use these tools",     // disallowedTools → prose
-				"syllago:converted",            // conversion marker
+				"syllago:converted",          // conversion marker
 				"comprehensive test agent",   // body preserved
 			},
 			absent:   []string{"permissionMode:", "isolation: worktree"},

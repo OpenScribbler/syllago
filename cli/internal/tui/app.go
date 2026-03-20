@@ -98,30 +98,30 @@ type App struct {
 	registrySources []catalog.RegistrySource
 	projectRoot     string
 
-	screen          screen
-	focus           focusTarget
+	screen               screen
+	focus                focusTarget
 	modal                confirmModal
 	saveModal            saveModal
 	envModal             envSetupModal
 	instModal            installModal
 	registryAddModal     registryAddModal
-	createLoadout createLoadoutScreen
+	createLoadout        createLoadoutScreen
 	registryOpInProgress bool
-	sidebar         sidebarModel
-	items           itemsModel
-	detail          detailModel
-	search          searchModel
-	helpOverlay     helpOverlayModel
-	importer        importModel
-	updater         updateModel
-	settings        settingsModel
-	registries      registriesModel
-	sandboxSettings sandboxSettingsModel
-	registryCfg     *config.Config
-	toast toastModel
+	sidebar              sidebarModel
+	items                itemsModel
+	detail               detailModel
+	search               searchModel
+	helpOverlay          helpOverlayModel
+	importer             importModel
+	updater              updateModel
+	settings             settingsModel
+	registries           registriesModel
+	sandboxSettings      sandboxSettingsModel
+	registryCfg          *config.Config
+	toast                toastModel
 
 	// Pending non-syllago redirect (between detection and user confirmation)
-	pendingNonSyllagoClone string                  // temp clone path
+	pendingNonSyllagoClone string                   // temp clone path
 	pendingNonSyllagoScan  catalog.NativeScanResult // what was detected
 
 	// Detail model cache (preserves state when re-entering same item)
@@ -132,10 +132,10 @@ type App struct {
 	remoteVersion string
 	commitsBehind int
 
-	showHidden      bool   // when true, hidden items are included in lists
-	cardCursor      int    // selected card index on card view screens
-	cardScrollOffset int   // first visible card row on card grid pages
-	cardParent      screen // which card screen the items list was entered from (0 = none)
+	showHidden       bool   // when true, hidden items are included in lists
+	cardCursor       int    // selected card index on card view screens
+	cardScrollOffset int    // first visible card row on card grid pages
+	cardParent       screen // which card screen the items list was entered from (0 = none)
 
 	// Loadout apply state
 	loadoutApplyItem catalog.ContentItem // the loadout item being applied
@@ -1091,8 +1091,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Button row: last content line before bottom padding(1)+border(1)
 				buttonRelY := modalH - 3
 				if relY == buttonRelY {
-					contentLeft := 3            // border(1) + padding(2)
-					contentW := modalW - 6      // minus borders(2) and padding(4)
+					contentLeft := 3       // border(1) + padding(2)
+					contentW := modalW - 6 // minus borders(2) and padding(4)
 					midX := contentLeft + contentW/2
 					if relX < midX {
 						a.modal.btnCursor = 0 // Confirm
@@ -1245,8 +1245,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				// Check button row click first
 				if relY == buttonRelY {
-					contentLeft := 3            // border(1) + padding(2)
-					contentW := modalW - 6      // minus borders(2) and padding(4)
+					contentLeft := 3       // border(1) + padding(2)
+					contentW := modalW - 6 // minus borders(2) and padding(4)
 					midX := contentLeft + contentW/2
 					if relX < midX {
 						a.instModal.btnCursor = 0
@@ -2724,72 +2724,6 @@ const syllagoFontRaw = `
               ███ ░███                        ███ ░███
              ░░██████                        ░░██████
               ░░░░░░                          ░░░░░░`
-
-// syllagoPlantRaw is the syllago fractal plant ASCII art.
-const syllagoPlantRaw = `
-                                     ##+
-                                    ###+#
-                                  ###++++++      ######
-                                 ###++++++++  ##########
-                      ++++++-   ###++++++++#############
-                     ++++++-...##++++++++#########+++++++
-                     +++++--..##+++++++#######++++++++#+++++++++#+
-                     +++++--.#+++++++######+++++#++++++++++++++++++
-          #######+++#+++++-.###+++++#####++++#+++++++++++++++++++++
-          #######+++#++++--.#++++++#####++#++++++++---------------+
-          #######+++#++++--.#+++++###+++++++++------.............-
-          ########+++++++--##++++####+#+++----##################..
-           #######++++++++-##+++###+++++--##+++++++++++++++++########
-           #######+++#++++-##+++####++++##++++++++++++++++++++++++#+####
-            #######+++++++-##++###+++-#+++###############+++++++++++++#####
-             #######++#++++.#++###++-++######+++############++++++++++++####
-            ++#######++#+++-#++##+++#+###++++++####++##########++++++++++++
-          +++++#######++++++-#++#++++###+-+++++++++###++#########++++++++#
-        ####++++#######++#+++-#+##+++#+#++##+##++++++####++########+++++
-       ######+++++######++++++-#++#+++#++##++#+#-++++++####++########-+
-       ########+++++######+++++++#++########++#+##+++++++###+++#######
-        #########+++++#######++#+++++++++###++##+##-++++++###+++######
-          +#########++++########+#++++#####+++##+##--++++++###+++###
-             ##########+#+++##############-+++##++##-+++++++###++#
-              .-############+#+++++######+++++##++##-++++++++###
-             ---....##################+-+++++##++###-++++++++####
-             --------...-#########---++++#++###++###--++++++++####
-            ++++++---+-----------++++++#++###+++###--++++++++####
-            +++++++++++++++++++++++++#++++###++++###--++++++++#####
-            #++++++++++++++++++++##+++++####++++###---+++++++++####
-               ####+++++++++##++++++++#####++++####--++++++++++####
-                     ++++++++++++++######+++++####.--+++++++++#+#
-                      ++++++++#########++++++####.---+++++
-                      ###############++++++#####----++++++
-                      ############+++++++######.---++++++
-                       ########    ++++++#####    +++++++
-                        ##          +#######+
-                                      #####
-                                       ##`
-
-// trimArt removes common leading whitespace from multi-line ASCII art.
-func trimArt(s string) string {
-	lines := strings.Split(strings.TrimSpace(s), "\n")
-	minIndent := len(s)
-	for _, line := range lines {
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		indent := len(line) - len(strings.TrimLeft(line, " "))
-		if indent < minIndent {
-			minIndent = indent
-		}
-	}
-	var result []string
-	for _, line := range lines {
-		if len(line) > minIndent {
-			result = append(result, strings.TrimRight(line[minIndent:], " "))
-		} else {
-			result = append(result, "")
-		}
-	}
-	return strings.Join(result, "\n")
-}
 
 // renderFirstRun returns a getting-started guide shown when the catalog is empty
 // and no registries are configured. This is the zero-state experience for new users.

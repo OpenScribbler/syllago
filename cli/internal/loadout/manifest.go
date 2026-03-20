@@ -8,7 +8,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-
 // Manifest represents a parsed loadout.yaml file.
 type Manifest struct {
 	Kind        string   `yaml:"kind"`               // must be "loadout"

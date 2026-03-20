@@ -89,8 +89,8 @@ var infoProvidersCmd = &cobra.Command{
 }
 
 var infoFormatsCmd = &cobra.Command{
-	Use:   "formats",
-	Short: "List supported file formats",
+	Use:     "formats",
+	Short:   "List supported file formats",
 	Example: `  syllago info formats`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		type formatInfo struct {

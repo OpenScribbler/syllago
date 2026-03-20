@@ -39,13 +39,13 @@ type SandboxConfig struct {
 }
 
 type Config struct {
-	Providers         []string          `json:"providers"`              // enabled provider slugs
-	ContentRoot       string            `json:"content_root,omitempty"` // relative path to content directory (default: project root)
-	Registries        []Registry        `json:"registries,omitempty"`
-	AllowedRegistries []string          `json:"allowed_registries,omitempty"` // URL allowlist; empty means any URL is permitted
-	Preferences       map[string]string                `json:"preferences,omitempty"`
-	Sandbox           SandboxConfig                    `json:"sandbox,omitempty"`
-	ProviderPaths     map[string]ProviderPathConfig    `json:"provider_paths,omitempty"` // keyed by provider slug
+	Providers         []string                      `json:"providers"`              // enabled provider slugs
+	ContentRoot       string                        `json:"content_root,omitempty"` // relative path to content directory (default: project root)
+	Registries        []Registry                    `json:"registries,omitempty"`
+	AllowedRegistries []string                      `json:"allowed_registries,omitempty"` // URL allowlist; empty means any URL is permitted
+	Preferences       map[string]string             `json:"preferences,omitempty"`
+	Sandbox           SandboxConfig                 `json:"sandbox,omitempty"`
+	ProviderPaths     map[string]ProviderPathConfig `json:"provider_paths,omitempty"` // keyed by provider slug
 }
 
 // IsRegistryAllowed returns true if url is permitted given the config.

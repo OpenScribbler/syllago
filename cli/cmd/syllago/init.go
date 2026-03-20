@@ -21,7 +21,7 @@ import (
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize syllago for this project",
-	Long: "Detects AI coding tools in use, creates .syllago/config.json with provider selection.",
+	Long:  "Detects AI coding tools in use, creates .syllago/config.json with provider selection.",
 	Example: `  # Interactive setup
   syllago init
 
@@ -40,8 +40,8 @@ func init() {
 }
 
 type initResult struct {
-	Detected   []string        `json:"detected"`
-	ConfigPath string          `json:"configPath"`
+	Detected   []string            `json:"detected"`
+	ConfigPath string              `json:"configPath"`
 	Installed  []initInstalledItem `json:"installed,omitempty"`
 }
 
