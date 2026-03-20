@@ -1,6 +1,8 @@
 package loadout
 
 import (
+	cryptorand "crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -479,7 +481,12 @@ func writeJSONFileAtomic(path string, data []byte) error {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
-	tmpPath := path + ".tmp"
+	// Use random suffix to prevent predictable temp path attacks
+	suffix := make([]byte, 8)
+	if _, err := cryptorand.Read(suffix); err != nil {
+		return fmt.Errorf("generating temp suffix: %w", err)
+	}
+	tmpPath := path + ".tmp." + hex.EncodeToString(suffix)
 	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
 		return err
 	}

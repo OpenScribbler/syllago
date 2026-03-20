@@ -24,7 +24,7 @@ Registries are read-only git repos containing shared content (skills, rules,
 hooks, MCP configs, etc.). Use "registry sync" to pull updates, and
 "registry items" to browse what's available.
 
-To use registry content, browse it in the TUI ("syllago") or export it
+To use registry content, browse it in the TUI ("syllago") or install it
 directly with "syllago install --to <provider>".`,
 	Example: `  syllago registry add https://github.com/team/rules.git
   syllago registry sync
@@ -312,9 +312,9 @@ var registrySyncCmd = &cobra.Command{
 	Short: "Pull latest content from one or all registries",
 	Long: `Runs git pull on registry clones to fetch the latest content.
 
-Sync updates the local clone only — it does not modify your local/ or
+Sync updates the local clone only — it does not modify your library or
 installed provider content. Use "syllago registry items" to see what changed,
-and "syllago install" to apply updated content.`,
+and "syllago install" to activate updated content.`,
 	Example: `  # Sync all registries
   syllago registry sync
 

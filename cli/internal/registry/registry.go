@@ -123,11 +123,9 @@ func Clone(url, name, ref string) error {
 		return fmt.Errorf("creating registry cache: %w", err)
 	}
 
-	args := []string{"clone", url, dir}
-	if ref != "" {
-		args = append(args, "--branch", ref)
-	}
+	args := cloneArgs(url, dir, ref)
 	cmd := exec.Command("git", args...)
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		// Clean up partial clone
@@ -135,6 +133,22 @@ func Clone(url, name, ref string) error {
 		return fmt.Errorf("git clone failed: %s", strings.TrimSpace(string(out)))
 	}
 	return nil
+}
+
+// cloneArgs builds the git argument list for a secure clone.
+// It disables hooks via core.hooksPath and prevents submodule recursion.
+// GIT_CONFIG_NOSYSTEM=1 must also be set on the command's Env by the caller.
+func cloneArgs(url, dir, ref string) []string {
+	args := []string{
+		"-c", "core.hooksPath=/dev/null",
+		"clone",
+		"--no-recurse-submodules",
+		url, dir,
+	}
+	if ref != "" {
+		args = append(args, "--branch", ref)
+	}
+	return args
 }
 
 // Sync runs git pull --ff-only in the registry clone directory.

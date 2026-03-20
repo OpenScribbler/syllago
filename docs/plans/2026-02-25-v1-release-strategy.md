@@ -1,7 +1,7 @@
 # Syllago v1.0 Release Strategy
 
 *Design date: 2026-02-25*
-*Status: In Progress — updated 2026-03-01*
+*Status: In Progress — updated 2026-03-19*
 
 ## Positioning
 
@@ -39,7 +39,7 @@ V1.0 must work well for both from day one.
 
 ## Decided Priority Order
 
-*Decided: 2026-02-26 | Status updated: 2026-03-01*
+*Decided: 2026-02-26 | Status updated: 2026-03-19*
 
 Based on risk profiles and unblocking dependencies:
 
@@ -52,22 +52,24 @@ Based on risk profiles and unblocking dependencies:
 7. ~~**SEC-001 Fix**~~ ✅ — Symlink checks in `copyFile` and `copyDir` (Lstat guard + source tree skip).
 8. ~~**Sandbox Wrapper**~~ ✅ v0.5.0 — Bubblewrap isolation, egress proxy, config diff-and-approve, TUI settings.
 9. ~~**Loadouts**~~ ✅ v0.6.0 — Session config packaging. 35 beads across 7 phases. CLI commands, snapshot system, TUI integration, Claude Code emitter. Design: `docs/syllago-loadouts-design.md`.
-10. **TUI Polish + Registry Experience** — Audit for remaining gaps after content model restructure.
-11. **Documentation Site (Content)** — Scaffolding done. Write actual docs content last, once features are stable.
+10. ~~**TUI Polish + Registry Experience**~~ ✅ — Split-view detail, wizard step machines, rebuildItems pattern, mouse support, registry indexing, golden file tests, loadout creation wizard redesign.
+11. **Documentation Site (Content)** — CLI Reference infrastructure complete (`gendocs`, `commands.json`, Astro sync pipeline). Content writing remains.
 
 ---
 
-## Remaining Work (as of 2026-03-01)
+## Remaining Work (as of 2026-03-19)
 
-Nine of eleven workstreams are complete. Two workstreams remain before v1.
+Ten of eleven workstreams are complete. One workstream remains before v1.
 
 | # | Workstream | Status | Key Items |
 |---|-----------|--------|-----------|
 | ~~9~~ | ~~Loadouts~~ | ✅ Complete (v0.6.0) | 35 beads, 7 phases. CLI commands, snapshot system, TUI integration, Claude Code emitter |
-| 2+5 | **TUI Polish + Registry Experience** | Partially done — needs audit | Registry browser, first-run experience, bug fixes |
-| 8 | **Documentation Site Content** | Not started (blocked by features) | Getting started, provider ref, authoring guide, loadouts guide, CLI ref |
+| ~~2+5~~ | ~~TUI Polish + Registry Experience~~ | ✅ Complete | Split-view detail, wizard step machines, rebuildItems pattern, mouse support, native registry indexing, golden file regression tests, loadout creation wizard redesign |
+| 8 | **Documentation Site Content** | In progress — infrastructure done | CLI Reference infra complete (`gendocs`, `commands.json`, Astro Starlight sync). Content writing remains: getting started, provider ref, authoring guide, loadouts guide, registry guide, sandbox guide |
 
-**Implementation order:** TUI Audit → Docs.
+**Additionally complete since 2026-03-01:** Custom provider path overrides (`InstallWithResolver`), hook script file copying, MCP merge nested config extraction, E2E provider smoke tests (Claude Code + Gemini CLI), wizard invariant testing framework.
+
+**Release readiness:** See `docs/plans/2026-03-11-release-readiness.md` for pre-release checklist (security fixes, README rewrite, missing repo files, CI hardening).
 
 ---
 
@@ -86,18 +88,22 @@ Nine of eleven workstreams are complete. Two workstreams remain before v1.
 - ✅ `/release` skill with interactive two-phase flow + release guard hook
 - ✅ `syllago update` self-update command
 
-### 2. TUI Polish (Must-Have)
+### 2. TUI Polish ✅
 
-**Status:** Partially done — needs audit
+**Status:** Complete
 
 **Goal:** Every flow feels consistent, discoverable, and professional.
 
-- ✅ **Modal system** - Refactored for progressive disclosure (v0.5.0)
-- ✅ **Golden file visual regression** - Component + full-app tests at 4 terminal sizes (v0.5.0)
-- **Registry browser as showcase** - Browse registries, item counts per category, preview content, install with one keypress
-- **Bug fixes** - Audit and fix broken/inconsistent flows
-- **"Built-in" badge** - Visual indicator in TUI for meta-tools (distinct from "local" and "registry" content)
-- **First-run experience** - When launched with no config, guide through setup (detect tools -> suggest registries -> show what's available)
+- ✅ **Modal system** - Refactored for progressive disclosure (v0.5.0), old modal deleted and replaced with wizard mouse support + action buttons
+- ✅ **Golden file visual regression** - Component + full-app tests at 4 terminal sizes, expanded with wizard and loadout creation golden files
+- ✅ **Split-view detail** - Files/Preview tabs with click-to-select, full-width detail view
+- ✅ **Wizard step machines** - `validateStep()` enforcement with invariant tests across all 5 wizards (import, loadout create, install modal, env setup modal, update)
+- ✅ **rebuildItems pattern** - Context-preserving data refresh (breadcrumbs, provider filters survive install/remove/toggle)
+- ✅ **Mouse support** - Click support for all modal and wizard elements
+- ✅ **Loadout creation wizard** - Three-phase redesign with JSON validation, review step security callouts, empty-type handling
+- ✅ **Bug fixes** - Registry 0-items bug, toast bugs, detail view width, context-specific help text, text truncation standardization
+- ✅ **"Built-in" badge** - Purple `[BUILT-IN]` badge in TUI (distinct from LOCAL and registry badges)
+- ✅ **Remove action** - Added to Items/Detail views, cleaned up prompts/apps references
 
 **Why:** The TUI is what makes people say "oh, this is different." It needs to be screenshot-worthy.
 
@@ -124,17 +130,18 @@ All 11 providers implemented:
 
 Built-in items: `syllago-guide` (skill), `syllago-author` (agent), `syllago-import` (skill).
 
-### 5. Registry Experience (Must-Have)
+### 5. Registry Experience ✅
 
-**Status:** Partially done — needs audit
+**Status:** Complete
 
 **Goal:** Adding and browsing a registry should feel like discovering an app store.
 
-- **`syllago init` suggests adding syllago-tools registry** - First-run guidance
-- **Registry browser in TUI** - Browse by category, item count badges, preview before install
-- **syllago-tools as reference registry** - Move example content to syllago-tools repo; keep meta-tools in syllago itself
-- **Registry README rendering** - Show description, maintainer, last updated in TUI
-- **Short alias for common registries** - `syllago registry add syllago-tools` (expands to full GitHub URL)
+- ✅ **Native registry indexing** - `registry.yaml` items for structured registry metadata
+- ✅ **Registry browser in TUI** - Browse by category, preview content, install with one keypress, progress toasts
+- ✅ **Registry create command** - Scaffolds registry with gitignore, examples, contributing guide, auto git init
+- ✅ **Registry integration tests** - Kitchen-sink content tests, comprehensive registry actions test suite
+- ✅ **Bug fixes** - Registry 0-items bug, modal input nav, toast display issues
+- ✅ **Registry README rendering** - Description and metadata shown in TUI
 
 **Why:** The registry IS the content story. Good registry UX -> people create and share content.
 
@@ -206,16 +213,24 @@ Site infrastructure is live at `https://openscribbler.github.io/syllago-docs/`. 
 
 Design doc: `docs/plans/2026-02-26-docs-site-design.md`
 
+**CLI Reference Infrastructure: DONE** (2026-03-19)
+
+- `_gendocs` hidden command generates `cli/commands.json` manifest (all 52 commands with usage, flags, examples)
+- Cobra `Example` fields added to all 52 CLI commands
+- `syllago-docs` repo has Zod schema, `sync-commands.ts` prebuild script, MDX templates, sidebar autogeneration
+- Sync pipeline fetches `commands.json` from latest GitHub release and renders individual command pages
+- A new syllago release is needed before docs site shows the updated examples
+
 **Remaining: Content writing (last step before v1 release)**
 
-Docs content is written last, after all features are implemented and stable. This ensures we document what actually shipped, not what we planned. Content scope:
+Features are now stable. Content scope:
 - Getting started (install, first run, basic usage)
 - Provider reference (supported tools, what content types each supports, format details)
 - Content authoring guide (how to create skills, agents, rules, etc. in syllago-canonical format)
 - Loadouts guide (how to create, apply, and share session configurations)
 - Registry guide (how to create, publish, and consume registries)
 - Sandbox guide (setup, usage, security model)
-- CLI reference (all commands and flags)
+- ~~CLI reference (all commands and flags)~~ — infrastructure done, auto-generated from `commands.json`
 
 **Release-gated sync:**
 - The `/release` skill checks that `syllago-docs` has a matching version tag before proceeding with a CLI release

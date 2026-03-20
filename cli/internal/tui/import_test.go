@@ -656,6 +656,72 @@ func TestImportGitURLEsc(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Clone security protections
+// ---------------------------------------------------------------------------
+
+func TestImportCloneArgs_SecurityProtections(t *testing.T) {
+	t.Parallel()
+	args := importCloneArgs("https://github.com/acme/tools.git", "/tmp/clone")
+
+	// Must contain -c core.hooksPath=/dev/null to disable git hooks
+	foundHooksPath := false
+	for i, a := range args {
+		if a == "-c" && i+1 < len(args) && args[i+1] == "core.hooksPath=/dev/null" {
+			foundHooksPath = true
+			break
+		}
+	}
+	if !foundHooksPath {
+		t.Errorf("importCloneArgs missing -c core.hooksPath=/dev/null, got %v", args)
+	}
+
+	// Must contain --no-recurse-submodules
+	foundNoSubmodules := false
+	for _, a := range args {
+		if a == "--no-recurse-submodules" {
+			foundNoSubmodules = true
+			break
+		}
+	}
+	if !foundNoSubmodules {
+		t.Errorf("importCloneArgs missing --no-recurse-submodules, got %v", args)
+	}
+
+	// Must contain --depth 1 (shallow clone)
+	foundDepth := false
+	for i, a := range args {
+		if a == "--depth" && i+1 < len(args) && args[i+1] == "1" {
+			foundDepth = true
+			break
+		}
+	}
+	if !foundDepth {
+		t.Errorf("importCloneArgs missing --depth 1, got %v", args)
+	}
+
+	// The -c flag must come BEFORE clone to be a global git option
+	cloneIdx := -1
+	hooksIdx := -1
+	for i, a := range args {
+		if a == "clone" {
+			cloneIdx = i
+		}
+		if a == "core.hooksPath=/dev/null" {
+			hooksIdx = i
+		}
+	}
+	if cloneIdx < 0 {
+		t.Fatal("clone subcommand not found in args")
+	}
+	if hooksIdx < 0 {
+		t.Fatal("core.hooksPath=/dev/null not found in args")
+	}
+	if hooksIdx >= cloneIdx {
+		t.Errorf("core.hooksPath=/dev/null (index %d) must come before clone (index %d) to be a global git option", hooksIdx, cloneIdx)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Clone done message handling
 // ---------------------------------------------------------------------------
 

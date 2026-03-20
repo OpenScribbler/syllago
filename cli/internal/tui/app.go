@@ -200,8 +200,6 @@ func (a *App) handleConfirmAction() tea.Cmd {
 			result, err := promote.Promote(repoRoot, item, false)
 			return shareDoneMsg{result: result, err: err}
 		}
-	case modalAppScript:
-		return a.detail.runAppScript()
 	case modalLoadoutApply:
 		return a.runLoadoutApply(a.loadoutApplyItem, a.loadoutApplyMode)
 	case modalHookBrokenWarning:
@@ -599,15 +597,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case toastMsg:
 		a.toast.show(msg)
 		return a, nil
-
-	case appInstallDoneMsg:
-		a.cachedDetail = nil // invalidate cache (install state changed)
-		if a.screen == screenDetail {
-			var cmd tea.Cmd
-			a.detail, cmd = a.detail.Update(msg)
-			a.promoteDetailMessage()
-			return a, cmd
-		}
 
 	case shareDoneMsg:
 		if a.screen == screenDetail {

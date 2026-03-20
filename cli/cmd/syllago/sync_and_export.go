@@ -19,13 +19,13 @@ import (
 var syncAndExportCmd = &cobra.Command{
 	Use:   "sync-and-export",
 	Short: "Sync registries then export content to a provider",
-	Long: `Convenience command that syncs all registries then exports.
+	Long: `Convenience command that syncs all registries then installs.
 
 Equivalent to running:
-  syllago registry sync && syllago export --to <provider>
+  syllago registry sync && syllago install --to <provider>
 
 This is useful in CI/CD or automation where you want a single command
-to ensure registries are up-to-date before exporting.`,
+to ensure registries are up-to-date before installing.`,
 	Example: `  # Sync registries and export to Cursor
   syllago sync-and-export --to cursor
 

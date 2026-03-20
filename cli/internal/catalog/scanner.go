@@ -59,6 +59,21 @@ func IsValidRegistryName(name string) bool {
 	return validRegistryNameRe.MatchString(name)
 }
 
+// validateRegistryPath resolves symlinks in path and checks that the resolved
+// path stays within registryRoot. This prevents symlink-based path traversal
+// when scanning untrusted registry directories. registryRoot must already be
+// resolved (no symlinks).
+func validateRegistryPath(path, registryRoot string) error {
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return fmt.Errorf("cannot resolve path: %w", err)
+	}
+	if !strings.HasPrefix(resolved, registryRoot+string(filepath.Separator)) && resolved != registryRoot {
+		return fmt.Errorf("path escapes registry boundary: %s resolves to %s", path, resolved)
+	}
+	return nil
+}
+
 // Scan walks contentRoot to discover all content items.
 // contentRoot is the directory containing shared content directories (skills/, agents/, etc.).
 // projectRoot is unused but kept for API compatibility.
@@ -152,13 +167,33 @@ func loadManifestItems(dir string) ([]manifestItem, error) {
 	return m.Items, nil
 }
 
+// Per-registry scanning limits to prevent resource exhaustion from malicious registries.
+const (
+	maxScanItems = 10000  // Maximum items per registry scan
+	maxScanDepth = 50     // Maximum directory depth
+	maxScanDirs  = 100000 // Maximum directory entries read per registry scan
+)
+
 // scanRoot scans a base directory for content items of all types.
 // If local is true, discovered items are marked as Library items.
 func scanRoot(cat *Catalog, baseDir string, local bool) error {
+	// Resolve the base directory once so symlink checks inside scanners
+	// compare against a canonical, symlink-free root path.
+	resolvedBase, err := filepath.EvalSymlinks(baseDir)
+	if err != nil {
+		return fmt.Errorf("resolving base directory: %w", err)
+	}
+
+	beforeCount := len(cat.Items)
+
 	// Check for registry.yaml with indexed items; if present, use index-based scan.
 	items, _ := loadManifestItems(baseDir)
 	if len(items) > 0 {
-		return scanFromIndex(cat, baseDir, items, local)
+		if len(items) > maxScanItems {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("registry at %s has %d manifest items, exceeding limit of %d; truncating", baseDir, len(items), maxScanItems))
+			items = items[:maxScanItems]
+		}
+		return scanFromIndex(cat, baseDir, resolvedBase, items, local)
 	}
 
 	for _, ct := range AllContentTypes() {
@@ -172,12 +207,18 @@ func scanRoot(cat *Catalog, baseDir string, local bool) error {
 			return err
 		}
 
+		// Enforce per-registry item limit
+		if len(cat.Items)-beforeCount >= maxScanItems {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("registry at %s exceeded %d item limit; skipping remaining content types", baseDir, maxScanItems))
+			break
+		}
+
 		if ct.IsUniversal() {
-			if err := scanUniversal(cat, typeDir, ct, entries, local); err != nil {
+			if err := scanUniversal(cat, typeDir, ct, entries, local, resolvedBase); err != nil {
 				return err
 			}
 		} else {
-			if err := scanProviderSpecific(cat, typeDir, ct, entries, local); err != nil {
+			if err := scanProviderSpecific(cat, typeDir, ct, entries, local, resolvedBase); err != nil {
 				return err
 			}
 		}
@@ -188,11 +229,18 @@ func scanRoot(cat *Catalog, baseDir string, local bool) error {
 // scanFromIndex builds ContentItems from a registry manifest's Items list.
 // Each manifestItem maps a name/type/provider to a relative path in the registry.
 // Missing paths produce a warning and are skipped (not an error), so a partial
-// index doesn't abort the whole scan.
-func scanFromIndex(cat *Catalog, baseDir string, items []manifestItem, local bool) error {
+// index doesn't abort the whole scan. resolvedBase is the symlink-resolved
+// base directory used for path traversal checks.
+func scanFromIndex(cat *Catalog, baseDir string, resolvedBase string, items []manifestItem, local bool) error {
 	for _, mi := range items {
 		itemPath := filepath.Join(baseDir, mi.Path)
 		ct := ContentType(mi.Type)
+
+		// Validate the path stays within the registry boundary.
+		if err := validateRegistryPath(itemPath, resolvedBase); err != nil {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("index item %q: %s, skipping", mi.Name, err))
+			continue
+		}
 
 		info, err := os.Stat(itemPath)
 		if err != nil {
@@ -300,8 +348,9 @@ func scanFromIndex(cat *Catalog, baseDir string, items []manifestItem, local boo
 }
 
 // scanUniversal discovers items for universal types (skills, agents, mcp).
-// Each subdirectory inside the type directory is one item.
-func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.DirEntry, local bool) error {
+// Each subdirectory inside the type directory is one item. resolvedBase is the
+// symlink-resolved registry root used for path traversal checks.
+func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.DirEntry, local bool, resolvedBase string) error {
 	for _, entry := range entries {
 		if !entry.IsDir() || shouldSkip(entry.Name()) {
 			continue
@@ -312,6 +361,12 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 		}
 
 		itemDir := filepath.Join(typeDir, entry.Name())
+
+		// Validate the item directory stays within the registry boundary.
+		if err := validateRegistryPath(itemDir, resolvedBase); err != nil {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("skipping item %q: %s", entry.Name(), err))
+			continue
+		}
 		item := ContentItem{
 			Name:    entry.Name(),
 			Type:    ct,
@@ -369,7 +424,9 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 // Supports two layouts:
 //   - Directory-per-item (new): <type>/<provider>/<item-name>/ with content file + .syllago.yaml
 //   - Single file (legacy):    <type>/<provider>/<file> with .syllago.<file>.yaml alongside
-func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries []os.DirEntry, local bool) error {
+//
+// resolvedBase is the symlink-resolved registry root used for path traversal checks.
+func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries []os.DirEntry, local bool, resolvedBase string) error {
 	for _, providerEntry := range entries {
 		if !providerEntry.IsDir() || shouldSkip(providerEntry.Name()) {
 			continue
@@ -377,6 +434,12 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 
 		providerDir := filepath.Join(typeDir, providerEntry.Name())
 		providerName := providerEntry.Name()
+
+		// Validate the provider directory stays within the registry boundary.
+		if err := validateRegistryPath(providerDir, resolvedBase); err != nil {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("skipping provider %q: %s", providerName, err))
+			continue
+		}
 
 		children, err := os.ReadDir(providerDir)
 		if err != nil {
@@ -389,6 +452,13 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 			}
 			if child.IsDir() && !IsValidItemName(child.Name()) {
 				cat.Warnings = append(cat.Warnings, fmt.Sprintf("skipping item %q — name contains characters unsafe for JSON key paths", child.Name()))
+				continue
+			}
+
+			// Validate child path stays within the registry boundary.
+			childPath := filepath.Join(providerDir, child.Name())
+			if err := validateRegistryPath(childPath, resolvedBase); err != nil {
+				cat.Warnings = append(cat.Warnings, fmt.Sprintf("skipping item %q: %s", child.Name(), err))
 				continue
 			}
 

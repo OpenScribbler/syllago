@@ -344,19 +344,19 @@ func TestCreateLoadoutScreenUpdate(t *testing.T) {
 		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
 		// Set up a type with no items by manually adding a fake type entry
 		s.typeEntries = append(s.typeEntries, typeCheckEntry{
-			ct:      catalog.ContentType("prompts"),
+			ct:      catalog.ContentType("synthetic-empty"),
 			checked: true,
 			count:   0,
 		})
 		s.step = clStepTypes
 		s, _ = s.Update(keyEnter) // advance to items
 
-		// Navigate to the Prompts type step (last one)
-		for s.currentType() != catalog.ContentType("prompts") && s.step == clStepItems {
+		// Navigate to the empty synthetic type step (last one)
+		for s.currentType() != catalog.ContentType("synthetic-empty") && s.step == clStepItems {
 			s, _ = s.Update(keyEnter)
 		}
-		if s.currentType() != catalog.ContentType("prompts") {
-			t.Skip("could not reach Prompts type step")
+		if s.currentType() != catalog.ContentType("synthetic-empty") {
+			t.Skip("could not reach synthetic-empty type step")
 		}
 
 		got := s.View()
@@ -366,7 +366,7 @@ func TestCreateLoadoutScreenUpdate(t *testing.T) {
 
 		// Enter should still advance past empty type
 		s, _ = s.Update(keyEnter)
-		if s.currentType() == catalog.ContentType("prompts") && s.step == clStepItems {
+		if s.currentType() == catalog.ContentType("synthetic-empty") && s.step == clStepItems {
 			t.Error("Enter should advance past empty type")
 		}
 	})
@@ -374,19 +374,19 @@ func TestCreateLoadoutScreenUpdate(t *testing.T) {
 	t.Run("empty type Esc goes back", func(t *testing.T) {
 		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
 		s.typeEntries = append(s.typeEntries, typeCheckEntry{
-			ct:      catalog.ContentType("prompts"),
+			ct:      catalog.ContentType("synthetic-empty"),
 			checked: true,
 			count:   0,
 		})
 		s.step = clStepTypes
 		s, _ = s.Update(keyEnter) // advance to items
 
-		// Navigate to the Prompts type step
-		for s.currentType() != catalog.ContentType("prompts") && s.step == clStepItems {
+		// Navigate to the synthetic-empty type step
+		for s.currentType() != catalog.ContentType("synthetic-empty") && s.step == clStepItems {
 			s, _ = s.Update(keyEnter)
 		}
-		if s.currentType() != catalog.ContentType("prompts") {
-			t.Skip("could not reach Prompts type step")
+		if s.currentType() != catalog.ContentType("synthetic-empty") {
+			t.Skip("could not reach synthetic-empty type step")
 		}
 
 		prevTypeIndex := s.typeStepIndex
