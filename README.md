@@ -40,7 +40,7 @@ syllago install my-rule --to cursor
 ## Features
 
 - **Interactive TUI** with card grids, search, mouse support, and keyboard navigation
-- **Cross-provider conversion** across 11 providers (hub-and-spoke via Claude Code canonical format)
+- **Cross-provider conversion** with hub-and-spoke architecture (Claude Code as canonical format)
 - **Git-based registries** -- browse and install from any compatible content repository
 - **Loadouts** -- curated content bundles that apply, preview (`--try`), or revert as a unit
 - **Sandbox** -- run AI CLI tools in bubblewrap isolation with filesystem, network, and env filtering (Linux)
@@ -78,9 +78,9 @@ syllago install my-rule --to cursor
 
 | Content Type | Coverage | Notes |
 |---|---|---|
-| Rules | All 11 providers | Format differs but content fully preserved |
-| Skills | All 11 providers | Metadata rendering varies by provider |
-| Agents | All 11 providers | Codex uses TOML format (auto-converted) |
+| Rules | All providers | Format differs but content fully preserved |
+| Skills | All providers | Metadata rendering varies by provider |
+| Agents | All providers | Codex uses TOML format (auto-converted) |
 | MCP configs | 9 providers | Zed uses `context_servers` key (handled automatically) |
 | Hooks | 3 providers | Other providers don't have hook systems |
 | Commands | Claude Code | Provider-specific feature |

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Syllago is a CLI and TUI for managing AI coding tool content (rules, skills, agents, hooks, MCP configs, commands, loadouts) across 11 providers. Built in Go using the Cobra CLI framework and Bubble Tea TUI framework. The canonical content format is Claude Code; all provider conversions go through it as a hub.
+Syllago is a CLI and TUI for managing AI coding tool content (rules, skills, agents, hooks, MCP configs, commands, loadouts) across providers. Built in Go using the Cobra CLI framework and Bubble Tea TUI framework. The canonical content format is Claude Code; all provider conversions go through it as a hub.
 
 ## Package Map
 
@@ -60,7 +60,7 @@ Local-to-shared content promotion. Implements the `syllago share` workflow for c
 
 ### internal/provider/
 
-Provider detection and path resolution for 11 supported tools (Claude Code, Cursor, Windsurf, Codex, Gemini CLI, Copilot CLI, Cline, Roo Code, Zed, OpenCode, Kiro). `AllProviders` is the authoritative list. `DetectProvidersWithResolver()` checks default paths and custom overrides.
+Provider detection and path resolution for all supported tools (Claude Code, Cursor, Windsurf, Codex, Gemini CLI, Copilot CLI, Cline, Roo Code, Zed, OpenCode, Kiro). `AllProviders` is the authoritative list. `DetectProvidersWithResolver()` checks default paths and custom overrides.
 
 ### internal/registry/
 
