@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -8,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -603,14 +605,24 @@ func checkForUpdateRelease(localVersion string) tea.Cmd {
 }
 
 // checkForUpdate runs a background fetch and compares local vs remote versions.
+// Uses GIT_TERMINAL_PROMPT=0 and a timeout to prevent blocking the TUI when
+// credentials are unavailable (private repos, expired tokens, VHS recordings).
 func checkForUpdate(repoRoot, localVersion string) tea.Cmd {
 	return func() tea.Msg {
-		// Fetch latest from origin (quiet, fail silently if offline)
-		fetchCmd := exec.Command("git", "-C", repoRoot, "fetch", "origin", "main", "--quiet", "--tags")
+		// Fetch latest from origin (quiet, fail silently if offline or no credentials)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		fetchCmd := exec.CommandContext(ctx, "git", "-C", repoRoot, "fetch", "origin", "main", "--quiet", "--tags")
+		fetchCmd.Stdin = nil
+		fetchCmd.Stdout = nil
+		fetchCmd.Stderr = nil
+		fetchCmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 		fetchCmd.Run() // ignore errors (offline is fine)
 
 		// Get latest tag on origin/main
 		descCmd := exec.Command("git", "-C", repoRoot, "describe", "--tags", "--abbrev=0", "origin/main")
+		descCmd.Stdin = nil
+		descCmd.Stderr = nil
 		descOut, err := descCmd.Output()
 
 		remoteVersion := ""
@@ -623,6 +635,8 @@ func checkForUpdate(repoRoot, localVersion string) tea.Cmd {
 
 		// Count commits behind
 		behindCmd := exec.Command("git", "-C", repoRoot, "rev-list", "--count", "HEAD..origin/main")
+		behindCmd.Stdin = nil
+		behindCmd.Stderr = nil
 		behindOut, err := behindCmd.Output()
 		if err == nil {
 			fmt.Sscanf(strings.TrimSpace(string(behindOut)), "%d", &commitsBehind)
