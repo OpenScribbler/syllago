@@ -15,11 +15,11 @@
               ░░░░░░                          ░░░░░░
 </pre>
 
-**The package manager for AI coding tool content.**
+**Convert, bundle, and share AI coding tool content across providers.**
 
 </div>
 
-Syllago is a content manager for AI coding tools. It maintains a library of reusable configurations -- rules, skills, agents, hooks, MCP server configs, commands, and loadouts -- and handles format conversion automatically when you install to a provider or export to another tool. Browse and manage content through an interactive TUI or automate everything with CLI commands and `--json` output.
+Syllago is a content manager for AI coding tools. It maintains a library of reusable content -- rules, skills, agents, hooks, MCP server configs, and commands -- and handles format conversion automatically when you install to a provider or export to another tool. Bundle content into **loadouts** that apply as a unit, preview with `--try`, and revert cleanly. Browse and manage everything through an interactive TUI or automate with CLI commands and `--json` output.
 
 ## Quick Start
 
@@ -81,8 +81,8 @@ syllago install my-rule --to cursor
 | Rules | All providers | Format differs but content fully preserved |
 | Skills | All providers | Metadata rendering varies by provider |
 | Agents | All providers | Codex uses TOML format (auto-converted) |
-| MCP configs | 9 providers | Zed uses `context_servers` key (handled automatically) |
-| Hooks | 3 providers | Other providers don't have hook systems |
+| MCP configs | Most providers | Zed uses `context_servers` key (handled automatically) |
+| Hooks | Claude Code, Gemini CLI, Copilot CLI | Other providers don't have hook systems |
 | Commands | Claude Code | Provider-specific feature |
 | Loadouts | Claude Code (v1) | Additional provider emitters planned |
 
@@ -91,7 +91,8 @@ syllago install my-rule --to cursor
 | Command | Description |
 |---------|-------------|
 | `syllago` | Launch the interactive TUI |
-| `syllago add` | Add content to your library from a provider, path, or git URL |
+| `syllago add` | Discover and add content from a provider |
+| `syllago import` | Import content from a provider, path, or git URL |
 | `syllago install` | Activate library content in a provider |
 | `syllago uninstall` | Deactivate content from a provider |
 | `syllago remove` | Remove content from your library |
@@ -108,6 +109,7 @@ syllago install my-rule --to cursor
 | `syllago config` | View and edit configuration |
 | `syllago update` | Update syllago to the latest release |
 | `syllago info` | Show capabilities (providers, formats) |
+| `syllago completion` | Generate shell autocompletion scripts |
 | `syllago version` | Print version |
 
 ### Global Flags
@@ -165,10 +167,6 @@ syllago convert my-rule --to windsurf
 
 Mouse support: click to select cards, items, tabs, breadcrumbs, and modal buttons. Scroll wheel works in all scrollable areas.
 
-## Demo
-
-<!-- VHS demo GIFs coming in a future release -->
-
 ## Installation
 
 ### Install script (Linux, macOS, Windows)
@@ -181,12 +179,6 @@ Downloads the latest release binary, verifies the SHA-256 checksum, and installs
 
 ```bash
 INSTALL_DIR=/usr/local/bin sh install.sh
-```
-
-### Homebrew (macOS, Linux)
-
-```bash
-brew install openscribbler/tap/syllago
 ```
 
 ### go install
