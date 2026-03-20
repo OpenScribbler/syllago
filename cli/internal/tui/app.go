@@ -14,8 +14,6 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
@@ -360,29 +358,11 @@ func (a *App) doCreateLoadoutFromScreen(m createLoadoutScreen) tea.Cmd {
 		desc := strings.TrimSpace(m.descInput.Value())
 		provSlug := m.prefilledProvider
 
-		manifest := loadout.Manifest{
-			Kind:        "loadout",
-			Version:     1,
-			Provider:    provSlug,
-			Name:        name,
-			Description: desc,
-		}
+		itemsByType := make(map[catalog.ContentType][]string)
 		for _, e := range m.selectedItems() {
-			switch e.item.Type {
-			case catalog.Rules:
-				manifest.Rules = append(manifest.Rules, e.item.Name)
-			case catalog.Hooks:
-				manifest.Hooks = append(manifest.Hooks, e.item.Name)
-			case catalog.Skills:
-				manifest.Skills = append(manifest.Skills, e.item.Name)
-			case catalog.Agents:
-				manifest.Agents = append(manifest.Agents, e.item.Name)
-			case catalog.MCP:
-				manifest.MCP = append(manifest.MCP, e.item.Name)
-			case catalog.Commands:
-				manifest.Commands = append(manifest.Commands, e.item.Name)
-			}
+			itemsByType[e.item.Type] = append(itemsByType[e.item.Type], e.item.Name)
 		}
+		manifest := loadout.BuildManifest(provSlug, name, desc, itemsByType)
 
 		var destDir string
 		switch m.destCursor {
@@ -402,19 +382,9 @@ func (a *App) doCreateLoadoutFromScreen(m createLoadoutScreen) tea.Cmd {
 			destDir = filepath.Join(dir, "loadouts", provSlug)
 		}
 
-		itemDir := filepath.Join(destDir, name)
-		if err := os.MkdirAll(itemDir, 0755); err != nil {
-			return doCreateLoadoutMsg{err: fmt.Errorf("creating loadout dir: %w", err)}
-		}
-
-		data, err := yaml.Marshal(manifest)
+		_, err := loadout.WriteManifest(manifest, destDir)
 		if err != nil {
-			return doCreateLoadoutMsg{err: fmt.Errorf("marshaling manifest: %w", err)}
-		}
-
-		outPath := filepath.Join(itemDir, "loadout.yaml")
-		if err := os.WriteFile(outPath, data, 0644); err != nil {
-			return doCreateLoadoutMsg{err: fmt.Errorf("writing loadout.yaml: %w", err)}
+			return doCreateLoadoutMsg{err: err}
 		}
 
 		return doCreateLoadoutMsg{name: name, provider: provSlug}

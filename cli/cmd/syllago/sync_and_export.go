@@ -121,9 +121,13 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 	if prov == nil {
 		slugs := providerSlugs()
 		slugs = append(slugs, "all")
-		output.PrintError(1, "unknown provider: "+toSlug,
-			"Available: "+strings.Join(slugs, ", "))
-		return output.SilentError(fmt.Errorf("unknown provider: %s", toSlug))
+		se := output.NewStructuredError(
+			output.ErrProviderNotFound,
+			"unknown provider: "+toSlug,
+			"Available: "+strings.Join(slugs, ", "),
+		)
+		output.PrintStructuredError(se)
+		return output.SilentError(se)
 	}
 
 	// Build resolver from merged config + CLI flag.

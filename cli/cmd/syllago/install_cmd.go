@@ -77,9 +77,13 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	prov := findProviderBySlug(toSlug)
 	if prov == nil {
 		slugs := providerSlugs()
-		output.PrintError(1, "unknown provider: "+toSlug,
-			"Available: "+strings.Join(slugs, ", "))
-		return output.SilentError(fmt.Errorf("unknown provider: %s", toSlug))
+		se := output.NewStructuredError(
+			output.ErrProviderNotFound,
+			"unknown provider: "+toSlug,
+			"Available: "+strings.Join(slugs, ", "),
+		)
+		output.PrintStructuredError(se)
+		return output.SilentError(se)
 	}
 
 	// Build resolver from merged config + CLI flag.

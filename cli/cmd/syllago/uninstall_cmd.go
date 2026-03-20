@@ -101,9 +101,9 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		prov := findProviderBySlug(fromSlug)
 		if prov == nil {
 			slugs := providerSlugs()
-			output.PrintError(1, "unknown provider: "+fromSlug,
-				"Available: "+strings.Join(slugs, ", "))
-			return output.SilentError(fmt.Errorf("unknown provider: %s", fromSlug))
+			se := output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Available: "+strings.Join(slugs, ", "))
+			output.PrintStructuredError(se)
+			return output.SilentError(se)
 		}
 		// Verify it is actually installed there
 		status := installer.CheckStatus(*item, *prov, globalDir)
