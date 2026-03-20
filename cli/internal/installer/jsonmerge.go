@@ -70,5 +70,12 @@ func backupFile(path string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path+".bak", data, 0644)
+	// Match permissions from writeJSONFile: 0600 for home-dir files, 0644 for project files
+	perm := os.FileMode(0644)
+	if home, err := os.UserHomeDir(); err == nil {
+		if strings.HasPrefix(path, home+string(filepath.Separator)) {
+			perm = 0600
+		}
+	}
+	return os.WriteFile(path+".bak", data, perm)
 }

@@ -522,6 +522,200 @@ func TestScanWithGlobalAndRegistries_TagsProjectItems(t *testing.T) {
 	t.Error("test-skill not found in catalog")
 }
 
+func TestValidateRegistryPath(t *testing.T) {
+	t.Parallel()
+
+	t.Run("accepts path within registry root", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+		sub := filepath.Join(root, "skills", "my-skill")
+		os.MkdirAll(sub, 0755)
+
+		if err := validateRegistryPath(sub, root); err != nil {
+			t.Errorf("expected no error for path within root, got: %v", err)
+		}
+	})
+
+	t.Run("accepts registry root itself", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+
+		if err := validateRegistryPath(root, root); err != nil {
+			t.Errorf("expected no error for root itself, got: %v", err)
+		}
+	})
+
+	t.Run("rejects symlink escaping registry", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+		outside := t.TempDir()
+
+		// Create a symlink inside root that points outside
+		link := filepath.Join(root, "evil-link")
+		if err := os.Symlink(outside, link); err != nil {
+			t.Skipf("cannot create symlinks: %v", err)
+		}
+
+		err := validateRegistryPath(link, root)
+		if err == nil {
+			t.Error("expected error for symlink escaping registry, got nil")
+		}
+		if err != nil && !strings.Contains(err.Error(), "escapes registry boundary") {
+			t.Errorf("expected 'escapes registry boundary' error, got: %v", err)
+		}
+	})
+
+	t.Run("rejects nonexistent path", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+
+		err := validateRegistryPath(filepath.Join(root, "does-not-exist"), root)
+		if err == nil {
+			t.Error("expected error for nonexistent path, got nil")
+		}
+	})
+}
+
+func TestScanSkipsSymlinkEscapingRegistry(t *testing.T) {
+	t.Parallel()
+
+	t.Run("universal scan skips symlinked item directory", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+		outside := t.TempDir()
+
+		// Create a legitimate skill
+		writeFile(t, filepath.Join(root, "skills", "legit-skill", "SKILL.md"),
+			"---\nname: Legit\ndescription: A legit skill\n---\n")
+
+		// Create an outside skill directory
+		writeFile(t, filepath.Join(outside, "SKILL.md"),
+			"---\nname: Evil\ndescription: Escaped skill\n---\n")
+
+		// Symlink inside skills/ pointing outside.
+		// os.ReadDir reports symlinks with IsDir()=false, so scanUniversal
+		// skips them at the entry filter. This test verifies that the
+		// symlinked item is NOT included in results regardless of mechanism.
+		link := filepath.Join(root, "skills", "escaped-skill")
+		if err := os.Symlink(outside, link); err != nil {
+			t.Skipf("cannot create symlinks: %v", err)
+		}
+
+		cat, err := Scan(root, root)
+		if err != nil {
+			t.Fatalf("Scan returned error: %v", err)
+		}
+
+		skills := cat.ByType(Skills)
+		if len(skills) != 1 {
+			var names []string
+			for _, s := range skills {
+				names = append(names, s.Name)
+			}
+			t.Fatalf("expected 1 skill (escaped should be skipped), got %d: %v", len(skills), names)
+		}
+		if skills[0].Name != "legit-skill" {
+			t.Errorf("expected legit-skill, got %q", skills[0].Name)
+		}
+	})
+
+	t.Run("provider-specific scan skips symlinked item", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+		outside := t.TempDir()
+
+		// Create a legitimate rule
+		writeFile(t, filepath.Join(root, "rules", "claude-code", "legit-rule.md"),
+			"# Legit Rule\nThis is fine.\n")
+
+		// Create an outside file
+		writeFile(t, filepath.Join(outside, "evil.md"),
+			"# Evil Rule\nThis escaped.\n")
+
+		// Symlink a file inside the provider dir pointing outside
+		link := filepath.Join(root, "rules", "claude-code", "escaped-rule.md")
+		if err := os.Symlink(filepath.Join(outside, "evil.md"), link); err != nil {
+			t.Skipf("cannot create symlinks: %v", err)
+		}
+
+		cat, err := Scan(root, root)
+		if err != nil {
+			t.Fatalf("Scan returned error: %v", err)
+		}
+
+		rules := cat.ByType(Rules)
+		if len(rules) != 1 {
+			var names []string
+			for _, r := range rules {
+				names = append(names, r.Name)
+			}
+			t.Fatalf("expected 1 rule (escaped should be skipped), got %d: %v", len(rules), names)
+		}
+		if rules[0].Name != "legit-rule.md" {
+			t.Errorf("expected legit-rule.md, got %q", rules[0].Name)
+		}
+	})
+
+	t.Run("index scan skips symlinked item", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+		outside := t.TempDir()
+
+		// Create a legit skill referenced by the index
+		writeFile(t, filepath.Join(root, "content", "legit-skill", "SKILL.md"),
+			"---\nname: Legit\ndescription: A legit skill\n---\n")
+
+		// Create an outside skill
+		writeFile(t, filepath.Join(outside, "SKILL.md"),
+			"---\nname: Evil\ndescription: Escaped\n---\n")
+
+		// Symlink inside root pointing outside
+		link := filepath.Join(root, "content", "evil-skill")
+		if err := os.Symlink(outside, link); err != nil {
+			t.Skipf("cannot create symlinks: %v", err)
+		}
+
+		// Write a registry.yaml index referencing both
+		writeFile(t, filepath.Join(root, "registry.yaml"),
+			"items:\n"+
+				"  - name: legit-skill\n"+
+				"    type: skills\n"+
+				"    path: content/legit-skill\n"+
+				"  - name: evil-skill\n"+
+				"    type: skills\n"+
+				"    path: content/evil-skill\n")
+
+		cat, err := Scan(root, root)
+		if err != nil {
+			t.Fatalf("Scan returned error: %v", err)
+		}
+
+		skills := cat.ByType(Skills)
+		if len(skills) != 1 {
+			var names []string
+			for _, s := range skills {
+				names = append(names, s.Name)
+			}
+			t.Fatalf("expected 1 skill (escaped should be skipped), got %d: %v", len(skills), names)
+		}
+		if skills[0].Name != "legit-skill" {
+			t.Errorf("expected legit-skill, got %q", skills[0].Name)
+		}
+
+		// Verify a warning was emitted
+		found := false
+		for _, w := range cat.Warnings {
+			if strings.Contains(w, "evil-skill") && strings.Contains(w, "escapes registry boundary") {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected warning about evil-skill, warnings: %v", cat.Warnings)
+		}
+	})
+}
+
 func TestIsValidRegistryName(t *testing.T) {
 	valid := []string{"acme/my-tools", "my-tools", "acme/my_tools-v2", "user123/repo-name"}
 	for _, name := range valid {

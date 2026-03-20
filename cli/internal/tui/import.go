@@ -1526,6 +1526,17 @@ func (m importModel) doScaffold() (string, []string, error) {
 	return m.itemName, warnings, nil
 }
 
+// importCloneArgs builds the git argument list for a secure shallow clone.
+// It disables hooks via core.hooksPath and prevents submodule recursion.
+// GIT_CONFIG_NOSYSTEM=1 must also be set on the command's Env by the caller.
+func importCloneArgs(url, dir string) []string {
+	return []string{
+		"-c", "core.hooksPath=/dev/null",
+		"clone", "--depth", "1", "--no-recurse-submodules",
+		url, dir,
+	}
+}
+
 // startClone creates a temp dir and returns a tea.ExecProcess command for git clone.
 func (m importModel) startClone(url string) tea.Cmd {
 	tmpDir, err := os.MkdirTemp("", "syllago-import-*")
@@ -1535,7 +1546,8 @@ func (m importModel) startClone(url string) tea.Cmd {
 		}
 	}
 
-	cmd := exec.Command("git", "clone", "--depth", "1", url, tmpDir)
+	cmd := exec.Command("git", importCloneArgs(url, tmpDir)...)
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return importCloneDoneMsg{err: err, path: tmpDir}
 	})

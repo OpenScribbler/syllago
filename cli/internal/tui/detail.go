@@ -1,11 +1,8 @@
 package tui
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -22,11 +19,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/promote"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
-
-type appInstallDoneMsg struct {
-	err    error
-	action string // "install" or "uninstall"
-}
 
 type shareDoneMsg struct {
 	result *promote.Result
@@ -82,8 +74,7 @@ type detailModel struct {
 	savePath     string // confirmed save destination (after path input)
 	// Sub-models for grouped concerns
 	provCheck        provCheckModel // provider checkbox state (Install tab)
-	appScriptPreview string // first N lines of install.sh for preview
-	llmPrompt        string // loaded from LLM-PROMPT.md for local scaffolded items
+llmPrompt        string // loaded from LLM-PROMPT.md for local scaffolded items
 	// Override info
 	overrides []catalog.ContentItem // lower-precedence items this one shadows
 	// Tab state
@@ -164,15 +155,6 @@ func newDetailModel(item catalog.ContentItem, providers []provider.Provider, rep
 
 func (m detailModel) Update(msg tea.Msg) (detailModel, tea.Cmd) {
 	switch msg := msg.(type) {
-	case appInstallDoneMsg:
-		if msg.err != nil {
-			m.message = fmt.Sprintf("%s failed: %s", msg.action, msg.err)
-			m.messageIsErr = true
-		} else {
-			m.message = fmt.Sprintf("%s completed successfully", msg.action)
-			m.messageIsErr = false
-		}
-		return m, nil
 	case shareDoneMsg:
 		if msg.err != nil {
 			m.message = fmt.Sprintf("Share failed: %s", msg.err)
@@ -728,40 +710,6 @@ func (m *detailModel) doUninstallAll() {
 	for i := range m.provCheck.checks {
 		m.provCheck.checks[i] = false
 	}
-}
-
-// runAppScript runs the app's install.sh script via tea.ExecProcess.
-// Pass no args for install, or "--uninstall" for uninstall.
-func (m *detailModel) runAppScript(args ...string) tea.Cmd {
-	scriptPath := filepath.Join(m.item.Path, "install.sh")
-	if _, err := os.Stat(scriptPath); errors.Is(err, fs.ErrNotExist) {
-		m.message = "No install.sh found for this app"
-		m.messageIsErr = true
-		return nil
-	}
-	cmdArgs := append([]string{scriptPath}, args...)
-	cmd := exec.Command("bash", cmdArgs...)
-	action := "Install"
-	if len(args) > 0 && args[0] == "--uninstall" {
-		action = "Uninstall"
-	}
-	return tea.ExecProcess(cmd, func(err error) tea.Msg {
-		return appInstallDoneMsg{err: err, action: action}
-	})
-}
-
-// loadScriptPreview reads the first 10 lines of install.sh from itemPath.
-// Returns a placeholder string if the file cannot be read.
-func loadScriptPreview(itemPath string) string {
-	data, err := os.ReadFile(filepath.Join(itemPath, "install.sh"))
-	if err != nil {
-		return "(script not found)"
-	}
-	lines := strings.Split(string(data), "\n")
-	if len(lines) > 10 {
-		lines = lines[:10]
-	}
-	return strings.Join(lines, "\n")
 }
 
 func (m *detailModel) doCopyLLMPrompt() {

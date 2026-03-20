@@ -21,12 +21,12 @@ import (
 var importCmd = &cobra.Command{
 	Use:   "import",
 	Short: "Bring content into syllago from a provider, path, or git URL",
-	Long: `Discovers content from a provider and imports it into local/.
+	Long: `Discovers content from a provider and imports it into your library.
 
 Syllago handles format conversion automatically. Once imported, content can be
-exported to any supported provider with "syllago export --to <provider>".
+installed to any supported provider with "syllago install --to <provider>".
 
-After import, use "syllago export" to install content into other providers,
+After import, use "syllago install" to activate content in other providers,
 or browse in the TUI with "syllago".`,
 	Example: `  # Import all content from Claude Code
   syllago import --from claude-code
@@ -179,10 +179,10 @@ func runImport(cmd *cobra.Command, args []string) error {
 
 	if !dryRun {
 		printDiscoveryReport(report)
-		fmt.Fprintf(output.Writer, "\nImported %d file(s) to local/.\n", written)
+		fmt.Fprintf(output.Writer, "\nImported %d file(s) to library.\n", written)
 	} else {
 		printDiscoveryReport(report)
-		fmt.Fprintf(output.Writer, "\n[dry-run] Would import %d file(s) to local/.\n", written)
+		fmt.Fprintf(output.Writer, "\n[dry-run] Would import %d file(s) to library.\n", written)
 	}
 
 	return nil
@@ -438,7 +438,7 @@ func importHooksFromLocation(root, fromSlug string, loc installer.SettingsLocati
 		fmt.Fprintf(output.Writer, "  %s   (%s/%s)\n", name, hook.Event, matcher)
 		count++
 	}
-	fmt.Fprintf(output.Writer, "\nImported %d hooks to local/hooks/%s/\n", count, fromSlug)
+	fmt.Fprintf(output.Writer, "\nImported %d hooks from %s\n", count, fromSlug)
 	return nil
 }
 

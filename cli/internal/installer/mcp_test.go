@@ -339,6 +339,96 @@ func TestInstallMCP_NestedFormat(t *testing.T) {
 	}
 }
 
+func TestInstallMCP_RejectsInvalidServerNames(t *testing.T) {
+	// Not parallel — mutates package-level mcpConfigPath
+	tests := []struct {
+		name       string
+		serverName string
+	}{
+		{"dot traversal", "evil..path"},
+		{"dots in name", "server.name"},
+		{"path separator", "server/name"},
+		{"backslash", "server\\name"},
+		{"space", "server name"},
+		{"leading dash", "-server"},
+		{"special chars", "server@name"},
+		{"empty via nested", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+
+			// Create MCP item with a malicious nested server name
+			itemDir := filepath.Join(tmpDir, "bad-mcp")
+			os.MkdirAll(itemDir, 0755)
+
+			// Build nested config with the malicious server name as a JSON key
+			nestedConfig, _ := json.Marshal(map[string]interface{}{
+				"mcpServers": map[string]interface{}{
+					tt.serverName: map[string]interface{}{
+						"command": "evil",
+					},
+				},
+			})
+			os.WriteFile(filepath.Join(itemDir, "config.json"), nestedConfig, 0644)
+
+			item := catalog.ContentItem{Name: "bad-mcp", Type: catalog.MCP, Path: itemDir}
+
+			configFile := filepath.Join(tmpDir, ".claude.json")
+			os.WriteFile(configFile, []byte("{}"), 0644)
+
+			prov := provider.Provider{Slug: "claude-code"}
+
+			originalFunc := mcpConfigPath
+			mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+				return configFile, nil
+			}
+			defer func() { mcpConfigPath = originalFunc }()
+
+			_, err := installMCP(item, prov, tmpDir)
+			if err == nil {
+				t.Fatalf("expected error for server name %q, got nil", tt.serverName)
+			}
+		})
+	}
+}
+
+func TestInstallMCP_RejectsInvalidFlatItemName(t *testing.T) {
+	// Flat format: item.Name is used as the server key when config.json
+	// doesn't have a nested wrapper. Validate it too.
+	tmpDir := t.TempDir()
+
+	itemDir := filepath.Join(tmpDir, "bad-mcp")
+	os.MkdirAll(itemDir, 0755)
+
+	// Flat config (no mcpServers wrapper)
+	flatConfig, _ := json.Marshal(map[string]interface{}{
+		"command": "node",
+		"args":    []string{"server.js"},
+	})
+	os.WriteFile(filepath.Join(itemDir, "config.json"), flatConfig, 0644)
+
+	// Use a name with dots — would be an sjson path injection
+	item := catalog.ContentItem{Name: "evil..path", Type: catalog.MCP, Path: itemDir}
+
+	configFile := filepath.Join(tmpDir, ".claude.json")
+	os.WriteFile(configFile, []byte("{}"), 0644)
+
+	prov := provider.Provider{Slug: "claude-code"}
+
+	originalFunc := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = originalFunc }()
+
+	_, err := installMCP(item, prov, tmpDir)
+	if err == nil {
+		t.Fatal("expected error for item name with dots, got nil")
+	}
+}
+
 func TestUninstallMCP_NestedFormat(t *testing.T) {
 	// Not parallel — mutates package-level mcpConfigPath
 	tmpDir := t.TempDir()

@@ -28,7 +28,7 @@ var infoCmd = &cobra.Command{
 			"version":      v,
 			"contentTypes": catalog.AllContentTypes(),
 			"providers":    providerSlugs(),
-			"commands":     []string{"init", "import", "export", "registry", "config", "info"},
+			"commands":     []string{"init", "add", "install", "import", "registry", "config", "info"},
 		}
 		if output.JSON {
 			output.Print(manifest)

@@ -59,7 +59,13 @@ func CleanStale() {
 	}
 	for _, e := range entries {
 		if strings.HasPrefix(e.Name(), "syllago-sandbox-") {
-			_ = os.RemoveAll(filepath.Join("/tmp", e.Name()))
+			fullPath := filepath.Join("/tmp", e.Name())
+			// Verify it's a real directory (not a symlink) before removing
+			info, err := os.Lstat(fullPath)
+			if err != nil || !info.IsDir() {
+				continue
+			}
+			_ = os.RemoveAll(fullPath)
 		}
 	}
 }

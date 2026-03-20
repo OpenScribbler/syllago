@@ -1,0 +1,21 @@
+# Minimal baseline linter configuration.
+# Goal: consistency, not exhaustive analysis.
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  disable-all: true
+  enable:
+    - govet
+    - gofmt
+    - ineffassign
+    - unused
+
+linters-settings:
+  govet:
+    enable-all: false
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

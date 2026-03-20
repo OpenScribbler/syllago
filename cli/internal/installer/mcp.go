@@ -186,6 +186,9 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 	// Merge each server entry into the target config
 	var serverNames []string
 	for name, configData := range entries {
+		if !catalog.IsValidItemName(name) {
+			return "", fmt.Errorf("invalid MCP server name %q: names may only contain letters, numbers, hyphens, and underscores", name)
+		}
 		key := jsonKey + "." + name
 		fileData, err = sjson.SetRawBytes(fileData, key, configData)
 		if err != nil {

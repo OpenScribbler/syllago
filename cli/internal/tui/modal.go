@@ -362,7 +362,6 @@ const (
 	modalUninstall
 	modalSave
 	modalShare
-	modalAppScript
 	modalLoadoutApply
 	modalHookBrokenWarning
 	modalRegistryRemove
