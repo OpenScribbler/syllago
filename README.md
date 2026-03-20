@@ -1,6 +1,5 @@
 <div align="center">
 
-<!-- New logo coming soon -->
 <pre>
  █████████             ████  ████
 ███░░░░░███           ░░███ ░░███
@@ -19,7 +18,9 @@
 
 </div>
 
-Syllago is a content manager for AI coding tools. It maintains a library of reusable content -- rules, skills, agents, hooks, MCP server configs, and commands -- and handles format conversion automatically when you install to a provider or export to another tool. Bundle content into **loadouts** that apply as a unit, preview with `--try`, and revert cleanly. Browse and manage everything through an interactive TUI or automate with CLI commands and `--json` output.
+AI coding tools like Claude Code, Cursor, Gemini CLI, and Copilot each store rules, skills, agents, and other configurations in their own format. If you've built up a library of custom instructions in one tool, moving them to another means manual copy-pasting and format translation. Syllago automates that.
+
+Syllago maintains a central library of your content -- rules, skills, agents, hooks, MCP server configs, and commands. When you add content from one provider, syllago converts it to its own format. When you install it to another provider, syllago converts it again to the target's native format. The conversion is automatic and bidirectional.
 
 ## Installation
 
@@ -60,24 +61,51 @@ make build
 
 ## Quick Start
 
+**Scenario:** You have Claude Code rules and skills you want to use in Cursor and Gemini CLI.
+
 ```bash
-# Launch the TUI
-syllago
-
-# Add content from your existing tools
+# Step 1: Add your Claude Code content to syllago's library
 syllago add --from claude-code
+# Found 3 rules, 2 skills, 1 agent. Added to ~/.syllago/content/
 
-# Install to another provider
-syllago install my-rule --to cursor
+# Step 2: See what's in your library
+syllago list
+# my-coding-rules       rules    claude-code
+# typescript-standards   rules    claude-code
+# ...
+
+# Step 3: Install a rule to Cursor (auto-converts to .mdc format)
+syllago install my-coding-rules --to cursor
+
+# Step 4: Install a skill to Gemini CLI (auto-converts to Gemini's SKILL.md format)
+syllago install my-research-skill --to gemini-cli
 ```
+
+Or skip the CLI and browse everything interactively:
+
+```bash
+syllago   # launches the TUI
+```
+
+## How It Works
+
+Syllago uses three verbs that mirror a simple workflow:
+
+| Step | Command | What it does |
+|------|---------|-------------|
+| **Add** | `syllago add --from <provider>` | Discovers content in a provider's config directory and copies it into your syllago library |
+| **Install** | `syllago install <item> --to <provider>` | Takes a library item and writes it to a provider's config directory, converting the format automatically |
+| **Remove** | `syllago remove <item>` | Removes content from your library (and uninstalls from all providers) |
+
+Content in your library is provider-neutral. You add once, install anywhere.
 
 ## Features
 
+- **Cross-provider conversion** -- add content from one tool, install to another. Syllago handles format differences (Cursor's `.mdc`, Codex's TOML, Kiro's JSON, etc.)
 - **Interactive TUI** with card grids, search, mouse support, and keyboard navigation
-- **Cross-provider conversion** with hub-and-spoke architecture
-- **Git-based registries** -- browse and install from any compatible content repository
-- **Loadouts** -- curated content bundles that apply, preview (`--try`), or revert as a unit
-- **Sandbox** -- run AI CLI tools in bubblewrap isolation with filesystem, network, and env filtering (Linux)
+- **Loadouts** -- bundle multiple content items together and apply them as a unit. Preview with `--try` and revert cleanly
+- **Git-based registries** -- browse and install shared content from any compatible git repository
+- **Sandbox** -- run AI CLI tools in isolated environments with filesystem, network, and environment filtering (Linux)
 - **`--json` output** on all commands for scripting and CI integration
 
 ## Supported Providers
@@ -98,35 +126,22 @@ syllago install my-rule --to cursor
 
 ## Content Types
 
-| Type | Description |
-|------|-------------|
-| Rules | System prompts and custom instructions |
-| Skills | Multi-file workflow packages |
-| Agents | AI agent definitions and personas |
-| MCP | MCP server configurations |
-| Hooks | Event-driven automation scripts |
-| Commands | Custom slash commands |
-| Loadouts | Curated content bundles |
-
-## Conversion Compatibility
-
-| Content Type | Coverage | Notes |
-|---|---|---|
-| Rules | All providers | Format differs but content fully preserved |
-| Skills | All providers | Metadata rendering varies by provider |
-| Agents | All providers | Codex uses TOML format (auto-converted) |
-| MCP configs | Most providers | Zed uses `context_servers` key (handled automatically) |
-| Hooks | Claude Code, Gemini CLI, Copilot CLI | Other providers don't have hook systems |
-| Commands | Claude Code | Provider-specific feature |
-| Loadouts | Claude Code (v1) | Additional provider emitters planned |
+| Type | What it is |
+|------|------------|
+| Rules | System prompts and custom instructions (e.g., "always use TypeScript strict mode") |
+| Skills | Multi-file workflow packages (e.g., a code review workflow with templates and scripts) |
+| Agents | AI agent definitions and personas (e.g., a "security reviewer" agent) |
+| MCP | Model Context Protocol server configurations |
+| Hooks | Event-driven automation scripts that run before/after tool actions |
+| Commands | Custom slash commands (e.g., `/deploy`) |
+| Loadouts | Bundles of the above, applied as a unit |
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
 | `syllago` | Launch the interactive TUI |
-| `syllago add` | Discover and add content from a provider |
-| `syllago import` | Import content from a provider, path, or git URL |
+| `syllago add` | Discover and add content from a provider, path, or git URL |
 | `syllago install` | Activate library content in a provider |
 | `syllago uninstall` | Deactivate content from a provider |
 | `syllago remove` | Remove content from your library |
@@ -135,7 +150,7 @@ syllago install my-rule --to cursor
 | `syllago publish` | Contribute library content to a registry |
 | `syllago loadout` | Apply, create, and manage loadouts |
 | `syllago registry` | Manage git-based content registries |
-| `syllago sandbox` | Run AI CLI tools in bubblewrap sandboxes (Linux) |
+| `syllago sandbox` | Run AI CLI tools in isolated sandboxes (Linux) |
 | `syllago init` | Initialize syllago for a project |
 | `syllago create` | Scaffold a new content item |
 | `syllago inspect` | Show details about a content item |
@@ -158,7 +173,7 @@ syllago install my-rule --to cursor
 ### Example Workflows
 
 ```bash
-# Add content from your Claude Code setup
+# Add all content from Claude Code
 syllago add --from claude-code
 
 # Add only rules from Cursor
@@ -167,12 +182,12 @@ syllago add --from cursor --type rules
 # Install a skill to Gemini CLI (auto-converts format)
 syllago install my-skill --to gemini-cli
 
-# Browse registry content
+# Browse and install from a shared team registry
 syllago registry add https://github.com/your-team/ai-configs.git
 syllago registry sync
 syllago registry items --type skills
 
-# Apply a loadout temporarily (auto-reverts when session ends)
+# Apply a loadout temporarily (auto-reverts when done)
 syllago loadout apply my-loadout --try
 
 # Convert content for a specific provider without installing
@@ -237,7 +252,7 @@ See [SECURITY.md](SECURITY.md) for the full security policy, threat model, and h
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Syllago accepts ideas, not code -- open an issue using one of the structured templates.
+Contributions are welcome as issues -- see [CONTRIBUTING.md](CONTRIBUTING.md) for how to submit bug reports, feature ideas, and improvement suggestions.
 
 ## License
 
