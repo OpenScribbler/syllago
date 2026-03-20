@@ -21,12 +21,46 @@
 
 Syllago is a content manager for AI coding tools. It maintains a library of reusable content -- rules, skills, agents, hooks, MCP server configs, and commands -- and handles format conversion automatically when you install to a provider or export to another tool. Bundle content into **loadouts** that apply as a unit, preview with `--try`, and revert cleanly. Browse and manage everything through an interactive TUI or automate with CLI commands and `--json` output.
 
+## Installation
+
+### Homebrew (macOS)
+
+```bash
+brew tap OpenScribbler/tap
+brew install syllago
+```
+
+### Install script (Linux, macOS, Windows)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/OpenScribbler/syllago/main/install.sh | sh
+```
+
+Downloads the latest release binary, verifies the SHA-256 checksum, and installs to `~/.local/bin`. Override the install location with `INSTALL_DIR`:
+
+```bash
+INSTALL_DIR=/usr/local/bin sh install.sh
+```
+
+### go install
+
+```bash
+go install github.com/OpenScribbler/syllago/cli/cmd/syllago@latest
+```
+
+### From source
+
+Requires Go 1.25+.
+
+```bash
+git clone https://github.com/OpenScribbler/syllago.git
+cd syllago
+make build
+```
+
 ## Quick Start
 
 ```bash
-# Install
-curl -fsSL https://raw.githubusercontent.com/OpenScribbler/syllago/main/install.sh | sh
-
 # Launch the TUI
 syllago
 
@@ -166,36 +200,6 @@ syllago convert my-rule --to windsurf
 | `H` | Toggle hidden items |
 
 Mouse support: click to select cards, items, tabs, breadcrumbs, and modal buttons. Scroll wheel works in all scrollable areas.
-
-## Installation
-
-### Install script (Linux, macOS, Windows)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/OpenScribbler/syllago/main/install.sh | sh
-```
-
-Downloads the latest release binary, verifies the SHA-256 checksum, and installs to `~/.local/bin`. Override the install location with `INSTALL_DIR`:
-
-```bash
-INSTALL_DIR=/usr/local/bin sh install.sh
-```
-
-### go install
-
-```bash
-go install github.com/OpenScribbler/syllago/cli/cmd/syllago@latest
-```
-
-### From source
-
-Requires Go 1.25+.
-
-```bash
-git clone https://github.com/OpenScribbler/syllago.git
-cd syllago
-make build
-```
 
 ## Configuration
 
