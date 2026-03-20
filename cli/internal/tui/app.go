@@ -176,6 +176,10 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 }
 
 func (a App) Init() tea.Cmd {
+	// Skip update check if user disabled it in settings
+	if a.registryCfg != nil && a.registryCfg.Preferences["updateCheck"] == "false" {
+		return nil
+	}
 	if a.isReleaseBuild {
 		return checkForUpdateRelease(a.version)
 	}
