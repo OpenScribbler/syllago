@@ -93,6 +93,18 @@ func TestKitchenSinkSkillRoundTrip(t *testing.T) {
 			lossyDesc:     true,
 			bodySubstring: "Kitchen Sink Skill",
 		},
+		{
+			name:          "cursor",
+			provider:      provider.Cursor,
+			sourceSlug:    "cursor",
+			bodySubstring: "Kitchen Sink Skill",
+		},
+		{
+			name:          "windsurf",
+			provider:      provider.Windsurf,
+			sourceSlug:    "windsurf",
+			bodySubstring: "Kitchen Sink Skill",
+		},
 	}
 
 	for _, tt := range targets {
@@ -228,6 +240,22 @@ func TestKitchenSinkAgentRoundTrip(t *testing.T) {
 			lossyDesc:     true, // Codex TOML has no description field
 			bodySubstring: "Kitchen Sink Agent",
 			minWarnings:   5, // many fields not supported by Codex
+		},
+		{
+			name:          "cursor",
+			provider:      provider.Cursor,
+			sourceSlug:    "cursor",
+			bodySubstring: "Kitchen Sink Agent",
+			minWarnings:   1, // many fields not supported by Cursor
+		},
+		{
+			name:          "roo-code",
+			provider:      provider.RooCode,
+			sourceSlug:    "roo-code",
+			lossyName:     true, // name embedded in mode slug, not frontmatter
+			lossyDesc:     true, // description embedded in mode roleDefinition
+			bodySubstring: "Kitchen Sink Agent",
+			minWarnings:   1, // many fields not supported by Roo Code
 		},
 	}
 
