@@ -15,6 +15,8 @@ var Cline = Provider{
 		switch ct {
 		case catalog.Rules:
 			return ProjectScopeSentinel // Rules go in project root as .clinerules/ directory
+		case catalog.Hooks:
+			return ProjectScopeSentinel // Hooks are file-based executables in .clinerules/hooks/
 		case catalog.MCP:
 			return JSONMergeSentinel // Merges into VS Code globalStorage config
 		}
@@ -30,6 +32,8 @@ var Cline = Provider{
 		switch ct {
 		case catalog.Rules:
 			return []string{filepath.Join(projectRoot, ".clinerules")}
+		case catalog.Hooks:
+			return []string{filepath.Join(projectRoot, ".clinerules", "hooks")}
 		default:
 			return nil
 		}
@@ -47,7 +51,7 @@ var Cline = Provider{
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {
-		case catalog.Rules, catalog.MCP:
+		case catalog.Rules, catalog.Hooks, catalog.MCP:
 			return true
 		default:
 			return false
@@ -55,6 +59,7 @@ var Cline = Provider{
 	},
 	SymlinkSupport: map[catalog.ContentType]bool{
 		catalog.Rules: true,
+		catalog.Hooks: true, // File-based executables
 		catalog.MCP:   false, // JSON merge
 	},
 }
