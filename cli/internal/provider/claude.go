@@ -47,7 +47,10 @@ var ClaudeCode = Provider{
 		case catalog.Agents:
 			return []string{filepath.Join(projectRoot, ".claude", "agents")}
 		case catalog.MCP:
-			return []string{filepath.Join(projectRoot, ".claude.json")}
+			return []string{
+				filepath.Join(projectRoot, ".claude.json"),
+				filepath.Join(projectRoot, ".mcp.json"),
+			}
 		case catalog.Hooks:
 			return []string{filepath.Join(projectRoot, ".claude", "settings.json")}
 		default:
