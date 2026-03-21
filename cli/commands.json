@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-20T15:27:29Z",
+  "generatedAt": "2026-03-21T00:07:05Z",
   "syllagoVersion": "0.6.1",
   "commands": [
     {
@@ -1024,128 +1024,6 @@
       "source": "cli/cmd/syllago/create.go"
     },
     {
-      "name": "import",
-      "displayName": "Import",
-      "slug": "import",
-      "parent": null,
-      "synopsis": "syllago import [flags]",
-      "description": "Bring content into syllago from a provider, path, or git URL",
-      "longDescription": "Discovers content from a provider and imports it into your library.\n\nSyllago handles format conversion automatically. Once imported, content can be\ninstalled to any supported provider with \"syllago install --to \u003cprovider\u003e\".\n\nAfter import, use \"syllago install\" to activate content in other providers,\nor browse in the TUI with \"syllago\".",
-      "aliases": [],
-      "flags": [
-        {
-          "name": "--base-dir",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Override base directory for content discovery"
-        },
-        {
-          "name": "--dry-run",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Show what would be written without actually writing"
-        },
-        {
-          "name": "--exclude",
-          "shorthand": null,
-          "type": "stringArray",
-          "default": null,
-          "required": false,
-          "description": "Skip hooks by auto-derived name (hooks only)"
-        },
-        {
-          "name": "--force",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Overwrite existing items with the same name (hooks only)"
-        },
-        {
-          "name": "--from",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": true,
-          "description": "Provider to import from (required)"
-        },
-        {
-          "name": "--name",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Filter to items whose path contains this substring (case-insensitive)"
-        },
-        {
-          "name": "--preview",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Show discovery report without parsing"
-        },
-        {
-          "name": "--scope",
-          "shorthand": null,
-          "type": "string",
-          "default": "global",
-          "required": false,
-          "description": "Settings scope to read from: global, project, or all (hooks only)"
-        },
-        {
-          "name": "--type",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Limit to a single content type (e.g., rules, hooks, mcp)"
-        }
-      ],
-      "inheritedFlags": [
-        {
-          "name": "--json",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Output in JSON format"
-        },
-        {
-          "name": "--no-color",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Disable color output"
-        },
-        {
-          "name": "--quiet",
-          "shorthand": "-q",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Suppress non-essential output"
-        },
-        {
-          "name": "--verbose",
-          "shorthand": "-v",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Verbose output"
-        }
-      ],
-      "subcommands": [],
-      "seeAlso": [],
-      "examples": "  # Import all content from Claude Code\n  syllago import --from claude-code\n\n  # Import only skills\n  syllago import --from claude-code --type skills\n\n  # Import a specific rule by name\n  syllago import --from cursor --name my-rule\n\n  # Preview what would be imported\n  syllago import --from claude-code --preview\n\n  # Show what would be written without writing\n  syllago import --from claude-code --dry-run",
-      "source": "cli/cmd/syllago/import.go"
-    },
-    {
       "name": "info",
       "displayName": "Info",
       "slug": "info",
@@ -1545,7 +1423,7 @@
       "slug": "list",
       "parent": null,
       "synopsis": "syllago list [flags]",
-      "description": "List content items in the catalog",
+      "description": "List content items in the library",
       "longDescription": "Show a quick inventory of all content without launching the TUI.\n\nBy default, lists all content grouped by type. Use flags to filter.",
       "aliases": [],
       "flags": [
