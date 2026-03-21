@@ -167,7 +167,7 @@ Content in your library is provider-neutral. You add once, install anywhere.
 | `syllago init` | Initialize syllago for a project |
 | `syllago create` | Scaffold a new content item |
 | `syllago inspect` | Show details about a content item |
-| `syllago list` | List content items in the catalog |
+| `syllago list` | List content items in the library |
 | `syllago config` | View and edit configuration |
 | `syllago update` | Update syllago to the latest release |
 | `syllago info` | Show capabilities (providers, formats) |

@@ -78,7 +78,7 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(loadoutItems) == 0 {
-		fmt.Fprintln(output.ErrWriter, "No loadouts found in catalog.")
+		fmt.Fprintln(output.ErrWriter, "No loadouts found in library.")
 		return nil
 	}
 
