@@ -24,7 +24,7 @@ type codexConfig struct {
 // canonicalizeCodexAgents parses Codex agent TOML into canonical agents.
 // Handles both formats:
 //   - Multi-agent (AGENTS.toml): [features] + [agents.<name>] sections
-//   - Single-agent (.codex/agents/*.toml): [agent] + [agent.instructions]
+//   - Single-agent (.codex/agents/*.toml): [agent] with developer_instructions
 func canonicalizeCodexAgents(content []byte) (*Result, error) {
 	// Try single-agent format first (more specific structure)
 	var single codexSingleAgent
@@ -45,7 +45,7 @@ func canonicalizeCodexAgents(content []byte) (*Result, error) {
 	return canonicalizeMultiCodexAgents(cfg)
 }
 
-// canonicalizeSingleCodexAgent handles the [agent] + [agent.instructions] format.
+// canonicalizeSingleCodexAgent handles the [agent] with developer_instructions format.
 func canonicalizeSingleCodexAgent(single codexSingleAgent) (*Result, error) {
 	meta := AgentMeta{
 		Name:        single.Agent.Name,
@@ -56,12 +56,26 @@ func canonicalizeSingleCodexAgent(single codexSingleAgent) (*Result, error) {
 	if len(single.Agent.Tools) > 0 {
 		canonical := make([]string, len(single.Agent.Tools))
 		for i, t := range single.Agent.Tools {
-			canonical[i] = ReverseTranslateTool(t, "copilot-cli")
+			canonical[i] = ReverseTranslateTool(t, "codex")
 		}
 		meta.Tools = canonical
 	}
 
-	body := strings.TrimSpace(single.Agent.Instructions.Content)
+	// Extract MCP server names from the map keys
+	if len(single.Agent.MCPServers) > 0 {
+		for name := range single.Agent.MCPServers {
+			meta.MCPServers = append(meta.MCPServers, name)
+		}
+	}
+
+	// Extract skill names from the config map keys
+	if len(single.Agent.Skills.Config) > 0 {
+		for name := range single.Agent.Skills.Config {
+			meta.Skills = append(meta.Skills, name)
+		}
+	}
+
+	body := strings.TrimSpace(single.Agent.DeveloperInstructions)
 
 	data, err := buildAgentCanonical(meta, body)
 	if err != nil {
@@ -90,7 +104,7 @@ func canonicalizeMultiCodexAgents(cfg codexConfig) (*Result, error) {
 		if len(agent.Tools) > 0 {
 			canonical := make([]string, len(agent.Tools))
 			for i, t := range agent.Tools {
-				canonical[i] = ReverseTranslateTool(t, "copilot-cli")
+				canonical[i] = ReverseTranslateTool(t, "codex")
 			}
 			meta.Tools = canonical
 		}
@@ -130,20 +144,26 @@ type codexSingleAgent struct {
 }
 
 type codexSingleAgentBody struct {
-	Name         string                 `toml:"name"`
-	Description  string                 `toml:"description,omitempty"`
-	Model        string                 `toml:"model,omitempty"`
-	Tools        []string               `toml:"tools,omitempty"`
-	Instructions codexAgentInstructions `toml:"instructions,omitempty"`
+	Name                  string              `toml:"name"`
+	Description           string              `toml:"description,omitempty"`
+	Model                 string              `toml:"model,omitempty"`
+	ModelReasoningEffort  string              `toml:"model_reasoning_effort,omitempty"`
+	Tools                 []string            `toml:"tools,omitempty"`
+	DeveloperInstructions string              `toml:"developer_instructions,omitempty"`
+	SandboxMode           string              `toml:"sandbox_mode,omitempty"`
+	NicknameCandidates    []string            `toml:"nickname_candidates,omitempty"`
+	MCPServers            map[string]any      `toml:"mcp_servers,omitempty"`
+	Skills                codexSkillsConfig   `toml:"skills,omitempty"`
 }
 
-type codexAgentInstructions struct {
-	Content string `toml:"content,omitempty"`
+// codexSkillsConfig represents the [agent.skills] section with a config sub-table.
+type codexSkillsConfig struct {
+	Config map[string]any `toml:"config,omitempty"`
 }
 
 // renderCodexAgents renders a canonical agent to Codex single-agent TOML format.
-// Outputs the per-file format ([agent] + [agent.instructions]) used by .codex/agents/<name>.toml,
-// not the multi-agent format ([agents.<name>]) used by AGENTS.toml.
+// Outputs the per-file format with [agent] and developer_instructions used by
+// .codex/agents/<name>.toml, not the multi-agent format ([agents.<name>]) used by AGENTS.toml.
 func renderCodexAgents(meta AgentMeta, body string) (*Result, error) {
 	var warnings []string
 
@@ -153,12 +173,6 @@ func renderCodexAgents(meta AgentMeta, body string) (*Result, error) {
 	}
 	if meta.PermissionMode != "" {
 		warnings = append(warnings, "field 'permissionMode' not supported by Codex (dropped)")
-	}
-	if len(meta.Skills) > 0 {
-		warnings = append(warnings, "field 'skills' not supported by Codex (dropped)")
-	}
-	if len(meta.MCPServers) > 0 {
-		warnings = append(warnings, "field 'mcpServers' not supported by Codex (dropped)")
 	}
 	if meta.Memory != "" {
 		warnings = append(warnings, "field 'memory' not supported by Codex (dropped)")
@@ -173,10 +187,10 @@ func renderCodexAgents(meta AgentMeta, body string) (*Result, error) {
 		warnings = append(warnings, "field 'disallowedTools' not supported by Codex (dropped)")
 	}
 
-	// Translate tools to Codex names (same as Copilot CLI)
+	// Translate tools to Codex names
 	var codexTools []string
 	if len(meta.Tools) > 0 {
-		codexTools = TranslateTools(meta.Tools, "copilot-cli")
+		codexTools = TranslateTools(meta.Tools, "codex")
 	}
 
 	cleanBody := StripConversionNotes(body)
@@ -186,15 +200,33 @@ func renderCodexAgents(meta AgentMeta, body string) (*Result, error) {
 		slug = "agent"
 	}
 
+	// Build MCP servers map from canonical names
+	var mcpServers map[string]any
+	if len(meta.MCPServers) > 0 {
+		mcpServers = make(map[string]any, len(meta.MCPServers))
+		for _, name := range meta.MCPServers {
+			mcpServers[name] = map[string]any{}
+		}
+	}
+
+	// Build skills config from canonical names
+	var skills codexSkillsConfig
+	if len(meta.Skills) > 0 {
+		skills.Config = make(map[string]any, len(meta.Skills))
+		for _, name := range meta.Skills {
+			skills.Config[name] = map[string]any{}
+		}
+	}
+
 	cfg := codexSingleAgent{
 		Agent: codexSingleAgentBody{
-			Name:        meta.Name,
-			Description: meta.Description,
-			Model:       meta.Model,
-			Tools:       codexTools,
-			Instructions: codexAgentInstructions{
-				Content: cleanBody,
-			},
+			Name:                  meta.Name,
+			Description:           meta.Description,
+			Model:                 meta.Model,
+			Tools:                 codexTools,
+			DeveloperInstructions: cleanBody,
+			MCPServers:            mcpServers,
+			Skills:                skills,
 		},
 	}
 
