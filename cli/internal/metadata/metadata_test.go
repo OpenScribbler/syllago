@@ -150,6 +150,120 @@ func TestMetaSourceHash(t *testing.T) {
 	}
 }
 
+func TestFormatVersion(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Save stamps current version", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		m := &Meta{ID: NewID(), Name: "test"}
+		if err := Save(dir, m); err != nil {
+			t.Fatalf("Save: %v", err)
+		}
+		// Verify the field was set on the struct
+		if m.FormatVersion != CurrentFormatVersion {
+			t.Errorf("FormatVersion on struct: got %d, want %d", m.FormatVersion, CurrentFormatVersion)
+		}
+		// Verify the YAML file contains format_version
+		data, _ := os.ReadFile(MetaPath(dir))
+		if !strings.Contains(string(data), "format_version: 1") {
+			t.Errorf("YAML missing format_version: 1, got:\n%s", data)
+		}
+	})
+
+	t.Run("SaveProvider stamps current version", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		m := &Meta{ID: NewID(), Name: "hook.json"}
+		if err := SaveProvider(dir, "hook.json", m); err != nil {
+			t.Fatalf("SaveProvider: %v", err)
+		}
+		if m.FormatVersion != CurrentFormatVersion {
+			t.Errorf("FormatVersion: got %d, want %d", m.FormatVersion, CurrentFormatVersion)
+		}
+	})
+
+	t.Run("Load with current version succeeds", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		// Write YAML with format_version: 1 directly
+		yaml := "format_version: 1\nid: abc\nname: test\n"
+		os.MkdirAll(dir, 0755)
+		os.WriteFile(MetaPath(dir), []byte(yaml), 0644)
+
+		loaded, err := Load(dir)
+		if err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		if loaded.FormatVersion != 1 {
+			t.Errorf("FormatVersion: got %d, want 1", loaded.FormatVersion)
+		}
+	})
+
+	t.Run("Load with no format version succeeds (backward compat)", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		// Old-style YAML without format_version
+		yaml := "id: abc\nname: test\n"
+		os.MkdirAll(dir, 0755)
+		os.WriteFile(MetaPath(dir), []byte(yaml), 0644)
+
+		loaded, err := Load(dir)
+		if err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		if loaded.FormatVersion != 0 {
+			t.Errorf("FormatVersion: got %d, want 0", loaded.FormatVersion)
+		}
+	})
+
+	t.Run("Load with unsupported version returns error", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		yaml := "format_version: 999\nid: abc\nname: test\n"
+		os.MkdirAll(dir, 0755)
+		os.WriteFile(MetaPath(dir), []byte(yaml), 0644)
+
+		_, err := Load(dir)
+		if err == nil {
+			t.Fatal("expected error for unsupported format version")
+		}
+		if !strings.Contains(err.Error(), "unsupported format version 999") {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("LoadProvider with unsupported version returns error", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		yaml := "format_version: 999\nid: abc\nname: test\n"
+		os.WriteFile(ProviderMetaPath(dir, "hook.json"), []byte(yaml), 0644)
+
+		_, err := LoadProvider(dir, "hook.json")
+		if err == nil {
+			t.Fatal("expected error for unsupported format version")
+		}
+		if !strings.Contains(err.Error(), "unsupported format version 999") {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("Backfill includes format version", func(t *testing.T) {
+		t.Parallel()
+		dir := filepath.Join(t.TempDir(), "item")
+		if err := Backfill(dir, "test", "skills", "tester"); err != nil {
+			t.Fatalf("Backfill: %v", err)
+		}
+		loaded, err := Load(dir)
+		if err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		if loaded.FormatVersion != CurrentFormatVersion {
+			t.Errorf("FormatVersion: got %d, want %d", loaded.FormatVersion, CurrentFormatVersion)
+		}
+	})
+}
+
 func TestMetaHiddenField(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

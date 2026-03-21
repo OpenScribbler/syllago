@@ -810,3 +810,180 @@ func TestCursorMCPDropsGeminiFields(t *testing.T) {
 		t.Fatal("expected warnings about dropped Gemini fields")
 	}
 }
+
+// --- OAuth MCP Tests ---
+
+func TestClaudeMCPOAuthRoundTrip(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"auth-server": {
+				"url": "https://api.example.com/mcp",
+				"type": "sse",
+				"oauth": {
+					"client_id": "my-client",
+					"scopes": ["read", "write"],
+					"auth_url": "https://auth.example.com/authorize"
+				}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+
+	// Claude Code → canonical
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// Verify OAuth preserved in canonical form
+	out := string(canonical.Content)
+	assertContains(t, out, "oauth")
+	assertContains(t, out, "my-client")
+
+	// canonical → Claude Code
+	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	rendered := string(result.Content)
+	assertContains(t, rendered, "oauth")
+	assertContains(t, rendered, "my-client")
+	assertContains(t, rendered, "read")
+	assertContains(t, rendered, "write")
+	assertContains(t, rendered, "auth.example.com")
+}
+
+func TestOAuthWarningForUnsupportedProvider(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"auth-server": {
+				"command": "node",
+				"args": ["server.js"],
+				"oauth": {"client_id": "abc"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// Providers that should warn about OAuth
+	warnProviders := []provider.Provider{
+		provider.GeminiCLI,
+		provider.CopilotCLI,
+		provider.Cursor,
+		provider.Kiro,
+		provider.RooCode,
+	}
+
+	for _, prov := range warnProviders {
+		t.Run(prov.Name, func(t *testing.T) {
+			result, err := conv.Render(canonical.Content, prov)
+			if err != nil {
+				t.Fatalf("Render to %s: %v", prov.Name, err)
+			}
+
+			hasOAuthWarning := false
+			for _, w := range result.Warnings {
+				if strings.Contains(w, "oauth") {
+					hasOAuthWarning = true
+					break
+				}
+			}
+			if !hasOAuthWarning {
+				t.Errorf("expected OAuth warning for %s, got warnings: %v", prov.Name, result.Warnings)
+			}
+		})
+	}
+}
+
+func TestOAuthNoWarningForSupportedProviders(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"auth-server": {
+				"command": "node",
+				"args": ["server.js"],
+				"oauth": {"client_id": "abc"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// Claude Code and OpenCode support OAuth — no warning expected
+	noWarnProviders := []provider.Provider{
+		provider.ClaudeCode,
+		provider.OpenCode,
+	}
+
+	for _, prov := range noWarnProviders {
+		t.Run(prov.Name, func(t *testing.T) {
+			result, err := conv.Render(canonical.Content, prov)
+			if err != nil {
+				t.Fatalf("Render to %s: %v", prov.Name, err)
+			}
+
+			for _, w := range result.Warnings {
+				if strings.Contains(w, "oauth") {
+					t.Errorf("unexpected OAuth warning for %s: %s", prov.Name, w)
+				}
+			}
+		})
+	}
+}
+
+func TestOpenCodeToClaudeOAuthPreserved(t *testing.T) {
+	input := []byte(`{
+		"mcp": {
+			"auth-server": {
+				"type": "remote",
+				"url": "https://api.example.com/mcp",
+				"oauth": {
+					"client_id": "oc-client",
+					"scopes": ["api"],
+					"token_url": "https://auth.example.com/token"
+				}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+
+	// OpenCode → canonical
+	canonical, err := conv.Canonicalize(input, "opencode")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(canonical.Content)
+	assertContains(t, out, "oauth")
+	assertContains(t, out, "oc-client")
+
+	// canonical → Claude Code
+	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	rendered := string(result.Content)
+	assertContains(t, rendered, "oauth")
+	assertContains(t, rendered, "oc-client")
+	assertContains(t, rendered, "api")
+	assertContains(t, rendered, "auth.example.com")
+
+	// No warnings — both providers support OAuth
+	for _, w := range result.Warnings {
+		if strings.Contains(w, "oauth") {
+			t.Errorf("unexpected OAuth warning: %s", w)
+		}
+	}
+}

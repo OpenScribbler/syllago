@@ -232,7 +232,7 @@ func canonicalizeFlatHook(content []byte, sourceProvider string) (*Result, error
 	if sourceProvider != "claude-code" {
 		hd.Event = ReverseTranslateHookEvent(hd.Event, sourceProvider)
 		if hd.Matcher != "" {
-			hd.Matcher = ReverseTranslateTool(hd.Matcher, sourceProvider)
+			hd.Matcher = ReverseTranslateMatcher(hd.Matcher, sourceProvider)
 		}
 	}
 
@@ -329,7 +329,7 @@ func canonicalizeStandardHooks(content []byte, sourceProvider string) (*Result, 
 			}
 			// Translate matcher tool name to canonical
 			if cm.Matcher != "" && sourceProvider != "claude-code" {
-				cm.Matcher = ReverseTranslateTool(cm.Matcher, sourceProvider)
+				cm.Matcher = ReverseTranslateMatcher(cm.Matcher, sourceProvider)
 			}
 			canonicalMatchers = append(canonicalMatchers, cm)
 		}
@@ -372,7 +372,7 @@ func canonicalizeCopilotHooks(content []byte) (*Result, error) {
 			}
 			matcher := g.Matcher
 			if matcher != "" {
-				matcher = ReverseTranslateTool(matcher, "copilot-cli")
+				matcher = ReverseTranslateMatcher(matcher, "copilot-cli")
 			}
 			matchers = append(matchers, hookMatcher{
 				Matcher: matcher,
@@ -419,7 +419,7 @@ func renderStandardHooks(cfg hooksConfig, targetSlug string, llmMode string) (*R
 			}
 			// Translate matcher tool name
 			if tm.Matcher != "" {
-				tm.Matcher = TranslateTool(tm.Matcher, targetSlug)
+				tm.Matcher = TranslateMatcher(tm.Matcher, targetSlug)
 			}
 			copy(tm.Hooks, m.Hooks)
 
@@ -506,7 +506,7 @@ func renderCopilotHooks(cfg hooksConfig, llmMode string) (*Result, error) {
 			// Translate matcher tool name to Copilot's vocabulary
 			matcher := ""
 			if m.Matcher != "" {
-				matcher = TranslateTool(m.Matcher, "copilot-cli")
+				matcher = TranslateMatcher(m.Matcher, "copilot-cli")
 			}
 
 			var entries []copilotHookEntry
@@ -601,7 +601,7 @@ func renderKiroHooks(cfg hooksConfig, llmMode string) (*Result, error) {
 		for _, m := range matchers {
 			matcher := ""
 			if m.Matcher != "" {
-				matcher = TranslateTool(m.Matcher, "kiro")
+				matcher = TranslateMatcher(m.Matcher, "kiro")
 			}
 
 			for _, h := range m.Hooks {

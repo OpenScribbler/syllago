@@ -1116,6 +1116,162 @@ func TestHookRenderNonClaudeWarnsHTTPType(t *testing.T) {
 	}
 }
 
+// --- Gemini-only hook event tests ---
+
+func TestGeminiOnlyEventsRoundtrip(t *testing.T) {
+	// Gemini-only events (BeforeModel, AfterModel, BeforeToolSelection) should
+	// survive import from Gemini CLI and export back to Gemini CLI.
+	input := []byte(`{
+		"hooks": {
+			"BeforeModel": [
+				{
+					"hooks": [
+						{"type": "command", "command": "echo before-model", "timeout": 5000}
+					]
+				}
+			],
+			"AfterModel": [
+				{
+					"hooks": [
+						{"type": "command", "command": "echo after-model", "timeout": 3000}
+					]
+				}
+			],
+			"BeforeToolSelection": [
+				{
+					"hooks": [
+						{"type": "command", "command": "echo before-tool-selection"}
+					]
+				}
+			]
+		}
+	}`)
+
+	conv := &HooksConverter{}
+
+	// Canonicalize from Gemini CLI
+	canonical, err := conv.Canonicalize(input, "gemini-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// Canonical should preserve all 3 events
+	var cfg hooksConfig
+	if err := json.Unmarshal(canonical.Content, &cfg); err != nil {
+		t.Fatalf("unmarshal canonical: %v", err)
+	}
+	for _, event := range []string{"BeforeModel", "AfterModel", "BeforeToolSelection"} {
+		if _, ok := cfg.Hooks[event]; !ok {
+			t.Errorf("expected canonical to have event %q", event)
+		}
+	}
+
+	// Render back to Gemini CLI — all 3 events should survive
+	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
+	if err != nil {
+		t.Fatalf("Render to Gemini: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "BeforeModel")
+	assertContains(t, out, "AfterModel")
+	assertContains(t, out, "BeforeToolSelection")
+	assertContains(t, out, "echo before-model")
+	assertContains(t, out, "echo after-model")
+	assertContains(t, out, "echo before-tool-selection")
+
+	// No warnings — these events are supported by Gemini
+	for _, w := range result.Warnings {
+		if containsStr(w, "not supported") {
+			t.Errorf("unexpected warning: %s", w)
+		}
+	}
+}
+
+func TestGeminiOnlyEventsDroppedForOtherProviders(t *testing.T) {
+	// Gemini-only events should be dropped with warnings when targeting non-Gemini providers.
+	input := []byte(`{
+		"hooks": {
+			"BeforeModel": [
+				{
+					"hooks": [
+						{"type": "command", "command": "echo model"}
+					]
+				}
+			],
+			"AfterModel": [
+				{
+					"hooks": [
+						{"type": "command", "command": "echo after"}
+					]
+				}
+			],
+			"BeforeToolSelection": [
+				{
+					"hooks": [
+						{"type": "command", "command": "echo select"}
+					]
+				}
+			]
+		}
+	}`)
+
+	conv := &HooksConverter{}
+	canonical, err := conv.Canonicalize(input, "gemini-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	targets := []struct {
+		name string
+		prov provider.Provider
+	}{
+		{"copilot-cli", provider.CopilotCLI},
+		{"kiro", provider.Kiro},
+	}
+
+	for _, tt := range targets {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := conv.Render(canonical.Content, tt.prov)
+			if err != nil {
+				t.Fatalf("Render to %s: %v", tt.name, err)
+			}
+
+			// All 3 events should generate warnings
+			warnEvents := map[string]bool{}
+			for _, w := range result.Warnings {
+				for _, event := range []string{"BeforeModel", "AfterModel", "BeforeToolSelection"} {
+					if containsStr(w, event) && containsStr(w, "not supported") {
+						warnEvents[event] = true
+					}
+				}
+			}
+			for _, event := range []string{"BeforeModel", "AfterModel", "BeforeToolSelection"} {
+				if !warnEvents[event] {
+					t.Errorf("expected warning for %q on %s, got warnings: %v", event, tt.name, result.Warnings)
+				}
+			}
+		})
+	}
+}
+
+func TestGeminiOnlyEventsFlatFormat(t *testing.T) {
+	t.Parallel()
+	// Flat-format Gemini-only events should canonicalize correctly.
+	input := `{"event":"BeforeModel","hooks":[{"type":"command","command":"echo model-check"}]}`
+	conv := &HooksConverter{}
+	result, err := conv.Canonicalize([]byte(input), "gemini-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize flat: %v", err)
+	}
+	var hd HookData
+	json.Unmarshal(result.Content, &hd)
+	// BeforeModel in Gemini maps to canonical "BeforeModel"
+	if hd.Event != "BeforeModel" {
+		t.Errorf("event not translated correctly: got %q, want %q", hd.Event, "BeforeModel")
+	}
+}
+
 func TestHookCanonicalizeFlatHTTPHook(t *testing.T) {
 	t.Parallel()
 	input := []byte(`{
