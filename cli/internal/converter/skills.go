@@ -14,13 +14,56 @@ func init() {
 	Register(&SkillsConverter{})
 }
 
+// flexStringList is a []string that also accepts a single YAML scalar string.
+// When unmarshaled from a scalar, the string is split on commas (if present)
+// or whitespace, producing individual tool names.
+type flexStringList []string
+
+func (f *flexStringList) UnmarshalYAML(value *yaml.Node) error {
+	switch value.Kind {
+	case yaml.SequenceNode:
+		// Standard YAML list: ["Read", "Grep", "Glob"]
+		var list []string
+		if err := value.Decode(&list); err != nil {
+			return err
+		}
+		*f = list
+		return nil
+	case yaml.ScalarNode:
+		// Single scalar string — could be comma-separated, space-delimited, or single tool
+		*f = splitToolString(value.Value)
+		return nil
+	default:
+		return fmt.Errorf("expected string or list, got YAML kind %d", value.Kind)
+	}
+}
+
+// splitToolString splits a string on commas (if present) or whitespace.
+func splitToolString(s string) []string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	if strings.Contains(s, ",") {
+		parts := strings.Split(s, ",")
+		var result []string
+		for _, p := range parts {
+			if t := strings.TrimSpace(p); t != "" {
+				result = append(result, t)
+			}
+		}
+		return result
+	}
+	return strings.Fields(s)
+}
+
 // SkillMeta is the canonical skill metadata (YAML frontmatter fields).
 // Claude Code is the superset.
 type SkillMeta struct {
-	Name                   string   `yaml:"name,omitempty"`
-	Description            string   `yaml:"description,omitempty"`
-	AllowedTools           []string `yaml:"allowed-tools,omitempty"`
-	DisallowedTools        []string `yaml:"disallowed-tools,omitempty"`
+	Name                   string         `yaml:"name,omitempty"`
+	Description            string         `yaml:"description,omitempty"`
+	AllowedTools           flexStringList `yaml:"allowed-tools,omitempty"`
+	DisallowedTools        flexStringList `yaml:"disallowed-tools,omitempty"`
 	Context                string   `yaml:"context,omitempty"`
 	Agent                  string   `yaml:"agent,omitempty"`
 	Model                  string   `yaml:"model,omitempty"`
@@ -48,7 +91,9 @@ func (c *SkillsConverter) Canonicalize(content []byte, sourceProvider string) (*
 	case "kiro", "opencode":
 		return canonicalizeSkillFromMarkdown(content)
 	default:
-		// Claude Code, Gemini CLI, Copilot CLI — YAML frontmatter + markdown
+		// Claude Code, Gemini CLI, Copilot CLI, Cursor — YAML frontmatter + markdown
+		// Cursor SKILL.md uses the same frontmatter format as Claude Code (subset of fields),
+		// so it parses identically through the canonical path.
 		meta, body, err := parseSkillCanonical(content)
 		if err != nil {
 			return nil, err
@@ -74,6 +119,8 @@ func (c *SkillsConverter) Render(content []byte, target provider.Provider) (*Res
 		return renderOpenCodeSkill(meta, body)
 	case "kiro":
 		return renderKiroSkill(meta, body)
+	case "cursor":
+		return renderCursorSkill(meta, body)
 	default:
 		// Claude Code, Copilot CLI — full frontmatter preserved
 		return renderClaudeSkill(meta, body)
@@ -181,6 +228,78 @@ func renderClaudeSkill(meta SkillMeta, body string) (*Result, error) {
 	buf.Write(fm)
 	buf.WriteString("\n")
 	buf.WriteString(cleanBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+}
+
+// cursorSkillMeta is the subset of fields Cursor supports in SKILL.md frontmatter.
+// Cursor supports: name, description, license, compatibility, metadata, disable-model-invocation.
+// It does NOT support: allowed-tools, context, agent, model, effort, hooks, user-invocable, argument-hint.
+type cursorSkillMeta struct {
+	Name                   string `yaml:"name,omitempty"`
+	Description            string `yaml:"description,omitempty"`
+	DisableModelInvocation bool   `yaml:"disable-model-invocation,omitempty"`
+}
+
+// renderCursorSkill renders a canonical skill to Cursor's SKILL.md format.
+// Cursor uses the same SKILL.md shape as Claude Code but supports fewer frontmatter fields.
+// Unsupported fields (allowed-tools, context, agent, model, etc.) are embedded as prose notes.
+func renderCursorSkill(meta SkillMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	// Build behavioral embedding notes for fields Cursor doesn't support
+	var notes []string
+	if len(meta.AllowedTools) > 0 {
+		translated := TranslateTools(meta.AllowedTools, "cursor")
+		notes = append(notes, fmt.Sprintf("**Tool restriction:** Use only %s tools.", strings.Join(translated, ", ")))
+	}
+	if len(meta.DisallowedTools) > 0 {
+		translated := TranslateTools(meta.DisallowedTools, "cursor")
+		notes = append(notes, fmt.Sprintf("**Do not use:** %s tools.", strings.Join(translated, ", ")))
+	}
+	if meta.Context == "fork" {
+		notes = append(notes, "Run in an isolated context. Do not modify the main conversation.")
+	}
+	if meta.Agent != "" {
+		notes = append(notes, fmt.Sprintf("Use a %s-focused approach.", strings.ToLower(meta.Agent)))
+	}
+	if meta.Model != "" {
+		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+	if meta.UserInvocable != nil && *meta.UserInvocable {
+		notes = append(notes, "Intended to appear in the command menu.")
+	}
+	if meta.ArgumentHint != "" {
+		notes = append(notes, fmt.Sprintf("Usage: %s", meta.ArgumentHint))
+	}
+	if meta.Hooks != nil {
+		notes = append(notes, "**Hooks:** This skill defines lifecycle hooks that execute shell commands. Hooks require a provider with skill-scoped hook support (currently only Claude Code).")
+	}
+
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	cm := cursorSkillMeta{
+		Name:                   meta.Name,
+		Description:            meta.Description,
+		DisableModelInvocation: meta.DisableModelInvocation,
+	}
+	fm, err := renderFrontmatter(cm)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
 	buf.WriteString("\n")
 
 	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
