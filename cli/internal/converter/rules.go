@@ -60,7 +60,9 @@ func (c *RulesConverter) Render(content []byte, target provider.Provider) (*Resu
 		return renderCursorRule(meta, body)
 	case "windsurf":
 		return renderWindsurfRule(meta, body)
-	case "claude-code", "codex", "gemini-cli", "copilot-cli":
+	case "claude-code":
+		return renderClaudeCodeRule(meta, body)
+	case "codex", "gemini-cli", "copilot-cli":
 		return renderSingleFileRule(meta, body)
 	case "zed":
 		return renderZedRule(meta, body)
@@ -334,8 +336,51 @@ func renderWindsurfRule(meta RuleMeta, body string) (*Result, error) {
 	return &Result{Content: buf.Bytes(), Filename: "rule.md"}, nil
 }
 
+// claudeCodePathsFrontmatter holds the paths field for Claude Code .claude/rules/*.md files.
+type claudeCodePathsFrontmatter struct {
+	Paths []string `yaml:"paths"`
+}
+
+// renderClaudeCodeRule renders a rule for Claude Code. Glob-scoped rules use native
+// YAML frontmatter with a `paths` field (matching .claude/rules/*.md format).
+// Always-apply rules render as plain markdown (no frontmatter), suitable for CLAUDE.md.
+func renderClaudeCodeRule(meta RuleMeta, body string) (*Result, error) {
+	if len(meta.Globs) > 0 {
+		// Claude Code supports native paths frontmatter in .claude/rules/*.md files.
+		// The canonical Globs field maps directly to Claude Code's paths field.
+		fm, err := renderFrontmatter(claudeCodePathsFrontmatter{Paths: meta.Globs})
+		if err != nil {
+			return nil, err
+		}
+		var buf bytes.Buffer
+		buf.Write(fm)
+		buf.WriteString("\n")
+		buf.WriteString(body)
+		buf.WriteString("\n")
+		return &Result{Content: buf.Bytes(), Filename: "rule.md"}, nil
+	}
+
+	if meta.AlwaysApply {
+		// Always-active rules get body only — no frontmatter
+		return &Result{Content: []byte(body + "\n"), Filename: "rule.md"}, nil
+	}
+
+	// Non-glob, non-alwaysApply: embed scope as prose (description-based or manual)
+	var notes []string
+	switch {
+	case meta.Description != "":
+		notes = append(notes, fmt.Sprintf("**Scope:** Apply when: %s", meta.Description))
+	default:
+		notes = append(notes, "**Scope:** Apply only when explicitly asked.")
+	}
+
+	notesBlock := BuildConversionNotes("syllago", notes)
+	result := AppendNotes(body, notesBlock)
+	return &Result{Content: []byte(result + "\n"), Filename: "rule.md"}, nil
+}
+
 // renderSingleFileRule renders for providers that use a flat markdown file
-// (Claude Code, Codex, Gemini CLI). Non-alwaysApply rules get scope embedded as prose.
+// (Codex, Gemini CLI). Non-alwaysApply rules get scope embedded as prose.
 func renderSingleFileRule(meta RuleMeta, body string) (*Result, error) {
 	if meta.AlwaysApply {
 		// Always-active rules get body only — no frontmatter

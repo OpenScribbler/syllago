@@ -67,7 +67,7 @@ func TestClaudeCommandBehavioralEmbedding(t *testing.T) {
 
 	out := string(result.Content)
 	assertContains(t, out, "read_file")
-	assertContains(t, out, "list_directory")
+	assertContains(t, out, "glob")
 	assertContains(t, out, "explore-focused approach")
 	assertContains(t, out, "model: opus")
 	assertContains(t, out, "isolated context")

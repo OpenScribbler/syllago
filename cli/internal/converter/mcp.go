@@ -51,12 +51,13 @@ type mcpConfig struct {
 // rooCodeMCPServerConfig is Roo Code's per-server format.
 // Roo Code uses the standard mcpServers key but only supports a core subset of fields.
 type rooCodeMCPServerConfig struct {
-	Command  string            `json:"command,omitempty"`
-	Args     []string          `json:"args,omitempty"`
-	Env      map[string]string `json:"env,omitempty"`
-	Disabled bool              `json:"disabled,omitempty"`
-	Type     string            `json:"type,omitempty"`
-	URL      string            `json:"url,omitempty"`
+	Command     string            `json:"command,omitempty"`
+	Args        []string          `json:"args,omitempty"`
+	Env         map[string]string `json:"env,omitempty"`
+	Disabled    bool              `json:"disabled,omitempty"`
+	Type        string            `json:"type,omitempty"`
+	URL         string            `json:"url,omitempty"`
+	AlwaysAllow []string          `json:"alwaysAllow,omitempty"`
 }
 
 type rooCodeMCPConfig struct {
@@ -120,6 +121,9 @@ func (c *MCPConverter) Canonicalize(content []byte, sourceProvider string) (*Res
 	}
 	if sourceProvider == "cline" {
 		return canonicalizeClineMCP(content)
+	}
+	if sourceProvider == "roo-code" {
+		return canonicalizeRooCodeMCP(content)
 	}
 
 	var cfg mcpConfig
@@ -222,6 +226,10 @@ func (c *MCPConverter) Render(content []byte, target provider.Provider) (*Result
 		return renderRooCodeMCP(cfg)
 	case "kiro":
 		return renderKiroMCP(cfg)
+	case "cursor":
+		// Cursor uses .cursor/mcp.json with the same mcpServers key and transport
+		// types as Claude Code. Route through the same renderer.
+		return renderCursorMCP(cfg)
 	default:
 		// Claude Code — emit with Claude-compatible fields only
 		return renderClaudeMCP(cfg)
@@ -231,6 +239,46 @@ func (c *MCPConverter) Render(content []byte, target provider.Provider) (*Result
 // --- Renderers ---
 
 func renderClaudeMCP(cfg mcpConfig) (*Result, error) {
+	var warnings []string
+	out := mcpConfig{MCPServers: make(map[string]mcpServerConfig)}
+
+	for name, server := range cfg.MCPServers {
+		s := mcpServerConfig{
+			Command:     server.Command,
+			Args:        server.Args,
+			Env:         server.Env,
+			Cwd:         server.Cwd,
+			URL:         server.URL,
+			Headers:     server.Headers,
+			Type:        server.Type,
+			AutoApprove: server.AutoApprove,
+		}
+
+		// Warn about dropped Gemini-specific fields
+		if server.Trust != "" {
+			warnings = append(warnings, fmt.Sprintf("server %q: trust field dropped (Gemini-specific)", name))
+		}
+		if len(server.IncludeTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: includeTools dropped (Gemini-specific)", name))
+		}
+		if len(server.ExcludeTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific)", name))
+		}
+
+		out.MCPServers[name] = s
+	}
+
+	result, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: result, Filename: "mcp.json", Warnings: warnings}, nil
+}
+
+// renderCursorMCP renders canonical MCP config to Cursor's .cursor/mcp.json format.
+// Cursor uses the same mcpServers schema as Claude Code (command, args, env, url, etc.).
+// Provider-specific fields from other providers (trust, includeTools, etc.) are dropped.
+func renderCursorMCP(cfg mcpConfig) (*Result, error) {
 	var warnings []string
 	out := mcpConfig{MCPServers: make(map[string]mcpServerConfig)}
 
@@ -457,6 +505,33 @@ func canonicalizeClineMCP(content []byte) (*Result, error) {
 	return &Result{Content: result, Filename: "mcp.json"}, nil
 }
 
+func canonicalizeRooCodeMCP(content []byte) (*Result, error) {
+	var src rooCodeMCPConfig
+	if err := json.Unmarshal(content, &src); err != nil {
+		return nil, fmt.Errorf("parsing Roo Code MCP config: %w", err)
+	}
+
+	out := mcpConfig{MCPServers: make(map[string]mcpServerConfig)}
+
+	for name, s := range src.MCPServers {
+		out.MCPServers[name] = mcpServerConfig{
+			Command:     s.Command,
+			Args:        s.Args,
+			Env:         s.Env,
+			Disabled:    s.Disabled,
+			Type:        s.Type,
+			URL:         s.URL,
+			AutoApprove: s.AlwaysAllow, // alwaysAllow → autoApprove in canonical
+		}
+	}
+
+	result, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: result, Filename: "mcp.json"}, nil
+}
+
 func renderClineMCP(cfg mcpConfig) (*Result, error) {
 	var warnings []string
 	out := clineMCPConfig{MCPServers: make(map[string]clineMCPServerConfig)}
@@ -504,18 +579,16 @@ func renderRooCodeMCP(cfg mcpConfig) (*Result, error) {
 
 	for name, server := range cfg.MCPServers {
 		out.MCPServers[name] = rooCodeMCPServerConfig{
-			Command:  server.Command,
-			Args:     server.Args,
-			Env:      server.Env,
-			Disabled: server.Disabled,
-			Type:     server.Type,
-			URL:      server.URL,
+			Command:     server.Command,
+			Args:        server.Args,
+			Env:         server.Env,
+			Disabled:    server.Disabled,
+			Type:        server.Type,
+			URL:         server.URL,
+			AlwaysAllow: server.AutoApprove, // autoApprove → alwaysAllow
 		}
 
 		// Warn about dropped provider-specific fields
-		if len(server.AutoApprove) > 0 {
-			warnings = append(warnings, fmt.Sprintf("server %q: autoApprove dropped (not supported by Roo Code)", name))
-		}
 		if server.Cwd != "" {
 			warnings = append(warnings, fmt.Sprintf("server %q: cwd dropped (not supported by Roo Code)", name))
 		}
