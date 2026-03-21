@@ -179,7 +179,7 @@ type copilotMatcherGroup struct {
 
 // copilotHooksConfig is the Copilot hooks structure.
 type copilotHooksConfig struct {
-	Version int                            `json:"version"`
+	Version int                              `json:"version"`
 	Hooks   map[string][]copilotMatcherGroup `json:"hooks"`
 }
 

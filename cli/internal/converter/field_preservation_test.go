@@ -279,9 +279,9 @@ func TestFieldPreservation_Agents(t *testing.T) {
 			contains: []string{
 				"name: Kitchen Sink Agent",
 				"model: opus",
-				"- read",     // Read → read
-				"- fs_write", // Write → fs_write
-				"- shell",    // Bash → shell
+				"- read",                   // Read → read
+				"- fs_write",               // Write → fs_write
+				"- shell",                  // Bash → shell
 				"comprehensive test agent", // body preserved
 			},
 			minWarns: 1, // maxTurns not supported
@@ -1047,9 +1047,9 @@ func TestRoundTrip_HooksClaudeGemini(t *testing.T) {
 	}
 
 	out := string(backToCanonical.Content)
-	assertContains(t, out, "PreToolUse") // event translated back
-	assertContains(t, out, `"Bash"`)     // matcher translated back
-	assertContains(t, out, "echo check") // command preserved
+	assertContains(t, out, "PreToolUse")   // event translated back
+	assertContains(t, out, `"Bash"`)       // matcher translated back
+	assertContains(t, out, "echo check")   // command preserved
 	assertContains(t, out, `"timeout": 3`) // timeout preserved (canonical seconds: 3000ms → 3s)
 }
 

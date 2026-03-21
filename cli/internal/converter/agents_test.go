@@ -568,11 +568,11 @@ func TestClaudeAgentToCursor(t *testing.T) {
 	assertContains(t, out, "name: Explorer")
 	assertContains(t, out, "description: Codebase explorer")
 	assertContains(t, out, "model: sonnet")
-	assertContains(t, out, "readonly: true")       // permissionMode:plan → readonly
-	assertContains(t, out, "is_background: true")  // background → is_background
+	assertContains(t, out, "readonly: true")      // permissionMode:plan → readonly
+	assertContains(t, out, "is_background: true") // background → is_background
 	// Unsupported fields embedded as prose
-	assertContains(t, out, "read_file")            // tool name translated
-	assertContains(t, out, "Limit to 30 turns")    // maxTurns as prose
+	assertContains(t, out, "read_file")         // tool name translated
+	assertContains(t, out, "Limit to 30 turns") // maxTurns as prose
 	assertContains(t, out, "syllago:converted")
 	// Body preserved
 	assertContains(t, out, "Explore the codebase and summarize.")

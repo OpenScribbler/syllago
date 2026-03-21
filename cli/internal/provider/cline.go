@@ -59,7 +59,7 @@ var Cline = Provider{
 	},
 	SymlinkSupport: map[catalog.ContentType]bool{
 		catalog.Rules: true,
-		catalog.Hooks: true, // File-based executables
+		catalog.Hooks: true,  // File-based executables
 		catalog.MCP:   false, // JSON merge
 	},
 }
