@@ -153,7 +153,7 @@ Content in your library is provider-neutral. You add once, install anywhere.
 | Command | Description |
 |---------|-------------|
 | `syllago` | Launch the interactive TUI |
-| `syllago add` | Discover and add content from a provider, path, or git URL |
+| `syllago add` | Discover and add content from a provider |
 | `syllago install` | Activate library content in a provider |
 | `syllago uninstall` | Deactivate content from a provider |
 | `syllago remove` | Remove content from your library |
