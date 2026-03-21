@@ -22,14 +22,13 @@ func init() {
 	// Initialize the bubblezone global manager so zone.Mark() calls in View()
 	// don't panic during tests (in production this is called in main.go).
 	zone.NewGlobal()
-	// Warm up lipgloss default renderer by resolving an AdaptiveColor.
-	// AdaptiveColor triggers HasDarkBackground() detection, which mutates
-	// the renderer's cached color profile. Without this, the first test
-	// that renders an AdaptiveColor (e.g., modal Background) changes the
-	// profile mid-suite, causing ±1 char width shifts in golden tests.
-	lipgloss.NewStyle().
-		Background(lipgloss.AdaptiveColor{Light: "#000", Dark: "#FFF"}).
-		Render("")
+	// Explicitly set dark background detection to avoid flaky auto-detection.
+	// HasDarkBackground() auto-detection queries the terminal via termenv,
+	// which returns non-deterministic results in CI (no TTY). Setting it
+	// explicitly marks explicitBackgroundColor=true on the renderer, which
+	// skips the sync.Once auto-detection entirely. This is the approach
+	// lipgloss's own tests use (SetHasDarkBackground in style_test.go).
+	lipgloss.SetHasDarkBackground(true)
 }
 
 // ---------------------------------------------------------------------------

@@ -46,11 +46,12 @@ func (s ItemStatus) String() string {
 
 // DiscoveryItem is a discovered provider file annotated with its library status.
 type DiscoveryItem struct {
-	Name   string
-	Type   catalog.ContentType
-	Path   string // absolute path to source file
-	Status ItemStatus
-	Scope  string // "project" or "global" (set by caller)
+	Name      string
+	Type      catalog.ContentType
+	Path      string // absolute path to primary content file
+	SourceDir string // absolute path to the item's root directory (empty for single-file items)
+	Status    ItemStatus
+	Scope     string // "project" or "global" (set by caller)
 }
 
 // AddStatus tracks the outcome of a single write operation.
@@ -261,6 +262,15 @@ func writeItem(item DiscoveryItem, opts AddOptions, globalDir string, canon Cano
 		return r
 	}
 
+	// Copy supporting files (subdirectories, non-primary files) for directory-based items.
+	if item.SourceDir != "" {
+		if err := copySupportingFiles(item.SourceDir, destDir, filepath.Base(item.Path)); err != nil {
+			r.Status = AddStatusError
+			r.Error = fmt.Errorf("copying supporting files: %w", err)
+			return r
+		}
+	}
+
 	// Preserve original in .source/ if source format differs from canonical (.md).
 	hasSource := false
 	sourceExt := filepath.Ext(item.Path)
@@ -327,6 +337,45 @@ func contentFilename(ct catalog.ContentType, name, ext string) string {
 	}
 }
 
+// copySupportingFiles copies all files from srcDir to destDir, skipping
+// the primary content file (already written and possibly canonicalized)
+// and hidden entries. Directory structure is preserved.
+func copySupportingFiles(srcDir, destDir, primaryFilename string) error {
+	return filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(srcDir, path)
+		if err != nil {
+			return err
+		}
+		// Skip the root itself.
+		if rel == "." {
+			return nil
+		}
+		// Skip hidden entries (and their subtrees).
+		if strings.HasPrefix(filepath.Base(rel), ".") {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		// Skip the primary content file (already handled with canonicalization).
+		if rel == primaryFilename {
+			return nil
+		}
+		dest := filepath.Join(destDir, rel)
+		if d.IsDir() {
+			return os.MkdirAll(dest, 0755)
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("reading %s: %w", path, err)
+		}
+		return os.WriteFile(dest, data, 0644)
+	})
+}
+
 // timeNow is a var so tests can override it for deterministic timestamps.
 var timeNow = func() time.Time { return time.Now().UTC() }
 
@@ -371,10 +420,11 @@ func DiscoverFromProvider(prov provider.Provider, projectRoot string, resolver *
 
 				status := computeItemStatus(raw.path, ct, prov.Slug, raw.name, idx)
 				items = append(items, DiscoveryItem{
-					Name:   raw.name,
-					Type:   ct,
-					Path:   raw.path,
-					Status: status,
+					Name:      raw.name,
+					Type:      ct,
+					Path:      raw.path,
+					SourceDir: raw.sourceDir,
+					Status:    status,
 				})
 			}
 		}
@@ -385,8 +435,9 @@ func DiscoverFromProvider(prov provider.Provider, projectRoot string, resolver *
 
 // rawDiscoveredItem is an intermediate result from scanning a discovery path.
 type rawDiscoveredItem struct {
-	name string // logical item name (directory name or filename sans extension)
-	path string // path to the main content file
+	name      string // logical item name (directory name or filename sans extension)
+	path      string // path to the main content file
+	sourceDir string // item's root directory (empty for single-file items)
 }
 
 // discoverItemsAtPath scans a discovery path and returns logical items.
@@ -434,8 +485,9 @@ func discoverItemsAtPath(path string) []rawDiscoveredItem {
 				continue
 			}
 			items = append(items, rawDiscoveredItem{
-				name: e.Name(),
-				path: contentFile,
+				name:      e.Name(),
+				path:      contentFile,
+				sourceDir: full,
 			})
 		} else {
 			// Single-file item (e.g., rules/my-rule.md).
