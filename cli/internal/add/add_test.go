@@ -561,6 +561,134 @@ func TestFindContentFile_EmptyDir(t *testing.T) {
 	}
 }
 
+func TestAddItems_MultiFileSkill(t *testing.T) {
+	t.Parallel()
+	globalDir := t.TempDir()
+	srcDir := t.TempDir()
+
+	// Create a multi-file skill: SKILL.md + workflows/ subdirectory.
+	skillDir := filepath.Join(srcDir, "atlassian")
+	os.MkdirAll(filepath.Join(skillDir, "workflows", "jira"), 0755)
+	os.MkdirAll(filepath.Join(skillDir, "workflows", "confluence"), 0755)
+
+	os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# Atlassian Skill"), 0644)
+	os.WriteFile(filepath.Join(skillDir, "workflows", "jira", "create-issue.md"), []byte("# Create Issue"), 0644)
+	os.WriteFile(filepath.Join(skillDir, "workflows", "jira", "search-issues.md"), []byte("# Search Issues"), 0644)
+	os.WriteFile(filepath.Join(skillDir, "workflows", "confluence", "view-page.md"), []byte("# View Page"), 0644)
+	os.WriteFile(filepath.Join(skillDir, "workflows", "search-atlassian.md"), []byte("# Search"), 0644)
+
+	items := []DiscoveryItem{
+		{
+			Name:      "atlassian",
+			Type:      catalog.Skills,
+			Path:      filepath.Join(skillDir, "SKILL.md"),
+			SourceDir: skillDir,
+			Status:    StatusNew,
+		},
+	}
+	results := AddItems(items, AddOptions{Provider: "claude-code"}, globalDir, nil, "test")
+
+	if len(results) != 1 || results[0].Status != AddStatusAdded {
+		t.Fatalf("expected AddStatusAdded, got %v", results[0].Status)
+	}
+
+	// Verify all files were copied.
+	destDir := filepath.Join(globalDir, "skills", "atlassian")
+
+	wantFiles := []string{
+		"SKILL.md",
+		"workflows/jira/create-issue.md",
+		"workflows/jira/search-issues.md",
+		"workflows/confluence/view-page.md",
+		"workflows/search-atlassian.md",
+	}
+	for _, f := range wantFiles {
+		full := filepath.Join(destDir, f)
+		if _, err := os.Stat(full); err != nil {
+			t.Errorf("expected file %s to exist: %v", f, err)
+		}
+	}
+
+	// Verify content is preserved.
+	data, err := os.ReadFile(filepath.Join(destDir, "workflows", "jira", "create-issue.md"))
+	if err != nil {
+		t.Fatalf("reading workflow file: %v", err)
+	}
+	if string(data) != "# Create Issue" {
+		t.Errorf("workflow content mismatch: got %q", string(data))
+	}
+}
+
+func TestAddItems_MultiFileSkill_HiddenFilesExcluded(t *testing.T) {
+	t.Parallel()
+	globalDir := t.TempDir()
+	srcDir := t.TempDir()
+
+	skillDir := filepath.Join(srcDir, "my-skill")
+	os.MkdirAll(filepath.Join(skillDir, ".hidden-dir"), 0755)
+	os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# Skill"), 0644)
+	os.WriteFile(filepath.Join(skillDir, "ref.md"), []byte("# Ref"), 0644)
+	os.WriteFile(filepath.Join(skillDir, ".hidden-file"), []byte("hidden"), 0644)
+	os.WriteFile(filepath.Join(skillDir, ".hidden-dir", "secret.md"), []byte("secret"), 0644)
+
+	items := []DiscoveryItem{
+		{
+			Name:      "my-skill",
+			Type:      catalog.Skills,
+			Path:      filepath.Join(skillDir, "SKILL.md"),
+			SourceDir: skillDir,
+			Status:    StatusNew,
+		},
+	}
+	AddItems(items, AddOptions{Provider: "claude-code"}, globalDir, nil, "test")
+
+	destDir := filepath.Join(globalDir, "skills", "my-skill")
+
+	// ref.md should be copied.
+	if _, err := os.Stat(filepath.Join(destDir, "ref.md")); err != nil {
+		t.Error("expected ref.md to be copied")
+	}
+	// Hidden files/dirs should NOT be copied.
+	if _, err := os.Stat(filepath.Join(destDir, ".hidden-file")); err == nil {
+		t.Error("hidden file should not be copied")
+	}
+	if _, err := os.Stat(filepath.Join(destDir, ".hidden-dir")); err == nil {
+		t.Error("hidden directory should not be copied")
+	}
+}
+
+func TestDiscoverItemsAtPath_DirectoryWithSubdirs_SetsSourceDir(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	skillDir := filepath.Join(dir, "my-skill")
+	os.MkdirAll(filepath.Join(skillDir, "workflows"), 0755)
+	os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# Skill"), 0644)
+	os.WriteFile(filepath.Join(skillDir, "workflows", "flow.md"), []byte("# Flow"), 0644)
+
+	items := discoverItemsAtPath(dir)
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+	if items[0].sourceDir != skillDir {
+		t.Errorf("expected sourceDir %q, got %q", skillDir, items[0].sourceDir)
+	}
+}
+
+func TestDiscoverItemsAtPath_SingleFile_EmptySourceDir(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "rule.md")
+	os.WriteFile(srcPath, []byte("# Rule"), 0644)
+
+	items := discoverItemsAtPath(srcPath)
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+	if items[0].sourceDir != "" {
+		t.Errorf("expected empty sourceDir for single file, got %q", items[0].sourceDir)
+	}
+}
+
 // helpers
 
 func nowPtr() *time.Time {
