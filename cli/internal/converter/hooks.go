@@ -16,12 +16,36 @@ func init() {
 }
 
 // HookEntry represents a single hook action in syllago canonical format.
+// Timeout is in seconds (canonical unit). Provider-specific conversions:
+//   - Claude Code / Gemini CLI: milliseconds (divide by 1000 on canonicalize, multiply on render)
+//   - Copilot CLI: seconds (no conversion needed)
+//   - Kiro: milliseconds in timeout_ms field (multiply by 1000 on render)
+//
+// Claude Code supports 4 hook types, each with different fields:
+//   - "command": Command, Timeout, StatusMessage, Async
+//   - "http": URL, Headers, AllowedEnvVars, Timeout, StatusMessage
+//   - "prompt": Prompt, Model, Timeout, StatusMessage
+//   - "agent": Agent, Timeout, StatusMessage
+//
+// Type defaults to "command" when empty (backwards compatibility).
 type HookEntry struct {
 	Type          string `json:"type"`
 	Command       string `json:"command,omitempty"`
 	Timeout       int    `json:"timeout,omitempty"`
 	StatusMessage string `json:"statusMessage,omitempty"`
 	Async         bool   `json:"async,omitempty"`
+
+	// HTTP hook fields (type: "http")
+	URL            string            `json:"url,omitempty"`
+	Headers        map[string]string `json:"headers,omitempty"`
+	AllowedEnvVars []string          `json:"allowedEnvVars,omitempty"`
+
+	// Prompt hook fields (type: "prompt")
+	Prompt string `json:"prompt,omitempty"`
+	Model  string `json:"model,omitempty"`
+
+	// Agent hook fields (type: "agent")
+	Agent json.RawMessage `json:"agent,omitempty"`
 }
 
 // hookMatcher represents an event matcher with its hooks in canonical format.
@@ -137,15 +161,26 @@ func (c *HooksConverter) RenderFlat(hook HookData, target provider.Provider) (*R
 
 // copilotHookEntry represents a single hook in Copilot CLI format.
 type copilotHookEntry struct {
-	Bash       string `json:"bash,omitempty"`
-	PowerShell string `json:"powershell,omitempty"`
-	TimeoutSec int    `json:"timeoutSec,omitempty"`
-	Comment    string `json:"comment,omitempty"`
+	Type       string            `json:"type,omitempty"`
+	Bash       string            `json:"bash,omitempty"`
+	PowerShell string            `json:"powershell,omitempty"`
+	TimeoutSec int               `json:"timeoutSec,omitempty"`
+	Comment    string            `json:"comment,omitempty"`
+	Env        map[string]string `json:"env,omitempty"`
+	Cwd        string            `json:"cwd,omitempty"`
+}
+
+// copilotMatcherGroup represents a matcher group in Copilot CLI format.
+// Copilot supports matchers — each group has a matcher pattern and a list of hooks.
+type copilotMatcherGroup struct {
+	Matcher string             `json:"matcher,omitempty"`
+	Hooks   []copilotHookEntry `json:"hooks"`
 }
 
 // copilotHooksConfig is the Copilot hooks structure.
 type copilotHooksConfig struct {
-	Hooks map[string][]copilotHookEntry `json:"hooks"`
+	Version int                            `json:"version"`
+	Hooks   map[string][]copilotMatcherGroup `json:"hooks"`
 }
 
 // LLMHooksModeSkip drops LLM-evaluated hooks with a warning (default).
@@ -172,6 +207,15 @@ func (c *HooksConverter) Canonicalize(content []byte, sourceProvider string) (*R
 	switch sourceProvider {
 	case "copilot-cli":
 		return canonicalizeCopilotHooks(content)
+	case "cursor":
+		// Cursor hooks use the same event names as canonical format.
+		// Unique fields (failClosed, loop_limit, version) are not yet preserved.
+		return canonicalizeStandardHooks(content, sourceProvider)
+	case "windsurf":
+		// Windsurf uses per-tool-category events (pre_read_code, etc.) — structural
+		// mismatch with generic PreToolUse+matcher. Standard canonicalization is a
+		// best-effort pass-through. TODO: implement proper Windsurf event mapping.
+		return canonicalizeStandardHooks(content, sourceProvider)
 	default:
 		// Claude Code and Gemini CLI share the same structure, just different event/tool names
 		return canonicalizeStandardHooks(content, sourceProvider)
@@ -192,6 +236,13 @@ func canonicalizeFlatHook(content []byte, sourceProvider string) (*Result, error
 		}
 	}
 
+	// Convert provider ms timeouts to canonical seconds (all flat-format providers use ms)
+	for i := range hd.Hooks {
+		if hd.Hooks[i].Timeout > 0 {
+			hd.Hooks[i].Timeout = hd.Hooks[i].Timeout / 1000
+		}
+	}
+
 	out, err := json.MarshalIndent(hd, "", "  ")
 	if err != nil {
 		return nil, err
@@ -204,11 +255,7 @@ func canonicalizeFlatHook(content []byte, sourceProvider string) (*Result, error
 var hooklessProviders = map[string]bool{
 	"opencode": true,
 	"zed":      true,
-	"cline":    true,
 	"roo-code": true,
-	"cursor":   true,
-	"windsurf": true,
-	"codex":    true,
 }
 
 func (c *HooksConverter) Render(content []byte, target provider.Provider) (*Result, error) {
@@ -233,6 +280,17 @@ func (c *HooksConverter) Render(content []byte, target provider.Provider) (*Resu
 		return renderCopilotHooks(cfg, mode)
 	case "kiro":
 		return renderKiroHooks(cfg, mode)
+	case "cursor":
+		// Cursor uses hooks.json with a unique schema: {"version": 1, "hooks": {"EventName": [...]}}
+		// Each entry supports fields not yet handled: failClosed, loop_limit, version.
+		// Cursor reads the same event names as canonical, so the standard renderer works
+		// for basic command hooks. TODO: support Cursor-specific fields.
+		return renderStandardHooks(cfg, target.Slug, mode)
+	case "windsurf":
+		// Windsurf uses per-tool-category events (pre_read_code, pre_write_code, etc.)
+		// instead of generic PreToolUse+matcher. This structural mismatch means event-level
+		// translation may not be accurate. TODO: implement Windsurf-specific event mapping.
+		return renderStandardHooks(cfg, target.Slug, mode)
 	default:
 		// Claude Code and Gemini CLI
 		return renderStandardHooks(cfg, target.Slug, mode)
@@ -257,9 +315,17 @@ func canonicalizeStandardHooks(content []byte, sourceProvider string) (*Result, 
 
 		var canonicalMatchers []hookMatcher
 		for _, m := range matchers {
+			// Convert hook timeouts from provider ms to canonical seconds
+			hooks := make([]HookEntry, len(m.Hooks))
+			copy(hooks, m.Hooks)
+			for i := range hooks {
+				if hooks[i].Timeout > 0 {
+					hooks[i].Timeout = hooks[i].Timeout / 1000
+				}
+			}
 			cm := hookMatcher{
 				Matcher: m.Matcher,
-				Hooks:   m.Hooks,
+				Hooks:   hooks,
 			}
 			// Translate matcher tool name to canonical
 			if cm.Matcher != "" && sourceProvider != "claude-code" {
@@ -284,25 +350,33 @@ func canonicalizeCopilotHooks(content []byte) (*Result, error) {
 	}
 
 	canonical := hooksConfig{Hooks: make(map[string][]hookMatcher)}
-	for event, entries := range cfg.Hooks {
+	for event, groups := range cfg.Hooks {
 		canonicalEvent := ReverseTranslateHookEvent(event, "copilot-cli")
 
 		var matchers []hookMatcher
-		for _, e := range entries {
-			cmd := e.Bash
-			if cmd == "" {
-				cmd = e.PowerShell
+		for _, g := range groups {
+			var hooks []HookEntry
+			for _, e := range g.Hooks {
+				cmd := e.Bash
+				if cmd == "" {
+					cmd = e.PowerShell
+				}
+				// Copilot timeoutSec is already in seconds — matches canonical unit
+				he := HookEntry{
+					Type:          "command",
+					Command:       cmd,
+					Timeout:       e.TimeoutSec,
+					StatusMessage: e.Comment,
+				}
+				hooks = append(hooks, he)
 			}
-			timeout := e.TimeoutSec * 1000 // Convert seconds to milliseconds
-
-			he := HookEntry{
-				Type:          "command",
-				Command:       cmd,
-				Timeout:       timeout,
-				StatusMessage: e.Comment,
+			matcher := g.Matcher
+			if matcher != "" {
+				matcher = ReverseTranslateTool(matcher, "copilot-cli")
 			}
 			matchers = append(matchers, hookMatcher{
-				Hooks: []HookEntry{he},
+				Matcher: matcher,
+				Hooks:   hooks,
 			})
 		}
 		canonical.Hooks[canonicalEvent] = matchers
@@ -325,8 +399,8 @@ func renderStandardHooks(cfg hooksConfig, targetSlug string, llmMode string) (*R
 
 	for event, matchers := range cfg.Hooks {
 		var targetEvent string
-		if targetSlug == "claude-code" {
-			// Claude Code is canonical — events pass through untranslated
+		if targetSlug == "claude-code" || targetSlug == "cursor" {
+			// Claude Code is canonical, Cursor uses the same event names — pass through untranslated
 			targetEvent = event
 		} else {
 			translated, supported := TranslateHookEvent(event, targetSlug)
@@ -351,24 +425,42 @@ func renderStandardHooks(cfg hooksConfig, targetSlug string, llmMode string) (*R
 
 			var kept []HookEntry
 			for _, h := range tm.Hooks {
-				if h.Type == "prompt" || h.Type == "agent" {
-					if llmMode == LLMHooksModeGenerate {
-						scriptName, scriptContent := generateLLMWrapperScript(h, targetSlug, event, scriptIdx)
-						scriptIdx++
-						extraFiles[scriptName] = scriptContent
-						kept = append(kept, HookEntry{
-							Type:          "command",
-							Command:       "./" + scriptName,
-							Timeout:       30000, // LLM calls need more time
-							StatusMessage: fmt.Sprintf("syllago-generated: LLM-evaluated hook (from %s)", h.Type),
-						})
-						warnings = append(warnings, fmt.Sprintf("LLM hook (type: %q) converted to wrapper script %s", h.Type, scriptName))
+				hType := h.Type
+				if hType == "" {
+					hType = "command"
+				}
+
+				// Claude Code supports all 4 hook types natively — pass them through.
+				// Other providers only support command hooks.
+				if hType != "command" && targetSlug != "claude-code" {
+					if hType == "prompt" || hType == "agent" {
+						if llmMode == LLMHooksModeGenerate {
+							scriptName, scriptContent := generateLLMWrapperScript(h, targetSlug, event, scriptIdx)
+							scriptIdx++
+							extraFiles[scriptName] = scriptContent
+							kept = append(kept, HookEntry{
+								Type:          "command",
+								Command:       "./" + scriptName,
+								Timeout:       30000, // LLM calls need more time (ms)
+								StatusMessage: fmt.Sprintf("syllago-generated: LLM-evaluated hook (from %s)", h.Type),
+							})
+							warnings = append(warnings, fmt.Sprintf("LLM hook (type: %q) converted to wrapper script %s", h.Type, scriptName))
+						} else {
+							warnings = append(warnings, fmt.Sprintf("LLM-evaluated hook (type: %q) dropped for %s (use --llm-hooks=generate to create wrapper scripts)", h.Type, targetSlug))
+						}
 					} else {
-						warnings = append(warnings, fmt.Sprintf("LLM-evaluated hook (type: %q) dropped for %s (use --llm-hooks=generate to create wrapper scripts)", h.Type, targetSlug))
+						// http and any other non-command types: no conversion possible, just warn
+						warnings = append(warnings, fmt.Sprintf("hook type %q is only supported by Claude Code; dropped for %s", hType, targetSlug))
 					}
 					continue
 				}
-				kept = append(kept, h)
+
+				// Convert canonical seconds to provider milliseconds
+				rendered := h
+				if rendered.Timeout > 0 {
+					rendered.Timeout = rendered.Timeout * 1000
+				}
+				kept = append(kept, rendered)
 			}
 			tm.Hooks = kept
 
@@ -394,7 +486,10 @@ func renderStandardHooks(cfg hooksConfig, targetSlug string, llmMode string) (*R
 }
 
 func renderCopilotHooks(cfg hooksConfig, llmMode string) (*Result, error) {
-	out := copilotHooksConfig{Hooks: make(map[string][]copilotHookEntry)}
+	out := copilotHooksConfig{
+		Version: 1,
+		Hooks:   make(map[string][]copilotMatcherGroup),
+	}
 	var warnings []string
 	extraFiles := map[string][]byte{}
 	scriptIdx := 0
@@ -406,40 +501,61 @@ func renderCopilotHooks(cfg hooksConfig, llmMode string) (*Result, error) {
 			continue
 		}
 
-		// Copilot doesn't support matchers — flatten all hooks
-		var entries []copilotHookEntry
+		var groups []copilotMatcherGroup
 		for _, m := range matchers {
+			// Translate matcher tool name to Copilot's vocabulary
+			matcher := ""
 			if m.Matcher != "" {
-				warnings = append(warnings, fmt.Sprintf("matcher %q dropped (copilot-cli does not support matchers)", m.Matcher))
+				matcher = TranslateTool(m.Matcher, "copilot-cli")
 			}
+
+			var entries []copilotHookEntry
 			for _, h := range m.Hooks {
-				if h.Type == "prompt" || h.Type == "agent" {
-					if llmMode == LLMHooksModeGenerate {
-						scriptName, scriptContent := generateLLMWrapperScript(h, "copilot-cli", event, scriptIdx)
-						scriptIdx++
-						extraFiles[scriptName] = scriptContent
-						entries = append(entries, copilotHookEntry{
-							Bash:       "./" + scriptName,
-							TimeoutSec: 30,
-							Comment:    fmt.Sprintf("syllago-generated: LLM-evaluated hook (from %s)", h.Type),
-						})
-						warnings = append(warnings, fmt.Sprintf("LLM hook (type: %q) converted to wrapper script %s", h.Type, scriptName))
+				hType := h.Type
+				if hType == "" {
+					hType = "command"
+				}
+				if hType != "command" {
+					if hType == "prompt" || hType == "agent" {
+						if llmMode == LLMHooksModeGenerate {
+							scriptName, scriptContent := generateLLMWrapperScript(h, "copilot-cli", event, scriptIdx)
+							scriptIdx++
+							extraFiles[scriptName] = scriptContent
+							entries = append(entries, copilotHookEntry{
+								Type:       "command",
+								Bash:       "./" + scriptName,
+								TimeoutSec: 30,
+								Comment:    fmt.Sprintf("syllago-generated: LLM-evaluated hook (from %s)", h.Type),
+							})
+							warnings = append(warnings, fmt.Sprintf("LLM hook (type: %q) converted to wrapper script %s", h.Type, scriptName))
+						} else {
+							warnings = append(warnings, fmt.Sprintf("LLM-evaluated hook (type: %q) dropped for copilot-cli (use --llm-hooks=generate to create wrapper scripts)", h.Type))
+						}
 					} else {
-						warnings = append(warnings, fmt.Sprintf("LLM-evaluated hook (type: %q) dropped for copilot-cli (use --llm-hooks=generate to create wrapper scripts)", h.Type))
+						warnings = append(warnings, fmt.Sprintf("hook type %q is only supported by Claude Code; dropped for copilot-cli", hType))
 					}
 					continue
 				}
+				// Canonical timeout is already in seconds — matches Copilot's timeoutSec
 				entry := copilotHookEntry{
+					Type:       "command",
 					Bash:       h.Command,
-					TimeoutSec: h.Timeout / 1000,
+					TimeoutSec: h.Timeout,
 					Comment:    h.StatusMessage,
 				}
 				entries = append(entries, entry)
 			}
+
+			if len(entries) > 0 {
+				groups = append(groups, copilotMatcherGroup{
+					Matcher: matcher,
+					Hooks:   entries,
+				})
+			}
 		}
 
-		if len(entries) > 0 {
-			out.Hooks[targetEvent] = entries
+		if len(groups) > 0 {
+			out.Hooks[targetEvent] = groups
 		}
 	}
 
@@ -489,25 +605,34 @@ func renderKiroHooks(cfg hooksConfig, llmMode string) (*Result, error) {
 			}
 
 			for _, h := range m.Hooks {
-				if h.Type == "prompt" || h.Type == "agent" {
-					if llmMode == LLMHooksModeGenerate {
-						scriptName, _ := generateLLMWrapperScript(h, "kiro", event, len(kiroHooks))
-						kiroHooks[translated] = append(kiroHooks[translated], kiroHookEntry{
-							Command:   "./" + scriptName,
-							Matcher:   matcher,
-							TimeoutMs: 30000,
-						})
-						warnings = append(warnings, fmt.Sprintf("LLM hook (type: %q) converted to wrapper script %s", h.Type, scriptName))
+				hType := h.Type
+				if hType == "" {
+					hType = "command"
+				}
+				if hType != "command" {
+					if hType == "prompt" || hType == "agent" {
+						if llmMode == LLMHooksModeGenerate {
+							scriptName, _ := generateLLMWrapperScript(h, "kiro", event, len(kiroHooks))
+							kiroHooks[translated] = append(kiroHooks[translated], kiroHookEntry{
+								Command:   "./" + scriptName,
+								Matcher:   matcher,
+								TimeoutMs: 30000,
+							})
+							warnings = append(warnings, fmt.Sprintf("LLM hook (type: %q) converted to wrapper script %s", h.Type, scriptName))
+						} else {
+							warnings = append(warnings, fmt.Sprintf("LLM-evaluated hook (type: %q) dropped for kiro", h.Type))
+						}
 					} else {
-						warnings = append(warnings, fmt.Sprintf("LLM-evaluated hook (type: %q) dropped for kiro", h.Type))
+						warnings = append(warnings, fmt.Sprintf("hook type %q is only supported by Claude Code; dropped for kiro", hType))
 					}
 					continue
 				}
 
+				// Convert canonical seconds to Kiro's timeout_ms (milliseconds)
 				entry := kiroHookEntry{
 					Command:   h.Command,
 					Matcher:   matcher,
-					TimeoutMs: h.Timeout,
+					TimeoutMs: h.Timeout * 1000,
 				}
 				kiroHooks[translated] = append(kiroHooks[translated], entry)
 			}
@@ -547,7 +672,10 @@ func generateLLMWrapperScript(h HookEntry, targetSlug string, event string, idx 
 		cli = "gemini" // fallback
 	}
 
-	prompt := h.Command
+	prompt := h.Prompt
+	if prompt == "" {
+		prompt = h.Command // fallback for legacy format
+	}
 	if prompt == "" {
 		prompt = "Evaluate this hook input and respond with a JSON decision."
 	}

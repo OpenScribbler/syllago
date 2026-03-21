@@ -44,10 +44,11 @@ func SplitSettingsHooks(content []byte, sourceProvider string) ([]HookData, erro
 				if cmd == "" {
 					cmd = e.PowerShell
 				}
+				// Copilot timeoutSec is already in seconds — matches canonical unit
 				he := HookEntry{
 					Type:          "command",
 					Command:       cmd,
-					Timeout:       e.TimeoutSec * 1000,
+					Timeout:       e.TimeoutSec,
 					StatusMessage: e.Comment,
 				}
 				items = append(items, HookData{
@@ -66,10 +67,18 @@ func SplitSettingsHooks(content []byte, sourceProvider string) ([]HookData, erro
 				if matcher != "" && sourceProvider != "claude-code" {
 					matcher = ReverseTranslateTool(matcher, sourceProvider)
 				}
+				// Convert provider ms timeouts to canonical seconds
+				hooks := make([]HookEntry, len(m.Hooks))
+				copy(hooks, m.Hooks)
+				for i := range hooks {
+					if hooks[i].Timeout > 0 {
+						hooks[i].Timeout = hooks[i].Timeout / 1000
+					}
+				}
 				items = append(items, HookData{
 					Event:   canonicalEvent,
 					Matcher: matcher,
-					Hooks:   m.Hooks,
+					Hooks:   hooks,
 				})
 			}
 		}

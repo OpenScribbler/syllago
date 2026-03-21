@@ -62,8 +62,8 @@ func TestSplitSettingsHooks_CopilotCLI(t *testing.T) {
 	if he.Command != "echo check" {
 		t.Errorf("expected command 'echo check', got %q", he.Command)
 	}
-	if he.Timeout != 5000 {
-		t.Errorf("expected timeout 5000ms, got %d", he.Timeout)
+	if he.Timeout != 5 {
+		t.Errorf("expected timeout 5s (canonical seconds), got %d", he.Timeout)
 	}
 	if he.StatusMessage != "Safety" {
 		t.Errorf("expected statusMessage 'Safety', got %q", he.StatusMessage)
