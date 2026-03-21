@@ -64,14 +64,14 @@ type SkillMeta struct {
 	Description            string         `yaml:"description,omitempty"`
 	AllowedTools           flexStringList `yaml:"allowed-tools,omitempty"`
 	DisallowedTools        flexStringList `yaml:"disallowed-tools,omitempty"`
-	Context                string   `yaml:"context,omitempty"`
-	Agent                  string   `yaml:"agent,omitempty"`
-	Model                  string   `yaml:"model,omitempty"`
-	Effort                 string   `yaml:"effort,omitempty"`
-	DisableModelInvocation bool     `yaml:"disable-model-invocation,omitempty"`
-	UserInvocable          *bool    `yaml:"user-invocable,omitempty"`
-	ArgumentHint           string   `yaml:"argument-hint,omitempty"`
-	Hooks                  any      `yaml:"hooks,omitempty"`
+	Context                string         `yaml:"context,omitempty"`
+	Agent                  string         `yaml:"agent,omitempty"`
+	Model                  string         `yaml:"model,omitempty"`
+	Effort                 string         `yaml:"effort,omitempty"`
+	DisableModelInvocation bool           `yaml:"disable-model-invocation,omitempty"`
+	UserInvocable          *bool          `yaml:"user-invocable,omitempty"`
+	ArgumentHint           string         `yaml:"argument-hint,omitempty"`
+	Hooks                  any            `yaml:"hooks,omitempty"`
 }
 
 // geminiSkillMeta is the subset of fields Gemini CLI supports.

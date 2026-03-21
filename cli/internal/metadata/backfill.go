@@ -22,8 +22,8 @@ func Backfill(itemDir, name, contentType, author string) error {
 		Name:          name,
 		Type:          contentType,
 		Author:        author,
-		Source:         "created",
-		AddedAt:        &now,
+		Source:        "created",
+		AddedAt:       &now,
 	}
 	return Save(itemDir, meta)
 }

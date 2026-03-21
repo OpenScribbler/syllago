@@ -16,16 +16,16 @@ func init() {
 
 // AgentMeta is the canonical agent metadata (YAML frontmatter, superset of all providers).
 type AgentMeta struct {
-	Name            string   `yaml:"name,omitempty"`
-	Description     string   `yaml:"description,omitempty"`
-	Tools           []string `yaml:"tools,omitempty"`
-	DisallowedTools []string `yaml:"disallowedTools,omitempty"`
-	Model           string   `yaml:"model,omitempty"`
-	MaxTurns        int      `yaml:"maxTurns,omitempty"`
-	PermissionMode  string   `yaml:"permissionMode,omitempty"`
-	Skills          []string `yaml:"skills,omitempty"`
-	MCPServers      []string `yaml:"mcpServers,omitempty"`
-	Memory          string   `yaml:"memory,omitempty"`
+	Name            string      `yaml:"name,omitempty"`
+	Description     string      `yaml:"description,omitempty"`
+	Tools           []string    `yaml:"tools,omitempty"`
+	DisallowedTools []string    `yaml:"disallowedTools,omitempty"`
+	Model           string      `yaml:"model,omitempty"`
+	MaxTurns        int         `yaml:"maxTurns,omitempty"`
+	PermissionMode  string      `yaml:"permissionMode,omitempty"`
+	Skills          []string    `yaml:"skills,omitempty"`
+	MCPServers      []string    `yaml:"mcpServers,omitempty"`
+	Memory          string      `yaml:"memory,omitempty"`
 	Background      bool        `yaml:"background,omitempty"`
 	Isolation       string      `yaml:"isolation,omitempty"`
 	Effort          string      `yaml:"effort,omitempty"`

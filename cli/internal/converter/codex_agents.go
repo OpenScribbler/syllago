@@ -144,16 +144,16 @@ type codexSingleAgent struct {
 }
 
 type codexSingleAgentBody struct {
-	Name                  string              `toml:"name"`
-	Description           string              `toml:"description,omitempty"`
-	Model                 string              `toml:"model,omitempty"`
-	ModelReasoningEffort  string              `toml:"model_reasoning_effort,omitempty"`
-	Tools                 []string            `toml:"tools,omitempty"`
-	DeveloperInstructions string              `toml:"developer_instructions,omitempty"`
-	SandboxMode           string              `toml:"sandbox_mode,omitempty"`
-	NicknameCandidates    []string            `toml:"nickname_candidates,omitempty"`
-	MCPServers            map[string]any      `toml:"mcp_servers,omitempty"`
-	Skills                codexSkillsConfig   `toml:"skills,omitempty"`
+	Name                  string            `toml:"name"`
+	Description           string            `toml:"description,omitempty"`
+	Model                 string            `toml:"model,omitempty"`
+	ModelReasoningEffort  string            `toml:"model_reasoning_effort,omitempty"`
+	Tools                 []string          `toml:"tools,omitempty"`
+	DeveloperInstructions string            `toml:"developer_instructions,omitempty"`
+	SandboxMode           string            `toml:"sandbox_mode,omitempty"`
+	NicknameCandidates    []string          `toml:"nickname_candidates,omitempty"`
+	MCPServers            map[string]any    `toml:"mcp_servers,omitempty"`
+	Skills                codexSkillsConfig `toml:"skills,omitempty"`
 }
 
 // codexSkillsConfig represents the [agent.skills] section with a config sub-table.

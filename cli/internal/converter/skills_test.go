@@ -309,8 +309,8 @@ func TestClaudeSkillToCursor(t *testing.T) {
 	assertNotContains(t, out, "allowed-tools:")
 	assertNotContains(t, out, "context: fork")
 	assertContains(t, out, "Tool restriction")
-	assertContains(t, out, "read_file")            // translated tool name
-	assertContains(t, out, "isolated context")     // context:fork prose
+	assertContains(t, out, "read_file")                // translated tool name
+	assertContains(t, out, "isolated context")         // context:fork prose
 	assertContains(t, out, "Designed for model: opus") // model as prose note
 	assertContains(t, out, "syllago:converted")
 	assertEqual(t, "SKILL.md", result.Filename)
