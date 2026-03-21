@@ -24,7 +24,7 @@ func TestClaudeAgentToGemini(t *testing.T) {
 	out := string(result.Content)
 	assertContains(t, out, "name: explorer")
 	assertContains(t, out, "read_file")
-	assertContains(t, out, "list_directory")
+	assertContains(t, out, "glob")
 	assertContains(t, out, "grep_search")
 	assertContains(t, out, "max_turns: 30")
 	assertContains(t, out, "read-only exploration mode")
@@ -93,6 +93,43 @@ func TestAgentBackgroundAndWorktree(t *testing.T) {
 	assertContains(t, out, "separate git worktree")
 }
 
+func TestAgentEffortHooksColor(t *testing.T) {
+	input := []byte("---\nname: careful\ndescription: Careful agent\neffort: high\ncolor: \"#ff6600\"\nhooks:\n  preToolUse:\n    - matcher: Bash\n      script: echo checking\n---\n\nBe careful.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// Verify canonical preserves all three fields
+	canonStr := string(canonical.Content)
+	assertContains(t, canonStr, "effort: high")
+	assertContains(t, canonStr, `color: '#ff6600'`)
+	assertContains(t, canonStr, "hooks:")
+	assertContains(t, canonStr, "preToolUse")
+
+	// Render back to Claude Code — fields should survive in frontmatter
+	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render to Claude: %v", err)
+	}
+	out := string(result.Content)
+	assertContains(t, out, "effort: high")
+	assertContains(t, out, "color:")
+	assertContains(t, out, "hooks:")
+
+	// Render to Gemini — fields should appear as conversion notes
+	gemResult, err := conv.Render(canonical.Content, provider.GeminiCLI)
+	if err != nil {
+		t.Fatalf("Render to Gemini: %v", err)
+	}
+	gemOut := string(gemResult.Content)
+	assertContains(t, gemOut, "Effort level: high")
+	assertContains(t, gemOut, "hooks configured")
+	assertContains(t, gemOut, "Agent color: #ff6600")
+}
+
 func TestAgentToCopilot(t *testing.T) {
 	input := []byte("---\nname: helper\ndescription: Helper agent\ntools:\n  - Read\n  - Write\nmodel: opus\nmaxTurns: 20\n---\n\nHelp with tasks.\n")
 
@@ -110,9 +147,75 @@ func TestAgentToCopilot(t *testing.T) {
 	out := string(result.Content)
 	assertContains(t, out, "name: helper")
 	assertContains(t, out, "view")
-	assertContains(t, out, "apply_patch")
+	assertContains(t, out, "create")
 	assertContains(t, out, "model: opus")
 	assertContains(t, out, "Limit to 20 turns")
+	// Filename should be <name>.agent.md
+	assertEqual(t, "helper.agent.md", result.Filename)
+}
+
+func TestCopilotAgentModelAndMCPServers(t *testing.T) {
+	input := []byte("---\nname: deployer\ndescription: Deploy agent\ntools:\n  - Bash\nmodel: gpt-4o\nmcpServers:\n  - github\n  - jira\n---\n\nDeploy the application.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.CopilotCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// Model should be in frontmatter (not conversion notes)
+	assertContains(t, out, "model: gpt-4o")
+	assertNotContains(t, out, "Designed for model")
+	// MCP servers in frontmatter with Copilot's "mcp-servers" key
+	assertContains(t, out, "mcp-servers:")
+	assertContains(t, out, "github")
+	assertContains(t, out, "jira")
+	// Filename
+	assertEqual(t, "deployer.agent.md", result.Filename)
+}
+
+func TestCopilotAgentTargetFromIsolation(t *testing.T) {
+	input := []byte("---\nname: isolator\ndescription: Isolated agent\nisolation: worktree\n---\n\nWork in isolation.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.CopilotCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// isolation: worktree maps to target: workspace in Copilot
+	assertContains(t, out, "target: workspace")
+	assertEqual(t, "isolator.agent.md", result.Filename)
+}
+
+func TestCopilotAgentFilenameNoName(t *testing.T) {
+	// Agent without a name should get "agent.agent.md"
+	input := []byte("---\ndescription: No name agent\n---\n\nInstructions.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.CopilotCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	assertEqual(t, "agent.agent.md", result.Filename)
 }
 
 func TestAgentNoFrontmatter(t *testing.T) {
@@ -150,20 +253,18 @@ func TestClaudeAgentToKiro(t *testing.T) {
 	}
 
 	out := string(result.Content)
-	assertContains(t, out, `"name": "AWS Expert"`)
-	assertContains(t, out, `"description"`)
-	assertContains(t, out, `"prompt": "You are an expert in AWS and Rust development."`)
-	assertContains(t, out, `"model": "claude-sonnet-4"`)
-	// Tool names translated to Kiro
-	assertContains(t, out, `"read"`)
-	assertContains(t, out, `"fs_write"`)
-	assertContains(t, out, `"shell"`)
-	assertEqual(t, "aws-expert.json", result.Filename)
-
-	// Prompt body is inlined — no ExtraFiles
-	if result.ExtraFiles != nil {
-		t.Errorf("expected no ExtraFiles (prompt inlined), got %d", len(result.ExtraFiles))
-	}
+	// Output is now markdown with YAML frontmatter (not JSON)
+	assertContains(t, out, "---")
+	assertContains(t, out, "name: AWS Expert")
+	assertContains(t, out, "description: AWS Rust development specialist")
+	assertContains(t, out, "model: claude-sonnet-4")
+	// Tool names translated to Kiro in YAML frontmatter
+	assertContains(t, out, "read")
+	assertContains(t, out, "fs_write")
+	assertContains(t, out, "shell")
+	// Prompt body is in the markdown body after frontmatter
+	assertContains(t, out, "You are an expert in AWS and Rust development.")
+	assertEqual(t, "aws-expert.md", result.Filename)
 
 	// maxTurns should warn
 	if len(result.Warnings) == 0 {
@@ -172,15 +273,10 @@ func TestClaudeAgentToKiro(t *testing.T) {
 }
 
 func TestKiroAgentCanonicalize(t *testing.T) {
+	// Kiro agents are markdown with YAML frontmatter.
 	// Use unambiguous tool names: fs_write→Write/Edit, shell→Bash
 	// ("read" is ambiguous — maps to Read, Glob, and Grep)
-	input := []byte(`{
-		"name": "AWS Expert",
-		"description": "AWS and Rust specialist",
-		"prompt": "file://./prompts/aws-expert.md",
-		"model": "claude-sonnet-4",
-		"tools": ["fs_write", "shell"]
-	}`)
+	input := []byte("---\nname: AWS Expert\ndescription: AWS and Rust specialist\nmodel: claude-sonnet-4\ntools:\n  - fs_write\n  - shell\nmcpServers:\n  - github\n---\n\nYou are an AWS and Rust specialist.\n")
 
 	conv := &AgentsConverter{}
 	result, err := conv.Canonicalize(input, "kiro")
@@ -194,8 +290,51 @@ func TestKiroAgentCanonicalize(t *testing.T) {
 	// fs_write → Write (or Edit, both map to fs_write)
 	// shell → Bash
 	assertContains(t, out, "Bash")
-	// Prompt file reference should be preserved
-	assertContains(t, out, "kiro:prompt-file")
+	// mcpServers should be preserved in canonical
+	assertContains(t, out, "mcpServers")
+	assertContains(t, out, "github")
+	// Body should be preserved
+	assertContains(t, out, "You are an AWS and Rust specialist.")
+}
+
+func TestKiroAgentYAMLFrontmatterStructure(t *testing.T) {
+	// Verify that rendered Kiro agents have proper YAML frontmatter structure
+	input := []byte("---\nname: Test Agent\ndescription: A test agent\ntools:\n  - Read\n  - Bash\nmodel: claude-sonnet-4\nmcpServers:\n  - github\n---\n\nDo test things.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+
+	// Must start with YAML frontmatter delimiter
+	if !strings.HasPrefix(out, "---\n") {
+		t.Fatal("expected output to start with YAML frontmatter delimiter '---'")
+	}
+
+	// Must have closing frontmatter delimiter
+	rest := out[4:] // skip opening "---\n"
+	if !strings.Contains(rest, "---\n") {
+		t.Fatal("expected closing YAML frontmatter delimiter '---'")
+	}
+
+	// Frontmatter should contain Kiro-translated tool names
+	assertContains(t, out, "- read")
+	assertContains(t, out, "- shell")
+	// mcpServers should be passed through
+	assertContains(t, out, "mcpServers")
+	assertContains(t, out, "github")
+	// Body after frontmatter
+	assertContains(t, out, "Do test things.")
+	// Filename should be .md
+	assertEqual(t, "test-agent.md", result.Filename)
 }
 
 // --- OpenCode agents ---
@@ -360,11 +499,12 @@ func TestGeminiToCodexRoundtrip(t *testing.T) {
 	codexStr := string(codex.Content)
 	assertContains(t, codexStr, "[agent]")
 	assertContains(t, codexStr, "name = 'planner'")
-	assertContains(t, codexStr, "[agent.instructions]")
+	assertContains(t, codexStr, "developer_instructions")
+	assertNotContains(t, codexStr, "[agent.instructions]")
 	assertContains(t, codexStr, "Plan the implementation strategy")
-	// Tools in Codex vocabulary (same as Copilot CLI)
-	assertContains(t, codexStr, "view")  // Read → view
-	assertContains(t, codexStr, "shell") // Bash → shell
+	// Tools in Codex vocabulary
+	assertContains(t, codexStr, "read_file") // Read → read_file
+	assertContains(t, codexStr, "shell")     // Bash → shell
 }
 
 func TestAgentAcrossAllNewProviders(t *testing.T) {
@@ -387,6 +527,7 @@ func TestAgentAcrossAllNewProviders(t *testing.T) {
 		{"codex", provider.Codex},
 		{"copilot-cli", provider.CopilotCLI},
 		{"gemini-cli", provider.GeminiCLI},
+		{"cursor", provider.Cursor},
 	}
 
 	for _, tt := range targets {
@@ -404,4 +545,94 @@ func TestAgentAcrossAllNewProviders(t *testing.T) {
 			}
 		})
 	}
+}
+
+// --- Cursor agents ---
+
+func TestClaudeAgentToCursor(t *testing.T) {
+	input := []byte("---\nname: Explorer\ndescription: Codebase explorer\ntools:\n  - Read\n  - Grep\n  - Bash\nmodel: sonnet\nmaxTurns: 30\npermissionMode: plan\nbackground: true\n---\n\nExplore the codebase and summarize.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Cursor)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// Cursor-supported frontmatter fields
+	assertContains(t, out, "name: Explorer")
+	assertContains(t, out, "description: Codebase explorer")
+	assertContains(t, out, "model: sonnet")
+	assertContains(t, out, "readonly: true")       // permissionMode:plan → readonly
+	assertContains(t, out, "is_background: true")  // background → is_background
+	// Unsupported fields embedded as prose
+	assertContains(t, out, "read_file")            // tool name translated
+	assertContains(t, out, "Limit to 30 turns")    // maxTurns as prose
+	assertContains(t, out, "syllago:converted")
+	// Body preserved
+	assertContains(t, out, "Explore the codebase and summarize.")
+	assertEqual(t, "explorer.md", result.Filename)
+}
+
+func TestCursorAgentCanonicalize(t *testing.T) {
+	input := []byte("---\nname: Reviewer\ndescription: Code review agent\nmodel: gpt-4\nreadonly: true\nis_background: true\n---\n\nReview all code changes carefully.\n")
+
+	conv := &AgentsConverter{}
+	result, err := conv.Canonicalize(input, "cursor")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: Reviewer")
+	assertContains(t, out, "description: Code review agent")
+	assertContains(t, out, "model: gpt-4")
+	assertContains(t, out, "permissionMode: plan") // readonly → permissionMode:plan
+	assertContains(t, out, "background: true")     // is_background → background
+	assertContains(t, out, "Review all code changes carefully.")
+}
+
+func TestCursorAgentRoundTrip(t *testing.T) {
+	input := []byte("---\nname: Helper\ndescription: General helper\nmodel: gpt-4\nreadonly: true\nis_background: true\n---\n\nHelp with tasks.\n")
+
+	conv := &AgentsConverter{}
+
+	// Cursor → canonical
+	canonical, err := conv.Canonicalize(input, "cursor")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// canonical → Cursor
+	result, err := conv.Render(canonical.Content, provider.Cursor)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: Helper")
+	assertContains(t, out, "description: General helper")
+	assertContains(t, out, "model: gpt-4")
+	assertContains(t, out, "readonly: true")
+	assertContains(t, out, "is_background: true")
+	assertContains(t, out, "Help with tasks.")
+	assertEqual(t, "helper.md", result.Filename)
+}
+
+func TestCursorAgentNoFrontmatter(t *testing.T) {
+	input := []byte("Just a plain agent with instructions.\n")
+
+	conv := &AgentsConverter{}
+	result, err := conv.Canonicalize(input, "cursor")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "Just a plain agent with instructions.")
 }

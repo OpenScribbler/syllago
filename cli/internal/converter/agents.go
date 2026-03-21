@@ -2,7 +2,6 @@ package converter
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -27,8 +26,11 @@ type AgentMeta struct {
 	Skills          []string `yaml:"skills,omitempty"`
 	MCPServers      []string `yaml:"mcpServers,omitempty"`
 	Memory          string   `yaml:"memory,omitempty"`
-	Background      bool     `yaml:"background,omitempty"`
-	Isolation       string   `yaml:"isolation,omitempty"`
+	Background      bool        `yaml:"background,omitempty"`
+	Isolation       string      `yaml:"isolation,omitempty"`
+	Effort          string      `yaml:"effort,omitempty"`
+	Hooks           interface{} `yaml:"hooks,omitempty"`
+	Color           string      `yaml:"color,omitempty"`
 	// Gemini-specific (stored in canonical for lossless round-trips)
 	Temperature float64 `yaml:"temperature,omitempty"`
 	TimeoutMins int     `yaml:"timeout_mins,omitempty"`
@@ -52,6 +54,9 @@ type copilotAgentMeta struct {
 	Name        string   `yaml:"name,omitempty"`
 	Description string   `yaml:"description,omitempty"`
 	Tools       []string `yaml:"tools,omitempty"`
+	Model       string   `yaml:"model,omitempty"`
+	Target      string   `yaml:"target,omitempty"`
+	MCPServers  []string `yaml:"mcp-servers,omitempty"`
 }
 
 type AgentsConverter struct{}
@@ -67,7 +72,9 @@ func (c *AgentsConverter) Canonicalize(content []byte, sourceProvider string) (*
 	if sourceProvider == "codex" {
 		return canonicalizeCodexAgents(content)
 	}
-
+	if sourceProvider == "cursor" {
+		return canonicalizeCursorAgent(content)
+	}
 	meta, body, err := parseAgentCanonical(content)
 	if err != nil {
 		return nil, err
@@ -114,6 +121,8 @@ func (c *AgentsConverter) Render(content []byte, target provider.Provider) (*Res
 		return renderKiroAgent(meta, body)
 	case "codex":
 		return renderCodexAgents(meta, body)
+	case "cursor":
+		return renderCursorAgent(meta, body)
 	default:
 		// Claude Code — full frontmatter preserved
 		return renderClaudeAgent(meta, body)
@@ -176,6 +185,15 @@ func renderGeminiAgent(meta AgentMeta, body string) (*Result, error) {
 	if meta.Isolation == "worktree" {
 		notes = append(notes, "Work in a separate git worktree.")
 	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+	if meta.Hooks != nil {
+		notes = append(notes, "Agent has hooks configured (not portable).")
+	}
+	if meta.Color != "" {
+		notes = append(notes, fmt.Sprintf("Agent color: %s.", meta.Color))
+	}
 	if len(meta.DisallowedTools) > 0 {
 		translated := TranslateTools(meta.DisallowedTools, "gemini-cli")
 		notes = append(notes, fmt.Sprintf("Do not use these tools: %s.", strings.Join(translated, ", ")))
@@ -224,15 +242,27 @@ func renderCopilotAgent(meta AgentMeta, body string) (*Result, error) {
 			notes = append(notes, fmt.Sprintf("Permission mode: %s.", meta.PermissionMode))
 		}
 	}
-	if meta.Model != "" {
-		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
-	}
 	if meta.MaxTurns > 0 {
 		notes = append(notes, fmt.Sprintf("Limit to %d turns.", meta.MaxTurns))
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+	if meta.Hooks != nil {
+		notes = append(notes, "Agent has hooks configured (not portable).")
+	}
+	if meta.Color != "" {
+		notes = append(notes, fmt.Sprintf("Agent color: %s.", meta.Color))
 	}
 	if len(meta.DisallowedTools) > 0 {
 		translated := TranslateTools(meta.DisallowedTools, "copilot-cli")
 		notes = append(notes, fmt.Sprintf("Do not use these tools: %s.", strings.Join(translated, ", ")))
+	}
+
+	// Map isolation to Copilot's target field
+	target := ""
+	if meta.Isolation == "worktree" {
+		target = "workspace"
 	}
 
 	outBody := body
@@ -245,6 +275,9 @@ func renderCopilotAgent(meta AgentMeta, body string) (*Result, error) {
 		Name:        meta.Name,
 		Description: meta.Description,
 		Tools:       TranslateTools(meta.Tools, "copilot-cli"),
+		Model:       meta.Model,
+		Target:      target,
+		MCPServers:  meta.MCPServers,
 	}
 	fm, err := renderFrontmatter(cm)
 	if err != nil {
@@ -257,7 +290,14 @@ func renderCopilotAgent(meta AgentMeta, body string) (*Result, error) {
 	buf.WriteString(outBody)
 	buf.WriteString("\n")
 
-	return &Result{Content: buf.Bytes(), Filename: "agent.md"}, nil
+	// Filename: <name>.agent.md (Copilot convention)
+	agentName := meta.Name
+	if agentName == "" {
+		agentName = "agent"
+	}
+	filename := slugify(agentName) + ".agent.md"
+
+	return &Result{Content: buf.Bytes(), Filename: filename}, nil
 }
 
 func renderClaudeAgent(meta AgentMeta, body string) (*Result, error) {
@@ -314,9 +354,13 @@ func renderRooCodeAgent(meta AgentMeta, body string) (*Result, error) {
 			groupSet["browser"] = struct{}{}
 		}
 	}
+	// Include mcp group when the agent references MCP servers.
+	if len(meta.MCPServers) > 0 {
+		groupSet["mcp"] = struct{}{}
+	}
 	var groups []string
 	// Emit in a stable order.
-	for _, g := range []string{"read", "edit", "command", "browser"} {
+	for _, g := range []string{"read", "edit", "command", "browser", "mcp"} {
 		if _, ok := groupSet[g]; ok {
 			groups = append(groups, g)
 		}
@@ -364,6 +408,15 @@ func renderRooCodeAgent(meta AgentMeta, body string) (*Result, error) {
 	if len(meta.DisallowedTools) > 0 {
 		warnings = append(warnings, "disallowedTools has no Roo Code equivalent; dropped")
 	}
+	if meta.Effort != "" {
+		warnings = append(warnings, "effort has no Roo Code equivalent; dropped")
+	}
+	if meta.Hooks != nil {
+		warnings = append(warnings, "hooks has no Roo Code equivalent; dropped")
+	}
+	if meta.Color != "" {
+		warnings = append(warnings, "color has no Roo Code equivalent; dropped")
+	}
 
 	return &Result{
 		Content:  out,
@@ -382,20 +435,44 @@ type rooCodeMode struct {
 	Groups             []string `yaml:"groups,omitempty"`
 }
 
-// kiroAgentConfig is Kiro's on-disk agent format.
-type kiroAgentConfig struct {
-	Name         string   `json:"name"`
-	Description  string   `json:"description"`
-	Prompt       string   `json:"prompt"`
-	Model        string   `json:"model,omitempty"`
-	Tools        []string `json:"tools,omitempty"`
-	AllowedTools []string `json:"allowedTools,omitempty"`
+// kiroAgentMeta is Kiro's on-disk agent format (YAML frontmatter in .md files).
+// Kiro agents use markdown with YAML frontmatter, similar to Claude Code and other
+// providers. The struct includes all Kiro-specific fields for lossless round-trips.
+type kiroAgentMeta struct {
+	Name             string              `yaml:"name,omitempty"`
+	Description      string              `yaml:"description,omitempty"`
+	Model            string              `yaml:"model,omitempty"`
+	Tools            []string            `yaml:"tools,omitempty"`
+	AllowedTools     []string            `yaml:"allowedTools,omitempty"`
+	ToolAliases      map[string]string   `yaml:"toolAliases,omitempty"`
+	ToolsSettings    map[string]any      `yaml:"toolsSettings,omitempty"`
+	MCPServers       []string            `yaml:"mcpServers,omitempty"`
+	Resources        []string            `yaml:"resources,omitempty"`
+	IncludeMCPJSON   bool                `yaml:"includeMcpJson,omitempty"`
+	IncludePowers    bool                `yaml:"includePowers,omitempty"`
+	KeyboardShortcut string              `yaml:"keyboardShortcut,omitempty"`
+	WelcomeMessage   string              `yaml:"welcomeMessage,omitempty"`
+	Hooks            map[string][]string `yaml:"hooks,omitempty"`
 }
 
 func canonicalizeKiroAgent(content []byte) (*Result, error) {
-	var ka kiroAgentConfig
-	if err := json.Unmarshal(content, &ka); err != nil {
-		return nil, fmt.Errorf("parsing Kiro agent JSON: %w", err)
+	// Kiro agents are markdown with YAML frontmatter (same shape as other providers).
+	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+
+	var ka kiroAgentMeta
+	body := strings.TrimSpace(string(normalized))
+
+	opening := []byte("---\n")
+	if bytes.HasPrefix(normalized, opening) {
+		rest := normalized[len(opening):]
+		closingIdx := bytes.Index(rest, opening)
+		if closingIdx != -1 {
+			yamlBytes := rest[:closingIdx]
+			if err := yaml.Unmarshal(yamlBytes, &ka); err != nil {
+				return nil, fmt.Errorf("parsing Kiro agent YAML frontmatter: %w", err)
+			}
+			body = strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+		}
 	}
 
 	// Translate Kiro tool names to canonical
@@ -420,14 +497,7 @@ func canonicalizeKiroAgent(content []byte) (*Result, error) {
 		Description: ka.Description,
 		Tools:       tools,
 		Model:       ka.Model,
-	}
-
-	// Prompt body: if it's a file:// reference, store as a note
-	body := ""
-	if strings.HasPrefix(ka.Prompt, "file://") {
-		body = fmt.Sprintf("<!-- kiro:prompt-file=%q -->\n\n(Prompt body loaded from %s)", ka.Prompt, ka.Prompt)
-	} else {
-		body = ka.Prompt
+		MCPServers:  ka.MCPServers,
 	}
 
 	canonical, err := buildAgentCanonical(meta, body)
@@ -458,15 +528,15 @@ func renderKiroAgent(meta AgentMeta, body string) (*Result, error) {
 	// Translate tools to Kiro names
 	kiroTools := TranslateTools(meta.Tools, "kiro")
 
-	// Inline the prompt body directly in the JSON. Kiro supports both inline
-	// prompts and file:// references; inline produces a self-contained file
-	// that works for both convert (sharing) and install.
-	ka := kiroAgentConfig{
+	// Build Kiro YAML frontmatter with translated tool names and MCP servers.
+	// Kiro agents are markdown files with YAML frontmatter, just like Claude Code
+	// and other providers — NOT JSON.
+	km := kiroAgentMeta{
 		Name:        meta.Name,
 		Description: meta.Description,
-		Prompt:      cleanBody,
 		Tools:       kiroTools,
 		Model:       meta.Model,
+		MCPServers:  meta.MCPServers,
 	}
 
 	if meta.MaxTurns > 0 {
@@ -479,14 +549,20 @@ func renderKiroAgent(meta AgentMeta, body string) (*Result, error) {
 		warnings = append(warnings, "disallowedTools not supported by Kiro; consider using tool groups instead")
 	}
 
-	agentJSON, err := json.MarshalIndent(ka, "", "  ")
+	fm, err := renderFrontmatter(km)
 	if err != nil {
 		return nil, err
 	}
 
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(cleanBody)
+	buf.WriteString("\n")
+
 	return &Result{
-		Content:  append(agentJSON, '\n'),
-		Filename: slugify(agentName) + ".json",
+		Content:  buf.Bytes(),
+		Filename: slugify(agentName) + ".md",
 		Warnings: warnings,
 	}, nil
 }
@@ -519,6 +595,156 @@ func renderOpenCodeAgent(meta AgentMeta, body string) (*Result, error) {
 		name = slugify(meta.Name)
 	}
 	return &Result{Content: canonical, Filename: name + ".md", Warnings: warnings}, nil
+}
+
+// --- Cursor agents ---
+
+// cursorAgentMeta is Cursor's agent frontmatter format.
+// Cursor agents are .md files with YAML frontmatter supporting:
+// name, description, model, readonly, is_background.
+type cursorAgentMeta struct {
+	Name         string `yaml:"name,omitempty"`
+	Description  string `yaml:"description,omitempty"`
+	Model        string `yaml:"model,omitempty"`
+	ReadOnly     bool   `yaml:"readonly,omitempty"`
+	IsBackground bool   `yaml:"is_background,omitempty"`
+}
+
+// canonicalizeCursorAgent parses a Cursor agent .md file into canonical format.
+// Cursor agents use markdown with YAML frontmatter containing a small set of fields.
+// readonly maps to permissionMode:"plan", is_background maps to background.
+func canonicalizeCursorAgent(content []byte) (*Result, error) {
+	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+
+	var ca cursorAgentMeta
+	body := strings.TrimSpace(string(normalized))
+
+	opening := []byte("---\n")
+	if bytes.HasPrefix(normalized, opening) {
+		rest := normalized[len(opening):]
+		closingIdx := bytes.Index(rest, opening)
+		if closingIdx != -1 {
+			yamlBytes := rest[:closingIdx]
+			if err := yaml.Unmarshal(yamlBytes, &ca); err != nil {
+				return nil, fmt.Errorf("parsing Cursor agent YAML frontmatter: %w", err)
+			}
+			body = strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+		}
+	}
+
+	meta := AgentMeta{
+		Name:        ca.Name,
+		Description: ca.Description,
+		Model:       ca.Model,
+		Background:  ca.IsBackground,
+	}
+
+	// readonly maps to permissionMode "plan" (read-only exploration)
+	if ca.ReadOnly {
+		meta.PermissionMode = "plan"
+	}
+
+	canonical, err := buildAgentCanonical(meta, body)
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: canonical, Filename: "agent.md"}, nil
+}
+
+// renderCursorAgent renders a canonical agent to Cursor's .md format.
+// Cursor supports: name, description, model, readonly, is_background.
+// Unsupported fields (permissionMode details, maxTurns, tools, skills, etc.)
+// are embedded as prose conversion notes.
+func renderCursorAgent(meta AgentMeta, body string) (*Result, error) {
+	var warnings []string
+	cleanBody := StripConversionNotes(body)
+
+	// Map canonical fields to Cursor equivalents
+	cm := cursorAgentMeta{
+		Name:         meta.Name,
+		Description:  meta.Description,
+		Model:        meta.Model,
+		IsBackground: meta.Background,
+	}
+
+	// permissionMode "plan" maps to readonly
+	if meta.PermissionMode == "plan" {
+		cm.ReadOnly = true
+	}
+
+	// Build prose notes for unsupported fields
+	var notes []string
+	if len(meta.Tools) > 0 {
+		translated := TranslateTools(meta.Tools, "cursor")
+		notes = append(notes, fmt.Sprintf("**Available tools:** %s.", strings.Join(translated, ", ")))
+	}
+	if len(meta.DisallowedTools) > 0 {
+		translated := TranslateTools(meta.DisallowedTools, "cursor")
+		notes = append(notes, fmt.Sprintf("**Do not use:** %s tools.", strings.Join(translated, ", ")))
+	}
+	if meta.PermissionMode != "" && meta.PermissionMode != "plan" {
+		notes = append(notes, fmt.Sprintf("Permission mode: %s.", meta.PermissionMode))
+	}
+	if meta.MaxTurns > 0 {
+		notes = append(notes, fmt.Sprintf("Limit to %d turns.", meta.MaxTurns))
+	}
+	if len(meta.Skills) > 0 {
+		notes = append(notes, fmt.Sprintf("Preload these skills: %s.", strings.Join(meta.Skills, ", ")))
+	}
+	if len(meta.MCPServers) > 0 {
+		notes = append(notes, fmt.Sprintf("Expected MCP servers: %s.", strings.Join(meta.MCPServers, ", ")))
+	}
+	if meta.Memory != "" {
+		notes = append(notes, fmt.Sprintf("Use persistent memory scope: %s.", meta.Memory))
+	}
+	if meta.Isolation == "worktree" {
+		notes = append(notes, "Work in a separate git worktree.")
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+	if meta.Hooks != nil {
+		notes = append(notes, "Agent has hooks configured (not portable).")
+	}
+	if meta.Color != "" {
+		notes = append(notes, fmt.Sprintf("Agent color: %s.", meta.Color))
+	}
+
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	// Warn about fields that have no Cursor equivalent
+	if meta.MaxTurns > 0 {
+		warnings = append(warnings, fmt.Sprintf("maxTurns (%d) not supported by Cursor (embedded as prose)", meta.MaxTurns))
+	}
+	if meta.PermissionMode != "" && meta.PermissionMode != "plan" {
+		warnings = append(warnings, fmt.Sprintf("permissionMode (%q) not fully supported by Cursor (embedded as prose)", meta.PermissionMode))
+	}
+
+	fm, err := renderFrontmatter(cm)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	agentName := meta.Name
+	if agentName == "" {
+		agentName = "agent"
+	}
+
+	return &Result{
+		Content:  buf.Bytes(),
+		Filename: slugify(agentName) + ".md",
+		Warnings: warnings,
+	}, nil
 }
 
 // --- Helpers ---
