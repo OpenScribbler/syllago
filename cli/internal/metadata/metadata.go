@@ -15,6 +15,11 @@ import (
 // FileName is the metadata file stored in each content item directory.
 const FileName = ".syllago.yaml"
 
+// CurrentFormatVersion is the latest .syllago.yaml format version.
+// Bump this when the metadata schema changes in a way that older
+// syllago versions cannot safely interpret.
+const CurrentFormatVersion = 1
+
 // Dependency represents a dependency on another content item.
 type Dependency struct {
 	Type string `yaml:"type"`
@@ -23,6 +28,7 @@ type Dependency struct {
 
 // Meta holds metadata for a single content item.
 type Meta struct {
+	FormatVersion  int          `yaml:"format_version,omitempty"` // syllago format version (1 = current)
 	ID             string       `yaml:"id"`
 	Name           string       `yaml:"name"`
 	Description    string       `yaml:"description,omitempty"`
@@ -44,6 +50,15 @@ type Meta struct {
 	SourceHash     string       `yaml:"source_hash,omitempty"`     // SHA-256 of source content at import time
 	AddedAt        *time.Time   `yaml:"added_at,omitempty"`        // when content was added to library
 	AddedBy        string       `yaml:"added_by,omitempty"`        // e.g. "syllago v0.1.0"
+}
+
+// validateFormatVersion checks that the format version is supported.
+// Zero (missing from old files) is treated as valid for backward compatibility.
+func validateFormatVersion(m *Meta) error {
+	if m.FormatVersion > CurrentFormatVersion {
+		return fmt.Errorf("unsupported format version %d, max supported: %d", m.FormatVersion, CurrentFormatVersion)
+	}
+	return nil
 }
 
 // MetaPath returns the path to the metadata file in the given directory.
@@ -70,6 +85,9 @@ func Load(itemDir string) (*Meta, error) {
 	if err := yaml.Unmarshal(data, &m); err != nil {
 		return nil, fmt.Errorf("parsing %s: %w", FileName, err)
 	}
+	if err := validateFormatVersion(&m); err != nil {
+		return nil, fmt.Errorf("%s: %w", FileName, err)
+	}
 	return &m, nil
 }
 
@@ -87,11 +105,15 @@ func LoadProvider(dir, filename string) (*Meta, error) {
 	if err := yaml.Unmarshal(data, &m); err != nil {
 		return nil, fmt.Errorf("parsing %s: %w", filepath.Base(path), err)
 	}
+	if err := validateFormatVersion(&m); err != nil {
+		return nil, fmt.Errorf("%s: %w", filepath.Base(path), err)
+	}
 	return &m, nil
 }
 
 // Save writes .syllago.yaml to itemDir, creating directories as needed.
 func Save(itemDir string, m *Meta) error {
+	m.FormatVersion = CurrentFormatVersion
 	if err := os.MkdirAll(itemDir, 0755); err != nil {
 		return fmt.Errorf("creating directory: %w", err)
 	}
@@ -104,6 +126,7 @@ func Save(itemDir string, m *Meta) error {
 
 // SaveProvider writes a provider-specific metadata file.
 func SaveProvider(dir, filename string, m *Meta) error {
+	m.FormatVersion = CurrentFormatVersion
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("creating directory: %w", err)
 	}

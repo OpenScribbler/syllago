@@ -40,7 +40,7 @@ type mcpServerConfig struct {
 	CommandArray []string          `json:"commandArray,omitempty"` // OpenCode command as array
 	Enabled      *bool             `json:"enabled,omitempty"`      // OpenCode uses "enabled" (true default) not "disabled"
 	Timeout      int               `json:"timeout,omitempty"`      // OpenCode timeout in ms
-	OAuth        json.RawMessage   `json:"oauth,omitempty"`        // OpenCode OAuth config (preserved opaque)
+	OAuth        json.RawMessage   `json:"oauth,omitempty"`        // OAuth config (OpenCode + Claude Code; preserved opaque)
 }
 
 // mcpConfig wraps one or more server configs.
@@ -252,6 +252,7 @@ func renderClaudeMCP(cfg mcpConfig) (*Result, error) {
 			Headers:     server.Headers,
 			Type:        server.Type,
 			AutoApprove: server.AutoApprove,
+			OAuth:       server.OAuth,
 		}
 
 		// Warn about dropped Gemini-specific fields
@@ -294,6 +295,11 @@ func renderCursorMCP(cfg mcpConfig) (*Result, error) {
 			AutoApprove: server.AutoApprove,
 		}
 
+		// Warn about dropped OAuth config
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Cursor", name))
+		}
+
 		// Warn about dropped Gemini-specific fields
 		if server.Trust != "" {
 			warnings = append(warnings, fmt.Sprintf("server %q: trust field dropped (Gemini-specific)", name))
@@ -304,7 +310,6 @@ func renderCursorMCP(cfg mcpConfig) (*Result, error) {
 		if len(server.ExcludeTools) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific)", name))
 		}
-
 		out.MCPServers[name] = s
 	}
 
@@ -342,6 +347,9 @@ func renderGeminiMCP(cfg mcpConfig) (*Result, error) {
 		}
 		if server.Disabled {
 			warnings = append(warnings, fmt.Sprintf("server %q: disabled state dropped (runtime-only)", name))
+		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Gemini CLI", name))
 		}
 
 		out.MCPServers[name] = s
@@ -381,6 +389,9 @@ func renderCopilotMCP(cfg mcpConfig) (*Result, error) {
 		}
 		if len(server.AutoApprove) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: autoApprove dropped (Claude-specific)", name))
+		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Copilot CLI", name))
 		}
 
 		out.MCPServers[name] = s
@@ -564,6 +575,9 @@ func renderClineMCP(cfg mcpConfig) (*Result, error) {
 		if server.Cwd != "" {
 			warnings = append(warnings, fmt.Sprintf("server %q: cwd dropped (not supported by Cline)", name))
 		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Cline", name))
+		}
 	}
 
 	result, err := json.MarshalIndent(out, "", "  ")
@@ -603,6 +617,9 @@ func renderRooCodeMCP(cfg mcpConfig) (*Result, error) {
 		}
 		if len(server.ExcludeTools) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific)", name))
+		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Roo Code", name))
 		}
 	}
 
@@ -652,6 +669,9 @@ func renderKiroMCP(cfg mcpConfig) (*Result, error) {
 		if len(server.IncludeTools) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: includeTools dropped (Gemini-specific)", name))
 		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Kiro", name))
+		}
 
 		kc.MCPServers[name] = s
 	}
@@ -696,6 +716,9 @@ func renderZedMCP(cfg mcpConfig) (*Result, error) {
 		}
 		if len(server.ExcludeTools) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific)", name))
+		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Zed", name))
 		}
 	}
 

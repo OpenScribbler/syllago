@@ -56,6 +56,7 @@ func TestTranslateTool(t *testing.T) {
 		{"Agent to RooCode (no mapping)", "Agent", "roo-code", "Agent"},
 		// Cursor
 		{"Read to Cursor", "Read", "cursor", "read_file"},
+		{"Write to Cursor", "Write", "cursor", "edit_file"},
 		{"Edit to Cursor", "Edit", "cursor", "edit_file"},
 		{"Bash to Cursor", "Bash", "cursor", "run_terminal_cmd"},
 		{"Glob to Cursor", "Glob", "cursor", "file_search"},
@@ -72,6 +73,7 @@ func TestTranslateTool(t *testing.T) {
 		{"WebFetch to Windsurf", "WebFetch", "windsurf", "read_url_content"},
 		// Codex
 		{"Read to Codex", "Read", "codex", "read_file"},
+		{"Write to Codex", "Write", "codex", "apply_patch"},
 		{"Edit to Codex", "Edit", "codex", "apply_patch"},
 		{"Bash to Codex", "Bash", "codex", "shell"},
 		{"Glob to Codex", "Glob", "codex", "list_dir"},
@@ -100,6 +102,14 @@ func TestTranslateTool(t *testing.T) {
 		{"WebFetch to Codex (no mapping)", "WebFetch", "codex", "WebFetch"},
 		// CC-only tools pass through
 		{"NotebookEdit to Gemini (no mapping)", "NotebookEdit", "gemini-cli", "NotebookEdit"},
+		{"MultiEdit to Gemini (no mapping)", "MultiEdit", "gemini-cli", "MultiEdit"},
+		{"LS to Gemini (no mapping)", "LS", "gemini-cli", "LS"},
+		{"NotebookRead to Gemini (no mapping)", "NotebookRead", "gemini-cli", "NotebookRead"},
+		{"KillBash to Gemini (no mapping)", "KillBash", "gemini-cli", "KillBash"},
+		{"MultiEdit to Cline (no mapping)", "MultiEdit", "cline", "MultiEdit"},
+		{"LS to Cursor (no mapping)", "LS", "cursor", "LS"},
+		{"NotebookRead to Windsurf (no mapping)", "NotebookRead", "windsurf", "NotebookRead"},
+		{"KillBash to Codex (no mapping)", "KillBash", "codex", "KillBash"},
 		{"Skill to Gemini (no mapping)", "Skill", "gemini-cli", "Skill"},
 		{"AskUserQuestion to Gemini (no mapping)", "AskUserQuestion", "gemini-cli", "AskUserQuestion"},
 	}
@@ -153,6 +163,12 @@ func TestTranslateHookEvent(t *testing.T) {
 		{"BeforeModel to Gemini", "BeforeModel", "gemini-cli", "BeforeModel", true},
 		{"AfterModel to Gemini", "AfterModel", "gemini-cli", "AfterModel", true},
 		{"BeforeToolSelection to Gemini", "BeforeToolSelection", "gemini-cli", "BeforeToolSelection", true},
+		// Gemini-only events unsupported by other providers
+		{"BeforeModel to Copilot (unsupported)", "BeforeModel", "copilot-cli", "BeforeModel", false},
+		{"AfterModel to Copilot (unsupported)", "AfterModel", "copilot-cli", "AfterModel", false},
+		{"BeforeToolSelection to Copilot (unsupported)", "BeforeToolSelection", "copilot-cli", "BeforeToolSelection", false},
+		{"BeforeModel to Kiro (unsupported)", "BeforeModel", "kiro", "BeforeModel", false},
+		{"AfterModel to Cline (unsupported)", "AfterModel", "cline", "AfterModel", false},
 		// CC-only events have no targets
 		{"PostToolUseFailure (CC-only)", "PostToolUseFailure", "gemini-cli", "PostToolUseFailure", false},
 		{"Elicitation (CC-only)", "Elicitation", "cline", "Elicitation", false},
@@ -187,6 +203,8 @@ func TestReverseTranslateHookEvent(t *testing.T) {
 		{"Copilot errorOccurred", "errorOccurred", "copilot-cli", "ErrorOccurred"},
 		// Gemini-only events
 		{"Gemini BeforeModel", "BeforeModel", "gemini-cli", "BeforeModel"},
+		{"Gemini AfterModel", "AfterModel", "gemini-cli", "AfterModel"},
+		{"Gemini BeforeToolSelection", "BeforeToolSelection", "gemini-cli", "BeforeToolSelection"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -337,6 +355,75 @@ func TestReverseTranslateTool_NewProviders(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := ReverseTranslateTool(tt.tool, tt.source)
+			assertEqual(t, tt.want, got)
+		})
+	}
+}
+
+func TestTranslateMatcher(t *testing.T) {
+	tests := []struct {
+		name   string
+		match  string
+		target string
+		want   string
+	}{
+		// Simple tool name — works like TranslateTool
+		{"simple Bash to Gemini", "Bash", "gemini-cli", "run_shell_command"},
+		{"simple Edit to Copilot", "Edit", "copilot-cli", "edit"},
+		{"unknown tool passes through", "CustomTool", "gemini-cli", "CustomTool"},
+
+		// Regex alternation — each component translated individually
+		{"Edit|Write to Gemini", "Edit|Write", "gemini-cli", "replace|write_file"},
+		{"Edit|Write to Copilot", "Edit|Write", "copilot-cli", "edit|create"},
+		{"three components", "Edit|Write|Bash", "gemini-cli", "replace|write_file|run_shell_command"},
+
+		// Wildcard suffix preserved
+		{"Bash.* to Gemini", "Bash.*", "gemini-cli", "run_shell_command.*"},
+
+		// MCP prefix patterns pass through unchanged
+		{"mcp__github__.* unchanged", "mcp__github__.*", "gemini-cli", "mcp__github__.*"},
+		{"mcp__github__create_issue unchanged", "mcp__github__create_issue", "gemini-cli", "mcp__github__create_issue"},
+
+		// Bare wildcard passes through
+		{".* passes through", ".*", "gemini-cli", ".*"},
+
+		// Mixed: alternation with MCP pattern
+		{"Edit|mcp__github__.*", "Edit|mcp__github__.*", "gemini-cli", "replace|mcp__github__.*"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := TranslateMatcher(tt.match, tt.target)
+			assertEqual(t, tt.want, got)
+		})
+	}
+}
+
+func TestReverseTranslateMatcher(t *testing.T) {
+	tests := []struct {
+		name   string
+		match  string
+		source string
+		want   string
+	}{
+		// Simple reverse
+		{"simple Gemini read_file", "read_file", "gemini-cli", "Read"},
+
+		// Regex alternation
+		{"replace|write_file from Gemini", "replace|write_file", "gemini-cli", "Edit|Write"},
+		{"three components from Gemini", "replace|write_file|run_shell_command", "gemini-cli", "Edit|Write|Bash"},
+
+		// Wildcard suffix preserved
+		{"run_shell_command.* from Gemini", "run_shell_command.*", "gemini-cli", "Bash.*"},
+
+		// MCP prefix patterns pass through unchanged
+		{"mcp__github__.* unchanged", "mcp__github__.*", "gemini-cli", "mcp__github__.*"},
+
+		// Bare wildcard
+		{".* passes through", ".*", "gemini-cli", ".*"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ReverseTranslateMatcher(tt.match, tt.source)
 			assertEqual(t, tt.want, got)
 		})
 	}

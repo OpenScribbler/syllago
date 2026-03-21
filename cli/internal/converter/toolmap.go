@@ -3,8 +3,9 @@ package converter
 import "strings"
 
 // ToolNames maps canonical tool names (Claude Code) to provider-specific equivalents.
-// Note: Zed uses "edit_file" for both Write and Edit. Reverse translation is ambiguous
-// and may return either canonical name; round-trips through Zed lose the distinction.
+// Note: Zed and Cursor use "edit_file" for both Write and Edit; Codex uses "apply_patch"
+// for both. Reverse translation is ambiguous and may return either canonical name;
+// round-trips through these providers lose the Write/Edit distinction.
 var ToolNames = map[string]map[string]string{
 	"Read": {
 		"gemini-cli":  "read_file",
@@ -26,7 +27,9 @@ var ToolNames = map[string]map[string]string{
 		"zed":         "edit_file",
 		"cline":       "write_to_file",
 		"roo-code":    "write_to_file",
+		"cursor":      "edit_file",
 		"windsurf":    "write_to_file",
+		"codex":       "apply_patch",
 	},
 	"Edit": {
 		"gemini-cli":  "replace",
@@ -102,6 +105,10 @@ var ToolNames = map[string]map[string]string{
 	},
 	// CC-only tools with no cross-provider equivalents
 	"NotebookEdit":    {},
+	"MultiEdit":       {},
+	"LS":              {},
+	"NotebookRead":    {},
+	"KillBash":        {},
 	"Skill":           {},
 	"AskUserQuestion": {},
 }
@@ -190,18 +197,102 @@ func ReverseTranslateHookEvent(event, sourceSlug string) string {
 }
 
 // ReverseTranslateTool finds the canonical tool name from a provider-specific one.
+// When multiple canonical names map to the same provider tool (e.g., Cursor/Zed use
+// "edit_file" for both Write and Edit, Codex uses "apply_patch" for both), prefers
+// Edit over Write since Edit is the more specific operation.
 // Also handles backwards compatibility: "Task" was renamed to "Agent" in Claude Code v2.1.63.
 func ReverseTranslateTool(name, sourceSlug string) string {
+	var match string
 	for canonical, m := range ToolNames {
 		if provName, ok := m[sourceSlug]; ok && provName == name {
-			return canonical
+			if canonical == "Edit" {
+				return "Edit" // prefer Edit over Write for ambiguous mappings
+			}
+			match = canonical
 		}
+	}
+	if match != "" {
+		return match
 	}
 	// Backwards compat: "Task" as a canonical name maps to "Agent".
 	if strings.EqualFold(name, "task") {
 		return "Agent"
 	}
 	return name
+}
+
+// TranslateMatcher translates a hook matcher string to the target provider.
+// Matchers can be:
+//   - Simple tool names: "Bash" → translate directly
+//   - Regex alternations: "Edit|Write" → split, translate each, rejoin
+//   - Wildcard patterns: "mcp__github__.*" → strip .*, translate, reattach
+//   - MCP prefix patterns: "mcp__.*" → pass through unchanged
+func TranslateMatcher(matcher, targetSlug string) string {
+	parts := strings.Split(matcher, "|")
+	for i, part := range parts {
+		parts[i] = translateMatcherComponent(part, targetSlug)
+	}
+	return strings.Join(parts, "|")
+}
+
+// ReverseTranslateMatcher translates a provider-specific hook matcher to canonical.
+// Handles the same patterns as TranslateMatcher but in reverse.
+func ReverseTranslateMatcher(matcher, sourceSlug string) string {
+	parts := strings.Split(matcher, "|")
+	for i, part := range parts {
+		parts[i] = reverseTranslateMatcherComponent(part, sourceSlug)
+	}
+	return strings.Join(parts, "|")
+}
+
+// translateMatcherComponent translates a single matcher component (no |) to the target.
+func translateMatcherComponent(comp, targetSlug string) string {
+	// Bare wildcard patterns like ".*" — pass through unchanged
+	if comp == ".*" || comp == "*" {
+		return comp
+	}
+
+	// Strip .* suffix if present, translate the base, reattach
+	hasSuffix := strings.HasSuffix(comp, ".*")
+	base := comp
+	if hasSuffix {
+		base = strings.TrimSuffix(comp, ".*")
+	}
+
+	// MCP-style prefixes (e.g., "mcp__github__create_issue") — pass through unchanged.
+	// These are server-specific tool names that don't map through ToolNames.
+	if strings.Contains(base, "__") || strings.Contains(base, "/") || strings.Contains(base, ":") {
+		return comp
+	}
+
+	translated := TranslateTool(base, targetSlug)
+	if hasSuffix {
+		return translated + ".*"
+	}
+	return translated
+}
+
+// reverseTranslateMatcherComponent reverse-translates a single matcher component.
+func reverseTranslateMatcherComponent(comp, sourceSlug string) string {
+	if comp == ".*" || comp == "*" {
+		return comp
+	}
+
+	hasSuffix := strings.HasSuffix(comp, ".*")
+	base := comp
+	if hasSuffix {
+		base = strings.TrimSuffix(comp, ".*")
+	}
+
+	if strings.Contains(base, "__") || strings.Contains(base, "/") || strings.Contains(base, ":") {
+		return comp
+	}
+
+	translated := ReverseTranslateTool(base, sourceSlug)
+	if hasSuffix {
+		return translated + ".*"
+	}
+	return translated
 }
 
 // TranslateMCPToolName translates MCP tool name format between providers.
