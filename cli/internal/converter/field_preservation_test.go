@@ -83,8 +83,8 @@ func TestFieldPreservation_RulesScoped(t *testing.T) {
 		{
 			name:     "to Claude",
 			target:   provider.ClaudeCode,
-			contains: []string{"Use strict TypeScript", "**Scope:**", "*.ts", "syllago:converted"},
-			absent:   []string{"alwaysApply:", "trigger:"},
+			contains: []string{"Use strict TypeScript", "paths:", "*.ts", "*.tsx"},
+			absent:   []string{"alwaysApply:", "trigger:", "globs:"},
 		},
 		{
 			name:     "to Gemini",
@@ -242,10 +242,11 @@ func TestFieldPreservation_Agents(t *testing.T) {
 			target: provider.CopilotCLI,
 			contains: []string{
 				"name: Kitchen Sink Agent",
+				"model: opus",              // model in frontmatter
 				"Limit to 25 turns",        // maxTurns → prose
 				"comprehensive test agent", // body preserved
 			},
-			filename: "agent.md",
+			filename: "kitchen-sink-agent.agent.md",
 		},
 		{
 			name:   "to Roo Code",
@@ -276,11 +277,12 @@ func TestFieldPreservation_Agents(t *testing.T) {
 			name:   "to Kiro",
 			target: provider.Kiro,
 			contains: []string{
-				`"name": "Kitchen Sink Agent"`,
-				`"model": "opus"`,
-				`"read"`,     // Read → read
-				`"fs_write"`, // Write → fs_write
-				`"shell"`,    // Bash → shell
+				"name: Kitchen Sink Agent",
+				"model: opus",
+				"- read",     // Read → read
+				"- fs_write", // Write → fs_write
+				"- shell",    // Bash → shell
+				"comprehensive test agent", // body preserved
 			},
 			minWarns: 1, // maxTurns not supported
 		},
@@ -295,10 +297,10 @@ func TestFieldPreservation_Agents(t *testing.T) {
 		if result.ExtraFiles != nil {
 			t.Errorf("expected no ExtraFiles (prompt inlined), got %d", len(result.ExtraFiles))
 		}
-		// Prompt body should be in the JSON content
+		// Prompt body should be in the markdown content
 		out := string(result.Content)
 		if !containsStr(out, "comprehensive test agent") {
-			t.Error("expected prompt body inlined in JSON content")
+			t.Error("expected prompt body in markdown content")
 		}
 	})
 }
@@ -501,7 +503,7 @@ func TestFieldPreservation_Hooks(t *testing.T) {
 		assertNotContains(t, out, `"Bash"`)         // not leaked
 	})
 
-	// Copilot CLI — events translated, matchers dropped with warning
+	// Copilot CLI — events translated, matchers preserved, version field present
 	t.Run("to Copilot", func(t *testing.T) {
 		result, err := conv.Render(canonical.Content, provider.CopilotCLI)
 		if err != nil {
@@ -510,18 +512,12 @@ func TestFieldPreservation_Hooks(t *testing.T) {
 		out := string(result.Content)
 		assertContains(t, out, "echo safety-check")
 		assertNotContains(t, out, "PreToolUse")
-
-		// Copilot doesn't support matchers — should warn
-		hasMatcherWarning := false
-		for _, w := range result.Warnings {
-			if containsStr(w, "matcher") {
-				hasMatcherWarning = true
-				break
-			}
-		}
-		if !hasMatcherWarning {
-			t.Error("expected warning about dropped matcher for Copilot")
-		}
+		// Matchers should be preserved (translated to Copilot tool name)
+		assertContains(t, out, "\"matcher\": \"bash\"") // Bash → bash
+		// Version field present
+		assertContains(t, out, "\"version\": 1")
+		// Type field present on entries
+		assertContains(t, out, "\"type\": \"command\"")
 	})
 
 	// Kiro — wrapped in agent file, events translated
@@ -908,13 +904,20 @@ func TestCanonicalize_GeminiHookEvents(t *testing.T) {
 }
 
 func TestCanonicalize_CopilotHookFormat(t *testing.T) {
+	// Copilot hooks use matcher groups: {"version":1, "hooks":{"event":[{"matcher":"...","hooks":[...]}]}}
 	input := []byte(`{
+		"version": 1,
 		"hooks": {
 			"preToolUse": [
 				{
-					"bash": "echo verify",
-					"timeoutSec": 10,
-					"comment": "Safety verification"
+					"hooks": [
+						{
+							"type": "command",
+							"bash": "echo verify",
+							"timeoutSec": 10,
+							"comment": "Safety verification"
+						}
+					]
 				}
 			]
 		}
@@ -929,7 +932,7 @@ func TestCanonicalize_CopilotHookFormat(t *testing.T) {
 	out := string(result.Content)
 	assertContains(t, out, "PreToolUse") // preToolUse → PreToolUse
 	assertContains(t, out, "echo verify")
-	assertContains(t, out, "10000") // 10 sec → 10000 ms
+	assertContains(t, out, `"timeout": 10`) // 10 sec stays 10 sec (canonical unit is seconds)
 	assertContains(t, out, "Safety verification")
 }
 
@@ -1047,7 +1050,7 @@ func TestRoundTrip_HooksClaudeGemini(t *testing.T) {
 	assertContains(t, out, "PreToolUse") // event translated back
 	assertContains(t, out, `"Bash"`)     // matcher translated back
 	assertContains(t, out, "echo check") // command preserved
-	assertContains(t, out, "3000")       // timeout preserved
+	assertContains(t, out, `"timeout": 3`) // timeout preserved (canonical seconds: 3000ms → 3s)
 }
 
 // =============================================================================
@@ -1070,14 +1073,11 @@ func TestCrossProvider_GeminiAgentToKiro(t *testing.T) {
 	}
 
 	out := string(result.Content)
-	assertContains(t, out, `"name": "researcher"`)
+	assertContains(t, out, "name: researcher")
 	// Gemini read_file → canonical Read → Kiro read
-	assertContains(t, out, `"read"`)
-	// Prompt body inlined in JSON
+	assertContains(t, out, "- read")
+	// Prompt body in markdown after frontmatter
 	assertContains(t, out, "Research and summarize")
-	if result.ExtraFiles != nil {
-		t.Errorf("expected no ExtraFiles (prompt inlined), got %d", len(result.ExtraFiles))
-	}
 }
 
 func TestCrossProvider_GeminiAgentToRooCode(t *testing.T) {
@@ -1478,7 +1478,7 @@ func TestFilenameSlugification(t *testing.T) {
 			input:    "---\nname: AWS Expert\ndescription: AWS specialist\n---\n\nAWS stuff.\n",
 			target:   provider.Kiro,
 			conv:     &AgentsConverter{},
-			expected: "aws-expert.json",
+			expected: "aws-expert.md",
 		},
 		{
 			name:     "OpenCode agent slug",

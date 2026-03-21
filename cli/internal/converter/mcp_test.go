@@ -2,6 +2,7 @@ package converter
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -376,12 +377,73 @@ func TestRooCodeMCPRender(t *testing.T) {
 	assertContains(t, out, "npx")
 	assertContains(t, out, "GITHUB_TOKEN")
 	assertNotContains(t, out, "autoApprove")
-	assertNotContains(t, out, "alwaysAllow")
+	assertContains(t, out, "alwaysAllow")
+	assertContains(t, out, "search_repositories")
 	assertEqual(t, "mcp.json", result.Filename)
 
-	if len(result.Warnings) == 0 {
-		t.Fatal("expected warning about dropped autoApprove")
+	// No warning about autoApprove — Roo Code supports it as alwaysAllow
+	for _, w := range result.Warnings {
+		if strings.Contains(w, "autoApprove") {
+			t.Errorf("unexpected autoApprove warning: %s", w)
+		}
 	}
+}
+
+func TestRooCodeMCPCanonicalizeAlwaysAllow(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"env": {"GITHUB_TOKEN": "token"},
+				"alwaysAllow": ["search_repositories", "list_issues"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	canonical, err := conv.Canonicalize(input, "roo-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(canonical.Content)
+	// alwaysAllow should be mapped to autoApprove in canonical form
+	assertContains(t, out, "autoApprove")
+	assertContains(t, out, "search_repositories")
+	assertContains(t, out, "list_issues")
+	assertNotContains(t, out, "alwaysAllow")
+}
+
+func TestRooCodeMCPAlwaysAllowRoundTrip(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"alwaysAllow": ["search_repositories"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+
+	// Roo Code → canonical
+	canonical, err := conv.Canonicalize(input, "roo-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// canonical → Roo Code
+	result, err := conv.Render(canonical.Content, provider.RooCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "alwaysAllow")
+	assertContains(t, out, "search_repositories")
+	assertNotContains(t, out, "autoApprove")
 }
 
 func TestRooCodeMCPPreservesHTTPServers(t *testing.T) {
@@ -622,5 +684,129 @@ func TestRooCodeMCPDropsCwd(t *testing.T) {
 
 	if len(result.Warnings) == 0 {
 		t.Fatal("expected warning about dropped cwd")
+	}
+}
+
+// --- Cursor MCP ---
+
+func TestCursorMCPRender(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"env": {"GITHUB_TOKEN": "token"},
+				"autoApprove": ["search_repositories"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Cursor)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "mcpServers")
+	assertContains(t, out, "npx")
+	assertContains(t, out, "GITHUB_TOKEN")
+	assertContains(t, out, "autoApprove")
+	assertContains(t, out, "search_repositories")
+	assertEqual(t, "mcp.json", result.Filename)
+}
+
+func TestCursorMCPCanonicalize(t *testing.T) {
+	// Cursor uses .cursor/mcp.json with mcpServers key — same as Claude Code
+	input := []byte(`{
+		"mcpServers": {
+			"local": {
+				"command": "node",
+				"args": ["server.js"],
+				"env": {"PORT": "3000"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Canonicalize(input, "cursor")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "mcpServers")
+	assertContains(t, out, "node")
+	assertContains(t, out, "server.js")
+	assertContains(t, out, "PORT")
+}
+
+func TestCursorMCPRoundTrip(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"env": {"GITHUB_TOKEN": "token"},
+				"autoApprove": ["search_repositories"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+
+	// Cursor → canonical
+	canonical, err := conv.Canonicalize(input, "cursor")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// canonical → Cursor
+	result, err := conv.Render(canonical.Content, provider.Cursor)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "mcpServers")
+	assertContains(t, out, "npx")
+	assertContains(t, out, "autoApprove")
+	assertContains(t, out, "search_repositories")
+}
+
+func TestCursorMCPDropsGeminiFields(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"server": {
+				"command": "node",
+				"args": ["s.js"],
+				"trust": "high",
+				"includeTools": ["search"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	canonical, err := conv.Canonicalize(input, "gemini-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Cursor)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertNotContains(t, out, "trust")
+	assertNotContains(t, out, "includeTools")
+
+	if len(result.Warnings) == 0 {
+		t.Fatal("expected warnings about dropped Gemini fields")
 	}
 }
