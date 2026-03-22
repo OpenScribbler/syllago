@@ -9,6 +9,7 @@ Vulnerabilities we want to hear about:
 - **MCP config injection** -- JSON merge inserting unexpected server entries into provider settings
 - **Symlink escape** -- content that resolves outside the expected install target via symlink manipulation
 - **Registry trust bypass** -- mechanisms to install unconfirmed content without user awareness or confirmation
+- **Private content leakage** -- content from private registries being published or shared to public registries through syllago commands
 
 ### Out of Scope (By Design)
 
@@ -23,6 +24,15 @@ Vulnerabilities we want to hear about:
 - **Registry content** from `syllago registry add <url>` is third-party and unverified
 - **App install scripts** from registries require explicit user confirmation before execution
 - Users should review hooks and MCP configs before installing -- they execute as your user
+
+## Registry Privacy
+
+Syllago includes a privacy gate system to prevent accidental leakage of content from private registries to public destinations.
+
+- **Detection:** Private registries are identified via hosting platform APIs (GitHub, GitLab, Bitbucket) and an optional `visibility` field in `registry.yaml`. Unknown visibility defaults to private.
+- **Tainting:** Content imported from private registries is permanently tagged with its source registry and visibility in metadata. This taint persists through the content's lifecycle in the library.
+- **Enforcement:** Four gates block private-tainted content from reaching public registries -- at `publish`, `share`, `loadout create` (warning), and `loadout publish` (block).
+- **Scope of protection:** This is a soft gate designed to prevent accidental leakage through syllago commands. It does not prevent intentional circumvention via direct filesystem operations, direct git commands, or modification of content after export. There is no override flag by design -- removing the taint requires re-adding the content from a public source.
 
 ## Reporting a Vulnerability
 
