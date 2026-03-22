@@ -636,3 +636,210 @@ func TestCursorAgentNoFrontmatter(t *testing.T) {
 	out := string(result.Content)
 	assertContains(t, out, "Just a plain agent with instructions.")
 }
+
+// --- permissionMode 5-value tests ---
+
+func TestCanonicalizePreservesDontAsk(t *testing.T) {
+	t.Parallel()
+	input := []byte("---\nname: auto\npermissionMode: dontAsk\n---\n\nRun autonomously.\n")
+
+	conv := &AgentsConverter{}
+	result, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "permissionMode: dontAsk")
+}
+
+func TestCanonicalizePreservesBypassPermissions(t *testing.T) {
+	t.Parallel()
+	input := []byte("---\nname: bypass\npermissionMode: bypassPermissions\n---\n\nFull autonomy.\n")
+
+	conv := &AgentsConverter{}
+	result, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "permissionMode: bypassPermissions")
+}
+
+func TestClaudeAgentAllFivePermissionModes(t *testing.T) {
+	t.Parallel()
+	modes := []string{"default", "acceptEdits", "dontAsk", "bypassPermissions", "plan"}
+
+	conv := &AgentsConverter{}
+	for _, mode := range modes {
+		t.Run(mode, func(t *testing.T) {
+			t.Parallel()
+			input := []byte("---\nname: test\npermissionMode: " + mode + "\n---\n\nInstructions.\n")
+
+			canonical, err := conv.Canonicalize(input, "claude-code")
+			if err != nil {
+				t.Fatalf("Canonicalize: %v", err)
+			}
+
+			result, err := conv.Render(canonical.Content, provider.ClaudeCode)
+			if err != nil {
+				t.Fatalf("Render: %v", err)
+			}
+
+			out := string(result.Content)
+			assertContains(t, out, "permissionMode: "+mode)
+		})
+	}
+}
+
+func TestCursorAgentDontAskProseNote(t *testing.T) {
+	t.Parallel()
+	input := []byte("---\nname: auto\npermissionMode: dontAsk\n---\n\nRun tasks.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Cursor)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// Should NOT have readonly (that's only for "plan")
+	assertNotContains(t, out, "readonly: true")
+	// Should have prose note
+	assertContains(t, out, "without asking for confirmation")
+	// Should have warning
+	if len(result.Warnings) == 0 {
+		t.Fatal("expected warning about permissionMode not fully supported by Cursor")
+	}
+}
+
+func TestGeminiAgentBypassPermissionsNote(t *testing.T) {
+	t.Parallel()
+	input := []byte("---\nname: bypass\npermissionMode: bypassPermissions\n---\n\nDo everything.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "Bypass all permission checks")
+}
+
+func TestGeminiAgentDefaultPermissionNoNote(t *testing.T) {
+	t.Parallel()
+	input := []byte("---\nname: normal\npermissionMode: default\n---\n\nNormal agent.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// "default" should NOT produce any permission note or conversion notes block
+	assertNotContains(t, out, "Permission mode")
+	assertNotContains(t, out, "permission checks")
+	assertNotContains(t, out, "syllago:converted")
+}
+
+func TestEffortMaxRoundTripClaude(t *testing.T) {
+	t.Parallel()
+	input := []byte("---\nname: maxeffort\neffort: max\n---\n\nTry hardest.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "effort: max")
+}
+
+func TestEffortMaxGeminiProse(t *testing.T) {
+	t.Parallel()
+	input := []byte("---\nname: maxeffort\neffort: max\n---\n\nTry hardest.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "Effort level: max")
+}
+
+func TestCopilotAgentDontAskNote(t *testing.T) {
+	t.Parallel()
+	input := []byte("---\nname: auto\npermissionMode: dontAsk\n---\n\nRun freely.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.CopilotCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "without asking for confirmation")
+}
+
+func TestCursorAgentDefaultPermissionNoNote(t *testing.T) {
+	t.Parallel()
+	input := []byte("---\nname: normal\npermissionMode: default\n---\n\nNormal work.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Cursor)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertNotContains(t, out, "readonly: true")
+	assertNotContains(t, out, "Permission mode")
+	assertNotContains(t, out, "permission checks")
+	// "default" should not trigger a warning about unsupported permissionMode
+	for _, w := range result.Warnings {
+		if strings.Contains(w, "permissionMode") {
+			t.Fatalf("unexpected permissionMode warning for 'default': %s", w)
+		}
+	}
+}

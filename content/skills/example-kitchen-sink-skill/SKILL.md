@@ -1,6 +1,11 @@
 ---
 name: Kitchen Sink Skill
 description: Example skill that populates every available frontmatter field for testing and reference
+license: MIT
+compatibility: ">=1.0"
+metadata:
+  author: syllago-team
+  category: reference
 allowed-tools:
   - Read
   - Glob
@@ -33,6 +38,9 @@ Nothing practical. It serves as a living reference for the complete set of metad
 
 - **name**: Display name shown in menus and listings
 - **description**: Human-readable summary of the skill's purpose
+- **license**: SPDX license identifier for the skill content
+- **compatibility**: Version constraint for compatible tool versions
+- **metadata**: Arbitrary key-value pairs for custom metadata
 - **allowed-tools**: Whitelist of tools this skill may use (Read, Glob, Grep)
 - **disallowed-tools**: Tools explicitly forbidden (Bash, Write)
 - **context**: Execution context ("fork" means isolated from main conversation)

@@ -32,6 +32,9 @@ type mcpServerConfig struct {
 	Disabled     bool     `json:"disabled,omitempty"`     // Runtime state
 	AutoApprove  []string `json:"autoApprove,omitempty"`  // Claude-specific
 
+	// Multi-provider fields
+	DisabledTools []string `json:"disabledTools,omitempty"` // Kiro, Windsurf, Roo Code
+
 	// Gemini alternate field names
 	HTTPUrl   string `json:"httpUrl,omitempty"`   // Gemini uses httpUrl instead of url
 	ServerUrl string `json:"serverUrl,omitempty"` // Windsurf uses serverUrl for HTTP transport
@@ -52,13 +55,14 @@ type mcpConfig struct {
 // rooCodeMCPServerConfig is Roo Code's per-server format.
 // Roo Code uses the standard mcpServers key but only supports a core subset of fields.
 type rooCodeMCPServerConfig struct {
-	Command     string            `json:"command,omitempty"`
-	Args        []string          `json:"args,omitempty"`
-	Env         map[string]string `json:"env,omitempty"`
-	Disabled    bool              `json:"disabled,omitempty"`
-	Type        string            `json:"type,omitempty"`
-	URL         string            `json:"url,omitempty"`
-	AlwaysAllow []string          `json:"alwaysAllow,omitempty"`
+	Command       string            `json:"command,omitempty"`
+	Args          []string          `json:"args,omitempty"`
+	Env           map[string]string `json:"env,omitempty"`
+	Disabled      bool              `json:"disabled,omitempty"`
+	Type          string            `json:"type,omitempty"`
+	URL           string            `json:"url,omitempty"`
+	AlwaysAllow   []string          `json:"alwaysAllow,omitempty"`
+	DisabledTools []string          `json:"disabledTools,omitempty"`
 }
 
 type rooCodeMCPConfig struct {
@@ -290,6 +294,9 @@ func renderClaudeMCP(cfg mcpConfig) (*Result, error) {
 		if len(server.ExcludeTools) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific)", name))
 		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Claude Code)", name))
+		}
 
 		out.MCPServers[name] = s
 	}
@@ -340,6 +347,9 @@ func renderCursorMCP(cfg mcpConfig) (*Result, error) {
 		if len(server.ExcludeTools) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific)", name))
 		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Cursor)", name))
+		}
 		out.MCPServers[name] = s
 	}
 
@@ -380,6 +390,9 @@ func renderGeminiMCP(cfg mcpConfig) (*Result, error) {
 		}
 		if len(server.OAuth) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Gemini CLI", name))
+		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Gemini CLI)", name))
 		}
 
 		out.MCPServers[name] = s
@@ -427,6 +440,9 @@ func renderCopilotMCP(cfg mcpConfig) (*Result, error) {
 		}
 		if len(server.OAuth) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Copilot CLI", name))
+		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Copilot CLI)", name))
 		}
 
 		out.MCPServers[name] = s
@@ -490,6 +506,9 @@ func renderOpencodeMCP(cfg mcpConfig) (*Result, error) {
 		}
 		if server.Cwd != "" {
 			warnings = append(warnings, fmt.Sprintf("server %q: cwd dropped (not supported by OpenCode)", name))
+		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by OpenCode)", name))
 		}
 
 		out.MCP[name] = s
@@ -567,13 +586,14 @@ func canonicalizeRooCodeMCP(content []byte) (*Result, error) {
 
 	for name, s := range src.MCPServers {
 		out.MCPServers[name] = mcpServerConfig{
-			Command:     s.Command,
-			Args:        s.Args,
-			Env:         s.Env,
-			Disabled:    s.Disabled,
-			Type:        s.Type,
-			URL:         s.URL,
-			AutoApprove: s.AlwaysAllow, // alwaysAllow → autoApprove in canonical
+			Command:       s.Command,
+			Args:          s.Args,
+			Env:           s.Env,
+			Disabled:      s.Disabled,
+			Type:          s.Type,
+			URL:           s.URL,
+			AutoApprove:   s.AlwaysAllow, // alwaysAllow → autoApprove in canonical
+			DisabledTools: s.DisabledTools,
 		}
 	}
 
@@ -615,6 +635,9 @@ func renderClineMCP(cfg mcpConfig) (*Result, error) {
 		if len(server.OAuth) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Cline", name))
 		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Cline)", name))
+		}
 	}
 
 	result, err := json.MarshalIndent(out, "", "  ")
@@ -630,13 +653,14 @@ func renderRooCodeMCP(cfg mcpConfig) (*Result, error) {
 
 	for name, server := range cfg.MCPServers {
 		out.MCPServers[name] = rooCodeMCPServerConfig{
-			Command:     server.Command,
-			Args:        server.Args,
-			Env:         server.Env,
-			Disabled:    server.Disabled,
-			Type:        server.Type,
-			URL:         server.URL,
-			AlwaysAllow: server.AutoApprove, // autoApprove → alwaysAllow
+			Command:       server.Command,
+			Args:          server.Args,
+			Env:           server.Env,
+			Disabled:      server.Disabled,
+			Type:          server.Type,
+			URL:           server.URL,
+			AlwaysAllow:   server.AutoApprove, // autoApprove → alwaysAllow
+			DisabledTools: server.DisabledTools,
 		}
 
 		// Warn about dropped provider-specific fields
@@ -690,13 +714,14 @@ func renderKiroMCP(cfg mcpConfig) (*Result, error) {
 
 	for name, server := range cfg.MCPServers {
 		s := kiroServerConfig{
-			Command:     server.Command,
-			Args:        server.Args,
-			Env:         server.Env,
-			URL:         server.URL,
-			Headers:     server.Headers,
-			Disabled:    server.Disabled,
-			AutoApprove: server.AutoApprove,
+			Command:       server.Command,
+			Args:          server.Args,
+			Env:           server.Env,
+			URL:           server.URL,
+			Headers:       server.Headers,
+			Disabled:      server.Disabled,
+			AutoApprove:   server.AutoApprove,
+			DisabledTools: server.DisabledTools,
 		}
 
 		// Warn about dropped Gemini-specific fields
@@ -723,12 +748,13 @@ func renderKiroMCP(cfg mcpConfig) (*Result, error) {
 // windsurfServerConfig is Windsurf's per-server format.
 // Windsurf uses the standard mcpServers key but uses serverUrl (not url) for HTTP transport.
 type windsurfServerConfig struct {
-	Command   string            `json:"command,omitempty"`
-	Args      []string          `json:"args,omitempty"`
-	Env       map[string]string `json:"env,omitempty"`
-	ServerUrl string            `json:"serverUrl,omitempty"` // HTTP transport
-	URL       string            `json:"url,omitempty"`       // SSE transport
-	Headers   map[string]string `json:"headers,omitempty"`
+	Command       string            `json:"command,omitempty"`
+	Args          []string          `json:"args,omitempty"`
+	Env           map[string]string `json:"env,omitempty"`
+	ServerUrl     string            `json:"serverUrl,omitempty"` // HTTP transport
+	URL           string            `json:"url,omitempty"`       // SSE transport
+	Headers       map[string]string `json:"headers,omitempty"`
+	DisabledTools []string          `json:"disabledTools,omitempty"`
 }
 
 type windsurfMCPConfig struct {
@@ -745,10 +771,11 @@ func canonicalizeWindsurfMCP(content []byte) (*Result, error) {
 
 	for name, s := range src.MCPServers {
 		canonical := mcpServerConfig{
-			Command: s.Command,
-			Args:    s.Args,
-			Env:     s.Env,
-			Headers: s.Headers,
+			Command:       s.Command,
+			Args:          s.Args,
+			Env:           s.Env,
+			Headers:       s.Headers,
+			DisabledTools: s.DisabledTools,
 		}
 
 		// Normalize serverUrl → url (HTTP transport)
@@ -782,10 +809,11 @@ func renderWindsurfMCP(cfg mcpConfig) (*Result, error) {
 
 	for name, server := range cfg.MCPServers {
 		s := windsurfServerConfig{
-			Command: server.Command,
-			Args:    server.Args,
-			Env:     server.Env,
-			Headers: server.Headers,
+			Command:       server.Command,
+			Args:          server.Args,
+			Env:           server.Env,
+			Headers:       server.Headers,
+			DisabledTools: server.DisabledTools,
 		}
 
 		// Map url → serverUrl for HTTP, keep url for SSE
@@ -865,6 +893,9 @@ func renderZedMCP(cfg mcpConfig) (*Result, error) {
 		}
 		if len(server.OAuth) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Zed", name))
+		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Zed)", name))
 		}
 	}
 
