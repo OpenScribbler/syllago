@@ -28,25 +28,25 @@ type Dependency struct {
 
 // Meta holds metadata for a single content item.
 type Meta struct {
-	FormatVersion  int          `yaml:"format_version,omitempty"` // syllago format version (1 = current)
-	ID             string       `yaml:"id"`
-	Name           string       `yaml:"name"`
-	Description    string       `yaml:"description,omitempty"`
-	Version        string       `yaml:"version,omitempty"`
-	Type           string       `yaml:"type,omitempty"`
-	Author         string       `yaml:"author,omitempty"`
-	Source         string       `yaml:"source,omitempty"`
-	Tags           []string     `yaml:"tags,omitempty"`
-	Hidden         bool         `yaml:"hidden,omitempty"`
-	Dependencies   []Dependency `yaml:"dependencies,omitempty"`
-	CreatedAt      *time.Time   `yaml:"created_at,omitempty"` // when item was scaffolded via syllago create
-	PromotedAt     *time.Time   `yaml:"promoted_at,omitempty"`
-	PRBranch       string       `yaml:"pr_branch,omitempty"`
-	SourceProvider string       `yaml:"source_provider,omitempty"` // provider slug content was imported from
-	SourceFormat   string       `yaml:"source_format,omitempty"`   // original file extension (e.g. "mdc", "md")
-	SourceType     string       `yaml:"source_type,omitempty"`     // git | filesystem | registry | provider
-	SourceURL      string       `yaml:"source_url,omitempty"`      // for future syllago update capability
-	HasSource      bool         `yaml:"has_source,omitempty"`      // whether .source/ directory exists
+	FormatVersion    int          `yaml:"format_version,omitempty"` // syllago format version (1 = current)
+	ID               string       `yaml:"id"`
+	Name             string       `yaml:"name"`
+	Description      string       `yaml:"description,omitempty"`
+	Version          string       `yaml:"version,omitempty"`
+	Type             string       `yaml:"type,omitempty"`
+	Author           string       `yaml:"author,omitempty"`
+	Source           string       `yaml:"source,omitempty"`
+	Tags             []string     `yaml:"tags,omitempty"`
+	Hidden           bool         `yaml:"hidden,omitempty"`
+	Dependencies     []Dependency `yaml:"dependencies,omitempty"`
+	CreatedAt        *time.Time   `yaml:"created_at,omitempty"` // when item was scaffolded via syllago create
+	PromotedAt       *time.Time   `yaml:"promoted_at,omitempty"`
+	PRBranch         string       `yaml:"pr_branch,omitempty"`
+	SourceProvider   string       `yaml:"source_provider,omitempty"`   // provider slug content was imported from
+	SourceFormat     string       `yaml:"source_format,omitempty"`     // original file extension (e.g. "mdc", "md")
+	SourceType       string       `yaml:"source_type,omitempty"`       // git | filesystem | registry | provider
+	SourceURL        string       `yaml:"source_url,omitempty"`        // for future syllago update capability
+	HasSource        bool         `yaml:"has_source,omitempty"`        // whether .source/ directory exists
 	SourceHash       string       `yaml:"source_hash,omitempty"`       // SHA-256 of source content at import time
 	SourceRegistry   string       `yaml:"source_registry,omitempty"`   // registry name content was imported from (e.g. "acme/internal-rules")
 	SourceVisibility string       `yaml:"source_visibility,omitempty"` // visibility at import time: "public", "private", "unknown"

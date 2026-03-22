@@ -19,8 +19,8 @@ const FileName = "config.json"
 type Registry struct {
 	Name                string     `json:"name"`
 	URL                 string     `json:"url"`
-	Ref                 string     `json:"ref,omitempty"`                  // branch/tag/commit, defaults to default branch
-	Visibility          string     `json:"visibility,omitempty"`           // "public", "private", "unknown"
+	Ref                 string     `json:"ref,omitempty"`                   // branch/tag/commit, defaults to default branch
+	Visibility          string     `json:"visibility,omitempty"`            // "public", "private", "unknown"
 	VisibilityCheckedAt *time.Time `json:"visibility_checked_at,omitempty"` // for TTL cache (re-probe after 1 hour)
 }
 
