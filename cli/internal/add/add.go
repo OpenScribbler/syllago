@@ -15,6 +15,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 // ItemStatus describes the relationship between a discovered provider item
@@ -403,7 +404,7 @@ var timeNow = func() time.Time { return time.Now().UTC() }
 // traceSymlinkTaint checks if filePath is a symlink (or inside a symlink dir)
 // pointing back into the library at globalDir. If so, reads the target item's
 // .syllago.yaml and returns its SourceRegistry and SourceVisibility.
-func traceSymlinkTaint(filePath, globalDir string) (registry, visibility string) {
+func traceSymlinkTaint(filePath, globalDir string) (srcRegistry, srcVisibility string) {
 	if globalDir == "" {
 		return "", ""
 	}
@@ -436,7 +437,7 @@ func traceSymlinkTaint(filePath, globalDir string) (registry, visibility string)
 
 // hashMatchTaint scans all library items with private taint and checks if
 // any of them have the same source hash. Returns the taint if found.
-func hashMatchTaint(hash, globalDir string) (registry, visibility string) {
+func hashMatchTaint(hash, globalDir string) (srcRegistry, srcVisibility string) {
 	if globalDir == "" || hash == "" {
 		return "", ""
 	}
@@ -448,7 +449,7 @@ func hashMatchTaint(hash, globalDir string) (registry, visibility string) {
 		if meta == nil {
 			continue
 		}
-		if meta.SourceVisibility == "private" && meta.SourceHash == hash {
+		if registry.IsPrivate(meta.SourceVisibility) && meta.SourceRegistry != "" && meta.SourceHash == hash {
 			return meta.SourceRegistry, meta.SourceVisibility
 		}
 	}

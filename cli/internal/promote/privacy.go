@@ -24,10 +24,14 @@ func CheckPrivacyGate(item catalog.ContentItem, targetRegistry, repoRoot string)
 		for _, r := range cfg.Registries {
 			if r.Name == targetRegistry {
 				targetVisibility = r.Visibility
-				// Re-probe if stale
+				// Re-probe if stale, resolving against manifest (stricter wins)
 				if registry.NeedsReprobe(r.VisibilityCheckedAt) {
 					if vis, probeErr := registry.ProbeVisibility(r.URL); probeErr == nil {
-						targetVisibility = vis
+						manifestDecl := ""
+						if manifest, _ := registry.LoadManifest(targetRegistry); manifest != nil {
+							manifestDecl = manifest.Visibility
+						}
+						targetVisibility = registry.ResolveVisibility(vis, manifestDecl)
 					}
 				}
 				break

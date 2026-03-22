@@ -201,7 +201,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 		}
 
 		// Privacy warning: alert if exporting private-tainted content.
-		if item.Meta != nil && item.Meta.SourceRegistry != "" && item.Meta.SourceVisibility == "private" {
+		if item.Meta != nil && item.Meta.SourceRegistry != "" && registry.IsPrivate(item.Meta.SourceVisibility) {
 			fmt.Fprintf(output.ErrWriter, "  warning: %s originated from private registry %q — do not commit exported files to public repositories\n",
 				item.Name, item.Meta.SourceRegistry)
 		}
