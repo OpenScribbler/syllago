@@ -56,16 +56,18 @@ type hookMatcher struct {
 
 // hooksConfig is the top-level hooks structure (syllago canonical format).
 type hooksConfig struct {
-	Hooks map[string][]hookMatcher `json:"hooks"`
+	Hooks          map[string][]hookMatcher `json:"hooks"`
+	SourceProvider string                   `json:"sourceProvider,omitempty"`
 }
 
 // HookData is the canonical representation of a single hook group (flat format).
 // One event + one matcher + one or more hook entries. Used by the compatibility
 // engine, TUI rendering, and import splitting.
 type HookData struct {
-	Event   string      `json:"event"`
-	Matcher string      `json:"matcher,omitempty"`
-	Hooks   []HookEntry `json:"hooks"`
+	Event          string      `json:"event"`
+	Matcher        string      `json:"matcher,omitempty"`
+	Hooks          []HookEntry `json:"hooks"`
+	SourceProvider string      `json:"sourceProvider,omitempty"`
 }
 
 // DetectHookFormat returns "flat" if content has a top-level "event" field,
@@ -149,9 +151,12 @@ func LoadHookData(item catalog.ContentItem) (HookData, error) {
 // RenderFlat converts a HookData into the target provider's format for a single hook.
 func (c *HooksConverter) RenderFlat(hook HookData, target provider.Provider) (*Result, error) {
 	// Wrap the single hook in a hooksConfig so we can reuse existing render logic
-	cfg := hooksConfig{Hooks: map[string][]hookMatcher{
-		hook.Event: {{Matcher: hook.Matcher, Hooks: hook.Hooks}},
-	}}
+	cfg := hooksConfig{
+		Hooks: map[string][]hookMatcher{
+			hook.Event: {{Matcher: hook.Matcher, Hooks: hook.Hooks}},
+		},
+		SourceProvider: hook.SourceProvider,
+	}
 	content, err := json.Marshal(cfg)
 	if err != nil {
 		return nil, err
@@ -243,6 +248,8 @@ func canonicalizeFlatHook(content []byte, sourceProvider string) (*Result, error
 		}
 	}
 
+	hd.SourceProvider = sourceProvider
+
 	out, err := json.MarshalIndent(hd, "", "  ")
 	if err != nil {
 		return nil, err
@@ -306,7 +313,7 @@ func canonicalizeStandardHooks(content []byte, sourceProvider string) (*Result, 
 	}
 
 	// Translate event names and matcher tool names to canonical
-	canonical := hooksConfig{Hooks: make(map[string][]hookMatcher)}
+	canonical := hooksConfig{Hooks: make(map[string][]hookMatcher), SourceProvider: sourceProvider}
 	for event, matchers := range cfg.Hooks {
 		canonicalEvent := event
 		if sourceProvider != "claude-code" {
@@ -349,7 +356,7 @@ func canonicalizeCopilotHooks(content []byte) (*Result, error) {
 		return nil, fmt.Errorf("parsing Copilot hooks JSON: %w", err)
 	}
 
-	canonical := hooksConfig{Hooks: make(map[string][]hookMatcher)}
+	canonical := hooksConfig{Hooks: make(map[string][]hookMatcher), SourceProvider: "copilot-cli"}
 	for event, groups := range cfg.Hooks {
 		canonicalEvent := ReverseTranslateHookEvent(event, "copilot-cli")
 
@@ -395,6 +402,11 @@ func renderStandardHooks(cfg hooksConfig, targetSlug string, llmMode string) (*R
 	out := hooksConfig{Hooks: make(map[string][]hookMatcher)}
 	var warnings []string
 	extraFiles := map[string][]byte{}
+
+	// Check for structured output capability loss
+	if cfg.SourceProvider != "" {
+		warnings = append(warnings, structuredOutputWarnings(cfg.SourceProvider, targetSlug)...)
+	}
 	scriptIdx := 0
 
 	for event, matchers := range cfg.Hooks {
@@ -492,6 +504,11 @@ func renderCopilotHooks(cfg hooksConfig, llmMode string) (*Result, error) {
 	}
 	var warnings []string
 	extraFiles := map[string][]byte{}
+
+	// Check for structured output capability loss
+	if cfg.SourceProvider != "" {
+		warnings = append(warnings, structuredOutputWarnings(cfg.SourceProvider, "copilot-cli")...)
+	}
 	scriptIdx := 0
 
 	for event, matchers := range cfg.Hooks {
@@ -589,6 +606,12 @@ type kiroHooksAgent struct {
 
 func renderKiroHooks(cfg hooksConfig, llmMode string) (*Result, error) {
 	var warnings []string
+
+	// Check for structured output capability loss
+	if cfg.SourceProvider != "" {
+		warnings = append(warnings, structuredOutputWarnings(cfg.SourceProvider, "kiro")...)
+	}
+
 	kiroHooks := make(map[string][]kiroHookEntry)
 
 	for event, matchers := range cfg.Hooks {
@@ -651,6 +674,24 @@ func renderKiroHooks(cfg hooksConfig, llmMode string) (*Result, error) {
 		return nil, err
 	}
 	return &Result{Content: result, Filename: "syllago-hooks.json", Warnings: warnings}, nil
+}
+
+// --- Structured output warnings ---
+
+// structuredOutputWarnings returns warnings if the source provider supports
+// structured hook output fields that the target does not. This is called during
+// render to alert users that hook output behavior will be silently lost.
+func structuredOutputWarnings(sourceProvider, targetSlug string) []string {
+	lost := OutputFieldsLostWarnings(sourceProvider, targetSlug)
+	if len(lost) == 0 {
+		return nil
+	}
+
+	// Build a single warning listing all lost fields
+	return []string{
+		fmt.Sprintf("structured hook output fields [%s] supported by %s but not by %s (hook output will be ignored)",
+			strings.Join(lost, ", "), sourceProvider, targetSlug),
+	}
 }
 
 // --- LLM wrapper script generation ---

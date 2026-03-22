@@ -10,6 +10,95 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// hookConfigHints maps provider slugs to the file path where hook configuration
+// should be added. Only includes providers that support hooks.
+var hookConfigHints = map[string]string{
+	"gemini-cli":  ".gemini/settings.json hooks section",
+	"cursor":      ".cursor/settings.json hooks section",
+	"windsurf":    ".windsurf/hooks.json",
+	"copilot-cli": ".github/hooks/ directory",
+	"kiro":        ".kiro/ hooks agent file",
+	"codex":       ".codex/hooks.json",
+}
+
+// hookScopingNotes describes scoping limitations per provider.
+// Skill-scoped hooks are a Claude Code feature — other providers run hooks globally.
+var hookScopingNotes = map[string]string{
+	"gemini-cli":  "Gemini hooks are global (skill scoping will be lost)",
+	"cursor":      "Cursor hooks are global (skill scoping will be lost)",
+	"windsurf":    "Windsurf hooks are global (skill scoping will be lost)",
+	"copilot-cli": "Copilot hooks are global (skill scoping will be lost)",
+	"kiro":        "Kiro hooks are global (skill scoping will be lost)",
+	"codex":       "Codex hooks are global (skill scoping will be lost)",
+}
+
+// formatSkillHookWarnings extracts hook details from SkillMeta.Hooks and generates
+// actionable warnings for providers that support hooks. Returns nil if hooks is nil
+// or cannot be interpreted.
+func formatSkillHookWarnings(skillName string, hooks any, targetSlug string) []string {
+	if hooks == nil {
+		return nil
+	}
+
+	configHint, hasHooks := hookConfigHints[targetSlug]
+	if !hasHooks {
+		return nil // hookless provider — caller handles prose embedding
+	}
+
+	// SkillMeta.Hooks comes from YAML unmarshal into any.
+	// Expected shape: map[string]interface{} with event names as keys,
+	// each mapping to a list of hook entries (maps with command/matcher/timeout).
+	hooksMap, ok := hooks.(map[string]interface{})
+	if !ok {
+		// Fallback: hooks is present but not a map (unusual). Generate a generic warning.
+		return []string{
+			fmt.Sprintf("skill %q has hooks that require separate configuration in %s", skillName, configHint),
+		}
+	}
+
+	label := skillName
+	if label == "" {
+		label = "(unnamed skill)"
+	}
+
+	var warnings []string
+	warnings = append(warnings, fmt.Sprintf("skill %q has hooks requiring separate configuration:", label))
+
+	for event, matchersRaw := range hooksMap {
+		matchers, ok := matchersRaw.([]interface{})
+		if !ok {
+			warnings = append(warnings, fmt.Sprintf("  Event: %s (could not parse hook entries)", event))
+			continue
+		}
+
+		for _, entryRaw := range matchers {
+			entry, ok := entryRaw.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			command, _ := entry["command"].(string)
+			matcher, _ := entry["matcher"].(string)
+
+			detail := fmt.Sprintf("  Event: %s", event)
+			if matcher != "" {
+				detail += fmt.Sprintf(", Matcher: %s", matcher)
+			}
+			if command != "" {
+				detail += fmt.Sprintf(", Command: %s", command)
+			}
+			warnings = append(warnings, detail)
+		}
+	}
+
+	warnings = append(warnings, fmt.Sprintf("  -> Add to %s", configHint))
+	if note, ok := hookScopingNotes[targetSlug]; ok {
+		warnings = append(warnings, fmt.Sprintf("  -> %s", note))
+	}
+
+	return warnings
+}
+
 func init() {
 	Register(&SkillsConverter{})
 }
@@ -189,9 +278,8 @@ func renderGeminiSkill(meta SkillMeta, body string) (*Result, error) {
 	if meta.ArgumentHint != "" {
 		notes = append(notes, fmt.Sprintf("Usage: %s", meta.ArgumentHint))
 	}
-	if meta.Hooks != nil {
-		notes = append(notes, "**Hooks:** This skill defines lifecycle hooks that execute shell commands. Hooks require a provider with skill-scoped hook support (currently only Claude Code).")
-	}
+	// Hooks: generate actionable warnings instead of prose (Gemini supports hooks)
+	hookWarnings := formatSkillHookWarnings(meta.Name, meta.Hooks, "gemini-cli")
 
 	outBody := body
 	if len(notes) > 0 {
@@ -215,7 +303,7 @@ func renderGeminiSkill(meta SkillMeta, body string) (*Result, error) {
 	buf.WriteString(outBody)
 	buf.WriteString("\n")
 
-	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
 }
 
 func renderClaudeSkill(meta SkillMeta, body string) (*Result, error) {
@@ -278,9 +366,8 @@ func renderCursorSkill(meta SkillMeta, body string) (*Result, error) {
 	if meta.ArgumentHint != "" {
 		notes = append(notes, fmt.Sprintf("Usage: %s", meta.ArgumentHint))
 	}
-	if meta.Hooks != nil {
-		notes = append(notes, "**Hooks:** This skill defines lifecycle hooks that execute shell commands. Hooks require a provider with skill-scoped hook support (currently only Claude Code).")
-	}
+	// Hooks: generate actionable warnings instead of prose (Cursor supports hooks)
+	hookWarnings := formatSkillHookWarnings(meta.Name, meta.Hooks, "cursor")
 
 	outBody := cleanBody
 	if len(notes) > 0 {
@@ -304,7 +391,7 @@ func renderCursorSkill(meta SkillMeta, body string) (*Result, error) {
 	buf.WriteString(outBody)
 	buf.WriteString("\n")
 
-	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
 }
 
 // windsurfSkillMeta is the subset of fields Windsurf supports in SKILL.md frontmatter.
@@ -351,9 +438,8 @@ func renderWindsurfSkill(meta SkillMeta, body string) (*Result, error) {
 	if meta.ArgumentHint != "" {
 		notes = append(notes, fmt.Sprintf("Usage: %s", meta.ArgumentHint))
 	}
-	if meta.Hooks != nil {
-		notes = append(notes, "**Hooks:** This skill defines lifecycle hooks that execute shell commands. Hooks require a provider with skill-scoped hook support (currently only Claude Code).")
-	}
+	// Hooks: generate actionable warnings instead of prose (Windsurf supports hooks)
+	hookWarnings := formatSkillHookWarnings(meta.Name, meta.Hooks, "windsurf")
 
 	outBody := cleanBody
 	if len(notes) > 0 {
@@ -376,7 +462,7 @@ func renderWindsurfSkill(meta SkillMeta, body string) (*Result, error) {
 	buf.WriteString(outBody)
 	buf.WriteString("\n")
 
-	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
 }
 
 // canonicalizeSkillFromMarkdown wraps plain markdown content in minimal canonical skill format.
@@ -467,8 +553,14 @@ func renderPlainMarkdownSkill(meta SkillMeta, body string) (*Result, error) {
 }
 
 // renderKiroSkill renders a canonical skill to a Kiro steering file (plain markdown).
+// Kiro supports hooks, so skill hooks generate actionable warnings instead of only prose.
 func renderKiroSkill(meta SkillMeta, body string) (*Result, error) {
-	return renderPlainMarkdownSkill(meta, body)
+	result, err := renderPlainMarkdownSkill(meta, body)
+	if err != nil {
+		return nil, err
+	}
+	result.Warnings = formatSkillHookWarnings(meta.Name, meta.Hooks, "kiro")
+	return result, nil
 }
 
 // renderOpenCodeSkill renders a canonical skill to OpenCode's plain markdown format.

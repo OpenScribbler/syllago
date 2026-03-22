@@ -1,6 +1,7 @@
 package converter
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -428,4 +429,186 @@ func TestCursorSkillRoundTrip(t *testing.T) {
 	assertContains(t, out, "disable-model-invocation: true")
 	assertContains(t, out, "Help with tasks.")
 	assertEqual(t, "SKILL.md", result.Filename)
+}
+
+// --- Skill hook conversion warnings ---
+
+func TestSkillWithHooks_ToGemini_ActionableWarnings(t *testing.T) {
+	input := []byte("---\nname: greeting\ndescription: Greeting skill\nhooks:\n  PreToolUse:\n    - matcher: \"Edit|Write\"\n      command: ./validate.sh\n---\n\nGreet the user.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	// Should have actionable warnings with hook details
+	if len(result.Warnings) == 0 {
+		t.Fatal("expected warnings for skill hooks, got none")
+	}
+	warningText := joinWarnings(result.Warnings)
+	assertContains(t, warningText, "greeting")
+	assertContains(t, warningText, "PreToolUse")
+	assertContains(t, warningText, "Edit|Write")
+	assertContains(t, warningText, "./validate.sh")
+	assertContains(t, warningText, ".gemini/settings.json")
+	assertContains(t, warningText, "skill scoping will be lost")
+
+	// Hooks should NOT be embedded as prose in the content
+	out := string(result.Content)
+	assertNotContains(t, out, "Hooks:")
+	assertNotContains(t, out, "skill-scoped hook support")
+}
+
+func TestSkillWithHooks_ToCursor_ActionableWarnings(t *testing.T) {
+	input := []byte("---\nname: validator\ndescription: Validation skill\nhooks:\n  PostToolUse:\n    - command: ./check.sh\n---\n\nValidate outputs.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Cursor)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	if len(result.Warnings) == 0 {
+		t.Fatal("expected warnings for skill hooks, got none")
+	}
+	warningText := joinWarnings(result.Warnings)
+	assertContains(t, warningText, "validator")
+	assertContains(t, warningText, "PostToolUse")
+	assertContains(t, warningText, "./check.sh")
+	assertContains(t, warningText, ".cursor/settings.json")
+}
+
+func TestSkillWithHooks_ToWindsurf_ActionableWarnings(t *testing.T) {
+	input := []byte("---\nname: linter\ndescription: Lint skill\nhooks:\n  PreToolUse:\n    - matcher: Bash\n      command: ./lint.sh\n---\n\nLint code.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	if len(result.Warnings) == 0 {
+		t.Fatal("expected warnings for skill hooks, got none")
+	}
+	warningText := joinWarnings(result.Warnings)
+	assertContains(t, warningText, "linter")
+	assertContains(t, warningText, "PreToolUse")
+	assertContains(t, warningText, "./lint.sh")
+	assertContains(t, warningText, ".windsurf/hooks.json")
+}
+
+func TestSkillWithHooks_ToKiro_ActionableWarnings(t *testing.T) {
+	input := []byte("---\nname: guard\ndescription: Guard skill\nhooks:\n  SessionStart:\n    - command: ./setup.sh\n---\n\nGuard the session.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	if len(result.Warnings) == 0 {
+		t.Fatal("expected warnings for skill hooks, got none")
+	}
+	warningText := joinWarnings(result.Warnings)
+	assertContains(t, warningText, "guard")
+	assertContains(t, warningText, "SessionStart")
+	assertContains(t, warningText, "./setup.sh")
+	assertContains(t, warningText, ".kiro/")
+}
+
+func TestSkillWithHooks_ToOpenCode_ProseEmbedding(t *testing.T) {
+	// OpenCode is hookless — hooks should be embedded as prose, no warnings
+	input := []byte("---\nname: checker\ndescription: Check skill\nhooks:\n  PreToolUse:\n    - command: ./check.sh\n---\n\nCheck things.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.OpenCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	// No warnings for hookless provider
+	if len(result.Warnings) != 0 {
+		t.Fatalf("expected no warnings for hookless provider, got %v", result.Warnings)
+	}
+
+	// Hooks should be embedded as prose
+	out := string(result.Content)
+	assertContains(t, out, "Hooks:")
+	assertContains(t, out, "skill-scoped hook support")
+}
+
+func TestSkillWithHooks_ToClaude_NoWarnings(t *testing.T) {
+	// Claude Code round-trip: hooks preserved in frontmatter, no warnings needed
+	input := []byte("---\nname: test\nhooks:\n  PreToolUse:\n    - command: ./test.sh\n---\n\nTest.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	if len(result.Warnings) != 0 {
+		t.Fatalf("expected no warnings for Claude round-trip, got %v", result.Warnings)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "hooks:")
+	assertContains(t, out, "PreToolUse")
+	assertContains(t, out, "./test.sh")
+}
+
+func TestSkillNoHooks_ToGemini_NoWarnings(t *testing.T) {
+	// Skill without hooks should produce no warnings
+	input := []byte("---\nname: simple\ndescription: Simple skill\n---\n\nDo simple things.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	if len(result.Warnings) != 0 {
+		t.Fatalf("expected no warnings for hookless skill, got %v", result.Warnings)
+	}
+}
+
+// joinWarnings concatenates all warnings into a single string for assertion convenience.
+func joinWarnings(warnings []string) string {
+	return strings.Join(warnings, "\n")
 }
