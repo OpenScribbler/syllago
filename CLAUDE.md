@@ -33,3 +33,11 @@ Syllago is **pre-release and unpublished**. No users depend on current APIs, CLI
 - **Hooks and MCP configs** merge into provider settings files (JSON merge). All other content types use filesystem (files, dirs, symlinks).
 - Go conventions: see `cli/CLAUDE.md`
 - TUI component patterns: see `cli/internal/tui/CLAUDE.md`
+
+## Go Edit Patterns
+
+When adding new functionality that requires both a new import AND new code using that import:
+
+1. **Prefer a new file** over modifying an existing file when adding a cohesive set of functions (e.g., `privacy.go` for privacy gate logic). This avoids any risk of import/usage sequencing issues.
+2. **If modifying an existing file**, add the import and the code that uses it in a **single Edit call** — never add an import in one edit and the function using it in a separate edit. Between edits, `goimports` or `gopls` may strip the "unused" import.
+3. **After editing Go files**, verify with `grep` that your changes survived before proceeding. System reminders about files being "modified by a linter" mean the edit may not have applied as expected.
