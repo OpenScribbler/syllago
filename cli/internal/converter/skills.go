@@ -121,6 +121,8 @@ func (c *SkillsConverter) Render(content []byte, target provider.Provider) (*Res
 		return renderKiroSkill(meta, body)
 	case "cursor":
 		return renderCursorSkill(meta, body)
+	case "windsurf":
+		return renderWindsurfSkill(meta, body)
 	default:
 		// Claude Code, Copilot CLI — full frontmatter preserved
 		return renderClaudeSkill(meta, body)
@@ -292,6 +294,78 @@ func renderCursorSkill(meta SkillMeta, body string) (*Result, error) {
 		DisableModelInvocation: meta.DisableModelInvocation,
 	}
 	fm, err := renderFrontmatter(cm)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+}
+
+// windsurfSkillMeta is the subset of fields Windsurf supports in SKILL.md frontmatter.
+// Windsurf only supports name and description — same as Gemini CLI.
+type windsurfSkillMeta struct {
+	Name        string `yaml:"name,omitempty"`
+	Description string `yaml:"description,omitempty"`
+}
+
+// renderWindsurfSkill renders a canonical skill to Windsurf's SKILL.md format.
+// Windsurf uses the Agent Skills standard (SKILL.md with YAML frontmatter) but only
+// supports name and description fields. Unsupported fields are embedded as prose notes.
+func renderWindsurfSkill(meta SkillMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	// Build behavioral embedding notes for fields Windsurf doesn't support
+	var notes []string
+	if len(meta.AllowedTools) > 0 {
+		translated := TranslateTools(meta.AllowedTools, "windsurf")
+		notes = append(notes, fmt.Sprintf("**Tool restriction:** Use only %s tools.", strings.Join(translated, ", ")))
+	}
+	if len(meta.DisallowedTools) > 0 {
+		translated := TranslateTools(meta.DisallowedTools, "windsurf")
+		notes = append(notes, fmt.Sprintf("**Do not use:** %s tools.", strings.Join(translated, ", ")))
+	}
+	if meta.Context == "fork" {
+		notes = append(notes, "Run in an isolated context. Do not modify the main conversation.")
+	}
+	if meta.Agent != "" {
+		notes = append(notes, fmt.Sprintf("Use a %s-focused approach.", strings.ToLower(meta.Agent)))
+	}
+	if meta.Model != "" {
+		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+	if meta.DisableModelInvocation {
+		notes = append(notes, "Only invoke when the user explicitly requests it.")
+	}
+	if meta.UserInvocable != nil && *meta.UserInvocable {
+		notes = append(notes, "Intended to appear in the command menu.")
+	}
+	if meta.ArgumentHint != "" {
+		notes = append(notes, fmt.Sprintf("Usage: %s", meta.ArgumentHint))
+	}
+	if meta.Hooks != nil {
+		notes = append(notes, "**Hooks:** This skill defines lifecycle hooks that execute shell commands. Hooks require a provider with skill-scoped hook support (currently only Claude Code).")
+	}
+
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	wm := windsurfSkillMeta{
+		Name:        meta.Name,
+		Description: meta.Description,
+	}
+	fm, err := renderFrontmatter(wm)
 	if err != nil {
 		return nil, err
 	}
