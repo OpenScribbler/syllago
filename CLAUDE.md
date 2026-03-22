@@ -7,6 +7,7 @@ Content registries are community-driven — syllago provides the tooling but doe
 ## Build and Test
 
 ```bash
+make setup          # Configure git hooks (run once after clone)
 make build          # Build dev binary (cli/syllago → ~/.local/bin/syllago)
 make test           # Run all tests
 ```
