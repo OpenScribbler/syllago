@@ -350,11 +350,11 @@ func TestFieldPreservation_Skills(t *testing.T) {
 				"command menu",       // user-invocable → prose
 				"<pr-url>",           // argument-hint → prose
 				"run_shell_command",  // disallowed-tools translated
-				"Hooks:",             // hooks embedded as prose
 				"Review code for best practices",
 				"syllago:converted",
 			},
 			absent:   []string{"allowed-tools:", "context: fork", "user-invocable:", "echo check"},
+			minWarns: 1, // hooks surfaced as warnings (Gemini supports hooks natively)
 			filename: "SKILL.md",
 		},
 		{

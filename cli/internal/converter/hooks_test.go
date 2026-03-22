@@ -99,11 +99,17 @@ func TestUnsupportedEventDroppedWithWarning(t *testing.T) {
 		t.Fatalf("Render: %v", err)
 	}
 
-	if len(result.Warnings) == 0 {
-		t.Fatal("expected warning for unsupported event")
+	// Find the event-specific warning (not the structured output warning)
+	found := false
+	for _, w := range result.Warnings {
+		if containsStr(w, "SubagentStart") && containsStr(w, "not supported") {
+			found = true
+			break
+		}
 	}
-	assertContains(t, result.Warnings[0], "SubagentStart")
-	assertContains(t, result.Warnings[0], "not supported")
+	if !found {
+		t.Fatalf("expected warning mentioning SubagentStart and 'not supported', got: %v", result.Warnings)
+	}
 }
 
 func TestLLMHookDroppedWithWarning(t *testing.T) {
@@ -130,10 +136,17 @@ func TestLLMHookDroppedWithWarning(t *testing.T) {
 		t.Fatalf("Render: %v", err)
 	}
 
-	if len(result.Warnings) == 0 {
-		t.Fatal("expected warning for LLM-evaluated hook")
+	// Find the LLM-specific warning (not the structured output warning)
+	foundPromptWarning := false
+	for _, w := range result.Warnings {
+		if containsStr(w, "prompt") && !containsStr(w, "structured hook output") {
+			foundPromptWarning = true
+			break
+		}
 	}
-	assertContains(t, result.Warnings[0], "prompt")
+	if !foundPromptWarning {
+		t.Fatal("expected warning for LLM-evaluated hook mentioning 'prompt'")
+	}
 
 	// Verify the hook was dropped (empty hooks)
 	var cfg hooksConfig
@@ -362,10 +375,16 @@ func TestLLMHookDefaultSkipMode(t *testing.T) {
 	}
 
 	// Warning should mention --llm-hooks=generate
-	if len(result.Warnings) == 0 {
-		t.Fatal("expected warning")
+	foundLLMWarning := false
+	for _, w := range result.Warnings {
+		if containsStr(w, "--llm-hooks=generate") {
+			foundLLMWarning = true
+			break
+		}
 	}
-	assertContains(t, result.Warnings[0], "--llm-hooks=generate")
+	if !foundLLMWarning {
+		t.Fatalf("expected warning mentioning --llm-hooks=generate, got: %v", result.Warnings)
+	}
 }
 
 // --- Kiro hooks ---
@@ -1269,6 +1288,274 @@ func TestGeminiOnlyEventsFlatFormat(t *testing.T) {
 	// BeforeModel in Gemini maps to canonical "BeforeModel"
 	if hd.Event != "BeforeModel" {
 		t.Errorf("event not translated correctly: got %q, want %q", hd.Event, "BeforeModel")
+	}
+}
+
+// --- Structured output capability warnings ---
+
+func TestStructuredOutputWarnings_ClaudeToGemini(t *testing.T) {
+	t.Parallel()
+	// Claude Code hooks with structured output -> Gemini should warn about all lost fields
+	input := []byte(`{
+		"hooks": {
+			"PreToolUse": [
+				{
+					"matcher": "Bash",
+					"hooks": [
+						{"type": "command", "command": "echo check", "timeout": 5000}
+					]
+				}
+			]
+		}
+	}`)
+
+	conv := &HooksConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	// Should have a warning about structured output fields
+	foundOutputWarning := false
+	for _, w := range result.Warnings {
+		if containsStr(w, "structured hook output") && containsStr(w, "claude-code") && containsStr(w, "gemini-cli") {
+			foundOutputWarning = true
+			// Should mention specific fields
+			assertContains(t, w, "updatedInput")
+			assertContains(t, w, "suppressOutput")
+			assertContains(t, w, "systemMessage")
+			assertContains(t, w, "additionalContext")
+			assertContains(t, w, "continue")
+			assertContains(t, w, "permissionDecision")
+			break
+		}
+	}
+	if !foundOutputWarning {
+		t.Fatalf("expected structured output warning, got: %v", result.Warnings)
+	}
+}
+
+func TestStructuredOutputWarnings_ClaudeToCopilot(t *testing.T) {
+	t.Parallel()
+	// Copilot supports permissionDecision, so only 5 fields should be lost
+	input := []byte(`{
+		"hooks": {
+			"PreToolUse": [
+				{
+					"hooks": [
+						{"type": "command", "command": "echo check", "timeout": 5000}
+					]
+				}
+			]
+		}
+	}`)
+
+	conv := &HooksConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.CopilotCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	foundOutputWarning := false
+	for _, w := range result.Warnings {
+		if containsStr(w, "structured hook output") {
+			foundOutputWarning = true
+			// Should mention lost fields but NOT permissionDecision (Copilot supports it)
+			assertContains(t, w, "updatedInput")
+			assertContains(t, w, "suppressOutput")
+			assertNotContains(t, w, "permissionDecision")
+			break
+		}
+	}
+	if !foundOutputWarning {
+		t.Fatalf("expected structured output warning, got: %v", result.Warnings)
+	}
+}
+
+func TestStructuredOutputWarnings_GeminiToClaude(t *testing.T) {
+	t.Parallel()
+	// Gemini -> Claude: Gemini has no output capabilities, so nothing is lost
+	input := []byte(`{
+		"hooks": {
+			"BeforeTool": [
+				{
+					"matcher": "run_shell_command",
+					"hooks": [
+						{"type": "command", "command": "echo safe", "timeout": 3000}
+					]
+				}
+			]
+		}
+	}`)
+
+	conv := &HooksConverter{}
+	canonical, err := conv.Canonicalize(input, "gemini-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	// Should NOT have structured output warnings
+	for _, w := range result.Warnings {
+		if containsStr(w, "structured hook output") {
+			t.Fatalf("unexpected structured output warning for gemini->claude: %s", w)
+		}
+	}
+}
+
+func TestStructuredOutputWarnings_SameProvider(t *testing.T) {
+	t.Parallel()
+	// Claude -> Claude: no capability loss
+	input := []byte(`{
+		"hooks": {
+			"PreToolUse": [
+				{
+					"hooks": [
+						{"type": "command", "command": "echo check"}
+					]
+				}
+			]
+		}
+	}`)
+
+	conv := &HooksConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	for _, w := range result.Warnings {
+		if containsStr(w, "structured hook output") {
+			t.Fatalf("unexpected structured output warning for same provider: %s", w)
+		}
+	}
+}
+
+func TestStructuredOutputWarnings_ClaudeToKiro(t *testing.T) {
+	t.Parallel()
+	input := []byte(`{
+		"hooks": {
+			"PreToolUse": [
+				{
+					"matcher": "Bash",
+					"hooks": [
+						{"type": "command", "command": "echo check", "timeout": 5000}
+					]
+				}
+			]
+		}
+	}`)
+
+	conv := &HooksConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	foundOutputWarning := false
+	for _, w := range result.Warnings {
+		if containsStr(w, "structured hook output") && containsStr(w, "kiro") {
+			foundOutputWarning = true
+			// All 6 fields should be listed as lost
+			assertContains(t, w, "updatedInput")
+			assertContains(t, w, "permissionDecision")
+			break
+		}
+	}
+	if !foundOutputWarning {
+		t.Fatalf("expected structured output warning for claude->kiro, got: %v", result.Warnings)
+	}
+}
+
+func TestOutputFieldsLostWarnings(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		source string
+		target string
+		want   int // expected number of lost fields
+	}{
+		{"claude->gemini: all 6 lost", "claude-code", "gemini-cli", 6},
+		{"claude->copilot: 5 lost (permissionDecision kept)", "claude-code", "copilot-cli", 5},
+		{"claude->claude: none lost", "claude-code", "claude-code", 0},
+		{"gemini->claude: none lost", "gemini-cli", "claude-code", 0},
+		{"copilot->gemini: 1 lost (permissionDecision)", "copilot-cli", "gemini-cli", 1},
+		{"copilot->claude: none lost", "copilot-cli", "claude-code", 0},
+		{"gemini->gemini: none lost", "gemini-cli", "gemini-cli", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lost := OutputFieldsLostWarnings(tt.source, tt.target)
+			if len(lost) != tt.want {
+				t.Errorf("OutputFieldsLostWarnings(%s, %s) = %v (len %d), want len %d",
+					tt.source, tt.target, lost, len(lost), tt.want)
+			}
+		})
+	}
+}
+
+func TestStructuredOutputWarnings_FlatFormat(t *testing.T) {
+	t.Parallel()
+	// Flat format should also carry source provider through RenderFlat
+	input := []byte(`{
+		"event": "PreToolUse",
+		"matcher": "Bash",
+		"hooks": [
+			{"type": "command", "command": "echo check", "timeout": 5000}
+		]
+	}`)
+
+	conv := &HooksConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize flat: %v", err)
+	}
+
+	// Parse canonical flat to get HookData with SourceProvider set
+	var hd HookData
+	if err := json.Unmarshal(canonical.Content, &hd); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	assertEqual(t, "claude-code", hd.SourceProvider)
+
+	result, err := conv.RenderFlat(hd, provider.GeminiCLI)
+	if err != nil {
+		t.Fatalf("RenderFlat: %v", err)
+	}
+
+	foundOutputWarning := false
+	for _, w := range result.Warnings {
+		if containsStr(w, "structured hook output") {
+			foundOutputWarning = true
+			break
+		}
+	}
+	if !foundOutputWarning {
+		t.Fatalf("expected structured output warning via RenderFlat, got: %v", result.Warnings)
 	}
 }
 
