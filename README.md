@@ -107,6 +107,7 @@ Content in your library is provider-neutral. You add once, install anywhere.
 - **Loadouts** -- bundle multiple content items together and apply them as a unit. Preview with `--try` and revert cleanly
 - **Git-based registries** -- browse and install shared content from any compatible git repository
 - **Sandbox** -- run AI CLI tools in isolated environments with filesystem, network, and environment filtering (Linux)
+- **Registry privacy** -- content from private registries is automatically detected and prevented from being published to public registries
 - **`--json` output** on all commands for scripting and CI integration
 
 ## Supported Providers
