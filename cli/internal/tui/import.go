@@ -157,6 +157,10 @@ type importModel struct {
 	// Registry redirect state
 	fromRegistryRedirect bool // true when entered via registry add redirect
 
+	// Registry taint: set when git URL matches a configured registry
+	taintRegistry   string // registry name (e.g., "acme/internal-rules")
+	taintVisibility string // "public", "private", "unknown"
+
 	// Result messaging
 	message      string
 	messageIsErr bool
@@ -1429,12 +1433,17 @@ func (m importModel) doImport() (string, []string, error) {
 		source = m.urlInput.Value()
 	}
 	meta := &metadata.Meta{
-		ID:      metadata.NewID(),
-		Name:    m.itemName,
-		Type:    string(m.contentType),
-		Source:  source,
-		AddedAt: &now,
-		AddedBy: gitutil.Username(),
+		ID:               metadata.NewID(),
+		Name:             m.itemName,
+		Type:             string(m.contentType),
+		Source:           source,
+		SourceRegistry:   m.taintRegistry,
+		SourceVisibility: m.taintVisibility,
+		AddedAt:          &now,
+		AddedBy:          gitutil.Username(),
+	}
+	if m.taintRegistry != "" {
+		meta.SourceType = "registry"
 	}
 	// For universal types, save in the item directory.
 	// For provider-specific types, save as provider-specific metadata.
@@ -1675,12 +1684,17 @@ func (m importModel) doBatchImportWithOverwrite(paths []string, overwrite map[st
 		// Generate metadata
 		now := time.Now()
 		meta := &metadata.Meta{
-			ID:      metadata.NewID(),
-			Name:    itemName,
-			Type:    string(m.contentType),
-			Source:  srcPath,
-			AddedAt: &now,
-			AddedBy: gitutil.Username(),
+			ID:               metadata.NewID(),
+			Name:             itemName,
+			Type:             string(m.contentType),
+			Source:           srcPath,
+			SourceRegistry:   m.taintRegistry,
+			SourceVisibility: m.taintVisibility,
+			AddedAt:          &now,
+			AddedBy:          gitutil.Username(),
+		}
+		if m.taintRegistry != "" {
+			meta.SourceType = "registry"
 		}
 		if m.contentType.IsUniversal() {
 			if err := metadata.Save(dest, meta); err != nil {
