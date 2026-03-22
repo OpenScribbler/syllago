@@ -200,6 +200,12 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 			fmt.Fprintf(output.ErrWriter, "  warning: %s is %s\n", item.Name, msg)
 		}
 
+		// Privacy warning: alert if exporting private-tainted content.
+		if item.Meta != nil && item.Meta.SourceRegistry != "" && item.Meta.SourceVisibility == "private" {
+			fmt.Fprintf(output.ErrWriter, "  warning: %s originated from private registry %q — do not commit exported files to public repositories\n",
+				item.Name, item.Meta.SourceRegistry)
+		}
+
 		// Check if provider supports this type via SupportsType.
 		if prov.SupportsType != nil && !prov.SupportsType(item.Type) {
 			skip := exportSkippedItem{
