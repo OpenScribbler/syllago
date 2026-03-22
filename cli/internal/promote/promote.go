@@ -24,6 +24,11 @@ type Result struct {
 // Promote copies a library item to the shared directory, creates a git branch, commits, pushes, and opens a PR.
 // noInput suppresses interactive prompts even on a TTY (e.g. when --no-input is passed).
 func Promote(repoRoot string, item catalog.ContentItem, noInput bool) (*Result, error) {
+	// Privacy gate G2: block private content from being shared to public repos.
+	if gateErr := CheckSharePrivacyGate(item, repoRoot); gateErr != nil {
+		return nil, gateErr
+	}
+
 	// 1. Check clean tree
 	dirty, err := isTreeDirty(repoRoot)
 	if err != nil {
