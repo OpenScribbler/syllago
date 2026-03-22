@@ -372,38 +372,139 @@ func TestClineRuleCanonicalize(t *testing.T) {
 	assertContains(t, out, "Go conventions.")
 }
 
-// --- Kiro rules ---
+// --- Kiro rules: canonicalize ---
 
-func TestKiroRuleRender(t *testing.T) {
-	input := []byte("---\nalwaysApply: true\n---\n\nAlways follow these guidelines.\n")
+func TestKiroCanonicalizeFileMatch(t *testing.T) {
+	input := []byte("---\ninclusion: fileMatch\nfileMatchPattern: \"*.ts,*.tsx\"\ndescription: TypeScript files\n---\n\nUse strict TypeScript.\n")
+
 	conv := &RulesConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
+	canonical, err := conv.Canonicalize(input, "kiro")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}
-	result, err := conv.Render(canonical.Content, provider.Kiro)
+
+	meta, body, err := parseCanonical(canonical.Content)
 	if err != nil {
-		t.Fatalf("Render: %v", err)
+		t.Fatalf("parseCanonical: %v", err)
 	}
-	assertContains(t, string(result.Content), "Always follow")
-	assertNotContains(t, string(result.Content), "---") // no frontmatter
+
+	if meta.AlwaysApply {
+		t.Error("expected alwaysApply:false for fileMatch rule")
+	}
+	if len(meta.Globs) != 2 {
+		t.Fatalf("expected 2 globs, got %d: %v", len(meta.Globs), meta.Globs)
+	}
+	assertEqual(t, "*.ts", meta.Globs[0])
+	assertEqual(t, "*.tsx", meta.Globs[1])
+	assertEqual(t, "TypeScript files", meta.Description)
+	assertContains(t, body, "Use strict TypeScript.")
 }
 
-func TestKiroRuleScopedEmbedsProse(t *testing.T) {
-	input := []byte("---\ndescription: TS files\nalwaysApply: false\nglobs:\n    - \"*.ts\"\n---\n\nTypeScript rule.\n")
+func TestKiroCanonicalizeAlways(t *testing.T) {
+	input := []byte("---\ninclusion: always\ndescription: Global guidelines\n---\n\nAlways follow these.\n")
+
 	conv := &RulesConverter{}
-	canonical, err := conv.Canonicalize(input, "cursor")
+	canonical, err := conv.Canonicalize(input, "kiro")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}
-	result, err := conv.Render(canonical.Content, provider.Kiro)
+
+	meta, body, err := parseCanonical(canonical.Content)
+	if err != nil {
+		t.Fatalf("parseCanonical: %v", err)
+	}
+
+	if !meta.AlwaysApply {
+		t.Error("expected alwaysApply:true for inclusion:always")
+	}
+	assertEqual(t, "Global guidelines", meta.Description)
+	assertContains(t, body, "Always follow these.")
+}
+
+func TestKiroCanonicalizeNoFrontmatter(t *testing.T) {
+	input := []byte("# Plain Kiro Rule\n\nJust some content.\n")
+
+	conv := &RulesConverter{}
+	canonical, err := conv.Canonicalize(input, "kiro")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	meta, body, err := parseCanonical(canonical.Content)
+	if err != nil {
+		t.Fatalf("parseCanonical: %v", err)
+	}
+
+	if !meta.AlwaysApply {
+		t.Error("expected alwaysApply:true for rule without frontmatter")
+	}
+	assertContains(t, body, "Just some content.")
+}
+
+// --- Kiro rules: render ---
+
+func TestKiroRenderAlwaysApply(t *testing.T) {
+	input := []byte("---\nalwaysApply: true\n---\n\nAlways follow these guidelines.\n")
+	conv := &RulesConverter{}
+	result, err := conv.Render(input, provider.Kiro)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
 	out := string(result.Content)
+	assertContains(t, out, "inclusion: always")
+	assertContains(t, out, "Always follow these guidelines.")
+}
+
+func TestKiroRenderFileMatch(t *testing.T) {
+	input := []byte("---\ndescription: TS files\nalwaysApply: false\nglobs:\n    - \"*.ts\"\n    - \"*.tsx\"\n---\n\nTypeScript rule.\n")
+	conv := &RulesConverter{}
+	result, err := conv.Render(input, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	out := string(result.Content)
+	assertContains(t, out, "inclusion: fileMatch")
+	assertContains(t, out, "fileMatchPattern: '*.ts,*.tsx'")
+	assertContains(t, out, "description: TS files")
 	assertContains(t, out, "TypeScript rule.")
-	assertContains(t, out, "**Scope:**")
-	assertContains(t, out, "*.ts")
+}
+
+func TestKiroRenderAuto(t *testing.T) {
+	// Non-alwaysApply, no globs → auto inclusion
+	input := []byte("---\ndescription: Apply when refactoring\nalwaysApply: false\n---\n\nRefactoring guide.\n")
+	conv := &RulesConverter{}
+	result, err := conv.Render(input, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	out := string(result.Content)
+	assertContains(t, out, "inclusion: auto")
+	assertContains(t, out, "description: Apply when refactoring")
+	assertContains(t, out, "Refactoring guide.")
+}
+
+// --- Kiro round-trip ---
+
+func TestKiroRoundTripFileMatch(t *testing.T) {
+	// Kiro fileMatch rule → canonical → Kiro should preserve semantics
+	input := []byte("---\ninclusion: fileMatch\nfileMatchPattern: \"*.go\"\ndescription: Go files\n---\n\nGo conventions.\n")
+
+	conv := &RulesConverter{}
+	canonical, err := conv.Canonicalize(input, "kiro")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "inclusion: fileMatch")
+	assertContains(t, out, "fileMatchPattern: '*.go'")
+	assertContains(t, out, "description: Go files")
+	assertContains(t, out, "Go conventions.")
 }
 
 // --- Roo Code rules ---

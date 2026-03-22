@@ -129,7 +129,8 @@ func TestFieldPreservation_RulesScoped(t *testing.T) {
 		{
 			name:     "to Kiro",
 			target:   provider.Kiro,
-			contains: []string{"Use strict TypeScript", "**Scope:**", "*.ts"},
+			contains: []string{"Use strict TypeScript", "inclusion: fileMatch", "fileMatchPattern", "*.ts"},
+			absent:   []string{"**Scope:**", "alwaysApply:"},
 		},
 	})
 }
@@ -361,7 +362,7 @@ func TestFieldPreservation_Skills(t *testing.T) {
 			name:   "to OpenCode",
 			target: provider.OpenCode,
 			contains: []string{
-				"# code-review",
+				"name: code-review",
 				"Review code for best practices",
 				"Tool restriction",   // allowed-tools embedded as prose
 				"isolated context",   // context: fork embedded as prose
@@ -371,21 +372,22 @@ func TestFieldPreservation_Skills(t *testing.T) {
 				"Hooks:",             // hooks embedded as prose
 			},
 			absent:   []string{"allowed-tools:", "echo check"},
-			filename: "code-review.md",
+			filename: "SKILL.md",
 		},
 		{
 			name:   "to Kiro",
 			target: provider.Kiro,
 			contains: []string{
-				"# code-review",
+				"name: code-review",
+				"description: Code review skill",
 				"Review code for best practices",
 				"Tool restriction", // allowed-tools embedded as prose
 				"Do not use",       // disallowed-tools embedded as prose
 				"command menu",     // user-invocable embedded as prose
-				"Hooks:",           // hooks embedded as prose
 			},
 			absent:   []string{"allowed-tools:", "echo check"},
-			filename: "code-review.md",
+			minWarns: 1,          // hooks surfaced as warnings (Kiro supports hooks natively)
+			filename: "SKILL.md", // SKILL.md with frontmatter, not slug.md
 		},
 	})
 }
@@ -1136,7 +1138,8 @@ func TestCrossProvider_CursorRulesToKiro(t *testing.T) {
 
 	out := string(result.Content)
 	assertContains(t, out, "Use type hints.")
-	assertContains(t, out, "**Scope:**") // globs embedded as prose
+	assertContains(t, out, "inclusion: fileMatch") // native Kiro frontmatter
+	assertContains(t, out, "fileMatchPattern")
 	assertContains(t, out, "*.py")
 }
 

@@ -180,8 +180,6 @@ func (c *SkillsConverter) ContentType() catalog.ContentType {
 
 func (c *SkillsConverter) Canonicalize(content []byte, sourceProvider string) (*Result, error) {
 	switch sourceProvider {
-	case "kiro", "opencode":
-		return canonicalizeSkillFromMarkdown(content)
 	default:
 		// Claude Code, Gemini CLI, Copilot CLI, Cursor — YAML frontmatter + markdown
 		// Cursor SKILL.md uses the same frontmatter format as Claude Code (subset of fields),
@@ -475,7 +473,7 @@ func renderWindsurfSkill(meta SkillMeta, body string) (*Result, error) {
 }
 
 // canonicalizeSkillFromMarkdown wraps plain markdown content in minimal canonical skill format.
-// Used for providers whose skills are plain markdown without frontmatter (Kiro, OpenCode).
+// Used for providers whose skills are plain markdown without frontmatter.
 func canonicalizeSkillFromMarkdown(content []byte) (*Result, error) {
 	body := strings.TrimSpace(string(content))
 	meta := SkillMeta{}
@@ -525,8 +523,7 @@ func buildSkillProseNotes(meta SkillMeta) []string {
 }
 
 // renderPlainMarkdownSkill renders a canonical skill to a plain markdown file
-// with no frontmatter. Used by Kiro and OpenCode where skill files are simple markdown.
-// Metadata that can't be represented structurally is embedded as prose.
+// with no frontmatter. Metadata that can't be represented structurally is embedded as prose.
 func renderPlainMarkdownSkill(meta SkillMeta, body string) (*Result, error) {
 	cleanBody := StripConversionNotes(body)
 
@@ -561,20 +558,98 @@ func renderPlainMarkdownSkill(meta SkillMeta, body string) (*Result, error) {
 	}, nil
 }
 
-// renderKiroSkill renders a canonical skill to a Kiro steering file (plain markdown).
-// Kiro supports hooks, so skill hooks generate actionable warnings instead of only prose.
+// kiroSkillMeta is the subset of fields Kiro supports in SKILL.md frontmatter.
+// Kiro adopted the Agent Skills standard (Feb 2026) and supports the 5 shared spec fields.
+type kiroSkillMeta struct {
+	Name          string            `yaml:"name,omitempty"`
+	Description   string            `yaml:"description,omitempty"`
+	License       string            `yaml:"license,omitempty"`
+	Compatibility string            `yaml:"compatibility,omitempty"`
+	Metadata      map[string]string `yaml:"metadata,omitempty"`
+}
+
+// renderKiroSkill renders a canonical skill to Kiro's SKILL.md format with YAML frontmatter.
+// Kiro supports the 5 Agent Skills spec fields (name, description, license, compatibility, metadata).
+// CC-specific fields (allowed-tools, context, agent, etc.) are embedded as prose notes.
 func renderKiroSkill(meta SkillMeta, body string) (*Result, error) {
-	result, err := renderPlainMarkdownSkill(meta, body)
+	cleanBody := StripConversionNotes(body)
+
+	// Build behavioral notes for CC-specific fields Kiro doesn't support
+	notes := buildSkillProseNotes(meta)
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	km := kiroSkillMeta{
+		Name:          meta.Name,
+		Description:   meta.Description,
+		License:       meta.License,
+		Compatibility: meta.Compatibility,
+		Metadata:      meta.Metadata,
+	}
+
+	fm, err := renderFrontmatter(km)
 	if err != nil {
 		return nil, err
 	}
-	result.Warnings = formatSkillHookWarnings(meta.Name, meta.Hooks, "kiro")
-	return result, nil
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	hookWarnings := formatSkillHookWarnings(meta.Name, meta.Hooks, "kiro")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
 }
 
-// renderOpenCodeSkill renders a canonical skill to OpenCode's plain markdown format.
+// opencodeSkillMeta is the subset of fields OpenCode supports in SKILL.md frontmatter.
+// OpenCode adopted the Agent Skills standard and supports the 5 shared spec fields.
+type opencodeSkillMeta struct {
+	Name          string            `yaml:"name,omitempty"`
+	Description   string            `yaml:"description,omitempty"`
+	License       string            `yaml:"license,omitempty"`
+	Compatibility string            `yaml:"compatibility,omitempty"`
+	Metadata      map[string]string `yaml:"metadata,omitempty"`
+}
+
+// renderOpenCodeSkill renders a canonical skill to OpenCode's SKILL.md format with YAML frontmatter.
+// OpenCode supports the 5 Agent Skills spec fields (name, description, license, compatibility, metadata).
+// CC-specific fields (allowed-tools, context, agent, etc.) are embedded as prose notes.
 func renderOpenCodeSkill(meta SkillMeta, body string) (*Result, error) {
-	return renderPlainMarkdownSkill(meta, body)
+	cleanBody := StripConversionNotes(body)
+
+	// Build behavioral notes for CC-specific fields OpenCode doesn't support
+	notes := buildSkillProseNotes(meta)
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	om := opencodeSkillMeta{
+		Name:          meta.Name,
+		Description:   meta.Description,
+		License:       meta.License,
+		Compatibility: meta.Compatibility,
+		Metadata:      meta.Metadata,
+	}
+
+	fm, err := renderFrontmatter(om)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
 }
 
 // --- Helpers ---

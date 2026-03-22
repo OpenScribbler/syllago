@@ -100,7 +100,7 @@ func TestSkillNoFrontmatter(t *testing.T) {
 // --- OpenCode skills ---
 
 func TestClaudeSkillToOpenCode(t *testing.T) {
-	input := []byte("---\nname: Go Expert\ndescription: Go coding guidelines\nallowed-tools:\n  - Read\n---\n\nUse idiomatic Go patterns.\n")
+	input := []byte("---\nname: Go Expert\ndescription: Go coding guidelines\nallowed-tools:\n  - Read\nmodel: opus\ncontext: fork\n---\n\nUse idiomatic Go patterns.\n")
 
 	conv := &SkillsConverter{}
 	canonical, err := conv.Canonicalize(input, "claude-code")
@@ -114,13 +114,182 @@ func TestClaudeSkillToOpenCode(t *testing.T) {
 	}
 
 	out := string(result.Content)
-	assertContains(t, out, "# Go Expert")
+	// OpenCode now uses YAML frontmatter (Agent Skills spec)
+	assertContains(t, out, "name: Go Expert")
+	assertContains(t, out, "description: Go coding guidelines")
 	assertContains(t, out, "idiomatic Go")
-	assertContains(t, out, "Go coding guidelines") // description embedded as prose
-	assertNotContains(t, out, "allowed-tools")     // no YAML key in output
-	assertContains(t, out, "Tool restriction")     // embedded as prose instead
-	assertContains(t, out, "Read")                 // tool name preserved in prose
-	assertEqual(t, "go-expert.md", result.Filename)
+	// CC-specific fields should be embedded as prose, not in frontmatter
+	assertNotContains(t, out, "allowed-tools:")
+	assertNotContains(t, out, "context: fork")
+	assertContains(t, out, "Tool restriction")         // allowed-tools as prose
+	assertContains(t, out, "Read")                     // tool name in prose
+	assertContains(t, out, "isolated context")         // context:fork prose
+	assertContains(t, out, "Designed for model: opus") // model as prose
+	assertContains(t, out, "syllago:converted")
+	assertEqual(t, "SKILL.md", result.Filename) // SKILL.md, not slug.md
+}
+
+func TestOpenCodeSkillCanonicalize(t *testing.T) {
+	// OpenCode SKILL.md with YAML frontmatter (Agent Skills spec)
+	input := []byte("---\nname: deploy\ndescription: Deploy helper\nlicense: MIT\n---\n\nDeploy to production.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "opencode")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// Should preserve frontmatter fields
+	meta, body, err := parseSkillCanonical(canonical.Content)
+	if err != nil {
+		t.Fatalf("parseSkillCanonical: %v", err)
+	}
+
+	assertEqual(t, "deploy", meta.Name)
+	assertEqual(t, "Deploy helper", meta.Description)
+	assertEqual(t, "MIT", meta.License)
+	assertContains(t, body, "Deploy to production.")
+}
+
+func TestOpenCodeSkillCanonicalize_AllFields(t *testing.T) {
+	input := []byte("---\nname: reviewer\ndescription: Code review\nlicense: Apache-2.0\ncompatibility: \">=1.0\"\nmetadata:\n  author: bob\n  team: platform\n---\n\nReview carefully.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "opencode")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	meta, body, err := parseSkillCanonical(canonical.Content)
+	if err != nil {
+		t.Fatalf("parseSkillCanonical: %v", err)
+	}
+
+	assertEqual(t, "reviewer", meta.Name)
+	assertEqual(t, "Code review", meta.Description)
+	assertEqual(t, "Apache-2.0", meta.License)
+	assertEqual(t, ">=1.0", meta.Compatibility)
+	assertEqual(t, "bob", meta.Metadata["author"])
+	assertEqual(t, "platform", meta.Metadata["team"])
+	assertContains(t, body, "Review carefully.")
+}
+
+func TestOpenCodeSkillCanonicalize_PlainMarkdown(t *testing.T) {
+	// Backward compat: OpenCode skill with no frontmatter should still work
+	input := []byte("# My Skill\n\nDo useful things.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "opencode")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	meta, body, err := parseSkillCanonical(canonical.Content)
+	if err != nil {
+		t.Fatalf("parseSkillCanonical: %v", err)
+	}
+
+	// No frontmatter fields should be set
+	assertEqual(t, "", meta.Name)
+	assertEqual(t, "", meta.Description)
+	assertContains(t, body, "My Skill")
+	assertContains(t, body, "Do useful things.")
+}
+
+func TestOpenCodeSkillRenderFrontmatter(t *testing.T) {
+	// Render to OpenCode should produce YAML frontmatter with supported fields
+	input := []byte("---\nname: helper\ndescription: General helper\nlicense: MIT\ncompatibility: \">=2.0\"\nmetadata:\n  author: alice\n---\n\nHelp with tasks.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.OpenCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: helper")
+	assertContains(t, out, "description: General helper")
+	assertContains(t, out, "license: MIT")
+	assertContains(t, out, "compatibility:")
+	assertContains(t, out, "author: alice")
+	assertContains(t, out, "Help with tasks.")
+	assertEqual(t, "SKILL.md", result.Filename)
+}
+
+func TestOpenCodeSkillRoundTrip(t *testing.T) {
+	input := []byte("---\nname: deploy\ndescription: Deploy helper\nlicense: MIT\ncompatibility: \">=1.0\"\nmetadata:\n  author: bob\n---\n\nDeploy to production.\n")
+
+	conv := &SkillsConverter{}
+
+	// OpenCode -> canonical
+	canonical, err := conv.Canonicalize(input, "opencode")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// canonical -> OpenCode
+	result, err := conv.Render(canonical.Content, provider.OpenCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: deploy")
+	assertContains(t, out, "description: Deploy helper")
+	assertContains(t, out, "license: MIT")
+	assertContains(t, out, "compatibility:")
+	assertContains(t, out, "author: bob")
+	assertContains(t, out, "Deploy to production.")
+	assertEqual(t, "SKILL.md", result.Filename)
+
+	// Re-canonicalize to verify full round-trip
+	canonical2, err := conv.Canonicalize(result.Content, "opencode")
+	if err != nil {
+		t.Fatalf("Re-canonicalize: %v", err)
+	}
+
+	meta, body, err := parseSkillCanonical(canonical2.Content)
+	if err != nil {
+		t.Fatalf("parseSkillCanonical: %v", err)
+	}
+
+	assertEqual(t, "deploy", meta.Name)
+	assertEqual(t, "Deploy helper", meta.Description)
+	assertEqual(t, "MIT", meta.License)
+	assertEqual(t, "bob", meta.Metadata["author"])
+	assertContains(t, body, "Deploy to production.")
+}
+
+func TestOpenCodeSkillCCFieldsAsProseNotes(t *testing.T) {
+	// CC-specific fields should become prose notes in OpenCode output
+	input := []byte("---\nname: safe\nallowed-tools:\n  - Read\ncontext: fork\nagent: code\nmodel: opus\n---\n\nDo safe things.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.OpenCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "Tool restriction")         // allowed-tools as prose
+	assertContains(t, out, "isolated context")         // context:fork as prose
+	assertContains(t, out, "code-focused approach")    // agent as prose
+	assertContains(t, out, "Designed for model: opus") // model as prose
+	assertContains(t, out, "syllago:converted")
+	// These should NOT be in frontmatter
+	assertNotContains(t, out, "allowed-tools:")
+	assertNotContains(t, out, "context: fork")
+	assertNotContains(t, out, "agent: code")
 }
 
 // --- Kiro skills ---
@@ -140,13 +309,155 @@ func TestClaudeSkillToKiro(t *testing.T) {
 	}
 
 	out := string(result.Content)
-	assertContains(t, out, "# Go Expert")
+	// Kiro now uses YAML frontmatter (Agent Skills spec)
+	assertContains(t, out, "name: Go Expert")
+	assertContains(t, out, "description: Go coding guidelines")
 	assertContains(t, out, "idiomatic Go")
-	assertContains(t, out, "Go coding guidelines") // description embedded as prose
-	assertNotContains(t, out, "allowed-tools")     // no YAML key in output
-	assertContains(t, out, "Tool restriction")     // allowed-tools embedded as prose
-	assertContains(t, out, "command menu")         // user-invocable embedded as prose
-	assertEqual(t, "go-expert.md", result.Filename)
+	assertNotContains(t, out, "allowed-tools")  // CC-specific, not in Kiro frontmatter
+	assertContains(t, out, "Tool restriction")  // allowed-tools embedded as prose
+	assertContains(t, out, "command menu")      // user-invocable embedded as prose
+	assertEqual(t, "SKILL.md", result.Filename) // SKILL.md, not slug.md
+}
+
+func TestKiroSkillCanonicalize(t *testing.T) {
+	// Kiro SKILL.md with YAML frontmatter (Agent Skills spec)
+	input := []byte("---\nname: deploy\ndescription: Deploy helper\nlicense: MIT\n---\n\nDeploy to production.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "kiro")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// Should preserve frontmatter fields (not strip them like plain markdown path did)
+	meta, body, err := parseSkillCanonical(canonical.Content)
+	if err != nil {
+		t.Fatalf("parseSkillCanonical: %v", err)
+	}
+
+	assertEqual(t, "deploy", meta.Name)
+	assertEqual(t, "Deploy helper", meta.Description)
+	assertEqual(t, "MIT", meta.License)
+	assertContains(t, body, "Deploy to production.")
+}
+
+func TestKiroSkillCanonicalize_AllFields(t *testing.T) {
+	input := []byte("---\nname: reviewer\ndescription: Code review\nlicense: Apache-2.0\ncompatibility: \">=1.0\"\nmetadata:\n  author: bob\n  team: platform\n---\n\nReview carefully.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "kiro")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	meta, body, err := parseSkillCanonical(canonical.Content)
+	if err != nil {
+		t.Fatalf("parseSkillCanonical: %v", err)
+	}
+
+	assertEqual(t, "reviewer", meta.Name)
+	assertEqual(t, "Code review", meta.Description)
+	assertEqual(t, "Apache-2.0", meta.License)
+	assertEqual(t, ">=1.0", meta.Compatibility)
+	assertEqual(t, "bob", meta.Metadata["author"])
+	assertEqual(t, "platform", meta.Metadata["team"])
+	assertContains(t, body, "Review carefully.")
+}
+
+func TestKiroSkillRenderFrontmatter(t *testing.T) {
+	// Render to Kiro should produce YAML frontmatter with supported fields
+	input := []byte("---\nname: helper\ndescription: General helper\nlicense: MIT\ncompatibility: \">=2.0\"\nmetadata:\n  author: alice\n---\n\nHelp with tasks.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: helper")
+	assertContains(t, out, "description: General helper")
+	assertContains(t, out, "license: MIT")
+	assertContains(t, out, "compatibility:")
+	assertContains(t, out, "author: alice")
+	assertContains(t, out, "Help with tasks.")
+	assertEqual(t, "SKILL.md", result.Filename)
+}
+
+func TestKiroSkillRoundTrip(t *testing.T) {
+	input := []byte("---\nname: deploy\ndescription: Deploy helper\nlicense: MIT\ncompatibility: \">=1.0\"\nmetadata:\n  author: bob\n---\n\nDeploy to production.\n")
+
+	conv := &SkillsConverter{}
+
+	// Kiro -> canonical
+	canonical, err := conv.Canonicalize(input, "kiro")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// canonical -> Kiro
+	result, err := conv.Render(canonical.Content, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: deploy")
+	assertContains(t, out, "description: Deploy helper")
+	assertContains(t, out, "license: MIT")
+	assertContains(t, out, "compatibility:")
+	assertContains(t, out, "author: bob")
+	assertContains(t, out, "Deploy to production.")
+	assertEqual(t, "SKILL.md", result.Filename)
+
+	// Re-canonicalize to verify full round-trip
+	canonical2, err := conv.Canonicalize(result.Content, "kiro")
+	if err != nil {
+		t.Fatalf("Re-canonicalize: %v", err)
+	}
+
+	meta, body, err := parseSkillCanonical(canonical2.Content)
+	if err != nil {
+		t.Fatalf("parseSkillCanonical: %v", err)
+	}
+
+	assertEqual(t, "deploy", meta.Name)
+	assertEqual(t, "Deploy helper", meta.Description)
+	assertEqual(t, "MIT", meta.License)
+	assertEqual(t, "bob", meta.Metadata["author"])
+	assertContains(t, body, "Deploy to production.")
+}
+
+func TestKiroSkillCCFieldsAsProseNotes(t *testing.T) {
+	// CC-specific fields should become prose notes in Kiro output
+	input := []byte("---\nname: safe\nallowed-tools:\n  - Read\ncontext: fork\nagent: code\nmodel: opus\n---\n\nDo safe things.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "Tool restriction")         // allowed-tools as prose
+	assertContains(t, out, "isolated context")         // context:fork as prose
+	assertContains(t, out, "code-focused approach")    // agent as prose
+	assertContains(t, out, "Designed for model: opus") // model as prose
+	assertContains(t, out, "syllago:converted")
+	// These should NOT be in frontmatter
+	assertNotContains(t, out, "allowed-tools:")
+	assertNotContains(t, out, "context: fork")
+	assertNotContains(t, out, "agent: code")
 }
 
 // --- AllowedTools parsing ---
