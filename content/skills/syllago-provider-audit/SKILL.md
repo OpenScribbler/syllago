@@ -100,7 +100,10 @@ Include URLs for all sources.
 
 ### Zed
 - Docs: https://zed.dev/docs
-- Assistant: https://zed.dev/docs/assistant
+- AI Overview: https://zed.dev/docs/ai/overview
+- Rules: https://zed.dev/docs/ai/rules
+- MCP: https://zed.dev/docs/ai/mcp
+- Tools: https://zed.dev/docs/ai/tools
 
 ## Audit Workflow
 
