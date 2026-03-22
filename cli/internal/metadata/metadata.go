@@ -47,9 +47,11 @@ type Meta struct {
 	SourceType     string       `yaml:"source_type,omitempty"`     // git | filesystem | registry | provider
 	SourceURL      string       `yaml:"source_url,omitempty"`      // for future syllago update capability
 	HasSource      bool         `yaml:"has_source,omitempty"`      // whether .source/ directory exists
-	SourceHash     string       `yaml:"source_hash,omitempty"`     // SHA-256 of source content at import time
-	AddedAt        *time.Time   `yaml:"added_at,omitempty"`        // when content was added to library
-	AddedBy        string       `yaml:"added_by,omitempty"`        // e.g. "syllago v0.1.0"
+	SourceHash       string       `yaml:"source_hash,omitempty"`       // SHA-256 of source content at import time
+	SourceRegistry   string       `yaml:"source_registry,omitempty"`   // registry name content was imported from (e.g. "acme/internal-rules")
+	SourceVisibility string       `yaml:"source_visibility,omitempty"` // visibility at import time: "public", "private", "unknown"
+	AddedAt          *time.Time   `yaml:"added_at,omitempty"`          // when content was added to library
+	AddedBy          string       `yaml:"added_by,omitempty"`          // e.g. "syllago v0.1.0"
 }
 
 // validateFormatVersion checks that the format version is supported.

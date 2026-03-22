@@ -12,7 +12,7 @@ import (
 // BuildManifest constructs a Manifest from discrete inputs.
 // Kind="loadout" and Version=1 are set automatically.
 // Empty slices in items are treated as absent (nil) so yaml omitempty drops them.
-func BuildManifest(provider, name, description string, items map[catalog.ContentType][]string) *Manifest {
+func BuildManifest(provider, name, description string, items map[catalog.ContentType][]ItemRef) *Manifest {
 	m := &Manifest{
 		Kind:        "loadout",
 		Version:     1,
@@ -42,6 +42,18 @@ func BuildManifest(provider, name, description string, items map[catalog.Content
 	}
 
 	return m
+}
+
+// BuildManifestFromNames is a convenience wrapper that creates ItemRefs from
+// plain name strings (no IDs). Use BuildManifest when IDs are available.
+func BuildManifestFromNames(provider, name, description string, items map[catalog.ContentType][]string) *Manifest {
+	refs := make(map[catalog.ContentType][]ItemRef)
+	for ct, names := range items {
+		for _, n := range names {
+			refs[ct] = append(refs[ct], ItemRef{Name: n})
+		}
+	}
+	return BuildManifest(provider, name, description, refs)
 }
 
 // WriteManifest marshals m to YAML and writes to destDir/<m.Name>/loadout.yaml.

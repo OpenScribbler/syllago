@@ -88,7 +88,7 @@ func TestGolden_HookMerge(t *testing.T) {
 		Version:  1,
 		Provider: "claude-code",
 		Name:     "golden-test",
-		Hooks:    []string{"golden-hook"},
+		Hooks:    []ItemRef{{Name: "golden-hook"}},
 	}
 
 	cat := &catalog.Catalog{
