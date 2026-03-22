@@ -142,9 +142,9 @@ func TestProbeVisibility_Override(t *testing.T) {
 func TestResolveVisibility(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name         string
-		probe, decl  string
-		want         string
+		name        string
+		probe, decl string
+		want        string
 	}{
 		{"both public", "public", "public", "public"},
 		{"probe private, decl public", "private", "public", "private"},
@@ -283,7 +283,9 @@ func probeGitHubWithURL(baseURL string) (string, error) {
 	if resp.StatusCode != 200 {
 		return VisibilityUnknown, nil
 	}
-	var result struct{ Private bool `json:"private"` }
+	var result struct {
+		Private bool `json:"private"`
+	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return VisibilityUnknown, nil
 	}
@@ -307,7 +309,9 @@ func probeGitLabWithURL(baseURL string) (string, error) {
 	if resp.StatusCode != 200 {
 		return VisibilityUnknown, nil
 	}
-	var result struct{ Visibility string `json:"visibility"` }
+	var result struct {
+		Visibility string `json:"visibility"`
+	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return VisibilityUnknown, nil
 	}
@@ -331,7 +335,9 @@ func probeBitbucketWithURL(baseURL string) (string, error) {
 	if resp.StatusCode != 200 {
 		return VisibilityUnknown, nil
 	}
-	var result struct{ IsPrivate bool `json:"is_private"` }
+	var result struct {
+		IsPrivate bool `json:"is_private"`
+	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return VisibilityUnknown, nil
 	}
