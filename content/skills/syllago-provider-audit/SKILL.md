@@ -42,15 +42,50 @@ Each provider gets 4 research files in the syllago repo at `docs/providers/<slug
 | `hooks.md` | Hook events, config format, matcher syntax, execution model, structured output support |
 | `skills-agents.md` | Skill/agent definition format, model selection, tool permissions, invocation patterns |
 
+## Report Metadata
+
+**Every report file MUST start with a metadata block:**
+
+```
+<!-- provider-audit-meta
+provider: zed
+provider_version: "0.178.x"
+report_format: 1
+researched: 2026-03-21
+researcher: claude-opus-4.6
+changelog_checked: https://zed.dev/releases
+-->
+```
+
+All fields are required. `provider_version` is the version you researched against. `changelog_checked` is the URL you verified for recent releases. See `docs/providers/REPORT-FORMAT.md` for full spec.
+
+## Changelog Sources (MUST CHECK)
+
+Every audit and diff MUST check the provider's changelog for releases newer than the last research date. This is not optional.
+
+| Provider | Changelog |
+|----------|-----------|
+| Claude Code | https://github.com/anthropics/claude-code/releases |
+| Gemini CLI | https://github.com/google-gemini/gemini-cli/releases |
+| Cursor | https://cursor.com/changelog |
+| Windsurf | https://docs.windsurf.com/changelog |
+| Codex | https://github.com/openai/codex/releases |
+| Copilot CLI | https://github.blog/changelog/ (filter: Copilot) |
+| Cline | https://github.com/cline/cline/releases |
+| Roo Code | https://github.com/RooVetGit/Roo-Code/releases |
+| OpenCode | https://github.com/opencode-ai/opencode/releases |
+| Kiro | https://kiro.dev/changelog |
+| Zed | https://zed.dev/releases |
+
 ## Source Attribution
 
 Every finding must be tagged:
-- `[Official]` — provider's official docs or repo
+- `[Official]` — from provider's official docs or repo
 - `[Community]` — blog posts, tutorials, forums
 - `[Inferred]` — derived from source code or config examples
 - `[Unverified]` — stated but not confirmed
 
-Include URLs for all sources.
+Include URLs for all sources. Prefer specific pages, not docs root.
 
 ## Official Documentation Sources
 
@@ -109,11 +144,19 @@ Include URLs for all sources.
 
 ### Step 1: Validate the provider slug
 
-### Step 2: Load existing reports
-Check `docs/providers/<slug>/`. If reports exist, read them first — focus on verifying and updating, not starting from scratch.
+### Step 2: Check changelog FIRST
+Fetch the provider's changelog URL (from the table above). Identify:
+- The latest release version/date
+- What changed since our last research (check metadata block in existing reports for `researched` date)
+- Any new features, renamed tools, moved paths, deprecated features
 
-### Step 3: Research each area
-For each of the 4 report files, fetch official docs and extract findings. Use parallel subagents (one per report area) for speed.
+This gives you a targeted list of what to verify, instead of re-researching everything blind.
+
+### Step 3: Load existing reports
+Check `docs/providers/<slug>/`. If reports exist, read them and their metadata blocks. Note the `provider_version` and `researched` date.
+
+### Step 4: Research each area
+For each of the 4 report files, fetch official docs and extract findings. Use parallel subagents (one per report area) for speed. **Prioritize areas flagged by changelog changes.**
 
 **Research strategy:**
 1. Official docs first — fetch key pages from the URLs above
@@ -122,11 +165,11 @@ For each of the 4 report files, fetch official docs and extract findings. Use pa
 4. Community sources — only to fill gaps in official docs
 5. Prefer Readability MCP for fetching; fall back to WebFetch for JS-heavy sites (Cursor, Windsurf, Cline)
 
-### Step 4: Write reports
-Write all 4 files to `docs/providers/<slug>/`. Follow the format above exactly.
+### Step 5: Write reports
+Write all 4 files to `docs/providers/<slug>/`. Each file MUST start with the metadata block (see Report Metadata section). Set `provider_version` to the latest release found in Step 2, `researched` to today, and `changelog_checked` to the changelog URL.
 
-### Step 5: Summarize
-Report: tools found, content types supported, hook events, key differences from previous reports, recommended syllago changes (toolmap updates, provider definition fixes, new beads needed).
+### Step 6: Summarize
+Report: provider version audited, tools found, content types supported, hook events, key differences from previous reports, recommended syllago changes (toolmap updates, provider definition fixes, new beads needed).
 
 ## Diff Workflow
 
