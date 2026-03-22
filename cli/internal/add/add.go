@@ -75,9 +75,11 @@ type AddResult struct {
 
 // AddOptions controls the behavior of AddItems.
 type AddOptions struct {
-	Force    bool
-	DryRun   bool
-	Provider string // provider slug, used for directory layout
+	Force            bool
+	DryRun           bool
+	Provider         string // provider slug, used for directory layout
+	SourceRegistry   string // registry name for taint propagation (e.g., "acme/internal-rules")
+	SourceVisibility string // visibility at import time: "public", "private", "unknown"
 }
 
 // LibraryIndex is a pre-built map from "type/provider/name" (or "type/name"
@@ -303,6 +305,25 @@ func writeItem(item DiscoveryItem, opts AddOptions, globalDir string, canon Cano
 		AddedAt:        &now,
 		AddedBy:        ver,
 	}
+
+	// Taint propagation: if registry source is explicitly provided, use it.
+	if opts.SourceRegistry != "" {
+		meta.SourceRegistry = opts.SourceRegistry
+		meta.SourceVisibility = opts.SourceVisibility
+		meta.SourceType = "registry"
+	} else {
+		// Laundering defense: check if this file is a symlink back into the library.
+		taintReg, taintVis := traceSymlinkTaint(item.Path, globalDir)
+		if taintReg == "" {
+			// Fallback: hash-match against private library content.
+			taintReg, taintVis = hashMatchTaint(hash, globalDir)
+		}
+		if taintReg != "" {
+			meta.SourceRegistry = taintReg
+			meta.SourceVisibility = taintVis
+		}
+	}
+
 	// Non-fatal: metadata write failure does not fail the add operation.
 	_ = metadata.Save(destDir, meta)
 
@@ -378,6 +399,61 @@ func copySupportingFiles(srcDir, destDir, primaryFilename string) error {
 
 // timeNow is a var so tests can override it for deterministic timestamps.
 var timeNow = func() time.Time { return time.Now().UTC() }
+
+// traceSymlinkTaint checks if filePath is a symlink (or inside a symlink dir)
+// pointing back into the library at globalDir. If so, reads the target item's
+// .syllago.yaml and returns its SourceRegistry and SourceVisibility.
+func traceSymlinkTaint(filePath, globalDir string) (registry, visibility string) {
+	if globalDir == "" {
+		return "", ""
+	}
+
+	// Check if the file itself or its parent directory is a symlink
+	// into the library. Provider installs typically symlink at the
+	// item directory level (e.g., ~/.claude/rules/my-rule -> ~/.syllago/content/rules/my-rule).
+	dir := filepath.Dir(filePath)
+	target, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return "", ""
+	}
+
+	// Check if the resolved target is inside the library
+	absGlobal, err := filepath.Abs(globalDir)
+	if err != nil {
+		return "", ""
+	}
+	if !strings.HasPrefix(target, absGlobal+string(filepath.Separator)) && target != absGlobal {
+		return "", ""
+	}
+
+	// It's a symlink into the library — load the metadata
+	meta, err := metadata.Load(target)
+	if err != nil || meta == nil {
+		return "", ""
+	}
+	return meta.SourceRegistry, meta.SourceVisibility
+}
+
+// hashMatchTaint scans all library items with private taint and checks if
+// any of them have the same source hash. Returns the taint if found.
+func hashMatchTaint(hash, globalDir string) (registry, visibility string) {
+	if globalDir == "" || hash == "" {
+		return "", ""
+	}
+	idx, err := BuildLibraryIndex(globalDir)
+	if err != nil {
+		return "", ""
+	}
+	for _, meta := range idx {
+		if meta == nil {
+			continue
+		}
+		if meta.SourceVisibility == "private" && meta.SourceHash == hash {
+			return meta.SourceRegistry, meta.SourceVisibility
+		}
+	}
+	return "", ""
+}
 
 // DiscoverFromProvider discovers all content from prov, annotates each item
 // with its library status against globalDir, and returns the list.
