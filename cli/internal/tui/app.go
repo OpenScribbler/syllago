@@ -362,9 +362,13 @@ func (a *App) doCreateLoadoutFromScreen(m createLoadoutScreen) tea.Cmd {
 		desc := strings.TrimSpace(m.descInput.Value())
 		provSlug := m.prefilledProvider
 
-		itemsByType := make(map[catalog.ContentType][]string)
+		itemsByType := make(map[catalog.ContentType][]loadout.ItemRef)
 		for _, e := range m.selectedItems() {
-			itemsByType[e.item.Type] = append(itemsByType[e.item.Type], e.item.Name)
+			ref := loadout.ItemRef{Name: e.item.Name}
+			if e.item.Meta != nil {
+				ref.ID = e.item.Meta.ID
+			}
+			itemsByType[e.item.Type] = append(itemsByType[e.item.Type], ref)
 		}
 		manifest := loadout.BuildManifest(provSlug, name, desc, itemsByType)
 

@@ -225,6 +225,7 @@ type Manifest struct {
 	Version           string         `yaml:"version,omitempty"`
 	MinSyllagoVersion string         `yaml:"min_syllago_version,omitempty"`
 	Items             []ManifestItem `yaml:"items,omitempty"`
+	Visibility        string         `yaml:"visibility,omitempty"` // "public", "private" — declared by registry owner
 }
 
 // LoadManifest reads registry.yaml from the clone directory for the named registry.

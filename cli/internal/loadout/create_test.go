@@ -33,29 +33,29 @@ func TestBuildManifest_Basic(t *testing.T) {
 
 func TestBuildManifest_AllItems(t *testing.T) {
 	t.Parallel()
-	items := map[catalog.ContentType][]string{
-		catalog.Rules:    {"rule-a", "rule-b"},
-		catalog.Hooks:    {"hook-one"},
-		catalog.Skills:   {"skill-x", "skill-y", "skill-z"},
-		catalog.Agents:   {"agent-1"},
-		catalog.MCP:      {"mcp-server"},
-		catalog.Commands: {"cmd-foo", "cmd-bar"},
+	items := map[catalog.ContentType][]ItemRef{
+		catalog.Rules:    {{Name: "rule-a"}, {Name: "rule-b"}},
+		catalog.Hooks:    {{Name: "hook-one"}},
+		catalog.Skills:   {{Name: "skill-x"}, {Name: "skill-y"}, {Name: "skill-z"}},
+		catalog.Agents:   {{Name: "agent-1"}},
+		catalog.MCP:      {{Name: "mcp-server"}},
+		catalog.Commands: {{Name: "cmd-foo"}, {Name: "cmd-bar"}},
 	}
 	m := BuildManifest("cursor", "full-loadout", "All types", items)
 
-	if len(m.Rules) != 2 || m.Rules[0] != "rule-a" || m.Rules[1] != "rule-b" {
+	if len(m.Rules) != 2 || m.Rules[0].Name != "rule-a" || m.Rules[1].Name != "rule-b" {
 		t.Errorf("Rules = %v, want [rule-a rule-b]", m.Rules)
 	}
-	if len(m.Hooks) != 1 || m.Hooks[0] != "hook-one" {
+	if len(m.Hooks) != 1 || m.Hooks[0].Name != "hook-one" {
 		t.Errorf("Hooks = %v, want [hook-one]", m.Hooks)
 	}
 	if len(m.Skills) != 3 {
 		t.Errorf("Skills = %v, want 3 entries", m.Skills)
 	}
-	if len(m.Agents) != 1 || m.Agents[0] != "agent-1" {
+	if len(m.Agents) != 1 || m.Agents[0].Name != "agent-1" {
 		t.Errorf("Agents = %v, want [agent-1]", m.Agents)
 	}
-	if len(m.MCP) != 1 || m.MCP[0] != "mcp-server" {
+	if len(m.MCP) != 1 || m.MCP[0].Name != "mcp-server" {
 		t.Errorf("MCP = %v, want [mcp-server]", m.MCP)
 	}
 	if len(m.Commands) != 2 {
@@ -66,7 +66,7 @@ func TestBuildManifest_AllItems(t *testing.T) {
 func TestBuildManifest_EmptyItems(t *testing.T) {
 	t.Parallel()
 	// Empty slices in the map should produce nil fields (yaml omitempty drops them).
-	items := map[catalog.ContentType][]string{
+	items := map[catalog.ContentType][]ItemRef{
 		catalog.Rules:  {},
 		catalog.Skills: {},
 	}
@@ -107,6 +107,18 @@ func TestBuildManifest_NilItems(t *testing.T) {
 	}
 	if m.Commands != nil {
 		t.Errorf("Commands = %v, want nil", m.Commands)
+	}
+}
+
+func TestBuildManifestFromNames(t *testing.T) {
+	t.Parallel()
+	items := map[catalog.ContentType][]string{
+		catalog.Rules: {"rule-a", "rule-b"},
+	}
+	m := BuildManifestFromNames("claude-code", "test", "desc", items)
+
+	if len(m.Rules) != 2 || m.Rules[0].Name != "rule-a" || m.Rules[1].Name != "rule-b" {
+		t.Errorf("Rules = %v, want [rule-a rule-b]", m.Rules)
 	}
 }
 
@@ -153,9 +165,9 @@ func TestWriteManifest_CreatesDir(t *testing.T) {
 func TestWriteManifest_RoundTrip(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	items := map[catalog.ContentType][]string{
-		catalog.Rules:  {"rule-a"},
-		catalog.Skills: {"skill-x", "skill-y"},
+	items := map[catalog.ContentType][]ItemRef{
+		catalog.Rules:  {{Name: "rule-a"}},
+		catalog.Skills: {{Name: "skill-x"}, {Name: "skill-y"}},
 	}
 	m := BuildManifest("claude-code", "roundtrip-loadout", "Round trip test", items)
 
@@ -206,5 +218,66 @@ func TestWriteManifest_UnwritablePath(t *testing.T) {
 	_, err := WriteManifest(m, base)
 	if err == nil {
 		t.Error("expected error writing to unwritable path, got nil")
+	}
+}
+
+func TestItemRef_UnmarshalYAML_String(t *testing.T) {
+	t.Parallel()
+	// Test that ItemRef can unmarshal from a plain string in loadout.yaml
+	yamlContent := `kind: loadout
+version: 1
+name: test
+description: test
+rules:
+  - my-rule
+  - other-rule
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "loadout.yaml")
+	os.WriteFile(path, []byte(yamlContent), 0644)
+
+	m, err := Parse(path)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if len(m.Rules) != 2 {
+		t.Fatalf("Rules len = %d, want 2", len(m.Rules))
+	}
+	if m.Rules[0].Name != "my-rule" {
+		t.Errorf("Rules[0].Name = %q, want %q", m.Rules[0].Name, "my-rule")
+	}
+	if m.Rules[1].Name != "other-rule" {
+		t.Errorf("Rules[1].Name = %q, want %q", m.Rules[1].Name, "other-rule")
+	}
+}
+
+func TestItemRef_UnmarshalYAML_Struct(t *testing.T) {
+	t.Parallel()
+	// Test that ItemRef can unmarshal from a full struct with ID
+	yamlContent := `kind: loadout
+version: 1
+name: test
+description: test
+rules:
+  - name: my-rule
+    id: abc-123
+  - name: other-rule
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "loadout.yaml")
+	os.WriteFile(path, []byte(yamlContent), 0644)
+
+	m, err := Parse(path)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if len(m.Rules) != 2 {
+		t.Fatalf("Rules len = %d, want 2", len(m.Rules))
+	}
+	if m.Rules[0].Name != "my-rule" || m.Rules[0].ID != "abc-123" {
+		t.Errorf("Rules[0] = %+v, want {Name:my-rule ID:abc-123}", m.Rules[0])
+	}
+	if m.Rules[1].Name != "other-rule" || m.Rules[1].ID != "" {
+		t.Errorf("Rules[1] = %+v, want {Name:other-rule ID:}", m.Rules[1])
 	}
 }

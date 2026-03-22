@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 const DirName = ".syllago"
@@ -16,9 +17,11 @@ const FileName = "config.json"
 
 // Registry represents a git-based content source registered in this project.
 type Registry struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
-	Ref  string `json:"ref,omitempty"` // branch/tag/commit, defaults to default branch
+	Name                string     `json:"name"`
+	URL                 string     `json:"url"`
+	Ref                 string     `json:"ref,omitempty"`                  // branch/tag/commit, defaults to default branch
+	Visibility          string     `json:"visibility,omitempty"`           // "public", "private", "unknown"
+	VisibilityCheckedAt *time.Time `json:"visibility_checked_at,omitempty"` // for TTL cache (re-probe after 1 hour)
 }
 
 // ProviderPathConfig holds custom path overrides for a single provider.

@@ -134,7 +134,7 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 		itemsByType[ct] = selected
 	}
 
-	manifest := loadout.BuildManifest(providerSlug, name, description, itemsByType)
+	manifest := loadout.BuildManifestFromNames(providerSlug, name, description, itemsByType)
 
 	// Step 5: Review
 	fmt.Fprintf(output.Writer, "\n--- Loadout Review ---\n")
