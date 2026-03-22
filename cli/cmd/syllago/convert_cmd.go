@@ -13,9 +13,10 @@ import (
 
 // convertResult is the JSON-serializable output for syllago convert.
 type convertResult struct {
-	Name     string `json:"name"`
-	Provider string `json:"provider"`
-	Output   string `json:"output,omitempty"` // path if --output was used; empty for stdout
+	Name     string   `json:"name"`
+	Provider string   `json:"provider"`
+	Output   string   `json:"output,omitempty"`   // path if --output was used; empty for stdout
+	Warnings []string `json:"warnings,omitempty"` // portability warnings from conversion
 }
 
 var convertCmd = &cobra.Command{
@@ -112,15 +113,24 @@ func runConvert(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("writing output: %w", err)
 		}
 		if output.JSON {
-			output.Print(convertResult{Name: name, Provider: prov.Slug, Output: outputPath})
+			output.Print(convertResult{Name: name, Provider: prov.Slug, Output: outputPath, Warnings: rendered.Warnings})
 		} else if !output.Quiet {
 			fmt.Fprintf(output.Writer, "Rendered %s as %s format to %s\n", name, prov.Name, outputPath)
 		}
 	} else {
 		if output.JSON {
-			output.Print(convertResult{Name: name, Provider: prov.Slug})
+			output.Print(convertResult{Name: name, Provider: prov.Slug, Warnings: rendered.Warnings})
 		}
 		os.Stdout.Write(rendered.Content)
+	}
+
+	// Surface portability warnings to stderr so they're visible even with stdout output.
+	if !output.JSON && !output.Quiet && len(rendered.Warnings) > 0 {
+		fmt.Fprintf(output.ErrWriter, "\n  Portability warnings:\n")
+		for _, w := range rendered.Warnings {
+			fmt.Fprintf(output.ErrWriter, "    - %s\n", w)
+		}
+		fmt.Fprintln(output.ErrWriter)
 	}
 
 	return nil
