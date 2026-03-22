@@ -56,6 +56,7 @@ Requires Go 1.25+.
 ```bash
 git clone https://github.com/OpenScribbler/syllago.git
 cd syllago
+make setup    # configure git hooks (gofmt pre-commit check)
 make build
 ```
 
