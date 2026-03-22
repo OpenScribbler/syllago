@@ -73,6 +73,8 @@ type clineMCPServerConfig struct {
 	Env         map[string]string `json:"env,omitempty"`
 	AlwaysAllow []string          `json:"alwaysAllow,omitempty"`
 	Disabled    bool              `json:"disabled,omitempty"`
+	URL         string            `json:"url,omitempty"`
+	Headers     map[string]string `json:"headers,omitempty"`
 }
 
 type clineMCPConfig struct {
@@ -151,6 +153,11 @@ func (c *MCPConverter) Canonicalize(content []byte, sourceProvider string) (*Res
 				server.Type = "streamable-http" // Infer transport type from serverUrl
 			}
 		}
+		// Normalize transport type: providers use "http" for streamable HTTP
+		if server.Type == "http" {
+			server.Type = "streamable-http"
+		}
+
 		cfg.MCPServers[name] = server
 	}
 
@@ -268,6 +275,11 @@ func renderClaudeMCP(cfg mcpConfig) (*Result, error) {
 			OAuth:       server.OAuth,
 		}
 
+		// Map canonical transport type back to Claude Code terminology
+		if s.Type == "streamable-http" {
+			s.Type = "http"
+		}
+
 		// Warn about dropped Gemini-specific fields
 		if server.Trust != "" {
 			warnings = append(warnings, fmt.Sprintf("server %q: trust field dropped (Gemini-specific)", name))
@@ -306,6 +318,11 @@ func renderCursorMCP(cfg mcpConfig) (*Result, error) {
 			Headers:     server.Headers,
 			Type:        server.Type,
 			AutoApprove: server.AutoApprove,
+		}
+
+		// Map canonical transport type back to Cursor terminology
+		if s.Type == "streamable-http" {
+			s.Type = "http"
 		}
 
 		// Warn about dropped OAuth config
@@ -388,6 +405,11 @@ func renderCopilotMCP(cfg mcpConfig) (*Result, error) {
 			URL:     server.URL,
 			Headers: server.Headers,
 			Type:    server.Type,
+		}
+
+		// Map canonical transport type back to Copilot CLI terminology
+		if s.Type == "streamable-http" {
+			s.Type = "http"
 		}
 
 		// Warn about all provider-specific fields
@@ -513,13 +535,19 @@ func canonicalizeClineMCP(content []byte) (*Result, error) {
 	out := mcpConfig{MCPServers: make(map[string]mcpServerConfig)}
 
 	for name, s := range src.MCPServers {
-		out.MCPServers[name] = mcpServerConfig{
+		canonical := mcpServerConfig{
 			Command:     s.Command,
 			Args:        s.Args,
 			Env:         s.Env,
 			AutoApprove: s.AlwaysAllow, // alwaysAllow → autoApprove in canonical
 			Disabled:    s.Disabled,
+			URL:         s.URL,
+			Headers:     s.Headers,
 		}
+		if s.URL != "" && canonical.Type == "" {
+			canonical.Type = "sse"
+		}
+		out.MCPServers[name] = canonical
 	}
 
 	result, err := json.MarshalIndent(out, "", "  ")
@@ -561,18 +589,14 @@ func renderClineMCP(cfg mcpConfig) (*Result, error) {
 	out := clineMCPConfig{MCPServers: make(map[string]clineMCPServerConfig)}
 
 	for name, server := range cfg.MCPServers {
-		// Cline only supports stdio; warn and skip HTTP servers.
-		if server.URL != "" {
-			warnings = append(warnings, fmt.Sprintf("server %q: skipped (Cline only supports stdio, not HTTP)", name))
-			continue
-		}
-
 		out.MCPServers[name] = clineMCPServerConfig{
 			Command:     server.Command,
 			Args:        server.Args,
 			Env:         server.Env,
 			AlwaysAllow: server.AutoApprove, // autoApprove → alwaysAllow
 			Disabled:    server.Disabled,
+			URL:         server.URL,
+			Headers:     server.Headers,
 		}
 
 		// Warn about dropped provider-specific fields

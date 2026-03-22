@@ -291,7 +291,7 @@ func TestClineMCPRender(t *testing.T) {
 	assertEqual(t, "cline_mcp_settings.json", result.Filename)
 }
 
-func TestClineMCPHTTPServerDropped(t *testing.T) {
+func TestClineMCPPreservesHTTPServers(t *testing.T) {
 	input := []byte(`{
 		"mcpServers": {
 			"remoteapi": {
@@ -312,14 +312,69 @@ func TestClineMCPHTTPServerDropped(t *testing.T) {
 		t.Fatalf("Render: %v", err)
 	}
 
-	if len(result.Warnings) == 0 {
-		t.Fatal("expected warning about HTTP transport not supported")
+	// Cline supports SSE transport — server should be emitted, not skipped
+	out := string(result.Content)
+	assertContains(t, out, "remoteapi")
+	assertContains(t, out, "api.example.com")
+}
+
+func TestClineMCPCanonicalizeSSE(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"remote": {
+				"url": "https://sse.example.com/events",
+				"headers": {"Authorization": "Bearer tok123"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Canonicalize(input, "cline")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
 	}
-	assertContains(t, result.Warnings[0], "remoteapi")
+
+	var cfg mcpConfig
+	json.Unmarshal(result.Content, &cfg)
+
+	server := cfg.MCPServers["remote"]
+	assertEqual(t, "https://sse.example.com/events", server.URL)
+	assertEqual(t, "sse", server.Type)
+	assertEqual(t, "Bearer tok123", server.Headers["Authorization"])
+}
+
+func TestClineMCPSSERoundTrip(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"remote": {
+				"url": "https://sse.example.com/events",
+				"headers": {"Authorization": "Bearer tok123"},
+				"alwaysAllow": ["read"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+
+	// Cline → canonical
+	canonical, err := conv.Canonicalize(input, "cline")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// canonical → Cline
+	result, err := conv.Render(canonical.Content, provider.Cline)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
 
 	out := string(result.Content)
-	assertNotContains(t, out, "remoteapi")
-	assertNotContains(t, out, "api.example.com")
+	assertContains(t, out, "sse.example.com")
+	assertContains(t, out, "Authorization")
+	assertContains(t, out, "Bearer tok123")
+	assertContains(t, out, "alwaysAllow")
+	assertContains(t, out, "read")
+	assertNotContains(t, out, "autoApprove")
 }
 
 func TestClineMCPCanonicalize(t *testing.T) {
@@ -1157,6 +1212,141 @@ func TestOAuthNoWarningForSupportedProviders(t *testing.T) {
 			}
 		})
 	}
+}
+
+// --- Streamable HTTP Transport Type Mapping ---
+
+func TestMCPCanonicalizeHttpToStreamableHTTP(t *testing.T) {
+	// Claude Code / Copilot CLI use "http" for streamable HTTP transport.
+	// Canonical format should normalize to "streamable-http".
+	input := []byte(`{
+		"mcpServers": {
+			"remote": {
+				"url": "https://api.example.com/mcp",
+				"type": "http"
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	var cfg mcpConfig
+	json.Unmarshal(canonical.Content, &cfg)
+
+	server := cfg.MCPServers["remote"]
+	assertEqual(t, "streamable-http", server.Type)
+	assertEqual(t, "https://api.example.com/mcp", server.URL)
+}
+
+func TestMCPRenderClaudeStreamableHTTPToHttp(t *testing.T) {
+	// Canonical "streamable-http" should render as "http" for Claude Code.
+	input := []byte(`{
+		"mcpServers": {
+			"remote": {
+				"url": "https://api.example.com/mcp",
+				"type": "streamable-http"
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Render(input, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	var cfg mcpConfig
+	json.Unmarshal(result.Content, &cfg)
+
+	server := cfg.MCPServers["remote"]
+	assertEqual(t, "http", server.Type)
+}
+
+func TestMCPRenderCopilotStreamableHTTPToHttp(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"remote": {
+				"url": "https://api.example.com/mcp",
+				"type": "streamable-http"
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Render(input, provider.CopilotCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	var cfg mcpConfig
+	json.Unmarshal(result.Content, &cfg)
+
+	server := cfg.MCPServers["remote"]
+	assertEqual(t, "http", server.Type)
+}
+
+func TestMCPRenderCursorStreamableHTTPToHttp(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"remote": {
+				"url": "https://api.example.com/mcp",
+				"type": "streamable-http"
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Render(input, provider.Cursor)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	var cfg mcpConfig
+	json.Unmarshal(result.Content, &cfg)
+
+	server := cfg.MCPServers["remote"]
+	assertEqual(t, "http", server.Type)
+}
+
+func TestMCPStreamableHTTPRoundTrip(t *testing.T) {
+	// Claude Code config with type:"http" → canonicalize → render to Claude Code → still type:"http"
+	input := []byte(`{
+		"mcpServers": {
+			"remote": {
+				"url": "https://api.example.com/mcp",
+				"type": "http",
+				"headers": {"Authorization": "Bearer tok"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+
+	// Claude Code → canonical (http → streamable-http)
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	var canCfg mcpConfig
+	json.Unmarshal(canonical.Content, &canCfg)
+	assertEqual(t, "streamable-http", canCfg.MCPServers["remote"].Type)
+
+	// canonical → Claude Code (streamable-http → http)
+	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	var outCfg mcpConfig
+	json.Unmarshal(result.Content, &outCfg)
+	assertEqual(t, "http", outCfg.MCPServers["remote"].Type)
+	assertEqual(t, "https://api.example.com/mcp", outCfg.MCPServers["remote"].URL)
+	assertEqual(t, "Bearer tok", outCfg.MCPServers["remote"].Headers["Authorization"])
 }
 
 func TestOpenCodeToClaudeOAuthPreserved(t *testing.T) {

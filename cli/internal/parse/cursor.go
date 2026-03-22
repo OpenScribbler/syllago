@@ -9,10 +9,20 @@ import (
 )
 
 // CursorFrontmatter represents the YAML frontmatter in .mdc files.
+// Globs can appear as either a comma-separated string (native Cursor format)
+// or a YAML array (canonical format). Both are parsed into []string.
 type CursorFrontmatter struct {
 	Description string   `yaml:"description"`
-	Globs       []string `yaml:"globs,omitempty"`
+	Globs       []string `yaml:"-"`
 	AlwaysApply bool     `yaml:"alwaysApply,omitempty"`
+}
+
+// cursorFrontmatterRaw is used for initial YAML unmarshaling before
+// processing the globs field which can be either a string or array.
+type cursorFrontmatterRaw struct {
+	Description string    `yaml:"description"`
+	Globs       yaml.Node `yaml:"globs,omitempty"`
+	AlwaysApply bool      `yaml:"alwaysApply,omitempty"`
 }
 
 var errNoFrontmatter = errors.New("no frontmatter found")
@@ -34,9 +44,33 @@ func ParseMDCFrontmatter(content []byte) (CursorFrontmatter, string, error) {
 	}
 
 	yamlBytes := rest[:closingIdx]
-	var fm CursorFrontmatter
-	if err := yaml.Unmarshal(yamlBytes, &fm); err != nil {
+	var raw cursorFrontmatterRaw
+	if err := yaml.Unmarshal(yamlBytes, &raw); err != nil {
 		return CursorFrontmatter{}, "", err
+	}
+
+	fm := CursorFrontmatter{
+		Description: raw.Description,
+		AlwaysApply: raw.AlwaysApply,
+	}
+
+	// Parse globs: can be a scalar string (comma-separated) or a YAML sequence.
+	switch raw.Globs.Kind {
+	case yaml.ScalarNode:
+		// Comma-separated string: "*.ts, *.tsx"
+		for _, g := range strings.Split(raw.Globs.Value, ",") {
+			g = strings.TrimSpace(g)
+			if g != "" {
+				fm.Globs = append(fm.Globs, g)
+			}
+		}
+	case yaml.SequenceNode:
+		// YAML array: ["*.ts", "*.tsx"]
+		for _, item := range raw.Globs.Content {
+			if item.Kind == yaml.ScalarNode && item.Value != "" {
+				fm.Globs = append(fm.Globs, item.Value)
+			}
+		}
 	}
 
 	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
