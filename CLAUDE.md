@@ -13,6 +13,8 @@ make test           # Run all tests
 
 IMPORTANT: Always run `make build` after code changes before testing. The `syllago` command runs from the compiled binary, not source.
 
+IMPORTANT: Always run `cd cli && make fmt` before committing Go changes. CI enforces gofmt and will fail on unformatted code. A pre-commit hook also blocks unformatted commits locally.
+
 For TUI visual changes, regenerate golden baselines after tests pass:
 ```bash
 cd cli && go test ./internal/tui/ -update-golden
