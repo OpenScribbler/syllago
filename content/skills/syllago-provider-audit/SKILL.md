@@ -1,5 +1,5 @@
 ---
-name: provider-audit
+name: syllago-provider-audit
 description: Use when auditing AI coding tool providers OR researching provider capabilities OR updating provider docs OR checking what changed in a provider. Runs structured research against official docs and produces standardized reports for syllago's provider accuracy.
 ---
 
@@ -10,9 +10,9 @@ Structured research workflow for auditing AI coding tool providers supported by 
 ## Usage
 
 ```
-/provider-audit <provider-slug>          # Full audit of one provider
-/provider-audit diff <provider-slug>     # Diff against existing reports
-/provider-audit --all                    # Audit all 11 providers
+/syllago-provider-audit <provider-slug>          # Full audit of one provider
+/syllago-provider-audit diff <provider-slug>     # Diff against existing reports
+/syllago-provider-audit --all                    # Audit all 11 providers
 ```
 
 ## Supported Providers
