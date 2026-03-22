@@ -150,6 +150,78 @@ func TestClaudeSkillToKiro(t *testing.T) {
 
 // --- AllowedTools parsing ---
 
+// --- Windsurf skills ---
+
+func TestClaudeSkillToWindsurf(t *testing.T) {
+	input := []byte("---\nname: Go Expert\ndescription: Go coding guidelines\nallowed-tools:\n  - Read\n  - Grep\nmodel: opus\ncontext: fork\n---\n\nUse idiomatic Go patterns.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: Go Expert")
+	assertContains(t, out, "description: Go coding guidelines")
+	assertContains(t, out, "idiomatic Go")
+	// Claude-specific fields should be embedded as prose, not in frontmatter
+	assertNotContains(t, out, "allowed-tools:")
+	assertNotContains(t, out, "context: fork")
+	assertContains(t, out, "Tool restriction")
+	assertContains(t, out, "view_line_range")           // translated tool name for Windsurf
+	assertContains(t, out, "isolated context")          // context:fork prose
+	assertContains(t, out, "Designed for model: opus.") // model as prose note
+	assertContains(t, out, "syllago:converted")
+	assertEqual(t, "SKILL.md", result.Filename)
+}
+
+func TestWindsurfSkillCanonicalize(t *testing.T) {
+	// Windsurf SKILL.md with name and description frontmatter
+	input := []byte("---\nname: deploy-to-production\ndescription: Guides the deployment process\n---\n\n## Steps\n\n1. Run pre-deployment checks\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "windsurf")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(canonical.Content)
+	assertContains(t, out, "name: deploy-to-production")
+	assertContains(t, out, "description: Guides the deployment process")
+	assertContains(t, out, "pre-deployment checks")
+}
+
+func TestWindsurfSkillRoundTrip(t *testing.T) {
+	input := []byte("---\nname: deploy-to-production\ndescription: Guides the deployment process\n---\n\n## Steps\n\n1. Run pre-deployment checks\n2. Build the release artifact\n")
+
+	conv := &SkillsConverter{}
+
+	// Windsurf -> canonical
+	canonical, err := conv.Canonicalize(input, "windsurf")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// canonical -> Windsurf
+	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: deploy-to-production")
+	assertContains(t, out, "description: Guides the deployment process")
+	assertContains(t, out, "pre-deployment checks")
+	assertContains(t, out, "release artifact")
+	assertEqual(t, "SKILL.md", result.Filename)
+}
+
 func TestSkillAllowedToolsCommaSeparated(t *testing.T) {
 	// Comma-separated string in frontmatter: "Read, Grep, Glob"
 	input := []byte("---\nname: test\nallowed-tools: \"Read, Grep, Glob\"\n---\n\nDo things.\n")

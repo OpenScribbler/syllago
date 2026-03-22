@@ -33,7 +33,8 @@ type mcpServerConfig struct {
 	AutoApprove  []string `json:"autoApprove,omitempty"`  // Claude-specific
 
 	// Gemini alternate field names
-	HTTPUrl string `json:"httpUrl,omitempty"` // Gemini uses httpUrl instead of url
+	HTTPUrl   string `json:"httpUrl,omitempty"`   // Gemini uses httpUrl instead of url
+	ServerUrl string `json:"serverUrl,omitempty"` // Windsurf uses serverUrl for HTTP transport
 
 	// OpenCode-specific (preserved in canonical for round-trips)
 	Environment  map[string]string `json:"environment,omitempty"`  // OpenCode uses "environment" not "env"
@@ -125,19 +126,29 @@ func (c *MCPConverter) Canonicalize(content []byte, sourceProvider string) (*Res
 	if sourceProvider == "roo-code" {
 		return canonicalizeRooCodeMCP(content)
 	}
+	if sourceProvider == "windsurf" {
+		return canonicalizeWindsurfMCP(content)
+	}
 
 	var cfg mcpConfig
 	if err := json.Unmarshal(content, &cfg); err != nil {
 		return nil, fmt.Errorf("parsing MCP config: %w", err)
 	}
 
-	// Normalize: merge httpUrl into url field
+	// Normalize: merge provider-specific URL fields into canonical url field
 	for name, server := range cfg.MCPServers {
 		if server.HTTPUrl != "" && server.URL == "" {
 			server.URL = server.HTTPUrl
 			server.HTTPUrl = ""
 			if server.Type == "" {
 				server.Type = "sse" // Infer transport type from httpUrl
+			}
+		}
+		if server.ServerUrl != "" && server.URL == "" {
+			server.URL = server.ServerUrl
+			server.ServerUrl = ""
+			if server.Type == "" {
+				server.Type = "streamable-http" // Infer transport type from serverUrl
 			}
 		}
 		cfg.MCPServers[name] = server
@@ -230,6 +241,8 @@ func (c *MCPConverter) Render(content []byte, target provider.Provider) (*Result
 		// Cursor uses .cursor/mcp.json with the same mcpServers key and transport
 		// types as Claude Code. Route through the same renderer.
 		return renderCursorMCP(cfg)
+	case "windsurf":
+		return renderWindsurfMCP(cfg)
 	default:
 		// Claude Code — emit with Claude-compatible fields only
 		return renderClaudeMCP(cfg)
@@ -681,6 +694,115 @@ func renderKiroMCP(cfg mcpConfig) (*Result, error) {
 		return nil, err
 	}
 	return &Result{Content: result, Filename: "mcp.json", Warnings: warnings}, nil
+}
+
+// windsurfServerConfig is Windsurf's per-server format.
+// Windsurf uses the standard mcpServers key but uses serverUrl (not url) for HTTP transport.
+type windsurfServerConfig struct {
+	Command   string            `json:"command,omitempty"`
+	Args      []string          `json:"args,omitempty"`
+	Env       map[string]string `json:"env,omitempty"`
+	ServerUrl string            `json:"serverUrl,omitempty"` // HTTP transport
+	URL       string            `json:"url,omitempty"`       // SSE transport
+	Headers   map[string]string `json:"headers,omitempty"`
+}
+
+type windsurfMCPConfig struct {
+	MCPServers map[string]windsurfServerConfig `json:"mcpServers"`
+}
+
+func canonicalizeWindsurfMCP(content []byte) (*Result, error) {
+	var src windsurfMCPConfig
+	if err := json.Unmarshal(content, &src); err != nil {
+		return nil, fmt.Errorf("parsing Windsurf MCP config: %w", err)
+	}
+
+	out := mcpConfig{MCPServers: make(map[string]mcpServerConfig)}
+
+	for name, s := range src.MCPServers {
+		canonical := mcpServerConfig{
+			Command: s.Command,
+			Args:    s.Args,
+			Env:     s.Env,
+			Headers: s.Headers,
+		}
+
+		// Normalize serverUrl → url (HTTP transport)
+		if s.ServerUrl != "" {
+			canonical.URL = s.ServerUrl
+			if canonical.Type == "" {
+				canonical.Type = "streamable-http"
+			}
+		}
+		// SSE url preserved directly
+		if s.URL != "" {
+			canonical.URL = s.URL
+			if canonical.Type == "" {
+				canonical.Type = "sse"
+			}
+		}
+
+		out.MCPServers[name] = canonical
+	}
+
+	result, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: result, Filename: "mcp.json"}, nil
+}
+
+func renderWindsurfMCP(cfg mcpConfig) (*Result, error) {
+	var warnings []string
+	out := windsurfMCPConfig{MCPServers: make(map[string]windsurfServerConfig)}
+
+	for name, server := range cfg.MCPServers {
+		s := windsurfServerConfig{
+			Command: server.Command,
+			Args:    server.Args,
+			Env:     server.Env,
+			Headers: server.Headers,
+		}
+
+		// Map url → serverUrl for HTTP, keep url for SSE
+		if server.URL != "" {
+			switch server.Type {
+			case "sse":
+				s.URL = server.URL
+			default:
+				// streamable-http or unspecified — use serverUrl
+				s.ServerUrl = server.URL
+			}
+		}
+
+		// Warn about dropped provider-specific fields
+		if server.Cwd != "" {
+			warnings = append(warnings, fmt.Sprintf("server %q: cwd dropped (not supported by Windsurf)", name))
+		}
+		if len(server.AutoApprove) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: autoApprove dropped (Claude-specific)", name))
+		}
+		if server.Trust != "" {
+			warnings = append(warnings, fmt.Sprintf("server %q: trust dropped (Gemini-specific)", name))
+		}
+		if len(server.IncludeTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: includeTools dropped (Gemini-specific)", name))
+		}
+		if len(server.ExcludeTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific)", name))
+		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Windsurf", name))
+		}
+
+		out.MCPServers[name] = s
+	}
+
+	result, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: result, Filename: "mcp_config.json", Warnings: warnings}, nil
 }
 
 func renderZedMCP(cfg mcpConfig) (*Result, error) {

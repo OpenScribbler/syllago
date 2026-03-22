@@ -3,9 +3,34 @@ package provider
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
+
+// ClineMCPSettingsPath returns the platform-aware path to Cline's MCP settings
+// in VS Code's globalStorage directory.
+func ClineMCPSettingsPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	const ext = "saoudrizwan.claude-dev"
+	rel := filepath.Join("settings", "cline_mcp_settings.json")
+
+	switch runtime.GOOS {
+	case "darwin":
+		return filepath.Join(home, "Library", "Application Support", "Code", "User", "globalStorage", ext, rel)
+	case "windows":
+		appdata := os.Getenv("APPDATA")
+		if appdata == "" {
+			appdata = filepath.Join(home, "AppData", "Roaming")
+		}
+		return filepath.Join(appdata, "Code", "User", "globalStorage", ext, rel)
+	default: // linux
+		return filepath.Join(home, ".config", "Code", "User", "globalStorage", ext, rel)
+	}
+}
 
 var Cline = Provider{
 	Name:      "Cline",
@@ -31,9 +56,18 @@ var Cline = Provider{
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {
 		case catalog.Rules:
-			return []string{filepath.Join(projectRoot, ".clinerules")}
+			paths := []string{filepath.Join(projectRoot, ".clinerules")}
+			if home, err := os.UserHomeDir(); err == nil {
+				paths = append(paths, filepath.Join(home, "Documents", "Cline", "Rules"))
+			}
+			return paths
 		case catalog.Hooks:
 			return []string{filepath.Join(projectRoot, ".clinerules", "hooks")}
+		case catalog.MCP:
+			if p := ClineMCPSettingsPath(); p != "" {
+				return []string{p}
+			}
+			return nil
 		default:
 			return nil
 		}

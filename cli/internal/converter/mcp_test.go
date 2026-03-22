@@ -811,6 +811,223 @@ func TestCursorMCPDropsGeminiFields(t *testing.T) {
 	}
 }
 
+// --- Windsurf MCP ---
+
+func TestWindsurfMCPRender(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"env": {"GITHUB_TOKEN": "token"},
+				"autoApprove": ["search_repositories"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "mcpServers")
+	assertContains(t, out, "npx")
+	assertContains(t, out, "GITHUB_TOKEN")
+	assertNotContains(t, out, "autoApprove")
+	assertEqual(t, "mcp_config.json", result.Filename)
+
+	// autoApprove should produce a warning
+	hasAutoApproveWarning := false
+	for _, w := range result.Warnings {
+		if strings.Contains(w, "autoApprove") {
+			hasAutoApproveWarning = true
+			break
+		}
+	}
+	if !hasAutoApproveWarning {
+		t.Error("expected warning about dropped autoApprove")
+	}
+}
+
+func TestWindsurfMCPCanonicalize(t *testing.T) {
+	// Windsurf uses mcp_config.json with mcpServers key
+	input := []byte(`{
+		"mcpServers": {
+			"local": {
+				"command": "node",
+				"args": ["server.js"],
+				"env": {"PORT": "3000"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Canonicalize(input, "windsurf")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "mcpServers")
+	assertContains(t, out, "node")
+	assertContains(t, out, "server.js")
+	assertContains(t, out, "PORT")
+}
+
+func TestWindsurfMCPServerUrlNormalization(t *testing.T) {
+	// Windsurf uses serverUrl for HTTP transport
+	input := []byte(`{
+		"mcpServers": {
+			"remote-api": {
+				"serverUrl": "https://api.example.com/mcp",
+				"headers": {"Authorization": "Bearer token123"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	canonical, err := conv.Canonicalize(input, "windsurf")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// serverUrl should be normalized to url in canonical form
+	out := string(canonical.Content)
+	assertContains(t, out, `"url"`)
+	assertContains(t, out, "api.example.com")
+	assertNotContains(t, out, "serverUrl")
+}
+
+func TestWindsurfMCPRoundTrip(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"env": {"GITHUB_TOKEN": "token"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+
+	// Windsurf -> canonical
+	canonical, err := conv.Canonicalize(input, "windsurf")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// canonical -> Windsurf
+	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "mcpServers")
+	assertContains(t, out, "npx")
+	assertContains(t, out, "GITHUB_TOKEN")
+	assertEqual(t, "mcp_config.json", result.Filename)
+}
+
+func TestWindsurfMCPServerUrlRoundTrip(t *testing.T) {
+	// HTTP server with serverUrl should round-trip through canonical
+	input := []byte(`{
+		"mcpServers": {
+			"remote": {
+				"serverUrl": "https://api.example.com/mcp",
+				"headers": {"Authorization": "Bearer tok"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+
+	// Windsurf -> canonical
+	canonical, err := conv.Canonicalize(input, "windsurf")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// canonical -> Windsurf
+	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "serverUrl")
+	assertContains(t, out, "api.example.com")
+	assertContains(t, out, "Authorization")
+}
+
+func TestWindsurfMCPSSEUrl(t *testing.T) {
+	// SSE server with url field
+	input := []byte(`{
+		"mcpServers": {
+			"sse-server": {
+				"url": "https://sse.example.com/events"
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+
+	canonical, err := conv.Canonicalize(input, "windsurf")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// SSE servers should use url, not serverUrl
+	assertContains(t, out, `"url"`)
+	assertContains(t, out, "sse.example.com")
+}
+
+func TestWindsurfMCPDropsGeminiFields(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"server": {
+				"command": "node",
+				"args": ["s.js"],
+				"trust": "high",
+				"includeTools": ["search"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	canonical, err := conv.Canonicalize(input, "gemini-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertNotContains(t, out, "trust")
+	assertNotContains(t, out, "includeTools")
+
+	if len(result.Warnings) == 0 {
+		t.Fatal("expected warnings about dropped Gemini fields")
+	}
+}
+
 // --- OAuth MCP Tests ---
 
 func TestClaudeMCPOAuthRoundTrip(t *testing.T) {
@@ -879,6 +1096,7 @@ func TestOAuthWarningForUnsupportedProvider(t *testing.T) {
 		provider.Cursor,
 		provider.Kiro,
 		provider.RooCode,
+		provider.Windsurf,
 	}
 
 	for _, prov := range warnProviders {
