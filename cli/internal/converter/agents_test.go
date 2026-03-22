@@ -297,6 +297,55 @@ func TestKiroAgentCanonicalize(t *testing.T) {
 	assertContains(t, out, "You are an AWS and Rust specialist.")
 }
 
+func TestKiroAgentCanonicalize_WarnsDroppedToolAliases(t *testing.T) {
+	input := []byte("---\nname: My Agent\ntoolAliases:\n  read_file: cat\n---\n\nDo things.\n")
+
+	conv := &AgentsConverter{}
+	result, err := conv.Canonicalize(input, "kiro")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	if len(result.Warnings) != 1 {
+		t.Fatalf("expected 1 warning, got %d: %v", len(result.Warnings), result.Warnings)
+	}
+	assertContains(t, result.Warnings[0], "toolAliases dropped")
+}
+
+func TestKiroAgentCanonicalize_WarnsMultipleDroppedFields(t *testing.T) {
+	input := []byte("---\nname: My Agent\ntoolAliases:\n  read_file: cat\ntoolsSettings:\n  shell:\n    timeout: 30\nresources:\n  - res1\nincludeMcpJson: true\nincludePowers: true\nkeyboardShortcut: ctrl+k\nwelcomeMessage: Hello!\n---\n\nDo things.\n")
+
+	conv := &AgentsConverter{}
+	result, err := conv.Canonicalize(input, "kiro")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	if len(result.Warnings) != 7 {
+		t.Fatalf("expected 7 warnings, got %d: %v", len(result.Warnings), result.Warnings)
+	}
+
+	// Verify each dropped field is mentioned
+	expectedFields := []string{"toolAliases", "toolsSettings", "resources", "includeMcpJson", "includePowers", "keyboardShortcut", "welcomeMessage"}
+	for i, field := range expectedFields {
+		assertContains(t, result.Warnings[i], field+" dropped")
+	}
+}
+
+func TestKiroAgentCanonicalize_NoWarningsForStandardFields(t *testing.T) {
+	input := []byte("---\nname: Clean Agent\ndescription: Standard fields only\nmodel: claude-sonnet-4\ntools:\n  - shell\nmcpServers:\n  - github\n---\n\nStandard agent.\n")
+
+	conv := &AgentsConverter{}
+	result, err := conv.Canonicalize(input, "kiro")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	if len(result.Warnings) != 0 {
+		t.Fatalf("expected no warnings, got %d: %v", len(result.Warnings), result.Warnings)
+	}
+}
+
 func TestKiroAgentYAMLFrontmatterStructure(t *testing.T) {
 	// Verify that rendered Kiro agents have proper YAML frontmatter structure
 	input := []byte("---\nname: Test Agent\ndescription: A test agent\ntools:\n  - Read\n  - Bash\nmodel: claude-sonnet-4\nmcpServers:\n  - github\n---\n\nDo test things.\n")
@@ -340,7 +389,7 @@ func TestKiroAgentYAMLFrontmatterStructure(t *testing.T) {
 // --- OpenCode agents ---
 
 func TestClaudeAgentToOpenCode(t *testing.T) {
-	input := []byte("---\nname: Refactor Bot\ndescription: Refactoring assistant\npermissionMode: bypassPermissions\n---\n\nYou help refactor code.\n")
+	input := []byte("---\nname: Refactor Bot\ndescription: Refactoring assistant\ntools:\n  - Read\n  - Bash\nmodel: sonnet\nmaxTurns: 20\npermissionMode: bypassPermissions\ncolor: '#ff6600'\n---\n\nYou help refactor code.\n")
 
 	conv := &AgentsConverter{}
 	canonical, err := conv.Canonicalize(input, "claude-code")
@@ -354,14 +403,118 @@ func TestClaudeAgentToOpenCode(t *testing.T) {
 	}
 
 	out := string(result.Content)
-	assertContains(t, out, "Refactor Bot")
+	assertContains(t, out, "name: Refactor Bot")
+	assertContains(t, out, "description: Refactoring assistant")
+	assertContains(t, out, "model: sonnet")
+	// maxTurns → steps
+	assertContains(t, out, "steps: 20")
+	assertNotContains(t, out, "maxTurns")
+	// tools as map[string]bool
+	assertContains(t, out, "read: true")
+	assertContains(t, out, "bash: true")
+	// color preserved
+	assertContains(t, out, "color:")
+	// permissionMode not in frontmatter, embedded as prose
+	assertContains(t, out, "Bypass all permission checks")
+	assertContains(t, out, "syllago:converted")
+	// Body preserved
 	assertContains(t, out, "refactor code")
-	assertNotContains(t, out, "permissionMode")
 	assertEqual(t, "refactor-bot.md", result.Filename)
 
 	if len(result.Warnings) == 0 {
 		t.Fatal("expected warning about dropped permissionMode")
 	}
+}
+
+func TestOpenCodeAgentCanonicalize(t *testing.T) {
+	input := []byte("---\nname: Code Reviewer\ndescription: Reviews code changes\ntools:\n  read: true\n  bash: true\n  grep: true\n  write: false\nmodel: gpt-4o\nsteps: 15\ncolor: '#00ff00'\ntemperature: 0.3\n---\n\nReview all changed files carefully.\n")
+
+	conv := &AgentsConverter{}
+	result, err := conv.Canonicalize(input, "opencode")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: Code Reviewer")
+	assertContains(t, out, "description: Reviews code changes")
+	assertContains(t, out, "model: gpt-4o")
+	// steps → maxTurns in canonical
+	assertContains(t, out, "maxTurns: 15")
+	assertNotContains(t, out, "steps:")
+	// tools mapped to canonical names (only enabled ones)
+	assertContains(t, out, "Read")
+	assertContains(t, out, "Bash")
+	assertContains(t, out, "Grep")
+	// write: false should be excluded
+	assertNotContains(t, out, "Edit") // write→Write, not included since false
+	// color and temperature preserved
+	assertContains(t, out, "color:")
+	assertContains(t, out, "temperature: 0.3")
+	// Body preserved
+	assertContains(t, out, "Review all changed files carefully.")
+}
+
+func TestOpenCodeAgentRoundTrip(t *testing.T) {
+	input := []byte("---\nname: Helper\ndescription: General helper\ntools:\n  read: true\n  bash: true\nmodel: gpt-4o\nsteps: 10\ncolor: '#0099ff'\ntemperature: 0.5\n---\n\nHelp with tasks.\n")
+
+	conv := &AgentsConverter{}
+
+	// OpenCode → canonical
+	canonical, err := conv.Canonicalize(input, "opencode")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// canonical → OpenCode
+	result, err := conv.Render(canonical.Content, provider.OpenCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: Helper")
+	assertContains(t, out, "description: General helper")
+	assertContains(t, out, "model: gpt-4o")
+	assertContains(t, out, "steps: 10")
+	assertContains(t, out, "color:")
+	assertContains(t, out, "temperature: 0.5")
+	// Tools should be map format
+	assertContains(t, out, "read: true")
+	assertContains(t, out, "bash: true")
+	assertContains(t, out, "Help with tasks.")
+	assertEqual(t, "helper.md", result.Filename)
+}
+
+func TestOpenCodeAgentRenderWarnings(t *testing.T) {
+	// Test that unsupported fields produce warnings
+	input := []byte("---\nname: Full\ndescription: Has everything\ntools:\n  - Read\npermissionMode: dontAsk\nskills:\n  - coding\nmemory: project\nbackground: true\nisolation: worktree\neffort: high\nhooks:\n  preToolUse:\n    - matcher: Bash\n      script: echo hi\n---\n\nFull agent.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.OpenCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	// Should have warnings for all unsupported fields
+	if len(result.Warnings) < 6 {
+		t.Fatalf("expected at least 6 warnings, got %d: %v", len(result.Warnings), result.Warnings)
+	}
+
+	// Verify specific warnings exist
+	allWarnings := strings.Join(result.Warnings, " | ")
+	assertContains(t, allWarnings, "permissionMode")
+	assertContains(t, allWarnings, "skills")
+	assertContains(t, allWarnings, "memory")
+	assertContains(t, allWarnings, "background")
+	assertContains(t, allWarnings, "isolation")
+	assertContains(t, allWarnings, "effort")
+	assertContains(t, allWarnings, "hooks")
 }
 
 // --- Roo Code agents ---
@@ -438,7 +591,7 @@ func TestAgentToRooCodeDroppedFieldWarnings(t *testing.T) {
 // --- Cross-provider integration roundtrip tests ---
 
 func TestClaudeToOpenCodeRoundtrip(t *testing.T) {
-	input := []byte("---\nname: reviewer\ndescription: Code review agent\ntools:\n  - Read\n  - Grep\n  - Bash\nmodel: sonnet\n---\n\nReview all changed files.\n")
+	input := []byte("---\nname: reviewer\ndescription: Code review agent\ntools:\n  - Read\n  - Grep\n  - Bash\nmodel: sonnet\nmaxTurns: 25\n---\n\nReview all changed files.\n")
 
 	conv := &AgentsConverter{}
 
@@ -455,14 +608,23 @@ func TestClaudeToOpenCodeRoundtrip(t *testing.T) {
 	}
 
 	out := string(opencode.Content)
-	// OpenCode uses plain markdown (no frontmatter) with tool names translated
 	assertContains(t, out, "Review all changed files")
+	// Should use OpenCode field names
+	assertContains(t, out, "steps: 25")
+	assertContains(t, out, "read: true")
+	assertContains(t, out, "grep: true")
+	assertContains(t, out, "bash: true")
 
 	// OpenCode → canonical
 	backToCanonical, err := conv.Canonicalize(opencode.Content, "opencode")
 	if err != nil {
 		t.Fatalf("Canonicalize from OpenCode: %v", err)
 	}
+
+	backCanonicalStr := string(backToCanonical.Content)
+	// Should have canonical field names
+	assertContains(t, backCanonicalStr, "maxTurns: 25")
+	assertContains(t, backCanonicalStr, "name: reviewer")
 
 	// canonical → Claude
 	backToClaude, err := conv.Render(backToCanonical.Content, provider.ClaudeCode)
@@ -472,6 +634,7 @@ func TestClaudeToOpenCodeRoundtrip(t *testing.T) {
 
 	final := string(backToClaude.Content)
 	assertContains(t, final, "Review all changed files")
+	assertContains(t, final, "maxTurns: 25")
 }
 
 func TestGeminiToCodexRoundtrip(t *testing.T) {

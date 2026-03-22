@@ -30,6 +30,14 @@ type CommandMeta struct {
 	Effort                 string   `yaml:"effort,omitempty"` // "low", "medium", "high", "max"
 }
 
+// opencodeCommandMeta represents OpenCode command frontmatter fields.
+type opencodeCommandMeta struct {
+	Description string `yaml:"description,omitempty"`
+	Agent       string `yaml:"agent,omitempty"`   // maps from canonical Agent field
+	Model       string `yaml:"model,omitempty"`   // maps from canonical Model field
+	Subtask     bool   `yaml:"subtask,omitempty"` // maps from canonical Context=="fork"
+}
+
 // geminiCommand represents a Gemini CLI command TOML structure.
 type geminiCommand struct {
 	Name        string `toml:"name,omitempty"`
@@ -253,27 +261,28 @@ func renderClaudeCommand(meta CommandMeta, body string) (*Result, error) {
 
 // renderOpenCodeCommand renders a canonical command to OpenCode's markdown format.
 // OpenCode commands are markdown files in .opencode/commands/ with optional frontmatter.
+// OpenCode natively supports description, agent, model, and subtask fields.
+// Other Claude-specific fields are embedded as behavioral notes in the body.
 func renderOpenCodeCommand(meta CommandMeta, body string) (*Result, error) {
 	cleanBody := StripConversionNotes(body)
+
+	om := opencodeCommandMeta{
+		Description: meta.Description,
+		Agent:       meta.Agent,
+		Model:       meta.Model,
+		Subtask:     meta.Context == "fork",
+	}
 
 	name := "command"
 	if meta.Name != "" {
 		name = slugify(meta.Name)
 	}
 
-	// Build behavioral embedding notes for Claude-specific fields
+	// Build behavioral notes only for fields NOT supported in OpenCode frontmatter.
+	// Agent, Model, and Context→Subtask are now in frontmatter — no notes needed for those.
 	var notes []string
 	if len(meta.AllowedTools) > 0 {
 		notes = append(notes, fmt.Sprintf("**Tool restriction:** Use only %s tools.", strings.Join(meta.AllowedTools, ", ")))
-	}
-	if meta.Context == "fork" {
-		notes = append(notes, "Run in an isolated context. Do not modify the main conversation.")
-	}
-	if meta.Agent != "" {
-		notes = append(notes, fmt.Sprintf("Use a %s-focused approach.", strings.ToLower(meta.Agent)))
-	}
-	if meta.Model != "" {
-		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
 	}
 	if meta.Effort != "" {
 		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
@@ -285,18 +294,18 @@ func renderOpenCodeCommand(meta CommandMeta, body string) (*Result, error) {
 		result = AppendNotes(cleanBody, notesBlock)
 	}
 
-	// Build minimal frontmatter if description is present
-	var buf strings.Builder
-	if meta.Description != "" {
-		buf.WriteString("---\n")
-		buf.WriteString("description: ")
-		buf.WriteString(meta.Description)
-		buf.WriteString("\n---\n\n")
+	fm, err := renderFrontmatter(om)
+	if err != nil {
+		return nil, err
 	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
 	buf.WriteString(result)
 	buf.WriteString("\n")
 
-	return &Result{Content: []byte(buf.String()), Filename: name + ".md"}, nil
+	return &Result{Content: buf.Bytes(), Filename: name + ".md"}, nil
 }
 
 // --- Helpers ---

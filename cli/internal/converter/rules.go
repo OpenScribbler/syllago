@@ -42,7 +42,7 @@ func (c *RulesConverter) Canonicalize(content []byte, sourceProvider string) (*R
 	case "opencode":
 		return canonicalizeMarkdownRule(content)
 	case "kiro":
-		return canonicalizeMarkdownRule(content)
+		return canonicalizeKiroRule(content)
 	default:
 		return canonicalizeMarkdownRule(content)
 	}
@@ -236,6 +236,14 @@ type clineFrontmatter struct {
 	Paths []string `yaml:"paths,omitempty"`
 }
 
+// kiroRuleFrontmatter represents Kiro's YAML frontmatter fields.
+type kiroRuleFrontmatter struct {
+	Inclusion        string `yaml:"inclusion,omitempty"`        // "always", "auto", "fileMatch"
+	FileMatchPattern string `yaml:"fileMatchPattern,omitempty"` // glob pattern when inclusion=fileMatch
+	Name             string `yaml:"name,omitempty"`
+	Description      string `yaml:"description,omitempty"`
+}
+
 func canonicalizeClineRule(content []byte) (*Result, error) {
 	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
 
@@ -272,6 +280,60 @@ func canonicalizeClineRule(content []byte) (*Result, error) {
 	if len(cfm.Paths) > 0 {
 		meta.Globs = cfm.Paths
 	} else {
+		meta.AlwaysApply = true
+	}
+
+	canonical, err := buildCanonical(meta, body)
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: canonical, Filename: "rule.md"}, nil
+}
+
+func canonicalizeKiroRule(content []byte) (*Result, error) {
+	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+
+	opening := []byte("---\n")
+	if !bytes.HasPrefix(normalized, opening) {
+		// No frontmatter — treat as always-apply plain markdown
+		meta := RuleMeta{AlwaysApply: true}
+		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "rule.md"}, nil
+	}
+
+	rest := normalized[len(opening):]
+	closingIdx := bytes.Index(rest, opening)
+	if closingIdx == -1 {
+		meta := RuleMeta{AlwaysApply: true}
+		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "rule.md"}, nil
+	}
+
+	yamlBytes := rest[:closingIdx]
+	var kfm kiroRuleFrontmatter
+	if err := yaml.Unmarshal(yamlBytes, &kfm); err != nil {
+		return nil, err
+	}
+
+	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+
+	meta := RuleMeta{Description: kfm.Description}
+	switch kfm.Inclusion {
+	case "fileMatch":
+		meta.AlwaysApply = false
+		if kfm.FileMatchPattern != "" {
+			meta.Globs = splitGlobs(kfm.FileMatchPattern)
+		}
+	case "always", "auto":
+		meta.AlwaysApply = true
+	default:
+		// No inclusion field or unknown value — default to always-apply
 		meta.AlwaysApply = true
 	}
 
@@ -510,33 +572,38 @@ func renderRooCodeRule(meta RuleMeta, body string) (*Result, error) {
 	return &Result{Content: buf.Bytes(), Filename: filename, Warnings: warnings}, nil
 }
 
-// renderKiroRule renders a rule as a plain markdown steering file for Kiro.
-// Kiro steering files (.kiro/steering/) are plain markdown — no frontmatter.
+// renderKiroRule renders a rule with proper Kiro YAML frontmatter.
+// Kiro steering files (.kiro/steering/) use inclusion/fileMatchPattern/description fields.
 func renderKiroRule(meta RuleMeta, body string) (*Result, error) {
-	var notes []string
+	kfm := kiroRuleFrontmatter{Description: meta.Description}
 
-	if !meta.AlwaysApply {
-		switch {
-		case len(meta.Globs) > 0:
-			notes = append(notes, fmt.Sprintf("**Scope:** Apply only when working with files matching: %s", strings.Join(meta.Globs, ", ")))
-		case meta.Description != "":
-			notes = append(notes, fmt.Sprintf("**Scope:** Apply when: %s", meta.Description))
-		default:
-			notes = append(notes, "**Scope:** Apply only when explicitly asked.")
-		}
+	switch {
+	case meta.AlwaysApply:
+		kfm.Inclusion = "always"
+	case len(meta.Globs) > 0:
+		kfm.Inclusion = "fileMatch"
+		kfm.FileMatchPattern = strings.Join(meta.Globs, ",")
+	default:
+		// No globs + not always-apply → auto (description-based activation)
+		kfm.Inclusion = "auto"
 	}
 
-	content := body
-	if len(notes) > 0 {
-		notesBlock := BuildConversionNotes("syllago", notes)
-		content = AppendNotes(body, notesBlock)
+	fm, err := renderFrontmatter(kfm)
+	if err != nil {
+		return nil, err
 	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(body)
+	buf.WriteString("\n")
 
 	filename := "rule.md"
 	if meta.Description != "" {
 		filename = slugify(meta.Description) + ".md"
 	}
-	return &Result{Content: []byte(content + "\n"), Filename: filename}, nil
+	return &Result{Content: buf.Bytes(), Filename: filename}, nil
 }
 
 // renderOpenCodeRule renders a rule as plain markdown for OpenCode's AGENTS.md.

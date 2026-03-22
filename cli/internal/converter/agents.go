@@ -49,6 +49,18 @@ type geminiAgentMeta struct {
 	Kind        string   `yaml:"kind,omitempty"`
 }
 
+// opencodeAgentMeta is the subset of fields OpenCode supports in frontmatter.
+// OpenCode uses "steps" instead of "maxTurns" and tools as map[string]bool.
+type opencodeAgentMeta struct {
+	Name        string          `yaml:"name,omitempty"`
+	Description string          `yaml:"description,omitempty"`
+	Tools       map[string]bool `yaml:"tools,omitempty"`
+	Model       string          `yaml:"model,omitempty"`
+	Steps       int             `yaml:"steps,omitempty"`
+	Color       string          `yaml:"color,omitempty"`
+	Temperature float64         `yaml:"temperature,omitempty"`
+}
+
 // copilotAgentMeta is the subset of fields Copilot CLI supports.
 type copilotAgentMeta struct {
 	Name        string   `yaml:"name,omitempty"`
@@ -74,6 +86,9 @@ func (c *AgentsConverter) Canonicalize(content []byte, sourceProvider string) (*
 	}
 	if sourceProvider == "cursor" {
 		return canonicalizeCursorAgent(content)
+	}
+	if sourceProvider == "opencode" {
+		return canonicalizeOpenCodeAgent(content)
 	}
 	meta, body, err := parseAgentCanonical(content)
 	if err != nil {
@@ -516,7 +531,32 @@ func canonicalizeKiroAgent(content []byte) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Result{Content: canonical, Filename: "agent.md"}, nil
+
+	// Warn about Kiro-specific fields that have no canonical equivalent.
+	var warnings []string
+	if len(ka.ToolAliases) > 0 {
+		warnings = append(warnings, "toolAliases dropped (no canonical equivalent)")
+	}
+	if len(ka.ToolsSettings) > 0 {
+		warnings = append(warnings, "toolsSettings dropped (no canonical equivalent)")
+	}
+	if len(ka.Resources) > 0 {
+		warnings = append(warnings, "resources dropped (no canonical equivalent)")
+	}
+	if ka.IncludeMCPJSON {
+		warnings = append(warnings, "includeMcpJson dropped (no canonical equivalent)")
+	}
+	if ka.IncludePowers {
+		warnings = append(warnings, "includePowers dropped (no canonical equivalent)")
+	}
+	if ka.KeyboardShortcut != "" {
+		warnings = append(warnings, "keyboardShortcut dropped (no canonical equivalent)")
+	}
+	if ka.WelcomeMessage != "" {
+		warnings = append(warnings, "welcomeMessage dropped (no canonical equivalent)")
+	}
+
+	return &Result{Content: canonical, Filename: "agent.md", Warnings: warnings}, nil
 }
 
 func containsString(s []string, v string) bool {
@@ -579,34 +619,152 @@ func renderKiroAgent(meta AgentMeta, body string) (*Result, error) {
 	}, nil
 }
 
+// canonicalizeOpenCodeAgent parses an OpenCode agent .md file into canonical format.
+// OpenCode agents use "steps" instead of "maxTurns" and tools as map[string]bool.
+func canonicalizeOpenCodeAgent(content []byte) (*Result, error) {
+	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+
+	var oc opencodeAgentMeta
+	body := strings.TrimSpace(string(normalized))
+
+	opening := []byte("---\n")
+	if bytes.HasPrefix(normalized, opening) {
+		rest := normalized[len(opening):]
+		closingIdx := bytes.Index(rest, opening)
+		if closingIdx != -1 {
+			yamlBytes := rest[:closingIdx]
+			if err := yaml.Unmarshal(yamlBytes, &oc); err != nil {
+				return nil, fmt.Errorf("parsing OpenCode agent YAML frontmatter: %w", err)
+			}
+			body = strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+		}
+	}
+
+	// Convert tools map[string]bool to canonical []string (only enabled tools)
+	var tools []string
+	for tool, enabled := range oc.Tools {
+		if enabled {
+			tools = append(tools, ReverseTranslateTool(tool, "opencode"))
+		}
+	}
+
+	meta := AgentMeta{
+		Name:        oc.Name,
+		Description: oc.Description,
+		Tools:       tools,
+		Model:       oc.Model,
+		MaxTurns:    oc.Steps, // OpenCode "steps" → canonical "maxTurns"
+		Color:       oc.Color,
+		Temperature: oc.Temperature,
+	}
+
+	canonical, err := buildAgentCanonical(meta, body)
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: canonical, Filename: "agent.md"}, nil
+}
+
 // renderOpenCodeAgent renders a canonical agent to OpenCode's markdown format.
 // OpenCode agents are markdown files with YAML frontmatter in .opencode/agents/.
-// The format is nearly identical to Claude Code's sub-agents.
+// OpenCode uses "steps" instead of "maxTurns" and tools as map[string]bool.
 func renderOpenCodeAgent(meta AgentMeta, body string) (*Result, error) {
 	var warnings []string
 	cleanBody := StripConversionNotes(body)
 
-	// OpenCode does not support permissionMode
-	if meta.PermissionMode != "" {
-		warnings = append(warnings, fmt.Sprintf("permissionMode (%q) not supported by OpenCode (dropped)", meta.PermissionMode))
+	// Convert canonical tools []string to OpenCode map[string]bool
+	var toolsMap map[string]bool
+	if len(meta.Tools) > 0 {
+		toolsMap = make(map[string]bool)
+		translated := TranslateTools(meta.Tools, "opencode")
+		for _, t := range translated {
+			toolsMap[t] = true
+		}
 	}
 
-	canonical, err := buildAgentCanonical(AgentMeta{
+	om := opencodeAgentMeta{
 		Name:        meta.Name,
 		Description: meta.Description,
-		Tools:       meta.Tools,
+		Tools:       toolsMap,
 		Model:       meta.Model,
-		MaxTurns:    meta.MaxTurns,
-	}, cleanBody)
+		Steps:       meta.MaxTurns,
+		Color:       meta.Color,
+		Temperature: meta.Temperature,
+	}
+
+	// Build prose notes for unsupported fields
+	var notes []string
+	if meta.PermissionMode != "" {
+		warnings = append(warnings, fmt.Sprintf("permissionMode (%q) not supported by OpenCode (dropped)", meta.PermissionMode))
+		switch meta.PermissionMode {
+		case "plan":
+			notes = append(notes, "Operate in read-only exploration mode.")
+		case "acceptEdits":
+			notes = append(notes, "Auto-approve file edits.")
+		case "dontAsk":
+			notes = append(notes, "Run without asking for confirmation on any operation.")
+		case "bypassPermissions":
+			notes = append(notes, "Bypass all permission checks. Full autonomous mode.")
+		case "default":
+			// No note needed.
+		default:
+			notes = append(notes, fmt.Sprintf("Permission mode: %s.", meta.PermissionMode))
+		}
+	}
+	if len(meta.Skills) > 0 {
+		warnings = append(warnings, "skills not supported by OpenCode (dropped)")
+		notes = append(notes, fmt.Sprintf("Preload these skills: %s.", strings.Join(meta.Skills, ", ")))
+	}
+	if len(meta.MCPServers) > 0 {
+		notes = append(notes, fmt.Sprintf("Expected MCP servers: %s.", strings.Join(meta.MCPServers, ", ")))
+	}
+	if meta.Memory != "" {
+		warnings = append(warnings, fmt.Sprintf("memory (%q) not supported by OpenCode (dropped)", meta.Memory))
+		notes = append(notes, fmt.Sprintf("Use persistent memory scope: %s.", meta.Memory))
+	}
+	if meta.Background {
+		warnings = append(warnings, "background not supported by OpenCode (dropped)")
+		notes = append(notes, "Run as a background task.")
+	}
+	if meta.Isolation != "" {
+		warnings = append(warnings, fmt.Sprintf("isolation (%q) not supported by OpenCode (dropped)", meta.Isolation))
+		notes = append(notes, "Work in a separate git worktree.")
+	}
+	if meta.Effort != "" {
+		warnings = append(warnings, fmt.Sprintf("effort (%q) not supported by OpenCode (dropped)", meta.Effort))
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+	if meta.Hooks != nil {
+		warnings = append(warnings, "hooks not supported by OpenCode (dropped)")
+		notes = append(notes, "Agent has hooks configured (not portable).")
+	}
+	if len(meta.DisallowedTools) > 0 {
+		translated := TranslateTools(meta.DisallowedTools, "opencode")
+		notes = append(notes, fmt.Sprintf("Do not use these tools: %s.", strings.Join(translated, ", ")))
+	}
+
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	fm, err := renderFrontmatter(om)
 	if err != nil {
 		return nil, err
 	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
 
 	name := "agent"
 	if meta.Name != "" {
 		name = slugify(meta.Name)
 	}
-	return &Result{Content: canonical, Filename: name + ".md", Warnings: warnings}, nil
+	return &Result{Content: buf.Bytes(), Filename: name + ".md", Warnings: warnings}, nil
 }
 
 // --- Cursor agents ---
