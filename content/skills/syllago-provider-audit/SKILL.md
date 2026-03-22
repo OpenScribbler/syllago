@@ -7,6 +7,18 @@ description: Use when auditing AI coding tool providers OR researching provider 
 
 Structured research workflow for auditing AI coding tool providers supported by syllago. Takes a provider slug, researches official docs, and produces/updates standardized 4-file reports that drive syllago's converter accuracy.
 
+## Accuracy Standard
+
+**Every discrepancy matters. No exceptions.**
+
+Syllago's converter output is only as good as its provider knowledge. A wrong tool name, a stale directory path, a renamed config field — these produce silent failures for users. Content converts "successfully" but doesn't work in the target provider. The user blames their setup, not our data.
+
+This means:
+- **Fix every finding**, no matter how small. A renamed URL path is as important as a missing tool.
+- **Never dismiss a discrepancy as "minor"**. If the docs say one thing and our reports say another, our reports are wrong.
+- **Always update reports AND create beads** for anything that affects the converter, toolmap, or provider definition. Don't just note it — fix it or track it.
+- **After a diff, the default action is "both"** (update reports + create beads). Only skip if the user explicitly says otherwise.
+
 ## Usage
 
 ```
@@ -134,7 +146,27 @@ Report: tools found, content types supported, hook events, key differences from 
 - Create bead for MCP path fix
 ```
 
-### Step 4: Ask whether to update reports, create beads, or both
+### Step 4: Act on every finding
+
+**Default: update reports AND create beads.** Don't ask — just do both unless the user says otherwise.
+
+For each finding in the diff:
+
+| Finding type | Action |
+|-------------|--------|
+| New tool | Update tools.md + check if toolmap.go needs a mapping |
+| Changed path/filename | Update content-types.md + check provider definition (InstallDir, DiscoveryPaths) |
+| Changed config field | Update content-types.md + check converter (canonicalize/render) |
+| Changed URL | Update all reports referencing old URL |
+| New content type | Update content-types.md + create bead for provider expansion |
+| Removed/deprecated feature | Update relevant report + check if converter handles gracefully |
+| Tool name discrepancy | Update tools.md + fix toolmap.go entry |
+
+After applying all changes:
+1. Update the report files in `docs/providers/<slug>/`
+2. Create beads for any converter/toolmap/provider definition changes
+3. Run `make build && make test` if code was changed
+4. Summarize what was updated and what beads were created
 
 ## Gotchas
 
@@ -144,3 +176,4 @@ Report: tools found, content types supported, hook events, key differences from 
 - **Kiro dual format**: Agents support both JSON and markdown. Markdown is primary as of 2026-03.
 - **Source attribution is critical**: Without it, future audits can't distinguish verified facts from assumptions
 - **Check git dates**: Before diffing, check `git log -1 --format=%ai -- docs/providers/<slug>/` to know how stale the reports are
+- **Never dismiss "minor" findings**: A renamed URL, a slightly different tool name, a moved config path — these all cause silent converter failures. Every discrepancy gets fixed or tracked. The diff workflow defaults to "update + create beads" for this reason.
