@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"time"
+
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/gitutil"
@@ -141,11 +143,30 @@ var registryAddCmd = &cobra.Command{
 			fmt.Fprintf(output.ErrWriter, "Warning: registry %q doesn't appear to contain any recognized content. Added anyway.\n", name)
 		}
 
+		// Probe visibility from hosting platform API
+		probeResult, _ := registry.ProbeVisibility(gitURL)
+
+		// Check manifest declaration and resolve (stricter wins)
+		manifestDecl := ""
+		if manifest, _ := registry.LoadManifestFromDir(dir); manifest != nil {
+			manifestDecl = manifest.Visibility
+		}
+		visibility := registry.ResolveVisibility(probeResult, manifestDecl)
+		now := time.Now().UTC()
+
+		if registry.IsPrivate(visibility) {
+			fmt.Fprintf(output.Writer, "Visibility: private (content from this registry will be tainted)\n")
+		} else {
+			fmt.Fprintf(output.Writer, "Visibility: public\n")
+		}
+
 		// Save to config
 		cfg.Registries = append(cfg.Registries, config.Registry{
-			Name: name,
-			URL:  gitURL,
-			Ref:  refFlag,
+			Name:                name,
+			URL:                 gitURL,
+			Ref:                 refFlag,
+			Visibility:          visibility,
+			VisibilityCheckedAt: &now,
 		})
 		if err := config.Save(root, cfg); err != nil {
 			// Config save failed — clean up the clone so it doesn't become orphaned.
@@ -346,6 +367,8 @@ and "syllago install" to activate updated content.`,
 			if err := registry.Sync(name); err != nil {
 				return err
 			}
+			// Re-probe visibility on sync
+			reprobeRegistryVisibility(cfg, name, root)
 			fmt.Fprintf(output.Writer, "Synced: %s\n", name)
 			return nil
 		}
@@ -578,6 +601,34 @@ func truncateStr(s string, max int) string {
 		return s[:max]
 	}
 	return s[:max-3] + "..."
+}
+
+// reprobeRegistryVisibility re-probes the visibility for a named registry
+// and saves the updated config if the visibility changed or the cache is stale.
+func reprobeRegistryVisibility(cfg *config.Config, name, root string) {
+	for i := range cfg.Registries {
+		if cfg.Registries[i].Name != name {
+			continue
+		}
+		r := &cfg.Registries[i]
+		if !registry.NeedsReprobe(r.VisibilityCheckedAt) {
+			return
+		}
+		probeResult, err := registry.ProbeVisibility(r.URL)
+		if err != nil {
+			return // don't update on error
+		}
+		manifestDecl := ""
+		if manifest, _ := registry.LoadManifest(name); manifest != nil {
+			manifestDecl = manifest.Visibility
+		}
+		newVis := registry.ResolveVisibility(probeResult, manifestDecl)
+		now := time.Now().UTC()
+		r.Visibility = newVis
+		r.VisibilityCheckedAt = &now
+		_ = config.Save(root, cfg) // best-effort save
+		return
+	}
 }
 
 func init() {
