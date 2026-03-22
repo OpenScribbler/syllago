@@ -27,6 +27,7 @@ type CommandMeta struct {
 	DisableModelInvocation bool     `yaml:"disable-model-invocation,omitempty"`
 	UserInvocable          *bool    `yaml:"user-invocable,omitempty"`
 	ArgumentHint           string   `yaml:"argument-hint,omitempty"`
+	Effort                 string   `yaml:"effort,omitempty"` // "low", "medium", "high", "max"
 }
 
 // geminiCommand represents a Gemini CLI command TOML structure.
@@ -167,6 +168,9 @@ func renderGeminiCommand(meta CommandMeta, body string) (*Result, error) {
 	if meta.Model != "" {
 		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
 	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
 
 	prompt := body
 	if len(notes) > 0 {
@@ -209,6 +213,9 @@ func renderCodexCommand(meta CommandMeta, body string) (*Result, error) {
 	}
 	if meta.Model != "" {
 		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
 	}
 
 	result := body
@@ -254,6 +261,30 @@ func renderOpenCodeCommand(meta CommandMeta, body string) (*Result, error) {
 		name = slugify(meta.Name)
 	}
 
+	// Build behavioral embedding notes for Claude-specific fields
+	var notes []string
+	if len(meta.AllowedTools) > 0 {
+		notes = append(notes, fmt.Sprintf("**Tool restriction:** Use only %s tools.", strings.Join(meta.AllowedTools, ", ")))
+	}
+	if meta.Context == "fork" {
+		notes = append(notes, "Run in an isolated context. Do not modify the main conversation.")
+	}
+	if meta.Agent != "" {
+		notes = append(notes, fmt.Sprintf("Use a %s-focused approach.", strings.ToLower(meta.Agent)))
+	}
+	if meta.Model != "" {
+		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+
+	result := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		result = AppendNotes(cleanBody, notesBlock)
+	}
+
 	// Build minimal frontmatter if description is present
 	var buf strings.Builder
 	if meta.Description != "" {
@@ -262,7 +293,7 @@ func renderOpenCodeCommand(meta CommandMeta, body string) (*Result, error) {
 		buf.WriteString(meta.Description)
 		buf.WriteString("\n---\n\n")
 	}
-	buf.WriteString(cleanBody)
+	buf.WriteString(result)
 	buf.WriteString("\n")
 
 	return &Result{Content: []byte(buf.String()), Filename: name + ".md"}, nil

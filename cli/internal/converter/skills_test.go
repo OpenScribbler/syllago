@@ -608,6 +608,150 @@ func TestSkillNoHooks_ToGemini_NoWarnings(t *testing.T) {
 	}
 }
 
+// --- License, Compatibility, Metadata fields ---
+
+func TestSkillMetaFields_Canonicalize(t *testing.T) {
+	input := []byte("---\nname: review\ndescription: Code review\nlicense: MIT\ncompatibility: \">=1.0\"\nmetadata:\n  author: alice\n  category: testing\n---\n\nReview code.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	meta, body, err := parseSkillCanonical(canonical.Content)
+	if err != nil {
+		t.Fatalf("parseSkillCanonical: %v", err)
+	}
+
+	assertEqual(t, "MIT", meta.License)
+	assertEqual(t, ">=1.0", meta.Compatibility)
+	assertEqual(t, "alice", meta.Metadata["author"])
+	assertEqual(t, "testing", meta.Metadata["category"])
+	assertContains(t, body, "Review code.")
+}
+
+func TestSkillMetaFields_RenderClaude(t *testing.T) {
+	input := []byte("---\nname: review\nlicense: MIT\ncompatibility: \">=1.0\"\nmetadata:\n  author: alice\n---\n\nReview code.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "license: MIT")
+	assertContains(t, out, "compatibility:")
+	assertContains(t, out, "author: alice")
+	assertContains(t, out, "Review code.")
+}
+
+func TestSkillMetaFields_RenderCursor(t *testing.T) {
+	input := []byte("---\nname: review\nlicense: Apache-2.0\ncompatibility: \">=2.0\"\nmetadata:\n  team: backend\n---\n\nReview code.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Cursor)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "license: Apache-2.0")
+	assertContains(t, out, "compatibility:")
+	assertContains(t, out, "team: backend")
+	assertContains(t, out, "Review code.")
+}
+
+func TestSkillMetaFields_RenderGemini_NotInFrontmatter(t *testing.T) {
+	input := []byte("---\nname: review\ndescription: Code review\nlicense: MIT\ncompatibility: \">=1.0\"\nmetadata:\n  author: alice\n---\n\nReview code.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: review")
+	assertContains(t, out, "description: Code review")
+	// These fields should NOT be in the Gemini output
+	assertNotContains(t, out, "license:")
+	assertNotContains(t, out, "compatibility:")
+	assertNotContains(t, out, "author: alice")
+}
+
+func TestSkillMetaFields_RenderWindsurf_NotInFrontmatter(t *testing.T) {
+	input := []byte("---\nname: review\ndescription: Code review\nlicense: MIT\nmetadata:\n  author: alice\n---\n\nReview code.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: review")
+	assertContains(t, out, "description: Code review")
+	assertNotContains(t, out, "license:")
+	assertNotContains(t, out, "author: alice")
+}
+
+func TestSkillMetaFields_ClaudeRoundTrip(t *testing.T) {
+	input := []byte("---\nname: review\nlicense: MIT\ncompatibility: \">=1.0\"\nmetadata:\n  author: alice\n  category: testing\n---\n\nReview code.\n")
+
+	conv := &SkillsConverter{}
+
+	// Canonicalize
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// Render to Claude
+	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	// Re-canonicalize the rendered output
+	canonical2, err := conv.Canonicalize(result.Content, "claude-code")
+	if err != nil {
+		t.Fatalf("Re-canonicalize: %v", err)
+	}
+
+	meta, body, err := parseSkillCanonical(canonical2.Content)
+	if err != nil {
+		t.Fatalf("parseSkillCanonical: %v", err)
+	}
+
+	assertEqual(t, "MIT", meta.License)
+	assertEqual(t, ">=1.0", meta.Compatibility)
+	assertEqual(t, "alice", meta.Metadata["author"])
+	assertEqual(t, "testing", meta.Metadata["category"])
+	assertContains(t, body, "Review code.")
+}
+
 // joinWarnings concatenates all warnings into a single string for assertion convenience.
 func joinWarnings(warnings []string) string {
 	return strings.Join(warnings, "\n")

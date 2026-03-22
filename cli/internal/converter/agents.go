@@ -166,6 +166,12 @@ func renderGeminiAgent(meta AgentMeta, body string) (*Result, error) {
 			notes = append(notes, "Operate in read-only exploration mode.")
 		case "acceptEdits":
 			notes = append(notes, "Auto-approve file edits.")
+		case "dontAsk":
+			notes = append(notes, "Run without asking for confirmation on any operation.")
+		case "bypassPermissions":
+			notes = append(notes, "Bypass all permission checks. Full autonomous mode.")
+		case "default":
+			// No note needed — this is the default behavior.
 		default:
 			notes = append(notes, fmt.Sprintf("Permission mode: %s.", meta.PermissionMode))
 		}
@@ -238,6 +244,12 @@ func renderCopilotAgent(meta AgentMeta, body string) (*Result, error) {
 			notes = append(notes, "Operate in read-only exploration mode.")
 		case "acceptEdits":
 			notes = append(notes, "Auto-approve file edits.")
+		case "dontAsk":
+			notes = append(notes, "Run without asking for confirmation on any operation.")
+		case "bypassPermissions":
+			notes = append(notes, "Bypass all permission checks. Full autonomous mode.")
+		case "default":
+			// No note needed — this is the default behavior.
 		default:
 			notes = append(notes, fmt.Sprintf("Permission mode: %s.", meta.PermissionMode))
 		}
@@ -683,7 +695,18 @@ func renderCursorAgent(meta AgentMeta, body string) (*Result, error) {
 		notes = append(notes, fmt.Sprintf("**Do not use:** %s tools.", strings.Join(translated, ", ")))
 	}
 	if meta.PermissionMode != "" && meta.PermissionMode != "plan" {
-		notes = append(notes, fmt.Sprintf("Permission mode: %s.", meta.PermissionMode))
+		switch meta.PermissionMode {
+		case "acceptEdits":
+			notes = append(notes, "Auto-approve file edits.")
+		case "dontAsk":
+			notes = append(notes, "Run without asking for confirmation on any operation.")
+		case "bypassPermissions":
+			notes = append(notes, "Bypass all permission checks. Full autonomous mode.")
+		case "default":
+			// No note needed — this is the default behavior.
+		default:
+			notes = append(notes, fmt.Sprintf("Permission mode: %s.", meta.PermissionMode))
+		}
 	}
 	if meta.MaxTurns > 0 {
 		notes = append(notes, fmt.Sprintf("Limit to %d turns.", meta.MaxTurns))
@@ -720,7 +743,7 @@ func renderCursorAgent(meta AgentMeta, body string) (*Result, error) {
 	if meta.MaxTurns > 0 {
 		warnings = append(warnings, fmt.Sprintf("maxTurns (%d) not supported by Cursor (embedded as prose)", meta.MaxTurns))
 	}
-	if meta.PermissionMode != "" && meta.PermissionMode != "plan" {
+	if meta.PermissionMode != "" && meta.PermissionMode != "plan" && meta.PermissionMode != "default" {
 		warnings = append(warnings, fmt.Sprintf("permissionMode (%q) not fully supported by Cursor (embedded as prose)", meta.PermissionMode))
 	}
 

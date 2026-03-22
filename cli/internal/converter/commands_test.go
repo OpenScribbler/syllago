@@ -153,6 +153,119 @@ func TestClaudeCommandToOpenCode(t *testing.T) {
 	assertContains(t, out, "coverage")
 }
 
+// --- Effort field tests ---
+
+func TestCommandEffortPreservedInCanonical(t *testing.T) {
+	input := []byte("---\nname: deploy\neffort: high\n---\n\nDeploy to production.\n")
+
+	conv := &CommandsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(canonical.Content)
+	assertContains(t, out, "effort: high")
+}
+
+func TestCommandEffortInClaudeFrontmatter(t *testing.T) {
+	input := []byte("---\nname: deploy\neffort: high\n---\n\nDeploy to production.\n")
+
+	conv := &CommandsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "effort: high")
+	assertContains(t, out, "Deploy to production.")
+}
+
+func TestCommandEffortAsGeminiBehavioralNote(t *testing.T) {
+	input := []byte("---\nname: deploy\neffort: max\n---\n\nDeploy to production.\n")
+
+	conv := &CommandsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "Effort level: max.")
+}
+
+func TestCommandEffortAsCodexBehavioralNote(t *testing.T) {
+	input := []byte("---\nname: deploy\neffort: low\n---\n\nDeploy to production.\n")
+
+	conv := &CommandsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Codex)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "Effort level: low.")
+}
+
+func TestCommandEffortAsOpenCodeBehavioralNote(t *testing.T) {
+	input := []byte("---\nname: deploy\neffort: medium\n---\n\nDeploy to production.\n")
+
+	conv := &CommandsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.OpenCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "Effort level: medium.")
+}
+
+func TestCommandEffortRoundTripClaude(t *testing.T) {
+	input := []byte("---\nname: deploy\neffort: high\n---\n\nDeploy to production.\n")
+
+	conv := &CommandsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	rendered, err := conv.Render(canonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	// Re-canonicalize the rendered output
+	canonical2, err := conv.Canonicalize(rendered.Content, "claude-code")
+	if err != nil {
+		t.Fatalf("Re-canonicalize: %v", err)
+	}
+
+	out := string(canonical2.Content)
+	assertContains(t, out, "effort: high")
+	assertContains(t, out, "Deploy to production.")
+}
+
 func TestCommandNoFrontmatterToGemini(t *testing.T) {
 	input := []byte("Just do the thing.\n")
 

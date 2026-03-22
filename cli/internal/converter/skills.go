@@ -149,18 +149,21 @@ func splitToolString(s string) []string {
 // SkillMeta is the canonical skill metadata (YAML frontmatter fields).
 // Claude Code is the superset.
 type SkillMeta struct {
-	Name                   string         `yaml:"name,omitempty"`
-	Description            string         `yaml:"description,omitempty"`
-	AllowedTools           flexStringList `yaml:"allowed-tools,omitempty"`
-	DisallowedTools        flexStringList `yaml:"disallowed-tools,omitempty"`
-	Context                string         `yaml:"context,omitempty"`
-	Agent                  string         `yaml:"agent,omitempty"`
-	Model                  string         `yaml:"model,omitempty"`
-	Effort                 string         `yaml:"effort,omitempty"`
-	DisableModelInvocation bool           `yaml:"disable-model-invocation,omitempty"`
-	UserInvocable          *bool          `yaml:"user-invocable,omitempty"`
-	ArgumentHint           string         `yaml:"argument-hint,omitempty"`
-	Hooks                  any            `yaml:"hooks,omitempty"`
+	Name                   string            `yaml:"name,omitempty"`
+	Description            string            `yaml:"description,omitempty"`
+	License                string            `yaml:"license,omitempty"`
+	Compatibility          string            `yaml:"compatibility,omitempty"`
+	Metadata               map[string]string `yaml:"metadata,omitempty"`
+	AllowedTools           flexStringList    `yaml:"allowed-tools,omitempty"`
+	DisallowedTools        flexStringList    `yaml:"disallowed-tools,omitempty"`
+	Context                string            `yaml:"context,omitempty"`
+	Agent                  string            `yaml:"agent,omitempty"`
+	Model                  string            `yaml:"model,omitempty"`
+	Effort                 string            `yaml:"effort,omitempty"`
+	DisableModelInvocation bool              `yaml:"disable-model-invocation,omitempty"`
+	UserInvocable          *bool             `yaml:"user-invocable,omitempty"`
+	ArgumentHint           string            `yaml:"argument-hint,omitempty"`
+	Hooks                  any               `yaml:"hooks,omitempty"`
 }
 
 // geminiSkillMeta is the subset of fields Gemini CLI supports.
@@ -327,9 +330,12 @@ func renderClaudeSkill(meta SkillMeta, body string) (*Result, error) {
 // Cursor supports: name, description, license, compatibility, metadata, disable-model-invocation.
 // It does NOT support: allowed-tools, context, agent, model, effort, hooks, user-invocable, argument-hint.
 type cursorSkillMeta struct {
-	Name                   string `yaml:"name,omitempty"`
-	Description            string `yaml:"description,omitempty"`
-	DisableModelInvocation bool   `yaml:"disable-model-invocation,omitempty"`
+	Name                   string            `yaml:"name,omitempty"`
+	Description            string            `yaml:"description,omitempty"`
+	License                string            `yaml:"license,omitempty"`
+	Compatibility          string            `yaml:"compatibility,omitempty"`
+	Metadata               map[string]string `yaml:"metadata,omitempty"`
+	DisableModelInvocation bool              `yaml:"disable-model-invocation,omitempty"`
 }
 
 // renderCursorSkill renders a canonical skill to Cursor's SKILL.md format.
@@ -378,6 +384,9 @@ func renderCursorSkill(meta SkillMeta, body string) (*Result, error) {
 	cm := cursorSkillMeta{
 		Name:                   meta.Name,
 		Description:            meta.Description,
+		License:                meta.License,
+		Compatibility:          meta.Compatibility,
+		Metadata:               meta.Metadata,
 		DisableModelInvocation: meta.DisableModelInvocation,
 	}
 	fm, err := renderFrontmatter(cm)

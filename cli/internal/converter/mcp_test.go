@@ -1349,6 +1349,183 @@ func TestMCPStreamableHTTPRoundTrip(t *testing.T) {
 	assertEqual(t, "Bearer tok", outCfg.MCPServers["remote"].Headers["Authorization"])
 }
 
+func TestWindsurfMCPCanonicalizeDisabledTools(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"disabledTools": ["create_issue", "delete_repo"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	canonical, err := conv.Canonicalize(input, "windsurf")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(canonical.Content)
+	assertContains(t, out, "disabledTools")
+	assertContains(t, out, "create_issue")
+	assertContains(t, out, "delete_repo")
+}
+
+func TestRooCodeMCPCanonicalizeDisabledTools(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"disabledTools": ["create_issue", "delete_repo"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	canonical, err := conv.Canonicalize(input, "roo-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(canonical.Content)
+	assertContains(t, out, "disabledTools")
+	assertContains(t, out, "create_issue")
+	assertContains(t, out, "delete_repo")
+}
+
+func TestKiroMCPRenderDisabledTools(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"disabledTools": ["create_issue", "delete_repo"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Render(input, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "disabledTools")
+	assertContains(t, out, "create_issue")
+	assertContains(t, out, "delete_repo")
+}
+
+func TestWindsurfMCPRenderDisabledTools(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"disabledTools": ["create_issue"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Render(input, provider.Windsurf)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "disabledTools")
+	assertContains(t, out, "create_issue")
+}
+
+func TestRooCodeMCPRenderDisabledTools(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"disabledTools": ["create_issue"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Render(input, provider.RooCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "disabledTools")
+	assertContains(t, out, "create_issue")
+}
+
+func TestClaudeMCPDropsDisabledTools(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"disabledTools": ["create_issue"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Render(input, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertNotContains(t, out, "disabledTools")
+	assertNotContains(t, out, "create_issue")
+
+	// Should warn about dropped disabledTools
+	found := false
+	for _, w := range result.Warnings {
+		if strings.Contains(w, "disabledTools") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected warning about dropped disabledTools")
+	}
+}
+
+func TestDisabledToolsRoundTripKiro(t *testing.T) {
+	// Windsurf → canonical → Kiro: disabledTools preserved
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"disabledTools": ["create_issue", "delete_repo"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+
+	canonical, err := conv.Canonicalize(input, "windsurf")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Kiro)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "disabledTools")
+	assertContains(t, out, "create_issue")
+	assertContains(t, out, "delete_repo")
+}
+
 func TestOpenCodeToClaudeOAuthPreserved(t *testing.T) {
 	input := []byte(`{
 		"mcp": {
