@@ -386,6 +386,7 @@ and "syllago install" to activate updated content.`,
 				fmt.Fprintf(output.ErrWriter, "Error syncing %s: %s\n", res.Name, res.Err)
 				hasErrors = true
 			} else {
+				reprobeRegistryVisibility(cfg, res.Name, root)
 				fmt.Fprintf(output.Writer, "Synced: %s\n", res.Name)
 			}
 		}

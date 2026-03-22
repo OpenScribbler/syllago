@@ -22,6 +22,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 type importStep int
@@ -396,6 +397,14 @@ func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
 			return m, nil
 		}
 		m.clonedPath = msg.path
+		// Set taint from git URL visibility
+		gitURL := m.urlInput.Value()
+		m.taintRegistry = registry.NameFromURL(gitURL)
+		if vis, probeErr := registry.ProbeVisibility(gitURL); probeErr == nil {
+			m.taintVisibility = vis
+		} else {
+			m.taintVisibility = registry.VisibilityUnknown
+		}
 		// Scan the cloned repo for content (cloned repo is self-contained; both roots are the same)
 		cat, err := catalog.Scan(msg.path, msg.path)
 		if err != nil {
