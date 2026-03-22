@@ -284,9 +284,24 @@ func canonicalizeClineRule(content []byte) (*Result, error) {
 
 // --- Renderers (canonical → provider) ---
 
+// cursorRuleFrontmatter is the output struct for Cursor .mdc files.
+// Cursor expects globs as a comma-separated string, not a YAML array.
+type cursorRuleFrontmatter struct {
+	Description string `yaml:"description,omitempty"`
+	AlwaysApply bool   `yaml:"alwaysApply"`
+	Globs       string `yaml:"globs,omitempty"`
+}
+
 func renderCursorRule(meta RuleMeta, body string) (*Result, error) {
-	// Cursor uses the same fields as canonical (alwaysApply, globs, description)
-	fm, err := renderFrontmatter(meta)
+	cfm := cursorRuleFrontmatter{
+		Description: meta.Description,
+		AlwaysApply: meta.AlwaysApply,
+	}
+	if len(meta.Globs) > 0 {
+		cfm.Globs = strings.Join(meta.Globs, ", ")
+	}
+
+	fm, err := renderFrontmatter(cfm)
 	if err != nil {
 		return nil, err
 	}

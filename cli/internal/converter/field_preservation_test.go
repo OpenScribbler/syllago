@@ -612,7 +612,7 @@ func TestFieldPreservation_MCPMixed(t *testing.T) {
 		}
 	})
 
-	// Cline — stdio only, autoApprove → alwaysAllow, HTTP dropped
+	// Cline — autoApprove → alwaysAllow, HTTP preserved (SSE supported)
 	t.Run("to Cline", func(t *testing.T) {
 		result, err := conv.Render(canonical.Content, provider.Cline)
 		if err != nil {
@@ -622,10 +622,7 @@ func TestFieldPreservation_MCPMixed(t *testing.T) {
 		assertContains(t, out, "npx")
 		assertContains(t, out, "alwaysAllow") // autoApprove → alwaysAllow
 		assertNotContains(t, out, "autoApprove")
-		assertNotContains(t, out, "api.example.com") // HTTP dropped
-		if len(result.Warnings) == 0 {
-			t.Error("expected warning about dropped HTTP server")
-		}
+		assertContains(t, out, "api.example.com") // HTTP preserved
 	})
 
 	// Roo Code — HTTP preserved, autoApprove dropped, cwd dropped
@@ -1237,35 +1234,28 @@ func TestEdgeCase_MCPOnlyHTTPServers(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	// Zed and Cline should drop everything and warn
-	for _, tt := range []struct {
-		name   string
-		target provider.Provider
-	}{
-		{"Zed", provider.Zed},
-		{"Cline", provider.Cline},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := conv.Render(canonical.Content, tt.target)
-			if err != nil {
-				t.Fatalf("Render: %v", err)
-			}
-			out := string(result.Content)
-			assertNotContains(t, out, "a.example.com")
-			assertNotContains(t, out, "b.example.com")
-			if len(result.Warnings) < 2 {
-				t.Errorf("expected at least 2 warnings (one per HTTP server), got %d", len(result.Warnings))
-			}
-		})
-	}
+	// Zed should drop everything and warn (stdio-only provider)
+	t.Run("Zed", func(t *testing.T) {
+		result, err := conv.Render(canonical.Content, provider.Zed)
+		if err != nil {
+			t.Fatalf("Render: %v", err)
+		}
+		out := string(result.Content)
+		assertNotContains(t, out, "a.example.com")
+		assertNotContains(t, out, "b.example.com")
+		if len(result.Warnings) < 2 {
+			t.Errorf("expected at least 2 warnings (one per HTTP server), got %d", len(result.Warnings))
+		}
+	})
 
-	// OpenCode and Kiro should preserve both
+	// OpenCode, Kiro, and Cline should preserve both
 	for _, tt := range []struct {
 		name   string
 		target provider.Provider
 	}{
 		{"OpenCode", provider.OpenCode},
 		{"Kiro", provider.Kiro},
+		{"Cline", provider.Cline},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := conv.Render(canonical.Content, tt.target)

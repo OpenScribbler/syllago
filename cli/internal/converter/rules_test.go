@@ -490,6 +490,74 @@ func TestZedRuleGlobsWarning(t *testing.T) {
 	}
 }
 
+// --- Cursor globs format ---
+
+func TestCursorRenderGlobsAsCommaSeparatedString(t *testing.T) {
+	input := []byte("---\ndescription: TS rule\nalwaysApply: false\nglobs:\n    - \"*.ts\"\n    - \"*.tsx\"\n---\n\nUse strict.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Render(input, provider.Cursor)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// Should be a comma-separated string, not a YAML array
+	assertContains(t, out, "globs: '*.ts, *.tsx'")
+	assertNotContains(t, out, "- \"*.ts\"")
+	assertContains(t, out, "alwaysApply: false")
+	assertContains(t, out, "Use strict.")
+}
+
+func TestCursorRoundTripGlobs(t *testing.T) {
+	// Start with a Cursor rule using comma-separated globs (native format)
+	input := []byte("---\ndescription: TS rule\nglobs: \"*.ts, *.tsx\"\nalwaysApply: false\n---\n\nUse strict.\n")
+
+	conv := &RulesConverter{}
+	// Cursor → canonical
+	canonical, err := conv.Canonicalize(input, "cursor")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// Verify canonical has globs as array
+	meta, body, err := parseCanonical(canonical.Content)
+	if err != nil {
+		t.Fatalf("parseCanonical: %v", err)
+	}
+	if len(meta.Globs) != 2 {
+		t.Fatalf("expected 2 globs, got %d: %v", len(meta.Globs), meta.Globs)
+	}
+	assertEqual(t, "*.ts", meta.Globs[0])
+	assertEqual(t, "*.tsx", meta.Globs[1])
+	assertContains(t, body, "Use strict.")
+
+	// canonical → Cursor (should produce comma-separated string)
+	result, err := conv.Render(canonical.Content, provider.Cursor)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "globs: '*.ts, *.tsx'")
+	assertNotContains(t, out, "- \"*.ts\"")
+	assertEqual(t, "rule.mdc", result.Filename)
+}
+
+func TestCursorRenderNoGlobsOmitted(t *testing.T) {
+	input := []byte("---\ndescription: Always rule\nalwaysApply: true\n---\n\nAlways on.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Render(input, provider.Cursor)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "alwaysApply: true")
+	assertNotContains(t, out, "globs:")
+}
+
 // --- Helpers ---
 
 func assertContains(t *testing.T, haystack, needle string) {
