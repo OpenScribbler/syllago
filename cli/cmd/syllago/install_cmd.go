@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -19,10 +21,11 @@ type installResult struct {
 }
 
 type installedItem struct {
-	Name   string `json:"name"`
-	Type   string `json:"type"`
-	Method string `json:"method"`
-	Path   string `json:"path"`
+	Name     string   `json:"name"`
+	Type     string   `json:"type"`
+	Method   string   `json:"method"`
+	Path     string   `json:"path"`
+	Warnings []string `json:"warnings,omitempty"` // portability warnings
 }
 
 type skippedItem struct {
@@ -169,17 +172,41 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			}
 			continue
 		}
+
+		// Check for portability warnings by running the converter.
+		var warnings []string
+		if conv := converter.For(item.Type); conv != nil {
+			contentFile := converter.ResolveContentFile(item)
+			if contentFile != "" {
+				if raw, readErr := os.ReadFile(contentFile); readErr == nil {
+					srcProv := ""
+					if item.Meta != nil {
+						srcProv = item.Meta.SourceProvider
+					}
+					if canonical, cErr := conv.Canonicalize(raw, srcProv); cErr == nil {
+						if rendered, rErr := conv.Render(canonical.Content, *prov); rErr == nil {
+							warnings = rendered.Warnings
+						}
+					}
+				}
+			}
+		}
+
 		result.Installed = append(result.Installed, installedItem{
-			Name:   item.Name,
-			Type:   string(item.Type),
-			Method: string(method),
-			Path:   desc,
+			Name:     item.Name,
+			Type:     string(item.Type),
+			Method:   string(method),
+			Path:     desc,
+			Warnings: warnings,
 		})
 		if !output.JSON && !output.Quiet {
 			if method == installer.MethodSymlink {
 				fmt.Fprintf(output.Writer, "Symlinked %s to %s\n", item.Name, desc)
 			} else {
 				fmt.Fprintf(output.Writer, "Copied %s to %s\n", item.Name, desc)
+			}
+			for _, w := range warnings {
+				fmt.Fprintf(output.ErrWriter, "    - %s\n", w)
 			}
 		}
 	}
