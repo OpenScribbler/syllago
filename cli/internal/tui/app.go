@@ -215,7 +215,7 @@ func (a *App) handleConfirmAction() tea.Cmd {
 				if p.Detected && p.SupportsType(item.Type) {
 					status := installer.CheckStatus(item, p, repoRoot)
 					if status == installer.StatusInstalled {
-						installer.Uninstall(item, p, repoRoot)
+						_, _ = installer.Uninstall(item, p, repoRoot)
 					}
 				}
 			}
@@ -263,7 +263,7 @@ func (a *App) handleConfirmAction() tea.Cmd {
 // Currently only needed for the non-syllago redirect modal (clone cleanup).
 func (a *App) cleanupDismissedModal() {
 	if a.pendingNonSyllagoClone != "" {
-		os.RemoveAll(a.pendingNonSyllagoClone)
+		_ = os.RemoveAll(a.pendingNonSyllagoClone)
 		a.pendingNonSyllagoClone = ""
 		a.pendingNonSyllagoScan = catalog.NativeScanResult{}
 	}
@@ -335,13 +335,13 @@ func (a *App) doRegistryAdd(gitURL, nameOverride string) tea.Cmd {
 		freshCfg, err := config.Load(root)
 		if err != nil {
 			dir, _ := registry.CloneDir(name)
-			os.RemoveAll(dir)
+			_ = os.RemoveAll(dir)
 			return registryAddDoneMsg{name: name, err: fmt.Errorf("loading config: %w", err)}
 		}
 		freshCfg.Registries = append(freshCfg.Registries, config.Registry{Name: name, URL: gitURL})
 		if err := config.Save(root, freshCfg); err != nil {
 			dir, _ := registry.CloneDir(name)
-			os.RemoveAll(dir)
+			_ = os.RemoveAll(dir)
 			return registryAddDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
 		}
 		return registryAddDoneMsg{name: name, empty: empty}
@@ -476,7 +476,8 @@ func (a *App) rebuildItemsFiltered(query string) {
 
 	// Build the source item list
 	var src []catalog.ContentItem
-	if ct == catalog.Library {
+	switch ct {
+	case catalog.Library:
 		for _, item := range a.visibleItems(a.catalog.Items) {
 			if item.Library {
 				src = append(src, item)
@@ -484,10 +485,10 @@ func (a *App) rebuildItemsFiltered(query string) {
 		}
 		savedCtx.hiddenCount = countHidden(a.catalog.Items)
 		savedCtx.hideLibraryBadge = true
-	} else if ct == catalog.SearchResults {
+	case catalog.SearchResults:
 		src = a.visibleItems(a.catalog.Items)
 		// SearchResults: hiddenCount stays as-is
-	} else {
+	default:
 		src = a.visibleItems(a.catalog.ByType(ct))
 		savedCtx.hiddenCount = countHidden(a.catalog.ByType(ct))
 
@@ -846,10 +847,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.refreshSidebarCounts()
 			}
 			// If on detail screen, navigate back to items
-			if a.screen == screenDetail {
+			switch a.screen {
+			case screenDetail:
 				a.screen = screenItems
 				a.rebuildItems()
-			} else if a.screen == screenItems {
+			case screenItems:
 				a.rebuildItems()
 			}
 		}
@@ -1833,7 +1835,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if msg.Type == tea.KeyEnter {
 				// Apply filter
-				if a.screen == screenCategory {
+				switch a.screen {
+				case screenCategory:
 					// Search across all items, go to items view with filtered results
 					filtered := filterItems(a.visibleItems(a.catalog.Items), a.search.query())
 					items := newItemsModel(catalog.SearchResults, filtered, a.providers, a.catalog.RepoRoot)
@@ -1843,7 +1846,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.cardParent = 0
 					a.screen = screenItems
 					a.focus = focusContent
-				} else if a.screen == screenItems {
+				case screenItems:
 					a.rebuildItemsFiltered(a.search.query())
 				}
 				a.search = a.search.deactivated()

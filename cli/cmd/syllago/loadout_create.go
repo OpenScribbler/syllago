@@ -134,7 +134,25 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 		itemsByType[ct] = selected
 	}
 
-	manifest := loadout.BuildManifestFromNames(providerSlug, name, description, itemsByType)
+	globalDir := catalog.GlobalContentDir()
+	manifest := loadout.BuildManifestFromNames(providerSlug, name, description, itemsByType, globalDir)
+
+	// G3 privacy gate: warn about private items in the loadout.
+	var selectedItems []catalog.ContentItem
+	for ct, names := range itemsByType {
+		for _, n := range names {
+			for _, item := range cat.Items {
+				if item.Type == ct && item.Name == n {
+					selectedItems = append(selectedItems, item)
+					break
+				}
+			}
+		}
+	}
+	if warnings := loadout.CheckPrivateItems(selectedItems); len(warnings) > 0 {
+		fmt.Fprintln(output.ErrWriter)
+		fmt.Fprintln(output.ErrWriter, loadout.FormatPrivateWarnings(warnings))
+	}
 
 	// Step 5: Review
 	fmt.Fprintf(output.Writer, "\n--- Loadout Review ---\n")

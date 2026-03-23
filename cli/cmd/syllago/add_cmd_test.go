@@ -542,7 +542,7 @@ func TestAddHooksForce(t *testing.T) {
 		os.WriteFile(filepath.Join(existingDir, "hook.json"), []byte(`{"event":"old"}`), 0644)
 
 		stdout, _ := output.SetForTest(t)
-		if err := runAddHooks(tmp, "claude-code", false, nil, false, "project", nil); err != nil {
+		if err := runAddHooks(tmp, "claude-code", false, nil, false, "project", nil, "", ""); err != nil {
 			t.Fatalf("runAddHooks without force failed: %v", err)
 		}
 		out := stdout.String()
@@ -572,7 +572,7 @@ func TestAddHooksForce(t *testing.T) {
 		os.WriteFile(filepath.Join(existingDir, "hook.json"), []byte(`{"event":"old"}`), 0644)
 
 		_, _ = output.SetForTest(t)
-		if err := runAddHooks(tmp, "claude-code", false, nil, true, "project", nil); err != nil {
+		if err := runAddHooks(tmp, "claude-code", false, nil, true, "project", nil, "", ""); err != nil {
 			t.Fatalf("runAddHooks with force failed: %v", err)
 		}
 		data, _ := os.ReadFile(filepath.Join(existingDir, "hook.json"))

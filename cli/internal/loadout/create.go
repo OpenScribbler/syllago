@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"gopkg.in/yaml.v3"
 )
 
@@ -45,15 +46,40 @@ func BuildManifest(provider, name, description string, items map[catalog.Content
 }
 
 // BuildManifestFromNames is a convenience wrapper that creates ItemRefs from
-// plain name strings (no IDs). Use BuildManifest when IDs are available.
-func BuildManifestFromNames(provider, name, description string, items map[catalog.ContentType][]string) *Manifest {
+// plain name strings, resolving IDs from library metadata when globalDir is provided.
+// Pass empty globalDir to skip ID resolution.
+func BuildManifestFromNames(provider, name, description string, items map[catalog.ContentType][]string, globalDir ...string) *Manifest {
 	refs := make(map[catalog.ContentType][]ItemRef)
+	gdir := ""
+	if len(globalDir) > 0 {
+		gdir = globalDir[0]
+	}
 	for ct, names := range items {
 		for _, n := range names {
-			refs[ct] = append(refs[ct], ItemRef{Name: n})
+			ref := ItemRef{Name: n}
+			if gdir != "" {
+				ref.ID = resolveItemID(gdir, ct, provider, n)
+			}
+			refs[ct] = append(refs[ct], ref)
 		}
 	}
 	return BuildManifest(provider, name, description, refs)
+}
+
+// resolveItemID reads the .syllago.yaml for a library item and returns its ID.
+// Returns empty string if the metadata can't be read.
+func resolveItemID(globalDir string, ct catalog.ContentType, provider, name string) string {
+	var itemDir string
+	if ct.IsUniversal() {
+		itemDir = filepath.Join(globalDir, string(ct), name)
+	} else {
+		itemDir = filepath.Join(globalDir, string(ct), provider, name)
+	}
+	meta, err := metadata.Load(itemDir)
+	if err != nil || meta == nil {
+		return ""
+	}
+	return meta.ID
 }
 
 // WriteManifest marshals m to YAML and writes to destDir/<m.Name>/loadout.yaml.
