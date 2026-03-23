@@ -6,9 +6,14 @@
 
 </div>
 
-AI coding tools like Claude Code, Cursor, Gemini CLI, and Copilot each store rules, skills, agents, and other configurations in their own format. If you've built up a library of custom instructions in one tool, moving them to another means manual copy-pasting and format translation. Syllago automates that.
+AI coding tools like Claude Code, Cursor, Gemini CLI, Copilot, and Amp each store rules, skills, agents, and other configurations in their own format. If you've built up a library of custom instructions in one tool, moving them to another means manual copy-pasting and format translation. Syllago automates that.
 
 Syllago maintains a central library of your content -- rules, skills, agents, hooks, MCP server configs, and commands. When you add content from one provider, syllago converts it to its own format. When you install it to another provider, syllago converts it again to the target's native format. The conversion is automatic and bidirectional.
+
+## Prerequisites
+
+- **OS:** Linux, macOS, or Windows (via WSL)
+- **Git:** Required for registry operations and content sharing
 
 ## Installation
 
@@ -90,7 +95,7 @@ Content in your library is provider-neutral. You add once, install anywhere.
 
 ## Features
 
-- **Cross-provider conversion** -- add content from one tool, install to another. Syllago handles format differences (Cursor's `.mdc`, Codex's TOML, Kiro's JSON, etc.)
+- **Cross-provider conversion** -- add content from one tool, install to another. Syllago handles format differences (Cursor's `.mdc`, Codex's TOML, Kiro's JSON, Amp's `AGENTS.md`, etc.)
 - **Interactive TUI** with card grids, search, mouse support, and keyboard navigation
 - **Loadouts** -- bundle multiple content items together and apply them as a unit. Preview with `--try` and revert cleanly
 - **Git-based registries** -- browse and install shared content from any compatible git repository
@@ -103,16 +108,17 @@ Content in your library is provider-neutral. You add once, install anywhere.
 | Tool | Rules | Skills | Agents | MCP | Hooks | Commands |
 |------|:-----:|:------:|:------:|:---:|:-----:|:--------:|
 | Claude Code | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Gemini CLI | ✅ | ✅ | ✅ | ✅ | ✅ | - |
-| Copilot CLI | ✅ | - | ✅ | ✅ | ✅ | - |
-| Codex | ✅ | - | ✅ | - | - | ✅ |
-| Cursor | ✅ | - | - | - | - | - |
-| Windsurf | ✅ | - | - | - | - | - |
-| Zed | ✅ | - | - | - | - | - |
-| Cline | ✅ | - | - | ✅ | - | - |
-| Roo Code | ✅ | - | - | ✅ | - | - |
-| OpenCode | ✅ | ✅ | - | ✅ | - | - |
-| Kiro | ✅ | ✅ | ✅ | ✅ | - | - |
+| Gemini CLI | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Copilot CLI | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Codex | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Cursor | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Amp | ✅ | ✅ | - | ✅ | - | - |
+| Windsurf | ✅ | ✅ | - | ✅ | ✅ | - |
+| Kiro | ✅ | ✅ | ✅ | ✅ | ✅ | - |
+| OpenCode | ✅ | ✅ | ✅ | ✅ | - | ✅ |
+| Roo Code | ✅ | ✅ | ✅ | ✅ | - | - |
+| Cline | ✅ | - | - | ✅ | ✅ | - |
+| Zed | ✅ | - | - | ✅ | - | - |
 
 ## Content Types
 
@@ -134,8 +140,8 @@ Content in your library is provider-neutral. You add once, install anywhere.
 | Skills | All providers | Metadata rendering varies by provider |
 | Agents | All providers | Codex uses TOML format (auto-converted) |
 | MCP configs | Most providers | Zed uses `context_servers` key (handled automatically) |
-| Hooks | Claude Code, Gemini CLI, Copilot CLI, Kiro, Cursor, Cline | Canonical interchange format (`docs/spec/hooks-v1.md`) with degradation strategies. OpenCode, Zed, Roo Code lack hook systems |
-| Commands | Claude Code | Provider-specific feature |
+| Hooks | Claude Code, Gemini CLI, Copilot CLI, Codex, Cursor, Windsurf, Kiro, Cline | Canonical interchange format (`docs/spec/hooks-v1.md`) with degradation strategies. Amp, OpenCode, Zed, Roo Code lack hook systems |
+| Commands | Claude Code, Gemini CLI, Copilot CLI, Codex, Cursor, OpenCode | Slash command definitions (e.g., `/deploy`) |
 | Loadouts | Claude Code (v1) | Additional provider emitters planned |
 
 ## Commands
