@@ -1,7 +1,7 @@
 kind: loadout
 version: 1
-provider: opencode
-name: opencode-starter
+provider: codex
+name: syllago-starter
 description: >
   Built-in meta-tools for syllago: reference guide, quickstart,
   import workflow reference, and content authoring agent.

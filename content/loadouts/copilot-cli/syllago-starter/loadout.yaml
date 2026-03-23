@@ -1,12 +1,14 @@
 kind: loadout
 version: 1
-provider: windsurf
-name: windsurf-starter
+provider: copilot-cli
+name: syllago-starter
 description: >
   Built-in meta-tools for syllago: reference guide, quickstart,
-  and import workflow reference.
+  import workflow reference, and content authoring agent.
 
 skills:
   - syllago-guide
   - syllago-quickstart
   - syllago-import
+agents:
+  - syllago-author
