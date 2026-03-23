@@ -599,19 +599,16 @@ func TestFieldPreservation_MCPMixed(t *testing.T) {
 		}
 	})
 
-	// Zed — stdio only, HTTP servers dropped with warning
+	// Zed — supports both stdio and URL-based servers
 	t.Run("to Zed", func(t *testing.T) {
 		result, err := conv.Render(canonical.Content, provider.Zed)
 		if err != nil {
 			t.Fatalf("Render: %v", err)
 		}
 		out := string(result.Content)
-		assertContains(t, out, "context_servers")    // Zed key name
-		assertContains(t, out, "npx")                // stdio server preserved
-		assertNotContains(t, out, "api.example.com") // HTTP server dropped
-		if len(result.Warnings) == 0 {
-			t.Error("expected warning about dropped HTTP server")
-		}
+		assertContains(t, out, "context_servers") // Zed key name
+		assertContains(t, out, "npx")             // stdio server preserved
+		assertContains(t, out, "api.example.com") // URL server preserved
 	})
 
 	// Cline — autoApprove → alwaysAllow, HTTP preserved (SSE supported)
@@ -627,7 +624,7 @@ func TestFieldPreservation_MCPMixed(t *testing.T) {
 		assertContains(t, out, "api.example.com") // HTTP preserved
 	})
 
-	// Roo Code — HTTP preserved, autoApprove dropped, cwd dropped
+	// Roo Code — HTTP preserved, autoApprove mapped to alwaysAllow, cwd+headers preserved
 	t.Run("to Roo Code", func(t *testing.T) {
 		result, err := conv.Render(canonical.Content, provider.RooCode)
 		if err != nil {
@@ -637,10 +634,9 @@ func TestFieldPreservation_MCPMixed(t *testing.T) {
 		assertContains(t, out, "npx")
 		assertContains(t, out, "api.example.com") // HTTP preserved
 		assertNotContains(t, out, "autoApprove")
-		assertNotContains(t, out, "cwd")
-		if len(result.Warnings) == 0 {
-			t.Error("expected warnings about dropped fields")
-		}
+		assertContains(t, out, "cwd")        // Roo Code supports cwd
+		assertContains(t, out, "/workspace") // cwd value preserved
+		assertContains(t, out, "headers")    // Roo Code supports headers
 	})
 
 	// OpenCode — command array, environment key, type: local/remote
@@ -1237,18 +1233,15 @@ func TestEdgeCase_MCPOnlyHTTPServers(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	// Zed should drop everything and warn (stdio-only provider)
+	// Zed now preserves HTTP servers with URL + headers
 	t.Run("Zed", func(t *testing.T) {
 		result, err := conv.Render(canonical.Content, provider.Zed)
 		if err != nil {
 			t.Fatalf("Render: %v", err)
 		}
 		out := string(result.Content)
-		assertNotContains(t, out, "a.example.com")
-		assertNotContains(t, out, "b.example.com")
-		if len(result.Warnings) < 2 {
-			t.Errorf("expected at least 2 warnings (one per HTTP server), got %d", len(result.Warnings))
-		}
+		assertContains(t, out, "a.example.com")
+		assertContains(t, out, "b.example.com")
 	})
 
 	// OpenCode, Kiro, and Cline should preserve both

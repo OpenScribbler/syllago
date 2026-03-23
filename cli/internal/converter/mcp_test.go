@@ -201,12 +201,13 @@ func TestZedMCPRender(t *testing.T) {
 	}
 }
 
-func TestZedMCPHTTPServerDropped(t *testing.T) {
+func TestZedMCPHTTPServerRendered(t *testing.T) {
 	input := []byte(`{
 		"mcpServers": {
 			"remoteapi": {
 				"url": "https://api.example.com/mcp",
-				"type": "sse"
+				"type": "sse",
+				"headers": {"Authorization": "Bearer tok"}
 			}
 		}
 	}`)
@@ -222,14 +223,19 @@ func TestZedMCPHTTPServerDropped(t *testing.T) {
 		t.Fatalf("Render: %v", err)
 	}
 
-	if len(result.Warnings) == 0 {
-		t.Fatal("expected warning about HTTP transport not supported")
-	}
-	assertContains(t, result.Warnings[0], "remoteapi")
-
 	out := string(result.Content)
-	assertNotContains(t, out, "remoteapi")
-	assertNotContains(t, out, "api.example.com")
+	assertContains(t, out, "context_servers")
+	assertContains(t, out, "remoteapi")
+	assertContains(t, out, "https://api.example.com/mcp")
+	assertContains(t, out, `"source": "custom"`)
+	assertContains(t, out, "Authorization")
+	assertContains(t, out, "Bearer tok")
+	// URL-based servers should not have command/args
+	assertNotContains(t, out, "command")
+
+	if len(result.Warnings) > 0 {
+		t.Fatalf("expected no warnings for URL server, got: %v", result.Warnings)
+	}
 }
 
 func TestZedMCPCanonicalize(t *testing.T) {
@@ -254,6 +260,32 @@ func TestZedMCPCanonicalize(t *testing.T) {
 	assertNotContains(t, out, "source")
 	assertContains(t, out, "npx")
 	assertContains(t, out, "some-mcp-server")
+}
+
+func TestZedMCPCanonicalizeURL(t *testing.T) {
+	input := []byte(`{
+		"context_servers": {
+			"remote": {
+				"source": "custom",
+				"url": "https://api.example.com/mcp",
+				"headers": {"Authorization": "Bearer tok"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	canonical, err := conv.Canonicalize(input, "zed")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(canonical.Content)
+	assertContains(t, out, "mcpServers")
+	assertNotContains(t, out, "source")
+	assertContains(t, out, "https://api.example.com/mcp")
+	assertContains(t, out, "Authorization")
+	assertContains(t, out, "Bearer tok")
+	assertContains(t, out, `"type": "sse"`)
 }
 
 func TestClineMCPRender(t *testing.T) {
@@ -710,13 +742,15 @@ func TestKiroMCPDropsGeminiFields(t *testing.T) {
 	}
 }
 
-func TestRooCodeMCPDropsCwd(t *testing.T) {
+func TestRooCodeMCPPreservesCwdHeadersTimeout(t *testing.T) {
 	input := []byte(`{
 		"mcpServers": {
 			"local": {
 				"command": "node",
 				"args": ["server.js"],
-				"cwd": "/app"
+				"cwd": "/app",
+				"headers": {"Authorization": "Bearer tok"},
+				"timeout": 30
 			}
 		}
 	}`)
@@ -733,12 +767,24 @@ func TestRooCodeMCPDropsCwd(t *testing.T) {
 	}
 
 	out := string(result.Content)
-	assertNotContains(t, out, "cwd")
-	assertNotContains(t, out, "/app")
+	assertContains(t, out, `"cwd"`)
+	assertContains(t, out, "/app")
+	assertContains(t, out, `"headers"`)
+	assertContains(t, out, "Bearer tok")
+	assertContains(t, out, `"timeout"`)
 	assertContains(t, out, "node")
 
-	if len(result.Warnings) == 0 {
-		t.Fatal("expected warning about dropped cwd")
+	// No warnings about cwd, headers, or timeout — Roo Code supports them
+	for _, w := range result.Warnings {
+		if strings.Contains(w, "cwd") {
+			t.Errorf("unexpected cwd warning: %s", w)
+		}
+		if strings.Contains(w, "headers") {
+			t.Errorf("unexpected headers warning: %s", w)
+		}
+		if strings.Contains(w, "timeout") {
+			t.Errorf("unexpected timeout warning: %s", w)
+		}
 	}
 }
 
@@ -771,9 +817,21 @@ func TestCursorMCPRender(t *testing.T) {
 	assertContains(t, out, "mcpServers")
 	assertContains(t, out, "npx")
 	assertContains(t, out, "GITHUB_TOKEN")
-	assertContains(t, out, "autoApprove")
-	assertContains(t, out, "search_repositories")
+	// autoApprove is not documented by Cursor — should be dropped with warning
+	assertNotContains(t, out, "autoApprove")
+	assertNotContains(t, out, "search_repositories")
 	assertEqual(t, "mcp.json", result.Filename)
+
+	foundWarning := false
+	for _, w := range result.Warnings {
+		if strings.Contains(w, "autoApprove dropped") {
+			foundWarning = true
+			break
+		}
+	}
+	if !foundWarning {
+		t.Error("expected warning about autoApprove being dropped for Cursor")
+	}
 }
 
 func TestCursorMCPCanonicalize(t *testing.T) {
@@ -830,8 +888,8 @@ func TestCursorMCPRoundTrip(t *testing.T) {
 	out := string(result.Content)
 	assertContains(t, out, "mcpServers")
 	assertContains(t, out, "npx")
-	assertContains(t, out, "autoApprove")
-	assertContains(t, out, "search_repositories")
+	// autoApprove should be dropped on Cursor render (not documented by Cursor)
+	assertNotContains(t, out, "autoApprove")
 }
 
 func TestCursorMCPDropsGeminiFields(t *testing.T) {

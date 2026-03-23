@@ -381,3 +381,90 @@ func TestCommandNoFrontmatterToGemini(t *testing.T) {
 	assertContains(t, out, "Just do the thing.")
 	assertEqual(t, "command.toml", result.Filename)
 }
+
+// --- Codex frontmatter and named args ---
+
+func TestCodexCommandFrontmatterParsed(t *testing.T) {
+	// Codex commands can have YAML frontmatter with description and argument-hint.
+	input := []byte("---\ndescription: Review a pull request\nargument-hint: <pr-url>\n---\n\nReview the PR at $PR_URL and provide feedback.\n")
+
+	conv := &CommandsConverter{}
+	canonical, err := conv.Canonicalize(input, "codex")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(canonical.Content)
+	// Frontmatter fields should be preserved in canonical
+	assertContains(t, out, "description: Review a pull request")
+	assertContains(t, out, "argument-hint: <pr-url>")
+	// Body with $NAME pattern should survive
+	assertContains(t, out, "$PR_URL")
+}
+
+func TestCodexCommandFrontmatterRoundTrip(t *testing.T) {
+	// Codex → canonical → Codex should preserve description and argument-hint.
+	input := []byte("---\ndescription: Fix an issue\nargument-hint: <issue-number>\n---\n\nFix issue $ISSUE_NUMBER in the codebase.\n")
+
+	conv := &CommandsConverter{}
+	canonical, err := conv.Canonicalize(input, "codex")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Codex)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "description: Fix an issue")
+	assertContains(t, out, "argument-hint: <issue-number>")
+	assertContains(t, out, "$ISSUE_NUMBER")
+}
+
+func TestCodexNamedArgsPreservedInBody(t *testing.T) {
+	// $NAME patterns (e.g. $ISSUE_NUMBER, $PR_URL) should survive round-trip
+	// through canonical format — they're literal text in the body.
+	input := []byte("Review $PR_URL and fix $ISSUE_NUMBER.\n")
+
+	conv := &CommandsConverter{}
+	canonical, err := conv.Canonicalize(input, "codex")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// Verify in canonical
+	assertContains(t, string(canonical.Content), "$PR_URL")
+	assertContains(t, string(canonical.Content), "$ISSUE_NUMBER")
+
+	// Render back to Codex
+	result, err := conv.Render(canonical.Content, provider.Codex)
+	if err != nil {
+		t.Fatalf("Render to Codex: %v", err)
+	}
+	assertContains(t, string(result.Content), "$PR_URL")
+	assertContains(t, string(result.Content), "$ISSUE_NUMBER")
+
+	// Render to Claude Code — $NAME patterns should survive as-is
+	result2, err := conv.Render(canonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render to Claude: %v", err)
+	}
+	assertContains(t, string(result2.Content), "$PR_URL")
+	assertContains(t, string(result2.Content), "$ISSUE_NUMBER")
+}
+
+func TestCodexPlainBodyNoFrontmatter(t *testing.T) {
+	// Plain body without frontmatter should still work (backwards compatible).
+	input := []byte("Just review the code.\n")
+
+	conv := &CommandsConverter{}
+	canonical, err := conv.Canonicalize(input, "codex")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(canonical.Content)
+	assertContains(t, out, "Just review the code.")
+}

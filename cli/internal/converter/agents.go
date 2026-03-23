@@ -682,6 +682,14 @@ func renderOpenCodeAgent(meta AgentMeta, body string) (*Result, error) {
 		}
 	}
 
+	// Clamp temperature to OpenCode's supported range (0.0–1.0).
+	// Gemini supports up to 2.0, so canonical values may exceed OpenCode's max.
+	temp := meta.Temperature
+	if temp > 1.0 {
+		warnings = append(warnings, fmt.Sprintf("temperature clamped from %.1f to 1.0 (OpenCode maximum)", meta.Temperature))
+		temp = 1.0
+	}
+
 	om := opencodeAgentMeta{
 		Name:        meta.Name,
 		Description: meta.Description,
@@ -689,7 +697,7 @@ func renderOpenCodeAgent(meta AgentMeta, body string) (*Result, error) {
 		Model:       meta.Model,
 		Steps:       meta.MaxTurns,
 		Color:       meta.Color,
-		Temperature: meta.Temperature,
+		Temperature: temp,
 	}
 
 	// Build prose notes for unsupported fields
