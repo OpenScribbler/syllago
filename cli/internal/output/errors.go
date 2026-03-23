@@ -25,8 +25,6 @@ const (
 	ErrExportNotSupported   = "EXPORT_001"
 	ErrConfigInvalid        = "CONFIG_001"
 	ErrConfigNotFound       = "CONFIG_002"
-	ErrPrivacyGateBlocked   = "PRIVACY_001" // private content -> public target (hard block)
-	ErrPrivacyGateWarn      = "PRIVACY_002" // private content in loadout (warning)
 )
 
 // docsURL converts an error code like "CATALOG_001" to its documentation URL.
@@ -79,8 +77,6 @@ func allErrorCodes() []string {
 		ErrExportNotSupported,
 		ErrConfigInvalid,
 		ErrConfigNotFound,
-		ErrPrivacyGateBlocked,
-		ErrPrivacyGateWarn,
 	}
 }
 
