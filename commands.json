@@ -1,0 +1,4018 @@
+{
+  "version": "1",
+  "generatedAt": "2026-03-23T03:59:35Z",
+  "syllagoVersion": "0.6.1",
+  "commands": [
+    {
+      "name": "add",
+      "displayName": "Add",
+      "slug": "add",
+      "parent": null,
+      "synopsis": "syllago add [\u003ctype\u003e[/\u003cname\u003e]] --from \u003cprovider\u003e [flags]",
+      "description": "Add content to your library from a provider",
+      "longDescription": "Discovers content from a provider and adds it to your library (~/.syllago/content/).\n\nWithout a positional argument, shows what content is available (discovery mode).\nProvide a type or type/name to add content.\n\nSyllago handles format conversion automatically. Once added, content can be\ninstalled to any supported provider with \"syllago install --to \u003cprovider\u003e\".\n\nAfter adding, use \"syllago install\" to activate content in a provider.\n\nHooks-specific flags (--exclude, --scope) are only meaningful when adding hooks.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--all",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Add all discovered content (cannot combine with positional target)"
+        },
+        {
+          "name": "--base-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Override base directory for content discovery"
+        },
+        {
+          "name": "--dry-run",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show what would be written without actually writing"
+        },
+        {
+          "name": "--exclude",
+          "shorthand": null,
+          "type": "stringArray",
+          "default": null,
+          "required": false,
+          "description": "Skip hooks by auto-derived name (hooks only)"
+        },
+        {
+          "name": "--force",
+          "shorthand": "-f",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Overwrite existing item without prompting"
+        },
+        {
+          "name": "--from",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": true,
+          "description": "Provider to add from (required)"
+        },
+        {
+          "name": "--no-input",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable interactive prompts, use defaults"
+        },
+        {
+          "name": "--scope",
+          "shorthand": null,
+          "type": "string",
+          "default": "global",
+          "required": false,
+          "description": "Settings scope to read from: global, project, or all (hooks only)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Discover available content (read-only)\n  syllago add --from claude-code\n\n  # Add all rules from a provider\n  syllago add rules --from claude-code\n\n  # Add a specific rule by name\n  syllago add rules/security --from claude-code\n\n  # Add everything\n  syllago add --all --from claude-code\n\n  # Preview what would be written\n  syllago add --from claude-code --dry-run",
+      "source": "cli/cmd/syllago/add.go"
+    },
+    {
+      "name": "compat",
+      "displayName": "Compat",
+      "slug": "compat",
+      "parent": null,
+      "synopsis": "syllago compat \u003cname\u003e",
+      "description": "Show provider compatibility matrix for a content item",
+      "longDescription": "Analyzes a library item and shows which providers support it,\nwhat warnings arise during conversion, and which providers cannot\nhandle the content type at all.\n\nFor each provider, syllago attempts the full canonicalize-then-render\npipeline and reports the result.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Show compatibility for a skill\n  syllago compat my-skill\n\n  # JSON output for scripting\n  syllago compat my-skill --json",
+      "source": "cli/cmd/syllago/compat.go"
+    },
+    {
+      "name": "completion",
+      "displayName": "Completion",
+      "slug": "completion",
+      "parent": null,
+      "synopsis": "syllago completion",
+      "description": "Generate the autocompletion script for the specified shell",
+      "longDescription": "Generate the autocompletion script for syllago for the specified shell.\nSee each sub-command's help for details on how to use the generated script.\n",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [
+        "bash",
+        "fish",
+        "powershell",
+        "zsh"
+      ],
+      "seeAlso": [],
+      "examples": null,
+      "source": "cli/cmd/syllago/completion_cmd.go"
+    },
+    {
+      "name": "completion bash",
+      "displayName": "Completion Bash",
+      "slug": "completion-bash",
+      "parent": "completion",
+      "synopsis": "syllago completion bash",
+      "description": "Generate the autocompletion script for bash",
+      "longDescription": "Generate the autocompletion script for the bash shell.\n\nThis script depends on the 'bash-completion' package.\nIf it is not installed already, you can install it via your OS's package manager.\n\nTo load completions in your current shell session:\n\n\tsource \u003c(syllago completion bash)\n\nTo load completions for every new session, execute once:\n\n#### Linux:\n\n\tsyllago completion bash \u003e /etc/bash_completion.d/syllago\n\n#### macOS:\n\n\tsyllago completion bash \u003e $(brew --prefix)/etc/bash_completion.d/syllago\n\nYou will need to start a new shell for this setup to take effect.\n",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--no-descriptions",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "disable completion descriptions"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "completion",
+        "completion fish",
+        "completion powershell",
+        "completion zsh"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/completion_cmd.go"
+    },
+    {
+      "name": "completion fish",
+      "displayName": "Completion Fish",
+      "slug": "completion-fish",
+      "parent": "completion",
+      "synopsis": "syllago completion fish [flags]",
+      "description": "Generate the autocompletion script for fish",
+      "longDescription": "Generate the autocompletion script for the fish shell.\n\nTo load completions in your current shell session:\n\n\tsyllago completion fish | source\n\nTo load completions for every new session, execute once:\n\n\tsyllago completion fish \u003e ~/.config/fish/completions/syllago.fish\n\nYou will need to start a new shell for this setup to take effect.\n",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--no-descriptions",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "disable completion descriptions"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "completion",
+        "completion bash",
+        "completion powershell",
+        "completion zsh"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/completion_cmd.go"
+    },
+    {
+      "name": "completion powershell",
+      "displayName": "Completion Powershell",
+      "slug": "completion-powershell",
+      "parent": "completion",
+      "synopsis": "syllago completion powershell [flags]",
+      "description": "Generate the autocompletion script for powershell",
+      "longDescription": "Generate the autocompletion script for powershell.\n\nTo load completions in your current shell session:\n\n\tsyllago completion powershell | Out-String | Invoke-Expression\n\nTo load completions for every new session, add the output of the above command\nto your powershell profile.\n",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--no-descriptions",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "disable completion descriptions"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "completion",
+        "completion bash",
+        "completion fish",
+        "completion zsh"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/completion_cmd.go"
+    },
+    {
+      "name": "completion zsh",
+      "displayName": "Completion Zsh",
+      "slug": "completion-zsh",
+      "parent": "completion",
+      "synopsis": "syllago completion zsh [flags]",
+      "description": "Generate the autocompletion script for zsh",
+      "longDescription": "Generate the autocompletion script for the zsh shell.\n\nIf shell completion is not already enabled in your environment you will need\nto enable it.  You can execute the following once:\n\n\techo \"autoload -U compinit; compinit\" \u003e\u003e ~/.zshrc\n\nTo load completions in your current shell session:\n\n\tsource \u003c(syllago completion zsh)\n\nTo load completions for every new session, execute once:\n\n#### Linux:\n\n\tsyllago completion zsh \u003e \"${fpath[1]}/_syllago\"\n\n#### macOS:\n\n\tsyllago completion zsh \u003e $(brew --prefix)/share/zsh/site-functions/_syllago\n\nYou will need to start a new shell for this setup to take effect.\n",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--no-descriptions",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "disable completion descriptions"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "completion",
+        "completion bash",
+        "completion fish",
+        "completion powershell"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/completion_cmd.go"
+    },
+    {
+      "name": "config",
+      "displayName": "Config",
+      "slug": "config",
+      "parent": null,
+      "synopsis": "syllago config",
+      "description": "View and edit syllago configuration",
+      "longDescription": "Manage provider selection and preferences in .syllago/config.json.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [
+        "add",
+        "list",
+        "paths",
+        "remove"
+      ],
+      "seeAlso": [],
+      "examples": "  syllago config list\n  syllago config add cursor\n  syllago config remove windsurf",
+      "source": "cli/cmd/syllago/config_cmd.go"
+    },
+    {
+      "name": "config add",
+      "displayName": "Config Add",
+      "slug": "config-add",
+      "parent": "config",
+      "synopsis": "syllago config add \u003cprovider-slug\u003e",
+      "description": "Add a provider to the configuration",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "config",
+        "config list",
+        "config paths",
+        "config remove"
+      ],
+      "examples": "  syllago config add cursor",
+      "source": "cli/cmd/syllago/config_cmd.go"
+    },
+    {
+      "name": "config list",
+      "displayName": "Config List",
+      "slug": "config-list",
+      "parent": "config",
+      "synopsis": "syllago config list",
+      "description": "List current configuration",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "config",
+        "config add",
+        "config paths",
+        "config remove"
+      ],
+      "examples": "  # Show configured providers\n  syllago config list\n\n  # JSON output\n  syllago config list --json",
+      "source": "cli/cmd/syllago/config_cmd.go"
+    },
+    {
+      "name": "config paths",
+      "displayName": "Config Paths",
+      "slug": "config-paths",
+      "parent": "config",
+      "synopsis": "syllago config paths",
+      "description": "Manage custom provider path overrides",
+      "longDescription": "Configure custom base directories or per-type path overrides for providers.\nOverrides are stored in the global config (~/.syllago/config.json) since paths are machine-specific.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [
+        "clear",
+        "set",
+        "show"
+      ],
+      "seeAlso": [
+        "config",
+        "config add",
+        "config list",
+        "config remove"
+      ],
+      "examples": "  syllago config paths show\n  syllago config paths set claude-code --base-dir ~/custom/claude\n  syllago config paths clear claude-code",
+      "source": "cli/cmd/syllago/config_cmd.go"
+    },
+    {
+      "name": "config paths clear",
+      "displayName": "Config Paths Clear",
+      "slug": "config-paths-clear",
+      "parent": "config paths",
+      "synopsis": "syllago config paths clear \u003cprovider\u003e [flags]",
+      "description": "Clear path overrides for a provider",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "specific content type to clear (omit to clear all)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "config paths",
+        "config paths set",
+        "config paths show"
+      ],
+      "examples": "  # Clear all overrides for a provider\n  syllago config paths clear claude-code\n\n  # Clear only a specific type override\n  syllago config paths clear cursor --type rules",
+      "source": "cli/cmd/syllago/paths_cmd.go"
+    },
+    {
+      "name": "config paths set",
+      "displayName": "Config Paths Set",
+      "slug": "config-paths-set",
+      "parent": "config paths",
+      "synopsis": "syllago config paths set \u003cprovider\u003e [flags]",
+      "description": "Set path overrides for a provider",
+      "longDescription": "Set a base directory or per-type path override for a provider.\nPaths must be absolute (start with / or ~/).",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--base-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "base directory override (replaces home dir)"
+        },
+        {
+          "name": "--path",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "absolute path for the content type"
+        },
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "content type (e.g., skills, hooks)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "config paths",
+        "config paths clear",
+        "config paths show"
+      ],
+      "examples": "  # Set a base directory for a provider\n  syllago config paths set claude-code --base-dir ~/custom/claude\n\n  # Set a per-type path override\n  syllago config paths set cursor --type rules --path ~/my-rules",
+      "source": "cli/cmd/syllago/paths_cmd.go"
+    },
+    {
+      "name": "config paths show",
+      "displayName": "Config Paths Show",
+      "slug": "config-paths-show",
+      "parent": "config paths",
+      "synopsis": "syllago config paths show [flags]",
+      "description": "Show configured path overrides",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "filter by provider slug"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "config paths",
+        "config paths clear",
+        "config paths set"
+      ],
+      "examples": "  # Show all path overrides\n  syllago config paths show\n\n  # Show overrides for a specific provider\n  syllago config paths show --provider claude-code",
+      "source": "cli/cmd/syllago/paths_cmd.go"
+    },
+    {
+      "name": "config remove",
+      "displayName": "Config Remove",
+      "slug": "config-remove",
+      "parent": "config",
+      "synopsis": "syllago config remove \u003cprovider-slug\u003e",
+      "description": "Remove a provider from the configuration",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "config",
+        "config add",
+        "config list",
+        "config paths"
+      ],
+      "examples": "  syllago config remove windsurf",
+      "source": "cli/cmd/syllago/config_cmd.go"
+    },
+    {
+      "name": "convert",
+      "displayName": "Convert",
+      "slug": "convert",
+      "parent": null,
+      "synopsis": "syllago convert \u003cname\u003e [flags]",
+      "description": "Convert library content to a provider format",
+      "longDescription": "Renders a library item to a target provider's format without installing it.\nOutput goes to stdout by default, or to a file with --output.\n\nNo state changes are made — this is purely for ad-hoc sharing.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--batch",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Directory of hook files to batch-canonicalize (mutual exclusive with \u003cname\u003e)"
+        },
+        {
+          "name": "--dry-run",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show what would be converted without writing files"
+        },
+        {
+          "name": "--from",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Source provider slug (required with --batch)"
+        },
+        {
+          "name": "--output",
+          "shorthand": "-o",
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Write output to this file path (default: stdout)"
+        },
+        {
+          "name": "--to",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": true,
+          "description": "Target provider (required)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Convert a skill to Cursor format (stdout)\n  syllago convert my-skill --to cursor\n\n  # Convert and save to a file\n  syllago convert my-rule --to windsurf --output ./windsurf-rule.md\n\n  # Batch-canonicalize a directory of hooks\n  syllago convert --batch ./hooks/ --from claude-code --to canonical\n\n  # Batch dry-run\n  syllago convert --batch ./hooks/ --from claude-code --to canonical --dry-run",
+      "source": "cli/cmd/syllago/convert.go"
+    },
+    {
+      "name": "create",
+      "displayName": "Create",
+      "slug": "create",
+      "parent": null,
+      "synopsis": "syllago create \u003ctype\u003e \u003cname\u003e [flags]",
+      "description": "Scaffold a new content item in the global library",
+      "longDescription": "Creates a new content item directory under ~/.syllago/content/ with\n.syllago.yaml metadata.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--provider",
+          "shorthand": "-p",
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Provider slug (required for rules, hooks, commands)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Create a new skill\n  syllago create skills my-new-skill\n\n  # Create a provider-specific rule\n  syllago create rules my-rule --provider claude-code\n\n  # Create a new agent\n  syllago create agents my-agent",
+      "source": "cli/cmd/syllago/create.go"
+    },
+    {
+      "name": "export",
+      "displayName": "Export",
+      "slug": "export",
+      "parent": null,
+      "synopsis": "syllago export \u003cname\u003e [flags]",
+      "description": "Export content with optional dual-format (canonical + native) output",
+      "longDescription": "Exports a library item to canonical format, optionally generating\nprovider-native configs alongside it for manual consumption.\n\nWith --dual, the output directory contains both the canonical hook.json\n(source of truth) and pre-generated native configs in native/\u003cprovider\u003e/\nfor users who don't have syllago installed.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--dual",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Generate native configs alongside canonical"
+        },
+        {
+          "name": "--out-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Output directory (default: current hook directory)"
+        },
+        {
+          "name": "--providers",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Comma-separated list of target providers for --dual (default: all portable)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Export a hook with dual-format output\n  syllago export my-hook --dual\n\n  # Export for specific providers only\n  syllago export my-hook --dual --providers claude-code,cursor,gemini-cli\n\n  # Export to a specific directory\n  syllago export my-hook --dual --out-dir ./hooks/safety-check",
+      "source": "cli/cmd/syllago/export.go"
+    },
+    {
+      "name": "info",
+      "displayName": "Info",
+      "slug": "info",
+      "parent": null,
+      "synopsis": "syllago info",
+      "description": "Show syllago capabilities",
+      "longDescription": "Machine-readable capability manifest. Useful for agents discovering syllago's features.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [
+        "formats",
+        "providers"
+      ],
+      "seeAlso": [],
+      "examples": "  # Show capabilities summary\n  syllago info\n\n  # JSON output for agent consumption\n  syllago info --json",
+      "source": "cli/cmd/syllago/info_cmd.go"
+    },
+    {
+      "name": "info formats",
+      "displayName": "Info Formats",
+      "slug": "info-formats",
+      "parent": "info",
+      "synopsis": "syllago info formats",
+      "description": "List supported file formats",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "info",
+        "info providers"
+      ],
+      "examples": "  syllago info formats",
+      "source": "cli/cmd/syllago/info_cmd.go"
+    },
+    {
+      "name": "info providers",
+      "displayName": "Info Providers",
+      "slug": "info-providers",
+      "parent": "info",
+      "synopsis": "syllago info providers",
+      "description": "List all known providers",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "info",
+        "info formats"
+      ],
+      "examples": "  # List providers and their supported types\n  syllago info providers\n\n  # JSON output\n  syllago info providers --json",
+      "source": "cli/cmd/syllago/info_cmd.go"
+    },
+    {
+      "name": "init",
+      "displayName": "Init",
+      "slug": "init",
+      "parent": null,
+      "synopsis": "syllago init [flags]",
+      "description": "Initialize syllago for this project",
+      "longDescription": "Detects AI coding tools in use, creates .syllago/config.json with provider selection.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--force",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Overwrite existing config"
+        },
+        {
+          "name": "--yes",
+          "shorthand": "-y",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Skip interactive confirmation"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Interactive setup\n  syllago init\n\n  # Skip confirmation prompts\n  syllago init --yes\n\n  # Overwrite existing config\n  syllago init --force",
+      "source": "cli/cmd/syllago/init.go"
+    },
+    {
+      "name": "inspect",
+      "displayName": "Inspect",
+      "slug": "inspect",
+      "parent": null,
+      "synopsis": "syllago inspect \u003ctype\u003e/\u003cname\u003e [flags]",
+      "description": "Show details about a content item",
+      "longDescription": "Display full details about a content item for pre-install auditing.\n\nPath formats:\n  skills/my-skill                   Universal content (type/name)\n  rules/claude-code/my-rule         Provider-specific (type/provider/name)",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--compatibility",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show per-provider compatibility matrix (hooks only)"
+        },
+        {
+          "name": "--files",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show file contents"
+        },
+        {
+          "name": "--risk",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show detailed risk analysis"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Inspect a universal skill\n  syllago inspect skills/my-skill\n\n  # Inspect a provider-specific rule\n  syllago inspect rules/claude-code/my-rule\n\n  # JSON output for scripting\n  syllago inspect --json skills/my-skill",
+      "source": "cli/cmd/syllago/inspect.go"
+    },
+    {
+      "name": "install",
+      "displayName": "Install",
+      "slug": "install",
+      "parent": null,
+      "synopsis": "syllago install [name] [flags]",
+      "description": "Activate library content in a provider",
+      "longDescription": "Install content from your library into a provider's location.\n\nBy default uses a symlink so edits in your library are reflected immediately.\nUse --method copy to place a standalone copy instead.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--base-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Override base directory for content installation"
+        },
+        {
+          "name": "--dry-run",
+          "shorthand": "-n",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show what would happen without making changes"
+        },
+        {
+          "name": "--method",
+          "shorthand": null,
+          "type": "string",
+          "default": "symlink",
+          "required": false,
+          "description": "Install method: symlink (default) or copy"
+        },
+        {
+          "name": "--no-input",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable interactive prompts, use defaults"
+        },
+        {
+          "name": "--to",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": true,
+          "description": "Provider to install into (required)"
+        },
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Filter to a specific content type"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Install a skill to Claude Code\n  syllago install my-skill --to claude-code\n\n  # Install with a standalone copy instead of symlink\n  syllago install my-skill --to cursor --method copy\n\n  # Install all skills to a provider\n  syllago install --to claude-code --type skills\n\n  # Preview what would happen\n  syllago install my-skill --to claude-code --dry-run",
+      "source": "cli/cmd/syllago/install.go"
+    },
+    {
+      "name": "list",
+      "displayName": "List",
+      "slug": "list",
+      "parent": null,
+      "synopsis": "syllago list [flags]",
+      "description": "List content items in the library",
+      "longDescription": "Show a quick inventory of all content without launching the TUI.\n\nBy default, lists all content grouped by type. Use flags to filter.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--source",
+          "shorthand": null,
+          "type": "string",
+          "default": "all",
+          "required": false,
+          "description": "Filter by source: library, shared, registry, builtin, all"
+        },
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Filter to one content type (e.g., skills, rules)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # List all content grouped by type\n  syllago list\n\n  # Show only library items\n  syllago list --source library\n\n  # Show only skills\n  syllago list --type skills\n\n  # JSON output for scripting\n  syllago list --json",
+      "source": "cli/cmd/syllago/list.go"
+    },
+    {
+      "name": "loadout",
+      "displayName": "Loadout",
+      "slug": "loadout",
+      "parent": null,
+      "synopsis": "syllago loadout",
+      "description": "Apply, create, and manage loadouts",
+      "longDescription": "Loadouts bundle a curated set of syllago content — rules, hooks, skills,\nagents, MCP servers — into a single shareable configuration.\n\nUse \"syllago loadout apply\" to try or apply a loadout.\nUse \"syllago loadout create\" to build a new loadout interactively.\nUse \"syllago loadout remove\" to revert an active loadout.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [
+        "apply",
+        "create",
+        "list",
+        "remove",
+        "status"
+      ],
+      "seeAlso": [],
+      "examples": "  syllago loadout list\n  syllago loadout apply my-loadout --try\n  syllago loadout remove",
+      "source": "cli/cmd/syllago/loadout_cmd.go"
+    },
+    {
+      "name": "loadout apply",
+      "displayName": "Loadout Apply",
+      "slug": "loadout-apply",
+      "parent": "loadout",
+      "synopsis": "syllago loadout apply [name] [flags]",
+      "description": "Apply a loadout",
+      "longDescription": "Apply a loadout to configure the current project for Claude Code.\n\nDefault mode (no flags): preview what would happen without making changes.\n--try: apply temporarily; reverts automatically when the session ends.\n--keep: apply permanently; run \"syllago loadout remove\" to undo.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--base-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Override base directory for content installation"
+        },
+        {
+          "name": "--keep",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Apply permanently"
+        },
+        {
+          "name": "--method",
+          "shorthand": null,
+          "type": "string",
+          "default": "symlink",
+          "required": false,
+          "description": "Install method: symlink (default) or copy"
+        },
+        {
+          "name": "--preview",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Dry run: show planned actions without applying"
+        },
+        {
+          "name": "--to",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Target provider (overrides manifest provider; defaults to claude-code if unset)"
+        },
+        {
+          "name": "--try",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Apply temporarily; auto-revert on session end"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "loadout",
+        "loadout create",
+        "loadout list",
+        "loadout remove",
+        "loadout status"
+      ],
+      "examples": "  # Preview what a loadout would do\n  syllago loadout apply my-loadout\n\n  # Try temporarily (auto-reverts on session end)\n  syllago loadout apply my-loadout --try\n\n  # Apply permanently\n  syllago loadout apply my-loadout --keep\n\n  # Apply to a specific provider\n  syllago loadout apply my-loadout --keep --to cursor",
+      "source": "cli/cmd/syllago/loadout_apply.go"
+    },
+    {
+      "name": "loadout create",
+      "displayName": "Loadout Create",
+      "slug": "loadout-create",
+      "parent": "loadout",
+      "synopsis": "syllago loadout create",
+      "description": "Interactively create a new loadout",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "loadout",
+        "loadout apply",
+        "loadout list",
+        "loadout remove",
+        "loadout status"
+      ],
+      "examples": "  syllago loadout create",
+      "source": "cli/cmd/syllago/loadout_create.go"
+    },
+    {
+      "name": "loadout list",
+      "displayName": "Loadout List",
+      "slug": "loadout-list",
+      "parent": "loadout",
+      "synopsis": "syllago loadout list",
+      "description": "List available loadouts",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "loadout",
+        "loadout apply",
+        "loadout create",
+        "loadout remove",
+        "loadout status"
+      ],
+      "examples": "  # List all available loadouts\n  syllago loadout list\n\n  # JSON output\n  syllago loadout list --json",
+      "source": "cli/cmd/syllago/loadout_list.go"
+    },
+    {
+      "name": "loadout remove",
+      "displayName": "Loadout Remove",
+      "slug": "loadout-remove",
+      "parent": "loadout",
+      "synopsis": "syllago loadout remove [flags]",
+      "description": "Remove the active loadout and restore original configuration",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--auto",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Skip confirmation (used by SessionEnd hook)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "loadout",
+        "loadout apply",
+        "loadout create",
+        "loadout list",
+        "loadout status"
+      ],
+      "examples": "  syllago loadout remove",
+      "source": "cli/cmd/syllago/loadout_remove.go"
+    },
+    {
+      "name": "loadout status",
+      "displayName": "Loadout Status",
+      "slug": "loadout-status",
+      "parent": "loadout",
+      "synopsis": "syllago loadout status",
+      "description": "Show active loadout status",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "loadout",
+        "loadout apply",
+        "loadout create",
+        "loadout list",
+        "loadout remove"
+      ],
+      "examples": "  # Check if a loadout is active\n  syllago loadout status\n\n  # JSON output\n  syllago loadout status --json",
+      "source": "cli/cmd/syllago/loadout_status.go"
+    },
+    {
+      "name": "publish",
+      "displayName": "Publish",
+      "slug": "publish",
+      "parent": null,
+      "synopsis": "syllago publish \u003cname\u003e [flags]",
+      "description": "Contribute library content to a registry",
+      "longDescription": "Copies a library item to a registry clone, stages the change, and\noptionally creates a branch and PR.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--no-input",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Skip interactive git prompts, stage only"
+        },
+        {
+          "name": "--registry",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": true,
+          "description": "Registry name to publish to (required)"
+        },
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Disambiguate when name exists in multiple types"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Publish a skill to a registry\n  syllago publish my-skill --registry my-registry\n\n  # Publish a specific rule type\n  syllago publish my-rule --registry team-rules --type rules\n\n  # Non-interactive mode\n  syllago publish my-skill --registry my-registry --no-input",
+      "source": "cli/cmd/syllago/publish.go"
+    },
+    {
+      "name": "registry",
+      "displayName": "Registry",
+      "slug": "registry",
+      "parent": null,
+      "synopsis": "syllago registry",
+      "description": "Manage git-based content registries",
+      "longDescription": "Add, remove, list, and sync git repositories as content registries.\n\nRegistries are read-only git repos containing shared content (skills, rules,\nhooks, MCP configs, etc.). Use \"registry sync\" to pull updates, and\n\"registry items\" to browse what's available.\n\nTo use registry content, browse it in the TUI (\"syllago\") or install it\ndirectly with \"syllago install --to \u003cprovider\u003e\".",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [
+        "add",
+        "create",
+        "items",
+        "list",
+        "remove",
+        "sync"
+      ],
+      "seeAlso": [],
+      "examples": "  syllago registry add https://github.com/team/rules.git\n  syllago registry sync\n  syllago registry items --type skills",
+      "source": "cli/cmd/syllago/registry_cmd.go"
+    },
+    {
+      "name": "registry add",
+      "displayName": "Registry Add",
+      "slug": "registry-add",
+      "parent": "registry",
+      "synopsis": "syllago registry add \u003cgit-url\u003e [flags]",
+      "description": "Add a git registry",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--name",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Override the registry name (default: derived from URL)"
+        },
+        {
+          "name": "--ref",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Branch, tag, or commit to checkout (default: repo default branch)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "registry",
+        "registry create",
+        "registry items",
+        "registry list",
+        "registry remove",
+        "registry sync"
+      ],
+      "examples": "  # Add a registry by URL\n  syllago registry add https://github.com/team/rules.git\n\n  # Add with a custom name\n  syllago registry add https://github.com/team/rules.git --name team-rules\n\n  # Pin to a specific branch\n  syllago registry add https://github.com/team/rules.git --ref main",
+      "source": "cli/cmd/syllago/registry_cmd.go"
+    },
+    {
+      "name": "registry create",
+      "displayName": "Registry Create",
+      "slug": "registry-create",
+      "parent": "registry",
+      "synopsis": "syllago registry create [flags]",
+      "description": "Create a new registry",
+      "longDescription": "Create a new registry in one of two modes:\n\n  --new \u003cname\u003e          Scaffold an empty registry directory structure\n  --from-native         Index provider-native content in the current repo",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--description",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Short description of the registry (used with --new)"
+        },
+        {
+          "name": "--from-native",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Index provider-native content in the current repo"
+        },
+        {
+          "name": "--new",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Scaffold an empty registry directory with this name"
+        },
+        {
+          "name": "--no-git",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Skip git init and initial commit (used with --new)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "registry",
+        "registry add",
+        "registry items",
+        "registry list",
+        "registry remove",
+        "registry sync"
+      ],
+      "examples": "  # Scaffold an empty registry\n  syllago registry create --new my-rules\n\n  # Scaffold with a description\n  syllago registry create --new my-rules --description \"Team coding standards\"\n\n  # Index existing provider-native content\n  syllago registry create --from-native",
+      "source": "cli/cmd/syllago/registry_cmd.go"
+    },
+    {
+      "name": "registry items",
+      "displayName": "Registry Items",
+      "slug": "registry-items",
+      "parent": "registry",
+      "synopsis": "syllago registry items [name] [flags]",
+      "description": "Browse content available in registries",
+      "longDescription": "Lists content items from one or all registries.\n\nUse --type to filter by content type. To install registry content, use\n\"syllago install --to \u003cprovider\u003e\" or browse in the TUI with \"syllago\".",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Filter by content type (skills, rules, hooks, etc.)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "registry",
+        "registry add",
+        "registry create",
+        "registry list",
+        "registry remove",
+        "registry sync"
+      ],
+      "examples": "  # List all items from all registries\n  syllago registry items\n\n  # List items from a specific registry\n  syllago registry items my-rules\n\n  # Filter by content type\n  syllago registry items --type skills",
+      "source": "cli/cmd/syllago/registry_cmd.go"
+    },
+    {
+      "name": "registry list",
+      "displayName": "Registry List",
+      "slug": "registry-list",
+      "parent": "registry",
+      "synopsis": "syllago registry list",
+      "description": "List registered registries",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "registry",
+        "registry add",
+        "registry create",
+        "registry items",
+        "registry remove",
+        "registry sync"
+      ],
+      "examples": "  # List all configured registries\n  syllago registry list\n\n  # JSON output\n  syllago registry list --json",
+      "source": "cli/cmd/syllago/registry_cmd.go"
+    },
+    {
+      "name": "registry remove",
+      "displayName": "Registry Remove",
+      "slug": "registry-remove",
+      "parent": "registry",
+      "synopsis": "syllago registry remove \u003cname\u003e",
+      "description": "Remove a registry and delete its local clone",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "registry",
+        "registry add",
+        "registry create",
+        "registry items",
+        "registry list",
+        "registry sync"
+      ],
+      "examples": "  syllago registry remove team-rules",
+      "source": "cli/cmd/syllago/registry_cmd.go"
+    },
+    {
+      "name": "registry sync",
+      "displayName": "Registry Sync",
+      "slug": "registry-sync",
+      "parent": "registry",
+      "synopsis": "syllago registry sync [name]",
+      "description": "Pull latest content from one or all registries",
+      "longDescription": "Runs git pull on registry clones to fetch the latest content.\n\nSync updates the local clone only — it does not modify your library or\ninstalled provider content. Use \"syllago registry items\" to see what changed,\nand \"syllago install\" to activate updated content.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "registry",
+        "registry add",
+        "registry create",
+        "registry items",
+        "registry list",
+        "registry remove"
+      ],
+      "examples": "  # Sync all registries\n  syllago registry sync\n\n  # Sync a specific registry\n  syllago registry sync my-rules",
+      "source": "cli/cmd/syllago/registry_cmd.go"
+    },
+    {
+      "name": "remove",
+      "displayName": "Remove",
+      "slug": "remove",
+      "parent": null,
+      "synopsis": "syllago remove \u003cname\u003e [flags]",
+      "description": "Remove content from your library and uninstall from providers",
+      "longDescription": "Removes a content item from your library (~/.syllago/content/) and\nuninstalls it from any providers where it is currently installed.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--dry-run",
+          "shorthand": "-n",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show what would happen without making changes"
+        },
+        {
+          "name": "--force",
+          "shorthand": "-f",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Skip confirmation prompt"
+        },
+        {
+          "name": "--no-input",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable interactive prompts, use defaults"
+        },
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Disambiguate when name exists in multiple types"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Remove a skill from library and all providers\n  syllago remove my-skill\n\n  # Disambiguate by type when name exists in multiple types\n  syllago remove my-rule --type rules\n\n  # Skip confirmation prompt\n  syllago remove my-skill --force\n\n  # Preview what would happen\n  syllago remove my-skill --dry-run",
+      "source": "cli/cmd/syllago/remove.go"
+    },
+    {
+      "name": "sandbox",
+      "displayName": "Sandbox",
+      "slug": "sandbox",
+      "parent": null,
+      "synopsis": "syllago sandbox",
+      "description": "Run and manage AI CLI tools in bubblewrap sandboxes",
+      "longDescription": "Sandbox wraps AI CLI tools in bubblewrap to restrict filesystem access,\nnetwork egress, and environment variables.\n\nLinux only: requires bubblewrap \u003e= 0.4.0 and socat \u003e= 1.7.0.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [
+        "allow-domain",
+        "allow-env",
+        "allow-port",
+        "check",
+        "deny-domain",
+        "deny-env",
+        "deny-port",
+        "domains",
+        "env",
+        "info",
+        "ports",
+        "run"
+      ],
+      "seeAlso": [],
+      "examples": "  syllago sandbox run claude-code\n  syllago sandbox check\n  syllago sandbox allow-domain api.example.com",
+      "source": "cli/cmd/syllago/sandbox_cmd.go"
+    },
+    {
+      "name": "sandbox allow-domain",
+      "displayName": "Sandbox Allow-domain",
+      "slug": "sandbox-allow-domain",
+      "parent": "sandbox",
+      "synopsis": "syllago sandbox allow-domain \u003cdomain\u003e",
+      "description": "Add a domain to the sandbox allowlist",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "sandbox",
+        "sandbox allow-env",
+        "sandbox allow-port",
+        "sandbox check",
+        "sandbox deny-domain",
+        "sandbox deny-env",
+        "sandbox deny-port",
+        "sandbox domains",
+        "sandbox env",
+        "sandbox info",
+        "sandbox ports",
+        "sandbox run"
+      ],
+      "examples": "  syllago sandbox allow-domain api.example.com",
+      "source": "cli/cmd/syllago/sandbox_cmd.go"
+    },
+    {
+      "name": "sandbox allow-env",
+      "displayName": "Sandbox Allow-env",
+      "slug": "sandbox-allow-env",
+      "parent": "sandbox",
+      "synopsis": "syllago sandbox allow-env \u003cVAR\u003e",
+      "description": "Add an env var to the sandbox allowlist",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "sandbox",
+        "sandbox allow-domain",
+        "sandbox allow-port",
+        "sandbox check",
+        "sandbox deny-domain",
+        "sandbox deny-env",
+        "sandbox deny-port",
+        "sandbox domains",
+        "sandbox env",
+        "sandbox info",
+        "sandbox ports",
+        "sandbox run"
+      ],
+      "examples": "  syllago sandbox allow-env OPENAI_API_KEY",
+      "source": "cli/cmd/syllago/sandbox_cmd.go"
+    },
+    {
+      "name": "sandbox allow-port",
+      "displayName": "Sandbox Allow-port",
+      "slug": "sandbox-allow-port",
+      "parent": "sandbox",
+      "synopsis": "syllago sandbox allow-port \u003cport\u003e",
+      "description": "Add a localhost port to the sandbox allowlist",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "sandbox",
+        "sandbox allow-domain",
+        "sandbox allow-env",
+        "sandbox check",
+        "sandbox deny-domain",
+        "sandbox deny-env",
+        "sandbox deny-port",
+        "sandbox domains",
+        "sandbox env",
+        "sandbox info",
+        "sandbox ports",
+        "sandbox run"
+      ],
+      "examples": "  syllago sandbox allow-port 8080",
+      "source": "cli/cmd/syllago/sandbox_cmd.go"
+    },
+    {
+      "name": "sandbox check",
+      "displayName": "Sandbox Check",
+      "slug": "sandbox-check",
+      "parent": "sandbox",
+      "synopsis": "syllago sandbox check [provider]",
+      "description": "Verify bubblewrap, socat, and optionally a provider",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "sandbox",
+        "sandbox allow-domain",
+        "sandbox allow-env",
+        "sandbox allow-port",
+        "sandbox deny-domain",
+        "sandbox deny-env",
+        "sandbox deny-port",
+        "sandbox domains",
+        "sandbox env",
+        "sandbox info",
+        "sandbox ports",
+        "sandbox run"
+      ],
+      "examples": "  # Check sandbox prerequisites\n  syllago sandbox check\n\n  # Check prerequisites for a specific provider\n  syllago sandbox check claude-code",
+      "source": "cli/cmd/syllago/sandbox_cmd.go"
+    },
+    {
+      "name": "sandbox deny-domain",
+      "displayName": "Sandbox Deny-domain",
+      "slug": "sandbox-deny-domain",
+      "parent": "sandbox",
+      "synopsis": "syllago sandbox deny-domain \u003cdomain\u003e",
+      "description": "Remove a domain from the sandbox allowlist",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "sandbox",
+        "sandbox allow-domain",
+        "sandbox allow-env",
+        "sandbox allow-port",
+        "sandbox check",
+        "sandbox deny-env",
+        "sandbox deny-port",
+        "sandbox domains",
+        "sandbox env",
+        "sandbox info",
+        "sandbox ports",
+        "sandbox run"
+      ],
+      "examples": "  syllago sandbox deny-domain api.example.com",
+      "source": "cli/cmd/syllago/sandbox_cmd.go"
+    },
+    {
+      "name": "sandbox deny-env",
+      "displayName": "Sandbox Deny-env",
+      "slug": "sandbox-deny-env",
+      "parent": "sandbox",
+      "synopsis": "syllago sandbox deny-env \u003cVAR\u003e",
+      "description": "Remove an env var from the sandbox allowlist",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "sandbox",
+        "sandbox allow-domain",
+        "sandbox allow-env",
+        "sandbox allow-port",
+        "sandbox check",
+        "sandbox deny-domain",
+        "sandbox deny-port",
+        "sandbox domains",
+        "sandbox env",
+        "sandbox info",
+        "sandbox ports",
+        "sandbox run"
+      ],
+      "examples": "  syllago sandbox deny-env OPENAI_API_KEY",
+      "source": "cli/cmd/syllago/sandbox_cmd.go"
+    },
+    {
+      "name": "sandbox deny-port",
+      "displayName": "Sandbox Deny-port",
+      "slug": "sandbox-deny-port",
+      "parent": "sandbox",
+      "synopsis": "syllago sandbox deny-port \u003cport\u003e",
+      "description": "Remove a localhost port from the sandbox allowlist",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "sandbox",
+        "sandbox allow-domain",
+        "sandbox allow-env",
+        "sandbox allow-port",
+        "sandbox check",
+        "sandbox deny-domain",
+        "sandbox deny-env",
+        "sandbox domains",
+        "sandbox env",
+        "sandbox info",
+        "sandbox ports",
+        "sandbox run"
+      ],
+      "examples": "  syllago sandbox deny-port 8080",
+      "source": "cli/cmd/syllago/sandbox_cmd.go"
+    },
+    {
+      "name": "sandbox domains",
+      "displayName": "Sandbox Domains",
+      "slug": "sandbox-domains",
+      "parent": "sandbox",
+      "synopsis": "syllago sandbox domains",
+      "description": "List allowed domains",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "sandbox",
+        "sandbox allow-domain",
+        "sandbox allow-env",
+        "sandbox allow-port",
+        "sandbox check",
+        "sandbox deny-domain",
+        "sandbox deny-env",
+        "sandbox deny-port",
+        "sandbox env",
+        "sandbox info",
+        "sandbox ports",
+        "sandbox run"
+      ],
+      "examples": "  syllago sandbox domains",
+      "source": "cli/cmd/syllago/sandbox_cmd.go"
+    },
+    {
+      "name": "sandbox env",
+      "displayName": "Sandbox Env",
+      "slug": "sandbox-env",
+      "parent": "sandbox",
+      "synopsis": "syllago sandbox env",
+      "description": "List allowed env vars",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "sandbox",
+        "sandbox allow-domain",
+        "sandbox allow-env",
+        "sandbox allow-port",
+        "sandbox check",
+        "sandbox deny-domain",
+        "sandbox deny-env",
+        "sandbox deny-port",
+        "sandbox domains",
+        "sandbox info",
+        "sandbox ports",
+        "sandbox run"
+      ],
+      "examples": "  syllago sandbox env",
+      "source": "cli/cmd/syllago/sandbox_cmd.go"
+    },
+    {
+      "name": "sandbox info",
+      "displayName": "Sandbox Info",
+      "slug": "sandbox-info",
+      "parent": "sandbox",
+      "synopsis": "syllago sandbox info [provider]",
+      "description": "Show effective sandbox configuration",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "sandbox",
+        "sandbox allow-domain",
+        "sandbox allow-env",
+        "sandbox allow-port",
+        "sandbox check",
+        "sandbox deny-domain",
+        "sandbox deny-env",
+        "sandbox deny-port",
+        "sandbox domains",
+        "sandbox env",
+        "sandbox ports",
+        "sandbox run"
+      ],
+      "examples": "  # Show sandbox config\n  syllago sandbox info\n\n  # Show config with provider mount profile\n  syllago sandbox info claude-code",
+      "source": "cli/cmd/syllago/sandbox_cmd.go"
+    },
+    {
+      "name": "sandbox ports",
+      "displayName": "Sandbox Ports",
+      "slug": "sandbox-ports",
+      "parent": "sandbox",
+      "synopsis": "syllago sandbox ports",
+      "description": "List allowed localhost ports",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "sandbox",
+        "sandbox allow-domain",
+        "sandbox allow-env",
+        "sandbox allow-port",
+        "sandbox check",
+        "sandbox deny-domain",
+        "sandbox deny-env",
+        "sandbox deny-port",
+        "sandbox domains",
+        "sandbox env",
+        "sandbox info",
+        "sandbox run"
+      ],
+      "examples": "  syllago sandbox ports",
+      "source": "cli/cmd/syllago/sandbox_cmd.go"
+    },
+    {
+      "name": "sandbox run",
+      "displayName": "Sandbox Run",
+      "slug": "sandbox-run",
+      "parent": "sandbox",
+      "synopsis": "syllago sandbox run \u003cprovider\u003e [flags]",
+      "description": "Run a provider in a sandbox",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--allow-domain",
+          "shorthand": null,
+          "type": "stringArray",
+          "default": null,
+          "required": false,
+          "description": "Allow an additional domain for this session"
+        },
+        {
+          "name": "--allow-env",
+          "shorthand": null,
+          "type": "stringArray",
+          "default": null,
+          "required": false,
+          "description": "Forward an additional env var into the sandbox"
+        },
+        {
+          "name": "--allow-port",
+          "shorthand": null,
+          "type": "stringArray",
+          "default": null,
+          "required": false,
+          "description": "Allow a localhost port inside the sandbox"
+        },
+        {
+          "name": "--force-dir",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Skip directory safety checks"
+        },
+        {
+          "name": "--mount-ro",
+          "shorthand": null,
+          "type": "stringArray",
+          "default": null,
+          "required": false,
+          "description": "Mount additional path read-only inside sandbox"
+        },
+        {
+          "name": "--no-network",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Block all network egress (no proxy)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "sandbox",
+        "sandbox allow-domain",
+        "sandbox allow-env",
+        "sandbox allow-port",
+        "sandbox check",
+        "sandbox deny-domain",
+        "sandbox deny-env",
+        "sandbox deny-port",
+        "sandbox domains",
+        "sandbox env",
+        "sandbox info",
+        "sandbox ports"
+      ],
+      "examples": "  # Run Claude Code in a sandbox\n  syllago sandbox run claude-code\n\n  # Run with additional domain access\n  syllago sandbox run claude-code --allow-domain api.example.com\n\n  # Run with no network at all\n  syllago sandbox run gemini-cli --no-network",
+      "source": "cli/cmd/syllago/sandbox_cmd.go"
+    },
+    {
+      "name": "share",
+      "displayName": "Share",
+      "slug": "share",
+      "parent": null,
+      "synopsis": "syllago share \u003cname\u003e [flags]",
+      "description": "Contribute library content to a team repo",
+      "longDescription": "Copies a library item to your team repo, stages the change, and\noptionally creates a branch and PR.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--no-input",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Skip interactive git prompts, stage only"
+        },
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Disambiguate when name exists in multiple types"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Share a skill to the team repo\n  syllago share my-skill\n\n  # Disambiguate by type\n  syllago share my-rule --type rules\n\n  # Non-interactive mode (stage only, no git prompts)\n  syllago share my-skill --no-input",
+      "source": "cli/cmd/syllago/share.go"
+    },
+    {
+      "name": "sign",
+      "displayName": "Sign",
+      "slug": "sign",
+      "parent": null,
+      "synopsis": "syllago sign \u003cname\u003e [flags]",
+      "description": "Sign hook content for provenance verification",
+      "longDescription": "Cryptographically signs a hook's manifest and scripts using\nSigstore (keyless OIDC, default) or GPG (traditional keys).\n\nSignatures enable trust verification during installation.\nRecipients can verify that content was signed by a known identity\nand hasn't been tampered with since signing.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--key-id",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "GPG key ID (required when --method=gpg)"
+        },
+        {
+          "name": "--method",
+          "shorthand": null,
+          "type": "string",
+          "default": "sigstore",
+          "required": false,
+          "description": "Signing method: sigstore (default) or gpg"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Sign with Sigstore (keyless — uses GitHub/Google identity)\n  syllago sign my-hook\n\n  # Sign with GPG\n  syllago sign my-hook --method gpg --key-id 0xABCDEF12\n\n  # Verify a signed hook\n  syllago verify my-hook",
+      "source": "cli/cmd/syllago/sign.go"
+    },
+    {
+      "name": "sync-and-export",
+      "displayName": "Sync-and-export",
+      "slug": "sync-and-export",
+      "parent": null,
+      "synopsis": "syllago sync-and-export [flags]",
+      "description": "Sync registries then export content to a provider",
+      "longDescription": "Convenience command that syncs all registries then installs.\n\nEquivalent to running:\n  syllago registry sync \u0026\u0026 syllago install --to \u003cprovider\u003e\n\nThis is useful in CI/CD or automation where you want a single command\nto ensure registries are up-to-date before installing.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--llm-hooks",
+          "shorthand": null,
+          "type": "string",
+          "default": "skip",
+          "required": false,
+          "description": "How to handle LLM-evaluated hooks: skip (drop with warning) or generate (create wrapper scripts)"
+        },
+        {
+          "name": "--name",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Filter by item name (substring match)"
+        },
+        {
+          "name": "--source",
+          "shorthand": null,
+          "type": "string",
+          "default": "local",
+          "required": false,
+          "description": "Which items to export: local (default), shared, registry, builtin, all"
+        },
+        {
+          "name": "--to",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": true,
+          "description": "Provider slug to export to, or \"all\" for every provider (required)"
+        },
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Filter to a specific content type (e.g., skills, rules)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Sync registries and export to Cursor\n  syllago sync-and-export --to cursor\n\n  # Export to all providers\n  syllago sync-and-export --to all --type skills\n\n  # Export only registry content to Kiro\n  syllago sync-and-export --to kiro --source registry",
+      "source": "cli/cmd/syllago/sync-and-export.go"
+    },
+    {
+      "name": "uninstall",
+      "displayName": "Uninstall",
+      "slug": "uninstall",
+      "parent": null,
+      "synopsis": "syllago uninstall \u003cname\u003e [flags]",
+      "description": "Deactivate content from a provider",
+      "longDescription": "Removes installed content from a provider's location.\n\nFor symlinked content: removes the symlink.\nFor copied content: removes the copied file or directory.\nFor hooks/MCP: reverses the JSON merge from the provider's settings file.\n\nThe content remains in your library (~/.syllago/content/) and can be\nreinstalled at any time with \"syllago install\".",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--dry-run",
+          "shorthand": "-n",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show what would happen without making changes"
+        },
+        {
+          "name": "--force",
+          "shorthand": "-f",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Skip confirmation prompt"
+        },
+        {
+          "name": "--from",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Provider to uninstall from (omit to uninstall from all)"
+        },
+        {
+          "name": "--no-input",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable interactive prompts, use defaults"
+        },
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Disambiguate when name exists in multiple types"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Uninstall from a specific provider\n  syllago uninstall my-skill --from claude-code\n\n  # Uninstall from all providers\n  syllago uninstall my-agent\n\n  # Skip confirmation prompt\n  syllago uninstall my-rule --from cursor --force\n\n  # Preview what would happen\n  syllago uninstall my-skill --dry-run",
+      "source": "cli/cmd/syllago/uninstall.go"
+    },
+    {
+      "name": "update",
+      "displayName": "Update",
+      "slug": "update",
+      "parent": null,
+      "synopsis": "syllago update [name] [flags]",
+      "description": "Check for and apply content updates from registries",
+      "longDescription": "Compares installed content versions against their source registries\nand updates items where a newer version is available.\n\nVersion comparison uses semver from .syllago.yaml metadata.\nItems installed from local projects (not registries) are skipped.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--all",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Update all installed items"
+        },
+        {
+          "name": "--dry-run",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show what would be updated without changing anything"
+        },
+        {
+          "name": "--registry",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Only update items from this registry"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Update a specific item\n  syllago update my-skill\n\n  # Check and update all installed items\n  syllago update --all\n\n  # Dry-run: show what would be updated\n  syllago update --all --dry-run\n\n  # Only update items from a specific registry\n  syllago update --all --registry team-rules",
+      "source": "cli/cmd/syllago/update.go"
+    },
+    {
+      "name": "update",
+      "displayName": "Update",
+      "slug": "update",
+      "parent": null,
+      "synopsis": "syllago update",
+      "description": "Update syllago to the latest release",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  syllago update",
+      "source": "cli/cmd/syllago/update.go"
+    },
+    {
+      "name": "verify",
+      "displayName": "Verify",
+      "slug": "verify",
+      "parent": null,
+      "synopsis": "syllago verify \u003cname\u003e [flags]",
+      "description": "Verify hook content signatures",
+      "longDescription": "Checks cryptographic signatures on hook content against the\nconfigured trust policy. Reports the signer identity and whether\nthe content is trusted.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--verbose",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show detailed verification info"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Verify a hook's signature\n  syllago verify my-hook\n\n  # Verify with verbose output\n  syllago verify my-hook --verbose",
+      "source": "cli/cmd/syllago/verify.go"
+    },
+    {
+      "name": "version",
+      "displayName": "Version",
+      "slug": "version",
+      "parent": null,
+      "synopsis": "syllago version",
+      "description": "Print syllago version",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  syllago version",
+      "source": "cli/cmd/syllago/version.go"
+    }
+  ]
+}
