@@ -79,6 +79,11 @@ func (c *AgentsConverter) ContentType() catalog.ContentType {
 
 func (c *AgentsConverter) Canonicalize(content []byte, sourceProvider string) (*Result, error) {
 	if sourceProvider == "kiro" {
+		// Auto-detect JSON vs markdown: Kiro CLI uses JSON, Kiro IDE uses markdown.
+		trimmed := bytes.TrimSpace(content)
+		if len(trimmed) > 0 && trimmed[0] == '{' {
+			return canonicalizeKiroAgentJSON(content)
+		}
 		return canonicalizeKiroAgent(content)
 	}
 	if sourceProvider == "codex" {
@@ -134,6 +139,8 @@ func (c *AgentsConverter) Render(content []byte, target provider.Provider) (*Res
 		return renderOpenCodeAgent(meta, body)
 	case "kiro":
 		return renderKiroAgent(meta, body)
+	case "kiro-json":
+		return renderKiroAgentJSON(meta, body)
 	case "codex":
 		return renderCodexAgents(meta, body)
 	case "cursor":
