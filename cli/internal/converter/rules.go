@@ -669,6 +669,16 @@ type ampRuleFrontmatter struct {
 	Globs []string `yaml:"globs,omitempty"`
 }
 
+// stripImplicitGlobPrefix removes a leading **/ from a glob pattern.
+// Amp implicitly prefixes globs with **/ at runtime unless they start
+// with ../ or ./, so storing **/ in the frontmatter would double-prefix.
+func stripImplicitGlobPrefix(g string) string {
+	if strings.HasPrefix(g, "**/") && !strings.HasPrefix(g, "../") && !strings.HasPrefix(g, "./") {
+		return g[3:]
+	}
+	return g
+}
+
 func canonicalizeAmpRule(content []byte) (*Result, error) {
 	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
 
@@ -718,9 +728,15 @@ func canonicalizeAmpRule(content []byte) (*Result, error) {
 // renderAmpRule renders a rule for Amp's AGENTS.md format.
 // Amp uses `globs` as a YAML array in frontmatter. Always-apply rules
 // render as plain markdown (no frontmatter).
+// Amp implicitly prefixes globs with **/ unless they start with ../ or ./,
+// so we strip that prefix when rendering to avoid double-prefixing.
 func renderAmpRule(meta RuleMeta, body string) (*Result, error) {
 	if len(meta.Globs) > 0 {
-		afm := ampRuleFrontmatter{Globs: meta.Globs}
+		ampGlobs := make([]string, len(meta.Globs))
+		for i, g := range meta.Globs {
+			ampGlobs[i] = stripImplicitGlobPrefix(g)
+		}
+		afm := ampRuleFrontmatter{Globs: ampGlobs}
 		fm, err := renderFrontmatter(afm)
 		if err != nil {
 			return nil, err

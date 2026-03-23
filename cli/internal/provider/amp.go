@@ -18,7 +18,8 @@ var Amp = Provider{
 			// Rules go to project root or ~/.config/amp/AGENTS.md (global).
 			return filepath.Join(homeDir, ".config", "amp")
 		case catalog.Skills:
-			// Amp skills: ~/.config/agents/skills/ (global) or .agents/skills/ (project)
+			// Amp skills: ~/.config/agents/skills/ (primary global)
+			// Also searches ~/.config/amp/skills/ but we install to the primary.
 			return filepath.Join(homeDir, ".config", "agents", "skills")
 		case catalog.MCP:
 			return JSONMergeSentinel
@@ -32,8 +33,13 @@ var Amp = Provider{
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {
 		case catalog.Rules:
+			// Amp checks AGENTS.md, then falls back to AGENT.md and CLAUDE.md
+			// if AGENTS.md doesn't exist. It also walks parent directories up
+			// to $HOME, but syllago only discovers project-root files.
 			return []string{
 				filepath.Join(projectRoot, "AGENTS.md"),
+				filepath.Join(projectRoot, "AGENT.md"),
+				filepath.Join(projectRoot, "CLAUDE.md"),
 			}
 		case catalog.Skills:
 			return []string{
@@ -41,6 +47,8 @@ var Amp = Provider{
 				filepath.Join(projectRoot, ".claude", "skills"), // compat fallback
 			}
 		case catalog.MCP:
+			// Workspace MCP: .amp/settings.json (requires user approval in Amp).
+			// User-level MCP: ~/.config/amp/settings.json under amp.mcpServers key.
 			return []string{
 				filepath.Join(projectRoot, ".amp", "settings.json"),
 			}
@@ -48,6 +56,10 @@ var Amp = Provider{
 			return nil
 		}
 	},
+	// Note: Amp also searches ~/.config/amp/skills/ for user-wide skills
+	// (second priority after ~/.config/agents/skills/). The Provider struct
+	// doesn't have a GlobalDiscoveryPaths field, so this is documented here.
+	// InstallDir targets ~/.config/agents/skills/ (highest priority).
 	FileFormat: func(ct catalog.ContentType) Format {
 		switch ct {
 		case catalog.MCP:
