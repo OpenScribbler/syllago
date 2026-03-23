@@ -2,6 +2,10 @@
 
 <img src="logos/logo.svg" alt="Syllago" width="600">
 
+[![CI](https://github.com/OpenScribbler/syllago/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenScribbler/syllago/actions/workflows/ci.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/OpenScribbler/syllago)](https://github.com/OpenScribbler/syllago/releases/latest)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 **Convert, bundle, and share AI coding tool content across providers.**
 
 </div>
