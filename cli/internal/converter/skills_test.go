@@ -122,7 +122,7 @@ func TestClaudeSkillToOpenCode(t *testing.T) {
 	assertNotContains(t, out, "allowed-tools:")
 	assertNotContains(t, out, "context: fork")
 	assertContains(t, out, "Tool restriction")         // allowed-tools as prose
-	assertContains(t, out, "Read")                     // tool name in prose
+	assertContains(t, out, "file_read")                // tool name in prose (neutral canonical)
 	assertContains(t, out, "isolated context")         // context:fork prose
 	assertContains(t, out, "Designed for model: opus") // model as prose
 	assertContains(t, out, "syllago:converted")
@@ -552,9 +552,9 @@ func TestSkillAllowedToolsCommaSeparated(t *testing.T) {
 	if len(meta.AllowedTools) != 3 {
 		t.Fatalf("expected 3 tools, got %d: %v", len(meta.AllowedTools), meta.AllowedTools)
 	}
-	assertEqual(t, "Read", meta.AllowedTools[0])
-	assertEqual(t, "Grep", meta.AllowedTools[1])
-	assertEqual(t, "Glob", meta.AllowedTools[2])
+	assertEqual(t, "file_read", meta.AllowedTools[0])
+	assertEqual(t, "search", meta.AllowedTools[1])
+	assertEqual(t, "find", meta.AllowedTools[2])
 }
 
 func TestSkillAllowedToolsSpaceDelimited(t *testing.T) {
@@ -575,9 +575,9 @@ func TestSkillAllowedToolsSpaceDelimited(t *testing.T) {
 	if len(meta.AllowedTools) != 3 {
 		t.Fatalf("expected 3 tools, got %d: %v", len(meta.AllowedTools), meta.AllowedTools)
 	}
-	assertEqual(t, "Read", meta.AllowedTools[0])
-	assertEqual(t, "Grep", meta.AllowedTools[1])
-	assertEqual(t, "Glob", meta.AllowedTools[2])
+	assertEqual(t, "file_read", meta.AllowedTools[0])
+	assertEqual(t, "search", meta.AllowedTools[1])
+	assertEqual(t, "find", meta.AllowedTools[2])
 }
 
 func TestSkillAllowedToolsYAMLList(t *testing.T) {
@@ -598,9 +598,9 @@ func TestSkillAllowedToolsYAMLList(t *testing.T) {
 	if len(meta.AllowedTools) != 3 {
 		t.Fatalf("expected 3 tools, got %d: %v", len(meta.AllowedTools), meta.AllowedTools)
 	}
-	assertEqual(t, "Read", meta.AllowedTools[0])
-	assertEqual(t, "Grep", meta.AllowedTools[1])
-	assertEqual(t, "Glob", meta.AllowedTools[2])
+	assertEqual(t, "file_read", meta.AllowedTools[0])
+	assertEqual(t, "search", meta.AllowedTools[1])
+	assertEqual(t, "find", meta.AllowedTools[2])
 }
 
 func TestSkillAllowedToolsSingle(t *testing.T) {
@@ -621,7 +621,7 @@ func TestSkillAllowedToolsSingle(t *testing.T) {
 	if len(meta.AllowedTools) != 1 {
 		t.Fatalf("expected 1 tool, got %d: %v", len(meta.AllowedTools), meta.AllowedTools)
 	}
-	assertEqual(t, "Bash", meta.AllowedTools[0])
+	assertEqual(t, "shell", meta.AllowedTools[0])
 }
 
 func TestSkillCommaSeparatedRenderTranslatesEach(t *testing.T) {

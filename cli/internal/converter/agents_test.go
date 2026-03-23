@@ -287,9 +287,9 @@ func TestKiroAgentCanonicalize(t *testing.T) {
 	out := string(result.Content)
 	assertContains(t, out, "name: AWS Expert")
 	assertContains(t, out, "model: claude-sonnet-4")
-	// fs_write → Write (or Edit, both map to fs_write)
-	// shell → Bash
-	assertContains(t, out, "Bash")
+	// fs_write → file_edit (or file_write, both map to fs_write)
+	// shell → shell
+	assertContains(t, out, "shell")
 	// mcpServers should be preserved in canonical
 	assertContains(t, out, "mcpServers")
 	assertContains(t, out, "github")
@@ -443,11 +443,11 @@ func TestOpenCodeAgentCanonicalize(t *testing.T) {
 	assertContains(t, out, "maxTurns: 15")
 	assertNotContains(t, out, "steps:")
 	// tools mapped to canonical names (only enabled ones)
-	assertContains(t, out, "Read")
-	assertContains(t, out, "Bash")
-	assertContains(t, out, "Grep")
+	assertContains(t, out, "file_read")
+	assertContains(t, out, "shell")
+	assertContains(t, out, "search")
 	// write: false should be excluded
-	assertNotContains(t, out, "Edit") // write→Write, not included since false
+	assertNotContains(t, out, "file_write") // write→file_write, not included since false
 	// color and temperature preserved
 	assertContains(t, out, "color:")
 	assertContains(t, out, "temperature: 0.3")
@@ -650,8 +650,8 @@ func TestGeminiToCodexRoundtrip(t *testing.T) {
 
 	canonicalStr := string(canonical.Content)
 	// Tools should be in canonical form
-	assertContains(t, canonicalStr, "Read")
-	assertContains(t, canonicalStr, "Bash")
+	assertContains(t, canonicalStr, "file_read")
+	assertContains(t, canonicalStr, "shell")
 
 	// canonical → Codex
 	codex, err := conv.Render(canonical.Content, provider.Codex)

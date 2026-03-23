@@ -19,10 +19,11 @@ content/.syllago/
 # Backups
 *.bak
 
-# Working docs — ignore all except design specs
+# Working docs — ignore all except design specs and the hook spec
 docs/*
 !docs/design/
 !docs/vhs/
+!docs/spec/
 tmp/
 
 # Development workflow state

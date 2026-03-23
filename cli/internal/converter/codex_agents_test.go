@@ -27,12 +27,12 @@ tools = ["shell", "read_file"]
 	// Should have canonical frontmatter
 	assertContains(t, out, "name: reviewer")
 	assertContains(t, out, "model: o4-mini")
-	// Tools should be reverse-translated: shell → Bash, read_file → Read
-	assertContains(t, out, "Bash")
-	assertContains(t, out, "Read")
+	// Tools should be reverse-translated: shell → shell, read_file → file_read
+	assertContains(t, out, "shell")
+	assertContains(t, out, "file_read")
 	// Verify the YAML tools list contains canonical names not Codex ones
-	assertContains(t, out, "- Bash")
-	assertContains(t, out, "- Read")
+	assertContains(t, out, "- shell")
+	assertContains(t, out, "- file_read")
 	// Body should contain the prompt
 	assertContains(t, out, "You are a code reviewer")
 }
@@ -78,9 +78,9 @@ name: my-agent
 description: A test agent
 model: claude-sonnet-4-6
 tools:
-  - Read
-  - Bash
-  - Grep
+  - file_read
+  - shell
+  - search
 maxTurns: 10
 permissionMode: plan
 ---
@@ -151,8 +151,8 @@ tools = ["shell", "apply_patch"]
 
 	// Verify canonical form has correct tool names
 	canonicalStr := string(canonical.Content)
-	assertContains(t, canonicalStr, "Bash") // shell → Bash
-	assertContains(t, canonicalStr, "Edit") // apply_patch → Edit
+	assertContains(t, canonicalStr, "shell")     // shell → shell
+	assertContains(t, canonicalStr, "file_edit") // apply_patch → file_edit
 
 	// Render to single-agent Codex format
 	result, err := conv.Render(canonical.Content, provider.Codex)
@@ -179,7 +179,7 @@ tools = ["shell", "apply_patch"]
 		t.Fatalf("Canonicalize pass 2: %v", err)
 	}
 	canonical2Str := string(canonical2.Content)
-	assertContains(t, canonical2Str, "Bash")
+	assertContains(t, canonical2Str, "shell")
 	assertContains(t, canonical2Str, "Write clean, tested code.")
 }
 

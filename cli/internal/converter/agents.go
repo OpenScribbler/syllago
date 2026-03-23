@@ -100,8 +100,8 @@ func (c *AgentsConverter) Canonicalize(content []byte, sourceProvider string) (*
 		// max_turns is handled by the YAML tag; temperature/timeout_mins are already in canonical
 	}
 
-	// Translate tool names to canonical (Claude Code names)
-	if sourceProvider != "claude-code" && sourceProvider != "" {
+	// Translate tool names from provider-native to canonical (neutral)
+	if sourceProvider != "" {
 		for i, tool := range meta.Tools {
 			meta.Tools[i] = ReverseTranslateTool(tool, sourceProvider)
 		}
@@ -330,6 +330,14 @@ func renderCopilotAgent(meta AgentMeta, body string) (*Result, error) {
 func renderClaudeAgent(meta AgentMeta, body string) (*Result, error) {
 	cleanBody := StripConversionNotes(body)
 
+	// Translate canonical (neutral) tool names to CC names
+	if len(meta.Tools) > 0 {
+		meta.Tools = TranslateTools(meta.Tools, "claude-code")
+	}
+	if len(meta.DisallowedTools) > 0 {
+		meta.DisallowedTools = TranslateTools(meta.DisallowedTools, "claude-code")
+	}
+
 	// Embed Gemini-specific fields as conversion notes
 	var notes []string
 	if meta.Temperature > 0 {
@@ -367,17 +375,17 @@ func renderRooCodeAgent(meta AgentMeta, body string) (*Result, error) {
 	slug = strings.ReplaceAll(slug, " ", "-")
 	slug = strings.ReplaceAll(slug, "_", "-")
 
-	// Map canonical tool names to Roo Code tool groups.
+	// Map canonical (neutral) tool names to Roo Code tool groups.
 	groupSet := map[string]struct{}{}
 	for _, tool := range meta.Tools {
 		switch tool {
-		case "Read", "Glob", "Grep":
+		case "file_read", "find", "search":
 			groupSet["read"] = struct{}{}
-		case "Write", "Edit":
+		case "file_write", "file_edit":
 			groupSet["edit"] = struct{}{}
-		case "Bash":
+		case "shell":
 			groupSet["command"] = struct{}{}
-		case "WebSearch", "WebFetch":
+		case "web_search", "web_fetch":
 			groupSet["browser"] = struct{}{}
 		}
 	}

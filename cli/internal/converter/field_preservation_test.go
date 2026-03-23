@@ -890,9 +890,9 @@ func TestCanonicalize_GeminiHookEvents(t *testing.T) {
 	}
 
 	out := string(result.Content)
-	assertContains(t, out, "PreToolUse")  // BeforeTool → PreToolUse
-	assertContains(t, out, "PostToolUse") // AfterTool → PostToolUse
-	assertContains(t, out, `"Bash"`)      // run_shell_command → Bash
+	assertContains(t, out, "before_tool_execute") // BeforeTool → canonical
+	assertContains(t, out, "after_tool_execute")  // AfterTool → canonical
+	assertContains(t, out, `"shell"`)             // run_shell_command → canonical
 	assertNotContains(t, out, "BeforeTool")
 	assertNotContains(t, out, "AfterTool")
 	assertNotContains(t, out, "run_shell_command")
@@ -925,7 +925,7 @@ func TestCanonicalize_CopilotHookFormat(t *testing.T) {
 	}
 
 	out := string(result.Content)
-	assertContains(t, out, "PreToolUse") // preToolUse → PreToolUse
+	assertContains(t, out, "before_tool_execute") // preToolUse → canonical
 	assertContains(t, out, "echo verify")
 	assertContains(t, out, `"timeout": 10`) // 10 sec stays 10 sec (canonical unit is seconds)
 	assertContains(t, out, "Safety verification")
@@ -1042,10 +1042,10 @@ func TestRoundTrip_HooksClaudeGemini(t *testing.T) {
 	}
 
 	out := string(backToCanonical.Content)
-	assertContains(t, out, "PreToolUse")   // event translated back
-	assertContains(t, out, `"Bash"`)       // matcher translated back
-	assertContains(t, out, "echo check")   // command preserved
-	assertContains(t, out, `"timeout": 3`) // timeout preserved (canonical seconds: 3000ms → 3s)
+	assertContains(t, out, "before_tool_execute") // event back to canonical
+	assertContains(t, out, `"shell"`)             // matcher back to canonical
+	assertContains(t, out, "echo check")          // command preserved
+	assertContains(t, out, `"timeout": 3`)        // timeout preserved (canonical seconds: 3000ms → 3s)
 }
 
 // =============================================================================
@@ -1371,7 +1371,7 @@ func TestEdgeCase_TimeoutUnitPrecision(t *testing.T) {
 
 	backOut := string(backToCanonical.Content)
 	assertContains(t, backOut, "echo test")
-	assertContains(t, backOut, "PreToolUse")
+	assertContains(t, backOut, "before_tool_execute") // canonical name
 }
 
 func TestEdgeCase_SkillMinimalToAllProviders(t *testing.T) {

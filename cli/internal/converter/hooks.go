@@ -213,7 +213,7 @@ func (c *HooksConverter) Canonicalize(content []byte, sourceProvider string) (*R
 	case "copilot-cli":
 		return canonicalizeCopilotHooks(content)
 	case "cursor":
-		// Cursor hooks use the same event names as canonical format.
+		// Cursor hooks use CC-style event names (mapped via HookEvents).
 		// Unique fields (failClosed, loop_limit, version) are not yet preserved.
 		return canonicalizeStandardHooks(content, sourceProvider)
 	case "windsurf":
@@ -234,11 +234,9 @@ func canonicalizeFlatHook(content []byte, sourceProvider string) (*Result, error
 		return nil, err
 	}
 
-	if sourceProvider != "claude-code" {
-		hd.Event = ReverseTranslateHookEvent(hd.Event, sourceProvider)
-		if hd.Matcher != "" {
-			hd.Matcher = ReverseTranslateMatcher(hd.Matcher, sourceProvider)
-		}
+	hd.Event = ReverseTranslateHookEvent(hd.Event, sourceProvider)
+	if hd.Matcher != "" {
+		hd.Matcher = ReverseTranslateMatcher(hd.Matcher, sourceProvider)
 	}
 
 	// Convert provider ms timeouts to canonical seconds (all flat-format providers use ms)
@@ -290,8 +288,8 @@ func (c *HooksConverter) Render(content []byte, target provider.Provider) (*Resu
 	case "cursor":
 		// Cursor uses hooks.json with a unique schema: {"version": 1, "hooks": {"EventName": [...]}}
 		// Each entry supports fields not yet handled: failClosed, loop_limit, version.
-		// Cursor reads the same event names as canonical, so the standard renderer works
-		// for basic command hooks. TODO: support Cursor-specific fields.
+		// Cursor uses CC-style event names (PreToolUse, etc.) mapped via HookEvents.
+		// TODO: support Cursor-specific fields.
 		return renderStandardHooks(cfg, target.Slug, mode)
 	case "windsurf":
 		// Windsurf uses per-tool-category events (pre_read_code, pre_write_code, etc.)
@@ -315,10 +313,7 @@ func canonicalizeStandardHooks(content []byte, sourceProvider string) (*Result, 
 	// Translate event names and matcher tool names to canonical
 	canonical := hooksConfig{Hooks: make(map[string][]hookMatcher), SourceProvider: sourceProvider}
 	for event, matchers := range cfg.Hooks {
-		canonicalEvent := event
-		if sourceProvider != "claude-code" {
-			canonicalEvent = ReverseTranslateHookEvent(event, sourceProvider)
-		}
+		canonicalEvent := ReverseTranslateHookEvent(event, sourceProvider)
 
 		var canonicalMatchers []hookMatcher
 		for _, m := range matchers {
@@ -335,7 +330,7 @@ func canonicalizeStandardHooks(content []byte, sourceProvider string) (*Result, 
 				Hooks:   hooks,
 			}
 			// Translate matcher tool name to canonical
-			if cm.Matcher != "" && sourceProvider != "claude-code" {
+			if cm.Matcher != "" {
 				cm.Matcher = ReverseTranslateMatcher(cm.Matcher, sourceProvider)
 			}
 			canonicalMatchers = append(canonicalMatchers, cm)
@@ -410,18 +405,12 @@ func renderStandardHooks(cfg hooksConfig, targetSlug string, llmMode string) (*R
 	scriptIdx := 0
 
 	for event, matchers := range cfg.Hooks {
-		var targetEvent string
-		if targetSlug == "claude-code" || targetSlug == "cursor" {
-			// Claude Code is canonical, Cursor uses the same event names — pass through untranslated
-			targetEvent = event
-		} else {
-			translated, supported := TranslateHookEvent(event, targetSlug)
-			if !supported {
-				warnings = append(warnings, fmt.Sprintf("hook event %q is not supported by %s (dropped)", event, targetSlug))
-				continue
-			}
-			targetEvent = translated
+		translated, supported := TranslateHookEvent(event, targetSlug)
+		if !supported {
+			warnings = append(warnings, fmt.Sprintf("hook event %q is not supported by %s (dropped)", event, targetSlug))
+			continue
 		}
+		targetEvent := translated
 
 		var targetMatchers []hookMatcher
 		for _, m := range matchers {

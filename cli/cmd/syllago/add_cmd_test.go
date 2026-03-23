@@ -579,8 +579,8 @@ func TestAddHooksForce(t *testing.T) {
 		if strings.Contains(string(data), `"event":"old"`) {
 			t.Errorf("expected hook.json to be overwritten with force, still has old content")
 		}
-		if !strings.Contains(string(data), "PreToolUse") {
-			t.Errorf("expected overwritten hook.json to contain 'PreToolUse', got: %s", data)
+		if !strings.Contains(string(data), "before_tool_execute") {
+			t.Errorf("expected overwritten hook.json to contain 'before_tool_execute', got: %s", data)
 		}
 	})
 }

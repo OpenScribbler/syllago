@@ -2,12 +2,14 @@ package converter
 
 import "strings"
 
-// ToolNames maps canonical tool names (Claude Code) to provider-specific equivalents.
-// Note: Zed and Cursor use "edit_file" for both Write and Edit; Codex uses "apply_patch"
+// ToolNames maps canonical (provider-neutral) tool names to provider-specific equivalents.
+// Keys are snake_case neutral names; every provider including claude-code has an explicit entry.
+// Note: Zed and Cursor use "edit_file" for both file_write and file_edit; Codex uses "apply_patch"
 // for both. Reverse translation is ambiguous and may return either canonical name;
-// round-trips through these providers lose the Write/Edit distinction.
+// round-trips through these providers lose the file_write/file_edit distinction.
 var ToolNames = map[string]map[string]string{
-	"Read": {
+	"file_read": {
+		"claude-code": "Read",
 		"gemini-cli":  "read_file",
 		"copilot-cli": "view",
 		"kiro":        "read",
@@ -19,7 +21,8 @@ var ToolNames = map[string]map[string]string{
 		"windsurf":    "view_line_range",
 		"codex":       "read_file",
 	},
-	"Write": {
+	"file_write": {
+		"claude-code": "Write",
 		"gemini-cli":  "write_file",
 		"copilot-cli": "create",
 		"kiro":        "fs_write",
@@ -31,7 +34,8 @@ var ToolNames = map[string]map[string]string{
 		"windsurf":    "write_to_file",
 		"codex":       "apply_patch",
 	},
-	"Edit": {
+	"file_edit": {
+		"claude-code": "Edit",
 		"gemini-cli":  "replace",
 		"copilot-cli": "edit",
 		"kiro":        "fs_write",
@@ -43,7 +47,8 @@ var ToolNames = map[string]map[string]string{
 		"windsurf":    "edit_file",
 		"codex":       "apply_patch",
 	},
-	"Bash": {
+	"shell": {
+		"claude-code": "Bash",
 		"gemini-cli":  "run_shell_command",
 		"copilot-cli": "bash",
 		"kiro":        "shell",
@@ -55,7 +60,8 @@ var ToolNames = map[string]map[string]string{
 		"windsurf":    "run_command",
 		"codex":       "shell",
 	},
-	"Glob": {
+	"find": {
+		"claude-code": "Glob",
 		"gemini-cli":  "glob",
 		"copilot-cli": "glob",
 		"kiro":        "glob",
@@ -67,7 +73,8 @@ var ToolNames = map[string]map[string]string{
 		"windsurf":    "find_by_name",
 		"codex":       "list_dir",
 	},
-	"Grep": {
+	"search": {
+		"claude-code": "Grep",
 		"gemini-cli":  "grep_search",
 		"copilot-cli": "grep",
 		"kiro":        "grep",
@@ -79,23 +86,26 @@ var ToolNames = map[string]map[string]string{
 		"windsurf":    "grep_search",
 		"codex":       "grep_files",
 	},
-	"WebSearch": {
-		"gemini-cli": "google_web_search",
-		"opencode":   "websearch",
-		"zed":        "web_search",
-		"cursor":     "web_search",
-		"windsurf":   "search_web",
-		"codex":      "web_search",
-		"kiro":       "web_search",
+	"web_search": {
+		"claude-code": "WebSearch",
+		"gemini-cli":  "google_web_search",
+		"opencode":    "websearch",
+		"zed":         "web_search",
+		"cursor":      "web_search",
+		"windsurf":    "search_web",
+		"codex":       "web_search",
+		"kiro":        "web_search",
 	},
-	"Agent": {
+	"agent": {
+		"claude-code": "Agent",
 		"copilot-cli": "task",
 		"opencode":    "task",
 		"zed":         "spawn_agent",
 		"codex":       "spawn_agent",
 		"kiro":        "use_subagent",
 	},
-	"WebFetch": {
+	"web_fetch": {
+		"claude-code": "WebFetch",
 		"gemini-cli":  "web_fetch",
 		"copilot-cli": "web_fetch",
 		"kiro":        "web_fetch",
@@ -104,52 +114,52 @@ var ToolNames = map[string]map[string]string{
 		"windsurf":    "read_url_content",
 	},
 	// CC-only tools with no cross-provider equivalents
-	"NotebookEdit":    {},
-	"MultiEdit":       {},
-	"LS":              {},
-	"NotebookRead":    {},
-	"KillBash":        {},
-	"Skill":           {},
-	"AskUserQuestion": {},
+	"notebook_edit": {"claude-code": "NotebookEdit"},
+	"multi_edit":    {"claude-code": "MultiEdit"},
+	"list_dir":      {"claude-code": "LS"},
+	"notebook_read": {"claude-code": "NotebookRead"},
+	"kill_shell":    {"claude-code": "KillBash"},
+	"skill":         {"claude-code": "Skill"},
+	"ask_user":      {"claude-code": "AskUserQuestion"},
 }
 
-// HookEvents maps canonical event names (Claude Code) to provider-specific equivalents.
+// HookEvents maps canonical (provider-neutral) event names to provider-specific equivalents.
+// Keys are snake_case neutral names; every provider including claude-code has an explicit entry.
 var HookEvents = map[string]map[string]string{
-	"PreToolUse":       {"gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse", "cline": "PreToolUse"},
-	"PostToolUse":      {"gemini-cli": "AfterTool", "copilot-cli": "postToolUse", "kiro": "postToolUse", "cline": "PostToolUse"},
-	"UserPromptSubmit": {"gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted", "kiro": "userPromptSubmit", "cline": "UserPromptSubmit"},
-	"Stop":             {"gemini-cli": "AfterAgent", "kiro": "stop"},
-	"SessionStart":     {"gemini-cli": "SessionStart", "copilot-cli": "sessionStart", "kiro": "agentSpawn", "cline": "TaskStart"},
-	"SessionEnd":       {"gemini-cli": "SessionEnd", "copilot-cli": "sessionEnd", "cline": "TaskComplete"},
-	"PreCompact":       {"gemini-cli": "PreCompress", "cline": "PreCompact"},
-	"Notification":     {"gemini-cli": "Notification"},
-	"SubagentStart":    {},
-	"SubagentStop":     {"copilot-cli": "subagentStop"},
-	"AgentStop":        {"copilot-cli": "agentStop"},
-	"ErrorOccurred":    {"copilot-cli": "errorOccurred"},
+	"before_tool_execute": {"claude-code": "PreToolUse", "gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse", "cline": "PreToolUse", "cursor": "PreToolUse"},
+	"after_tool_execute":  {"claude-code": "PostToolUse", "gemini-cli": "AfterTool", "copilot-cli": "postToolUse", "kiro": "postToolUse", "cline": "PostToolUse", "cursor": "PostToolUse"},
+	"before_prompt":       {"claude-code": "UserPromptSubmit", "gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted", "kiro": "userPromptSubmit", "cline": "UserPromptSubmit", "cursor": "UserPromptSubmit"},
+	"agent_stop":          {"claude-code": "Stop", "gemini-cli": "AfterAgent", "kiro": "stop", "copilot-cli": "agentStop", "cursor": "Stop"},
+	"session_start":       {"claude-code": "SessionStart", "gemini-cli": "SessionStart", "copilot-cli": "sessionStart", "kiro": "agentSpawn", "cline": "TaskStart", "cursor": "SessionStart"},
+	"session_end":         {"claude-code": "SessionEnd", "gemini-cli": "SessionEnd", "copilot-cli": "sessionEnd", "cline": "TaskComplete", "cursor": "SessionEnd"},
+	"before_compact":      {"claude-code": "PreCompact", "gemini-cli": "PreCompress", "cline": "PreCompact", "cursor": "PreCompact"},
+	"notification":        {"claude-code": "Notification", "gemini-cli": "Notification"},
+	"subagent_start":      {"claude-code": "SubagentStart"},
+	"subagent_stop":       {"claude-code": "SubagentStop", "copilot-cli": "subagentStop"},
+	"error_occurred":      {"claude-code": "ErrorOccurred", "copilot-cli": "errorOccurred"},
 
-	// CC-only events (empty maps — no cross-provider equivalents)
-	"PostToolUseFailure": {},
-	"PermissionRequest":  {},
-	"PostCompact":        {},
-	"InstructionsLoaded": {},
-	"ConfigChange":       {},
-	"WorktreeCreate":     {},
-	"WorktreeRemove":     {},
-	"Elicitation":        {},
-	"ElicitationResult":  {},
-	"TeammateIdle":       {},
-	"TaskCompleted":      {},
-	"StopFailure":        {},
+	// CC-only events (no cross-provider equivalents)
+	"after_tool_failure":  {"claude-code": "PostToolUseFailure"},
+	"permission_request":  {"claude-code": "PermissionRequest"},
+	"after_compact":       {"claude-code": "PostCompact"},
+	"instructions_loaded": {"claude-code": "InstructionsLoaded"},
+	"config_change":       {"claude-code": "ConfigChange"},
+	"worktree_create":     {"claude-code": "WorktreeCreate"},
+	"worktree_remove":     {"claude-code": "WorktreeRemove"},
+	"elicitation":         {"claude-code": "Elicitation"},
+	"elicitation_result":  {"claude-code": "ElicitationResult"},
+	"teammate_idle":       {"claude-code": "TeammateIdle"},
+	"task_completed":      {"claude-code": "TaskCompleted"},
+	"stop_failure":        {"claude-code": "StopFailure"},
 
 	// Gemini-only events
-	"BeforeModel":         {"gemini-cli": "BeforeModel"},
-	"AfterModel":          {"gemini-cli": "AfterModel"},
-	"BeforeToolSelection": {"gemini-cli": "BeforeToolSelection"},
+	"before_model":          {"gemini-cli": "BeforeModel"},
+	"after_model":           {"gemini-cli": "AfterModel"},
+	"before_tool_selection": {"gemini-cli": "BeforeToolSelection"},
 
 	// Cline-only events
-	"TaskResume": {"cline": "TaskResume"},
-	"TaskCancel": {"cline": "TaskCancel"},
+	"task_resume": {"cline": "TaskResume"},
+	"task_cancel": {"cline": "TaskCancel"},
 }
 
 // TranslateTool translates a single canonical tool name to the target provider.
@@ -198,15 +208,15 @@ func ReverseTranslateHookEvent(event, sourceSlug string) string {
 
 // ReverseTranslateTool finds the canonical tool name from a provider-specific one.
 // When multiple canonical names map to the same provider tool (e.g., Cursor/Zed use
-// "edit_file" for both Write and Edit, Codex uses "apply_patch" for both), prefers
-// Edit over Write since Edit is the more specific operation.
+// "edit_file" for both file_write and file_edit, Codex uses "apply_patch" for both),
+// prefers file_edit over file_write since edit is the more specific operation.
 // Also handles backwards compatibility: "Task" was renamed to "Agent" in Claude Code v2.1.63.
 func ReverseTranslateTool(name, sourceSlug string) string {
 	var match string
 	for canonical, m := range ToolNames {
 		if provName, ok := m[sourceSlug]; ok && provName == name {
-			if canonical == "Edit" {
-				return "Edit" // prefer Edit over Write for ambiguous mappings
+			if canonical == "file_edit" {
+				return "file_edit" // prefer file_edit over file_write for ambiguous mappings
 			}
 			match = canonical
 		}
@@ -214,17 +224,17 @@ func ReverseTranslateTool(name, sourceSlug string) string {
 	if match != "" {
 		return match
 	}
-	// Backwards compat: "Task" as a canonical name maps to "Agent".
-	if strings.EqualFold(name, "task") {
-		return "Agent"
+	// Backwards compat: CC's legacy "Task" tool name maps to "agent".
+	if sourceSlug == "claude-code" && strings.EqualFold(name, "task") {
+		return "agent"
 	}
 	return name
 }
 
 // TranslateMatcher translates a hook matcher string to the target provider.
 // Matchers can be:
-//   - Simple tool names: "Bash" → translate directly
-//   - Regex alternations: "Edit|Write" → split, translate each, rejoin
+//   - Simple tool names: "shell" → translate directly
+//   - Regex alternations: "file_edit|file_write" → split, translate each, rejoin
 //   - Wildcard patterns: "mcp__github__.*" → strip .*, translate, reattach
 //   - MCP prefix patterns: "mcp__.*" → pass through unchanged
 func TranslateMatcher(matcher, targetSlug string) string {

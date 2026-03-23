@@ -75,12 +75,12 @@ func (c *CommandsConverter) Canonicalize(content []byte, sourceProvider string) 
 		return canonicalizeCodexCommand(content)
 	case "opencode":
 		// OpenCode commands use the same format as Claude Code
-		return canonicalizeClaudeCommand(content)
+		return canonicalizeCommandWithProvider(content, "opencode")
 	case "vscode-copilot":
 		return canonicalizeVSCodeCopilotCommand(content)
 	default:
 		// Claude Code, Copilot CLI — already YAML frontmatter + markdown
-		return canonicalizeClaudeCommand(content)
+		return canonicalizeCommandWithProvider(content, sourceProvider)
 	}
 }
 
@@ -359,9 +359,19 @@ func parseCommandCanonical(content []byte) (CommandMeta, string, error) {
 // --- Canonicalizers ---
 
 func canonicalizeClaudeCommand(content []byte) (*Result, error) {
+	return canonicalizeCommandWithProvider(content, "claude-code")
+}
+
+func canonicalizeCommandWithProvider(content []byte, sourceProvider string) (*Result, error) {
 	meta, body, err := parseCommandCanonical(content)
 	if err != nil {
 		return nil, err
+	}
+	// Translate tool names from provider-native to canonical (neutral)
+	if sourceProvider != "" {
+		for i, tool := range meta.AllowedTools {
+			meta.AllowedTools[i] = ReverseTranslateTool(tool, sourceProvider)
+		}
 	}
 	canonical, err := buildCommandCanonical(meta, body)
 	if err != nil {
@@ -609,6 +619,11 @@ func renderCursorCommand(meta CommandMeta, body string) (*Result, error) {
 func renderClaudeCommand(meta CommandMeta, body string) (*Result, error) {
 	// Strip any conversion notes that may have been in the canonical body
 	cleanBody := StripConversionNotes(body)
+
+	// Translate canonical (neutral) tool names to CC names
+	if len(meta.AllowedTools) > 0 {
+		meta.AllowedTools = TranslateTools(meta.AllowedTools, "claude-code")
+	}
 
 	// Check for Gemini template directives and add informational note
 	var warnings []string
