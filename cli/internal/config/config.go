@@ -112,7 +112,7 @@ func Save(projectRoot string, cfg *Config) error {
 		return err
 	}
 	if err := os.Rename(tempPath, target); err != nil {
-		os.Remove(tempPath)
+		_ = os.Remove(tempPath)
 		return err
 	}
 	return nil
@@ -193,7 +193,7 @@ func SaveGlobal(cfg *Config) error {
 		return err
 	}
 	if err := os.Rename(tempPath, target); err != nil {
-		os.Remove(tempPath)
+		_ = os.Remove(tempPath)
 		return err
 	}
 	return nil

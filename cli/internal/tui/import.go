@@ -389,7 +389,7 @@ func (m importModel) Update(msg tea.Msg) (importModel, tea.Cmd) {
 
 	case importCloneDoneMsg:
 		if msg.err != nil {
-			os.RemoveAll(msg.path) // clean up failed clone
+			_ = os.RemoveAll(msg.path) // clean up failed clone
 			m.message = fmt.Sprintf("Clone failed: %s", msg.err)
 			m.messageIsErr = true
 			m.step = stepGitURL
@@ -1524,7 +1524,7 @@ func (m importModel) doScaffold() (string, []string, error) {
 	llmPath := filepath.Join(dest, "LLM-PROMPT.md")
 	if data, err := os.ReadFile(llmPath); err == nil {
 		replaced := strings.ReplaceAll(string(data), "{{NAME}}", m.itemName)
-		os.WriteFile(llmPath, []byte(replaced), 0644) // non-fatal
+		_ = os.WriteFile(llmPath, []byte(replaced), 0644) // non-fatal
 	}
 
 	// Generate .syllago.yaml
@@ -1574,7 +1574,7 @@ func (m importModel) startClone(url string) tea.Cmd {
 // cleanup removes the cloned temp directory if it exists.
 func (m *importModel) cleanup() {
 	if m.clonedPath != "" {
-		os.RemoveAll(m.clonedPath)
+		_ = os.RemoveAll(m.clonedPath)
 		m.clonedPath = ""
 	}
 }
@@ -1875,7 +1875,7 @@ func renderDiffLine(line string, hOff int) string {
 // Skips symlinks and .syllago.yaml (metadata noise).
 func collectRelativeFiles(dir string) []string {
 	var files []string
-	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil // skip unreadable entries
 		}

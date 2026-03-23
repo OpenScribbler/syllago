@@ -62,7 +62,10 @@ func CheckSharePrivacyGate(item catalog.ContentItem, repoRoot string) error {
 	// Probe the current repo's visibility via its remote URL
 	remoteURL, err := commandOutput(repoRoot, "git", "remote", "get-url", "origin")
 	if err != nil {
-		return nil // can't determine remote → allow (fail-open for share)
+		// Fail-closed: can't determine remote visibility → block to prevent leaking private content.
+		return output.NewStructuredError(output.ErrPrivacyShareBlocked,
+			fmt.Sprintf("cannot share %q: unable to determine repository visibility", item.Name),
+			"Ensure the repo has a git remote configured, or remove the private taint from the content")
 	}
 	remoteURL = strings.TrimSpace(remoteURL)
 

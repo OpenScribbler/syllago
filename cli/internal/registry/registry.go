@@ -129,7 +129,7 @@ func Clone(url, name, ref string) error {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		// Clean up partial clone
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 		return fmt.Errorf("git clone failed: %s", strings.TrimSpace(string(out)))
 	}
 	return nil

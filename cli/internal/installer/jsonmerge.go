@@ -54,7 +54,7 @@ func writeJSONFileWithPerm(path string, data []byte, perm os.FileMode) error {
 
 	// Atomic rename (on POSIX, rename within same filesystem is atomic)
 	if err := os.Rename(tempPath, path); err != nil {
-		os.Remove(tempPath)
+		_ = os.Remove(tempPath)
 		return fmt.Errorf("renaming temp file: %w", err)
 	}
 

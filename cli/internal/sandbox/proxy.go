@@ -54,7 +54,7 @@ func (p *Proxy) Start() error {
 // Shutdown closes the listener, causing the accept loop to exit.
 func (p *Proxy) Shutdown() {
 	if p.listener != nil {
-		p.listener.Close()
+		_ = p.listener.Close()
 	}
 }
 
@@ -78,7 +78,7 @@ func (p *Proxy) accept(ln net.Listener) {
 }
 
 func (p *Proxy) handleConn(client net.Conn) {
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 	br := bufio.NewReader(client)
 	req, err := http.ReadRequest(br)
 	if err != nil {
@@ -108,14 +108,14 @@ func (p *Proxy) handleConn(client net.Conn) {
 		fmt.Fprintf(client, "HTTP/1.1 502 Bad Gateway\r\n\r\n")
 		return
 	}
-	defer upstream.Close()
+	defer func() { _ = upstream.Close() }()
 
 	fmt.Fprintf(client, "HTTP/1.1 200 Connection Established\r\n\r\n")
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go func() { defer wg.Done(); io.Copy(upstream, br) }()
-	go func() { defer wg.Done(); io.Copy(client, upstream) }()
+	go func() { defer wg.Done(); _, _ = io.Copy(upstream, br) }()
+	go func() { defer wg.Done(); _, _ = io.Copy(client, upstream) }()
 	wg.Wait()
 }
 
