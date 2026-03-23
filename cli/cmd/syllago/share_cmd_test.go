@@ -115,8 +115,8 @@ func TestFindLibraryItem_AmbiguousWithoutTypeFilter(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for ambiguous name")
 	}
-	if !strings.Contains(err.Error(), "Use --type") {
-		t.Errorf("expected '--type' hint in error, got: %v", err)
+	if !strings.Contains(err.Error(), "multiple types") {
+		t.Errorf("expected 'multiple types' in error, got: %v", err)
 	}
 }
 

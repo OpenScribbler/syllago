@@ -80,18 +80,16 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	fromSlug, _ := cmd.Flags().GetString("from")
 	if fromSlug == "" {
-		return fmt.Errorf("missing --from flag. Usage: syllago add [type] --from <provider>")
+		return output.NewStructuredError(output.ErrInputMissing, "missing --from flag", "Usage: syllago add [type] --from <provider>")
 	}
 	prov := findProviderBySlug(fromSlug)
 	if prov == nil {
 		slugs := providerSlugs()
-		se := output.NewStructuredError(
+		return output.NewStructuredError(
 			output.ErrProviderNotFound,
 			"unknown provider: "+fromSlug,
 			"Available: "+strings.Join(slugs, ", "),
 		)
-		output.PrintStructuredError(se)
-		return output.SilentError(se)
 	}
 
 	addAll, _ := cmd.Flags().GetBool("all")
@@ -101,22 +99,22 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	// --all and a positional target are mutually exclusive.
 	if addAll && len(args) > 0 {
-		return fmt.Errorf("cannot specify both a target and --all")
+		return output.NewStructuredError(output.ErrInputConflict, "cannot specify both a target and --all", "Use either a positional argument or --all, not both")
 	}
 
 	// Build resolver from merged config + CLI flag.
 	globalCfg, err := config.LoadGlobal()
 	if err != nil {
-		return fmt.Errorf("loading global config: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConfigInvalid, "loading global config", "Check ~/.syllago/config.json syntax", err.Error())
 	}
 	projectCfg, err := config.Load(root)
 	if err != nil {
-		return fmt.Errorf("loading project config: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConfigNotFound, "loading project config", "Run 'syllago init' to create project config", err.Error())
 	}
 	mergedCfg := config.Merge(globalCfg, projectCfg)
 	resolver := config.NewResolver(mergedCfg, baseDir)
 	if err := resolver.ExpandPaths(); err != nil {
-		return fmt.Errorf("expanding paths: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConfigPath, "expanding paths", "Check path overrides in config", err.Error())
 	}
 
 	// Warn if the source provider is not detected on disk.
@@ -134,7 +132,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	globalDir := catalog.GlobalContentDir()
 	if globalDir == "" {
-		return fmt.Errorf("cannot determine home directory")
+		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
 	}
 
 	// No positional arg and no --all → discovery mode.
@@ -166,7 +164,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	// File-based content: discover and add.
 	items, err := add.DiscoverFromProvider(*prov, root, resolver, globalDir)
 	if err != nil {
-		return fmt.Errorf("discovering content: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "discovering content", "Check provider installation and permissions", err.Error())
 	}
 
 	// Filter by type when a positional arg is provided (and it's not --all).
@@ -185,7 +183,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 			for _, t := range catalog.AllContentTypes() {
 				typeNames = append(typeNames, string(t))
 			}
-			return fmt.Errorf("unknown content type %q. Available: %s", typeStr, strings.Join(typeNames, ", "))
+			return output.NewStructuredError(output.ErrItemTypeUnknown, fmt.Sprintf("unknown content type %q", typeStr), "Available: "+strings.Join(typeNames, ", "))
 		}
 
 		var filtered []add.DiscoveryItem
@@ -214,8 +212,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 				if availStr == "" {
 					availStr = "(none found)"
 				}
-				return fmt.Errorf("no %s named %q found in %s. Available %s: %s",
-					typeStr, nameFilter, prov.Name, typeStr, availStr)
+				return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no %s named %q found in %s", typeStr, nameFilter, prov.Name), "Available "+typeStr+": "+availStr)
 			}
 			items = nameFiltered
 		}
@@ -352,13 +349,13 @@ type discoveryJSON struct {
 func runAddDiscovery(root, fromSlug string, resolver *config.PathResolver, globalDir string) error {
 	prov := findProviderBySlug(fromSlug)
 	if prov == nil {
-		return fmt.Errorf("unknown provider: %s", fromSlug)
+		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Run 'syllago info providers' to see available providers")
 	}
 
 	// Discover file-based content.
 	items, err := add.DiscoverFromProvider(*prov, root, resolver, globalDir)
 	if err != nil {
-		return fmt.Errorf("discovering content: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "discovering content", "Check provider installation and permissions", err.Error())
 	}
 
 	// Discover hooks separately (they live in settings.json, not as files).
@@ -467,7 +464,7 @@ func printDiscoveryJSON(provSlug string, items []add.DiscoveryItem) error {
 	}
 	data, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
-		return fmt.Errorf("marshaling discovery JSON: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "marshaling discovery JSON", "", err.Error())
 	}
 	fmt.Fprintln(output.Writer, string(data))
 	return nil
@@ -569,7 +566,7 @@ func printDiscoveryText(provSlug, provName string, items []add.DiscoveryItem) er
 func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string, resolver *config.PathResolver, srcRegistry, srcVisibility string) error {
 	prov := findProviderBySlug(fromSlug)
 	if prov == nil {
-		return fmt.Errorf("unknown provider: %s", fromSlug)
+		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Run 'syllago info providers' to see available providers")
 	}
 
 	// Use resolver's effective base dir for settings discovery.
@@ -580,7 +577,7 @@ func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, forc
 	}
 	locations, err := installer.FindSettingsLocationsWithBase(*prov, root, baseDir)
 	if err != nil {
-		return fmt.Errorf("finding settings locations: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "finding settings locations", "Check provider config directory exists", err.Error())
 	}
 
 	// Filter by --scope.
@@ -614,12 +611,12 @@ func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, forc
 func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previewOnly bool, excludeSet map[string]bool, force bool, srcRegistry, srcVisibility string) error {
 	data, err := os.ReadFile(loc.Path)
 	if err != nil {
-		return fmt.Errorf("reading %s: %w", loc.Path, err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "reading "+loc.Path, "Check file permissions", err.Error())
 	}
 
 	candidates, err := converter.SplitSettingsHooks(data, fromSlug)
 	if err != nil {
-		return fmt.Errorf("splitting hooks from %s: %w", loc.Path, err)
+		return output.NewStructuredErrorDetail(output.ErrConvertParseFailed, "splitting hooks from "+loc.Path, "Check settings.json format", err.Error())
 	}
 
 	// Apply --exclude filter.
@@ -647,7 +644,7 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previ
 
 	globalDir := catalog.GlobalContentDir()
 	if globalDir == "" {
-		return fmt.Errorf("cannot determine home directory")
+		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
 	}
 
 	count := 0

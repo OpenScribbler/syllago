@@ -81,29 +81,27 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	prov := findProviderBySlug(toSlug)
 	if prov == nil {
 		slugs := providerSlugs()
-		se := output.NewStructuredError(
+		return output.NewStructuredError(
 			output.ErrProviderNotFound,
 			"unknown provider: "+toSlug,
 			"Available: "+strings.Join(slugs, ", "),
 		)
-		output.PrintStructuredError(se)
-		return output.SilentError(se)
 	}
 
 	// Build resolver from merged config + CLI flag.
 	globalCfg, err := config.LoadGlobal()
 	if err != nil {
-		return fmt.Errorf("loading global config: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConfigInvalid, "loading global config", "Check ~/.syllago/config.json syntax", err.Error())
 	}
 	projectRoot, _ := findProjectRoot()
 	projectCfg, err := config.Load(projectRoot)
 	if err != nil {
-		return fmt.Errorf("loading project config: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConfigNotFound, "loading project config", "Run 'syllago init' to create project config", err.Error())
 	}
 	mergedCfg := config.Merge(globalCfg, projectCfg)
 	resolver := config.NewResolver(mergedCfg, baseDir)
 	if err := resolver.ExpandPaths(); err != nil {
-		return fmt.Errorf("expanding paths: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConfigPath, "expanding paths", "Check path overrides in config", err.Error())
 	}
 
 	// Warn if the target provider is not detected on disk.
@@ -122,11 +120,11 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	// Scan global library only.
 	globalDir := catalog.GlobalContentDir()
 	if globalDir == "" {
-		return fmt.Errorf("cannot determine home directory")
+		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
 	}
 	globalCat, err := catalog.Scan(globalDir, globalDir)
 	if err != nil {
-		return fmt.Errorf("scanning library: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning library", "Check file permissions in ~/.syllago/content/", err.Error())
 	}
 
 	var items []catalog.ContentItem
@@ -146,7 +144,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			if hint == "" {
 				hint = "skills"
 			}
-			return fmt.Errorf("no item named %q found in your library.\n  Hint: syllago list --type %s", args[0], hint)
+			return output.NewStructuredError(output.ErrInstallItemNotFound, fmt.Sprintf("no item named %q found in your library", args[0]), "Hint: syllago list --type "+hint)
 		}
 		fmt.Fprintln(output.ErrWriter, "no items found in library matching filters")
 		return nil

@@ -19,21 +19,21 @@ import (
 func registryCreateFromNative(desc string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("getting working directory: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "getting working directory failed", "Check filesystem permissions", err.Error())
 	}
 
 	// Guard: don't overwrite existing registry.yaml
 	if _, err := os.Stat(filepath.Join(cwd, "registry.yaml")); err == nil {
-		return fmt.Errorf("registry.yaml already exists in this directory")
+		return output.NewStructuredError(output.ErrRegistryInvalid, "registry.yaml already exists in this directory", "Remove the existing registry.yaml first, or use a different directory")
 	}
 
 	// Scan for native content
 	result := catalog.ScanNativeContent(cwd)
 	if result.HasSyllagoStructure {
-		return fmt.Errorf("this directory already has syllago structure — use 'registry create --new' instead")
+		return output.NewStructuredError(output.ErrRegistryInvalid, "this directory already has syllago structure", "Use 'registry create --new' instead for syllago-native registries")
 	}
 	if len(result.Providers) == 0 {
-		return fmt.Errorf("no AI coding tool content found in this directory")
+		return output.NewStructuredError(output.ErrRegistryInvalid, "no AI coding tool content found in this directory", "Ensure this directory contains provider-specific content (e.g., .cursor/rules/, .claude/)")
 	}
 
 	// Display discovered content
@@ -49,7 +49,7 @@ func registryCreateFromNative(desc string) error {
 	}
 
 	if totalItems == 0 {
-		return fmt.Errorf("no indexable items found")
+		return output.NewStructuredError(output.ErrRegistryInvalid, "no indexable items found", "Check that the content directories contain valid files")
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -84,11 +84,11 @@ func registryCreateFromNative(desc string) error {
 			return err
 		}
 	default:
-		return fmt.Errorf("invalid choice: %s", choice)
+		return output.NewStructuredError(output.ErrInputInvalid, fmt.Sprintf("invalid choice: %s", choice), "Enter 1, 2, or 3")
 	}
 
 	if len(selectedItems) == 0 {
-		return fmt.Errorf("no items selected")
+		return output.NewStructuredError(output.ErrInputMissing, "no items selected", "Select at least one item to include in the registry")
 	}
 
 	// Offer to scan user-scoped settings for hooks
@@ -127,11 +127,11 @@ func registryCreateFromNative(desc string) error {
 
 	data, err := yaml.Marshal(&manifest)
 	if err != nil {
-		return fmt.Errorf("marshaling registry.yaml: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "marshaling registry.yaml failed", "Check that the manifest data is valid", err.Error())
 	}
 
 	if err := os.WriteFile(filepath.Join(cwd, "registry.yaml"), data, 0644); err != nil {
-		return fmt.Errorf("writing registry.yaml: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "writing registry.yaml failed", "Check filesystem permissions", err.Error())
 	}
 
 	// Summary
@@ -180,7 +180,7 @@ func selectByProvider(result catalog.NativeScanResult, scanner *bufio.Scanner) (
 	fmt.Fprintf(output.Writer, "\nProviders: ")
 
 	if !scanner.Scan() {
-		return nil, fmt.Errorf("no selection made")
+		return nil, output.NewStructuredError(output.ErrInputTerminal, "no selection made", "Enter comma-separated numbers to select providers")
 	}
 
 	var selected []registry.ManifestItem
@@ -237,7 +237,7 @@ func selectIndividualItems(result catalog.NativeScanResult, scanner *bufio.Scann
 
 	fmt.Fprintf(output.Writer, "\nSelect items (comma-separated numbers, or 'all'): ")
 	if !scanner.Scan() {
-		return nil, fmt.Errorf("no selection made")
+		return nil, output.NewStructuredError(output.ErrInputTerminal, "no selection made", "Enter comma-separated numbers or 'all' to select items")
 	}
 
 	text := strings.TrimSpace(scanner.Text())

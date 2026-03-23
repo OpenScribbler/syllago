@@ -66,7 +66,7 @@ var registryAddCmd = &cobra.Command{
 			name = registry.NameFromURL(gitURL)
 		}
 		if !catalog.IsValidRegistryName(name) {
-			return fmt.Errorf("registry name %q is invalid (use letters, numbers, - and _ with optional owner/repo format)", name)
+			return output.NewStructuredError(output.ErrRegistryInvalid, fmt.Sprintf("registry name %q is invalid", name), "Use letters, numbers, - and _ with optional owner/repo format")
 		}
 
 		cfg, err := config.Load(root)
@@ -77,15 +77,13 @@ var registryAddCmd = &cobra.Command{
 		// Check for duplicate name
 		for _, r := range cfg.Registries {
 			if r.Name == name {
-				return fmt.Errorf("registry %q already exists (use a different --name or remove it first)", name)
+				return output.NewStructuredError(output.ErrRegistryDuplicate, fmt.Sprintf("registry %q already exists", name), "Use a different --name or remove it first")
 			}
 		}
 
 		// Enforce allowedRegistries policy
 		if !cfg.IsRegistryAllowed(gitURL) {
-			return fmt.Errorf("registry URL %q is not in the allowedRegistries list.\n"+
-				"Your project config restricts which registries can be added.\n"+
-				"Contact your team lead to add it to .syllago/config.json", gitURL)
+			return output.NewStructuredError(output.ErrRegistryNotAllowed, fmt.Sprintf("registry URL %q is not in the allowedRegistries list", gitURL), "Contact your team lead to add it to .syllago/config.json")
 		}
 
 		// Security warning: prominent box on first registry, brief reminder otherwise
@@ -136,8 +134,8 @@ var registryAddCmd = &cobra.Command{
 				}
 				fmt.Fprintf(output.ErrWriter, "\nThis content cannot be added as a registry (registries require syllago format).\n")
 				fmt.Fprintf(output.ErrWriter, "To add this content to your library, use: syllago add <path> (coming soon)\n")
-				os.RemoveAll(dir)
-				return fmt.Errorf("not a syllago registry -- clone removed")
+				_ = os.RemoveAll(dir)
+				return output.NewStructuredError(output.ErrRegistryInvalid, "not a syllago registry -- clone removed", "This content cannot be added as a registry (registries require syllago format)")
 			}
 		} else if !scanResult.HasSyllagoStructure && len(scanResult.Providers) == 0 {
 			fmt.Fprintf(output.ErrWriter, "Warning: registry %q doesn't appear to contain any recognized content. Added anyway.\n", name)
@@ -171,8 +169,8 @@ var registryAddCmd = &cobra.Command{
 		if err := config.Save(root, cfg); err != nil {
 			// Config save failed — clean up the clone so it doesn't become orphaned.
 			dir, _ := registry.CloneDir(name)
-			os.RemoveAll(dir)
-			return fmt.Errorf("saving config: %w", err)
+			_ = os.RemoveAll(dir)
+			return output.NewStructuredErrorDetail(output.ErrRegistrySaveFailed, "saving registry config", "Check write permissions on .syllago/config.json", err.Error())
 		}
 
 		fmt.Fprintf(output.Writer, "Added registry: %s\n", name)
@@ -236,12 +234,12 @@ var registryRemoveCmd = &cobra.Command{
 			filtered = append(filtered, r)
 		}
 		if !found {
-			return fmt.Errorf("registry %q not found in config", name)
+			return output.NewStructuredError(output.ErrRegistryNotFound, fmt.Sprintf("registry %q not found in config", name), "Run 'syllago registry list' to see configured registries")
 		}
 
 		cfg.Registries = filtered
 		if err := config.Save(root, cfg); err != nil {
-			return fmt.Errorf("saving config: %w", err)
+			return output.NewStructuredErrorDetail(output.ErrConfigSave, "saving config after registry removal", "Check write permissions on .syllago/config.json", err.Error())
 		}
 
 		if err := registry.Remove(name); err != nil {
@@ -361,7 +359,7 @@ and "syllago install" to activate updated content.`,
 		if len(args) == 1 {
 			name := args[0]
 			if !registry.IsCloned(name) {
-				return fmt.Errorf("registry %q is not cloned locally — run `syllago registry add` first", name)
+				return output.NewStructuredError(output.ErrRegistryNotCloned, fmt.Sprintf("registry %q is not cloned locally", name), "Run 'syllago registry add' first")
 			}
 			fmt.Fprintf(output.Writer, "Syncing %s...\n", name)
 			if err := registry.Sync(name); err != nil {
@@ -391,7 +389,7 @@ and "syllago install" to activate updated content.`,
 			}
 		}
 		if hasErrors {
-			return fmt.Errorf("one or more registry syncs failed")
+			return output.NewStructuredError(output.ErrRegistrySyncFailed, "one or more registry syncs failed", "Check error messages above and retry")
 		}
 		return nil
 	},
@@ -442,10 +440,10 @@ Use --type to filter by content type. To install registry content, use
 				}
 			}
 			if !found {
-				return fmt.Errorf("registry %q not found in config", name)
+				return output.NewStructuredError(output.ErrRegistryNotFound, fmt.Sprintf("registry %q not found in config", name), "Run 'syllago registry list' to see configured registries")
 			}
 			if !registry.IsCloned(name) {
-				return fmt.Errorf("registry %q not cloned — run `syllago registry sync %s` first", name, name)
+				return output.NewStructuredError(output.ErrRegistryNotCloned, fmt.Sprintf("registry %q not cloned", name), fmt.Sprintf("Run 'syllago registry sync %s' first", name))
 			}
 			dir, _ := registry.CloneDir(name)
 			sources = append(sources, catalog.RegistrySource{Name: name, Path: dir})
@@ -537,7 +535,7 @@ func runRegistryCreateNew(cmd *cobra.Command, name string) error {
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("getting working directory: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "getting working directory", "", err.Error())
 	}
 
 	// Check if already inside a git repo before creating anything.

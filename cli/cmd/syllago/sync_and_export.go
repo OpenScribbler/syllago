@@ -51,12 +51,12 @@ func runSyncAndExport(cmd *cobra.Command, args []string) error {
 	// Find project root and load config to get registry list.
 	root, err := findProjectRoot()
 	if err != nil {
-		return fmt.Errorf("could not find project root: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogNotFound, "could not find project root", "Run 'syllago init' to initialize a project", err.Error())
 	}
 
 	cfg, err := config.Load(root)
 	if err != nil {
-		return fmt.Errorf("loading config: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConfigInvalid, "loading config failed", "Check .syllago/config.json for syntax errors", err.Error())
 	}
 
 	// Sync registries if any are configured.
@@ -73,7 +73,7 @@ func runSyncAndExport(cmd *cobra.Command, args []string) error {
 		results := registry.SyncAll(names)
 		for _, res := range results {
 			if res.Err != nil {
-				return fmt.Errorf("registry sync failed for %q: %w", res.Name, res.Err)
+				return output.NewStructuredErrorDetail(output.ErrRegistrySyncFailed, fmt.Sprintf("registry sync failed for %q", res.Name), "Check network connectivity and registry URL", res.Err.Error())
 			}
 			if !output.JSON {
 				fmt.Fprintf(output.Writer, "Synced: %s\n", res.Name)
@@ -111,7 +111,8 @@ type exportSkippedItem struct {
 }
 
 // runExportOp contains the core export logic shared by sync-and-export.
-// toSlug may be "all" to export to every known provider.
+//
+//nolint:gocyclo // CLI command runner with many flags
 func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir string) error {
 	if toSlug == "all" {
 		return runExportAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir)
@@ -121,19 +122,13 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 	if prov == nil {
 		slugs := providerSlugs()
 		slugs = append(slugs, "all")
-		se := output.NewStructuredError(
-			output.ErrProviderNotFound,
-			"unknown provider: "+toSlug,
-			"Available: "+strings.Join(slugs, ", "),
-		)
-		output.PrintStructuredError(se)
-		return output.SilentError(se)
+		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+toSlug, "Available: "+strings.Join(slugs, ", "))
 	}
 
 	// Build resolver from merged config + CLI flag.
 	globalCfg, err := config.LoadGlobal()
 	if err != nil {
-		return fmt.Errorf("loading global config: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConfigInvalid, "loading global config failed", "Check ~/.syllago/config.json for syntax errors", err.Error())
 	}
 	projectRoot, _ := findProjectRoot()
 	if projectRoot == "" {
@@ -141,12 +136,12 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 	}
 	projectCfg, err := config.Load(projectRoot)
 	if err != nil {
-		return fmt.Errorf("loading project config: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConfigNotFound, "loading project config failed", "Run 'syllago init' to create a project config", err.Error())
 	}
 	mergedCfg := config.Merge(globalCfg, projectCfg)
 	resolver := config.NewResolver(mergedCfg, baseDir)
 	if err := resolver.ExpandPaths(); err != nil {
-		return fmt.Errorf("expanding paths: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConfigPath, "expanding paths failed", "Check path overrides in config", err.Error())
 	}
 
 	// Configure the hooks converter with the LLM hooks mode.
@@ -157,7 +152,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 	// Scan the catalog.
 	cat, err := catalog.Scan(root, projectRoot)
 	if err != nil {
-		return fmt.Errorf("scanning catalog: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content repository is valid", err.Error())
 	}
 
 	// Collect items matching source, type, and name filters.
@@ -189,7 +184,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("getting home directory: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable", err.Error())
 	}
 
 	result := exportResult{}
@@ -283,7 +278,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 		if installDir == provider.ProjectScopeSentinel {
 			cwd, cwdErr := os.Getwd()
 			if cwdErr != nil {
-				return fmt.Errorf("getting working directory: %w", cwdErr)
+				return output.NewStructuredErrorDetail(output.ErrSystemIO, "getting working directory failed", "Check filesystem permissions", cwdErr.Error())
 			}
 			if prov.DiscoveryPaths != nil {
 				paths := resolver.DiscoveryPaths(*prov, item.Type, cwd)
@@ -321,7 +316,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 		}
 
 		if err := os.MkdirAll(installDir, 0755); err != nil {
-			return fmt.Errorf("creating directory %s: %w", installDir, err)
+			return output.NewStructuredErrorDetail(output.ErrSystemIO, fmt.Sprintf("creating directory %s failed", installDir), "Check filesystem permissions", err.Error())
 		}
 
 		// Try cross-provider rendering via converter
@@ -356,7 +351,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 		dest := filepath.Join(installDir, item.Name)
 
 		if err := installer.CopyContent(item.Path, dest); err != nil {
-			return fmt.Errorf("copying %s: %w", item.Name, err)
+			return output.NewStructuredErrorDetail(output.ErrExportFailed, fmt.Sprintf("copying %s failed", item.Name), "Check filesystem permissions", err.Error())
 		}
 
 		result.Exported = append(result.Exported, exportedItem{
@@ -423,7 +418,7 @@ func runExportAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, base
 		}
 
 		if hasErrors {
-			return fmt.Errorf("one or more provider exports failed")
+			return output.NewStructuredError(output.ErrExportFailed, "one or more provider exports failed", "Review the per-provider errors above")
 		}
 	}
 

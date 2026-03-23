@@ -58,7 +58,7 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 
 	root, err := findContentRepoRoot()
 	if err != nil {
-		return fmt.Errorf("could not find syllago repo: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogNotFound, "could not find syllago repo", "Run 'syllago init' to create a project", err.Error())
 	}
 	if projectRoot == "" {
 		projectRoot = root
@@ -66,7 +66,7 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 
 	cat, err := catalog.Scan(root, projectRoot)
 	if err != nil {
-		return fmt.Errorf("scanning catalog: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog", "Check file permissions", err.Error())
 	}
 
 	// Collect loadout items from catalog
@@ -95,14 +95,12 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 			}
 		}
 		if !found {
-			se := output.NewStructuredError(output.ErrInstallItemNotFound, fmt.Sprintf("loadout %q not found", name), "Run 'syllago loadout list' to see available loadouts.")
-			output.PrintStructuredError(se)
-			return output.SilentError(se)
+			return output.NewStructuredError(output.ErrLoadoutNotFound, fmt.Sprintf("loadout %q not found", name), "Run 'syllago loadout list' to see available loadouts")
 		}
 	} else {
 		// Interactive selection
 		if !isInteractive() {
-			return fmt.Errorf("no loadout name provided and stdin is not a terminal; pass a loadout name as argument")
+			return output.NewStructuredError(output.ErrInputTerminal, "no loadout name provided and stdin is not a terminal", "Pass a loadout name as argument")
 		}
 		fmt.Fprintln(output.Writer, "Available loadouts:")
 		for i, item := range loadoutItems {
@@ -116,11 +114,11 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 
 		scanner := bufio.NewScanner(os.Stdin)
 		if !scanner.Scan() {
-			return fmt.Errorf("no selection made")
+			return output.NewStructuredError(output.ErrInputTerminal, "no selection made", "Select a loadout number")
 		}
 		choice, err := strconv.Atoi(strings.TrimSpace(scanner.Text()))
 		if err != nil || choice < 1 || choice > len(loadoutItems) {
-			return fmt.Errorf("invalid selection: %s", scanner.Text())
+			return output.NewStructuredError(output.ErrInputInvalid, fmt.Sprintf("invalid selection: %s", scanner.Text()), fmt.Sprintf("Enter a number between 1 and %d", len(loadoutItems)))
 		}
 		selected = loadoutItems[choice-1]
 	}
@@ -128,7 +126,7 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 	// Parse loadout.yaml
 	manifest, err := loadout.Parse(filepath.Join(selected.Path, "loadout.yaml"))
 	if err != nil {
-		return fmt.Errorf("parsing loadout: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrLoadoutParse, "parsing loadout", "Check loadout.yaml syntax", err.Error())
 	}
 
 	// Determine mode
@@ -138,7 +136,7 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 
 	mode := "preview"
 	if tryMode && keepMode {
-		return fmt.Errorf("--try and --keep are mutually exclusive")
+		return output.NewStructuredError(output.ErrInputConflict, "--try and --keep are mutually exclusive", "Use one or the other")
 	}
 	if keepMode {
 		mode = "keep"
@@ -153,9 +151,9 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		_, _, snapErr := snapshot.Load(projectRoot)
 		if snapErr == nil {
 			// A snapshot exists — loadout is already active
-			return fmt.Errorf("a loadout is already active. Run 'syllago loadout remove' first")
+			return output.NewStructuredError(output.ErrLoadoutConflict, "a loadout is already active", "Run 'syllago loadout remove' first")
 		} else if !errors.Is(snapErr, snapshot.ErrNoSnapshot) {
-			return fmt.Errorf("checking existing snapshot: %w", snapErr)
+			return output.NewStructuredErrorDetail(output.ErrSystemIO, "checking existing snapshot", "Check .syllago/ directory permissions", snapErr.Error())
 		}
 	}
 
@@ -163,16 +161,16 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 	baseDir, _ := cmd.Flags().GetString("base-dir")
 	globalCfg, cfgErr := config.LoadGlobal()
 	if cfgErr != nil {
-		return fmt.Errorf("loading global config: %w", cfgErr)
+		return output.NewStructuredErrorDetail(output.ErrConfigInvalid, "loading global config", "Check ~/.syllago/config.json syntax", cfgErr.Error())
 	}
 	projectCfg, cfgErr := config.Load(projectRoot)
 	if cfgErr != nil {
-		return fmt.Errorf("loading project config: %w", cfgErr)
+		return output.NewStructuredErrorDetail(output.ErrConfigNotFound, "loading project config", "Run 'syllago init' to create project config", cfgErr.Error())
 	}
 	mergedCfg := config.Merge(globalCfg, projectCfg)
 	resolver := config.NewResolver(mergedCfg, baseDir)
 	if err := resolver.ExpandPaths(); err != nil {
-		return fmt.Errorf("expanding paths: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConfigPath, "expanding paths", "Check path overrides in config", err.Error())
 	}
 
 	// Resolve target provider: --to flag > manifest field > default to claude-code
@@ -188,15 +186,13 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		p := findProviderBySlug(toSlug)
 		if p == nil {
 			slugs := providerSlugs()
-			se := output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+toSlug, "Available: "+strings.Join(slugs, ", "))
-			output.PrintStructuredError(se)
-			return output.SilentError(se)
+			return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+toSlug, "Available: "+strings.Join(slugs, ", "))
 		}
 		prov = *p
 	} else if manifest.Provider != "" {
 		p := findProviderBySlug(manifest.Provider)
 		if p == nil {
-			return fmt.Errorf("loadout manifest specifies unknown provider: %s", manifest.Provider)
+			return output.NewStructuredError(output.ErrLoadoutProvider, "loadout manifest specifies unknown provider: "+manifest.Provider, "Run 'syllago info providers' to see supported providers")
 		}
 		prov = *p
 	} else {
@@ -214,7 +210,7 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 
 	result, err := loadout.Apply(manifest, cat, prov, opts)
 	if err != nil {
-		return fmt.Errorf("applying loadout: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrInstallConflict, "applying loadout", "Check error details and resolve conflicts", err.Error())
 	}
 
 	// Print results

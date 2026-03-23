@@ -120,7 +120,7 @@ var backfillCmd = &cobra.Command{
 		}
 		cat, err := catalog.Scan(root, projectRoot)
 		if err != nil {
-			return fmt.Errorf("scanning catalog: %w", err)
+			return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
 		}
 
 		// Get git author
@@ -222,7 +222,7 @@ func wrapTTYError(err error) error {
 	}
 	errMsg := err.Error()
 	if strings.Contains(errMsg, "TTY") || strings.Contains(errMsg, "tty") {
-		return fmt.Errorf("syllago requires a terminal for interactive mode. Use a subcommand for non-interactive usage")
+		return output.NewStructuredError(output.ErrInputTerminal, "syllago requires a terminal for interactive mode", "Use a subcommand for non-interactive usage (e.g., syllago list --json)")
 	}
 	return err
 }
@@ -230,7 +230,7 @@ func wrapTTYError(err error) error {
 func runTUI(cmd *cobra.Command, args []string) error {
 	root, err := findContentRepoRoot()
 	if err != nil {
-		return fmt.Errorf("could not find syllago content repository.\n\nTo get started:\n  syllago init    Create a new content repo in the current directory\n\nFor more info: syllago --help")
+		return output.NewStructuredError(output.ErrCatalogNotFound, "could not find syllago content repository", "Run 'syllago init' to create a new content repo in the current directory")
 	}
 
 	// Load project config to get registry list and preferences
@@ -283,7 +283,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 
 	cat, err := catalog.ScanWithGlobalAndRegistries(root, projectRoot, regSources)
 	if err != nil {
-		return fmt.Errorf("catalog scan failed: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "catalog scan failed", "Check that the content directory exists and is readable", err.Error())
 	}
 
 	// Auto-cleanup: remove local items whose ID matches a shared item
@@ -295,7 +295,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		// Rescan after cleanup
 		cat, err = catalog.ScanWithGlobalAndRegistries(root, projectRoot, regSources)
 		if err != nil {
-			return fmt.Errorf("error rescanning catalog: %w", err)
+			return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "error rescanning catalog", "Check that the content directory exists and is readable", err.Error())
 		}
 	}
 
@@ -306,10 +306,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 	providers := provider.DetectProvidersWithResolver(resolver)
 
 	// Check if auto-update is enabled in project config
-	autoUpdate := false
-	if cfgErr == nil && cfg.Preferences["autoUpdate"] == "true" {
-		autoUpdate = true
-	}
+	autoUpdate := cfgErr == nil && cfg.Preferences["autoUpdate"] == "true"
 
 	isReleaseBuild := buildCommit == "" && version != ""
 	app := tui.NewApp(cat, providers, version, autoUpdate, regSources, cfg, isReleaseBuild, projectRoot)
@@ -336,7 +333,7 @@ func findContentRepoRoot() (string, error) {
 
 	projectRoot, err := findProjectRoot()
 	if err != nil {
-		return "", fmt.Errorf("could not find syllago content repository")
+		return "", output.NewStructuredError(output.ErrCatalogNotFound, "could not find syllago content repository", "Run 'syllago init' to set up a content repository")
 	}
 
 	return resolveContentRoot(projectRoot)
@@ -367,7 +364,7 @@ var semverRegex = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(
 // validateVersion checks if a string is a valid semver version.
 func validateVersion(v string) error {
 	if !semverRegex.MatchString(v) {
-		return fmt.Errorf("invalid version format: %q (must be semver like 1.0.0)", v)
+		return output.NewStructuredError(output.ErrInputInvalid, fmt.Sprintf("invalid version format: %q (must be semver like 1.0.0)", v), "Use semantic versioning format like 1.0.0 or 1.2.3-beta")
 	}
 	return nil
 }

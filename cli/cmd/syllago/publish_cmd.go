@@ -53,13 +53,13 @@ func runPublish(cmd *cobra.Command, args []string) error {
 	// Use an empty temp dir as contentRoot to avoid scan shadowing.
 	emptyRoot, err := os.MkdirTemp("", "syllago-publish-*")
 	if err != nil {
-		return fmt.Errorf("creating temp dir: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "creating temp dir failed", "Check filesystem permissions and disk space", err.Error())
 	}
-	defer os.RemoveAll(emptyRoot)
+	defer func() { _ = os.RemoveAll(emptyRoot) }()
 
 	cat, err := catalog.ScanWithGlobalAndRegistries(emptyRoot, emptyRoot, nil)
 	if err != nil {
-		return fmt.Errorf("scanning library: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning library failed", "Check that ~/.syllago/content/ exists and is readable", err.Error())
 	}
 
 	item, err := findLibraryItem(cat, name, typeFilter)
@@ -69,7 +69,7 @@ func runPublish(cmd *cobra.Command, args []string) error {
 
 	root, err := findContentRepoRoot()
 	if err != nil {
-		return fmt.Errorf("could not find syllago repo: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogNotFound, "could not find syllago repo", "Use this command from inside a syllago repo directory", err.Error())
 	}
 
 	if !output.Quiet && !output.JSON {
@@ -78,7 +78,7 @@ func runPublish(cmd *cobra.Command, args []string) error {
 
 	result, err := promote.PromoteToRegistry(root, registryName, *item, noInput)
 	if err != nil {
-		return fmt.Errorf("publish failed: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrPromoteGitFailed, "publish failed", "Check git credentials and network connectivity", err.Error())
 	}
 
 	if output.JSON {

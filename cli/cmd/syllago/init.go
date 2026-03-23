@@ -60,7 +60,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	force, _ := cmd.Flags().GetBool("force")
 	if config.Exists(root) && !force {
 		output.PrintError(1, ".syllago/config.json already exists", "Use --force to overwrite")
-		return fmt.Errorf("config already exists")
+		return output.NewStructuredError(output.ErrInitExists, "config already exists", "Use --force to overwrite")
 	}
 
 	home, _ := os.UserHomeDir()
@@ -80,7 +80,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		p := tea.NewProgram(model)
 		finalModel, err := p.Run()
 		if err != nil {
-			return fmt.Errorf("init wizard: %w", err)
+			return output.NewStructuredErrorDetail(output.ErrSystemIO, "init wizard failed", "Try running 'syllago init --yes' for non-interactive mode", err.Error())
 		}
 		final := finalModel.(initWizardModel)
 		if final.wizard.cancelled {
@@ -135,7 +135,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Create local/ directory for user content
 	if err := os.MkdirAll(filepath.Join(root, "local"), 0755); err != nil {
-		return fmt.Errorf("creating local/ directory: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "creating local/ directory failed", "Check filesystem permissions", err.Error())
 	}
 
 	// Ensure .gitignore covers local content and registry cache

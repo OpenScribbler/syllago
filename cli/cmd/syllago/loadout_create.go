@@ -29,12 +29,12 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 	checkAndWarnStaleSnapshot(projectRoot)
 
 	if !isInteractive() {
-		return fmt.Errorf("loadout create requires an interactive terminal")
+		return output.NewStructuredError(output.ErrInputTerminal, "loadout create requires an interactive terminal", "Run this command in an interactive terminal session")
 	}
 
 	root, err := findContentRepoRoot()
 	if err != nil {
-		return fmt.Errorf("could not find syllago repo: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogNotFound, "could not find syllago repo", "Run 'syllago init' to set up a content repository", err.Error())
 	}
 	if projectRoot == "" {
 		projectRoot = root
@@ -42,7 +42,7 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 
 	cat, err := catalog.Scan(root, projectRoot)
 	if err != nil {
-		return fmt.Errorf("scanning catalog: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -50,17 +50,17 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 	// Step 1: Name
 	fmt.Fprint(output.Writer, "Loadout name: ")
 	if !scanner.Scan() {
-		return fmt.Errorf("no input")
+		return output.NewStructuredError(output.ErrInputTerminal, "no input received", "Provide a loadout name when prompted")
 	}
 	name := strings.TrimSpace(scanner.Text())
 	if errMsg := catalog.ValidateUserName(name); errMsg != "" {
-		return fmt.Errorf("invalid loadout name: %s", errMsg)
+		return output.NewStructuredError(output.ErrInputInvalid, fmt.Sprintf("invalid loadout name: %s", errMsg), "Use lowercase letters, numbers, and hyphens only")
 	}
 
 	// Step 2: Description
 	fmt.Fprint(output.Writer, "Description: ")
 	if !scanner.Scan() {
-		return fmt.Errorf("no input")
+		return output.NewStructuredError(output.ErrInputTerminal, "no input received", "Provide a description when prompted")
 	}
 	description := strings.TrimSpace(scanner.Text())
 
@@ -182,7 +182,7 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 	parentDir := filepath.Join(root, "content", "loadouts", providerSlug)
 	outPath, err := loadout.WriteManifest(manifest, parentDir)
 	if err != nil {
-		return fmt.Errorf("writing loadout: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "writing loadout failed", "Check filesystem permissions", err.Error())
 	}
 
 	fmt.Fprintf(output.Writer, "\nCreated loadout at: %s\n", outPath)

@@ -49,13 +49,13 @@ func runShare(cmd *cobra.Command, args []string) error {
 	// Use an empty temp dir as contentRoot to avoid scan shadowing.
 	emptyRoot, err := os.MkdirTemp("", "syllago-share-*")
 	if err != nil {
-		return fmt.Errorf("creating temp dir: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "creating temp dir failed", "Check filesystem permissions and disk space", err.Error())
 	}
-	defer os.RemoveAll(emptyRoot)
+	defer func() { _ = os.RemoveAll(emptyRoot) }()
 
 	cat, err := catalog.ScanWithGlobalAndRegistries(emptyRoot, emptyRoot, nil)
 	if err != nil {
-		return fmt.Errorf("scanning library: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning library failed", "Check that ~/.syllago/content/ exists and is readable", err.Error())
 	}
 
 	item, err := findLibraryItem(cat, name, typeFilter)
@@ -66,7 +66,7 @@ func runShare(cmd *cobra.Command, args []string) error {
 	// Find team repo root (the syllago repo the user is working in).
 	root, err := findContentRepoRoot()
 	if err != nil {
-		return fmt.Errorf("could not find syllago team repo: %w\n  Use this command from inside a syllago team repo directory", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogNotFound, "could not find syllago team repo", "Use this command from inside a syllago team repo directory", err.Error())
 	}
 
 	if !output.Quiet && !output.JSON {
@@ -75,7 +75,7 @@ func runShare(cmd *cobra.Command, args []string) error {
 
 	result, err := promote.Promote(root, *item, noInput)
 	if err != nil {
-		return fmt.Errorf("sharing failed: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrPromoteGitFailed, "sharing failed", "Check git status and permissions in the team repo", err.Error())
 	}
 
 	if output.JSON {
@@ -113,10 +113,10 @@ func findLibraryItem(cat *catalog.Catalog, name, typeFilter string) (*catalog.Co
 		matches = append(matches, item)
 	}
 	if len(matches) == 0 {
-		return nil, fmt.Errorf("no item named %q found in your library.\n  Hint: syllago list    (show all library items)", name)
+		return nil, output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no item named %q found in your library", name), "Run 'syllago list' to see all library items")
 	}
 	if len(matches) > 1 {
-		return nil, fmt.Errorf("%q exists in multiple types. Use --type to disambiguate.", name)
+		return nil, output.NewStructuredError(output.ErrItemAmbiguous, fmt.Sprintf("%q exists in multiple types", name), "Use --type to disambiguate")
 	}
 	return &matches[0], nil
 }
