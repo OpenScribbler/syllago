@@ -120,9 +120,9 @@ func NewStructuredErrorDetail(code, message, suggestion, details string) Structu
 	}
 }
 
-// allErrorCodes returns all registered error code values for validation.
-// Used by tests to assert uniqueness and format correctness.
-func allErrorCodes() []string {
+// AllErrorCodes returns all registered error code values for validation.
+// Used by tests to assert uniqueness, format correctness, and doc parity.
+func AllErrorCodes() []string {
 	return []string{
 		// Catalog
 		ErrCatalogNotFound,

@@ -59,13 +59,13 @@ func runConvert(cmd *cobra.Command, args []string) error {
 	prov := findProviderBySlug(toSlug)
 	if prov == nil {
 		slugs := providerSlugs()
-		return fmt.Errorf("unknown provider: %s\n  Available: %s", toSlug, strings.Join(slugs, ", "))
+		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+toSlug, "Available: "+strings.Join(slugs, ", "))
 	}
 
 	globalDir := catalog.GlobalContentDir()
 	cat, err := catalog.ScanWithGlobalAndRegistries(globalDir, globalDir, nil)
 	if err != nil {
-		return fmt.Errorf("scanning library: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning library failed", "Check that ~/.syllago/content/ exists and is readable", err.Error())
 	}
 
 	var item *catalog.ContentItem
@@ -76,21 +76,21 @@ func runConvert(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if item == nil {
-		return fmt.Errorf("no item named %q in your library.\n  Hint: syllago list    (show all library items)", name)
+		return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no item named %q in your library", name), "Run 'syllago list' to see all library items")
 	}
 
 	conv := converter.For(item.Type)
 	if conv == nil {
-		return fmt.Errorf("%s does not support format conversion", item.Type.Label())
+		return output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s does not support format conversion", item.Type.Label()), "Only hooks and rules support cross-provider conversion")
 	}
 
 	contentFile := converter.ResolveContentFile(*item)
 	if contentFile == "" {
-		return fmt.Errorf("cannot locate content file for %s", name)
+		return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("cannot locate content file for %s", name), "Ensure the item has a primary content file")
 	}
 	raw, err := os.ReadFile(contentFile)
 	if err != nil {
-		return fmt.Errorf("reading content: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "reading content failed", "Check file permissions", err.Error())
 	}
 
 	srcProvider := ""
@@ -103,20 +103,20 @@ func runConvert(cmd *cobra.Command, args []string) error {
 
 	canonical, err := conv.Canonicalize(raw, srcProvider)
 	if err != nil {
-		return fmt.Errorf("canonicalizing content: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConvertParseFailed, "canonicalizing content failed", "Check that the content is valid for its source provider format", err.Error())
 	}
 
 	rendered, err := conv.Render(canonical.Content, *prov)
 	if err != nil {
-		return fmt.Errorf("rendering to %s format: %w", prov.Name, err)
+		return output.NewStructuredErrorDetail(output.ErrConvertRenderFailed, fmt.Sprintf("rendering to %s format failed", prov.Name), "This content may not be compatible with the target provider", err.Error())
 	}
 	if rendered.Content == nil {
-		return fmt.Errorf("%s is not compatible with %s format", name, prov.Name)
+		return output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s is not compatible with %s format", name, prov.Name), "Try a different target provider")
 	}
 
 	if outputPath != "" {
 		if err := os.WriteFile(outputPath, rendered.Content, 0644); err != nil {
-			return fmt.Errorf("writing output: %w", err)
+			return output.NewStructuredErrorDetail(output.ErrSystemIO, "writing output failed", "Check that the output path is writable", err.Error())
 		}
 		if output.JSON {
 			output.Print(convertResult{Name: name, Provider: prov.Slug, Output: outputPath, Warnings: rendered.Warnings})

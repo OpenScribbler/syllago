@@ -157,4 +157,7 @@ func PrintStructuredError(e StructuredError) {
 			fmt.Fprintf(ErrWriter, "  %s\n", line)
 		}
 	}
+	if e.Code != "" {
+		fmt.Fprintf(ErrWriter, "  Run 'syllago explain %s' for details\n", e.Code)
+	}
 }

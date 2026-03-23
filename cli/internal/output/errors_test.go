@@ -104,6 +104,9 @@ func TestPrintStructuredError_PlainText(t *testing.T) {
 	if !strings.Contains(out, "https://openscribbler.github.io/syllago-docs/errors/catalog-001/") {
 		t.Errorf("plain text output missing docs URL, got:\n%s", out)
 	}
+	if !strings.Contains(out, "Run 'syllago explain CATALOG_001' for details") {
+		t.Errorf("plain text output missing explain hint, got:\n%s", out)
+	}
 }
 
 func TestPrintStructuredError_JSON(t *testing.T) {
@@ -161,10 +164,27 @@ func TestPrintStructuredError_NoDocsURL(t *testing.T) {
 	if strings.Contains(out, "Docs:") {
 		t.Errorf("output should omit Docs line when DocsURL is empty, got:\n%s", out)
 	}
+	if !strings.Contains(out, "Run 'syllago explain CUSTOM_001' for details") {
+		t.Errorf("output should still show explain hint when Code is set, got:\n%s", out)
+	}
+}
+
+func TestPrintStructuredError_NoCode(t *testing.T) {
+	_, stderr := SetForTest(t)
+
+	se := StructuredError{
+		Message: "something went wrong",
+	}
+	PrintStructuredError(se)
+
+	out := stderr.String()
+	if strings.Contains(out, "syllago explain") {
+		t.Errorf("output should omit explain hint when Code is empty, got:\n%s", out)
+	}
 }
 
 func TestAllErrorCodes_UniqueValues(t *testing.T) {
-	codes := allErrorCodes()
+	codes := AllErrorCodes()
 	seen := make(map[string]string)
 	for _, name := range codes {
 		val := errorCodeValue(name)
@@ -177,7 +197,7 @@ func TestAllErrorCodes_UniqueValues(t *testing.T) {
 
 func TestAllErrorCodes_Format(t *testing.T) {
 	pattern := regexp.MustCompile(`^[A-Z]+_\d{3}$`)
-	for _, val := range allErrorCodes() {
+	for _, val := range AllErrorCodes() {
 		if !pattern.MatchString(val) {
 			t.Errorf("error code %q does not match CATEGORY_NNN pattern", val)
 		}

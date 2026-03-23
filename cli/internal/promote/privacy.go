@@ -6,6 +6,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
@@ -41,13 +42,10 @@ func CheckPrivacyGate(item catalog.ContentItem, targetRegistry, repoRoot string)
 
 	if !registry.IsPrivate(targetVisibility) {
 		// Target is public, content is private → BLOCK
-		return fmt.Errorf("cannot publish %q to registry %q\n\n"+
-			"  Content origin:  %s (private)\n"+
-			"  Target registry: %s (public)\n\n"+
-			"  Private content cannot be published to public registries.\n"+
-			"  Remove the private taint by recreating the content in your\n"+
-			"  library without the private registry association.",
-			item.Name, targetRegistry, item.Meta.SourceRegistry, targetRegistry)
+		return output.NewStructuredErrorDetail(output.ErrPrivacyPublishBlocked,
+			fmt.Sprintf("cannot publish %q to registry %q", item.Name, targetRegistry),
+			"Remove the private taint by recreating the content in your library without the private registry association",
+			fmt.Sprintf("Content origin: %s (private)\nTarget registry: %s (public)", item.Meta.SourceRegistry, targetRegistry))
 	}
 
 	return nil // private→private is fine
@@ -71,13 +69,10 @@ func CheckSharePrivacyGate(item catalog.ContentItem, repoRoot string) error {
 	repoVis, _ := registry.ProbeVisibility(remoteURL)
 	if !registry.IsPrivate(repoVis) {
 		// Repo is public, content is private → BLOCK
-		return fmt.Errorf("cannot share %q to this repository\n\n"+
-			"  Content origin: %s (private)\n"+
-			"  Target repo:    %s (public)\n\n"+
-			"  Private content cannot be shared to public repositories.\n"+
-			"  Remove the private taint by recreating the content in your\n"+
-			"  library without the private registry association.",
-			item.Name, item.Meta.SourceRegistry, remoteURL)
+		return output.NewStructuredErrorDetail(output.ErrPrivacyShareBlocked,
+			fmt.Sprintf("cannot share %q to this repository", item.Name),
+			"Remove the private taint by recreating the content in your library without the private registry association",
+			fmt.Sprintf("Content origin: %s (private)\nTarget repo: %s (public)", item.Meta.SourceRegistry, remoteURL))
 	}
 
 	return nil

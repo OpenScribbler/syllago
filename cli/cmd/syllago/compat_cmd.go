@@ -55,7 +55,7 @@ func runCompat(cmd *cobra.Command, args []string) error {
 	globalDir := catalog.GlobalContentDir()
 	cat, err := catalog.ScanWithGlobalAndRegistries(globalDir, globalDir, nil)
 	if err != nil {
-		return fmt.Errorf("scanning library: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning library failed", "Check that ~/.syllago/content/ exists and is readable", err.Error())
 	}
 
 	var item *catalog.ContentItem
@@ -66,7 +66,7 @@ func runCompat(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if item == nil {
-		return fmt.Errorf("no item named %q in your library.\n  Hint: syllago list    (show all library items)", name)
+		return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no item named %q in your library", name), "Run 'syllago list' to show all library items")
 	}
 
 	conv := converter.For(item.Type)
@@ -154,7 +154,7 @@ func runCompat(cmd *cobra.Command, args []string) error {
 		warnings := strings.Join(e.Warnings, "; ")
 		fmt.Fprintf(w, "%s\t%s\t%s\n", e.Provider, symbol, warnings)
 	}
-	w.Flush()
+	_ = w.Flush()
 
 	return nil
 }

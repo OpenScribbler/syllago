@@ -33,7 +33,7 @@ var configPathsShowCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.LoadGlobal()
 		if err != nil {
-			return fmt.Errorf("loading global config: %w", err)
+			return output.NewStructuredErrorDetail(output.ErrConfigInvalid, "loading global config failed", "Check that ~/.syllago/config.json exists and is valid JSON", err.Error())
 		}
 
 		filterProvider, _ := cmd.Flags().GetString("provider")
@@ -96,10 +96,10 @@ var configPathsSetCmd = &cobra.Command{
 		pathValue, _ := cmd.Flags().GetString("path")
 
 		if baseDir == "" && typeName == "" {
-			return fmt.Errorf("specify --base-dir or both --type and --path")
+			return output.NewStructuredError(output.ErrInputMissing, "specify --base-dir or both --type and --path", "Example: syllago config paths set <provider> --base-dir ~/custom/path")
 		}
 		if (typeName == "") != (pathValue == "") {
-			return fmt.Errorf("--type and --path must be used together")
+			return output.NewStructuredError(output.ErrInputMissing, "--type and --path must be used together", "Example: syllago config paths set <provider> --type rules --path ~/my-rules")
 		}
 
 		// Validate provider slug (warn if unknown, don't block)
@@ -114,10 +114,10 @@ var configPathsSetCmd = &cobra.Command{
 
 		// Validate path is absolute
 		if baseDir != "" && !isAbsoluteOrTilde(baseDir) {
-			return fmt.Errorf("--base-dir must be an absolute path (start with / or ~/), got %q", baseDir)
+			return output.NewStructuredError(output.ErrConfigPath, fmt.Sprintf("--base-dir must be an absolute path (start with / or ~/), got %q", baseDir), "Use an absolute path like /home/user/custom or ~/custom")
 		}
 		if pathValue != "" && !isAbsoluteOrTilde(pathValue) {
-			return fmt.Errorf("--path must be an absolute path (start with / or ~/), got %q", pathValue)
+			return output.NewStructuredError(output.ErrConfigPath, fmt.Sprintf("--path must be an absolute path (start with / or ~/), got %q", pathValue), "Use an absolute path like /home/user/custom or ~/custom")
 		}
 
 		// Validate content type
@@ -126,7 +126,7 @@ var configPathsSetCmd = &cobra.Command{
 			for _, ct := range catalog.AllContentTypes() {
 				names = append(names, string(ct))
 			}
-			return fmt.Errorf("unknown content type %q; valid types: %s", typeName, strings.Join(names, ", "))
+			return output.NewStructuredError(output.ErrItemTypeUnknown, fmt.Sprintf("unknown content type %q; valid types: %s", typeName, strings.Join(names, ", ")), "Use one of the valid content type names listed above")
 		}
 
 		// Clean paths and warn if they don't exist on disk
@@ -151,7 +151,7 @@ var configPathsSetCmd = &cobra.Command{
 
 		cfg, err := config.LoadGlobal()
 		if err != nil {
-			return fmt.Errorf("loading global config: %w", err)
+			return output.NewStructuredErrorDetail(output.ErrConfigInvalid, "loading global config failed", "Check that ~/.syllago/config.json exists and is valid JSON", err.Error())
 		}
 
 		if cfg.ProviderPaths == nil {
@@ -172,7 +172,7 @@ var configPathsSetCmd = &cobra.Command{
 		cfg.ProviderPaths[slug] = ppc
 
 		if err := config.SaveGlobal(cfg); err != nil {
-			return fmt.Errorf("saving global config: %w", err)
+			return output.NewStructuredErrorDetail(output.ErrConfigSave, "saving global config failed", "Check filesystem permissions for ~/.syllago/config.json", err.Error())
 		}
 
 		if baseDir != "" {
@@ -200,16 +200,16 @@ var configPathsClearCmd = &cobra.Command{
 
 		cfg, err := config.LoadGlobal()
 		if err != nil {
-			return fmt.Errorf("loading global config: %w", err)
+			return output.NewStructuredErrorDetail(output.ErrConfigInvalid, "loading global config failed", "Check that ~/.syllago/config.json exists and is valid JSON", err.Error())
 		}
 
 		if cfg.ProviderPaths == nil {
-			return fmt.Errorf("no path overrides configured for %q", slug)
+			return output.NewStructuredError(output.ErrConfigNotFound, fmt.Sprintf("no path overrides configured for %q", slug), "Use 'syllago config paths set' to add path overrides")
 		}
 
 		ppc, ok := cfg.ProviderPaths[slug]
 		if !ok {
-			return fmt.Errorf("no path overrides configured for %q", slug)
+			return output.NewStructuredError(output.ErrConfigNotFound, fmt.Sprintf("no path overrides configured for %q", slug), "Use 'syllago config paths set' to add path overrides")
 		}
 
 		if typeName != "" {
@@ -233,7 +233,7 @@ var configPathsClearCmd = &cobra.Command{
 		}
 
 		if err := config.SaveGlobal(cfg); err != nil {
-			return fmt.Errorf("saving global config: %w", err)
+			return output.NewStructuredErrorDetail(output.ErrConfigSave, "saving global config failed", "Check filesystem permissions for ~/.syllago/config.json", err.Error())
 		}
 		return nil
 	},

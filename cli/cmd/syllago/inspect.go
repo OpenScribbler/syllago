@@ -76,7 +76,7 @@ type riskDetail struct {
 func runInspect(cmd *cobra.Command, args []string) error {
 	root, err := findContentRepoRoot()
 	if err != nil {
-		return fmt.Errorf("could not find syllago repo: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogNotFound, "could not find syllago repo", "Run 'syllago init' to set up a content repository", err.Error())
 	}
 
 	projectRoot, _ := findProjectRoot()
@@ -85,7 +85,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 	}
 	cat, err := catalog.ScanWithGlobalAndRegistries(root, projectRoot, nil)
 	if err != nil {
-		return fmt.Errorf("scanning catalog: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
 	}
 
 	item, err := findItemByPath(cat, args[0])
