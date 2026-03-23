@@ -315,6 +315,11 @@ Syllago defines provider-neutral interchange formats for each content type. The 
 | Provider | Notes |
 |----------|-------|
 | VS Code Copilot | Preview hooks (same 3 events as Copilot CLI), `.vscode/hooks.json` config |
+| Qwen Code | Fork of Gemini CLI -- same `settings.json` format, skills, MCP. Low effort (path mapping + detection) |
+| Crush | Charmbracelet's Go TUI agent (21.8k stars). LSP-aware, MCP support, multi-provider |
+| Kimi CLI | Moonshot AI's agent (7.1k stars). Skills, MCP, hooks. 5,000+ community skills via ClawHub |
+| Trae Agent | ByteDance's research CLI (11k stars). YAML/JSON config, modular architecture, MIT licensed |
+| Droid | Factory's enterprise agent. Top terminal benchmarks, specialized agent types, YAML config |
 | Pi Agent Rust | TypeScript extensions via embedded QuickJS, 20+ lifecycle events, capability-gated security |
 | Aider | `--auto-lint` and `--auto-test` flags (no hook system, but content types apply) |
 | Continue.dev | `config.yaml` rules and MCP integration |
