@@ -1395,8 +1395,6 @@ func TestCreateLoadoutHandlerNavigatesToDetail(t *testing.T) {
 	app := testApp(t)
 	app.screen = screenCreateLoadout
 
-	beforeLoadoutCount := app.sidebar.loadoutsCount
-
 	// Set up wizard state and execute the create command
 	scr := newCreateLoadoutScreen("claude-code", "", app.providers, app.catalog, 80, 30)
 	scr.nameInput.SetValue("handler-test-loadout")
@@ -1439,9 +1437,11 @@ func TestCreateLoadoutHandlerNavigatesToDetail(t *testing.T) {
 		t.Error("toast should not be an error")
 	}
 
-	// 3. Sidebar loadout count should increase
-	if app.sidebar.loadoutsCount <= beforeLoadoutCount {
-		t.Errorf("sidebar loadoutsCount = %d, should be > %d", app.sidebar.loadoutsCount, beforeLoadoutCount)
+	// 3. Catalog loadout count should increase (sidebar counts provider cards,
+	// not items, so it won't change when adding to an existing provider)
+	afterCatalogCount := len(app.catalog.ByType(catalog.Loadouts))
+	if afterCatalogCount <= 1 {
+		t.Errorf("catalog loadout count = %d, should be > 1 after creation", afterCatalogCount)
 	}
 
 	// 4. Items model should be set up for this provider's loadouts
