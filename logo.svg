@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 555 200" role="img" aria-label="Syllago">
+  <title>Syllago</title>
+  <style>
+    text {
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .s { fill: #047857; }
+    .l { fill: #6D28D9; }
+    @media (prefers-color-scheme: dark) {
+      .s { fill: #6EE7B7; }
+      .l { fill: #C4B5FD; }
+    }
+  </style>
+  <g xml:space="preserve">
+    <text y="16"><tspan class="s">  █████████             ████</tspan><tspan class="l">  ████</tspan></text>
+    <text y="34"><tspan class="s"> ███░░░░░███           ░░███</tspan><tspan class="l"> ░░███</tspan></text>
+    <text y="52"><tspan class="s">░███    ░░░  █████ ████ ░███</tspan><tspan class="l">  ░███   ██████    ███████  ██████</tspan></text>
+    <text y="70"><tspan class="s">░░█████████ ░░███ ░███  ░███</tspan><tspan class="l">  ░███  ░░░░░███  ███░░███ ███░░███</tspan></text>
+    <text y="88"><tspan class="s"> ░░░░░░░░███ ░███ ░███  ░███</tspan><tspan class="l">  ░███   ███████ ░███ ░███░███ ░███</tspan></text>
+    <text y="106"><tspan class="s"> ███    ░███ ░███ ░███  ░███</tspan><tspan class="l">  ░███  ███░░███ ░███ ░███░███ ░███</tspan></text>
+    <text y="124"><tspan class="s">░░█████████  ░░███████  █████</tspan><tspan class="l"> █████░░████████░░███████░░██████</tspan></text>
+    <text y="142"><tspan class="s"> ░░░░░░░░░    ░░░░░███ ░░░░░</tspan><tspan class="l"> ░░░░░  ░░░░░░░░  ░░░░░███ ░░░░░░</tspan></text>
+    <text y="160"><tspan class="s">              ███ ░███</tspan><tspan class="l">                        ███ ░███</tspan></text>
+    <text y="178"><tspan class="s">             ░░██████</tspan><tspan class="l">                        ░░██████</tspan></text>
+    <text y="196"><tspan class="s">              ░░░░░░</tspan><tspan class="l">                          ░░░░░░</tspan></text>
+  </g>
+</svg>
