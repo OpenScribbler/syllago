@@ -134,7 +134,7 @@ Content in your library is provider-neutral. You add once, install anywhere.
 | Skills | All providers | Metadata rendering varies by provider |
 | Agents | All providers | Codex uses TOML format (auto-converted) |
 | MCP configs | Most providers | Zed uses `context_servers` key (handled automatically) |
-| Hooks | Claude Code, Gemini CLI, Copilot CLI | Other providers don't have hook systems |
+| Hooks | Claude Code, Gemini CLI, Copilot CLI, Kiro, Cursor, Cline | Canonical interchange format (`docs/spec/hooks-v1.md`) with degradation strategies. OpenCode, Zed, Roo Code lack hook systems |
 | Commands | Claude Code | Provider-specific feature |
 | Loadouts | Claude Code (v1) | Additional provider emitters planned |
 
@@ -249,7 +249,12 @@ See [SECURITY.md](SECURITY.md) for the full security policy, threat model, and h
 
 ## Roadmap
 
-- Cross-provider skill hook conversion (Claude Code skill-scoped hooks to Gemini global hooks)
+- Hook signing and verification (Sigstore + GPG)
+- Hook execution audit logging
+- Registry trust tiers (trusted/verified/community)
+- Batch hook migration (`syllago convert --batch`)
+- Dual-format hook distribution (`syllago export --dual`)
+- Content update mechanism (`syllago update`)
 - Additional loadout provider emitters beyond Claude Code
 - VHS demo GIFs for README
 
