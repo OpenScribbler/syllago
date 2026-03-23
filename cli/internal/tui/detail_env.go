@@ -28,7 +28,7 @@ func saveEnvToFile(name, value, filePath string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Use single quotes to prevent shell expansion ($, `, etc.)
 	// Escape embedded single quotes with the '\'' idiom
@@ -64,7 +64,7 @@ func loadEnvFromFile(name, filePath string) error {
 			value := strings.TrimSpace(parts[1])
 			// Strip surrounding quotes
 			value = strings.Trim(value, "\"'")
-			os.Setenv(name, value)
+			_ = os.Setenv(name, value)
 			return nil
 		}
 	}

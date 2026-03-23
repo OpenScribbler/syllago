@@ -179,6 +179,50 @@ func TestCheckSharePrivacyGate_PrivateToPrivateRepo_Allowed(t *testing.T) {
 	}
 }
 
+func TestCheckSharePrivacyGate_NoRemote_FailClosed(t *testing.T) {
+	// No git remote configured → should block (fail-closed) for private content
+	root := t.TempDir()
+	cmd := exec.Command("git", "init", root)
+	cmd.Run()
+	// Deliberately NOT adding a remote
+
+	item := catalog.ContentItem{
+		Name: "secret-rule",
+		Type: catalog.Rules,
+		Meta: &metadata.Meta{
+			SourceRegistry:   "acme/internal",
+			SourceVisibility: "private",
+		},
+	}
+
+	err := CheckSharePrivacyGate(item, root)
+	if err == nil {
+		t.Fatal("expected G2 gate to block when remote is unknown (fail-closed), got nil")
+	}
+	if !strings.Contains(err.Error(), "cannot share") {
+		t.Errorf("error should contain 'cannot share', got: %s", err)
+	}
+}
+
+func TestCheckSharePrivacyGate_NoGitRepo_FailClosed(t *testing.T) {
+	// Not even a git repo → should block (fail-closed) for private content
+	root := t.TempDir()
+
+	item := catalog.ContentItem{
+		Name: "secret-rule",
+		Type: catalog.Rules,
+		Meta: &metadata.Meta{
+			SourceRegistry:   "acme/internal",
+			SourceVisibility: "private",
+		},
+	}
+
+	err := CheckSharePrivacyGate(item, root)
+	if err == nil {
+		t.Fatal("expected G2 gate to block when not in a git repo (fail-closed), got nil")
+	}
+}
+
 func TestCheckSharePrivacyGate_PublicContent_Allowed(t *testing.T) {
 	item := catalog.ContentItem{
 		Name: "open-rule",

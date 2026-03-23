@@ -69,7 +69,7 @@ func Promote(repoRoot string, item catalog.ContentItem, noInput bool) (*Result, 
 
 	// On any error after branch creation, return to default branch
 	cleanup := func() {
-		gitRun(repoRoot, "checkout", defaultBranch)
+		_ = gitRun(repoRoot, "checkout", defaultBranch)
 	}
 
 	// 6. Copy content (exclude LLM-PROMPT.md)
@@ -125,7 +125,7 @@ func Promote(repoRoot string, item catalog.ContentItem, noInput bool) (*Result, 
 	result.CompareURL = buildCompareURL(repoRoot, branchName)
 
 	// 11. Return to default branch
-	gitRun(repoRoot, "checkout", defaultBranch)
+	_ = gitRun(repoRoot, "checkout", defaultBranch)
 
 	return result, nil
 }

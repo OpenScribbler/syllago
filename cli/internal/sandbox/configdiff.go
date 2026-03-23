@@ -135,7 +135,7 @@ func hashPath(path string) ([]byte, error) {
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				defer func() { _ = f.Close() }()
 				if _, err := io.Copy(h, f); err != nil {
 					return err
 				}
@@ -150,7 +150,7 @@ func hashPath(path string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		if _, err := io.Copy(h, f); err != nil {
 			return nil, err
 		}
@@ -269,12 +269,12 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 	_, err = io.Copy(out, in)
 	return err
 }

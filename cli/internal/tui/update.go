@@ -617,7 +617,7 @@ func checkForUpdate(repoRoot, localVersion string) tea.Cmd {
 		fetchCmd.Stdout = nil
 		fetchCmd.Stderr = nil
 		fetchCmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
-		fetchCmd.Run() // ignore errors (offline is fine)
+		_ = fetchCmd.Run() // ignore errors (offline is fine)
 
 		// Get latest tag on origin/main
 		descCmd := exec.Command("git", "-C", repoRoot, "describe", "--tags", "--abbrev=0", "origin/main")

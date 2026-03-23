@@ -68,7 +68,7 @@ func RunSession(cfg RunConfig, w *os.File) error {
 	if err != nil {
 		return err
 	}
-	defer staging.Cleanup()
+	defer func() { _ = staging.Cleanup() }()
 
 	// Signal handler: clean up on Ctrl-C.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

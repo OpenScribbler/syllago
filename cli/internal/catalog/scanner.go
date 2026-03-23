@@ -609,7 +609,7 @@ func shouldSkip(name string) bool {
 // Walks recursively to match the behavior of installer.CopyContent.
 func collectFiles(itemDir string, baseDir string) []string {
 	var files []string
-	filepath.WalkDir(itemDir, func(path string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(itemDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}

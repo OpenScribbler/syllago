@@ -123,13 +123,13 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		// Rollback: restore snapshot and clean up
 		sm, _, loadErr := snapshot.Load(opts.ProjectRoot)
 		if loadErr == nil {
-			snapshot.Restore(snapshotDir, sm)
+			_ = snapshot.Restore(snapshotDir, sm)
 			// Remove any symlinks we may have partially created
 			for _, sr := range symlinkRecords {
-				os.Remove(sr.Path)
+				_ = os.Remove(sr.Path)
 			}
 		}
-		snapshot.Delete(snapshotDir)
+		_ = snapshot.Delete(snapshotDir)
 		return nil, fmt.Errorf("applying loadout (rolled back): %w", applyErr)
 	}
 
@@ -491,7 +491,7 @@ func writeJSONFileAtomic(path string, data []byte) error {
 		return err
 	}
 	if err := os.Rename(tmpPath, path); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return err
 	}
 	return nil

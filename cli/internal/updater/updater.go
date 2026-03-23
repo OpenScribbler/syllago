@@ -61,7 +61,7 @@ func CheckLatest(currentVersion string) (ReleaseInfo, error) {
 	if err != nil {
 		return ReleaseInfo{}, fmt.Errorf("fetching release: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return ReleaseInfo{}, fmt.Errorf("GitHub API returned %d", resp.StatusCode)
@@ -128,7 +128,7 @@ func Update(currentVersion string, progress func(string)) error {
 	if err != nil {
 		return fmt.Errorf("creating temp dir: %w", err)
 	}
-	defer os.RemoveAll(tmpDir) // clean up on any error path (no-op after Rename)
+	defer func() { _ = os.RemoveAll(tmpDir) }() // clean up on any error path (no-op after Rename)
 
 	// Download checksums.txt first (small file).
 	var expectedHash string
@@ -213,7 +213,7 @@ func downloadFile(url, destPath string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("HTTP %d fetching %s", resp.StatusCode, url)
@@ -223,7 +223,7 @@ func downloadFile(url, destPath string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	_, err = io.Copy(f, resp.Body)
 	return err
@@ -235,7 +235,7 @@ func sha256File(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
@@ -251,7 +251,7 @@ func findChecksum(checksumPath, filename string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {

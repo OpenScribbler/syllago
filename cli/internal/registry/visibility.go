@@ -167,7 +167,7 @@ func probeGitHub(owner, repo string) (string, error) {
 	if err != nil {
 		return VisibilityUnknown, nil // network error = unknown (fail-safe)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == 404 || resp.StatusCode == 403 {
 		return VisibilityPrivate, nil // not accessible = private
@@ -204,7 +204,7 @@ func probeGitLab(owner, repo string) (string, error) {
 	if err != nil {
 		return VisibilityUnknown, nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == 404 {
 		return VisibilityPrivate, nil
@@ -241,7 +241,7 @@ func probeBitbucket(owner, repo string) (string, error) {
 	if err != nil {
 		return VisibilityUnknown, nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == 404 || resp.StatusCode == 403 {
 		return VisibilityPrivate, nil
