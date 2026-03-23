@@ -188,6 +188,15 @@ func (c *SkillsConverter) Canonicalize(content []byte, sourceProvider string) (*
 		if err != nil {
 			return nil, err
 		}
+		// Translate tool names from provider-native to canonical (neutral)
+		if sourceProvider != "" {
+			for i, tool := range meta.AllowedTools {
+				meta.AllowedTools[i] = ReverseTranslateTool(tool, sourceProvider)
+			}
+			for i, tool := range meta.DisallowedTools {
+				meta.DisallowedTools[i] = ReverseTranslateTool(tool, sourceProvider)
+			}
+		}
 		canonical, err := buildSkillCanonical(meta, body)
 		if err != nil {
 			return nil, err
@@ -317,6 +326,16 @@ func renderGeminiSkill(meta SkillMeta, body string) (*Result, error) {
 
 func renderClaudeSkill(meta SkillMeta, body string) (*Result, error) {
 	cleanBody := StripConversionNotes(body)
+
+	// Translate canonical (neutral) tool names to CC names
+	if len(meta.AllowedTools) > 0 {
+		translated := TranslateTools(meta.AllowedTools, "claude-code")
+		meta.AllowedTools = flexStringList(translated)
+	}
+	if len(meta.DisallowedTools) > 0 {
+		translated := TranslateTools(meta.DisallowedTools, "claude-code")
+		meta.DisallowedTools = flexStringList(translated)
+	}
 
 	fm, err := renderFrontmatter(meta)
 	if err != nil {

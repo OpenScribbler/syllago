@@ -102,7 +102,7 @@ func TestUnsupportedEventDroppedWithWarning(t *testing.T) {
 	// Find the event-specific warning (not the structured output warning)
 	found := false
 	for _, w := range result.Warnings {
-		if containsStr(w, "SubagentStart") && containsStr(w, "not supported") {
+		if containsStr(w, "subagent_start") && containsStr(w, "not supported") {
 			found = true
 			break
 		}
@@ -574,10 +574,10 @@ func TestCanonicalizeFlatHook_GeminiCLI(t *testing.T) {
 	}
 	var hd HookData
 	json.Unmarshal(result.Content, &hd)
-	if hd.Event != "PreToolUse" {
+	if hd.Event != "before_tool_execute" {
 		t.Errorf("event not translated: got %q", hd.Event)
 	}
-	if hd.Matcher != "Bash" {
+	if hd.Matcher != "shell" {
 		t.Errorf("matcher not translated: got %q", hd.Matcher)
 	}
 }
@@ -592,19 +592,19 @@ func TestCanonicalizeFlatHook_ClaudeCode(t *testing.T) {
 	}
 	var hd HookData
 	json.Unmarshal(result.Content, &hd)
-	if hd.Event != "PreToolUse" {
-		t.Errorf("event should pass through: got %q", hd.Event)
+	if hd.Event != "before_tool_execute" {
+		t.Errorf("event should be translated to neutral: got %q", hd.Event)
 	}
-	if hd.Matcher != "Bash" {
-		t.Errorf("matcher should pass through: got %q", hd.Matcher)
+	if hd.Matcher != "shell" {
+		t.Errorf("matcher should be translated to neutral: got %q", hd.Matcher)
 	}
 }
 
 func TestRenderFlat_Copilot(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event:   "PreToolUse",
-		Matcher: "Bash",
+		Event:   "before_tool_execute",
+		Matcher: "shell",
 		Hooks:   []HookEntry{{Type: "command", Command: "echo check", Timeout: 3, StatusMessage: "Checking..."}},
 	}
 	conv := &HooksConverter{}
@@ -839,15 +839,15 @@ func TestCopilotHooksRoundtripWithMatcher(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	// Canonical should have matcher translated to canonical (Bash)
+	// Canonical should have matcher translated to neutral (shell)
 	var canonCfg hooksConfig
 	json.Unmarshal(canonical.Content, &canonCfg)
-	matchers := canonCfg.Hooks["PreToolUse"]
+	matchers := canonCfg.Hooks["before_tool_execute"]
 	if len(matchers) == 0 {
 		t.Fatal("expected matchers in canonical")
 	}
-	if matchers[0].Matcher != "Bash" {
-		t.Errorf("expected canonical matcher 'Bash', got %q", matchers[0].Matcher)
+	if matchers[0].Matcher != "shell" {
+		t.Errorf("expected canonical matcher 'shell', got %q", matchers[0].Matcher)
 	}
 
 	// Render back to Copilot
@@ -905,7 +905,7 @@ func TestHookCanonicalizeHTTPPreservesFields(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	matchers := cfg.Hooks["PreToolUse"]
+	matchers := cfg.Hooks["before_tool_execute"]
 	if len(matchers) == 0 || len(matchers[0].Hooks) == 0 {
 		t.Fatal("expected hook entries")
 	}
@@ -953,7 +953,7 @@ func TestHookCanonicalizePromptPreservesFields(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	matchers := cfg.Hooks["PreToolUse"]
+	matchers := cfg.Hooks["before_tool_execute"]
 	if len(matchers) == 0 || len(matchers[0].Hooks) == 0 {
 		t.Fatal("expected hook entries")
 	}
@@ -994,7 +994,7 @@ func TestHookCanonicalizeAgentPreservesFields(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	matchers := cfg.Hooks["PreToolUse"]
+	matchers := cfg.Hooks["before_tool_execute"]
 	if len(matchers) == 0 || len(matchers[0].Hooks) == 0 {
 		t.Fatal("expected hook entries")
 	}
@@ -1007,12 +1007,12 @@ func TestHookCanonicalizeAgentPreservesFields(t *testing.T) {
 
 func TestHookRenderClaudeCodeIncludesTypeSpecificFields(t *testing.T) {
 	t.Parallel()
-	// Canonical input with all 4 types
+	// Canonical input with all 4 types (neutral event/tool names)
 	input := []byte(`{
 		"hooks": {
-			"PreToolUse": [
+			"before_tool_execute": [
 				{
-					"matcher": "Bash",
+					"matcher": "shell",
 					"hooks": [
 						{"type": "command", "command": "echo check", "timeout": 5},
 						{
@@ -1084,7 +1084,7 @@ func TestHookRenderNonClaudeWarnsHTTPType(t *testing.T) {
 	t.Parallel()
 	input := []byte(`{
 		"hooks": {
-			"PreToolUse": [
+			"before_tool_execute": [
 				{
 					"hooks": [
 						{
@@ -1179,7 +1179,7 @@ func TestGeminiOnlyEventsRoundtrip(t *testing.T) {
 	if err := json.Unmarshal(canonical.Content, &cfg); err != nil {
 		t.Fatalf("unmarshal canonical: %v", err)
 	}
-	for _, event := range []string{"BeforeModel", "AfterModel", "BeforeToolSelection"} {
+	for _, event := range []string{"before_model", "after_model", "before_tool_selection"} {
 		if _, ok := cfg.Hooks[event]; !ok {
 			t.Errorf("expected canonical to have event %q", event)
 		}
@@ -1259,13 +1259,13 @@ func TestGeminiOnlyEventsDroppedForOtherProviders(t *testing.T) {
 			// All 3 events should generate warnings
 			warnEvents := map[string]bool{}
 			for _, w := range result.Warnings {
-				for _, event := range []string{"BeforeModel", "AfterModel", "BeforeToolSelection"} {
+				for _, event := range []string{"before_model", "after_model", "before_tool_selection"} {
 					if containsStr(w, event) && containsStr(w, "not supported") {
 						warnEvents[event] = true
 					}
 				}
 			}
-			for _, event := range []string{"BeforeModel", "AfterModel", "BeforeToolSelection"} {
+			for _, event := range []string{"before_model", "after_model", "before_tool_selection"} {
 				if !warnEvents[event] {
 					t.Errorf("expected warning for %q on %s, got warnings: %v", event, tt.name, result.Warnings)
 				}
@@ -1285,9 +1285,9 @@ func TestGeminiOnlyEventsFlatFormat(t *testing.T) {
 	}
 	var hd HookData
 	json.Unmarshal(result.Content, &hd)
-	// BeforeModel in Gemini maps to canonical "BeforeModel"
-	if hd.Event != "BeforeModel" {
-		t.Errorf("event not translated correctly: got %q, want %q", hd.Event, "BeforeModel")
+	// BeforeModel in Gemini maps to canonical "before_model"
+	if hd.Event != "before_model" {
+		t.Errorf("event not translated correctly: got %q, want %q", hd.Event, "before_model")
 	}
 }
 
