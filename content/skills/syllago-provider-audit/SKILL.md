@@ -24,12 +24,12 @@ This means:
 ```
 /syllago-provider-audit <provider-slug>          # Full audit of one provider
 /syllago-provider-audit diff <provider-slug>     # Diff against existing reports
-/syllago-provider-audit --all                    # Audit all 11 providers
+/syllago-provider-audit --all                    # Audit all 12 providers
 ```
 
 ## Supported Providers
 
-`claude-code`, `gemini-cli`, `cursor`, `windsurf`, `codex`, `copilot-cli`, `cline`, `roo-code`, `opencode`, `kiro`, `zed`
+`amp`, `claude-code`, `gemini-cli`, `cursor`, `windsurf`, `codex`, `copilot-cli`, `cline`, `roo-code`, `opencode`, `kiro`, `zed`
 
 ## Report Format
 
@@ -76,6 +76,7 @@ Every audit and diff MUST check the provider's changelog for releases newer than
 | OpenCode | https://github.com/opencode-ai/opencode/releases |
 | Kiro | https://kiro.dev/changelog |
 | Zed | https://zed.dev/releases |
+| Amp | https://ampcode.com/blog (auth-gated; check public blog) |
 
 ## Source Attribution
 
@@ -139,6 +140,12 @@ Include URLs for all sources. Prefer specific pages, not docs root.
 - Rules: https://zed.dev/docs/ai/rules
 - MCP: https://zed.dev/docs/ai/mcp
 - Tools: https://zed.dev/docs/ai/tools
+
+### Amp
+- Docs: https://ampcode.com/docs (auth-gated — requires login)
+- Public blog: https://ampcode.com/blog
+- Developer: Sourcegraph (uses Claude models but is NOT an Anthropic product)
+- Note: Most docs require authentication. Research relies on public blog posts, CLI help output, and community sources
 
 ## Audit Workflow
 
