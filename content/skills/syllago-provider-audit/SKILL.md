@@ -76,7 +76,7 @@ Every audit and diff MUST check the provider's changelog for releases newer than
 | OpenCode | https://github.com/opencode-ai/opencode/releases |
 | Kiro | https://kiro.dev/changelog |
 | Zed | https://zed.dev/releases |
-| Amp | https://ampcode.com/blog (auth-gated; check public blog) |
+| Amp | https://ampcode.com/manual (check for version/feature updates) |
 
 ## Source Attribution
 
@@ -142,10 +142,9 @@ Include URLs for all sources. Prefer specific pages, not docs root.
 - Tools: https://zed.dev/docs/ai/tools
 
 ### Amp
-- Docs: https://ampcode.com/docs (auth-gated — requires login)
-- Public blog: https://ampcode.com/blog
+- Manual: https://ampcode.com/manual (single-page reference — sub-pages are auth-gated)
 - Developer: Sourcegraph (uses Claude models but is NOT an Anthropic product)
-- Note: Most docs require authentication. Research relies on public blog posts, CLI help output, and community sources
+- Note: Sub-pages under `/manual/` require authentication, but the main `/manual` page contains the full reference
 
 ## Audit Workflow
 

@@ -1,10 +1,10 @@
 <!-- provider-audit-meta
 provider: amp
-provider_version: "unknown (auth-gated)"
+provider_version: "current (rolling release)"
 report_format: 1
 researched: 2026-03-23
 researcher: claude-opus-4.6
-changelog_checked: https://ampcode.com/blog
+changelog_checked: https://ampcode.com/manual
 -->
 
 # Amp — Skills & Agents
@@ -13,72 +13,145 @@ changelog_checked: https://ampcode.com/blog
 
 **Status:** Supported (syllago can install/discover skills for Amp)
 
-### Format
-- Markdown-based skill definitions [Inferred]
-- Likely SKILL.md files with frontmatter, similar to Claude Code [Inferred]
-- Skills replaced custom commands in Amp [Community]
+### SKILL.md Format
 
-### Directory Structure
-- Project: `.agents/skills/<skill-name>/SKILL.md` [Inferred from provider definition]
-- Project (compat fallback): `.claude/skills/<skill-name>/SKILL.md` [Inferred from provider definition]
-- Global: `~/.config/agents/skills/<skill-name>/SKILL.md` [Inferred from provider definition]
+Each skill is a directory containing `SKILL.md` with YAML frontmatter:
 
-### Invocation
-- Skills are composable instructions that agents can invoke on demand [Community]
-- Specific invocation syntax (slash command, natural language, etc.) is not documented publicly [Unverified]
+```yaml
+---
+name: my-skill
+description: A description of what this skill does
+---
 
-### Unique Features
-- Multi-model routing may allow skills to specify preferred models [Unverified]
-- Skills can potentially leverage Amp-specific tools (Oracle, Librarian, Code Review) [Unverified]
+# My Skill
+
+Instructions for the agent...
+```
+
+**Required fields:**
+- `name` — unique identifier
+- `description` — visible to model, determines when skill invokes
+
+**Optional components:**
+- Bundled resources (scripts, templates, etc.) in the same directory
+- `mcp.json` — bundled MCP servers that load with the skill
+
+[Official] https://ampcode.com/manual
+
+### Directory Structure and Precedence
+
+Skills are searched in this order (highest priority first):
+
+1. `~/.config/agents/skills/<name>/SKILL.md` — user-wide (primary)
+2. `~/.config/amp/skills/<name>/SKILL.md` — user-wide (Amp-specific)
+3. `.agents/skills/<name>/SKILL.md` — project-level
+4. `.claude/skills/<name>/SKILL.md` — project-level (compatibility)
+5. `~/.claude/skills/<name>/SKILL.md` — user-wide (compatibility)
+6. Plugins, toolbox directories, built-in skills
+
+**Additional paths:** Configurable via `amp.skills.path` setting in `settings.json`.
+
+**Override behavior:** Project skills override user-wide skills, which override built-in skills, matched by `name`. [Official]
+
+### Bundled MCP Servers
+
+Skills can include an `mcp.json` file to declare MCP servers that load when the skill is active:
+
+```json
+{
+  "my-server": {
+    "command": "node",
+    "args": ["server.js"],
+    "includeTools": ["tool_*"]
+  }
+}
+```
+
+Same schema as the main MCP configuration. [Official]
+
+### Compatibility with Claude Code
+
+Amp searches `.claude/skills/` and `~/.claude/skills/` as fallback paths, providing compatibility with Claude Code skill directories. The SKILL.md format (name + description frontmatter + markdown body) appears identical to Claude Code's format. [Official]
 
 ## Agents
 
-**Status:** Not supported by syllago for Amp
+**Status:** Not supported as user-definable content files
 
 ### Built-in Agent Types
-Amp has several built-in specialized agents [Community]:
 
-| Agent | Purpose |
-|-------|---------|
-| Oracle | Architectural review, second-opinion reasoning |
-| Librarian | External repository exploration and documentation loading |
-| Code Review | Automated code review with customizable checks |
-| Course Correct | Parallel correction agent for quality monitoring |
+Amp has several built-in specialized agents that are invoked by the system, not defined by users:
 
-### Custom Agent Definitions
-- No publicly documented format for user-defined agent definitions [Unverified]
-- Amp's agent system appears to be internal/built-in rather than user-extensible via files [Inferred]
-- The `.agents/` directory is used for skills and checks, not agent definitions [Inferred]
+| Agent | Purpose | Model |
+|-------|---------|-------|
+| Oracle | Second-opinion reasoning, debugging | GPT-5.4 (high reasoning) |
+| Librarian | Cross-repo code search | Sourcegraph integration |
+| Code Review | Automated review with custom checks | Configurable |
+| Course Correct | Parallel correction monitoring | Background |
+| Subagents (Task) | Parallel work on multi-step tasks | Same as parent mode |
+
+[Official] https://ampcode.com/manual
+
+### Subagents
+
+Spawned via the Task tool for parallel work. Key constraints:
+- Work in isolation — cannot communicate with each other
+- Cannot be guided mid-task by the user
+- Useful for parallel work across different code areas
+
+[Official]
 
 ### Custom Checks (Agent Extension)
-Amp supports custom code review checks via `.agents/checks/` [Community]:
-- Files use YAML frontmatter with `name` and `description` fields
-- Acts as domain-specific review criteria for the Code Review agent
-- This is the closest equivalent to user-defined agent customization
+
+The closest equivalent to user-defined agents. Checks live in `.agents/checks/` with YAML frontmatter:
+
+```yaml
+---
+name: security-review
+description: Check for common security vulnerabilities
+severity-default: warning
+tools:
+  - Grep
+  - Read
+---
+
+Review criteria and instructions...
+```
+
+**Frontmatter fields:**
+- `name` — check identifier
+- `description` — what the check reviews
+- `severity-default` — default severity level
+- `tools` — tools the check is permitted to use
+
+[Official]
 
 ## Model Selection
 
-Amp uses multi-model routing rather than single-model selection [Community]:
+Amp uses mode-based model routing rather than per-skill model selection:
 
-| Mode | Models |
-|------|--------|
-| Smart | Claude Opus 4.6, GPT-5 variants |
-| Deep | GPT-5.3-Codex (specialized) |
-| Rush | Lighter-weight models |
+| Mode | Model | Use Case |
+|------|-------|----------|
+| Smart | Claude Opus 4.6 | Standard development, unconstrained |
+| Deep | GPT-5.3 Codex | Complex problems, extended reasoning |
+| Rush | Lighter models | Fast, well-defined tasks |
 
-Model selection is handled at the platform level, not per-skill or per-agent. [Inferred]
+Deep reasoning effort is configurable: `amp.agent.deepReasoningEffort` = `"medium"` | `"high"` | `"xhigh"` [Official]
 
-## SDK Integration
+## Syllago Provider Definition Accuracy
 
-Amp provides TypeScript (`@sourcegraph/amp-sdk`) and Python SDKs for programmatic embedding [Community]:
-- Custom tools can be defined via a toolbox directory parameter
-- This is an API-level integration, not a content-type that syllago would manage
+Based on the official manual, the current syllago provider definition is **accurate**:
 
-## Documentation Gaps
+| Aspect | Provider Definition | Official Docs | Match? |
+|--------|-------------------|---------------|--------|
+| Rules path | `AGENTS.md` in project root | `AGENTS.md` (+ parents, fallbacks) | Yes |
+| Skills project path | `.agents/skills/` | `.agents/skills/` | Yes |
+| Skills compat path | `.claude/skills/` | `.claude/skills/` | Yes |
+| Skills global path | `~/.config/agents/skills/` | `~/.config/agents/skills/` | Yes |
+| MCP path | `.amp/settings.json` | `amp.mcpServers` in settings | Partial — MCP is in `~/.config/amp/settings.json`, not `.amp/settings.json` |
+| Supports hooks | No | No | Yes |
+| Supports commands | No | No (replaced by skills) | Yes |
+| Supports agents | No | No (built-in only) | Yes |
 
-- Full skill format specification and supported frontmatter fields
-- Whether skills support `is_mode`, `model`, or tool permission fields
-- How skills are triggered (slash commands? natural language? both?)
-- Whether user-defined agent files are supported (vs only built-in agents)
-- Whether the `.claude/skills/` fallback path is an intentional compatibility feature
-- Whether Amp's skills format diverges from Claude Code's SKILL.md format
+### Potential Issue
+
+The MCP discovery path in the provider definition uses `.amp/settings.json` (project-level), but the official docs describe MCP configuration in the main settings file (`~/.config/amp/settings.json`) under `amp.mcpServers`. It's unclear if `.amp/settings.json` is a valid project-level override or an incorrect path. This should be verified by testing with a local Amp installation.
