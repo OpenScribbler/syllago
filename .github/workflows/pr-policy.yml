@@ -1,32 +1,24 @@
-name: PR Policy
+name: "Vouch: Check PR"
 
 on:
   pull_request_target:
-    types: [opened]
+    types: [opened, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
-  close-external-prs:
+  check:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
     steps:
-      - name: Close external PRs
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: mitchellh/vouch/action/check-pr@c6d80ead49839655b61b422700b7a3bc9d0804a9 # v1.4.2
         with:
-          script: |
-            const allowlist = ['holdenhewett', 'OpenScribblerOwner', 'dependabot[bot]'];
-            const sender = context.payload.sender.login;
-            if (!allowlist.includes(sender)) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
-                body: `Thank you for your interest in contributing to syllago!\n\nThis project doesn't accept external pull requests at this time. Instead, please:\n1. Open an issue describing the bug or feature\n2. Include reproduction steps for bugs, or a use case description for features\n\nWe review all issues and may implement your suggestion in a future release.`
-              });
-              await github.rest.pulls.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: context.payload.pull_request.number,
-                state: 'closed'
-              });
-            }
+          pr-number: ${{ github.event.pull_request.number }}
+          auto-close: true
+          vouched-repo: ghostty-org/ghostty
+          template-file: .github/vouch-pr-response.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
