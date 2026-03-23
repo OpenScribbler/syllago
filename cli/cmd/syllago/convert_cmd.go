@@ -32,9 +32,12 @@ No state changes are made — this is purely for ad-hoc sharing.`,
   # Convert and save to a file
   syllago convert my-rule --to windsurf --output ./windsurf-rule.md
 
-  # Convert to JSON output
-  syllago convert my-skill --to cursor --json`,
-	Args: cobra.ExactArgs(1),
+  # Batch-canonicalize a directory of hooks
+  syllago convert --batch ./hooks/ --from claude-code --to canonical
+
+  # Batch dry-run
+  syllago convert --batch ./hooks/ --from claude-code --to canonical --dry-run`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: runConvert,
 }
 
@@ -42,6 +45,9 @@ func init() {
 	convertCmd.Flags().String("to", "", "Target provider (required)")
 	convertCmd.MarkFlagRequired("to")
 	convertCmd.Flags().StringP("output", "o", "", "Write output to this file path (default: stdout)")
+	convertCmd.Flags().String("batch", "", "Directory of hook files to batch-canonicalize (mutual exclusive with <name>)")
+	convertCmd.Flags().String("from", "", "Source provider slug (required with --batch)")
+	convertCmd.Flags().Bool("dry-run", false, "Show what would be converted without writing files")
 	rootCmd.AddCommand(convertCmd)
 }
 

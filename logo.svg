@@ -20,10 +20,10 @@
     <text y="70" textLength="500" lengthAdjust="spacing"><tspan class="s">░░█████████ ░░███ ░███  ░███</tspan><tspan class="l">  ░███  ░░░░░███  ███░░███ ███░░███</tspan></text>
     <text y="88" textLength="500" lengthAdjust="spacing"><tspan class="s"> ░░░░░░░░███ ░███ ░███  ░███</tspan><tspan class="l">  ░███   ███████ ░███ ░███░███ ░███</tspan></text>
     <text y="106" textLength="500" lengthAdjust="spacing"><tspan class="s"> ███    ░███ ░███ ░███  ░███</tspan><tspan class="l">  ░███  ███░░███ ░███ ░███░███ ░███</tspan></text>
-    <text y="124" textLength="500" lengthAdjust="spacing"><tspan class="s">░░█████████  ░░███████  █████</tspan><tspan class="l"> █████░░████████░░███████░░██████  </tspan></text>
-    <text y="142" textLength="500" lengthAdjust="spacing"><tspan class="s"> ░░░░░░░░░    ░░░░░███ ░░░░░</tspan><tspan class="l"> ░░░░░  ░░░░░░░░  ░░░░░███ ░░░░░░ </tspan></text>
-    <text y="160" textLength="500" lengthAdjust="spacing"><tspan class="s">              ███ ░███</tspan><tspan class="l">                        ███ ░███   </tspan></text>
-    <text y="178" textLength="500" lengthAdjust="spacing"><tspan class="s">             ░░██████</tspan><tspan class="l">                        ░░██████   </tspan></text>
-    <text y="196" textLength="500" lengthAdjust="spacing"><tspan class="s">              ░░░░░░</tspan><tspan class="l">                          ░░░░░░   </tspan></text>
+    <text y="124" textLength="500" lengthAdjust="spacing"><tspan class="s">░░█████████  ░░███████  █████</tspan><tspan class="l"> █████░░████████░░███████░░██████ </tspan></text>
+    <text y="142" textLength="500" lengthAdjust="spacing"><tspan class="s"> ░░░░░░░░░    ░░░░░███ ░░░░░</tspan><tspan class="l"> ░░░░░  ░░░░░░░░  ░░░░░███ ░░░░░░  </tspan></text>
+    <text y="160" textLength="500" lengthAdjust="spacing"><tspan class="s">              ███ ░███</tspan><tspan class="l">                        ███ ░███         </tspan></text>
+    <text y="178" textLength="500" lengthAdjust="spacing"><tspan class="s">             ░░██████</tspan><tspan class="l">                        ░░██████          </tspan></text>
+    <text y="196" textLength="500" lengthAdjust="spacing"><tspan class="s">              ░░░░░░</tspan><tspan class="l">                          ░░░░░░           </tspan></text>
   </g>
 </svg>
