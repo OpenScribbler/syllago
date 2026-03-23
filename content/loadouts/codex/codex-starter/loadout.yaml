@@ -1,0 +1,14 @@
+kind: loadout
+version: 1
+provider: codex
+name: codex-starter
+description: >
+  Built-in meta-tools for syllago: reference guide, quickstart,
+  import workflow reference, and content authoring agent.
+
+skills:
+  - syllago-guide
+  - syllago-quickstart
+  - syllago-import
+agents:
+  - syllago-author

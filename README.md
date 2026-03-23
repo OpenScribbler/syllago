@@ -142,7 +142,7 @@ Content in your library is provider-neutral. You add once, install anywhere.
 | MCP configs | Most providers | Zed uses `context_servers` key (handled automatically) |
 | Hooks | Claude Code, Gemini CLI, Copilot CLI, Codex, Cursor, Windsurf, Kiro, Cline | Canonical interchange format (`docs/spec/hooks-v1.md`) with degradation strategies. Amp, OpenCode, Zed, Roo Code lack hook systems |
 | Commands | Claude Code, Gemini CLI, Copilot CLI, Codex, Cursor, OpenCode | Slash command definitions (e.g., `/deploy`) |
-| Loadouts | Claude Code (v1) | Additional provider emitters planned |
+| Loadouts | All providers | Starter loadouts bundle syllago meta-tools per provider |
 
 ## Commands
 
