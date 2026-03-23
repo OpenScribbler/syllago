@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -3199,35 +3198,45 @@ func (a App) libraryCardTypes() []catalog.ContentType {
 	return result
 }
 
-// countVisibleLoadouts returns the number of loadout cards shown on the
-// loadout page — one per detected provider — so the sidebar count matches.
+// countVisibleLoadouts returns the total number of loadout cards shown on the
+// loadout page (installed + available) so the sidebar count matches.
 func (a App) countVisibleLoadouts() int {
-	return len(a.loadoutCardProviders())
+	installed, available := a.loadoutCardSections()
+	return len(installed) + len(available)
 }
 
-// loadoutCardProviders returns providers to show on the loadouts card screen.
-// Shows all detected providers — even those with no loadouts — so the grid
-// is always populated and the user can create loadouts for any provider.
+// loadoutCardProviders returns the flat list of all provider slugs shown on the
+// loadout card page (installed first, then available), used for cursor navigation.
 func (a App) loadoutCardProviders() []string {
+	installed, available := a.loadoutCardSections()
+	result := make([]string, 0, len(installed)+len(available))
+	result = append(result, installed...)
+	result = append(result, available...)
+	return result
+}
+
+// loadoutCardSections returns two slices: providers detected on this machine
+// (installed) and providers with loadouts but not detected (available).
+func (a App) loadoutCardSections() (installed []string, available []string) {
 	hasLoadouts := make(map[string]bool)
 	for _, item := range a.catalog.ByType(catalog.Loadouts) {
 		if item.Provider != "" {
 			hasLoadouts[item.Provider] = true
 		}
 	}
-	var result []string
+	detected := make(map[string]bool)
 	for _, prov := range a.providers {
 		if prov.Detected {
-			result = append(result, prov.Slug)
+			detected[prov.Slug] = true
+			installed = append(installed, prov.Slug)
 		}
 	}
-	if len(result) == 0 {
-		for slug := range hasLoadouts {
-			result = append(result, slug)
+	for _, prov := range a.providers {
+		if !prov.Detected && hasLoadouts[prov.Slug] {
+			available = append(available, prov.Slug)
 		}
-		sort.Strings(result)
 	}
-	return result
+	return installed, available
 }
 
 // renderLibraryCards renders a card grid grouping library items by content type.
@@ -3342,9 +3351,12 @@ func (a App) renderLibraryCards() string {
 }
 
 // renderLoadoutCards renders a card grid grouping loadout items by provider.
+// Two sections: "Installed" (detected providers) and "Available" (undetected
+// providers that have loadouts). Follows the homepage section pattern.
 func (a App) renderLoadoutCards() string {
-	providers := a.loadoutCardProviders()
-	if len(providers) == 0 {
+	installed, available := a.loadoutCardSections()
+	allProviders := a.loadoutCardProviders()
+	if len(allProviders) == 0 {
 		return "\n" + helpStyle.Render("  No loadouts found.")
 	}
 
@@ -3382,7 +3394,7 @@ func (a App) renderLoadoutCards() string {
 		cardSel = cardSel.Height(3)
 	}
 
-	renderCard := func(idx int, prov string) string {
+	renderCard := func(flatIdx int, prov string) string {
 		count := provCounts[prov]
 		name := providerDisplayName(prov)
 		var inner string
@@ -3395,7 +3407,7 @@ func (a App) renderLoadoutCards() string {
 		}
 
 		style := cardBase
-		if idx == a.cardCursor {
+		if flatIdx == a.cardCursor {
 			style = cardSel
 		}
 		return zone.Mark(fmt.Sprintf("loadout-card-%s", prov), style.Render(inner))
@@ -3405,50 +3417,113 @@ func (a App) renderLoadoutCards() string {
 	if singleCol {
 		cols = 1
 	}
-	totalRows := (len(providers) + cols - 1) / cols
+
+	// Build sections following the homepage pattern
+	type sectionInfo struct {
+		label string
+		start int
+		provs []string
+	}
+	var sections []sectionInfo
+	if len(installed) > 0 {
+		sections = append(sections, sectionInfo{"Installed", 0, installed})
+	}
+	if len(available) > 0 {
+		sections = append(sections, sectionInfo{"Available", len(installed), available})
+	}
+
+	// Render all sections into body, then do line-based scroll clipping
 	cardRowHeight := 6
 	headerLines := 3
 	availH := a.panelHeight() - headerLines
-	firstRow, visibleRows, newOffset := cardScrollRange(a.cardCursor, len(providers), cols, availH, cardRowHeight, a.cardScrollOffset)
+	if availH < 6 {
+		availH = 6
+	}
+	totalCards := len(allProviders)
+	_, _, newOffset := cardScrollRange(a.cardCursor, totalCards, cols, availH, cardRowHeight, a.cardScrollOffset)
 	a.cardScrollOffset = newOffset
 
-	if firstRow > 0 {
-		s += "  " + renderScrollUp(firstRow*cols, false) + "\n"
+	var body string
+	for si, sec := range sections {
+		if len(sec.provs) == 0 {
+			continue
+		}
+		if si > 0 {
+			body += "\n"
+		}
+		body += labelStyle.Render("  "+sec.label) + "\n\n"
+		if singleCol {
+			for i, prov := range sec.provs {
+				body += renderCard(sec.start+i, prov) + "\n"
+			}
+		} else {
+			for i := 0; i < len(sec.provs); i += 2 {
+				left := renderCard(sec.start+i, sec.provs[i])
+				var right string
+				if i+1 < len(sec.provs) {
+					right = renderCard(sec.start+i+1, sec.provs[i+1])
+				}
+				body += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
+			}
+		}
 	}
 
-	lastRow := firstRow + visibleRows
-	if lastRow > totalRows {
-		lastRow = totalRows
+	// Line-based scroll clipping (same pattern as homepage)
+	lines := strings.Split(body, "\n")
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
 	}
-
-	if singleCol {
-		for row := firstRow; row < lastRow; row++ {
-			if row >= len(providers) {
+	if len(lines) > availH {
+		cursorLine := 0
+		cardsSeen := 0
+		for i, line := range lines {
+			if cardsSeen > a.cardCursor {
 				break
 			}
-			s += renderCard(row, providers[row]) + "\n"
+			cursorLine = i
+			if strings.Contains(line, "╭") || strings.Contains(line, "loadout-card") {
+				cardsSeen += cols
+			}
+		}
+		startLine := newOffset * cardRowHeight
+		if startLine > cursorLine {
+			startLine = cursorLine
+		}
+
+		viewportH := availH
+		hasAbove := startLine > 0
+		hasBelow := true
+		if hasAbove {
+			viewportH--
+		}
+		if hasBelow {
+			viewportH--
+		}
+		if viewportH < 1 {
+			viewportH = 1
+		}
+
+		if startLine+viewportH > len(lines) {
+			startLine = len(lines) - viewportH
+		}
+		if startLine < 0 {
+			startLine = 0
+		}
+		endLine := startLine + viewportH
+		if endLine > len(lines) {
+			endLine = len(lines)
+		}
+
+		if hasAbove {
+			s += "  " + renderScrollUp(startLine, true) + "\n"
+		}
+		s += strings.Join(lines[startLine:endLine], "\n") + "\n"
+		remaining := len(lines) - endLine
+		if remaining > 0 {
+			s += "  " + renderScrollDown(remaining, true) + "\n"
 		}
 	} else {
-		for row := firstRow; row < lastRow; row++ {
-			i := row * 2
-			if i >= len(providers) {
-				break
-			}
-			left := renderCard(i, providers[i])
-			var right string
-			if i+1 < len(providers) {
-				right = renderCard(i+1, providers[i+1])
-			}
-			s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
-		}
-	}
-
-	hiddenBelow := len(providers) - lastRow*cols
-	if hiddenBelow < 0 {
-		hiddenBelow = 0
-	}
-	if hiddenBelow > 0 {
-		s += "  " + renderScrollDown(hiddenBelow, false) + "\n"
+		s += body
 	}
 
 	return s

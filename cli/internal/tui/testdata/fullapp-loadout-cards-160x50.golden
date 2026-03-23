@@ -2,13 +2,13 @@ syllago           │Home > Loadouts
                   │
   Content         │ [a] Create Loadout
   Skills        3 │
-  Agents        1 │╭────────────────────────────────────────────────────────────────────╮
-  MCP Configs   1 ││ Claude Code (2)                                                    │
-  Rules         1 ││ Loadouts for Claude Code                                           │
-  Hooks         1 ││                                                                    │
-  Commands      1 │╰────────────────────────────────────────────────────────────────────╯
-  ─────────────   │
-  Collections     │
+  Agents        1 │  Installed
+  MCP Configs   1 │
+  Rules         1 │╭────────────────────────────────────────────────────────────────────╮
+  Hooks         1 ││ Claude Code (2)                                                    │
+  Commands      1 ││ Loadouts for Claude Code                                           │
+  ─────────────   ││                                                                    │
+  Collections     │╰────────────────────────────────────────────────────────────────────╯
   Library       1 │
 > Loadouts      1 │
   Registries      │
