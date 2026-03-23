@@ -14,7 +14,7 @@ multi_agent = true
 [agents.reviewer]
 model = "o4-mini"
 prompt = "You are a code reviewer. Check for bugs and style issues."
-tools = ["shell", "view"]
+tools = ["shell", "read_file"]
 `)
 
 	conv := &AgentsConverter{}
@@ -27,12 +27,12 @@ tools = ["shell", "view"]
 	// Should have canonical frontmatter
 	assertContains(t, out, "name: reviewer")
 	assertContains(t, out, "model: o4-mini")
-	// Tools should be reverse-translated: shell → Bash, view → Read
-	assertContains(t, out, "Bash")
-	assertContains(t, out, "Read")
+	// Tools should be reverse-translated: shell → shell, read_file → file_read
+	assertContains(t, out, "shell")
+	assertContains(t, out, "file_read")
 	// Verify the YAML tools list contains canonical names not Codex ones
-	assertContains(t, out, "- Bash")
-	assertContains(t, out, "- Read")
+	assertContains(t, out, "- shell")
+	assertContains(t, out, "- file_read")
 	// Body should contain the prompt
 	assertContains(t, out, "You are a code reviewer")
 }
@@ -78,9 +78,9 @@ name: my-agent
 description: A test agent
 model: claude-sonnet-4-6
 tools:
-  - Read
-  - Bash
-  - Grep
+  - file_read
+  - shell
+  - search
 maxTurns: 10
 permissionMode: plan
 ---
@@ -100,13 +100,14 @@ You are a helpful agent that reviews code and suggests improvements.
 	assertContains(t, out, "name = 'my-agent'")
 	assertContains(t, out, "description = 'A test agent'")
 	assertContains(t, out, "claude-sonnet-4-6")
-	// Tools translated: Read→view, Bash→shell, Grep→rg
-	assertContains(t, out, "view")
+	// Tools translated: Read→read_file, Bash→shell, Grep→grep_files
+	assertContains(t, out, "read_file")
 	assertContains(t, out, "shell")
-	assertContains(t, out, "rg")
-	// Prompt in instructions section
-	assertContains(t, out, "[agent.instructions]")
+	assertContains(t, out, "grep_files")
+	// Prompt in developer_instructions field (not nested [agent.instructions])
+	assertContains(t, out, "developer_instructions")
 	assertContains(t, out, "reviews code")
+	assertNotContains(t, out, "[agent.instructions]")
 	// Filename uses agent slug
 	assertEqual(t, "my-agent.toml", result.Filename)
 
@@ -150,12 +151,8 @@ tools = ["shell", "apply_patch"]
 
 	// Verify canonical form has correct tool names
 	canonicalStr := string(canonical.Content)
-	assertContains(t, canonicalStr, "Bash") // shell → Bash
-	// apply_patch maps to both Write and Edit in Copilot CLI; reverse translation
-	// picks one (map iteration order). Either is correct.
-	if !strings.Contains(canonicalStr, "Write") && !strings.Contains(canonicalStr, "Edit") {
-		t.Fatal("expected either Write or Edit for apply_patch reverse translation")
-	}
+	assertContains(t, canonicalStr, "shell")     // shell → shell
+	assertContains(t, canonicalStr, "file_edit") // apply_patch → file_edit
 
 	// Render to single-agent Codex format
 	result, err := conv.Render(canonical.Content, provider.Codex)
@@ -168,7 +165,8 @@ tools = ["shell", "apply_patch"]
 	assertContains(t, out, "[agent]")
 	assertContains(t, out, "name = 'coder'")
 	assertContains(t, out, "o4-mini")
-	assertContains(t, out, "[agent.instructions]")
+	assertContains(t, out, "developer_instructions")
+	assertNotContains(t, out, "[agent.instructions]")
 	// Tools should be back in Codex vocabulary
 	assertContains(t, out, "shell")
 	assertContains(t, out, "apply_patch")
@@ -181,7 +179,7 @@ tools = ["shell", "apply_patch"]
 		t.Fatalf("Canonicalize pass 2: %v", err)
 	}
 	canonical2Str := string(canonical2.Content)
-	assertContains(t, canonical2Str, "Bash")
+	assertContains(t, canonical2Str, "shell")
 	assertContains(t, canonical2Str, "Write clean, tested code.")
 }
 
@@ -213,9 +211,9 @@ An agent with all the fields.
 		t.Fatalf("Render: %v", err)
 	}
 
-	// Should have warnings for all unsupported fields
+	// Should have warnings for truly unsupported fields
 	expectedWarnings := []string{
-		"maxTurns", "permissionMode", "skills", "mcpServers",
+		"maxTurns", "permissionMode",
 		"memory", "background", "isolation", "disallowedTools",
 	}
 	for _, expected := range expectedWarnings {
@@ -230,4 +228,70 @@ An agent with all the fields.
 			t.Errorf("missing warning for field %q", expected)
 		}
 	}
+
+	// skills and mcpServers ARE supported by Codex — should NOT have warnings
+	for _, w := range result.Warnings {
+		if strings.Contains(w, "skills") {
+			t.Error("unexpected warning for 'skills' — Codex supports skills")
+		}
+		if strings.Contains(w, "mcpServers") {
+			t.Error("unexpected warning for 'mcpServers' — Codex supports mcp_servers")
+		}
+	}
+
+	// Verify skills and mcp_servers are rendered in the output
+	out := string(result.Content)
+	assertContains(t, out, "reviewer")
+	assertContains(t, out, "github")
+}
+
+func TestRenderCodexAgent_DeveloperInstructions(t *testing.T) {
+	input := []byte(`---
+name: instructor
+model: o4-mini
+---
+
+Follow these coding standards strictly.
+`)
+
+	conv := &AgentsConverter{}
+	result, err := conv.Render(input, provider.Codex)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// developer_instructions should be a top-level field under [agent], not nested
+	assertContains(t, out, "developer_instructions")
+	assertContains(t, out, "Follow these coding standards strictly.")
+	assertNotContains(t, out, "[agent.instructions]")
+}
+
+func TestCanonicalizeCodexAgent_SingleWithNewFields(t *testing.T) {
+	// Single-agent format with developer_instructions, mcp_servers, and skills
+	input := []byte(`[agent]
+name = "smart-agent"
+model = "o4-mini"
+developer_instructions = "You are a smart agent."
+tools = ["shell"]
+
+[agent.mcp_servers.github]
+
+[agent.skills.config.reviewer]
+`)
+
+	conv := &AgentsConverter{}
+	result, err := conv.Canonicalize(input, "codex")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: smart-agent")
+	assertContains(t, out, "You are a smart agent.")
+	// MCP servers and skills should be extracted into canonical form
+	assertContains(t, out, "mcpServers")
+	assertContains(t, out, "github")
+	assertContains(t, out, "skills")
+	assertContains(t, out, "reviewer")
 }

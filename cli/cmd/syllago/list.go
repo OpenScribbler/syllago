@@ -10,7 +10,7 @@ import (
 
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List content items in the catalog",
+	Short: "List content items in the library",
 	Long: `Show a quick inventory of all content without launching the TUI.
 
 By default, lists all content grouped by type. Use flags to filter.`,

@@ -18,10 +18,13 @@ func itemPrecedence(item ContentItem) int {
 
 // applyPrecedence deduplicates items by (name, type), keeping the highest-precedence
 // version in Items and moving others to Overridden.
+// Loadouts include provider in the dedup key because the same loadout name under
+// different providers represents distinct loadouts (different content references).
 func applyPrecedence(cat *Catalog) {
 	type key struct {
-		name string
-		typ  ContentType
+		name     string
+		typ      ContentType
+		provider string // only set for Loadouts
 	}
 
 	best := make(map[key]int) // key → index in kept of winning item
@@ -30,7 +33,10 @@ func applyPrecedence(cat *Catalog) {
 	var overridden []ContentItem
 
 	for _, item := range cat.Items {
-		k := key{strings.ToLower(item.Name), item.Type}
+		k := key{strings.ToLower(item.Name), item.Type, ""}
+		if item.Type == Loadouts {
+			k.provider = item.Provider
+		}
 		winIdx, exists := best[k]
 		if !exists {
 			best[k] = len(kept)

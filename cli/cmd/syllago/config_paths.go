@@ -265,4 +265,3 @@ func isValidContentType(name string) bool {
 	}
 	return false
 }
-

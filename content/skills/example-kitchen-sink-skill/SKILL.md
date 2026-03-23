@@ -1,6 +1,11 @@
 ---
 name: Kitchen Sink Skill
 description: Example skill that populates every available frontmatter field for testing and reference
+license: MIT
+compatibility: ">=1.0"
+metadata:
+  author: syllago-team
+  category: reference
 allowed-tools:
   - Read
   - Glob
@@ -11,9 +16,14 @@ disallowed-tools:
 context: fork
 agent: Explore
 model: claude-sonnet-4-20250514
+effort: high
 disable-model-invocation: true
 user-invocable: true
 argument-hint: <file-path> [--verbose]
+hooks:
+  pre_tool_use:
+    - command: "echo skill-hook-check"
+      timeout: 5000
 ---
 
 # Kitchen Sink Skill
@@ -28,11 +38,16 @@ Nothing practical. It serves as a living reference for the complete set of metad
 
 - **name**: Display name shown in menus and listings
 - **description**: Human-readable summary of the skill's purpose
+- **license**: SPDX license identifier for the skill content
+- **compatibility**: Version constraint for compatible tool versions
+- **metadata**: Arbitrary key-value pairs for custom metadata
 - **allowed-tools**: Whitelist of tools this skill may use (Read, Glob, Grep)
 - **disallowed-tools**: Tools explicitly forbidden (Bash, Write)
 - **context**: Execution context ("fork" means isolated from main conversation)
 - **agent**: Which agent personality to use (Explore)
 - **model**: Preferred model for this skill
+- **effort**: Model effort level (low, medium, high, max)
 - **disable-model-invocation**: Prevents the model from invoking this skill automatically
 - **user-invocable**: Whether users can trigger this skill from the command menu
 - **argument-hint**: Usage hint shown when the skill appears in menus
+- **hooks**: Lifecycle hooks scoped to this skill (currently Claude Code only)

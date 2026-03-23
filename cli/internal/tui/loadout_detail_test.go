@@ -294,4 +294,3 @@ func TestGoldenSized_LoadoutDetailContents(t *testing.T) {
 		})
 	}
 }
-

@@ -32,7 +32,11 @@ var Zed = Provider{
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {
 		case catalog.Rules:
-			return []string{filepath.Join(projectRoot, ".rules")}
+			return []string{
+				filepath.Join(projectRoot, ".rules"),
+				filepath.Join(projectRoot, ".cursorrules"),
+				filepath.Join(projectRoot, "CLAUDE.md"),
+			}
 		default:
 			return nil
 		}

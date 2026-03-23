@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -13,8 +12,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 	overlay "github.com/rmhubbert/bubbletea-overlay"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
@@ -100,30 +97,30 @@ type App struct {
 	registrySources []catalog.RegistrySource
 	projectRoot     string
 
-	screen          screen
-	focus           focusTarget
+	screen               screen
+	focus                focusTarget
 	modal                confirmModal
 	saveModal            saveModal
 	envModal             envSetupModal
 	instModal            installModal
 	registryAddModal     registryAddModal
-	createLoadout createLoadoutScreen
+	createLoadout        createLoadoutScreen
 	registryOpInProgress bool
-	sidebar         sidebarModel
-	items           itemsModel
-	detail          detailModel
-	search          searchModel
-	helpOverlay     helpOverlayModel
-	importer        importModel
-	updater         updateModel
-	settings        settingsModel
-	registries      registriesModel
-	sandboxSettings sandboxSettingsModel
-	registryCfg     *config.Config
-	toast toastModel
+	sidebar              sidebarModel
+	items                itemsModel
+	detail               detailModel
+	search               searchModel
+	helpOverlay          helpOverlayModel
+	importer             importModel
+	updater              updateModel
+	settings             settingsModel
+	registries           registriesModel
+	sandboxSettings      sandboxSettingsModel
+	registryCfg          *config.Config
+	toast                toastModel
 
 	// Pending non-syllago redirect (between detection and user confirmation)
-	pendingNonSyllagoClone string                  // temp clone path
+	pendingNonSyllagoClone string                   // temp clone path
 	pendingNonSyllagoScan  catalog.NativeScanResult // what was detected
 
 	// Detail model cache (preserves state when re-entering same item)
@@ -134,10 +131,10 @@ type App struct {
 	remoteVersion string
 	commitsBehind int
 
-	showHidden      bool   // when true, hidden items are included in lists
-	cardCursor      int    // selected card index on card view screens
-	cardScrollOffset int   // first visible card row on card grid pages
-	cardParent      screen // which card screen the items list was entered from (0 = none)
+	showHidden       bool   // when true, hidden items are included in lists
+	cardCursor       int    // selected card index on card view screens
+	cardScrollOffset int    // first visible card row on card grid pages
+	cardParent       screen // which card screen the items list was entered from (0 = none)
 
 	// Loadout apply state
 	loadoutApplyItem catalog.ContentItem // the loadout item being applied
@@ -178,6 +175,10 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 }
 
 func (a App) Init() tea.Cmd {
+	// Skip update check if user disabled it in settings
+	if a.registryCfg != nil && a.registryCfg.Preferences["updateCheck"] == "false" {
+		return nil
+	}
 	if a.isReleaseBuild {
 		return checkForUpdateRelease(a.version)
 	}
@@ -360,29 +361,15 @@ func (a *App) doCreateLoadoutFromScreen(m createLoadoutScreen) tea.Cmd {
 		desc := strings.TrimSpace(m.descInput.Value())
 		provSlug := m.prefilledProvider
 
-		manifest := loadout.Manifest{
-			Kind:        "loadout",
-			Version:     1,
-			Provider:    provSlug,
-			Name:        name,
-			Description: desc,
-		}
+		itemsByType := make(map[catalog.ContentType][]loadout.ItemRef)
 		for _, e := range m.selectedItems() {
-			switch e.item.Type {
-			case catalog.Rules:
-				manifest.Rules = append(manifest.Rules, e.item.Name)
-			case catalog.Hooks:
-				manifest.Hooks = append(manifest.Hooks, e.item.Name)
-			case catalog.Skills:
-				manifest.Skills = append(manifest.Skills, e.item.Name)
-			case catalog.Agents:
-				manifest.Agents = append(manifest.Agents, e.item.Name)
-			case catalog.MCP:
-				manifest.MCP = append(manifest.MCP, e.item.Name)
-			case catalog.Commands:
-				manifest.Commands = append(manifest.Commands, e.item.Name)
+			ref := loadout.ItemRef{Name: e.item.Name}
+			if e.item.Meta != nil {
+				ref.ID = e.item.Meta.ID
 			}
+			itemsByType[e.item.Type] = append(itemsByType[e.item.Type], ref)
 		}
+		manifest := loadout.BuildManifest(provSlug, name, desc, itemsByType)
 
 		var destDir string
 		switch m.destCursor {
@@ -402,19 +389,9 @@ func (a *App) doCreateLoadoutFromScreen(m createLoadoutScreen) tea.Cmd {
 			destDir = filepath.Join(dir, "loadouts", provSlug)
 		}
 
-		itemDir := filepath.Join(destDir, name)
-		if err := os.MkdirAll(itemDir, 0755); err != nil {
-			return doCreateLoadoutMsg{err: fmt.Errorf("creating loadout dir: %w", err)}
-		}
-
-		data, err := yaml.Marshal(manifest)
+		_, err := loadout.WriteManifest(manifest, destDir)
 		if err != nil {
-			return doCreateLoadoutMsg{err: fmt.Errorf("marshaling manifest: %w", err)}
-		}
-
-		outPath := filepath.Join(itemDir, "loadout.yaml")
-		if err := os.WriteFile(outPath, data, 0644); err != nil {
-			return doCreateLoadoutMsg{err: fmt.Errorf("writing loadout.yaml: %w", err)}
+			return doCreateLoadoutMsg{err: err}
 		}
 
 		return doCreateLoadoutMsg{name: name, provider: provSlug}
@@ -422,9 +399,9 @@ func (a *App) doCreateLoadoutFromScreen(m createLoadoutScreen) tea.Cmd {
 }
 
 // panelHeight returns the usable height for sidebar and content panels,
-// reserving space for the footer bar (border line + text = 2 rows).
+// reserving space for the footer bar (border top + 2 text lines = 3 rows).
 func (a App) panelHeight() int {
-	h := a.height - 2
+	h := a.height - 3
 	if h < 5 {
 		h = 5
 	}
@@ -475,7 +452,7 @@ func (a *App) refreshSidebarCounts() {
 	}
 	a.sidebar.counts = counts
 	a.sidebar.libraryCount = len(a.visibleItems(a.libraryItems()))
-	a.sidebar.loadoutsCount = counts[catalog.Loadouts]
+	a.sidebar.loadoutsCount = a.countVisibleLoadouts()
 }
 
 // rebuildItems refreshes the items list data while preserving navigation context
@@ -1121,8 +1098,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Button row: last content line before bottom padding(1)+border(1)
 				buttonRelY := modalH - 3
 				if relY == buttonRelY {
-					contentLeft := 3            // border(1) + padding(2)
-					contentW := modalW - 6      // minus borders(2) and padding(4)
+					contentLeft := 3       // border(1) + padding(2)
+					contentW := modalW - 6 // minus borders(2) and padding(4)
 					midX := contentLeft + contentW/2
 					if relX < midX {
 						a.modal.btnCursor = 0 // Confirm
@@ -1275,8 +1252,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				// Check button row click first
 				if relY == buttonRelY {
-					contentLeft := 3            // border(1) + padding(2)
-					contentW := modalW - 6      // minus borders(2) and padding(4)
+					contentLeft := 3       // border(1) + padding(2)
+					contentW := modalW - 6 // minus borders(2) and padding(4)
 					midX := contentLeft + contentW/2
 					if relX < midX {
 						a.instModal.btnCursor = 0
@@ -2603,6 +2580,11 @@ func (a App) View() string {
 		contentView = a.helpOverlay.View(a.screen)
 	}
 
+	// Inject no-providers warning banner above content when no AI tools detected.
+	if banner := a.noProvidersWarning(); banner != "" {
+		contentView = banner + "\n" + contentView
+	}
+
 	// Constrain content to the same height as the sidebar so panels align.
 	// Height pads short content; MaxHeight truncates long content.
 	contentView = lipgloss.NewStyle().Height(a.panelHeight()).MaxHeight(a.panelHeight()).Render(contentView)
@@ -2755,97 +2737,71 @@ const syllagoFontRaw = `
              ░░██████                        ░░██████
               ░░░░░░                          ░░░░░░`
 
-// syllagoPlantRaw is the syllago fractal plant ASCII art.
-const syllagoPlantRaw = `
-                                     ##+
-                                    ###+#
-                                  ###++++++      ######
-                                 ###++++++++  ##########
-                      ++++++-   ###++++++++#############
-                     ++++++-...##++++++++#########+++++++
-                     +++++--..##+++++++#######++++++++#+++++++++#+
-                     +++++--.#+++++++######+++++#++++++++++++++++++
-          #######+++#+++++-.###+++++#####++++#+++++++++++++++++++++
-          #######+++#++++--.#++++++#####++#++++++++---------------+
-          #######+++#++++--.#+++++###+++++++++------.............-
-          ########+++++++--##++++####+#+++----##################..
-           #######++++++++-##+++###+++++--##+++++++++++++++++########
-           #######+++#++++-##+++####++++##++++++++++++++++++++++++#+####
-            #######+++++++-##++###+++-#+++###############+++++++++++++#####
-             #######++#++++.#++###++-++######+++############++++++++++++####
-            ++#######++#+++-#++##+++#+###++++++####++##########++++++++++++
-          +++++#######++++++-#++#++++###+-+++++++++###++#########++++++++#
-        ####++++#######++#+++-#+##+++#+#++##+##++++++####++########+++++
-       ######+++++######++++++-#++#+++#++##++#+#-++++++####++########-+
-       ########+++++######+++++++#++########++#+##+++++++###+++#######
-        #########+++++#######++#+++++++++###++##+##-++++++###+++######
-          +#########++++########+#++++#####+++##+##--++++++###+++###
-             ##########+#+++##############-+++##++##-+++++++###++#
-              .-############+#+++++######+++++##++##-++++++++###
-             ---....##################+-+++++##++###-++++++++####
-             --------...-#########---++++#++###++###--++++++++####
-            ++++++---+-----------++++++#++###+++###--++++++++####
-            +++++++++++++++++++++++++#++++###++++###--++++++++#####
-            #++++++++++++++++++++##+++++####++++###---+++++++++####
-               ####+++++++++##++++++++#####++++####--++++++++++####
-                     ++++++++++++++######+++++####.--+++++++++#+#
-                      ++++++++#########++++++####.---+++++
-                      ###############++++++#####----++++++
-                      ############+++++++######.---++++++
-                       ########    ++++++#####    +++++++
-                        ##          +#######+
-                                      #####
-                                       ##`
-
-// trimArt removes common leading whitespace from multi-line ASCII art.
-func trimArt(s string) string {
-	lines := strings.Split(strings.TrimSpace(s), "\n")
-	minIndent := len(s)
-	for _, line := range lines {
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		indent := len(line) - len(strings.TrimLeft(line, " "))
-		if indent < minIndent {
-			minIndent = indent
-		}
+// noProvidersWarning returns a warning banner when no providers are detected.
+// Returns empty string if any provider is detected (no banner needed).
+func (a App) noProvidersWarning() string {
+	if a.anyProviderDetected() {
+		return ""
 	}
-	var result []string
-	for _, line := range lines {
-		if len(line) > minIndent {
-			result = append(result, strings.TrimRight(line[minIndent:], " "))
-		} else {
-			result = append(result, "")
-		}
-	}
-	return strings.Join(result, "\n")
+	return warningStyle.Render("! No AI coding tools detected. Content can be browsed but won't activate until a tool is installed. Configure: syllago config paths")
 }
 
-// renderFirstRun returns a getting-started guide shown when the catalog is empty
-// and no registries are configured. This is the zero-state experience for new users.
+// anyProviderDetected returns true if at least one provider was found on disk.
+func (a App) anyProviderDetected() bool {
+	for _, p := range a.providers {
+		if p.Detected {
+			return true
+		}
+	}
+	return false
+}
+
+// detectedProviderNames returns display names of all detected providers.
+func (a App) detectedProviderNames() []string {
+	var names []string
+	for _, p := range a.providers {
+		if p.Detected {
+			names = append(names, p.Name)
+		}
+	}
+	return names
+}
+
+// renderFirstRun returns a context-aware getting-started guide shown when the
+// catalog is empty. The content adapts based on what's already detected:
+//   - Journey A: providers detected — guide user to discover content for them
+//   - Journey B: registries exist but no providers (rare — registries bypass first-run)
+//   - Journey C: nothing detected — full onboarding from scratch
 func (a App) renderFirstRun(contentW int) string {
 	var s string
-
 	s += titleStyle.Render("Welcome to syllago!") + "\n\n"
-	s += helpStyle.Render("No content found. Here's how to get started:") + "\n\n"
 
-	steps := []struct {
-		num  string
-		head string
-		cmd  string
-	}{
-		{"1.", "Add existing content:", "syllago add --from claude-code"},
-		{"2.", "Add a registry:", "syllago registry add <git-url>"},
-		{"3.", "Create new content:", "syllago create skill my-first-skill"},
-		{"4.", "Create a registry:", "syllago registry create my-registry"},
+	hasProviders := a.anyProviderDetected()
+	hasRegistries := a.registryCfg != nil && len(a.registryCfg.Registries) > 0
+
+	switch {
+	case hasProviders:
+		// Journey A: providers detected — help user discover content
+		names := a.detectedProviderNames()
+		s += labelStyle.Render("Detected:") + " " + valueStyle.Render(strings.Join(names, ", ")) + "\n\n"
+		s += helpStyle.Render("Get started:") + "\n\n"
+		s += labelStyle.Render("  'a'") + " " + valueStyle.Render("to discover content for your providers") + "\n"
+		s += labelStyle.Render("  'R'") + " " + valueStyle.Render("to add a registry from your team") + "\n"
+
+	case hasRegistries:
+		// Journey B: registries configured but no providers found (rare path)
+		s += helpStyle.Render("Registries configured but no providers detected.") + "\n\n"
+		s += helpStyle.Render("Install a supported AI coding tool, then restart syllago.") + "\n"
+
+	default:
+		// Journey C: nothing detected — full onboarding
+		s += helpStyle.Render("No content or providers found. Here's how to get started:") + "\n\n"
+		s += labelStyle.Render("  'a'") + " " + valueStyle.Render("to add content from a provider or file") + "\n"
+		s += "   " + helpStyle.Render("or run: syllago loadout apply syllago-starter") + "\n\n"
+		s += labelStyle.Render("  '?'") + " " + valueStyle.Render("for keyboard shortcuts") + "\n"
 	}
 
-	for _, step := range steps {
-		s += labelStyle.Render(step.num) + " " + valueStyle.Render(step.head) + "\n"
-		s += "   " + helpStyle.Render(step.cmd) + "\n\n"
-	}
-
-	s += helpStyle.Render("Press ? for help, q to quit.") + "\n"
+	s += "\n"
 	return s
 }
 
@@ -3242,29 +3198,45 @@ func (a App) libraryCardTypes() []catalog.ContentType {
 	return result
 }
 
-// loadoutCardProviders returns providers to show on the loadouts card screen.
-// Shows all detected providers — even those with no loadouts — so the grid
-// is always populated and the user can create loadouts for any provider.
+// countVisibleLoadouts returns the total number of loadout cards shown on the
+// loadout page (installed + available) so the sidebar count matches.
+func (a App) countVisibleLoadouts() int {
+	installed, available := a.loadoutCardSections()
+	return len(installed) + len(available)
+}
+
+// loadoutCardProviders returns the flat list of all provider slugs shown on the
+// loadout card page (installed first, then available), used for cursor navigation.
 func (a App) loadoutCardProviders() []string {
+	installed, available := a.loadoutCardSections()
+	result := make([]string, 0, len(installed)+len(available))
+	result = append(result, installed...)
+	result = append(result, available...)
+	return result
+}
+
+// loadoutCardSections returns two slices: providers detected on this machine
+// (installed) and providers with loadouts but not detected (available).
+func (a App) loadoutCardSections() (installed []string, available []string) {
 	hasLoadouts := make(map[string]bool)
 	for _, item := range a.catalog.ByType(catalog.Loadouts) {
 		if item.Provider != "" {
 			hasLoadouts[item.Provider] = true
 		}
 	}
-	var result []string
+	detected := make(map[string]bool)
 	for _, prov := range a.providers {
 		if prov.Detected {
-			result = append(result, prov.Slug)
+			detected[prov.Slug] = true
+			installed = append(installed, prov.Slug)
 		}
 	}
-	if len(result) == 0 {
-		for slug := range hasLoadouts {
-			result = append(result, slug)
+	for _, prov := range a.providers {
+		if !prov.Detected && hasLoadouts[prov.Slug] {
+			available = append(available, prov.Slug)
 		}
-		sort.Strings(result)
 	}
-	return result
+	return installed, available
 }
 
 // renderLibraryCards renders a card grid grouping library items by content type.
@@ -3379,9 +3351,12 @@ func (a App) renderLibraryCards() string {
 }
 
 // renderLoadoutCards renders a card grid grouping loadout items by provider.
+// Two sections: "Installed" (detected providers) and "Available" (undetected
+// providers that have loadouts). Follows the homepage section pattern.
 func (a App) renderLoadoutCards() string {
-	providers := a.loadoutCardProviders()
-	if len(providers) == 0 {
+	installed, available := a.loadoutCardSections()
+	allProviders := a.loadoutCardProviders()
+	if len(allProviders) == 0 {
 		return "\n" + helpStyle.Render("  No loadouts found.")
 	}
 
@@ -3419,7 +3394,7 @@ func (a App) renderLoadoutCards() string {
 		cardSel = cardSel.Height(3)
 	}
 
-	renderCard := func(idx int, prov string) string {
+	renderCard := func(flatIdx int, prov string) string {
 		count := provCounts[prov]
 		name := providerDisplayName(prov)
 		var inner string
@@ -3432,7 +3407,7 @@ func (a App) renderLoadoutCards() string {
 		}
 
 		style := cardBase
-		if idx == a.cardCursor {
+		if flatIdx == a.cardCursor {
 			style = cardSel
 		}
 		return zone.Mark(fmt.Sprintf("loadout-card-%s", prov), style.Render(inner))
@@ -3442,50 +3417,113 @@ func (a App) renderLoadoutCards() string {
 	if singleCol {
 		cols = 1
 	}
-	totalRows := (len(providers) + cols - 1) / cols
+
+	// Build sections following the homepage pattern
+	type sectionInfo struct {
+		label string
+		start int
+		provs []string
+	}
+	var sections []sectionInfo
+	if len(installed) > 0 {
+		sections = append(sections, sectionInfo{"Installed", 0, installed})
+	}
+	if len(available) > 0 {
+		sections = append(sections, sectionInfo{"Available", len(installed), available})
+	}
+
+	// Render all sections into body, then do line-based scroll clipping
 	cardRowHeight := 6
 	headerLines := 3
 	availH := a.panelHeight() - headerLines
-	firstRow, visibleRows, newOffset := cardScrollRange(a.cardCursor, len(providers), cols, availH, cardRowHeight, a.cardScrollOffset)
+	if availH < 6 {
+		availH = 6
+	}
+	totalCards := len(allProviders)
+	_, _, newOffset := cardScrollRange(a.cardCursor, totalCards, cols, availH, cardRowHeight, a.cardScrollOffset)
 	a.cardScrollOffset = newOffset
 
-	if firstRow > 0 {
-		s += "  " + renderScrollUp(firstRow*cols, false) + "\n"
+	var body string
+	for si, sec := range sections {
+		if len(sec.provs) == 0 {
+			continue
+		}
+		if si > 0 {
+			body += "\n"
+		}
+		body += labelStyle.Render("  "+sec.label) + "\n\n"
+		if singleCol {
+			for i, prov := range sec.provs {
+				body += renderCard(sec.start+i, prov) + "\n"
+			}
+		} else {
+			for i := 0; i < len(sec.provs); i += 2 {
+				left := renderCard(sec.start+i, sec.provs[i])
+				var right string
+				if i+1 < len(sec.provs) {
+					right = renderCard(sec.start+i+1, sec.provs[i+1])
+				}
+				body += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
+			}
+		}
 	}
 
-	lastRow := firstRow + visibleRows
-	if lastRow > totalRows {
-		lastRow = totalRows
+	// Line-based scroll clipping (same pattern as homepage)
+	lines := strings.Split(body, "\n")
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
 	}
-
-	if singleCol {
-		for row := firstRow; row < lastRow; row++ {
-			if row >= len(providers) {
+	if len(lines) > availH {
+		cursorLine := 0
+		cardsSeen := 0
+		for i, line := range lines {
+			if cardsSeen > a.cardCursor {
 				break
 			}
-			s += renderCard(row, providers[row]) + "\n"
+			cursorLine = i
+			if strings.Contains(line, "╭") || strings.Contains(line, "loadout-card") {
+				cardsSeen += cols
+			}
+		}
+		startLine := newOffset * cardRowHeight
+		if startLine > cursorLine {
+			startLine = cursorLine
+		}
+
+		viewportH := availH
+		hasAbove := startLine > 0
+		hasBelow := true
+		if hasAbove {
+			viewportH--
+		}
+		if hasBelow {
+			viewportH--
+		}
+		if viewportH < 1 {
+			viewportH = 1
+		}
+
+		if startLine+viewportH > len(lines) {
+			startLine = len(lines) - viewportH
+		}
+		if startLine < 0 {
+			startLine = 0
+		}
+		endLine := startLine + viewportH
+		if endLine > len(lines) {
+			endLine = len(lines)
+		}
+
+		if hasAbove {
+			s += "  " + renderScrollUp(startLine, true) + "\n"
+		}
+		s += strings.Join(lines[startLine:endLine], "\n") + "\n"
+		remaining := len(lines) - endLine
+		if remaining > 0 {
+			s += "  " + renderScrollDown(remaining, true) + "\n"
 		}
 	} else {
-		for row := firstRow; row < lastRow; row++ {
-			i := row * 2
-			if i >= len(providers) {
-				break
-			}
-			left := renderCard(i, providers[i])
-			var right string
-			if i+1 < len(providers) {
-				right = renderCard(i+1, providers[i+1])
-			}
-			s += lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right) + "\n"
-		}
-	}
-
-	hiddenBelow := len(providers) - lastRow*cols
-	if hiddenBelow < 0 {
-		hiddenBelow = 0
-	}
-	if hiddenBelow > 0 {
-		s += "  " + renderScrollDown(hiddenBelow, false) + "\n"
+		s += body
 	}
 
 	return s
@@ -3531,19 +3569,71 @@ func (a App) contextHelpText() string {
 }
 
 // renderFooter builds the breadcrumb + context-sensitive help bar.
+// The footer is always 2 lines: help text wraps at bullet separators
+// when it doesn't fit alongside the breadcrumb on a single line.
 func (a App) renderFooter() string {
 	crumb := a.breadcrumb()
 	helpText := a.contextHelpText()
 
-	// Pad the gap between help text and breadcrumb so crumb is right-aligned
-	gap := a.width - len(helpText) - len(crumb)
+	// Truncate breadcrumb so it never exceeds half the terminal width.
+	// Long item names (e.g. "Skills > extremely-long-skill-name-...") would
+	// otherwise cause the footer to wrap uncontrollably at small sizes.
+	maxCrumb := a.width / 2
+	crumb = truncate(crumb, maxCrumb)
+
+	// Check if everything fits on one line (help + gap + crumb)
+	singleLineLen := len(helpText) + 1 + len(crumb)
+	if singleLineLen <= a.width {
+		// Fits on one line — pad between help and crumb, blank second line
+		gap := a.width - len(helpText) - len(crumb)
+		if gap < 1 {
+			gap = 1
+		}
+		line1 := helpText + strings.Repeat(" ", gap) + crumb
+		line2 := ""
+		content := line1 + "\n" + line2
+		return footerStyle.Width(a.width).Height(2).Render(content)
+	}
+
+	// Doesn't fit — wrap help text at a bullet separator to make 2 lines.
+	// Put the breadcrumb right-aligned on line 1 with as much help text as fits.
+	// Remaining help text goes on line 2.
+	parts := strings.Split(helpText, " • ")
+	line1Help := ""
+	line2Help := ""
+	minGap := 2 // minimum space between help text and breadcrumb
+
+	for i, part := range parts {
+		candidate := line1Help
+		if candidate != "" {
+			candidate += " • "
+		}
+		candidate += part
+		// Check if adding this part still leaves room for the crumb
+		if len(candidate)+minGap+len(crumb) <= a.width {
+			line1Help = candidate
+		} else {
+			// Remaining parts go to line 2
+			line2Help = strings.Join(parts[i:], " • ")
+			break
+		}
+	}
+
+	// If nothing fit on line 1 with the crumb, put all help on line 2
+	if line1Help == "" {
+		line1Help = ""
+		line2Help = helpText
+	}
+
+	// Build line 1: help text + gap + right-aligned breadcrumb
+	gap := a.width - len(line1Help) - len(crumb)
 	if gap < 1 {
 		gap = 1
 	}
-	line := helpText + strings.Repeat(" ", gap) + crumb
+	line1 := line1Help + strings.Repeat(" ", gap) + crumb
+	content := line1 + "\n" + line2Help
 
-	// Apply footer style (muted color + top border) to the full-width line
-	return footerStyle.Width(a.width).Render(line)
+	return footerStyle.Width(a.width).Height(2).Render(content)
 }
 
 // breadcrumb returns a "Category > Item" navigation string for the current screen.

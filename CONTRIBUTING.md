@@ -31,3 +31,40 @@ syllago ships with AI content — skills, agents, rules, hooks, and more — tha
 2. Pick the right template when opening a new issue
 3. Answer the questions — be as specific as you can
 4. That's it. We'll take it from there.
+
+## Development
+
+### Requirements
+
+- Go 1.25+
+- Make
+
+### Building and Testing
+
+From the `cli/` directory (or use `make` targets from the repo root):
+
+```bash
+make build    # Build binary to ~/.local/bin/syllago
+make test     # Run test suite (includes go vet)
+make fmt      # Format code with gofmt
+make vet      # Run go vet
+```
+
+### Code Organization
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full package map and data flow.
+
+### Testing Patterns
+
+- Table-driven tests with `t.Run()`
+- `t.TempDir()` for filesystem fixtures -- never hardcode paths
+- No mocking library -- hand-crafted provider stubs and function overrides
+- TUI components: golden file visual regression tests
+  - Regenerate baselines after visual changes: `cd cli && go test ./internal/tui/ -update-golden`
+  - Run individual golden tests when updating, not the full suite (known test isolation issue with golden updates)
+
+### Why No External PRs?
+
+Syllago is maintained using an AI-augmented development workflow where a small team handles design and implementation together. External code contributions create coordination overhead that doesn't fit this model.
+
+We genuinely welcome issues. Bug reports, feature requests, and use case descriptions help us prioritize what to build next -- your thinking is the real contribution.

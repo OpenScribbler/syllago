@@ -32,16 +32,16 @@ func Resolve(manifest *Manifest, cat *catalog.Catalog) ([]ResolvedRef, error) {
 	var refs []ResolvedRef
 	var missing []string
 
-	for ct, names := range manifest.RefsByType() {
-		for _, name := range names {
-			item, found := findItem(cat, ct, name, manifest.Provider)
+	for ct, itemRefs := range manifest.RefsByType() {
+		for _, ref := range itemRefs {
+			item, found := findItem(cat, ct, ref.Name, manifest.Provider)
 			if !found {
-				missing = append(missing, fmt.Sprintf("%s: %s not found", ct, name))
+				missing = append(missing, fmt.Sprintf("%s: %s not found", ct, ref.Name))
 				continue
 			}
 			refs = append(refs, ResolvedRef{
 				Type: ct,
-				Name: name,
+				Name: ref.Name,
 				Item: item,
 			})
 		}

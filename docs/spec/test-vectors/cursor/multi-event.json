@@ -1,0 +1,33 @@
+{
+  "_comment": "Expected Cursor output for canonical/multi-event.json. Cursor split-event mapping: (1) before_tool_execute + ['shell','file_write'] splits into beforeShellExecution (for shell) and afterFileEdit (for file_write, closest Cursor equivalent — Cursor uses afterFileEdit not beforeFileEdit); (2) after_tool_execute + wildcard -> afterFileEdit (Cursor's only after event); (3) before_prompt -> beforeSubmitPrompt; (4) agent_stop -> stop. Cursor has limited event support so some semantics are approximate.",
+  "_warnings": [
+    "Hook 1: array matcher split into separate Cursor events — 'shell' maps to beforeShellExecution, 'file_write' maps to afterFileEdit (Cursor has no beforeFileEdit event; afterFileEdit is the closest match but fires after, not before)",
+    "Hook 2: after_tool_execute wildcard mapped to afterFileEdit — Cursor only supports afterFileEdit for post-tool events, losing coverage of non-file tools",
+    "Hook 3: before_prompt blocking=true mapped to beforeSubmitPrompt — Cursor treats this as observe-only (blocking intent cannot be honored)",
+    "Hook 4: agent_stop blocking=false mapped to stop — Cursor treats this as observe-only"
+  ],
+  "hooks": {
+    "beforeShellExecution": {
+      "command": "./audit-dangerous-ops.sh",
+      "timeout": 10
+    },
+    "afterFileEdit": [
+      {
+        "command": "./audit-dangerous-ops.sh",
+        "timeout": 10
+      },
+      {
+        "command": "./log-tool-usage.sh",
+        "timeout": 5
+      }
+    ],
+    "beforeSubmitPrompt": {
+      "command": "./redact-pii.sh",
+      "timeout": 5
+    },
+    "stop": {
+      "command": "./cleanup.sh",
+      "timeout": 15
+    }
+  }
+}

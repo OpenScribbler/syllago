@@ -1,0 +1,53 @@
+{
+  "_comment": "Expected Claude Code output for canonical/multi-event.json. Conversions: (1) before_tool_execute + array ['shell','file_write'] -> PreToolUse with regex alternation matcher 'Bash|Write'; (2) after_tool_execute + wildcard -> PostToolUse with empty matcher; (3) before_prompt -> UserPromptSubmit; (4) agent_stop -> Stop. All timeouts stay in seconds.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./audit-dangerous-ops.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./log-tool-usage.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./redact-pii.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./cleanup.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

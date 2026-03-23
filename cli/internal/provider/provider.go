@@ -67,6 +67,7 @@ var AllProviders = []Provider{
 	RooCode,
 	OpenCode,
 	Kiro,
+	Amp,
 }
 
 // DetectedOnly returns the subset of AllProviders that are detected

@@ -17,10 +17,12 @@ var CopilotCLI = Provider{
 		switch ct {
 		case catalog.Rules:
 			return base
+		case catalog.Skills:
+			return filepath.Join(homeDir, ".github", "skills")
 		case catalog.Commands:
 			return filepath.Join(base, "commands")
 		case catalog.Agents:
-			return filepath.Join(base, "agents")
+			return filepath.Join(homeDir, ".github", "agents")
 		case catalog.Hooks:
 			return JSONMergeSentinel
 		case catalog.MCP:
@@ -41,7 +43,10 @@ var CopilotCLI = Provider{
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {
 		case catalog.Rules:
-			return []string{filepath.Join(projectRoot, ".github", "copilot-instructions.md")}
+			return []string{
+				filepath.Join(projectRoot, ".github", "copilot-instructions.md"),
+				filepath.Join(projectRoot, "AGENTS.md"),
+			}
 		case catalog.Commands:
 			return []string{filepath.Join(projectRoot, ".copilot", "commands")}
 		case catalog.Agents:
@@ -50,10 +55,12 @@ var CopilotCLI = Provider{
 				filepath.Join(projectRoot, ".github", "agents"),
 				filepath.Join(projectRoot, ".claude", "agents"), // compatibility fallback
 			}
+		case catalog.Skills:
+			return []string{filepath.Join(projectRoot, ".github", "skills")}
 		case catalog.MCP:
-			return []string{filepath.Join(projectRoot, ".copilot", "mcp.json")}
+			return []string{filepath.Join(projectRoot, ".copilot", "mcp-config.json")}
 		case catalog.Hooks:
-			return []string{filepath.Join(projectRoot, ".copilot", "hooks.json")}
+			return []string{filepath.Join(projectRoot, ".github", "hooks")}
 		default:
 			return nil
 		}
@@ -71,7 +78,7 @@ var CopilotCLI = Provider{
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {
-		case catalog.Rules, catalog.Commands, catalog.Agents, catalog.Hooks, catalog.MCP:
+		case catalog.Rules, catalog.Skills, catalog.Commands, catalog.Agents, catalog.Hooks, catalog.MCP:
 			return true
 		default:
 			return false
@@ -79,6 +86,7 @@ var CopilotCLI = Provider{
 	},
 	SymlinkSupport: map[catalog.ContentType]bool{
 		catalog.Rules:    true,
+		catalog.Skills:   true,
 		catalog.Commands: true,
 		catalog.Agents:   true,
 		catalog.Hooks:    false, // JSON merge

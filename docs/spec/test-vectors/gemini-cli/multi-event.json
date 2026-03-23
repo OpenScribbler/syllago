@@ -1,0 +1,32 @@
+{
+  "_comment": "Expected Gemini CLI output for canonical/multi-event.json. Conversions: (1) before_tool_execute + array ['shell','file_write'] -> two BeforeTool entries (one per tool, Gemini doesn't support regex alternation in toolMatcher); (2) after_tool_execute + wildcard -> AfterTool with no toolMatcher; (3) before_prompt -> BeforeAgent; (4) agent_stop -> AfterAgent. Timeout seconds -> milliseconds.",
+  "hooks": [
+    {
+      "trigger": "BeforeTool",
+      "toolMatcher": "run_shell_command",
+      "command": "./audit-dangerous-ops.sh",
+      "timeoutMs": 10000
+    },
+    {
+      "trigger": "BeforeTool",
+      "toolMatcher": "write_file",
+      "command": "./audit-dangerous-ops.sh",
+      "timeoutMs": 10000
+    },
+    {
+      "trigger": "AfterTool",
+      "command": "./log-tool-usage.sh",
+      "timeoutMs": 5000
+    },
+    {
+      "trigger": "BeforeAgent",
+      "command": "./redact-pii.sh",
+      "timeoutMs": 5000
+    },
+    {
+      "trigger": "AfterAgent",
+      "command": "./cleanup.sh",
+      "timeoutMs": 15000
+    }
+  ]
+}

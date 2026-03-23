@@ -15,11 +15,11 @@ func TestSplitSettingsHooks_ClaudeCode(t *testing.T) {
 	for _, item := range items {
 		events[item.Event] = true
 	}
-	if !events["PreToolUse"] {
-		t.Error("expected PreToolUse event")
+	if !events["before_tool_execute"] {
+		t.Error("expected before_tool_execute event")
 	}
-	if !events["PostToolUse"] {
-		t.Error("expected PostToolUse event")
+	if !events["after_tool_execute"] {
+		t.Error("expected after_tool_execute event")
 	}
 }
 
@@ -32,11 +32,11 @@ func TestSplitSettingsHooks_GeminiCLI(t *testing.T) {
 	if len(items) != 1 {
 		t.Fatalf("expected 1 item, got %d", len(items))
 	}
-	if items[0].Event != "PreToolUse" {
-		t.Errorf("expected event PreToolUse, got %q", items[0].Event)
+	if items[0].Event != "before_tool_execute" {
+		t.Errorf("expected event before_tool_execute, got %q", items[0].Event)
 	}
-	if items[0].Matcher != "Bash" {
-		t.Errorf("expected matcher Bash, got %q", items[0].Matcher)
+	if items[0].Matcher != "shell" {
+		t.Errorf("expected matcher shell, got %q", items[0].Matcher)
 	}
 }
 
@@ -49,8 +49,8 @@ func TestSplitSettingsHooks_CopilotCLI(t *testing.T) {
 	if len(items) != 1 {
 		t.Fatalf("expected 1 item, got %d", len(items))
 	}
-	if items[0].Event != "PreToolUse" {
-		t.Errorf("expected event PreToolUse, got %q", items[0].Event)
+	if items[0].Event != "before_tool_execute" {
+		t.Errorf("expected event before_tool_execute, got %q", items[0].Event)
 	}
 	if len(items[0].Hooks) != 1 {
 		t.Fatalf("expected 1 hook entry, got %d", len(items[0].Hooks))
@@ -62,8 +62,8 @@ func TestSplitSettingsHooks_CopilotCLI(t *testing.T) {
 	if he.Command != "echo check" {
 		t.Errorf("expected command 'echo check', got %q", he.Command)
 	}
-	if he.Timeout != 5000 {
-		t.Errorf("expected timeout 5000ms, got %d", he.Timeout)
+	if he.Timeout != 5 {
+		t.Errorf("expected timeout 5s (canonical seconds), got %d", he.Timeout)
 	}
 	if he.StatusMessage != "Safety" {
 		t.Errorf("expected statusMessage 'Safety', got %q", he.StatusMessage)

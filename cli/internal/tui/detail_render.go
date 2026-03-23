@@ -13,13 +13,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 )
 
-// renderContent builds the full detail content (without scrolling or help bar).
-// Returns the combined string of pinned header and scrollable body.
-func (m detailModel) renderContent() string {
-	pinned, body := m.renderContentSplit()
-	return pinned + body
-}
-
 // renderContentSplit returns pinned header and scrollable body separately.
 // The pinned header contains: back link + item name + tab bar + metadata + separator.
 // The scrollable body contains: tab content only.
