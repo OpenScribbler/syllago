@@ -10,7 +10,7 @@ func testConfig() BwrapConfig {
 		HomeDir:        "/home/user",
 		StagingDir:     "/tmp/syllago-sandbox-abc123",
 		SocketPath:     "/tmp/syllago-sandbox-abc123/proxy.sock",
-		GitWrapperPath: "/tmp/syllago-sandbox-abc123/git",
+		GitWrapperPath: "/tmp/syllago-sandbox-abc123/bin/git",
 		WrapperScript:  "/tmp/syllago-sandbox-abc123/wrapper.sh",
 		Profile: &MountProfile{
 			BinaryPaths: []string{"/usr/bin/claude"},
@@ -84,8 +84,9 @@ func TestBuildArgs_ProjectDirBind(t *testing.T) {
 func TestBuildArgs_GitWrapperMount(t *testing.T) {
 	cfg := testConfig()
 	args := BuildArgs(cfg)
-	if !argsContainTriple(args, "--ro-bind", cfg.GitWrapperPath, "/usr/local/bin/git") {
-		t.Error("expected --ro-bind for git wrapper at /usr/local/bin/git")
+	gitBinDir := GitWrapperBinDir(cfg.GitWrapperPath)
+	if !argsContainTriple(args, "--ro-bind", gitBinDir, gitBinDir) {
+		t.Errorf("expected --ro-bind for git wrapper bin dir %s", gitBinDir)
 	}
 }
 

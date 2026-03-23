@@ -14,19 +14,20 @@
 
 ## Why Syllago?
 
-AI coding tools like Claude Code, Cursor, Gemini CLI, Copilot, and Amp each store rules, skills, agents, and configurations in their own format. Switching tools means manual copy-pasting and format translation. Syllago automates that.
+AI coding tools like Claude Code, Cursor, Gemini CLI, Copilot, and Amp each store rules, skills, agents, and configurations in their own format. Switching tools -- or rolling out configurations across a team -- means manual copy-pasting and format translation. Syllago automates that: add content once, install it anywhere, and organize it into shareable collections called loadouts.
 
-- **Solo devs:** Stop re-creating your rules and skills every time you try a new AI tool. Add once, install anywhere.
-- **Teams and IT admins:** Standardize AI tool configurations across your org with git-based registries. Push updates once, everyone syncs.
-- **Security-conscious orgs:** Hooks and MCP configs execute code by design -- syllago provides sandbox isolation, registry privacy gates, and signed releases so you can evaluate content safely.
-- **Enterprise leads:** Audit-friendly `--json` output on all commands, CI/CD integration via `sync-and-export`, and a privacy gate system that prevents private content from leaking to public registries.
+- **Portable content** -- Add from one tool, install to another. Syllago canonicalizes everything into its own intermediate format, then converts to the target provider's native format automatically.
+- **Shared configurations** -- Distribute AI tool content through git-based registries. Push updates once, and your team syncs automatically.
+- **Governed distribution** -- Use privacy gates to keep internal content out of public registries. Evaluate untrusted hooks and MCP configs in sandbox isolation before they run. Pipe `--json` output into your CI pipelines and audit workflows.
+- **One library** -- Your content lives in a single, provider-neutral library. No duplication across tools, no drift between copies.
 
-Syllago maintains a central library of your content. When you add content from one provider, syllago converts it to its own canonical format. When you install it to another provider, syllago converts it again to the target's native format. The conversion is automatic and bidirectional.
+For a deeper introduction, see the [documentation site](https://openscribbler.github.io/syllago-docs/).
 
 ## Prerequisites
 
 - **OS:** Linux, macOS, or Windows (via WSL)
 - **Git:** Required for registry operations and content sharing
+- **Go 1.25+:** Only required for `go install` or building from source
 
 ## Installation
 
@@ -56,8 +57,6 @@ go install github.com/OpenScribbler/syllago/cli/cmd/syllago@latest
 ```
 
 ### From source
-
-Requires Go 1.25+.
 
 ```bash
 git clone https://github.com/OpenScribbler/syllago.git
@@ -96,25 +95,28 @@ syllago   # launches the TUI
 
 ## How It Works
 
-Syllago uses three verbs that mirror a simple workflow:
+Syllago uses a **hub-and-spoke conversion model**. When you add content from a provider, syllago converts it into its own canonical format -- a provider-neutral intermediate representation. When you install that content to a different provider, syllago converts from canonical to the target's native format. This means adding support for a new provider only requires two conversions (to/from canonical), not N-to-N mappings between every provider pair.
+
+Specification files define how each content type looks in canonical form. See the [canonical format docs](https://openscribbler.github.io/syllago-docs/) for details.
+
+### The library
+
+Everything you add goes into your **library** (`~/.syllago/content/`). Your library is your single source of truth -- provider-neutral, deduplicated, and ready to install to any supported provider.
+
+### Commands
+
+Syllago's CLI is organized around a content lifecycle:
 
 | Step | Command | What it does |
 |------|---------|-------------|
-| **Add** | `syllago add --from <provider>` | Discovers content in a provider's config directory and copies it into your syllago library |
-| **Install** | `syllago install <item> --to <provider>` | Takes a library item and writes it to a provider's config directory, converting the format automatically |
-| **Remove** | `syllago remove <item>` | Removes content from your library (and uninstalls from all providers) |
+| **Discover** | `syllago add --from <provider>` | Scans a provider's config directory and shows you what content exists |
+| **Add** | `syllago add --all --from <provider>` | Copies content into your library, converting to canonical format |
+| **Install** | `syllago install <item> --to <provider>` | Writes a library item to a provider's config directory in its native format |
+| **Convert** | `syllago convert <item> --to <provider>` | Converts content for a provider without installing it |
+| **Share** | `syllago share <item>` | Opens a PR to contribute library content to a team repo |
+| **Publish** | `syllago publish <item>` | Pushes library content to a public registry |
 
-Content in your library is provider-neutral. You add once, install anywhere.
-
-## Features
-
-- **Cross-provider conversion** -- add content from one tool, install to another. Syllago handles format differences (Cursor's `.mdc`, Codex's TOML, Kiro's JSON, Amp's `AGENTS.md`, etc.)
-- **Interactive TUI** with card grids, search, mouse support, and keyboard navigation
-- **Loadouts** -- bundle multiple content items together and apply them as a unit. Preview with `--try` and revert cleanly
-- **Git-based registries** -- browse and install shared content from any compatible git repository
-- **Sandbox** -- run AI CLI tools in isolated environments with filesystem, network, and environment filtering (Linux)
-- **Registry privacy** -- content from private registries is automatically detected and prevented from being published to public registries
-- **`--json` output** on all commands for scripting and CI integration
+See the full [command reference](#all-commands) below or the [CLI docs](https://openscribbler.github.io/syllago-docs/) for detailed usage.
 
 ## Supported Providers
 
@@ -143,21 +145,35 @@ Content in your library is provider-neutral. You add once, install anywhere.
 | MCP | Model Context Protocol server configurations |
 | Hooks | Event-driven automation scripts that run before/after tool actions |
 | Commands | Custom slash commands (e.g., `/deploy`) |
-| Loadouts | Bundles of the above, applied as a unit |
 
-## Conversion Compatibility
+For conversion details across providers, see the [compatibility docs](https://openscribbler.github.io/syllago-docs/).
 
-| Content Type | Coverage | Notes |
-|---|---|---|
-| Rules | All providers | Format differs but content fully preserved |
-| Skills | All providers | Metadata rendering varies by provider |
-| Agents | All providers | Codex uses TOML format (auto-converted) |
-| MCP configs | Most providers | Zed uses `context_servers` key (handled automatically) |
-| Hooks | Claude Code, Gemini CLI, Copilot CLI, Codex, Cursor, Windsurf, Kiro, Cline | Canonical interchange format (`docs/spec/hooks-v1.md`) with degradation strategies. Amp, OpenCode, Zed, Roo Code lack hook systems |
-| Commands | Claude Code, Gemini CLI, Copilot CLI, Codex, Cursor, OpenCode | Slash command definitions (e.g., `/deploy`) |
-| Loadouts | All providers | Starter loadouts bundle syllago meta-tools per provider |
+## Collections
 
-## Commands
+Collections let you organize and distribute content beyond individual items.
+
+### Library
+
+Your library (`~/.syllago/content/`) stores everything you've added in syllago's canonical format. Install any item to any supported provider from here. The library lives locally on your machine.
+
+### Loadouts
+
+A **loadout** bundles multiple content items and applies them as a unit. Package a complete AI tool setup (rules + skills + hooks + MCP configs) for a specific workflow or role. Pass `--try` to preview a loadout temporarily -- syllago auto-reverts when you're done.
+
+### Registries
+
+A **registry** is a git repository that distributes syllago content. Push curated configurations to a registry, and your team syncs them with `syllago registry sync`. Mark registries as public or private -- syllago's privacy gates block content from private registries from reaching public ones.
+
+## Features
+
+- **Cross-provider conversion** -- Add content from one tool, install to another. Syllago handles format differences (Cursor's `.mdc`, Codex's TOML, Kiro's JSON, Amp's `AGENTS.md`, etc.)
+- **Interactive TUI** -- Browse, search, install, and manage content with card grids, mouse support, and keyboard navigation
+- **Sandbox** -- Run AI CLI tools in isolated environments with filesystem, network, and environment filtering (Linux)
+- **Registry privacy** -- Syllago detects content from private registries and blocks it from reaching public ones
+- **Hook signing** -- Sign hook content cryptographically with Sigstore or GPG for provenance verification
+- **`--json` output** -- Pipe any command's output into scripts, CI pipelines, or other automation
+
+## All Commands
 
 | Command | Description |
 |---------|-------------|
@@ -177,6 +193,10 @@ Content in your library is provider-neutral. You add once, install anywhere.
 | `syllago create` | Scaffold a new content item |
 | `syllago inspect` | Show details about a content item |
 | `syllago list` | List content items in the library |
+| `syllago compat` | Show provider compatibility matrix for a content item |
+| `syllago sign` | Sign hook content for provenance verification |
+| `syllago verify` | Verify hook content signatures |
+| `syllago explain` | Show documentation for an error code |
 | `syllago config` | View and edit configuration |
 | `syllago update` | Update syllago to the latest release |
 | `syllago info` | Show capabilities (providers, formats) |
@@ -214,6 +234,9 @@ syllago loadout apply my-loadout --try
 
 # Convert content for a specific provider without installing
 syllago convert my-rule --to windsurf
+
+# Check which providers support a specific content item
+syllago compat my-hook
 ```
 
 ## TUI Keyboard Shortcuts
@@ -258,7 +281,7 @@ syllago config paths show
 
 ## Accessibility
 
-All operations are available via CLI commands with `--json` output for scripting and assistive technology. The TUI uses ANSI rendering; for screen reader users, we recommend CLI commands directly. Colors can be disabled with `NO_COLOR=1` or `--no-color`. We're exploring a screen-reader-compatible TUI mode -- [feedback welcome](https://github.com/OpenScribbler/syllago/issues).
+Every operation works through CLI commands with `--json` output for scripting and assistive technology. The TUI uses ANSI rendering; if you use a screen reader, we recommend running CLI commands directly. Disable colors with `NO_COLOR=1` or `--no-color`. We're exploring a screen-reader-compatible TUI mode -- [feedback welcome](https://github.com/OpenScribbler/syllago/issues).
 
 ## Security and Supply Chain
 
@@ -266,13 +289,14 @@ Syllago does not operate any registry or marketplace. Third-party registries are
 
 **What we do to keep the tool itself trustworthy:**
 
-- **Signed releases** -- all release binaries are signed with [Sigstore cosign](https://www.sigstore.dev/) (keyless). Verify with: `cosign verify-blob --bundle checksums.txt.bundle checksums.txt`
-- **SHA-256 checksums** -- every release includes `checksums.txt` for independent verification
-- **Pinned CI dependencies** -- all GitHub Actions are pinned to full-length commit SHAs, not mutable version tags
-- **Automated vulnerability scanning** -- govulncheck runs in CI to catch known-vulnerable dependencies before merge
-- **Dependency updates** -- Dependabot is configured for automated dependency security patches
-- **Registry privacy gates** -- content from private registries is automatically tagged and blocked from being published to public registries
-- **Sandbox isolation** -- run AI CLI tools in bubblewrap-based sandboxes with filesystem, network, and environment filtering (Linux)
+- **Signed releases** -- We sign all release binaries with [Sigstore cosign](https://www.sigstore.dev/) (keyless). Verify with: `cosign verify-blob --bundle checksums.txt.bundle checksums.txt`
+- **SHA-256 checksums** -- Every release ships with `checksums.txt` for independent verification
+- **Pinned CI dependencies** -- We pin all GitHub Actions to full-length commit SHAs, not mutable version tags
+- **Automated vulnerability scanning** -- govulncheck runs in CI and catches known-vulnerable dependencies before merge
+- **Dependency updates** -- Dependabot monitors and patches dependency security issues automatically
+- **Registry privacy gates** -- Syllago tags content from private registries and blocks it from reaching public ones
+- **Hook signing** -- Sign hooks with Sigstore or GPG, then verify provenance before installing
+- **Sandbox isolation** -- Run AI CLI tools in bubblewrap-based sandboxes with filesystem, network, and environment filtering (Linux)
 
 See [SECURITY.md](SECURITY.md) for the full security policy, threat model, and how to report vulnerabilities.
 
@@ -290,7 +314,7 @@ See [ROADMAP.md](ROADMAP.md) for the full roadmap with status tracking.
 
 ## Contributing
 
-We welcome ideas, bug reports, and feature suggestions from everyone -- open an issue to get started. Pull requests are accepted from [vouched contributors](https://github.com/mitchellh/vouch). See [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to get involved.
+We welcome ideas, bug reports, and feature suggestions -- open an issue to get started. We accept pull requests from [vouched contributors](https://github.com/mitchellh/vouch). See [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to get involved.
 
 ## License
 

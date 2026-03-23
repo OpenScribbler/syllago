@@ -63,6 +63,42 @@ func StageConfigs(stagingDir string, globalConfigPaths []string) ([]ConfigSnapsh
 	return snapshots, nil
 }
 
+// protectStagedFiles makes specific files read-only in staged config directories.
+// This prevents providers from deleting credential files during keychain migration
+// while still allowing reads. Patterns are matched against file basenames.
+func protectStagedFiles(snapshots []ConfigSnapshot, patterns []string) {
+	for _, snap := range snapshots {
+		info, err := os.Stat(snap.StagedPath)
+		if err != nil || !info.IsDir() {
+			continue
+		}
+		_ = filepath.WalkDir(snap.StagedPath, func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return nil
+			}
+			base := filepath.Base(path)
+			for _, pattern := range patterns {
+				if matched, _ := filepath.Match(pattern, base); matched {
+					_ = os.Chmod(path, 0444)
+				}
+			}
+			return nil
+		})
+	}
+}
+
+// shouldSkipDiff checks if a config path matches any of the skip patterns.
+// Patterns are matched against the file's base name.
+func shouldSkipDiff(originalPath string, patterns []string) bool {
+	base := filepath.Base(originalPath)
+	for _, pattern := range patterns {
+		if matched, _ := filepath.Match(pattern, base); matched {
+			return true
+		}
+	}
+	return false
+}
+
 // DiffResult describes changes to one config path after the sandbox session.
 type DiffResult struct {
 	Snapshot   ConfigSnapshot
@@ -104,11 +140,16 @@ func ComputeDiffs(snapshots []ConfigSnapshot) ([]DiffResult, error) {
 }
 
 // ApplyDiff copies the staged version back to the original path.
+// If the staged copy no longer exists, the change is skipped — we never delete
+// the user's original config based on a missing staged file.
 // Call this only after user approval.
 func ApplyDiff(result DiffResult) error {
 	info, err := os.Stat(result.Snapshot.StagedPath)
 	if err != nil {
-		return fmt.Errorf("staged path gone: %w", err)
+		if errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("staged copy no longer exists — skipping to protect original at %s", result.Snapshot.OriginalPath)
+		}
+		return fmt.Errorf("staged path error: %w", err)
 	}
 	if info.IsDir() {
 		return copyDir(result.Snapshot.StagedPath, result.Snapshot.OriginalPath)
@@ -127,6 +168,10 @@ func hashPath(path string) ([]byte, error) {
 		err = filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
+			}
+			// Skip symlinks — they may be broken and can't be hashed by content.
+			if d.Type()&os.ModeSymlink != 0 {
+				return nil
 			}
 			rel, _ := filepath.Rel(path, p)
 			fmt.Fprintf(h, "%s\x00", rel)
@@ -286,6 +331,24 @@ func copyDir(src, dst string) error {
 		}
 		rel, _ := filepath.Rel(src, path)
 		target := filepath.Join(dst, rel)
+
+		// Handle symlinks: preserve valid ones, skip broken ones.
+		if d.Type()&os.ModeSymlink != 0 {
+			linkTarget, err := os.Readlink(path)
+			if err != nil {
+				return nil // skip unreadable symlinks
+			}
+			// Check if target exists (resolve relative to symlink's dir).
+			absTarget := linkTarget
+			if !filepath.IsAbs(linkTarget) {
+				absTarget = filepath.Join(filepath.Dir(path), linkTarget)
+			}
+			if _, err := os.Stat(absTarget); err != nil {
+				return nil // skip broken symlinks
+			}
+			return os.Symlink(linkTarget, target)
+		}
+
 		if d.IsDir() {
 			return os.MkdirAll(target, 0700)
 		}
