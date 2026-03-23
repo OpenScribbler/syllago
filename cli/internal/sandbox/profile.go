@@ -17,8 +17,23 @@ type MountProfile struct {
 	BinaryPaths []string
 	// BinaryExec is the resolved absolute path to the provider binary.
 	BinaryExec string
-	// ProviderEnvVars are provider-specific env var names to forward.
+	// ExtraPATH are directories to prepend to the sandbox PATH (e.g. node bin dir).
+	ExtraPATH []string
+	// ProviderEnvVars are provider-specific env var names to forward from the host.
 	ProviderEnvVars []string
+	// SandboxEnvVars are env vars to inject into the sandbox (not from the host).
+	SandboxEnvVars map[string]string
+	// ProtectFiles are glob patterns (relative to staged config dirs) for files that
+	// should be made read-only in staging to prevent deletion by the provider.
+	// Useful for credential files that providers delete after migrating to keychains.
+	ProtectFiles []string
+	// SkipDiffFiles are glob patterns for staged files whose changes should be
+	// silently discarded after the session. Used for state files (counters,
+	// metrics, OAuth tokens) that change every session but aren't meaningful config.
+	SkipDiffFiles []string
+	// AuthHint is an optional message printed before launch, advising users
+	// about authentication requirements for the sandbox.
+	AuthHint string
 	// AllowedDomains are the provider's own API domains.
 	AllowedDomains []string
 }
@@ -60,12 +75,13 @@ func claudeProfile(homeDir, projectDir string) (*MountProfile, error) {
 		BinaryPaths:     binPaths,
 		BinaryExec:      bin,
 		ProviderEnvVars: []string{}, // Claude Code uses its own auth, not env vars
-		AllowedDomains:  []string{"api.anthropic.com", "sentry.io"},
+		SkipDiffFiles:   []string{".claude.json", ".claude"},
+		AllowedDomains:  []string{"api.anthropic.com", "console.anthropic.com", "mcp-proxy.anthropic.com", "sentry.io"},
 	}, nil
 }
 
 func geminiProfile(homeDir, projectDir string) (*MountProfile, error) {
-	bin, binPaths, err := resolveBinary("gemini")
+	bin, binPaths, extraPATH, err := resolveNodeBinary("gemini")
 	if err != nil {
 		return nil, fmt.Errorf("gemini binary not found: %w", err)
 	}
@@ -78,8 +94,13 @@ func geminiProfile(homeDir, projectDir string) (*MountProfile, error) {
 		},
 		BinaryPaths:     binPaths,
 		BinaryExec:      bin,
+		ExtraPATH:       extraPATH,
 		ProviderEnvVars: []string{"GOOGLE_API_KEY", "GEMINI_API_KEY"},
-		AllowedDomains:  []string{"generativelanguage.googleapis.com"},
+		SandboxEnvVars:  map[string]string{"GEMINI_FORCE_FILE_STORAGE": "true"},
+		SkipDiffFiles:   []string{".gemini"},
+		ProtectFiles:    []string{"oauth_creds.json"},
+		AuthHint:        "Gemini CLI stores OAuth tokens in your system keychain, which the sandbox\ncannot access. Make sure you've authenticated with 'gemini' outside the sandbox\nfirst -- the sandbox will use your cached credentials from ~/.gemini/oauth_creds.json.",
+		AllowedDomains:  []string{"generativelanguage.googleapis.com", "oauth2.googleapis.com", "accounts.google.com", "cloudcode-pa.googleapis.com"},
 	}, nil
 }
 
@@ -150,6 +171,58 @@ func resolveBinary(name string) (string, []string, error) {
 	}
 	// Mount the resolved binary's directory so relative-path interpreters work.
 	return resolved, []string{resolved}, nil
+}
+
+// resolveNodeBinary resolves a Node.js CLI tool (installed via npm) and returns
+// the script path, all paths to mount, and extra PATH directories.
+// Mounts the entire node installation directory (the prefix containing bin/node)
+// so that all globally installed packages and their dependencies are available.
+func resolveNodeBinary(name string) (string, []string, []string, error) {
+	bin, err := exec.LookPath(name)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("%q not found on PATH", name)
+	}
+	resolved, err := filepath.EvalSymlinks(bin)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("resolving symlinks for %q: %w", bin, err)
+	}
+
+	// Find the node installation prefix: walk up from the resolved script to find
+	// the directory containing bin/node. This covers the entire node installation
+	// including all globally installed packages and their dependencies.
+	// e.g. .../node/23.11.1/lib/node_modules/@google/gemini-cli/dist/index.js
+	//   -> .../node/23.11.1/ (contains bin/node, lib/node_modules/*)
+	nodePrefix, err := findNodePrefix(resolved)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("node installation not found for %q: %w", name, err)
+	}
+	nodeBinDir := filepath.Join(nodePrefix, "bin")
+
+	return resolved, []string{nodePrefix}, []string{nodeBinDir}, nil
+}
+
+// findNodePrefix walks up from a resolved script path to find the node installation
+// prefix — the directory containing bin/node.
+func findNodePrefix(scriptPath string) (string, error) {
+	dir := filepath.Dir(scriptPath)
+	for dir != "/" {
+		candidate := filepath.Join(dir, "bin", "node")
+		if _, err := os.Stat(candidate); err == nil {
+			return dir, nil
+		}
+		dir = filepath.Dir(dir)
+	}
+	// Fallback: try to find node on PATH and use its prefix.
+	nodeBin, err := exec.LookPath("node")
+	if err != nil {
+		return "", fmt.Errorf("node not found on PATH")
+	}
+	resolved, err := filepath.EvalSymlinks(nodeBin)
+	if err != nil {
+		return "", err
+	}
+	// node binary is at <prefix>/bin/node
+	return filepath.Dir(filepath.Dir(resolved)), nil
 }
 
 // EcosystemDomains returns the package registry domains for detected ecosystems.
