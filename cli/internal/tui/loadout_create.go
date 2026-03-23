@@ -14,6 +14,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/loadout"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -1134,6 +1135,9 @@ func (m createLoadoutScreen) renderReviewLeftPane(leftW int) string {
 
 		// Security callout with actual commands
 		lines = append(lines, m.renderSecurityCallout(selected, maxNameW)...)
+
+		// Privacy callout — warn about private items (G3 gate)
+		lines = append(lines, renderPrivacyCallout(selected)...)
 	}
 
 	// Apply scroll window
@@ -1251,6 +1255,28 @@ func (m createLoadoutScreen) renderSecurityCallout(selected []loadoutItemEntry, 
 		lines = append(lines, "  "+warningStyle.Render("This loadout includes hooks/MCP configs that run code."))
 	}
 	lines = append(lines, "  "+warningStyle.Render("Review content before installing."))
+	return lines
+}
+
+// renderPrivacyCallout returns warning lines if any selected items have private taint.
+func renderPrivacyCallout(selected []loadoutItemEntry) []string {
+	var items []catalog.ContentItem
+	for _, e := range selected {
+		items = append(items, e.item)
+	}
+	warnings := loadout.CheckPrivateItems(items)
+	if len(warnings) == 0 {
+		return nil
+	}
+
+	var lines []string
+	lines = append(lines, "")
+	lines = append(lines, "  "+warningStyle.Render(fmt.Sprintf("!! %d private item(s) !!", len(warnings))))
+	for _, w := range warnings {
+		label := fmt.Sprintf("%s (from %s)", w.Name, w.Registry)
+		lines = append(lines, "    "+warningStyle.Render(label))
+	}
+	lines = append(lines, "  "+warningStyle.Render("Cannot publish to public registries."))
 	return lines
 }
 

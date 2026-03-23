@@ -64,6 +64,11 @@ func init() {
 	addCmd.Flags().BoolP("force", "f", false, "Overwrite existing item without prompting")
 	addCmd.Flags().String("base-dir", "", "Override base directory for content discovery")
 	addCmd.Flags().Bool("no-input", false, "Disable interactive prompts, use defaults")
+	// Registry taint propagation — used by internal callers (TUI import, registry add).
+	addCmd.Flags().String("source-registry", "", "Registry name for taint tracking")
+	addCmd.Flags().String("source-visibility", "", "Source registry visibility (public, private, unknown)")
+	_ = addCmd.Flags().MarkHidden("source-registry")
+	_ = addCmd.Flags().MarkHidden("source-visibility")
 	rootCmd.AddCommand(addCmd)
 }
 
@@ -152,7 +157,9 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		if typeStr == string(catalog.Hooks) {
 			exclude, _ := cmd.Flags().GetStringArray("exclude")
 			scope, _ := cmd.Flags().GetString("scope")
-			return runAddHooks(root, fromSlug, dryRun, exclude, force, scope, resolver)
+			srcReg, _ := cmd.Flags().GetString("source-registry")
+			srcVis, _ := cmd.Flags().GetString("source-visibility")
+			return runAddHooks(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis)
 		}
 	}
 
@@ -222,10 +229,15 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	srcRegistry, _ := cmd.Flags().GetString("source-registry")
+	srcVisibility, _ := cmd.Flags().GetString("source-visibility")
+
 	results := add.AddItems(items, add.AddOptions{
-		Force:    force,
-		DryRun:   dryRun,
-		Provider: fromSlug,
+		Force:            force,
+		DryRun:           dryRun,
+		Provider:         fromSlug,
+		SourceRegistry:   srcRegistry,
+		SourceVisibility: srcVisibility,
 	}, globalDir, canon, version)
 
 	return printAddResults(results, dryRun)
@@ -554,7 +566,7 @@ func printDiscoveryText(provSlug, provName string, items []add.DiscoveryItem) er
 // runAddHooks handles "syllago add hooks --from <provider>". It reads settings.json
 // for the given provider, splits it into individual hook groups, filters by
 // --exclude, and either prints a preview or writes each hook to library.
-func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string, resolver *config.PathResolver) error {
+func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string, resolver *config.PathResolver, srcRegistry, srcVisibility string) error {
 	prov := findProviderBySlug(fromSlug)
 	if prov == nil {
 		return fmt.Errorf("unknown provider: %s", fromSlug)
@@ -590,7 +602,7 @@ func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, forc
 	}
 
 	for _, loc := range targets {
-		if err := addHooksFromLocation(fromSlug, loc, previewOnly, excludeSet, force); err != nil {
+		if err := addHooksFromLocation(fromSlug, loc, previewOnly, excludeSet, force, srcRegistry, srcVisibility); err != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: failed to add hooks from %s: %v\n", loc.Path, err)
 		}
 	}
@@ -599,7 +611,7 @@ func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, forc
 
 // addHooksFromLocation reads a single settings.json, splits it into hooks,
 // and either previews or writes them.
-func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previewOnly bool, excludeSet map[string]bool, force bool) error {
+func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previewOnly bool, excludeSet map[string]bool, force bool, srcRegistry, srcVisibility string) error {
 	data, err := os.ReadFile(loc.Path)
 	if err != nil {
 		return fmt.Errorf("reading %s: %w", loc.Path, err)
@@ -667,13 +679,18 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previ
 
 		now := time.Now().UTC()
 		meta := &metadata.Meta{
-			ID:             metadata.NewID(),
-			Name:           name,
-			Type:           string(catalog.Hooks),
-			AddedAt:        &now,
-			SourceProvider: fromSlug,
-			SourceFormat:   "json",
-			SourceType:     "provider",
+			ID:               metadata.NewID(),
+			Name:             name,
+			Type:             string(catalog.Hooks),
+			AddedAt:          &now,
+			SourceProvider:   fromSlug,
+			SourceFormat:     "json",
+			SourceType:       "provider",
+			SourceRegistry:   srcRegistry,
+			SourceVisibility: srcVisibility,
+		}
+		if srcRegistry != "" {
+			meta.SourceType = "registry"
 		}
 		if err := metadata.Save(itemDir, meta); err != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: failed to write metadata for %s: %v\n", name, err)
