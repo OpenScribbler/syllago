@@ -92,8 +92,8 @@ func runSyncAndExport(cmd *cobra.Command, args []string) error {
 
 // exportResult is the JSON-serializable output for export operations.
 type exportResult struct {
-	Exported []exportedItem `json:"exported"`
-	Skipped  []exportSkippedItem  `json:"skipped,omitempty"`
+	Exported []exportedItem      `json:"exported"`
+	Skipped  []exportSkippedItem `json:"skipped,omitempty"`
 }
 
 type exportedItem struct {
@@ -121,9 +121,13 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 	if prov == nil {
 		slugs := providerSlugs()
 		slugs = append(slugs, "all")
-		output.PrintError(1, "unknown provider: "+toSlug,
-			"Available: "+strings.Join(slugs, ", "))
-		return output.SilentError(fmt.Errorf("unknown provider: %s", toSlug))
+		se := output.NewStructuredError(
+			output.ErrProviderNotFound,
+			"unknown provider: "+toSlug,
+			"Available: "+strings.Join(slugs, ", "),
+		)
+		output.PrintStructuredError(se)
+		return output.SilentError(se)
 	}
 
 	// Build resolver from merged config + CLI flag.
@@ -194,6 +198,12 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 		// Warn about built-in or example content before processing.
 		if msg := exportWarnMessage(item); msg != "" {
 			fmt.Fprintf(output.ErrWriter, "  warning: %s is %s\n", item.Name, msg)
+		}
+
+		// Privacy warning: alert if exporting private-tainted content.
+		if item.Meta != nil && item.Meta.SourceRegistry != "" && registry.IsPrivate(item.Meta.SourceVisibility) {
+			fmt.Fprintf(output.ErrWriter, "  warning: %s originated from private registry %q — do not commit exported files to public repositories\n",
+				item.Name, item.Meta.SourceRegistry)
 		}
 
 		// Check if provider supports this type via SupportsType.

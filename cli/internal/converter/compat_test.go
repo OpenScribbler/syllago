@@ -62,8 +62,8 @@ func TestCompatLevel_Label(t *testing.T) {
 func TestAnalyzeHookCompat_FullCompat(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event:   "PreToolUse",
-		Matcher: "Bash",
+		Event:   "before_tool_execute",
+		Matcher: "shell",
 		Hooks:   []HookEntry{{Type: "command", Command: "go vet ./..."}},
 	}
 
@@ -81,8 +81,8 @@ func TestAnalyzeHookCompat_FullCompat(t *testing.T) {
 func TestAnalyzeHookCompat_BrokenMatcher_Copilot(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event:   "PreToolUse",
-		Matcher: "Bash",
+		Event:   "before_tool_execute",
+		Matcher: "shell",
 		Hooks:   []HookEntry{{Type: "command", Command: "go vet ./..."}},
 	}
 	r := AnalyzeHookCompat(hook, "copilot-cli")
@@ -104,7 +104,7 @@ func TestAnalyzeHookCompat_BrokenMatcher_Copilot(t *testing.T) {
 func TestAnalyzeHookCompat_NoneEvent(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event: "SubagentStart",
+		Event: "subagent_start",
 		Hooks: []HookEntry{{Type: "command", Command: "echo hi"}},
 	}
 	for _, target := range []string{"gemini-cli", "copilot-cli", "kiro"} {
@@ -120,7 +120,7 @@ func TestAnalyzeHookCompat_NoneEvent(t *testing.T) {
 func TestAnalyzeHookCompat_LLMHook_NoneForNonClaude(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event: "PreToolUse",
+		Event: "before_tool_execute",
 		Hooks: []HookEntry{{Type: "prompt", Command: "Is this safe?"}},
 	}
 	for _, target := range []string{"gemini-cli", "copilot-cli", "kiro"} {
@@ -136,7 +136,7 @@ func TestAnalyzeHookCompat_LLMHook_NoneForNonClaude(t *testing.T) {
 func TestAnalyzeHookCompat_StatusMessage_Kiro_Degraded(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event: "PreToolUse",
+		Event: "before_tool_execute",
 		Hooks: []HookEntry{{Type: "command", Command: "echo hi", StatusMessage: "Working..."}},
 	}
 	r := AnalyzeHookCompat(hook, "kiro")
@@ -148,7 +148,7 @@ func TestAnalyzeHookCompat_StatusMessage_Kiro_Degraded(t *testing.T) {
 func TestAnalyzeHookCompat_Async_Kiro_Broken(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event: "PostToolUse",
+		Event: "after_tool_execute",
 		Hooks: []HookEntry{{Type: "command", Command: "echo done", Async: true}},
 	}
 	r := AnalyzeHookCompat(hook, "kiro")
@@ -160,7 +160,7 @@ func TestAnalyzeHookCompat_Async_Kiro_Broken(t *testing.T) {
 func TestAnalyzeHookCompat_Async_Copilot_Broken(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event: "PreToolUse",
+		Event: "before_tool_execute",
 		Hooks: []HookEntry{{Type: "command", Command: "echo check", Async: true}},
 	}
 	r := AnalyzeHookCompat(hook, "copilot-cli")
@@ -173,7 +173,7 @@ func TestAnalyzeHookCompat_NoMatcher_FullEverywhere(t *testing.T) {
 	t.Parallel()
 	// Hook with no matcher, no async, no statusMessage — should be Full everywhere
 	hook := HookData{
-		Event: "SessionStart",
+		Event: "session_start",
 		Hooks: []HookEntry{{Type: "command", Command: "echo start"}},
 	}
 	for _, target := range HookProviders() {
@@ -189,7 +189,7 @@ func TestAnalyzeHookCompat_NoMatcher_FullEverywhere(t *testing.T) {
 func TestAnalyzeHookCompat_UnknownProvider(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event: "PreToolUse",
+		Event: "before_tool_execute",
 		Hooks: []HookEntry{{Type: "command", Command: "echo"}},
 	}
 	r := AnalyzeHookCompat(hook, "nonexistent-provider")

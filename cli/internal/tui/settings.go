@@ -14,11 +14,11 @@ type settingsModel struct {
 	repoRoot string
 	cfg      *config.Config
 
-	cursor     int // main settings row cursor
-	message    string
+	cursor       int // main settings row cursor
+	message      string
 	messageIsErr bool
-	width      int
-	height     int
+	width        int
+	height       int
 }
 
 func newSettingsModel(repoRoot string) settingsModel {
@@ -34,7 +34,7 @@ func newSettingsModel(repoRoot string) settingsModel {
 
 // settingsRowCount returns the number of configurable rows.
 func (m settingsModel) settingsRowCount() int {
-	return 2 // auto-update, registry-auto-sync
+	return 3 // update-check, auto-update, registry-auto-sync
 }
 
 func (m settingsModel) Update(msg tea.Msg) (settingsModel, tea.Cmd) {
@@ -71,20 +71,23 @@ func (m settingsModel) Update(msg tea.Msg) (settingsModel, tea.Cmd) {
 
 // activateRow handles enter/space on the current row.
 func (m *settingsModel) activateRow() {
+	if m.cfg.Preferences == nil {
+		m.cfg.Preferences = make(map[string]string)
+	}
 	switch m.cursor {
-	case 0: // auto-update toggle
-		if m.cfg.Preferences == nil {
-			m.cfg.Preferences = make(map[string]string)
+	case 0: // update check toggle (defaults to on)
+		if m.cfg.Preferences["updateCheck"] == "false" {
+			delete(m.cfg.Preferences, "updateCheck") // absent = on (default)
+		} else {
+			m.cfg.Preferences["updateCheck"] = "false"
 		}
+	case 1: // auto-update toggle
 		if m.cfg.Preferences["autoUpdate"] == "true" {
 			m.cfg.Preferences["autoUpdate"] = "false"
 		} else {
 			m.cfg.Preferences["autoUpdate"] = "true"
 		}
-	case 1: // registry auto-sync toggle
-		if m.cfg.Preferences == nil {
-			m.cfg.Preferences = make(map[string]string)
-		}
+	case 2: // registry auto-sync toggle
 		if m.cfg.Preferences["registryAutoSync"] == "true" {
 			m.cfg.Preferences["registryAutoSync"] = "false"
 		} else {
@@ -107,6 +110,7 @@ func (m *settingsModel) save() {
 
 // settingsDescriptions maps cursor index to a description shown in the bottom detail area.
 var settingsDescriptions = []string{
+	"Check for new versions on launch. Requires network access to the git remote.\nDisable for air-gapped or offline environments.",
 	"Pull updates automatically when a new version is detected on the remote.",
 	"Sync git registries automatically when syllago launches (5-second timeout).\nRegistries must be added via `syllago registry add` first.",
 }
@@ -117,19 +121,26 @@ func (m settingsModel) View() string {
 		BreadcrumbSegment{"Settings", ""},
 	) + "\n\n"
 
-	// Row 0: Auto-update
+	// Row 0: Update check (defaults to on)
+	updateCheckVal := "on"
+	if m.cfg.Preferences["updateCheck"] == "false" {
+		updateCheckVal = "off"
+	}
+	s += m.renderRow(0, "Update check", updateCheckVal)
+
+	// Row 1: Auto-update
 	autoVal := "off"
 	if m.cfg.Preferences["autoUpdate"] == "true" {
 		autoVal = "on"
 	}
-	s += m.renderRow(0, "Auto-update", autoVal)
+	s += m.renderRow(1, "Auto-update", autoVal)
 
-	// Row 1: Registry auto-sync
+	// Row 2: Registry auto-sync
 	autoSyncVal := "off"
 	if m.cfg.Preferences["registryAutoSync"] == "true" {
 		autoSyncVal = "on"
 	}
-	s += m.renderRow(1, "Registry auto-sync", autoSyncVal)
+	s += m.renderRow(2, "Registry auto-sync", autoSyncVal)
 
 	// Bottom detail area (fixed 3-line height to prevent jitter)
 	if m.cursor >= 0 && m.cursor < len(settingsDescriptions) {

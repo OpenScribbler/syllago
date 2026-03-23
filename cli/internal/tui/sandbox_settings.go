@@ -22,10 +22,10 @@ type sandboxSettingsModel struct {
 	editMode  int
 	editInput string
 
-	message    string
+	message      string
 	messageIsErr bool
-	width      int
-	height     int
+	width        int
+	height       int
 }
 
 func newSandboxSettingsModel(repoRoot string) sandboxSettingsModel {

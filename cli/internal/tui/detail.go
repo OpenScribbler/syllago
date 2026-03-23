@@ -73,24 +73,24 @@ type detailModel struct {
 	saveInput    textinput.Model
 	savePath     string // confirmed save destination (after path input)
 	// Sub-models for grouped concerns
-	provCheck        provCheckModel // provider checkbox state (Install tab)
-llmPrompt        string // loaded from LLM-PROMPT.md for local scaffolded items
+	provCheck provCheckModel // provider checkbox state (Install tab)
+	llmPrompt string         // loaded from LLM-PROMPT.md for local scaffolded items
 	// Override info
 	overrides []catalog.ContentItem // lower-precedence items this one shadows
 	// Tab state
-	activeTab    detailTab
-	fileViewer   fileViewerModel // file viewer state (Files tab)
-	parentLabel   string // intermediate breadcrumb (e.g. "Library", "Loadouts")
-	categoryLabel string // overrides Type.Label() in breadcrumb (e.g. provider display name)
-	listPosition int             // 0-based position in the items list (for breadcrumb)
-	listTotal    int             // total items in the list
-	width        int
-	height       int
+	activeTab     detailTab
+	fileViewer    fileViewerModel // file viewer state (Files tab)
+	parentLabel   string          // intermediate breadcrumb (e.g. "Library", "Loadouts")
+	categoryLabel string          // overrides Type.Label() in breadcrumb (e.g. provider display name)
+	listPosition  int             // 0-based position in the items list (for breadcrumb)
+	listTotal     int             // total items in the list
+	width         int
+	height        int
 	// Loadout-specific state
-	loadoutManifest    *loadout.Manifest        // parsed manifest (for Loadouts type)
-	loadoutManifestErr string                   // error from parsing manifest
-	loadoutModeCursor  int                      // 0=preview, 1=try, 2=keep (Apply tab)
-	loadoutContents    loadoutContentsModel     // split view for Contents tab
+	loadoutManifest    *loadout.Manifest    // parsed manifest (for Loadouts type)
+	loadoutManifestErr string               // error from parsing manifest
+	loadoutModeCursor  int                  // 0=preview, 1=try, 2=keep (Apply tab)
+	loadoutContents    loadoutContentsModel // split view for Contents tab
 	// Hook-specific state
 	hookData   *converter.HookData      // loaded for hook items (nil for all others)
 	hookCompat []converter.CompatResult // computed for all 4 providers
@@ -750,15 +750,6 @@ func (m *detailModel) doSave() {
 			m.messageIsErr = false
 		}
 	}
-}
-
-// doSavePrompt sets the save path from the modal input value and triggers save.
-// It replaces the inline actionSavePath/actionSaveMethod flow.
-func (m *detailModel) doSavePrompt(filename string) {
-	m.savePath = filename
-	// Default to symlink (methodCursor 0); user chose via modal, not method picker
-	m.methodCursor = 0
-	m.doSave()
 }
 
 // HasPendingAction returns true if the detail view has an active single-pane

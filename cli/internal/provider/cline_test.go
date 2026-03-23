@@ -9,12 +9,12 @@ import (
 
 func TestClineSupportsTypes(t *testing.T) {
 	t.Parallel()
-	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.MCP} {
+	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Hooks, catalog.MCP} {
 		if !Cline.SupportsType(ct) {
 			t.Errorf("Cline.SupportsType(%s) = false, want true", ct)
 		}
 	}
-	for _, ct := range []catalog.ContentType{catalog.Skills, catalog.Agents, catalog.Hooks, catalog.Commands} {
+	for _, ct := range []catalog.ContentType{catalog.Skills, catalog.Agents, catalog.Commands} {
 		if Cline.SupportsType(ct) {
 			t.Errorf("Cline.SupportsType(%s) = true, want false", ct)
 		}

@@ -83,8 +83,8 @@ func TestFieldPreservation_RulesScoped(t *testing.T) {
 		{
 			name:     "to Claude",
 			target:   provider.ClaudeCode,
-			contains: []string{"Use strict TypeScript", "**Scope:**", "*.ts", "syllago:converted"},
-			absent:   []string{"alwaysApply:", "trigger:"},
+			contains: []string{"Use strict TypeScript", "paths:", "*.ts", "*.tsx"},
+			absent:   []string{"alwaysApply:", "trigger:", "globs:"},
 		},
 		{
 			name:     "to Gemini",
@@ -129,7 +129,8 @@ func TestFieldPreservation_RulesScoped(t *testing.T) {
 		{
 			name:     "to Kiro",
 			target:   provider.Kiro,
-			contains: []string{"Use strict TypeScript", "**Scope:**", "*.ts"},
+			contains: []string{"Use strict TypeScript", "inclusion: fileMatch", "fileMatchPattern", "*.ts"},
+			absent:   []string{"**Scope:**", "alwaysApply:"},
 		},
 	})
 }
@@ -231,7 +232,7 @@ func TestFieldPreservation_Agents(t *testing.T) {
 				"background task",            // background → prose
 				"separate git worktree",      // isolation → prose
 				"Do not use these tools",     // disallowedTools → prose
-				"syllago:converted",            // conversion marker
+				"syllago:converted",          // conversion marker
 				"comprehensive test agent",   // body preserved
 			},
 			absent:   []string{"permissionMode:", "isolation: worktree"},
@@ -242,10 +243,11 @@ func TestFieldPreservation_Agents(t *testing.T) {
 			target: provider.CopilotCLI,
 			contains: []string{
 				"name: Kitchen Sink Agent",
+				"model: opus",              // model in frontmatter
 				"Limit to 25 turns",        // maxTurns → prose
 				"comprehensive test agent", // body preserved
 			},
-			filename: "agent.md",
+			filename: "kitchen-sink-agent.agent.md",
 		},
 		{
 			name:   "to Roo Code",
@@ -276,11 +278,12 @@ func TestFieldPreservation_Agents(t *testing.T) {
 			name:   "to Kiro",
 			target: provider.Kiro,
 			contains: []string{
-				`"name": "Kitchen Sink Agent"`,
-				`"model": "opus"`,
-				`"read"`,     // Read → read
-				`"fs_write"`, // Write → fs_write
-				`"shell"`,    // Bash → shell
+				"name: Kitchen Sink Agent",
+				"model: opus",
+				"- read",                   // Read → read
+				"- fs_write",               // Write → fs_write
+				"- shell",                  // Bash → shell
+				"comprehensive test agent", // body preserved
 			},
 			minWarns: 1, // maxTurns not supported
 		},
@@ -295,10 +298,10 @@ func TestFieldPreservation_Agents(t *testing.T) {
 		if result.ExtraFiles != nil {
 			t.Errorf("expected no ExtraFiles (prompt inlined), got %d", len(result.ExtraFiles))
 		}
-		// Prompt body should be in the JSON content
+		// Prompt body should be in the markdown content
 		out := string(result.Content)
 		if !containsStr(out, "comprehensive test agent") {
-			t.Error("expected prompt body inlined in JSON content")
+			t.Error("expected prompt body in markdown content")
 		}
 	})
 }
@@ -308,7 +311,7 @@ func TestFieldPreservation_Agents(t *testing.T) {
 // =============================================================================
 
 func TestFieldPreservation_Skills(t *testing.T) {
-	input := []byte("---\nname: code-review\ndescription: Code review skill\nallowed-tools:\n  - Read\n  - Grep\ndisallowed-tools:\n  - Bash\nmodel: opus\ncontext: fork\nuser-invocable: true\nargument-hint: \"<pr-url>\"\n---\n\nReview code for best practices and security.\n")
+	input := []byte("---\nname: code-review\ndescription: Code review skill\nallowed-tools:\n  - Read\n  - Grep\ndisallowed-tools:\n  - Bash\nmodel: opus\neffort: high\ncontext: fork\nuser-invocable: true\nargument-hint: \"<pr-url>\"\nhooks:\n  pre_tool_use:\n    - command: \"echo check\"\n---\n\nReview code for best practices and security.\n")
 
 	conv := &SkillsConverter{}
 	canonical, err := conv.Canonicalize(input, "claude-code")
@@ -326,7 +329,10 @@ func TestFieldPreservation_Skills(t *testing.T) {
 				"Read",
 				"Grep",
 				"model: opus",
+				"effort: high",
 				"context: fork",
+				"hooks:",
+				"echo check",
 				"Review code for best practices",
 			},
 			filename: "SKILL.md",
@@ -337,45 +343,51 @@ func TestFieldPreservation_Skills(t *testing.T) {
 			contains: []string{
 				"name: code-review",
 				"description: Code review skill",
-				"read_file",         // allowed-tools translated
-				"grep_search",       // allowed-tools translated
-				"model: opus",       // embedded as prose
-				"isolated context",  // context: fork → prose
-				"command menu",      // user-invocable → prose
-				"<pr-url>",          // argument-hint → prose
-				"run_shell_command", // disallowed-tools translated
+				"read_file",          // allowed-tools translated
+				"grep_search",        // allowed-tools translated
+				"model: opus",        // embedded as prose
+				"Effort level: high", // effort embedded as prose
+				"isolated context",   // context: fork → prose
+				"command menu",       // user-invocable → prose
+				"<pr-url>",           // argument-hint → prose
+				"run_shell_command",  // disallowed-tools translated
 				"Review code for best practices",
 				"syllago:converted",
 			},
-			absent:   []string{"allowed-tools:", "context: fork", "user-invocable:"},
+			absent:   []string{"allowed-tools:", "context: fork", "user-invocable:", "echo check"},
+			minWarns: 1, // hooks surfaced as warnings (Gemini supports hooks natively)
 			filename: "SKILL.md",
 		},
 		{
 			name:   "to OpenCode",
 			target: provider.OpenCode,
 			contains: []string{
-				"# code-review",
+				"name: code-review",
 				"Review code for best practices",
-				"Tool restriction", // allowed-tools embedded as prose
-				"isolated context", // context: fork embedded as prose
-				"model: opus",      // model embedded as prose
-				"command menu",     // user-invocable embedded as prose
+				"Tool restriction",   // allowed-tools embedded as prose
+				"isolated context",   // context: fork embedded as prose
+				"model: opus",        // model embedded as prose
+				"Effort level: high", // effort embedded as prose
+				"command menu",       // user-invocable embedded as prose
+				"Hooks:",             // hooks embedded as prose
 			},
-			absent:   []string{"allowed-tools:"},
-			filename: "code-review.md",
+			absent:   []string{"allowed-tools:", "echo check"},
+			filename: "SKILL.md",
 		},
 		{
 			name:   "to Kiro",
 			target: provider.Kiro,
 			contains: []string{
-				"# code-review",
+				"name: code-review",
+				"description: Code review skill",
 				"Review code for best practices",
 				"Tool restriction", // allowed-tools embedded as prose
 				"Do not use",       // disallowed-tools embedded as prose
 				"command menu",     // user-invocable embedded as prose
 			},
-			absent:   []string{"allowed-tools:"},
-			filename: "code-review.md",
+			absent:   []string{"allowed-tools:", "echo check"},
+			minWarns: 1,          // hooks surfaced as warnings (Kiro supports hooks natively)
+			filename: "SKILL.md", // SKILL.md with frontmatter, not slug.md
 		},
 	})
 }
@@ -493,7 +505,7 @@ func TestFieldPreservation_Hooks(t *testing.T) {
 		assertNotContains(t, out, `"Bash"`)         // not leaked
 	})
 
-	// Copilot CLI — events translated, matchers dropped with warning
+	// Copilot CLI — events translated, matchers preserved, version field present
 	t.Run("to Copilot", func(t *testing.T) {
 		result, err := conv.Render(canonical.Content, provider.CopilotCLI)
 		if err != nil {
@@ -502,18 +514,12 @@ func TestFieldPreservation_Hooks(t *testing.T) {
 		out := string(result.Content)
 		assertContains(t, out, "echo safety-check")
 		assertNotContains(t, out, "PreToolUse")
-
-		// Copilot doesn't support matchers — should warn
-		hasMatcherWarning := false
-		for _, w := range result.Warnings {
-			if containsStr(w, "matcher") {
-				hasMatcherWarning = true
-				break
-			}
-		}
-		if !hasMatcherWarning {
-			t.Error("expected warning about dropped matcher for Copilot")
-		}
+		// Matchers should be preserved (translated to Copilot tool name)
+		assertContains(t, out, "\"matcher\": \"bash\"") // Bash → bash
+		// Version field present
+		assertContains(t, out, "\"version\": 1")
+		// Type field present on entries
+		assertContains(t, out, "\"type\": \"command\"")
 	})
 
 	// Kiro — wrapped in agent file, events translated
@@ -593,22 +599,19 @@ func TestFieldPreservation_MCPMixed(t *testing.T) {
 		}
 	})
 
-	// Zed — stdio only, HTTP servers dropped with warning
+	// Zed — supports both stdio and URL-based servers
 	t.Run("to Zed", func(t *testing.T) {
 		result, err := conv.Render(canonical.Content, provider.Zed)
 		if err != nil {
 			t.Fatalf("Render: %v", err)
 		}
 		out := string(result.Content)
-		assertContains(t, out, "context_servers")    // Zed key name
-		assertContains(t, out, "npx")                // stdio server preserved
-		assertNotContains(t, out, "api.example.com") // HTTP server dropped
-		if len(result.Warnings) == 0 {
-			t.Error("expected warning about dropped HTTP server")
-		}
+		assertContains(t, out, "context_servers") // Zed key name
+		assertContains(t, out, "npx")             // stdio server preserved
+		assertContains(t, out, "api.example.com") // URL server preserved
 	})
 
-	// Cline — stdio only, autoApprove → alwaysAllow, HTTP dropped
+	// Cline — autoApprove → alwaysAllow, HTTP preserved (SSE supported)
 	t.Run("to Cline", func(t *testing.T) {
 		result, err := conv.Render(canonical.Content, provider.Cline)
 		if err != nil {
@@ -618,13 +621,10 @@ func TestFieldPreservation_MCPMixed(t *testing.T) {
 		assertContains(t, out, "npx")
 		assertContains(t, out, "alwaysAllow") // autoApprove → alwaysAllow
 		assertNotContains(t, out, "autoApprove")
-		assertNotContains(t, out, "api.example.com") // HTTP dropped
-		if len(result.Warnings) == 0 {
-			t.Error("expected warning about dropped HTTP server")
-		}
+		assertContains(t, out, "api.example.com") // HTTP preserved
 	})
 
-	// Roo Code — HTTP preserved, autoApprove dropped, cwd dropped
+	// Roo Code — HTTP preserved, autoApprove mapped to alwaysAllow, cwd+headers preserved
 	t.Run("to Roo Code", func(t *testing.T) {
 		result, err := conv.Render(canonical.Content, provider.RooCode)
 		if err != nil {
@@ -634,10 +634,9 @@ func TestFieldPreservation_MCPMixed(t *testing.T) {
 		assertContains(t, out, "npx")
 		assertContains(t, out, "api.example.com") // HTTP preserved
 		assertNotContains(t, out, "autoApprove")
-		assertNotContains(t, out, "cwd")
-		if len(result.Warnings) == 0 {
-			t.Error("expected warnings about dropped fields")
-		}
+		assertContains(t, out, "cwd")        // Roo Code supports cwd
+		assertContains(t, out, "/workspace") // cwd value preserved
+		assertContains(t, out, "headers")    // Roo Code supports headers
 	})
 
 	// OpenCode — command array, environment key, type: local/remote
@@ -891,22 +890,29 @@ func TestCanonicalize_GeminiHookEvents(t *testing.T) {
 	}
 
 	out := string(result.Content)
-	assertContains(t, out, "PreToolUse")  // BeforeTool → PreToolUse
-	assertContains(t, out, "PostToolUse") // AfterTool → PostToolUse
-	assertContains(t, out, `"Bash"`)      // run_shell_command → Bash
+	assertContains(t, out, "before_tool_execute") // BeforeTool → canonical
+	assertContains(t, out, "after_tool_execute")  // AfterTool → canonical
+	assertContains(t, out, `"shell"`)             // run_shell_command → canonical
 	assertNotContains(t, out, "BeforeTool")
 	assertNotContains(t, out, "AfterTool")
 	assertNotContains(t, out, "run_shell_command")
 }
 
 func TestCanonicalize_CopilotHookFormat(t *testing.T) {
+	// Copilot hooks use matcher groups: {"version":1, "hooks":{"event":[{"matcher":"...","hooks":[...]}]}}
 	input := []byte(`{
+		"version": 1,
 		"hooks": {
 			"preToolUse": [
 				{
-					"bash": "echo verify",
-					"timeoutSec": 10,
-					"comment": "Safety verification"
+					"hooks": [
+						{
+							"type": "command",
+							"bash": "echo verify",
+							"timeoutSec": 10,
+							"comment": "Safety verification"
+						}
+					]
 				}
 			]
 		}
@@ -919,9 +925,9 @@ func TestCanonicalize_CopilotHookFormat(t *testing.T) {
 	}
 
 	out := string(result.Content)
-	assertContains(t, out, "PreToolUse") // preToolUse → PreToolUse
+	assertContains(t, out, "before_tool_execute") // preToolUse → canonical
 	assertContains(t, out, "echo verify")
-	assertContains(t, out, "10000") // 10 sec → 10000 ms
+	assertContains(t, out, `"timeout": 10`) // 10 sec stays 10 sec (canonical unit is seconds)
 	assertContains(t, out, "Safety verification")
 }
 
@@ -1036,10 +1042,10 @@ func TestRoundTrip_HooksClaudeGemini(t *testing.T) {
 	}
 
 	out := string(backToCanonical.Content)
-	assertContains(t, out, "PreToolUse") // event translated back
-	assertContains(t, out, `"Bash"`)     // matcher translated back
-	assertContains(t, out, "echo check") // command preserved
-	assertContains(t, out, "3000")       // timeout preserved
+	assertContains(t, out, "before_tool_execute") // event back to canonical
+	assertContains(t, out, `"shell"`)             // matcher back to canonical
+	assertContains(t, out, "echo check")          // command preserved
+	assertContains(t, out, `"timeout": 3`)        // timeout preserved (canonical seconds: 3000ms → 3s)
 }
 
 // =============================================================================
@@ -1062,14 +1068,11 @@ func TestCrossProvider_GeminiAgentToKiro(t *testing.T) {
 	}
 
 	out := string(result.Content)
-	assertContains(t, out, `"name": "researcher"`)
+	assertContains(t, out, "name: researcher")
 	// Gemini read_file → canonical Read → Kiro read
-	assertContains(t, out, `"read"`)
-	// Prompt body inlined in JSON
+	assertContains(t, out, "- read")
+	// Prompt body in markdown after frontmatter
 	assertContains(t, out, "Research and summarize")
-	if result.ExtraFiles != nil {
-		t.Errorf("expected no ExtraFiles (prompt inlined), got %d", len(result.ExtraFiles))
-	}
 }
 
 func TestCrossProvider_GeminiAgentToRooCode(t *testing.T) {
@@ -1131,7 +1134,8 @@ func TestCrossProvider_CursorRulesToKiro(t *testing.T) {
 
 	out := string(result.Content)
 	assertContains(t, out, "Use type hints.")
-	assertContains(t, out, "**Scope:**") // globs embedded as prose
+	assertContains(t, out, "inclusion: fileMatch") // native Kiro frontmatter
+	assertContains(t, out, "fileMatchPattern")
 	assertContains(t, out, "*.py")
 }
 
@@ -1229,35 +1233,25 @@ func TestEdgeCase_MCPOnlyHTTPServers(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	// Zed and Cline should drop everything and warn
-	for _, tt := range []struct {
-		name   string
-		target provider.Provider
-	}{
-		{"Zed", provider.Zed},
-		{"Cline", provider.Cline},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := conv.Render(canonical.Content, tt.target)
-			if err != nil {
-				t.Fatalf("Render: %v", err)
-			}
-			out := string(result.Content)
-			assertNotContains(t, out, "a.example.com")
-			assertNotContains(t, out, "b.example.com")
-			if len(result.Warnings) < 2 {
-				t.Errorf("expected at least 2 warnings (one per HTTP server), got %d", len(result.Warnings))
-			}
-		})
-	}
+	// Zed now preserves HTTP servers with URL + headers
+	t.Run("Zed", func(t *testing.T) {
+		result, err := conv.Render(canonical.Content, provider.Zed)
+		if err != nil {
+			t.Fatalf("Render: %v", err)
+		}
+		out := string(result.Content)
+		assertContains(t, out, "a.example.com")
+		assertContains(t, out, "b.example.com")
+	})
 
-	// OpenCode and Kiro should preserve both
+	// OpenCode, Kiro, and Cline should preserve both
 	for _, tt := range []struct {
 		name   string
 		target provider.Provider
 	}{
 		{"OpenCode", provider.OpenCode},
 		{"Kiro", provider.Kiro},
+		{"Cline", provider.Cline},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := conv.Render(canonical.Content, tt.target)
@@ -1377,7 +1371,7 @@ func TestEdgeCase_TimeoutUnitPrecision(t *testing.T) {
 
 	backOut := string(backToCanonical.Content)
 	assertContains(t, backOut, "echo test")
-	assertContains(t, backOut, "PreToolUse")
+	assertContains(t, backOut, "before_tool_execute") // canonical name
 }
 
 func TestEdgeCase_SkillMinimalToAllProviders(t *testing.T) {
@@ -1470,7 +1464,7 @@ func TestFilenameSlugification(t *testing.T) {
 			input:    "---\nname: AWS Expert\ndescription: AWS specialist\n---\n\nAWS stuff.\n",
 			target:   provider.Kiro,
 			conv:     &AgentsConverter{},
-			expected: "aws-expert.json",
+			expected: "aws-expert.md",
 		},
 		{
 			name:     "OpenCode agent slug",

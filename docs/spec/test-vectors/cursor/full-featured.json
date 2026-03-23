@@ -1,0 +1,21 @@
+{
+  "_comment": "Expected Cursor output for canonical/full-featured.json. Cursor is a split-event provider: (1) before_tool_execute+shell -> beforeShellExecution (no matcher needed, event implies tool category); (2) before_tool_execute+mcp -> beforeMCPExecution with matcher 'github__create_issue' (Cursor MCP format); (3) session_start -> DROPPED (Cursor does not support session_start). platform/cwd/env fields dropped. provider_data.windsurf dropped.",
+  "_warnings": [
+    "Hook 1: 'platform' field dropped — Cursor does not support per-OS command overrides (platform_commands capability, degradation: warn)",
+    "Hook 1: 'cwd' field dropped — Cursor does not support configurable working directory (configurable_cwd capability, degradation: warn)",
+    "Hook 1: 'env' field dropped — Cursor does not support custom environment variables (custom_env capability, degradation: warn)",
+    "Hook 1: provider_data.windsurf ignored — not target provider",
+    "Hook 3: event 'session_start' dropped — Cursor does not support this event"
+  ],
+  "hooks": {
+    "beforeShellExecution": {
+      "command": "./safety-check.sh",
+      "timeout": 10
+    },
+    "beforeMCPExecution": {
+      "matcher": "github__create_issue",
+      "command": "./validate-issue.sh",
+      "timeout": 5
+    }
+  }
+}

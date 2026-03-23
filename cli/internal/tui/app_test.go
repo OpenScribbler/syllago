@@ -9,6 +9,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 func TestAppHasSidebarField(t *testing.T) {
@@ -84,15 +85,6 @@ func TestFirstRunScreenAppearsWhenEmpty(t *testing.T) {
 	view := a.renderContentWelcome()
 	if !strings.Contains(view, "Welcome to syllago") {
 		t.Error("first-run screen should show 'Welcome to syllago' when catalog is empty")
-	}
-	if !strings.Contains(view, "syllago add") {
-		t.Error("first-run screen should show 'syllago add' step")
-	}
-	if !strings.Contains(view, "syllago registry add") {
-		t.Error("first-run screen should show 'syllago registry add' step")
-	}
-	if !strings.Contains(view, "syllago create") {
-		t.Error("first-run screen should show 'syllago create' step")
 	}
 }
 
@@ -302,15 +294,118 @@ func TestFirstRunScreen_NoSyllagoToolsReference(t *testing.T) {
 	}
 }
 
-func TestFirstRunScreen_ContainsRegistryCreateStep(t *testing.T) {
-	a := testApp(t)
-	a.catalog = &catalog.Catalog{Items: nil}
-	a.width = 80
-	a.height = 30
-
-	view := a.View()
+// TestFirstRunJourneyA_ProvidersDetected verifies that when providers are
+// detected but no content exists, Journey A shows detected provider names
+// and discovery guidance.
+func TestFirstRunJourneyA_ProvidersDetected(t *testing.T) {
+	a := App{
+		width:  80,
+		height: 30,
+		screen: screenCategory,
+		catalog: &catalog.Catalog{
+			Items: nil,
+		},
+		registryCfg: &config.Config{
+			Registries: nil,
+		},
+		providers: []provider.Provider{
+			{Name: "Claude Code", Slug: "claude-code", Detected: true},
+			{Name: "Cursor", Slug: "cursor", Detected: false},
+			{Name: "Windsurf", Slug: "windsurf", Detected: true},
+		},
+	}
+	view := a.renderContentWelcome()
 	stripped := stripANSI(view)
-	if !strings.Contains(stripped, "registry create") {
-		t.Error("first-run screen should show 'registry create' step")
+
+	if !strings.Contains(stripped, "Welcome to syllago") {
+		t.Error("Journey A should show welcome title")
+	}
+	if !strings.Contains(stripped, "Detected:") {
+		t.Error("Journey A should show 'Detected:' label")
+	}
+	if !strings.Contains(stripped, "Claude Code") {
+		t.Error("Journey A should list detected provider 'Claude Code'")
+	}
+	if !strings.Contains(stripped, "Windsurf") {
+		t.Error("Journey A should list detected provider 'Windsurf'")
+	}
+	if strings.Contains(stripped, "Cursor") {
+		t.Error("Journey A should NOT list undetected provider 'Cursor'")
+	}
+	if !strings.Contains(stripped, "'a'") {
+		t.Error("Journey A should mention 'a' key for content discovery")
+	}
+	if !strings.Contains(stripped, "'R'") {
+		t.Error("Journey A should mention 'R' key for adding a registry")
+	}
+}
+
+// TestFirstRunJourneyC_NoProviders verifies that when no providers are
+// detected and no registries exist, Journey C shows full onboarding
+// guidance including the starter loadout command.
+func TestFirstRunJourneyC_NoProviders(t *testing.T) {
+	a := App{
+		width:  80,
+		height: 30,
+		screen: screenCategory,
+		catalog: &catalog.Catalog{
+			Items: nil,
+		},
+		registryCfg: &config.Config{
+			Registries: nil,
+		},
+		providers: []provider.Provider{
+			{Name: "Claude Code", Slug: "claude-code", Detected: false},
+			{Name: "Cursor", Slug: "cursor", Detected: false},
+		},
+	}
+	view := a.renderContentWelcome()
+	stripped := stripANSI(view)
+
+	if !strings.Contains(stripped, "Welcome to syllago") {
+		t.Error("Journey C should show welcome title")
+	}
+	if !strings.Contains(stripped, "'a'") {
+		t.Error("Journey C should mention 'a' key for adding content")
+	}
+	if !strings.Contains(stripped, "syllago loadout apply syllago-starter") {
+		t.Error("Journey C should mention the starter loadout command")
+	}
+	if !strings.Contains(stripped, "'?'") {
+		t.Error("Journey C should mention '?' for keyboard shortcuts")
+	}
+	if strings.Contains(stripped, "Detected:") {
+		t.Error("Journey C should NOT show 'Detected:' when no providers found")
+	}
+}
+
+func TestNoProvidersWarningShown(t *testing.T) {
+	a := App{
+		width:  80,
+		height: 30,
+		providers: []provider.Provider{
+			{Name: "Claude Code", Slug: "claude-code", Detected: false},
+		},
+	}
+	warning := a.noProvidersWarning()
+	if warning == "" {
+		t.Error("should show warning when no providers detected")
+	}
+	stripped := stripANSI(warning)
+	if !strings.Contains(stripped, "syllago config paths") {
+		t.Error("warning should reference 'syllago config paths'")
+	}
+}
+
+func TestNoProvidersWarningHiddenWhenDetected(t *testing.T) {
+	a := App{
+		width:  80,
+		height: 30,
+		providers: []provider.Provider{
+			{Name: "Claude Code", Slug: "claude-code", Detected: true},
+		},
+	}
+	if a.noProvidersWarning() != "" {
+		t.Error("should not show warning when a provider is detected")
 	}
 }

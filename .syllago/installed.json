@@ -1,0 +1,72 @@
+{
+  "hooks": [
+    {
+      "name": "validating-shell-command",
+      "event": "PreToolUse",
+      "command": "echo 'Pre-tool check: validating Bash command'",
+      "source": "loadout:example-kitchen-sink-loadout",
+      "installedAt": "2026-03-19T00:09:56.210025477-07:00"
+    },
+    {
+      "name": "pretooluse-ai-safety-check",
+      "event": "PreToolUse",
+      "command": "Evaluate whether this tool invocation is safe and appropriate. Respond with JSON: {\"decision\": \"allow\"} or {\"decision\": \"deny\", \"reason\": \"...\"}",
+      "source": "loadout:example-kitchen-sink-loadout",
+      "installedAt": "2026-03-19T00:09:56.210099971-07:00"
+    },
+    {
+      "name": "running-linter",
+      "event": "PostToolUse",
+      "command": "echo 'Post-edit: running linter on changed files'",
+      "source": "loadout:example-kitchen-sink-loadout",
+      "installedAt": "2026-03-19T00:09:56.219528593-07:00"
+    },
+    {
+      "name": "logging-tool-usage",
+      "event": "PostToolUse",
+      "command": "echo 'Post-tool telemetry placeholder'",
+      "source": "loadout:example-kitchen-sink-loadout",
+      "installedAt": "2026-03-19T00:09:56.219648652-07:00"
+    },
+    {
+      "name": "processing-notification",
+      "event": "Notification",
+      "command": "echo 'Notification received'",
+      "source": "loadout:example-kitchen-sink-loadout",
+      "installedAt": "2026-03-19T00:09:56.219997295-07:00"
+    }
+  ],
+  "mcp": [
+    {
+      "name": "example-kitchen-sink-mcp",
+      "source": "loadout:example-kitchen-sink-loadout",
+      "installedAt": "2026-03-19T00:09:56.220379243-07:00"
+    }
+  ],
+  "symlinks": [
+    {
+      "path": "/tmp/syllago-debug-KTpOZJ/.claude/skills/syllago-guide",
+      "target": "/home/hhewett/.local/src/syllago/content/skills/syllago-guide",
+      "source": "loadout:example-kitchen-sink-loadout",
+      "installedAt": "2026-03-19T00:09:56.220186291-07:00"
+    },
+    {
+      "path": "/tmp/syllago-debug-KTpOZJ/.claude/agents/example-kitchen-sink-agent.md",
+      "target": "/home/hhewett/.local/src/syllago/content/agents/example-kitchen-sink-agent/AGENT.md",
+      "source": "loadout:example-kitchen-sink-loadout",
+      "installedAt": "2026-03-19T00:09:56.220285214-07:00"
+    },
+    {
+      "path": "/tmp/syllago-debug-KTpOZJ/.claude/commands/example-kitchen-sink-commands",
+      "target": "/home/hhewett/.local/src/syllago/content/commands/claude-code/example-kitchen-sink-commands",
+      "source": "loadout:example-kitchen-sink-loadout",
+      "installedAt": "2026-03-19T00:09:56.220478611-07:00"
+    },
+    {
+      "path": "/tmp/syllago-debug-KTpOZJ/.claude/rules/example-kitchen-sink-rules",
+      "target": "/home/hhewett/.local/src/syllago/content/rules/claude-code/example-kitchen-sink-rules",
+      "source": "loadout:example-kitchen-sink-loadout",
+      "installedAt": "2026-03-19T00:09:56.220608726-07:00"
+    }
+  ]
+}

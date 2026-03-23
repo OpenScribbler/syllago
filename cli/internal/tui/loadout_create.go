@@ -63,7 +63,7 @@ type createLoadoutScreen struct {
 
 	// Context passed in at creation
 	prefilledProvider string
-	scopeRegistry    string
+	scopeRegistry     string
 
 	// Step 1: provider picker
 	providerList   []provider.Provider
@@ -102,8 +102,7 @@ type createLoadoutScreen struct {
 	reviewScroll    int // scroll offset for review content
 
 	// Split-view preview
-	splitView      splitViewModel
-	previewLoading bool
+	splitView splitViewModel
 
 	// Outcome
 	confirmed    bool
@@ -139,19 +138,19 @@ func newCreateLoadoutScreen(
 
 	m := createLoadoutScreen{
 		prefilledProvider: prefilledProvider,
-		scopeRegistry:    scopeRegistry,
-		providerList:     allProviders,
-		searchInput:      si,
-		nameInput:        ni,
-		descInput:        di,
-		nameFirst:        true,
-		perTypeCursor:    make(map[catalog.ContentType]int),
-		perTypeScroll:    make(map[catalog.ContentType]int),
-		perTypeSearch:    make(map[catalog.ContentType]string),
-		typeItemMap:      make(map[catalog.ContentType][]int),
-		typeItemMapAll:   make(map[catalog.ContentType][]int),
-		width:            width,
-		height:           height,
+		scopeRegistry:     scopeRegistry,
+		providerList:      allProviders,
+		searchInput:       si,
+		nameInput:         ni,
+		descInput:         di,
+		nameFirst:         true,
+		perTypeCursor:     make(map[catalog.ContentType]int),
+		perTypeScroll:     make(map[catalog.ContentType]int),
+		perTypeSearch:     make(map[catalog.ContentType]string),
+		typeItemMap:       make(map[catalog.ContentType][]int),
+		typeItemMapAll:    make(map[catalog.ContentType][]int),
+		width:             width,
+		height:            height,
 	}
 
 	m.destOptions = []string{"Project (loadouts/ in repo)", "Library (~/.syllago/content/loadouts/)"}

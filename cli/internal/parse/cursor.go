@@ -3,80 +3,29 @@ package parse
 import (
 	"bytes"
 	"errors"
-	"path/filepath"
 	"strings"
 
-	"github.com/OpenScribbler/syllago/cli/internal/catalog"
-	"github.com/OpenScribbler/syllago/cli/internal/model"
 	"gopkg.in/yaml.v3"
 )
 
-// CursorParser parses Cursor provider files (.mdc format).
-type CursorParser struct{}
-
 // CursorFrontmatter represents the YAML frontmatter in .mdc files.
+// Globs can appear as either a comma-separated string (native Cursor format)
+// or a YAML array (canonical format). Both are parsed into []string.
 type CursorFrontmatter struct {
 	Description string   `yaml:"description"`
-	Globs       []string `yaml:"globs,omitempty"`
+	Globs       []string `yaml:"-"`
 	AlwaysApply bool     `yaml:"alwaysApply,omitempty"`
 }
 
+// cursorFrontmatterRaw is used for initial YAML unmarshaling before
+// processing the globs field which can be either a string or array.
+type cursorFrontmatterRaw struct {
+	Description string    `yaml:"description"`
+	Globs       yaml.Node `yaml:"globs,omitempty"`
+	AlwaysApply bool      `yaml:"alwaysApply,omitempty"`
+}
+
 var errNoFrontmatter = errors.New("no frontmatter found")
-
-func (p CursorParser) ParseFile(file DiscoveredFile) ([]model.Section, error) {
-	content, err := readFileContent(file.Path)
-	if err != nil {
-		return nil, err
-	}
-
-	if file.ContentType == catalog.Rules && filepath.Ext(file.Path) == ".mdc" {
-		return p.parseMDC(file.Path, content)
-	}
-
-	name := filepath.Base(file.Path)
-	return []model.Section{
-		model.TextSection{
-			Category: model.CatConventions,
-			Origin:   model.OriginHuman,
-			Title:    string(file.ContentType) + ": " + name,
-			Body:     string(content),
-			Source:   "import:cursor:" + file.Path,
-		},
-	}, nil
-}
-
-func (p CursorParser) parseMDC(path string, content []byte) ([]model.Section, error) {
-	name := filepath.Base(path)
-	name = strings.TrimSuffix(name, ".mdc")
-
-	fm, body, err := ParseMDCFrontmatter(content)
-	if err != nil {
-		return []model.Section{
-			model.TextSection{
-				Category: model.CatConventions,
-				Origin:   model.OriginHuman,
-				Title:    "Cursor Rule: " + name,
-				Body:     string(content),
-				Source:   "import:cursor:" + path,
-			},
-		}, nil
-	}
-
-	title := "Cursor Rule: " + name
-	if fm.Description != "" {
-		title = "Cursor Rule: " + fm.Description
-	}
-
-	return []model.Section{
-		model.TextSection{
-			Category: model.CatConventions,
-			Origin:   model.OriginHuman,
-			Title:    title,
-			Body:     body,
-			Source:   "import:cursor:" + path,
-		},
-	}, nil
-}
 
 // ParseMDCFrontmatter extracts YAML frontmatter and body from .mdc content.
 // Returns the parsed frontmatter, the body text, and any error.
@@ -95,9 +44,33 @@ func ParseMDCFrontmatter(content []byte) (CursorFrontmatter, string, error) {
 	}
 
 	yamlBytes := rest[:closingIdx]
-	var fm CursorFrontmatter
-	if err := yaml.Unmarshal(yamlBytes, &fm); err != nil {
+	var raw cursorFrontmatterRaw
+	if err := yaml.Unmarshal(yamlBytes, &raw); err != nil {
 		return CursorFrontmatter{}, "", err
+	}
+
+	fm := CursorFrontmatter{
+		Description: raw.Description,
+		AlwaysApply: raw.AlwaysApply,
+	}
+
+	// Parse globs: can be a scalar string (comma-separated) or a YAML sequence.
+	switch raw.Globs.Kind {
+	case yaml.ScalarNode:
+		// Comma-separated string: "*.ts, *.tsx"
+		for _, g := range strings.Split(raw.Globs.Value, ",") {
+			g = strings.TrimSpace(g)
+			if g != "" {
+				fm.Globs = append(fm.Globs, g)
+			}
+		}
+	case yaml.SequenceNode:
+		// YAML array: ["*.ts", "*.tsx"]
+		for _, item := range raw.Globs.Content {
+			if item.Kind == yaml.ScalarNode && item.Value != "" {
+				fm.Globs = append(fm.Globs, item.Value)
+			}
+		}
 	}
 
 	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))

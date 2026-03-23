@@ -15,14 +15,14 @@ import (
 const sidebarWidth = 18 // fixed width including border character
 
 type sidebarModel struct {
-	types          []catalog.ContentType // content types (excludes Loadouts)
-	counts         map[catalog.ContentType]int
-	libraryCount   int
-	loadoutsCount  int
-	registryCount  int // number of configured registries
-	cursor         int
-	focused        bool
-	height         int // available terminal height for sidebar panel
+	types         []catalog.ContentType // content types (excludes Loadouts)
+	counts        map[catalog.ContentType]int
+	libraryCount  int
+	loadoutsCount int
+	registryCount int // number of configured registries
+	cursor        int
+	focused       bool
+	height        int // available terminal height for sidebar panel
 
 	// Version/update state (displayed in sidebar header)
 	version         string
@@ -105,7 +105,7 @@ func (m sidebarModel) View() string {
 	}
 
 	// Separator
-	s += helpStyle.Render("  " + "─────────────") + "\n"
+	s += helpStyle.Render("  "+"─────────────") + "\n"
 
 	// ── Collections section ──
 	s += labelStyle.Render("  Collections") + "\n"
@@ -143,7 +143,7 @@ func (m sidebarModel) View() string {
 	s += m.renderSidebarRow(regIdx, regLine, inner)
 
 	// Separator
-	s += helpStyle.Render("  " + "─────────────") + "\n"
+	s += helpStyle.Render("  "+"─────────────") + "\n"
 
 	// ── Configuration section ──
 	s += labelStyle.Render("  Configuration") + "\n"

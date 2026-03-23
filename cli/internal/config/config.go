@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 const DirName = ".syllago"
@@ -16,9 +17,12 @@ const FileName = "config.json"
 
 // Registry represents a git-based content source registered in this project.
 type Registry struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
-	Ref  string `json:"ref,omitempty"` // branch/tag/commit, defaults to default branch
+	Name                string     `json:"name"`
+	URL                 string     `json:"url"`
+	Ref                 string     `json:"ref,omitempty"`                   // branch/tag/commit, defaults to default branch
+	Trust               string     `json:"trust,omitempty"`                 // "trusted", "verified", "community" (default: "community")
+	Visibility          string     `json:"visibility,omitempty"`            // "public", "private", "unknown"
+	VisibilityCheckedAt *time.Time `json:"visibility_checked_at,omitempty"` // for TTL cache (re-probe after 1 hour)
 }
 
 // ProviderPathConfig holds custom path overrides for a single provider.
@@ -39,13 +43,13 @@ type SandboxConfig struct {
 }
 
 type Config struct {
-	Providers         []string          `json:"providers"`              // enabled provider slugs
-	ContentRoot       string            `json:"content_root,omitempty"` // relative path to content directory (default: project root)
-	Registries        []Registry        `json:"registries,omitempty"`
-	AllowedRegistries []string          `json:"allowed_registries,omitempty"` // URL allowlist; empty means any URL is permitted
-	Preferences       map[string]string                `json:"preferences,omitempty"`
-	Sandbox           SandboxConfig                    `json:"sandbox,omitempty"`
-	ProviderPaths     map[string]ProviderPathConfig    `json:"provider_paths,omitempty"` // keyed by provider slug
+	Providers         []string                      `json:"providers"`              // enabled provider slugs
+	ContentRoot       string                        `json:"content_root,omitempty"` // relative path to content directory (default: project root)
+	Registries        []Registry                    `json:"registries,omitempty"`
+	AllowedRegistries []string                      `json:"allowed_registries,omitempty"` // URL allowlist; empty means any URL is permitted
+	Preferences       map[string]string             `json:"preferences,omitempty"`
+	Sandbox           SandboxConfig                 `json:"sandbox,omitempty"`
+	ProviderPaths     map[string]ProviderPathConfig `json:"provider_paths,omitempty"` // keyed by provider slug
 }
 
 // IsRegistryAllowed returns true if url is permitted given the config.

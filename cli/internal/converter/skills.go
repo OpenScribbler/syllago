@@ -10,23 +10,160 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// hookConfigHints maps provider slugs to the file path where hook configuration
+// should be added. Only includes providers that support hooks.
+var hookConfigHints = map[string]string{
+	"gemini-cli":  ".gemini/settings.json hooks section",
+	"cursor":      ".cursor/settings.json hooks section",
+	"windsurf":    ".windsurf/hooks.json",
+	"copilot-cli": ".github/hooks/ directory",
+	"kiro":        ".kiro/ hooks agent file",
+	"codex":       ".codex/hooks.json",
+}
+
+// hookScopingNotes describes scoping limitations per provider.
+// Skill-scoped hooks are a Claude Code feature — other providers run hooks globally.
+var hookScopingNotes = map[string]string{
+	"gemini-cli":  "Gemini hooks are global (skill scoping will be lost)",
+	"cursor":      "Cursor hooks are global (skill scoping will be lost)",
+	"windsurf":    "Windsurf hooks are global (skill scoping will be lost)",
+	"copilot-cli": "Copilot hooks are global (skill scoping will be lost)",
+	"kiro":        "Kiro hooks are global (skill scoping will be lost)",
+	"codex":       "Codex hooks are global (skill scoping will be lost)",
+}
+
+// formatSkillHookWarnings extracts hook details from SkillMeta.Hooks and generates
+// actionable warnings for providers that support hooks. Returns nil if hooks is nil
+// or cannot be interpreted.
+func formatSkillHookWarnings(skillName string, hooks any, targetSlug string) []string {
+	if hooks == nil {
+		return nil
+	}
+
+	configHint, hasHooks := hookConfigHints[targetSlug]
+	if !hasHooks {
+		return nil // hookless provider — caller handles prose embedding
+	}
+
+	// SkillMeta.Hooks comes from YAML unmarshal into any.
+	// Expected shape: map[string]interface{} with event names as keys,
+	// each mapping to a list of hook entries (maps with command/matcher/timeout).
+	hooksMap, ok := hooks.(map[string]interface{})
+	if !ok {
+		// Fallback: hooks is present but not a map (unusual). Generate a generic warning.
+		return []string{
+			fmt.Sprintf("skill %q has hooks that require separate configuration in %s", skillName, configHint),
+		}
+	}
+
+	label := skillName
+	if label == "" {
+		label = "(unnamed skill)"
+	}
+
+	var warnings []string
+	warnings = append(warnings, fmt.Sprintf("skill %q has hooks requiring separate configuration:", label))
+
+	for event, matchersRaw := range hooksMap {
+		matchers, ok := matchersRaw.([]interface{})
+		if !ok {
+			warnings = append(warnings, fmt.Sprintf("  Event: %s (could not parse hook entries)", event))
+			continue
+		}
+
+		for _, entryRaw := range matchers {
+			entry, ok := entryRaw.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			command, _ := entry["command"].(string)
+			matcher, _ := entry["matcher"].(string)
+
+			detail := fmt.Sprintf("  Event: %s", event)
+			if matcher != "" {
+				detail += fmt.Sprintf(", Matcher: %s", matcher)
+			}
+			if command != "" {
+				detail += fmt.Sprintf(", Command: %s", command)
+			}
+			warnings = append(warnings, detail)
+		}
+	}
+
+	warnings = append(warnings, fmt.Sprintf("  -> Add to %s", configHint))
+	if note, ok := hookScopingNotes[targetSlug]; ok {
+		warnings = append(warnings, fmt.Sprintf("  -> %s", note))
+	}
+
+	return warnings
+}
+
 func init() {
 	Register(&SkillsConverter{})
+}
+
+// flexStringList is a []string that also accepts a single YAML scalar string.
+// When unmarshaled from a scalar, the string is split on commas (if present)
+// or whitespace, producing individual tool names.
+type flexStringList []string
+
+func (f *flexStringList) UnmarshalYAML(value *yaml.Node) error {
+	switch value.Kind {
+	case yaml.SequenceNode:
+		// Standard YAML list: ["Read", "Grep", "Glob"]
+		var list []string
+		if err := value.Decode(&list); err != nil {
+			return err
+		}
+		*f = list
+		return nil
+	case yaml.ScalarNode:
+		// Single scalar string — could be comma-separated, space-delimited, or single tool
+		*f = splitToolString(value.Value)
+		return nil
+	default:
+		return fmt.Errorf("expected string or list, got YAML kind %d", value.Kind)
+	}
+}
+
+// splitToolString splits a string on commas (if present) or whitespace.
+func splitToolString(s string) []string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	if strings.Contains(s, ",") {
+		parts := strings.Split(s, ",")
+		var result []string
+		for _, p := range parts {
+			if t := strings.TrimSpace(p); t != "" {
+				result = append(result, t)
+			}
+		}
+		return result
+	}
+	return strings.Fields(s)
 }
 
 // SkillMeta is the canonical skill metadata (YAML frontmatter fields).
 // Claude Code is the superset.
 type SkillMeta struct {
-	Name                   string   `yaml:"name,omitempty"`
-	Description            string   `yaml:"description,omitempty"`
-	AllowedTools           []string `yaml:"allowed-tools,omitempty"`
-	DisallowedTools        []string `yaml:"disallowed-tools,omitempty"`
-	Context                string   `yaml:"context,omitempty"`
-	Agent                  string   `yaml:"agent,omitempty"`
-	Model                  string   `yaml:"model,omitempty"`
-	DisableModelInvocation bool     `yaml:"disable-model-invocation,omitempty"`
-	UserInvocable          *bool    `yaml:"user-invocable,omitempty"`
-	ArgumentHint           string   `yaml:"argument-hint,omitempty"`
+	Name                   string            `yaml:"name,omitempty"`
+	Description            string            `yaml:"description,omitempty"`
+	License                string            `yaml:"license,omitempty"`
+	Compatibility          string            `yaml:"compatibility,omitempty"`
+	Metadata               map[string]string `yaml:"metadata,omitempty"`
+	AllowedTools           flexStringList    `yaml:"allowed-tools,omitempty"`
+	DisallowedTools        flexStringList    `yaml:"disallowed-tools,omitempty"`
+	Context                string            `yaml:"context,omitempty"`
+	Agent                  string            `yaml:"agent,omitempty"`
+	Model                  string            `yaml:"model,omitempty"`
+	Effort                 string            `yaml:"effort,omitempty"`
+	DisableModelInvocation bool              `yaml:"disable-model-invocation,omitempty"`
+	UserInvocable          *bool             `yaml:"user-invocable,omitempty"`
+	ArgumentHint           string            `yaml:"argument-hint,omitempty"`
+	Hooks                  any               `yaml:"hooks,omitempty"`
 }
 
 // geminiSkillMeta is the subset of fields Gemini CLI supports.
@@ -43,13 +180,22 @@ func (c *SkillsConverter) ContentType() catalog.ContentType {
 
 func (c *SkillsConverter) Canonicalize(content []byte, sourceProvider string) (*Result, error) {
 	switch sourceProvider {
-	case "kiro", "opencode":
-		return canonicalizeSkillFromMarkdown(content)
 	default:
-		// Claude Code, Gemini CLI, Copilot CLI — YAML frontmatter + markdown
+		// Claude Code, Gemini CLI, Copilot CLI, Cursor — YAML frontmatter + markdown
+		// Cursor SKILL.md uses the same frontmatter format as Claude Code (subset of fields),
+		// so it parses identically through the canonical path.
 		meta, body, err := parseSkillCanonical(content)
 		if err != nil {
 			return nil, err
+		}
+		// Translate tool names from provider-native to canonical (neutral)
+		if sourceProvider != "" {
+			for i, tool := range meta.AllowedTools {
+				meta.AllowedTools[i] = ReverseTranslateTool(tool, sourceProvider)
+			}
+			for i, tool := range meta.DisallowedTools {
+				meta.DisallowedTools[i] = ReverseTranslateTool(tool, sourceProvider)
+			}
 		}
 		canonical, err := buildSkillCanonical(meta, body)
 		if err != nil {
@@ -72,8 +218,20 @@ func (c *SkillsConverter) Render(content []byte, target provider.Provider) (*Res
 		return renderOpenCodeSkill(meta, body)
 	case "kiro":
 		return renderKiroSkill(meta, body)
+	case "cursor":
+		return renderCursorSkill(meta, body)
+	case "windsurf":
+		return renderWindsurfSkill(meta, body)
+	case "amp":
+		return renderAmpSkill(meta, body)
+	case "cline":
+		return renderClineSkill(meta, body)
+	case "copilot-cli":
+		return renderCopilotSkill(meta, body)
+	case "roo-code":
+		return renderRooCodeSkill(meta, body)
 	default:
-		// Claude Code, Copilot CLI — full frontmatter preserved
+		// Claude Code — full frontmatter preserved
 		return renderClaudeSkill(meta, body)
 	}
 }
@@ -126,6 +284,9 @@ func renderGeminiSkill(meta SkillMeta, body string) (*Result, error) {
 	if meta.Model != "" {
 		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
 	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
 	if meta.DisableModelInvocation {
 		notes = append(notes, "Only invoke when the user explicitly requests it.")
 	}
@@ -135,6 +296,8 @@ func renderGeminiSkill(meta SkillMeta, body string) (*Result, error) {
 	if meta.ArgumentHint != "" {
 		notes = append(notes, fmt.Sprintf("Usage: %s", meta.ArgumentHint))
 	}
+	// Hooks: generate actionable warnings instead of prose (Gemini supports hooks)
+	hookWarnings := formatSkillHookWarnings(meta.Name, meta.Hooks, "gemini-cli")
 
 	outBody := body
 	if len(notes) > 0 {
@@ -158,11 +321,21 @@ func renderGeminiSkill(meta SkillMeta, body string) (*Result, error) {
 	buf.WriteString(outBody)
 	buf.WriteString("\n")
 
-	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
 }
 
 func renderClaudeSkill(meta SkillMeta, body string) (*Result, error) {
 	cleanBody := StripConversionNotes(body)
+
+	// Translate canonical (neutral) tool names to CC names
+	if len(meta.AllowedTools) > 0 {
+		translated := TranslateTools(meta.AllowedTools, "claude-code")
+		meta.AllowedTools = flexStringList(translated)
+	}
+	if len(meta.DisallowedTools) > 0 {
+		translated := TranslateTools(meta.DisallowedTools, "claude-code")
+		meta.DisallowedTools = flexStringList(translated)
+	}
 
 	fm, err := renderFrontmatter(meta)
 	if err != nil {
@@ -178,16 +351,229 @@ func renderClaudeSkill(meta SkillMeta, body string) (*Result, error) {
 	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
 }
 
-// canonicalizeSkillFromMarkdown wraps plain markdown content in minimal canonical skill format.
-// Used for providers whose skills are plain markdown without frontmatter (Kiro, OpenCode).
-func canonicalizeSkillFromMarkdown(content []byte) (*Result, error) {
-	body := strings.TrimSpace(string(content))
-	meta := SkillMeta{}
-	canonical, err := buildSkillCanonical(meta, body)
+// cursorSkillMeta is the subset of fields Cursor supports in SKILL.md frontmatter.
+// Cursor supports: name, description, license, compatibility, metadata, disable-model-invocation.
+// It does NOT support: allowed-tools, context, agent, model, effort, hooks, user-invocable, argument-hint.
+type cursorSkillMeta struct {
+	Name                   string            `yaml:"name,omitempty"`
+	Description            string            `yaml:"description,omitempty"`
+	License                string            `yaml:"license,omitempty"`
+	Compatibility          string            `yaml:"compatibility,omitempty"`
+	Metadata               map[string]string `yaml:"metadata,omitempty"`
+	DisableModelInvocation bool              `yaml:"disable-model-invocation,omitempty"`
+}
+
+// renderCursorSkill renders a canonical skill to Cursor's SKILL.md format.
+// Cursor uses the same SKILL.md shape as Claude Code but supports fewer frontmatter fields.
+// Unsupported fields (allowed-tools, context, agent, model, etc.) are embedded as prose notes.
+func renderCursorSkill(meta SkillMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	// Build behavioral embedding notes for fields Cursor doesn't support
+	var notes []string
+	if len(meta.AllowedTools) > 0 {
+		translated := TranslateTools(meta.AllowedTools, "cursor")
+		notes = append(notes, fmt.Sprintf("**Tool restriction:** Use only %s tools.", strings.Join(translated, ", ")))
+	}
+	if len(meta.DisallowedTools) > 0 {
+		translated := TranslateTools(meta.DisallowedTools, "cursor")
+		notes = append(notes, fmt.Sprintf("**Do not use:** %s tools.", strings.Join(translated, ", ")))
+	}
+	if meta.Context == "fork" {
+		notes = append(notes, "Run in an isolated context. Do not modify the main conversation.")
+	}
+	if meta.Agent != "" {
+		notes = append(notes, fmt.Sprintf("Use a %s-focused approach.", strings.ToLower(meta.Agent)))
+	}
+	if meta.Model != "" {
+		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+	if meta.UserInvocable != nil && *meta.UserInvocable {
+		notes = append(notes, "Intended to appear in the command menu.")
+	}
+	if meta.ArgumentHint != "" {
+		notes = append(notes, fmt.Sprintf("Usage: %s", meta.ArgumentHint))
+	}
+	// Hooks: generate actionable warnings instead of prose (Cursor supports hooks)
+	hookWarnings := formatSkillHookWarnings(meta.Name, meta.Hooks, "cursor")
+
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	cm := cursorSkillMeta{
+		Name:                   meta.Name,
+		Description:            meta.Description,
+		License:                meta.License,
+		Compatibility:          meta.Compatibility,
+		Metadata:               meta.Metadata,
+		DisableModelInvocation: meta.DisableModelInvocation,
+	}
+	fm, err := renderFrontmatter(cm)
 	if err != nil {
 		return nil, err
 	}
-	return &Result{Content: canonical, Filename: "SKILL.md"}, nil
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
+}
+
+// copilotSkillMeta is the subset of fields Copilot CLI supports in SKILL.md frontmatter.
+// Copilot supports: name, description, license, argument-hint, user-invocable, disable-model-invocation.
+// It does NOT support: allowed-tools, disallowed-tools, context, agent, model, effort, hooks,
+// compatibility, metadata.
+type copilotSkillMeta struct {
+	Name                   string `yaml:"name,omitempty"`
+	Description            string `yaml:"description,omitempty"`
+	License                string `yaml:"license,omitempty"`
+	ArgumentHint           string `yaml:"argument-hint,omitempty"`
+	UserInvocable          *bool  `yaml:"user-invocable,omitempty"`
+	DisableModelInvocation bool   `yaml:"disable-model-invocation,omitempty"`
+}
+
+// renderCopilotSkill renders a canonical skill to Copilot CLI's SKILL.md format.
+// Copilot uses the same SKILL.md shape as Claude Code but supports fewer frontmatter fields.
+// Unsupported fields (allowed-tools, context, agent, model, etc.) are embedded as prose notes.
+func renderCopilotSkill(meta SkillMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	// Build behavioral notes for CC-specific fields Copilot doesn't support
+	var notes []string
+	if len(meta.AllowedTools) > 0 {
+		translated := TranslateTools(meta.AllowedTools, "copilot-cli")
+		notes = append(notes, fmt.Sprintf("**Tool restriction:** Use only %s tools.", strings.Join(translated, ", ")))
+	}
+	if len(meta.DisallowedTools) > 0 {
+		translated := TranslateTools(meta.DisallowedTools, "copilot-cli")
+		notes = append(notes, fmt.Sprintf("**Do not use:** %s tools.", strings.Join(translated, ", ")))
+	}
+	if meta.Context == "fork" {
+		notes = append(notes, "Run in an isolated context. Do not modify the main conversation.")
+	}
+	if meta.Agent != "" {
+		notes = append(notes, fmt.Sprintf("Use a %s-focused approach.", strings.ToLower(meta.Agent)))
+	}
+	if meta.Model != "" {
+		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+	if meta.Hooks != nil {
+		notes = append(notes, "**Hooks:** This skill defines lifecycle hooks that execute shell commands. Hooks require a provider with skill-scoped hook support (currently only Claude Code).")
+	}
+
+	// Copilot supports hooks through .github/hooks/ — generate hook warnings
+	hookWarnings := formatSkillHookWarnings(meta.Name, meta.Hooks, "copilot-cli")
+
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	cm := copilotSkillMeta{
+		Name:                   meta.Name,
+		Description:            meta.Description,
+		License:                meta.License,
+		ArgumentHint:           meta.ArgumentHint,
+		UserInvocable:          meta.UserInvocable,
+		DisableModelInvocation: meta.DisableModelInvocation,
+	}
+
+	fm, err := renderFrontmatter(cm)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
+}
+
+// windsurfSkillMeta is the subset of fields Windsurf supports in SKILL.md frontmatter.
+// Windsurf only supports name and description — same as Gemini CLI.
+type windsurfSkillMeta struct {
+	Name        string `yaml:"name,omitempty"`
+	Description string `yaml:"description,omitempty"`
+}
+
+// renderWindsurfSkill renders a canonical skill to Windsurf's SKILL.md format.
+// Windsurf uses the Agent Skills standard (SKILL.md with YAML frontmatter) but only
+// supports name and description fields. Unsupported fields are embedded as prose notes.
+func renderWindsurfSkill(meta SkillMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	// Build behavioral embedding notes for fields Windsurf doesn't support
+	var notes []string
+	if len(meta.AllowedTools) > 0 {
+		translated := TranslateTools(meta.AllowedTools, "windsurf")
+		notes = append(notes, fmt.Sprintf("**Tool restriction:** Use only %s tools.", strings.Join(translated, ", ")))
+	}
+	if len(meta.DisallowedTools) > 0 {
+		translated := TranslateTools(meta.DisallowedTools, "windsurf")
+		notes = append(notes, fmt.Sprintf("**Do not use:** %s tools.", strings.Join(translated, ", ")))
+	}
+	if meta.Context == "fork" {
+		notes = append(notes, "Run in an isolated context. Do not modify the main conversation.")
+	}
+	if meta.Agent != "" {
+		notes = append(notes, fmt.Sprintf("Use a %s-focused approach.", strings.ToLower(meta.Agent)))
+	}
+	if meta.Model != "" {
+		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+	if meta.DisableModelInvocation {
+		notes = append(notes, "Only invoke when the user explicitly requests it.")
+	}
+	if meta.UserInvocable != nil && *meta.UserInvocable {
+		notes = append(notes, "Intended to appear in the command menu.")
+	}
+	if meta.ArgumentHint != "" {
+		notes = append(notes, fmt.Sprintf("Usage: %s", meta.ArgumentHint))
+	}
+	// Hooks: generate actionable warnings instead of prose (Windsurf supports hooks)
+	hookWarnings := formatSkillHookWarnings(meta.Name, meta.Hooks, "windsurf")
+
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	wm := windsurfSkillMeta{
+		Name:        meta.Name,
+		Description: meta.Description,
+	}
+	fm, err := renderFrontmatter(wm)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
 }
 
 // buildSkillProseNotes generates behavioral embedding notes for skill metadata
@@ -210,6 +596,9 @@ func buildSkillProseNotes(meta SkillMeta) []string {
 	if meta.Model != "" {
 		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
 	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
 	if meta.DisableModelInvocation {
 		notes = append(notes, "Only invoke when the user explicitly requests it.")
 	}
@@ -219,54 +608,221 @@ func buildSkillProseNotes(meta SkillMeta) []string {
 	if meta.ArgumentHint != "" {
 		notes = append(notes, fmt.Sprintf("Usage: %s", meta.ArgumentHint))
 	}
+	if meta.Hooks != nil {
+		notes = append(notes, "**Hooks:** This skill defines lifecycle hooks that execute shell commands. Hooks require a provider with skill-scoped hook support (currently only Claude Code).")
+	}
 	return notes
 }
 
-// renderPlainMarkdownSkill renders a canonical skill to a plain markdown file
-// with no frontmatter. Used by Kiro and OpenCode where skill files are simple markdown.
-// Metadata that can't be represented structurally is embedded as prose.
-func renderPlainMarkdownSkill(meta SkillMeta, body string) (*Result, error) {
+// kiroSkillMeta is the subset of fields Kiro supports in SKILL.md frontmatter.
+// Kiro adopted the Agent Skills standard (Feb 2026) and supports the 5 shared spec fields.
+type kiroSkillMeta struct {
+	Name          string            `yaml:"name,omitempty"`
+	Description   string            `yaml:"description,omitempty"`
+	License       string            `yaml:"license,omitempty"`
+	Compatibility string            `yaml:"compatibility,omitempty"`
+	Metadata      map[string]string `yaml:"metadata,omitempty"`
+}
+
+// renderKiroSkill renders a canonical skill to Kiro's SKILL.md format with YAML frontmatter.
+// Kiro supports the 5 Agent Skills spec fields (name, description, license, compatibility, metadata).
+// CC-specific fields (allowed-tools, context, agent, etc.) are embedded as prose notes.
+func renderKiroSkill(meta SkillMeta, body string) (*Result, error) {
 	cleanBody := StripConversionNotes(body)
 
-	var header strings.Builder
-	if meta.Name != "" {
-		header.WriteString("# ")
-		header.WriteString(meta.Name)
-		header.WriteString("\n\n")
-	}
-	if meta.Description != "" {
-		header.WriteString(meta.Description)
-		header.WriteString("\n\n")
-	}
-
-	outBody := header.String() + cleanBody
-
-	// Embed behavioral metadata as prose rather than dropping it
+	// Build behavioral notes for CC-specific fields Kiro doesn't support
 	notes := buildSkillProseNotes(meta)
+	outBody := cleanBody
 	if len(notes) > 0 {
 		notesBlock := BuildConversionNotes("claude-code", notes)
 		outBody = AppendNotes(outBody, notesBlock)
 	}
 
-	name := "skill"
-	if meta.Name != "" {
-		name = slugify(meta.Name)
+	km := kiroSkillMeta{
+		Name:          meta.Name,
+		Description:   meta.Description,
+		License:       meta.License,
+		Compatibility: meta.Compatibility,
+		Metadata:      meta.Metadata,
 	}
 
-	return &Result{
-		Content:  []byte(outBody + "\n"),
-		Filename: name + ".md",
-	}, nil
+	fm, err := renderFrontmatter(km)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	hookWarnings := formatSkillHookWarnings(meta.Name, meta.Hooks, "kiro")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
 }
 
-// renderKiroSkill renders a canonical skill to a Kiro steering file (plain markdown).
-func renderKiroSkill(meta SkillMeta, body string) (*Result, error) {
-	return renderPlainMarkdownSkill(meta, body)
+// opencodeSkillMeta is the subset of fields OpenCode supports in SKILL.md frontmatter.
+// OpenCode adopted the Agent Skills standard and supports the 5 shared spec fields.
+type opencodeSkillMeta struct {
+	Name          string            `yaml:"name,omitempty"`
+	Description   string            `yaml:"description,omitempty"`
+	License       string            `yaml:"license,omitempty"`
+	Compatibility string            `yaml:"compatibility,omitempty"`
+	Metadata      map[string]string `yaml:"metadata,omitempty"`
 }
 
-// renderOpenCodeSkill renders a canonical skill to OpenCode's plain markdown format.
+// renderOpenCodeSkill renders a canonical skill to OpenCode's SKILL.md format with YAML frontmatter.
+// OpenCode supports the 5 Agent Skills spec fields (name, description, license, compatibility, metadata).
+// CC-specific fields (allowed-tools, context, agent, etc.) are embedded as prose notes.
 func renderOpenCodeSkill(meta SkillMeta, body string) (*Result, error) {
-	return renderPlainMarkdownSkill(meta, body)
+	cleanBody := StripConversionNotes(body)
+
+	// Build behavioral notes for CC-specific fields OpenCode doesn't support
+	notes := buildSkillProseNotes(meta)
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	om := opencodeSkillMeta{
+		Name:          meta.Name,
+		Description:   meta.Description,
+		License:       meta.License,
+		Compatibility: meta.Compatibility,
+		Metadata:      meta.Metadata,
+	}
+
+	fm, err := renderFrontmatter(om)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+}
+
+// ampSkillMeta is the subset of fields Amp supports in SKILL.md frontmatter.
+// Amp follows the base Agent Skills spec with name and description only.
+type ampSkillMeta struct {
+	Name        string `yaml:"name,omitempty"`
+	Description string `yaml:"description,omitempty"`
+}
+
+// renderAmpSkill renders a canonical skill to Amp's SKILL.md format.
+// Amp supports only name and description fields. CC-specific fields
+// (allowed-tools, context, agent, etc.) are embedded as prose notes.
+func renderAmpSkill(meta SkillMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	notes := buildSkillProseNotes(meta)
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	am := ampSkillMeta{
+		Name:        meta.Name,
+		Description: meta.Description,
+	}
+
+	fm, err := renderFrontmatter(am)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+}
+
+// clineSkillMeta is the subset of fields Cline supports in SKILL.md frontmatter.
+// Cline follows the base Agent Skills spec with name and description only.
+type clineSkillMeta struct {
+	Name        string `yaml:"name,omitempty"`
+	Description string `yaml:"description,omitempty"`
+}
+
+// renderClineSkill renders a canonical skill to Cline's SKILL.md format.
+// Cline supports only name and description fields. CC-specific fields
+// (allowed-tools, context, agent, etc.) are embedded as prose notes.
+func renderClineSkill(meta SkillMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	notes := buildSkillProseNotes(meta)
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	cm := clineSkillMeta{
+		Name:        meta.Name,
+		Description: meta.Description,
+	}
+
+	fm, err := renderFrontmatter(cm)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+}
+
+// rooCodeSkillMeta is the subset of fields Roo Code supports in SKILL.md frontmatter.
+// Roo Code follows the base Agent Skills spec with name and description only.
+type rooCodeSkillMeta struct {
+	Name        string `yaml:"name,omitempty"`
+	Description string `yaml:"description,omitempty"`
+}
+
+// renderRooCodeSkill renders a canonical skill to Roo Code's SKILL.md format.
+// Roo Code supports only name and description fields. CC-specific fields
+// (allowed-tools, context, agent, etc.) are embedded as prose notes.
+func renderRooCodeSkill(meta SkillMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	notes := buildSkillProseNotes(meta)
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	rm := rooCodeSkillMeta{
+		Name:        meta.Name,
+		Description: meta.Description,
+	}
+
+	fm, err := renderFrontmatter(rm)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
 }
 
 // --- Helpers ---

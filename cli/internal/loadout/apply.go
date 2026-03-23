@@ -20,12 +20,12 @@ import (
 
 // ApplyOptions configures a loadout apply operation.
 type ApplyOptions struct {
-	Mode        string                // "preview", "try", or "keep"
+	Mode        string                  // "preview", "try", or "keep"
 	Method      installer.InstallMethod // "symlink" (default) or "copy"
 	ProjectRoot string
-	HomeDir     string                // defaults to os.UserHomeDir() if empty
-	RepoRoot    string                // catalog repo root for symlink source resolution
-	Resolver    *config.PathResolver  // optional path resolver for custom locations
+	HomeDir     string               // defaults to os.UserHomeDir() if empty
+	RepoRoot    string               // catalog repo root for symlink source resolution
+	Resolver    *config.PathResolver // optional path resolver for custom locations
 }
 
 // ApplyResult describes what happened during apply.
@@ -393,9 +393,9 @@ func collectBackupFiles(actions []PlannedAction, prov provider.Provider, opts Ap
 		files = append(files, settingsPathFor(prov, opts.HomeDir, opts.Resolver))
 	}
 	if needsMCPConfig {
-		home, err := os.UserHomeDir()
+		mcpPath, err := installer.MCPConfigPathFor(prov, opts.ProjectRoot)
 		if err == nil {
-			files = append(files, filepath.Join(home, ".claude.json"))
+			files = append(files, mcpPath)
 		}
 	}
 

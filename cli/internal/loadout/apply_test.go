@@ -46,8 +46,8 @@ func setupTestEnv(t *testing.T) (homeDir string, projectRoot string, manifest *M
 		Version:  1,
 		Provider: "claude-code",
 		Name:     "test-loadout",
-		Rules:    []string{"my-rule"},
-		Hooks:    []string{"my-hook"},
+		Rules:    []ItemRef{{Name: "my-rule"}},
+		Hooks:    []ItemRef{{Name: "my-hook"}},
 	}
 
 	cat = &catalog.Catalog{
@@ -273,7 +273,7 @@ func TestApply_ResolveFails(t *testing.T) {
 	manifest := &Manifest{
 		Provider: "claude-code",
 		Name:     "bad-loadout",
-		Rules:    []string{"nonexistent-rule"},
+		Rules:    []ItemRef{{Name: "nonexistent-rule"}},
 	}
 	cat := &catalog.Catalog{Items: []catalog.ContentItem{}}
 
