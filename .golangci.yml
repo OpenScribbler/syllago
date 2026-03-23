@@ -1,7 +1,6 @@
 version: "2"
 
-# Minimal baseline linter configuration.
-# Goal: consistency, not exhaustive analysis.
+# Linter configuration for pre-release code quality.
 run:
   timeout: 5m
   modules-download-mode: readonly
@@ -9,9 +8,29 @@ run:
 linters:
   default: none
   enable:
+    - errcheck
+    - gocyclo
     - govet
     - ineffassign
+    - staticcheck
     - unused
+  settings:
+    errcheck:
+      # fmt.Fprint* writing to stdout/stderr almost never fails in CLI tools,
+      # and checking the error adds noise without value.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - (fmt.State).Write
+        - (*strings.Builder).WriteString
+        - (*strings.Builder).WriteRune
+        - (*strings.Builder).WriteByte
+    gocyclo:
+      # Bubbletea Update() methods and CLI command runners inherently have
+      # high cyclomatic complexity due to message/flag dispatch patterns.
+      # 50 catches genuinely problematic functions without flagging idiomatic TUI code.
+      min-complexity: 50
 
 formatters:
   enable:
