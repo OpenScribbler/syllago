@@ -358,10 +358,6 @@ func parseCommandCanonical(content []byte) (CommandMeta, string, error) {
 
 // --- Canonicalizers ---
 
-func canonicalizeClaudeCommand(content []byte) (*Result, error) {
-	return canonicalizeCommandWithProvider(content, "claude-code")
-}
-
 func canonicalizeCommandWithProvider(content []byte, sourceProvider string) (*Result, error) {
 	meta, body, err := parseCommandCanonical(content)
 	if err != nil {
