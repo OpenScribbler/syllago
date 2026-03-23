@@ -135,6 +135,9 @@ func (c *MCPConverter) Canonicalize(content []byte, sourceProvider string) (*Res
 	if sourceProvider == "windsurf" {
 		return canonicalizeWindsurfMCP(content)
 	}
+	if sourceProvider == "amp" {
+		return canonicalizeAmpMCP(content)
+	}
 
 	var cfg mcpConfig
 	if err := json.Unmarshal(content, &cfg); err != nil {
@@ -254,6 +257,8 @@ func (c *MCPConverter) Render(content []byte, target provider.Provider) (*Result
 		return renderCursorMCP(cfg)
 	case "windsurf":
 		return renderWindsurfMCP(cfg)
+	case "amp":
+		return renderAmpMCP(cfg)
 	default:
 		// Claude Code — emit with Claude-compatible fields only
 		return renderClaudeMCP(cfg)
@@ -897,6 +902,101 @@ func renderZedMCP(cfg mcpConfig) (*Result, error) {
 		if len(server.DisabledTools) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Zed)", name))
 		}
+	}
+
+	result, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: result, Filename: "settings.json", Warnings: warnings}, nil
+}
+
+// ampMCPSettings is Amp's settings.json structure with namespaced MCP key.
+type ampMCPSettings struct {
+	AmpMCPServers map[string]ampServerConfig `json:"amp.mcpServers"`
+}
+
+// ampServerConfig is Amp's per-server MCP format.
+type ampServerConfig struct {
+	Command      string            `json:"command,omitempty"`
+	Args         []string          `json:"args,omitempty"`
+	Env          map[string]string `json:"env,omitempty"`
+	URL          string            `json:"url,omitempty"`
+	Headers      map[string]string `json:"headers,omitempty"`
+	IncludeTools []string          `json:"includeTools,omitempty"`
+}
+
+func canonicalizeAmpMCP(content []byte) (*Result, error) {
+	var src ampMCPSettings
+	if err := json.Unmarshal(content, &src); err != nil {
+		return nil, fmt.Errorf("parsing Amp MCP config: %w", err)
+	}
+
+	out := mcpConfig{MCPServers: make(map[string]mcpServerConfig)}
+
+	for name, s := range src.AmpMCPServers {
+		canonical := mcpServerConfig{
+			Command:      s.Command,
+			Args:         s.Args,
+			Env:          s.Env,
+			URL:          s.URL,
+			Headers:      s.Headers,
+			IncludeTools: s.IncludeTools,
+		}
+
+		// Infer transport type from URL presence
+		if s.URL != "" && canonical.Type == "" {
+			canonical.Type = "streamable-http"
+		}
+
+		out.MCPServers[name] = canonical
+	}
+
+	result, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: result, Filename: "mcp.json"}, nil
+}
+
+func renderAmpMCP(cfg mcpConfig) (*Result, error) {
+	var warnings []string
+	out := ampMCPSettings{AmpMCPServers: make(map[string]ampServerConfig)}
+
+	for name, server := range cfg.MCPServers {
+		s := ampServerConfig{
+			Command:      server.Command,
+			Args:         server.Args,
+			Env:          server.Env,
+			URL:          server.URL,
+			Headers:      server.Headers,
+			IncludeTools: server.IncludeTools,
+		}
+
+		// Warn about dropped provider-specific fields
+		if server.Cwd != "" {
+			warnings = append(warnings, fmt.Sprintf("server %q: cwd dropped (not supported by Amp)", name))
+		}
+		if len(server.AutoApprove) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: autoApprove dropped (Claude-specific; Amp uses permissions system)", name))
+		}
+		if server.Trust != "" {
+			warnings = append(warnings, fmt.Sprintf("server %q: trust dropped (Gemini-specific)", name))
+		}
+		if len(server.ExcludeTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific; Amp uses includeTools)", name))
+		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Amp)", name))
+		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Amp", name))
+		}
+		if server.Disabled {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabled state dropped (Amp doesn't support disabled flag)", name))
+		}
+
+		out.AmpMCPServers[name] = s
 	}
 
 	result, err := json.MarshalIndent(out, "", "  ")

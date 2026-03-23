@@ -30,6 +30,12 @@ type CommandMeta struct {
 	Effort                 string   `yaml:"effort,omitempty"` // "low", "medium", "high", "max"
 }
 
+// codexCommandMeta represents Codex command frontmatter fields.
+type codexCommandMeta struct {
+	Description  string `yaml:"description,omitempty"`
+	ArgumentHint string `yaml:"argument-hint,omitempty"`
+}
+
 // opencodeCommandMeta represents OpenCode command frontmatter fields.
 type opencodeCommandMeta struct {
 	Description string `yaml:"description,omitempty"`
@@ -77,6 +83,8 @@ func (c *CommandsConverter) Render(content []byte, target provider.Provider) (*R
 		return renderGeminiCommand(meta, body)
 	case "codex":
 		return renderCodexCommand(meta, body)
+	case "cursor":
+		return renderCursorCommand(meta, body)
 	case "opencode":
 		return renderOpenCodeCommand(meta, body)
 	default:
@@ -136,6 +144,7 @@ func canonicalizeGeminiCommand(content []byte) (*Result, error) {
 		Description: gc.Description,
 	}
 	body := strings.TrimSpace(gc.Prompt)
+	body = strings.ReplaceAll(body, "{{args}}", "$ARGUMENTS")
 
 	canonical, err := buildCommandCanonical(meta, body)
 	if err != nil {
@@ -209,6 +218,15 @@ func renderGeminiCommand(meta CommandMeta, body string) (*Result, error) {
 }
 
 func renderCodexCommand(meta CommandMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	cm := codexCommandMeta{
+		Description:  meta.Description,
+		ArgumentHint: meta.ArgumentHint,
+	}
+
+	// Build behavioral notes only for fields NOT supported in Codex frontmatter.
+	// Description and ArgumentHint are now in frontmatter — no notes needed for those.
 	var notes []string
 	if len(meta.AllowedTools) > 0 {
 		notes = append(notes, fmt.Sprintf("**Tool restriction:** Use only %s tools.", strings.Join(meta.AllowedTools, ", ")))
@@ -226,11 +244,59 @@ func renderCodexCommand(meta CommandMeta, body string) (*Result, error) {
 		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
 	}
 
-	result := body
+	result := cleanBody
 	if len(notes) > 0 {
 		notesBlock := BuildConversionNotes("claude-code", notes)
-		result = AppendNotes(body, notesBlock)
+		result = AppendNotes(cleanBody, notesBlock)
 	}
+
+	fm, err := renderFrontmatter(cm)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(result)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "command.md"}, nil
+}
+
+// renderCursorCommand renders a canonical command to Cursor's plain markdown format.
+// Cursor commands are plain markdown files — no frontmatter, no TOML.
+// Unsupported fields are embedded as behavioral prose notes.
+func renderCursorCommand(meta CommandMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	// Build behavioral notes for fields Cursor doesn't support
+	var notes []string
+	if len(meta.AllowedTools) > 0 {
+		translated := TranslateTools(meta.AllowedTools, "cursor")
+		notes = append(notes, fmt.Sprintf("**Tool restriction:** Use only %s tools.", strings.Join(translated, ", ")))
+	}
+	if meta.Context == "fork" {
+		notes = append(notes, "Run in an isolated context. Do not modify the main conversation.")
+	}
+	if meta.Agent != "" {
+		notes = append(notes, fmt.Sprintf("Use a %s-focused approach.", strings.ToLower(meta.Agent)))
+	}
+	if meta.Model != "" {
+		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+
+	result := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		result = AppendNotes(cleanBody, notesBlock)
+	}
+
+	// Convert argument placeholder: $ARGUMENTS → $1 (Cursor's shell-style arg)
+	result = strings.ReplaceAll(result, "$ARGUMENTS", "$1")
 
 	return &Result{Content: []byte(result + "\n"), Filename: "command.md"}, nil
 }

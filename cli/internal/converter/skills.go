@@ -213,6 +213,8 @@ func (c *SkillsConverter) Render(content []byte, target provider.Provider) (*Res
 		return renderCursorSkill(meta, body)
 	case "windsurf":
 		return renderWindsurfSkill(meta, body)
+	case "amp":
+		return renderAmpSkill(meta, body)
 	default:
 		// Claude Code, Copilot CLI — full frontmatter preserved
 		return renderClaudeSkill(meta, body)
@@ -591,6 +593,45 @@ func renderOpenCodeSkill(meta SkillMeta, body string) (*Result, error) {
 	}
 
 	fm, err := renderFrontmatter(om)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+}
+
+// ampSkillMeta is the subset of fields Amp supports in SKILL.md frontmatter.
+// Amp follows the base Agent Skills spec with name and description only.
+type ampSkillMeta struct {
+	Name        string `yaml:"name,omitempty"`
+	Description string `yaml:"description,omitempty"`
+}
+
+// renderAmpSkill renders a canonical skill to Amp's SKILL.md format.
+// Amp supports only name and description fields. CC-specific fields
+// (allowed-tools, context, agent, etc.) are embedded as prose notes.
+func renderAmpSkill(meta SkillMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	notes := buildSkillProseNotes(meta)
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	am := ampSkillMeta{
+		Name:        meta.Name,
+		Description: meta.Description,
+	}
+
+	fm, err := renderFrontmatter(am)
 	if err != nil {
 		return nil, err
 	}

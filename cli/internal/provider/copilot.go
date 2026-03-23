@@ -22,7 +22,7 @@ var CopilotCLI = Provider{
 		case catalog.Commands:
 			return filepath.Join(base, "commands")
 		case catalog.Agents:
-			return filepath.Join(base, "agents")
+			return filepath.Join(homeDir, ".github", "agents")
 		case catalog.Hooks:
 			return JSONMergeSentinel
 		case catalog.MCP:

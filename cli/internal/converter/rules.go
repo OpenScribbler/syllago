@@ -43,6 +43,8 @@ func (c *RulesConverter) Canonicalize(content []byte, sourceProvider string) (*R
 		return canonicalizeMarkdownRule(content)
 	case "kiro":
 		return canonicalizeKiroRule(content)
+	case "amp":
+		return canonicalizeAmpRule(content)
 	default:
 		return canonicalizeMarkdownRule(content)
 	}
@@ -74,6 +76,8 @@ func (c *RulesConverter) Render(content []byte, target provider.Provider) (*Resu
 		return renderOpenCodeRule(meta, body)
 	case "kiro":
 		return renderKiroRule(meta, body)
+	case "amp":
+		return renderAmpRule(meta, body)
 	default:
 		return renderMarkdownRule(meta, body)
 	}
@@ -652,6 +656,94 @@ func slugify(s string) string {
 		return "rule"
 	}
 	return result
+}
+
+// ampRuleFrontmatter represents Amp's YAML frontmatter fields.
+// Amp AGENTS.md files use a globs array for file-specific activation.
+type ampRuleFrontmatter struct {
+	Globs []string `yaml:"globs,omitempty"`
+}
+
+func canonicalizeAmpRule(content []byte) (*Result, error) {
+	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+
+	opening := []byte("---\n")
+	if !bytes.HasPrefix(normalized, opening) {
+		meta := RuleMeta{AlwaysApply: true}
+		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "rule.md"}, nil
+	}
+
+	rest := normalized[len(opening):]
+	closingIdx := bytes.Index(rest, opening)
+	if closingIdx == -1 {
+		meta := RuleMeta{AlwaysApply: true}
+		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "rule.md"}, nil
+	}
+
+	yamlBytes := rest[:closingIdx]
+	var afm ampRuleFrontmatter
+	if err := yaml.Unmarshal(yamlBytes, &afm); err != nil {
+		return nil, err
+	}
+
+	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+
+	meta := RuleMeta{}
+	if len(afm.Globs) > 0 {
+		meta.Globs = afm.Globs
+	} else {
+		meta.AlwaysApply = true
+	}
+
+	canonical, err := buildCanonical(meta, body)
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: canonical, Filename: "rule.md"}, nil
+}
+
+// renderAmpRule renders a rule for Amp's AGENTS.md format.
+// Amp uses `globs` as a YAML array in frontmatter. Always-apply rules
+// render as plain markdown (no frontmatter).
+func renderAmpRule(meta RuleMeta, body string) (*Result, error) {
+	if len(meta.Globs) > 0 {
+		afm := ampRuleFrontmatter{Globs: meta.Globs}
+		fm, err := renderFrontmatter(afm)
+		if err != nil {
+			return nil, err
+		}
+		var buf bytes.Buffer
+		buf.Write(fm)
+		buf.WriteString("\n")
+		buf.WriteString(body)
+		buf.WriteString("\n")
+		return &Result{Content: buf.Bytes(), Filename: "AGENTS.md"}, nil
+	}
+
+	if meta.AlwaysApply {
+		return &Result{Content: []byte(body + "\n"), Filename: "AGENTS.md"}, nil
+	}
+
+	// Non-glob, non-alwaysApply: embed scope as prose
+	var notes []string
+	switch {
+	case meta.Description != "":
+		notes = append(notes, fmt.Sprintf("**Scope:** Apply when: %s", meta.Description))
+	default:
+		notes = append(notes, "**Scope:** Apply only when explicitly asked.")
+	}
+
+	notesBlock := BuildConversionNotes("syllago", notes)
+	result := AppendNotes(body, notesBlock)
+	return &Result{Content: []byte(result + "\n"), Filename: "AGENTS.md"}, nil
 }
 
 // --- Helpers ---
