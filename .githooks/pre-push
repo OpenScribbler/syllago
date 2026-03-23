@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# Pre-push hook: run golangci-lint to catch issues before burning CI minutes.
+#
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -z "$REPO_ROOT" ] || [ ! -d "$REPO_ROOT/cli" ]; then
+    exit 0
+fi
+
+# Skip if golangci-lint is not installed
+if ! command -v golangci-lint >/dev/null 2>&1; then
+    echo "Warning: golangci-lint not found, skipping pre-push lint check" >&2
+    exit 0
+fi
+
+echo "Running golangci-lint before push..."
+if ! (cd "$REPO_ROOT/cli" && golangci-lint run ./...); then
+    echo "" >&2
+    echo "Error: golangci-lint found issues. Fix them before pushing." >&2
+    echo "Run: cd cli && golangci-lint run ./..." >&2
+    exit 1
+fi
+
+echo "Lint clean."
+exit 0
