@@ -2,6 +2,7 @@ package sandbox
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -170,7 +171,8 @@ func RunSession(cfg RunConfig, w *os.File) error {
 	if err := bwrapRunner(ctx, bwrapArgs); err != nil && ctx.Err() == nil {
 		// Non-zero exit from the provider is expected (e.g. user typed "exit").
 		// Only surface errors that aren't from the provider itself exiting.
-		if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() == -1 {
+		var exitErr *exec.ExitError
+		if !errors.As(err, &exitErr) || exitErr.ExitCode() == -1 {
 			return fmt.Errorf("sandbox exited with error: %w", err)
 		}
 	}
