@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 528 200" overflow="visible" role="img" aria-label="Syllago">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 200" overflow="visible" role="img" aria-label="Syllago">
   <title>Syllago</title>
   <style>
     text {
@@ -14,16 +14,16 @@
     }
   </style>
   <g xml:space="preserve">
-    <text y="16"><tspan class="s">  █████████             ████</tspan><tspan class="l">  ████</tspan></text>
-    <text y="34"><tspan class="s"> ███░░░░░███           ░░███</tspan><tspan class="l"> ░░███</tspan></text>
-    <text y="52"><tspan class="s">░███    ░░░  █████ ████ ░███</tspan><tspan class="l">  ░███   ██████    ███████  ██████</tspan></text>
-    <text y="70"><tspan class="s">░░█████████ ░░███ ░███  ░███</tspan><tspan class="l">  ░███  ░░░░░███  ███░░███ ███░░███</tspan></text>
-    <text y="88"><tspan class="s"> ░░░░░░░░███ ░███ ░███  ░███</tspan><tspan class="l">  ░███   ███████ ░███ ░███░███ ░███</tspan></text>
-    <text y="106"><tspan class="s"> ███    ░███ ░███ ░███  ░███</tspan><tspan class="l">  ░███  ███░░███ ░███ ░███░███ ░███</tspan></text>
-    <text y="124"><tspan class="s">░░█████████  ░░███████  █████</tspan><tspan class="l"> █████░░████████░░███████░░██████</tspan></text>
-    <text y="142"><tspan class="s"> ░░░░░░░░░    ░░░░░███ ░░░░░</tspan><tspan class="l"> ░░░░░  ░░░░░░░░  ░░░░░███ ░░░░░░</tspan></text>
-    <text y="160"><tspan class="s">              ███ ░███</tspan><tspan class="l">                        ███ ░███</tspan></text>
-    <text y="178"><tspan class="s">             ░░██████</tspan><tspan class="l">                        ░░██████</tspan></text>
-    <text y="196"><tspan class="s">              ░░░░░░</tspan><tspan class="l">                          ░░░░░░</tspan></text>
+    <text y="16" textLength="500" lengthAdjust="spacing"><tspan class="s">  █████████             ████</tspan><tspan class="l">  ████                             </tspan></text>
+    <text y="34" textLength="500" lengthAdjust="spacing"><tspan class="s"> ███░░░░░███           ░░███</tspan><tspan class="l"> ░░███                             </tspan></text>
+    <text y="52" textLength="500" lengthAdjust="spacing"><tspan class="s">░███    ░░░  █████ ████ ░███</tspan><tspan class="l">  ░███   ██████    ███████  ██████ </tspan></text>
+    <text y="70" textLength="500" lengthAdjust="spacing"><tspan class="s">░░█████████ ░░███ ░███  ░███</tspan><tspan class="l">  ░███  ░░░░░███  ███░░███ ███░░███</tspan></text>
+    <text y="88" textLength="500" lengthAdjust="spacing"><tspan class="s"> ░░░░░░░░███ ░███ ░███  ░███</tspan><tspan class="l">  ░███   ███████ ░███ ░███░███ ░███</tspan></text>
+    <text y="106" textLength="500" lengthAdjust="spacing"><tspan class="s"> ███    ░███ ░███ ░███  ░███</tspan><tspan class="l">  ░███  ███░░███ ░███ ░███░███ ░███</tspan></text>
+    <text y="124" textLength="500" lengthAdjust="spacing"><tspan class="s">░░█████████  ░░███████  █████</tspan><tspan class="l"> █████░░████████░░███████░░██████  </tspan></text>
+    <text y="142" textLength="500" lengthAdjust="spacing"><tspan class="s"> ░░░░░░░░░    ░░░░░███ ░░░░░</tspan><tspan class="l"> ░░░░░  ░░░░░░░░  ░░░░░███ ░░░░░░ </tspan></text>
+    <text y="160" textLength="500" lengthAdjust="spacing"><tspan class="s">              ███ ░███</tspan><tspan class="l">                        ███ ░███   </tspan></text>
+    <text y="178" textLength="500" lengthAdjust="spacing"><tspan class="s">             ░░██████</tspan><tspan class="l">                        ░░██████   </tspan></text>
+    <text y="196" textLength="500" lengthAdjust="spacing"><tspan class="s">              ░░░░░░</tspan><tspan class="l">                          ░░░░░░   </tspan></text>
   </g>
 </svg>
