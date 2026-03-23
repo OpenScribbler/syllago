@@ -1547,7 +1547,7 @@ func TestLLMHookGenerateMode_AllProviders(t *testing.T) {
 			}
 
 			// Should produce ExtraFiles with wrapper script
-			if result.ExtraFiles == nil || len(result.ExtraFiles) == 0 {
+			if len(result.ExtraFiles) == 0 {
 				t.Fatal("expected ExtraFiles with wrapper script")
 			}
 

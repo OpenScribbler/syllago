@@ -472,11 +472,7 @@ func TestItemsHooksMatrixFullHeaders(t *testing.T) {
 
 // splitLines splits a string into lines, handling both \n and \r\n.
 func splitLines(s string) []string {
-	var lines []string
-	for _, line := range split(s, "\n") {
-		lines = append(lines, line)
-	}
-	return lines
+	return split(s, "\n")
 }
 
 func split(s, sep string) []string {

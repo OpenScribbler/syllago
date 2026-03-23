@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"path/filepath"
 	"testing"
 )
@@ -128,8 +127,5 @@ func TestProxy_Shutdown(t *testing.T) {
 		t.Error("expected connection refused after shutdown")
 	}
 
-	// Socket file should still exist (OS doesn't auto-clean UNIX sockets)
-	if _, err := os.Stat(sock); err != nil {
-		// That's fine — either way, the listener is closed
-	}
+	// Socket file may or may not exist after shutdown — either way, the listener is closed.
 }

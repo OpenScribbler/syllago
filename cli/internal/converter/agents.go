@@ -101,11 +101,8 @@ func (c *AgentsConverter) Canonicalize(content []byte, sourceProvider string) (*
 	}
 
 	// Normalize Gemini field names to canonical
-	if sourceProvider == "gemini-cli" {
-		// max_turns is handled by the YAML tag; temperature/timeout_mins are already in canonical
-	}
-
-	// Translate tool names from provider-native to canonical (neutral)
+	// Gemini field names: no special handling needed. max_turns is handled by
+	// the YAML tag; temperature/timeout_mins are already in canonical.
 	if sourceProvider != "" {
 		for i, tool := range meta.Tools {
 			meta.Tools[i] = ReverseTranslateTool(tool, sourceProvider)

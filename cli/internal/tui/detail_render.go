@@ -138,7 +138,8 @@ func (m detailModel) renderTabBar() string {
 		label string
 		tab   detailTab
 	}
-	if m.item.Type == catalog.Loadouts {
+	switch m.item.Type {
+	case catalog.Loadouts:
 		tabs = []struct {
 			label string
 			tab   detailTab
@@ -146,7 +147,7 @@ func (m detailModel) renderTabBar() string {
 			{"Contents", tabFiles},
 			{"Apply", tabInstall},
 		}
-	} else if m.item.Type == catalog.Hooks {
+	case catalog.Hooks:
 		tabs = []struct {
 			label string
 			tab   detailTab
@@ -155,7 +156,7 @@ func (m detailModel) renderTabBar() string {
 			{"Compat", tabCompatibility},
 			{"Install", tabInstall},
 		}
-	} else {
+	default:
 		tabs = []struct {
 			label string
 			tab   detailTab

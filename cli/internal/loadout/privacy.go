@@ -56,7 +56,7 @@ func CheckLoadoutPublishGate(items []catalog.ContentItem, targetRegistryVisibili
 		return nil
 	}
 
-	msg := fmt.Sprintf("cannot publish loadout to public registry\n\n  Contains private content:\n")
+	msg := "cannot publish loadout to public registry\n\n  Contains private content:\n"
 	for _, w := range warnings {
 		msg += fmt.Sprintf("    - %s (from %s, private)\n", w.Name, w.Registry)
 	}

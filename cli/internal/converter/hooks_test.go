@@ -743,12 +743,13 @@ func TestCopilotHooksMatcherPreserved(t *testing.T) {
 	foundMatcher := false
 	foundNoMatcher := false
 	for _, g := range groups {
-		if g.Matcher == "bash" {
+		switch g.Matcher {
+		case "bash":
 			foundMatcher = true
 			if len(g.Hooks) != 1 || g.Hooks[0].Bash != "echo safe" {
 				t.Errorf("matched group unexpected content: %+v", g)
 			}
-		} else if g.Matcher == "" {
+		case "":
 			foundNoMatcher = true
 			if len(g.Hooks) != 1 || g.Hooks[0].Bash != "echo general" {
 				t.Errorf("unmatched group unexpected content: %+v", g)

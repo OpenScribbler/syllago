@@ -80,12 +80,13 @@ func ScanNativeContent(dir string) NativeScanResult {
 				continue
 			}
 			pc := ensureProvider(p.providerSlug, p.providerName)
-			if p.typeLabel == "hooks" {
+			switch p.typeLabel {
+			case "hooks":
 				items := extractEmbeddedHooks(data, p.path)
 				if len(items) > 0 {
 					pc.Items[p.typeLabel] = append(pc.Items[p.typeLabel], items...)
 				}
-			} else if p.typeLabel == "mcp" {
+			case "mcp":
 				items := extractEmbeddedMCP(data, p.path)
 				if len(items) > 0 {
 					pc.Items[p.typeLabel] = append(pc.Items[p.typeLabel], items...)
@@ -126,9 +127,10 @@ func ScanNativeContent(dir string) NativeScanResult {
 					item.Name = e.Name()
 					item.Path = entryPath
 					// Look for a primary file inside the subdir (SKILL.md, AGENT.md).
-					if p.typeLabel == "skills" {
+					switch p.typeLabel {
+					case "skills":
 						item = enrichFromSubdirFile(item, filepath.Join(dir, entryPath), "SKILL.md")
-					} else if p.typeLabel == "agents" {
+					case "agents":
 						item = enrichFromSubdirFile(item, filepath.Join(dir, entryPath), "AGENT.md")
 					}
 					pc.Items[p.typeLabel] = append(pc.Items[p.typeLabel], item)

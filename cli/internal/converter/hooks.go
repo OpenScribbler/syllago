@@ -713,7 +713,7 @@ func generateLLMWrapperScript(h HookEntry, targetSlug string, event string, idx 
 	var b strings.Builder
 	b.WriteString("#!/bin/bash\n")
 	b.WriteString("# syllago-generated: LLM-evaluated hook wrapper\n")
-	b.WriteString(fmt.Sprintf("# Original type: %s | Event: %s\n", h.Type, event))
+	fmt.Fprintf(&b, "# Original type: %s | Event: %s\n", h.Type, event)
 	b.WriteString("# Calls the target provider's CLI in non-interactive mode.\n")
 	b.WriteString("# No API key needed — uses the locally installed CLI's auth.\n")
 	b.WriteString("\n")
@@ -728,13 +728,13 @@ func generateLLMWrapperScript(h HookEntry, targetSlug string, event string, idx 
 
 	switch targetSlug {
 	case "gemini-cli":
-		b.WriteString(fmt.Sprintf("RESPONSE=$(%s -p %s --output-format json 2>/dev/null)\n", cli, escapedPrompt))
+		fmt.Fprintf(&b, "RESPONSE=$(%s -p %s --output-format json 2>/dev/null)\n", cli, escapedPrompt)
 		b.WriteString("echo \"$RESPONSE\" | jq -r '.response'\n")
 	case "claude-code":
-		b.WriteString(fmt.Sprintf("RESPONSE=$(%s -p %s --output-format json 2>/dev/null)\n", cli, escapedPrompt))
+		fmt.Fprintf(&b, "RESPONSE=$(%s -p %s --output-format json 2>/dev/null)\n", cli, escapedPrompt)
 		b.WriteString("echo \"$RESPONSE\" | jq -r '.result // .'\n")
 	default:
-		b.WriteString(fmt.Sprintf("RESPONSE=$(echo %s | %s 2>/dev/null)\n", escapedPrompt, cli))
+		fmt.Fprintf(&b, "RESPONSE=$(echo %s | %s 2>/dev/null)\n", escapedPrompt, cli)
 		b.WriteString("echo \"$RESPONSE\"\n")
 	}
 
