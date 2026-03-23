@@ -225,20 +225,23 @@ func extractEmbeddedHooks(data []byte, relPath string) []NativeItem {
 // extractEmbeddedMCP parses a JSON file for MCP server definitions and
 // returns one NativeItem per server name.
 //
-// Expected format: {"mcpServers": {"server-name": {...}}}
+// Most providers use "mcpServers"; Zed uses "context_servers". Both keys
+// are checked so a single scan handles all providers.
 func extractEmbeddedMCP(data []byte, relPath string) []NativeItem {
 	var items []NativeItem
-	serversObj := gjson.GetBytes(data, "mcpServers")
-	if !serversObj.Exists() || !serversObj.IsObject() {
-		return nil
-	}
-	serversObj.ForEach(func(nameKey, _ gjson.Result) bool {
-		items = append(items, NativeItem{
-			Name: nameKey.String(),
-			Path: relPath,
+	for _, key := range []string{"mcpServers", "context_servers"} {
+		serversObj := gjson.GetBytes(data, key)
+		if !serversObj.Exists() || !serversObj.IsObject() {
+			continue
+		}
+		serversObj.ForEach(func(nameKey, _ gjson.Result) bool {
+			items = append(items, NativeItem{
+				Name: nameKey.String(),
+				Path: relPath,
+			})
+			return true
 		})
-		return true
-	})
+	}
 	return items
 }
 
@@ -280,6 +283,7 @@ func providerNativePatterns() []nativePattern {
 		{providerSlug: "kiro", providerName: "Kiro", path: ".kiro/settings/mcp.json", typeLabel: "mcp", embedded: true},
 		{providerSlug: "opencode", providerName: "OpenCode", path: "opencode.json", typeLabel: "mcp", embedded: true},
 		// Zed
+		{providerSlug: "zed", providerName: "Zed", path: ".zed/settings.json", typeLabel: "mcp", embedded: true},
 		{providerSlug: "zed", providerName: "Zed", path: ".zed", typeLabel: "settings"},
 		// Cline
 		{providerSlug: "cline", providerName: "Cline", path: ".clinerules", typeLabel: "rules"},

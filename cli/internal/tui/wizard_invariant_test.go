@@ -715,7 +715,7 @@ func TestWizardInvariantCreateLoadoutEsc(t *testing.T) {
 	t.Run("ReviewEsc_GoesBackToDest", func(t *testing.T) {
 		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
 		s.step = clStepReview
-		s.reviewBtnCursor = 0 // Back button
+		s.reviewBtnCursor = 0     // Back button
 		s, _ = s.Update(keyEnter) // Review Back → dest
 		if s.step != clStepDest {
 			t.Fatalf("expected clStepDest after Review Back, got %d", s.step)
@@ -771,9 +771,9 @@ func TestWizardInvariantInstallModal(t *testing.T) {
 		// When symlink is disabled for the content type, methodCursor defaults to 1 (copy)
 		disableSymlinkProviders := []provider.Provider{
 			{
-				Name:     "Claude Code",
-				Slug:     "claude-code",
-				Detected: true,
+				Name:         "Claude Code",
+				Slug:         "claude-code",
+				Detected:     true,
 				SupportsType: func(ct catalog.ContentType) bool { return true },
 				InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
 				SymlinkSupport: map[catalog.ContentType]bool{

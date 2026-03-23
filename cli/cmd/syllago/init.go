@@ -21,7 +21,7 @@ import (
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize syllago for this project",
-	Long: "Detects AI coding tools in use, creates .syllago/config.json with provider selection.",
+	Long:  "Detects AI coding tools in use, creates .syllago/config.json with provider selection.",
 	Example: `  # Interactive setup
   syllago init
 
@@ -40,8 +40,8 @@ func init() {
 }
 
 type initResult struct {
-	Detected   []string        `json:"detected"`
-	ConfigPath string          `json:"configPath"`
+	Detected   []string            `json:"detected"`
+	ConfigPath string              `json:"configPath"`
 	Installed  []initInstalledItem `json:"installed,omitempty"`
 }
 
@@ -74,7 +74,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	// Interactive wizard: let the user toggle providers before confirming.
 	// Falls through to auto-accept in non-interactive / --yes / --json modes.
 	if !yes && !output.JSON && isInteractive() && os.Getenv("SYLLAGO_NO_PROMPT") != "1" {
-		allProviders := provider.DetectProviders()
+		allProviders := provider.DetectProvidersWithResolver(nil)
 		wizard := newInitWizard(detected, allProviders)
 		model := initWizardModel{wizard: wizard}
 		p := tea.NewProgram(model)

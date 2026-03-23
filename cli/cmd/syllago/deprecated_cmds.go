@@ -22,18 +22,6 @@ var deprecatedExportCmd = &cobra.Command{
 	},
 }
 
-var deprecatedImportCmd = &cobra.Command{
-	Use:    "import",
-	Hidden: true,
-	Short:  "(removed) use 'add'",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		output.PrintError(1,
-			"Unknown command 'import'.",
-			"To add content to your library: syllago add <source>")
-		return output.SilentError(fmt.Errorf("import removed"))
-	},
-}
-
 var deprecatedPromoteCmd = &cobra.Command{
 	Use:    "promote",
 	Hidden: true,
@@ -47,17 +35,6 @@ var deprecatedPromoteCmd = &cobra.Command{
 }
 
 func init() {
-	// Register deprecated stubs for export and promote now that the real
-	// commands have been deleted (Phase 3.2). The import stub is NOT registered
-	// here because import.go still exists — it will be registered after Phase 3.1.
 	rootCmd.AddCommand(deprecatedExportCmd)
 	rootCmd.AddCommand(deprecatedPromoteCmd)
-}
-
-// registerDeprecatedStubs adds all deprecated command stubs to rootCmd.
-// Call this only after ALL real commands (export, import, promote) have been
-// removed. Calling it while any real command still exists will panic
-// with a Cobra duplicate command error.
-func registerDeprecatedStubs() {
-	rootCmd.AddCommand(deprecatedImportCmd)
 }

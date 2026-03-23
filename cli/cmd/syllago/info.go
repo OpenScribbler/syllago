@@ -28,7 +28,7 @@ var infoCmd = &cobra.Command{
 			"version":      v,
 			"contentTypes": catalog.AllContentTypes(),
 			"providers":    providerSlugs(),
-			"commands":     []string{"init", "add", "install", "import", "registry", "config", "info"},
+			"commands":     []string{"init", "add", "install", "registry", "config", "info"},
 		}
 		if output.JSON {
 			output.Print(manifest)
@@ -89,8 +89,8 @@ var infoProvidersCmd = &cobra.Command{
 }
 
 var infoFormatsCmd = &cobra.Command{
-	Use:   "formats",
-	Short: "List supported file formats",
+	Use:     "formats",
+	Short:   "List supported file formats",
 	Example: `  syllago info formats`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		type formatInfo struct {

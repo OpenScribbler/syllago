@@ -168,7 +168,7 @@ func runRemove(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(output.Writer, "Uninstalled from: %s\n", strings.Join(uninstalledFrom, ", "))
 		}
 		fmt.Fprintf(output.Writer, "Removed %q from library (%s).\n", name, item.Type.Label())
-		fmt.Fprintf(output.Writer, "\n  Next: syllago import <name>    (re-import to library)\n")
+		fmt.Fprintf(output.Writer, "\n  Next: syllago add <type>/<name> --from <provider>    (re-add to library)\n")
 	}
 
 	return nil

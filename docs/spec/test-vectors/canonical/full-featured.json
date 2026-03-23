@@ -1,0 +1,56 @@
+{
+  "_comment": "Full-featured hook manifest exercising most canonical fields. Contains: (1) a blocking shell hook with platform overrides, cwd, env, degradation, and windsurf provider_data; (2) an MCP matcher hook gating GitHub issue creation; (3) a session_start hook for initialization. Tests platform_commands, custom_env, configurable_cwd capabilities, provider_data passthrough, MCP matcher encoding, and non-tool event handling.",
+  "spec": "hooks/1.0",
+  "hooks": [
+    {
+      "event": "before_tool_execute",
+      "matcher": "shell",
+      "handler": {
+        "type": "command",
+        "command": "./safety-check.sh",
+        "platform": {
+          "windows": "./safety-check.ps1",
+          "linux": "./safety-check.sh",
+          "osx": "./safety-check-mac.sh"
+        },
+        "cwd": ".",
+        "env": {
+          "AUDIT_LOG": "./audit.log",
+          "STRICT_MODE": "true"
+        },
+        "timeout": 10
+      },
+      "blocking": true,
+      "degradation": {
+        "input_rewrite": "block",
+        "custom_env": "warn",
+        "platform_commands": "warn"
+      },
+      "provider_data": {
+        "windsurf": {
+          "show_output": true,
+          "working_directory": "/opt/hooks"
+        }
+      }
+    },
+    {
+      "event": "before_tool_execute",
+      "matcher": {"mcp": {"server": "github", "tool": "create_issue"}},
+      "handler": {
+        "type": "command",
+        "command": "./validate-issue.sh",
+        "timeout": 5
+      },
+      "blocking": true
+    },
+    {
+      "event": "session_start",
+      "handler": {
+        "type": "command",
+        "command": "./init-session.sh",
+        "timeout": 30
+      },
+      "blocking": false
+    }
+  ]
+}

@@ -24,7 +24,7 @@ type splitViewPane int
 
 const (
 	paneList    splitViewPane = iota // left pane (file tree / item list)
-	panePreview                     // right pane (content preview)
+	panePreview                      // right pane (content preview)
 )
 
 // splitViewCursorMsg is sent when the cursor moves to a new item.
@@ -564,70 +564,6 @@ func (m splitViewModel) renderList(width int) string {
 
 	if end < len(m.items) {
 		s.WriteString("  " + renderScrollDown(len(m.items)-end, false) + "\n")
-	}
-
-	return s.String()
-}
-
-// renderPreview renders the right pane (content preview).
-func (m splitViewModel) renderPreview(width int) string {
-	var s strings.Builder
-
-	// Title
-	titleStyle := labelStyle
-	if m.focusedPane != panePreview {
-		titleStyle = helpStyle
-	}
-	s.WriteString(titleStyle.Render("Preview"))
-	s.WriteString("\n")
-
-	if m.previewContent == "" {
-		s.WriteString(helpStyle.Render("  (no preview)") + "\n")
-		return s.String()
-	}
-
-	lines := strings.Split(m.previewContent, "\n")
-	visible := m.visiblePreviewRows()
-
-	// Clamp scroll
-	maxOffset := len(lines) - visible
-	if maxOffset < 0 {
-		maxOffset = 0
-	}
-	offset := m.previewScroll
-	if offset > maxOffset {
-		offset = maxOffset
-	}
-
-	end := offset + visible
-	if end > len(lines) {
-		end = len(lines)
-	}
-
-	if offset > 0 {
-		s.WriteString(renderScrollUp(offset, true) + "\n")
-	}
-
-	lineNumW := len(fmt.Sprintf("%d", len(lines)))
-	if lineNumW < 4 {
-		lineNumW = 4
-	}
-	maxContentW := width - lineNumW - 2 // line num + space + margin
-	if maxContentW < 10 {
-		maxContentW = 10
-	}
-
-	for i := offset; i < end; i++ {
-		lineNum := helpStyle.Render(fmt.Sprintf("%*d ", lineNumW, i+1))
-		lineContent := lines[i]
-		if len(lineContent) > maxContentW {
-			lineContent = lineContent[:maxContentW]
-		}
-		s.WriteString(lineNum + valueStyle.Render(StripControlChars(lineContent)) + "\n")
-	}
-
-	if end < len(lines) {
-		s.WriteString(renderScrollDown(len(lines)-end, true) + "\n")
 	}
 
 	return s.String()

@@ -12,9 +12,16 @@ var Windsurf = Provider{
 	Slug:      "windsurf",
 	ConfigDir: ".codeium/windsurf",
 	InstallDir: func(homeDir string, ct catalog.ContentType) string {
+		base := filepath.Join(homeDir, ".codeium", "windsurf")
 		switch ct {
 		case catalog.Rules:
-			return filepath.Join(homeDir, ".codeium", "windsurf")
+			return base
+		case catalog.Skills:
+			return filepath.Join(base, "skills")
+		case catalog.Hooks:
+			return JSONMergeSentinel
+		case catalog.MCP:
+			return JSONMergeSentinel
 		}
 		return ""
 	},
@@ -25,26 +32,42 @@ var Windsurf = Provider{
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {
 		case catalog.Rules:
-			return []string{filepath.Join(projectRoot, ".windsurfrules")}
+			return []string{
+				filepath.Join(projectRoot, ".windsurfrules"),
+				filepath.Join(projectRoot, ".windsurf", "rules"),
+			}
+		case catalog.Skills:
+			return []string{
+				filepath.Join(projectRoot, ".windsurf", "skills"),
+				filepath.Join(projectRoot, ".agents", "skills"),
+			}
 		default:
 			return nil
 		}
 	},
 	FileFormat: func(ct catalog.ContentType) Format {
-		return FormatMarkdown
+		switch ct {
+		case catalog.Hooks, catalog.MCP:
+			return FormatJSON
+		default:
+			return FormatMarkdown
+		}
 	},
 	EmitPath: func(projectRoot string) string {
-		return filepath.Join(projectRoot, ".windsurfrules")
+		return filepath.Join(projectRoot, ".windsurf", "rules")
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {
-		case catalog.Rules:
+		case catalog.Rules, catalog.Skills, catalog.Hooks, catalog.MCP:
 			return true
 		default:
 			return false
 		}
 	},
 	SymlinkSupport: map[catalog.ContentType]bool{
-		catalog.Rules: true,
+		catalog.Rules:  true,
+		catalog.Skills: true,
+		catalog.Hooks:  false, // JSON merge
+		catalog.MCP:    false, // JSON merge
 	},
 }

@@ -194,14 +194,14 @@ func resolveManifestItems(manifest *loadout.Manifest, cat *catalog.Catalog) []re
 	}
 
 	for _, ct := range typeOrder {
-		names, ok := refs[ct]
+		itemRefs, ok := refs[ct]
 		if !ok {
 			continue
 		}
-		for _, name := range names {
-			item := findCatalogItem(cat, name, ct)
+		for _, ref := range itemRefs {
+			item := findCatalogItem(cat, ref.Name, ct)
 			resolved = append(resolved, resolvedLoadoutItem{
-				name:     name,
+				name:     ref.Name,
 				ct:       ct,
 				resolved: item,
 			})

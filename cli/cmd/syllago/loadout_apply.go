@@ -78,7 +78,7 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(loadoutItems) == 0 {
-		fmt.Fprintln(output.ErrWriter, "No loadouts found in catalog.")
+		fmt.Fprintln(output.ErrWriter, "No loadouts found in library.")
 		return nil
 	}
 
@@ -95,8 +95,9 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 			}
 		}
 		if !found {
-			output.PrintError(1, fmt.Sprintf("loadout %q not found", name), "Run 'syllago loadout list' to see available loadouts.")
-			return output.SilentError(fmt.Errorf("loadout not found: %s", name))
+			se := output.NewStructuredError(output.ErrInstallItemNotFound, fmt.Sprintf("loadout %q not found", name), "Run 'syllago loadout list' to see available loadouts.")
+			output.PrintStructuredError(se)
+			return output.SilentError(se)
 		}
 	} else {
 		// Interactive selection
@@ -187,9 +188,9 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		p := findProviderBySlug(toSlug)
 		if p == nil {
 			slugs := providerSlugs()
-			output.PrintError(1, "unknown provider: "+toSlug,
-				"Available: "+strings.Join(slugs, ", "))
-			return output.SilentError(fmt.Errorf("unknown provider: %s", toSlug))
+			se := output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+toSlug, "Available: "+strings.Join(slugs, ", "))
+			output.PrintStructuredError(se)
+			return output.SilentError(se)
 		}
 		prov = *p
 	} else if manifest.Provider != "" {

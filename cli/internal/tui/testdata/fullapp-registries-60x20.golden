@@ -10,12 +10,12 @@ syllago           │Home > Registries
   ─────────────   │
   Collections     │
   Library       1 │
-  Loadouts      2 │
+  Loadouts      1 │
 > Registries      │
   ─────────────   │
   Configuration   │
   Add             │
-  Update          │
 ────────────────────────────────────────────────────────────
-arrows navigate • enter browse • a add registry • r remove
-registry • s sync registry • esc back Registries
+arrows navigate • enter browse                  Registries
+a add registry • r remove registry • s sync registry • esc
+back

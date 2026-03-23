@@ -10,7 +10,7 @@ syllago           │  Content
   ─────────────   ││ Model Context Protocol server configurations   │ │ Rule files that guide AI coding tool behavior  │
   Collections     ││                                                │ │                                                │
   Library       1 │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
-  Loadouts      2 │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
+  Loadouts      1 │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
   Registries      ││ Hooks (1)                                      │ │ Commands (1)                                   │
   ─────────────   ││ Event-driven hooks for automation and          │ │ Custom slash commands for AI coding tools      │
   Configuration   ││ validation                                     │ │                                                │
@@ -19,7 +19,7 @@ syllago           │  Content
   Settings        │  Collections
   Sandbox         │
                   │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
-                  ││ Library (1)                                    │ │ Loadouts (2)                                   │
+                  ││ Library (1)                                    │ │ Loadouts (1)                                   │
                   ││ All content across categories in one view      │ │ Curated content bundles for quick session      │
                   ││                                                │ │ setup                                          │
                   │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
@@ -34,7 +34,6 @@ syllago           │  Content
                   │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
                   ││ Add                                            │ │ Update                                         │
                   ││ Add content from providers, local files, or    │ │ Check for updates and pull latest changes      │
-                  ││ git repos                                      │ │                                                │
-           v1.0.0 │  (6 lines below)
+           v1.0.0 │  (7 lines below)
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 tab switch panel • / search • ? help • q quit                                                              syllago

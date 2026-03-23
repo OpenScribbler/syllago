@@ -233,9 +233,9 @@ func TestModalPurposesAreDefined(t *testing.T) {
 // tab is set to tabInstall so install-related keys are active.
 func makeDetailModel(itemType catalog.ContentType, local bool, installed bool) detailModel {
 	item := catalog.ContentItem{
-		Name:  "test-item",
-		Type:  itemType,
-		Path:  "/tmp/test-item",
+		Name:    "test-item",
+		Type:    itemType,
+		Path:    "/tmp/test-item",
 		Library: local,
 	}
 	var providers []provider.Provider
@@ -339,19 +339,19 @@ func TestInstallModalEscapeResetsState(t *testing.T) {
 		Path: t.TempDir(),
 	}
 	p := provider.Provider{
-		Name:     "TestProvider",
-		Detected: true,
-		Slug:     "test",
+		Name:         "TestProvider",
+		Detected:     true,
+		Slug:         "test",
 		SupportsType: func(ct catalog.ContentType) bool { return true },
 		InstallDir:   func(_ string, _ catalog.ContentType) string { return t.TempDir() },
 	}
 
 	// Start with an install modal already open (as if openInstallModalMsg was received)
 	a := App{
-		width:  80,
-		height: 24,
-		screen: screenDetail,
-		focus:  focusModal,
+		width:     80,
+		height:    24,
+		screen:    screenDetail,
+		focus:     focusModal,
 		instModal: newInstallModal(item, []provider.Provider{p}, "/tmp/repo"),
 	}
 
@@ -407,9 +407,9 @@ func TestInstallModalNavigateAwayResetsState(t *testing.T) {
 		Path: t.TempDir(),
 	}
 	p := provider.Provider{
-		Name:     "TestProvider",
-		Detected: true,
-		Slug:     "test",
+		Name:         "TestProvider",
+		Detected:     true,
+		Slug:         "test",
 		SupportsType: func(ct catalog.ContentType) bool { return true },
 		InstallDir:   func(_ string, _ catalog.ContentType) string { return t.TempDir() },
 	}
@@ -519,9 +519,9 @@ func TestInstallModalClosesOnEscapeAtLocationStep(t *testing.T) {
 		Path: "/tmp/test-item",
 	}
 	p := provider.Provider{
-		Name:     "Claude Code",
-		Slug:     "claude-code",
-		Detected: true,
+		Name:         "Claude Code",
+		Slug:         "claude-code",
+		Detected:     true,
 		SupportsType: func(ct catalog.ContentType) bool { return true },
 		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/claude" },
 	}
@@ -740,9 +740,9 @@ func TestInstallModal_SymlinkDisabled_DefaultsCopy(t *testing.T) {
 		Path: "/tmp/test",
 	}
 	p := provider.Provider{
-		Name:     "TestProvider",
-		Slug:     "test",
-		Detected: true,
+		Name:         "TestProvider",
+		Slug:         "test",
+		Detected:     true,
 		SupportsType: func(ct catalog.ContentType) bool { return true },
 		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
 		SymlinkSupport: map[catalog.ContentType]bool{
@@ -772,9 +772,9 @@ func TestInstallModal_SymlinkEnabled_DefaultsSymlink(t *testing.T) {
 		Path: "/tmp/test",
 	}
 	p := provider.Provider{
-		Name:     "TestProvider",
-		Slug:     "test",
-		Detected: true,
+		Name:         "TestProvider",
+		Slug:         "test",
+		Detected:     true,
 		SupportsType: func(ct catalog.ContentType) bool { return true },
 		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
 		SymlinkSupport: map[catalog.ContentType]bool{
@@ -801,9 +801,9 @@ func TestInstallModal_SymlinkDisabled_UpKeyCannotSelectSymlink(t *testing.T) {
 		Path: "/tmp/test",
 	}
 	p := provider.Provider{
-		Name:     "TestProvider",
-		Slug:     "test",
-		Detected: true,
+		Name:         "TestProvider",
+		Slug:         "test",
+		Detected:     true,
 		SupportsType: func(ct catalog.ContentType) bool { return true },
 		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
 		SymlinkSupport: map[catalog.ContentType]bool{
@@ -830,9 +830,9 @@ func TestInstallModal_SymlinkDisabled_ViewShowsNote(t *testing.T) {
 		Path: "/tmp/test",
 	}
 	p := provider.Provider{
-		Name:     "TestProvider",
-		Slug:     "test",
-		Detected: true,
+		Name:         "TestProvider",
+		Slug:         "test",
+		Detected:     true,
 		SupportsType: func(ct catalog.ContentType) bool { return true },
 		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
 		SymlinkSupport: map[catalog.ContentType]bool{

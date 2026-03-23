@@ -579,10 +579,106 @@ func TestAddHooksForce(t *testing.T) {
 		if strings.Contains(string(data), `"event":"old"`) {
 			t.Errorf("expected hook.json to be overwritten with force, still has old content")
 		}
-		if !strings.Contains(string(data), "PreToolUse") {
-			t.Errorf("expected overwritten hook.json to contain 'PreToolUse', got: %s", data)
+		if !strings.Contains(string(data), "before_tool_execute") {
+			t.Errorf("expected overwritten hook.json to contain 'before_tool_execute', got: %s", data)
 		}
 	})
+}
+
+func TestAddWarnsWhenProviderNotDetected(t *testing.T) {
+	tmp := setupAddProject(t)
+	globalDir := t.TempDir()
+
+	original := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = original })
+
+	// Add an undetected provider with discovery paths pointing to tmp.
+	installBase := t.TempDir()
+	addTestProviderOpts(t, "undetected-add", "Undetected Add Provider", installBase, false)
+
+	_, stderr := output.SetForTest(t)
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	addCmd.Flags().Set("from", "undetected-add")
+	addCmd.Flags().Set("all", "false")
+	addCmd.Flags().Set("force", "false")
+	addCmd.Flags().Set("dry-run", "false")
+
+	// Discovery mode (no args, no --all) — should still warn.
+	_ = addCmd.RunE(addCmd, []string{})
+
+	errOut := stderr.String()
+	if !strings.Contains(errOut, "Warning: Undetected Add Provider not detected") {
+		t.Errorf("expected provider-not-detected warning on stderr, got: %s", errOut)
+	}
+	if !strings.Contains(errOut, "syllago config paths --provider undetected-add") {
+		t.Errorf("expected config paths hint in warning, got: %s", errOut)
+	}
+}
+
+func TestAddNoWarningWhenProviderDetected(t *testing.T) {
+	tmp := setupAddProject(t)
+	globalDir := t.TempDir()
+
+	original := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = original })
+
+	installBase := t.TempDir()
+	addTestProviderOpts(t, "detected-add", "Detected Add Provider", installBase, true)
+
+	_, stderr := output.SetForTest(t)
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	addCmd.Flags().Set("from", "detected-add")
+	addCmd.Flags().Set("all", "false")
+	addCmd.Flags().Set("force", "false")
+	addCmd.Flags().Set("dry-run", "false")
+
+	_ = addCmd.RunE(addCmd, []string{})
+
+	errOut := stderr.String()
+	if strings.Contains(errOut, "Warning") {
+		t.Errorf("expected no warning for detected provider, got: %s", errOut)
+	}
+}
+
+func TestAddNoWarningInJSONMode(t *testing.T) {
+	tmp := setupAddProject(t)
+	globalDir := t.TempDir()
+
+	original := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = original })
+
+	installBase := t.TempDir()
+	addTestProviderOpts(t, "undetected-add-json", "Undetected JSON", installBase, false)
+
+	_, stderr := output.SetForTest(t)
+	output.JSON = true
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	addCmd.Flags().Set("from", "undetected-add-json")
+	addCmd.Flags().Set("all", "false")
+	addCmd.Flags().Set("force", "false")
+	addCmd.Flags().Set("dry-run", "false")
+
+	_ = addCmd.RunE(addCmd, []string{})
+
+	errOut := stderr.String()
+	if strings.Contains(errOut, "Warning") {
+		t.Errorf("expected no warning in JSON mode, got: %s", errOut)
+	}
 }
 
 func TestAddPreservesSourceForNonCanonicalFormat(t *testing.T) {

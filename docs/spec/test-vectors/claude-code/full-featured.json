@@ -1,0 +1,45 @@
+{
+  "_comment": "Expected Claude Code output for canonical/full-featured.json. Conversions: (1) before_tool_execute+shell -> PreToolUse with matcher 'Bash'; (2) before_tool_execute+mcp -> PreToolUse with matcher 'mcp__github__create_issue'; (3) session_start -> SessionStart with no matcher. Timeout stays in seconds. platform/cwd/env fields dropped (CC doesn't support — capabilities degrade with warn). provider_data.windsurf dropped (not target provider).",
+  "_warnings": [
+    "Hook 1: 'platform' field dropped — Claude Code does not support per-OS command overrides (platform_commands capability, degradation: warn)",
+    "Hook 1: 'cwd' field dropped — Claude Code does not support configurable working directory (configurable_cwd capability, degradation: warn)",
+    "Hook 1: 'env' field dropped — Claude Code does not support custom environment variables (custom_env capability, degradation: warn)",
+    "Hook 1: provider_data.windsurf ignored — not target provider"
+  ],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./safety-check.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__github__create_issue",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./validate-issue.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./init-session.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

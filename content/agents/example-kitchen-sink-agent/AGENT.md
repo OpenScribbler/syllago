@@ -25,6 +25,14 @@ isolation: worktree
 temperature: 0.7
 timeout_mins: 30
 kind: remote
+effort: high
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: echo "pre-tool hook"
+color: blue
 ---
 
 # Kitchen Sink Agent

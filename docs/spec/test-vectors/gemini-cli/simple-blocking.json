@@ -1,0 +1,11 @@
+{
+  "_comment": "Expected Gemini CLI output for canonical/simple-blocking.json. Conversion: event before_tool_execute -> BeforeTool, matcher 'shell' -> 'run_shell_command' (tool vocabulary), timeout 10s -> 10000ms (Gemini uses milliseconds). Gemini CLI hooks live in .gemini/settings.json under the 'hooks' key.",
+  "hooks": [
+    {
+      "trigger": "BeforeTool",
+      "toolMatcher": "run_shell_command",
+      "command": "./safety-check.sh",
+      "timeoutMs": 10000
+    }
+  ]
+}

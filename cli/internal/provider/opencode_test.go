@@ -48,8 +48,14 @@ func TestOpenCodeFileFormat(t *testing.T) {
 func TestOpenCodeDiscoveryPaths(t *testing.T) {
 	t.Parallel()
 	paths := OpenCode.DiscoveryPaths("/project", catalog.Rules)
-	if len(paths) != 1 || paths[0] != filepath.Join("/project", "AGENTS.md") {
-		t.Errorf("expected /project/AGENTS.md, got %v", paths)
+	if len(paths) != 2 {
+		t.Fatalf("expected 2 Rules discovery paths, got %d: %v", len(paths), paths)
+	}
+	if paths[0] != filepath.Join("/project", "AGENTS.md") {
+		t.Errorf("expected first path /project/AGENTS.md, got %v", paths[0])
+	}
+	if paths[1] != filepath.Join("/project", "CLAUDE.md") {
+		t.Errorf("expected second path /project/CLAUDE.md, got %v", paths[1])
 	}
 
 	paths = OpenCode.DiscoveryPaths("/project", catalog.MCP)
@@ -61,7 +67,7 @@ func TestOpenCodeDiscoveryPaths(t *testing.T) {
 func TestOpenCodeInstallDir(t *testing.T) {
 	t.Parallel()
 	skillDir := OpenCode.InstallDir("/home/user", catalog.Skills)
-	expected := filepath.Join("/home/user", ".config", "opencode", "skill")
+	expected := filepath.Join("/home/user", ".config", "opencode", "skills")
 	if skillDir != expected {
 		t.Errorf("expected %q, got %q", expected, skillDir)
 	}

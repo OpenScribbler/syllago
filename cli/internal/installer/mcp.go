@@ -70,7 +70,11 @@ func mcpConfigPathImpl(prov provider.Provider, repoRoot string) (string, error) 
 	case "zed":
 		return filepath.Join(home, ".config", "zed", "settings.json"), nil
 	case "cline":
-		return filepath.Join(repoRoot, ".vscode", "mcp.json"), nil
+		p := provider.ClineMCPSettingsPath()
+		if p == "" {
+			return "", fmt.Errorf("cannot determine Cline MCP settings path")
+		}
+		return p, nil
 	case "roo-code":
 		return filepath.Join(repoRoot, ".roo", "mcp.json"), nil
 	}
@@ -110,6 +114,7 @@ func readMCPConfig(cfgPath string, prov provider.Provider) ([]byte, error) {
 //
 //   - Nested: {"mcpServers": {"name": {...}}} — extracts each entry
 //   - Flat: {"command": "node", ...} — uses itemName as the key
+//
 // ExtractServerEntries reads config.json and returns a map of server names to
 // their whitelisted config. Handles two formats:
 //

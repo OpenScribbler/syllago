@@ -16,7 +16,12 @@ func TestDiscoveryPaths(t *testing.T) {
 		{ClaudeCode, catalog.Rules, 2},
 		{ClaudeCode, catalog.MCP, 1},
 		{ClaudeCode, catalog.Skills, 1},
-		{Cursor, catalog.Rules, 1},
+		{Cursor, catalog.Rules, 2},
+		{Cursor, catalog.Skills, 1},
+		{Cursor, catalog.Commands, 1},
+		{Cursor, catalog.Agents, 2},
+		{Cursor, catalog.MCP, 1},
+		{Cursor, catalog.Hooks, 1},
 		{GeminiCLI, catalog.Rules, 1},
 		{Windsurf, catalog.Rules, 1},
 		{Codex, catalog.Rules, 1},
@@ -47,12 +52,11 @@ func TestSupportsType(t *testing.T) {
 			t.Errorf("ClaudeCode.SupportsType(%s) = false, want true", ct)
 		}
 	}
-	// Cursor only supports Rules
-	if !Cursor.SupportsType(catalog.Rules) {
-		t.Error("Cursor.SupportsType(Rules) = false, want true")
-	}
-	if Cursor.SupportsType(catalog.Skills) {
-		t.Error("Cursor.SupportsType(Skills) = true, want false")
+	// Cursor supports Rules, Skills, Agents, Commands, MCP, Hooks
+	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.Agents, catalog.Commands, catalog.MCP, catalog.Hooks} {
+		if !Cursor.SupportsType(ct) {
+			t.Errorf("Cursor.SupportsType(%s) = false, want true", ct)
+		}
 	}
 }
 
