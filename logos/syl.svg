@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 232 196" role="img" aria-label="Syl">
+  <title>Syl</title>
+  <style>
+    .f { fill: #047857; }
+    .d { fill: #047857; opacity: 0.4; }
+    @media (prefers-color-scheme: dark) {
+      .f { fill: #6EE7B7; }
+      .d { fill: #6EE7B7; opacity: 0.4; }
+    }
+  </style>
+    <rect x="16" y="0" width="72" height="16" class="f"/>
+    <rect x="192" y="0" width="32" height="16" class="f"/>
+    <rect x="8" y="18" width="24" height="16" class="f"/>
+    <rect x="32" y="18" width="40" height="16" class="d"/>
+    <rect x="72" y="18" width="24" height="16" class="f"/>
+    <rect x="184" y="18" width="16" height="16" class="d"/>
+    <rect x="200" y="18" width="24" height="16" class="f"/>
+    <rect x="0" y="36" width="8" height="16" class="d"/>
+    <rect x="8" y="36" width="24" height="16" class="f"/>
+    <rect x="64" y="36" width="24" height="16" class="d"/>
+    <rect x="104" y="36" width="40" height="16" class="f"/>
+    <rect x="152" y="36" width="32" height="16" class="f"/>
+    <rect x="192" y="36" width="8" height="16" class="d"/>
+    <rect x="200" y="36" width="24" height="16" class="f"/>
+    <rect x="0" y="54" width="16" height="16" class="d"/>
+    <rect x="16" y="54" width="72" height="16" class="f"/>
+    <rect x="96" y="54" width="16" height="16" class="d"/>
+    <rect x="112" y="54" width="24" height="16" class="f"/>
+    <rect x="144" y="54" width="8" height="16" class="d"/>
+    <rect x="152" y="54" width="24" height="16" class="f"/>
+    <rect x="192" y="54" width="8" height="16" class="d"/>
+    <rect x="200" y="54" width="24" height="16" class="f"/>
+    <rect x="8" y="72" width="64" height="16" class="d"/>
+    <rect x="72" y="72" width="24" height="16" class="f"/>
+    <rect x="104" y="72" width="8" height="16" class="d"/>
+    <rect x="112" y="72" width="24" height="16" class="f"/>
+    <rect x="144" y="72" width="8" height="16" class="d"/>
+    <rect x="152" y="72" width="24" height="16" class="f"/>
+    <rect x="192" y="72" width="8" height="16" class="d"/>
+    <rect x="200" y="72" width="24" height="16" class="f"/>
+    <rect x="8" y="90" width="24" height="16" class="f"/>
+    <rect x="64" y="90" width="8" height="16" class="d"/>
+    <rect x="72" y="90" width="24" height="16" class="f"/>
+    <rect x="104" y="90" width="8" height="16" class="d"/>
+    <rect x="112" y="90" width="24" height="16" class="f"/>
+    <rect x="144" y="90" width="8" height="16" class="d"/>
+    <rect x="152" y="90" width="24" height="16" class="f"/>
+    <rect x="192" y="90" width="8" height="16" class="d"/>
+    <rect x="200" y="90" width="24" height="16" class="f"/>
+    <rect x="0" y="108" width="16" height="16" class="d"/>
+    <rect x="16" y="108" width="72" height="16" class="f"/>
+    <rect x="104" y="108" width="16" height="16" class="d"/>
+    <rect x="120" y="108" width="56" height="16" class="f"/>
+    <rect x="192" y="108" width="40" height="16" class="f"/>
+    <rect x="8" y="126" width="72" height="16" class="d"/>
+    <rect x="112" y="126" width="40" height="16" class="d"/>
+    <rect x="152" y="126" width="24" height="16" class="f"/>
+    <rect x="184" y="126" width="40" height="16" class="d"/>
+    <rect x="112" y="144" width="24" height="16" class="f"/>
+    <rect x="144" y="144" width="8" height="16" class="d"/>
+    <rect x="152" y="144" width="24" height="16" class="f"/>
+    <rect x="104" y="162" width="16" height="16" class="d"/>
+    <rect x="120" y="162" width="48" height="16" class="f"/>
+    <rect x="112" y="180" width="48" height="16" class="d"/>
+</svg>

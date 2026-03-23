@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="logo.svg" alt="Syllago" width="600">
+<img src="logos/logo.svg" alt="Syllago" width="600">
 
 **Convert, bundle, and share AI coding tool content across providers.**
 
@@ -255,14 +255,70 @@ See [SECURITY.md](SECURITY.md) for the full security policy, threat model, and h
 
 ## Roadmap
 
-- Hook signing and verification (Sigstore + GPG)
-- Hook execution audit logging
-- Registry trust tiers (trusted/verified/community)
-- Batch hook migration (`syllago convert --batch`)
-- Dual-format hook distribution (`syllago export --dual`)
-- Content update mechanism (`syllago update`)
-- Additional loadout provider emitters beyond Claude Code
-- VHS demo GIFs for README
+### Security
+
+| Feature | Phase | Status |
+|---------|-------|--------|
+| Audit logging -- wire into install/import flows, query CLI, CSV/SIEM export | Foundation | Planned |
+| Script scanning -- language-specific patterns for .sh, .py, .js, .ps1, .rb | Foundation | Planned |
+| Trust tiers -- trusted/verified/community with install-time gates | Foundation | Planned |
+| Pluggable scanner -- chain interface, external adapters (ShellCheck, Semgrep) | Infrastructure | Planned |
+| Hook signing and verification (Sigstore keyless + GPG) | Cryptographic | Planned |
+| Revocation -- per-registry revocation index, sync, install-time blocking | Enforcement | Planned |
+| Policy engine -- per-tier rules, allowed identities, signature requirements | Enforcement | Planned |
+
+### Privacy and Integrity
+
+| Feature | Status |
+|---------|--------|
+| Registry privacy gates -- prevent private content from leaking to public registries | In Progress |
+| Content integrity hashes at install time | Planned |
+
+### Distribution and Content
+
+| Feature | Status |
+|---------|--------|
+| Bulk install operations (`install --all`, `install --type rules`) | Planned |
+| Batch hook migration (`syllago convert --batch`) | Planned |
+| Dual-format hook distribution (`syllago export --dual`) | Planned |
+| Content update mechanism (`syllago update`) | Planned |
+| Additional loadout provider emitters beyond Claude Code | Planned |
+
+### Platform and Tooling
+
+| Feature | Status |
+|---------|--------|
+| `syllago doctor` -- diagnostic command for troubleshooting | Planned |
+| `syllago compat --hooks` -- provider hook capability matrix | Planned |
+| Hook portability report -- warn about capability mismatches during install | Planned |
+| Container image and GitHub Action for CI/CD pipelines | Planned |
+| Org-level config inheritance | Planned |
+| macOS sandbox support (Linux sandbox already available) | Planned |
+| VHS demo GIFs for README | Planned |
+
+### Canonical Format Specs
+
+Syllago defines provider-neutral interchange formats for each content type. The hooks spec is complete; the rest are implemented in code but not yet formally specified.
+
+| Content Type | Spec | Status |
+|---|---|---|
+| Hooks | [`docs/spec/hooks-v1.md`](docs/spec/hooks-v1.md) | Draft |
+| Skills | `docs/spec/skills-v1.md` | Planned |
+| Agents | `docs/spec/agents-v1.md` | Planned |
+| Rules | `docs/spec/rules-v1.md` | Planned |
+| MCP | `docs/spec/mcp-v1.md` | Planned |
+| Commands | `docs/spec/commands-v1.md` | Planned |
+| Loadouts | `docs/spec/loadouts-v1.md` | Planned |
+
+### New Providers
+
+| Provider | Notes |
+|----------|-------|
+| VS Code Copilot | Preview hooks (same 3 events as Copilot CLI), `.vscode/hooks.json` config |
+| Pi Agent Rust | TypeScript extensions via embedded QuickJS, 20+ lifecycle events, capability-gated security |
+| Aider | `--auto-lint` and `--auto-test` flags (no hook system, but content types apply) |
+| Continue.dev | `config.yaml` rules and MCP integration |
+| Goose | MCP-only extensions model |
 
 ## Contributing
 
