@@ -453,7 +453,7 @@ func (a *App) refreshSidebarCounts() {
 	}
 	a.sidebar.counts = counts
 	a.sidebar.libraryCount = len(a.visibleItems(a.libraryItems()))
-	a.sidebar.loadoutsCount = counts[catalog.Loadouts]
+	a.sidebar.loadoutsCount = a.countVisibleLoadouts()
 }
 
 // rebuildItems refreshes the items list data while preserving navigation context
@@ -3197,6 +3197,24 @@ func (a App) libraryCardTypes() []catalog.ContentType {
 		}
 	}
 	return result
+}
+
+// countVisibleLoadouts counts loadouts for detected providers only,
+// so the sidebar count matches the loadout card grid.
+func (a App) countVisibleLoadouts() int {
+	detected := make(map[string]bool)
+	for _, prov := range a.providers {
+		if prov.Detected {
+			detected[prov.Slug] = true
+		}
+	}
+	count := 0
+	for _, item := range a.catalog.ByType(catalog.Loadouts) {
+		if item.Provider == "" || detected[item.Provider] {
+			count++
+		}
+	}
+	return count
 }
 
 // loadoutCardProviders returns providers to show on the loadouts card screen.
