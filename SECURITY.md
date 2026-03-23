@@ -1,5 +1,15 @@
 # Security Policy
 
+## Supported Versions
+
+| Version | Supported |
+|---------|-----------|
+| Latest release | Yes |
+| Previous minor release | Best-effort security patches |
+| Older versions | No |
+
+We recommend always running the latest release. Use `syllago update` to upgrade.
+
 ## Scope
 
 Vulnerabilities we want to hear about:
@@ -34,6 +44,32 @@ Syllago includes a privacy gate system to prevent accidental leakage of content 
 - **Enforcement:** Four gates block private-tainted content from reaching public registries -- at `publish`, `share`, `loadout create` (warning), and `loadout publish` (block).
 - **Scope of protection:** This is a soft gate designed to prevent accidental leakage through syllago commands. It does not prevent intentional circumvention via direct filesystem operations, direct git commands, or modification of content after export. There is no override flag by design -- removing the taint requires re-adding the content from a public source.
 
+## Release Integrity
+
+All release binaries are cryptographically signed and checksummed:
+
+- **Sigstore cosign** -- keyless signing via [Sigstore](https://www.sigstore.dev/). Every release includes a `checksums.txt.bundle` attestation.
+- **SHA-256 checksums** -- `checksums.txt` lists the hash for every release artifact.
+- **Verification:**
+  ```bash
+  # Download the release artifacts, checksums, and bundle
+  # Verify the cosign signature
+  cosign verify-blob --bundle checksums.txt.bundle checksums.txt
+
+  # Verify individual binary checksums
+  sha256sum --check checksums.txt
+  ```
+
+## CI Security Practices
+
+- **Pinned dependencies** -- all GitHub Actions are pinned to full-length commit SHAs, not mutable version tags
+- **Least-privilege tokens** -- CI workflows use explicit `permissions:` blocks with minimal scope
+- **Automated vulnerability scanning** -- `govulncheck` runs in CI to catch known-vulnerable dependencies
+- **Static analysis** -- golangci-lint with `gosec` (security linter) runs on every PR and push
+- **Race detector** -- `go test -race` runs in CI to catch data race conditions
+- **Dependency updates** -- [Dependabot](https://github.com/dependabot) is configured for automated dependency security patches
+- **Module integrity** -- `go mod tidy` check ensures no unexpected dependency changes
+
 ## Reporting a Vulnerability
 
 **Email:** openscribbler.dev@pm.me
@@ -52,6 +88,14 @@ Subject line: `[SECURITY] syllago -- <brief description>`
 - Affected versions (check `syllago version`)
 
 This is a pre-revenue open source project. There is no bug bounty program.
+
+## Safe Harbor
+
+We support good-faith security research. If you act in good faith to identify and report vulnerabilities following this policy, we will not pursue legal action against you. We ask that you:
+
+- Make a reasonable effort to avoid privacy violations, data destruction, and service disruption
+- Only interact with accounts you own or with explicit permission from the account holder
+- Give us reasonable time to address the issue before public disclosure
 
 ## Disclosure Policy
 

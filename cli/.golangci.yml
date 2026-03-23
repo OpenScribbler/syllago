@@ -9,10 +9,16 @@ linters:
   default: none
   enable:
     - errcheck
+    - errorlint
     - gocyclo
+    - gosec
     - govet
     - ineffassign
+    - misspell
+    - nolintlint
+    - revive
     - staticcheck
+    - unconvert
     - unused
   settings:
     errcheck:
@@ -34,15 +40,47 @@ linters:
         - (*github.com/spf13/cobra.Command).MarkFlagRequired
     gocyclo:
       min-complexity: 50
+    gosec:
+      excludes:
+        # Standard permissions for a CLI file manager.
+        - G301 # directory permissions 0755
+        - G302 # file permissions on Chmod
+        - G306 # WriteFile permissions 0644
+        # Expected behavior: syllago reads/writes files by user-provided paths.
+        - G304 # file inclusion via variable
+        - G703 # path traversal via taint
+        # Expected behavior: sandbox and exec commands launch subprocesses.
+        - G204 # subprocess launched with variable
+        # MarkFlagRequired errors — already excluded via errcheck.
+        - G104 # unhandled errors
+        # Expected patterns in a file manager CLI.
+        - G115 # integer overflow conversion (rune -> byte in sanitizer)
+        - G122 # filepath.Walk race (TOCTOU — acceptable for config diff)
+        - G602 # slice bounds (false positive on map lookups)
+        - G702 # command injection via taint (exec_unix.go syscall.Exec)
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    revive:
+      rules:
+        # Cobra RunE signatures require (cmd, args) even when unused.
+        - name: unused-parameter
+          disabled: true
+        # Not requiring package comments for now.
+        - name: package-comments
+          disabled: true
   exclusions:
     rules:
       - path: _test\.go
         linters:
           - errcheck
+          - errorlint
           - gocyclo
+          - gosec
       - path: internal/tui/
         linters:
           - gocyclo
+          - revive
 
 formatters:
   enable:

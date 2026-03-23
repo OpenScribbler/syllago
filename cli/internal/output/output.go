@@ -3,6 +3,7 @@ package output
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -98,8 +99,8 @@ func IsSilentError(err error) bool {
 	if err == nil {
 		return false
 	}
-	_, ok := err.(silentError)
-	return ok
+	var silent silentError
+	return errors.As(err, &silent)
 }
 
 type ErrorResponse struct {

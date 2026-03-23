@@ -2305,7 +2305,7 @@ func (m importModel) importSelectedHooks() tea.Cmd {
 
 			// Write minimal .syllago.yaml
 			yamlContent := fmt.Sprintf("name: %s\ndescription: Imported hook (%s)\n", name, hook.Event)
-			os.WriteFile(filepath.Join(itemDir, ".syllago.yaml"), []byte(yamlContent), 0644) //nolint:errcheck
+			os.WriteFile(filepath.Join(itemDir, ".syllago.yaml"), []byte(yamlContent), 0644) //nolint:errcheck // best-effort metadata write during import; failure is non-fatal
 
 			imported = append(imported, name)
 		}

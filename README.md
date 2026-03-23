@@ -6,14 +6,22 @@
 [![GitHub Release](https://img.shields.io/github/v/release/OpenScribbler/syllago)](https://github.com/OpenScribbler/syllago/releases/latest)
 [![Go Report Card](https://goreportcard.com/badge/github.com/OpenScribbler/syllago/cli)](https://goreportcard.com/report/github.com/OpenScribbler/syllago/cli)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/OpenScribbler/syllago/badge)](https://scorecard.dev/viewer/?uri=github.com/OpenScribbler/syllago)
 
 **Convert, bundle, and share AI coding tool content across providers.**
 
 </div>
 
-AI coding tools like Claude Code, Cursor, Gemini CLI, Copilot, and Amp each store rules, skills, agents, and other configurations in their own format. If you've built up a library of custom instructions in one tool, moving them to another means manual copy-pasting and format translation. Syllago automates that.
+## Why Syllago?
 
-Syllago maintains a central library of your content -- rules, skills, agents, hooks, MCP server configs, and commands. When you add content from one provider, syllago converts it to its own format. When you install it to another provider, syllago converts it again to the target's native format. The conversion is automatic and bidirectional.
+AI coding tools like Claude Code, Cursor, Gemini CLI, Copilot, and Amp each store rules, skills, agents, and configurations in their own format. Switching tools means manual copy-pasting and format translation. Syllago automates that.
+
+- **Solo devs:** Stop re-creating your rules and skills every time you try a new AI tool. Add once, install anywhere.
+- **Teams and IT admins:** Standardize AI tool configurations across your org with git-based registries. Push updates once, everyone syncs.
+- **Security-conscious orgs:** Hooks and MCP configs execute code by design -- syllago provides sandbox isolation, registry privacy gates, and signed releases so you can evaluate content safely.
+- **Enterprise leads:** Audit-friendly `--json` output on all commands, CI/CD integration via `sync-and-export`, and a privacy gate system that prevents private content from leaking to public registries.
+
+Syllago maintains a central library of your content. When you add content from one provider, syllago converts it to its own canonical format. When you install it to another provider, syllago converts it again to the target's native format. The conversion is automatic and bidirectional.
 
 ## Prerequisites
 
@@ -252,83 +260,33 @@ syllago config paths show
 
 All operations are available via CLI commands with `--json` output for scripting and assistive technology. The TUI uses ANSI rendering; for screen reader users, we recommend CLI commands directly. Colors can be disabled with `NO_COLOR=1` or `--no-color`. We're exploring a screen-reader-compatible TUI mode -- [feedback welcome](https://github.com/OpenScribbler/syllago/issues).
 
-## Security
+## Security and Supply Chain
 
 Syllago does not operate any registry or marketplace. Third-party registries are unverified -- review content before installing, especially hooks and MCP configs which execute code by design.
+
+**What we do to keep the tool itself trustworthy:**
+
+- **Signed releases** -- all release binaries are signed with [Sigstore cosign](https://www.sigstore.dev/) (keyless). Verify with: `cosign verify-blob --bundle checksums.txt.bundle checksums.txt`
+- **SHA-256 checksums** -- every release includes `checksums.txt` for independent verification
+- **Pinned CI dependencies** -- all GitHub Actions are pinned to full-length commit SHAs, not mutable version tags
+- **Automated vulnerability scanning** -- govulncheck runs in CI to catch known-vulnerable dependencies before merge
+- **Dependency updates** -- Dependabot is configured for automated dependency security patches
+- **Registry privacy gates** -- content from private registries is automatically tagged and blocked from being published to public registries
+- **Sandbox isolation** -- run AI CLI tools in bubblewrap-based sandboxes with filesystem, network, and environment filtering (Linux)
 
 See [SECURITY.md](SECURITY.md) for the full security policy, threat model, and how to report vulnerabilities.
 
 ## Roadmap
 
-### Security
+What's next for syllago:
 
-| Feature | Phase | Status |
-|---------|-------|--------|
-| Audit logging -- wire into install/import flows, query CLI, CSV/SIEM export | Foundation | Planned |
-| Script scanning -- language-specific patterns for .sh, .py, .js, .ps1, .rb | Foundation | Planned |
-| Trust tiers -- trusted/verified/community with install-time gates | Foundation | Planned |
-| Pluggable scanner -- chain interface, external adapters (ShellCheck, Semgrep) | Infrastructure | Planned |
-| Hook signing and verification (Sigstore keyless + GPG) | Cryptographic | Planned |
-| Revocation -- per-registry revocation index, sync, install-time blocking | Enforcement | Planned |
-| Policy engine -- per-tier rules, allowed identities, signature requirements | Enforcement | Planned |
+- **Security hardening** -- audit logging, trust tiers, hook signing and verification, script scanning
+- **Distribution** -- bulk install, batch migration, SBOM generation
+- **Platform** -- `syllago doctor`, container image and GitHub Action, macOS sandbox, org-level config inheritance
+- **Providers** -- VS Code Copilot, Qwen Code, Crush, Kimi CLI, Trae Agent, and more
+- **Specs** -- formal specs for all canonical formats (hooks spec is already drafted)
 
-### Privacy and Integrity
-
-| Feature | Status |
-|---------|--------|
-| Registry privacy gates -- prevent private content from leaking to public registries | In Progress |
-| Content integrity hashes at install time | Planned |
-
-### Distribution and Content
-
-| Feature | Status |
-|---------|--------|
-| Bulk install operations (`install --all`, `install --type rules`) | Planned |
-| Batch hook migration (`syllago convert --batch`) | Planned |
-| Dual-format hook distribution (`syllago export --dual`) | Planned |
-| Content update mechanism (`syllago update`) | Planned |
-| Additional loadout provider emitters beyond Claude Code | Planned |
-
-### Platform and Tooling
-
-| Feature | Status |
-|---------|--------|
-| `syllago doctor` -- diagnostic command for troubleshooting | Planned |
-| `syllago compat --hooks` -- provider hook capability matrix | Planned |
-| Hook portability report -- warn about capability mismatches during install | Planned |
-| Container image and GitHub Action for CI/CD pipelines | Planned |
-| Org-level config inheritance | Planned |
-| macOS sandbox support (Linux sandbox already available) | Planned |
-| VHS demo GIFs for README | Planned |
-
-### Canonical Format Specs
-
-Syllago defines provider-neutral interchange formats for each content type. The hooks spec is complete; the rest are implemented in code but not yet formally specified.
-
-| Content Type | Spec | Status |
-|---|---|---|
-| Hooks | [`docs/spec/hooks-v1.md`](docs/spec/hooks-v1.md) | Draft |
-| Skills | `docs/spec/skills-v1.md` | Planned |
-| Agents | `docs/spec/agents-v1.md` | Planned |
-| Rules | `docs/spec/rules-v1.md` | Planned |
-| MCP | `docs/spec/mcp-v1.md` | Planned |
-| Commands | `docs/spec/commands-v1.md` | Planned |
-| Loadouts | `docs/spec/loadouts-v1.md` | Planned |
-
-### New Providers
-
-| Provider | Notes |
-|----------|-------|
-| VS Code Copilot | Preview hooks (same 3 events as Copilot CLI), `.vscode/hooks.json` config |
-| Qwen Code | Fork of Gemini CLI -- same `settings.json` format, skills, MCP. Low effort (path mapping + detection) |
-| Crush | Charmbracelet's Go TUI agent (21.8k stars). LSP-aware, MCP support, multi-provider |
-| Kimi CLI | Moonshot AI's agent (7.1k stars). Skills, MCP, hooks. 5,000+ community skills via ClawHub |
-| Trae Agent | ByteDance's research CLI (11k stars). YAML/JSON config, modular architecture, MIT licensed |
-| Droid | Factory's enterprise agent. Top terminal benchmarks, specialized agent types, YAML config |
-| Pi Agent Rust | TypeScript extensions via embedded QuickJS, 20+ lifecycle events, capability-gated security |
-| Aider | `--auto-lint` and `--auto-test` flags (no hook system, but content types apply) |
-| Continue.dev | `config.yaml` rules and MCP integration |
-| Goose | MCP-only extensions model |
+See [ROADMAP.md](ROADMAP.md) for the full roadmap with status tracking.
 
 ## Contributing
 
