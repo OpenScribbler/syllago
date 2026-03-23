@@ -215,8 +215,14 @@ func (c *SkillsConverter) Render(content []byte, target provider.Provider) (*Res
 		return renderWindsurfSkill(meta, body)
 	case "amp":
 		return renderAmpSkill(meta, body)
+	case "cline":
+		return renderClineSkill(meta, body)
+	case "copilot-cli":
+		return renderCopilotSkill(meta, body)
+	case "roo-code":
+		return renderRooCodeSkill(meta, body)
 	default:
-		// Claude Code, Copilot CLI — full frontmatter preserved
+		// Claude Code — full frontmatter preserved
 		return renderClaudeSkill(meta, body)
 	}
 }
@@ -389,6 +395,83 @@ func renderCursorSkill(meta SkillMeta, body string) (*Result, error) {
 		Metadata:               meta.Metadata,
 		DisableModelInvocation: meta.DisableModelInvocation,
 	}
+	fm, err := renderFrontmatter(cm)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
+}
+
+// copilotSkillMeta is the subset of fields Copilot CLI supports in SKILL.md frontmatter.
+// Copilot supports: name, description, license, argument-hint, user-invocable, disable-model-invocation.
+// It does NOT support: allowed-tools, disallowed-tools, context, agent, model, effort, hooks,
+// compatibility, metadata.
+type copilotSkillMeta struct {
+	Name                   string `yaml:"name,omitempty"`
+	Description            string `yaml:"description,omitempty"`
+	License                string `yaml:"license,omitempty"`
+	ArgumentHint           string `yaml:"argument-hint,omitempty"`
+	UserInvocable          *bool  `yaml:"user-invocable,omitempty"`
+	DisableModelInvocation bool   `yaml:"disable-model-invocation,omitempty"`
+}
+
+// renderCopilotSkill renders a canonical skill to Copilot CLI's SKILL.md format.
+// Copilot uses the same SKILL.md shape as Claude Code but supports fewer frontmatter fields.
+// Unsupported fields (allowed-tools, context, agent, model, etc.) are embedded as prose notes.
+func renderCopilotSkill(meta SkillMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	// Build behavioral notes for CC-specific fields Copilot doesn't support
+	var notes []string
+	if len(meta.AllowedTools) > 0 {
+		translated := TranslateTools(meta.AllowedTools, "copilot-cli")
+		notes = append(notes, fmt.Sprintf("**Tool restriction:** Use only %s tools.", strings.Join(translated, ", ")))
+	}
+	if len(meta.DisallowedTools) > 0 {
+		translated := TranslateTools(meta.DisallowedTools, "copilot-cli")
+		notes = append(notes, fmt.Sprintf("**Do not use:** %s tools.", strings.Join(translated, ", ")))
+	}
+	if meta.Context == "fork" {
+		notes = append(notes, "Run in an isolated context. Do not modify the main conversation.")
+	}
+	if meta.Agent != "" {
+		notes = append(notes, fmt.Sprintf("Use a %s-focused approach.", strings.ToLower(meta.Agent)))
+	}
+	if meta.Model != "" {
+		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+	if meta.Hooks != nil {
+		notes = append(notes, "**Hooks:** This skill defines lifecycle hooks that execute shell commands. Hooks require a provider with skill-scoped hook support (currently only Claude Code).")
+	}
+
+	// Copilot supports hooks through .github/hooks/ — generate hook warnings
+	hookWarnings := formatSkillHookWarnings(meta.Name, meta.Hooks, "copilot-cli")
+
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	cm := copilotSkillMeta{
+		Name:                   meta.Name,
+		Description:            meta.Description,
+		License:                meta.License,
+		ArgumentHint:           meta.ArgumentHint,
+		UserInvocable:          meta.UserInvocable,
+		DisableModelInvocation: meta.DisableModelInvocation,
+	}
+
 	fm, err := renderFrontmatter(cm)
 	if err != nil {
 		return nil, err
@@ -632,6 +715,84 @@ func renderAmpSkill(meta SkillMeta, body string) (*Result, error) {
 	}
 
 	fm, err := renderFrontmatter(am)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+}
+
+// clineSkillMeta is the subset of fields Cline supports in SKILL.md frontmatter.
+// Cline follows the base Agent Skills spec with name and description only.
+type clineSkillMeta struct {
+	Name        string `yaml:"name,omitempty"`
+	Description string `yaml:"description,omitempty"`
+}
+
+// renderClineSkill renders a canonical skill to Cline's SKILL.md format.
+// Cline supports only name and description fields. CC-specific fields
+// (allowed-tools, context, agent, etc.) are embedded as prose notes.
+func renderClineSkill(meta SkillMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	notes := buildSkillProseNotes(meta)
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	cm := clineSkillMeta{
+		Name:        meta.Name,
+		Description: meta.Description,
+	}
+
+	fm, err := renderFrontmatter(cm)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(outBody)
+	buf.WriteString("\n")
+
+	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+}
+
+// rooCodeSkillMeta is the subset of fields Roo Code supports in SKILL.md frontmatter.
+// Roo Code follows the base Agent Skills spec with name and description only.
+type rooCodeSkillMeta struct {
+	Name        string `yaml:"name,omitempty"`
+	Description string `yaml:"description,omitempty"`
+}
+
+// renderRooCodeSkill renders a canonical skill to Roo Code's SKILL.md format.
+// Roo Code supports only name and description fields. CC-specific fields
+// (allowed-tools, context, agent, etc.) are embedded as prose notes.
+func renderRooCodeSkill(meta SkillMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	notes := buildSkillProseNotes(meta)
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	rm := rooCodeSkillMeta{
+		Name:        meta.Name,
+		Description: meta.Description,
+	}
+
+	fm, err := renderFrontmatter(rm)
 	if err != nil {
 		return nil, err
 	}

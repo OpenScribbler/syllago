@@ -44,6 +44,16 @@ type opencodeCommandMeta struct {
 	Subtask     bool   `yaml:"subtask,omitempty"` // maps from canonical Context=="fork"
 }
 
+// vscodeCopilotCommandMeta represents VS Code Copilot .prompt.md frontmatter fields.
+type vscodeCopilotCommandMeta struct {
+	Name         string   `yaml:"name,omitempty"`
+	Description  string   `yaml:"description,omitempty"`
+	Agent        string   `yaml:"agent,omitempty"` // ask, agent, plan
+	Model        string   `yaml:"model,omitempty"`
+	Tools        []string `yaml:"tools,omitempty"`
+	ArgumentHint string   `yaml:"argument-hint,omitempty"`
+}
+
 // geminiCommand represents a Gemini CLI command TOML structure.
 type geminiCommand struct {
 	Name        string `toml:"name,omitempty"`
@@ -66,6 +76,8 @@ func (c *CommandsConverter) Canonicalize(content []byte, sourceProvider string) 
 	case "opencode":
 		// OpenCode commands use the same format as Claude Code
 		return canonicalizeClaudeCommand(content)
+	case "vscode-copilot":
+		return canonicalizeVSCodeCopilotCommand(content)
 	default:
 		// Claude Code, Copilot CLI — already YAML frontmatter + markdown
 		return canonicalizeClaudeCommand(content)
@@ -87,10 +99,163 @@ func (c *CommandsConverter) Render(content []byte, target provider.Provider) (*R
 		return renderCursorCommand(meta, body)
 	case "opencode":
 		return renderOpenCodeCommand(meta, body)
+	case "vscode-copilot":
+		return renderVSCodeCopilotCommand(meta, body)
 	default:
 		// Claude Code, Copilot CLI — YAML frontmatter + markdown
 		return renderClaudeCommand(meta, body)
 	}
+}
+
+// --- VS Code Copilot ---
+
+// canonicalizeVSCodeCopilotCommand converts a VS Code Copilot .prompt.md file to canonical format.
+// VS Code uses "tools" instead of "allowed-tools", "agent" for execution mode (ask/agent/plan),
+// and ${input:varName} for arguments instead of $ARGUMENTS.
+func canonicalizeVSCodeCopilotCommand(content []byte) (*Result, error) {
+	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+
+	opening := []byte("---\n")
+	if !bytes.HasPrefix(normalized, opening) {
+		// No frontmatter — plain prompt
+		canonical, err := buildCommandCanonical(CommandMeta{}, strings.TrimSpace(string(normalized)))
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "command.md"}, nil
+	}
+
+	rest := normalized[len(opening):]
+	closingIdx := bytes.Index(rest, opening)
+	if closingIdx == -1 {
+		canonical, err := buildCommandCanonical(CommandMeta{}, strings.TrimSpace(string(normalized)))
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "command.md"}, nil
+	}
+
+	yamlBytes := rest[:closingIdx]
+	var vc vscodeCopilotCommandMeta
+	if err := yaml.Unmarshal(yamlBytes, &vc); err != nil {
+		return nil, fmt.Errorf("parsing VS Code Copilot frontmatter: %w", err)
+	}
+
+	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+
+	// Map to canonical
+	meta := CommandMeta{
+		Name:         vc.Name,
+		Description:  vc.Description,
+		Model:        vc.Model,
+		ArgumentHint: vc.ArgumentHint,
+	}
+
+	// VS Code "agent" field maps to canonical Agent (execution mode):
+	// "ask" = read-only/chat, "agent" = full agent mode, "plan" = plan mode
+	if vc.Agent != "" {
+		meta.Agent = vc.Agent
+	}
+
+	// Map VS Code tools to canonical AllowedTools (best effort).
+	// These are VS Code-specific tool IDs (e.g. "search/codebase", "myMcpServer/*")
+	// but we preserve them as-is since there's no universal tool ID scheme.
+	if len(vc.Tools) > 0 {
+		meta.AllowedTools = vc.Tools
+	}
+
+	// Convert ${input:varName} to $ARGUMENTS in body.
+	// This is lossy: named variables become a single positional arg.
+	body = replaceVSCodeInputVars(body)
+
+	canonical, err := buildCommandCanonical(meta, body)
+	if err != nil {
+		return nil, err
+	}
+
+	var warnings []string
+	if strings.Contains(string(content), "${input:") {
+		warnings = append(warnings, "VS Code ${input:varName} variables converted to $ARGUMENTS (named → positional, lossy)")
+	}
+
+	return &Result{Content: canonical, Filename: "command.md", Warnings: warnings}, nil
+}
+
+// replaceVSCodeInputVars replaces ${input:varName} and ${input:varName:placeholder}
+// patterns with $ARGUMENTS. This is lossy: named variables become a single positional arg.
+func replaceVSCodeInputVars(body string) string {
+	result := body
+	for strings.Contains(result, "${input:") {
+		start := strings.Index(result, "${input:")
+		end := strings.Index(result[start:], "}")
+		if end == -1 {
+			break
+		}
+		result = result[:start] + "$ARGUMENTS" + result[start+end+1:]
+	}
+	return result
+}
+
+// renderVSCodeCopilotCommand renders a canonical command to VS Code Copilot's .prompt.md format.
+// VS Code Copilot commands use YAML frontmatter with tools/agent/model fields and
+// ${input:args} for argument placeholders.
+func renderVSCodeCopilotCommand(meta CommandMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	vc := vscodeCopilotCommandMeta{
+		Name:         meta.Name,
+		Description:  meta.Description,
+		Model:        meta.Model,
+		ArgumentHint: meta.ArgumentHint,
+	}
+
+	// Map canonical Agent to VS Code agent field
+	if meta.Agent != "" {
+		vc.Agent = meta.Agent
+	}
+
+	// Map canonical AllowedTools to VS Code tools
+	if len(meta.AllowedTools) > 0 {
+		vc.Tools = meta.AllowedTools
+	}
+
+	// Build prose notes for unsupported fields
+	var notes []string
+	if meta.Context == "fork" {
+		notes = append(notes, "Run in an isolated context. Do not modify the main conversation.")
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+	if meta.DisableModelInvocation {
+		notes = append(notes, "Only invoke when the user explicitly requests it.")
+	}
+
+	result := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		result = AppendNotes(cleanBody, notesBlock)
+	}
+
+	// Convert $ARGUMENTS to ${input:args} for VS Code
+	result = strings.ReplaceAll(result, "$ARGUMENTS", "${input:args}")
+
+	fm, err := renderFrontmatter(vc)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(result)
+	buf.WriteString("\n")
+
+	name := "command"
+	if meta.Name != "" {
+		name = slugify(meta.Name)
+	}
+	return &Result{Content: buf.Bytes(), Filename: name + ".prompt.md"}, nil
 }
 
 // --- Canonical parser ---
