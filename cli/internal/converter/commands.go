@@ -480,10 +480,7 @@ func renderGeminiCommand(meta CommandMeta, body string) (*Result, error) {
 	}
 
 	var warnings []string
-	if containsGeminiDirectives(body) {
-		// Gemini → Gemini: no warning needed. But this shouldn't happen in render path.
-	}
-
+	// Gemini -> Gemini requires no warning for Gemini directives.
 	return &Result{Content: out, Filename: "command.toml", Warnings: warnings}, nil
 }
 

@@ -117,9 +117,7 @@ func TestSearchEnterFromCategory(t *testing.T) {
 	if app.items.contentType != catalog.SearchResults {
 		t.Fatalf("expected SearchResults, got %s", app.items.contentType)
 	}
-	if !app.search.active {
-		// Search should be deactivated after enter
-	}
+	// Search should be deactivated after enter.
 	if app.search.active {
 		t.Fatal("search should be deactivated after enter")
 	}

@@ -94,10 +94,8 @@ func TestScrollDetail_TabSwitchResetsScroll(t *testing.T) {
 
 	// Scroll down in overview
 	app = pressN(app, keyDown, 5)
-	if app.detail.scrollOffset == 0 {
-		// If scroll didn't change, that's OK — content may be short.
-		// The important thing is the next assertion after tab switch.
-	}
+	// If scroll didn't change, that's OK — content may be short.
+	// The important thing is the next assertion after tab switch.
 	initialScroll := app.detail.scrollOffset
 
 	// Switch to Files tab

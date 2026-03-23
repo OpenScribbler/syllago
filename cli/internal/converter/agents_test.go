@@ -699,7 +699,7 @@ func TestAgentAcrossAllNewProviders(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Render to %s: %v", tt.name, err)
 			}
-			if result.Content == nil || len(result.Content) == 0 {
+			if len(result.Content) == 0 {
 				t.Fatalf("expected non-empty content for %s", tt.name)
 			}
 			out := string(result.Content)

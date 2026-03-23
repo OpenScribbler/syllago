@@ -271,11 +271,12 @@ func TestLoadoutAddKeyOpensWizard(t *testing.T) {
 	m, _ = app.Update(keyRune('a'))
 	app = m.(App)
 
-	if app.screen == screenCreateLoadout {
+	switch app.screen {
+	case screenCreateLoadout:
 		t.Log("create loadout screen opened (correct)")
-	} else if app.screen == screenImport {
+	case screenImport:
 		t.Error("import wizard opened instead of create loadout screen")
-	} else {
+	default:
 		t.Errorf("unexpected state: screen=%d, want screenCreateLoadout(%d)", app.screen, screenCreateLoadout)
 	}
 }

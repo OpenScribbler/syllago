@@ -210,7 +210,7 @@ func (w initWizard) View() string {
 				tag = muted.Render(" (not found)")
 			}
 
-			sb.WriteString(fmt.Sprintf("  %s%s %s%s\n", prefix, check, nameStyle.Render(p.Name), tag))
+			fmt.Fprintf(&sb, "  %s%s %s%s\n", prefix, check, nameStyle.Render(p.Name), tag)
 		}
 
 		sb.WriteString("\n" + muted.Render("[up/down] navigate   [space] toggle   [enter] confirm   [esc] cancel"))
@@ -227,7 +227,7 @@ func (w initWizard) View() string {
 				prefix = "> "
 				nameStyle = selected
 			}
-			sb.WriteString(fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(opt)))
+			fmt.Fprintf(&sb, "  %s%s\n", prefix, nameStyle.Render(opt))
 		}
 
 		sb.WriteString("\n" + muted.Render("[up/down] navigate   [enter] select   [esc] cancel"))

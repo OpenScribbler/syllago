@@ -731,8 +731,8 @@ func (m importModel) updateBrowseStart(msg tea.KeyMsg) (importModel, tea.Cmd) {
 }
 
 func (m importModel) updateBrowse(msg tea.KeyMsg) (importModel, tea.Cmd) {
-	switch {
-	case msg.Type == tea.KeyEsc:
+	switch msg.Type {
+	case tea.KeyEsc:
 		// If previewing a file, exit preview first
 		if m.browser.previewing {
 			m.browser.previewing = false
@@ -760,12 +760,12 @@ func (m importModel) updateBrowse(msg tea.KeyMsg) (importModel, tea.Cmd) {
 }
 
 func (m importModel) updatePath(msg tea.KeyMsg) (importModel, tea.Cmd) {
-	switch {
-	case msg.Type == tea.KeyEsc:
+	switch msg.Type {
+	case tea.KeyEsc:
 		m.pathInput.Blur()
 		m.step = stepBrowseStart
 		return m, nil
-	case msg.Type == tea.KeyEnter:
+	case tea.KeyEnter:
 		path := m.pathInput.Value()
 		if path == "" {
 			return m, nil
@@ -865,13 +865,13 @@ func (m importModel) updateValidate(msg tea.KeyMsg) (importModel, tea.Cmd) {
 }
 
 func (m importModel) updateGitURL(msg tea.KeyMsg) (importModel, tea.Cmd) {
-	switch {
-	case msg.Type == tea.KeyEsc:
+	switch msg.Type {
+	case tea.KeyEsc:
 		m.urlInput.Blur()
 		m.step = stepSource
 		m.message = ""
 		return m, nil
-	case msg.Type == tea.KeyEnter:
+	case tea.KeyEnter:
 		url := m.urlInput.Value()
 		if url == "" {
 			return m, nil
@@ -1471,8 +1471,8 @@ func (m importModel) doImport() (string, []string, error) {
 }
 
 func (m importModel) updateName(msg tea.KeyMsg) (importModel, tea.Cmd) {
-	switch {
-	case msg.Type == tea.KeyEsc:
+	switch msg.Type {
+	case tea.KeyEsc:
 		m.nameInput.Blur()
 		if m.preFilterType != "" {
 			m.step = stepSource
@@ -1483,7 +1483,7 @@ func (m importModel) updateName(msg tea.KeyMsg) (importModel, tea.Cmd) {
 			m.step = stepType
 		}
 		return m, nil
-	case msg.Type == tea.KeyEnter:
+	case tea.KeyEnter:
 		name := strings.TrimSpace(m.nameInput.Value())
 		if errMsg := catalog.ValidateUserName(name); errMsg != "" {
 			m.message = errMsg
@@ -1972,14 +1972,14 @@ func computeDiffText(ci conflictInfo) string {
 		if err != nil {
 			continue
 		}
-		buf.WriteString(fmt.Sprintf("--- a/%s\n", f))
+		fmt.Fprintf(&buf, "--- a/%s\n", f)
 		buf.WriteString("+++ /dev/null\n")
 		content := strings.TrimRight(string(data), "\n")
 		if content == "" {
 			buf.WriteString("@@ -0,0 +0,0 @@\n")
 		} else {
 			lines := strings.Split(content, "\n")
-			buf.WriteString(fmt.Sprintf("@@ -1,%d +0,0 @@\n", len(lines)))
+			fmt.Fprintf(&buf, "@@ -1,%d +0,0 @@\n", len(lines))
 			for _, l := range lines {
 				buf.WriteString("-" + l + "\n")
 			}
@@ -1995,13 +1995,13 @@ func computeDiffText(ci conflictInfo) string {
 			continue
 		}
 		buf.WriteString("--- /dev/null\n")
-		buf.WriteString(fmt.Sprintf("+++ b/%s\n", f))
+		fmt.Fprintf(&buf, "+++ b/%s\n", f)
 		content := strings.TrimRight(string(data), "\n")
 		if content == "" {
 			buf.WriteString("@@ -0,0 +0,0 @@\n")
 		} else {
 			lines := strings.Split(content, "\n")
-			buf.WriteString(fmt.Sprintf("@@ -0,0 +1,%d @@\n", len(lines)))
+			fmt.Fprintf(&buf, "@@ -0,0 +1,%d @@\n", len(lines))
 			for _, l := range lines {
 				buf.WriteString("+" + l + "\n")
 			}

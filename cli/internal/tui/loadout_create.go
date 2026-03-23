@@ -653,11 +653,11 @@ func (m createLoadoutScreen) Update(msg tea.Msg) (createLoadoutScreen, tea.Cmd) 
 			}
 
 		case clStepName:
-			switch {
-			case msg.Type == tea.KeyEsc:
+			switch msg.Type {
+			case tea.KeyEsc:
 				m.step = clStepItems
 				return m, nil
-			case msg.Type == tea.KeyTab:
+			case tea.KeyTab:
 				if m.nameFirst {
 					m.nameFirst = false
 					m.nameInput.Blur()
@@ -668,7 +668,7 @@ func (m createLoadoutScreen) Update(msg tea.Msg) (createLoadoutScreen, tea.Cmd) 
 					m.nameInput.Focus()
 				}
 				return m, nil
-			case msg.Type == tea.KeyEnter:
+			case tea.KeyEnter:
 				if errMsg := catalog.ValidateUserName(strings.TrimSpace(m.nameInput.Value())); errMsg != "" {
 					m.message = errMsg
 					m.messageIsErr = true

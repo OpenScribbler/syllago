@@ -75,16 +75,16 @@ func (m sandboxSettingsModel) Update(msg tea.Msg) (sandboxSettingsModel, tea.Cmd
 		m.message = ""
 
 		if m.editMode != 0 {
-			switch {
-			case msg.Type == tea.KeyEsc:
+			switch msg.Type {
+			case tea.KeyEsc:
 				m.editMode = 0
 				m.editInput = ""
-			case msg.Type == tea.KeyEnter:
+			case tea.KeyEnter:
 				m.commitEdit()
 				m.editMode = 0
 				m.editInput = ""
 				m.save()
-			case msg.Type == tea.KeyBackspace:
+			case tea.KeyBackspace:
 				if len(m.editInput) > 0 {
 					m.editInput = m.editInput[:len(m.editInput)-1]
 				}

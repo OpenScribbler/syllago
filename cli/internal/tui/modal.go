@@ -200,7 +200,7 @@ func (m envSetupModal) Update(msg tea.Msg) (envSetupModal, tea.Cmd) {
 					m.message = fmt.Sprintf("Failed to save %s: %s", name, err)
 					m.messageIsErr = true
 				} else {
-					os.Setenv(name, m.value)
+					_ = os.Setenv(name, m.value)
 					m.message = fmt.Sprintf("Saved %s to %s", name, savePath)
 					m.messageIsErr = false
 				}
@@ -1022,13 +1022,13 @@ func (m registryAddModal) Update(msg tea.Msg) (registryAddModal, tea.Cmd) {
 
 		// When buttons are focused, Left/Right switch buttons
 		if m.focusedField == 2 {
-			switch {
-			case msg.Type == tea.KeyLeft:
+			switch msg.Type {
+			case tea.KeyLeft:
 				if m.btnCursor > 0 {
 					m.btnCursor--
 				}
 				return m, nil
-			case msg.Type == tea.KeyRight:
+			case tea.KeyRight:
 				if m.btnCursor < 1 {
 					m.btnCursor++
 				}
