@@ -4,6 +4,7 @@
 
 [![CI](https://github.com/OpenScribbler/syllago/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenScribbler/syllago/actions/workflows/ci.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/OpenScribbler/syllago)](https://github.com/OpenScribbler/syllago/releases/latest)
+[![Go Report Card](https://goreportcard.com/badge/github.com/OpenScribbler/syllago/cli)](https://goreportcard.com/report/github.com/OpenScribbler/syllago/cli)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 **Convert, bundle, and share AI coding tool content across providers.**
@@ -331,7 +332,7 @@ Syllago defines provider-neutral interchange formats for each content type. The 
 
 ## Contributing
 
-Contributions are welcome as issues -- see [CONTRIBUTING.md](CONTRIBUTING.md) for how to submit bug reports, feature ideas, and improvement suggestions.
+We welcome ideas, bug reports, and feature suggestions from everyone -- open an issue to get started. Pull requests are accepted from [vouched contributors](https://github.com/mitchellh/vouch). See [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to get involved.
 
 ## License
 
