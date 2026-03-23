@@ -166,7 +166,7 @@ func TestResolveVisibility(t *testing.T) {
 // --- HTTP probe tests using httptest ---
 
 func TestProbeGitHub_Public(t *testing.T) {
-	t.Parallel()
+	// Not parallel: mutates package-level httpClient
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]interface{}{"private": false})
 	}))
