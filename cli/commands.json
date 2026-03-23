@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-22T00:31:05Z",
+  "generatedAt": "2026-03-23T04:16:04Z",
   "syllagoVersion": "0.6.1",
   "commands": [
     {
@@ -959,6 +959,30 @@
       "aliases": [],
       "flags": [
         {
+          "name": "--batch",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Directory of hook files to batch-canonicalize (mutual exclusive with \u003cname\u003e)"
+        },
+        {
+          "name": "--dry-run",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show what would be converted without writing files"
+        },
+        {
+          "name": "--from",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Source provider slug (required with --batch)"
+        },
+        {
           "name": "--output",
           "shorthand": "-o",
           "type": "string",
@@ -1011,7 +1035,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": "  # Convert a skill to Cursor format (stdout)\n  syllago convert my-skill --to cursor\n\n  # Convert and save to a file\n  syllago convert my-rule --to windsurf --output ./windsurf-rule.md\n\n  # Convert to JSON output\n  syllago convert my-skill --to cursor --json",
+      "examples": "  # Convert a skill to Cursor format (stdout)\n  syllago convert my-skill --to cursor\n\n  # Convert and save to a file\n  syllago convert my-rule --to windsurf --output ./windsurf-rule.md\n\n  # Batch-canonicalize a directory of hooks\n  syllago convert --batch ./hooks/ --from claude-code --to canonical\n\n  # Batch dry-run\n  syllago convert --batch ./hooks/ --from claude-code --to canonical --dry-run",
       "source": "cli/cmd/syllago/convert.go"
     },
     {
@@ -1071,6 +1095,80 @@
       "seeAlso": [],
       "examples": "  # Create a new skill\n  syllago create skills my-new-skill\n\n  # Create a provider-specific rule\n  syllago create rules my-rule --provider claude-code\n\n  # Create a new agent\n  syllago create agents my-agent",
       "source": "cli/cmd/syllago/create.go"
+    },
+    {
+      "name": "export",
+      "displayName": "Export",
+      "slug": "export",
+      "parent": null,
+      "synopsis": "syllago export \u003cname\u003e [flags]",
+      "description": "Export content with optional dual-format (canonical + native) output",
+      "longDescription": "Exports a library item to canonical format, optionally generating\nprovider-native configs alongside it for manual consumption.\n\nWith --dual, the output directory contains both the canonical hook.json\n(source of truth) and pre-generated native configs in native/\u003cprovider\u003e/\nfor users who don't have syllago installed.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--dual",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Generate native configs alongside canonical"
+        },
+        {
+          "name": "--out-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Output directory (default: current hook directory)"
+        },
+        {
+          "name": "--providers",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Comma-separated list of target providers for --dual (default: all portable)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Export a hook with dual-format output\n  syllago export my-hook --dual\n\n  # Export for specific providers only\n  syllago export my-hook --dual --providers claude-code,cursor,gemini-cli\n\n  # Export to a specific directory\n  syllago export my-hook --dual --out-dir ./hooks/safety-check",
+      "source": "cli/cmd/syllago/export.go"
     },
     {
       "name": "info",
@@ -3449,6 +3547,72 @@
       "source": "cli/cmd/syllago/share.go"
     },
     {
+      "name": "sign",
+      "displayName": "Sign",
+      "slug": "sign",
+      "parent": null,
+      "synopsis": "syllago sign \u003cname\u003e [flags]",
+      "description": "Sign hook content for provenance verification",
+      "longDescription": "Cryptographically signs a hook's manifest and scripts using\nSigstore (keyless OIDC, default) or GPG (traditional keys).\n\nSignatures enable trust verification during installation.\nRecipients can verify that content was signed by a known identity\nand hasn't been tampered with since signing.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--key-id",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "GPG key ID (required when --method=gpg)"
+        },
+        {
+          "name": "--method",
+          "shorthand": null,
+          "type": "string",
+          "default": "sigstore",
+          "required": false,
+          "description": "Signing method: sigstore (default) or gpg"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Sign with Sigstore (keyless — uses GitHub/Google identity)\n  syllago sign my-hook\n\n  # Sign with GPG\n  syllago sign my-hook --method gpg --key-id 0xABCDEF12\n\n  # Verify a signed hook\n  syllago verify my-hook",
+      "source": "cli/cmd/syllago/sign.go"
+    },
+    {
       "name": "sync-and-export",
       "displayName": "Sync-and-export",
       "slug": "sync-and-export",
@@ -3633,6 +3797,80 @@
       "displayName": "Update",
       "slug": "update",
       "parent": null,
+      "synopsis": "syllago update [name] [flags]",
+      "description": "Check for and apply content updates from registries",
+      "longDescription": "Compares installed content versions against their source registries\nand updates items where a newer version is available.\n\nVersion comparison uses semver from .syllago.yaml metadata.\nItems installed from local projects (not registries) are skipped.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--all",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Update all installed items"
+        },
+        {
+          "name": "--dry-run",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show what would be updated without changing anything"
+        },
+        {
+          "name": "--registry",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Only update items from this registry"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Update a specific item\n  syllago update my-skill\n\n  # Check and update all installed items\n  syllago update --all\n\n  # Dry-run: show what would be updated\n  syllago update --all --dry-run\n\n  # Only update items from a specific registry\n  syllago update --all --registry team-rules",
+      "source": "cli/cmd/syllago/update.go"
+    },
+    {
+      "name": "update",
+      "displayName": "Update",
+      "slug": "update",
+      "parent": null,
       "synopsis": "syllago update",
       "description": "Update syllago to the latest release",
       "longDescription": null,
@@ -3676,6 +3914,56 @@
       "seeAlso": [],
       "examples": "  syllago update",
       "source": "cli/cmd/syllago/update.go"
+    },
+    {
+      "name": "verify",
+      "displayName": "Verify",
+      "slug": "verify",
+      "parent": null,
+      "synopsis": "syllago verify \u003cname\u003e [flags]",
+      "description": "Verify hook content signatures",
+      "longDescription": "Checks cryptographic signatures on hook content against the\nconfigured trust policy. Reports the signer identity and whether\nthe content is trusted.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--verbose",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show detailed verification info"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Verify a hook's signature\n  syllago verify my-hook\n\n  # Verify with verbose output\n  syllago verify my-hook --verbose",
+      "source": "cli/cmd/syllago/verify.go"
     },
     {
       "name": "version",
