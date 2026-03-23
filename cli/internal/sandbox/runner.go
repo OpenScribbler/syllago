@@ -110,7 +110,11 @@ func RunSession(cfg RunConfig, w *os.File) error {
 	allPorts := append(cfg.SandboxConfig.AllowedPorts, cfg.AdditionalPorts...)
 
 	// Step 9: Build env allowlist.
-	allExtraEnv := append(profile.ProviderEnvVars, cfg.SandboxConfig.AllowedEnv...)
+	var providerEnv []string
+	if profile != nil {
+		providerEnv = profile.ProviderEnvVars
+	}
+	allExtraEnv := append(providerEnv, cfg.SandboxConfig.AllowedEnv...)
 	allExtraEnv = append(allExtraEnv, cfg.AdditionalEnv...)
 	envPairs, envReport := FilterEnv(os.Environ(), allExtraEnv)
 
