@@ -393,9 +393,9 @@ func collectBackupFiles(actions []PlannedAction, prov provider.Provider, opts Ap
 		files = append(files, settingsPathFor(prov, opts.HomeDir, opts.Resolver))
 	}
 	if needsMCPConfig {
-		home, err := os.UserHomeDir()
+		mcpPath, err := installer.MCPConfigPathFor(prov, opts.ProjectRoot)
 		if err == nil {
-			files = append(files, filepath.Join(home, ".claude.json"))
+			files = append(files, mcpPath)
 		}
 	}
 
