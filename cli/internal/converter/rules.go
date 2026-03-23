@@ -209,11 +209,16 @@ func canonicalizeWindsurfRule(content []byte) (*Result, error) {
 		meta.AlwaysApply = false
 	}
 
+	var warnings []string
+	if wfm.Trigger == "manual" {
+		warnings = append(warnings, "Windsurf 'manual' trigger has no direct equivalent; rule will only activate when explicitly requested")
+	}
+
 	canonical, err := buildCanonical(meta, body)
 	if err != nil {
 		return nil, err
 	}
-	return &Result{Content: canonical, Filename: "rule.md"}, nil
+	return &Result{Content: canonical, Filename: "rule.md", Warnings: warnings}, nil
 }
 
 func canonicalizeMarkdownRule(content []byte) (*Result, error) {

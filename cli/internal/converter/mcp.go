@@ -58,11 +58,14 @@ type rooCodeMCPServerConfig struct {
 	Command       string            `json:"command,omitempty"`
 	Args          []string          `json:"args,omitempty"`
 	Env           map[string]string `json:"env,omitempty"`
+	Cwd           string            `json:"cwd,omitempty"`
 	Disabled      bool              `json:"disabled,omitempty"`
 	Type          string            `json:"type,omitempty"`
 	URL           string            `json:"url,omitempty"`
+	Headers       map[string]string `json:"headers,omitempty"`
 	AlwaysAllow   []string          `json:"alwaysAllow,omitempty"`
 	DisabledTools []string          `json:"disabledTools,omitempty"`
+	Timeout       int               `json:"timeout,omitempty"`
 }
 
 type rooCodeMCPConfig struct {
@@ -107,6 +110,8 @@ type zedContextServer struct {
 	Command string            `json:"command,omitempty"`
 	Args    []string          `json:"args,omitempty"`
 	Env     map[string]string `json:"env,omitempty"`
+	URL     string            `json:"url,omitempty"`
+	Headers map[string]string `json:"headers,omitempty"`
 }
 
 type zedContextServersConfig struct {
@@ -137,6 +142,12 @@ func (c *MCPConverter) Canonicalize(content []byte, sourceProvider string) (*Res
 	}
 	if sourceProvider == "amp" {
 		return canonicalizeAmpMCP(content)
+	}
+	if sourceProvider == "vscode-copilot" {
+		return canonicalizeVSCodeCopilotMCP(content)
+	}
+	if sourceProvider == "codex" {
+		return canonicalizeCodexMCP(content)
 	}
 
 	var cfg mcpConfig
@@ -259,6 +270,10 @@ func (c *MCPConverter) Render(content []byte, target provider.Provider) (*Result
 		return renderWindsurfMCP(cfg)
 	case "amp":
 		return renderAmpMCP(cfg)
+	case "vscode-copilot":
+		return renderVSCodeCopilotMCP(cfg)
+	case "codex":
+		return renderCodexMCP(cfg)
 	default:
 		// Claude Code — emit with Claude-compatible fields only
 		return renderClaudeMCP(cfg)
@@ -322,19 +337,23 @@ func renderCursorMCP(cfg mcpConfig) (*Result, error) {
 
 	for name, server := range cfg.MCPServers {
 		s := mcpServerConfig{
-			Command:     server.Command,
-			Args:        server.Args,
-			Env:         server.Env,
-			Cwd:         server.Cwd,
-			URL:         server.URL,
-			Headers:     server.Headers,
-			Type:        server.Type,
-			AutoApprove: server.AutoApprove,
+			Command: server.Command,
+			Args:    server.Args,
+			Env:     server.Env,
+			Cwd:     server.Cwd,
+			URL:     server.URL,
+			Headers: server.Headers,
+			Type:    server.Type,
 		}
 
 		// Map canonical transport type back to Cursor terminology
 		if s.Type == "streamable-http" {
 			s.Type = "http"
+		}
+
+		// Warn about dropped autoApprove (not documented by Cursor)
+		if len(server.AutoApprove) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: autoApprove dropped (not documented by Cursor)", name))
 		}
 
 		// Warn about dropped OAuth config
@@ -379,6 +398,7 @@ func renderGeminiMCP(cfg mcpConfig) (*Result, error) {
 			Trust:        server.Trust,
 			IncludeTools: server.IncludeTools,
 			ExcludeTools: server.ExcludeTools,
+			Timeout:      server.Timeout,
 		}
 
 		// Gemini uses httpUrl for HTTP transport
@@ -536,11 +556,18 @@ func canonicalizeZedMCP(content []byte) (*Result, error) {
 
 	for name, s := range src.ContextServers {
 		// Drop "source" field — it's Zed-specific metadata, not meaningful in canonical form.
-		out.MCPServers[name] = mcpServerConfig{
+		canonical := mcpServerConfig{
 			Command: s.Command,
 			Args:    s.Args,
 			Env:     s.Env,
+			URL:     s.URL,
+			Headers: s.Headers,
 		}
+		// Infer transport type from URL presence
+		if s.URL != "" && canonical.Type == "" {
+			canonical.Type = "sse"
+		}
+		out.MCPServers[name] = canonical
 	}
 
 	result, err := json.MarshalIndent(out, "", "  ")
@@ -594,11 +621,14 @@ func canonicalizeRooCodeMCP(content []byte) (*Result, error) {
 			Command:       s.Command,
 			Args:          s.Args,
 			Env:           s.Env,
+			Cwd:           s.Cwd,
 			Disabled:      s.Disabled,
 			Type:          s.Type,
 			URL:           s.URL,
+			Headers:       s.Headers,
 			AutoApprove:   s.AlwaysAllow, // alwaysAllow → autoApprove in canonical
 			DisabledTools: s.DisabledTools,
+			Timeout:       s.Timeout,
 		}
 	}
 
@@ -661,20 +691,17 @@ func renderRooCodeMCP(cfg mcpConfig) (*Result, error) {
 			Command:       server.Command,
 			Args:          server.Args,
 			Env:           server.Env,
+			Cwd:           server.Cwd,
 			Disabled:      server.Disabled,
 			Type:          server.Type,
 			URL:           server.URL,
+			Headers:       server.Headers,
 			AlwaysAllow:   server.AutoApprove, // autoApprove → alwaysAllow
 			DisabledTools: server.DisabledTools,
+			Timeout:       server.Timeout,
 		}
 
 		// Warn about dropped provider-specific fields
-		if server.Cwd != "" {
-			warnings = append(warnings, fmt.Sprintf("server %q: cwd dropped (not supported by Roo Code)", name))
-		}
-		if len(server.Headers) > 0 {
-			warnings = append(warnings, fmt.Sprintf("server %q: headers dropped (not supported by Roo Code)", name))
-		}
 		if server.Trust != "" {
 			warnings = append(warnings, fmt.Sprintf("server %q: trust dropped (Gemini-specific)", name))
 		}
@@ -867,17 +894,19 @@ func renderZedMCP(cfg mcpConfig) (*Result, error) {
 	out := zedContextServersConfig{ContextServers: make(map[string]zedContextServer)}
 
 	for name, server := range cfg.MCPServers {
-		// Zed only supports stdio; skip HTTP servers.
 		if server.URL != "" {
-			warnings = append(warnings, fmt.Sprintf("server %q: skipped (Zed only supports stdio, not HTTP)", name))
-			continue
-		}
-
-		out.ContextServers[name] = zedContextServer{
-			Source:  "custom",
-			Command: server.Command,
-			Args:    server.Args,
-			Env:     server.Env,
+			out.ContextServers[name] = zedContextServer{
+				Source:  "custom",
+				URL:     server.URL,
+				Headers: server.Headers,
+			}
+		} else {
+			out.ContextServers[name] = zedContextServer{
+				Source:  "custom",
+				Command: server.Command,
+				Args:    server.Args,
+				Env:     server.Env,
+			}
 		}
 
 		// Warn about dropped provider-specific fields

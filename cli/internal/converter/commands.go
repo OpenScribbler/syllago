@@ -95,16 +95,88 @@ func (c *CommandsConverter) Render(content []byte, target provider.Provider) (*R
 		return renderGeminiCommand(meta, body)
 	case "codex":
 		return renderCodexCommand(meta, body)
+	case "cline":
+		return renderClineCommand(meta, body)
 	case "cursor":
 		return renderCursorCommand(meta, body)
 	case "opencode":
 		return renderOpenCodeCommand(meta, body)
 	case "vscode-copilot":
 		return renderVSCodeCopilotCommand(meta, body)
+	case "windsurf":
+		return renderWindsurfCommand(meta, body)
 	default:
 		// Claude Code, Copilot CLI — YAML frontmatter + markdown
 		return renderClaudeCommand(meta, body)
 	}
+}
+
+// --- Windsurf ---
+
+// renderWindsurfCommand renders a canonical command to Windsurf's "Workflow" format.
+// Windsurf workflows are step-based markdown files with a # title heading and numbered steps.
+// Unsupported fields are embedded as behavioral prose notes.
+func renderWindsurfCommand(meta CommandMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	var buf bytes.Buffer
+
+	// Title from name or description
+	title := meta.Name
+	if title == "" {
+		title = meta.Description
+	}
+	if title == "" {
+		title = "Workflow"
+	}
+	buf.WriteString("# ")
+	buf.WriteString(title)
+	buf.WriteString("\n\n")
+
+	// Description (only if both name and description are present, to avoid repeating the title)
+	if meta.Description != "" && meta.Name != "" {
+		buf.WriteString(meta.Description)
+		buf.WriteString("\n\n")
+	}
+
+	// Build behavioral notes for unsupported fields
+	var notes []string
+	if len(meta.AllowedTools) > 0 {
+		notes = append(notes, fmt.Sprintf("**Tool restriction:** Use only %s tools.", strings.Join(meta.AllowedTools, ", ")))
+	}
+	if meta.Context == "fork" {
+		notes = append(notes, "Run in an isolated context. Do not modify the main conversation.")
+	}
+	if meta.Agent != "" {
+		notes = append(notes, fmt.Sprintf("Use a %s-focused approach.", strings.ToLower(meta.Agent)))
+	}
+	if meta.Model != "" {
+		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+
+	result := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		result = AppendNotes(cleanBody, notesBlock)
+	}
+
+	buf.WriteString("## Steps\n\n")
+	buf.WriteString(result)
+	buf.WriteString("\n")
+
+	var warnings []string
+	if strings.Contains(body, "$ARGUMENTS") {
+		warnings = append(warnings, "Windsurf workflows do not support argument placeholders; $ARGUMENTS will appear as literal text")
+	}
+
+	name := "workflow"
+	if meta.Name != "" {
+		name = slugify(meta.Name)
+	}
+	return &Result{Content: buf.Bytes(), Filename: name + ".md", Warnings: warnings}, nil
 }
 
 // --- VS Code Copilot ---
@@ -319,9 +391,36 @@ func canonicalizeGeminiCommand(content []byte) (*Result, error) {
 }
 
 func canonicalizeCodexCommand(content []byte) (*Result, error) {
-	// Codex commands are plain markdown — wrap with minimal frontmatter
-	body := strings.TrimSpace(string(content))
+	// Codex commands can have YAML frontmatter with description and argument-hint.
+	// Parse it if present; otherwise treat as plain markdown body.
+	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+
+	opening := []byte("---\n")
 	meta := CommandMeta{}
+
+	if bytes.HasPrefix(normalized, opening) {
+		rest := normalized[len(opening):]
+		closingIdx := bytes.Index(rest, opening)
+		if closingIdx != -1 {
+			yamlBytes := rest[:closingIdx]
+			var cm codexCommandMeta
+			if err := yaml.Unmarshal(yamlBytes, &cm); err != nil {
+				return nil, fmt.Errorf("parsing Codex command frontmatter: %w", err)
+			}
+			meta.Description = cm.Description
+			meta.ArgumentHint = cm.ArgumentHint
+
+			body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+			canonical, err := buildCommandCanonical(meta, body)
+			if err != nil {
+				return nil, err
+			}
+			return &Result{Content: canonical, Filename: "command.md"}, nil
+		}
+	}
+
+	// No frontmatter — plain markdown body
+	body := strings.TrimSpace(string(normalized))
 	canonical, err := buildCommandCanonical(meta, body)
 	if err != nil {
 		return nil, err
@@ -427,6 +526,47 @@ func renderCodexCommand(meta CommandMeta, body string) (*Result, error) {
 	buf.WriteString("\n")
 
 	return &Result{Content: buf.Bytes(), Filename: "command.md"}, nil
+}
+
+// renderClineCommand renders a canonical command to Cline's plain markdown format.
+// Cline commands are plain markdown files — no frontmatter, no argument support.
+// Unsupported fields are embedded as behavioral prose notes.
+func renderClineCommand(meta CommandMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	var notes []string
+	if len(meta.AllowedTools) > 0 {
+		notes = append(notes, fmt.Sprintf("**Tool restriction:** Use only %s tools.", strings.Join(meta.AllowedTools, ", ")))
+	}
+	if meta.Context == "fork" {
+		notes = append(notes, "Run in an isolated context. Do not modify the main conversation.")
+	}
+	if meta.Agent != "" {
+		notes = append(notes, fmt.Sprintf("Use a %s-focused approach.", strings.ToLower(meta.Agent)))
+	}
+	if meta.Model != "" {
+		notes = append(notes, fmt.Sprintf("Designed for model: %s.", meta.Model))
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+
+	result := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		result = AppendNotes(cleanBody, notesBlock)
+	}
+
+	var warnings []string
+	if strings.Contains(result, "$ARGUMENTS") {
+		warnings = append(warnings, "Cline does not support argument placeholders; $ARGUMENTS will appear as literal text")
+	}
+
+	name := "command"
+	if meta.Name != "" {
+		name = slugify(meta.Name)
+	}
+	return &Result{Content: []byte(result + "\n"), Filename: name + ".md", Warnings: warnings}, nil
 }
 
 // renderCursorCommand renders a canonical command to Cursor's plain markdown format.
