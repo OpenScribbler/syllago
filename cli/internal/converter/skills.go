@@ -472,18 +472,6 @@ func renderWindsurfSkill(meta SkillMeta, body string) (*Result, error) {
 	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
 }
 
-// canonicalizeSkillFromMarkdown wraps plain markdown content in minimal canonical skill format.
-// Used for providers whose skills are plain markdown without frontmatter.
-func canonicalizeSkillFromMarkdown(content []byte) (*Result, error) {
-	body := strings.TrimSpace(string(content))
-	meta := SkillMeta{}
-	canonical, err := buildSkillCanonical(meta, body)
-	if err != nil {
-		return nil, err
-	}
-	return &Result{Content: canonical, Filename: "SKILL.md"}, nil
-}
-
 // buildSkillProseNotes generates behavioral embedding notes for skill metadata
 // that can't be represented as structured fields. Uses canonical tool names
 // (no provider-specific translation) since the target is plain markdown.
@@ -520,42 +508,6 @@ func buildSkillProseNotes(meta SkillMeta) []string {
 		notes = append(notes, "**Hooks:** This skill defines lifecycle hooks that execute shell commands. Hooks require a provider with skill-scoped hook support (currently only Claude Code).")
 	}
 	return notes
-}
-
-// renderPlainMarkdownSkill renders a canonical skill to a plain markdown file
-// with no frontmatter. Metadata that can't be represented structurally is embedded as prose.
-func renderPlainMarkdownSkill(meta SkillMeta, body string) (*Result, error) {
-	cleanBody := StripConversionNotes(body)
-
-	var header strings.Builder
-	if meta.Name != "" {
-		header.WriteString("# ")
-		header.WriteString(meta.Name)
-		header.WriteString("\n\n")
-	}
-	if meta.Description != "" {
-		header.WriteString(meta.Description)
-		header.WriteString("\n\n")
-	}
-
-	outBody := header.String() + cleanBody
-
-	// Embed behavioral metadata as prose rather than dropping it
-	notes := buildSkillProseNotes(meta)
-	if len(notes) > 0 {
-		notesBlock := BuildConversionNotes("claude-code", notes)
-		outBody = AppendNotes(outBody, notesBlock)
-	}
-
-	name := "skill"
-	if meta.Name != "" {
-		name = slugify(meta.Name)
-	}
-
-	return &Result{
-		Content:  []byte(outBody + "\n"),
-		Filename: name + ".md",
-	}, nil
 }
 
 // kiroSkillMeta is the subset of fields Kiro supports in SKILL.md frontmatter.
