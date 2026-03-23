@@ -3199,22 +3199,10 @@ func (a App) libraryCardTypes() []catalog.ContentType {
 	return result
 }
 
-// countVisibleLoadouts counts loadouts for detected providers only,
-// so the sidebar count matches the loadout card grid.
+// countVisibleLoadouts returns the number of loadout cards shown on the
+// loadout page — one per detected provider — so the sidebar count matches.
 func (a App) countVisibleLoadouts() int {
-	detected := make(map[string]bool)
-	for _, prov := range a.providers {
-		if prov.Detected {
-			detected[prov.Slug] = true
-		}
-	}
-	count := 0
-	for _, item := range a.catalog.ByType(catalog.Loadouts) {
-		if item.Provider == "" || detected[item.Provider] {
-			count++
-		}
-	}
-	return count
+	return len(a.loadoutCardProviders())
 }
 
 // loadoutCardProviders returns providers to show on the loadouts card screen.
