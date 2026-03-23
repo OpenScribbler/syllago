@@ -1,14 +1,12 @@
 kind: loadout
 version: 1
-provider: copilot-cli
-name: copilot-cli-starter
+provider: cline
+name: syllago-starter
 description: >
   Built-in meta-tools for syllago: reference guide, quickstart,
-  import workflow reference, and content authoring agent.
+  and import workflow reference.
 
 skills:
   - syllago-guide
   - syllago-quickstart
   - syllago-import
-agents:
-  - syllago-author

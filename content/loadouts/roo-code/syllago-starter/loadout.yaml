@@ -1,7 +1,7 @@
 kind: loadout
 version: 1
-provider: cursor
-name: cursor-starter
+provider: roo-code
+name: syllago-starter
 description: >
   Built-in meta-tools for syllago: reference guide, quickstart,
   import workflow reference, and content authoring agent.

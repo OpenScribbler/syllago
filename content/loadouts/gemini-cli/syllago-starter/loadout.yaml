@@ -1,7 +1,7 @@
 kind: loadout
 version: 1
-provider: kiro
-name: kiro-starter
+provider: gemini-cli
+name: syllago-starter
 description: >
   Built-in meta-tools for syllago: reference guide, quickstart,
   import workflow reference, and content authoring agent.
