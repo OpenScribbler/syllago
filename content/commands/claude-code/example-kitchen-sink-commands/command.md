@@ -12,6 +12,7 @@ model: claude-sonnet-4-20250514
 disable-model-invocation: true
 user-invocable: true
 argument-hint: <target> [--format json|text]
+effort: high
 ---
 
 # /kitchen-sink Command
@@ -55,3 +56,4 @@ Analyzes the current directory and outputs JSON.
 - **disable-model-invocation**: Prevents automatic invocation by the model
 - **user-invocable**: Whether the command appears in the slash command menu
 - **argument-hint**: Usage hint shown in the menu
+- **effort**: Reasoning effort level (low, medium, high, max)

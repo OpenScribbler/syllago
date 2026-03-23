@@ -1,4 +1,4 @@
-.PHONY: build clean build-all test fmt vet
+.PHONY: build clean build-all test fmt vet setup
 
 build:
 	$(MAKE) -C cli build
@@ -17,3 +17,7 @@ fmt:
 
 vet:
 	$(MAKE) -C cli vet
+
+setup:
+	git config core.hooksPath .githooks
+	@echo "Git hooks configured (.githooks/)"

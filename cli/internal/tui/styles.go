@@ -97,10 +97,6 @@ var (
 	compatBrokenStyle   = lipgloss.NewStyle().Foreground(warningColor)
 	compatNoneStyle     = lipgloss.NewStyle().Foreground(dangerColor)
 
-	// Update notification
-	updateBannerStyle = lipgloss.NewStyle().
-				Foreground(warningColor)
-
 	versionStyle = lipgloss.NewStyle().
 			Foreground(mutedColor)
 
@@ -109,12 +105,6 @@ var (
 				BorderStyle(lipgloss.NormalBorder()).
 				BorderForeground(borderColor).
 				BorderRight(true)
-
-	// Content panel header bar (item name + tab bar line)
-	contentHeaderStyle = lipgloss.NewStyle().
-				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(borderColor).
-				BorderBottom(true)
 
 	// Action buttons (Install tab)
 	buttonStyle = lipgloss.NewStyle().
@@ -132,10 +122,6 @@ var (
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(borderColor).
 			BorderTop(true).
-			Foreground(mutedColor)
-
-	// Breadcrumb within footer
-	breadcrumbStyle = lipgloss.NewStyle().
 			Foreground(mutedColor)
 
 	// Detail tabs — single-line with background color for active

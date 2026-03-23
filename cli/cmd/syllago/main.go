@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -191,10 +192,27 @@ func main() {
 
 // printExecuteError prints err to the error writer unless it's a SilentError
 // (meaning the command already printed its own error message).
+// In JSON mode, non-silent errors are wrapped in a structured JSON envelope.
 func printExecuteError(err error) {
-	if !output.IsSilentError(err) {
-		fmt.Fprintln(output.ErrWriter, err)
+	if output.IsSilentError(err) {
+		return
 	}
+	// If the error is a StructuredError returned directly (not via SilentError),
+	// print it using the structured formatter.
+	var se output.StructuredError
+	if errors.As(err, &se) {
+		output.PrintStructuredError(se)
+		return
+	}
+	// In JSON mode, wrap unstructured errors in a JSON envelope for consistency.
+	if output.JSON {
+		output.PrintStructuredError(output.StructuredError{
+			Code:    "UNKNOWN_001",
+			Message: err.Error(),
+		})
+		return
+	}
+	fmt.Fprintln(output.ErrWriter, err)
 }
 
 // wrapTTYError wraps bubbletea TTY errors with user-facing guidance.
@@ -281,7 +299,11 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	providers := provider.DetectProviders()
+	resolver := config.NewResolver(cfg, "")
+	if err := resolver.ExpandPaths(); err != nil {
+		resolver = nil // non-fatal, fall back to standard detection
+	}
+	providers := provider.DetectProvidersWithResolver(resolver)
 
 	// Check if auto-update is enabled in project config
 	autoUpdate := false

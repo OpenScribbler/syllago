@@ -73,7 +73,7 @@ func TestKiroFileFormat(t *testing.T) {
 	if got := Kiro.FileFormat(catalog.MCP); got != FormatJSON {
 		t.Errorf("Kiro.FileFormat(MCP) = %q, want %q", got, FormatJSON)
 	}
-	if got := Kiro.FileFormat(catalog.Agents); got != FormatJSON {
-		t.Errorf("Kiro.FileFormat(Agents) = %q, want %q", got, FormatJSON)
+	if got := Kiro.FileFormat(catalog.Agents); got != FormatMarkdown {
+		t.Errorf("Kiro.FileFormat(Agents) = %q, want %q", got, FormatMarkdown)
 	}
 }

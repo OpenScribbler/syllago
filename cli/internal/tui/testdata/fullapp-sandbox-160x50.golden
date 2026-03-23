@@ -10,7 +10,7 @@ syllago           │Home > Sandbox
   ─────────────   │ Domains the sandbox allows network access to.
   Collections     │ Add domains like api.example.com or *.github.com.
   Library       1 │
-  Loadouts      2 │ ─────────────────────────────────────────────
+  Loadouts      1 │ ─────────────────────────────────────────────
   Registries      │
   ─────────────   │
   Configuration   │
@@ -18,7 +18,6 @@ syllago           │Home > Sandbox
   Update          │
   Settings        │
 > Sandbox         │
-                  │
                   │
                   │
                   │

@@ -128,7 +128,7 @@ func TestMCPConfigPath_ProjectScoped(t *testing.T) {
 		{"copilot-cli", filepath.Join(repoRoot, ".copilot", "mcp.json")},
 		{"kiro", filepath.Join(repoRoot, ".kiro", "settings", "mcp.json")},
 		{"opencode", filepath.Join(repoRoot, "opencode.json")},
-		{"cline", filepath.Join(repoRoot, ".vscode", "mcp.json")},
+		{"cline", provider.ClineMCPSettingsPath()},
 		{"roo-code", filepath.Join(repoRoot, ".roo", "mcp.json")},
 	}
 

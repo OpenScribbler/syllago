@@ -964,8 +964,8 @@ func newRegistryAddModal() registryAddModal {
 	ni.Width = 40
 
 	return registryAddModal{
-		active:   true,
-		urlInput: ui,
+		active:    true,
+		urlInput:  ui,
 		nameInput: ni,
 	}
 }

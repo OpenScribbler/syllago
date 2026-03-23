@@ -1,20 +1,20 @@
 syllago           │Home > Settings
                   │
-  Content         │  > Auto-update  off
-  Skills        3 │    Registry auto-sync  off
-  Agents        1 │
-  MCP Configs   1 │ ─────────────────────────────────────────────
-  Rules         1 │ Pull updates automatically when a new version is detected on the remote.
-  Hooks         1 │
-  Commands      1 │
-  ─────────────   │ ─────────────────────────────────────────────
-  Collections     │
+  Content         │  > Update check  on
+  Skills        3 │    Auto-update  off
+  Agents        1 │    Registry auto-sync  off
+  MCP Configs   1 │
+  Rules         1 │ ─────────────────────────────────────────────
+  Hooks         1 │ Check for new versions on launch. Requires network access to the git remote.
+  Commands      1 │ Disable for air-gapped or offline environments.
+  ─────────────   │
+  Collections     │ ─────────────────────────────────────────────
   Library       1 │
-  Loadouts      2 │
+  Loadouts      1 │
   Registries      │
   ─────────────   │
   Configuration   │
   Add             │
-  Update          │
 ────────────────────────────────────────────────────────────
-up/down navigate • enter/space toggle • esc back Settings
+up/down navigate • enter/space toggle             Settings
+esc back

@@ -10,7 +10,7 @@ syllago           │Home > Skills > extremely-long-skill-name-that-should-be-tr
   ─────────────   │  > SKILL.md
   Collections     │
   Library       0 │
-  Loadouts      0 │
+  Loadouts      1 │
   Registries      │
   ─────────────   │
   Configuration   │
@@ -24,9 +24,7 @@ syllago           │Home > Skills > extremely-long-skill-name-that-should-be-tr
                   │
                   │
                   │
-                  │
            v1.0.0 │
 ────────────────────────────────────────────────────────────────────────────────
-esc back • tab switch tab • up/down navigate • enter view • ctrl+n/p next/prev
-Skills > extremely-long-skill-name-that-should-be-truncated-in-narrow-terminals-
-010
+esc back • tab switch tab             Skills > extremely-long-skill-name-th...
+up/down navigate • enter view • ctrl+n/p next/prev

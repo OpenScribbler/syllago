@@ -73,8 +73,8 @@ func setupIntegrationEnv(t *testing.T) (homeDir, projectRoot string, manifest *M
 		Version:  1,
 		Provider: "claude-code",
 		Name:     "integration-test",
-		Rules:    []string{"int-rule"},
-		Hooks:    []string{"int-hook"},
+		Rules:    []ItemRef{{Name: "int-rule"}},
+		Hooks:    []ItemRef{{Name: "int-hook"}},
 	}
 
 	cat = &catalog.Catalog{

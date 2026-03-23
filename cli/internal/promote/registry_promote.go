@@ -26,6 +26,11 @@ type RegistryResult struct {
 // locally, and this function creates a branch with their content ready to PR upstream.
 // noInput suppresses interactive prompts even on a TTY (e.g. when --no-input is passed).
 func PromoteToRegistry(repoRoot string, registryName string, item catalog.ContentItem, noInput bool) (*RegistryResult, error) {
+	// Privacy gate G1: block private content from being published to public registries.
+	if gateErr := CheckPrivacyGate(item, registryName, repoRoot); gateErr != nil {
+		return nil, gateErr
+	}
+
 	// 1. Get registry clone directory
 	cloneDir, err := registry.CloneDir(registryName)
 	if err != nil {

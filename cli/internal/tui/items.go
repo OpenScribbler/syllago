@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/lipgloss"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"

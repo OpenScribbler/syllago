@@ -160,6 +160,81 @@ func TestInstallJSONOutputOnSuccess(t *testing.T) {
 	}
 }
 
+func TestInstallWarnsWhenProviderNotDetected(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+	// Provider with Detected=false triggers warning.
+	addTestProviderOpts(t, "undetected-prov", "Undetected Provider", installBase, false)
+
+	_, stderr := output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "undetected-prov")
+	defer installCmd.Flags().Set("to", "")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+
+	errOut := stderr.String()
+	if !strings.Contains(errOut, "Warning: Undetected Provider not detected") {
+		t.Errorf("expected provider-not-detected warning on stderr, got: %s", errOut)
+	}
+	if !strings.Contains(errOut, "syllago config paths --provider undetected-prov") {
+		t.Errorf("expected config paths hint in warning, got: %s", errOut)
+	}
+}
+
+func TestInstallNoWarningWhenProviderDetected(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+	// Provider with Detected=true should NOT trigger warning.
+	addTestProviderOpts(t, "detected-prov", "Detected Provider", installBase, true)
+
+	_, stderr := output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "detected-prov")
+	defer installCmd.Flags().Set("to", "")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+
+	errOut := stderr.String()
+	if strings.Contains(errOut, "Warning") {
+		t.Errorf("expected no warning for detected provider, got: %s", errOut)
+	}
+}
+
+func TestInstallNoWarningInJSONMode(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+	addTestProviderOpts(t, "undetected-json", "Undetected JSON", installBase, false)
+
+	_, stderr := output.SetForTest(t)
+	output.JSON = true
+
+	installCmd.Flags().Set("to", "undetected-json")
+	defer installCmd.Flags().Set("to", "")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+
+	errOut := stderr.String()
+	if strings.Contains(errOut, "Warning") {
+		t.Errorf("expected no warning in JSON mode, got: %s", errOut)
+	}
+}
+
 func TestInstallJSONOutputOnSkip(t *testing.T) {
 	globalDir := setupGlobalLibrary(t)
 	withGlobalLibrary(t, globalDir)

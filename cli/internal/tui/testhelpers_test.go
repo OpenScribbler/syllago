@@ -2,25 +2,39 @@ package tui
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+	"github.com/muesli/termenv"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 func init() {
-	// Disable ANSI color output for deterministic test assertions.
-	// All charmbracelet libraries honor the NO_COLOR standard.
+	// Force deterministic terminal state for golden tests.
+	// The lipgloss default renderer is created before init() runs, so it may
+	// have already detected non-deterministic terminal state from os.Stderr
+	// (WSL TTY attachment varies between invocations). We must:
+	// 1. Set env vars that termenv checks during lazy detection
+	// 2. Replace the renderer's output to prevent terminal queries
+	// 3. Explicitly set profile and background to skip sync.Once auto-detection
 	os.Setenv("NO_COLOR", "1")
+	os.Setenv("TERM", "dumb")
 	// Initialize the bubblezone global manager so zone.Mark() calls in View()
 	// don't panic during tests (in production this is called in main.go).
 	zone.NewGlobal()
+	// Replace the renderer's output and pin all detection values.
+	r := lipgloss.DefaultRenderer()
+	r.SetOutput(termenv.NewOutput(io.Discard, termenv.WithProfile(termenv.Ascii)))
+	r.SetColorProfile(termenv.Ascii)
+	r.SetHasDarkBackground(true)
 }
 
 // ---------------------------------------------------------------------------
@@ -439,6 +453,9 @@ func testApp(t *testing.T) App {
 
 func testAppSize(t *testing.T, width, height int) App {
 	t.Helper()
+	// Reset zone manager so zone mark IDs are deterministic regardless of
+	// test execution order (Go randomizes test order within a package).
+	zone.NewGlobal()
 	cat := testCatalog(t)
 	providers := testProviders(t)
 

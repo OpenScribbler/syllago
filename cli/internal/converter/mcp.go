@@ -32,15 +32,19 @@ type mcpServerConfig struct {
 	Disabled     bool     `json:"disabled,omitempty"`     // Runtime state
 	AutoApprove  []string `json:"autoApprove,omitempty"`  // Claude-specific
 
+	// Multi-provider fields
+	DisabledTools []string `json:"disabledTools,omitempty"` // Kiro, Windsurf, Roo Code
+
 	// Gemini alternate field names
-	HTTPUrl string `json:"httpUrl,omitempty"` // Gemini uses httpUrl instead of url
+	HTTPUrl   string `json:"httpUrl,omitempty"`   // Gemini uses httpUrl instead of url
+	ServerUrl string `json:"serverUrl,omitempty"` // Windsurf uses serverUrl for HTTP transport
 
 	// OpenCode-specific (preserved in canonical for round-trips)
 	Environment  map[string]string `json:"environment,omitempty"`  // OpenCode uses "environment" not "env"
 	CommandArray []string          `json:"commandArray,omitempty"` // OpenCode command as array
 	Enabled      *bool             `json:"enabled,omitempty"`      // OpenCode uses "enabled" (true default) not "disabled"
 	Timeout      int               `json:"timeout,omitempty"`      // OpenCode timeout in ms
-	OAuth        json.RawMessage   `json:"oauth,omitempty"`        // OpenCode OAuth config (preserved opaque)
+	OAuth        json.RawMessage   `json:"oauth,omitempty"`        // OAuth config (OpenCode + Claude Code; preserved opaque)
 }
 
 // mcpConfig wraps one or more server configs.
@@ -51,12 +55,17 @@ type mcpConfig struct {
 // rooCodeMCPServerConfig is Roo Code's per-server format.
 // Roo Code uses the standard mcpServers key but only supports a core subset of fields.
 type rooCodeMCPServerConfig struct {
-	Command  string            `json:"command,omitempty"`
-	Args     []string          `json:"args,omitempty"`
-	Env      map[string]string `json:"env,omitempty"`
-	Disabled bool              `json:"disabled,omitempty"`
-	Type     string            `json:"type,omitempty"`
-	URL      string            `json:"url,omitempty"`
+	Command       string            `json:"command,omitempty"`
+	Args          []string          `json:"args,omitempty"`
+	Env           map[string]string `json:"env,omitempty"`
+	Cwd           string            `json:"cwd,omitempty"`
+	Disabled      bool              `json:"disabled,omitempty"`
+	Type          string            `json:"type,omitempty"`
+	URL           string            `json:"url,omitempty"`
+	Headers       map[string]string `json:"headers,omitempty"`
+	AlwaysAllow   []string          `json:"alwaysAllow,omitempty"`
+	DisabledTools []string          `json:"disabledTools,omitempty"`
+	Timeout       int               `json:"timeout,omitempty"`
 }
 
 type rooCodeMCPConfig struct {
@@ -71,6 +80,8 @@ type clineMCPServerConfig struct {
 	Env         map[string]string `json:"env,omitempty"`
 	AlwaysAllow []string          `json:"alwaysAllow,omitempty"`
 	Disabled    bool              `json:"disabled,omitempty"`
+	URL         string            `json:"url,omitempty"`
+	Headers     map[string]string `json:"headers,omitempty"`
 }
 
 type clineMCPConfig struct {
@@ -99,6 +110,8 @@ type zedContextServer struct {
 	Command string            `json:"command,omitempty"`
 	Args    []string          `json:"args,omitempty"`
 	Env     map[string]string `json:"env,omitempty"`
+	URL     string            `json:"url,omitempty"`
+	Headers map[string]string `json:"headers,omitempty"`
 }
 
 type zedContextServersConfig struct {
@@ -121,13 +134,28 @@ func (c *MCPConverter) Canonicalize(content []byte, sourceProvider string) (*Res
 	if sourceProvider == "cline" {
 		return canonicalizeClineMCP(content)
 	}
+	if sourceProvider == "roo-code" {
+		return canonicalizeRooCodeMCP(content)
+	}
+	if sourceProvider == "windsurf" {
+		return canonicalizeWindsurfMCP(content)
+	}
+	if sourceProvider == "amp" {
+		return canonicalizeAmpMCP(content)
+	}
+	if sourceProvider == "vscode-copilot" {
+		return canonicalizeVSCodeCopilotMCP(content)
+	}
+	if sourceProvider == "codex" {
+		return canonicalizeCodexMCP(content)
+	}
 
 	var cfg mcpConfig
 	if err := json.Unmarshal(content, &cfg); err != nil {
 		return nil, fmt.Errorf("parsing MCP config: %w", err)
 	}
 
-	// Normalize: merge httpUrl into url field
+	// Normalize: merge provider-specific URL fields into canonical url field
 	for name, server := range cfg.MCPServers {
 		if server.HTTPUrl != "" && server.URL == "" {
 			server.URL = server.HTTPUrl
@@ -136,6 +164,18 @@ func (c *MCPConverter) Canonicalize(content []byte, sourceProvider string) (*Res
 				server.Type = "sse" // Infer transport type from httpUrl
 			}
 		}
+		if server.ServerUrl != "" && server.URL == "" {
+			server.URL = server.ServerUrl
+			server.ServerUrl = ""
+			if server.Type == "" {
+				server.Type = "streamable-http" // Infer transport type from serverUrl
+			}
+		}
+		// Normalize transport type: providers use "http" for streamable HTTP
+		if server.Type == "http" {
+			server.Type = "streamable-http"
+		}
+
 		cfg.MCPServers[name] = server
 	}
 
@@ -222,6 +262,18 @@ func (c *MCPConverter) Render(content []byte, target provider.Provider) (*Result
 		return renderRooCodeMCP(cfg)
 	case "kiro":
 		return renderKiroMCP(cfg)
+	case "cursor":
+		// Cursor uses .cursor/mcp.json with the same mcpServers key and transport
+		// types as Claude Code. Route through the same renderer.
+		return renderCursorMCP(cfg)
+	case "windsurf":
+		return renderWindsurfMCP(cfg)
+	case "amp":
+		return renderAmpMCP(cfg)
+	case "vscode-copilot":
+		return renderVSCodeCopilotMCP(cfg)
+	case "codex":
+		return renderCodexMCP(cfg)
 	default:
 		// Claude Code — emit with Claude-compatible fields only
 		return renderClaudeMCP(cfg)
@@ -244,6 +296,12 @@ func renderClaudeMCP(cfg mcpConfig) (*Result, error) {
 			Headers:     server.Headers,
 			Type:        server.Type,
 			AutoApprove: server.AutoApprove,
+			OAuth:       server.OAuth,
+		}
+
+		// Map canonical transport type back to Claude Code terminology
+		if s.Type == "streamable-http" {
+			s.Type = "http"
 		}
 
 		// Warn about dropped Gemini-specific fields
@@ -256,7 +314,66 @@ func renderClaudeMCP(cfg mcpConfig) (*Result, error) {
 		if len(server.ExcludeTools) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific)", name))
 		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Claude Code)", name))
+		}
 
+		out.MCPServers[name] = s
+	}
+
+	result, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: result, Filename: "mcp.json", Warnings: warnings}, nil
+}
+
+// renderCursorMCP renders canonical MCP config to Cursor's .cursor/mcp.json format.
+// Cursor uses the same mcpServers schema as Claude Code (command, args, env, url, etc.).
+// Provider-specific fields from other providers (trust, includeTools, etc.) are dropped.
+func renderCursorMCP(cfg mcpConfig) (*Result, error) {
+	var warnings []string
+	out := mcpConfig{MCPServers: make(map[string]mcpServerConfig)}
+
+	for name, server := range cfg.MCPServers {
+		s := mcpServerConfig{
+			Command: server.Command,
+			Args:    server.Args,
+			Env:     server.Env,
+			Cwd:     server.Cwd,
+			URL:     server.URL,
+			Headers: server.Headers,
+			Type:    server.Type,
+		}
+
+		// Map canonical transport type back to Cursor terminology
+		if s.Type == "streamable-http" {
+			s.Type = "http"
+		}
+
+		// Warn about dropped autoApprove (not documented by Cursor)
+		if len(server.AutoApprove) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: autoApprove dropped (not documented by Cursor)", name))
+		}
+
+		// Warn about dropped OAuth config
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Cursor", name))
+		}
+
+		// Warn about dropped Gemini-specific fields
+		if server.Trust != "" {
+			warnings = append(warnings, fmt.Sprintf("server %q: trust field dropped (Gemini-specific)", name))
+		}
+		if len(server.IncludeTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: includeTools dropped (Gemini-specific)", name))
+		}
+		if len(server.ExcludeTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific)", name))
+		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Cursor)", name))
+		}
 		out.MCPServers[name] = s
 	}
 
@@ -281,6 +398,7 @@ func renderGeminiMCP(cfg mcpConfig) (*Result, error) {
 			Trust:        server.Trust,
 			IncludeTools: server.IncludeTools,
 			ExcludeTools: server.ExcludeTools,
+			Timeout:      server.Timeout,
 		}
 
 		// Gemini uses httpUrl for HTTP transport
@@ -294,6 +412,12 @@ func renderGeminiMCP(cfg mcpConfig) (*Result, error) {
 		}
 		if server.Disabled {
 			warnings = append(warnings, fmt.Sprintf("server %q: disabled state dropped (runtime-only)", name))
+		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Gemini CLI", name))
+		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Gemini CLI)", name))
 		}
 
 		out.MCPServers[name] = s
@@ -321,6 +445,11 @@ func renderCopilotMCP(cfg mcpConfig) (*Result, error) {
 			Type:    server.Type,
 		}
 
+		// Map canonical transport type back to Copilot CLI terminology
+		if s.Type == "streamable-http" {
+			s.Type = "http"
+		}
+
 		// Warn about all provider-specific fields
 		if server.Trust != "" {
 			warnings = append(warnings, fmt.Sprintf("server %q: trust dropped (Gemini-specific)", name))
@@ -333,6 +462,12 @@ func renderCopilotMCP(cfg mcpConfig) (*Result, error) {
 		}
 		if len(server.AutoApprove) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: autoApprove dropped (Claude-specific)", name))
+		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Copilot CLI", name))
+		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Copilot CLI)", name))
 		}
 
 		out.MCPServers[name] = s
@@ -397,6 +532,9 @@ func renderOpencodeMCP(cfg mcpConfig) (*Result, error) {
 		if server.Cwd != "" {
 			warnings = append(warnings, fmt.Sprintf("server %q: cwd dropped (not supported by OpenCode)", name))
 		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by OpenCode)", name))
+		}
 
 		out.MCP[name] = s
 	}
@@ -418,11 +556,18 @@ func canonicalizeZedMCP(content []byte) (*Result, error) {
 
 	for name, s := range src.ContextServers {
 		// Drop "source" field — it's Zed-specific metadata, not meaningful in canonical form.
-		out.MCPServers[name] = mcpServerConfig{
+		canonical := mcpServerConfig{
 			Command: s.Command,
 			Args:    s.Args,
 			Env:     s.Env,
+			URL:     s.URL,
+			Headers: s.Headers,
 		}
+		// Infer transport type from URL presence
+		if s.URL != "" && canonical.Type == "" {
+			canonical.Type = "sse"
+		}
+		out.MCPServers[name] = canonical
 	}
 
 	result, err := json.MarshalIndent(out, "", "  ")
@@ -441,12 +586,49 @@ func canonicalizeClineMCP(content []byte) (*Result, error) {
 	out := mcpConfig{MCPServers: make(map[string]mcpServerConfig)}
 
 	for name, s := range src.MCPServers {
-		out.MCPServers[name] = mcpServerConfig{
+		canonical := mcpServerConfig{
 			Command:     s.Command,
 			Args:        s.Args,
 			Env:         s.Env,
 			AutoApprove: s.AlwaysAllow, // alwaysAllow → autoApprove in canonical
 			Disabled:    s.Disabled,
+			URL:         s.URL,
+			Headers:     s.Headers,
+		}
+		if s.URL != "" && canonical.Type == "" {
+			canonical.Type = "sse"
+		}
+		out.MCPServers[name] = canonical
+	}
+
+	result, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: result, Filename: "mcp.json"}, nil
+}
+
+func canonicalizeRooCodeMCP(content []byte) (*Result, error) {
+	var src rooCodeMCPConfig
+	if err := json.Unmarshal(content, &src); err != nil {
+		return nil, fmt.Errorf("parsing Roo Code MCP config: %w", err)
+	}
+
+	out := mcpConfig{MCPServers: make(map[string]mcpServerConfig)}
+
+	for name, s := range src.MCPServers {
+		out.MCPServers[name] = mcpServerConfig{
+			Command:       s.Command,
+			Args:          s.Args,
+			Env:           s.Env,
+			Cwd:           s.Cwd,
+			Disabled:      s.Disabled,
+			Type:          s.Type,
+			URL:           s.URL,
+			Headers:       s.Headers,
+			AutoApprove:   s.AlwaysAllow, // alwaysAllow → autoApprove in canonical
+			DisabledTools: s.DisabledTools,
+			Timeout:       s.Timeout,
 		}
 	}
 
@@ -462,18 +644,14 @@ func renderClineMCP(cfg mcpConfig) (*Result, error) {
 	out := clineMCPConfig{MCPServers: make(map[string]clineMCPServerConfig)}
 
 	for name, server := range cfg.MCPServers {
-		// Cline only supports stdio; warn and skip HTTP servers.
-		if server.URL != "" {
-			warnings = append(warnings, fmt.Sprintf("server %q: skipped (Cline only supports stdio, not HTTP)", name))
-			continue
-		}
-
 		out.MCPServers[name] = clineMCPServerConfig{
 			Command:     server.Command,
 			Args:        server.Args,
 			Env:         server.Env,
 			AlwaysAllow: server.AutoApprove, // autoApprove → alwaysAllow
 			Disabled:    server.Disabled,
+			URL:         server.URL,
+			Headers:     server.Headers,
 		}
 
 		// Warn about dropped provider-specific fields
@@ -488,6 +666,12 @@ func renderClineMCP(cfg mcpConfig) (*Result, error) {
 		}
 		if server.Cwd != "" {
 			warnings = append(warnings, fmt.Sprintf("server %q: cwd dropped (not supported by Cline)", name))
+		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Cline", name))
+		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Cline)", name))
 		}
 	}
 
@@ -504,24 +688,20 @@ func renderRooCodeMCP(cfg mcpConfig) (*Result, error) {
 
 	for name, server := range cfg.MCPServers {
 		out.MCPServers[name] = rooCodeMCPServerConfig{
-			Command:  server.Command,
-			Args:     server.Args,
-			Env:      server.Env,
-			Disabled: server.Disabled,
-			Type:     server.Type,
-			URL:      server.URL,
+			Command:       server.Command,
+			Args:          server.Args,
+			Env:           server.Env,
+			Cwd:           server.Cwd,
+			Disabled:      server.Disabled,
+			Type:          server.Type,
+			URL:           server.URL,
+			Headers:       server.Headers,
+			AlwaysAllow:   server.AutoApprove, // autoApprove → alwaysAllow
+			DisabledTools: server.DisabledTools,
+			Timeout:       server.Timeout,
 		}
 
 		// Warn about dropped provider-specific fields
-		if len(server.AutoApprove) > 0 {
-			warnings = append(warnings, fmt.Sprintf("server %q: autoApprove dropped (not supported by Roo Code)", name))
-		}
-		if server.Cwd != "" {
-			warnings = append(warnings, fmt.Sprintf("server %q: cwd dropped (not supported by Roo Code)", name))
-		}
-		if len(server.Headers) > 0 {
-			warnings = append(warnings, fmt.Sprintf("server %q: headers dropped (not supported by Roo Code)", name))
-		}
 		if server.Trust != "" {
 			warnings = append(warnings, fmt.Sprintf("server %q: trust dropped (Gemini-specific)", name))
 		}
@@ -530,6 +710,9 @@ func renderRooCodeMCP(cfg mcpConfig) (*Result, error) {
 		}
 		if len(server.ExcludeTools) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific)", name))
+		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Roo Code", name))
 		}
 	}
 
@@ -563,13 +746,14 @@ func renderKiroMCP(cfg mcpConfig) (*Result, error) {
 
 	for name, server := range cfg.MCPServers {
 		s := kiroServerConfig{
-			Command:     server.Command,
-			Args:        server.Args,
-			Env:         server.Env,
-			URL:         server.URL,
-			Headers:     server.Headers,
-			Disabled:    server.Disabled,
-			AutoApprove: server.AutoApprove,
+			Command:       server.Command,
+			Args:          server.Args,
+			Env:           server.Env,
+			URL:           server.URL,
+			Headers:       server.Headers,
+			Disabled:      server.Disabled,
+			AutoApprove:   server.AutoApprove,
+			DisabledTools: server.DisabledTools,
 		}
 
 		// Warn about dropped Gemini-specific fields
@@ -578,6 +762,9 @@ func renderKiroMCP(cfg mcpConfig) (*Result, error) {
 		}
 		if len(server.IncludeTools) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: includeTools dropped (Gemini-specific)", name))
+		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Kiro", name))
 		}
 
 		kc.MCPServers[name] = s
@@ -590,22 +777,136 @@ func renderKiroMCP(cfg mcpConfig) (*Result, error) {
 	return &Result{Content: result, Filename: "mcp.json", Warnings: warnings}, nil
 }
 
+// windsurfServerConfig is Windsurf's per-server format.
+// Windsurf uses the standard mcpServers key but uses serverUrl (not url) for HTTP transport.
+type windsurfServerConfig struct {
+	Command       string            `json:"command,omitempty"`
+	Args          []string          `json:"args,omitempty"`
+	Env           map[string]string `json:"env,omitempty"`
+	ServerUrl     string            `json:"serverUrl,omitempty"` // HTTP transport
+	URL           string            `json:"url,omitempty"`       // SSE transport
+	Headers       map[string]string `json:"headers,omitempty"`
+	DisabledTools []string          `json:"disabledTools,omitempty"`
+}
+
+type windsurfMCPConfig struct {
+	MCPServers map[string]windsurfServerConfig `json:"mcpServers"`
+}
+
+func canonicalizeWindsurfMCP(content []byte) (*Result, error) {
+	var src windsurfMCPConfig
+	if err := json.Unmarshal(content, &src); err != nil {
+		return nil, fmt.Errorf("parsing Windsurf MCP config: %w", err)
+	}
+
+	out := mcpConfig{MCPServers: make(map[string]mcpServerConfig)}
+
+	for name, s := range src.MCPServers {
+		canonical := mcpServerConfig{
+			Command:       s.Command,
+			Args:          s.Args,
+			Env:           s.Env,
+			Headers:       s.Headers,
+			DisabledTools: s.DisabledTools,
+		}
+
+		// Normalize serverUrl → url (HTTP transport)
+		if s.ServerUrl != "" {
+			canonical.URL = s.ServerUrl
+			if canonical.Type == "" {
+				canonical.Type = "streamable-http"
+			}
+		}
+		// SSE url preserved directly
+		if s.URL != "" {
+			canonical.URL = s.URL
+			if canonical.Type == "" {
+				canonical.Type = "sse"
+			}
+		}
+
+		out.MCPServers[name] = canonical
+	}
+
+	result, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: result, Filename: "mcp.json"}, nil
+}
+
+func renderWindsurfMCP(cfg mcpConfig) (*Result, error) {
+	var warnings []string
+	out := windsurfMCPConfig{MCPServers: make(map[string]windsurfServerConfig)}
+
+	for name, server := range cfg.MCPServers {
+		s := windsurfServerConfig{
+			Command:       server.Command,
+			Args:          server.Args,
+			Env:           server.Env,
+			Headers:       server.Headers,
+			DisabledTools: server.DisabledTools,
+		}
+
+		// Map url → serverUrl for HTTP, keep url for SSE
+		if server.URL != "" {
+			switch server.Type {
+			case "sse":
+				s.URL = server.URL
+			default:
+				// streamable-http or unspecified — use serverUrl
+				s.ServerUrl = server.URL
+			}
+		}
+
+		// Warn about dropped provider-specific fields
+		if server.Cwd != "" {
+			warnings = append(warnings, fmt.Sprintf("server %q: cwd dropped (not supported by Windsurf)", name))
+		}
+		if len(server.AutoApprove) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: autoApprove dropped (Claude-specific)", name))
+		}
+		if server.Trust != "" {
+			warnings = append(warnings, fmt.Sprintf("server %q: trust dropped (Gemini-specific)", name))
+		}
+		if len(server.IncludeTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: includeTools dropped (Gemini-specific)", name))
+		}
+		if len(server.ExcludeTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific)", name))
+		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Windsurf", name))
+		}
+
+		out.MCPServers[name] = s
+	}
+
+	result, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: result, Filename: "mcp_config.json", Warnings: warnings}, nil
+}
+
 func renderZedMCP(cfg mcpConfig) (*Result, error) {
 	var warnings []string
 	out := zedContextServersConfig{ContextServers: make(map[string]zedContextServer)}
 
 	for name, server := range cfg.MCPServers {
-		// Zed only supports stdio; skip HTTP servers.
 		if server.URL != "" {
-			warnings = append(warnings, fmt.Sprintf("server %q: skipped (Zed only supports stdio, not HTTP)", name))
-			continue
-		}
-
-		out.ContextServers[name] = zedContextServer{
-			Source:  "custom",
-			Command: server.Command,
-			Args:    server.Args,
-			Env:     server.Env,
+			out.ContextServers[name] = zedContextServer{
+				Source:  "custom",
+				URL:     server.URL,
+				Headers: server.Headers,
+			}
+		} else {
+			out.ContextServers[name] = zedContextServer{
+				Source:  "custom",
+				Command: server.Command,
+				Args:    server.Args,
+				Env:     server.Env,
+			}
 		}
 
 		// Warn about dropped provider-specific fields
@@ -624,6 +925,107 @@ func renderZedMCP(cfg mcpConfig) (*Result, error) {
 		if len(server.ExcludeTools) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific)", name))
 		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Zed", name))
+		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Zed)", name))
+		}
+	}
+
+	result, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: result, Filename: "settings.json", Warnings: warnings}, nil
+}
+
+// ampMCPSettings is Amp's settings.json structure with namespaced MCP key.
+type ampMCPSettings struct {
+	AmpMCPServers map[string]ampServerConfig `json:"amp.mcpServers"`
+}
+
+// ampServerConfig is Amp's per-server MCP format.
+type ampServerConfig struct {
+	Command      string            `json:"command,omitempty"`
+	Args         []string          `json:"args,omitempty"`
+	Env          map[string]string `json:"env,omitempty"`
+	URL          string            `json:"url,omitempty"`
+	Headers      map[string]string `json:"headers,omitempty"`
+	IncludeTools []string          `json:"includeTools,omitempty"`
+}
+
+func canonicalizeAmpMCP(content []byte) (*Result, error) {
+	var src ampMCPSettings
+	if err := json.Unmarshal(content, &src); err != nil {
+		return nil, fmt.Errorf("parsing Amp MCP config: %w", err)
+	}
+
+	out := mcpConfig{MCPServers: make(map[string]mcpServerConfig)}
+
+	for name, s := range src.AmpMCPServers {
+		canonical := mcpServerConfig{
+			Command:      s.Command,
+			Args:         s.Args,
+			Env:          s.Env,
+			URL:          s.URL,
+			Headers:      s.Headers,
+			IncludeTools: s.IncludeTools,
+		}
+
+		// Infer transport type from URL presence
+		if s.URL != "" && canonical.Type == "" {
+			canonical.Type = "streamable-http"
+		}
+
+		out.MCPServers[name] = canonical
+	}
+
+	result, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: result, Filename: "mcp.json"}, nil
+}
+
+func renderAmpMCP(cfg mcpConfig) (*Result, error) {
+	var warnings []string
+	out := ampMCPSettings{AmpMCPServers: make(map[string]ampServerConfig)}
+
+	for name, server := range cfg.MCPServers {
+		s := ampServerConfig{
+			Command:      server.Command,
+			Args:         server.Args,
+			Env:          server.Env,
+			URL:          server.URL,
+			Headers:      server.Headers,
+			IncludeTools: server.IncludeTools,
+		}
+
+		// Warn about dropped provider-specific fields
+		if server.Cwd != "" {
+			warnings = append(warnings, fmt.Sprintf("server %q: cwd dropped (not supported by Amp)", name))
+		}
+		if len(server.AutoApprove) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: autoApprove dropped (Claude-specific; Amp uses permissions system)", name))
+		}
+		if server.Trust != "" {
+			warnings = append(warnings, fmt.Sprintf("server %q: trust dropped (Gemini-specific)", name))
+		}
+		if len(server.ExcludeTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific; Amp uses includeTools)", name))
+		}
+		if len(server.DisabledTools) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabledTools dropped (not supported by Amp)", name))
+		}
+		if len(server.OAuth) > 0 {
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Amp", name))
+		}
+		if server.Disabled {
+			warnings = append(warnings, fmt.Sprintf("server %q: disabled state dropped (Amp doesn't support disabled flag)", name))
+		}
+
+		out.AmpMCPServers[name] = s
 	}
 
 	result, err := json.MarshalIndent(out, "", "  ")

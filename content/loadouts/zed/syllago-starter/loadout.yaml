@@ -1,0 +1,12 @@
+kind: loadout
+version: 1
+provider: zed
+name: syllago-starter
+description: >
+  Built-in meta-tools for syllago: reference guide, quickstart,
+  and import workflow reference.
+
+skills:
+  - syllago-guide
+  - syllago-quickstart
+  - syllago-import
