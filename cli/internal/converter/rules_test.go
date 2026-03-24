@@ -785,6 +785,168 @@ func TestStripImplicitGlobPrefix(t *testing.T) {
 	}
 }
 
+// --- Copilot rules: canonicalize ---
+
+func TestCopilotCanonicalizeApplyTo(t *testing.T) {
+	input := []byte("---\napplyTo: \"*.ts, *.tsx\"\n---\n\nUse strict TypeScript.\n")
+
+	conv := &RulesConverter{}
+	canonical, err := conv.Canonicalize(input, "copilot-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	meta, body, err := parseCanonical(canonical.Content)
+	if err != nil {
+		t.Fatalf("parseCanonical: %v", err)
+	}
+
+	if meta.AlwaysApply {
+		t.Error("expected alwaysApply:false for applyTo rule")
+	}
+	if len(meta.Globs) != 2 {
+		t.Fatalf("expected 2 globs, got %d: %v", len(meta.Globs), meta.Globs)
+	}
+	assertEqual(t, "*.ts", meta.Globs[0])
+	assertEqual(t, "*.tsx", meta.Globs[1])
+	assertContains(t, body, "Use strict TypeScript.")
+}
+
+func TestCopilotCanonicalizeNoFrontmatter(t *testing.T) {
+	input := []byte("# Global Copilot Instructions\n\nAlways follow these rules.\n")
+
+	conv := &RulesConverter{}
+	canonical, err := conv.Canonicalize(input, "copilot-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	meta, body, err := parseCanonical(canonical.Content)
+	if err != nil {
+		t.Fatalf("parseCanonical: %v", err)
+	}
+
+	if !meta.AlwaysApply {
+		t.Error("expected alwaysApply:true for copilot rule without frontmatter")
+	}
+	assertContains(t, body, "Always follow these rules.")
+}
+
+func TestCopilotCanonicalizeEmptyApplyTo(t *testing.T) {
+	// applyTo present but empty → alwaysApply
+	input := []byte("---\napplyTo: \"\"\n---\n\nGeneral rule.\n")
+
+	conv := &RulesConverter{}
+	canonical, err := conv.Canonicalize(input, "copilot-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	meta, _, err := parseCanonical(canonical.Content)
+	if err != nil {
+		t.Fatalf("parseCanonical: %v", err)
+	}
+
+	if !meta.AlwaysApply {
+		t.Error("expected alwaysApply:true when applyTo is empty")
+	}
+}
+
+// --- Copilot rules: render ---
+
+func TestCopilotRenderGlobs(t *testing.T) {
+	input := []byte("---\nalwaysApply: false\nglobs:\n    - \"*.ts\"\n    - \"*.tsx\"\n---\n\nTypeScript rule.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Render(input, provider.CopilotCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "applyTo:")
+	assertContains(t, out, "*.ts")
+	assertContains(t, out, "*.tsx")
+	assertContains(t, out, "TypeScript rule.")
+	assertEqual(t, ".instructions.md", result.Filename)
+}
+
+func TestCopilotRenderAlwaysApply(t *testing.T) {
+	input := []byte("---\nalwaysApply: true\n---\n\nGlobal instructions.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Render(input, provider.CopilotCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertNotContains(t, out, "---")
+	assertNotContains(t, out, "applyTo")
+	assertContains(t, out, "Global instructions.")
+	assertEqual(t, "copilot-instructions.md", result.Filename)
+}
+
+func TestCopilotRenderDescriptionScope(t *testing.T) {
+	input := []byte("---\ndescription: When writing tests\nalwaysApply: false\n---\n\nTest patterns.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Render(input, provider.CopilotCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "Apply when: When writing tests")
+	assertEqual(t, "copilot-instructions.md", result.Filename)
+}
+
+// --- Copilot round-trip ---
+
+func TestCopilotRoundTripApplyTo(t *testing.T) {
+	// Copilot applyTo rule → canonical → Copilot should preserve semantics
+	input := []byte("---\napplyTo: \"*.go\"\n---\n\nGo conventions.\n")
+
+	conv := &RulesConverter{}
+	canonical, err := conv.Canonicalize(input, "copilot-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.CopilotCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "applyTo")
+	assertContains(t, out, "*.go")
+	assertContains(t, out, "Go conventions.")
+	assertEqual(t, ".instructions.md", result.Filename)
+}
+
+// --- Copilot to other providers ---
+
+func TestCopilotApplyToToCursor(t *testing.T) {
+	input := []byte("---\napplyTo: \"*.py\"\n---\n\nPython conventions.\n")
+
+	conv := &RulesConverter{}
+	canonical, err := conv.Canonicalize(input, "copilot-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Cursor)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "alwaysApply: false")
+	assertContains(t, out, "*.py")
+	assertEqual(t, "rule.mdc", result.Filename)
+}
+
 // --- Markdown Rules ---
 
 func TestRenderMarkdownRule(t *testing.T) {

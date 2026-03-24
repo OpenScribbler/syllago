@@ -40,6 +40,8 @@ func TestInstallUnknownProvider(t *testing.T) {
 
 	installCmd.Flags().Set("to", "nonexistent-provider")
 	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
 
 	err := installCmd.RunE(installCmd, []string{})
 	if err == nil {
@@ -77,6 +79,8 @@ func TestInstallDryRunDoesNotWrite(t *testing.T) {
 	defer installCmd.Flags().Set("to", "")
 	installCmd.Flags().Set("dry-run", "true")
 	defer installCmd.Flags().Set("dry-run", "false")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
 
 	err := installCmd.RunE(installCmd, []string{})
 	if err != nil {
@@ -114,7 +118,7 @@ func TestInstallTypeFilter(t *testing.T) {
 }
 
 func TestInstallFlagsRegistered(t *testing.T) {
-	flags := []string{"to", "type", "method", "dry-run", "base-dir", "no-input"}
+	flags := []string{"to", "type", "method", "dry-run", "base-dir", "no-input", "all"}
 	for _, name := range flags {
 		if installCmd.Flags().Lookup(name) == nil {
 			t.Errorf("expected --%s flag to be registered on installCmd", name)
@@ -134,6 +138,8 @@ func TestInstallJSONOutputOnSuccess(t *testing.T) {
 
 	installCmd.Flags().Set("to", "test-provider-json")
 	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
 
 	err := installCmd.RunE(installCmd, []string{})
 	if err != nil {
@@ -172,6 +178,8 @@ func TestInstallWarnsWhenProviderNotDetected(t *testing.T) {
 
 	installCmd.Flags().Set("to", "undetected-prov")
 	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
 
 	err := installCmd.RunE(installCmd, []string{})
 	if err != nil {
@@ -199,6 +207,8 @@ func TestInstallNoWarningWhenProviderDetected(t *testing.T) {
 
 	installCmd.Flags().Set("to", "detected-prov")
 	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
 
 	err := installCmd.RunE(installCmd, []string{})
 	if err != nil {
@@ -223,6 +233,8 @@ func TestInstallNoWarningInJSONMode(t *testing.T) {
 
 	installCmd.Flags().Set("to", "undetected-json")
 	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
 
 	err := installCmd.RunE(installCmd, []string{})
 	if err != nil {
@@ -265,5 +277,68 @@ func TestInstallJSONOutputOnSkip(t *testing.T) {
 	var result installResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("output is not valid JSON: %v\noutput: %s", err, out)
+	}
+}
+
+func TestInstallRequiresExplicitIntent(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+	_, _ = output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "claude-code")
+	defer installCmd.Flags().Set("to", "")
+
+	// No name, no --all, no --type → should error.
+	err := installCmd.RunE(installCmd, []string{})
+	if err == nil {
+		t.Fatal("expected error when no name, --all, or --type is specified")
+	}
+	if !strings.Contains(err.Error(), "--all") {
+		t.Errorf("expected hint about --all in error, got: %v", err)
+	}
+}
+
+func TestInstallAllConflictsWithName(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+	_, _ = output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "claude-code")
+	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
+
+	// --all + name → should error.
+	err := installCmd.RunE(installCmd, []string{"my-skill"})
+	if err == nil {
+		t.Fatal("expected error when both --all and a name are specified")
+	}
+	if !strings.Contains(err.Error(), "cannot specify both") {
+		t.Errorf("expected conflict message, got: %v", err)
+	}
+}
+
+func TestInstallAllInstallsEverything(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+	addTestProvider(t, "test-prov-all", "Test Provider All", installBase)
+
+	stdout, _ := output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "test-prov-all")
+	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("install --all failed: %v", err)
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "my-skill") {
+		t.Errorf("expected 'my-skill' in output, got: %s", out)
 	}
 }

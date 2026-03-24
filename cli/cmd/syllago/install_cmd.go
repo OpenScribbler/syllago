@@ -49,6 +49,9 @@ Use --method copy to place a standalone copy instead.`,
   # Install all skills to a provider
   syllago install --to claude-code --type skills
 
+  # Install everything from your library
+  syllago install --all --to claude-code
+
   # Preview what would happen
   syllago install my-skill --to claude-code --dry-run`,
 	Args: cobra.MaximumNArgs(1),
@@ -60,6 +63,7 @@ func init() {
 	installCmd.MarkFlagRequired("to")
 	installCmd.Flags().String("type", "", "Filter to a specific content type")
 	installCmd.Flags().String("method", "symlink", "Install method: symlink (default) or copy")
+	installCmd.Flags().Bool("all", false, "Install all library content (cannot combine with a positional name)")
 	installCmd.Flags().BoolP("dry-run", "n", false, "Show what would happen without making changes")
 	installCmd.Flags().String("base-dir", "", "Override base directory for content installation")
 	installCmd.Flags().Bool("no-input", false, "Disable interactive prompts, use defaults")
@@ -72,6 +76,17 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	methodStr, _ := cmd.Flags().GetString("method")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	baseDir, _ := cmd.Flags().GetString("base-dir")
+	installAll, _ := cmd.Flags().GetBool("all")
+
+	// --all and a positional name are mutually exclusive.
+	if installAll && len(args) > 0 {
+		return output.NewStructuredError(output.ErrInputConflict, "cannot specify both a name and --all", "Use either a positional argument or --all, not both")
+	}
+
+	// Require explicit intent for bulk installs: name, --all, or --type.
+	if len(args) == 0 && !installAll && typeFilter == "" {
+		return output.NewStructuredError(output.ErrInputMissing, "specify a name, --all, or --type to install", "Examples:\n  syllago install my-skill --to <provider>\n  syllago install --all --to <provider>\n  syllago install --type rules --to <provider>")
+	}
 
 	method := installer.MethodSymlink
 	if methodStr == "copy" {
