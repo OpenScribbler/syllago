@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-24T07:31:45Z",
+  "generatedAt": "2026-03-24T23:31:52Z",
   "syllagoVersion": "dev",
   "commands": [
     {
@@ -2027,80 +2027,6 @@
       "source": "cli/cmd/syllago/loadout_status.go"
     },
     {
-      "name": "publish",
-      "displayName": "Publish",
-      "slug": "publish",
-      "parent": null,
-      "synopsis": "syllago publish \u003cname\u003e [flags]",
-      "description": "Contribute library content to a registry",
-      "longDescription": "Copies a library item to a registry clone, stages the change, and\noptionally creates a branch and PR.",
-      "aliases": [],
-      "flags": [
-        {
-          "name": "--no-input",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Skip interactive git prompts, stage only"
-        },
-        {
-          "name": "--registry",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": true,
-          "description": "Registry name to publish to (required)"
-        },
-        {
-          "name": "--type",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Disambiguate when name exists in multiple types"
-        }
-      ],
-      "inheritedFlags": [
-        {
-          "name": "--json",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Output in JSON format"
-        },
-        {
-          "name": "--no-color",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Disable color output"
-        },
-        {
-          "name": "--quiet",
-          "shorthand": "-q",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Suppress non-essential output"
-        },
-        {
-          "name": "--verbose",
-          "shorthand": "-v",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Verbose output"
-        }
-      ],
-      "subcommands": [],
-      "seeAlso": [],
-      "examples": "  # Publish a skill to a registry\n  syllago publish my-skill --registry my-registry\n\n  # Publish a specific rule type\n  syllago publish my-rule --registry team-rules --type rules\n\n  # Non-interactive mode\n  syllago publish my-skill --registry my-registry --no-input",
-      "source": "cli/cmd/syllago/publish.go"
-    },
-    {
       "name": "registry",
       "displayName": "Registry",
       "slug": "registry",
@@ -3494,8 +3420,8 @@
       "slug": "share",
       "parent": null,
       "synopsis": "syllago share \u003cname\u003e [flags]",
-      "description": "Contribute library content to a team repo",
-      "longDescription": "Copies a library item to your team repo, stages the change, and\noptionally creates a branch and PR.",
+      "description": "Contribute library content to a team repo or registry",
+      "longDescription": "Copies a library item to a target repo, stages the change, and\noptionally creates a branch and PR.\n\nBy default, shares to the current team repo (the syllago repo you're in).\nUse --to to share to a named registry instead.",
       "aliases": [],
       "flags": [
         {
@@ -3505,6 +3431,14 @@
           "default": null,
           "required": false,
           "description": "Skip interactive git prompts, stage only"
+        },
+        {
+          "name": "--to",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Target registry name (omit for current team repo)"
         },
         {
           "name": "--type",
@@ -3551,7 +3485,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": "  # Share a skill to the team repo\n  syllago share my-skill\n\n  # Disambiguate by type\n  syllago share my-rule --type rules\n\n  # Non-interactive mode (stage only, no git prompts)\n  syllago share my-skill --no-input",
+      "examples": "  # Share a skill to the current team repo\n  syllago share my-skill\n\n  # Share to a named registry\n  syllago share my-skill --to my-registry\n\n  # Disambiguate by type\n  syllago share my-rule --type rules\n\n  # Non-interactive mode (stage only, no git prompts)\n  syllago share my-skill --no-input",
       "source": "cli/cmd/syllago/share.go"
     },
     {
