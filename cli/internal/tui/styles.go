@@ -1,12 +1,15 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"strings"
 
+	"github.com/charmbracelet/lipgloss"
+)
+
+// Colors — adaptive for light/dark terminal themes.
 var (
-	// Colors — adaptive for light/dark terminal themes.
-	// Light = color on light terminal backgrounds, Dark = color on dark terminal backgrounds.
-	primaryColor = lipgloss.AdaptiveColor{Light: "#047857", Dark: "#6EE7B7"} // Mint
-	accentColor  = lipgloss.AdaptiveColor{Light: "#6D28D9", Dark: "#C4B5FD"} // Viola
+	primaryColor = lipgloss.AdaptiveColor{Light: "#047857", Dark: "#6EE7B7"} // Mint (content)
+	accentColor  = lipgloss.AdaptiveColor{Light: "#6D28D9", Dark: "#C4B5FD"} // Viola (collections)
 	mutedColor   = lipgloss.AdaptiveColor{Light: "#57534E", Dark: "#A8A29E"} // Stone
 	successColor = lipgloss.AdaptiveColor{Light: "#15803D", Dark: "#4ADE80"} // Green
 	dangerColor  = lipgloss.AdaptiveColor{Light: "#B91C1C", Dark: "#FCA5A5"} // Red
@@ -16,23 +19,30 @@ var (
 	borderColor      = lipgloss.AdaptiveColor{Light: "#D4D4D8", Dark: "#3F3F46"}
 	selectedBgColor  = lipgloss.AdaptiveColor{Light: "#D1FAE5", Dark: "#1A3A2A"}
 	modalBgColor     = lipgloss.AdaptiveColor{Light: "#F4F4F5", Dark: "#27272A"}
-	modalBorderColor = lipgloss.AdaptiveColor{Light: "#6D28D9", Dark: "#C4B5FD"} // same as accent
+	modalBorderColor = lipgloss.AdaptiveColor{Light: "#6D28D9", Dark: "#C4B5FD"}
+)
 
-	// Title bar
+// Named styles — all styles defined here, never inline.
+var (
+	// Title and text styles
 	titleStyle = lipgloss.NewStyle().
 			Bold(true).
 			Foreground(primaryColor)
 
-	// ASCII art accent (SYL highlight in landing page art)
-	artAccentStyle = lipgloss.NewStyle().
+	labelStyle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(accentColor)
+			Foreground(primaryColor)
 
-	// Help bar at bottom
+	valueStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.AdaptiveColor{Light: "#374151", Dark: "#E5E7EB"})
+
 	helpStyle = lipgloss.NewStyle().
 			Foreground(mutedColor)
 
-	// List item styles — color only, no padding (layout handled in View)
+	countStyle = lipgloss.NewStyle().
+			Foreground(mutedColor)
+
+	// Selection / items
 	itemStyle = lipgloss.NewStyle()
 
 	selectedItemStyle = lipgloss.NewStyle().
@@ -50,14 +60,6 @@ var (
 	warningStyle = lipgloss.NewStyle().
 			Foreground(warningColor)
 
-	// Detail view
-	labelStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(primaryColor)
-
-	valueStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.AdaptiveColor{Light: "#374151", Dark: "#E5E7EB"})
-
 	// Messages
 	successMsgStyle = lipgloss.NewStyle().
 			Foreground(successColor)
@@ -65,81 +67,57 @@ var (
 	errorMsgStyle = lipgloss.NewStyle().
 			Foreground(dangerColor)
 
-	// Category count badge
-	countStyle = lipgloss.NewStyle().
-			Foreground(mutedColor)
+	// Top bar
+	topBarStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(borderColor)
 
-	// Built-in content badge (accent/purple to distinguish from LOCAL/registry)
-	builtinStyle = lipgloss.NewStyle().
-			Foreground(accentColor)
+	logoStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(primaryColor)
 
-	// Global content badge (amber — distinct from project and registry)
-	globalStyle = lipgloss.NewStyle().
-			Foreground(warningColor)
-
-	// Example content badge (dim purple, distinct from builtinStyle)
-	exampleStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.AdaptiveColor{Light: "#9D7ACC", Dark: "#A78BFA"})
-
-	// Table header (bold muted — distinct from help text)
-	tableHeaderStyle = lipgloss.NewStyle().
-				Foreground(mutedColor).
-				Bold(true)
-
-	// Search
-	searchPromptStyle = lipgloss.NewStyle().
+	activeDropdownStyle = lipgloss.NewStyle().
 				Foreground(primaryColor).
 				Bold(true)
 
-	// Compatibility matrix (hooks list view)
-	compatFullStyle     = lipgloss.NewStyle().Foreground(successColor)
-	compatDegradedStyle = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#CA8A04", Dark: "#FDE68A"})
-	compatBrokenStyle   = lipgloss.NewStyle().Foreground(warningColor)
-	compatNoneStyle     = lipgloss.NewStyle().Foreground(dangerColor)
+	inactiveDropdownStyle = lipgloss.NewStyle().
+				Foreground(mutedColor)
 
-	versionStyle = lipgloss.NewStyle().
+	collectionDropdownStyle = lipgloss.NewStyle().
+				Foreground(accentColor).
+				Bold(true)
+
+	// Dropdown menu
+	dropdownBorderStyle = lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder()).
+				BorderForeground(borderColor)
+
+	dropdownItemStyle = lipgloss.NewStyle()
+
+	dropdownSelectedStyle = lipgloss.NewStyle().
+				Foreground(accentColor).
+				Bold(true)
+
+	// Metadata bar
+	metadataStyle = lipgloss.NewStyle().
+			Border(lipgloss.NormalBorder()).
+			BorderForeground(borderColor)
+
+	metaNameStyle = lipgloss.NewStyle().
+			Bold(true)
+
+	metaActionStyle = lipgloss.NewStyle().
 			Foreground(mutedColor)
 
-	// Sidebar panel
-	sidebarBorderStyle = lipgloss.NewStyle().
-				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(borderColor).
-				BorderRight(true)
+	// Content zone
+	splitBorderStyle = lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder()).
+				BorderForeground(borderColor)
 
-	// Action buttons (Install tab)
-	buttonStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#1E1B2E"}).
-			Background(lipgloss.AdaptiveColor{Light: "#6D28D9", Dark: "#C4B5FD"}).
-			Padding(0, 1)
-
-	buttonDisabledStyle = lipgloss.NewStyle().
-				Foreground(mutedColor).
-				Background(lipgloss.AdaptiveColor{Light: "#E4E4E7", Dark: "#3F3F46"}).
-				Padding(0, 1)
-
-	// Footer bar
-	footerStyle = lipgloss.NewStyle().
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(borderColor).
-			BorderTop(true).
+	lineNumStyle = lipgloss.NewStyle().
 			Foreground(mutedColor)
 
-	// Detail tabs — single-line with background color for active
-	activeTabStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(accentColor).
-			Background(selectedBgColor).
-			Padding(0, 1)
-
-	inactiveTabStyle = lipgloss.NewStyle().
-				Foreground(mutedColor).
-				Padding(0, 1)
-
-	// Clickable back link
-	backLinkStyle = lipgloss.NewStyle().
-			Foreground(mutedColor)
-
-	// Card grid styles (registries, library, loadouts)
+	// Cards
 	cardNormalStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(mutedColor).
@@ -151,35 +129,69 @@ var (
 				Padding(0, 1).
 				Bold(true)
 
-	// Action buttons (page-level, below breadcrumb)
-	// Format: [hotkey] Label — chip-style with semantic background colors.
-	// actionBtnAddStyle — constructive action (install, add, create)
+	// Modals
+	modalStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(modalBorderColor).
+			Background(modalBgColor).
+			Padding(1, 2)
+
+	buttonStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFFFF")).
+			Background(accentColor).
+			Padding(0, 2)
+
+	buttonDisabledStyle = lipgloss.NewStyle().
+				Foreground(mutedColor).
+				Background(lipgloss.AdaptiveColor{Light: "#E5E7EB", Dark: "#3F3F46"}).
+				Padding(0, 2)
+
+	// Action button styles (semantic)
 	actionBtnAddStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#052E16"}).
-				Background(lipgloss.AdaptiveColor{Light: "#16A34A", Dark: "#4ADE80"}).
+				Foreground(successColor).
 				Padding(0, 1)
 
-	// actionBtnRemoveStyle — destructive action (remove, delete)
-	actionBtnRemoveStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#450A0A"}).
-				Background(lipgloss.AdaptiveColor{Light: "#B91C1C", Dark: "#FCA5A5"}).
-				Padding(0, 1)
-
-	// actionBtnUninstallStyle — destructive action (uninstall)
-	actionBtnUninstallStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#431407"}).
-				Background(lipgloss.AdaptiveColor{Light: "#C2410C", Dark: "#FDBA74"}).
-				Padding(0, 1)
-
-	// actionBtnSyncStyle — data synchronization action (sync registries)
-	actionBtnSyncStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#2E1065"}).
-				Background(lipgloss.AdaptiveColor{Light: "#7C3AED", Dark: "#C4B5FD"}).
-				Padding(0, 1)
-
-	// actionBtnDefaultStyle — neutral action (copy, save, env, share)
-	actionBtnDefaultStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.AdaptiveColor{Light: "#374151", Dark: "#D1D5DB"}).
-				Background(lipgloss.AdaptiveColor{Light: "#E5E7EB", Dark: "#374151"}).
+	actionBtnNewStyle = lipgloss.NewStyle().
+				Foreground(accentColor).
 				Padding(0, 1)
 )
+
+// modalWidth is the fixed width for all modals.
+const modalWidth = 56
+
+// inlineTitle renders a section title with horizontal rules.
+// Format: ──{Title}──{fill remaining width with ─}
+// The title text uses the given style; rules use mutedColor.
+func inlineTitle(title string, width int, titleColor lipgloss.AdaptiveColor) string {
+	prefix := "──"
+	suffix := "──"
+	titleRendered := lipgloss.NewStyle().Foreground(titleColor).Render(title)
+	ruleStyle := lipgloss.NewStyle().Foreground(mutedColor)
+
+	// Calculate fill width: total - prefix(2) - title len - suffix(2)
+	titleLen := lipgloss.Width(title)
+	fillLen := width - 2 - titleLen - 2
+	if fillLen < 0 {
+		fillLen = 0
+	}
+
+	return ruleStyle.Render(prefix) + titleRendered + ruleStyle.Render(suffix+strings.Repeat("─", fillLen))
+}
+
+// truncateStr truncates text to maxWidth, adding "..." if needed.
+func truncateStr(text string, maxWidth int) string {
+	if maxWidth <= 0 {
+		return ""
+	}
+	if lipgloss.Width(text) <= maxWidth {
+		return text
+	}
+	if maxWidth <= 3 {
+		return text[:maxWidth]
+	}
+	// Simple byte-based truncation; sufficient for ASCII content
+	if len(text) > maxWidth-3 {
+		return text[:maxWidth-3] + "..."
+	}
+	return text
+}

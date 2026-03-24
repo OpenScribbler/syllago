@@ -1,6 +1,6 @@
 ---
 paths:
-  - "cli/internal/tui/**"
+  - "cli/internal/tui_v1/**"
 ---
 
 # TUI Test Conventions
@@ -16,8 +16,8 @@ Visual output tests use golden files in `testdata/`:
 
 **After any visual change, regenerate goldens:**
 ```bash
-go test ./cli/internal/tui/ -update-golden
-# Then: git diff cli/internal/tui/testdata/ to verify changes are intentional
+go test ./cli/internal/tui_v1/ -update-golden
+# Then: git diff cli/internal/tui_v1/testdata/ to verify changes are intentional
 ```
 
 **Path normalization:** Tests replace temp directory paths with `<TESTDIR>` and strip trailing whitespace for deterministic output.

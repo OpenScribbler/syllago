@@ -3,47 +3,57 @@ package tui
 import "github.com/charmbracelet/bubbles/key"
 
 type keyMap struct {
-	Up            key.Binding
-	Down          key.Binding
-	Enter         key.Binding
-	Back          key.Binding
-	Quit          key.Binding
-	Search        key.Binding
-	Install       key.Binding
-	Uninstall     key.Binding
-	Copy          key.Binding
-	Save          key.Binding
-	Space         key.Binding
-	EnvSetup      key.Binding
-	Share         key.Binding
-	Tab           key.Binding
-	ShiftTab      key.Binding
-	Help          key.Binding
-	Home          key.Binding
-	End           key.Binding
-	Left          key.Binding
-	Right         key.Binding
-	PageUp        key.Binding
-	PageDown      key.Binding
-	ToggleHidden  key.Binding
-	Add           key.Binding
-	Delete        key.Binding
-	Refresh       key.Binding
-	CreateLoadout key.Binding
-	ToggleAll     key.Binding
-	ToggleCompat  key.Binding
-	ConfirmYes    key.Binding
-	ConfirmNo     key.Binding
+	Up           key.Binding
+	Down         key.Binding
+	Left         key.Binding
+	Right        key.Binding
+	Enter        key.Binding
+	Back         key.Binding
+	Quit         key.Binding
+	Search       key.Binding
+	Install      key.Binding
+	Uninstall    key.Binding
+	Copy         key.Binding
+	Share        key.Binding
+	Tab          key.Binding
+	ShiftTab     key.Binding
+	Help         key.Binding
+	Home         key.Binding
+	End          key.Binding
+	PageUp       key.Binding
+	PageDown     key.Binding
+	Space        key.Binding
+	ConfirmYes   key.Binding
+	ConfirmNo    key.Binding
+	Dropdown1    key.Binding // Content dropdown
+	Dropdown2    key.Binding // Collection dropdown
+	Dropdown3    key.Binding // Config dropdown
+	EnvSetup     key.Binding
+	Save         key.Binding
+	Add          key.Binding
+	Delete       key.Binding
+	Refresh      key.Binding
+	ToggleHidden key.Binding
+	ToggleAll    key.Binding
+	ToggleCompat key.Binding
 }
 
 var keys = keyMap{
 	Up: key.NewBinding(
 		key.WithKeys("up", "k"),
-		key.WithHelp("up/k", "up"),
+		key.WithHelp("j/k", "navigate"),
 	),
 	Down: key.NewBinding(
 		key.WithKeys("down", "j"),
-		key.WithHelp("down/j", "down"),
+		key.WithHelp("j/k", "navigate"),
+	),
+	Left: key.NewBinding(
+		key.WithKeys("left", "h"),
+		key.WithHelp("h/l", "pane"),
+	),
+	Right: key.NewBinding(
+		key.WithKeys("right", "l"),
+		key.WithHelp("h/l", "pane"),
 	),
 	Enter: key.NewBinding(
 		key.WithKeys("enter"),
@@ -73,29 +83,17 @@ var keys = keyMap{
 		key.WithKeys("c"),
 		key.WithHelp("c", "copy"),
 	),
-	Save: key.NewBinding(
-		key.WithKeys("s"),
-		key.WithHelp("s", "save"),
-	),
-	Space: key.NewBinding(
-		key.WithKeys(" "),
-		key.WithHelp("space", "toggle"),
-	),
-	EnvSetup: key.NewBinding(
-		key.WithKeys("e"),
-		key.WithHelp("e", "env setup"),
-	),
 	Share: key.NewBinding(
 		key.WithKeys("p"),
 		key.WithHelp("p", "share"),
 	),
 	Tab: key.NewBinding(
 		key.WithKeys("tab"),
-		key.WithHelp("tab", "switch tab"),
+		key.WithHelp("tab", "switch"),
 	),
 	ShiftTab: key.NewBinding(
 		key.WithKeys("shift+tab"),
-		key.WithHelp("shift+tab", "prev tab"),
+		key.WithHelp("shift+tab", "prev"),
 	),
 	Help: key.NewBinding(
 		key.WithKeys("?"),
@@ -103,19 +101,11 @@ var keys = keyMap{
 	),
 	Home: key.NewBinding(
 		key.WithKeys("home", "g"),
-		key.WithHelp("home/g", "top"),
+		key.WithHelp("home", "top"),
 	),
 	End: key.NewBinding(
 		key.WithKeys("end", "G"),
-		key.WithHelp("end/G", "bottom"),
-	),
-	Left: key.NewBinding(
-		key.WithKeys("left", "h"),
-		key.WithHelp("left/h", "scroll left"),
-	),
-	Right: key.NewBinding(
-		key.WithKeys("right"),
-		key.WithHelp("right", "enter"),
+		key.WithHelp("end", "bottom"),
 	),
 	PageUp: key.NewBinding(
 		key.WithKeys("pgup"),
@@ -123,11 +113,39 @@ var keys = keyMap{
 	),
 	PageDown: key.NewBinding(
 		key.WithKeys("pgdown"),
-		key.WithHelp("pgdown", "page down"),
+		key.WithHelp("pgdn", "page down"),
 	),
-	ToggleHidden: key.NewBinding(
-		key.WithKeys("H"),
-		key.WithHelp("H", "show/hide hidden"),
+	Space: key.NewBinding(
+		key.WithKeys(" "),
+		key.WithHelp("space", "toggle"),
+	),
+	ConfirmYes: key.NewBinding(
+		key.WithKeys("y", "Y"),
+		key.WithHelp("y", "confirm"),
+	),
+	ConfirmNo: key.NewBinding(
+		key.WithKeys("n", "N"),
+		key.WithHelp("n", "cancel"),
+	),
+	Dropdown1: key.NewBinding(
+		key.WithKeys("1"),
+		key.WithHelp("1", "content"),
+	),
+	Dropdown2: key.NewBinding(
+		key.WithKeys("2"),
+		key.WithHelp("2", "collection"),
+	),
+	Dropdown3: key.NewBinding(
+		key.WithKeys("3"),
+		key.WithHelp("3", "config"),
+	),
+	EnvSetup: key.NewBinding(
+		key.WithKeys("e"),
+		key.WithHelp("e", "env setup"),
+	),
+	Save: key.NewBinding(
+		key.WithKeys("s"),
+		key.WithHelp("s", "save"),
 	),
 	Add: key.NewBinding(
 		key.WithKeys("a"),
@@ -141,9 +159,9 @@ var keys = keyMap{
 		key.WithKeys("s"),
 		key.WithHelp("s", "sync"),
 	),
-	CreateLoadout: key.NewBinding(
-		key.WithKeys("l"),
-		key.WithHelp("l", "create loadout"),
+	ToggleHidden: key.NewBinding(
+		key.WithKeys("H"),
+		key.WithHelp("H", "show/hide hidden"),
 	),
 	ToggleAll: key.NewBinding(
 		key.WithKeys("a"),
@@ -152,13 +170,5 @@ var keys = keyMap{
 	ToggleCompat: key.NewBinding(
 		key.WithKeys("t"),
 		key.WithHelp("t", "toggle filter"),
-	),
-	ConfirmYes: key.NewBinding(
-		key.WithKeys("y", "Y"),
-		key.WithHelp("y", "confirm"),
-	),
-	ConfirmNo: key.NewBinding(
-		key.WithKeys("n", "N"),
-		key.WithHelp("n", "cancel"),
 	),
 }
