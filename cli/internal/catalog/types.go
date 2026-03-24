@@ -75,7 +75,7 @@ type ContentItem struct {
 }
 
 // IsExample returns true if this item is tagged as example content.
-func (ci ContentItem) IsExample() bool {
+func (ci *ContentItem) IsExample() bool {
 	if ci.Meta == nil {
 		return false
 	}
@@ -88,7 +88,7 @@ func (ci ContentItem) IsExample() bool {
 }
 
 // IsBuiltin returns true if this item is tagged as built-in meta-content.
-func (ci ContentItem) IsBuiltin() bool {
+func (ci *ContentItem) IsBuiltin() bool {
 	if ci.Meta == nil {
 		return false
 	}
@@ -110,7 +110,7 @@ type Catalog struct {
 
 // ByType returns all items of a given type.
 func (c *Catalog) ByType(ct ContentType) []ContentItem {
-	var result []ContentItem
+	result := make([]ContentItem, 0, len(c.Items)/4)
 	for _, item := range c.Items {
 		if item.Type == ct {
 			result = append(result, item)
@@ -130,7 +130,7 @@ func (c *Catalog) CountByType() map[ContentType]int {
 
 // ByTypeShared returns shared-only items of a given type (from the main repo, not registries).
 func (c *Catalog) ByTypeShared(ct ContentType) []ContentItem {
-	var result []ContentItem
+	result := make([]ContentItem, 0, len(c.Items)/4)
 	for _, item := range c.Items {
 		if item.Type == ct && !item.Library && item.Registry == "" {
 			result = append(result, item)
@@ -141,7 +141,7 @@ func (c *Catalog) ByTypeShared(ct ContentType) []ContentItem {
 
 // ByRegistry returns all items from a specific named registry.
 func (c *Catalog) ByRegistry(name string) []ContentItem {
-	var result []ContentItem
+	result := make([]ContentItem, 0, len(c.Items)/4)
 	for _, item := range c.Items {
 		if item.Registry == name {
 			result = append(result, item)
@@ -163,7 +163,7 @@ func (c *Catalog) CountLibrary() int {
 
 // ByTypeLibrary returns items of the given type that came from the global library.
 func (c *Catalog) ByTypeLibrary(ct ContentType) []ContentItem {
-	var result []ContentItem
+	result := make([]ContentItem, 0, len(c.Items)/4)
 	for _, item := range c.Items {
 		if item.Type == ct && item.Library {
 			result = append(result, item)

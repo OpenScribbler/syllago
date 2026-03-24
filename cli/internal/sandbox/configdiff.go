@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -332,16 +333,32 @@ func copyDir(src, dst string) error {
 		rel, _ := filepath.Rel(src, path)
 		target := filepath.Join(dst, rel)
 
-		// Handle symlinks: preserve valid ones, skip broken ones.
+		// Handle symlinks: preserve valid ones that stay within the source tree.
+		// Symlinks pointing outside the source directory are a security risk —
+		// a malicious project could use them to overwrite arbitrary files when
+		// ApplyDiff copies staged content back.
 		if d.Type()&os.ModeSymlink != 0 {
 			linkTarget, err := os.Readlink(path)
 			if err != nil {
 				return nil // skip unreadable symlinks
 			}
-			// Check if target exists (resolve relative to symlink's dir).
+			// Resolve the symlink target to an absolute, clean path.
 			absTarget := linkTarget
 			if !filepath.IsAbs(linkTarget) {
 				absTarget = filepath.Join(filepath.Dir(path), linkTarget)
+			}
+			absTarget, err = filepath.EvalSymlinks(absTarget)
+			if err != nil {
+				return nil // skip broken/unresolvable symlinks
+			}
+			// Verify the resolved target is within the source directory.
+			absSrc, err := filepath.EvalSymlinks(src)
+			if err != nil {
+				return nil
+			}
+			if !strings.HasPrefix(absTarget, absSrc+string(filepath.Separator)) && absTarget != absSrc {
+				log.Printf("sandbox: skipping symlink %s → %s (escapes source dir %s)", path, absTarget, absSrc)
+				return nil
 			}
 			if _, err := os.Stat(absTarget); err != nil {
 				return nil // skip broken symlinks

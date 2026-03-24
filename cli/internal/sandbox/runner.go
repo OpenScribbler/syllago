@@ -169,9 +169,13 @@ func RunSession(cfg RunConfig, w *os.File) error {
 		"GIT_TERMINAL_PROMPT": "0",
 		"HOME":                cfg.HomeDir,
 	}
-	// Provider-specific env vars injected unconditionally.
+	// Provider-specific env vars — skip any that are on the denylist.
 	if profile != nil {
 		for k, v := range profile.SandboxEnvVars {
+			if reason := IsDeniedEnvVar(k); reason != "" {
+				fmt.Fprintf(os.Stderr, "[sandbox] warning: skipping profile env var: %s\n", reason)
+				continue
+			}
 			sandboxEnv[k] = v
 		}
 	}

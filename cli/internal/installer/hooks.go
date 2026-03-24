@@ -315,10 +315,14 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 
 		if strings.HasPrefix(firstToken, "./") || strings.HasPrefix(firstToken, "../") {
 			// Relative to item directory
-			scriptPath = filepath.Join(itemDir, firstToken)
-		} else if filepath.IsAbs(firstToken) {
-			scriptPath = firstToken
+			scriptPath = filepath.Clean(filepath.Join(itemDir, firstToken))
+			// Verify the resolved path stays within the item directory
+			rel, relErr := filepath.Rel(itemDir, scriptPath)
+			if relErr != nil || strings.HasPrefix(rel, "..") {
+				return nil, fmt.Errorf("hook %q command references path outside item directory: %s", item.Name, firstToken)
+			}
 		}
+		// Absolute paths are rejected — only relative paths within the item dir are allowed
 
 		if scriptPath == "" {
 			continue // inline command like "echo lint"
@@ -353,7 +357,7 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 		if readErr != nil {
 			return nil, fmt.Errorf("reading script %s: %w", scriptPath, readErr)
 		}
-		if writeErr := os.WriteFile(destPath, scriptData, 0755); writeErr != nil {
+		if writeErr := os.WriteFile(destPath, scriptData, 0700); writeErr != nil {
 			return nil, fmt.Errorf("copying script to %s: %w", destPath, writeErr)
 		}
 

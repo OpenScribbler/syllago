@@ -503,6 +503,101 @@ func TestIsHighRiskDiff(t *testing.T) {
 	}
 }
 
+func TestCopyDir_SymlinkWithinSourceDir(t *testing.T) {
+	srcDir := t.TempDir()
+	dstDir := t.TempDir()
+
+	// Create a file and a symlink pointing to it (within the source dir).
+	os.WriteFile(filepath.Join(srcDir, "real.json"), []byte(`{"ok":true}`), 0644)
+	os.Symlink("real.json", filepath.Join(srcDir, "link.json"))
+
+	if err := copyDir(srcDir, dstDir); err != nil {
+		t.Fatalf("copyDir: %v", err)
+	}
+
+	// The symlink should be copied.
+	info, err := os.Lstat(filepath.Join(dstDir, "link.json"))
+	if err != nil {
+		t.Fatalf("symlink not copied: %v", err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Error("expected link.json to be a symlink in destination")
+	}
+
+	// The symlink should resolve to valid content.
+	data, err := os.ReadFile(filepath.Join(dstDir, "link.json"))
+	if err != nil {
+		t.Fatalf("reading through symlink: %v", err)
+	}
+	if string(data) != `{"ok":true}` {
+		t.Errorf("symlink content = %q, want %q", data, `{"ok":true}`)
+	}
+}
+
+func TestCopyDir_SymlinkEscapingSourceDir(t *testing.T) {
+	// Create an "outside" file that a malicious symlink points to.
+	outsideDir := t.TempDir()
+	outsideFile := filepath.Join(outsideDir, "sensitive.txt")
+	os.WriteFile(outsideFile, []byte("secret data"), 0644)
+
+	srcDir := t.TempDir()
+	os.WriteFile(filepath.Join(srcDir, "legit.json"), []byte(`{"a":1}`), 0644)
+
+	// Create a symlink that escapes the source directory.
+	os.Symlink(outsideFile, filepath.Join(srcDir, "escape.json"))
+
+	dstDir := t.TempDir()
+	if err := copyDir(srcDir, dstDir); err != nil {
+		t.Fatalf("copyDir: %v", err)
+	}
+
+	// The escaping symlink should NOT be copied.
+	if _, err := os.Lstat(filepath.Join(dstDir, "escape.json")); err == nil {
+		t.Error("expected escaping symlink to be skipped, but it was copied")
+	}
+
+	// The legitimate file should still be copied.
+	data, err := os.ReadFile(filepath.Join(dstDir, "legit.json"))
+	if err != nil {
+		t.Fatalf("legit file not copied: %v", err)
+	}
+	if string(data) != `{"a":1}` {
+		t.Errorf("legit content = %q, want %q", data, `{"a":1}`)
+	}
+}
+
+func TestCopyDir_RelativeSymlinkEscaping(t *testing.T) {
+	// Simulate: ../../../etc/passwd style symlink.
+	baseDir := t.TempDir()
+
+	// Create nested source dir so relative paths can escape.
+	srcDir := filepath.Join(baseDir, "project", ".claude")
+	os.MkdirAll(srcDir, 0755)
+	os.WriteFile(filepath.Join(srcDir, "config.json"), []byte(`{"ok":true}`), 0644)
+
+	// Create a file outside the source dir.
+	outsideFile := filepath.Join(baseDir, "outside.txt")
+	os.WriteFile(outsideFile, []byte("should not be copied"), 0644)
+
+	// Create a relative symlink that escapes: ../../outside.txt
+	os.Symlink("../../outside.txt", filepath.Join(srcDir, "evil-link"))
+
+	dstDir := t.TempDir()
+	if err := copyDir(srcDir, dstDir); err != nil {
+		t.Fatalf("copyDir: %v", err)
+	}
+
+	// The escaping relative symlink should NOT be copied.
+	if _, err := os.Lstat(filepath.Join(dstDir, "evil-link")); err == nil {
+		t.Error("expected relative escaping symlink to be skipped, but it was copied")
+	}
+
+	// The config file should still be copied.
+	if _, err := os.Stat(filepath.Join(dstDir, "config.json")); err != nil {
+		t.Error("expected config.json to be copied")
+	}
+}
+
 // contains is a helper to avoid importing strings in tests.
 func contains(s, substr string) bool {
 	for i := 0; i <= len(s)-len(substr); i++ {

@@ -3,9 +3,11 @@ package installer
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/tidwall/gjson"
 )
@@ -358,5 +360,106 @@ func TestUninstallHook_HashMatching(t *testing.T) {
 	differentHash := computeGroupHash([]byte(differentEntry))
 	if storedHash == differentHash {
 		t.Error("different entry should produce a different hash")
+	}
+}
+
+func TestResolveHookScripts_AbsolutePathRejected(t *testing.T) {
+	t.Parallel()
+	// A hook command referencing an absolute path should be silently ignored
+	// (scriptPath stays empty, command left as-is).
+	itemDir := t.TempDir()
+
+	matcherGroup := []byte(`{"hooks":[{"command":"/etc/passwd --flag"}]}`)
+
+	item := catalog.ContentItem{
+		Name: "evil-hook",
+		Path: itemDir,
+	}
+
+	result, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// The command should be unchanged — absolute path is not resolved
+	if string(result) != string(matcherGroup) {
+		t.Errorf("expected matcher group unchanged, got %s", string(result))
+	}
+}
+
+func TestResolveHookScripts_RelativePathEscape(t *testing.T) {
+	t.Parallel()
+	// A hook command using ../ to escape the item directory must be rejected.
+	itemDir := t.TempDir()
+
+	// Create a real file outside itemDir so it would be found if not blocked
+	outsideDir := t.TempDir()
+	outsideScript := filepath.Join(outsideDir, "evil.sh")
+	os.WriteFile(outsideScript, []byte("#!/bin/sh\necho pwned"), 0755)
+
+	// Compute the relative escape path from itemDir to outsideDir
+	rel, err := filepath.Rel(itemDir, outsideScript)
+	if err != nil {
+		t.Fatalf("computing rel path: %v", err)
+	}
+	if !strings.HasPrefix(rel, "..") {
+		t.Fatalf("test setup: expected relative path with .., got %s", rel)
+	}
+
+	matcherGroup := []byte(`{"hooks":[{"command":"` + rel + `"}]}`)
+
+	item := catalog.ContentItem{
+		Name: "escape-hook",
+		Path: itemDir,
+	}
+
+	_, err = resolveHookScripts(matcherGroup, item, t.TempDir())
+	if err == nil {
+		t.Fatal("expected error for path traversal, got nil")
+	}
+	if !strings.Contains(err.Error(), "outside item directory") {
+		t.Errorf("expected 'outside item directory' error, got: %v", err)
+	}
+}
+
+func TestResolveHookScripts_ValidRelativePath(t *testing.T) {
+	// Mutates output.ErrWriter — cannot be parallel.
+	origErr := output.ErrWriter
+	output.ErrWriter = &strings.Builder{}
+	t.Cleanup(func() { output.ErrWriter = origErr })
+
+	itemDir := t.TempDir()
+	scriptPath := filepath.Join(itemDir, "lint.sh")
+	os.WriteFile(scriptPath, []byte("#!/bin/sh\necho lint"), 0755)
+
+	matcherGroup := []byte(`{"hooks":[{"command":"./lint.sh --fix"}]}`)
+
+	item := catalog.ContentItem{
+		Name: "good-hook",
+		Path: itemDir,
+	}
+
+	result, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// The command should have been rewritten to the stable location
+	if string(result) == string(matcherGroup) {
+		t.Error("expected command to be rewritten, but it was unchanged")
+	}
+
+	// Verify the destination script has 0700 permissions
+	home, _ := os.UserHomeDir()
+	destScript := filepath.Join(home, ".syllago", "hooks", "good-hook", "lint.sh")
+	t.Cleanup(func() { os.RemoveAll(filepath.Join(home, ".syllago", "hooks", "good-hook")) })
+
+	info, statErr := os.Stat(destScript)
+	if statErr != nil {
+		t.Fatalf("destination script not found: %v", statErr)
+	}
+	perm := info.Mode().Perm()
+	if perm != 0700 {
+		t.Errorf("expected permissions 0700, got %04o", perm)
 	}
 }
