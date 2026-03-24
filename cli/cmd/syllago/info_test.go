@@ -28,14 +28,25 @@ func TestInfoJSON(t *testing.T) {
 	if err := json.Unmarshal(buf.Bytes(), &manifest); err != nil {
 		t.Fatalf("invalid JSON output: %v", err)
 	}
-	if _, ok := manifest["version"]; !ok {
-		t.Error("manifest missing 'version' key")
+	for _, key := range []string{"version", "contentTypes", "providers", "library", "config", "registries", "commands"} {
+		if _, ok := manifest[key]; !ok {
+			t.Errorf("manifest missing %q key", key)
+		}
 	}
-	if _, ok := manifest["contentTypes"]; !ok {
-		t.Error("manifest missing 'contentTypes' key")
+	// Providers should be objects with name/slug/detected fields.
+	provs, ok := manifest["providers"].([]any)
+	if !ok || len(provs) == 0 {
+		t.Fatal("providers should be a non-empty array")
 	}
-	if _, ok := manifest["providers"]; !ok {
-		t.Error("manifest missing 'providers' key")
+	first, ok := provs[0].(map[string]any)
+	if !ok {
+		t.Fatal("provider entry should be an object")
+	}
+	if _, ok := first["slug"]; !ok {
+		t.Error("provider entry missing 'slug' field")
+	}
+	if _, ok := first["detected"]; !ok {
+		t.Error("provider entry missing 'detected' field")
 	}
 }
 
@@ -109,6 +120,26 @@ func TestInfoFormatsShowsProviders(t *testing.T) {
 	}
 	if !foundFormatWithProviders {
 		t.Error("expected format lines to show provider names")
+	}
+}
+
+func TestInfoTextShowsAllSections(t *testing.T) {
+	stdout, _ := output.SetForTest(t)
+
+	err := infoCmd.RunE(infoCmd, []string{})
+	if err != nil {
+		t.Fatalf("info failed: %v", err)
+	}
+
+	out := stdout.String()
+	for _, section := range []string{"Library:", "Providers:", "Content types:", "Config:"} {
+		if !strings.Contains(out, section) {
+			t.Errorf("expected %q section in text output, got:\n%s", section, out)
+		}
+	}
+	// Should show detection status markers
+	if !strings.Contains(out, "[+]") && !strings.Contains(out, "[x]") {
+		t.Errorf("expected detection status markers [+] or [x], got:\n%s", out)
 	}
 }
 

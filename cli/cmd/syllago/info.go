@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/spf13/cobra"
@@ -19,33 +22,131 @@ var infoCmd = &cobra.Command{
 
   # JSON output for agent consumption
   syllago info --json`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		v := version
-		if v == "" {
-			v = "(dev build)"
+	RunE: runInfo,
+}
+
+type detectedProvider struct {
+	Name     string `json:"name"`
+	Slug     string `json:"slug"`
+	Detected bool   `json:"detected"`
+	Path     string `json:"path,omitempty"`
+}
+
+type registryInfo struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+func runInfo(cmd *cobra.Command, args []string) error {
+	v := version
+	if v == "" {
+		v = "(dev build)"
+	}
+
+	// Detect providers
+	detected := provider.DetectProviders()
+	var provInfos []detectedProvider
+	for _, p := range detected {
+		pi := detectedProvider{Name: p.Name, Slug: p.Slug, Detected: p.Detected}
+		if p.Detected {
+			home, _ := os.UserHomeDir()
+			pi.Path = filepath.Join(home, p.ConfigDir)
 		}
+		provInfos = append(provInfos, pi)
+	}
+
+	// Library location
+	libraryDir := catalog.GlobalContentDir()
+
+	// Config paths
+	globalConfigPath := ""
+	if home, err := os.UserHomeDir(); err == nil {
+		globalConfigPath = filepath.Join(home, ".syllago", "config.json")
+	}
+	projectRoot, _ := findProjectRoot()
+	projectConfigPath := ""
+	if projectRoot != "" {
+		projectConfigPath = filepath.Join(projectRoot, ".syllago.json")
+	}
+
+	// Registries from merged config
+	var registries []registryInfo
+	globalCfg, _ := config.LoadGlobal()
+	projectCfg, _ := config.Load(projectRoot)
+	merged := config.Merge(globalCfg, projectCfg)
+	for _, r := range merged.Registries {
+		registries = append(registries, registryInfo{Name: r.Name, URL: r.URL})
+	}
+
+	if output.JSON {
 		manifest := map[string]any{
 			"version":      v,
 			"contentTypes": catalog.AllContentTypes(),
-			"providers":    providerSlugs(),
-			"commands":     []string{"init", "add", "install", "registry", "config", "info"},
+			"providers":    provInfos,
+			"library":      libraryDir,
+			"config": map[string]string{
+				"global":  globalConfigPath,
+				"project": projectConfigPath,
+			},
+			"registries": registries,
+			"commands":   []string{"init", "add", "install", "list", "inspect", "convert", "registry", "config", "info"},
 		}
-		if output.JSON {
-			output.Print(manifest)
-		} else {
-			fmt.Fprintf(output.Writer, "syllago %s\n\n", v)
-			fmt.Fprintf(output.Writer, "Content types: %d\n", len(catalog.AllContentTypes()))
-			for _, ct := range catalog.AllContentTypes() {
-				fmt.Fprintf(output.Writer, "  - %s\n", ct.Label())
-			}
-			fmt.Fprintln(output.Writer)
-			fmt.Fprintf(output.Writer, "\nProviders: %d\n", len(provider.AllProviders))
-			for _, p := range provider.AllProviders {
-				fmt.Fprintf(output.Writer, "  - %s (%s)\n", p.Name, p.Slug)
-			}
-		}
+		output.Print(manifest)
 		return nil
-	},
+	}
+
+	fmt.Fprintf(output.Writer, "syllago %s\n\n", v)
+
+	fmt.Fprintf(output.Writer, "Library: %s\n\n", libraryDir)
+
+	fmt.Fprintf(output.Writer, "Providers:\n")
+	for _, p := range provInfos {
+		status := "x"
+		if p.Detected {
+			status = "+"
+		}
+		if p.Path != "" {
+			fmt.Fprintf(output.Writer, "  [%s] %s (%s) — %s\n", status, p.Name, p.Slug, p.Path)
+		} else {
+			fmt.Fprintf(output.Writer, "  [%s] %s (%s)\n", status, p.Name, p.Slug)
+		}
+	}
+
+	fmt.Fprintf(output.Writer, "\nContent types: %s\n", joinContentTypes())
+
+	fmt.Fprintf(output.Writer, "\nConfig:\n")
+	fmt.Fprintf(output.Writer, "  global:  %s\n", fileStatus(globalConfigPath))
+	if projectConfigPath != "" {
+		fmt.Fprintf(output.Writer, "  project: %s\n", fileStatus(projectConfigPath))
+	}
+
+	if len(registries) > 0 {
+		fmt.Fprintf(output.Writer, "\nRegistries:\n")
+		for _, r := range registries {
+			fmt.Fprintf(output.Writer, "  - %s (%s)\n", r.Name, r.URL)
+		}
+	}
+
+	return nil
+}
+
+func joinContentTypes() string {
+	types := catalog.AllContentTypes()
+	labels := make([]string, len(types))
+	for i, ct := range types {
+		labels[i] = ct.Label()
+	}
+	return strings.Join(labels, ", ")
+}
+
+func fileStatus(path string) string {
+	if path == "" {
+		return "(not set)"
+	}
+	if _, err := os.Stat(path); err == nil {
+		return path
+	}
+	return path + " (not found)"
 }
 
 var infoProvidersCmd = &cobra.Command{
