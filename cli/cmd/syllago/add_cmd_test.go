@@ -681,6 +681,324 @@ func TestAddNoWarningInJSONMode(t *testing.T) {
 	}
 }
 
+// settingsWithMCP is a settings.json that contains both hooks and MCP configs.
+const settingsWithMCP = `{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{"type": "command", "command": "echo pre-bash"}]
+      }
+    ]
+  },
+  "mcpServers": {
+    "obsidian": {
+      "command": "npx",
+      "args": ["-y", "obsidian-mcp"],
+      "env": {"VAULT_PATH": "/path/to/vault"}
+    }
+  }
+}`
+
+// setupMcpProject creates a temp dir with a project-scoped .claude/settings.json
+// containing MCP configs.
+func setupMcpProject(t *testing.T) string {
+	t.Helper()
+	tmp := t.TempDir()
+	claudeDir := filepath.Join(tmp, ".claude")
+	os.MkdirAll(claudeDir, 0755)
+	os.WriteFile(filepath.Join(claudeDir, "settings.json"), []byte(settingsWithMCP), 0644)
+	return tmp
+}
+
+func TestAddMcpDiscovery(t *testing.T) {
+	tmp := setupMcpProject(t)
+	globalDir := t.TempDir()
+
+	original := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = original })
+
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	addCmd.Flags().Set("from", "claude-code")
+	addCmd.Flags().Set("all", "false")
+
+	if err := addCmd.RunE(addCmd, []string{}); err != nil {
+		t.Fatalf("add discovery failed: %v", err)
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "obsidian") {
+		t.Errorf("expected MCP server 'obsidian' in discovery output, got: %s", out)
+	}
+	if !strings.Contains(out, `"mcp"`) {
+		t.Errorf("expected 'mcp' type group in JSON output, got: %s", out)
+	}
+
+	// No files should be written.
+	entries, _ := os.ReadDir(globalDir)
+	if len(entries) != 0 {
+		t.Errorf("discovery should not write files, found %d entries", len(entries))
+	}
+}
+
+func TestAddMcpWritesToGlobalDir(t *testing.T) {
+	tmp := setupMcpProject(t)
+	globalDir := t.TempDir()
+
+	original := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = original })
+
+	_, _ = output.SetForTest(t)
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	addCmd.Flags().Set("from", "claude-code")
+	addCmd.Flags().Set("all", "false")
+	addCmd.Flags().Set("dry-run", "false")
+	addCmd.Flags().Set("scope", "project")
+	addCmd.Flags().Set("force", "false")
+
+	if err := addCmd.RunE(addCmd, []string{"mcp"}); err != nil {
+		t.Fatalf("add mcp failed: %v", err)
+	}
+
+	mcpBase := filepath.Join(globalDir, "mcp", "claude-code")
+	entries, err := os.ReadDir(mcpBase)
+	if err != nil {
+		t.Fatalf("expected global mcp dir, got error: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 MCP server directory, got %d", len(entries))
+	}
+	if entries[0].Name() != "obsidian" {
+		t.Errorf("expected 'obsidian' directory, got %q", entries[0].Name())
+	}
+
+	itemDir := filepath.Join(mcpBase, "obsidian")
+	if _, err := os.Stat(filepath.Join(itemDir, "config.json")); err != nil {
+		t.Errorf("expected config.json: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(itemDir, ".syllago.yaml")); err != nil {
+		t.Errorf("expected .syllago.yaml: %v", err)
+	}
+
+	// Verify config.json has the nested format.
+	data, _ := os.ReadFile(filepath.Join(itemDir, "config.json"))
+	if !strings.Contains(string(data), `"mcpServers"`) {
+		t.Errorf("expected nested mcpServers wrapper in config.json, got: %s", data)
+	}
+	if !strings.Contains(string(data), `"obsidian"`) {
+		t.Errorf("expected server name in config.json, got: %s", data)
+	}
+}
+
+func TestAddMcpScopeMetadata(t *testing.T) {
+	tmp := setupMcpProject(t)
+	globalDir := t.TempDir()
+
+	original := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = original })
+
+	_, _ = output.SetForTest(t)
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	addCmd.Flags().Set("from", "claude-code")
+	addCmd.Flags().Set("all", "false")
+	addCmd.Flags().Set("dry-run", "false")
+	addCmd.Flags().Set("scope", "project")
+	addCmd.Flags().Set("force", "false")
+
+	if err := addCmd.RunE(addCmd, []string{"mcp"}); err != nil {
+		t.Fatalf("add mcp failed: %v", err)
+	}
+
+	destDir := filepath.Join(globalDir, "mcp", "claude-code", "obsidian")
+	m, err := metadata.Load(destDir)
+	if err != nil || m == nil {
+		t.Fatalf("metadata load failed: %v", err)
+	}
+	if m.SourceProvider != "claude-code" {
+		t.Errorf("expected source_provider=claude-code, got %q", m.SourceProvider)
+	}
+	if m.SourceScope != "project" {
+		t.Errorf("expected source_scope=project, got %q", m.SourceScope)
+	}
+	if m.SourceProject == "" {
+		t.Error("expected source_project to be set for project-scoped item")
+	}
+	if m.Type != "mcp" {
+		t.Errorf("expected type=mcp, got %q", m.Type)
+	}
+}
+
+func TestAddMcpCollision(t *testing.T) {
+	tmp := setupMcpProject(t)
+	globalDir := t.TempDir()
+
+	original := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = original })
+
+	_, _ = output.SetForTest(t)
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	// Pre-create an "obsidian" MCP item with global scope metadata.
+	existingDir := filepath.Join(globalDir, "mcp", "claude-code", "obsidian")
+	os.MkdirAll(existingDir, 0755)
+	os.WriteFile(filepath.Join(existingDir, "config.json"), []byte(`{"mcpServers":{"obsidian":{}}}`), 0644)
+	existingMeta := &metadata.Meta{
+		ID:             metadata.NewID(),
+		Name:           "obsidian",
+		Type:           "mcp",
+		SourceScope:    "global",
+		SourceProvider: "claude-code",
+	}
+	metadata.Save(existingDir, existingMeta)
+
+	addCmd.Flags().Set("from", "claude-code")
+	addCmd.Flags().Set("all", "false")
+	addCmd.Flags().Set("dry-run", "false")
+	addCmd.Flags().Set("scope", "project")
+	addCmd.Flags().Set("force", "false")
+
+	if err := addCmd.RunE(addCmd, []string{"mcp"}); err != nil {
+		t.Fatalf("add mcp (collision) failed: %v", err)
+	}
+
+	// Should have obsidian (global, existing) and obsidian-2 (project, new).
+	mcpBase := filepath.Join(globalDir, "mcp", "claude-code")
+	entries, _ := os.ReadDir(mcpBase)
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 directories after collision (obsidian + obsidian-2), got %d: %v", len(entries), names)
+	}
+
+	// Verify the new item has project scope.
+	newDir := filepath.Join(mcpBase, "obsidian-2")
+	m, err := metadata.Load(newDir)
+	if err != nil || m == nil {
+		t.Fatalf("metadata load for collision item failed: %v", err)
+	}
+	if m.SourceScope != "project" {
+		t.Errorf("expected collision item source_scope=project, got %q", m.SourceScope)
+	}
+}
+
+func TestAddMcpDryRun(t *testing.T) {
+	tmp := setupMcpProject(t)
+	globalDir := t.TempDir()
+
+	original := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = original })
+
+	stdout, _ := output.SetForTest(t)
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	addCmd.Flags().Set("from", "claude-code")
+	addCmd.Flags().Set("all", "false")
+	addCmd.Flags().Set("dry-run", "true")
+	addCmd.Flags().Set("scope", "project")
+	addCmd.Flags().Set("force", "false")
+	t.Cleanup(func() { addCmd.Flags().Set("dry-run", "false") })
+
+	if err := addCmd.RunE(addCmd, []string{"mcp"}); err != nil {
+		t.Fatalf("add mcp --dry-run failed: %v", err)
+	}
+
+	entries, _ := os.ReadDir(globalDir)
+	if len(entries) != 0 {
+		t.Errorf("dry-run should not write files, found %d", len(entries))
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "obsidian") {
+		t.Errorf("expected 'obsidian' in dry-run output, got: %s", out)
+	}
+	if !strings.Contains(out, "would be added") {
+		t.Errorf("expected 'would be added' in dry-run output, got: %s", out)
+	}
+}
+
+func TestAddHooksScopeDefaultIsAll(t *testing.T) {
+	// Verify the scope flag's default is "all" not "global".
+	f := addCmd.Flags().Lookup("scope")
+	if f == nil {
+		t.Fatal("scope flag not found")
+	}
+	if f.DefValue != "all" {
+		t.Errorf("expected default scope='all', got %q", f.DefValue)
+	}
+}
+
+func TestAddHooksScopeMetadata(t *testing.T) {
+	tmp := setupHooksProject(t)
+	globalDir := t.TempDir()
+
+	original := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = original })
+
+	_, _ = output.SetForTest(t)
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	addCmd.Flags().Set("from", "claude-code")
+	addCmd.Flags().Set("all", "false")
+	addCmd.Flags().Set("dry-run", "false")
+	addCmd.Flags().Set("scope", "project")
+	addCmd.Flags().Set("force", "false")
+	addCmd.Flags().Set("exclude", "")
+
+	if err := addCmd.RunE(addCmd, []string{"hooks"}); err != nil {
+		t.Fatalf("add hooks failed: %v", err)
+	}
+
+	hooksBase := filepath.Join(globalDir, "hooks", "claude-code")
+	entries, err := os.ReadDir(hooksBase)
+	if err != nil || len(entries) == 0 {
+		t.Fatalf("expected hook directories, got error: %v, count: %d", err, len(entries))
+	}
+
+	// Check metadata of first hook has scope info.
+	firstDir := filepath.Join(hooksBase, entries[0].Name())
+	m, err := metadata.Load(firstDir)
+	if err != nil || m == nil {
+		t.Fatalf("metadata load failed: %v", err)
+	}
+	if m.SourceScope != "project" {
+		t.Errorf("expected source_scope=project, got %q", m.SourceScope)
+	}
+	if m.SourceProject == "" {
+		t.Error("expected source_project to be set for project-scoped hook")
+	}
+}
+
 func TestAddPreservesSourceForNonCanonicalFormat(t *testing.T) {
 	tmp := t.TempDir()
 	globalDir := t.TempDir()

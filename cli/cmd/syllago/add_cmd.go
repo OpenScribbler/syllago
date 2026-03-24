@@ -17,6 +17,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/spf13/cobra"
+	"github.com/tidwall/gjson"
 )
 
 var addCmd = &cobra.Command{
@@ -57,7 +58,7 @@ func init() {
 	addCmd.Flags().Bool("dry-run", false, "Show what would be written without actually writing")
 	// Hooks-specific flags — hidden from default help but still functional.
 	addCmd.Flags().StringArray("exclude", nil, "Skip hooks by auto-derived name (hooks only)")
-	addCmd.Flags().String("scope", "global", "Settings scope to read from: global, project, or all (hooks only)")
+	addCmd.Flags().String("scope", "all", "Settings scope to read from: global, project, or all (hooks/mcp only)")
 	if err := addCmd.Flags().MarkHidden("exclude"); err == nil {
 		_ = addCmd.Flags().MarkHidden("scope")
 	}
@@ -150,14 +151,32 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Hooks have a separate path because they are split from settings.json.
-	if typeStr == string(catalog.Hooks) || (addAll) {
-		if typeStr == string(catalog.Hooks) {
-			exclude, _ := cmd.Flags().GetStringArray("exclude")
-			scope, _ := cmd.Flags().GetString("scope")
-			srcReg, _ := cmd.Flags().GetString("source-registry")
-			srcVis, _ := cmd.Flags().GetString("source-visibility")
-			return runAddHooks(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis)
+	// Hooks and MCP have separate paths because they live in JSON config files.
+	if typeStr == string(catalog.Hooks) {
+		exclude, _ := cmd.Flags().GetStringArray("exclude")
+		scope, _ := cmd.Flags().GetString("scope")
+		srcReg, _ := cmd.Flags().GetString("source-registry")
+		srcVis, _ := cmd.Flags().GetString("source-visibility")
+		return runAddHooks(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis)
+	}
+	if typeStr == string(catalog.MCP) {
+		exclude, _ := cmd.Flags().GetStringArray("exclude")
+		scope, _ := cmd.Flags().GetString("scope")
+		srcReg, _ := cmd.Flags().GetString("source-registry")
+		srcVis, _ := cmd.Flags().GetString("source-visibility")
+		return runAddMcp(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis)
+	}
+
+	// For --all, also add hooks and MCP alongside file-based content.
+	if addAll {
+		scope, _ := cmd.Flags().GetString("scope")
+		srcReg, _ := cmd.Flags().GetString("source-registry")
+		srcVis, _ := cmd.Flags().GetString("source-visibility")
+		if err := runAddHooks(root, fromSlug, dryRun, nil, force, scope, resolver, srcReg, srcVis); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to add hooks: %v\n", err)
+		}
+		if err := runAddMcp(root, fromSlug, dryRun, nil, force, scope, resolver, srcReg, srcVis); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to add MCP configs: %v\n", err)
 		}
 	}
 
@@ -358,6 +377,7 @@ type discoveryJSONItem struct {
 	Name   string `json:"name"`
 	Path   string `json:"path"`
 	Status string `json:"status"`
+	Scope  string `json:"scope,omitempty"`
 }
 
 // discoveryJSON is the top-level JSON output for discovery mode.
@@ -382,9 +402,11 @@ func runAddDiscovery(root, fromSlug string, resolver *config.PathResolver, globa
 
 	// Discover hooks separately (they live in settings.json, not as files).
 	hookItems := discoverHooksForDisplay(root, fromSlug, resolver, globalDir)
-
-	// Merge hooks into items list.
 	items = append(items, hookItems...)
+
+	// Discover MCP configs separately (they live in JSON config files, not as files).
+	mcpItems := discoverMcpForDisplay(root, fromSlug, resolver, globalDir)
+	items = append(items, mcpItems...)
 
 	if output.JSON {
 		return printDiscoveryJSON(fromSlug, items)
@@ -417,7 +439,6 @@ func discoverHooksForDisplay(root, fromSlug string, resolver *config.PathResolve
 	}
 
 	var result []add.DiscoveryItem
-	seen := make(map[string]bool)
 	for _, loc := range locations {
 		data, err := os.ReadFile(loc.Path)
 		if err != nil {
@@ -429,10 +450,6 @@ func discoverHooksForDisplay(root, fromSlug string, resolver *config.PathResolve
 		}
 		for _, hook := range hooks {
 			name := converter.DeriveHookName(hook)
-			if seen[name] {
-				continue
-			}
-			seen[name] = true
 
 			key := string(catalog.Hooks) + "/" + fromSlug + "/" + name
 			_, inLib := idx[key]
@@ -444,11 +461,224 @@ func discoverHooksForDisplay(root, fromSlug string, resolver *config.PathResolve
 				Name:   name,
 				Type:   catalog.Hooks,
 				Path:   loc.Path,
+				Scope:  loc.Scope.String(),
 				Status: status,
 			})
 		}
 	}
 	return result
+}
+
+// discoverMcpForDisplay reads MCP config locations for the provider and returns
+// DiscoveryItems for each server, annotated with library status and scope.
+func discoverMcpForDisplay(root, fromSlug string, resolver *config.PathResolver, globalDir string) []add.DiscoveryItem {
+	prov := findProviderBySlug(fromSlug)
+	if prov == nil {
+		return nil
+	}
+
+	baseDir := ""
+	if resolver != nil {
+		baseDir = resolver.BaseDir(fromSlug)
+	}
+	locations := installer.FindMCPLocations(*prov, root, baseDir)
+
+	idx, err := add.BuildLibraryIndex(globalDir)
+	if err != nil {
+		return nil
+	}
+
+	var result []add.DiscoveryItem
+	for _, loc := range locations {
+		data, err := os.ReadFile(loc.Path)
+		if err != nil {
+			continue
+		}
+		if prov.Slug == "opencode" {
+			data = converter.StripJSONCComments(data)
+		}
+
+		servers := gjson.GetBytes(data, loc.JSONKey)
+		if !servers.Exists() || servers.Type != gjson.JSON {
+			continue
+		}
+		servers.ForEach(func(key, _ gjson.Result) bool {
+			name := key.String()
+			libKey := string(catalog.MCP) + "/" + fromSlug + "/" + name
+			_, inLib := idx[libKey]
+			status := add.StatusNew
+			if inLib {
+				status = add.StatusInLibrary
+			}
+			result = append(result, add.DiscoveryItem{
+				Name:   name,
+				Type:   catalog.MCP,
+				Path:   loc.Path,
+				Scope:  loc.Scope.String(),
+				Status: status,
+			})
+			return true
+		})
+	}
+	return result
+}
+
+// runAddMcp handles "syllago add mcp --from <provider>". It reads MCP config
+// locations, extracts individual server entries, and writes each to the library.
+func runAddMcp(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string, resolver *config.PathResolver, srcRegistry, srcVisibility string) error {
+	prov := findProviderBySlug(fromSlug)
+	if prov == nil {
+		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Run 'syllago info providers' to see available providers")
+	}
+
+	baseDir := ""
+	if resolver != nil {
+		baseDir = resolver.BaseDir(prov.Slug)
+	}
+	locations := installer.FindMCPLocations(*prov, root, baseDir)
+
+	// Filter by --scope.
+	var targets []installer.MCPLocation
+	for _, loc := range locations {
+		if scope == "all" || loc.Scope.String() == scope {
+			targets = append(targets, loc)
+		}
+	}
+
+	if len(targets) == 0 {
+		fmt.Fprintf(output.Writer, "No MCP configs found for %s (scope: %s).\n", fromSlug, scope)
+		return nil
+	}
+
+	excludeSet := make(map[string]bool, len(exclude))
+	for _, ex := range exclude {
+		excludeSet[ex] = true
+	}
+
+	globalDir := catalog.GlobalContentDir()
+	if globalDir == "" {
+		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
+	}
+
+	count := 0
+	for _, loc := range targets {
+		n, err := addMcpFromLocation(fromSlug, loc, root, previewOnly, excludeSet, force, globalDir, srcRegistry, srcVisibility)
+		if err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to add MCP configs from %s: %v\n", loc.Path, err)
+		}
+		count += n
+	}
+	if !previewOnly {
+		provLabel := fromSlug
+		if prov != nil {
+			provLabel = prov.Name
+		}
+		fmt.Fprintf(output.Writer, "\nAdded %d MCP servers from %s.\n", count, provLabel)
+	}
+	return nil
+}
+
+// addMcpFromLocation reads a single config file, extracts MCP server entries,
+// and either previews or writes them to the library.
+func addMcpFromLocation(fromSlug string, loc installer.MCPLocation, projectRoot string, previewOnly bool, excludeSet map[string]bool, force bool, globalDir, srcRegistry, srcVisibility string) (int, error) {
+	prov := findProviderBySlug(fromSlug)
+
+	data, err := os.ReadFile(loc.Path)
+	if err != nil {
+		return 0, output.NewStructuredErrorDetail(output.ErrSystemIO, "reading "+loc.Path, "Check file permissions", err.Error())
+	}
+	if prov != nil && prov.Slug == "opencode" {
+		data = converter.StripJSONCComments(data)
+	}
+
+	servers := gjson.GetBytes(data, loc.JSONKey)
+	if !servers.Exists() || servers.Type != gjson.JSON {
+		return 0, nil
+	}
+
+	// Collect server entries.
+	type serverEntry struct {
+		name string
+		raw  string
+	}
+	var entries []serverEntry
+	servers.ForEach(func(key, value gjson.Result) bool {
+		name := key.String()
+		if !excludeSet[name] {
+			entries = append(entries, serverEntry{name: name, raw: value.Raw})
+		}
+		return true
+	})
+
+	if previewOnly {
+		fmt.Fprintf(output.Writer, "MCP servers in %s (%s):\n", loc.Path, loc.Scope)
+		for _, e := range entries {
+			fmt.Fprintf(output.Writer, "  %s\n", e.name)
+		}
+		fmt.Fprintf(output.Writer, "\n%d MCP servers would be added.\n", len(entries))
+		return 0, nil
+	}
+
+	scope := loc.Scope.String()
+	projectName := ""
+	if scope == "project" && projectRoot != "" {
+		projectName = filepath.Base(projectRoot)
+	}
+
+	count := 0
+	for _, e := range entries {
+		itemDir := filepath.Join(globalDir, string(catalog.MCP), fromSlug, e.name)
+
+		if !force {
+			if info, err := os.Stat(itemDir); err == nil && info.IsDir() {
+				existingMeta, _ := metadata.Load(itemDir)
+				if existingMeta != nil && existingMeta.SourceScope != scope {
+					itemDir = uniqueItemDir(itemDir)
+				} else {
+					fmt.Fprintf(output.Writer, "  SKIP %s (already exists, use --force to overwrite)\n", e.name)
+					continue
+				}
+			}
+		}
+
+		if err := os.MkdirAll(itemDir, 0755); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to create %s: %v\n", itemDir, err)
+			continue
+		}
+
+		// Write config.json in the nested format expected by the installer.
+		configJSON := fmt.Sprintf("{\n  %q: {\n    %q: %s\n  }\n}", loc.JSONKey, e.name, e.raw)
+		if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(configJSON), 0644); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to write config.json for %s: %v\n", e.name, err)
+			continue
+		}
+
+		now := time.Now().UTC()
+		meta := &metadata.Meta{
+			ID:               metadata.NewID(),
+			Name:             e.name,
+			Type:             string(catalog.MCP),
+			AddedAt:          &now,
+			SourceProvider:   fromSlug,
+			SourceFormat:     "json",
+			SourceType:       "provider",
+			SourceRegistry:   srcRegistry,
+			SourceVisibility: srcVisibility,
+			SourceScope:      scope,
+			SourceProject:    projectName,
+		}
+		if srcRegistry != "" {
+			meta.SourceType = "registry"
+		}
+		if err := metadata.Save(itemDir, meta); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to write metadata for %s: %v\n", e.name, err)
+			continue
+		}
+
+		fmt.Fprintf(output.Writer, "  %-22s added (%s)\n", e.name, scope)
+		count++
+	}
+	return count, nil
 }
 
 // printDiscoveryJSON outputs structured JSON for discovery mode.
@@ -471,6 +701,7 @@ func printDiscoveryJSON(provSlug string, items []add.DiscoveryItem) error {
 				Name:   item.Name,
 				Path:   item.Path,
 				Status: statusJSONLabel(item.Status),
+				Scope:  item.Scope,
 			})
 		}
 		groups = append(groups, discoveryGroup{
@@ -525,7 +756,11 @@ func printDiscoveryText(provSlug, provName string, items []add.DiscoveryItem) er
 		}
 		fmt.Fprintf(output.Writer, "  %s (%d):\n", ct.Label(), len(typeItems))
 		for _, item := range typeItems {
-			fmt.Fprintf(output.Writer, "    %-20s (%s)\n", item.Name, item.Status.String())
+			if item.Scope != "" {
+				fmt.Fprintf(output.Writer, "    %-20s (%s, %s)\n", item.Name, item.Status.String(), item.Scope)
+			} else {
+				fmt.Fprintf(output.Writer, "    %-20s (%s)\n", item.Name, item.Status.String())
+			}
 		}
 	}
 
@@ -621,7 +856,7 @@ func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, forc
 	}
 
 	for _, loc := range targets {
-		if err := addHooksFromLocation(fromSlug, loc, previewOnly, excludeSet, force, srcRegistry, srcVisibility); err != nil {
+		if err := addHooksFromLocation(fromSlug, loc, root, previewOnly, excludeSet, force, srcRegistry, srcVisibility); err != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: failed to add hooks from %s: %v\n", loc.Path, err)
 		}
 	}
@@ -630,7 +865,7 @@ func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, forc
 
 // addHooksFromLocation reads a single settings.json, splits it into hooks,
 // and either previews or writes them.
-func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previewOnly bool, excludeSet map[string]bool, force bool, srcRegistry, srcVisibility string) error {
+func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, projectRoot string, previewOnly bool, excludeSet map[string]bool, force bool, srcRegistry, srcVisibility string) error {
 	data, err := os.ReadFile(loc.Path)
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrSystemIO, "reading "+loc.Path, "Check file permissions", err.Error())
@@ -669,15 +904,30 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previ
 		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
 	}
 
+	scope := loc.Scope.String()
+	projectName := ""
+	if scope == "project" && projectRoot != "" {
+		projectName = filepath.Base(projectRoot)
+	}
+
 	count := 0
 	for _, hook := range filtered {
 		name := converter.DeriveHookName(hook)
 		itemDir := filepath.Join(globalDir, string(catalog.Hooks), fromSlug, name)
 
+		// Handle name collisions: if directory exists and belongs to a different scope,
+		// find a unique name by appending -2, -3, etc.
 		if !force {
-			if _, err := os.Stat(itemDir); err == nil {
-				fmt.Fprintf(output.Writer, "  SKIP %s (already exists, use --force to overwrite)\n", name)
-				continue
+			if info, err := os.Stat(itemDir); err == nil && info.IsDir() {
+				existingMeta, _ := metadata.Load(itemDir)
+				if existingMeta != nil && existingMeta.SourceScope != scope {
+					// Different scope — find unique suffix.
+					itemDir = uniqueItemDir(itemDir)
+					name = filepath.Base(itemDir)
+				} else {
+					fmt.Fprintf(output.Writer, "  SKIP %s (already exists, use --force to overwrite)\n", name)
+					continue
+				}
 			}
 		}
 
@@ -707,6 +957,8 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previ
 			SourceType:       "provider",
 			SourceRegistry:   srcRegistry,
 			SourceVisibility: srcVisibility,
+			SourceScope:      scope,
+			SourceProject:    projectName,
 		}
 		if srcRegistry != "" {
 			meta.SourceType = "registry"
@@ -720,7 +972,7 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previ
 		if matcher == "" {
 			matcher = "*"
 		}
-		fmt.Fprintf(output.Writer, "  %s   (%s/%s)\n", name, hook.Event, matcher)
+		fmt.Fprintf(output.Writer, "  %s   (%s/%s, %s)\n", name, hook.Event, matcher, scope)
 		count++
 	}
 	prov := findProviderBySlug(fromSlug)
@@ -730,4 +982,15 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previ
 	}
 	fmt.Fprintf(output.Writer, "\nAdded %d hooks from %s.\n", count, provLabel)
 	return nil
+}
+
+// uniqueItemDir returns a unique directory path by appending -2, -3, etc.
+func uniqueItemDir(base string) string {
+	for i := 2; i < 100; i++ {
+		candidate := fmt.Sprintf("%s-%d", base, i)
+		if _, err := os.Stat(candidate); os.IsNotExist(err) {
+			return candidate
+		}
+	}
+	return base + "-overflow"
 }
