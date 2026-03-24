@@ -1063,6 +1063,106 @@ func TestSkillMetaFields_ClaudeRoundTrip(t *testing.T) {
 	assertContains(t, body, "Review code.")
 }
 
+// --- Copilot Skill ---
+
+func TestRenderCopilotSkill(t *testing.T) {
+	input := []byte("---\nname: review\ndescription: Code review skill\nallowed-tools:\n  - Read\n  - Grep\nmodel: opus\ncontext: fork\neffort: high\n---\n\nReview code for best practices.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.CopilotCLI)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: review")
+	assertContains(t, out, "description: Code review skill")
+	assertContains(t, out, "Review code for best practices.")
+	// Claude-specific fields embedded as prose
+	assertContains(t, out, "Tool restriction")
+	assertContains(t, out, "model: opus")
+	assertContains(t, out, "isolated context")
+	assertContains(t, out, "Effort level: high")
+	assertEqual(t, "SKILL.md", result.Filename)
+}
+
+// --- Cline Skill ---
+
+func TestRenderClineSkill(t *testing.T) {
+	input := []byte("---\nname: lint\ndescription: Lint skill\n---\n\nRun the linter.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Cline)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: lint")
+	assertContains(t, out, "description: Lint skill")
+	assertContains(t, out, "Run the linter.")
+	assertEqual(t, "SKILL.md", result.Filename)
+}
+
+// --- Roo Code Skill ---
+
+func TestRenderRooCodeSkill(t *testing.T) {
+	input := []byte("---\nname: deploy\ndescription: Deploy skill\nallowed-tools:\n  - Bash\neffort: max\n---\n\nDeploy to production.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.RooCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: deploy")
+	assertContains(t, out, "description: Deploy skill")
+	assertContains(t, out, "Deploy to production.")
+	assertContains(t, out, "Tool restriction")
+	assertContains(t, out, "Effort level: max")
+	assertEqual(t, "SKILL.md", result.Filename)
+}
+
+// --- Amp Skill ---
+
+func TestRenderAmpSkill(t *testing.T) {
+	input := []byte("---\nname: test\ndescription: Testing skill\nmodel: sonnet\n---\n\nRun all tests.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Amp)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: test")
+	assertContains(t, out, "description: Testing skill")
+	assertContains(t, out, "Run all tests.")
+	assertContains(t, out, "model: sonnet")
+	assertEqual(t, "SKILL.md", result.Filename)
+}
+
 // joinWarnings concatenates all warnings into a single string for assertion convenience.
 func joinWarnings(warnings []string) string {
 	return strings.Join(warnings, "\n")

@@ -11,6 +11,8 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // navigateToImport creates a test app and navigates to the import screen.
@@ -1784,5 +1786,580 @@ func TestDiscoveryUnfilteredKeepsAll(t *testing.T) {
 	}
 	if len(app.importer.discoverySelected) != 2 {
 		t.Fatalf("expected discoverySelected length 2, got %d", len(app.importer.discoverySelected))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// hasTextInput tests
+// ---------------------------------------------------------------------------
+
+func TestHasTextInput(t *testing.T) {
+	textSteps := []importStep{stepGitURL, stepPath, stepName}
+	nonTextSteps := []importStep{
+		stepSource, stepType, stepProvider, stepBrowseStart,
+		stepBrowse, stepValidate, stepGitPick, stepConfirm,
+		stepConflict, stepHookSelect, stepProviderPick, stepDiscoverySelect,
+	}
+
+	for _, step := range textSteps {
+		m := importModel{step: step}
+		if !m.hasTextInput() {
+			t.Errorf("hasTextInput() = false for step %d, want true", step)
+		}
+	}
+	for _, step := range nonTextSteps {
+		m := importModel{step: step}
+		if m.hasTextInput() {
+			t.Errorf("hasTextInput() = true for step %d, want false", step)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// viewValidate tests
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// View() step rendering tests
+// ---------------------------------------------------------------------------
+
+func TestImportView_StepSource(t *testing.T) {
+	m := importModel{step: stepSource, sourceCursor: 0, width: 80, height: 30}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "From Provider") {
+		t.Error("stepSource view should contain 'From Provider'")
+	}
+	if !strings.Contains(got, "Git URL") {
+		t.Error("stepSource view should contain 'Git URL'")
+	}
+	if !strings.Contains(got, "Create New") {
+		t.Error("stepSource view should contain 'Create New'")
+	}
+}
+
+func TestImportView_StepType(t *testing.T) {
+	m := importModel{
+		step:       stepType,
+		types:      []catalog.ContentType{catalog.Rules, catalog.Skills},
+		typeCursor: 0,
+		width:      80,
+		height:     30,
+	}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "content type") {
+		t.Error("stepType view should contain 'content type'")
+	}
+}
+
+func TestImportView_StepProvider(t *testing.T) {
+	m := importModel{
+		step:          stepProvider,
+		contentType:   catalog.Rules,
+		providerNames: []string{"Claude Code", "Gemini CLI"},
+		provCursor:    0,
+		width:         80,
+		height:        30,
+	}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "Claude Code") {
+		t.Error("stepProvider view should contain 'Claude Code'")
+	}
+}
+
+func TestImportView_StepBrowseStart(t *testing.T) {
+	m := importModel{
+		step:         stepBrowseStart,
+		browseCursor: 0,
+		width:        80,
+		height:       30,
+	}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "browse") {
+		t.Error("stepBrowseStart view should contain 'browse'")
+	}
+	if !strings.Contains(got, "Current directory") {
+		t.Error("stepBrowseStart view should contain 'Current directory'")
+	}
+}
+
+func TestImportView_StepPath(t *testing.T) {
+	m := importModel{step: stepPath, width: 80, height: 30}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "starting path") {
+		t.Error("stepPath view should contain 'starting path'")
+	}
+}
+
+func TestImportView_StepConfirmCreate(t *testing.T) {
+	m := importModel{
+		step:        stepConfirm,
+		contentType: catalog.Skills,
+		itemName:    "my-skill",
+		isCreate:    true,
+		width:       80,
+		height:      30,
+	}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "creation") {
+		t.Error("stepConfirm create view should contain 'creation'")
+	}
+	if !strings.Contains(got, "my-skill") {
+		t.Error("stepConfirm create view should show item name")
+	}
+}
+
+func TestImportView_StepGitURL(t *testing.T) {
+	m := importModel{step: stepGitURL, width: 80, height: 30}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "git repository URL") {
+		t.Error("stepGitURL view should contain 'git repository URL'")
+	}
+}
+
+func TestImportView_StepGitPick(t *testing.T) {
+	m := importModel{
+		step:       stepGitPick,
+		pickCursor: 0,
+		clonedItems: []catalog.ContentItem{
+			{Name: "item-a", Type: catalog.Rules},
+			{Name: "item-b", Type: catalog.Skills},
+		},
+		width:  80,
+		height: 30,
+	}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "item-a") {
+		t.Error("stepGitPick view should show items")
+	}
+}
+
+func TestImportView_StepName(t *testing.T) {
+	m := importModel{
+		step:        stepName,
+		contentType: catalog.Skills,
+		width:       80,
+		height:      30,
+	}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "name") || !strings.Contains(got, "Skill") {
+		t.Error("stepName view should contain item name prompt with content type")
+	}
+}
+
+func TestImportView_StepConfirm(t *testing.T) {
+	m := importModel{
+		step:        stepConfirm,
+		contentType: catalog.Rules,
+		itemName:    "my-rule",
+		sourcePath:  "/tmp/source",
+		width:       80,
+		height:      30,
+	}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "my-rule") {
+		t.Error("stepConfirm view should show item name")
+	}
+}
+
+func TestImportView_StepHookSelect(t *testing.T) {
+	m := importModel{
+		step:             stepHookSelect,
+		hookCandidates:   []converter.HookData{{Event: "before_tool_execute"}, {Event: "after_tool_execute"}},
+		hookNames:        []string{"pre-commit", "post-build"},
+		hookSelected:     []bool{true, false},
+		hookSelectCursor: 0,
+		width:            80,
+		height:           30,
+	}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "pre-commit") {
+		t.Error("stepHookSelect view should show hook names")
+	}
+}
+
+func TestImportView_StepProviderPick(t *testing.T) {
+	m := importModel{
+		step: stepProviderPick,
+		providers: []provider.Provider{
+			{Name: "Claude Code", Slug: "claude-code"},
+			{Name: "Gemini CLI", Slug: "gemini-cli"},
+		},
+		discoveryProvCursor: 0,
+		width:               80,
+		height:              30,
+	}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "Claude Code") {
+		t.Error("stepProviderPick view should show provider names")
+	}
+}
+
+func TestImportView_StepConflict(t *testing.T) {
+	m := importModel{
+		step: stepConflict,
+		conflict: conflictInfo{
+			existingPath: "/tmp/rules/my-rule",
+			onlyNew:      []string{"new.md"},
+			diffText:     "+new content\n-old content",
+		},
+		width:  80,
+		height: 30,
+	}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "already exists") {
+		t.Error("stepConflict view should show conflict warning")
+	}
+}
+
+func TestImportView_StepValidate(t *testing.T) {
+	m := importModel{
+		step: stepValidate,
+		validationItems: []validationItem{
+			{name: "my-rule", detection: "Rule", included: true},
+		},
+		width:  80,
+		height: 30,
+	}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "my-rule") {
+		t.Error("stepValidate view should show items")
+	}
+}
+
+func TestImportView_StepDiscoverySelect(t *testing.T) {
+	m := importModel{
+		step: stepDiscoverySelect,
+		discoveryItems: []add.DiscoveryItem{
+			{Name: "discovered-rule", Type: catalog.Rules},
+		},
+		discoverySelected: []bool{true},
+		discoveryCursor:   0,
+		discoveryProvider: provider.Provider{Name: "Claude Code"},
+		width:             80,
+		height:            30,
+	}
+	got := stripANSI(m.View())
+	if !strings.Contains(got, "discovered-rule") {
+		t.Error("stepDiscoverySelect view should show discovered items")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// viewConflict and renderDiffLine tests
+// ---------------------------------------------------------------------------
+
+func TestViewConflict_NoDiff(t *testing.T) {
+	m := importModel{
+		step: stepConflict,
+		conflict: conflictInfo{
+			existingPath: "/home/user/rules/my-rule",
+		},
+		width:  80,
+		height: 30,
+	}
+	got := stripANSI(m.viewConflict())
+	if !strings.Contains(got, "already exists") {
+		t.Error("should contain 'already exists'")
+	}
+	if !strings.Contains(got, "no differences") {
+		t.Error("should show 'no differences' when diffText is empty")
+	}
+}
+
+func TestViewConflict_WithDiff(t *testing.T) {
+	m := importModel{
+		step: stepConflict,
+		conflict: conflictInfo{
+			existingPath: "/home/user/rules/my-rule",
+			onlyExisting: []string{"old.md"},
+			onlyNew:      []string{"new.md"},
+			inBoth:       []string{"shared.md"},
+			diffText:     "--- a/shared.md\n+++ b/shared.md\n@@ -1,3 +1,3 @@\n-old line\n+new line\n same line",
+		},
+		width:  80,
+		height: 30,
+	}
+	got := stripANSI(m.viewConflict())
+	if !strings.Contains(got, "1 removed") {
+		t.Error("should show removed count")
+	}
+	if !strings.Contains(got, "1 added") {
+		t.Error("should show added count")
+	}
+	if !strings.Contains(got, "1 modified") {
+		t.Error("should show modified count")
+	}
+	if !strings.Contains(got, "old line") {
+		t.Error("should show diff content")
+	}
+}
+
+func TestRenderDiffLine(t *testing.T) {
+	// Basic prefix coloring
+	got := renderDiffLine("+added line", 0)
+	if !strings.Contains(got, "added line") {
+		t.Error("should contain the line text")
+	}
+
+	got = renderDiffLine("-removed line", 0)
+	if !strings.Contains(got, "removed line") {
+		t.Error("should contain the line text")
+	}
+
+	got = renderDiffLine("@@ -1,3 +1,3 @@", 0)
+	if !strings.Contains(got, "@@") {
+		t.Error("should contain hunk header")
+	}
+
+	got = renderDiffLine("--- a/file.txt", 0)
+	if !strings.Contains(got, "file.txt") {
+		t.Error("should contain file path")
+	}
+
+	// Horizontal offset
+	got = renderDiffLine("+abcdefgh", 3)
+	if !strings.Contains(got, "defgh") {
+		t.Error("horizontal offset should skip first chars")
+	}
+
+	// Offset beyond line length — result should be empty or a styled empty string
+	got = renderDiffLine("+abc", 10)
+	_ = got // valid: may be empty or styled empty
+}
+
+// ---------------------------------------------------------------------------
+// cwd / homeDir tests
+// ---------------------------------------------------------------------------
+
+func TestCwd(t *testing.T) {
+	got := cwd()
+	if got == "" || got == "(unknown)" {
+		t.Error("cwd() should return a valid directory")
+	}
+}
+
+func TestHomeDir(t *testing.T) {
+	got := homeDir()
+	if got == "" || got == "(unknown)" {
+		t.Error("homeDir() should return a valid directory")
+	}
+}
+
+func TestViewValidate_EmptyItems(t *testing.T) {
+	m := importModel{
+		step:            stepValidate,
+		validationItems: nil,
+	}
+	got := stripANSI(m.viewValidate())
+	if !strings.Contains(got, "0 of 0 items") {
+		t.Error("empty validation should show '0 of 0 items'")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// sourceLabel tests
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// stepLabel tests
+// ---------------------------------------------------------------------------
+
+func TestStepLabel(t *testing.T) {
+	tests := []struct {
+		step importStep
+		want string
+	}{
+		{stepSource, "Step 1 of 4: Source"},
+		{stepType, "Step 2 of 4: Content Type"},
+		{stepProvider, "Step 2b of 4: Provider"},
+		{stepBrowseStart, "Step 3 of 4: Browse"},
+		{stepBrowse, "Step 3 of 4: Browse"},
+		{stepPath, "Step 3 of 4: Browse"},
+		{stepValidate, "Step 3b of 4: Review"},
+		{stepGitURL, "Step 2 of 3: Repository URL"},
+		{stepGitPick, "Step 3 of 3: Select Item"},
+		{stepName, "Step 2 of 3: Name"},
+		{stepConfirm, "Confirm"},
+		{stepConflict, "Conflict"},
+		{stepHookSelect, "Step 4 of 4: Select Hooks"},
+		{stepProviderPick, "Select Provider"},
+		{stepDiscoverySelect, "Select Items to Add"},
+	}
+	for _, tt := range tests {
+		m := importModel{step: tt.step}
+		got := m.stepLabel()
+		if got != tt.want {
+			t.Errorf("stepLabel() at step %d = %q, want %q", tt.step, got, tt.want)
+		}
+	}
+}
+
+func TestStepLabel_BatchConflict(t *testing.T) {
+	m := importModel{
+		step:             stepConflict,
+		batchConflicts:   []string{"a", "b", "c"},
+		batchConflictIdx: 1,
+	}
+	got := m.stepLabel()
+	if got != "Conflict 2 of 3" {
+		t.Errorf("stepLabel() = %q, want %q", got, "Conflict 2 of 3")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// helpText tests
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// breadcrumb tests
+// ---------------------------------------------------------------------------
+
+func TestImportBreadcrumb(t *testing.T) {
+	tests := []struct {
+		step importStep
+		want string // substring expected in breadcrumb
+	}{
+		{stepSource, "Add"},
+		{stepType, "Content Type"},
+		{stepProvider, "Provider"},
+		{stepBrowseStart, "Browse"},
+		{stepBrowse, "Browse"},
+		{stepPath, "Browse"},
+		{stepValidate, "Review"},
+		{stepGitURL, "Repository URL"},
+		{stepGitPick, "Select Item"},
+		{stepName, "Name"},
+		{stepConfirm, "Confirm"},
+		{stepConflict, "Conflict"},
+		{stepHookSelect, "Select Hooks"},
+		{stepProviderPick, "Select Provider"},
+		{stepDiscoverySelect, "Select Items"},
+	}
+	for _, tt := range tests {
+		m := importModel{step: tt.step}
+		got := stripANSI(m.breadcrumb())
+		if !strings.Contains(got, tt.want) {
+			t.Errorf("breadcrumb() at step %d = %q, should contain %q", tt.step, got, tt.want)
+		}
+		// All breadcrumbs should contain "Home"
+		if !strings.Contains(got, "Home") {
+			t.Errorf("breadcrumb() at step %d should contain 'Home'", tt.step)
+		}
+	}
+}
+
+func TestImportHelpText(t *testing.T) {
+	tests := []struct {
+		step importStep
+		want string // substring expected in help text
+	}{
+		{stepSource, "navigate"},
+		{stepType, "navigate"},
+		{stepProvider, "navigate"},
+		{stepBrowseStart, "navigate"},
+		{stepGitPick, "navigate"},
+		{stepPath, "open browser"},
+		{stepGitURL, "clone"},
+		{stepName, "confirm"},
+		{stepValidate, "toggle"},
+		{stepHookSelect, "toggle"},
+		{stepProviderPick, "navigate"},
+		{stepDiscoverySelect, "toggle"},
+	}
+	for _, tt := range tests {
+		m := importModel{step: tt.step}
+		got := m.helpText()
+		if !strings.Contains(got, tt.want) {
+			t.Errorf("helpText() at step %d = %q, should contain %q", tt.step, got, tt.want)
+		}
+	}
+}
+
+func TestImportHelpText_ConfirmCreate(t *testing.T) {
+	m := importModel{step: stepConfirm, isCreate: true}
+	got := m.helpText()
+	if !strings.Contains(got, "create") {
+		t.Errorf("helpText() for create confirm = %q, should contain 'create'", got)
+	}
+}
+
+func TestImportHelpText_ConfirmAdd(t *testing.T) {
+	m := importModel{step: stepConfirm, isCreate: false}
+	got := m.helpText()
+	if !strings.Contains(got, "add") {
+		t.Errorf("helpText() for add confirm = %q, should contain 'add'", got)
+	}
+}
+
+func TestImportHelpText_ConflictBatch(t *testing.T) {
+	m := importModel{step: stepConflict, batchConflicts: []string{"a"}}
+	got := m.helpText()
+	if !strings.Contains(got, "skip") {
+		t.Errorf("helpText() for batch conflict = %q, should contain 'skip'", got)
+	}
+}
+
+func TestImportHelpText_ConflictSingle(t *testing.T) {
+	m := importModel{step: stepConflict}
+	got := m.helpText()
+	if !strings.Contains(got, "cancel") {
+		t.Errorf("helpText() for single conflict = %q, should contain 'cancel'", got)
+	}
+}
+
+func TestSourceLabel(t *testing.T) {
+	tests := []struct {
+		cursor int
+		want   string
+	}{
+		{0, "From Provider"},
+		{1, "Local Path"},
+		{2, "Git URL"},
+		{3, "Create New"},
+		{99, "Source"},
+	}
+	for _, tt := range tests {
+		m := importModel{sourceCursor: tt.cursor}
+		got := m.sourceLabel()
+		if got != tt.want {
+			t.Errorf("sourceLabel() with cursor=%d = %q, want %q", tt.cursor, got, tt.want)
+		}
+	}
+}
+
+func TestViewValidate_WithItems(t *testing.T) {
+	m := importModel{
+		step:           stepValidate,
+		validateCursor: 0,
+		validationItems: []validationItem{
+			{name: "rule-alpha", detection: "Rule detected", included: true},
+			{name: "bad-file", detection: "", isWarning: true, included: false},
+			{name: "skill-beta", detection: "Skill detected", description: "A skill", included: true},
+		},
+	}
+	got := stripANSI(m.viewValidate())
+
+	// Cursor indicator on first item
+	if !strings.Contains(got, ">") {
+		t.Error("should contain cursor indicator '>'")
+	}
+	// Item names
+	if !strings.Contains(got, "rule-alpha") {
+		t.Error("should contain item name 'rule-alpha'")
+	}
+	if !strings.Contains(got, "bad-file") {
+		t.Error("should contain item name 'bad-file'")
+	}
+	// Warning indicator
+	if !strings.Contains(got, "No recognized content") {
+		t.Error("warning item should show 'No recognized content'")
+	}
+	// Description
+	if !strings.Contains(got, "A skill") {
+		t.Error("should contain item description")
+	}
+	// Count
+	if !strings.Contains(got, "2 of 3 items") {
+		t.Error("should show '2 of 3 items will be added'")
 	}
 }

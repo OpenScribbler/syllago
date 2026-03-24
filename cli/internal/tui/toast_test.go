@@ -93,3 +93,62 @@ func TestSanitizeForClipboard(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// clampScroll tests
+// ---------------------------------------------------------------------------
+
+func TestToastClampScroll_NegativeOffset(t *testing.T) {
+	tm := &toastModel{scrollOffset: -5, text: "hello", width: 60}
+	tm.clampScroll()
+	if tm.scrollOffset != 0 {
+		t.Errorf("negative scroll should clamp to 0, got %d", tm.scrollOffset)
+	}
+}
+
+func TestToastClampScroll_ShortMessage(t *testing.T) {
+	tm := &toastModel{scrollOffset: 10, text: "short", width: 60}
+	tm.clampScroll()
+	// Short message fits in 5 lines, so maxOffset = 0
+	if tm.scrollOffset != 0 {
+		t.Errorf("short message should clamp to 0, got %d", tm.scrollOffset)
+	}
+}
+
+func TestToastClampScroll_LongMessage(t *testing.T) {
+	// Create a message long enough to exceed 5 visible lines at width 60
+	longMsg := strings.Repeat("word ", 100)
+	tm := &toastModel{scrollOffset: 0, text: longMsg, width: 60, isErr: true}
+	tm.clampScroll()
+	// Should stay at 0
+	if tm.scrollOffset != 0 {
+		t.Errorf("offset at 0 should stay 0, got %d", tm.scrollOffset)
+	}
+
+	// Set to very high offset, should clamp down
+	tm.scrollOffset = 999
+	tm.clampScroll()
+	if tm.scrollOffset >= 999 {
+		t.Errorf("excessive scroll should clamp down, got %d", tm.scrollOffset)
+	}
+	if tm.scrollOffset < 0 {
+		t.Errorf("clamped scroll should not be negative, got %d", tm.scrollOffset)
+	}
+}
+
+func TestToastClampScroll_NarrowWidth(t *testing.T) {
+	tm := &toastModel{scrollOffset: 0, text: "test", width: 10}
+	tm.clampScroll() // should not panic with narrow width (innerW defaults to 20)
+	if tm.scrollOffset != 0 {
+		t.Errorf("expected 0, got %d", tm.scrollOffset)
+	}
+}
+
+func TestToastClampScroll_ProgressPrefix(t *testing.T) {
+	tm := &toastModel{scrollOffset: 5, text: "loading", width: 60, isProgress: true}
+	tm.clampScroll()
+	// Progress messages have no prefix, short text should clamp to 0
+	if tm.scrollOffset != 0 {
+		t.Errorf("short progress message should clamp to 0, got %d", tm.scrollOffset)
+	}
+}

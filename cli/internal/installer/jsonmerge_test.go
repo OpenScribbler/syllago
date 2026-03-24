@@ -133,3 +133,77 @@ func TestWriteJSONFile_CreatesParentDirs(t *testing.T) {
 		t.Fatal("file was not created")
 	}
 }
+
+func TestReadJSONFile_ExistingFile(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "test.json")
+	os.WriteFile(filePath, []byte(`{"key":"value"}`), 0644)
+
+	data, err := readJSONFile(filePath)
+	if err != nil {
+		t.Fatalf("readJSONFile: %v", err)
+	}
+	if string(data) != `{"key":"value"}` {
+		t.Errorf("got %q, want %q", string(data), `{"key":"value"}`)
+	}
+}
+
+func TestReadJSONFile_MissingFile(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	data, err := readJSONFile(filepath.Join(tmpDir, "nonexistent.json"))
+	if err != nil {
+		t.Fatalf("readJSONFile should not error for missing file: %v", err)
+	}
+	if string(data) != "{}" {
+		t.Errorf("expected empty JSON object, got %q", string(data))
+	}
+}
+
+func TestBackupFile_ExistingFile(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "config.json")
+	os.WriteFile(filePath, []byte(`{"original":"data"}`), 0644)
+
+	if err := backupFile(filePath); err != nil {
+		t.Fatalf("backupFile: %v", err)
+	}
+
+	bakData, err := os.ReadFile(filePath + ".bak")
+	if err != nil {
+		t.Fatalf("reading backup: %v", err)
+	}
+	if string(bakData) != `{"original":"data"}` {
+		t.Errorf("backup content = %q", string(bakData))
+	}
+}
+
+func TestBackupFile_MissingFile(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	// Backing up a non-existent file should succeed (nothing to back up)
+	if err := backupFile(filepath.Join(tmpDir, "nonexistent.json")); err != nil {
+		t.Fatalf("backupFile should not error for missing file: %v", err)
+	}
+}
+
+func TestWriteJSONFile_OverwritesExisting(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "config.json")
+	os.WriteFile(filePath, []byte(`{"old":"data"}`), 0644)
+
+	if err := writeJSONFile(filePath, []byte(`{"new":"data"}`)); err != nil {
+		t.Fatalf("writeJSONFile: %v", err)
+	}
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(data) != `{"new":"data"}` {
+		t.Errorf("content = %q, want %q", string(data), `{"new":"data"}`)
+	}
+}

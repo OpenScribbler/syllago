@@ -409,3 +409,61 @@ func TestNoProvidersWarningHiddenWhenDetected(t *testing.T) {
 		t.Error("should not show warning when a provider is detected")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// promoteSandboxMessage tests
+// ---------------------------------------------------------------------------
+
+func TestPromoteSandboxMessage_WithMessage(t *testing.T) {
+	a := &App{
+		sandboxSettings: sandboxSettingsModel{
+			message:      "Settings saved",
+			messageIsErr: false,
+		},
+	}
+	a.promoteSandboxMessage()
+
+	// Toast should have the message
+	if a.toast.text != "Settings saved" {
+		t.Errorf("toast text = %q, want %q", a.toast.text, "Settings saved")
+	}
+	if a.toast.isErr {
+		t.Error("toast isErr should be false")
+	}
+	// Sandbox message should be cleared
+	if a.sandboxSettings.message != "" {
+		t.Error("sandbox message should be cleared after promotion")
+	}
+	if a.sandboxSettings.messageIsErr {
+		t.Error("sandbox messageIsErr should be cleared after promotion")
+	}
+}
+
+func TestPromoteSandboxMessage_ErrorMessage(t *testing.T) {
+	a := &App{
+		sandboxSettings: sandboxSettingsModel{
+			message:      "save failed",
+			messageIsErr: true,
+		},
+	}
+	a.promoteSandboxMessage()
+
+	if a.toast.text != "save failed" {
+		t.Errorf("toast text = %q, want %q", a.toast.text, "save failed")
+	}
+	if !a.toast.isErr {
+		t.Error("toast isErr should be true for error messages")
+	}
+}
+
+func TestPromoteSandboxMessage_NoMessage(t *testing.T) {
+	a := &App{
+		sandboxSettings: sandboxSettingsModel{},
+	}
+	a.promoteSandboxMessage()
+
+	// Toast should not be activated
+	if a.toast.text != "" {
+		t.Errorf("toast should not be set when no sandbox message, got %q", a.toast.text)
+	}
+}

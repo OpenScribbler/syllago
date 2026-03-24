@@ -1,9 +1,12 @@
 package converter
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -657,6 +660,272 @@ func TestCursorRenderNoGlobsOmitted(t *testing.T) {
 	out := string(result.Content)
 	assertContains(t, out, "alwaysApply: true")
 	assertNotContains(t, out, "globs:")
+}
+
+// --- Amp Rules ---
+
+func TestCanonicalizeAmpRule(t *testing.T) {
+	input := []byte("---\nglobs:\n  - \"*.go\"\n  - \"*.rs\"\n---\n\nFollow Go and Rust best practices.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Canonicalize(input, "amp")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "*.go")
+	assertContains(t, out, "*.rs")
+	assertContains(t, out, "Follow Go and Rust best practices.")
+}
+
+func TestCanonicalizeAmpRuleNoFrontmatter(t *testing.T) {
+	input := []byte("Always follow security best practices.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Canonicalize(input, "amp")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "alwaysApply: true")
+	assertContains(t, out, "Always follow security best practices.")
+}
+
+func TestCanonicalizeAmpRuleNoGlobs(t *testing.T) {
+	// Frontmatter without globs → alwaysApply
+	input := []byte("---\nsome_unknown_field: true\n---\n\nGeneral rule.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Canonicalize(input, "amp")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "alwaysApply: true")
+}
+
+func TestRenderAmpRule(t *testing.T) {
+	input := []byte("---\nglobs:\n  - \"**/*.go\"\nalwaysApply: false\n---\n\nFollow Go conventions.\n")
+
+	conv := &RulesConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Amp)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// Amp strips **/ prefix from globs (it adds it implicitly)
+	assertContains(t, out, "*.go")
+	assertContains(t, out, "Follow Go conventions.")
+	assertEqual(t, "AGENTS.md", result.Filename)
+}
+
+func TestRenderAmpRuleAlwaysApply(t *testing.T) {
+	input := []byte("---\nalwaysApply: true\n---\n\nAlways do this.\n")
+
+	conv := &RulesConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Amp)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// AlwaysApply → plain markdown, no frontmatter
+	assertNotContains(t, out, "---")
+	assertContains(t, out, "Always do this.")
+	assertEqual(t, "AGENTS.md", result.Filename)
+}
+
+func TestRenderAmpRuleDescriptionScope(t *testing.T) {
+	input := []byte("---\ndescription: When working with tests\nalwaysApply: false\n---\n\nFollow test patterns.\n")
+
+	conv := &RulesConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Amp)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "Apply when: When working with tests")
+	assertEqual(t, "AGENTS.md", result.Filename)
+}
+
+func TestStripImplicitGlobPrefix(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"**/*.go", "*.go"},
+		{"*.go", "*.go"},
+		{"../*.go", "../*.go"},
+		{"./*.go", "./*.go"},
+	}
+
+	for _, tt := range tests {
+		result := stripImplicitGlobPrefix(tt.input)
+		assertEqual(t, tt.expected, result)
+	}
+}
+
+// --- Markdown Rules ---
+
+func TestRenderMarkdownRule(t *testing.T) {
+	input := []byte("---\nalwaysApply: true\n---\n\nGeneric markdown rule.\n")
+
+	conv := &RulesConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// Use a provider that doesn't have a specific renderer
+	generic := provider.Provider{Slug: "unknown-provider", Name: "Unknown"}
+	result, err := conv.Render(canonical.Content, generic)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "Generic markdown rule.")
+	assertEqual(t, "rule.md", result.Filename)
+}
+
+// --- Converter registry ---
+
+func TestConverterFor(t *testing.T) {
+	// All registered content types should return non-nil converters
+	if For(catalog.Rules) == nil {
+		t.Error("expected Rules converter to be registered")
+	}
+	if For(catalog.MCP) == nil {
+		t.Error("expected MCP converter to be registered")
+	}
+	if For(catalog.Commands) == nil {
+		t.Error("expected Commands converter to be registered")
+	}
+	if For(catalog.Agents) == nil {
+		t.Error("expected Agents converter to be registered")
+	}
+	if For(catalog.Skills) == nil {
+		t.Error("expected Skills converter to be registered")
+	}
+	if For(catalog.Hooks) == nil {
+		t.Error("expected Hooks converter to be registered")
+	}
+}
+
+// --- HasSourceFile / SourceFilePath / ResolveContentFile ---
+
+func TestHasSourceFile(t *testing.T) {
+	dir := t.TempDir()
+	item := catalog.ContentItem{Path: dir}
+
+	// No .source dir
+	if HasSourceFile(item) {
+		t.Error("expected HasSourceFile to be false without .source dir")
+	}
+
+	// Create .source dir
+	os.MkdirAll(filepath.Join(dir, SourceDir), 0755)
+	if !HasSourceFile(item) {
+		t.Error("expected HasSourceFile to be true with .source dir")
+	}
+}
+
+func TestSourceFilePath(t *testing.T) {
+	dir := t.TempDir()
+	item := catalog.ContentItem{Path: dir}
+
+	// No .source dir
+	if SourceFilePath(item) != "" {
+		t.Error("expected empty path without .source dir")
+	}
+
+	// Create .source with a file
+	sourceDir := filepath.Join(dir, SourceDir)
+	os.MkdirAll(sourceDir, 0755)
+	os.WriteFile(filepath.Join(sourceDir, "original.md"), []byte("content"), 0644)
+
+	path := SourceFilePath(item)
+	if path == "" {
+		t.Error("expected non-empty path with source file")
+	}
+	assertContains(t, path, "original.md")
+}
+
+func TestSourceFilePathSkipsDirectories(t *testing.T) {
+	dir := t.TempDir()
+	item := catalog.ContentItem{Path: dir}
+
+	sourceDir := filepath.Join(dir, SourceDir)
+	os.MkdirAll(filepath.Join(sourceDir, "subdir"), 0755)
+	os.WriteFile(filepath.Join(sourceDir, "file.md"), []byte("content"), 0644)
+
+	path := SourceFilePath(item)
+	assertContains(t, path, "file.md")
+}
+
+func TestResolveContentFile(t *testing.T) {
+	dir := t.TempDir()
+	item := catalog.ContentItem{Path: dir}
+
+	// No files → empty
+	if ResolveContentFile(item) != "" {
+		t.Error("expected empty path for empty dir")
+	}
+
+	// Create rule.md → found via known names
+	os.WriteFile(filepath.Join(dir, "rule.md"), []byte("rule"), 0644)
+	path := ResolveContentFile(item)
+	assertContains(t, path, "rule.md")
+}
+
+func TestResolveContentFileFallbackToMD(t *testing.T) {
+	dir := t.TempDir()
+	item := catalog.ContentItem{Path: dir}
+
+	// Create a non-canonical .md file
+	os.WriteFile(filepath.Join(dir, "custom.md"), []byte("custom"), 0644)
+	path := ResolveContentFile(item)
+	assertContains(t, path, "custom.md")
+}
+
+func TestResolveContentFileFallbackToTOML(t *testing.T) {
+	dir := t.TempDir()
+	item := catalog.ContentItem{Path: dir}
+
+	// Create .toml file only
+	os.WriteFile(filepath.Join(dir, "command.toml"), []byte("toml"), 0644)
+	path := ResolveContentFile(item)
+	assertContains(t, path, "command.toml")
+}
+
+func TestResolveContentFileFallbackToJSON(t *testing.T) {
+	dir := t.TempDir()
+	item := catalog.ContentItem{Path: dir}
+
+	// Create .json file only
+	os.WriteFile(filepath.Join(dir, "config.json"), []byte("{}"), 0644)
+	path := ResolveContentFile(item)
+	assertContains(t, path, "config.json")
 }
 
 // --- Helpers ---

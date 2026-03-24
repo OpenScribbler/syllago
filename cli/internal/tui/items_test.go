@@ -10,6 +10,70 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
 
+// ---------------------------------------------------------------------------
+// displayName tests
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// truncate tests
+// ---------------------------------------------------------------------------
+
+func TestTermWidth_Default(t *testing.T) {
+	m := itemsModel{width: 0}
+	if m.termWidth() != 80 {
+		t.Errorf("termWidth() = %d, want 80", m.termWidth())
+	}
+}
+
+func TestSelectedItem_Empty(t *testing.T) {
+	m := itemsModel{items: nil}
+	got := m.selectedItem()
+	if got.Name != "" {
+		t.Errorf("selectedItem() on empty items should return zero ContentItem, got %q", got.Name)
+	}
+}
+
+func TestTruncate(t *testing.T) {
+	tests := []struct {
+		s    string
+		max  int
+		want string
+	}{
+		{"hello", 10, "hello"},
+		{"hello world", 8, "hello..."},
+		{"hello", 5, "hello"},
+		{"ab", 1, "a"},
+		{"abcdef", 3, "abc"},
+		{"", 5, ""},
+		{"hello", 0, ""},
+		{"hello", -1, ""},
+		{"abcdefgh", 4, "a..."},
+	}
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%q/%d", tt.s, tt.max), func(t *testing.T) {
+			got := truncate(tt.s, tt.max)
+			if got != tt.want {
+				t.Errorf("truncate(%q, %d) = %q, want %q", tt.s, tt.max, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDisplayName(t *testing.T) {
+	t.Run("uses DisplayName when set", func(t *testing.T) {
+		item := catalog.ContentItem{Name: "raw-name", DisplayName: "Pretty Name"}
+		if got := displayName(item); got != "Pretty Name" {
+			t.Errorf("displayName() = %q, want %q", got, "Pretty Name")
+		}
+	})
+	t.Run("falls back to Name", func(t *testing.T) {
+		item := catalog.ContentItem{Name: "raw-name"}
+		if got := displayName(item); got != "raw-name" {
+			t.Errorf("displayName() = %q, want %q", got, "raw-name")
+		}
+	})
+}
+
 func TestItemsNavigationUpDown(t *testing.T) {
 	app := testApp(t)
 	// Enter Skills (cursor=0, first type)

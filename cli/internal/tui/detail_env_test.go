@@ -274,6 +274,45 @@ func TestSaveEnvToFile_Escaping(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// hasUnsetEnvVars tests
+// ---------------------------------------------------------------------------
+
+func TestHasUnsetEnvVars_NilConfig(t *testing.T) {
+	m := detailModel{mcpConfig: nil}
+	if m.hasUnsetEnvVars() {
+		t.Error("nil mcpConfig should return false")
+	}
+}
+
+func TestHasUnsetEnvVars_NoEnvVars(t *testing.T) {
+	m := detailModel{mcpConfig: &installer.MCPConfig{}}
+	if m.hasUnsetEnvVars() {
+		t.Error("empty env map should return false")
+	}
+}
+
+func TestHasUnsetEnvVars_AllSet(t *testing.T) {
+	// Use an env var that's guaranteed to exist
+	m := detailModel{mcpConfig: &installer.MCPConfig{
+		Env: map[string]string{"PATH": ""},
+	}}
+	if m.hasUnsetEnvVars() {
+		t.Error("PATH is always set, should return false")
+	}
+}
+
+func TestHasUnsetEnvVars_SomeUnset(t *testing.T) {
+	m := detailModel{mcpConfig: &installer.MCPConfig{
+		Env: map[string]string{
+			"SYLLAGO_TEST_DEFINITELY_NOT_SET_XYZ_123": "",
+		},
+	}}
+	if !m.hasUnsetEnvVars() {
+		t.Error("unset env var should return true")
+	}
+}
+
 // writeTestEnvFile creates a .env file with a single var=value pair.
 func writeTestEnvFile(t *testing.T, path, name, value string) {
 	t.Helper()

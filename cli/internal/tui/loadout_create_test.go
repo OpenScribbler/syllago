@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
 
 func TestCreateLoadoutScreenSmoke(t *testing.T) {
@@ -1496,5 +1497,41 @@ func TestCreateLoadoutLibraryDestination(t *testing.T) {
 	}
 	if app.detail.item.Name != "library-loadout" {
 		t.Errorf("detail item name = %q, want library-loadout", app.detail.item.Name)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// renderPrivacyCallout tests
+// ---------------------------------------------------------------------------
+
+func TestRenderPrivacyCallout_NoPrivateItems(t *testing.T) {
+	entries := []loadoutItemEntry{
+		{item: catalog.ContentItem{Name: "public-rule", Type: catalog.Rules}},
+	}
+	lines := renderPrivacyCallout(entries)
+	if len(lines) != 0 {
+		t.Errorf("no private items should return nil, got %d lines", len(lines))
+	}
+}
+
+func TestRenderPrivacyCallout_WithPrivateItems(t *testing.T) {
+	entries := []loadoutItemEntry{
+		{item: catalog.ContentItem{
+			Name: "private-rule",
+			Type: catalog.Rules,
+			Meta: &metadata.Meta{
+				SourceRegistry:   "my-private-reg",
+				SourceVisibility: "private",
+			},
+		}},
+	}
+	lines := renderPrivacyCallout(entries)
+	if len(lines) == 0 {
+		t.Fatal("expected privacy callout lines for private items")
+	}
+	joined := strings.Join(lines, "\n")
+	stripped := stripANSI(joined)
+	if !strings.Contains(stripped, "private") {
+		t.Error("should mention 'private'")
 	}
 }

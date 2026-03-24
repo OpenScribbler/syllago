@@ -363,6 +363,51 @@ func TestUninstallHook_HashMatching(t *testing.T) {
 	}
 }
 
+func TestInstallHook_RejectsDuplicate(t *testing.T) {
+	projectRoot := t.TempDir()
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
+
+	hookDir := filepath.Join(projectRoot, "hooks", "dup-hook")
+	os.MkdirAll(hookDir, 0755)
+	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo dup"}]}`
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
+
+	item := catalog.ContentItem{
+		Name: "dup-hook",
+		Type: catalog.Hooks,
+		Path: hookDir,
+	}
+
+	// Pre-populate installed.json with this hook
+	inst := &Installed{
+		Hooks: []InstalledHook{
+			{Name: "dup-hook", Event: "PreToolUse", Command: "echo dup", Source: "export"},
+		},
+	}
+	SaveInstalled(projectRoot, inst)
+
+	// Create a settings.json for the provider
+	home, _ := os.UserHomeDir()
+	configDir := filepath.Join(home, ".syllago-test-dup-"+filepath.Base(projectRoot))
+	os.MkdirAll(configDir, 0755)
+	t.Cleanup(func() { os.RemoveAll(configDir) })
+	os.WriteFile(filepath.Join(configDir, "settings.json"), []byte("{}"), 0644)
+
+	prov := provider.Provider{
+		Name:      "test-provider",
+		Slug:      "test",
+		ConfigDir: filepath.Base(configDir),
+	}
+
+	_, err := installHook(item, prov, projectRoot)
+	if err == nil {
+		t.Fatal("expected error for duplicate hook")
+	}
+	if !strings.Contains(err.Error(), "already installed") {
+		t.Errorf("expected 'already installed' error, got: %v", err)
+	}
+}
+
 func TestResolveHookScripts_AbsolutePathRejected(t *testing.T) {
 	t.Parallel()
 	// A hook command referencing an absolute path should be silently ignored
