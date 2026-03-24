@@ -111,10 +111,7 @@ func (p previewModel) View() string {
 		num := mutedStyle.Render(fmt.Sprintf("%*d ", lineNumW, i+1))
 		numW := lipgloss.Width(num)
 		lineW := p.width - numW
-		line := p.lines[i]
-		if len(line) > lineW {
-			line = line[:lineW]
-		}
+		line := truncateLine(p.lines[i], lineW)
 		visibleLines = append(visibleLines, num+line)
 	}
 

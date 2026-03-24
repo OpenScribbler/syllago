@@ -24,6 +24,7 @@ var (
 
 // Flexoki structural colors.
 var (
+	borderColor = lipgloss.AdaptiveColor{Light: "#CECDC3", Dark: "#343331"} // base-200/850
 	selectedBG  = lipgloss.AdaptiveColor{Light: "#E6E4D9", Dark: "#343331"} // base-100/850
 	primaryText = lipgloss.AdaptiveColor{Light: "#100F0F", Dark: "#CECDC3"} // black/base-200
 )
@@ -77,6 +78,15 @@ var (
 			Foreground(warningColor).
 			Bold(true).
 			Align(lipgloss.Center)
+
+	// Panel borders — focus indicated by border color
+	focusedPanelStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(primaryColor)
+
+	unfocusedPanelStyle = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(borderColor)
 
 	// General text
 	mutedStyle = lipgloss.NewStyle().Foreground(mutedColor)
