@@ -1,247 +1,187 @@
 package tui
 
 import (
-	"regexp"
 	"strings"
+	"time"
 
-	"github.com/atotto/clipboard"
-	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/reflow/wordwrap"
 )
 
-// toastMsg is sent by any component to trigger a toast notification.
-// App.Update() catches this and sets the active toast state.
-type toastMsg struct {
-	text       string
-	isErr      bool
-	isProgress bool // in-progress indicator (no "Done:" prefix, accent border)
-}
+// toastType determines the toast behavior and styling.
+type toastType int
 
-// toastModel holds the state for the active toast overlay.
+const (
+	toastSuccess toastType = iota // green, "Done:", 3s auto-dismiss
+	toastWarning                  // amber, "Warn:", 5s auto-dismiss
+	toastError                    // red, "Error:", never auto-dismiss
+)
+
+// toastModel manages the toast overlay.
 type toastModel struct {
 	active       bool
 	text         string
-	isErr        bool
-	isProgress   bool
-	spinner      spinner.Model
-	scrollOffset int // for long error messages
-	width        int // content pane width (updated on WindowSizeMsg)
+	lines        []string
+	toastType    toastType
+	scrollOffset int
+	width        int
 }
 
-// show activates the toast with the given message.
-func (t *toastModel) show(msg toastMsg) {
-	t.active = true
-	t.text = msg.text
-	t.isErr = msg.isErr
-	t.isProgress = msg.isProgress
-	t.scrollOffset = 0
-	if msg.isProgress {
-		sp := spinner.New()
-		sp.Spinner = spinner.Dot
-		sp.Style = lipgloss.NewStyle().Foreground(accentColor)
-		t.spinner = sp
+// toastDismissMsg is sent when the auto-dismiss timer fires.
+type toastDismissMsg struct{}
+
+// toastCopyMsg is sent when the user copies toast text.
+type toastCopyMsg struct {
+	text string
+}
+
+// showToast creates and activates a toast.
+func showToast(text string, tt toastType) toastModel {
+	lines := strings.Split(text, "\n")
+	return toastModel{
+		active:    true,
+		text:      text,
+		lines:     lines,
+		toastType: tt,
 	}
 }
 
-// tickSpinner returns the tea.Cmd to start spinner animation.
-// Should be called after show() when isProgress is true.
-func (t *toastModel) tickSpinner() tea.Cmd {
-	if !t.isProgress {
-		return nil
+// autoDismissCmd returns a command that sends a dismiss message after the
+// appropriate delay, or nil for error toasts (which never auto-dismiss).
+func (m toastModel) autoDismissCmd() tea.Cmd {
+	var dur time.Duration
+	switch m.toastType {
+	case toastSuccess:
+		dur = 3 * time.Second
+	case toastWarning:
+		dur = 5 * time.Second
+	case toastError:
+		return nil // never auto-dismiss
 	}
-	return t.spinner.Tick
+	return tea.Tick(dur, func(time.Time) tea.Msg {
+		return toastDismissMsg{}
+	})
 }
 
-// updateSpinner forwards a spinner tick message and returns the next tick cmd.
-func (t *toastModel) updateSpinner(msg tea.Msg) tea.Cmd {
-	if !t.active || !t.isProgress {
-		return nil
-	}
-	var cmd tea.Cmd
-	t.spinner, cmd = t.spinner.Update(msg)
-	return cmd
-}
-
-// dismiss clears the toast.
-func (t *toastModel) dismiss() {
-	t.active = false
-	t.text = ""
-	t.scrollOffset = 0
-}
-
-// copyToClipboard copies the sanitized error text to the system clipboard.
-// Returns an error message if the copy fails.
-func (t *toastModel) copyToClipboard() string {
-	sanitized := sanitizeForClipboard(t.text)
-	if err := clipboard.WriteAll(sanitized); err != nil {
-		return "Copy failed — clipboard tool not found"
+// prefix returns the toast prefix based on type.
+func (m toastModel) prefix() string {
+	switch m.toastType {
+	case toastSuccess:
+		return "Done: "
+	case toastWarning:
+		return "Warn: "
+	case toastError:
+		return "Error: "
 	}
 	return ""
 }
 
-// isScrollable returns true if the toast content exceeds the visible line limit.
-func (t *toastModel) isScrollable() bool {
-	if !t.active || t.text == "" {
-		return false
+// style returns the text style based on toast type.
+func (m toastModel) style() lipgloss.Style {
+	switch m.toastType {
+	case toastSuccess:
+		return successMsgStyle
+	case toastWarning:
+		return warningStyle
+	case toastError:
+		return errorMsgStyle
 	}
-	innerW := t.width - 8
-	if innerW < 20 {
-		innerW = 20
-	}
-	prefix := "Done: "
-	if t.isErr {
-		prefix = "Error: "
-	} else if t.isProgress {
-		prefix = ""
-	}
-	wrapped := wordwrap.String(prefix+t.text, innerW)
-	return len(strings.Split(wrapped, "\n")) > 5
+	return helpStyle
 }
 
-// clampScroll ensures scrollOffset stays within valid bounds.
-func (t *toastModel) clampScroll() {
-	if t.scrollOffset < 0 {
-		t.scrollOffset = 0
+// Update handles toast input.
+func (m toastModel) Update(msg tea.Msg) (toastModel, tea.Cmd) {
+	if !m.active {
+		return m, nil
 	}
-	innerW := t.width - 8
-	if innerW < 20 {
-		innerW = 20
+
+	switch msg := msg.(type) {
+	case toastDismissMsg:
+		m.active = false
+		return m, nil
+
+	case tea.KeyMsg:
+		// c copies text
+		if key.Matches(msg, keys.Copy) {
+			m.active = false
+			return m, func() tea.Msg {
+				return toastCopyMsg{text: m.text}
+			}
+		}
+		// Esc dismisses any toast
+		if msg.Type == tea.KeyEsc {
+			m.active = false
+			return m, nil
+		}
+		// For error toasts, other keys pass through (toast stays visible)
+		if m.toastType == toastError {
+			// Up/Down scroll for multi-line errors
+			if key.Matches(msg, keys.Up) && m.scrollOffset > 0 {
+				m.scrollOffset--
+			}
+			if key.Matches(msg, keys.Down) && m.scrollOffset < len(m.lines)-5 {
+				m.scrollOffset++
+			}
+			return m, nil
+		}
+		// For success/warning, any key dismisses
+		m.active = false
+		return m, nil
 	}
-	prefix := "Done: "
-	if t.isErr {
-		prefix = "Error: "
-	} else if t.isProgress {
-		prefix = ""
-	}
-	wrapped := wordwrap.String(prefix+t.text, innerW)
-	lines := strings.Split(wrapped, "\n")
-	maxOffset := len(lines) - 5
-	if maxOffset < 0 {
-		maxOffset = 0
-	}
-	if t.scrollOffset > maxOffset {
-		t.scrollOffset = maxOffset
-	}
+
+	return m, nil
 }
 
-// view renders the toast box.
-func (t toastModel) view() string {
-	if !t.active || t.text == "" {
+// View renders the toast overlay.
+func (m toastModel) View() string {
+	if !m.active {
 		return ""
 	}
 
-	// Toast inner width: content pane width minus border/padding (4) minus margin (4)
-	innerW := t.width - 8
-	if innerW < 20 {
-		innerW = 20
-	}
+	s := m.style()
+	prefix := s.Render(m.prefix())
 
-	var prefix string
-	var borderColor lipgloss.AdaptiveColor
-	if t.isErr {
-		prefix = "Error: "
-		borderColor = dangerColor
-	} else if t.isProgress {
-		prefix = t.spinner.View() + " "
-		borderColor = accentColor
-	} else {
-		prefix = "Done: "
-		borderColor = successColor
-	}
-
-	fullText := prefix + t.text
-	wrapped := wordwrap.String(fullText, innerW)
-
-	var content string
-	if t.isProgress {
-		content = wrapped
-	} else if t.isErr {
-		lines := strings.Split(wrapped, "\n")
-		// Error toast: fixed 5 visible lines, scrollable
-		visibleLines := 5
-		if len(lines) <= visibleLines {
-			content = wrapped
-		} else {
-			offset := t.scrollOffset
-			maxOffset := len(lines) - visibleLines
-			if offset > maxOffset {
-				offset = maxOffset
-			}
-			if offset < 0 {
-				offset = 0
-			}
-			end := offset + visibleLines
-			if end > len(lines) {
-				end = len(lines)
-			}
-			content = strings.Join(lines[offset:end], "\n")
-			if offset > 0 {
-				content = renderScrollUp(offset, true) + "\n" + content
-			}
-			if end < len(lines) {
-				content += "\n" + renderScrollDown(len(lines)-end, true)
-			}
+	maxVisible := 5
+	visibleLines := m.lines
+	if len(visibleLines) > maxVisible {
+		end := m.scrollOffset + maxVisible
+		if end > len(visibleLines) {
+			end = len(visibleLines)
 		}
-		content += "\n" + helpStyle.Render("c copy • esc dismiss")
-	} else {
-		lines := strings.Split(wrapped, "\n")
-		visibleLines := 5
-		if len(lines) <= visibleLines {
-			content = wrapped
+		visibleLines = visibleLines[m.scrollOffset:end]
+	}
+
+	// First line gets prefix
+	var rows []string
+	for i, line := range visibleLines {
+		if i == 0 && m.scrollOffset == 0 {
+			row := prefix + s.Render(line)
+			// Add "c copy" right-aligned
+			copyLabel := helpStyle.Render("c copy")
+			gap := m.width - lipgloss.Width(row) - lipgloss.Width(copyLabel) - 4
+			if gap < 1 {
+				gap = 1
+			}
+			rows = append(rows, row+strings.Repeat(" ", gap)+copyLabel)
 		} else {
-			offset := t.scrollOffset
-			maxOffset := len(lines) - visibleLines
-			if offset > maxOffset {
-				offset = maxOffset
-			}
-			if offset < 0 {
-				offset = 0
-			}
-			end := offset + visibleLines
-			if end > len(lines) {
-				end = len(lines)
-			}
-			content = strings.Join(lines[offset:end], "\n")
-			if offset > 0 {
-				content = renderScrollUp(offset, true) + "\n" + content
-			}
-			if end < len(lines) {
-				content += "\n" + renderScrollDown(len(lines)-end, true)
-			}
+			rows = append(rows, "  "+s.Render(line))
 		}
 	}
 
-	style := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
+	// Scroll indicators
+	if m.scrollOffset > 0 {
+		rows = append([]string{helpStyle.Render("  (" + itoa(m.scrollOffset) + " more above)")}, rows...)
+	}
+	if m.scrollOffset+maxVisible < len(m.lines) {
+		below := len(m.lines) - m.scrollOffset - maxVisible
+		rows = append(rows, helpStyle.Render("  ("+itoa(below)+" more below)"))
+	}
+
+	content := strings.Join(rows, "\n")
+	border := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
 		BorderForeground(borderColor).
-		Padding(0, 1).
-		Width(innerW + 4). // account for padding
-		MaxWidth(t.width)
-
-	return style.Render(content)
-}
-
-// sanitizeForClipboard strips sensitive information from error text before copying.
-func sanitizeForClipboard(msg string) string {
-	// Strip absolute file paths
-	pathRe := regexp.MustCompile(`/(?:home|Users)/[^\s:]+`)
-	msg = pathRe.ReplaceAllString(msg, "<path>")
-
-	// Strip git remote URLs (may contain tokens)
-	gitRe := regexp.MustCompile(`https?://[^\s]*\.git\b`)
-	msg = gitRe.ReplaceAllString(msg, "<url>")
-
-	// Strip environment variable values that look like secrets
-	secretRe := regexp.MustCompile(`(?i)(?:_KEY|_SECRET|_TOKEN|_PASSWORD)=\S+`)
-	msg = secretRe.ReplaceAllStringFunc(msg, func(match string) string {
-		idx := strings.Index(match, "=")
-		if idx >= 0 {
-			return match[:idx+1] + "<redacted>"
-		}
-		return match
-	})
-
-	return msg
+		Width(m.width - 2)
+	return border.Render(content)
 }

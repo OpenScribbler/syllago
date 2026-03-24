@@ -1,108 +1,83 @@
-// cli/internal/tui/golden_test.go
 package tui
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/x/ansi"
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
-// tempDirRe matches Go test temp directory paths like /tmp/TestFoo123456789/001.
-// Used to normalize non-deterministic paths in golden file snapshots.
-var tempDirRe = regexp.MustCompile(`/tmp/Test[A-Za-z0-9_]+/\d+`)
-
-// updateGolden controls whether golden files are regenerated.
-// Named "update-golden" to avoid colliding with charmbracelet/x/exp/golden's "-update" flag.
-// Usage: go test -update-golden ./cli/internal/tui/...
 var updateGolden = flag.Bool("update-golden", false, "update golden files")
 
-// stripANSI removes ANSI escape sequences from s.
-// NO_COLOR=1 (set in init()) handles most cases; this is belt-and-suspenders.
-func stripANSI(s string) string {
-	return ansi.Strip(s)
-}
-
-// requireGolden compares actual against a golden file at testdata/<name>.golden.
-// Pass -update to regenerate: go test -update ./cli/internal/tui/...
-func requireGolden(t *testing.T, name string, actual string) {
+// requireGolden compares got against a golden file. If -update-golden is set,
+// it writes got to the golden file instead.
+func requireGolden(t *testing.T, name, got string) {
 	t.Helper()
+
+	// Normalize: strip trailing whitespace per line
+	var normalized []string
+	for _, line := range strings.Split(got, "\n") {
+		normalized = append(normalized, strings.TrimRight(line, " \t"))
+	}
+	got = strings.Join(normalized, "\n")
+
 	goldenPath := filepath.Join("testdata", name+".golden")
 
 	if *updateGolden {
-		if err := os.MkdirAll("testdata", 0o755); err != nil {
-			t.Fatalf("create testdata dir: %v", err)
+		err := os.WriteFile(goldenPath, []byte(got), 0644)
+		if err != nil {
+			t.Fatalf("failed to write golden file: %v", err)
 		}
-		if err := os.WriteFile(goldenPath, []byte(actual), 0o644); err != nil {
-			t.Fatalf("write golden file %s: %v", goldenPath, err)
-		}
-		t.Logf("updated golden: %s", goldenPath)
 		return
 	}
 
 	expected, err := os.ReadFile(goldenPath)
 	if err != nil {
-		t.Fatalf("golden file %s not found — run with -update-golden to create it: %v", goldenPath, err)
+		t.Fatalf("golden file not found: %s\nRun with -update-golden to create it.\n\nGot:\n%s", goldenPath, got)
 	}
 
-	if string(expected) != actual {
-		t.Errorf("golden file mismatch: %s\n\n"+
-			"If this UI change was intentional, update the golden files:\n"+
-			"  go test ./cli/internal/tui/... -update-golden\n"+
-			"  git diff cli/internal/tui/testdata/   # review the changes\n\n"+
-			"Diff:\n%s",
-			goldenPath, diffStrings(string(expected), actual))
+	if got != string(expected) {
+		t.Errorf("output does not match golden file %s\n\nGot:\n%s\n\nExpected:\n%s\n\nTo update:\n  go test ./internal/tui/... -update-golden\n  git diff internal/tui/testdata/",
+			goldenPath, got, string(expected))
 	}
 }
 
-// diffStrings produces a simple line-by-line diff between want and got.
-func diffStrings(want, got string) string {
-	wLines := strings.Split(want, "\n")
-	gLines := strings.Split(got, "\n")
-
-	var sb strings.Builder
-	max := len(wLines)
-	if len(gLines) > max {
-		max = len(gLines)
+func goldenApp(t *testing.T, w, h int) App {
+	t.Helper()
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "alpha-skill", Type: catalog.Skills, Source: "team-rules", Description: "A helpful skill"},
+			{Name: "beta-skill", Type: catalog.Skills, Source: "library"},
+			{Name: "gamma-skill", Type: catalog.Skills, Source: "team-rules"},
+			{Name: "code-reviewer", Type: catalog.Agents, Source: "team-rules", Description: "Reviews code"},
+			{Name: "docs-writer", Type: catalog.Agents, Source: "library"},
+			{Name: "postgres-mcp", Type: catalog.MCP, Source: "team-rules"},
+			{Name: "strict-types", Type: catalog.Rules, Source: "library"},
+			{Name: "pre-commit", Type: catalog.Hooks, Source: "team-rules"},
+		},
 	}
-	for i := 0; i < max; i++ {
-		var w, g string
-		if i < len(wLines) {
-			w = wLines[i]
-		}
-		if i < len(gLines) {
-			g = gLines[i]
-		}
-		if w != g {
-			fmt.Fprintf(&sb, "line %d:\n  want: %q\n  got:  %q\n", i+1, w, g)
-		}
+	provs := []provider.Provider{
+		{Name: "Claude Code", Slug: "claude-code", Detected: true},
+		{Name: "Gemini CLI", Slug: "gemini-cli", Detected: true},
 	}
-	return sb.String()
+	app := NewApp(cat, provs, "v1.0.0", false, nil, &config.Config{}, false, "/tmp/test")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
+	return m.(App)
 }
 
-// normalizeSnapshot replaces non-deterministic content in a rendered TUI snapshot:
-// - Go test temp dir paths (e.g. /tmp/TestFoo123/001) → <TESTDIR>
-// - Trailing whitespace on each line (varies with path length after substitution)
-func normalizeSnapshot(s string) string {
-	s = tempDirRe.ReplaceAllString(s, "<TESTDIR>")
-	lines := strings.Split(s, "\n")
-	for i, line := range lines {
-		lines[i] = strings.TrimRight(line, " ")
-	}
-	return strings.Join(lines, "\n")
+func TestGolden_FullApp_120x40(t *testing.T) {
+	app := goldenApp(t, 120, 40)
+	requireGolden(t, "fullapp-120x40", app.View())
 }
 
-// TestGoldenSmoke verifies the golden infrastructure compiles and runs.
-func TestGoldenSmoke(t *testing.T) {
-	// Just verify the flag is registered and the helpers compile.
-	_ = *updateGolden
-	result := stripANSI("\x1b[31mred\x1b[0m")
-	if result != "red" {
-		t.Fatalf("stripANSI: got %q, want %q", result, "red")
-	}
+func TestGolden_FullApp_80x30(t *testing.T) {
+	app := goldenApp(t, 80, 30)
+	requireGolden(t, "fullapp-80x30", app.View())
 }

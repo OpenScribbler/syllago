@@ -1,79 +1,99 @@
 package tui
 
 import (
-	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/charmbracelet/bubbles/textinput"
-
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
+// searchQueryMsg is sent when the search query changes (character added/removed).
+type searchQueryMsg struct {
+	query string
+}
+
+// searchCancelMsg is sent when the user presses Esc to cancel search.
+type searchCancelMsg struct{}
+
+// searchConfirmMsg is sent when the user presses Enter to confirm the filter.
+type searchConfirmMsg struct {
+	query string
+}
+
 type searchModel struct {
-	input      textinput.Model
-	active     bool
-	matchCount int // -1 = not showing count
+	active bool
+	query  string
+	width  int
 }
 
 func newSearchModel() searchModel {
-	ti := textinput.New()
-	ti.Placeholder = "type to search..."
-	ti.Prompt = searchPromptStyle.Render("Search: ")
-	ti.CharLimit = 50
-	return searchModel{input: ti, matchCount: -1}
+	return searchModel{}
 }
 
-func (m searchModel) activated() searchModel {
+func (m *searchModel) activate() {
 	m.active = true
-	m.input.Focus()
-	return m
+	m.query = ""
 }
 
-func (m searchModel) deactivated() searchModel {
+func (m *searchModel) deactivate() {
 	m.active = false
-	m.matchCount = -1
-	m.input.Blur()
-	m.input.SetValue("")
-	return m
 }
 
-func (m searchModel) Update(msg tea.Msg) (searchModel, tea.Cmd) {
+// Update handles key events when the search bar is active.
+// When inactive, it returns nil to signal no message was handled.
+func (m *searchModel) Update(msg tea.Msg) tea.Cmd {
 	if !m.active {
-		return m, nil
+		return nil
 	}
-	var cmd tea.Cmd
-	m.input, cmd = m.input.Update(msg)
-	return m, cmd
+
+	keyMsg, ok := msg.(tea.KeyMsg)
+	if !ok {
+		return nil
+	}
+
+	switch keyMsg.Type {
+	case tea.KeyEsc:
+		m.deactivate()
+		return func() tea.Msg { return searchCancelMsg{} }
+
+	case tea.KeyEnter:
+		q := m.query
+		m.deactivate()
+		return func() tea.Msg { return searchConfirmMsg{query: q} }
+
+	case tea.KeyBackspace:
+		if len(m.query) > 0 {
+			m.query = m.query[:len(m.query)-1]
+		}
+		return func() tea.Msg { return searchQueryMsg{query: m.query} }
+
+	case tea.KeyRunes:
+		m.query += string(keyMsg.Runes)
+		return func() tea.Msg { return searchQueryMsg{query: m.query} }
+	}
+
+	return nil
 }
 
+// View renders the search bar when active. Returns empty string when inactive.
 func (m searchModel) View() string {
 	if !m.active {
 		return ""
 	}
-	v := m.input.View()
-	if m.matchCount >= 0 {
-		v += " " + helpStyle.Render(fmt.Sprintf("(%d matches)", m.matchCount))
-	}
-	return v
+	return labelStyle.Render("/") + " " + valueStyle.Render(m.query+"\u2588")
 }
 
-func (m searchModel) query() string {
-	return strings.TrimSpace(m.input.Value())
-}
-
-// filterItems returns items matching the search query (case-insensitive substring match).
+// filterItems returns items whose Name contains query (case-insensitive).
+// Returns all items when query is empty.
 func filterItems(items []catalog.ContentItem, query string) []catalog.ContentItem {
 	if query == "" {
 		return items
 	}
-	q := strings.ToLower(query)
+	lower := strings.ToLower(query)
 	var result []catalog.ContentItem
 	for _, item := range items {
-		if strings.Contains(strings.ToLower(item.Name), q) ||
-			strings.Contains(strings.ToLower(item.Description), q) ||
-			strings.Contains(strings.ToLower(item.Provider), q) {
+		if strings.Contains(strings.ToLower(item.Name), lower) {
 			result = append(result, item)
 		}
 	}

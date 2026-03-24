@@ -1,627 +1,316 @@
 package tui
 
 import (
-	"fmt"
-	"os"
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
-	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
 
-// ---------------------------------------------------------------------------
-// displayName tests
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// truncate tests
-// ---------------------------------------------------------------------------
-
-func TestTermWidth_Default(t *testing.T) {
-	m := itemsModel{width: 0}
-	if m.termWidth() != 80 {
-		t.Errorf("termWidth() = %d, want 80", m.termWidth())
+func testItems() []catalog.ContentItem {
+	return []catalog.ContentItem{
+		{Name: "alpha-skill", Type: catalog.Skills, Source: "team-rules"},
+		{Name: "beta-skill", Type: catalog.Skills, Source: "library"},
+		{Name: "gamma-skill", Type: catalog.Skills, Source: "project"},
+		{Name: "delta-skill", Type: catalog.Skills, Source: "my-registry"},
+		{Name: "epsilon-skill", Type: catalog.Skills, Source: "global"},
 	}
 }
 
-func TestSelectedItem_Empty(t *testing.T) {
-	m := itemsModel{items: nil}
-	got := m.selectedItem()
-	if got.Name != "" {
-		t.Errorf("selectedItem() on empty items should return zero ContentItem, got %q", got.Name)
-	}
-}
+func TestItemsModel_Navigation(t *testing.T) {
+	t.Parallel()
 
-func TestTruncate(t *testing.T) {
 	tests := []struct {
-		s    string
-		max  int
-		want string
+		name       string
+		key        tea.KeyMsg
+		wantCursor int
 	}{
-		{"hello", 10, "hello"},
-		{"hello world", 8, "hello..."},
-		{"hello", 5, "hello"},
-		{"ab", 1, "a"},
-		{"abcdef", 3, "abc"},
-		{"", 5, ""},
-		{"hello", 0, ""},
-		{"hello", -1, ""},
-		{"abcdefgh", 4, "a..."},
+		{
+			name:       "down moves cursor",
+			key:        tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}},
+			wantCursor: 1,
+		},
+		{
+			name:       "up at top stays at 0",
+			key:        tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}},
+			wantCursor: 0,
+		},
+		{
+			name:       "end goes to last item",
+			key:        tea.KeyMsg{Type: tea.KeyEnd},
+			wantCursor: 4,
+		},
+		{
+			name:       "home goes to first item",
+			key:        tea.KeyMsg{Type: tea.KeyHome},
+			wantCursor: 0,
+		},
 	}
+
 	for _, tt := range tests {
-		t.Run(fmt.Sprintf("%q/%d", tt.s, tt.max), func(t *testing.T) {
-			got := truncate(tt.s, tt.max)
-			if got != tt.want {
-				t.Errorf("truncate(%q, %d) = %q, want %q", tt.s, tt.max, got, tt.want)
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			m := newItemsModel(testItems(), catalog.Skills)
+			m.width = 80
+			m.height = 20
+
+			updated, _ := m.Update(tt.key)
+			if updated.cursor != tt.wantCursor {
+				t.Errorf("cursor = %d, want %d", updated.cursor, tt.wantCursor)
 			}
 		})
 	}
 }
 
-func TestDisplayName(t *testing.T) {
-	t.Run("uses DisplayName when set", func(t *testing.T) {
-		item := catalog.ContentItem{Name: "raw-name", DisplayName: "Pretty Name"}
-		if got := displayName(item); got != "Pretty Name" {
-			t.Errorf("displayName() = %q, want %q", got, "Pretty Name")
+func TestItemsModel_ScrollTriggered(t *testing.T) {
+	t.Parallel()
+
+	m := newItemsModel(testItems(), catalog.Skills)
+	m.width = 80
+	m.height = 5 // title(1) + header(1) + 3 visible items
+
+	// Move cursor down past visible area
+	for i := 0; i < 4; i++ {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	}
+
+	if m.scrollOffset == 0 {
+		t.Error("expected scroll offset > 0 when cursor moves past visible area")
+	}
+	if m.cursor != 4 {
+		t.Errorf("cursor = %d, want 4", m.cursor)
+	}
+}
+
+func TestItemsModel_EmptyList(t *testing.T) {
+	t.Parallel()
+
+	m := newItemsModel(nil, catalog.Skills)
+	m.width = 80
+	m.height = 20
+
+	// Should not panic
+	view := m.View()
+	if !strings.Contains(view, "Skills (0)") {
+		t.Error("empty list should show count of 0")
+	}
+
+	// Navigation on empty list should not panic
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if cmd != nil {
+		t.Error("navigation on empty list should not emit a command")
+	}
+	if updated.cursor != 0 {
+		t.Errorf("cursor = %d, want 0 on empty list", updated.cursor)
+	}
+}
+
+func TestItemsModel_SelectedItem(t *testing.T) {
+	t.Parallel()
+
+	t.Run("non-empty", func(t *testing.T) {
+		t.Parallel()
+		m := newItemsModel(testItems(), catalog.Skills)
+		item := m.selectedItem()
+		if item == nil {
+			t.Fatal("selectedItem() returned nil for non-empty list")
+		}
+		if item.Name != "alpha-skill" {
+			t.Errorf("selectedItem().Name = %s, want alpha-skill", item.Name)
 		}
 	})
-	t.Run("falls back to Name", func(t *testing.T) {
-		item := catalog.ContentItem{Name: "raw-name"}
-		if got := displayName(item); got != "raw-name" {
-			t.Errorf("displayName() = %q, want %q", got, "raw-name")
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+		m := newItemsModel(nil, catalog.Skills)
+		if m.selectedItem() != nil {
+			t.Error("selectedItem() should return nil for empty list")
 		}
 	})
 }
 
-func TestItemsNavigationUpDown(t *testing.T) {
-	app := testApp(t)
-	// Enter Skills (cursor=0, first type)
-	m, _ := app.Update(keyEnter)
-	app = m.(App)
-	assertScreen(t, app, screenItems)
+func TestItemsModel_RenderWide(t *testing.T) {
+	t.Parallel()
 
-	nItems := len(app.items.items)
-	if nItems < 2 {
-		t.Fatalf("expected at least 2 skill items, got %d", nItems)
+	m := newItemsModel(testItems(), catalog.Skills)
+	m.width = 80
+	m.height = 20
+
+	view := m.View()
+
+	// Should show title with count
+	if !strings.Contains(view, "Skills (5)") {
+		t.Error("view should contain 'Skills (5)' title")
 	}
 
-	// Move down
-	app = pressN(app, keyDown, 1)
-	if app.items.cursor != 1 {
-		t.Fatalf("expected cursor 1, got %d", app.items.cursor)
+	// Should show column headers
+	if !strings.Contains(view, "Name") || !strings.Contains(view, "Source") {
+		t.Error("wide view should show Name and Source headers")
 	}
 
-	// Bounds: can't go past last item
-	app = pressN(app, keyDown, nItems+5)
-	if app.items.cursor != nItems-1 {
-		t.Fatalf("expected cursor clamped at %d, got %d", nItems-1, app.items.cursor)
+	// Should show items with source
+	if !strings.Contains(view, "alpha-skill") {
+		t.Error("view should contain item names")
+	}
+	if !strings.Contains(view, "team-rules") {
+		t.Error("wide view should show source column")
 	}
 
-	// Navigate back up
-	app = pressN(app, keyUp, nItems+5)
-	if app.items.cursor != 0 {
-		t.Fatalf("expected cursor 0 after up, got %d", app.items.cursor)
-	}
-}
-
-func TestItemsEnterOpensDetail(t *testing.T) {
-	app := testApp(t)
-	m, _ := app.Update(keyEnter) // → items (Skills)
-	app = m.(App)
-	assertScreen(t, app, screenItems)
-
-	selectedName := app.items.selectedItem().Name
-	m, _ = app.Update(keyEnter) // → detail
-	app = m.(App)
-	assertScreen(t, app, screenDetail)
-
-	if app.detail.item.Name != selectedName {
-		t.Fatalf("expected detail for %q, got %q", selectedName, app.detail.item.Name)
+	// Should have cursor prefix on first item
+	if !strings.Contains(view, " > ") {
+		t.Error("view should show cursor prefix '>' on selected item")
 	}
 }
 
-func TestItemsBackGoesToCategory(t *testing.T) {
-	app := testApp(t)
-	m, _ := app.Update(keyEnter) // → items (focus=content)
-	app = m.(App)
-	assertScreen(t, app, screenItems)
+func TestItemsModel_RenderNarrow(t *testing.T) {
+	t.Parallel()
 
-	m, _ = app.Update(keyEsc) // Single Esc: back to category screen
-	app = m.(App)
-	if app.screen != screenCategory {
-		t.Fatalf("expected screen=screenCategory after Esc from items, got %d", app.screen)
+	m := newItemsModel(testItems(), catalog.Skills)
+	m.width = 35 // < 40, should hide Source column
+	m.height = 20
+
+	view := m.View()
+
+	// Should show Name header but not Source
+	if !strings.Contains(view, "Name") {
+		t.Error("narrow view should show Name header")
 	}
-	if app.focus != focusSidebar {
-		t.Fatalf("expected focus=focusSidebar after Esc from items, got %d", app.focus)
+
+	// Source column header should be absent
+	lines := strings.Split(view, "\n")
+	headerLine := ""
+	if len(lines) > 1 {
+		headerLine = lines[1]
+	}
+	if strings.Contains(headerLine, "Source") {
+		t.Error("narrow view (width < 40) should NOT show Source header")
 	}
 }
 
-func TestQFromItemsNavigatesBack(t *testing.T) {
-	app := testApp(t)
-	m, _ := app.Update(keyEnter) // → items (focus=content)
-	app = m.(App)
-	assertScreen(t, app, screenItems)
+func TestItemsModel_SelectionMessage(t *testing.T) {
+	t.Parallel()
 
-	// q from content focus: synthesizes Esc → goes back to category screen
-	m, _ = app.Update(keyRune('q'))
-	app = m.(App)
-	if app.screen != screenCategory {
-		t.Fatalf("expected screen=screenCategory after q from items, got %d", app.screen)
-	}
-	// q from category/sidebar should quit
-	_, cmd := app.Update(keyRune('q'))
+	m := newItemsModel(testItems(), catalog.Skills)
+	m.width = 80
+	m.height = 20
+
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyDown})
 	if cmd == nil {
-		t.Fatal("q from sidebar should produce quit command")
+		t.Fatal("expected a command when cursor moves")
+	}
+
+	msg := cmd()
+	sel, ok := msg.(itemSelectedMsg)
+	if !ok {
+		t.Fatalf("expected itemSelectedMsg, got %T", msg)
+	}
+	if sel.index != 1 {
+		t.Errorf("itemSelectedMsg.index = %d, want 1", sel.index)
+	}
+	if sel.item.Name != "beta-skill" {
+		t.Errorf("itemSelectedMsg.item.Name = %s, want beta-skill", sel.item.Name)
 	}
 }
 
-func TestQFromDetailNavigatesBack(t *testing.T) {
-	app := navigateToDetail(t, catalog.Skills)
-	m, _ := app.Update(keyRune('q'))
-	app = m.(App)
-	assertScreen(t, app, screenItems)
-}
+func TestItemsModel_NoMessageWhenCursorUnchanged(t *testing.T) {
+	t.Parallel()
 
-func TestItemsEmptyList(t *testing.T) {
-	app := testApp(t)
-	// Navigate to a type with no items (Commands has 1 provider-specific item,
-	// but let's construct an empty case manually)
-	emptyItems := newItemsModel(catalog.Skills, nil, nil, "/tmp")
-	emptyItems.width = 80
-	emptyItems.height = 30
-	app.items = emptyItems
-	app.screen = screenItems
-	app.focus = focusContent
-
-	view := app.View()
-	assertContains(t, view, "No items found")
-
-	// Enter on empty list shouldn't crash
-	m, _ := app.Update(keyEnter)
-	app = m.(App)
-	// Should still be on items screen (enter does nothing with empty list)
-	assertScreen(t, app, screenItems)
-}
-
-func TestItemsScrollIndicators(t *testing.T) {
-	// Create a large number of items to force scrolling
-	var items []catalog.ContentItem
-	for i := 0; i < 50; i++ {
-		items = append(items, catalog.ContentItem{
-			Name:        "skill-" + string(rune('a'+i%26)) + string(rune('0'+i/26)),
-			Description: "Description for item",
-			Type:        catalog.Skills,
-			Path:        "/tmp/items/" + string(rune(i)),
-		})
-	}
-
-	app := testApp(t)
-	app.items = newItemsModel(catalog.Skills, items, nil, "/tmp")
-	app.items.width = app.width - sidebarWidth - 1
-	app.items.height = app.panelHeight()
-	app.screen = screenItems
-	app.focus = focusContent
-
-	// At the top, no "above" indicator but should have "below" indicator
-	view := app.View()
-	assertNotContains(t, view, "more above")
-	assertContains(t, view, "more below")
-
-	// Navigate down past the visible area
-	app = pressN(app, keyDown, 40)
-	view = app.View()
-	assertContains(t, view, "more above")
-}
-
-func TestItemsScrollShowsCounts(t *testing.T) {
-	items := make([]catalog.ContentItem, 50)
-	for i := range items {
-		items[i] = catalog.ContentItem{Name: fmt.Sprintf("item-%02d", i), Type: catalog.Skills}
-	}
-	m := newItemsModel(catalog.Skills, items, nil, "/tmp")
+	m := newItemsModel(testItems(), catalog.Skills)
 	m.width = 80
-	m.height = 10 // small height forces scrolling
+	m.height = 20
 
-	// Navigate to bottom
-	for i := 0; i < 40; i++ {
-		m, _ = m.Update(keyDown)
+	// Pressing up at top should not change cursor and should not emit
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	if cmd != nil {
+		t.Error("should not emit a command when cursor doesn't move")
 	}
-
-	view := m.View()
-	assertContains(t, view, "more above")
-	// Should show a number, not just generic text
-	assertNotContains(t, view, "(more items above)")
 }
 
-func TestItemsProviderColumn(t *testing.T) {
-	app := testApp(t)
-	// Navigate to Rules (provider-specific type)
-	nTypes := sidebarContentCount()
-	// Rules is one of the types — find its index
-	for i, ct := range catalog.AllContentTypes() {
-		if ct == catalog.Rules {
-			app = pressN(app, keyDown, i)
-			break
-		}
-		_ = nTypes // suppress unused
-	}
-	m, _ := app.Update(keyEnter)
-	app = m.(App)
-	assertScreen(t, app, screenItems)
+func TestItemsModel_PageUpDown(t *testing.T) {
+	t.Parallel()
 
-	if len(app.items.items) == 0 {
-		t.Fatal("expected at least one rule item")
-	}
-
-	view := app.View()
-	// Provider column header should appear
-	assertContains(t, view, "Provider")
-	// Provider name should appear for the rule item
-	assertContains(t, view, "Claude Code")
-}
-
-func TestItemsLibraryPrefix(t *testing.T) {
-	app := navigateToLibraryItems(t)
-
-	if len(app.items.items) == 0 {
-		t.Fatal("expected at least one library item")
-	}
-
-	// In Library view, the [LIBRARY] badge should be hidden (redundant)
-	view := app.View()
-	assertNotContains(t, view, "[LIBRARY]")
-}
-
-func TestItemsSearchResultsTypeTag(t *testing.T) {
-	app := testApp(t)
-	// Simulate search results view
-	items := []catalog.ContentItem{
-		{Name: "a-skill", Type: catalog.Skills, Description: "Skill item"},
-		{Name: "a-rule", Type: catalog.Rules, Description: "Rule item", Provider: "claude-code"},
-	}
-	app.items = newItemsModel(catalog.SearchResults, items, app.providers, app.catalog.RepoRoot)
-	app.items.width = 80
-	app.items.height = 30
-	app.screen = screenItems
-	app.focus = focusContent
-
-	view := app.View()
-	assertContains(t, view, "Search Results")
-	// Type tags should be shown for mixed-type views
-	assertContains(t, view, catalog.Skills.Label())
-}
-
-func TestItemsLibraryTypeTag(t *testing.T) {
-	app := navigateToLibraryItems(t)
-
-	if len(app.items.items) == 0 {
-		t.Fatal("expected at least one Library item")
-	}
-
-	view := app.View()
-	// Type label should appear in the breadcrumb/header
-	assertContains(t, view, catalog.Skills.Label())
-}
-
-func TestItemsHomeEnd(t *testing.T) {
-	var items []catalog.ContentItem
-	for i := 0; i < 20; i++ {
-		items = append(items, catalog.ContentItem{
-			Name: fmt.Sprintf("item-%02d", i),
-			Type: catalog.Skills,
-			Path: fmt.Sprintf("/tmp/items/%d", i),
-		})
-	}
-	m := newItemsModel(catalog.Skills, items, nil, "/tmp")
+	m := newItemsModel(testItems(), catalog.Skills)
 	m.width = 80
-	m.height = 30
+	m.height = 5 // visibleCount = 3
 
-	// End jumps to last
-	m, _ = m.Update(keyRune('G'))
-	if m.cursor != 19 {
-		t.Fatalf("expected cursor 19 after End/G, got %d", m.cursor)
+	// PageDown should jump by visibleCount
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyPgDown})
+	if updated.cursor != 3 {
+		t.Errorf("after PageDown, cursor = %d, want 3", updated.cursor)
 	}
 
-	// Home jumps to first
-	m, _ = m.Update(keyRune('g'))
-	if m.cursor != 0 {
-		t.Fatalf("expected cursor 0 after Home/g, got %d", m.cursor)
+	// PageDown again should clamp to last item
+	updated, _ = updated.Update(tea.KeyMsg{Type: tea.KeyPgDown})
+	if updated.cursor != 4 {
+		t.Errorf("after second PageDown, cursor = %d, want 4 (clamped)", updated.cursor)
+	}
+
+	// PageUp should jump back
+	updated, _ = updated.Update(tea.KeyMsg{Type: tea.KeyPgUp})
+	if updated.cursor != 1 {
+		t.Errorf("after PageUp, cursor = %d, want 1", updated.cursor)
 	}
 }
 
-func TestTableHeaderStyleIsBold(t *testing.T) {
-	if !tableHeaderStyle.GetBold() {
-		t.Fatal("tableHeaderStyle should be bold")
-	}
-}
+func TestItemsModel_MouseClick(t *testing.T) {
+	t.Parallel()
 
-func TestLibraryEmptyGuidance(t *testing.T) {
-	m := newItemsModel(catalog.Library, nil, nil, "/tmp")
+	m := newItemsModel(testItems(), catalog.Skills)
 	m.width = 80
-	m.height = 30
+	m.height = 20
 
-	view := m.View()
-	assertContains(t, view, "Add")
-	assertContains(t, view, "syllago add")
-}
+	// Click on row index 1 (Y=3 because title=0, header=1, first item=2, second item=3)
+	updated, cmd := m.Update(tea.MouseMsg{
+		Button: tea.MouseButtonLeft,
+		Action: tea.MouseActionRelease,
+		Y:      3,
+	})
 
-func TestItemsCursorIsASCII(t *testing.T) {
-	app := testApp(t)
-	app = pressN(app, keyEnter, 1) // → items
-	view := app.items.View()
-
-	assertContains(t, view, " > ")
-	assertNotContains(t, view, "▸")
-}
-
-func TestItemsCursorPreserved(t *testing.T) {
-	app := testApp(t)
-	m, _ := app.Update(keyEnter) // → items (Skills)
-	app = m.(App)
-	assertScreen(t, app, screenItems)
-
-	if len(app.items.items) < 2 {
-		t.Skip("need at least 2 items to test cursor preservation")
+	if updated.cursor != 1 {
+		t.Errorf("cursor = %d, want 1 after clicking row 1", updated.cursor)
 	}
-
-	// Move cursor to second item
-	app = pressN(app, keyDown, 1)
-	if app.items.cursor != 1 {
-		t.Fatalf("expected cursor 1, got %d", app.items.cursor)
-	}
-
-	// Enter detail
-	m, _ = app.Update(keyEnter)
-	app = m.(App)
-	assertScreen(t, app, screenDetail)
-
-	// Go back to items
-	m, _ = app.Update(keyEsc)
-	app = m.(App)
-	assertScreen(t, app, screenItems)
-
-	// Cursor should be preserved at position 1
-	if app.items.cursor != 1 {
-		t.Fatalf("expected cursor preserved at 1, got %d", app.items.cursor)
+	if cmd == nil {
+		t.Error("expected selection message after mouse click")
 	}
 }
 
-func TestItemsTruncation(t *testing.T) {
-	longName := "this-is-a-very-long-skill-name-that-should-be-truncated-in-the-view"
-	longDesc := "This is a very long description that exceeds the available width and should be truncated with an ellipsis at the end"
-	items := []catalog.ContentItem{
-		{Name: longName, Description: longDesc, Type: catalog.Skills, Path: "/tmp/long"},
-	}
-
-	app := testApp(t)
-	app.items = newItemsModel(catalog.Skills, items, nil, "/tmp")
-	app.items.width = 60 // narrow terminal
-	app.items.height = 30
-	app.screen = screenItems
-	app.focus = focusContent
-
-	view := app.View()
-	// The view should not be wider than what's reasonable
-	// (truncation with "..." should happen)
-	for _, line := range splitLines(view) {
-		if len(line) > 80 { // some tolerance for ANSI codes in non-NO_COLOR envs
-			// Just verify truncation happened — the "..." suffix
-			if len(longName) > 60 {
-				assertContains(t, view, "...")
-			}
-			break
-		}
-	}
-}
-
-func TestItemsHooksMatrix(t *testing.T) {
-	tmp := t.TempDir()
-
-	// Create a hook item with a real hook.json so LoadHookData succeeds.
-	hookDir := tmp + "/hooks/claude-code/simple-hook"
-	if err := os.MkdirAll(hookDir, 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo test"}]}`
-	if err := os.WriteFile(hookDir+"/hook.json", []byte(hookJSON), 0o644); err != nil {
-		t.Fatalf("write hook.json: %v", err)
-	}
+func TestItemsModel_EmptySource(t *testing.T) {
+	t.Parallel()
 
 	items := []catalog.ContentItem{
-		{
-			Name:        "simple-hook",
-			Description: "A simple hook for testing",
-			Type:        catalog.Hooks,
-			Path:        hookDir,
-			Provider:    "claude-code",
-		},
+		{Name: "no-source-item", Type: catalog.Skills, Source: ""},
 	}
-
-	// Width=80 uses abbreviated headers (< 101)
-	m := newItemsModel(catalog.Hooks, items, nil, tmp)
+	m := newItemsModel(items, catalog.Skills)
 	m.width = 80
-	m.height = 30
+	m.height = 20
 
 	view := m.View()
-
-	// Abbreviated matrix column headers should appear at width 80
-	assertContains(t, view, "CC")
-	assertContains(t, view, "GC")
-	assertContains(t, view, "Cp")
-	assertContains(t, view, "Ki")
-
-	// Provider header should NOT appear (matrix replaces it)
-	assertNotContains(t, view, "Provider")
-
-	// At least one compat symbol should appear
-	hasSymbol := strings.Contains(view, "✓") ||
-		strings.Contains(view, "~") ||
-		strings.Contains(view, "!") ||
-		strings.Contains(view, "✗")
-	if !hasSymbol {
-		t.Fatal("expected at least one compat symbol in hooks matrix view")
+	if !strings.Contains(view, "local") {
+		t.Error("items with empty source should display 'local'")
 	}
 }
 
-func TestItemsHooksMatrixAbbrHeaders(t *testing.T) {
-	tmp := t.TempDir()
+func TestItemsModel_ScrollIndicators(t *testing.T) {
+	t.Parallel()
 
-	hookDir := tmp + "/hooks/claude-code/simple-hook"
-	if err := os.MkdirAll(hookDir, 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo test"}]}`
-	if err := os.WriteFile(hookDir+"/hook.json", []byte(hookJSON), 0o644); err != nil {
-		t.Fatalf("write hook.json: %v", err)
-	}
-
-	items := []catalog.ContentItem{
-		{
-			Name:        "simple-hook",
-			Description: "A simple hook for testing",
-			Type:        catalog.Hooks,
-			Path:        hookDir,
-			Provider:    "claude-code",
-		},
-	}
-
-	// Narrow terminal (< 101 cols) should use abbreviated headers
-	m := newItemsModel(catalog.Hooks, items, nil, tmp)
+	m := newItemsModel(testItems(), catalog.Skills)
 	m.width = 80
-	m.height = 30
+	m.height = 5 // visibleCount = 3, so 2 items hidden below
 
 	view := m.View()
-	assertContains(t, view, "CC")
-	assertContains(t, view, "GC")
-	assertContains(t, view, "Cp")
-	assertContains(t, view, "Ki")
-	assertNotContains(t, view, "Provider")
-}
-
-func TestItemsHooksMatrixFullHeaders(t *testing.T) {
-	tmp := t.TempDir()
-
-	hookDir := tmp + "/hooks/claude-code/simple-hook"
-	if err := os.MkdirAll(hookDir, 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo test"}]}`
-	if err := os.WriteFile(hookDir+"/hook.json", []byte(hookJSON), 0o644); err != nil {
-		t.Fatalf("write hook.json: %v", err)
+	if !strings.Contains(view, "more below") {
+		t.Error("should show 'more below' indicator when items are hidden below")
 	}
 
-	items := []catalog.ContentItem{
-		{
-			Name:        "simple-hook",
-			Description: "A simple hook for testing",
-			Type:        catalog.Hooks,
-			Path:        hookDir,
-			Provider:    "claude-code",
-		},
+	// Scroll to bottom
+	for i := 0; i < 4; i++ {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
 	}
 
-	// Wide terminal (>= 101 cols) should use full headers
-	m := newItemsModel(catalog.Hooks, items, nil, tmp)
-	m.width = 120
-	m.height = 30
-
-	view := m.View()
-	assertContains(t, view, "Claude")
-	assertContains(t, view, "Gemini")
-	assertContains(t, view, "Copilot")
-	assertContains(t, view, "Kiro")
-	assertNotContains(t, view, "Provider")
-}
-
-// splitLines splits a string into lines, handling both \n and \r\n.
-func splitLines(s string) []string {
-	return split(s, "\n")
-}
-
-func split(s, sep string) []string {
-	var result []string
-	for {
-		i := indexOf(s, sep)
-		if i < 0 {
-			result = append(result, s)
-			break
-		}
-		result = append(result, s[:i])
-		s = s[i+len(sep):]
+	view = m.View()
+	if !strings.Contains(view, "more above") {
+		t.Error("should show 'more above' indicator when items are hidden above")
 	}
-	return result
-}
-
-func indexOf(s, substr string) int {
-	for i := 0; i+len(substr) <= len(s); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
-}
-
-func TestExampleBadgeRendered(t *testing.T) {
-	items := []catalog.ContentItem{
-		{
-			Name:        "example-skill",
-			Description: "An example skill",
-			Type:        catalog.Skills,
-			Path:        "/tmp/skills/example-skill",
-			Meta:        &metadata.Meta{Tags: []string{"example"}},
-		},
-		{
-			Name:        "normal-skill",
-			Description: "A normal skill",
-			Type:        catalog.Skills,
-			Path:        "/tmp/skills/normal-skill",
-		},
-	}
-
-	m := newItemsModel(catalog.Skills, items, nil, "/tmp")
-	m.width = 100
-	m.height = 30
-
-	view := m.View()
-	assertContains(t, view, "[EXAMPLE]")
-	// The normal skill should NOT have the example badge
-	// (It has no meta at all, so no badge)
-	assertNotContains(t, view, "[BUILT-IN]")
-}
-
-func TestHiddenCountInFooter(t *testing.T) {
-	items := []catalog.ContentItem{
-		{
-			Name:        "visible-skill",
-			Description: "Visible",
-			Type:        catalog.Skills,
-			Path:        "/tmp/skills/visible",
-		},
-	}
-	m := newItemsModel(catalog.Skills, items, nil, "/tmp")
-	m.width = 100
-	m.height = 30
-	m.ctx.hiddenCount = 3
-
-	help := m.helpText()
-	assertContains(t, help, "H show 3 hidden")
-}
-
-func TestNoHiddenCountWhenZero(t *testing.T) {
-	items := []catalog.ContentItem{
-		{
-			Name:        "visible-skill",
-			Description: "Visible",
-			Type:        catalog.Skills,
-			Path:        "/tmp/skills/visible",
-		},
-	}
-	m := newItemsModel(catalog.Skills, items, nil, "/tmp")
-	m.width = 100
-	m.height = 30
-	m.ctx.hiddenCount = 0
-
-	help := m.helpText()
-	assertNotContains(t, help, "hidden")
 }

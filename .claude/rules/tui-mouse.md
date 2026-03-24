@@ -1,6 +1,6 @@
 ---
 paths:
-  - "cli/internal/tui/**"
+  - "cli/internal/tui_v1/**"
 ---
 
 # Mouse Support Requirements
