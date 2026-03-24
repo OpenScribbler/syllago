@@ -11,7 +11,7 @@ Complete reference for building syllago's TUI. Based on deep research into super
 - `docs/research/go-tui-patterns.md` — architecture and libraries
 - `docs/research/tui-visual-patterns.md` — visual design patterns
 - `docs/research/tui-testing-patterns.md` — testing strategy
-- `docs/research/tui-messaging-patterns.md` — error/success/loading UX (pending)
+- `docs/research/tui-messaging-patterns.md` — error/success/loading UX
 
 ---
 
@@ -19,11 +19,11 @@ Complete reference for building syllago's TUI. Based on deep research into super
 
 ### Model Ownership (Top-Down Tree)
 
-Root model owns child models as struct fields. `Update()` routes messages to the active child. `View()` composes children's rendered strings. This is the standard pattern used by superfile, gh-dash, and most Bubble Tea apps of similar complexity.
+Root model owns child models as struct fields. `Update()` routes messages to the active child. `View()` composes children's rendered strings.
 
 ```go
 type App struct {
-    topBar    topBarModel
+    topBar    topBarModel     // two-tier tab navigation
     metadata  metadataModel
     explorer  explorerModel   // items list + content zone
     gallery   galleryModel    // card grid + contents sidebar
@@ -36,8 +36,6 @@ type App struct {
 ```
 
 ### Message Routing Priority
-
-Every project follows the same priority. No exceptions:
 
 1. **Global keys** (Ctrl+C quit, ? help) — always handled first
 2. **Modal** — when active, consumes ALL input except global keys
@@ -61,8 +59,6 @@ Tab cycles focus between zones. Modal/toast override focus when active.
 
 ### Component Interface
 
-Every TUI component follows this pattern (adapted from Soft Serve):
-
 ```go
 type Component interface {
     Init() tea.Cmd
@@ -74,245 +70,193 @@ type Component interface {
 
 Parent calls `SetSize()` on children during `WindowSizeMsg` handling. Children never calculate their own size.
 
-### Shared Context
+---
 
-Carry dimensions and styles to all components without message passing:
+## Navigation — Two-Tier Tabs
+
+**Dropdowns were abandoned** — they're a GUI pattern that fights the terminal. The topbar uses a two-tier tab bar inside a bordered frame instead.
+
+### Layout
+
+```
+╭──syllago─────────────────────────────────────────────────────────────────────╮
+│               [1] Collections      [2] Content      [3] Config               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│   Library     Registries     Loadouts              [a] Add      [n] Create   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+```
+
+- **Row 1 (groups):** `[1] Collections  [2] Content  [3] Config` — centered, button-styled with backgrounds
+- **Separator:** `├────────┤` connecting to left/right border
+- **Row 2 (sub-tabs + actions):** sub-tabs left-aligned (text-only), action buttons right-aligned (background-styled)
+- **Top border:** `╭──syllago──...╮` with colored logo inline (mint `syl` + viola `lago`)
+- **Height:** always 5 lines (border + groups + separator + tabs + border)
+
+### Groups and Sub-Tabs
+
+| Group | Hotkey | Sub-Tabs | Actions |
+|-------|--------|----------|---------|
+| Collections | `1` | Library, Registries, Loadouts | [a] Add, [n] Create |
+| Content | `2` | Skills, Agents, MCP, Rules, Hooks, Commands | [a] Add, [n] Create |
+| Config | `3` | Settings, Sandbox | (none) |
+
+**Default on launch:** Collections > Library (everything at a glance).
+
+### Keyboard
+
+| Key | Action |
+|-----|--------|
+| `1` / `2` / `3` | Switch group (resets sub-tab to first) |
+| `h` / `l` (or left/right) | Cycle sub-tabs within active group (wraps) |
+| `a` | Add action (context-sensitive to current group+tab) |
+| `n` | Create action (context-sensitive to current group+tab) |
+
+### Mouse
+
+Click any group tab, sub-tab, or action button. Zone IDs: `group-N`, `tab-G-N`, `btn-add`, `btn-create`.
+
+### Messages
 
 ```go
-type Common struct {
-    Width, Height int
-    Styles        *Styles
-    Zone          *zone.Manager  // bubblezone for mouse hit-testing
-}
+tabChangedMsg{group, tab, tabLabel}   // group or sub-tab changed
+actionPressedMsg{action, group, tab}  // action button activated
 ```
 
 ---
 
 ## Component Patterns
 
-### Buttons — Background-Color Blocks
+### Hotkey Labels — Brackets Standard
 
-No borders. `Background()` + `Padding(0, 2)`. Include hotkey inline.
+**All hotkeys use square brackets:** `[1]`, `[a]`, `[n]`, `[i]`, `[esc]`. Never parentheses. This is the universal pattern throughout the TUI.
 
 ```go
-ActiveButton = lipgloss.NewStyle().
-    Foreground(lipgloss.Color("0")).
+// Right:  [a] Add    [n] Create    [1] Collections
+// Wrong:  (a) Add    a: Add        + Add
+```
+
+### Buttons — Background-Color Blocks
+
+No borders. `Background()` + `Padding(0, 2)`. Include bracketed hotkey.
+
+```go
+activeButtonStyle = lipgloss.NewStyle().
+    Foreground(lipgloss.AdaptiveColor{Light: "#FFFCF0", Dark: "#100F0F"}).
     Background(accentColor).
     Padding(0, 2).
     MarginRight(1)
-
-InactiveButton = lipgloss.NewStyle().
-    Foreground(lipgloss.Color("252")).
-    Background(lipgloss.Color("237")).
-    Padding(0, 2).
-    MarginRight(1)
-
-// Render: " (enter) Install "  " (esc) Cancel "
 ```
 
-### Dropdowns — Soft Serve Message Pattern
+### Group Tabs — Button-Style with Backgrounds
 
-Based on Soft Serve's `tabs.go`. The dropdown is a reusable component with open/close state:
+Higher-level navigation uses background colors to differentiate from text-only sub-tabs:
 
 ```go
-type SelectMsg int   // command: "select item N"
-type ActiveMsg int   // event: "item N is now active"
+activeGroupStyle = lipgloss.NewStyle().
+    Bold(true).
+    Foreground(lipgloss.AdaptiveColor{Light: "#FFFCF0", Dark: "#100F0F"}).
+    Background(primaryColor). // cyan
+    Padding(0, 2)
 
-type Dropdown struct {
-    items     []string
-    active    int
-    isOpen    bool
-    cursor    int
-    zone      *zone.Manager
-}
+inactiveGroupStyle = lipgloss.NewStyle().
+    Foreground(lipgloss.AdaptiveColor{Light: "#575653", Dark: "#B7B5AC"}).
+    Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"}).
+    Padding(0, 2)
 ```
 
-- `tab`/`shift+tab` or `j`/`k` cycles within open dropdown
-- Enter selects and closes
-- Esc closes without selecting
-- Mouse: zone-mark each item, click to select
-- When open, dropdown intercepts all keys (modal pattern)
-- Render: bordered list below trigger using `lipgloss.Place()` anchored to trigger position
+### Sub-Tabs — Text-Only
+
+Lower-level navigation within a group. No backgrounds.
+
+```go
+activeTabStyle = lipgloss.NewStyle().
+    Bold(true).
+    Foreground(primaryColor). // cyan
+    Padding(0, 2)
+
+inactiveTabStyle = lipgloss.NewStyle().
+    Faint(true).
+    Padding(0, 2)
+```
 
 ### Selected Row — Full-Width Background Fill
 
-No prefix marker needed. Background alone conveys selection (gh-dash, lazygit, k9s pattern).
-
 ```go
-SelectedRow = lipgloss.NewStyle().
-    Background(selectedBG).  // ANSI 236 dark, adaptive for light
-    Bold(true)
-
-NormalRow = lipgloss.NewStyle()
+selectedRowStyle = lipgloss.NewStyle().Background(selectedBG).Bold(true)
 ```
 
 ### Panel Focus — Border Color Only
 
-Border color changes on focus. Nothing else. Universal across all surveyed projects.
-
 ```go
-FocusedBorder = lipgloss.NewStyle().
-    Border(lipgloss.RoundedBorder()).
-    BorderForeground(accentColor)
-
-UnfocusedBorder = lipgloss.NewStyle().
-    Border(lipgloss.RoundedBorder()).
-    BorderForeground(mutedColor)
-
-// Superfile trick: unfocused sidebar border = background color (invisible)
-```
-
-### Tab Bar — Bold + Background Fill Active
-
-```go
-ActiveTab = lipgloss.NewStyle().
-    Bold(true).
-    Background(selectedBG).
-    Foreground(primaryText).
-    Padding(0, 2)
-
-InactiveTab = lipgloss.NewStyle().
-    Faint(true).
-    Padding(0, 2)
-
-TabRow = lipgloss.NewStyle().
-    BorderBottom(true).
-    BorderStyle(lipgloss.ThickBorder()).
-    BorderBottomForeground(borderColor)
+focusedPanelStyle = lipgloss.NewStyle().
+    Border(lipgloss.RoundedBorder()).BorderForeground(accentColor)
+unfocusedPanelStyle = lipgloss.NewStyle().
+    Border(lipgloss.RoundedBorder()).BorderForeground(borderColor)
 ```
 
 ### Modals — Centered with lipgloss.Place
 
-```go
-func renderModal(content string, width, height int) string {
-    modal := modalStyle.Render(content)
-    return lipgloss.Place(
-        width, height,
-        lipgloss.Center, lipgloss.Center,
-        modal,
-        lipgloss.WithWhitespaceBackground(lipgloss.Color("235")),
-    )
-}
-```
+- Rounded border in accent color, fixed width 56, max height terminal-4
+- Buttons at bottom, Esc always dismisses, click outside dismisses
+- Default focus on Cancel (the safe option)
 
-- Rounded border in accent color
-- Fixed width: 56 characters
-- Max height: terminal height - 4
-- Buttons at bottom: `JoinHorizontal(Center, confirm, cancel)`
-- Esc always dismisses. Click outside dismisses.
+### Toasts — Below Topbar
 
-### Toasts — Positioned Overlay
-
-- Success: green text, `Done:` prefix, auto-dismiss 3s, any key dismisses + passes through
-- Warning: amber text, `Warn:` prefix, auto-dismiss 5s
-- Error: red text, `Error:` prefix, persists until Esc or c (copy), other keys pass through
-- All toasts: `c` copies message to clipboard
-- Position: below topbar, full width, pushes content down
+- Success: green, auto-dismiss 3s, any key passes through
+- Warning: amber, auto-dismiss 5s
+- Error: red bold, persists until Esc/c, `c` copies to clipboard
 
 ### Empty States
 
-Two distinct messages (from bubbles/list pattern):
-- **No items**: `"No skills found."` — truly empty
-- **No matches**: `"Nothing matched."` — filtered to empty (different style)
-
-Include actionable hints: `"Press 'a' to add your first skill"`
+Always include guidance: `"No skills yet. Press [a] to add your first one."`
 
 ### Loading States
 
-Spinner + descriptive text. The text carries meaning, spinner is liveness indicator:
-- `"Syncing team-rules..."` (spinner)
-- `"Installing alpha-skill to Claude Code..."` (spinner)
-
-**Three-state pattern (REQUIRED):** Every data-driven view must distinguish loading, empty, and results:
-```go
-switch {
-case m.err != nil:   return renderError(m.err)
-case m.loading:      return m.spinner.View() + " Loading..."
-case len(m.items)==0: return renderEmptyState()
-default:             return renderList(m.items)
-}
-```
-
----
-
-## Messaging & UX
-
-### Message Severity Hierarchy (Least to Most Disruptive)
-
-1. **Inline indicator** — spinner/icon next to the item in the list (no interruption)
-2. **Toast** — brief overlay, auto-dismisses for success (3s), persists for errors
-3. **Persistent error** — stays visible until dismissed or navigated away
-4. **Modal alert** — centered overlay for unexpected errors, must dismiss
-5. **Confirmation modal** — must choose before proceeding (default = Cancel)
-6. **Type-to-confirm** — most severe destructive actions only
-
-**Rule:** Use the least disruptive mechanism that ensures the user gets the information.
-
-### Error Messages — Two-Part Rule
-
-Every error answers: **what happened** + **what to do about it**
-
-| Bad | Good |
-|-----|------|
-| `"permission denied"` | `"Can't write to ~/.claude/rules/ — check directory permissions"` |
-| `"network error"` | `"Can't reach github.com/team/rules — check network or try again"` |
-
-Include error codes in visible text (syllago already has structured codes in `output/errors.go`).
-
-### Confirmation Design
-
-- **Default focus on Cancel** (the safe option), not the destructive action
-- **Descriptive labels**: `"Uninstall"` and `"Cancel"`, not `"OK"` and `"Cancel"`
-- **Include consequences**: `"This removes the symlink. Content stays in your library."`
-- **`ConfirmIf` pattern**: Skip the dialog when the operation is low-risk
-- **Undo > confirm** when possible: `"Uninstalled. Press 'z' to undo."` is less disruptive
-
-### Empty State Rules
-
-| Type | Message Pattern |
-|------|----------------|
-| First use | Guide: `"No skills yet. Press 'a' to add your first one."` |
-| Search empty | Suggest: `"No matches for 'xyz'. Press Esc to clear."` |
-| User cleared | Confirm: `"All items removed."` |
-| Error/failed | Show error, NEVER show as empty |
-
-### Help — Progressive Disclosure
-
-1. **Footer hints** (always visible): top 3-4 keys, context-sensitive
-2. **? overlay**: full keyboard reference, scrollable, grouped by category
-3. **In-context guidance**: empty states explain what to do, modals explain consequences
-
-**Deeper details:** `docs/research/tui-messaging-patterns.md`
+Three-state pattern (REQUIRED): loading → empty → results.
 
 ---
 
 ## Visual Design System
 
-### Color Palette
+### Color Palette — Flexoki
 
-All colors use `lipgloss.AdaptiveColor` for light/dark terminal support:
+All colors from the [Flexoki](https://stephango.com/flexoki) palette. Light uses -600 values, dark uses -400 values.
 
-| Name | Role | Light | Dark |
-|------|------|-------|------|
-| Primary (mint) | Content types, headings | `#047857` | `#6EE7B7` |
-| Accent (viola) | Collections, selection, buttons | `#6D28D9` | `#C4B5FD` |
-| Muted (stone) | Help text, inactive, separators | `#57534E` | `#A8A29E` |
-| Success (green) | Installed, success toasts | `#15803D` | `#4ADE80` |
-| Danger (red) | Error toasts, error borders | `#B91C1C` | `#FCA5A5` |
-| Warning (amber) | Warning toasts, update badge | `#B45309` | `#FCD34D` |
-| Border | Default panel borders | `#D4D4D8` | `#3F3F46` |
-| Selected BG | Row/tab selection background | `#D1FAE5` | `#1A3A2A` |
+**Syllago brand colors** (logo only — do not use elsewhere):
+| Name | Light | Dark |
+|------|-------|------|
+| Logo mint | `#047857` | `#6EE7B7` |
+| Logo viola | `#6D28D9` | `#C4B5FD` |
+
+**Theme colors** (Flexoki — use for everything except logo):
+| Name | Role | Light | Dark | Flexoki Source |
+|------|------|-------|------|----------------|
+| Primary | Active tabs, headings, section titles | `#24837B` | `#3AA99F` | cyan-600/400 |
+| Accent | Focus borders, buttons, selection | `#5E409D` | `#8B7EC8` | purple-600/400 |
+| Muted | Help text, inactive, separators | `#6F6E69` | `#878580` | base-600/500 |
+| Success | Installed, success toasts | `#66800B` | `#879A39` | green-600/400 |
+| Danger | Error toasts, error borders | `#AF3029` | `#D14D41` | red-600/400 |
+| Warning | Warning toasts, update badge | `#BC5215` | `#DA702C` | orange-600/400 |
+
+**Structural colors** (Flexoki base tones):
+| Name | Role | Light | Dark | Flexoki Source |
+|------|------|-------|------|----------------|
+| Border | Panel borders, separators | `#CECDC3` | `#343331` | base-200/850 |
+| Selected BG | Row/tab selection | `#E6E4D9` | `#343331` | base-100/850 |
+| Modal BG | Modal background | `#F2F0E5` | `#282726` | base-50/900 |
+| Primary text | Body text | `#100F0F` | `#CECDC3` | black/base-200 |
 
 **Rules:**
 - Never use raw hex in code — define named variables in `styles.go`
-- No emojis — use colored text symbols (checkmark, X, warning triangle)
+- No emojis — use colored text symbols
 - Check existing palette before adding colors
+- New colors MUST come from the Flexoki extended palette
 
 ### Typography
 
-- **Bold** for titles, active tabs, selected items
+- **Bold** for titles, active group tabs, active sub-tabs, selected items
 - **Faint** for inactive tabs, help text, muted elements
-- **Underline** — avoid (used by Textual but not Go TUIs)
+- **Underline** — avoid
 
 ---
 
@@ -321,20 +265,17 @@ All colors use `lipgloss.AdaptiveColor` for light/dark terminal support:
 ### lipgloss Composition
 
 ```go
-// Sidebar + content
 body := lipgloss.JoinHorizontal(lipgloss.Top, sidebar, content)
-
-// Full layout
 full := lipgloss.JoinVertical(lipgloss.Left, topbar, body, helpbar)
 ```
 
 ### Critical Dimension Rules
 
-1. **Subtract frame size from content width:** `contentWidth = panelWidth - style.GetHorizontalFrameSize()`
-2. **Set Width() explicitly.** Lipgloss won't auto-wrap — it overflows.
-3. **Propagate WindowSizeMsg to ALL children.** Children at zero size until they receive it.
-4. **Use `lipgloss.Width()` not `len()`.** ANSI sequences add invisible bytes.
-5. **Parent calculates child sizes** in WindowSizeMsg handler, calls `SetSize()` on each child.
+1. Subtract frame size from content width
+2. Set `Width()` explicitly — lipgloss won't auto-wrap
+3. Propagate `WindowSizeMsg` to ALL children
+4. Use `lipgloss.Width()` not `len()` — ANSI sequences add invisible bytes
+5. Parent calculates child sizes, calls `SetSize()` on each child
 
 ### Responsive Breakpoints
 
@@ -360,126 +301,59 @@ full := lipgloss.JoinVertical(lipgloss.Left, topbar, body, helpbar)
 ### Deterministic Output Setup (REQUIRED)
 
 ```go
-func init() {
+func TestMain(m *testing.M) {
     lipgloss.SetColorProfile(termenv.Ascii)
     lipgloss.SetHasDarkBackground(true)
     zone.NewGlobal()
     os.Setenv("NO_COLOR", "1")
     os.Setenv("TERM", "dumb")
+    _ = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#000", Dark: "#fff"}).Render("warmup")
+    os.Exit(m.Run())
 }
 ```
-
-Without this, golden files diverge between local dev and CI.
 
 ### Golden File Pattern
 
-```go
-var updateGolden = flag.Bool("update-golden", false, "update golden files")
+Strip ANSI before storing. `requireGolden()` and `normalizeSnapshot()` in `testhelpers_test.go`.
 
-func requireGolden(t *testing.T, name string, got string) {
-    t.Helper()
-    got = normalizeSnapshot(got)  // strip ANSI, normalize paths, trim whitespace
-    path := filepath.Join("testdata", name+".golden")
-    if *updateGolden {
-        os.WriteFile(path, []byte(got), 0o644)
-        return
-    }
-    want, _ := os.ReadFile(path)
-    if string(want) != got {
-        t.Errorf("golden mismatch: %s\n%s", path, diffStrings(string(want), got))
-    }
-}
-```
-
-**Strip ANSI before storing.** Human-readable diffs, stable across environments. Test styles separately.
-
-### Golden File Naming
-
-`{component}-{variant}-{width}x{height}.golden`
-
-Examples: `shell-empty-80x30.golden`, `explorer-skills-120x40.golden`, `modal-confirm-80x30.golden`
+Naming: `{component}-{variant}-{width}x{height}.golden`
 
 ### Test Helpers
 
 ```go
-func testApp(t *testing.T) App           // 2-item catalog, 1 provider, 80x30
+func testApp(t *testing.T) App              // empty catalog, 80x30
 func testAppSize(t *testing.T, w, h int) App
-func testAppLarge(t *testing.T) App       // 85+ items for overflow testing
-func testAppEmpty(t *testing.T) App       // empty catalog
-func keyRune(r rune) tea.KeyMsg           // shorthand for key events
+func keyRune(r rune) tea.KeyMsg
 func keyPress(k tea.KeyType) tea.KeyMsg
 func pressN(app tea.Model, key tea.Msg, n int) tea.Model
-```
-
-### Update Workflow
-
-```bash
-cd cli && go test ./internal/tui/ -update-golden
-git diff testdata/   # review every change
+func assertContains(t *testing.T, view, substr string)
 ```
 
 ---
 
 ## Mouse Support
 
-Every interactive element supports both keyboard AND mouse. Use `lrstanley/bubblezone`:
+Every interactive element supports both keyboard AND mouse via `lrstanley/bubblezone`:
 
 ```go
-// In View(): mark clickable regions
-zone.Mark("item-0", itemContent)
-
-// In root View(): scan for zones
-zone.Scan(fullOutput)
-
-// In Update(): check bounds
-if zone.Get("item-0").InBounds(msg) {
-    m.cursor = 0
-}
+zone.Mark("item-0", itemContent)  // in View()
+zone.Scan(fullOutput)             // in root View()
+zone.Get("item-0").InBounds(msg)  // in Update()
 ```
 
-Zone markers are zero-width ANSI sequences — don't affect `lipgloss.Width()`.
-
----
-
-## Key Libraries
-
-| Library | Purpose |
-|---------|---------|
-| `charmbracelet/bubbletea` | Elm architecture (Model-View-Update) |
-| `charmbracelet/lipgloss` | Styling, layout composition |
-| `charmbracelet/bubbles` | Official components (list, viewport, textinput, spinner) |
-| `lrstanley/bubblezone` | Mouse hit-testing via zone markers |
-| `charmbracelet/x/ansi` | ANSI stripping for golden tests |
-| `charmbracelet/x/exp/teatest` | Integration test harness |
-
----
-
-## Reference Projects
-
-When you need to look up how a pattern is implemented:
-
-| Project | Stars | Best For |
-|---------|-------|----------|
-| [superfile](https://github.com/yorukot/superfile) | ~17k | Panel focus (border color), prefix cursor, modal buttons |
-| [gh-dash](https://github.com/dlvhdr/gh-dash) | ~11k | Tab bars, full-width row selection, side panel layout switching |
-| [soft-serve](https://github.com/charmbracelet/soft-serve) | ~6.7k | Tab component code, Common struct, TabComponent interface |
-| [lazygit](https://github.com/jesseduffield/lazygit) | ~60k | Context stack, centered floating menus, keybinding hints |
-| [k9s](https://github.com/derailed/k9s) | ~30k | Pill breadcrumbs, prompt insertion, tview modal buttons |
-| [huh](https://github.com/charmbracelet/huh) | - | Select field, Confirm buttons, form validation, themes |
-| [pug](https://github.com/leg100/pug) | ~667 | PaneManager, ChildModel interface, Maker factory |
+Zone IDs: `group-N`, `tab-G-N`, `btn-add`, `btn-create`, `item-N`, `modal-zone`
 
 ---
 
 ## Gotchas
 
-- **AdaptiveColor mutates renderer state.** `lipgloss.AdaptiveColor` triggers `HasDarkBackground()` which mutates global state. Fix: warmup render in `init()` for deterministic test output.
-- **bubblezone v2 may not be compatible with lipgloss v2 Canvas.** Check before upgrading.
-- **No first-party dropdown component exists** in Bubble Tea. Build custom using the Soft Serve tab pattern adapted with isOpen state.
-- **`SelectTabMsg` does NOT fire `ActiveTabMsg`** in Soft Serve — they're asymmetric. Handle both cases in parent Update().
-- **Golden files with raw ANSI are fragile.** Strip ANSI before storing. Test styles separately with targeted unit tests.
+- **AdaptiveColor mutates renderer state.** Fix: warmup render in `TestMain()`.
+- **bubbletea v1 uses `tea.KeyMsg`**, not `tea.KeyPressMsg` (v2 API). Check version before using spec code.
+- **Golden files with raw ANSI are fragile.** Strip ANSI before storing.
 - **`lipgloss.Width()` is ANSI-aware, `len()` is not.** Always use `lipgloss.Width()` for rendered strings.
-- **Children that never receive WindowSizeMsg render at zero size.** Always propagate to all children.
-- **goimports strips "unused" imports between edits.** Add import and usage in a single Edit call, or use a new file.
+- **Children that never receive WindowSizeMsg render at zero size.**
+- **goimports strips "unused" imports between edits.** Add import and usage in a single Edit call.
+- **Cursor initialization with Reset():** When `active = -1`, `Open()` must default cursor to 0, not -1.
 
 ---
 
@@ -490,6 +364,25 @@ When you need to look up how a pattern is implemented:
 ### Pre-Phase (Research) — 2026-03-24
 - Surveyed 10+ Go TUI projects for patterns
 - Identified dropdown gap in Bubble Tea ecosystem
-- Established visual design system based on gh-dash (tabs, selection) + superfile (focus, modals) + huh (buttons)
-- Defined three-layer testing pyramid
-- Created research docs: go-tui-patterns.md, tui-visual-patterns.md, tui-testing-patterns.md
+- Established three-layer testing pyramid
+- Created research docs
+
+### Phase 1 (Shell + Styles + Tests) — 2026-03-24
+- styles.go, keys.go, helpbar.go, app.go — foundation built
+- TestMain warmup render is critical for AdaptiveColor stability
+- bubbletea v1 uses `tea.KeyMsg`, not `tea.KeyPressMsg` — spec had wrong API
+- `gofmt` only changes tab alignment in comments, no functional impact
+- NewApp signature must match main.go callsite exactly
+
+### Phase 2 (Topbar + Navigation) — 2026-03-24
+- **Dropdowns abandoned** — fought terminal strengths. Replaced with two-tier tabs.
+- Two-tier pattern: group tabs (button-style) + sub-tabs (text-only)
+- Bordered frame with `╭──syllago──╮` inline logo, `├────┤` separator
+- Brackets `[N]` are the standard hotkey indicator, not parentheses
+- Collections is group [1] (default), Content is [2] — Library is the landing page
+- Flexoki color scheme adopted for all non-logo colors
+- Active tabs use cyan foreground (Flexoki primary), not background highlight
+- Group tabs use button-style backgrounds for visual hierarchy over sub-tabs
+- Inactive group contrast: base-700 text on base-150 bg (light), base-300 on base-800 (dark)
+- Action buttons are context-sensitive per group, right-aligned on tab row
+- `actionPressedMsg` carries group+tab context for future wizard routing

@@ -49,7 +49,9 @@ j/k navigate * h/l pane * / search * i install * ? help                   syllag
 
 | Element | Keyboard | Mouse |
 |---|---|---|
-| Dropdown menus | 1/2/3 to open, arrows to navigate, Enter to select | Click to open, click item to select, click-away to close |
+| Group tabs | 1/2/3 to switch group | Click group tab |
+| Sub-tabs | h/l to cycle within group | Click sub-tab |
+| Action buttons | a = Add, n = Create | Click button |
 | Items list | j/k navigate, Enter to select | Click item to select, scroll wheel to scroll |
 | Card grid | Arrows to navigate, Enter to drill in | Click card to select+drill, scroll wheel to scroll grid |
 | Content zone panes | h/l switch panes, j/k scroll | Click pane to focus, scroll wheel in focused pane |
@@ -61,85 +63,62 @@ j/k navigate * h/l pane * / search * i install * ? help                   syllag
 | Help bar | (read-only) | (read-only) |
 | Search | / to activate, type to filter, Esc to cancel | Click search area to activate |
 
-## Top Navigation Bar
+## Top Navigation Bar — Two-Tier Tabs
 
-Three labeled dropdowns replace the sidebar. Only one of Content/Collection is active at a time (mutually exclusive). The inactive dropdown is grayed out.
+A bordered frame with two tiers of navigation. No dropdowns (those are a GUI pattern that doesn't work well in terminals).
 
-### Dropdown Behavior
+### Layout
 
-- **Content dropdown** (mint): Skills, Agents, MCP, Rules, Hooks, Commands
-- **Collection dropdown** (purple): Library, Registries, Loadouts
-- **Config dropdown** (muted): Settings, Sandbox
-- Selecting a Content type grays out the Collection dropdown (and vice versa)
-- Each dropdown shows `Category: Selection ▾` format
-- Default state on launch: `Content: Skills ▾` active, `Collection: -- ▾` grayed
-
-### Top Bar at 120 cols
 ```
-╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ SYL    Content: Skills ▾    Collection: -- ▾    Config ▾                                        + Add     * New   │
-│        ~~~~~~~~~~~~~~~~     ~~~~~~~~~~~~~~                                                                            │
-│        mint (active)        muted (inactive)                                                                          │
-╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭──syllago─────────────────────────────────────────────────────────────────────╮
+│               [1] Collections      [2] Content      [3] Config               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│   Library     Registries     Loadouts              [a] Add      [n] Create   │
+╰──────────────────────────────────────────────────────────────────────────────╯
 ```
 
-### Top Bar at 80 cols
-```
-╭──────────────────────────────────────────────────────────────────────────────────╮
-│ SYL  Content: Skills ▾  Collection: -- ▾  Config ▾               + Add * New │
-╰──────────────────────────────────────────────────────────────────────────────────╯
-```
+- **Top border:** `╭──syllago──╮` with colored logo inline (mint `syl` + viola `lago`)
+- **Row 1 (groups):** Centered, button-styled with backgrounds. Active = bold text on cyan BG. Inactive = muted text on gray BG.
+- **Separator:** `├────────┤` connecting to left/right border edges
+- **Row 2 (sub-tabs + actions):** Sub-tabs left-aligned (bold cyan active, faint inactive). Action buttons right-aligned with background styling.
+- **Bottom border:** `╰────────╯` rounded corners
+- **Height:** Always 5 lines
 
-### Dropdown Open State (Content)
+### Groups
+
+| Group | Hotkey | Sub-Tabs | Actions |
+|-------|--------|----------|---------|
+| Collections | `[1]` | Library, Registries, Loadouts | [a] Add, [n] Create |
+| Content | `[2]` | Skills, Agents, MCP, Rules, Hooks, Commands | [a] Add, [n] Create |
+| Config | `[3]` | Settings, Sandbox | (none) |
+
+**Default on launch:** Collections > Library (everything at a glance).
+
+### Switching to Content > Hooks at 80 cols
 ```
-╭──────────────────────────────────────────────────────────────────────────────────╮
-│ SYL  Content: Skills ▾  Collection: -- ▾  Config ▾               + Add * New │
-│      ┌────────────────┐                                                          │
-│      │ > Skills       │                                                          │
-│      │   Agents       │                                                          │
-│      │   MCP Configs  │                                                          │
-│      │   Rules        │                                                          │
-│      │   Hooks        │                                                          │
-│      │   Commands     │                                                          │
-│      └────────────────┘                                                          │
+╭──syllago─────────────────────────────────────────────────────────────────────╮
+│               [1] Collections      [2] Content      [3] Config               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│   Skills     Agents     MCP     Rules     Hooks     Commands   [a] Add [n] Create│
+╰──────────────────────────────────────────────────────────────────────────────╯
 ```
-
-### Dropdown Open State (Collection)
-```
-╭──────────────────────────────────────────────────────────────────────────────────╮
-│ SYL  Content: -- ▾  Collection: Library ▾  Config ▾              + Add * New │
-│                     ┌────────────────┐                                           │
-│                     │ > Library      │                                           │
-│                     │   Registries   │                                           │
-│                     │   Loadouts     │                                           │
-│                     └────────────────┘                                           │
-```
-
-### Mutual Exclusion Behavior
-
-When the user selects a **Content type**:
-- Content dropdown: mint color, shows selection (e.g., `Content: Skills ▾`)
-- Collection dropdown: muted/gray, shows `Collection: -- ▾`
-- Main area: items list + adaptive detail for that content type
-
-When the user selects a **Collection**:
-- Content dropdown: muted/gray, shows `Content: -- ▾`
-- Collection dropdown: purple color, shows selection (e.g., `Collection: Library ▾`)
-- Main area: collection-specific view (Library cards, Registry management, Loadout cards)
-
-Switching from one to the other resets the inactive dropdown to `--`.
 
 ### Keyboard Access
 
-- `1` opens Content dropdown, `2` opens Collection dropdown, `3` opens Config dropdown
-- Arrow keys navigate within open dropdown, Enter selects, Esc closes
-- Dropdowns can also be clicked with the mouse
+- `1`/`2`/`3` switch groups (resets sub-tab to first item)
+- `h`/`l` (or left/right arrows) cycle sub-tabs within the active group (wraps)
+- `a` triggers Add action, `n` triggers Create action (context-sensitive to current group+tab)
+- All interactive elements also support mouse clicks
+
+### Color Scheme — Flexoki
+
+All theme colors use the [Flexoki](https://stephango.com/flexoki) palette. Logo uses separate syllago brand colors (mint + viola). See `styles.go` for the complete mapping.
 
 ## Base Layout (Constant Shell)
 
 The shell has **four fixed zones** that never change position:
 
-1. **Top Bar** — dropdowns + actions (1 row)
+1. **Top Bar** — two-tier tabs + action buttons (5 rows including border)
 2. **Metadata Bar** — selected item info (3 rows, spans full width above the content split)
 3. **Main Area** — Items list (left) + Adaptive Content Zone (right)
 4. **Help Bar** — context-sensitive hints (1 row)
@@ -148,9 +127,11 @@ The metadata bar is part of the shell, not part of the detail zone. It renders t
 
 ### Shell at 120x40 (item selected)
 ```
-╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ SYL    Content: Skills ▾    Collection: -- ▾    Config ▾                                        + Add     * New   │
-╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭──syllago──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│                         [1] Collections      [2] Content      [3] Config                                              │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│   Skills     Agents     MCP     Rules     Hooks     Commands                                [a] Add      [n] Create   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ alpha-skill                                                      [i] Install  [u] Uninstall  [c] Copy  [p] Share     │
 │ Type: Skills    Source: team-rules (registry)    Providers: Claude Code, Gemini CLI    Files: 4    Installed: CC [ok] │
@@ -172,9 +153,11 @@ The metadata bar is part of the shell, not part of the detail zone. It renders t
 
 ### Shell at 80x30 (item selected)
 ```
-╭──────────────────────────────────────────────────────────────────────────────────╮
-│ SYL  Content: Skills ▾  Collection: -- ▾  Config ▾               + Add * New │
-╰──────────────────────────────────────────────────────────────────────────────────╯
+╭──syllago─────────────────────────────────────────────────────────────────────╮
+│               [1] Collections      [2] Content      [3] Config               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│   Skills     Agents     MCP     Rules     Hooks     Commands   [a] Add [n] Create│
+╰──────────────────────────────────────────────────────────────────────────────╯
 ┌──────────────────────────────────────────────────────────────────────────────────┐
 │ alpha-skill                                         [i] Install  [c] Copy      │
 │ Skills * team-rules * CC,GC * 4 files                     │
