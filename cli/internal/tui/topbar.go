@@ -191,10 +191,12 @@ func (t topBarModel) renderGroupRow(innerW int) string {
 		rendered = zone.Mark("group-"+itoa(i), rendered)
 		parts = append(parts, rendered)
 	}
-	left := strings.Join(parts, "  ")
-	leftW := lipgloss.Width(left)
-	pad := max(0, innerW-leftW)
-	return " " + left + strings.Repeat(" ", pad-1)
+	content := strings.Join(parts, "  ")
+	contentW := lipgloss.Width(content)
+	totalPad := max(0, innerW-contentW)
+	leftPad := totalPad / 2
+	rightPad := totalPad - leftPad
+	return strings.Repeat(" ", leftPad) + content + strings.Repeat(" ", rightPad)
 }
 
 // renderTabRow renders sub-tabs on the left and action buttons on the right.
