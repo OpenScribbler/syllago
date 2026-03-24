@@ -33,15 +33,14 @@ Type "syllago install coding-standards --to cursor"
 Enter
 Sleep 4s
 
-# Show the same rule in Claude Code format vs Cursor format
-Type "# Preview: same rule, two formats"
+# Preview: same rule in Claude Code format
+Type "syllago inspect rules/claude-code/coding-standards --as claude-code | head -6"
 Enter
-Sleep 1s
-Type "syllago convert coding-standards --to claude-code | head -4"
+Sleep 4s
+
+# Preview: same rule in Cursor format (notice the frontmatter)
+Type "syllago inspect rules/claude-code/coding-standards --as cursor | head -8"
 Enter
-Sleep 3.5s
-Type "syllago convert coding-standards --to cursor | head -4"
-Enter
-Sleep 4.5s
+Sleep 5s
 
 Sleep 3s
