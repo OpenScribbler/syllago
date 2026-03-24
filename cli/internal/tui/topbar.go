@@ -45,13 +45,13 @@ func newTopBar() topBarModel {
 				label:   "Content",
 				hotkey:  "1",
 				tabs:    []string{"Skills", "Agents", "MCP", "Rules", "Hooks", "Commands"},
-				actions: []string{"(a) Add", "(n) Create"},
+				actions: []string{"[a] Add", "[n] Create"},
 			},
 			{
 				label:   "Collections",
 				hotkey:  "2",
 				tabs:    []string{"Library", "Registries", "Loadouts"},
-				actions: []string{"(a) Add", "(n) Create"},
+				actions: []string{"[a] Add", "[n] Create"},
 			},
 			{
 				label:   "Config",

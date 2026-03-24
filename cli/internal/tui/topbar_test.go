@@ -99,8 +99,8 @@ func TestTopBar_RenderContainsElements(t *testing.T) {
 	assertContains(t, view, "Config")
 	assertContains(t, view, "Skills")
 	assertContains(t, view, "Agents")
-	assertContains(t, view, "(a) Add")
-	assertContains(t, view, "(n) Create")
+	assertContains(t, view, "[a] Add")
+	assertContains(t, view, "[n] Create")
 }
 
 func TestTopBar_GroupSwitchShowsDifferentTabs(t *testing.T) {
