@@ -65,11 +65,10 @@ var (
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(borderColor)
 
-	// Tabs (bold+bg active, faint inactive, gh-dash pattern)
+	// Tabs (bold cyan active, faint inactive)
 	activeTabStyle = lipgloss.NewStyle().
 			Bold(true).
-			Background(selectedBG).
-			Foreground(primaryText).
+			Foreground(primaryColor). // cyan
 			Padding(0, 2)
 
 	inactiveTabStyle = lipgloss.NewStyle().
