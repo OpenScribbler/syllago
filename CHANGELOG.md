@@ -5,7 +5,7 @@ All notable changes to syllago are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.7.0] - 2026-03-23
 
 ### Added
 
@@ -133,7 +133,8 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Sandbox high-risk key detection covers `"commands"` alongside `"mcpServers"` and `"hooks"`
 - `golang.org/x/net` bumped to 0.38.0 (security fix)
 
-[Unreleased]: https://github.com/OpenScribbler/syllago/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/OpenScribbler/syllago/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/OpenScribbler/syllago/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/OpenScribbler/syllago/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/OpenScribbler/syllago/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/OpenScribbler/syllago/releases/tag/v0.5.0

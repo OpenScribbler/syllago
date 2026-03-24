@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="logos/logo.svg" alt="Syllago" width="600">
+<img src="logos/social-preview.svg" alt="Syllago" width="600">
 
 [![CI](https://github.com/OpenScribbler/syllago/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenScribbler/syllago/actions/workflows/ci.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/OpenScribbler/syllago)](https://github.com/OpenScribbler/syllago/releases/latest)
@@ -170,7 +170,6 @@ A **registry** is a git repository that distributes syllago content. Push curate
 - **Interactive TUI** -- Browse, search, install, and manage content with card grids, mouse support, and keyboard navigation
 - **Sandbox** -- Run AI CLI tools in isolated environments with filesystem, network, and environment filtering (Linux)
 - **Registry privacy** -- Syllago detects content from private registries and blocks it from reaching public ones
-- **Hook signing** -- Sign hook content cryptographically with Sigstore or GPG for provenance verification
 - **`--json` output** -- Pipe any command's output into scripts, CI pipelines, or other automation
 
 ## All Commands
@@ -194,8 +193,6 @@ A **registry** is a git repository that distributes syllago content. Push curate
 | `syllago inspect` | Show details about a content item |
 | `syllago list` | List content items in the library |
 | `syllago compat` | Show provider compatibility matrix for a content item |
-| `syllago sign` | Sign hook content for provenance verification |
-| `syllago verify` | Verify hook content signatures |
 | `syllago explain` | Show documentation for an error code |
 | `syllago config` | View and edit configuration |
 | `syllago update` | Update syllago to the latest release |
@@ -295,7 +292,6 @@ Syllago does not operate any registry or marketplace. Third-party registries are
 - **Automated vulnerability scanning** -- govulncheck runs in CI and catches known-vulnerable dependencies before merge
 - **Dependency updates** -- Dependabot monitors and patches dependency security issues automatically
 - **Registry privacy gates** -- Syllago tags content from private registries and blocks it from reaching public ones
-- **Hook signing** -- Sign hooks with Sigstore or GPG, then verify provenance before installing
 - **Sandbox isolation** -- Run AI CLI tools in bubblewrap-based sandboxes with filesystem, network, and environment filtering (Linux)
 
 See [SECURITY.md](SECURITY.md) for the full security policy, threat model, and how to report vulnerabilities.

@@ -5,7 +5,7 @@ Content from a private registry cannot be published to a public registry. The pr
 ## Common Causes
 
 - Attempting to publish content that was imported from a private (enterprise/team) registry
-- Running `syllago promote` targeting a public registry with private-origin content
+- Running `syllago publish` targeting a public registry with private-origin content
 - The content's source registry is marked as private in its configuration
 
 ## How to Fix
