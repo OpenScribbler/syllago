@@ -68,6 +68,7 @@ type ContentItem struct {
 	Path        string         // absolute path to the item directory or file
 	Provider    string         // for provider-specific content (rules, hooks, commands), which provider
 	Files       []string       // relative paths of all files in item directory
+	ServerKey   string         // for MCP: which server entry in config.json this item represents
 	Meta        *metadata.Meta // loaded from .syllago.yaml if present
 	Library     bool           // true if item lives in the global content library (~/.syllago/content/)
 	Registry    string         // non-empty if item came from a git registry (value is the registry name)

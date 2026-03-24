@@ -36,6 +36,35 @@ func ParseMCPConfig(itemPath string) (*MCPConfig, error) {
 	return &cfg, nil
 }
 
+// ParseMCPServerConfig reads config.json and returns the MCPConfig for a specific server.
+// For nested format, extracts the entry matching serverKey.
+// For flat format (or empty serverKey), returns the single config.
+func ParseMCPServerConfig(itemPath string, serverKey string) (*MCPConfig, error) {
+	data, err := os.ReadFile(filepath.Join(itemPath, "config.json"))
+	if err != nil {
+		return nil, err
+	}
+
+	// If serverKey is provided, try nested format first.
+	if serverKey != "" {
+		result := gjson.GetBytes(data, "mcpServers."+serverKey)
+		if result.Exists() {
+			var cfg MCPConfig
+			if err := json.Unmarshal([]byte(result.Raw), &cfg); err != nil {
+				return nil, fmt.Errorf("parsing server %q: %w", serverKey, err)
+			}
+			return &cfg, nil
+		}
+	}
+
+	// Fall back to flat format.
+	var cfg MCPConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing config.json: %w", err)
+	}
+	return &cfg, nil
+}
+
 // CheckEnvVars returns a map of env var name -> whether it's currently set.
 func CheckEnvVars(cfg *MCPConfig) map[string]bool {
 	result := make(map[string]bool)
@@ -272,6 +301,15 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		return "", err
 	}
 
+	// If item has a ServerKey, filter to just that one server.
+	if item.ServerKey != "" {
+		configData, ok := entries[item.ServerKey]
+		if !ok {
+			return "", fmt.Errorf("server %q not found in config.json", item.ServerKey)
+		}
+		entries = map[string]json.RawMessage{item.ServerKey: configData}
+	}
+
 	// Read target config file
 	cfgPath, err := mcpConfigPath(prov, repoRoot)
 	if err != nil {
@@ -305,17 +343,30 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		return "", fmt.Errorf("writing %s: %w", cfgPath, err)
 	}
 
-	// Record in installed.json — track each server name for uninstall
+	// Record in installed.json
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
 		return "", fmt.Errorf("loading installed.json: %w", err)
 	}
-	inst.MCP = append(inst.MCP, InstalledMCP{
-		Name:        item.Name,
-		ServerNames: serverNames,
-		Source:      "export",
-		InstalledAt: time.Now(),
-	})
+
+	if item.ServerKey != "" {
+		// Per-server install: one entry per server key
+		inst.MCP = append(inst.MCP, InstalledMCP{
+			Name:        item.Name,
+			ServerKey:   item.ServerKey,
+			Source:      "export",
+			InstalledAt: time.Now(),
+		})
+	} else {
+		// Legacy bulk install: track all server names together
+		inst.MCP = append(inst.MCP, InstalledMCP{
+			Name:        item.Name,
+			ServerNames: serverNames,
+			Source:      "export",
+			InstalledAt: time.Now(),
+		})
+	}
+
 	if err := SaveInstalled(repoRoot, inst); err != nil {
 		return "", fmt.Errorf("saving installed.json: %w", err)
 	}
@@ -341,7 +392,15 @@ func uninstallMCP(item catalog.ContentItem, prov provider.Provider, repoRoot str
 	if err != nil {
 		return "", fmt.Errorf("loading installed.json: %w", err)
 	}
-	instIdx := inst.FindMCP(item.Name)
+
+	// Try per-server lookup first (new format), then legacy bulk lookup.
+	instIdx := -1
+	if item.ServerKey != "" {
+		instIdx = inst.FindMCPByServerKey(item.Name, item.ServerKey)
+	}
+	if instIdx < 0 {
+		instIdx = inst.FindMCP(item.Name)
+	}
 	if instIdx < 0 {
 		return "", fmt.Errorf("%s was not installed by syllago", item.Name)
 	}
@@ -350,10 +409,17 @@ func uninstallMCP(item catalog.ContentItem, prov provider.Provider, repoRoot str
 		return "", fmt.Errorf("backing up %s: %w", cfgPath, err)
 	}
 
-	// Determine which server keys to remove. New installs track ServerNames;
-	// legacy installs (before this fix) used item.Name as the key.
-	keysToRemove := inst.MCP[instIdx].ServerNames
-	if len(keysToRemove) == 0 {
+	// Determine which server keys to remove.
+	var keysToRemove []string
+	entry := inst.MCP[instIdx]
+	if entry.ServerKey != "" {
+		// Per-server entry: remove just this server key.
+		keysToRemove = []string{entry.ServerKey}
+	} else if len(entry.ServerNames) > 0 {
+		// Legacy bulk entry: remove all tracked server names.
+		keysToRemove = entry.ServerNames
+	} else {
+		// Very old legacy: item name was the server key.
 		keysToRemove = []string{item.Name}
 	}
 
@@ -393,12 +459,19 @@ func checkMCPStatus(item catalog.ContentItem, prov provider.Provider, repoRoot s
 
 	jsonKey := MCPConfigKey(prov)
 
-	// Check installed.json first — it tracks which server names belong to this item
+	// Per-server check: if item has a ServerKey, check for that specific key.
+	if item.ServerKey != "" {
+		if gjson.GetBytes(fileData, jsonKey+"."+item.ServerKey).Exists() {
+			return StatusInstalled
+		}
+		return StatusNotInstalled
+	}
+
+	// Legacy: check installed.json for bulk-installed entries.
 	inst, err := LoadInstalled(repoRoot)
 	if err == nil {
 		idx := inst.FindMCP(item.Name)
 		if idx >= 0 {
-			// Check that at least one tracked server key exists in config
 			names := inst.MCP[idx].ServerNames
 			if len(names) == 0 {
 				names = []string{item.Name}
@@ -412,7 +485,7 @@ func checkMCPStatus(item catalog.ContentItem, prov provider.Provider, repoRoot s
 		}
 	}
 
-	// Fallback: check if item name exists as a server key (legacy or flat format)
+	// Fallback: check if item name exists as a server key
 	if gjson.GetBytes(fileData, jsonKey+"."+item.Name).Exists() {
 		return StatusInstalled
 	}

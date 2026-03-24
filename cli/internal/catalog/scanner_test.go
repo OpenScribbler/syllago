@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/tidwall/gjson"
 )
 
 // makeItem is a test helper for building ContentItem values concisely.
@@ -729,4 +730,241 @@ func TestIsValidRegistryName(t *testing.T) {
 			t.Errorf("IsValidRegistryName(%q) = true, want false", name)
 		}
 	}
+}
+
+func TestScanMCP_NestedConfigExplodes(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+
+	writeFile(t, filepath.Join(root, "mcp", "my-config", "config.json"), `{
+		"mcpServers": {
+			"server-a": {"command": "npx", "args": ["-y", "@example/server-a"]},
+			"server-b": {"url": "https://mcp.example.com/v1"}
+		}
+	}`)
+
+	cat, err := Scan(root, root)
+	if err != nil {
+		t.Fatalf("Scan error: %v", err)
+	}
+
+	mcps := cat.ByType(MCP)
+	if len(mcps) != 2 {
+		t.Fatalf("expected 2 MCP items, got %d", len(mcps))
+	}
+
+	// Build a map for order-independent assertions.
+	byName := make(map[string]ContentItem)
+	for _, m := range mcps {
+		byName[m.Name] = m
+	}
+
+	a, ok := byName["server-a"]
+	if !ok {
+		t.Fatal("missing MCP item 'server-a'")
+	}
+	if a.ServerKey != "server-a" {
+		t.Errorf("server-a ServerKey = %q, want %q", a.ServerKey, "server-a")
+	}
+	if a.Description != "npx @example/server-a" {
+		t.Errorf("server-a Description = %q, want %q", a.Description, "npx @example/server-a")
+	}
+	// Path should point to the parent directory, not the server key.
+	if !strings.HasSuffix(a.Path, filepath.Join("mcp", "my-config")) {
+		t.Errorf("server-a Path = %q, expected to end with mcp/my-config", a.Path)
+	}
+
+	b, ok := byName["server-b"]
+	if !ok {
+		t.Fatal("missing MCP item 'server-b'")
+	}
+	if b.ServerKey != "server-b" {
+		t.Errorf("server-b ServerKey = %q, want %q", b.ServerKey, "server-b")
+	}
+	if b.Description != "https://mcp.example.com/v1" {
+		t.Errorf("server-b Description = %q, want %q", b.Description, "https://mcp.example.com/v1")
+	}
+}
+
+func TestScanMCP_NestedSingleServer(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+
+	writeFile(t, filepath.Join(root, "mcp", "single", "config.json"), `{
+		"mcpServers": {
+			"filesystem": {"command": "npx", "args": ["-y", "@mcp/server-filesystem"]}
+		}
+	}`)
+
+	cat, err := Scan(root, root)
+	if err != nil {
+		t.Fatalf("Scan error: %v", err)
+	}
+
+	mcps := cat.ByType(MCP)
+	if len(mcps) != 1 {
+		t.Fatalf("expected 1 MCP item, got %d", len(mcps))
+	}
+	if mcps[0].Name != "filesystem" {
+		t.Errorf("Name = %q, want %q", mcps[0].Name, "filesystem")
+	}
+	if mcps[0].ServerKey != "filesystem" {
+		t.Errorf("ServerKey = %q, want %q", mcps[0].ServerKey, "filesystem")
+	}
+}
+
+func TestScanMCP_FlatConfig(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+
+	writeFile(t, filepath.Join(root, "mcp", "my-server", "config.json"), `{
+		"command": "npx",
+		"args": ["-y", "@mcp/server-filesystem"]
+	}`)
+
+	cat, err := Scan(root, root)
+	if err != nil {
+		t.Fatalf("Scan error: %v", err)
+	}
+
+	mcps := cat.ByType(MCP)
+	if len(mcps) != 1 {
+		t.Fatalf("expected 1 MCP item, got %d", len(mcps))
+	}
+	if mcps[0].Name != "my-server" {
+		t.Errorf("Name = %q, want %q", mcps[0].Name, "my-server")
+	}
+	if mcps[0].ServerKey != "my-server" {
+		t.Errorf("ServerKey = %q, want %q", mcps[0].ServerKey, "my-server")
+	}
+	if mcps[0].Description != "npx @mcp/server-filesystem" {
+		t.Errorf("Description = %q, want %q", mcps[0].Description, "npx @mcp/server-filesystem")
+	}
+}
+
+func TestScanMCP_NoConfigJSON(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+
+	// MCP directory with no config.json — just a README.
+	writeFile(t, filepath.Join(root, "mcp", "no-config", "README.md"), "# Info")
+
+	cat, err := Scan(root, root)
+	if err != nil {
+		t.Fatalf("Scan error: %v", err)
+	}
+
+	mcps := cat.ByType(MCP)
+	if len(mcps) != 1 {
+		t.Fatalf("expected 1 MCP item, got %d", len(mcps))
+	}
+	if mcps[0].Name != "no-config" {
+		t.Errorf("Name = %q, want %q", mcps[0].Name, "no-config")
+	}
+	// ServerKey should be set to directory name for flat/missing configs.
+	if mcps[0].ServerKey != "no-config" {
+		t.Errorf("ServerKey = %q, want %q", mcps[0].ServerKey, "no-config")
+	}
+	if mcps[0].Description != "" {
+		t.Errorf("Description = %q, want empty", mcps[0].Description)
+	}
+}
+
+func TestScanMCP_InvalidServerName(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+
+	writeFile(t, filepath.Join(root, "mcp", "mixed", "config.json"), `{
+		"mcpServers": {
+			"valid-server": {"command": "node", "args": ["server.js"]},
+			"invalid.name": {"command": "bad"}
+		}
+	}`)
+
+	cat, err := Scan(root, root)
+	if err != nil {
+		t.Fatalf("Scan error: %v", err)
+	}
+
+	mcps := cat.ByType(MCP)
+	if len(mcps) != 1 {
+		t.Fatalf("expected 1 MCP item (valid only), got %d", len(mcps))
+	}
+	if mcps[0].Name != "valid-server" {
+		t.Errorf("Name = %q, want %q", mcps[0].Name, "valid-server")
+	}
+
+	// Should have a warning about the invalid name.
+	foundWarning := false
+	for _, w := range cat.Warnings {
+		if strings.Contains(w, "invalid.name") {
+			foundWarning = true
+			break
+		}
+	}
+	if !foundWarning {
+		t.Error("expected warning about invalid.name, got none")
+	}
+}
+
+func TestScanMCP_FilesSharedAcrossExplodedItems(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+
+	writeFile(t, filepath.Join(root, "mcp", "multi", "config.json"), `{
+		"mcpServers": {
+			"alpha": {"command": "node", "args": ["a.js"]},
+			"beta": {"url": "https://beta.example.com"}
+		}
+	}`)
+	writeFile(t, filepath.Join(root, "mcp", "multi", "README.md"), "# Multi")
+
+	cat, err := Scan(root, root)
+	if err != nil {
+		t.Fatalf("Scan error: %v", err)
+	}
+
+	mcps := cat.ByType(MCP)
+	if len(mcps) != 2 {
+		t.Fatalf("expected 2 MCP items, got %d", len(mcps))
+	}
+
+	// Both items should share the same files list.
+	for _, m := range mcps {
+		if len(m.Files) != 2 {
+			t.Errorf("item %q has %d files, want 2", m.Name, len(m.Files))
+		}
+	}
+}
+
+func TestMCPServerDescription(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		json string
+		want string
+	}{
+		{"command only", `{"command": "node"}`, "node"},
+		{"command with args", `{"command": "npx", "args": ["-y", "@example/server"]}`, "npx @example/server"},
+		{"command with only flags", `{"command": "npx", "args": ["-y", "--port"]}`, "npx"},
+		{"url only", `{"url": "https://mcp.example.com"}`, "https://mcp.example.com"},
+		{"empty", `{}`, ""},
+		{"url preferred over empty command", `{"url": "https://x.com", "command": ""}`, "https://x.com"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			value := gjsonParse(tt.json)
+			got := mcpServerDescription(value)
+			if got != tt.want {
+				t.Errorf("mcpServerDescription() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// gjsonParse is a test helper that parses a JSON string into a gjson.Result.
+func gjsonParse(s string) gjson.Result {
+	return gjson.Parse(s)
 }
