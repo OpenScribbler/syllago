@@ -6,40 +6,48 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Semantic colors — adaptive for light/dark terminals.
+// Syllago brand colors — used ONLY for the logo. Do not use elsewhere.
 var (
-	primaryColor = lipgloss.AdaptiveColor{Light: "#047857", Dark: "#6EE7B7"} // mint
-	accentColor  = lipgloss.AdaptiveColor{Light: "#6D28D9", Dark: "#C4B5FD"} // viola
-	mutedColor   = lipgloss.AdaptiveColor{Light: "#57534E", Dark: "#A8A29E"} // stone
-	successColor = lipgloss.AdaptiveColor{Light: "#15803D", Dark: "#4ADE80"} // green
-	dangerColor  = lipgloss.AdaptiveColor{Light: "#B91C1C", Dark: "#FCA5A5"} // red
-	warningColor = lipgloss.AdaptiveColor{Light: "#B45309", Dark: "#FCD34D"} // amber
+	logoMint  = lipgloss.AdaptiveColor{Light: "#047857", Dark: "#6EE7B7"}
+	logoViola = lipgloss.AdaptiveColor{Light: "#6D28D9", Dark: "#C4B5FD"}
 )
 
-// Structural colors.
+// Flexoki semantic colors — adaptive for light/dark terminals.
+// Light uses -600 values, dark uses -400 values.
+// https://stephango.com/flexoki
 var (
-	borderColor = lipgloss.AdaptiveColor{Light: "#D4D4D8", Dark: "#3F3F46"}
-	selectedBG  = lipgloss.AdaptiveColor{Light: "#D1FAE5", Dark: "#1A3A2A"}
-	modalBG     = lipgloss.AdaptiveColor{Light: "#F4F4F5", Dark: "#27272A"}
-	primaryText = lipgloss.AdaptiveColor{Light: "#1C1917", Dark: "#FAFAF9"}
+	primaryColor = lipgloss.AdaptiveColor{Light: "#24837B", Dark: "#3AA99F"} // cyan
+	accentColor  = lipgloss.AdaptiveColor{Light: "#5E409D", Dark: "#8B7EC8"} // purple
+	mutedColor   = lipgloss.AdaptiveColor{Light: "#6F6E69", Dark: "#878580"} // base-600/500
+	successColor = lipgloss.AdaptiveColor{Light: "#66800B", Dark: "#879A39"} // green
+	dangerColor  = lipgloss.AdaptiveColor{Light: "#AF3029", Dark: "#D14D41"} // red
+	warningColor = lipgloss.AdaptiveColor{Light: "#BC5215", Dark: "#DA702C"} // orange
+)
+
+// Flexoki structural colors.
+var (
+	borderColor = lipgloss.AdaptiveColor{Light: "#CECDC3", Dark: "#343331"} // base-200/850
+	selectedBG  = lipgloss.AdaptiveColor{Light: "#E6E4D9", Dark: "#343331"} // base-100/850
+	modalBG     = lipgloss.AdaptiveColor{Light: "#F2F0E5", Dark: "#282726"} // base-50/900
+	primaryText = lipgloss.AdaptiveColor{Light: "#100F0F", Dark: "#CECDC3"} // black/base-200
 )
 
 // Component styles — defined upfront for all phases.
 var (
-	// Logo
-	logoStyle       = lipgloss.NewStyle().Bold(true).Foreground(primaryColor)
-	accentLogoStyle = lipgloss.NewStyle().Bold(true).Foreground(accentColor)
+	// Logo — uses syllago brand colors, not Flexoki
+	logoStyle       = lipgloss.NewStyle().Bold(true).Foreground(logoMint)
+	accentLogoStyle = lipgloss.NewStyle().Bold(true).Foreground(logoViola)
 
 	// Buttons (background-color blocks, huh/superfile pattern)
 	activeButtonStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#000000"}).
+				Foreground(lipgloss.AdaptiveColor{Light: "#FFFCF0", Dark: "#100F0F"}). // paper/black
 				Background(accentColor).
 				Padding(0, 2).
 				MarginRight(1)
 
 	inactiveButtonStyle = lipgloss.NewStyle().
 				Foreground(mutedColor).
-				Background(lipgloss.AdaptiveColor{Light: "#E4E4E7", Dark: "#3F3F46"}).
+				Background(lipgloss.AdaptiveColor{Light: "#E6E4D9", Dark: "#343331"}). // base-100/850
 				Padding(0, 2).
 				MarginRight(1)
 
@@ -67,21 +75,6 @@ var (
 	inactiveTabStyle = lipgloss.NewStyle().
 				Faint(true).
 				Padding(0, 2)
-
-	// Dropdown
-	dropdownBorderStyle = lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(accentColor)
-
-	dropdownItemStyle = lipgloss.NewStyle().
-				PaddingLeft(2).
-				PaddingRight(2)
-
-	dropdownSelectedStyle = lipgloss.NewStyle().
-				Background(selectedBG).
-				Bold(true).
-				PaddingLeft(2).
-				PaddingRight(2)
 
 	// Modal
 	modalStyle = lipgloss.NewStyle().
