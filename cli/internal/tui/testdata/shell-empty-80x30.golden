@@ -1,7 +1,7 @@
 ╭──syllago─────────────────────────────────────────────────────────────────────╮
-│               [1] Content      [2] Collections      [3] Config               │
+│               [1] Collections      [2] Content      [3] Config               │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│   Skills     Agents     MCP     Rules     Hooks     Commands     [a] Add      [n] Create   │
+│   Library     Registries     Loadouts              [a] Add      [n] Create   │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 
 
