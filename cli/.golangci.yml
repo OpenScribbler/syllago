@@ -81,6 +81,10 @@ linters:
         linters:
           - gocyclo
           - revive
+      - path: internal/tui_v1/
+        linters:
+          - gocyclo
+          - revive
 
 formatters:
   enable:

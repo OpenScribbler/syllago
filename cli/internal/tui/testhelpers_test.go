@@ -29,20 +29,7 @@ func keyPress(k tea.KeyType) tea.KeyMsg {
 	return tea.KeyMsg{Type: k}
 }
 
-var (
-	keyUp    = keyPress(tea.KeyUp)
-	keyDown  = keyPress(tea.KeyDown)
-	keyEnter = keyPress(tea.KeyEnter)
-	keyEsc   = keyPress(tea.KeyEsc)
-	keyTab   = keyPress(tea.KeyTab)
-)
-
-func pressN(m tea.Model, key tea.Msg, n int) tea.Model {
-	for i := 0; i < n; i++ {
-		m, _ = m.Update(key)
-	}
-	return m
-}
+var keyTab = keyPress(tea.KeyTab)
 
 // --- Test data ---
 
@@ -51,12 +38,42 @@ func testCatalog(t *testing.T) *catalog.Catalog {
 	return &catalog.Catalog{}
 }
 
+// testCatalogWithItems creates a catalog with sample items for testing.
+// Items have no real files on disk, so preview will show error messages.
+func testCatalogWithItems(t *testing.T) *catalog.Catalog {
+	t.Helper()
+	return &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "alpha-skill", Type: catalog.Skills, Source: "team-rules", Files: []string{"SKILL.md"}},
+			{Name: "beta-skill", Type: catalog.Skills, Source: "team-rules", Files: []string{"SKILL.md"}},
+			{Name: "gamma-rule", Type: catalog.Rules, Source: "library", Files: []string{"rule.md"}},
+			{Name: "delta-agent", Type: catalog.Agents, Source: "my-registry", Files: []string{"agent.md"}},
+			{Name: "epsilon-hook", Type: catalog.Hooks, Source: "team-rules", Files: []string{"hook.json"}},
+			{Name: "zeta-mcp", Type: catalog.MCP, Source: "library", Files: []string{"config.json"}},
+			{Name: "eta-command", Type: catalog.Commands, Source: "team-rules", Files: []string{"cmd.md"}},
+		},
+	}
+}
+
 func testProviders() []provider.Provider {
 	return nil
 }
 
 func testConfig() *config.Config {
 	return &config.Config{}
+}
+
+// testAppWithItems creates a test app with sample catalog items at 80x30.
+func testAppWithItems(t *testing.T) App {
+	return testAppWithItemsSize(t, 80, 30)
+}
+
+// testAppWithItemsSize creates a test app with sample catalog items at custom dimensions.
+func testAppWithItemsSize(t *testing.T, w, h int) App {
+	t.Helper()
+	app := NewApp(testCatalogWithItems(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
+	return m.(App)
 }
 
 // --- App construction ---
@@ -125,11 +142,11 @@ func diffStrings(want, got string) string {
 			gl = gotLines[i]
 		}
 		if wl != gl {
-			sb.WriteString(fmt.Sprintf("--- want line %d:\n  %s\n+++ got  line %d:\n  %s\n", i, wl, i, gl))
+			fmt.Fprintf(&sb, "--- want line %d:\n  %s\n+++ got  line %d:\n  %s\n", i, wl, i, gl)
 		}
 	}
 	if len(wantLines) != len(gotLines) {
-		sb.WriteString(fmt.Sprintf("line count: want %d, got %d\n", len(wantLines), len(gotLines)))
+		fmt.Fprintf(&sb, "line count: want %d, got %d\n", len(wantLines), len(gotLines))
 	}
 	return sb.String()
 }

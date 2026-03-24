@@ -3,6 +3,13 @@
 ├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
 │   Library     Registries     Loadouts                                                      [a] Add      [n] Create   │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ > alpha-skill       team-rules [skills]│──SKILL.md─────────────────────────────────────────────────────────────────────
+   beta-skill        team-rules [skills]│ 1 Error reading file:
+   gamma-rule            library [rules]│ 2 reading file SKILL.md: open SKILL.md: no such file or directory
+   delta-agent      my-registry [agents]│
+   epsilon-hook       team-rules [hooks]│
+   zeta-mcp                library [mcp]│
+   eta-command     team-rules [commands]│
                                         │
                                         │
                                         │
@@ -13,13 +20,6 @@
                                         │
                                         │
                                         │
-                                        │
-                                        │
-                                        │
-                                        │
-                                        │
-                                        │
-            No items found.             │                           Select an item to preview
                                         │
                                         │
                                         │
