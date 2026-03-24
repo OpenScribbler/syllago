@@ -83,17 +83,17 @@ func TestApp_ContentHeight(t *testing.T) {
 func TestApp_GroupSwitchWith123(t *testing.T) {
 	app := testApp(t)
 
-	// Press 2 to switch to Collections
+	// Press 2 to switch to Content
 	m, cmd := app.Update(keyRune('2'))
 	if cmd != nil {
 		m, _ = m.Update(cmd()) // process tabChangedMsg
 	}
 	a := m.(App)
-	if a.topBar.ActiveGroupLabel() != "Collections" {
-		t.Errorf("expected Collections, got %q", a.topBar.ActiveGroupLabel())
+	if a.topBar.ActiveGroupLabel() != "Content" {
+		t.Errorf("expected Content, got %q", a.topBar.ActiveGroupLabel())
 	}
-	if a.topBar.ActiveTabLabel() != "Library" {
-		t.Errorf("expected Library as first tab, got %q", a.topBar.ActiveTabLabel())
+	if a.topBar.ActiveTabLabel() != "Skills" {
+		t.Errorf("expected Skills as first tab, got %q", a.topBar.ActiveTabLabel())
 	}
 
 	// Press 3 to switch to Config
@@ -110,24 +110,24 @@ func TestApp_GroupSwitchWith123(t *testing.T) {
 func TestApp_SubTabNavHL(t *testing.T) {
 	app := testApp(t)
 
-	// l moves to next sub-tab
+	// l moves to next sub-tab (Library -> Registries)
 	m, cmd := app.Update(keyRune('l'))
 	if cmd != nil {
 		m, _ = m.Update(cmd())
 	}
 	a := m.(App)
-	if a.topBar.ActiveTabLabel() != "Agents" {
-		t.Errorf("expected Agents after l, got %q", a.topBar.ActiveTabLabel())
+	if a.topBar.ActiveTabLabel() != "Registries" {
+		t.Errorf("expected Registries after l, got %q", a.topBar.ActiveTabLabel())
 	}
 
-	// h moves back
+	// h moves back (Registries -> Library)
 	m, cmd = a.Update(keyRune('h'))
 	if cmd != nil {
 		m, _ = m.Update(cmd())
 	}
 	a = m.(App)
-	if a.topBar.ActiveTabLabel() != "Skills" {
-		t.Errorf("expected Skills after h, got %q", a.topBar.ActiveTabLabel())
+	if a.topBar.ActiveTabLabel() != "Library" {
+		t.Errorf("expected Library after h, got %q", a.topBar.ActiveTabLabel())
 	}
 }
 
@@ -147,8 +147,8 @@ func TestApp_ActionButtonHotkeys(t *testing.T) {
 	if action.action != "add" {
 		t.Errorf("expected action=add, got %q", action.action)
 	}
-	if action.tab != "Skills" {
-		t.Errorf("expected tab=Skills, got %q", action.tab)
+	if action.tab != "Library" {
+		t.Errorf("expected tab=Library, got %q", action.tab)
 	}
 
 	// 'n' should fire a create action
@@ -166,10 +166,10 @@ func TestApp_ActionButtonHotkeys(t *testing.T) {
 func TestApp_TopBarShowsInView(t *testing.T) {
 	app := testApp(t)
 	view := app.View()
-	assertContains(t, view, "Content")
 	assertContains(t, view, "Collections")
+	assertContains(t, view, "Content")
 	assertContains(t, view, "Config")
-	assertContains(t, view, "Skills")
+	assertContains(t, view, "Library")
 }
 
 func TestApp_TopBarBorder(t *testing.T) {
@@ -205,12 +205,12 @@ func TestGolden_Shell_TooSmall(t *testing.T) {
 	requireGolden(t, "shell-toosmall-50x15", snapshotApp(t, app))
 }
 
-func TestGolden_Collections_80x30(t *testing.T) {
+func TestGolden_Content_80x30(t *testing.T) {
 	app := testApp(t)
 	m, cmd := app.Update(keyRune('2'))
 	if cmd != nil {
 		m, _ = m.Update(cmd())
 	}
 	a := m.(App)
-	requireGolden(t, "collections-80x30", snapshotApp(t, a))
+	requireGolden(t, "content-80x30", snapshotApp(t, a))
 }

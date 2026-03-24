@@ -42,15 +42,15 @@ func newTopBar() topBarModel {
 	return topBarModel{
 		groups: []tabGroup{
 			{
-				label:   "Content",
+				label:   "Collections",
 				hotkey:  "1",
-				tabs:    []string{"Skills", "Agents", "MCP", "Rules", "Hooks", "Commands"},
+				tabs:    []string{"Library", "Registries", "Loadouts"},
 				actions: []string{"[a] Add", "[n] Create"},
 			},
 			{
-				label:   "Collections",
+				label:   "Content",
 				hotkey:  "2",
-				tabs:    []string{"Library", "Registries", "Loadouts"},
+				tabs:    []string{"Skills", "Agents", "MCP", "Rules", "Hooks", "Commands"},
 				actions: []string{"[a] Add", "[n] Create"},
 			},
 			{
@@ -60,8 +60,8 @@ func newTopBar() topBarModel {
 				actions: nil,
 			},
 		},
-		activeGroup: 0, // Content
-		activeTab:   0, // Skills
+		activeGroup: 0, // Collections
+		activeTab:   0, // Library
 	}
 }
 
