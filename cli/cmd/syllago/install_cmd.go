@@ -215,8 +215,10 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(result.Installed) > 0 && !output.Quiet {
-		fmt.Fprintf(output.Writer, "\n  Next: syllago install %s --to <other-provider>    (install to another provider)\n", firstArg(args))
-		fmt.Fprintf(output.Writer, "        syllago convert %s --to <provider>           (convert for sharing)\n", firstArg(args))
+		fmt.Fprintf(output.Writer, "\n  # Install to another provider\n")
+		fmt.Fprintf(output.Writer, "  syllago install %s --to <provider>\n", firstArg(args))
+		fmt.Fprintf(output.Writer, "\n  # Convert for sharing\n")
+		fmt.Fprintf(output.Writer, "  syllago convert %s --to <provider>\n", firstArg(args))
 	}
 
 	return nil

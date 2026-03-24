@@ -237,7 +237,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		SourceVisibility: srcVisibility,
 	}, globalDir, canon, version)
 
-	return printAddResults(results, dryRun)
+	return printAddResults(results, dryRun, prov.Name)
 }
 
 // converterAdapter adapts converter.Converter to the add.Canonicalizer interface.
@@ -258,7 +258,7 @@ func (a *converterAdapter) Canonicalize(raw []byte, sourceProvider string) ([]by
 }
 
 // printAddResults writes per-item output and the summary line.
-func printAddResults(results []add.AddResult, dryRun bool) error {
+func printAddResults(results []add.AddResult, dryRun bool, providerName string) error {
 	if output.Quiet {
 		return nil
 	}
@@ -294,18 +294,24 @@ func printAddResults(results []add.AddResult, dryRun bool) error {
 
 	fmt.Fprintln(output.Writer)
 
-	// Summary line.
+	// Summary line with type and provider context.
+	typeLabel := summaryTypeLabel(results)
+	source := ""
+	if providerName != "" {
+		source = " from " + providerName
+	}
+
 	var parts []string
 	if dryRun {
 		if added > 0 {
-			parts = append(parts, fmt.Sprintf("[dry-run] would add %d", added))
+			parts = append(parts, fmt.Sprintf("[dry-run] would add %d %s%s", added, typeLabel, source))
 		}
 		if updated > 0 {
 			parts = append(parts, fmt.Sprintf("would update %d", updated))
 		}
 	} else {
 		if added > 0 {
-			parts = append(parts, fmt.Sprintf("Added %d", added))
+			parts = append(parts, fmt.Sprintf("Added %d %s%s", added, typeLabel, source))
 		}
 		if updated > 0 {
 			parts = append(parts, fmt.Sprintf("updated %d", updated))
@@ -322,6 +328,22 @@ func printAddResults(results []add.AddResult, dryRun bool) error {
 	}
 
 	return nil
+}
+
+// summaryTypeLabel returns a human-readable label for the content types in a
+// set of add results. If all items share the same type, it returns that type
+// name (e.g., "rules"); otherwise it returns "items".
+func summaryTypeLabel(results []add.AddResult) string {
+	if len(results) == 0 {
+		return "items"
+	}
+	first := results[0].Type
+	for _, r := range results[1:] {
+		if r.Type != first {
+			return "items"
+		}
+	}
+	return strings.ToLower(string(first))
 }
 
 // discoveryGroup is the JSON structure for one content type's discovered items.
@@ -701,6 +723,11 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previ
 		fmt.Fprintf(output.Writer, "  %s   (%s/%s)\n", name, hook.Event, matcher)
 		count++
 	}
-	fmt.Fprintf(output.Writer, "\nAdded %d hooks to library.\n", count)
+	prov := findProviderBySlug(fromSlug)
+	provLabel := fromSlug
+	if prov != nil {
+		provLabel = prov.Name
+	}
+	fmt.Fprintf(output.Writer, "\nAdded %d hooks from %s.\n", count, provLabel)
 	return nil
 }
