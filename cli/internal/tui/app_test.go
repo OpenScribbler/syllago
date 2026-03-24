@@ -131,6 +131,38 @@ func TestApp_SubTabNavHL(t *testing.T) {
 	}
 }
 
+func TestApp_ActionButtonHotkeys(t *testing.T) {
+	app := testApp(t)
+
+	// 'a' should fire an add action
+	_, cmd := app.Update(keyRune('a'))
+	if cmd == nil {
+		t.Fatal("'a' should produce an action command")
+	}
+	msg := cmd()
+	action, ok := msg.(actionPressedMsg)
+	if !ok {
+		t.Fatalf("expected actionPressedMsg, got %T", msg)
+	}
+	if action.action != "add" {
+		t.Errorf("expected action=add, got %q", action.action)
+	}
+	if action.tab != "Skills" {
+		t.Errorf("expected tab=Skills, got %q", action.tab)
+	}
+
+	// 'n' should fire a create action
+	_, cmd = app.Update(keyRune('n'))
+	if cmd == nil {
+		t.Fatal("'n' should produce an action command")
+	}
+	msg = cmd()
+	action = msg.(actionPressedMsg)
+	if action.action != "create" {
+		t.Errorf("expected action=create, got %q", action.action)
+	}
+}
+
 func TestApp_TopBarShowsInView(t *testing.T) {
 	app := testApp(t)
 	view := app.View()

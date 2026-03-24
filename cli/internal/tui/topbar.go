@@ -23,6 +23,13 @@ type tabChangedMsg struct {
 	tabLabel string
 }
 
+// actionPressedMsg is fired when an action button is activated (keyboard or mouse).
+type actionPressedMsg struct {
+	action string // "add" or "create"
+	group  string // which group was active (e.g., "Content", "Collections")
+	tab    string // which sub-tab was active (e.g., "Skills", "Library")
+}
+
 // topBarModel manages a two-tier tab navigation bar with a bordered frame.
 type topBarModel struct {
 	groups      []tabGroup
@@ -38,13 +45,13 @@ func newTopBar() topBarModel {
 				label:   "Content",
 				hotkey:  "1",
 				tabs:    []string{"Skills", "Agents", "MCP", "Rules", "Hooks", "Commands"},
-				actions: []string{"+ Add", "Create"},
+				actions: []string{"(a) Add", "(n) Create"},
 			},
 			{
 				label:   "Collections",
 				hotkey:  "2",
 				tabs:    []string{"Library", "Registries", "Loadouts"},
-				actions: []string{"+ Add", "Create"},
+				actions: []string{"(a) Add", "(n) Create"},
 			},
 			{
 				label:   "Config",
@@ -128,7 +135,26 @@ func (t topBarModel) Update(msg tea.Msg) (topBarModel, tea.Cmd) {
 		}
 	}
 
+	// Check action button clicks
+	if zone.Get("btn-add").InBounds(mouseMsg) {
+		return t, t.actionCmd("add")
+	}
+	if zone.Get("btn-create").InBounds(mouseMsg) {
+		return t, t.actionCmd("create")
+	}
+
 	return t, nil
+}
+
+// ActionCmd creates an actionPressedMsg for the given action name.
+func (t topBarModel) actionCmd(action string) tea.Cmd {
+	return func() tea.Msg {
+		return actionPressedMsg{
+			action: action,
+			group:  t.ActiveGroupLabel(),
+			tab:    t.ActiveTabLabel(),
+		}
+	}
 }
 
 // Height returns the rendered height of the topbar (always 5: top border + groups + separator + tabs + bottom border).
@@ -219,10 +245,13 @@ func (t topBarModel) renderTabRow(innerW int) string {
 
 	// Action buttons
 	var btnParts []string
-	for _, action := range g.actions {
+	for i, action := range g.actions {
 		btn := activeButtonStyle.Render(action)
-		btnID := "btn-" + strings.ToLower(strings.ReplaceAll(strings.TrimPrefix(action, "+ "), " ", "-"))
-		btn = zone.Mark(btnID, btn)
+		// Zone IDs: btn-add (index 0), btn-create (index 1)
+		ids := []string{"btn-add", "btn-create"}
+		if i < len(ids) {
+			btn = zone.Mark(ids[i], btn)
+		}
 		btnParts = append(btnParts, btn)
 	}
 	right := strings.Join(btnParts, " ")
