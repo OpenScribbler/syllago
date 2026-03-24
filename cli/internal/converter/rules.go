@@ -39,6 +39,8 @@ func (c *RulesConverter) Canonicalize(content []byte, sourceProvider string) (*R
 		return canonicalizeWindsurfRule(content)
 	case "cline":
 		return canonicalizeClineRule(content)
+	case "copilot-cli":
+		return canonicalizeCopilotRule(content)
 	case "opencode":
 		return canonicalizeMarkdownRule(content)
 	case "kiro":
@@ -64,7 +66,9 @@ func (c *RulesConverter) Render(content []byte, target provider.Provider) (*Resu
 		return renderWindsurfRule(meta, body)
 	case "claude-code":
 		return renderClaudeCodeRule(meta, body)
-	case "codex", "gemini-cli", "copilot-cli":
+	case "copilot-cli":
+		return renderCopilotRule(meta, body)
+	case "codex", "gemini-cli":
 		return renderSingleFileRule(meta, body)
 	case "zed":
 		return renderZedRule(meta, body)
@@ -219,6 +223,58 @@ func canonicalizeWindsurfRule(content []byte) (*Result, error) {
 		return nil, err
 	}
 	return &Result{Content: canonical, Filename: "rule.md", Warnings: warnings}, nil
+}
+
+// copilotFrontmatter represents Copilot's .instructions.md YAML frontmatter.
+// The applyTo field specifies file glob patterns for scoped instructions.
+type copilotFrontmatter struct {
+	ApplyTo string `yaml:"applyTo,omitempty"`
+}
+
+func canonicalizeCopilotRule(content []byte) (*Result, error) {
+	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+
+	opening := []byte("---\n")
+	if !bytes.HasPrefix(normalized, opening) {
+		meta := RuleMeta{AlwaysApply: true}
+		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "rule.md"}, nil
+	}
+
+	rest := normalized[len(opening):]
+	closingIdx := bytes.Index(rest, opening)
+	if closingIdx == -1 {
+		meta := RuleMeta{AlwaysApply: true}
+		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "rule.md"}, nil
+	}
+
+	yamlBytes := rest[:closingIdx]
+	var cfm copilotFrontmatter
+	if err := yaml.Unmarshal(yamlBytes, &cfm); err != nil {
+		return nil, err
+	}
+
+	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+
+	meta := RuleMeta{}
+	if cfm.ApplyTo != "" {
+		meta.Globs = splitGlobs(cfm.ApplyTo)
+	} else {
+		meta.AlwaysApply = true
+	}
+
+	canonical, err := buildCanonical(meta, body)
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: canonical, Filename: "rule.md"}, nil
 }
 
 func canonicalizeMarkdownRule(content []byte) (*Result, error) {
@@ -463,6 +519,42 @@ func renderClaudeCodeRule(meta RuleMeta, body string) (*Result, error) {
 	notesBlock := BuildConversionNotes("syllago", notes)
 	result := AppendNotes(body, notesBlock)
 	return &Result{Content: []byte(result + "\n"), Filename: "rule.md"}, nil
+}
+
+// renderCopilotRule renders a rule for Copilot CLI's .instructions.md format.
+// Glob-scoped rules use applyTo frontmatter. Always-apply rules render as
+// copilot-instructions.md (plain markdown, no frontmatter).
+func renderCopilotRule(meta RuleMeta, body string) (*Result, error) {
+	if len(meta.Globs) > 0 {
+		cfm := copilotFrontmatter{ApplyTo: strings.Join(meta.Globs, ", ")}
+		fm, err := renderFrontmatter(cfm)
+		if err != nil {
+			return nil, err
+		}
+		var buf bytes.Buffer
+		buf.Write(fm)
+		buf.WriteString("\n")
+		buf.WriteString(body)
+		buf.WriteString("\n")
+		return &Result{Content: buf.Bytes(), Filename: ".instructions.md"}, nil
+	}
+
+	if meta.AlwaysApply {
+		return &Result{Content: []byte(body + "\n"), Filename: "copilot-instructions.md"}, nil
+	}
+
+	// Non-glob, non-alwaysApply: embed scope as prose
+	var notes []string
+	switch {
+	case meta.Description != "":
+		notes = append(notes, fmt.Sprintf("**Scope:** Apply when: %s", meta.Description))
+	default:
+		notes = append(notes, "**Scope:** Apply only when explicitly asked.")
+	}
+
+	notesBlock := BuildConversionNotes("syllago", notes)
+	result := AppendNotes(body, notesBlock)
+	return &Result{Content: []byte(result + "\n"), Filename: "copilot-instructions.md"}, nil
 }
 
 // renderSingleFileRule renders for providers that use a flat markdown file

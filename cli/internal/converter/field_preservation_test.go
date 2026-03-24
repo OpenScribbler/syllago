@@ -100,7 +100,9 @@ func TestFieldPreservation_RulesScoped(t *testing.T) {
 		{
 			name:     "to Copilot",
 			target:   provider.CopilotCLI,
-			contains: []string{"Use strict TypeScript", "**Scope:**", "*.ts"},
+			contains: []string{"Use strict TypeScript", "applyTo:", "*.ts", "*.tsx"},
+			absent:   []string{"**Scope:**", "alwaysApply:"},
+			filename: ".instructions.md",
 		},
 		{
 			name:     "to Zed",
