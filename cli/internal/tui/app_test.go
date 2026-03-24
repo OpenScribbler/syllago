@@ -66,97 +66,89 @@ func TestApp_HelpBarVersion(t *testing.T) {
 func TestApp_Branding(t *testing.T) {
 	app := testApp(t)
 	view := app.View()
-	assertContains(t, view, "syl")
-	assertContains(t, view, "lago")
+	assertContains(t, view, "syllago")
 }
 
 func TestApp_ContentHeight(t *testing.T) {
 	app := testAppSize(t, 80, 30)
 	h := app.contentHeight()
-	// 30 total - 1 topbar - 1 helpbar = 28
-	if h != 28 {
-		t.Errorf("expected contentHeight 28, got %d", h)
+	// 30 total - 5 topbar - 1 helpbar = 24
+	if h != 24 {
+		t.Errorf("expected contentHeight 24, got %d", h)
 	}
 }
 
-// --- Dropdown integration tests (via App) ---
+// --- Tab navigation tests ---
 
-func TestApp_DropdownOpenClose(t *testing.T) {
+func TestApp_GroupSwitchWith123(t *testing.T) {
 	app := testApp(t)
 
-	// Press 1 to open Content dropdown
-	m, _ := app.Update(keyRune('1'))
+	// Press 2 to switch to Collections
+	m, cmd := app.Update(keyRune('2'))
+	if cmd != nil {
+		m, _ = m.Update(cmd()) // process tabChangedMsg
+	}
 	a := m.(App)
-	if !a.topBar.content.isOpen {
-		t.Fatal("pressing 1 should open content dropdown")
+	if a.topBar.ActiveGroupLabel() != "Collections" {
+		t.Errorf("expected Collections, got %q", a.topBar.ActiveGroupLabel())
+	}
+	if a.topBar.ActiveTabLabel() != "Library" {
+		t.Errorf("expected Library as first tab, got %q", a.topBar.ActiveTabLabel())
 	}
 
-	// Esc closes it
-	m, _ = a.Update(keyEsc)
+	// Press 3 to switch to Config
+	m, cmd = a.Update(keyRune('3'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
 	a = m.(App)
-	if a.topBar.content.isOpen {
-		t.Fatal("esc should close the dropdown")
+	if a.topBar.ActiveGroupLabel() != "Config" {
+		t.Errorf("expected Config, got %q", a.topBar.ActiveGroupLabel())
 	}
 }
 
-func TestApp_DropdownSelectChangesView(t *testing.T) {
+func TestApp_SubTabNavHL(t *testing.T) {
 	app := testApp(t)
 
-	// Open Content, navigate to Agents, select
-	m, _ := app.Update(keyRune('1'))
-	m, _ = m.Update(keyDown) // cursor to Agents
-	m, cmd := m.Update(keyEnter)
-
-	// Execute the cmd to get the dropdownActiveMsg
+	// l moves to next sub-tab
+	m, cmd := app.Update(keyRune('l'))
 	if cmd != nil {
-		msg := cmd()
-		m, _ = m.Update(msg)
+		m, _ = m.Update(cmd())
 	}
-
 	a := m.(App)
-	if a.topBar.content.ActiveLabel() != "Agents" {
-		t.Errorf("expected Agents selected, got %q", a.topBar.content.ActiveLabel())
+	if a.topBar.ActiveTabLabel() != "Agents" {
+		t.Errorf("expected Agents after l, got %q", a.topBar.ActiveTabLabel())
 	}
-}
 
-func TestApp_DropdownMutualExclusion(t *testing.T) {
-	app := testApp(t)
-
-	// Open Collection, select Library
-	m, _ := app.Update(keyRune('2'))
-	m, cmd := m.Update(keyEnter) // select Library (cursor at 0)
+	// h moves back
+	m, cmd = a.Update(keyRune('h'))
 	if cmd != nil {
-		msg := cmd()
-		m, _ = m.Update(msg)
+		m, _ = m.Update(cmd())
 	}
-
-	a := m.(App)
-	if a.topBar.collection.ActiveLabel() != "Library" {
-		t.Errorf("expected Library, got %q", a.topBar.collection.ActiveLabel())
-	}
-	if !a.topBar.content.disabled {
-		t.Error("content should be disabled after collection selection")
-	}
-	if a.topBar.content.ActiveLabel() != "--" {
-		t.Errorf("content should be reset to --, got %q", a.topBar.content.ActiveLabel())
-	}
-}
-
-func TestApp_CtrlCQuitsWithOpenDropdown(t *testing.T) {
-	app := testApp(t)
-
-	m, _ := app.Update(keyRune('1'))
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
-	if cmd == nil {
-		t.Fatal("ctrl+c should quit even with dropdown open")
+	a = m.(App)
+	if a.topBar.ActiveTabLabel() != "Skills" {
+		t.Errorf("expected Skills after h, got %q", a.topBar.ActiveTabLabel())
 	}
 }
 
 func TestApp_TopBarShowsInView(t *testing.T) {
 	app := testApp(t)
 	view := app.View()
-	assertContains(t, view, "Content: Skills")
-	assertContains(t, view, "Collection: --")
+	assertContains(t, view, "Content")
+	assertContains(t, view, "Collections")
+	assertContains(t, view, "Config")
+	assertContains(t, view, "Skills")
+}
+
+func TestApp_TopBarBorder(t *testing.T) {
+	app := testApp(t)
+	view := app.View()
+	// Should have rounded corners
+	assertContains(t, view, "╭")
+	assertContains(t, view, "╰")
+	// Should have separator
+	assertContains(t, view, "├")
+	assertContains(t, view, "┤")
 }
 
 // --- Golden tests ---
@@ -181,16 +173,12 @@ func TestGolden_Shell_TooSmall(t *testing.T) {
 	requireGolden(t, "shell-toosmall-50x15", snapshotApp(t, app))
 }
 
-func TestGolden_Dropdown_Content_80x30(t *testing.T) {
-	app := testAppSize(t, 80, 30)
-	m, _ := app.Update(keyRune('1'))
+func TestGolden_Collections_80x30(t *testing.T) {
+	app := testApp(t)
+	m, cmd := app.Update(keyRune('2'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
 	a := m.(App)
-	requireGolden(t, "dropdown-content-80x30", snapshotApp(t, a))
-}
-
-func TestGolden_Dropdown_Collection_80x30(t *testing.T) {
-	app := testAppSize(t, 80, 30)
-	m, _ := app.Update(keyRune('2'))
-	a := m.(App)
-	requireGolden(t, "dropdown-collection-80x30", snapshotApp(t, a))
+	requireGolden(t, "collections-80x30", snapshotApp(t, a))
 }

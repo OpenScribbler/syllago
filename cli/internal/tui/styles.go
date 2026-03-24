@@ -117,6 +117,17 @@ var (
 	sectionRuleStyle  = lipgloss.NewStyle().Foreground(mutedColor)
 )
 
+// itoa converts int to string without importing strconv.
+func itoa(n int) string {
+	if n < 0 {
+		return "-" + itoa(-n)
+	}
+	if n < 10 {
+		return string(rune('0' + n))
+	}
+	return itoa(n/10) + string(rune('0'+n%10))
+}
+
 // renderSectionTitle renders a divider line: ──Title────────────
 func renderSectionTitle(title string, width int) string {
 	prefix := sectionRuleStyle.Render("──")
