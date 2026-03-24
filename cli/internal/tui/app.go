@@ -1,10 +1,9 @@
 package tui
 
 import (
-	"strings"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
@@ -24,6 +23,7 @@ type App struct {
 	projectRoot     string
 
 	// Sub-models
+	topBar  topBarModel
 	helpBar helpBarModel
 
 	// Dimensions
@@ -47,6 +47,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		registrySources: registrySources,
 		cfg:             cfg,
 		projectRoot:     projectRoot,
+		topBar:          newTopBar(),
 		helpBar:         newHelpBar(version),
 	}
 }
@@ -63,17 +64,50 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.width = msg.Width
 		a.height = msg.Height
 		a.ready = true
+		a.topBar.SetSize(msg.Width)
 		a.helpBar.SetSize(msg.Width)
 		return a, nil
 
+	case tea.MouseMsg:
+		var cmd tea.Cmd
+		a.topBar, cmd = a.topBar.Update(msg)
+		return a, cmd
+
 	case tea.KeyMsg:
+		// Open dropdown captures ALL keys (modal pattern).
+		if a.topBar.HasOpenDropdown() {
+			// Global escape hatch
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			var cmd tea.Cmd
+			a.topBar, cmd = a.topBar.Update(msg)
+			return a, cmd
+		}
+
 		switch {
 		case msg.Type == tea.KeyCtrlC:
 			return a, tea.Quit
 		case msg.String() == "q":
 			return a, tea.Quit
+
+		// 1/2/3 open dropdowns from anywhere
+		case msg.String() == "1":
+			a.topBar.OpenDropdown(1)
+			return a, nil
+		case msg.String() == "2":
+			a.topBar.OpenDropdown(2)
+			return a, nil
+		case msg.String() == "3":
+			a.topBar.OpenDropdown(3)
+			return a, nil
 		}
-		// Phase 2+: dropdown keys, focus routing
+		// Phase 3+: focus-based routing to explorer/gallery
+
+	case dropdownActiveMsg:
+		a.topBar.HandleActiveMsg(msg)
+		a.helpBar.SetHints(a.currentHints())
+		return a, nil
 	}
 	return a, nil
 }
@@ -87,30 +121,30 @@ func (a App) View() string {
 		return a.renderTooSmall()
 	}
 
-	topBar := a.renderTopBarPlaceholder()
+	topBar := a.topBar.View()
 	content := a.renderEmptyContent()
 	helpBar := a.helpBar.View()
 
-	return lipgloss.JoinVertical(lipgloss.Left,
+	return zone.Scan(lipgloss.JoinVertical(lipgloss.Left,
 		topBar,
 		content,
 		helpBar,
-	)
+	))
 }
 
 // contentHeight returns the available height for the main content area.
 func (a App) contentHeight() int {
-	topBarHeight := 1 // Phase 2: will come from topBar.height()
+	topBarHeight := a.topBar.Height()
 	helpBarHeight := 1
 	return a.height - topBarHeight - helpBarHeight
 }
 
-// renderTopBarPlaceholder renders a placeholder header until Phase 2.
-func (a App) renderTopBarPlaceholder() string {
-	logo := logoStyle.Render("syl") + accentLogoStyle.Render("lago")
-	right := mutedStyle.Render("Phase 2: navigation dropdowns")
-	gap := strings.Repeat(" ", max(0, a.width-lipgloss.Width(logo)-lipgloss.Width(right)))
-	return logo + gap + right
+// currentHints returns context-sensitive help hints based on current state.
+func (a App) currentHints() []string {
+	if a.topBar.HasOpenDropdown() {
+		return []string{"j/k navigate", "enter select", "esc close"}
+	}
+	return []string{"1/2/3 dropdowns", "? help", "q quit"}
 }
 
 // renderEmptyContent renders the empty main content area.

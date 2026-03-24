@@ -79,6 +79,86 @@ func TestApp_ContentHeight(t *testing.T) {
 	}
 }
 
+// --- Dropdown integration tests (via App) ---
+
+func TestApp_DropdownOpenClose(t *testing.T) {
+	app := testApp(t)
+
+	// Press 1 to open Content dropdown
+	m, _ := app.Update(keyRune('1'))
+	a := m.(App)
+	if !a.topBar.content.isOpen {
+		t.Fatal("pressing 1 should open content dropdown")
+	}
+
+	// Esc closes it
+	m, _ = a.Update(keyEsc)
+	a = m.(App)
+	if a.topBar.content.isOpen {
+		t.Fatal("esc should close the dropdown")
+	}
+}
+
+func TestApp_DropdownSelectChangesView(t *testing.T) {
+	app := testApp(t)
+
+	// Open Content, navigate to Agents, select
+	m, _ := app.Update(keyRune('1'))
+	m, _ = m.Update(keyDown) // cursor to Agents
+	m, cmd := m.Update(keyEnter)
+
+	// Execute the cmd to get the dropdownActiveMsg
+	if cmd != nil {
+		msg := cmd()
+		m, _ = m.Update(msg)
+	}
+
+	a := m.(App)
+	if a.topBar.content.ActiveLabel() != "Agents" {
+		t.Errorf("expected Agents selected, got %q", a.topBar.content.ActiveLabel())
+	}
+}
+
+func TestApp_DropdownMutualExclusion(t *testing.T) {
+	app := testApp(t)
+
+	// Open Collection, select Library
+	m, _ := app.Update(keyRune('2'))
+	m, cmd := m.Update(keyEnter) // select Library (cursor at 0)
+	if cmd != nil {
+		msg := cmd()
+		m, _ = m.Update(msg)
+	}
+
+	a := m.(App)
+	if a.topBar.collection.ActiveLabel() != "Library" {
+		t.Errorf("expected Library, got %q", a.topBar.collection.ActiveLabel())
+	}
+	if !a.topBar.content.disabled {
+		t.Error("content should be disabled after collection selection")
+	}
+	if a.topBar.content.ActiveLabel() != "--" {
+		t.Errorf("content should be reset to --, got %q", a.topBar.content.ActiveLabel())
+	}
+}
+
+func TestApp_CtrlCQuitsWithOpenDropdown(t *testing.T) {
+	app := testApp(t)
+
+	m, _ := app.Update(keyRune('1'))
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	if cmd == nil {
+		t.Fatal("ctrl+c should quit even with dropdown open")
+	}
+}
+
+func TestApp_TopBarShowsInView(t *testing.T) {
+	app := testApp(t)
+	view := app.View()
+	assertContains(t, view, "Content: Skills")
+	assertContains(t, view, "Collection: --")
+}
+
 // --- Golden tests ---
 
 func TestGolden_Shell_60x20(t *testing.T) {
@@ -99,4 +179,18 @@ func TestGolden_Shell_120x40(t *testing.T) {
 func TestGolden_Shell_TooSmall(t *testing.T) {
 	app := testAppSize(t, 50, 15)
 	requireGolden(t, "shell-toosmall-50x15", snapshotApp(t, app))
+}
+
+func TestGolden_Dropdown_Content_80x30(t *testing.T) {
+	app := testAppSize(t, 80, 30)
+	m, _ := app.Update(keyRune('1'))
+	a := m.(App)
+	requireGolden(t, "dropdown-content-80x30", snapshotApp(t, a))
+}
+
+func TestGolden_Dropdown_Collection_80x30(t *testing.T) {
+	app := testAppSize(t, 80, 30)
+	m, _ := app.Update(keyRune('2'))
+	a := m.(App)
+	requireGolden(t, "dropdown-collection-80x30", snapshotApp(t, a))
 }
