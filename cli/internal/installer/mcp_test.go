@@ -780,3 +780,109 @@ func TestUninstallMCP_NestedFormat(t *testing.T) {
 		t.Error("multi-mcp should be removed from installed.json")
 	}
 }
+
+func TestFindMCPLocations_SettingsJSON(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+
+	// Create a project with .claude/settings.json containing mcpServers.
+	claudeDir := filepath.Join(tmp, ".claude")
+	os.MkdirAll(claudeDir, 0755)
+	os.WriteFile(filepath.Join(claudeDir, "settings.json"), []byte(`{
+		"mcpServers": {"my-server": {"command": "node"}}
+	}`), 0644)
+
+	prov := provider.Provider{
+		Name:      "Claude Code",
+		Slug:      "claude-code",
+		ConfigDir: ".claude",
+	}
+
+	locs := FindMCPLocations(prov, tmp, "")
+	found := false
+	for _, loc := range locs {
+		if loc.Scope == ScopeProject && loc.JSONKey == "mcpServers" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected project-scoped MCP location from settings.json, got %d locations", len(locs))
+	}
+}
+
+func TestFindMCPLocations_NoMCPKey(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+
+	// Create settings.json without mcpServers.
+	claudeDir := filepath.Join(tmp, ".claude")
+	os.MkdirAll(claudeDir, 0755)
+	os.WriteFile(filepath.Join(claudeDir, "settings.json"), []byte(`{
+		"hooks": {"PreToolUse": []}
+	}`), 0644)
+
+	prov := provider.Provider{
+		Name:      "Claude Code",
+		Slug:      "claude-code",
+		ConfigDir: ".claude",
+	}
+
+	locs := FindMCPLocations(prov, tmp, "")
+	// Should not include the settings.json since it has no mcpServers key.
+	for _, loc := range locs {
+		if loc.Path == filepath.Join(claudeDir, "settings.json") {
+			t.Error("settings.json without mcpServers should not be included")
+		}
+	}
+}
+
+func TestFindMCPLocations_DotMcpJSON(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+
+	// Create .mcp.json in project root (Claude Code project-level MCP).
+	os.WriteFile(filepath.Join(tmp, ".mcp.json"), []byte(`{
+		"mcpServers": {"test-server": {"command": "npx", "args": ["test"]}}
+	}`), 0644)
+
+	prov := provider.Provider{
+		Name:      "Claude Code",
+		Slug:      "claude-code",
+		ConfigDir: ".claude",
+	}
+
+	locs := FindMCPLocations(prov, tmp, "")
+	found := false
+	for _, loc := range locs {
+		if loc.Path == filepath.Join(tmp, ".mcp.json") && loc.Scope == ScopeProject {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected .mcp.json to be found as project-scoped MCP location")
+	}
+}
+
+func TestFindMCPLocations_NoDuplicates(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+
+	// Don't create any MCP files.
+	prov := provider.Provider{
+		Name:      "Claude Code",
+		Slug:      "claude-code",
+		ConfigDir: ".claude",
+	}
+
+	locs := FindMCPLocations(prov, tmp, "")
+	// With no files on disk, should return empty.
+	seen := make(map[string]bool)
+	for _, loc := range locs {
+		if seen[loc.Path] {
+			t.Errorf("duplicate path in MCP locations: %s", loc.Path)
+		}
+		seen[loc.Path] = true
+	}
+}

@@ -52,6 +52,8 @@ type Meta struct {
 	SourceVisibility string       `yaml:"source_visibility,omitempty"` // visibility at import time: "public", "private", "unknown"
 	AddedAt          *time.Time   `yaml:"added_at,omitempty"`          // when content was added to library
 	AddedBy          string       `yaml:"added_by,omitempty"`          // e.g. "syllago v0.1.0"
+	SourceScope      string       `yaml:"source_scope,omitempty"`      // "global" or "project"
+	SourceProject    string       `yaml:"source_project,omitempty"`    // project directory name (only when scope is "project")
 }
 
 // validateFormatVersion checks that the format version is supported.

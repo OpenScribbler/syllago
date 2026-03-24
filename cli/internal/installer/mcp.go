@@ -96,6 +96,105 @@ func MCPConfigPathFor(prov provider.Provider, repoRoot string) (string, error) {
 	return mcpConfigPath(prov, repoRoot)
 }
 
+// MCPLocation describes one file where MCP configs were found.
+type MCPLocation struct {
+	Scope   SettingsScope
+	Path    string
+	JSONKey string // "mcpServers", "context_servers", "mcp", "amp.mcpServers", etc.
+}
+
+// FindMCPLocations returns all files where MCP configs exist for a provider.
+// For providers that store MCP in settings.json (alongside hooks), it checks
+// both global and project scopes. For providers with dedicated MCP files, it
+// checks those. For Claude Code, it checks both settings.json files AND
+// dedicated files (~/.claude.json, .mcp.json).
+func FindMCPLocations(prov provider.Provider, projectRoot, baseDir string) []MCPLocation {
+	jsonKey := MCPConfigKey(prov)
+	if prov.Slug == "opencode" {
+		jsonKey = "mcp"
+	}
+	if prov.Slug == "amp" {
+		jsonKey = "amp.mcpServers"
+	}
+
+	var locs []MCPLocation
+
+	// Check settings.json files (these can contain mcpServers for some providers).
+	settingsLocs, _ := FindSettingsLocationsWithBase(prov, projectRoot, baseDir)
+	for _, sl := range settingsLocs {
+		data, err := os.ReadFile(sl.Path)
+		if err != nil {
+			continue
+		}
+		if gjson.GetBytes(data, jsonKey).Exists() {
+			locs = append(locs, MCPLocation{
+				Scope:   sl.Scope,
+				Path:    sl.Path,
+				JSONKey: jsonKey,
+			})
+		}
+	}
+
+	// Check dedicated MCP config files.
+	cfgPath, err := mcpConfigPath(prov, projectRoot)
+	if err == nil && cfgPath != "" {
+		// Don't add duplicates (some providers use settings.json for both).
+		dup := false
+		for _, l := range locs {
+			if l.Path == cfgPath {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			if _, err := os.Stat(cfgPath); err == nil {
+				scope := ScopeGlobal
+				// Heuristic: if the path is under projectRoot, it's project-scoped.
+				if projectRoot != "" && isUnder(cfgPath, projectRoot) {
+					scope = ScopeProject
+				}
+				locs = append(locs, MCPLocation{
+					Scope:   scope,
+					Path:    cfgPath,
+					JSONKey: jsonKey,
+				})
+			}
+		}
+	}
+
+	// Claude Code also has .mcp.json in the project root.
+	if prov.Slug == "claude-code" && projectRoot != "" {
+		mcpJSON := filepath.Join(projectRoot, ".mcp.json")
+		dup := false
+		for _, l := range locs {
+			if l.Path == mcpJSON {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			if _, err := os.Stat(mcpJSON); err == nil {
+				locs = append(locs, MCPLocation{
+					Scope:   ScopeProject,
+					Path:    mcpJSON,
+					JSONKey: jsonKey,
+				})
+			}
+		}
+	}
+
+	return locs
+}
+
+// isUnder reports whether path is inside dir.
+func isUnder(path, dir string) bool {
+	rel, err := filepath.Rel(dir, path)
+	if err != nil {
+		return false
+	}
+	return rel != ".." && len(rel) > 0 && rel[0] != '.'
+}
+
 // readMCPConfig reads and returns the JSON bytes from a provider's MCP config file.
 // For OpenCode, strips JSONC comments before returning.
 func readMCPConfig(cfgPath string, prov provider.Provider) ([]byte, error) {
