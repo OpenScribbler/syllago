@@ -70,6 +70,9 @@ make build
 **Scenario:** You have Claude Code rules and skills you want to use in Cursor and Gemini CLI.
 
 ```bash
+# Step 0: Initialize your syllago content repository (first time only)
+syllago init
+
 # Step 1: See what content Claude Code has
 syllago add --from claude-code
 # Discovered content from Claude Code:
