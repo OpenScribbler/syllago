@@ -101,11 +101,21 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.String() == "h", msg.String() == "left":
 			cmd := a.topBar.PrevTab()
 			return a, cmd
+
+		// Action button hotkeys
+		case msg.String() == "a":
+			return a, a.topBar.actionCmd("add")
+		case msg.String() == "n":
+			return a, a.topBar.actionCmd("create")
 		}
 		// Phase 3+: focus-based routing to explorer/gallery
 
 	case tabChangedMsg:
 		a.helpBar.SetHints(a.currentHints())
+		return a, nil
+
+	case actionPressedMsg:
+		// Phase 3+: open add/create wizards based on msg.group and msg.tab
 		return a, nil
 	}
 	return a, nil
@@ -140,7 +150,7 @@ func (a App) contentHeight() int {
 
 // currentHints returns context-sensitive help hints based on current state.
 func (a App) currentHints() []string {
-	return []string{"1/2/3 groups", "h/l tabs", "? help", "q quit"}
+	return []string{"1/2/3 groups", "h/l tabs", "a add", "n create", "? help", "q quit"}
 }
 
 // renderEmptyContent renders the empty main content area.

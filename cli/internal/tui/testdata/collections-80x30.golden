@@ -1,7 +1,7 @@
 ╭──syllago─────────────────────────────────────────────────────────────────────╮
 │               [1] Content      [2] Collections      [3] Config               │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│   Library     Registries     Loadouts                    + Add      Create   │
+│   Library     Registries     Loadouts              (a) Add      (n) Create   │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 
 
@@ -27,4 +27,4 @@
 
 
 
-1/2/3 groups * h/l tabs * ? help * q quit                   syllago v0.0.0-test
+1/2/3 groups * h/l tabs * a add * n create * ? help         syllago v0.0.0-test
