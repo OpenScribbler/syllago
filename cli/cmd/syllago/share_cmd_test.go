@@ -21,6 +21,16 @@ func TestShareCmdRegisters(t *testing.T) {
 	}
 }
 
+func TestShareCmdHasToFlag(t *testing.T) {
+	flag := shareCmd.Flags().Lookup("to")
+	if flag == nil {
+		t.Fatal("expected --to flag on share command")
+	}
+	if flag.DefValue != "" {
+		t.Errorf("expected empty default for --to, got %q", flag.DefValue)
+	}
+}
+
 func TestShareCmdValidatesArgs(t *testing.T) {
 	shareCmd.SilenceUsage = true
 	shareCmd.SilenceErrors = true
