@@ -65,7 +65,19 @@ var (
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(borderColor)
 
-	// Tabs (bold cyan active, faint inactive)
+	// Group tabs — button-like with backgrounds (higher-level navigation)
+	activeGroupStyle = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.AdaptiveColor{Light: "#FFFCF0", Dark: "#100F0F"}). // paper/black
+				Background(primaryColor).                                              // cyan
+				Padding(0, 2)
+
+	inactiveGroupStyle = lipgloss.NewStyle().
+				Foreground(mutedColor).
+				Background(lipgloss.AdaptiveColor{Light: "#E6E4D9", Dark: "#343331"}). // base-100/850
+				Padding(0, 2)
+
+	// Sub-tabs — text-only (lower-level navigation within a group)
 	activeTabStyle = lipgloss.NewStyle().
 			Bold(true).
 			Foreground(primaryColor). // cyan

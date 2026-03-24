@@ -181,12 +181,12 @@ func (t topBarModel) renderTopBorder(innerW int) string {
 func (t topBarModel) renderGroupRow(innerW int) string {
 	var parts []string
 	for i, g := range t.groups {
-		label := g.hotkey + " " + g.label
+		label := "[" + g.hotkey + "] " + g.label
 		var rendered string
 		if i == t.activeGroup {
-			rendered = activeTabStyle.Render(label)
+			rendered = activeGroupStyle.Render(label)
 		} else {
-			rendered = inactiveTabStyle.Render(label)
+			rendered = inactiveGroupStyle.Render(label)
 		}
 		rendered = zone.Mark("group-"+itoa(i), rendered)
 		parts = append(parts, rendered)
