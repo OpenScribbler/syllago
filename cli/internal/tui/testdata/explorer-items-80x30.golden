@@ -3,28 +3,28 @@
 ├──────────────────────────────────────────────────────────────────────────────┤
 │   Library     Registries     Loadouts              [a] Add      [n] Create   │
 ╰──────────────────────────────────────────────────────────────────────────────╯
- > alpha-skill [skills]     │──SKILL.md─────────────────────────────────────────
-   beta-skill [skills]      │ 1 Error reading file:
-   gamma-rule [rules]       │ 2 reading file SKILL.md: open SKILL.md: no such fi
-   delta-agent [agents]     │
-   epsilon-hook [hooks]     │
-   zeta-mcp [mcp]           │
-   eta-command [commands]   │
-                            │
-                            │
-                            │
-                            │
-                            │
-                            │
-                            │
-                            │
-                            │
-                            │
-                            │
-                            │
-                            │
-                            │
-                            │
-                            │
-                            │
+╭──────────────────────────╮╭──────────────────────────────────────────────────╮
+│ > alpha-skill [skills]   ││──SKILL.md────────────────────────────────────────│
+│   beta-skill [skills]    ││ 1 Error reading file:                            │
+│   gamma-rule [rules]     ││ 2 reading file SKILL.md: open SKILL.md: no such f│
+│   delta-agent [agents]   ││                                                  │
+│   epsilon-hook [hooks]   ││                                                  │
+│   zeta-mcp [mcp]         ││                                                  │
+│   eta-command [commands] ││                                                  │
+│                          ││                                                  │
+│                          ││                                                  │
+│                          ││                                                  │
+│                          ││                                                  │
+│                          ││                                                  │
+│                          ││                                                  │
+│                          ││                                                  │
+│                          ││                                                  │
+│                          ││                                                  │
+│                          ││                                                  │
+│                          ││                                                  │
+│                          ││                                                  │
+│                          ││                                                  │
+│                          ││                                                  │
+│                          ││                                                  │
+╰──────────────────────────╯╰──────────────────────────────────────────────────╯
 1/2/3 groups * h/l tabs * j/k navigate * tab focus          syllago v0.0.0-test

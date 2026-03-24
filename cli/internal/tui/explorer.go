@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"strings"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -23,6 +21,7 @@ type itemSelectedMsg struct {
 }
 
 // explorerModel is the main content area: items list (left) + preview (right).
+// Each pane is rendered inside a bordered box. Focus is indicated by border color.
 type explorerModel struct {
 	items   itemsModel
 	preview previewModel
@@ -48,20 +47,31 @@ func newExplorerModel(items []catalog.ContentItem, mixed bool) explorerModel {
 	return e
 }
 
-// SetSize recalculates child dimensions.
+// borderSize is the width/height consumed by a rounded border (1 char each side).
+const borderSize = 2
+
+// SetSize recalculates child dimensions, accounting for borders.
 func (e *explorerModel) SetSize(width, height int) {
 	e.width = width
 	e.height = height
 	e.stacked = width < 80
 
+	// Inner dimensions = total - border chars
+	innerH := max(0, height-borderSize)
+
 	if e.stacked {
-		e.items.SetSize(width, height)
-		e.preview.SetSize(width, height)
+		innerW := max(0, width-borderSize)
+		e.items.SetSize(innerW, innerH)
+		e.preview.SetSize(innerW, innerH)
 	} else {
-		itemsW := e.itemsWidth()
-		previewW := width - itemsW - 1 // 1 for the vertical separator
-		e.items.SetSize(itemsW, height)
-		e.preview.SetSize(previewW, height)
+		itemsOuterW := e.itemsWidth()
+		previewOuterW := width - itemsOuterW
+
+		itemsInnerW := max(0, itemsOuterW-borderSize)
+		previewInnerW := max(0, previewOuterW-borderSize)
+
+		e.items.SetSize(itemsInnerW, innerH)
+		e.preview.SetSize(previewInnerW, innerH)
 	}
 }
 
@@ -152,7 +162,6 @@ func (e explorerModel) updatePreview(msg tea.KeyMsg) (explorerModel, tea.Cmd) {
 		e.preview.PageUp()
 	case "esc":
 		if e.stacked {
-			// In stacked mode, Esc goes back to items
 			e.focus = paneItems
 			e.items.focused = true
 			e.preview.focused = false
@@ -175,7 +184,7 @@ func (e *explorerModel) toggleFocus() {
 	}
 }
 
-// View renders the explorer layout.
+// View renders the explorer layout with bordered panes.
 func (e explorerModel) View() string {
 	if e.width <= 0 || e.height <= 0 {
 		return ""
@@ -187,36 +196,53 @@ func (e explorerModel) View() string {
 	return e.viewSideBySide()
 }
 
-// viewSideBySide renders items list | separator | preview.
+// viewSideBySide renders bordered items pane + bordered preview pane.
 func (e explorerModel) viewSideBySide() string {
-	left := e.items.View()
-	right := e.preview.View()
+	itemsOuterW := e.itemsWidth()
+	previewOuterW := e.width - itemsOuterW
+	outerH := e.height
 
-	// Vertical separator
-	sep := strings.Repeat("│\n", e.height)
-	if len(sep) > 0 {
-		sep = sep[:len(sep)-1] // remove trailing newline
+	// Choose border style based on focus
+	itemsBorder := unfocusedPanelStyle
+	previewBorder := unfocusedPanelStyle
+	if e.focus == paneItems {
+		itemsBorder = focusedPanelStyle
+	} else {
+		previewBorder = focusedPanelStyle
 	}
-	sep = mutedStyle.Render(sep)
 
-	return lipgloss.JoinHorizontal(lipgloss.Top, left, sep, right)
+	left := itemsBorder.
+		Width(itemsOuterW - borderSize).
+		Height(outerH - borderSize).
+		Render(e.items.View())
+
+	right := previewBorder.
+		Width(previewOuterW - borderSize).
+		Height(outerH - borderSize).
+		Render(e.preview.View())
+
+	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 }
 
-// viewStacked renders either items or preview based on focus.
+// viewStacked renders a single bordered pane based on focus.
 func (e explorerModel) viewStacked() string {
+	border := focusedPanelStyle.
+		Width(e.width - borderSize).
+		Height(e.height - borderSize)
+
 	if e.focus == panePreview {
-		return e.preview.View()
+		return border.Render(e.preview.View())
 	}
-	return e.items.View()
+	return border.Render(e.items.View())
 }
 
-// itemsWidth returns the width allocated to the items list.
+// itemsWidth returns the OUTER width (including border) allocated to the items list.
 func (e explorerModel) itemsWidth() int {
 	if e.width >= 120 {
-		return 40
+		return 42 // 40 inner + 2 border
 	}
-	// ~35% of width at 80 cols gives room for names + type badges
-	return max(25, e.width*35/100)
+	// ~35% of width at 80 cols
+	return max(27, e.width*35/100)
 }
 
 // itemSelectedCmd creates a command that fires an itemSelectedMsg.

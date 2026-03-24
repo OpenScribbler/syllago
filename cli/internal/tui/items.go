@@ -236,3 +236,20 @@ func truncate(s string, maxWidth int) string {
 	}
 	return s[:maxWidth-3] + "..."
 }
+
+// truncateLine hard-clips a line to maxWidth characters. Handles tabs by
+// expanding them to spaces first. No ellipsis — just clip for preview content.
+func truncateLine(s string, maxWidth int) string {
+	if maxWidth <= 0 {
+		return ""
+	}
+	// Expand tabs to 4 spaces for consistent width
+	s = strings.ReplaceAll(s, "\t", "    ")
+	// Strip any carriage returns
+	s = strings.ReplaceAll(s, "\r", "")
+	runes := []rune(s)
+	if len(runes) <= maxWidth {
+		return string(runes)
+	}
+	return string(runes[:maxWidth])
+}
