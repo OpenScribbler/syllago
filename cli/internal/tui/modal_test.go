@@ -875,3 +875,25 @@ func TestInstallModal_NilSymlinkSupport_DefaultsSymlink(t *testing.T) {
 		t.Errorf("defaultMethodCursor() should return 0 (symlink) with nil SymlinkSupport, got %d", m.defaultMethodCursor())
 	}
 }
+
+// ---------------------------------------------------------------------------
+// installModal accessor tests
+// ---------------------------------------------------------------------------
+
+func TestInstallModalAccessors(t *testing.T) {
+	m := newInstallModal(
+		catalog.ContentItem{Name: "test", Type: catalog.Skills},
+		[]provider.Provider{{Name: "Claude Code", Slug: "claude-code", Detected: true}},
+		"/tmp/repo",
+	)
+
+	if m.LocationCursor() != 0 {
+		t.Errorf("LocationCursor() = %d, want 0", m.LocationCursor())
+	}
+	if m.MethodCursor() != m.defaultMethodCursor() {
+		t.Errorf("MethodCursor() = %d, want %d", m.MethodCursor(), m.defaultMethodCursor())
+	}
+	if m.CustomPath() != "" {
+		t.Errorf("CustomPath() = %q, want empty", m.CustomPath())
+	}
+}

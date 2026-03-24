@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -268,6 +269,214 @@ func TestVersionNewer(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestDownloadFile exercises the downloadFile function against a mock HTTP server.
+func TestDownloadFile(t *testing.T) {
+	content := []byte("hello world binary content")
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/good":
+			w.Write(content)
+		case "/notfound":
+			http.Error(w, "not found", http.StatusNotFound)
+		default:
+			http.Error(w, "bad", http.StatusInternalServerError)
+		}
+	}))
+	defer srv.Close()
+
+	t.Run("successful download", func(t *testing.T) {
+		dest := filepath.Join(t.TempDir(), "downloaded")
+		err := downloadFile(srv.URL+"/good", dest)
+		if err != nil {
+			t.Fatalf("downloadFile: %v", err)
+		}
+		got, err := os.ReadFile(dest)
+		if err != nil {
+			t.Fatalf("reading downloaded file: %v", err)
+		}
+		if string(got) != string(content) {
+			t.Errorf("content mismatch: got %q, want %q", got, content)
+		}
+	})
+
+	t.Run("404 returns error", func(t *testing.T) {
+		dest := filepath.Join(t.TempDir(), "downloaded")
+		err := downloadFile(srv.URL+"/notfound", dest)
+		if err == nil {
+			t.Fatal("expected error for 404, got nil")
+		}
+	})
+
+	t.Run("server error returns error", func(t *testing.T) {
+		dest := filepath.Join(t.TempDir(), "downloaded")
+		err := downloadFile(srv.URL+"/error", dest)
+		if err == nil {
+			t.Fatal("expected error for 500, got nil")
+		}
+	})
+}
+
+// TestUpdate_AlreadyLatest verifies Update returns early when already on latest.
+func TestUpdate_AlreadyLatest(t *testing.T) {
+	fakeRelease := map[string]interface{}{
+		"tag_name": "v0.5.0",
+		"body":     "release notes",
+		"assets":   []map[string]interface{}{},
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(fakeRelease)
+	}))
+	defer srv.Close()
+
+	origURL := githubAPIURL
+	githubAPIURL = srv.URL
+	defer func() { githubAPIURL = origURL }()
+
+	var messages []string
+	err := Update("0.5.0", func(msg string) { messages = append(messages, msg) })
+	if err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	if len(messages) != 1 || messages[0] != "Already on latest version" {
+		t.Errorf("unexpected messages: %v", messages)
+	}
+}
+
+// TestUpdate_NoAssetForPlatform verifies Update errors when no binary exists for the platform.
+func TestUpdate_NoAssetForPlatform(t *testing.T) {
+	fakeRelease := map[string]interface{}{
+		"tag_name": "v99.0.0",
+		"body":     "release notes",
+		"assets":   []map[string]interface{}{},
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(fakeRelease)
+	}))
+	defer srv.Close()
+
+	origURL := githubAPIURL
+	githubAPIURL = srv.URL
+	defer func() { githubAPIURL = origURL }()
+
+	err := Update("0.1.0", func(msg string) {})
+	if err == nil {
+		t.Fatal("expected error when no asset for platform, got nil")
+	}
+}
+
+// TestUpdate_FullFlow exercises the download + checksum verification flow.
+func TestUpdate_FullFlow(t *testing.T) {
+	// Create a fake binary and compute its checksum.
+	binaryContent := []byte("fake syllago binary for update test")
+	h := sha256.Sum256(binaryContent)
+	checksum := hex.EncodeToString(h[:])
+	wantAsset := assetName()
+
+	checksumContent := fmt.Sprintf("%s  %s\n", checksum, wantAsset)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/release":
+			fakeRelease := map[string]interface{}{
+				"tag_name": "v99.0.0",
+				"body":     "new release",
+				"assets": []map[string]interface{}{
+					{"name": wantAsset, "browser_download_url": "http://" + r.Host + "/binary"},
+					{"name": "checksums.txt", "browser_download_url": "http://" + r.Host + "/checksums"},
+				},
+			}
+			json.NewEncoder(w).Encode(fakeRelease)
+		case "/binary":
+			w.Write(binaryContent)
+		case "/checksums":
+			w.Write([]byte(checksumContent))
+		default:
+			http.Error(w, "not found", 404)
+		}
+	}))
+	defer srv.Close()
+
+	origURL := githubAPIURL
+	githubAPIURL = srv.URL + "/api/release"
+	defer func() { githubAPIURL = origURL }()
+
+	// Create a fake "current binary" that Update will try to replace.
+	// We need os.Executable() to point to something we control.
+	// Since we can't override os.Executable(), the Update function will try
+	// to replace the actual test binary. Instead, we test the pieces that
+	// Update calls: downloadFile + checksum verification.
+	// The full Update flow will fail at os.Rename (permission or cross-device),
+	// but we can verify it gets past the checksum step.
+	var messages []string
+	err := Update("0.1.0", func(msg string) { messages = append(messages, msg) })
+
+	// We expect either success (unlikely in test) or a "replacing binary" error
+	// which means it got through download + checksum verification successfully.
+	if err != nil {
+		// The error should be about replacing the binary, not about download or checksum.
+		errStr := err.Error()
+		if !contains(errStr, "replacing binary") && !contains(errStr, "rename") {
+			t.Fatalf("unexpected error (expected download/checksum to pass): %v", err)
+		}
+	}
+
+	// Verify progress messages were emitted for download and checksum steps.
+	if len(messages) < 2 {
+		t.Fatalf("expected at least 2 progress messages, got %d: %v", len(messages), messages)
+	}
+}
+
+// TestUpdate_BadChecksum verifies that a checksum mismatch is caught.
+func TestUpdate_BadChecksum(t *testing.T) {
+	binaryContent := []byte("real binary content")
+	wantAsset := assetName()
+	badChecksum := "0000000000000000000000000000000000000000000000000000000000000000"
+	checksumContent := fmt.Sprintf("%s  %s\n", badChecksum, wantAsset)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/release":
+			fakeRelease := map[string]interface{}{
+				"tag_name": "v99.0.0",
+				"body":     "new release",
+				"assets": []map[string]interface{}{
+					{"name": wantAsset, "browser_download_url": "http://" + r.Host + "/binary"},
+					{"name": "checksums.txt", "browser_download_url": "http://" + r.Host + "/checksums"},
+				},
+			}
+			json.NewEncoder(w).Encode(fakeRelease)
+		case "/binary":
+			w.Write(binaryContent)
+		case "/checksums":
+			w.Write([]byte(checksumContent))
+		default:
+			http.Error(w, "not found", 404)
+		}
+	}))
+	defer srv.Close()
+
+	origURL := githubAPIURL
+	githubAPIURL = srv.URL + "/api/release"
+	defer func() { githubAPIURL = origURL }()
+
+	err := Update("0.1.0", func(msg string) {})
+	if err == nil {
+		t.Fatal("expected checksum mismatch error, got nil")
+	}
+	if !contains(err.Error(), "checksum mismatch") {
+		t.Fatalf("expected checksum mismatch error, got: %v", err)
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && strings.Contains(s, substr)
 }
 
 // TestParseVersion tests the version parsing helper directly.

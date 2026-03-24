@@ -373,6 +373,252 @@ func TestMerge_ProviderPathsProjectOverride(t *testing.T) {
 	}
 }
 
+func TestLoadGlobal_MissingFile(t *testing.T) {
+	// Uses a temp HOME so no real config is touched
+	tmpDir := t.TempDir()
+	t.Setenv("HOME", tmpDir)
+
+	cfg, err := LoadGlobal()
+	if err != nil {
+		t.Fatalf("LoadGlobal on missing file: %v", err)
+	}
+	if cfg == nil {
+		t.Fatal("expected non-nil config")
+	}
+	if len(cfg.Providers) != 0 {
+		t.Errorf("expected empty providers, got %v", cfg.Providers)
+	}
+}
+
+func TestSaveGlobal_RoundTrip(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("HOME", tmpDir)
+
+	cfg := &Config{
+		Providers:   []string{"claude-code", "gemini-cli"},
+		Preferences: map[string]string{"theme": "dark"},
+	}
+	if err := SaveGlobal(cfg); err != nil {
+		t.Fatalf("SaveGlobal: %v", err)
+	}
+
+	loaded, err := LoadGlobal()
+	if err != nil {
+		t.Fatalf("LoadGlobal after save: %v", err)
+	}
+	if len(loaded.Providers) != 2 || loaded.Providers[0] != "claude-code" {
+		t.Errorf("Providers = %v, want [claude-code gemini-cli]", loaded.Providers)
+	}
+	if loaded.Preferences["theme"] != "dark" {
+		t.Errorf("Preferences[theme] = %q, want dark", loaded.Preferences["theme"])
+	}
+}
+
+func TestSaveGlobal_CreatesDirectory(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("HOME", tmpDir)
+
+	cfg := &Config{Providers: []string{"test"}}
+	if err := SaveGlobal(cfg); err != nil {
+		t.Fatalf("SaveGlobal: %v", err)
+	}
+
+	// Verify .syllago directory was created
+	syllagoDir := filepath.Join(tmpDir, ".syllago")
+	info, err := os.Stat(syllagoDir)
+	if err != nil {
+		t.Fatalf("Stat .syllago dir: %v", err)
+	}
+	if !info.IsDir() {
+		t.Error(".syllago should be a directory")
+	}
+
+	// Verify config.json exists
+	configPath := filepath.Join(syllagoDir, "config.json")
+	if _, err := os.Stat(configPath); err != nil {
+		t.Fatalf("config.json not found: %v", err)
+	}
+}
+
+func TestSaveGlobal_OverwritesExisting(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("HOME", tmpDir)
+
+	// Save initial config
+	cfg1 := &Config{Providers: []string{"initial"}}
+	if err := SaveGlobal(cfg1); err != nil {
+		t.Fatalf("SaveGlobal (initial): %v", err)
+	}
+
+	// Overwrite with different config
+	cfg2 := &Config{Providers: []string{"updated", "more"}}
+	if err := SaveGlobal(cfg2); err != nil {
+		t.Fatalf("SaveGlobal (update): %v", err)
+	}
+
+	loaded, err := LoadGlobal()
+	if err != nil {
+		t.Fatalf("LoadGlobal: %v", err)
+	}
+	if len(loaded.Providers) != 2 || loaded.Providers[0] != "updated" {
+		t.Errorf("Providers = %v, want [updated more]", loaded.Providers)
+	}
+}
+
+func TestLoadFromPath_InvalidJSON(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "bad.json")
+	os.WriteFile(path, []byte("{invalid json}"), 0644)
+
+	_, err := LoadFromPath(path)
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestLoad_InvalidJSON(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	// Create .syllago/config.json with invalid JSON
+	dir := filepath.Join(tmp, ".syllago")
+	os.MkdirAll(dir, 0755)
+	os.WriteFile(filepath.Join(dir, "config.json"), []byte("{bad}"), 0644)
+
+	_, err := Load(tmp)
+	if err == nil {
+		t.Fatal("expected error for invalid JSON in config file")
+	}
+}
+
+func TestExpandHome_BareHome(t *testing.T) {
+	t.Parallel()
+	result, err := ExpandHome("~")
+	if err != nil {
+		t.Fatalf("ExpandHome(~): %v", err)
+	}
+	home, _ := os.UserHomeDir()
+	if result != home {
+		t.Errorf("ExpandHome(~) = %q, want %q", result, home)
+	}
+}
+
+func TestExpandHome_WithSubpath(t *testing.T) {
+	t.Parallel()
+	result, err := ExpandHome("~/Documents/stuff")
+	if err != nil {
+		t.Fatalf("ExpandHome: %v", err)
+	}
+	home, _ := os.UserHomeDir()
+	want := filepath.Join(home, "Documents", "stuff")
+	if result != want {
+		t.Errorf("ExpandHome(~/Documents/stuff) = %q, want %q", result, want)
+	}
+}
+
+func TestExpandHome_AbsolutePath(t *testing.T) {
+	t.Parallel()
+	result, err := ExpandHome("/usr/local/bin")
+	if err != nil {
+		t.Fatalf("ExpandHome: %v", err)
+	}
+	if result != "/usr/local/bin" {
+		t.Errorf("ExpandHome(/usr/local/bin) = %q, want /usr/local/bin", result)
+	}
+}
+
+func TestExpandHome_RelativePath(t *testing.T) {
+	t.Parallel()
+	result, err := ExpandHome("relative/path")
+	if err != nil {
+		t.Fatalf("ExpandHome: %v", err)
+	}
+	if result != "relative/path" {
+		t.Errorf("ExpandHome(relative/path) = %q, want relative/path", result)
+	}
+}
+
+func TestMerge_PreferencesDeepMerge(t *testing.T) {
+	t.Parallel()
+	global := &Config{
+		Preferences: map[string]string{"theme": "dark", "lang": "en"},
+	}
+	project := &Config{
+		Preferences: map[string]string{"theme": "light"},
+	}
+	merged := Merge(global, project)
+	if merged.Preferences["theme"] != "light" {
+		t.Errorf("theme should be overridden by project, got %q", merged.Preferences["theme"])
+	}
+	if merged.Preferences["lang"] != "en" {
+		t.Errorf("lang should be preserved from global, got %q", merged.Preferences["lang"])
+	}
+}
+
+func TestMerge_SandboxProjectWins(t *testing.T) {
+	t.Parallel()
+	global := &Config{
+		Sandbox: SandboxConfig{AllowedDomains: []string{"global.com"}},
+	}
+	project := &Config{
+		Sandbox: SandboxConfig{AllowedDomains: []string{"project.com"}},
+	}
+	merged := Merge(global, project)
+	if len(merged.Sandbox.AllowedDomains) != 1 || merged.Sandbox.AllowedDomains[0] != "project.com" {
+		t.Errorf("project sandbox should win, got %v", merged.Sandbox.AllowedDomains)
+	}
+}
+
+func TestMerge_SandboxGlobalFallback(t *testing.T) {
+	t.Parallel()
+	global := &Config{
+		Sandbox: SandboxConfig{AllowedDomains: []string{"global.com"}},
+	}
+	project := &Config{}
+	merged := Merge(global, project)
+	if len(merged.Sandbox.AllowedDomains) != 1 || merged.Sandbox.AllowedDomains[0] != "global.com" {
+		t.Errorf("global sandbox should be fallback, got %v", merged.Sandbox.AllowedDomains)
+	}
+}
+
+func TestMerge_ContentRootProjectWins(t *testing.T) {
+	t.Parallel()
+	global := &Config{ContentRoot: "global-content"}
+	project := &Config{ContentRoot: "project-content"}
+	merged := Merge(global, project)
+	if merged.ContentRoot != "project-content" {
+		t.Errorf("ContentRoot = %q, want project-content", merged.ContentRoot)
+	}
+}
+
+func TestMerge_AllowedRegistriesProjectWins(t *testing.T) {
+	t.Parallel()
+	global := &Config{AllowedRegistries: []string{"https://global.git"}}
+	project := &Config{AllowedRegistries: []string{"https://project.git"}}
+	merged := Merge(global, project)
+	if len(merged.AllowedRegistries) != 1 || merged.AllowedRegistries[0] != "https://project.git" {
+		t.Errorf("project AllowedRegistries should win, got %v", merged.AllowedRegistries)
+	}
+}
+
+func TestMerge_RegistriesDeduplicatedByName(t *testing.T) {
+	t.Parallel()
+	global := &Config{
+		Registries: []Registry{{Name: "shared", URL: "https://global.git"}},
+	}
+	project := &Config{
+		Registries: []Registry{{Name: "shared", URL: "https://project.git"}},
+	}
+	merged := Merge(global, project)
+	// Same name: global entry wins (first-seen dedup)
+	if len(merged.Registries) != 1 {
+		t.Errorf("expected 1 registry (deduplicated), got %d", len(merged.Registries))
+	}
+	if merged.Registries[0].URL != "https://global.git" {
+		t.Errorf("global entry should win, got URL %q", merged.Registries[0].URL)
+	}
+}
+
 func TestMerge_ProviderPathsDeepMerge(t *testing.T) {
 	t.Parallel()
 	global := &Config{

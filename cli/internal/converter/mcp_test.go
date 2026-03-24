@@ -1584,6 +1584,602 @@ func TestDisabledToolsRoundTripKiro(t *testing.T) {
 	assertContains(t, out, "delete_repo")
 }
 
+// --- VS Code Copilot MCP ---
+
+func TestVSCodeCopilotMCPCanonicalize(t *testing.T) {
+	input := []byte(`{
+		"servers": {
+			"github": {
+				"type": "stdio",
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"env": {"GITHUB_TOKEN": "tok123"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Canonicalize(input, "vscode-copilot")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "mcpServers")
+	assertContains(t, out, "npx")
+	assertContains(t, out, "@modelcontextprotocol/server-github")
+	assertContains(t, out, "GITHUB_TOKEN")
+	assertEqual(t, "mcp.json", result.Filename)
+}
+
+func TestVSCodeCopilotMCPCanonicalizeHTTPType(t *testing.T) {
+	// VS Code uses "http" for streamable-http; canonical should normalize it
+	input := []byte(`{
+		"servers": {
+			"remote": {
+				"type": "http",
+				"url": "https://api.example.com/mcp",
+				"headers": {"Authorization": "Bearer tok"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Canonicalize(input, "vscode-copilot")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	var cfg mcpConfig
+	json.Unmarshal(result.Content, &cfg)
+
+	server := cfg.MCPServers["remote"]
+	assertEqual(t, "streamable-http", server.Type)
+	assertEqual(t, "https://api.example.com/mcp", server.URL)
+	assertEqual(t, "Bearer tok", server.Headers["Authorization"])
+}
+
+func TestVSCodeCopilotMCPCanonicalizeSSE(t *testing.T) {
+	input := []byte(`{
+		"servers": {
+			"sse-server": {
+				"type": "sse",
+				"url": "https://sse.example.com/events"
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Canonicalize(input, "vscode-copilot")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	var cfg mcpConfig
+	json.Unmarshal(result.Content, &cfg)
+
+	server := cfg.MCPServers["sse-server"]
+	assertEqual(t, "sse", server.Type)
+	assertEqual(t, "https://sse.example.com/events", server.URL)
+}
+
+func TestVSCodeCopilotMCPCanonicalizeWarnings(t *testing.T) {
+	// envFile, sandboxEnabled, sandbox, and inputs should produce warnings
+	tr := true
+	_ = tr
+	input := []byte(`{
+		"inputs": [
+			{"type": "promptString", "id": "api_key", "description": "Enter API key", "password": true}
+		],
+		"servers": {
+			"myserver": {
+				"type": "stdio",
+				"command": "node",
+				"args": ["server.js"],
+				"envFile": ".env",
+				"sandboxEnabled": true,
+				"sandbox": {"permissions": ["network"]}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Canonicalize(input, "vscode-copilot")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// Should have warnings for inputs, envFile, sandboxEnabled, sandbox
+	if len(result.Warnings) < 3 {
+		t.Fatalf("expected at least 3 warnings, got %d: %v", len(result.Warnings), result.Warnings)
+	}
+
+	allWarnings := strings.Join(result.Warnings, " | ")
+	assertContains(t, allWarnings, "input variable")
+	assertContains(t, allWarnings, "envFile")
+	assertContains(t, allWarnings, "sandbox")
+}
+
+func TestVSCodeCopilotMCPRender(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"env": {"GITHUB_TOKEN": "token"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	vscode := provider.Provider{Slug: "vscode-copilot", Name: "VS Code Copilot"}
+	result, err := conv.Render(input, vscode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// Should use "servers" key, not "mcpServers"
+	assertContains(t, out, "servers")
+	assertContains(t, out, "npx")
+	assertContains(t, out, "GITHUB_TOKEN")
+	// stdio should get type:"stdio"
+	assertContains(t, out, `"type": "stdio"`)
+	assertEqual(t, "mcp.json", result.Filename)
+}
+
+func TestVSCodeCopilotMCPRenderStreamableHTTP(t *testing.T) {
+	// canonical "streamable-http" should render as "http" for VS Code
+	input := []byte(`{
+		"mcpServers": {
+			"remote": {
+				"url": "https://api.example.com/mcp",
+				"type": "streamable-http",
+				"headers": {"Authorization": "Bearer tok"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	vscode := provider.Provider{Slug: "vscode-copilot", Name: "VS Code Copilot"}
+	result, err := conv.Render(input, vscode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, `"type": "http"`)
+	assertContains(t, out, "api.example.com")
+}
+
+func TestVSCodeCopilotMCPRenderDropsProviderFields(t *testing.T) {
+	// Fields from other providers should produce warnings
+	input := []byte(`{
+		"mcpServers": {
+			"test": {
+				"command": "node",
+				"args": ["s.js"],
+				"cwd": "/app",
+				"autoApprove": ["read"],
+				"trust": "high",
+				"includeTools": ["search"],
+				"excludeTools": ["delete"],
+				"disabledTools": ["exec"],
+				"oauth": {"client_id": "abc"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	vscode := provider.Provider{Slug: "vscode-copilot", Name: "VS Code Copilot"}
+	result, err := conv.Render(input, vscode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertNotContains(t, out, "cwd")
+	assertNotContains(t, out, "autoApprove")
+	assertNotContains(t, out, "trust")
+	assertNotContains(t, out, "includeTools")
+	assertNotContains(t, out, "excludeTools")
+	assertNotContains(t, out, "disabledTools")
+
+	if len(result.Warnings) < 6 {
+		t.Fatalf("expected at least 6 warnings, got %d: %v", len(result.Warnings), result.Warnings)
+	}
+}
+
+func TestVSCodeCopilotMCPRoundTrip(t *testing.T) {
+	input := []byte(`{
+		"servers": {
+			"github": {
+				"type": "stdio",
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"env": {"GITHUB_TOKEN": "tok"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	vscode := provider.Provider{Slug: "vscode-copilot", Name: "VS Code Copilot"}
+
+	canonical, err := conv.Canonicalize(input, "vscode-copilot")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, vscode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "servers")
+	assertContains(t, out, "npx")
+	assertContains(t, out, "GITHUB_TOKEN")
+}
+
+// --- Codex MCP ---
+
+func TestCodexMCPCanonicalize(t *testing.T) {
+	input := []byte(`[mcp_servers.github]
+type = "stdio"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-github"]
+
+[mcp_servers.github.env_vars]
+GITHUB_TOKEN = "tok123"
+`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Canonicalize(input, "codex")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "mcpServers")
+	assertContains(t, out, "npx")
+	assertContains(t, out, "@modelcontextprotocol/server-github")
+	assertContains(t, out, "GITHUB_TOKEN")
+	// env_vars should be mapped to env
+	assertContains(t, out, `"env"`)
+	assertNotContains(t, out, "env_vars")
+	assertEqual(t, "mcp.json", result.Filename)
+}
+
+func TestCodexMCPCanonicalizeBearerToken(t *testing.T) {
+	input := []byte(`[mcp_servers.remote]
+type = "http"
+url = "https://api.example.com/mcp"
+bearer_token_env_var = "API_TOKEN"
+`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Canonicalize(input, "codex")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	var cfg mcpConfig
+	json.Unmarshal(result.Content, &cfg)
+
+	server := cfg.MCPServers["remote"]
+	assertEqual(t, "streamable-http", server.Type)
+	assertEqual(t, "https://api.example.com/mcp", server.URL)
+	assertEqual(t, "Bearer ${API_TOKEN}", server.Headers["Authorization"])
+}
+
+func TestCodexMCPCanonicalizeHTTPHeaders(t *testing.T) {
+	input := []byte(`[mcp_servers.remote]
+url = "https://api.example.com/mcp"
+
+[mcp_servers.remote.env_http_headers]
+X-Custom = "custom-value"
+`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Canonicalize(input, "codex")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	var cfg mcpConfig
+	json.Unmarshal(result.Content, &cfg)
+
+	server := cfg.MCPServers["remote"]
+	assertEqual(t, "custom-value", server.Headers["X-Custom"])
+}
+
+func TestCodexMCPCanonicalizeDisabledServer(t *testing.T) {
+	input := []byte(`[mcp_servers.test]
+command = "node"
+args = ["server.js"]
+enabled = false
+`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Canonicalize(input, "codex")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	var cfg mcpConfig
+	json.Unmarshal(result.Content, &cfg)
+
+	server := cfg.MCPServers["test"]
+	if !server.Disabled {
+		t.Fatal("expected server to be disabled when enabled=false")
+	}
+}
+
+func TestCodexMCPCanonicalizeToolFilters(t *testing.T) {
+	input := []byte(`[mcp_servers.test]
+command = "node"
+args = ["server.js"]
+enabled_tools = ["read", "search"]
+disabled_tools = ["delete"]
+`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Canonicalize(input, "codex")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	var cfg mcpConfig
+	json.Unmarshal(result.Content, &cfg)
+
+	server := cfg.MCPServers["test"]
+	if len(server.IncludeTools) != 2 {
+		t.Fatalf("expected 2 includeTools, got %d", len(server.IncludeTools))
+	}
+	if len(server.ExcludeTools) != 1 {
+		t.Fatalf("expected 1 excludeTools, got %d", len(server.ExcludeTools))
+	}
+}
+
+func TestCodexMCPRender(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"env": {"GITHUB_TOKEN": "token"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Render(input, provider.Codex)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// Should be TOML with mcp_servers key
+	assertContains(t, out, "[mcp_servers")
+	assertContains(t, out, "command = 'npx'")
+	// env should be env_vars
+	assertContains(t, out, "env_vars")
+	assertEqual(t, "codex.toml", result.Filename)
+}
+
+func TestCodexMCPRenderStreamableHTTP(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"remote": {
+				"url": "https://api.example.com/mcp",
+				"type": "streamable-http",
+				"headers": {"Authorization": "Bearer tok"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Render(input, provider.Codex)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	// streamable-http should render as "http" for Codex
+	assertContains(t, out, "type = 'http'")
+	assertContains(t, out, "env_http_headers")
+}
+
+func TestCodexMCPRenderDisabled(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"test": {
+				"command": "node",
+				"args": ["server.js"],
+				"disabled": true
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Render(input, provider.Codex)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "enabled = false")
+}
+
+func TestCodexMCPRenderToolFilters(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"test": {
+				"command": "node",
+				"args": ["server.js"],
+				"includeTools": ["read"],
+				"excludeTools": ["delete"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Render(input, provider.Codex)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "enabled_tools")
+	assertContains(t, out, "disabled_tools")
+}
+
+func TestCodexMCPRenderWarnings(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"test": {
+				"command": "node",
+				"args": ["server.js"],
+				"cwd": "/app",
+				"autoApprove": ["read"],
+				"trust": "high",
+				"oauth": {"client_id": "abc"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Render(input, provider.Codex)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	if len(result.Warnings) < 3 {
+		t.Fatalf("expected at least 3 warnings, got %d: %v", len(result.Warnings), result.Warnings)
+	}
+
+	allWarnings := strings.Join(result.Warnings, " | ")
+	assertContains(t, allWarnings, "cwd")
+	assertContains(t, allWarnings, "autoApprove")
+	assertContains(t, allWarnings, "trust")
+}
+
+// --- Amp MCP ---
+
+func TestAmpMCPCanonicalize(t *testing.T) {
+	input := []byte(`{
+		"amp.mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"env": {"GITHUB_TOKEN": "tok"}
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Canonicalize(input, "amp")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "mcpServers")
+	assertContains(t, out, "npx")
+	assertContains(t, out, "GITHUB_TOKEN")
+	assertEqual(t, "mcp.json", result.Filename)
+}
+
+func TestAmpMCPCanonicalizeURLServer(t *testing.T) {
+	input := []byte(`{
+		"amp.mcpServers": {
+			"remote": {
+				"url": "https://api.example.com/mcp",
+				"headers": {"Authorization": "Bearer tok"},
+				"includeTools": ["search"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Canonicalize(input, "amp")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	var cfg mcpConfig
+	json.Unmarshal(result.Content, &cfg)
+
+	server := cfg.MCPServers["remote"]
+	assertEqual(t, "streamable-http", server.Type)
+	assertEqual(t, "https://api.example.com/mcp", server.URL)
+	if len(server.IncludeTools) != 1 || server.IncludeTools[0] != "search" {
+		t.Fatalf("expected includeTools=[search], got %v", server.IncludeTools)
+	}
+}
+
+func TestAmpMCPRender(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"github": {
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"],
+				"env": {"GITHUB_TOKEN": "token"},
+				"includeTools": ["search"]
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Render(input, provider.Amp)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "amp.mcpServers")
+	assertContains(t, out, "npx")
+	assertContains(t, out, "GITHUB_TOKEN")
+	assertContains(t, out, "includeTools")
+	assertEqual(t, "settings.json", result.Filename)
+}
+
+func TestAmpMCPRenderWarnings(t *testing.T) {
+	input := []byte(`{
+		"mcpServers": {
+			"test": {
+				"command": "node",
+				"args": ["server.js"],
+				"cwd": "/app",
+				"autoApprove": ["read"],
+				"trust": "high",
+				"excludeTools": ["delete"],
+				"disabledTools": ["exec"],
+				"oauth": {"client_id": "abc"},
+				"disabled": true
+			}
+		}
+	}`)
+
+	conv := &MCPConverter{}
+	result, err := conv.Render(input, provider.Amp)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	if len(result.Warnings) < 6 {
+		t.Fatalf("expected at least 6 warnings, got %d: %v", len(result.Warnings), result.Warnings)
+	}
+
+	allWarnings := strings.Join(result.Warnings, " | ")
+	assertContains(t, allWarnings, "cwd")
+	assertContains(t, allWarnings, "autoApprove")
+	assertContains(t, allWarnings, "trust")
+	assertContains(t, allWarnings, "excludeTools")
+	assertContains(t, allWarnings, "disabledTools")
+	assertContains(t, allWarnings, "disabled")
+}
+
 func TestOpenCodeToClaudeOAuthPreserved(t *testing.T) {
 	input := []byte(`{
 		"mcp": {

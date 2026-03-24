@@ -203,3 +203,95 @@ func TestFileBrowserNoEmoji(t *testing.T) {
 	// Directories should have "/" suffix
 	assertContains(t, view, "subdir/")
 }
+
+// ---------------------------------------------------------------------------
+// SelectedPaths tests
+// ---------------------------------------------------------------------------
+
+func TestSelectedPaths_Empty(t *testing.T) {
+	fb := fileBrowserModel{selected: make(map[string]bool)}
+	paths := fb.SelectedPaths()
+	if len(paths) != 0 {
+		t.Errorf("expected 0 paths, got %d", len(paths))
+	}
+}
+
+func TestSelectedPaths_Sorted(t *testing.T) {
+	fb := fileBrowserModel{
+		selected: map[string]bool{
+			"/z/file.txt": true,
+			"/a/file.txt": true,
+			"/m/file.txt": true,
+		},
+	}
+	paths := fb.SelectedPaths()
+	if len(paths) != 3 {
+		t.Fatalf("expected 3 paths, got %d", len(paths))
+	}
+	if paths[0] != "/a/file.txt" {
+		t.Errorf("first path should be /a/file.txt, got %s", paths[0])
+	}
+	if paths[2] != "/z/file.txt" {
+		t.Errorf("last path should be /z/file.txt, got %s", paths[2])
+	}
+}
+
+// ---------------------------------------------------------------------------
+// viewPreview tests
+// ---------------------------------------------------------------------------
+
+func TestViewPreview_BasicContent(t *testing.T) {
+	fb := fileBrowserModel{
+		previewName:    "test.go",
+		previewPath:    "/tmp/test.go",
+		previewContent: "package main\n\nfunc main() {\n}\n",
+		selected:       make(map[string]bool),
+		width:          60,
+		height:         30,
+	}
+	got := stripANSI(fb.viewPreview())
+	if !strings.Contains(got, "test.go") {
+		t.Error("should contain filename")
+	}
+	if !strings.Contains(got, "package main") {
+		t.Error("should contain file content")
+	}
+}
+
+func TestViewPreview_SelectedFile(t *testing.T) {
+	fb := fileBrowserModel{
+		previewName:    "test.go",
+		previewPath:    "/tmp/test.go",
+		previewContent: "content",
+		selected:       map[string]bool{"/tmp/test.go": true},
+		width:          60,
+		height:         30,
+	}
+	got := stripANSI(fb.viewPreview())
+	if !strings.Contains(got, "selected") {
+		t.Error("should show 'selected' for selected file")
+	}
+}
+
+func TestViewPreview_ScrollIndicators(t *testing.T) {
+	lines := ""
+	for i := 0; i < 50; i++ {
+		lines += fmt.Sprintf("line %d\n", i)
+	}
+	fb := fileBrowserModel{
+		previewName:    "big.txt",
+		previewPath:    "/tmp/big.txt",
+		previewContent: lines,
+		previewOffset:  5,
+		selected:       make(map[string]bool),
+		width:          60,
+		height:         20,
+	}
+	got := stripANSI(fb.viewPreview())
+	if !strings.Contains(got, "above") {
+		t.Error("should show scroll-up indicator")
+	}
+	if !strings.Contains(got, "below") {
+		t.Error("should show scroll-down indicator")
+	}
+}

@@ -429,6 +429,290 @@ func TestInstallMCP_RejectsInvalidFlatItemName(t *testing.T) {
 	}
 }
 
+func TestParseMCPConfig_Valid(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+
+	itemDir := filepath.Join(tmpDir, "test-mcp")
+	os.MkdirAll(itemDir, 0755)
+	configData := `{"type":"stdio","command":"node","args":["server.js"],"env":{"API_KEY":"test"}}`
+	os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(configData), 0644)
+
+	cfg, err := ParseMCPConfig(itemDir)
+	if err != nil {
+		t.Fatalf("ParseMCPConfig: %v", err)
+	}
+	if cfg.Type != "stdio" {
+		t.Errorf("Type = %q, want stdio", cfg.Type)
+	}
+	if cfg.Command != "node" {
+		t.Errorf("Command = %q, want node", cfg.Command)
+	}
+	if len(cfg.Args) != 1 || cfg.Args[0] != "server.js" {
+		t.Errorf("Args = %v, want [server.js]", cfg.Args)
+	}
+	if cfg.Env["API_KEY"] != "test" {
+		t.Errorf("Env[API_KEY] = %q, want test", cfg.Env["API_KEY"])
+	}
+}
+
+func TestParseMCPConfig_MissingFile(t *testing.T) {
+	t.Parallel()
+	_, err := ParseMCPConfig(t.TempDir())
+	if err == nil {
+		t.Fatal("expected error for missing config.json")
+	}
+}
+
+func TestParseMCPConfig_InvalidJSON(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	os.WriteFile(filepath.Join(tmpDir, "config.json"), []byte("{invalid}"), 0644)
+	_, err := ParseMCPConfig(tmpDir)
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestParseMCPConfig_URLType(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	configData := `{"url":"https://mcp.example.com","type":"streamable-http"}`
+	os.WriteFile(filepath.Join(tmpDir, "config.json"), []byte(configData), 0644)
+
+	cfg, err := ParseMCPConfig(tmpDir)
+	if err != nil {
+		t.Fatalf("ParseMCPConfig: %v", err)
+	}
+	if cfg.URL != "https://mcp.example.com" {
+		t.Errorf("URL = %q, want https://mcp.example.com", cfg.URL)
+	}
+}
+
+func TestCheckEnvVars(t *testing.T) {
+	// Not parallel — uses os.Setenv
+	t.Setenv("SYLLAGO_TEST_SET_VAR", "value")
+
+	cfg := &MCPConfig{
+		Env: map[string]string{
+			"SYLLAGO_TEST_SET_VAR":   "placeholder",
+			"SYLLAGO_TEST_UNSET_VAR": "placeholder",
+		},
+	}
+
+	result := CheckEnvVars(cfg)
+	if !result["SYLLAGO_TEST_SET_VAR"] {
+		t.Error("SYLLAGO_TEST_SET_VAR should be set")
+	}
+	if result["SYLLAGO_TEST_UNSET_VAR"] {
+		t.Error("SYLLAGO_TEST_UNSET_VAR should not be set")
+	}
+}
+
+func TestCheckEnvVars_NoEnv(t *testing.T) {
+	t.Parallel()
+	cfg := &MCPConfig{}
+	result := CheckEnvVars(cfg)
+	if len(result) != 0 {
+		t.Errorf("expected empty result, got %v", result)
+	}
+}
+
+func TestMCPConfigPathFor(t *testing.T) {
+	// Not parallel — depends on os.UserHomeDir
+	prov := provider.Provider{Slug: "claude-code"}
+	path, err := MCPConfigPathFor(prov, "/repo")
+	if err != nil {
+		t.Fatalf("MCPConfigPathFor: %v", err)
+	}
+	if !filepath.IsAbs(path) {
+		t.Errorf("expected absolute path, got %q", path)
+	}
+}
+
+func TestMCPConfigPathFor_UnknownProvider(t *testing.T) {
+	t.Parallel()
+	prov := provider.Provider{Slug: "unknown-provider"}
+	_, err := mcpConfigPathImpl(prov, "/repo")
+	if err == nil {
+		t.Fatal("expected error for unknown provider")
+	}
+}
+
+func TestCheckMCPStatus_InstalledViaInstalledJSON(t *testing.T) {
+	// Not parallel — mutates package-level mcpConfigPath
+	tmpDir := t.TempDir()
+
+	// Create provider config file with the server entry
+	configFile := filepath.Join(tmpDir, ".claude.json")
+	os.WriteFile(configFile, []byte(`{"mcpServers":{"my-server":{"command":"node"}}}`), 0644)
+
+	originalFunc := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = originalFunc }()
+
+	prov := provider.Provider{Slug: "claude-code"}
+
+	// Record in installed.json
+	inst := &Installed{
+		MCP: []InstalledMCP{
+			{Name: "my-server", ServerNames: []string{"my-server"}, Source: "export"},
+		},
+	}
+	os.MkdirAll(filepath.Join(tmpDir, ".syllago"), 0755)
+	SaveInstalled(tmpDir, inst)
+
+	item := catalog.ContentItem{Name: "my-server", Type: catalog.MCP}
+	status := checkMCPStatus(item, prov, tmpDir)
+	if status != StatusInstalled {
+		t.Errorf("expected StatusInstalled, got %v", status)
+	}
+}
+
+func TestCheckMCPStatus_NotInstalled(t *testing.T) {
+	// Not parallel — mutates package-level mcpConfigPath
+	tmpDir := t.TempDir()
+
+	configFile := filepath.Join(tmpDir, ".claude.json")
+	os.WriteFile(configFile, []byte(`{"mcpServers":{}}`), 0644)
+
+	originalFunc := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = originalFunc }()
+
+	prov := provider.Provider{Slug: "claude-code"}
+
+	item := catalog.ContentItem{Name: "absent-server", Type: catalog.MCP}
+	status := checkMCPStatus(item, prov, tmpDir)
+	if status != StatusNotInstalled {
+		t.Errorf("expected StatusNotInstalled, got %v", status)
+	}
+}
+
+func TestCheckMCPStatus_FallbackByItemName(t *testing.T) {
+	// Not parallel — mutates package-level mcpConfigPath
+	tmpDir := t.TempDir()
+
+	// Server exists in config but NOT in installed.json
+	configFile := filepath.Join(tmpDir, ".claude.json")
+	os.WriteFile(configFile, []byte(`{"mcpServers":{"legacy-server":{"command":"node"}}}`), 0644)
+
+	originalFunc := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = originalFunc }()
+
+	prov := provider.Provider{Slug: "claude-code"}
+
+	item := catalog.ContentItem{Name: "legacy-server", Type: catalog.MCP}
+	status := checkMCPStatus(item, prov, tmpDir)
+	if status != StatusInstalled {
+		t.Errorf("expected StatusInstalled via fallback, got %v", status)
+	}
+}
+
+func TestCheckMCPStatus_MissingConfigFile(t *testing.T) {
+	// Not parallel — mutates package-level mcpConfigPath
+	tmpDir := t.TempDir()
+
+	originalFunc := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return filepath.Join(tmpDir, "nonexistent.json"), nil
+	}
+	defer func() { mcpConfigPath = originalFunc }()
+
+	prov := provider.Provider{Slug: "claude-code"}
+
+	// readMCPConfig returns {} for missing files, so status should be NotInstalled
+	item := catalog.ContentItem{Name: "test", Type: catalog.MCP}
+	status := checkMCPStatus(item, prov, tmpDir)
+	if status != StatusNotInstalled {
+		t.Errorf("expected StatusNotInstalled for missing config, got %v", status)
+	}
+}
+
+func TestUninstallMCP_NotInstalledBySyllago(t *testing.T) {
+	// Not parallel — mutates package-level mcpConfigPath
+	tmpDir := t.TempDir()
+
+	configFile := filepath.Join(tmpDir, ".claude.json")
+	os.WriteFile(configFile, []byte(`{"mcpServers":{"foreign":{"command":"node"}}}`), 0644)
+
+	originalFunc := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = originalFunc }()
+
+	prov := provider.Provider{Slug: "claude-code"}
+	item := catalog.ContentItem{Name: "foreign", Type: catalog.MCP, Path: tmpDir}
+
+	// Not in installed.json — should fail
+	_, err := uninstallMCP(item, prov, tmpDir)
+	if err == nil {
+		t.Fatal("expected error for item not installed by syllago")
+	}
+}
+
+func TestCheckMCPStatus_InstalledWithLegacyNoServerNames(t *testing.T) {
+	// Not parallel — mutates package-level mcpConfigPath
+	tmpDir := t.TempDir()
+
+	configFile := filepath.Join(tmpDir, ".claude.json")
+	os.WriteFile(configFile, []byte(`{"mcpServers":{"legacy":{"command":"node"}}}`), 0644)
+
+	originalFunc := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = originalFunc }()
+
+	prov := provider.Provider{Slug: "claude-code"}
+
+	// Record in installed.json WITHOUT ServerNames (legacy format)
+	inst := &Installed{
+		MCP: []InstalledMCP{
+			{Name: "legacy", Source: "export"}, // no ServerNames
+		},
+	}
+	os.MkdirAll(filepath.Join(tmpDir, ".syllago"), 0755)
+	SaveInstalled(tmpDir, inst)
+
+	item := catalog.ContentItem{Name: "legacy", Type: catalog.MCP}
+	status := checkMCPStatus(item, prov, tmpDir)
+	if status != StatusInstalled {
+		t.Errorf("expected StatusInstalled for legacy (no ServerNames), got %v", status)
+	}
+}
+
+func TestExtractServerEntries_FlatFormat(t *testing.T) {
+	t.Parallel()
+	rawData := []byte(`{"command":"node","args":["server.js"],"env":{"KEY":"val"}}`)
+	entries, err := ExtractServerEntries(rawData, "my-server", "mcpServers")
+	if err != nil {
+		t.Fatalf("ExtractServerEntries: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if _, ok := entries["my-server"]; !ok {
+		t.Error("expected entry keyed by item name")
+	}
+}
+
+func TestExtractServerEntries_InvalidJSON(t *testing.T) {
+	t.Parallel()
+	_, err := ExtractServerEntries([]byte("{invalid}"), "test", "mcpServers")
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
 func TestUninstallMCP_NestedFormat(t *testing.T) {
 	// Not parallel — mutates package-level mcpConfigPath
 	tmpDir := t.TempDir()

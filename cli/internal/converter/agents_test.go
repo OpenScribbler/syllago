@@ -980,6 +980,178 @@ func TestCopilotAgentDontAskNote(t *testing.T) {
 	assertContains(t, out, "without asking for confirmation")
 }
 
+// --- Kiro JSON agents ---
+
+func TestCanonicalizeKiroAgentJSON(t *testing.T) {
+	input := []byte(`{
+		"name": "AWS Expert",
+		"description": "AWS Rust development specialist",
+		"prompt": "You are an expert in AWS and Rust development.",
+		"model": "claude-sonnet-4",
+		"tools": ["shell", "read"],
+		"allowedTools": ["fs_write/src"],
+		"mcpServers": {
+			"github": {"command": "npx", "args": ["-y", "@mcp/github"]}
+		}
+	}`)
+
+	result, err := canonicalizeKiroAgentJSON(input)
+	if err != nil {
+		t.Fatalf("canonicalizeKiroAgentJSON: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: AWS Expert")
+	assertContains(t, out, "description: AWS Rust development specialist")
+	assertContains(t, out, "model: claude-sonnet-4")
+	assertContains(t, out, "You are an expert in AWS and Rust development.")
+	// Tools should be translated from Kiro to canonical
+	assertContains(t, out, "shell")
+	// mcpServers should be in canonical
+	assertContains(t, out, "github")
+	assertEqual(t, "agent.md", result.Filename)
+}
+
+func TestCanonicalizeKiroAgentJSONFileURI(t *testing.T) {
+	input := []byte(`{
+		"name": "File Agent",
+		"prompt": "file://prompts/agent.md"
+	}`)
+
+	result, err := canonicalizeKiroAgentJSON(input)
+	if err != nil {
+		t.Fatalf("canonicalizeKiroAgentJSON: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "file://prompts/agent.md")
+	assertContains(t, out, "not available during conversion")
+}
+
+func TestCanonicalizeKiroAgentJSONWarnings(t *testing.T) {
+	input := []byte(`{
+		"name": "Full Agent",
+		"prompt": "Do things.",
+		"toolAliases": {"read_file": "cat"},
+		"toolsSettings": {"shell": {"timeout": 30}},
+		"resources": ["res1"],
+		"hooks": {"onStart": [{"command": "echo init"}]},
+		"keyboardShortcut": "ctrl+k",
+		"welcomeMessage": "Hello!"
+	}`)
+
+	result, err := canonicalizeKiroAgentJSON(input)
+	if err != nil {
+		t.Fatalf("canonicalizeKiroAgentJSON: %v", err)
+	}
+
+	if len(result.Warnings) < 5 {
+		t.Fatalf("expected at least 5 warnings, got %d: %v", len(result.Warnings), result.Warnings)
+	}
+
+	allWarnings := strings.Join(result.Warnings, " | ")
+	assertContains(t, allWarnings, "toolAliases")
+	assertContains(t, allWarnings, "toolsSettings")
+	assertContains(t, allWarnings, "resources")
+	assertContains(t, allWarnings, "hooks")
+	assertContains(t, allWarnings, "keyboardShortcut")
+	assertContains(t, allWarnings, "welcomeMessage")
+}
+
+func TestRenderKiroAgentJSON(t *testing.T) {
+	meta := AgentMeta{
+		Name:        "AWS Expert",
+		Description: "AWS specialist",
+		Tools:       []string{"shell", "file_read"},
+		Model:       "claude-sonnet-4",
+		MCPServers:  []string{"github"},
+	}
+	body := "You are an AWS expert."
+
+	result, err := renderKiroAgentJSON(meta, body)
+	if err != nil {
+		t.Fatalf("renderKiroAgentJSON: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, `"name": "AWS Expert"`)
+	assertContains(t, out, `"description": "AWS specialist"`)
+	assertContains(t, out, `"model": "claude-sonnet-4"`)
+	assertContains(t, out, `"prompt": "You are an AWS expert."`)
+	// Tools should be translated to Kiro names
+	assertContains(t, out, "shell")
+	assertContains(t, out, "read")
+	// MCPServers should be embedded as empty objects
+	assertContains(t, out, `"mcpServers"`)
+	assertContains(t, out, `"github"`)
+	assertEqual(t, "aws-expert.json", result.Filename)
+}
+
+func TestRenderKiroAgentJSONWarnings(t *testing.T) {
+	meta := AgentMeta{
+		Name:            "Full Agent",
+		MaxTurns:        20,
+		PermissionMode:  "plan",
+		DisallowedTools: []string{"Bash"},
+		Skills:          []string{"coding"},
+		Memory:          "project",
+		Background:      true,
+		Isolation:       "worktree",
+		Effort:          "high",
+		Hooks:           map[string]any{"preToolUse": "something"},
+		Color:           "#ff6600",
+	}
+	body := "Full agent."
+
+	result, err := renderKiroAgentJSON(meta, body)
+	if err != nil {
+		t.Fatalf("renderKiroAgentJSON: %v", err)
+	}
+
+	if len(result.Warnings) < 9 {
+		t.Fatalf("expected at least 9 warnings, got %d: %v", len(result.Warnings), result.Warnings)
+	}
+
+	allWarnings := strings.Join(result.Warnings, " | ")
+	assertContains(t, allWarnings, "maxTurns")
+	assertContains(t, allWarnings, "permissionMode")
+	assertContains(t, allWarnings, "disallowedTools")
+	assertContains(t, allWarnings, "skills")
+	assertContains(t, allWarnings, "memory")
+	assertContains(t, allWarnings, "background")
+	assertContains(t, allWarnings, "isolation")
+	assertContains(t, allWarnings, "effort")
+	assertContains(t, allWarnings, "hooks")
+	assertContains(t, allWarnings, "color")
+}
+
+func TestRenderKiroAgentJSONNoName(t *testing.T) {
+	meta := AgentMeta{
+		Description: "Unnamed agent",
+	}
+
+	result, err := renderKiroAgentJSON(meta, "Do things.")
+	if err != nil {
+		t.Fatalf("renderKiroAgentJSON: %v", err)
+	}
+
+	assertEqual(t, "agent.json", result.Filename)
+}
+
+// --- containsString ---
+
+func TestContainsString(t *testing.T) {
+	if !containsString([]string{"a", "b", "c"}, "b") {
+		t.Error("expected containsString to find 'b'")
+	}
+	if containsString([]string{"a", "b", "c"}, "d") {
+		t.Error("expected containsString to not find 'd'")
+	}
+	if containsString(nil, "a") {
+		t.Error("expected containsString to return false for nil slice")
+	}
+}
+
 func TestCursorAgentDefaultPermissionNoNote(t *testing.T) {
 	t.Parallel()
 	input := []byte("---\nname: normal\npermissionMode: default\n---\n\nNormal work.\n")
