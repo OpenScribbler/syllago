@@ -27,14 +27,16 @@ type InstalledMCP struct {
 	Name        string    `json:"name"`
 	ServerKey   string    `json:"serverKey,omitempty"`   // specific server key (new per-server installs)
 	ServerNames []string  `json:"serverNames,omitempty"` // DEPRECATED: legacy bulk installs tracked all keys here
+	ContentHash string    `json:"contentHash,omitempty"` // SHA-256 of config content at install time
 	Source      string    `json:"source"`
 	InstalledAt time.Time `json:"installedAt"`
 }
 
 // InstalledSymlink records a symlink placed by syllago.
 type InstalledSymlink struct {
-	Path        string    `json:"path"`   // absolute path of the symlink
-	Target      string    `json:"target"` // absolute path it points to
+	Path        string    `json:"path"`                  // absolute path of the symlink
+	Target      string    `json:"target"`                // absolute path it points to
+	ContentHash string    `json:"contentHash,omitempty"` // SHA-256 of target content at install time
 	Source      string    `json:"source"`
 	InstalledAt time.Time `json:"installedAt"`
 }
