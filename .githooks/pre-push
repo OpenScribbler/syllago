@@ -1,6 +1,7 @@
 #!/bin/sh
 #
-# Pre-push hook: run golangci-lint to catch issues before burning CI minutes.
+# Pre-push hook: run golangci-lint and check commands.json freshness
+# before burning CI minutes.
 #
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
@@ -8,19 +9,44 @@ if [ -z "$REPO_ROOT" ] || [ ! -d "$REPO_ROOT/cli" ]; then
     exit 0
 fi
 
-# Skip if golangci-lint is not installed
+# --- golangci-lint ---
 if ! command -v golangci-lint >/dev/null 2>&1; then
     echo "Warning: golangci-lint not found, skipping pre-push lint check" >&2
-    exit 0
+else
+    echo "Running golangci-lint before push..."
+    if ! (cd "$REPO_ROOT/cli" && golangci-lint run ./...); then
+        echo "" >&2
+        echo "Error: golangci-lint found issues. Fix them before pushing." >&2
+        echo "Run: cd cli && golangci-lint run ./..." >&2
+        exit 1
+    fi
+    echo "Lint clean."
 fi
 
-echo "Running golangci-lint before push..."
-if ! (cd "$REPO_ROOT/cli" && golangci-lint run ./...); then
-    echo "" >&2
-    echo "Error: golangci-lint found issues. Fix them before pushing." >&2
-    echo "Run: cd cli && golangci-lint run ./..." >&2
-    exit 1
+# --- commands.json freshness ---
+echo "Checking commands.json freshness..."
+cd "$REPO_ROOT/cli" || exit 1
+TMPBIN=$(mktemp)
+if go build -o "$TMPBIN" ./cmd/syllago 2>/dev/null; then
+    "$TMPBIN" _gendocs > commands.json.tmp 2>/dev/null
+    rm -f "$TMPBIN"
+
+    # Strip volatile fields before comparing
+    grep -v '"generatedAt"' commands.json | grep -v '"syllagoVersion"' > commands.json.stable
+    grep -v '"generatedAt"' commands.json.tmp | grep -v '"syllagoVersion"' > commands.json.tmp.stable
+
+    if ! diff -q commands.json.stable commands.json.tmp.stable >/dev/null 2>&1; then
+        echo "" >&2
+        echo "Error: commands.json is stale. Regenerate it:" >&2
+        echo "  cd cli && go build -o syllago-tmp ./cmd/syllago && ./syllago-tmp _gendocs > commands.json && rm syllago-tmp" >&2
+        rm -f commands.json.tmp commands.json.stable commands.json.tmp.stable
+        exit 1
+    fi
+    rm -f commands.json.tmp commands.json.stable commands.json.tmp.stable
+    echo "commands.json up to date."
+else
+    rm -f "$TMPBIN"
+    echo "Warning: could not build for commands.json check, skipping" >&2
 fi
 
-echo "Lint clean."
 exit 0
