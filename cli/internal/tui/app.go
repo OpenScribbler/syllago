@@ -74,38 +74,37 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, cmd
 
 	case tea.KeyMsg:
-		// Open dropdown captures ALL keys (modal pattern).
-		if a.topBar.HasOpenDropdown() {
-			// Global escape hatch
-			if msg.Type == tea.KeyCtrlC {
-				return a, tea.Quit
-			}
-			var cmd tea.Cmd
-			a.topBar, cmd = a.topBar.Update(msg)
-			return a, cmd
-		}
-
 		switch {
 		case msg.Type == tea.KeyCtrlC:
 			return a, tea.Quit
 		case msg.String() == "q":
 			return a, tea.Quit
 
-		// 1/2/3 open dropdowns from anywhere
+		// 1/2/3 switch groups
 		case msg.String() == "1":
-			a.topBar.OpenDropdown(1)
-			return a, nil
+			cmd := a.topBar.SetGroup(0)
+			a.helpBar.SetHints(a.currentHints())
+			return a, cmd
 		case msg.String() == "2":
-			a.topBar.OpenDropdown(2)
-			return a, nil
+			cmd := a.topBar.SetGroup(1)
+			a.helpBar.SetHints(a.currentHints())
+			return a, cmd
 		case msg.String() == "3":
-			a.topBar.OpenDropdown(3)
-			return a, nil
+			cmd := a.topBar.SetGroup(2)
+			a.helpBar.SetHints(a.currentHints())
+			return a, cmd
+
+		// h/l switch sub-tabs within active group
+		case msg.String() == "l", msg.String() == "right":
+			cmd := a.topBar.NextTab()
+			return a, cmd
+		case msg.String() == "h", msg.String() == "left":
+			cmd := a.topBar.PrevTab()
+			return a, cmd
 		}
 		// Phase 3+: focus-based routing to explorer/gallery
 
-	case dropdownActiveMsg:
-		a.topBar.HandleActiveMsg(msg)
+	case tabChangedMsg:
 		a.helpBar.SetHints(a.currentHints())
 		return a, nil
 	}
@@ -141,10 +140,7 @@ func (a App) contentHeight() int {
 
 // currentHints returns context-sensitive help hints based on current state.
 func (a App) currentHints() []string {
-	if a.topBar.HasOpenDropdown() {
-		return []string{"j/k navigate", "enter select", "esc close"}
-	}
-	return []string{"1/2/3 dropdowns", "? help", "q quit"}
+	return []string{"1/2/3 groups", "h/l tabs", "? help", "q quit"}
 }
 
 // renderEmptyContent renders the empty main content area.

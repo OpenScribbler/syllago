@@ -8,46 +8,53 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 )
 
-// activeCategory tracks which dropdown group is currently active.
-type activeCategory int
+// tabGroup represents a top-level navigation group (Content, Collections, Config).
+type tabGroup struct {
+	label   string
+	hotkey  string   // display hint: "1", "2", "3"
+	tabs    []string // sub-tab labels
+	actions []string // right-aligned action button labels
+}
 
-const (
-	categoryContent    activeCategory = iota // Content types view
-	categoryCollection                       // Collection view (Library/Registries/Loadouts)
-)
+// tabChangedMsg is fired when the active group or sub-tab changes.
+type tabChangedMsg struct {
+	group    int
+	tab      int
+	tabLabel string
+}
 
-// topBarModel manages the top navigation bar with three dropdowns.
+// topBarModel manages a two-tier tab navigation bar with a bordered frame.
 type topBarModel struct {
-	content    dropdownModel
-	collection dropdownModel
-	config     dropdownModel
-
-	activeCategory activeCategory // which of Content/Collection is active
-	width          int
+	groups      []tabGroup
+	activeGroup int
+	activeTab   int // sub-tab index within the active group
+	width       int
 }
 
 func newTopBar() topBarModel {
-	content := newDropdown("content", "Content", []string{
-		"Skills", "Agents", "MCP Configs", "Rules", "Hooks", "Commands",
-	})
-	content.SetActive(0) // default: Skills
-
-	collection := newDropdown("collection", "Collection", []string{
-		"Library", "Registries", "Loadouts",
-	})
-	collection.Reset()         // no selection
-	collection.disabled = true // grayed out initially
-
-	config := newDropdown("config", "Config", []string{
-		"Settings", "Sandbox",
-	})
-	config.Reset() // no selection
-
 	return topBarModel{
-		content:        content,
-		collection:     collection,
-		config:         config,
-		activeCategory: categoryContent,
+		groups: []tabGroup{
+			{
+				label:   "Content",
+				hotkey:  "1",
+				tabs:    []string{"Skills", "Agents", "MCP", "Rules", "Hooks", "Commands"},
+				actions: []string{"+ Add", "Create"},
+			},
+			{
+				label:   "Collections",
+				hotkey:  "2",
+				tabs:    []string{"Library", "Registries", "Loadouts"},
+				actions: []string{"+ Add", "Create"},
+			},
+			{
+				label:   "Config",
+				hotkey:  "3",
+				tabs:    []string{"Settings", "Sandbox"},
+				actions: nil,
+			},
+		},
+		activeGroup: 0, // Content
+		activeTab:   0, // Skills
 	}
 }
 
@@ -56,147 +63,185 @@ func (t *topBarModel) SetSize(width int) {
 	t.width = width
 }
 
-// HasOpenDropdown returns true if any dropdown is open.
-func (t topBarModel) HasOpenDropdown() bool {
-	return t.content.isOpen || t.collection.isOpen || t.config.isOpen
+// ActiveGroupLabel returns the label of the active group.
+func (t topBarModel) ActiveGroupLabel() string {
+	return t.groups[t.activeGroup].label
 }
 
-// Update handles input for the topbar and its dropdowns.
+// ActiveTabLabel returns the label of the active sub-tab.
+func (t topBarModel) ActiveTabLabel() string {
+	g := t.groups[t.activeGroup]
+	if t.activeTab >= 0 && t.activeTab < len(g.tabs) {
+		return g.tabs[t.activeTab]
+	}
+	return ""
+}
+
+// SetGroup switches to a group by index (0-based) and resets sub-tab to 0.
+func (t *topBarModel) SetGroup(index int) tea.Cmd {
+	if index < 0 || index >= len(t.groups) {
+		return nil
+	}
+	t.activeGroup = index
+	t.activeTab = 0
+	return t.tabChangedCmd()
+}
+
+// NextTab moves to the next sub-tab within the active group (wraps).
+func (t *topBarModel) NextTab() tea.Cmd {
+	g := t.groups[t.activeGroup]
+	t.activeTab = (t.activeTab + 1) % len(g.tabs)
+	return t.tabChangedCmd()
+}
+
+// PrevTab moves to the previous sub-tab within the active group (wraps).
+func (t *topBarModel) PrevTab() tea.Cmd {
+	g := t.groups[t.activeGroup]
+	t.activeTab = (t.activeTab - 1 + len(g.tabs)) % len(g.tabs)
+	return t.tabChangedCmd()
+}
+
+// Update handles mouse clicks on groups, tabs, and action buttons.
 func (t topBarModel) Update(msg tea.Msg) (topBarModel, tea.Cmd) {
-	// Route to the open dropdown first.
-	if t.content.isOpen {
-		var cmd tea.Cmd
-		t.content, cmd = t.content.Update(msg)
-		return t, cmd
+	mouseMsg, ok := msg.(tea.MouseMsg)
+	if !ok {
+		return t, nil
 	}
-	if t.collection.isOpen {
-		var cmd tea.Cmd
-		t.collection, cmd = t.collection.Update(msg)
-		return t, cmd
-	}
-	if t.config.isOpen {
-		var cmd tea.Cmd
-		t.config, cmd = t.config.Update(msg)
-		return t, cmd
+	if mouseMsg.Action != tea.MouseActionPress || mouseMsg.Button != tea.MouseButtonLeft {
+		return t, nil
 	}
 
-	// Handle mouse clicks on triggers when no dropdown is open.
-	if mouseMsg, ok := msg.(tea.MouseMsg); ok {
-		if mouseMsg.Action == tea.MouseActionPress && mouseMsg.Button == tea.MouseButtonLeft {
-			if zone.Get("dd-trigger-content").InBounds(mouseMsg) {
-				t.closeAll()
-				t.content.Open()
-				return t, nil
-			}
-			if zone.Get("dd-trigger-collection").InBounds(mouseMsg) {
-				t.closeAll()
-				t.collection.Open()
-				return t, nil
-			}
-			if zone.Get("dd-trigger-config").InBounds(mouseMsg) {
-				t.closeAll()
-				t.config.Open()
-				return t, nil
-			}
+	// Check group tab clicks
+	for i := range t.groups {
+		if zone.Get("group-" + itoa(i)).InBounds(mouseMsg) {
+			cmd := t.SetGroup(i)
+			return t, cmd
+		}
+	}
+
+	// Check sub-tab clicks (only for active group)
+	g := t.groups[t.activeGroup]
+	for i := range g.tabs {
+		if zone.Get("tab-" + itoa(t.activeGroup) + "-" + itoa(i)).InBounds(mouseMsg) {
+			t.activeTab = i
+			return t, t.tabChangedCmd()
 		}
 	}
 
 	return t, nil
 }
 
-// OpenDropdown opens a specific dropdown by hotkey index (1=Content, 2=Collection, 3=Config).
-func (t *topBarModel) OpenDropdown(n int) {
-	t.closeAll()
-	switch n {
-	case 1:
-		t.content.Open()
-	case 2:
-		t.collection.Open()
-	case 3:
-		t.config.Open()
-	}
-}
-
-// HandleActiveMsg processes a dropdown selection and applies mutual exclusion.
-func (t *topBarModel) HandleActiveMsg(msg dropdownActiveMsg) {
-	switch msg.id {
-	case "content":
-		t.content.SetActive(msg.index)
-		t.activeCategory = categoryContent
-		t.collection.Reset()
-		t.collection.disabled = true
-		t.content.disabled = false
-	case "collection":
-		t.collection.SetActive(msg.index)
-		t.activeCategory = categoryCollection
-		t.content.Reset()
-		t.content.disabled = true
-		t.collection.disabled = false
-	case "config":
-		t.config.SetActive(msg.index)
-	}
-}
-
-func (t *topBarModel) closeAll() {
-	t.content.Close()
-	t.collection.Close()
-	t.config.Close()
-}
-
-// View renders the full topbar. Height grows when a dropdown is open.
-func (t topBarModel) View() string {
-	bar := t.renderBar()
-	// If a dropdown is open, append its menu below the bar.
-	if t.content.isOpen {
-		menu := t.content.ViewMenu()
-		return lipgloss.JoinVertical(lipgloss.Left, bar, menu)
-	}
-	if t.collection.isOpen {
-		menu := t.collection.ViewMenu()
-		return lipgloss.JoinVertical(lipgloss.Left, bar, menu)
-	}
-	if t.config.isOpen {
-		menu := t.config.ViewMenu()
-		return lipgloss.JoinVertical(lipgloss.Left, bar, menu)
-	}
-	return bar
-}
-
-// Height returns the rendered height of the topbar (1 when closed, more when open).
+// Height returns the rendered height of the topbar (always 5: top border + groups + separator + tabs + bottom border).
 func (t topBarModel) Height() int {
-	h := 1
-	if t.content.isOpen {
-		h += len(t.content.items) + 2 // items + border
-	}
-	if t.collection.isOpen {
-		h += len(t.collection.items) + 2
-	}
-	if t.config.isOpen {
-		h += len(t.config.items) + 2
-	}
-	return h
+	return 5
 }
 
-// renderBar renders the single-line closed topbar.
-func (t topBarModel) renderBar() string {
-	logo := logoStyle.Render("syl") + accentLogoStyle.Render("lago")
+// View renders the full bordered topbar with two-tier tabs.
+func (t topBarModel) View() string {
+	innerW := t.width - 2 // subtract left+right border chars
 
-	triggers := strings.Join([]string{
-		t.content.ViewTrigger(),
-		t.collection.ViewTrigger(),
-		t.config.ViewTrigger(),
-	}, "  ")
+	// Row 1: group tabs
+	groupRow := t.renderGroupRow(innerW)
 
-	left := logo + "  " + triggers
+	// Separator
+	sep := "├" + strings.Repeat("─", innerW) + "┤"
 
-	// Action buttons (Phase 4+ will make these functional).
-	add := zone.Mark("btn-add", mutedStyle.Render("+ Add"))
-	new := zone.Mark("btn-new", mutedStyle.Render("* New"))
-	right := add + "  " + new
+	// Row 2: sub-tabs + action buttons
+	tabRow := t.renderTabRow(innerW)
+
+	// Top border with ──syllago── inline
+	topBorder := t.renderTopBorder(innerW)
+
+	// Bottom border
+	botBorder := "╰" + strings.Repeat("─", innerW) + "╯"
+
+	return strings.Join([]string{
+		topBorder,
+		"│" + groupRow + "│",
+		sep,
+		"│" + tabRow + "│",
+		botBorder,
+	}, "\n")
+}
+
+// renderTopBorder renders ╭──syllago────────...╮
+func (t topBarModel) renderTopBorder(innerW int) string {
+	logo := "syl" + "lago"
+	prefix := "╭──"
+	suffix := "╮"
+	fill := innerW - len(logo) - 2 // -2 for the "──" before logo
+	if fill < 0 {
+		fill = 0
+	}
+	return prefix + logo + strings.Repeat("─", fill) + suffix
+}
+
+// renderGroupRow renders the group tabs: [1 Content]  2 Collections  3 Config
+func (t topBarModel) renderGroupRow(innerW int) string {
+	var parts []string
+	for i, g := range t.groups {
+		label := g.hotkey + " " + g.label
+		var rendered string
+		if i == t.activeGroup {
+			rendered = activeTabStyle.Render(label)
+		} else {
+			rendered = inactiveTabStyle.Render(label)
+		}
+		rendered = zone.Mark("group-"+itoa(i), rendered)
+		parts = append(parts, rendered)
+	}
+	left := strings.Join(parts, "  ")
+	leftW := lipgloss.Width(left)
+	pad := max(0, innerW-leftW)
+	return " " + left + strings.Repeat(" ", pad-1)
+}
+
+// renderTabRow renders sub-tabs on the left and action buttons on the right.
+func (t topBarModel) renderTabRow(innerW int) string {
+	g := t.groups[t.activeGroup]
+
+	// Sub-tabs
+	var tabParts []string
+	for i, tab := range g.tabs {
+		var rendered string
+		if i == t.activeTab {
+			rendered = activeTabStyle.Render(tab)
+		} else {
+			rendered = inactiveTabStyle.Render(tab)
+		}
+		rendered = zone.Mark("tab-"+itoa(t.activeGroup)+"-"+itoa(i), rendered)
+		tabParts = append(tabParts, rendered)
+	}
+	left := strings.Join(tabParts, " ")
+
+	// Action buttons
+	var btnParts []string
+	for _, action := range g.actions {
+		btn := activeButtonStyle.Render(action)
+		btnID := "btn-" + strings.ToLower(strings.ReplaceAll(strings.TrimPrefix(action, "+ "), " ", "-"))
+		btn = zone.Mark(btnID, btn)
+		btnParts = append(btnParts, btn)
+	}
+	right := strings.Join(btnParts, " ")
 
 	leftW := lipgloss.Width(left)
 	rightW := lipgloss.Width(right)
-	gap := max(0, t.width-leftW-rightW)
+	gap := max(1, innerW-leftW-rightW-1) // -1 for leading space
 
-	return left + strings.Repeat(" ", gap) + right
+	return " " + left + strings.Repeat(" ", gap) + right
+}
+
+func (t topBarModel) tabChangedCmd() tea.Cmd {
+	g := t.groups[t.activeGroup]
+	label := ""
+	if t.activeTab >= 0 && t.activeTab < len(g.tabs) {
+		label = g.tabs[t.activeTab]
+	}
+	return func() tea.Msg {
+		return tabChangedMsg{
+			group:    t.activeGroup,
+			tab:      t.activeTab,
+			tabLabel: label,
+		}
+	}
 }

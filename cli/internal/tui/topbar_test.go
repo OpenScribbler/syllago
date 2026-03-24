@@ -5,151 +5,124 @@ import "testing"
 func TestTopBar_InitialState(t *testing.T) {
 	tb := newTopBar()
 
-	if tb.content.ActiveLabel() != "Skills" {
-		t.Errorf("expected default Content=Skills, got %q", tb.content.ActiveLabel())
+	if tb.activeGroup != 0 {
+		t.Errorf("expected initial group 0 (Content), got %d", tb.activeGroup)
 	}
-	if tb.collection.ActiveLabel() != "--" {
-		t.Errorf("expected default Collection=--, got %q", tb.collection.ActiveLabel())
+	if tb.activeTab != 0 {
+		t.Errorf("expected initial tab 0 (Skills), got %d", tb.activeTab)
 	}
-	if !tb.collection.disabled {
-		t.Error("collection should be disabled initially")
+	if tb.ActiveGroupLabel() != "Content" {
+		t.Errorf("expected Content, got %q", tb.ActiveGroupLabel())
 	}
-	if tb.content.disabled {
-		t.Error("content should not be disabled initially")
-	}
-	if tb.activeCategory != categoryContent {
-		t.Error("initial category should be categoryContent")
+	if tb.ActiveTabLabel() != "Skills" {
+		t.Errorf("expected Skills, got %q", tb.ActiveTabLabel())
 	}
 }
 
-func TestTopBar_OpenDropdown(t *testing.T) {
+func TestTopBar_SetGroup(t *testing.T) {
 	tb := newTopBar()
 
-	tb.OpenDropdown(1)
-	if !tb.content.isOpen {
-		t.Fatal("OpenDropdown(1) should open content")
+	tb.SetGroup(1) // Collections
+	if tb.activeGroup != 1 {
+		t.Errorf("expected group 1, got %d", tb.activeGroup)
 	}
-	if tb.collection.isOpen || tb.config.isOpen {
-		t.Fatal("only content should be open")
+	if tb.ActiveGroupLabel() != "Collections" {
+		t.Errorf("expected Collections, got %q", tb.ActiveGroupLabel())
 	}
-
-	tb.OpenDropdown(2)
-	if !tb.collection.isOpen {
-		t.Fatal("OpenDropdown(2) should open collection")
+	if tb.activeTab != 0 {
+		t.Errorf("SetGroup should reset tab to 0, got %d", tb.activeTab)
 	}
-	if tb.content.isOpen {
-		t.Fatal("content should be closed when collection opens")
+	if tb.ActiveTabLabel() != "Library" {
+		t.Errorf("expected Library, got %q", tb.ActiveTabLabel())
 	}
 
-	tb.OpenDropdown(3)
-	if !tb.config.isOpen {
-		t.Fatal("OpenDropdown(3) should open config")
+	tb.SetGroup(2) // Config
+	if tb.ActiveGroupLabel() != "Config" {
+		t.Errorf("expected Config, got %q", tb.ActiveGroupLabel())
+	}
+	if tb.ActiveTabLabel() != "Settings" {
+		t.Errorf("expected Settings, got %q", tb.ActiveTabLabel())
 	}
 }
 
-func TestTopBar_MutualExclusion_ContentDisablesCollection(t *testing.T) {
+func TestTopBar_NextPrevTab(t *testing.T) {
 	tb := newTopBar()
+	// Content group: Skills, Agents, MCP, Rules, Hooks, Commands
 
-	// Select a collection first
-	tb.HandleActiveMsg(dropdownActiveMsg{id: "collection", index: 0, label: "Library"})
-	if tb.activeCategory != categoryCollection {
-		t.Error("should be categoryCollection after selecting Library")
-	}
-	if !tb.content.disabled {
-		t.Error("content should be disabled after collection selection")
+	tb.NextTab()
+	if tb.ActiveTabLabel() != "Agents" {
+		t.Errorf("expected Agents, got %q", tb.ActiveTabLabel())
 	}
 
-	// Now select content — should disable collection
-	tb.HandleActiveMsg(dropdownActiveMsg{id: "content", index: 2, label: "MCP Configs"})
-	if tb.activeCategory != categoryContent {
-		t.Error("should be categoryContent after content selection")
+	tb.NextTab()
+	if tb.ActiveTabLabel() != "MCP" {
+		t.Errorf("expected MCP, got %q", tb.ActiveTabLabel())
 	}
-	if !tb.collection.disabled {
-		t.Error("collection should be disabled after content selection")
-	}
-	if tb.collection.ActiveLabel() != "--" {
-		t.Errorf("collection should be reset to --, got %q", tb.collection.ActiveLabel())
+
+	tb.PrevTab()
+	if tb.ActiveTabLabel() != "Agents" {
+		t.Errorf("expected Agents after PrevTab, got %q", tb.ActiveTabLabel())
 	}
 }
 
-func TestTopBar_MutualExclusion_CollectionDisablesContent(t *testing.T) {
+func TestTopBar_TabWraps(t *testing.T) {
 	tb := newTopBar()
 
-	// Default is content=Skills active
-	tb.HandleActiveMsg(dropdownActiveMsg{id: "collection", index: 1, label: "Registries"})
-
-	if !tb.content.disabled {
-		t.Error("content should be disabled after collection selection")
-	}
-	if tb.content.ActiveLabel() != "--" {
-		t.Errorf("content should be reset to --, got %q", tb.content.ActiveLabel())
-	}
-	if tb.collection.ActiveLabel() != "Registries" {
-		t.Errorf("collection should show Registries, got %q", tb.collection.ActiveLabel())
-	}
-}
-
-func TestTopBar_ConfigIsIndependent(t *testing.T) {
-	tb := newTopBar()
-
-	// Select config — should not affect content/collection
-	tb.HandleActiveMsg(dropdownActiveMsg{id: "config", index: 0, label: "Settings"})
-
-	if tb.content.ActiveLabel() != "Skills" {
-		t.Errorf("content should still be Skills, got %q", tb.content.ActiveLabel())
-	}
-	if tb.activeCategory != categoryContent {
-		t.Error("active category should still be content")
-	}
-}
-
-func TestTopBar_HasOpenDropdown(t *testing.T) {
-	tb := newTopBar()
-
-	if tb.HasOpenDropdown() {
-		t.Fatal("should not have open dropdown initially")
+	// Wrap backward from first
+	tb.PrevTab()
+	if tb.ActiveTabLabel() != "Commands" {
+		t.Errorf("expected Commands (wrap), got %q", tb.ActiveTabLabel())
 	}
 
-	tb.OpenDropdown(1)
-	if !tb.HasOpenDropdown() {
-		t.Fatal("should have open dropdown after OpenDropdown")
+	// Wrap forward from last
+	tb.NextTab()
+	if tb.ActiveTabLabel() != "Skills" {
+		t.Errorf("expected Skills (wrap), got %q", tb.ActiveTabLabel())
 	}
 }
 
 func TestTopBar_Height(t *testing.T) {
 	tb := newTopBar()
-
-	if h := tb.Height(); h != 1 {
-		t.Errorf("closed topbar should have height 1, got %d", h)
-	}
-
-	tb.OpenDropdown(1) // Content has 6 items
-	if h := tb.Height(); h != 9 {
-		// 1 bar + 6 items + 2 border
-		t.Errorf("open content dropdown should have height 9, got %d", h)
+	if h := tb.Height(); h != 5 {
+		t.Errorf("expected height 5, got %d", h)
 	}
 }
 
-func TestTopBar_RenderBar(t *testing.T) {
+func TestTopBar_RenderContainsElements(t *testing.T) {
 	tb := newTopBar()
 	tb.SetSize(80)
 
 	view := tb.View()
-	assertContains(t, view, "syl")
-	assertContains(t, view, "lago")
-	assertContains(t, view, "Content: Skills")
-	assertContains(t, view, "Collection: --")
+	assertContains(t, view, "syllago")
+	assertContains(t, view, "Content")
+	assertContains(t, view, "Collections")
+	assertContains(t, view, "Config")
+	assertContains(t, view, "Skills")
+	assertContains(t, view, "Agents")
 	assertContains(t, view, "+ Add")
-	assertContains(t, view, "* New")
+	assertContains(t, view, "Create")
 }
 
-func TestTopBar_RenderOpenDropdown(t *testing.T) {
+func TestTopBar_GroupSwitchShowsDifferentTabs(t *testing.T) {
 	tb := newTopBar()
 	tb.SetSize(80)
-	tb.OpenDropdown(1)
 
+	tb.SetGroup(1) // Collections
 	view := tb.View()
-	assertContains(t, view, "> Skills")
-	assertContains(t, view, "  Agents")
-	assertContains(t, view, "  Hooks")
+	assertContains(t, view, "Library")
+	assertContains(t, view, "Registries")
+	assertContains(t, view, "Loadouts")
+
+	tb.SetGroup(2) // Config
+	view = tb.View()
+	assertContains(t, view, "Settings")
+	assertContains(t, view, "Sandbox")
+}
+
+func TestTopBar_SetGroupOutOfBounds(t *testing.T) {
+	tb := newTopBar()
+	tb.SetGroup(99) // should be no-op
+	if tb.activeGroup != 0 {
+		t.Errorf("out-of-bounds SetGroup should be no-op, got group %d", tb.activeGroup)
+	}
 }
