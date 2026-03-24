@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-24T02:41:27Z",
+  "generatedAt": "2026-03-24T07:31:45Z",
   "syllagoVersion": "dev",
   "commands": [
     {
@@ -73,9 +73,9 @@
           "name": "--scope",
           "shorthand": null,
           "type": "string",
-          "default": "global",
+          "default": "all",
           "required": false,
-          "description": "Settings scope to read from: global, project, or all (hooks only)"
+          "description": "Settings scope to read from: global, project, or all (hooks/mcp only)"
         },
         {
           "name": "--source-registry",

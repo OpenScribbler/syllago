@@ -886,3 +886,273 @@ func TestFindMCPLocations_NoDuplicates(t *testing.T) {
 		seen[loc.Path] = true
 	}
 }
+
+func TestInstallMCP_PerServer(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a nested config with two servers.
+	itemDir := filepath.Join(tmpDir, "multi-mcp")
+	os.MkdirAll(itemDir, 0755)
+	os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{
+		"mcpServers": {
+			"server-a": {"command": "node", "args": ["a.js"]},
+			"server-b": {"url": "https://b.example.com"}
+		}
+	}`), 0644)
+
+	configFile := filepath.Join(tmpDir, ".claude.json")
+	os.WriteFile(configFile, []byte("{}"), 0644)
+
+	prov := provider.Provider{Slug: "test-provider"}
+	origPath := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = origPath }()
+
+	// Install only server-a (per-server).
+	itemA := catalog.ContentItem{
+		Name:      "server-a",
+		Type:      catalog.MCP,
+		Path:      itemDir,
+		ServerKey: "server-a",
+	}
+	if _, err := installMCP(itemA, prov, tmpDir); err != nil {
+		t.Fatalf("installMCP server-a: %v", err)
+	}
+
+	// Verify only server-a is in provider config.
+	data, _ := os.ReadFile(configFile)
+	if !gjson.GetBytes(data, "mcpServers.server-a").Exists() {
+		t.Error("server-a should be in provider config")
+	}
+	if gjson.GetBytes(data, "mcpServers.server-b").Exists() {
+		t.Error("server-b should NOT be in provider config yet")
+	}
+
+	// Verify installed.json has per-server entry.
+	inst, _ := LoadInstalled(tmpDir)
+	idx := inst.FindMCPByServerKey("server-a", "server-a")
+	if idx < 0 {
+		t.Fatal("server-a not found in installed.json by server key")
+	}
+	if inst.MCP[idx].ServerKey != "server-a" {
+		t.Errorf("ServerKey = %q, want %q", inst.MCP[idx].ServerKey, "server-a")
+	}
+
+	// Now install server-b independently.
+	itemB := catalog.ContentItem{
+		Name:      "server-b",
+		Type:      catalog.MCP,
+		Path:      itemDir,
+		ServerKey: "server-b",
+	}
+	if _, err := installMCP(itemB, prov, tmpDir); err != nil {
+		t.Fatalf("installMCP server-b: %v", err)
+	}
+
+	data, _ = os.ReadFile(configFile)
+	if !gjson.GetBytes(data, "mcpServers.server-a").Exists() {
+		t.Error("server-a should still be in provider config")
+	}
+	if !gjson.GetBytes(data, "mcpServers.server-b").Exists() {
+		t.Error("server-b should now be in provider config")
+	}
+
+	// Verify both are tracked separately.
+	inst, _ = LoadInstalled(tmpDir)
+	if inst.FindMCPByServerKey("server-a", "server-a") < 0 {
+		t.Error("server-a should still be tracked")
+	}
+	if inst.FindMCPByServerKey("server-b", "server-b") < 0 {
+		t.Error("server-b should be tracked")
+	}
+}
+
+func TestUninstallMCP_PerServer(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Set up config with both servers installed.
+	configFile := filepath.Join(tmpDir, ".claude.json")
+	os.WriteFile(configFile, []byte(`{
+		"mcpServers": {
+			"server-a": {"command": "node", "args": ["a.js"]},
+			"server-b": {"url": "https://b.example.com"}
+		}
+	}`), 0644)
+
+	// Set up installed.json with per-server entries.
+	inst := &Installed{
+		MCP: []InstalledMCP{
+			{Name: "server-a", ServerKey: "server-a", Source: "export"},
+			{Name: "server-b", ServerKey: "server-b", Source: "export"},
+		},
+	}
+	SaveInstalled(tmpDir, inst)
+
+	prov := provider.Provider{Slug: "test-provider"}
+	origPath := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = origPath }()
+
+	// Uninstall server-a only.
+	itemA := catalog.ContentItem{
+		Name:      "server-a",
+		Type:      catalog.MCP,
+		Path:      tmpDir,
+		ServerKey: "server-a",
+	}
+	if _, err := uninstallMCP(itemA, prov, tmpDir); err != nil {
+		t.Fatalf("uninstallMCP server-a: %v", err)
+	}
+
+	// server-a gone, server-b remains.
+	data, _ := os.ReadFile(configFile)
+	if gjson.GetBytes(data, "mcpServers.server-a").Exists() {
+		t.Error("server-a should be removed from provider config")
+	}
+	if !gjson.GetBytes(data, "mcpServers.server-b").Exists() {
+		t.Error("server-b should still be in provider config")
+	}
+
+	inst, _ = LoadInstalled(tmpDir)
+	if inst.FindMCPByServerKey("server-a", "server-a") >= 0 {
+		t.Error("server-a should be removed from installed.json")
+	}
+	if inst.FindMCPByServerKey("server-b", "server-b") < 0 {
+		t.Error("server-b should still be in installed.json")
+	}
+}
+
+func TestCheckMCPStatus_PerServer(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	configFile := filepath.Join(tmpDir, ".claude.json")
+	os.WriteFile(configFile, []byte(`{
+		"mcpServers": {
+			"server-a": {"command": "node"}
+		}
+	}`), 0644)
+
+	prov := provider.Provider{Slug: "test-provider"}
+	origPath := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = origPath }()
+
+	itemA := catalog.ContentItem{Name: "server-a", Type: catalog.MCP, ServerKey: "server-a"}
+	if got := checkMCPStatus(itemA, prov, tmpDir); got != StatusInstalled {
+		t.Errorf("server-a status = %v, want StatusInstalled", got)
+	}
+
+	itemB := catalog.ContentItem{Name: "server-b", Type: catalog.MCP, ServerKey: "server-b"}
+	if got := checkMCPStatus(itemB, prov, tmpDir); got != StatusNotInstalled {
+		t.Errorf("server-b status = %v, want StatusNotInstalled", got)
+	}
+}
+
+func TestParseMCPServerConfig(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+
+	os.WriteFile(filepath.Join(tmpDir, "config.json"), []byte(`{
+		"mcpServers": {
+			"server-a": {"command": "node", "args": ["a.js"], "env": {"KEY": "val"}},
+			"server-b": {"url": "https://b.example.com", "type": "streamable-http"}
+		}
+	}`), 0644)
+
+	t.Run("extracts specific server", func(t *testing.T) {
+		cfg, err := ParseMCPServerConfig(tmpDir, "server-a")
+		if err != nil {
+			t.Fatalf("ParseMCPServerConfig: %v", err)
+		}
+		if cfg.Command != "node" {
+			t.Errorf("Command = %q, want %q", cfg.Command, "node")
+		}
+		if len(cfg.Args) != 1 || cfg.Args[0] != "a.js" {
+			t.Errorf("Args = %v, want [a.js]", cfg.Args)
+		}
+		if cfg.Env["KEY"] != "val" {
+			t.Errorf("Env[KEY] = %q, want %q", cfg.Env["KEY"], "val")
+		}
+	})
+
+	t.Run("extracts HTTP server", func(t *testing.T) {
+		cfg, err := ParseMCPServerConfig(tmpDir, "server-b")
+		if err != nil {
+			t.Fatalf("ParseMCPServerConfig: %v", err)
+		}
+		if cfg.URL != "https://b.example.com" {
+			t.Errorf("URL = %q, want %q", cfg.URL, "https://b.example.com")
+		}
+		if cfg.Type != "streamable-http" {
+			t.Errorf("Type = %q, want %q", cfg.Type, "streamable-http")
+		}
+	})
+
+	t.Run("flat format fallback", func(t *testing.T) {
+		flatDir := t.TempDir()
+		os.WriteFile(filepath.Join(flatDir, "config.json"), []byte(`{
+			"command": "npx",
+			"args": ["-y", "@mcp/server"]
+		}`), 0644)
+
+		cfg, err := ParseMCPServerConfig(flatDir, "")
+		if err != nil {
+			t.Fatalf("ParseMCPServerConfig: %v", err)
+		}
+		if cfg.Command != "npx" {
+			t.Errorf("Command = %q, want %q", cfg.Command, "npx")
+		}
+	})
+
+	t.Run("missing server key returns flat fallback", func(t *testing.T) {
+		// When serverKey doesn't match nested, falls back to flat parse.
+		// For a nested config, flat parse returns empty since top-level has no command/url.
+		cfg, err := ParseMCPServerConfig(tmpDir, "nonexistent")
+		if err != nil {
+			t.Fatalf("ParseMCPServerConfig: %v", err)
+		}
+		// Flat fallback on nested config yields empty MCPConfig (no command/url at top level).
+		if cfg.Command != "" || cfg.URL != "" {
+			t.Errorf("expected empty fallback, got command=%q url=%q", cfg.Command, cfg.URL)
+		}
+	})
+}
+
+func TestInstallMCP_PerServer_InvalidServerKey(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	itemDir := filepath.Join(tmpDir, "my-mcp")
+	os.MkdirAll(itemDir, 0755)
+	os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{
+		"mcpServers": {
+			"real-server": {"command": "node"}
+		}
+	}`), 0644)
+
+	configFile := filepath.Join(tmpDir, ".claude.json")
+	os.WriteFile(configFile, []byte("{}"), 0644)
+
+	prov := provider.Provider{Slug: "test-provider"}
+	origPath := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = origPath }()
+
+	item := catalog.ContentItem{
+		Name:      "nonexistent",
+		Type:      catalog.MCP,
+		Path:      itemDir,
+		ServerKey: "nonexistent",
+	}
+	_, err := installMCP(item, prov, tmpDir)
+	if err == nil {
+		t.Fatal("expected error for missing server key")
+	}
+}

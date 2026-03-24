@@ -367,11 +367,20 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 			cat.Warnings = append(cat.Warnings, fmt.Sprintf("skipping item %q: %s", entry.Name(), err))
 			continue
 		}
+		// Collect file listing and metadata upfront (shared by exploded MCP items).
+		files := collectFiles(itemDir, itemDir)
+		meta, err := metadata.Load(itemDir)
+		if err != nil {
+			return err
+		}
+
 		item := ContentItem{
 			Name:    entry.Name(),
 			Type:    ct,
 			Path:    itemDir,
 			Library: local,
+			Files:   files,
+			Meta:    meta,
 		}
 
 		switch ct {
@@ -401,19 +410,43 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 					item.Description = fm.Description
 				}
 			}
+		case MCP:
+			// Read config.json and check for nested multi-server format.
+			configPath := filepath.Join(itemDir, "config.json")
+			data, readErr := os.ReadFile(configPath)
+			if readErr == nil {
+				servers := gjson.GetBytes(data, "mcpServers")
+				if servers.Exists() && servers.IsObject() {
+					// Nested format — explode into one item per server entry.
+					servers.ForEach(func(key, value gjson.Result) bool {
+						serverName := key.String()
+						if !IsValidItemName(serverName) {
+							cat.Warnings = append(cat.Warnings, fmt.Sprintf(
+								"skipping MCP server %q in %s — name unsafe for JSON keys",
+								serverName, entry.Name()))
+							return true
+						}
+						cat.Items = append(cat.Items, ContentItem{
+							Name:        serverName,
+							Type:        MCP,
+							Path:        itemDir,
+							ServerKey:   serverName,
+							Library:     local,
+							Description: mcpServerDescription(value),
+							Files:       files,
+							Meta:        meta,
+						})
+						return true
+					})
+					continue // skip appending the parent directory item
+				}
+			}
+			// Flat format or no config.json — single server item.
+			item.ServerKey = entry.Name()
+			item.Description = mcpFlatDescription(data)
 		default:
 			// For other universal types, no additional description extraction.
 		}
-
-		// Collect file listing
-		item.Files = collectFiles(itemDir, itemDir)
-
-		// Load metadata if present
-		meta, err := metadata.Load(itemDir)
-		if err != nil {
-			return err
-		}
-		item.Meta = meta
 
 		cat.Items = append(cat.Items, item)
 	}
@@ -662,6 +695,49 @@ func describeHookJSON(data []byte) string {
 			return fmt.Sprintf("%s hook for %s", event, matcher)
 		}
 		return fmt.Sprintf("%s hook", event)
+	}
+	return ""
+}
+
+// mcpServerDescription generates a short description from a nested MCP server entry.
+// Shows the command (for stdio servers) or URL (for HTTP servers).
+func mcpServerDescription(value gjson.Result) string {
+	if cmd := value.Get("command").String(); cmd != "" {
+		if args := value.Get("args"); args.Exists() && args.IsArray() {
+			// Include first non-flag arg for context (e.g., package name).
+			for _, a := range args.Array() {
+				s := a.String()
+				if s != "" && s[0] != '-' {
+					return cmd + " " + s
+				}
+			}
+		}
+		return cmd
+	}
+	if url := value.Get("url").String(); url != "" {
+		return url
+	}
+	return ""
+}
+
+// mcpFlatDescription generates a short description from a flat MCP config.json.
+func mcpFlatDescription(data []byte) string {
+	if len(data) == 0 {
+		return ""
+	}
+	if cmd := gjson.GetBytes(data, "command").String(); cmd != "" {
+		if args := gjson.GetBytes(data, "args"); args.Exists() && args.IsArray() {
+			for _, a := range args.Array() {
+				s := a.String()
+				if s != "" && s[0] != '-' {
+					return cmd + " " + s
+				}
+			}
+		}
+		return cmd
+	}
+	if url := gjson.GetBytes(data, "url").String(); url != "" {
+		return url
 	}
 	return ""
 }
