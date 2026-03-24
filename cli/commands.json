@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-24T23:31:52Z",
+  "generatedAt": "2026-03-24T23:35:05Z",
   "syllagoVersion": "dev",
   "commands": [
     {
@@ -1485,6 +1485,14 @@
       "aliases": [],
       "flags": [
         {
+          "name": "--all",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Install all library content (cannot combine with a positional name)"
+        },
+        {
           "name": "--base-dir",
           "shorthand": null,
           "type": "string",
@@ -1569,7 +1577,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": "  # Install a skill to Claude Code\n  syllago install my-skill --to claude-code\n\n  # Install with a standalone copy instead of symlink\n  syllago install my-skill --to cursor --method copy\n\n  # Install all skills to a provider\n  syllago install --to claude-code --type skills\n\n  # Preview what would happen\n  syllago install my-skill --to claude-code --dry-run",
+      "examples": "  # Install a skill to Claude Code\n  syllago install my-skill --to claude-code\n\n  # Install with a standalone copy instead of symlink\n  syllago install my-skill --to cursor --method copy\n\n  # Install all skills to a provider\n  syllago install --to claude-code --type skills\n\n  # Install everything from your library\n  syllago install --all --to claude-code\n\n  # Preview what would happen\n  syllago install my-skill --to claude-code --dry-run",
       "source": "cli/cmd/syllago/install.go"
     },
     {
