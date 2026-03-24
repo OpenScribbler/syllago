@@ -73,8 +73,8 @@ var (
 				Padding(0, 2)
 
 	inactiveGroupStyle = lipgloss.NewStyle().
-				Foreground(mutedColor).
-				Background(lipgloss.AdaptiveColor{Light: "#E6E4D9", Dark: "#343331"}). // base-100/850
+				Foreground(lipgloss.AdaptiveColor{Light: "#575653", Dark: "#B7B5AC"}). // base-700/300
+				Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"}). // base-150/800
 				Padding(0, 2)
 
 	// Sub-tabs — text-only (lower-level navigation within a group)
