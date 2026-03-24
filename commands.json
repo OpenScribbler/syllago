@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-23T04:16:04Z",
+  "generatedAt": "2026-03-24T01:42:04Z",
   "syllagoVersion": "0.6.1",
   "commands": [
     {
@@ -76,6 +76,22 @@
           "default": "global",
           "required": false,
           "description": "Settings scope to read from: global, project, or all (hooks only)"
+        },
+        {
+          "name": "--source-registry",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Registry name for taint tracking"
+        },
+        {
+          "name": "--source-visibility",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Source registry visibility (public, private, unknown)"
         }
       ],
       "inheritedFlags": [
@@ -1097,38 +1113,22 @@
       "source": "cli/cmd/syllago/create.go"
     },
     {
-      "name": "export",
-      "displayName": "Export",
-      "slug": "export",
+      "name": "explain",
+      "displayName": "Explain",
+      "slug": "explain",
       "parent": null,
-      "synopsis": "syllago export \u003cname\u003e [flags]",
-      "description": "Export content with optional dual-format (canonical + native) output",
-      "longDescription": "Exports a library item to canonical format, optionally generating\nprovider-native configs alongside it for manual consumption.\n\nWith --dual, the output directory contains both the canonical hook.json\n(source of truth) and pre-generated native configs in native/\u003cprovider\u003e/\nfor users who don't have syllago installed.",
+      "synopsis": "syllago explain CODE [flags]",
+      "description": "Show detailed documentation for an error code",
+      "longDescription": "Display documentation for a syllago error code.\n\nEach error code has a detailed explanation including what it means,\ncommon causes, and how to fix it.",
       "aliases": [],
       "flags": [
         {
-          "name": "--dual",
+          "name": "--list",
           "shorthand": null,
           "type": "bool",
           "default": null,
           "required": false,
-          "description": "Generate native configs alongside canonical"
-        },
-        {
-          "name": "--out-dir",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Output directory (default: current hook directory)"
-        },
-        {
-          "name": "--providers",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Comma-separated list of target providers for --dual (default: all portable)"
+          "description": "list all available error codes"
         }
       ],
       "inheritedFlags": [
@@ -1167,8 +1167,8 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": "  # Export a hook with dual-format output\n  syllago export my-hook --dual\n\n  # Export for specific providers only\n  syllago export my-hook --dual --providers claude-code,cursor,gemini-cli\n\n  # Export to a specific directory\n  syllago export my-hook --dual --out-dir ./hooks/safety-check",
-      "source": "cli/cmd/syllago/export.go"
+      "examples": "  syllago explain CATALOG_001\n  syllago explain --list",
+      "source": "cli/cmd/syllago/explain.go"
     },
     {
       "name": "info",
@@ -3547,72 +3547,6 @@
       "source": "cli/cmd/syllago/share.go"
     },
     {
-      "name": "sign",
-      "displayName": "Sign",
-      "slug": "sign",
-      "parent": null,
-      "synopsis": "syllago sign \u003cname\u003e [flags]",
-      "description": "Sign hook content for provenance verification",
-      "longDescription": "Cryptographically signs a hook's manifest and scripts using\nSigstore (keyless OIDC, default) or GPG (traditional keys).\n\nSignatures enable trust verification during installation.\nRecipients can verify that content was signed by a known identity\nand hasn't been tampered with since signing.",
-      "aliases": [],
-      "flags": [
-        {
-          "name": "--key-id",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "GPG key ID (required when --method=gpg)"
-        },
-        {
-          "name": "--method",
-          "shorthand": null,
-          "type": "string",
-          "default": "sigstore",
-          "required": false,
-          "description": "Signing method: sigstore (default) or gpg"
-        }
-      ],
-      "inheritedFlags": [
-        {
-          "name": "--json",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Output in JSON format"
-        },
-        {
-          "name": "--no-color",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Disable color output"
-        },
-        {
-          "name": "--quiet",
-          "shorthand": "-q",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Suppress non-essential output"
-        },
-        {
-          "name": "--verbose",
-          "shorthand": "-v",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Verbose output"
-        }
-      ],
-      "subcommands": [],
-      "seeAlso": [],
-      "examples": "  # Sign with Sigstore (keyless — uses GitHub/Google identity)\n  syllago sign my-hook\n\n  # Sign with GPG\n  syllago sign my-hook --method gpg --key-id 0xABCDEF12\n\n  # Verify a signed hook\n  syllago verify my-hook",
-      "source": "cli/cmd/syllago/sign.go"
-    },
-    {
       "name": "sync-and-export",
       "displayName": "Sync-and-export",
       "slug": "sync-and-export",
@@ -3914,56 +3848,6 @@
       "seeAlso": [],
       "examples": "  syllago update",
       "source": "cli/cmd/syllago/update.go"
-    },
-    {
-      "name": "verify",
-      "displayName": "Verify",
-      "slug": "verify",
-      "parent": null,
-      "synopsis": "syllago verify \u003cname\u003e [flags]",
-      "description": "Verify hook content signatures",
-      "longDescription": "Checks cryptographic signatures on hook content against the\nconfigured trust policy. Reports the signer identity and whether\nthe content is trusted.",
-      "aliases": [],
-      "flags": [
-        {
-          "name": "--verbose",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Show detailed verification info"
-        }
-      ],
-      "inheritedFlags": [
-        {
-          "name": "--json",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Output in JSON format"
-        },
-        {
-          "name": "--no-color",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Disable color output"
-        },
-        {
-          "name": "--quiet",
-          "shorthand": "-q",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Suppress non-essential output"
-        }
-      ],
-      "subcommands": [],
-      "seeAlso": [],
-      "examples": "  # Verify a hook's signature\n  syllago verify my-hook\n\n  # Verify with verbose output\n  syllago verify my-hook --verbose",
-      "source": "cli/cmd/syllago/verify.go"
     },
     {
       "name": "version",
