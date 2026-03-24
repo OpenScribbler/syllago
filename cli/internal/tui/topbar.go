@@ -164,12 +164,13 @@ func (t topBarModel) View() string {
 	}, "\n")
 }
 
-// renderTopBorder renders ╭──syllago────────...╮
+// renderTopBorder renders ╭──syllago────────...╮ with colored logo.
 func (t topBarModel) renderTopBorder(innerW int) string {
-	logo := "syl" + "lago"
+	logo := logoStyle.Render("syl") + accentLogoStyle.Render("lago")
+	logoW := lipgloss.Width(logo)
 	prefix := "╭──"
 	suffix := "╮"
-	fill := innerW - len(logo) - 2 // -2 for the "──" before logo
+	fill := innerW - logoW - 2 // -2 for the "──" before logo
 	if fill < 0 {
 		fill = 0
 	}
