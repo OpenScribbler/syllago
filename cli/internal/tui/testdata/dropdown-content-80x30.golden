@@ -1,8 +1,12 @@
 syllago  Content: Skills ▾  Collection: -- ▾  Config: -- ▾          + Add  * New
-
-
-
-
+╭─────────────────╮
+│  > Skills       │
+│    Agents       │
+│    MCP Configs  │
+│    Rules        │
+│    Hooks        │
+│    Commands     │
+╰─────────────────╯
 
 
 
@@ -14,10 +18,6 @@ syllago  Content: Skills ▾  Collection: -- ▾  Config: -- ▾          + Add 
                                No content loaded.
 
                        Phase 3 adds the explorer layout.
-
-
-
-
 
 
 
