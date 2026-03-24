@@ -1,11 +1,15 @@
 // Package signing provides cryptographic signing and verification for hook content.
 //
-// Two signing methods are supported:
+// STATUS: PLANNED / UNIMPLEMENTED
+//
+// This package contains only interface definitions and type declarations.
+// No implementations exist yet. It will be implemented when external dependencies
+// (sigstore-go, go-crypto) are integrated and the hook provenance feature is built.
+// Nothing in the codebase imports this package currently.
+//
+// Two signing methods are planned:
 //   - Sigstore/cosign (keyless OIDC-based) — primary, frictionless identity
 //   - GPG/PGP (traditional key-based) — secondary, for air-gapped environments
-//
-// This package defines interfaces and types. Implementations are in separate files
-// and will be added when external dependencies (sigstore-go, go-crypto) are integrated.
 package signing
 
 import "time"
