@@ -596,10 +596,13 @@ func scanProviderDir(itemDir string, ct ContentType, providerName string, local 
 
 // shouldSkip returns true for files/dirs that should always be ignored.
 func shouldSkip(name string) bool {
-	if name == ".gitkeep" || name == "LLM-PROMPT.md" {
+	if strings.HasPrefix(name, ".") {
 		return true
 	}
-	if name == metadata.FileName || strings.HasPrefix(name, ".syllago.") {
+	if name == "LLM-PROMPT.md" {
+		return true
+	}
+	if name == metadata.FileName {
 		return true
 	}
 	return false

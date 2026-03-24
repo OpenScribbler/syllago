@@ -19,14 +19,21 @@ var inspectCmd = &cobra.Command{
 	Short: "Show details about a content item",
 	Long: `Display full details about a content item for pre-install auditing.
 
+By default, shows metadata and the primary content file. Use --as to preview
+what the content would look like converted to a specific provider's format.
+
 Path formats:
   skills/my-skill                   Universal content (type/name)
   rules/claude-code/my-rule         Provider-specific (type/provider/name)`,
-	Example: `  # Inspect a universal skill
+	Example: `  # Inspect a skill (shows metadata + content)
   syllago inspect skills/my-skill
 
-  # Inspect a provider-specific rule
-  syllago inspect rules/claude-code/my-rule
+  # Preview what a rule looks like in Cursor format
+  syllago inspect rules/coding-standards --as cursor
+
+  # Compare formats side by side
+  syllago inspect rules/coding-standards --as claude-code
+  syllago inspect rules/coding-standards --as cursor
 
   # JSON output for scripting
   syllago inspect --json skills/my-skill`,
@@ -39,6 +46,7 @@ func init() {
 	inspectCmd.Flags().Bool("files", false, "Show file contents")
 	inspectCmd.Flags().Bool("compatibility", false, "Show per-provider compatibility matrix (hooks only)")
 	inspectCmd.Flags().Bool("risk", false, "Show detailed risk analysis")
+	inspectCmd.Flags().String("as", "", "Preview content converted to a provider's format")
 }
 
 // inspectResult is the JSON-serializable output for syllago inspect.
@@ -54,6 +62,9 @@ type inspectResult struct {
 	FileContents  map[string]string `json:"file_contents,omitempty"`
 	Compatibility []compatResult    `json:"compatibility,omitempty"`
 	DetailedRisks []riskDetail      `json:"detailed_risks,omitempty"`
+	AsProvider    string            `json:"as_provider,omitempty"`
+	AsContent     string            `json:"as_content,omitempty"`
+	AsWarnings    []string          `json:"as_warnings,omitempty"`
 }
 
 type inspectRisk struct {
@@ -148,12 +159,40 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		result.DetailedRisks = buildDetailedRisks(*item)
 	}
 
+	// --as <provider>: render the content in a provider's native format.
+	asSlug, _ := cmd.Flags().GetString("as")
+	if asSlug != "" {
+		rendered, provName, err := renderAsProvider(*item, asSlug)
+		if err != nil {
+			return err
+		}
+		result.AsProvider = provName
+		result.AsContent = string(rendered.Content)
+		result.AsWarnings = rendered.Warnings
+	}
+
 	if output.JSON {
 		output.Print(result)
 		return nil
 	}
 
-	// Plain text output.
+	// --as mode: show the rendered content with a header, skip metadata.
+	if asSlug != "" {
+		fmt.Fprintf(output.Writer, "# %s as %s\n\n", item.Name, result.AsProvider)
+		fmt.Fprint(output.Writer, result.AsContent)
+		if !strings.HasSuffix(result.AsContent, "\n") {
+			fmt.Fprintln(output.Writer)
+		}
+		if len(result.AsWarnings) > 0 {
+			fmt.Fprintf(output.ErrWriter, "\n  Portability warnings:\n")
+			for _, w := range result.AsWarnings {
+				fmt.Fprintf(output.ErrWriter, "    - %s\n", w)
+			}
+		}
+		return nil
+	}
+
+	// Plain text output (default mode).
 	fmt.Fprintf(output.Writer, "Name:    %s\n", item.Name)
 	fmt.Fprintf(output.Writer, "Type:    %s\n", item.Type.Label())
 	fmt.Fprintf(output.Writer, "Source:  %s\n", sourceLabel(*item))
@@ -169,6 +208,15 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(output.Writer, "\nFiles:\n")
 		for _, f := range item.Files {
 			fmt.Fprintf(output.Writer, "  %s\n", f)
+		}
+	}
+
+	// Show primary content by default (without needing --files).
+	primaryFile := catalog.PrimaryFileName(item.Files, item.Type)
+	if primaryFile != "" {
+		content, err := catalog.ReadFileContent(item.Path, primaryFile, 200)
+		if err == nil {
+			fmt.Fprintf(output.Writer, "\n--- %s ---\n%s\n", primaryFile, content)
 		}
 	}
 
@@ -354,6 +402,50 @@ func hookRiskDetails(item catalog.ContentItem) []riskDetail {
 	}
 
 	return details
+}
+
+// renderAsProvider converts a library item to a target provider's format.
+func renderAsProvider(item catalog.ContentItem, provSlug string) (*converter.Result, string, error) {
+	prov := findProviderBySlug(provSlug)
+	if prov == nil {
+		slugs := providerSlugs()
+		return nil, "", output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+provSlug, "Available: "+strings.Join(slugs, ", "))
+	}
+
+	conv := converter.For(item.Type)
+	if conv == nil {
+		return nil, "", output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s does not support format conversion", item.Type.Label()), "")
+	}
+
+	contentFile := converter.ResolveContentFile(item)
+	if contentFile == "" {
+		return nil, "", output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("cannot locate content file for %s", item.Name), "")
+	}
+
+	raw, err := os.ReadFile(contentFile)
+	if err != nil {
+		return nil, "", output.NewStructuredErrorDetail(output.ErrSystemIO, "reading content failed", "", err.Error())
+	}
+
+	srcProvider := ""
+	if item.Meta != nil {
+		srcProvider = item.Meta.SourceProvider
+	}
+	if srcProvider == "" && item.Provider != "" {
+		srcProvider = item.Provider
+	}
+
+	canonical, err := conv.Canonicalize(raw, srcProvider)
+	if err != nil {
+		return nil, "", output.NewStructuredErrorDetail(output.ErrConvertParseFailed, "canonicalizing content failed", "", err.Error())
+	}
+
+	rendered, err := conv.Render(canonical.Content, *prov)
+	if err != nil {
+		return nil, "", output.NewStructuredErrorDetail(output.ErrConvertRenderFailed, fmt.Sprintf("rendering to %s format failed", prov.Name), "", err.Error())
+	}
+
+	return rendered, prov.Name, nil
 }
 
 // compatSymbol returns a colored status symbol for a compat level label.

@@ -243,6 +243,111 @@ func TestInspectFiles_MissingFile(t *testing.T) {
 	}
 }
 
+func TestInspect_DefaultShowsPrimaryContent(t *testing.T) {
+	root := setupInspectRepo(t)
+	withFakeRepoRoot(t, root)
+
+	stdout, _ := output.SetForTest(t)
+
+	err := inspectCmd.RunE(inspectCmd, []string{"skills/my-skill"})
+	if err != nil {
+		t.Fatalf("inspect failed: %v", err)
+	}
+
+	out := stdout.String()
+	// Default mode should show primary file content without needing --files.
+	if !strings.Contains(out, "--- SKILL.md ---") {
+		t.Errorf("expected primary file header '--- SKILL.md ---' in default output, got:\n%s", out)
+	}
+	if !strings.Contains(out, "Use the Bash tool to run tests.") {
+		t.Errorf("expected primary file content in default output, got:\n%s", out)
+	}
+}
+
+func TestInspect_AsProvider(t *testing.T) {
+	root := t.TempDir()
+
+	// Create a provider-specific rule (rules need a source provider for conversion).
+	ruleDir := filepath.Join(root, "rules", "claude-code", "test-rule")
+	os.MkdirAll(ruleDir, 0755)
+	os.WriteFile(filepath.Join(ruleDir, "rule.md"), []byte("# Test Rule\nAlways use tests.\n"), 0644)
+
+	withFakeRepoRoot(t, root)
+	stdout, _ := output.SetForTest(t)
+	inspectCmd.Flags().Set("as", "cursor")
+	defer inspectCmd.Flags().Set("as", "")
+
+	err := inspectCmd.RunE(inspectCmd, []string{"rules/claude-code/test-rule"})
+	if err != nil {
+		t.Fatalf("inspect --as cursor failed: %v", err)
+	}
+
+	out := stdout.String()
+	// Should show header with provider name.
+	if !strings.Contains(out, "# test-rule as Cursor") {
+		t.Errorf("expected '# test-rule as Cursor' header, got:\n%s", out)
+	}
+	// Cursor format adds alwaysApply frontmatter.
+	if !strings.Contains(out, "alwaysApply: true") {
+		t.Errorf("expected Cursor frontmatter 'alwaysApply: true' in output, got:\n%s", out)
+	}
+	// Should not show metadata fields (Name:, Type:, etc.) in --as mode.
+	if strings.Contains(out, "Name:    test-rule") {
+		t.Errorf("--as mode should not show metadata, got:\n%s", out)
+	}
+}
+
+func TestInspect_AsProvider_JSON(t *testing.T) {
+	root := t.TempDir()
+
+	ruleDir := filepath.Join(root, "rules", "claude-code", "test-rule")
+	os.MkdirAll(ruleDir, 0755)
+	os.WriteFile(filepath.Join(ruleDir, "rule.md"), []byte("# Test Rule\nAlways use tests.\n"), 0644)
+
+	withFakeRepoRoot(t, root)
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+	inspectCmd.Flags().Set("as", "cursor")
+	defer inspectCmd.Flags().Set("as", "")
+
+	err := inspectCmd.RunE(inspectCmd, []string{"rules/claude-code/test-rule"})
+	if err != nil {
+		t.Fatalf("inspect --as cursor --json failed: %v", err)
+	}
+
+	var result inspectResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatalf("invalid JSON output: %v\nraw: %s", err, stdout.String())
+	}
+
+	if result.AsProvider != "Cursor" {
+		t.Errorf("as_provider = %q, want %q", result.AsProvider, "Cursor")
+	}
+	if result.AsContent == "" {
+		t.Error("expected non-empty as_content in JSON output")
+	}
+	if !strings.Contains(result.AsContent, "alwaysApply: true") {
+		t.Errorf("expected Cursor frontmatter in as_content, got: %q", result.AsContent)
+	}
+}
+
+func TestInspect_AsProvider_UnknownProvider(t *testing.T) {
+	root := setupInspectRepo(t)
+	withFakeRepoRoot(t, root)
+
+	output.SetForTest(t)
+	inspectCmd.Flags().Set("as", "nonexistent-provider")
+	defer inspectCmd.Flags().Set("as", "")
+
+	err := inspectCmd.RunE(inspectCmd, []string{"skills/my-skill"})
+	if err == nil {
+		t.Fatal("expected error for unknown provider")
+	}
+	if !strings.Contains(err.Error(), "unknown provider") {
+		t.Errorf("expected 'unknown provider' in error, got: %v", err)
+	}
+}
+
 // mapKeys returns the keys of a map for error messages.
 func mapKeys(m map[string]string) []string {
 	keys := make([]string, 0, len(m))
