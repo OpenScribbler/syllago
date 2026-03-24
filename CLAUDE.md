@@ -28,6 +28,24 @@ cd cli && go test ./internal/tui/ -update-golden
 - Go conventions: see `cli/CLAUDE.md`
 - TUI component patterns: see `cli/internal/tui/CLAUDE.md`
 
+## Testing Requirements
+
+Every code change must include tests. Coverage target is **80% minimum per package, 95%+ aspirational**.
+
+- **New functions** must have corresponding test cases covering the happy path and at least one error path.
+- **Bug fixes** must include a regression test that would have caught the bug.
+- **New files** must have a corresponding `_test.go` file unless they contain only types/constants.
+- **CLI commands** must have integration tests using cobra's `RunE` pattern (see `cli/CLAUDE.md` and `.claude/rules/cli-test-patterns.md`).
+- **TUI components** must have golden file tests for visual output and unit tests for logic (see `.claude/rules/tui-test-patterns.md`).
+
+Test patterns already established:
+- `httptest.NewServer` for HTTP endpoints (see `updater/updater_test.go`)
+- `t.TempDir()` + `git init` for git operations (see `promote/promote_test.go`)
+- Table-driven tests with `t.Run()` subtests
+- No mocking libraries — hand-craft stubs using interfaces and function overrides
+
+Check coverage after changes: `cd cli && go test ./your/package/... -coverprofile=cov.out && go tool cover -func=cov.out | grep total`
+
 ## Go Edit Patterns
 
 When adding new functionality that requires both a new import AND new code using that import:
