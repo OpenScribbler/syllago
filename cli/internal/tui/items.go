@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
@@ -200,13 +201,15 @@ func (m itemsModel) renderItem(index int) string {
 		}
 	}
 
+	var row string
 	if isCursor && m.focused {
-		return selectedRowStyle.Width(m.width).Render(text)
+		row = selectedRowStyle.Width(m.width).Render(text)
+	} else if isCursor {
+		row = boldStyle.Width(m.width).Render(text)
+	} else {
+		row = lipgloss.NewStyle().Width(m.width).Render(text)
 	}
-	if isCursor {
-		return boldStyle.Width(m.width).Render(text)
-	}
-	return lipgloss.NewStyle().Width(m.width).Render(text)
+	return zone.Mark("item-"+itoa(index), row)
 }
 
 // renderEmpty shows guidance when no items exist.

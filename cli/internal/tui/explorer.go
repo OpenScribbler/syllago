@@ -3,6 +3,7 @@ package tui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
@@ -88,28 +89,74 @@ func (e *explorerModel) SetItems(items []catalog.ContentItem, mixed bool) {
 	}
 }
 
-// Update handles key input based on current focus.
+// Update handles key and mouse input based on current focus.
 func (e explorerModel) Update(msg tea.Msg) (explorerModel, tea.Cmd) {
-	keyMsg, ok := msg.(tea.KeyMsg)
-	if !ok {
-		return e, nil
+	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		return e.updateMouse(msg)
+
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "tab":
+			e.toggleFocus()
+			return e, nil
+
+		case keySearch:
+			// TODO: Phase 3.5 — open search input overlay
+			return e, nil
+		}
+
+		switch e.focus {
+		case paneItems:
+			return e.updateItems(msg)
+		case panePreview:
+			return e.updatePreview(msg)
+		}
 	}
 
-	switch keyMsg.String() {
-	case "tab":
-		e.toggleFocus()
-		return e, nil
+	return e, nil
+}
 
-	case keySearch:
-		// TODO: Phase 3.5 — open search input overlay
-		return e, nil
+// updateMouse handles mouse clicks on items and scroll wheel.
+func (e explorerModel) updateMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
+	// Click on an item row
+	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
+		for i := range e.items.items {
+			if zone.Get("item-" + itoa(i)).InBounds(msg) {
+				e.items.cursor = i
+				e.items.focused = true
+				e.preview.focused = false
+				e.focus = paneItems
+				e.preview.LoadItem(e.items.Selected())
+				return e, e.itemSelectedCmd()
+			}
+		}
 	}
 
-	switch e.focus {
-	case paneItems:
-		return e.updateItems(keyMsg)
-	case panePreview:
-		return e.updatePreview(keyMsg)
+	// Scroll wheel on items pane
+	if msg.Action == tea.MouseActionPress {
+		switch msg.Button {
+		case tea.MouseButtonWheelUp:
+			if e.focus == paneItems {
+				e.items.CursorUp()
+				e.preview.LoadItem(e.items.Selected())
+				return e, e.itemSelectedCmd()
+			}
+			if e.focus == panePreview {
+				e.preview.ScrollUp()
+				return e, nil
+			}
+		case tea.MouseButtonWheelDown:
+			if e.focus == paneItems {
+				e.items.CursorDown()
+				e.preview.LoadItem(e.items.Selected())
+				return e, e.itemSelectedCmd()
+			}
+			if e.focus == panePreview {
+				e.preview.ScrollDown()
+				return e, nil
+			}
+		}
 	}
 
 	return e, nil
