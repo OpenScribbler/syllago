@@ -116,8 +116,7 @@ Syllago's CLI is organized around a content lifecycle:
 | **Add** | `syllago add --all --from <provider>` | Copies content into your library, converting to canonical format |
 | **Install** | `syllago install <item> --to <provider>` | Writes a library item to a provider's config directory in its native format |
 | **Convert** | `syllago convert <item> --to <provider>` | Converts content for a provider without installing it |
-| **Share** | `syllago share <item>` | Opens a PR to contribute library content to a team repo |
-| **Publish** | `syllago publish <item>` | Pushes library content to a public registry |
+| **Share** | `syllago share <item>` | Contributes library content to a team repo or registry |
 
 See the full [command reference](#all-commands) below or the [CLI docs](https://openscribbler.github.io/syllago-docs/) for detailed usage.
 
@@ -149,7 +148,60 @@ See the full [command reference](#all-commands) below or the [CLI docs](https://
 | Hooks | Event-driven automation scripts that run before/after tool actions |
 | Commands | Custom slash commands (e.g., `/deploy`) |
 
-For conversion details across providers, see the [compatibility docs](https://openscribbler.github.io/syllago-docs/).
+Use `syllago compat <item>` to see which providers support a specific content item and what changes during conversion.
+
+For full conversion details, see the [compatibility docs](https://openscribbler.github.io/syllago-docs/).
+
+## Conversion Examples
+
+Syllago automatically converts between provider-specific formats. Here's what that looks like in practice:
+
+**Cursor rule (.mdc) → Claude Code (.md)**
+
+```
+# Input (Cursor)                    # Output (Claude Code)
+---                                 ---
+description: TS conventions         paths:
+alwaysApply: false                      - '*.ts'
+globs: "*.ts, *.tsx"                    - '*.tsx'
+---                                 ---
+
+Use strict TypeScript.              Use strict TypeScript.
+```
+
+Cursor uses `globs` as a comma-separated string with `alwaysApply`. Claude Code uses a `paths` YAML array. The body content passes through unchanged.
+
+**Cursor rule → Windsurf rule**
+
+```
+# Input (Cursor)                    # Output (Windsurf)
+---                                 ---
+description: TS conventions         trigger: glob
+alwaysApply: false                  description: TS conventions
+globs: "*.ts, *.tsx"                globs: '*.ts, *.tsx'
+---                                 ---
+
+Use strict TypeScript.              Use strict TypeScript.
+```
+
+Windsurf uses `trigger: glob` instead of `alwaysApply: false`. The `globs` format is the same.
+
+**Cursor rule → Copilot (.instructions.md)**
+
+```
+# Input (Cursor)                    # Output (Copilot)
+---                                 ---
+description: TS conventions         applyTo: '*.ts, *.tsx'
+alwaysApply: false                  ---
+globs: "*.ts, *.tsx"
+---                                 Use strict TypeScript.
+
+Use strict TypeScript.
+```
+
+Copilot uses `applyTo` instead of `globs`. The `description` field is dropped (Copilot doesn't use it for scoping).
+
+Try it yourself: `syllago convert ./my-rule.mdc --from cursor --to windsurf`
 
 ## Collections
 
@@ -184,9 +236,8 @@ A **registry** is a git repository that distributes syllago content. Push curate
 | `syllago install` | Activate library content in a provider |
 | `syllago uninstall` | Deactivate content from a provider |
 | `syllago remove` | Remove content from your library |
-| `syllago convert` | Convert library content to a provider format |
-| `syllago share` | Contribute library content to a team repo |
-| `syllago publish` | Contribute library content to a registry |
+| `syllago convert` | Convert content between provider formats |
+| `syllago share` | Contribute library content to a team repo or registry |
 | `syllago loadout` | Apply, create, and manage loadouts |
 | `syllago registry` | Manage git-based content registries |
 | `syllago sandbox` | Run AI CLI tools in isolated sandboxes (Linux) |
@@ -199,7 +250,8 @@ A **registry** is a git repository that distributes syllago content. Push curate
 | `syllago explain` | Show documentation for an error code |
 | `syllago config` | View and edit configuration |
 | `syllago update` | Update syllago to the latest release |
-| `syllago info` | Show capabilities (providers, formats) |
+| `syllago info` | Show capabilities, detected providers, library location |
+| `syllago doctor` | Diagnose setup problems (providers, config, integrity) |
 | `syllago completion` | Generate shell autocompletion scripts |
 | `syllago version` | Print version |
 
