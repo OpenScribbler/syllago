@@ -436,10 +436,13 @@ func (a *App) rescanCatalog() {
 		projectRoot = root
 	}
 
-	// Reload config and rebuild registry sources to pick up changes
+	// Reload config from all sources to pick up changes.
+	// Registries may be stored in the content root config, project config,
+	// or global config — merge all three to cover every case.
 	globalCfg, _ := config.LoadGlobal()
 	projectCfg, _ := config.Load(projectRoot)
-	merged := config.Merge(globalCfg, projectCfg)
+	contentCfg, _ := config.Load(root)
+	merged := config.Merge(globalCfg, config.Merge(contentCfg, projectCfg))
 	var regSources []catalog.RegistrySource
 	for _, r := range merged.Registries {
 		if registry.IsCloned(r.Name) {
