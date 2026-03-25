@@ -83,8 +83,8 @@ func TestTopBar_TabWraps(t *testing.T) {
 
 func TestTopBar_Height(t *testing.T) {
 	tb := newTopBar()
-	if h := tb.Height(); h != 5 {
-		t.Errorf("expected height 5, got %d", h)
+	if h := tb.Height(); h != 6 {
+		t.Errorf("expected height 6, got %d", h)
 	}
 }
 
@@ -99,7 +99,6 @@ func TestTopBar_RenderContainsElements(t *testing.T) {
 	assertContains(t, view, "Config")
 	assertContains(t, view, "Library")
 	assertContains(t, view, "Registries")
-	assertContains(t, view, "[a] Add")
 	assertContains(t, view, "[n] Create")
 }
 

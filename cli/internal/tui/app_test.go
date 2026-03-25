@@ -78,7 +78,7 @@ func TestApp_ContentHeight(t *testing.T) {
 	// Use a wide enough terminal that hints fit on 1 line for the default tab
 	app := testAppSize(t, 120, 30)
 	h := app.contentHeight()
-	expected := 30 - 5 - app.helpBar.Height()
+	expected := 30 - 6 - app.helpBar.Height()
 	if h != expected {
 		t.Errorf("expected contentHeight %d at 120 cols, got %d", expected, h)
 	}
@@ -140,28 +140,15 @@ func TestApp_SubTabNavTab(t *testing.T) {
 func TestApp_ActionButtonHotkeys(t *testing.T) {
 	app := testApp(t)
 
-	_, cmd := app.Update(keyRune('a'))
+	_, cmd := app.Update(keyRune('n'))
 	if cmd == nil {
-		t.Fatal("'a' should produce an action command")
+		t.Fatal("'n' should produce an action command")
 	}
 	msg := cmd()
 	action, ok := msg.(actionPressedMsg)
 	if !ok {
 		t.Fatalf("expected actionPressedMsg, got %T", msg)
 	}
-	if action.action != "add" {
-		t.Errorf("expected action=add, got %q", action.action)
-	}
-	if action.tab != "Library" {
-		t.Errorf("expected tab=Library, got %q", action.tab)
-	}
-
-	_, cmd = app.Update(keyRune('n'))
-	if cmd == nil {
-		t.Fatal("'n' should produce an action command")
-	}
-	msg = cmd()
-	action = msg.(actionPressedMsg)
 	if action.action != "create" {
 		t.Errorf("expected action=create, got %q", action.action)
 	}

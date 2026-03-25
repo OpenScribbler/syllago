@@ -39,8 +39,9 @@ type App struct {
 	width, height int
 
 	// State
-	ready          bool // false until first WindowSizeMsg
-	galleryDrillIn bool // true when viewing card contents as a library
+	ready            bool   // false until first WindowSizeMsg
+	galleryDrillIn   bool   // true when viewing card contents as a library
+	galleryDrillCard string // name of the card we drilled into (for breadcrumbs)
 }
 
 // NewApp creates a new TUI app. Signature matches main.go.
@@ -69,7 +70,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		helpBar:         newHelpBar(version),
 		modal:           newTextInputModal(),
 	}
-	a.helpBar.SetHints(a.currentHints())
+	a.updateNavState()
 	return a
 }
 
@@ -137,13 +138,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					a.library.mode = libraryBrowse
 					a.library.detailItem = nil
 					a.library.SetSize(a.width, a.contentHeight())
-					a.helpBar.SetHints(a.currentHints())
+					a.updateNavState()
 					return a, nil
 				}
 				// Exit drill-in back to gallery
 				a.galleryDrillIn = false
+				a.galleryDrillCard = ""
 				a.library.SetItems(a.catalog.Items) // restore full library
-				a.helpBar.SetHints(a.currentHints())
+				a.updateNavState()
 				return a, nil
 			}
 
@@ -151,7 +153,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.library.mode = libraryBrowse
 				a.library.detailItem = nil
 				a.library.SetSize(a.width, a.contentHeight())
-				a.helpBar.SetHints(a.currentHints())
+				a.updateNavState()
 				return a, nil
 			}
 			if !a.isLibraryTab() && a.explorer.mode == explorerDetail {
@@ -159,7 +161,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.explorer.detailItem = nil
 				a.explorer.sizeBrowsePanes()
 				a.explorer.preview.LoadItem(a.explorer.items.Selected())
-				a.helpBar.SetHints(a.currentHints())
+				a.updateNavState()
 				return a, nil
 			}
 			if !a.isLibraryTab() {
@@ -167,7 +169,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmd := a.topBar.SetGroup(0)
 				a.galleryDrillIn = false
 				a.refreshContent()
-				a.helpBar.SetHints(a.currentHints())
+				a.updateNavState()
 				return a, cmd
 			}
 			return a, tea.Quit
@@ -176,17 +178,17 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.String() == keyGroup1:
 			cmd := a.topBar.SetGroup(0)
 			a.refreshContent()
-			a.helpBar.SetHints(a.currentHints())
+			a.updateNavState()
 			return a, cmd
 		case msg.String() == keyGroup2:
 			cmd := a.topBar.SetGroup(1)
 			a.refreshContent()
-			a.helpBar.SetHints(a.currentHints())
+			a.updateNavState()
 			return a, cmd
 		case msg.String() == keyGroup3:
 			cmd := a.topBar.SetGroup(2)
 			a.refreshContent()
-			a.helpBar.SetHints(a.currentHints())
+			a.updateNavState()
 			return a, cmd
 
 		// Tab cycles sub-tabs within active group
@@ -200,8 +202,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, cmd
 
 		// Action button hotkeys
-		case msg.String() == keyAdd:
-			return a, a.topBar.actionCmd("add")
 		case msg.String() == keyCreate:
 			return a, a.topBar.actionCmd("create")
 
@@ -228,26 +228,26 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tabChangedMsg:
 		a.galleryDrillIn = false
 		a.refreshContent()
-		a.helpBar.SetHints(a.currentHints())
+		a.updateNavState()
 		return a, nil
 
 	case libraryRenameMsg:
 		return a.handleRename()
 
 	case libraryDrillMsg:
-		a.helpBar.SetHints(a.currentHints())
+		a.updateNavState()
 		return a, nil
 
 	case libraryCloseMsg:
-		a.helpBar.SetHints(a.currentHints())
+		a.updateNavState()
 		return a, nil
 
 	case explorerDrillMsg:
-		a.helpBar.SetHints(a.currentHints())
+		a.updateNavState()
 		return a, nil
 
 	case explorerCloseMsg:
-		a.helpBar.SetHints(a.currentHints())
+		a.updateNavState()
 		return a, nil
 
 	case cardSelectedMsg:
@@ -257,11 +257,15 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Drill into the card — show a library view filtered to this card's items
 		if msg.card != nil && len(msg.card.items) > 0 {
 			a.galleryDrillIn = true
+			a.galleryDrillCard = msg.card.name
 			a.library.SetItems(msg.card.items)
 			a.library.SetSize(a.width, a.contentHeight())
-			a.helpBar.SetHints(a.currentHints())
+			a.updateNavState()
 		}
 		return a, nil
+
+	case breadcrumbClickMsg:
+		return a.handleBreadcrumbClick(msg)
 
 	case itemSelectedMsg:
 		return a, nil
@@ -459,7 +463,7 @@ func (a *App) rescanCatalog() {
 	a.catalog = cat
 	a.galleryDrillIn = false
 	a.refreshContent()
-	a.helpBar.SetHints(a.currentHints())
+	a.updateNavState()
 }
 
 // refreshContent updates the active content model based on the current tab.
@@ -549,7 +553,7 @@ func (a App) currentHints() []string {
 		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "r rename", "R refresh", "? help", "q back")
 	}
 	if a.isGalleryTab() {
-		return append(base, "arrows grid", "enter select", "tab grid/contents", "R refresh", "a add", "n create", "? help", "q back")
+		return append(base, "arrows grid", "enter select", "tab grid/contents", "R refresh", "n create", "? help", "q back")
 	}
 
 	// Library in detail mode has different hints
@@ -558,7 +562,7 @@ func (a App) currentHints() []string {
 	}
 
 	if a.isLibraryTab() {
-		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "r rename", "R refresh", "a add", "n create", "? help", "q quit")
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "r rename", "R refresh", "n create", "? help", "q quit")
 	}
 
 	// Explorer in detail mode
@@ -568,9 +572,81 @@ func (a App) currentHints() []string {
 
 	hints := append(base, "↑/↓ navigate", "←/→ switch pane", "enter detail")
 	if group != "Config" {
-		hints = append(hints, "r rename", "R refresh", "a add", "n create")
+		hints = append(hints, "r rename", "R refresh", "n create")
 	}
 	return append(hints, "? help", "q quit")
+}
+
+// handleBreadcrumbClick navigates back to the clicked breadcrumb level.
+func (a App) handleBreadcrumbClick(msg breadcrumbClickMsg) (tea.Model, tea.Cmd) {
+	// Gallery drill-in breadcrumbs: [0]=card name, [1]=item name
+	if a.isGalleryTab() && a.galleryDrillIn {
+		if msg.index == 0 {
+			// Click on card name → back to library browse (stay in drill-in)
+			if a.library.mode == libraryDetail {
+				a.library.mode = libraryBrowse
+				a.library.detailItem = nil
+				a.library.SetSize(a.width, a.contentHeight())
+				a.updateNavState()
+			}
+			return a, nil
+		}
+		// index >= 1 shouldn't navigate anywhere (already at that depth)
+		return a, nil
+	}
+
+	// Library drill-in: [0]=item name → close detail
+	if a.isLibraryTab() && a.library.mode == libraryDetail {
+		// Click on item crumb does nothing (already there)
+		return a, nil
+	}
+
+	// Explorer drill-in: [0]=item name → close detail
+	if a.explorer.mode == explorerDetail {
+		// Click on item crumb does nothing (already there)
+		return a, nil
+	}
+
+	return a, nil
+}
+
+// updateNavState refreshes hints and breadcrumbs to match the current navigation state.
+// Call this after any state transition that changes drill-in/tab state.
+func (a *App) updateNavState() {
+	a.helpBar.SetHints(a.currentHints())
+	a.updateBreadcrumbs()
+}
+
+// updateBreadcrumbs sets the topbar breadcrumbs based on the current navigation state.
+func (a *App) updateBreadcrumbs() {
+	var crumbs []string
+
+	// Gallery drill-in: card name, then optionally detail item
+	if a.isGalleryTab() && a.galleryDrillIn {
+		crumbs = append(crumbs, a.galleryDrillCard)
+		if a.library.mode == libraryDetail && a.library.detailItem != nil {
+			crumbs = append(crumbs, itemDisplayName(*a.library.detailItem))
+		}
+		a.topBar.SetBreadcrumbs(crumbs)
+		return
+	}
+
+	// Library detail drill-in
+	if a.isLibraryTab() && a.library.mode == libraryDetail && a.library.detailItem != nil {
+		crumbs = append(crumbs, itemDisplayName(*a.library.detailItem))
+		a.topBar.SetBreadcrumbs(crumbs)
+		return
+	}
+
+	// Explorer detail drill-in
+	if !a.isLibraryTab() && !a.isGalleryTab() && a.explorer.mode == explorerDetail && a.explorer.detailItem != nil {
+		crumbs = append(crumbs, itemDisplayName(*a.explorer.detailItem))
+		a.topBar.SetBreadcrumbs(crumbs)
+		return
+	}
+
+	// No drill-in — clear breadcrumbs
+	a.topBar.ClearBreadcrumbs()
 }
 
 // renderPlaceholder renders a centered message for tabs without explorer content.
