@@ -383,8 +383,11 @@ func (l libraryModel) View() string {
 }
 
 // metaBarHeight is the number of lines reserved for the metadata bar above the table.
-// Line 1: name + type + provider chips. Line 2: path + description. Line 3: separator.
-const metaBarHeight = 3
+// Line 1: name, type, files, origin, installed, registry
+// Line 2: scope, path
+// Line 3: type-specific detail (hooks/MCP/loadouts) or blank
+// Line 4: separator
+const metaBarHeight = 4
 
 // viewBrowse renders the metadata bar above the table.
 func (l libraryModel) viewBrowse() string {
@@ -459,63 +462,101 @@ func (l libraryModel) viewDetail() string {
 }
 
 // renderMetadataBar renders a detail panel for the currently selected item.
-// Always exactly metaBarHeight (3) lines: name+type, path/desc, separator.
+// Always exactly metaBarHeight (4) lines. Each line is padded/clipped to
+// exactly 1 visual line — never uses lipgloss Width() which wraps.
 //
-// CRITICAL: each line must be exactly 1 visual line. lipgloss Width() wraps
-// long text into multiple lines, breaking height calculations. We build lines
-// greedily (checking width before adding each chip) and pad manually.
+// Line 1: name (40 fixed), type (10), files (5), origin (15), installed (variable), registry (rest)
+// Line 2: scope + path
+// Line 3: type-specific detail or blank
+// Line 4: separator
 func (l libraryModel) renderMetadataBar(width int) string {
 	item := l.table.Selected()
 	if item == nil {
 		blank := strings.Repeat(" ", width)
 		sep := sectionRuleStyle.Render(strings.Repeat("─", width))
-		return blank + "\n" + blank + "\n" + sep
+		return blank + "\n" + blank + "\n" + blank + "\n" + sep
 	}
 
 	dot := mutedStyle.Render(" · ")
-	label := func(key, val string) string {
+
+	// chip renders a fixed-width labeled field: "Key: value" padded to w.
+	chip := func(key, val string, w int) string {
+		valW := w - len(key) - 2 // -2 for ": "
+		val = padRight(truncate(sanitizeLine(val), valW), valW)
 		return boldStyle.Render(key+": ") + mutedStyle.Render(val)
 	}
 
 	// tryAdd appends a chip to line only if it fits within width.
-	tryAdd := func(line, chip string) string {
-		candidate := line + dot + chip
+	tryAdd := func(line, c string) string {
+		candidate := line + dot + c
 		if lipgloss.Width(candidate) <= width {
 			return candidate
 		}
 		return line
 	}
 
-	// Line 1: name (fixed width) + chips (greedy)
-	// Fixed name width prevents chips from bouncing as cursor moves.
-	nameMaxW := 30
+	row := l.table.rows[l.table.cursor]
+
+	// --- Line 1: name (40), type (10), files (5), origin (15), installed, registry ---
+	nameMaxW := 40
 	displayName := truncate(sanitizeLine(itemDisplayName(*item)), nameMaxW)
 	line1 := " " + boldStyle.Render(padRight(displayName, nameMaxW))
-	line1 += "  " + label("Type", typeLabel(item.Type))
-	if item.Provider != "" {
-		line1 = tryAdd(line1, label("Source", item.Provider))
+	line1 += "  " + chip("Type", typeLabel(item.Type), 14)
+
+	line1 = tryAdd(line1, chip("Files", itoa(len(item.Files)), 9))
+
+	// Origin: provider it was imported from, or "syllago" if created locally
+	origin := "syllago"
+	if item.Meta != nil && item.Meta.SourceProvider != "" {
+		origin = item.Meta.SourceProvider
+	} else if item.Provider != "" {
+		origin = item.Provider
 	}
-	line1 = tryAdd(line1, label("Files", itoa(len(item.Files))))
-	row := l.table.rows[l.table.cursor]
+	line1 = tryAdd(line1, chip("Origin", origin, 19))
+
+	// Installed: variable width, can be long
 	if row.installed != "--" {
-		line1 = tryAdd(line1, label("Installed", row.installed))
+		line1 = tryAdd(line1, boldStyle.Render("Installed: ")+mutedStyle.Render(row.installed))
+	} else {
+		line1 = tryAdd(line1, boldStyle.Render("Installed: ")+mutedStyle.Render("--"))
 	}
 
-	// Line 2: path only (no description — visible in table column)
-	line2 := ""
+	// Registry
+	regName := "not in a registry"
+	if item.Registry != "" {
+		regName = item.Registry
+	} else if item.Meta != nil && item.Meta.SourceRegistry != "" {
+		regName = item.Meta.SourceRegistry
+	}
+	line1 = tryAdd(line1, boldStyle.Render("Registry: ")+mutedStyle.Render(regName))
+
+	// --- Line 2: scope + path ---
+	scope := "project"
+	if item.Meta != nil && item.Meta.SourceScope != "" {
+		scope = item.Meta.SourceScope
+	} else if item.Library {
+		scope = "global"
+	}
+	line2 := " " + chip("Scope", scope, 15)
 	if item.Path != "" {
 		path := item.Path
 		if home, err := homeDir(); err == nil && strings.HasPrefix(path, home) {
 			path = "~" + path[len(home):]
 		}
-		line2 = " " + label("Path", truncate(path, width-8))
+		pathW := max(20, width-lipgloss.Width(line2)-10) // leave room for dot+label
+		line2 = tryAdd(line2, boldStyle.Render("Path: ")+mutedStyle.Render(truncateMiddle(path, pathW)))
 	}
 
-	// Line 3: separator
+	// --- Line 3: type-specific detail or blank ---
+	line3 := ""
+	if row.typeDetail != "" {
+		line3 = " " + mutedStyle.Render(sanitizeLine(row.typeDetail))
+	}
+
+	// --- Line 4: separator ---
 	sep := sectionRuleStyle.Render(strings.Repeat("─", width))
 
-	// Pad each line to exact width with spaces (never use lipgloss Width
-	// which wraps). MaxWidth clips any ANSI overflow without adding lines.
+	// Pad each line to exact width (MaxWidth clips, manual pad fills).
 	pad := func(s string) string {
 		s = lipgloss.NewStyle().MaxWidth(width).Render(s)
 		if gap := width - lipgloss.Width(s); gap > 0 {
@@ -523,7 +564,32 @@ func (l libraryModel) renderMetadataBar(width int) string {
 		}
 		return s
 	}
-	return pad(line1) + "\n" + pad(line2) + "\n" + sep
+	return pad(line1) + "\n" + pad(line2) + "\n" + pad(line3) + "\n" + sep
+}
+
+// truncateMiddle keeps the first 2 path segments and last 3 segments,
+// replacing the middle with "…". Returns the path unchanged if it fits.
+func truncateMiddle(path string, maxWidth int) string {
+	if len(path) <= maxWidth {
+		return path
+	}
+
+	sep := "/"
+	parts := strings.Split(path, sep)
+	if len(parts) <= 5 {
+		// Not enough segments to split meaningfully — truncate end
+		return truncate(path, maxWidth)
+	}
+
+	head := strings.Join(parts[:2], sep)            // first 2 segments
+	tail := strings.Join(parts[len(parts)-3:], sep) // last 3 segments
+	result := head + "/…/" + tail
+
+	if len(result) <= maxWidth {
+		return result
+	}
+	// Still too long — truncate the tail
+	return truncate(result, maxWidth)
 }
 
 // homeDir returns the user's home directory path, cached for rendering.
