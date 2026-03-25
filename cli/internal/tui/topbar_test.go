@@ -99,6 +99,7 @@ func TestTopBar_RenderContainsElements(t *testing.T) {
 	assertContains(t, view, "Config")
 	assertContains(t, view, "Library")
 	assertContains(t, view, "Registries")
+	assertContains(t, view, "[a] Add")
 	assertContains(t, view, "[n] Create")
 }
 
