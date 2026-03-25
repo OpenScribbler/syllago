@@ -508,3 +508,50 @@ func TestResolveHookScripts_ValidRelativePath(t *testing.T) {
 		t.Errorf("expected permissions 0700, got %04o", perm)
 	}
 }
+
+func TestResolveHookScripts_InterpreterPrefix(t *testing.T) {
+	// Mutates output.ErrWriter — cannot be parallel.
+	origErr := output.ErrWriter
+	output.ErrWriter = &strings.Builder{}
+	t.Cleanup(func() { output.ErrWriter = origErr })
+
+	itemDir := t.TempDir()
+	scriptPath := filepath.Join(itemDir, "check.sh")
+	os.WriteFile(scriptPath, []byte("#!/bin/sh\necho check"), 0755)
+
+	// Command uses "bash ./check.sh" — interpreter prefix before relative path
+	matcherGroup := []byte(`{"hooks":[{"command":"bash ./check.sh --strict"}]}`)
+
+	item := catalog.ContentItem{
+		Name: "interp-hook",
+		Path: itemDir,
+	}
+
+	result, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// The command should be rewritten: "bash ./check.sh" → "bash /abs/path/check.sh"
+	if string(result) == string(matcherGroup) {
+		t.Error("expected command to be rewritten, but it was unchanged")
+	}
+
+	home, _ := os.UserHomeDir()
+	destDir := filepath.Join(home, ".syllago", "hooks", "interp-hook")
+	t.Cleanup(func() { os.RemoveAll(destDir) })
+
+	destScript := filepath.Join(destDir, "check.sh")
+	if _, statErr := os.Stat(destScript); statErr != nil {
+		t.Fatalf("destination script not found: %v", statErr)
+	}
+
+	// Verify the rewritten command preserves "bash" prefix and "--strict" args
+	cmd := gjson.GetBytes(result, "hooks.0.command").String()
+	if !strings.HasPrefix(cmd, "bash "+destScript) {
+		t.Errorf("command = %q, want prefix 'bash %s'", cmd, destScript)
+	}
+	if !strings.HasSuffix(cmd, " --strict") {
+		t.Errorf("command = %q, want suffix ' --strict'", cmd)
+	}
+}

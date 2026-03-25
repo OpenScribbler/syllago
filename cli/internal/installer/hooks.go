@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
@@ -306,26 +307,27 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 			continue
 		}
 
-		// Determine if command references a script file
-		var scriptPath string
-		firstToken := cmd
-		if idx := strings.IndexByte(cmd, ' '); idx > 0 {
-			firstToken = cmd[:idx]
+		// Use ExtractScriptRef to detect script references, including
+		// those behind interpreter prefixes (e.g. "bash ./lint.sh").
+		ref := converter.ExtractScriptRef(cmd)
+		if ref == "" {
+			continue // inline command like "echo lint"
 		}
 
-		if strings.HasPrefix(firstToken, "./") || strings.HasPrefix(firstToken, "../") {
-			// Relative to item directory
-			scriptPath = filepath.Clean(filepath.Join(itemDir, firstToken))
+		// Only handle relative paths at install time — these are scripts
+		// bundled into the library dir at add-time.
+		var scriptPath string
+		if strings.HasPrefix(ref, "./") || strings.HasPrefix(ref, "../") {
+			scriptPath = filepath.Clean(filepath.Join(itemDir, ref))
 			// Verify the resolved path stays within the item directory
 			rel, relErr := filepath.Rel(itemDir, scriptPath)
 			if relErr != nil || strings.HasPrefix(rel, "..") {
-				return nil, fmt.Errorf("hook %q command references path outside item directory: %s", item.Name, firstToken)
+				return nil, fmt.Errorf("hook %q command references path outside item directory: %s", item.Name, ref)
 			}
 		}
-		// Absolute paths are rejected — only relative paths within the item dir are allowed
 
 		if scriptPath == "" {
-			continue // inline command like "echo lint"
+			continue // absolute path — not a bundled script
 		}
 
 		// Check if the script exists
@@ -361,12 +363,8 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 			return nil, fmt.Errorf("copying script to %s: %w", destPath, writeErr)
 		}
 
-		// Rewrite command in the matcher group JSON
-		newCmd := destPath
-		if len(cmd) > len(firstToken) {
-			// Preserve arguments after the script path
-			newCmd = destPath + cmd[len(firstToken):]
-		}
+		// Rewrite command: replace the script ref with the stable absolute path
+		newCmd := strings.Replace(cmd, ref, destPath, 1)
 		key := fmt.Sprintf("hooks.%d.command", i)
 		result, err = sjson.SetBytes(result, key, newCmd)
 		if err != nil {

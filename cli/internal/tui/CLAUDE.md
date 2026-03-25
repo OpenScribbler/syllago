@@ -98,6 +98,37 @@ Every interactive element supports mouse via `lrstanley/bubblezone`:
 - `lipgloss.Width()` for rendered strings, never `len()`
 - Set `Width()` explicitly on lipgloss styles — it won't auto-wrap
 
+## Library Table + Metadata Bar
+
+The Library tab uses a full-width sortable table (`tableModel` in `table.go`) wrapped by `libraryModel` in `library.go`. The table shows all content items with columns: Name, Type, Scope, Files, Installed, Description (wide only).
+
+**Metadata bar** (3 lines at table bottom, inside the bordered panel):
+- Line 1: separator (`──────...`)
+- Line 2: display name, type, provider, file count, installed providers (dot-separated chips)
+- Line 3: path (with `~` shortening) and description
+
+The bar reads from `table.Selected()` and the corresponding `tableRow` for pre-computed display strings. Height is reserved via `metaBarHeight` constant (3 lines) — the table height is reduced accordingly.
+
+**Sorting:** `s` cycles columns, `S` reverses. Click column headers (zone-marked: `col-name`, `col-type`, etc.) to sort/reverse. Active column shows ▲/▼.
+
+**Search:** `/` activates search with background-tinted input field (`inputActiveBG`/`inputInactiveBG` from styles.go). Live filters across name, display name, description, type.
+
+**Drill-in:** `Enter` → `libraryDetail` mode with file tree + preview split. `Esc` returns to browse.
+
+## Text Input Modal
+
+`textInputModal` in `modal.go` provides centered overlay for single-field input (rename, etc.):
+- Uses `lipgloss.Place()` for centering (not custom overlay math)
+- Background-tinted input field: dim cyan when active (`inputActiveBG`), dim grey when inactive (`inputInactiveBG`)
+- Buttons use background+padding (no borders) for consistent height
+- `Tab` cycles focus: input → save → cancel
+- `Enter` submits, `Esc` cancels
+- `openModalMsg` / `modalResultMsg` for message passing
+
+## MCP Scanner
+
+The scanner in the catalog package handles provider-specific MCP directory layouts. When scanning `mcp/<provider>/`, if a directory has no `config.json` but contains subdirectories that do, it's treated as a provider grouping directory and recurses into each subdirectory.
+
 ## Testing
 
 **Golden files** in `testdata/`:

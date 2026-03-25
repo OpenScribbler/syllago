@@ -371,6 +371,8 @@ Zone IDs: `group-N`, `tab-G-N`, `btn-add`, `btn-create`, `item-N`, `modal-zone`
 - **Sort indicators overflow short columns.** "Files ▲" is 7 visual chars but the Files column is 5. Use `headerCell()` which truncates the label to make room for the indicator within the column width.
 - **App-level keys intercept search input.** When the library search input is active, keys like 'a' (add), 'q' (quit), '1' (group switch) must be passed through to the search handler instead of triggering app shortcuts. Check `table.searching` before handling global letter keys.
 - **Help bar separator is middle dot (·)** not asterisk (*). Cleaner look.
+- **Metadata bar steals table height.** When adding a fixed-height panel below a variable-height component (like table + metadata bar), always reduce the variable component's height in both `SetSize()` AND `View()`. If only one is updated, the table renders at the wrong height on resize vs initial draw.
+- **Modal `lipgloss.Place()` centering.** Use `lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, rendered)` for modal centering — not manual padding math. Handles terminal resize automatically.
 
 ---
 
@@ -420,3 +422,21 @@ Zone IDs: `group-N`, `tab-G-N`, `btn-add`, `btn-create`, `item-N`, `modal-zone`
 - **borderedPanel() helper**: Replaced lipgloss Width/Height with Width+MaxWidth+Height+MaxHeight for exact dimensions
 - **Hook/MCP naming**: Scanner derives DisplayName from .syllago.yaml, script filenames, event+matcher. New `syllago rename` CLI command. TUI rename modal planned.
 - **Key routing for search**: When search input is active, app bypasses letter shortcuts (a, q, s, 1/2/3) to let them reach the search handler
+
+### Phase 3.5 (Naming Feature + MCP Scanner Fix) — 2026-03-25
+- **Rename modal**: `textInputModal` in modal.go — centered overlay with lipgloss.Place(), background-tinted input fields (dim cyan active `inputActiveBG`, dim grey inactive `inputInactiveBG`), buttons with background+padding (no borders)
+- **Clickable column headers**: Zone-marked headers (`col-name`, `col-type`, etc.) — click sorts, click again reverses
+- **MCP scanner fix**: Detects provider grouping dirs (no config.json + has subdirs with config.json) and recurses — fixes mcp/<provider>/<server-name>/ layout
+- **--name flag on add**: Sets DisplayName for imported items
+- **Search includes DisplayName**: Renamed items are searchable by their display name
+- **Modal message flow**: `openModalMsg` triggers modal open, `modalResultMsg` returns result to app
+
+### Phase 4 (Metadata Bar) — 2026-03-25
+- **Metadata bar**: 3-line panel at bottom of Library table (inside bordered panel), reserved via `metaBarHeight` constant
+  - Line 1: separator line (`──────...`) using `sectionRuleStyle`
+  - Line 2: display name (bold) · type · provider · file count · installed providers — dot-separated chips
+  - Line 3: path (with ~ shortening) · description — dot-separated, muted
+- **Height management**: Table height reduced by `metaBarHeight` when items exist; metadata bar hidden when table is empty
+- **Data source**: Reads from `table.Selected()` item + pre-computed `tableRow` for installed column
+- **Installed highlight**: Uses `primaryColor` (cyan) for provider abbreviations when installed
+- **Path display**: `os.UserHomeDir()` for ~ shortening in rendered output

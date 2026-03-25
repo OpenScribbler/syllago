@@ -676,53 +676,49 @@ Same Gallery Grid layout, but cards show registry info and contents shows availa
 **Actions:** `[s] Sync`, `[r] Remove`, `[b] Browse` (switches to Explorer layout filtered to this registry's items)
 **"Browse" action:** Pressing `b` or `Enter` on a contents item switches to the Content dropdown with that type selected, filtered to the registry source — bridging the Gallery Grid back to the Explorer layout
 
-### Library — Gallery Grid
+### Library — Full-Width Table (Implemented)
 
-Library uses the same Gallery Grid but cards represent content types (Skills, Agents, etc.) instead of named collections.
+> **Note:** The original design specified a Gallery Grid with content-type cards. During implementation, a full-width sortable table proved more practical for the Library view — it shows all items at once with sortable columns and inline metadata. The gallery grid may still be used for Registries and Loadouts in the future.
+
+Library renders a full-width scrollable table with all content items, plus a metadata bar at the bottom showing details for the selected item.
 
 ```
-120x40:
-╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ SYL    Content: -- ▾    Collection: Library ▾    Config ▾                                       + Add     * New   │
-╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Library Overview                                                                          [+ Add]     [* New]     │
-│ 23 items total * 3 registries * 8 locally created * 15 installed                                                     │
-│ Your personal collection of AI coding tool content                                                                   │
-├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-┌────────────────────────────────────────────────────────────────────────────────────────────────┬───────────────────────┐
-│ Library                                                                                       │ Recent Activity       │
-│                                                                                               │                       │
-│ ╭──────────────────────────╮  ╭──────────────────────────╮  ╭──────────────────────────╮      │ Installed              │
-│ │ > Skills (8)             │  │   Agents (4)             │  │   MCP Servers (3)        │      │   Refactor-Py -> CC   │
-│ │   ────────────────────── │  │   ────────────────────── │  │   ────────────────────── │      │   Auditor -> CC       │
-│ │   5 from registries      │  │   2 from registries      │  │   1 from registry        │      │   Strict-Types -> CC  │
-│ │   3 locally created      │  │   2 locally created      │  │   2 locally created      │      │                       │
-│ │   6 installed            │  │   3 installed            │  │   2 installed            │      │ Added                 │
-│ ╰──────────────────────────╯  ╰──────────────────────────╯  ╰──────────────────────────╯      │   Test-Gen (team-r)   │
-│ ╭──────────────────────────╮  ╭──────────────────────────╮  ╭──────────────────────────╮      │   PEP8 (library)      │
-│ │   Rules (5)              │  │   Hooks (2)              │  │   Commands (1)           │      │                       │
-│ │   ────────────────────── │  │   ────────────────────── │  │   ────────────────────── │      │ Updated               │
-│ │   3 from registries      │  │   1 from registry        │  │   1 locally created      │      │   team-rules synced   │
-│ │   2 locally created      │  │   1 locally created      │  │                          │      │                       │
-│ │   4 installed            │  │   1 installed            │  │   0 installed            │      │                       │
-│ ╰──────────────────────────╯  ╰──────────────────────────╯  ╰──────────────────────────╯      │                       │
-│                                                                                               │                       │
-│                                                                                               │                       │
-│                                                                                               │                       │
-│                                                                                               │                       │
-│                                                                                               │                       │
-│                                                                                               │                       │
-│                                                                                               │                       │
-├────────────────────────────────────────────────────────────────────────────────────────────────┴───────────────────────┤
-│ arrows navigate * enter browse type * / search * ? help                                                   syllago v1.2.0│
-╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+80x30:
+╭──syllago─────────────────────────────────────────────────────────────────────╮
+│               [1] Collections      [2] Content      [3] Config               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│   Library     Registries     Loadouts              [a] Add      [n] Create   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│   Name ▲           Type     Scope        Files Installed                     │
+│ > alpha-skill      Skill    library      3     CC,GC                         │
+│   beta-rule        Rule     library      1     CC                            │
+│   gamma-hook       Hook     registry     2     --                            │
+│   delta-agent      Agent    library      1     CC,Cu                         │
+│                                                                              │
+│──────────────────────────────────────────────────────────────────────────────│
+│ alpha-skill · Skill · claude-code · 3 files · CC,GC                          │
+│ ~/.syllago/content/skills/claude-code/alpha-skill                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+1/2/3 groups · ↑/↓ navigate · enter preview · / search · s sort · r rename
+
+120x40 (adds Description column):
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│   Name ▲               Type      Scope        Files Installed      Description                                      │
+│ > alpha-skill          Skill     library      3     CC,GC          A helpful skill for...                            │
+│   ...                                                                                                               │
+│──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│ alpha-skill · Skill · claude-code · 3 files · CC,GC                                                                 │
+│ ~/.syllago/content/skills/... · A helpful skill for extending AI tool capabilities                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
-**Card contents:** Content type name + count, separator, source breakdown, install count
-**Right sidebar:** "Recent Activity" — recent installs, additions, and sync updates
-**Enter on a card:** Switches to Content dropdown with that type selected (bridges to Explorer layout)
-**Why "Recent Activity":** The Library overview doesn't have "contents" of a single item to show. Instead, the sidebar shows actionable recent events — what you just installed, what was added from a registry sync, etc.
+**Table columns:** Name, Type, Scope (library/registry/shared), Files, Installed (provider abbreviations), Description (wide terminals only)
+**Sorting:** `s` cycles sort column, `S` reverses direction. Click column headers to sort. Active column shows ▲/▼ indicator.
+**Search:** `/` opens search bar with live filtering across name, display name, description, and type. Match count shown.
+**Metadata bar:** 3-line panel at bottom (separator + detail line + path/description). Shows selected item's display name, type, provider, file count, installed providers, path (with ~ shortening), and description.
+**Drill-in:** `Enter` on an item enters detail mode (file tree + preview split, same as Skills/Hooks content zone).
+**Rename:** `r` opens text input modal to set a display name for the selected item.
 
 ### Gallery Grid Responsive Behavior
 
