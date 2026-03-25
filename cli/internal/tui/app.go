@@ -454,50 +454,28 @@ func (a App) renderTooSmall() string {
 	)
 }
 
-// overlayModal places the modal box on top of the background content,
-// centered horizontally and vertically. Background content remains visible
-// around the modal, giving context while editing.
+// overlayModal centers the modal within the content area. The background
+// content above and below the modal row range remains visible.
 func overlayModal(bg, modal string, width, height int) string {
 	bgLines := strings.Split(bg, "\n")
 	modalLines := strings.Split(modal, "\n")
+	modalH := len(modalLines)
 
-	// Pad bg to full height
 	for len(bgLines) < height {
 		bgLines = append(bgLines, strings.Repeat(" ", width))
 	}
 
-	modalW := lipgloss.Width(modal)
-	modalH := len(modalLines)
-
-	// Center position
+	// Center the modal vertically, replace those rows with centered modal lines
 	startRow := max(0, (height-modalH)/2)
-	startCol := max(0, (width-modalW)/2)
-
-	// Overlay modal lines onto background
 	for i, mLine := range modalLines {
 		row := startRow + i
 		if row >= len(bgLines) {
 			break
 		}
-		bgLine := bgLines[row]
-		bgRunes := []rune(bgLine)
-
-		// Build: bg prefix + modal line + bg suffix
-		prefix := ""
-		if startCol > 0 && startCol <= len(bgRunes) {
-			prefix = string(bgRunes[:startCol])
-		} else if startCol > 0 {
-			prefix = string(bgRunes) + strings.Repeat(" ", startCol-len(bgRunes))
-		}
-
+		// Center the modal line horizontally
 		mLineW := lipgloss.Width(mLine)
-		suffixStart := startCol + mLineW
-		suffix := ""
-		if suffixStart < len(bgRunes) {
-			suffix = string(bgRunes[suffixStart:])
-		}
-
-		bgLines[row] = prefix + mLine + suffix
+		pad := max(0, (width-mLineW)/2)
+		bgLines[row] = strings.Repeat(" ", pad) + mLine
 	}
 
 	if len(bgLines) > height {

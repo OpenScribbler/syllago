@@ -63,7 +63,7 @@ func (l *libraryModel) SetSize(width, height int) {
 	case libraryBrowse:
 		innerH := height - borderSize
 		if l.table.Len() > 0 {
-			innerH = max(3, innerH-metaBarHeight)
+			innerH = max(3, innerH-metaBarTotal)
 		}
 		l.table.SetSize(width-borderSize, innerH)
 	case libraryDetail:
@@ -366,7 +366,7 @@ func (l *libraryModel) loadSelectedFile() {
 func (l *libraryModel) sizeDetailPanes() {
 	treeOuterW := l.detailTreeWidth()
 	previewOuterW := l.width - treeOuterW
-	paneH := max(0, l.height-metaBarHeight)
+	paneH := max(0, l.height-metaBarTotal)
 	innerH := max(0, paneH-borderSize)
 
 	l.tree.SetSize(max(0, treeOuterW-borderSize), innerH)
@@ -402,105 +402,164 @@ func (l libraryModel) View() string {
 	}
 }
 
-// metaBarHeight is the number of lines reserved for the metadata bar above the table.
-// Line 1: name, type, files, origin, installed, registry
-// Line 2: scope, path
-// Line 3: type-specific detail (hooks/MCP/loadouts) or blank
-// Line 4: separator
-const metaBarHeight = 4
+// metaBarLines is the number of content lines in the metadata section.
+// Line 1: name, type, files, origin, installed
+// Line 2: scope, registry, path
+// Line 3: type-specific detail + rename button (or just rename button)
+// The shared border separator (├────┤) is drawn by the view, not counted here.
+const metaBarLines = 3
 
-// viewBrowse renders the metadata bar above the table.
+// metaBarTotal is the total lines consumed by the metadata section
+// including the shared separator line (metaBarLines + 1).
+const metaBarTotal = metaBarLines + 1
+
+// viewBrowse renders a unified panel: metadata section + separator + table.
 func (l libraryModel) viewBrowse() string {
 	l.table.focused = true
 	innerW := l.width - borderSize
 	innerH := l.height - borderSize
 
-	// Reserve space for metadata bar when there are items
-	tableH := innerH
-	if l.table.Len() > 0 {
-		tableH = max(3, innerH-metaBarHeight)
+	if l.table.Len() == 0 {
+		l.table.SetSize(innerW, innerH)
+		return borderedPanel(l.table.View(), innerW, innerH, focusedBorderFg)
 	}
+
+	// metadata (3 lines) + separator (1 line) + table (rest)
+	sepLines := 1
+	tableH := max(3, innerH-metaBarLines-sepLines)
 	l.table.SetSize(innerW, tableH)
 
-	var content string
-	if l.table.Len() > 0 {
-		content = l.renderMetadataBar(innerW) + "\n" + l.table.View()
-	} else {
-		content = l.table.View()
+	metaContent := l.renderMetadataContent(innerW)
+	separator := sectionRuleStyle.Render("├" + strings.Repeat("─", innerW) + "┤")
+	tableContent := l.table.View()
+
+	// Build unified panel manually: top border + meta + separator + table + bottom border
+	topBorder := sectionRuleStyle.Render("╭" + strings.Repeat("─", innerW) + "╮")
+	bottomBorder := sectionRuleStyle.Render("╰" + strings.Repeat("─", innerW) + "╯")
+
+	// Wrap each metadata and table line with side borders
+	wrapLine := func(s string) string {
+		s = lipgloss.NewStyle().MaxWidth(innerW).Render(s)
+		if gap := innerW - lipgloss.Width(s); gap > 0 {
+			s += strings.Repeat(" ", gap)
+		}
+		return sectionRuleStyle.Render("│") + s + sectionRuleStyle.Render("│")
 	}
-	return borderedPanel(content, innerW, innerH, focusedBorderFg)
+
+	var lines []string
+	lines = append(lines, topBorder)
+	for _, ml := range strings.Split(metaContent, "\n") {
+		lines = append(lines, wrapLine(ml))
+	}
+	lines = append(lines, separator)
+	for _, tl := range strings.Split(tableContent, "\n") {
+		lines = append(lines, wrapLine(tl))
+	}
+	lines = append(lines, bottomBorder)
+
+	return strings.Join(lines, "\n")
 }
 
-// viewDetail renders metadata bar + file tree + preview with bordered panes.
+// viewDetail renders a unified frame: metadata + separator with T-junction + tree|preview.
 func (l libraryModel) viewDetail() string {
-	// Metadata bar at top, spanning full width
-	metaBar := l.renderMetadataBar(l.width)
+	innerW := l.width - borderSize
+	totalInnerH := l.height - borderSize
+
+	// Metadata gets metaBarLines, separator gets 1, panes get the rest
+	paneH := max(3, totalInnerH-metaBarLines-1)
 
 	treeOuterW := l.detailTreeWidth()
-	previewOuterW := l.width - treeOuterW
+	treeInnerW := max(0, treeOuterW-1) // -1 for the vertical divider
+	previewInnerW := max(0, innerW-treeInnerW-1)
 
-	treeFg := unfocusedBorderFg
-	previewFg := unfocusedBorderFg
-	if l.focus == paneItems {
-		treeFg = focusedBorderFg
-	} else {
-		previewFg = focusedBorderFg
-	}
+	metaContent := l.renderMetadataContent(innerW)
 
-	// Reduce pane height to account for metadata bar
-	paneH := max(0, l.height-metaBarHeight)
-	innerH := max(0, paneH-borderSize)
-	treeInnerW := max(0, treeOuterW-borderSize)
-	previewInnerW := max(0, previewOuterW-borderSize)
+	// Build separator with T-junction: ├──────┬──────────────────┤
+	sepLeft := strings.Repeat("─", treeInnerW)
+	sepRight := strings.Repeat("─", previewInnerW)
+	separator := sectionRuleStyle.Render("├" + sepLeft + "┬" + sepRight + "┤")
 
-	// Tree content: item name header + file tree + close button
-	itemName := ""
-	if l.detailItem != nil {
-		itemName = itemDisplayName(*l.detailItem)
-	}
-	treeHeader := boldStyle.Render(truncate(itemName, treeInnerW))
+	// Build tree content
+	treeContentH := max(0, paneH)
 	closeBtn := zone.Mark("lib-close", mutedStyle.Render("[x] Close"))
+	treeViewH := max(0, treeContentH-1) // -1 for close button
+	l.tree.SetSize(treeInnerW, treeViewH)
+	treeLines := strings.Split(l.tree.View(), "\n")
+	// Pad tree to exact height and append close button
+	for len(treeLines) < treeViewH {
+		treeLines = append(treeLines, strings.Repeat(" ", treeInnerW))
+	}
+	if len(treeLines) > treeViewH {
+		treeLines = treeLines[:treeViewH]
+	}
+	treeLines = append(treeLines, closeBtn)
 
-	treeContentH := max(0, innerH-2) // header + footer
-	l.tree.SetSize(treeInnerW, treeContentH)
-	treeContent := treeHeader + "\n" + l.tree.View() + "\n" + closeBtn
-
-	left := zone.Mark("lib-tree",
-		borderedPanel(treeContent, treeInnerW, innerH, treeFg))
-
-	// Preview pane with file count indicator
+	// Build preview content
 	fileCount := ""
 	if l.detailItem != nil {
 		fileCount = fmt.Sprintf(" (%d files)", len(l.detailItem.Files))
 	}
 	previewHeader := renderSectionTitle(l.preview.fileName+fileCount, previewInnerW)
-	previewContentH := max(0, innerH-1)
-	l.preview.SetSize(previewInnerW, previewContentH)
+	previewViewH := max(0, paneH-1) // -1 for header
+	l.preview.SetSize(previewInnerW, previewViewH)
+	previewBody := l.renderPreviewBody(previewViewH, previewInnerW)
+	previewLines := []string{previewHeader}
+	previewLines = append(previewLines, strings.Split(previewBody, "\n")...)
+	for len(previewLines) < paneH {
+		previewLines = append(previewLines, strings.Repeat(" ", previewInnerW))
+	}
+	if len(previewLines) > paneH {
+		previewLines = previewLines[:paneH]
+	}
 
-	previewBody := l.renderPreviewBody(previewContentH, previewInnerW)
-	previewContent := previewHeader + "\n" + previewBody
+	// Assemble the frame
+	border := sectionRuleStyle.Render
+	topBorder := border("╭" + strings.Repeat("─", innerW) + "╮")
+	bottomLeft := strings.Repeat("─", treeInnerW)
+	bottomRight := strings.Repeat("─", previewInnerW)
+	bottomBorder := border("╰" + bottomLeft + "┴" + bottomRight + "╯")
 
-	right := zone.Mark("lib-preview",
-		borderedPanel(previewContent, previewInnerW, innerH, previewFg))
+	wrapLine := func(s string, w int) string {
+		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
+		if g := w - lipgloss.Width(s); g > 0 {
+			s += strings.Repeat(" ", g)
+		}
+		return s
+	}
 
-	panes := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
-	return metaBar + "\n" + panes
+	var lines []string
+	lines = append(lines, topBorder)
+	for _, ml := range strings.Split(metaContent, "\n") {
+		lines = append(lines, border("│")+wrapLine(ml, innerW)+border("│"))
+	}
+	lines = append(lines, separator)
+	for i := 0; i < paneH; i++ {
+		tl := ""
+		if i < len(treeLines) {
+			tl = treeLines[i]
+		}
+		pl := ""
+		if i < len(previewLines) {
+			pl = previewLines[i]
+		}
+		lines = append(lines, border("│")+wrapLine(tl, treeInnerW)+border("│")+wrapLine(pl, previewInnerW)+border("│"))
+	}
+	lines = append(lines, bottomBorder)
+
+	return strings.Join(lines, "\n")
 }
 
-// renderMetadataBar renders a detail panel for the currently selected item.
-// Always exactly metaBarHeight (4) lines. Each line is padded/clipped to
-// exactly 1 visual line — never uses lipgloss Width() which wraps.
+// renderMetadataContent returns exactly metaBarLines (3) lines of metadata text.
+// No border, no separator — the caller wraps this in the panel frame.
 //
-// Line 1: name (40 fixed), type (10), files (5), origin (15), installed (variable), registry (rest)
-// Line 2: scope + path
-// Line 3: type-specific detail or blank
-// Line 4: separator
-func (l libraryModel) renderMetadataBar(width int) string {
+// Line 1: name (40 fixed), type, files, origin, installed
+// Line 2: scope, registry, path
+// Line 3: type-specific detail + [r] Rename button (right-aligned)
+func (l libraryModel) renderMetadataContent(width int) string {
 	item := l.table.Selected()
 	if item == nil {
 		blank := strings.Repeat(" ", width)
-		sep := sectionRuleStyle.Render(strings.Repeat("─", width))
-		return blank + "\n" + blank + "\n" + blank + "\n" + sep
+		return blank + "\n" + blank + "\n" + blank
 	}
 
 	// chip renders a fixed-width labeled field: "Key: value" padded to w.
@@ -593,21 +652,22 @@ func (l libraryModel) renderMetadataBar(width int) string {
 		line3 = styled
 	}
 
-	// --- Line 4: separator with rename button right-aligned ---
-	renameBtn := zone.Mark("meta-rename", mutedStyle.Render("[r] Rename"))
+	// Add rename button right-aligned on line 3
+	renameBtn := zone.Mark("meta-rename", activeButtonStyle.Render("[r] Rename"))
 	renameBtnW := lipgloss.Width(renameBtn)
-	sepW := max(0, width-renameBtnW-1)
-	sep := sectionRuleStyle.Render(strings.Repeat("─", sepW)) + " " + renameBtn
+	line3W := lipgloss.Width(line3)
+	btnGap := max(1, width-line3W-renameBtnW)
+	line3 += strings.Repeat(" ", btnGap) + renameBtn
 
 	// Pad each line to exact width (MaxWidth clips, manual pad fills).
 	pad := func(s string) string {
 		s = lipgloss.NewStyle().MaxWidth(width).Render(s)
-		if gap := width - lipgloss.Width(s); gap > 0 {
-			s += strings.Repeat(" ", gap)
+		if g := width - lipgloss.Width(s); g > 0 {
+			s += strings.Repeat(" ", g)
 		}
 		return s
 	}
-	return pad(line1) + "\n" + pad(line2) + "\n" + pad(line3) + "\n" + sep
+	return pad(line1) + "\n" + pad(line2) + "\n" + pad(line3)
 }
 
 // truncateMiddle keeps the first 2 path segments and last 3 segments,
