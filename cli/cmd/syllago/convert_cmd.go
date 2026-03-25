@@ -17,7 +17,8 @@ type convertResult struct {
 	Name     string   `json:"name"`
 	From     string   `json:"from"`
 	To       string   `json:"to"`
-	Output   string   `json:"output,omitempty"`   // path if --output was used; empty for stdout
+	Output   string   `json:"output,omitempty"`   // path if --output was used
+	Content  string   `json:"content,omitempty"`  // rendered content (when no --output)
 	Warnings []string `json:"warnings,omitempty"` // portability warnings from conversion
 }
 
@@ -193,10 +194,9 @@ func emitConvertOutput(name, fromSlug, toSlug, outputPath string, rendered *conv
 		} else if !output.Quiet {
 			fmt.Fprintf(output.Writer, "Converted %s (%s -> %s) to %s\n", name, fromSlug, toSlug, outputPath)
 		}
+	} else if output.JSON {
+		output.Print(convertResult{Name: name, From: fromSlug, To: toSlug, Content: string(rendered.Content), Warnings: rendered.Warnings})
 	} else {
-		if output.JSON {
-			output.Print(convertResult{Name: name, From: fromSlug, To: toSlug, Warnings: rendered.Warnings})
-		}
 		os.Stdout.Write(rendered.Content)
 	}
 
