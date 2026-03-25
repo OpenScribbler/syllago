@@ -102,12 +102,7 @@ Every interactive element supports mouse via `lrstanley/bubblezone`:
 
 The Library tab uses a full-width sortable table (`tableModel` in `table.go`) wrapped by `libraryModel` in `library.go`. The table shows all content items with columns: Name, Type, Scope, Files, Installed, Description (wide only).
 
-**Metadata bar** (3 lines at table bottom, inside the bordered panel):
-- Line 1: separator (`──────...`)
-- Line 2: display name, type, provider, file count, installed providers (dot-separated chips)
-- Line 3: path (with `~` shortening) and description
-
-The bar reads from `table.Selected()` and the corresponding `tableRow` for pre-computed display strings. Height is reserved via `metaBarHeight` constant (3 lines) — the table height is reduced accordingly.
+See **Metadata Panel** section below for the current metadata implementation (replaced the original bottom-of-table metadata bar).
 
 **Sorting:** `s` cycles columns, `S` reverses. Click column headers (zone-marked: `col-name`, `col-type`, etc.) to sort/reverse. Active column shows ▲/▼.
 
@@ -115,15 +110,59 @@ The bar reads from `table.Selected()` and the corresponding `tableRow` for pre-c
 
 **Drill-in:** `Enter` → `libraryDetail` mode with file tree + preview split. `Esc` returns to browse.
 
+## Metadata Panel (Reusable Component)
+
+The metadata panel (`metapanel.go`) is a shared component used across Library and Content views. It renders 3 lines of item metadata inside a unified bordered frame.
+
+**Architecture:** `renderMetaPanel(item, data, width)` takes a `ContentItem` + pre-computed `metaPanelData` (installed status, type detail) and returns 3 padded lines. The caller wraps these in a manually-constructed border frame.
+
+**Fields (line 1):** Name (40 fixed), Type (14), Files (9), Origin (19), Installed (greedy), Registry (greedy)
+**Fields (line 2):** Scope (15 fixed), Registry (30 fixed), Path (middle-truncated, greedy)
+**Fields (line 3):** Type-specific detail + [r] Rename button (right-aligned)
+
+Type-specific details:
+- Hooks: Event, Matcher, Handler (pre-computed in `computeHookDetail`)
+- MCP: Server, Command (pre-computed in `computeMCPDetail`)
+- Loadouts: Target, item counts (pre-computed in `computeLoadoutDetail`)
+- Others: blank line
+
+**Unified frame pattern:** Both library and explorer build frames manually:
+```
+╭─────────────────────────╮   Browse mode
+│ metadata line 1          │
+│ metadata line 2          │
+│ metadata line 3  [r]     │
+├─────────────────────────┤
+│ table/items content      │
+╰─────────────────────────╯
+
+╭─────────────────────────╮   Detail/split mode
+│ metadata line 1          │
+│ metadata line 2          │
+│ metadata line 3  [r]     │
+├────────┬────────────────┤
+│ tree   │ preview         │
+╰────────┴────────────────╯
+```
+
 ## Text Input Modal
 
 `textInputModal` in `modal.go` provides centered overlay for single-field input (rename, etc.):
-- Uses `lipgloss.Place()` for centering (not custom overlay math)
+- Overlay via `overlayModal()` in app.go — background content visible above/below modal rows
 - Background-tinted input field: dim cyan when active (`inputActiveBG`), dim grey when inactive (`inputInactiveBG`)
 - Buttons use background+padding (no borders) for consistent height
 - `Tab` cycles focus: input → save → cancel
 - `Enter` submits, `Esc` cancels
-- `openModalMsg` / `modalResultMsg` for message passing
+- `modalSavedMsg` / `modalCancelledMsg` for message passing
+
+## Navigation — q Backs Out
+
+`q` only quits from the landing page (Collections > Library browse). Elsewhere:
+- Library detail view → Library browse
+- Any Content/Config tab → Collections > Library
+- `Ctrl+C` always quits immediately
+
+`R` (shift+r) re-scans catalog from disk without restarting. `rescanCatalog()` in app.go.
 
 ## MCP Scanner
 

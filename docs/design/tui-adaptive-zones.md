@@ -680,7 +680,9 @@ Same Gallery Grid layout, but cards show registry info and contents shows availa
 
 > **Note:** The original design specified a Gallery Grid with content-type cards. During implementation, a full-width sortable table proved more practical for the Library view — it shows all items at once with sortable columns and inline metadata. The gallery grid may still be used for Registries and Loadouts in the future.
 
-Library renders a full-width scrollable table with all content items, plus a metadata bar at the bottom showing details for the selected item.
+Library renders a full-width scrollable table with all content items inside a unified bordered frame. The metadata panel sits at the top of the frame (3 lines of item details), with a `├──┤` separator dividing it from the table below. In detail mode, the separator becomes `├──┬──┤` to introduce the file tree + preview split.
+
+> **Reusable metadata panel:** The metadata panel (`metapanel.go`) is shared across all Content tabs (Skills, Agents, MCP, Rules, Hooks, Commands) in addition to Library. The explorer model receives providers + repoRoot to compute installed status via `computeMetaPanelData()`. See `cli/internal/tui/CLAUDE.md` for the full component specification.
 
 ```
 80x30:
