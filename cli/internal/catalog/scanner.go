@@ -444,7 +444,21 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 					continue // skip appending the parent directory item
 				}
 			}
-			// Flat format or no config.json — single server item.
+
+			// No config.json at this level — check if this is a provider
+			// grouping directory (e.g., mcp/claude-code/) with individual
+			// server subdirectories beneath it.
+			if readErr != nil {
+				subEntries, subErr := os.ReadDir(itemDir)
+				if subErr == nil && hasMCPSubdirs(itemDir, subEntries) {
+					if err := scanMCPSubdirs(cat, itemDir, subEntries, local, resolvedBase); err != nil {
+						return err
+					}
+					continue // skip appending the grouping directory itself
+				}
+			}
+
+			// Flat format — single server item.
 			item.ServerKey = entry.Name()
 			item.Description = mcpFlatDescription(data)
 		default:
@@ -452,6 +466,90 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 		}
 
 		applyMetaOverrides(&item, item.Meta)
+		cat.Items = append(cat.Items, item)
+	}
+	return nil
+}
+
+// hasMCPSubdirs checks if any subdirectory contains a config.json file,
+// indicating this is a provider grouping directory (e.g., mcp/claude-code/).
+func hasMCPSubdirs(parentDir string, entries []os.DirEntry) bool {
+	for _, e := range entries {
+		if !e.IsDir() || shouldSkip(e.Name()) {
+			continue
+		}
+		configPath := filepath.Join(parentDir, e.Name(), "config.json")
+		if _, err := os.Stat(configPath); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// scanMCPSubdirs scans individual MCP server directories within a provider
+// grouping directory (e.g., mcp/claude-code/Astro-docs/, mcp/claude-code/github/).
+func scanMCPSubdirs(cat *Catalog, groupDir string, entries []os.DirEntry, local bool, resolvedBase string) error {
+	for _, entry := range entries {
+		if !entry.IsDir() || shouldSkip(entry.Name()) {
+			continue
+		}
+		if !IsValidItemName(entry.Name()) {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("skipping MCP server %q — name contains characters unsafe for JSON key paths", entry.Name()))
+			continue
+		}
+
+		serverDir := filepath.Join(groupDir, entry.Name())
+		if err := validateRegistryPath(serverDir, resolvedBase); err != nil {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("skipping MCP server %q: %s", entry.Name(), err))
+			continue
+		}
+
+		files := collectFiles(serverDir, serverDir)
+		meta, err := metadata.Load(serverDir)
+		if err != nil {
+			return err
+		}
+
+		item := ContentItem{
+			Name:    entry.Name(),
+			Type:    MCP,
+			Path:    serverDir,
+			Library: local,
+			Files:   files,
+			Meta:    meta,
+		}
+
+		// Read config.json for description and nested server explosion.
+		configPath := filepath.Join(serverDir, "config.json")
+		data, readErr := os.ReadFile(configPath)
+		if readErr == nil {
+			servers := gjson.GetBytes(data, "mcpServers")
+			if servers.Exists() && servers.IsObject() {
+				// Nested format — explode into one item per server entry.
+				servers.ForEach(func(key, value gjson.Result) bool {
+					serverName := key.String()
+					mcpItem := ContentItem{
+						Name:        serverName,
+						Type:        MCP,
+						Path:        serverDir,
+						ServerKey:   serverName,
+						Library:     local,
+						Description: mcpServerDescription(value),
+						Files:       files,
+						Meta:        meta,
+					}
+					applyMetaOverrides(&mcpItem, meta)
+					cat.Items = append(cat.Items, mcpItem)
+					return true
+				})
+				continue
+			}
+		}
+
+		// Flat format or single server.
+		item.ServerKey = entry.Name()
+		item.Description = mcpFlatDescription(data)
+		applyMetaOverrides(&item, meta)
 		cat.Items = append(cat.Items, item)
 	}
 	return nil

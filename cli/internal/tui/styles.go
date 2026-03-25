@@ -91,6 +91,10 @@ var (
 	// Inline section title: ──Title──────────────────
 	sectionTitleStyle = lipgloss.NewStyle().Foreground(primaryColor)
 	sectionRuleStyle  = lipgloss.NewStyle().Foreground(mutedColor)
+
+	// Text input fields — dim background tint
+	inputActiveBG   = lipgloss.AdaptiveColor{Light: "#D5EFED", Dark: "#1A3836"} // dim cyan tint
+	inputInactiveBG = lipgloss.AdaptiveColor{Light: "#E6E4D9", Dark: "#282726"} // dim grey tint
 )
 
 // itoa converts int to string without importing strconv.

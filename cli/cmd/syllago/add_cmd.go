@@ -65,6 +65,7 @@ func init() {
 	addCmd.Flags().BoolP("force", "f", false, "Overwrite existing item without prompting")
 	addCmd.Flags().String("base-dir", "", "Override base directory for content discovery")
 	addCmd.Flags().Bool("no-input", false, "Disable interactive prompts, use defaults")
+	addCmd.Flags().String("name", "", "Display name for hooks/MCP (stored in .syllago.yaml metadata)")
 	// Registry taint propagation — used by internal callers (TUI import, registry add).
 	addCmd.Flags().String("source-registry", "", "Registry name for taint tracking")
 	addCmd.Flags().String("source-visibility", "", "Source registry visibility (public, private, unknown)")
@@ -162,19 +163,20 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Hooks and MCP have separate paths because they live in JSON config files.
+	displayName, _ := cmd.Flags().GetString("name")
 	if typeStr == string(catalog.Hooks) {
 		exclude, _ := cmd.Flags().GetStringArray("exclude")
 		scope, _ := cmd.Flags().GetString("scope")
 		srcReg, _ := cmd.Flags().GetString("source-registry")
 		srcVis, _ := cmd.Flags().GetString("source-visibility")
-		return runAddHooks(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis)
+		return runAddHooks(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis, displayName)
 	}
 	if typeStr == string(catalog.MCP) {
 		exclude, _ := cmd.Flags().GetStringArray("exclude")
 		scope, _ := cmd.Flags().GetString("scope")
 		srcReg, _ := cmd.Flags().GetString("source-registry")
 		srcVis, _ := cmd.Flags().GetString("source-visibility")
-		return runAddMcp(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis)
+		return runAddMcp(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis, displayName)
 	}
 
 	// For --all, also add hooks and MCP alongside file-based content.
@@ -182,10 +184,10 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		scope, _ := cmd.Flags().GetString("scope")
 		srcReg, _ := cmd.Flags().GetString("source-registry")
 		srcVis, _ := cmd.Flags().GetString("source-visibility")
-		if err := runAddHooks(root, fromSlug, dryRun, nil, force, scope, resolver, srcReg, srcVis); err != nil {
+		if err := runAddHooks(root, fromSlug, dryRun, nil, force, scope, resolver, srcReg, srcVis, ""); err != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: failed to add hooks: %v\n", err)
 		}
-		if err := runAddMcp(root, fromSlug, dryRun, nil, force, scope, resolver, srcReg, srcVis); err != nil {
+		if err := runAddMcp(root, fromSlug, dryRun, nil, force, scope, resolver, srcReg, srcVis, ""); err != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: failed to add MCP configs: %v\n", err)
 		}
 	}
@@ -535,7 +537,7 @@ func discoverMcpForDisplay(root, fromSlug string, resolver *config.PathResolver,
 
 // runAddMcp handles "syllago add mcp --from <provider>". It reads MCP config
 // locations, extracts individual server entries, and writes each to the library.
-func runAddMcp(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string, resolver *config.PathResolver, srcRegistry, srcVisibility string) error {
+func runAddMcp(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string, resolver *config.PathResolver, srcRegistry, srcVisibility, displayName string) error {
 	prov := findProviderBySlug(fromSlug)
 	if prov == nil {
 		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Run 'syllago info providers' to see available providers")
@@ -572,7 +574,7 @@ func runAddMcp(root, fromSlug string, previewOnly bool, exclude []string, force 
 
 	count := 0
 	for _, loc := range targets {
-		n, err := addMcpFromLocation(fromSlug, loc, root, previewOnly, excludeSet, force, globalDir, srcRegistry, srcVisibility)
+		n, err := addMcpFromLocation(fromSlug, loc, root, previewOnly, excludeSet, force, globalDir, srcRegistry, srcVisibility, displayName)
 		if err != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: failed to add MCP configs from %s: %v\n", loc.Path, err)
 		}
@@ -590,7 +592,7 @@ func runAddMcp(root, fromSlug string, previewOnly bool, exclude []string, force 
 
 // addMcpFromLocation reads a single config file, extracts MCP server entries,
 // and either previews or writes them to the library.
-func addMcpFromLocation(fromSlug string, loc installer.MCPLocation, projectRoot string, previewOnly bool, excludeSet map[string]bool, force bool, globalDir, srcRegistry, srcVisibility string) (int, error) {
+func addMcpFromLocation(fromSlug string, loc installer.MCPLocation, projectRoot string, previewOnly bool, excludeSet map[string]bool, force bool, globalDir, srcRegistry, srcVisibility, displayName string) (int, error) {
 	prov := findProviderBySlug(fromSlug)
 
 	data, err := os.ReadFile(loc.Path)
@@ -664,9 +666,13 @@ func addMcpFromLocation(fromSlug string, loc installer.MCPLocation, projectRoot 
 		}
 
 		now := time.Now().UTC()
+		mcpMetaName := e.name
+		if displayName != "" {
+			mcpMetaName = displayName
+		}
 		meta := &metadata.Meta{
 			ID:               metadata.NewID(),
-			Name:             e.name,
+			Name:             mcpMetaName,
 			Type:             string(catalog.MCP),
 			AddedAt:          &now,
 			SourceProvider:   fromSlug,
@@ -830,7 +836,7 @@ func printDiscoveryText(provSlug, provName string, items []add.DiscoveryItem) er
 // runAddHooks handles "syllago add hooks --from <provider>". It reads settings.json
 // for the given provider, splits it into individual hook groups, filters by
 // --exclude, and either prints a preview or writes each hook to library.
-func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string, resolver *config.PathResolver, srcRegistry, srcVisibility string) error {
+func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string, resolver *config.PathResolver, srcRegistry, srcVisibility, displayName string) error {
 	prov := findProviderBySlug(fromSlug)
 	if prov == nil {
 		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Run 'syllago info providers' to see available providers")
@@ -866,7 +872,7 @@ func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, forc
 	}
 
 	for _, loc := range targets {
-		if err := addHooksFromLocation(fromSlug, loc, root, previewOnly, excludeSet, force, srcRegistry, srcVisibility); err != nil {
+		if err := addHooksFromLocation(fromSlug, loc, root, previewOnly, excludeSet, force, srcRegistry, srcVisibility, displayName); err != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: failed to add hooks from %s: %v\n", loc.Path, err)
 		}
 	}
@@ -875,7 +881,7 @@ func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, forc
 
 // addHooksFromLocation reads a single settings.json, splits it into hooks,
 // and either previews or writes them.
-func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, projectRoot string, previewOnly bool, excludeSet map[string]bool, force bool, srcRegistry, srcVisibility string) error {
+func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, projectRoot string, previewOnly bool, excludeSet map[string]bool, force bool, srcRegistry, srcVisibility, displayName string) error {
 	data, err := os.ReadFile(loc.Path)
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrSystemIO, "reading "+loc.Path, "Check file permissions", err.Error())
@@ -957,9 +963,13 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, proje
 		}
 
 		now := time.Now().UTC()
+		metaName := name
+		if displayName != "" {
+			metaName = displayName
+		}
 		meta := &metadata.Meta{
 			ID:               metadata.NewID(),
-			Name:             name,
+			Name:             metaName,
 			Type:             string(catalog.Hooks),
 			AddedAt:          &now,
 			SourceProvider:   fromSlug,

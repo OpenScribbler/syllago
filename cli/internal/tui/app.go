@@ -7,6 +7,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -27,6 +28,7 @@ type App struct {
 	library  libraryModel  // Library tab: table + drill-in
 	explorer explorerModel // Content/Loadout tabs: items list + preview
 	helpBar  helpBarModel
+	modal    textInputModal // reusable text input overlay
 
 	// Dimensions
 	width, height int
@@ -57,6 +59,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		library:         newLibraryModel(cat.Items, providers, projectRoot),
 		explorer:        newExplorerModel(nil, false),
 		helpBar:         newHelpBar(version),
+		modal:           newTextInputModal(),
 	}
 	a.helpBar.SetHints(a.currentHints())
 	return a
@@ -82,9 +85,25 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.MouseMsg:
+		// Modal captures all mouse input when active
+		if a.modal.active {
+			var cmd tea.Cmd
+			a.modal, cmd = a.modal.Update(msg)
+			return a, cmd
+		}
 		return a.routeMouse(msg)
 
 	case tea.KeyMsg:
+		// Modal captures all key input when active (except ctrl+c)
+		if a.modal.active {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			var cmd tea.Cmd
+			a.modal, cmd = a.modal.Update(msg)
+			return a, cmd
+		}
+
 		// When library search is active, only handle ctrl+c — everything
 		// else goes to the search input so letters like 'a', 'q', '1' etc.
 		// are typed into the query rather than triggering shortcuts.
@@ -135,10 +154,20 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.String() == keyCreate:
 			return a, a.topBar.actionCmd("create")
 
+		// Rename selected item
+		case msg.String() == keyRename:
+			return a.handleRename()
+
 		// Route to active content model
 		default:
 			return a.routeKey(msg)
 		}
+
+	case modalSavedMsg:
+		return a.handleModalSaved(msg)
+
+	case modalCancelledMsg:
+		return a, nil
 
 	case tabChangedMsg:
 		a.refreshContent()
@@ -159,6 +188,52 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case actionPressedMsg:
 		return a, nil
 	}
+	return a, nil
+}
+
+// handleRename opens the rename modal for the currently selected item.
+func (a App) handleRename() (tea.Model, tea.Cmd) {
+	var item *catalog.ContentItem
+	if a.isLibraryTab() {
+		item = a.library.table.Selected()
+	} else {
+		item = a.explorer.items.Selected()
+	}
+	if item == nil {
+		return a, nil
+	}
+	currentName := itemDisplayName(*item)
+	a.modal.Open("Rename: "+item.Name, currentName, item.Path)
+	return a, nil
+}
+
+// handleModalSaved persists the rename to .syllago.yaml and updates in-place.
+func (a App) handleModalSaved(msg modalSavedMsg) (tea.Model, tea.Cmd) {
+	if msg.value == "" || msg.context == "" {
+		return a, nil
+	}
+
+	// Load or create metadata
+	meta, err := metadata.Load(msg.context)
+	if err != nil {
+		return a, nil
+	}
+	if meta == nil {
+		meta = &metadata.Meta{}
+	}
+	meta.Name = msg.value
+	if err := metadata.Save(msg.context, meta); err != nil {
+		return a, nil
+	}
+
+	// Update DisplayName in-place in the catalog (avoid full re-scan)
+	for i := range a.catalog.Items {
+		if a.catalog.Items[i].Path == msg.context {
+			a.catalog.Items[i].DisplayName = msg.value
+			break
+		}
+	}
+	a.refreshContent()
 	return a, nil
 }
 
@@ -200,6 +275,13 @@ func (a App) View() string {
 	topBar := a.topBar.View()
 	content := a.renderContent()
 	helpBar := a.helpBar.View()
+
+	// When modal is active, replace content area with centered modal
+	if a.modal.active {
+		ch := a.contentHeight()
+		modalView := a.modal.View()
+		content = lipgloss.Place(a.width, ch, lipgloss.Center, lipgloss.Center, modalView)
+	}
 
 	return zone.Scan(lipgloss.JoinVertical(lipgloss.Left,
 		topBar,
@@ -314,12 +396,12 @@ func (a App) currentHints() []string {
 	}
 
 	if a.isLibraryTab() {
-		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "a add", "n create", "? help", "q quit")
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "r rename", "a add", "n create", "? help", "q quit")
 	}
 
 	hints := append(base, "↑/↓ navigate", "←/→ switch pane")
 	if group != "Config" {
-		hints = append(hints, "a add", "n create")
+		hints = append(hints, "r rename", "a add", "n create")
 	}
 	return append(hints, "? help", "q quit")
 }
