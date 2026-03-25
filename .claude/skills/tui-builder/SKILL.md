@@ -107,9 +107,17 @@ Parent calls `SetSize()` on children during `WindowSizeMsg` handling. Children n
 | Key | Action |
 |-----|--------|
 | `1` / `2` / `3` | Switch group (resets sub-tab to first) |
-| `h` / `l` (or left/right) | Cycle sub-tabs within active group (wraps) |
+| `Tab` / `Shift+Tab` | Cycle sub-tabs within active group (wraps) |
+| `h` / `l` (or ←/→) | Switch pane focus (items ↔ preview) |
+| `j` / `k` (or ↑/↓) | Navigate items list / scroll preview |
 | `a` | Add action (context-sensitive to current group+tab) |
 | `n` | Create action (context-sensitive to current group+tab) |
+| `r` | Rename selected item |
+| `/` | Search/filter (Library table) |
+| `s` / `S` | Cycle sort column / reverse sort (Library table) |
+| `PgUp` / `PgDn` | Page navigation in any scrollable pane |
+| `Enter` | Drill into item detail / select file |
+| `Esc` | Close detail view / cancel search |
 
 ### Mouse
 
@@ -185,20 +193,25 @@ inactiveTabStyle = lipgloss.NewStyle().
 selectedRowStyle = lipgloss.NewStyle().Background(selectedBG).Bold(true)
 ```
 
-### Panel Focus — Border Color Only
+### Panel Borders — borderedPanel() Helper
+
+Use `borderedPanel()` from `styles.go` for all bordered panels. It wraps lipgloss `Border()` with both `Width`/`MaxWidth` and `Height`/`MaxHeight` to guarantee exact dimensions (no wrapping, no overflow).
 
 ```go
-focusedPanelStyle = lipgloss.NewStyle().
-    Border(lipgloss.RoundedBorder()).BorderForeground(accentColor)
-unfocusedPanelStyle = lipgloss.NewStyle().
-    Border(lipgloss.RoundedBorder()).BorderForeground(borderColor)
+borderedPanel(content, innerW, innerH, borderFgColor)
 ```
 
-### Modals — Centered with lipgloss.Place
+Focus indicated by border foreground color: `focusedBorderFg` (cyan) vs `unfocusedBorderFg` (gray).
 
-- Rounded border in accent color, fixed width 56, max height terminal-4
-- Buttons at bottom, Esc always dismisses, click outside dismisses
-- Default focus on Cancel (the safe option)
+**CRITICAL**: Never use raw `lipgloss.Width().Height().Render()` for bordered panels — `Width()` wraps (doesn't truncate) and `Height()` pads (doesn't clamp). This causes layout overflow that pushes the header offscreen.
+
+### Modals — Text Input Modal Pattern
+
+- Centered overlay with rounded border in accent color
+- Text input field + Cancel/Save buttons
+- Full keyboard support: type to edit, Enter confirms, Esc cancels, Tab switches fields
+- Full mouse support: click buttons, click field to focus
+- When modal is active, it consumes ALL input except Ctrl+C
 
 ### Toasts — Below Topbar
 
@@ -281,10 +294,9 @@ full := lipgloss.JoinVertical(lipgloss.Left, topbar, body, helpbar)
 
 | Width | Behavior |
 |-------|----------|
-| < 60 | "Terminal too small" warning |
-| 60-79 | Stacked layout (no side-by-side panels) |
-| 80-119 | Standard two-pane layout |
-| 120+ | Full layout with all columns |
+| < 80 | "Terminal too small" warning |
+| 80-119 | Standard two-pane layout, Library table drops Description column |
+| 120+ | Full layout with all columns including Description |
 
 ---
 
@@ -354,6 +366,11 @@ Zone IDs: `group-N`, `tab-G-N`, `btn-add`, `btn-create`, `item-N`, `modal-zone`
 - **Children that never receive WindowSizeMsg render at zero size.**
 - **goimports strips "unused" imports between edits.** Add import and usage in a single Edit call.
 - **Cursor initialization with Reset():** When `active = -1`, `Open()` must default cursor to 0, not -1.
+- **lipgloss Width() wraps, MaxWidth() truncates.** For bordered panels, always use both Width+MaxWidth and Height+MaxHeight. Without MaxHeight, content overflow pushes the header offscreen.
+- **Manual string splitting destroys zone markers.** Never split rendered strings containing zone.Mark() on newlines or truncate by rune — the invisible zero-width markers get broken. Use lipgloss styling for dimension control instead.
+- **Sort indicators overflow short columns.** "Files ▲" is 7 visual chars but the Files column is 5. Use `headerCell()` which truncates the label to make room for the indicator within the column width.
+- **App-level keys intercept search input.** When the library search input is active, keys like 'a' (add), 'q' (quit), '1' (group switch) must be passed through to the search handler instead of triggering app shortcuts. Check `table.searching` before handling global letter keys.
+- **Help bar separator is middle dot (·)** not asterisk (*). Cleaner look.
 
 ---
 
@@ -386,3 +403,20 @@ Zone IDs: `group-N`, `tab-G-N`, `btn-add`, `btn-create`, `item-N`, `modal-zone`
 - Inactive group contrast: base-700 text on base-150 bg (light), base-300 on base-800 (dark)
 - Action buttons are context-sensitive per group, right-aligned on tab row
 - `actionPressedMsg` carries group+tab context for future wizard routing
+
+### Phase 3 (Explorer + Library Table + Naming) — 2026-03-24
+- **Explorer layout**: items list (left) + preview (right) with bordered panes, focus switching
+- **Library table view**: full-width table with columns: Name, Type, Scope, Files, Installed, Description
+- **Drill-in detail**: Enter on Library table row opens file tree + preview; Esc returns to table
+- **File tree component**: expandable directories with ▸/▾ toggles, reusable for Phase 5
+- **Tab/h-l swap**: Tab cycles sub-tabs (higher-level), h/l switches panes (spatial)
+- **Search**: `/` activates search input in Library table, filters by name/description/type
+- **Sort**: `s` cycles sort column, `S` reverses, header shows ▲/▼ indicator
+- **Scroll indicators**: "(N more above/below)" in both items lists and preview panes
+- **Help bar wrapping**: 2-line help bar at 80 cols, 1-line at 120+; dynamic Height()
+- **Minimum width raised to 80**: Content group's 6 tabs need the space
+- **Middle dot separator**: `·` in help bar (not `*`)
+- **Click-to-focus panes**: Click anywhere in a pane to focus it, scroll wheel follows mouse position
+- **borderedPanel() helper**: Replaced lipgloss Width/Height with Width+MaxWidth+Height+MaxHeight for exact dimensions
+- **Hook/MCP naming**: Scanner derives DisplayName from .syllago.yaml, script filenames, event+matcher. New `syllago rename` CLI command. TUI rename modal planned.
+- **Key routing for search**: When search input is active, app bypasses letter shortcuts (a, q, s, 1/2/3) to let them reach the search handler
