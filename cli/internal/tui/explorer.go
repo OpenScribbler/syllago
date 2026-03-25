@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -19,21 +20,43 @@ const (
 	panePreview
 )
 
+// explorerMode tracks whether we're browsing items or viewing item detail.
+type explorerMode int
+
+const (
+	explorerBrowse explorerMode = iota // items list + preview
+	explorerDetail                     // file tree + preview drill-in
+)
+
 // itemSelectedMsg is sent when the selected item changes.
 type itemSelectedMsg struct {
 	item *catalog.ContentItem
 }
 
+// explorerDrillMsg is sent when the user drills into an item from the explorer.
+type explorerDrillMsg struct {
+	item *catalog.ContentItem
+}
+
+// explorerCloseMsg is sent when the user closes the detail view.
+type explorerCloseMsg struct{}
+
 // explorerModel is the main content area: items list (left) + preview (right).
 // Rendered inside a unified bordered frame with metadata panel at top.
+// Supports drill-in detail mode with file tree + preview for a single item.
 type explorerModel struct {
 	items     itemsModel
 	preview   previewModel
+	tree      fileTreeModel
 	focus     explorerPane
+	mode      explorerMode
 	width     int
 	height    int
 	providers []provider.Provider
 	repoRoot  string
+
+	// The item currently being viewed in detail
+	detailItem *catalog.ContentItem
 
 	// Responsive: at narrow widths, show stacked layout
 	stacked bool // true when width < 80
@@ -64,9 +87,19 @@ func (e *explorerModel) SetSize(width, height int) {
 	e.height = height
 	e.stacked = width < 80
 
-	innerW := max(0, width-borderSize)
+	switch e.mode {
+	case explorerDetail:
+		e.sizeDetailPanes()
+	default:
+		e.sizeBrowsePanes()
+	}
+}
+
+// sizeBrowsePanes calculates sizes for browse mode (items + preview).
+func (e *explorerModel) sizeBrowsePanes() {
+	innerW := max(0, e.width-borderSize)
 	// Reserve space for metadata (3 lines) + separator (1) + top/bottom borders (2)
-	paneH := max(3, height-borderSize-metaBarLines-1)
+	paneH := max(3, e.height-borderSize-metaBarLines-1)
 
 	if e.stacked {
 		e.items.SetSize(innerW, paneH)
@@ -81,9 +114,30 @@ func (e *explorerModel) SetSize(width, height int) {
 	}
 }
 
-// SetItems replaces the item list and reloads preview.
+// sizeDetailPanes calculates sizes for the detail mode (tree + preview).
+func (e *explorerModel) sizeDetailPanes() {
+	treeOuterW := e.detailTreeWidth()
+	previewOuterW := e.width - treeOuterW
+	paneH := max(0, e.height-metaBarTotal)
+	innerH := max(0, paneH-borderSize)
+
+	e.tree.SetSize(max(0, treeOuterW-borderSize), innerH)
+	e.preview.SetSize(max(0, previewOuterW-borderSize), innerH)
+}
+
+// detailTreeWidth returns the outer width of the file tree pane in detail mode.
+func (e explorerModel) detailTreeWidth() int {
+	if e.width >= 120 {
+		return 35
+	}
+	return max(22, e.width*30/100)
+}
+
+// SetItems replaces the item list, reloads preview, and returns to browse mode.
 func (e *explorerModel) SetItems(items []catalog.ContentItem, mixed bool) {
 	e.items.SetItems(items, mixed)
+	e.mode = explorerBrowse
+	e.detailItem = nil
 	e.setFocus(paneItems)
 	if len(items) > 0 {
 		e.preview.LoadItem(&items[0])
@@ -99,37 +153,126 @@ func (e explorerModel) Update(msg tea.Msg) (explorerModel, tea.Cmd) {
 		return e.updateMouse(msg)
 
 	case tea.KeyMsg:
-		switch msg.String() {
-		// h/l and arrow keys switch pane focus
-		case keyLeft, "left":
-			if e.focus != paneItems {
-				e.setFocus(paneItems)
-			}
-			return e, nil
-		case keyRight, "right":
-			if e.focus != panePreview {
-				e.setFocus(panePreview)
-			}
-			return e, nil
-
-		case keySearch:
-			// TODO: Phase 3.5 — open search input overlay
-			return e, nil
-		}
-
-		switch e.focus {
-		case paneItems:
-			return e.updateItems(msg)
-		case panePreview:
-			return e.updatePreview(msg)
+		switch e.mode {
+		case explorerDetail:
+			return e.updateDetailKeys(msg)
+		default:
+			return e.updateBrowseKeys(msg)
 		}
 	}
 
 	return e, nil
 }
 
+// updateBrowseKeys handles keys in browse mode (items + preview).
+func (e explorerModel) updateBrowseKeys(msg tea.KeyMsg) (explorerModel, tea.Cmd) {
+	switch msg.String() {
+	// h/l and arrow keys switch pane focus
+	case keyLeft, "left":
+		if e.focus != paneItems {
+			e.setFocus(paneItems)
+		}
+		return e, nil
+	case keyRight, "right":
+		if e.focus != panePreview {
+			e.setFocus(panePreview)
+		}
+		return e, nil
+
+	case keySearch:
+		// TODO: Phase 3.5 — open search input overlay
+		return e, nil
+	}
+
+	switch e.focus {
+	case paneItems:
+		return e.updateItems(msg)
+	case panePreview:
+		return e.updatePreview(msg)
+	}
+	return e, nil
+}
+
+// updateDetailKeys handles keys in detail mode (file tree + preview).
+func (e explorerModel) updateDetailKeys(msg tea.KeyMsg) (explorerModel, tea.Cmd) {
+	switch msg.String() {
+	case "esc", "x":
+		e.mode = explorerBrowse
+		e.detailItem = nil
+		e.sizeBrowsePanes()
+		// Reload preview from selected item
+		e.preview.LoadItem(e.items.Selected())
+		return e, func() tea.Msg { return explorerCloseMsg{} }
+
+	case keyLeft, "left":
+		e.setDetailFocus(paneItems)
+		return e, nil
+	case keyRight, "right":
+		e.setDetailFocus(panePreview)
+		return e, nil
+	}
+
+	switch e.focus {
+	case paneItems:
+		return e.updateTreeKeys(msg)
+	case panePreview:
+		return e.updateDetailPreviewKeys(msg)
+	}
+	return e, nil
+}
+
+// updateTreeKeys handles keys when the file tree is focused in detail mode.
+func (e explorerModel) updateTreeKeys(msg tea.KeyMsg) (explorerModel, tea.Cmd) {
+	switch msg.String() {
+	case keyDown, "down":
+		e.tree.CursorDown()
+		e.loadSelectedFile()
+	case keyUp, "up":
+		e.tree.CursorUp()
+		e.loadSelectedFile()
+	case "pgup", "ctrl+u":
+		e.tree.PageUp()
+		e.loadSelectedFile()
+	case "pgdown", "ctrl+d":
+		e.tree.PageDown()
+		e.loadSelectedFile()
+	case "enter", " ":
+		if e.tree.cursor >= 0 && e.tree.cursor < len(e.tree.nodes) {
+			if e.tree.nodes[e.tree.cursor].isDir {
+				e.tree.ToggleDir()
+			} else {
+				e.loadSelectedFile()
+			}
+		}
+	}
+	return e, nil
+}
+
+// updateDetailPreviewKeys handles keys when preview is focused in detail mode.
+func (e explorerModel) updateDetailPreviewKeys(msg tea.KeyMsg) (explorerModel, tea.Cmd) {
+	switch msg.String() {
+	case keyDown, "down":
+		e.preview.ScrollDown()
+	case keyUp, "up":
+		e.preview.ScrollUp()
+	case "pgdown", "ctrl+d":
+		e.preview.PageDown()
+	case "pgup", "ctrl+u":
+		e.preview.PageUp()
+	}
+	return e, nil
+}
+
 // updateMouse handles mouse clicks on items and scroll wheel.
 func (e explorerModel) updateMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
+	if e.mode == explorerDetail {
+		return e.updateDetailMouse(msg)
+	}
+	return e.updateBrowseMouse(msg)
+}
+
+// updateBrowseMouse handles mouse events in browse mode.
+func (e explorerModel) updateBrowseMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 		// Rename button click
 		if zone.Get("meta-rename").InBounds(msg) {
@@ -139,6 +282,13 @@ func (e explorerModel) updateMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 		// Click on a specific item row — select it
 		for i := range e.items.items {
 			if zone.Get("item-" + itoa(i)).InBounds(msg) {
+				if e.items.cursor == i {
+					// Second click on same row — drill in
+					if item := e.items.Selected(); item != nil {
+						e.drillIn(item)
+						return e, func() tea.Msg { return explorerDrillMsg{item: item} }
+					}
+				}
 				e.items.cursor = i
 				e.setFocus(paneItems)
 				e.preview.LoadItem(e.items.Selected())
@@ -191,6 +341,61 @@ func (e explorerModel) updateMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 	return e, nil
 }
 
+// updateDetailMouse handles mouse events in detail mode.
+func (e explorerModel) updateDetailMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
+	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
+		// Rename button click
+		if zone.Get("meta-rename").InBounds(msg) {
+			return e, func() tea.Msg { return libraryRenameMsg{} }
+		}
+
+		// Close button click
+		if zone.Get("exp-close").InBounds(msg) {
+			e.mode = explorerBrowse
+			e.detailItem = nil
+			e.sizeBrowsePanes()
+			e.preview.LoadItem(e.items.Selected())
+			return e, func() tea.Msg { return explorerCloseMsg{} }
+		}
+
+		// Click on file tree nodes
+		for i := range e.tree.nodes {
+			if zone.Get("ftnode-" + itoa(i)).InBounds(msg) {
+				e.tree.cursor = i
+				e.setDetailFocus(paneItems)
+				if e.tree.nodes[i].isDir {
+					e.tree.ToggleDir()
+				} else {
+					e.loadSelectedFile()
+				}
+				return e, nil
+			}
+		}
+	}
+
+	// Scroll wheel
+	if msg.Action == tea.MouseActionPress {
+		switch msg.Button {
+		case tea.MouseButtonWheelUp:
+			if e.focus == paneItems {
+				e.tree.CursorUp()
+				e.loadSelectedFile()
+			} else {
+				e.preview.ScrollUp()
+			}
+		case tea.MouseButtonWheelDown:
+			if e.focus == paneItems {
+				e.tree.CursorDown()
+				e.loadSelectedFile()
+			} else {
+				e.preview.ScrollDown()
+			}
+		}
+	}
+
+	return e, nil
+}
+
 // updateItems handles keys when items list is focused.
 func (e explorerModel) updateItems(msg tea.KeyMsg) (explorerModel, tea.Cmd) {
 	switch msg.String() {
@@ -223,8 +428,12 @@ func (e explorerModel) updateItems(msg tea.KeyMsg) (explorerModel, tea.Cmd) {
 		e.preview.LoadItem(e.items.Selected())
 		return e, e.itemSelectedCmd()
 	case "enter":
-		if e.stacked && e.items.Selected() != nil {
-			e.setFocus(panePreview)
+		if item := e.items.Selected(); item != nil {
+			if e.stacked {
+				e.setFocus(panePreview)
+			}
+			e.drillIn(item)
+			return e, func() tea.Msg { return explorerDrillMsg{item: item} }
 		}
 		return e, nil
 	}
@@ -250,7 +459,54 @@ func (e explorerModel) updatePreview(msg tea.KeyMsg) (explorerModel, tea.Cmd) {
 	return e, nil
 }
 
-// setFocus switches focus to the given pane.
+// drillIn enters detail mode for the given item.
+func (e *explorerModel) drillIn(item *catalog.ContentItem) {
+	e.mode = explorerDetail
+	e.detailItem = item
+	e.tree = newFileTreeModel(item.Files)
+	e.focus = paneItems
+	e.tree.focused = true
+	e.preview.focused = false
+	e.sizeDetailPanes()
+	e.loadSelectedFile()
+}
+
+// loadSelectedFile loads the file at the tree cursor into the preview.
+func (e *explorerModel) loadSelectedFile() {
+	if e.detailItem == nil {
+		return
+	}
+	path := e.tree.SelectedPath()
+	if path == "" {
+		// Directory selected or empty — show primary file
+		primary := catalog.PrimaryFileName(e.detailItem.Files, e.detailItem.Type)
+		if primary != "" {
+			path = primary
+		}
+	}
+	if path == "" {
+		e.preview.lines = nil
+		e.preview.fileName = ""
+		return
+	}
+	e.preview.fileName = path
+	e.preview.offset = 0
+	content, err := catalog.ReadFileContent(e.detailItem.Path, path, 500)
+	if err != nil {
+		e.preview.lines = []string{"Error reading file:", err.Error()}
+		return
+	}
+	e.preview.lines = strings.Split(content, "\n")
+}
+
+// setDetailFocus switches focus between tree and preview in detail mode.
+func (e *explorerModel) setDetailFocus(pane explorerPane) {
+	e.focus = pane
+	e.tree.focused = pane == paneItems
+	e.preview.focused = pane == panePreview
+}
+
+// setFocus switches focus to the given pane (browse mode).
 func (e *explorerModel) setFocus(pane explorerPane) {
 	e.focus = pane
 	e.items.focused = pane == paneItems
@@ -263,10 +519,15 @@ func (e explorerModel) View() string {
 		return ""
 	}
 
-	if e.stacked {
-		return e.viewStacked()
+	switch e.mode {
+	case explorerDetail:
+		return e.viewDetail()
+	default:
+		if e.stacked {
+			return e.viewStacked()
+		}
+		return e.viewSideBySide()
 	}
-	return e.viewSideBySide()
 }
 
 // viewSideBySide renders a unified frame: metadata + ├──┬──┤ + items│preview.
@@ -327,9 +588,158 @@ func (e explorerModel) viewSideBySide() string {
 	return strings.Join(lines, "\n")
 }
 
-// renderMetadataContent returns 3 lines of metadata for the selected item.
+// viewDetail renders a unified frame: metadata + ├──┬──┤ + tree│preview (drill-in mode).
+func (e explorerModel) viewDetail() string {
+	innerW := e.width - borderSize
+	totalInnerH := e.height - borderSize
+
+	// Metadata gets metaBarLines, separator gets 1, panes get the rest
+	paneH := max(3, totalInnerH-metaBarLines-1)
+
+	treeOuterW := e.detailTreeWidth()
+	treeInnerW := max(0, treeOuterW-1) // -1 for the vertical divider
+	previewInnerW := max(0, innerW-treeInnerW-1)
+
+	metaContent := e.renderMetadataContent(innerW)
+
+	// Build separator with T-junction: ├──────┬──────────────────┤
+	sepLeft := strings.Repeat("─", treeInnerW)
+	sepRight := strings.Repeat("─", previewInnerW)
+	separator := sectionRuleStyle.Render("├" + sepLeft + "┬" + sepRight + "┤")
+
+	// Build tree content
+	treeContentH := max(0, paneH)
+	closeBtn := zone.Mark("exp-close", mutedStyle.Render("[x] Close"))
+	treeViewH := max(0, treeContentH-1) // -1 for close button
+	e.tree.SetSize(treeInnerW, treeViewH)
+	treeLines := strings.Split(e.tree.View(), "\n")
+	for len(treeLines) < treeViewH {
+		treeLines = append(treeLines, strings.Repeat(" ", treeInnerW))
+	}
+	if len(treeLines) > treeViewH {
+		treeLines = treeLines[:treeViewH]
+	}
+	treeLines = append(treeLines, closeBtn)
+
+	// Build preview content
+	fileCount := ""
+	if e.detailItem != nil {
+		fileCount = fmt.Sprintf(" (%d files)", len(e.detailItem.Files))
+	}
+	previewHeader := renderSectionTitle(e.preview.fileName+fileCount, previewInnerW)
+	previewViewH := max(0, paneH-1) // -1 for header
+	e.preview.SetSize(previewInnerW, previewViewH)
+	previewBody := e.renderDetailPreviewBody(previewViewH, previewInnerW)
+	previewLines := []string{previewHeader}
+	previewLines = append(previewLines, strings.Split(previewBody, "\n")...)
+	for len(previewLines) < paneH {
+		previewLines = append(previewLines, strings.Repeat(" ", previewInnerW))
+	}
+	if len(previewLines) > paneH {
+		previewLines = previewLines[:paneH]
+	}
+
+	// Assemble the frame
+	border := sectionRuleStyle.Render
+	topBorder := border("╭" + strings.Repeat("─", innerW) + "╮")
+	bottomLeft := strings.Repeat("─", treeInnerW)
+	bottomRight := strings.Repeat("─", previewInnerW)
+	bottomBorder := border("╰" + bottomLeft + "┴" + bottomRight + "╯")
+
+	wrapLine := func(s string, w int) string {
+		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
+		if g := w - lipgloss.Width(s); g > 0 {
+			s += strings.Repeat(" ", g)
+		}
+		return s
+	}
+
+	var lines []string
+	lines = append(lines, topBorder)
+	for _, ml := range strings.Split(metaContent, "\n") {
+		lines = append(lines, border("│")+wrapLine(ml, innerW)+border("│"))
+	}
+	lines = append(lines, separator)
+	for i := 0; i < paneH; i++ {
+		tl := ""
+		if i < len(treeLines) {
+			tl = treeLines[i]
+		}
+		pl := ""
+		if i < len(previewLines) {
+			pl = previewLines[i]
+		}
+		lines = append(lines, border("│")+wrapLine(tl, treeInnerW)+border("│")+wrapLine(pl, previewInnerW)+border("│"))
+	}
+	lines = append(lines, bottomBorder)
+
+	return strings.Join(lines, "\n")
+}
+
+// renderDetailPreviewBody renders preview content lines for the detail view (no header).
+func (e explorerModel) renderDetailPreviewBody(height, width int) string {
+	if len(e.preview.lines) == 0 {
+		return lipgloss.NewStyle().
+			Width(width).
+			Height(height).
+			Align(lipgloss.Center, lipgloss.Center).
+			Foreground(mutedColor).
+			Render("Select a file to preview")
+	}
+
+	linesAbove := e.preview.offset
+	lastVisible := min(e.preview.offset+height, len(e.preview.lines))
+	linesBelow := max(0, len(e.preview.lines)-lastVisible)
+	showAbove := linesAbove > 0
+	showBelow := linesBelow > 0
+
+	contentStart := e.preview.offset
+	contentEnd := lastVisible
+	if showAbove {
+		contentStart++
+	}
+	if showBelow && contentEnd > contentStart {
+		contentEnd--
+	}
+
+	lineNumW := len(fmt.Sprintf("%d", len(e.preview.lines)))
+	if lineNumW < 2 {
+		lineNumW = 2
+	}
+
+	lines := make([]string, 0, height)
+
+	if showAbove {
+		lines = append(lines, mutedStyle.Render(fmt.Sprintf("(%d more above)", linesAbove)))
+	}
+
+	for i := contentStart; i < contentEnd; i++ {
+		num := mutedStyle.Render(fmt.Sprintf("%*d ", lineNumW, i+1))
+		numW := lipgloss.Width(num)
+		lineW := width - numW
+		line := truncateLine(e.preview.lines[i], lineW)
+		lines = append(lines, num+line)
+	}
+
+	if showBelow {
+		lines = append(lines, mutedStyle.Render(fmt.Sprintf("(%d more below)", linesBelow)))
+	}
+
+	for len(lines) < height {
+		lines = append(lines, strings.Repeat(" ", width))
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// renderMetadataContent returns 3 lines of metadata for the selected/detail item.
 func (e explorerModel) renderMetadataContent(width int) string {
-	item := e.items.Selected()
+	var item *catalog.ContentItem
+	if e.mode == explorerDetail {
+		item = e.detailItem
+	} else {
+		item = e.items.Selected()
+	}
 	if item == nil {
 		return renderMetaPanel(nil, metaPanelData{}, width)
 	}
