@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-25T06:25:05Z",
-  "syllagoVersion": "0.7.0",
+  "generatedAt": "2026-03-25T07:31:51Z",
+  "syllagoVersion": "dev",
   "commands": [
     {
       "name": "add",
@@ -60,6 +60,14 @@
           "default": null,
           "required": true,
           "description": "Provider to add from (required)"
+        },
+        {
+          "name": "--name",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Display name for hooks/MCP (stored in .syllago.yaml metadata)"
         },
         {
           "name": "--no-input",
