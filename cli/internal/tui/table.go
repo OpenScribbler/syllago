@@ -157,14 +157,15 @@ func (t *tableModel) PageDown() {
 
 // ensureCursorVisible adjusts offset so the cursor row is not hidden behind
 // the "(N more above)" or "(N more below)" scroll indicators. Each indicator
-// steals one visible row, shrinking the effective visible range.
+// displaces one data row in the render, so the cursor must not be at the
+// displaced position.
 func (t *tableModel) ensureCursorVisible() {
 	vh := t.viewHeight()
-	if vh <= 0 || len(t.items) == 0 {
+	if vh <= 2 || len(t.items) == 0 {
 		return
 	}
 
-	// Basic bounds: cursor must be within [offset, offset+vh)
+	// Basic scroll bounds: cursor must be within [offset, offset+vh)
 	if t.cursor < t.offset {
 		t.offset = t.cursor
 	}
@@ -172,20 +173,16 @@ func (t *tableModel) ensureCursorVisible() {
 		t.offset = t.cursor - vh + 1
 	}
 
-	// Account for indicator lines: when offset > 0, "more above" takes
-	// one row — the cursor at offset would be displaced. Scroll up one
-	// more to keep it visible.
-	if t.offset > 0 && t.cursor <= t.offset {
-		t.offset = max(0, t.cursor-1)
+	// "More above" indicator appears when offset > 0, displacing the item
+	// at position offset. If cursor == offset, scroll up 1 to make room.
+	if t.offset > 0 && t.cursor == t.offset {
+		t.offset--
 	}
 
-	// Similarly, when items exist below the visible window, "more below"
-	// takes one row. If cursor is at the last visible position, scroll
-	// down one more.
-	lastVisible := t.offset + vh
-	hasBelow := lastVisible < len(t.items)
-	if hasBelow && t.cursor >= lastVisible-1 {
-		t.offset = min(t.cursor-vh+2, max(0, len(t.items)-vh))
+	// "More below" indicator appears when offset+vh < len(items), displacing
+	// the item at position offset+vh-1. If cursor is there, scroll down 1.
+	if t.offset+vh < len(t.items) && t.cursor == t.offset+vh-1 {
+		t.offset++
 	}
 }
 
@@ -443,12 +440,16 @@ func (t tableModel) renderSearchBar() string {
 	if !t.searching {
 		bg = inputInactiveBG
 	}
+	fieldContent = truncateLine(fieldContent, fieldW)
 	fieldStyle := lipgloss.NewStyle().
 		Background(bg).
 		Foreground(primaryText).
-		Width(fieldW).
-		Padding(0, 0)
+		MaxWidth(fieldW)
 	field := fieldStyle.Render(fieldContent)
+	if gap := fieldW - lipgloss.Width(field); gap > 0 {
+		// Pad inside the background color
+		field = lipgloss.NewStyle().Background(bg).Render(field + strings.Repeat(" ", gap))
+	}
 
 	return field + " " + rightRendered
 }
@@ -506,9 +507,12 @@ func (t tableModel) renderHeader(c colLayout) string {
 		row += " " + zone.Mark("col-desc", t.headerCell("Description", sortByDesc, c.desc))
 	}
 
-	// Hard-clip before styling to prevent wrapping
-	row = truncateLine(row, t.width)
-	return boldStyle.Width(t.width).MaxWidth(t.width).Render(row)
+	// MaxWidth clips without wrapping. Manual pad ensures full-width background.
+	rendered := boldStyle.MaxWidth(t.width).Render(row)
+	if gap := t.width - lipgloss.Width(rendered); gap > 0 {
+		rendered += strings.Repeat(" ", gap)
+	}
+	return rendered
 }
 
 // headerCell renders a column header, fitting the label + sort indicator within colWidth.
@@ -551,8 +555,7 @@ func (t tableModel) renderRow(index int, c colLayout) string {
 		row += " " + truncate(r.description, c.desc)
 	}
 
-	// Hard-clip the assembled row to prevent lipgloss Width() from wrapping
-	// to multiple lines (which would break table height calculations).
+	// Hard-clip the assembled row to prevent wrapping (plain text, safe to clip by rune).
 	row = truncateLine(row, t.width)
 
 	style := mutedStyle
@@ -561,7 +564,12 @@ func (t tableModel) renderRow(index int, c colLayout) string {
 	} else if isCursor {
 		style = boldStyle
 	}
-	return zone.Mark("tbl-"+itoa(index), style.Width(t.width).MaxWidth(t.width).Render(row))
+	// MaxWidth clips without wrapping. Manual pad for full-width row background.
+	rendered := style.MaxWidth(t.width).Render(row)
+	if gap := t.width - lipgloss.Width(rendered); gap > 0 {
+		rendered += strings.Repeat(" ", gap)
+	}
+	return zone.Mark("tbl-"+itoa(index), rendered)
 }
 
 // renderEmpty shows guidance when no items exist.

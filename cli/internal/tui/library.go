@@ -460,10 +460,13 @@ func (l libraryModel) viewDetail() string {
 
 // renderMetadataBar renders a detail panel for the currently selected item.
 // Always exactly metaBarHeight (3) lines: name+type, path/desc, separator.
+//
+// CRITICAL: each line must be exactly 1 visual line. lipgloss Width() wraps
+// long text into multiple lines, breaking height calculations. We build lines
+// greedily (checking width before adding each chip) and pad manually.
 func (l libraryModel) renderMetadataBar(width int) string {
 	item := l.table.Selected()
 	if item == nil {
-		// Empty placeholder: 2 blank lines + separator
 		blank := strings.Repeat(" ", width)
 		sep := sectionRuleStyle.Render(strings.Repeat("─", width))
 		return blank + "\n" + blank + "\n" + sep
@@ -474,46 +477,58 @@ func (l libraryModel) renderMetadataBar(width int) string {
 		return boldStyle.Render(key+": ") + mutedStyle.Render(val)
 	}
 
-	// Line 1: name, type, provider, files, installed
-	name := boldStyle.Render(itemDisplayName(*item))
-	chips := name
-	chips += dot + label("Type", typeLabel(item.Type))
-	if item.Provider != "" {
-		chips += dot + label("Source", item.Provider)
+	// tryAdd appends a chip to line only if it fits within width.
+	tryAdd := func(line, chip string) string {
+		candidate := line + dot + chip
+		if lipgloss.Width(candidate) <= width {
+			return candidate
+		}
+		return line
 	}
-	chips += dot + label("Files", itoa(len(item.Files)))
 
+	// Line 1: name + chips (greedy — add until width reached)
+	line1 := " " + boldStyle.Render(itemDisplayName(*item))
+	line1 = tryAdd(line1, label("Type", typeLabel(item.Type)))
+	if item.Provider != "" {
+		line1 = tryAdd(line1, label("Source", item.Provider))
+	}
+	line1 = tryAdd(line1, label("Files", itoa(len(item.Files))))
 	row := l.table.rows[l.table.cursor]
 	if row.installed != "--" {
-		chips += dot + label("Installed", row.installed)
+		line1 = tryAdd(line1, label("Installed", row.installed))
 	}
-	line1 := " " + chips
 
-	// Line 2: path and/or description
-	line2 := " "
-	var parts []string
+	// Line 2: path and/or description (greedy)
+	line2 := ""
 	if item.Path != "" {
 		path := item.Path
 		if home, err := homeDir(); err == nil && strings.HasPrefix(path, home) {
 			path = "~" + path[len(home):]
 		}
-		parts = append(parts, label("Path", truncate(path, width-8)))
+		line2 = " " + label("Path", truncate(path, width-8))
 	}
 	if item.Description != "" && width > 50 {
-		parts = append(parts, mutedStyle.Render(truncate(item.Description, width-8)))
-	}
-	if len(parts) > 0 {
-		line2 += strings.Join(parts, dot)
+		desc := mutedStyle.Render(truncate(item.Description, width-8))
+		if line2 == "" {
+			line2 = " " + desc
+		} else {
+			line2 = tryAdd(line2, desc)
+		}
 	}
 
 	// Line 3: separator
 	sep := sectionRuleStyle.Render(strings.Repeat("─", width))
 
-	// Use lipgloss Width+MaxWidth to pad and clip each line. truncateLine
-	// can't be used on styled text — it clips by rune count and would cut
-	// mid-ANSI-sequence, producing border fragment artifacts.
-	lineStyle := lipgloss.NewStyle().Width(width).MaxWidth(width)
-	return lineStyle.Render(line1) + "\n" + lineStyle.Render(line2) + "\n" + sep
+	// Pad each line to exact width with spaces (never use lipgloss Width
+	// which wraps). MaxWidth clips any ANSI overflow without adding lines.
+	pad := func(s string) string {
+		s = lipgloss.NewStyle().MaxWidth(width).Render(s)
+		if gap := width - lipgloss.Width(s); gap > 0 {
+			s += strings.Repeat(" ", gap)
+		}
+		return s
+	}
+	return pad(line1) + "\n" + pad(line2) + "\n" + sep
 }
 
 // homeDir returns the user's home directory path, cached for rendering.
