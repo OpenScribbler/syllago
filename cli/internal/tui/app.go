@@ -61,7 +61,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		projectRoot:     projectRoot,
 		topBar:          newTopBar(),
 		library:         newLibraryModel(cat.Items, providers, projectRoot),
-		explorer:        newExplorerModel(nil, false),
+		explorer:        newExplorerModel(nil, false, providers, projectRoot),
 		helpBar:         newHelpBar(version),
 		modal:           newTextInputModal(),
 	}

@@ -1,11 +1,14 @@
 package tui
 
 import (
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // explorerPane tracks which pane is focused within the explorer.
@@ -22,23 +25,27 @@ type itemSelectedMsg struct {
 }
 
 // explorerModel is the main content area: items list (left) + preview (right).
-// Each pane is rendered inside a bordered box. Focus is indicated by border color.
+// Rendered inside a unified bordered frame with metadata panel at top.
 type explorerModel struct {
-	items   itemsModel
-	preview previewModel
-	focus   explorerPane
-	width   int
-	height  int
+	items     itemsModel
+	preview   previewModel
+	focus     explorerPane
+	width     int
+	height    int
+	providers []provider.Provider
+	repoRoot  string
 
 	// Responsive: at narrow widths, show stacked layout
 	stacked bool // true when width < 80
 }
 
-func newExplorerModel(items []catalog.ContentItem, mixed bool) explorerModel {
+func newExplorerModel(items []catalog.ContentItem, mixed bool, providers []provider.Provider, repoRoot string) explorerModel {
 	e := explorerModel{
-		items:   newItemsModel(items, mixed),
-		preview: newPreviewModel(),
-		focus:   paneItems,
+		items:     newItemsModel(items, mixed),
+		preview:   newPreviewModel(),
+		focus:     paneItems,
+		providers: providers,
+		repoRoot:  repoRoot,
 	}
 	e.items.focused = true
 	// Auto-select first item
@@ -51,28 +58,26 @@ func newExplorerModel(items []catalog.ContentItem, mixed bool) explorerModel {
 // borderSize is the width/height consumed by a rounded border (1 char each side).
 const borderSize = 2
 
-// SetSize recalculates child dimensions, accounting for borders.
+// SetSize recalculates child dimensions, accounting for borders and metadata panel.
 func (e *explorerModel) SetSize(width, height int) {
 	e.width = width
 	e.height = height
 	e.stacked = width < 80
 
-	// Inner dimensions = total - border chars
-	innerH := max(0, height-borderSize)
+	innerW := max(0, width-borderSize)
+	// Reserve space for metadata (3 lines) + separator (1) + top/bottom borders (2)
+	paneH := max(3, height-borderSize-metaBarLines-1)
 
 	if e.stacked {
-		innerW := max(0, width-borderSize)
-		e.items.SetSize(innerW, innerH)
-		e.preview.SetSize(innerW, innerH)
+		e.items.SetSize(innerW, paneH)
+		e.preview.SetSize(innerW, paneH)
 	} else {
 		itemsOuterW := e.itemsWidth()
-		previewOuterW := width - itemsOuterW
+		itemsInnerW := max(0, itemsOuterW-1) // -1 for vertical divider
+		previewInnerW := max(0, innerW-itemsInnerW-1)
 
-		itemsInnerW := max(0, itemsOuterW-borderSize)
-		previewInnerW := max(0, previewOuterW-borderSize)
-
-		e.items.SetSize(itemsInnerW, innerH)
-		e.preview.SetSize(previewInnerW, innerH)
+		e.items.SetSize(itemsInnerW, paneH)
+		e.preview.SetSize(previewInnerW, paneH)
 	}
 }
 
@@ -126,6 +131,11 @@ func (e explorerModel) Update(msg tea.Msg) (explorerModel, tea.Cmd) {
 // updateMouse handles mouse clicks on items and scroll wheel.
 func (e explorerModel) updateMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
+		// Rename button click
+		if zone.Get("meta-rename").InBounds(msg) {
+			return e, func() tea.Msg { return libraryRenameMsg{} }
+		}
+
 		// Click on a specific item row — select it
 		for i := range e.items.items {
 			if zone.Get("item-" + itoa(i)).InBounds(msg) {
@@ -259,36 +269,115 @@ func (e explorerModel) View() string {
 	return e.viewSideBySide()
 }
 
-// viewSideBySide renders bordered items pane + bordered preview pane.
+// viewSideBySide renders a unified frame: metadata + ├──┬──┤ + items│preview.
 func (e explorerModel) viewSideBySide() string {
+	innerW := e.width - borderSize
 	itemsOuterW := e.itemsWidth()
-	previewOuterW := e.width - itemsOuterW
-	innerH := e.height - borderSize
+	itemsInnerW := max(0, itemsOuterW-1) // -1 for vertical divider
+	previewInnerW := max(0, innerW-itemsInnerW-1)
+	paneH := max(3, e.height-borderSize-metaBarLines-1)
 
-	itemsFg := unfocusedBorderFg
-	previewFg := unfocusedBorderFg
-	if e.focus == paneItems {
-		itemsFg = focusedBorderFg
-	} else {
-		previewFg = focusedBorderFg
+	// Compute metadata for selected item
+	metaContent := e.renderMetadataContent(innerW)
+
+	// Build separator with T-junction
+	separator := sectionRuleStyle.Render("├" + strings.Repeat("─", itemsInnerW) + "┬" + strings.Repeat("─", previewInnerW) + "┤")
+
+	// Get pane content
+	itemsLines := strings.Split(e.items.View(), "\n")
+	previewLines := strings.Split(e.preview.View(), "\n")
+	for len(itemsLines) < paneH {
+		itemsLines = append(itemsLines, strings.Repeat(" ", itemsInnerW))
+	}
+	for len(previewLines) < paneH {
+		previewLines = append(previewLines, strings.Repeat(" ", previewInnerW))
 	}
 
-	left := zone.Mark("pane-items",
-		borderedPanel(e.items.View(), itemsOuterW-borderSize, innerH, itemsFg))
+	border := sectionRuleStyle.Render
+	topBorder := border("╭" + strings.Repeat("─", innerW) + "╮")
+	bottomBorder := border("╰" + strings.Repeat("─", itemsInnerW) + "┴" + strings.Repeat("─", previewInnerW) + "╯")
 
-	right := zone.Mark("pane-preview",
-		borderedPanel(e.preview.View(), previewOuterW-borderSize, innerH, previewFg))
+	wrapLine := func(s string, w int) string {
+		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
+		if g := w - lipgloss.Width(s); g > 0 {
+			s += strings.Repeat(" ", g)
+		}
+		return s
+	}
 
-	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	var lines []string
+	lines = append(lines, topBorder)
+	for _, ml := range strings.Split(metaContent, "\n") {
+		lines = append(lines, border("│")+wrapLine(ml, innerW)+border("│"))
+	}
+	lines = append(lines, separator)
+	for i := 0; i < paneH; i++ {
+		il := ""
+		if i < len(itemsLines) {
+			il = itemsLines[i]
+		}
+		pl := ""
+		if i < len(previewLines) {
+			pl = previewLines[i]
+		}
+		lines = append(lines, border("│")+wrapLine(il, itemsInnerW)+border("│")+wrapLine(pl, previewInnerW)+border("│"))
+	}
+	lines = append(lines, bottomBorder)
+
+	return strings.Join(lines, "\n")
 }
 
-// viewStacked renders a single bordered pane based on focus.
-func (e explorerModel) viewStacked() string {
-	content := e.items.View()
-	if e.focus == panePreview {
-		content = e.preview.View()
+// renderMetadataContent returns 3 lines of metadata for the selected item.
+func (e explorerModel) renderMetadataContent(width int) string {
+	item := e.items.Selected()
+	if item == nil {
+		return renderMetaPanel(nil, metaPanelData{}, width)
 	}
-	return borderedPanel(content, e.width-borderSize, e.height-borderSize, focusedBorderFg)
+	data := computeMetaPanelData(*item, e.providers, e.repoRoot)
+	return renderMetaPanel(item, data, width)
+}
+
+// viewStacked renders metadata + single bordered pane based on focus.
+func (e explorerModel) viewStacked() string {
+	innerW := e.width - borderSize
+	paneH := max(3, e.height-borderSize-metaBarLines-1)
+
+	metaContent := e.renderMetadataContent(innerW)
+
+	paneContent := e.items.View()
+	if e.focus == panePreview {
+		paneContent = e.preview.View()
+	}
+	paneLines := strings.Split(paneContent, "\n")
+	for len(paneLines) < paneH {
+		paneLines = append(paneLines, strings.Repeat(" ", innerW))
+	}
+
+	border := sectionRuleStyle.Render
+	topBorder := border("╭" + strings.Repeat("─", innerW) + "╮")
+	separator := border("├" + strings.Repeat("─", innerW) + "┤")
+	bottomBorder := border("╰" + strings.Repeat("─", innerW) + "╯")
+
+	wrapLine := func(s string, w int) string {
+		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
+		if g := w - lipgloss.Width(s); g > 0 {
+			s += strings.Repeat(" ", g)
+		}
+		return s
+	}
+
+	var lines []string
+	lines = append(lines, topBorder)
+	for _, ml := range strings.Split(metaContent, "\n") {
+		lines = append(lines, border("│")+wrapLine(ml, innerW)+border("│"))
+	}
+	lines = append(lines, separator)
+	for _, pl := range paneLines {
+		lines = append(lines, border("│")+wrapLine(pl, innerW)+border("│"))
+	}
+	lines = append(lines, bottomBorder)
+
+	return strings.Join(lines, "\n")
 }
 
 // itemsWidth returns the OUTER width (including border) allocated to the items list.
