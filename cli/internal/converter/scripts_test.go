@@ -37,6 +37,14 @@ func TestExtractScriptRef(t *testing.T) {
 		{"python tilde", "python ~/scripts/analyze.py", "~/scripts/analyze.py"},
 		{"bash with args", "bash ~/.claude/hooks/lint.sh --mode strict", "~/.claude/hooks/lint.sh"},
 
+		// Interpreter + subcommand (bun run, node exec)
+		{"bun run absolute", "bun run /home/user/scripts/test.ts", "/home/user/scripts/test.ts"},
+		{"bun run tilde", "bun run ~/scripts/test.ts", "~/scripts/test.ts"},
+		{"bun run relative", "bun run ./test.ts", "./test.ts"},
+		{"bun run with args", "bun run /scripts/test.ts --flag", "/scripts/test.ts"},
+		{"bun run envvar", "bun run $PAI_DIR/hooks/foo.ts", ""},
+		{"bun direct", "bun /home/user/scripts/test.ts", "/home/user/scripts/test.ts"},
+
 		// Interpreter -c (inline) — no script
 		{"bash -c", `bash -c "echo hello"`, ""},
 		{"sh -c", `sh -c 'ls -la'`, ""},

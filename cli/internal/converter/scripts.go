@@ -21,6 +21,12 @@ var knownInterpreters = map[string]bool{
 	"ruby": true, "perl": true,
 }
 
+// knownSubcommands are runtime subcommands that appear between the interpreter
+// and the script path (e.g. "bun run script.ts", "node exec script.js").
+var knownSubcommands = map[string]bool{
+	"run": true, "exec": true,
+}
+
 // ExtractScriptRef parses a hook command string and returns the script file
 // path if it references an external file. Returns empty string for inline
 // commands (echo, cat, etc.) or interpreter -c "..." patterns.
@@ -41,7 +47,7 @@ func ExtractScriptRef(command string) string {
 
 	idx := 0
 
-	// If first token is a known interpreter, skip past it and any flags
+	// If first token is a known interpreter, skip past it, any flags, and subcommands
 	base := filepath.Base(fields[0])
 	if knownInterpreters[base] {
 		idx = 1
@@ -50,6 +56,10 @@ func ExtractScriptRef(command string) string {
 			if fields[idx] == "-c" || strings.HasPrefix(fields[idx], "-c") {
 				return ""
 			}
+			idx++
+		}
+		// Skip known subcommands (e.g. "bun run", "node exec")
+		if idx < len(fields) && knownSubcommands[fields[idx]] {
 			idx++
 		}
 	}
