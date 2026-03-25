@@ -68,7 +68,7 @@ func TestDoctorCheckContentDriftClean(t *testing.T) {
 }
 
 func TestDoctorCheckRegistriesNone(t *testing.T) {
-	c := checkRegistries()
+	c := checkRegistriesWith("")
 	if c.Status != checkOK {
 		t.Errorf("expected ok with no registries, got %s", c.Status)
 	}
@@ -94,7 +94,7 @@ func TestDoctorJSONOutput(t *testing.T) {
 		checkProviders(),
 		checkSymlinks(dir),
 		checkContentDrift(dir),
-		checkRegistries(),
+		checkRegistriesWith(""),
 	}
 
 	result := doctorResult{Checks: checks, Summary: "test"}
