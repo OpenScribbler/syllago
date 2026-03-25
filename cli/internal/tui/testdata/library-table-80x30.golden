@@ -4,17 +4,17 @@
 │   Library     Registries     Loadouts              [a] Add      [n] Create   │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭──────────────────────────────────────────────────────────────────────────────╮
+│   Name                       Type     Scope      Files Tools      Inst.      │
+│ > alpha-skill                Skill    team-rules 1                --         │
+│   beta-skill                 Skill    team-rules 1                --         │
+│   gamma-rule                 Rule     library    1                --         │
+│   delta-agent                Agent    my-regi... 1                --         │
+│   epsilon-hook               Hook     team-rules 1                --         │
+│   zeta-mcp                   MCP      library    1                --         │
+│   eta-command                Command  team-rules 1                --         │
 │                                                                              │
 │                                                                              │
 │                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                            No content in library.                            │
-│                      Press [a] to add your first item.                       │
 │                                                                              │
 │                                                                              │
 │                                                                              │
