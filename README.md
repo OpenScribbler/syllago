@@ -144,7 +144,7 @@ See the full [command reference](#all-commands) below or the [CLI docs](https://
 | Rules | System prompts and custom instructions (e.g., "always use TypeScript strict mode") |
 | Skills | Multi-file workflow packages (e.g., a code review workflow with templates and scripts) |
 | Agents | AI agent definitions and personas (e.g., a "security reviewer" agent) |
-| MCP | Model Context Protocol server configurations |
+| MCP Servers | Model Context Protocol server configurations |
 | Hooks | Event-driven automation scripts that run before/after tool actions |
 | Commands | Custom slash commands (e.g., `/deploy`) |
 
@@ -353,11 +353,12 @@ See [SECURITY.md](SECURITY.md) for the full security policy, threat model, and h
 
 ## Roadmap
 
-What's next for syllago:
+What's done and what's next:
 
-- **Security hardening** -- audit logging, trust tiers, hook signing and verification, script scanning
-- **Distribution** -- bulk install, batch migration, SBOM generation
-- **Platform** -- `syllago doctor`, container image and GitHub Action, macOS sandbox, org-level config inheritance
+- **Privacy and integrity** -- registry privacy gates, content integrity hashes, audit trail (done)
+- **Distribution** -- bulk install, `add --from shared`, provider-to-provider conversion, SBOM (done)
+- **Platform** -- `syllago doctor`, enhanced `syllago info`, dependency review CI (done)
+- **Security** -- trust tiers, hook signing and verification, script scanning, policy engine (next)
 - **Providers** -- VS Code Copilot, Qwen Code, Crush, Kimi CLI, Trae Agent, and more
 - **Specs** -- formal specs for all canonical formats (hooks spec is already drafted)
 

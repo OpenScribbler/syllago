@@ -16,16 +16,18 @@
 
 | Feature | Status |
 |---------|--------|
-| Registry privacy gates -- prevent private content from leaking to public registries | In Progress |
-| Content integrity hashes at install time | Planned |
+| Registry privacy gates -- prevent private content from leaking to public registries | Done |
+| Content integrity hashes at install time | Done |
+| Audit trail for content operations (add, install, remove, share) | Done |
 
 ## Distribution and Content
 
 | Feature | Status |
 |---------|--------|
-| Bulk install operations (`install --all`, `install --type rules`) | Planned |
-| Batch hook migration (`syllago convert --batch`) | Planned |
-| Dual-format hook distribution (`syllago export --dual`) | Planned |
+| Bulk install operations (`install --all`, `install --type rules`) | Done |
+| `add --from shared` for bundled content | Done |
+| Provider-to-provider file conversion (`convert --from --to`) | Done |
+| Conversion diff mode (`convert --diff`) | Done |
 | Content update mechanism (`syllago update`) | Planned |
 | Additional loadout provider emitters beyond Claude Code | Planned |
 
@@ -33,16 +35,18 @@
 
 | Feature | Status |
 |---------|--------|
-| `syllago doctor` -- diagnostic command for troubleshooting | Planned |
+| `syllago doctor` -- diagnostic command for troubleshooting | Done |
+| Enhanced `syllago info` -- detected providers, paths, registries | Done |
 | `syllago compat --hooks` -- provider hook capability matrix | Planned |
 | Hook portability report -- warn about capability mismatches during install | Planned |
 | Container image and GitHub Action for CI/CD pipelines | Planned |
 | Org-level config inheritance | Planned |
 | macOS sandbox support (Linux sandbox already available) | Planned |
 | VHS demo GIFs for README | Planned |
-| SBOM generation in release artifacts | Planned |
+| SBOM generation in release artifacts | Done |
+| Dependency review in CI | Done |
 | OpenSSF Best Practices badge (self-assessment) | Planned |
-| GitHub Discussions for community Q&A | Planned |
+| GitHub Discussions for community Q&A | Planned (post-launch) |
 
 ## Canonical Format Specs
 
