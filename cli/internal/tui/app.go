@@ -11,6 +11,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 // App is the root bubbletea model for the TUI.
@@ -424,6 +425,7 @@ func (a App) isGalleryTab() bool {
 }
 
 // rescanCatalog re-reads all content from disk and refreshes the active view.
+// Re-reads the config to pick up registries added/removed since startup.
 func (a *App) rescanCatalog() {
 	root := a.contentRoot
 	if root == "" {
@@ -433,12 +435,28 @@ func (a *App) rescanCatalog() {
 	if projectRoot == "" {
 		projectRoot = root
 	}
-	cat, err := catalog.ScanWithGlobalAndRegistries(root, projectRoot, a.registrySources)
+
+	// Reload config and rebuild registry sources to pick up changes
+	globalCfg, _ := config.LoadGlobal()
+	projectCfg, _ := config.Load(projectRoot)
+	merged := config.Merge(globalCfg, projectCfg)
+	var regSources []catalog.RegistrySource
+	for _, r := range merged.Registries {
+		if registry.IsCloned(r.Name) {
+			dir, _ := registry.CloneDir(r.Name)
+			regSources = append(regSources, catalog.RegistrySource{Name: r.Name, Path: dir})
+		}
+	}
+	a.registrySources = regSources
+
+	cat, err := catalog.ScanWithGlobalAndRegistries(root, projectRoot, regSources)
 	if err != nil {
 		return // silently fail — keep existing data
 	}
 	a.catalog = cat
+	a.galleryDrillIn = false
 	a.refreshContent()
+	a.helpBar.SetHints(a.currentHints())
 }
 
 // refreshContent updates the active content model based on the current tab.
