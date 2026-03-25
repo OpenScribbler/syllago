@@ -491,7 +491,7 @@ func (l libraryModel) renderMetadataBar(width int) string {
 	nameMaxW := 30
 	displayName := truncate(sanitizeLine(itemDisplayName(*item)), nameMaxW)
 	line1 := " " + boldStyle.Render(padRight(displayName, nameMaxW))
-	line1 = tryAdd(line1, label("Type", typeLabel(item.Type)))
+	line1 += "  " + label("Type", typeLabel(item.Type))
 	if item.Provider != "" {
 		line1 = tryAdd(line1, label("Source", item.Provider))
 	}
