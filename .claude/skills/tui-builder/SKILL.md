@@ -373,6 +373,10 @@ Zone IDs: `group-N`, `tab-G-N`, `btn-add`, `btn-create`, `item-N`, `modal-zone`
 - **Help bar separator is middle dot (·)** not asterisk (*). Cleaner look.
 - **Metadata bar steals table height.** When adding a fixed-height panel below a variable-height component (like table + metadata bar), always reduce the variable component's height in both `SetSize()` AND `View()`. If only one is updated, the table renders at the wrong height on resize vs initial draw.
 - **Modal `lipgloss.Place()` centering.** Use `lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, rendered)` for modal centering — not manual padding math. Handles terminal resize automatically.
+- **YAML folded scalars add trailing newlines.** Descriptions from `loadout.yaml` using `>` have `\n` at the end. Always sanitize catalog text fields before rendering in the TUI.
+- **Unified frame requires manual border construction.** `borderedPanel()` can't create shared borders between sections. Build frames manually: `╭`/`╰` for corners, `├──┤` for internal separators, `├──┬──┤`/`╰──┴──╯` for split pane junctions.
+- **Metadata panel height is constant (metaBarLines=3 + 1 separator).** Type-specific line 3 is blank for simple types, not omitted. This prevents the frame from shifting when scrolling between hooks and skills.
+- **Explorer needs providers for metadata.** Pass providers + repoRoot to `newExplorerModel()` so it can compute installed status via `computeMetaPanelData()`.
 
 ---
 
@@ -440,3 +444,18 @@ Zone IDs: `group-N`, `tab-G-N`, `btn-add`, `btn-create`, `item-N`, `modal-zone`
 - **Data source**: Reads from `table.Selected()` item + pre-computed `tableRow` for installed column
 - **Installed highlight**: Uses `primaryColor` (cyan) for provider abbreviations when installed
 - **Path display**: `os.UserHomeDir()` for ~ shortening in rendered output
+
+### Phase 4.5 (Metadata Panel + UX Polish) — 2026-03-25
+- **Metadata panel as reusable component**: Extracted into `metapanel.go` — `renderMetaPanel()`, `computeMetaPanelData()`, `metaPanelData` struct. Used by both library and explorer views.
+- **Unified bordered frame**: Metadata and content share one border (`╭ meta ├──┤ table ╰` for browse, `╭ meta ├──┬──┤ items│preview ╰──┴──╯` for detail). No separate panels stacked — shared borders via manual frame construction.
+- **Fixed-width metadata fields**: Name (40), Type (14), Files (9), Origin (19), then greedy for Installed/Registry. Prevents jank when scrolling between items of different lengths.
+- **Type-specific line 3**: Hooks show Event/Matcher/Handler, MCP shows Server/Command, Loadouts show Target/item counts. Other types get blank line (constant height).
+- **Middle-truncation paths**: `truncateMiddle()` keeps first 2 + last 3 path segments with `…` in middle.
+- **Metadata on all Content tabs**: Explorer model gains providers + repoRoot fields. Same unified frame renders on Skills, Agents, MCP, Rules, Hooks, Commands tabs.
+- **Transparent modal**: `overlayModal()` centers modal on screen, background content visible above/below modal rows.
+- **R refresh hotkey**: `rescanCatalog()` re-reads all content from disk. App stores `contentRoot` for re-scanning.
+- **q backs out**: Only quits from Collections > Library browse. Detail view → browse, other tabs → Library.
+- **Double-click drill-in**: Second click on already-selected row triggers drill-in (same as Enter).
+- **[r] Rename button**: Styled button on metadata line 3, clickable zone `meta-rename`, triggers `libraryRenameMsg`.
+- **Data sanitization**: `sanitizeLine()` strips \n, \r, \t from all text fields. YAML folded scalars (`>`) add trailing newlines that break table height.
+- **No lipgloss Width()**: Eliminated all `Width()` calls — use `MaxWidth()` + manual space padding. `Width()` word-wraps, creating multi-line output that breaks height calculations.
