@@ -265,38 +265,30 @@ func (e explorerModel) viewSideBySide() string {
 	previewOuterW := e.width - itemsOuterW
 	outerH := e.height
 
-	// Choose border style based on focus
-	itemsBorder := unfocusedPanelStyle
-	previewBorder := unfocusedPanelStyle
+	itemsFg := borderColor
+	previewFg := borderColor
 	if e.focus == paneItems {
-		itemsBorder = focusedPanelStyle
+		itemsFg = primaryColor
 	} else {
-		previewBorder = focusedPanelStyle
+		previewFg = primaryColor
 	}
 
-	left := zone.Mark("pane-items", itemsBorder.
-		Width(itemsOuterW-borderSize).
-		Height(outerH-borderSize).
-		Render(e.items.View()))
+	left := zone.Mark("pane-items",
+		renderBorderedPanel(e.items.View(), itemsOuterW, outerH, itemsFg))
 
-	right := zone.Mark("pane-preview", previewBorder.
-		Width(previewOuterW-borderSize).
-		Height(outerH-borderSize).
-		Render(e.preview.View()))
+	right := zone.Mark("pane-preview",
+		renderBorderedPanel(e.preview.View(), previewOuterW, outerH, previewFg))
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 }
 
 // viewStacked renders a single bordered pane based on focus.
 func (e explorerModel) viewStacked() string {
-	border := focusedPanelStyle.
-		Width(e.width - borderSize).
-		Height(e.height - borderSize)
-
+	content := e.items.View()
 	if e.focus == panePreview {
-		return border.Render(e.preview.View())
+		content = e.preview.View()
 	}
-	return border.Render(e.items.View())
+	return renderBorderedPanel(content, e.width, e.height, primaryColor)
 }
 
 // itemsWidth returns the OUTER width (including border) allocated to the items list.
