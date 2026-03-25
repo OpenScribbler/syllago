@@ -122,9 +122,7 @@ func (t *tableModel) CursorUp() {
 		t.cursor = len(t.items) - 1
 		t.offset = max(0, len(t.items)-t.viewHeight())
 	}
-	if t.cursor < t.offset {
-		t.offset = t.cursor
-	}
+	t.ensureCursorVisible()
 }
 
 // CursorDown moves cursor down with wrapping.
@@ -137,10 +135,7 @@ func (t *tableModel) CursorDown() {
 		t.cursor = 0
 		t.offset = 0
 	}
-	vh := t.viewHeight()
-	if t.cursor >= t.offset+vh {
-		t.offset = t.cursor - vh + 1
-	}
+	t.ensureCursorVisible()
 }
 
 // PageUp moves cursor up by one page.
@@ -148,6 +143,7 @@ func (t *tableModel) PageUp() {
 	vh := t.viewHeight()
 	t.cursor = max(0, t.cursor-vh)
 	t.offset = max(0, t.offset-vh)
+	t.ensureCursorVisible()
 }
 
 // PageDown moves cursor down by one page.
@@ -156,6 +152,41 @@ func (t *tableModel) PageDown() {
 	t.cursor = min(len(t.items)-1, t.cursor+vh)
 	maxOffset := max(0, len(t.items)-vh)
 	t.offset = min(maxOffset, t.offset+vh)
+	t.ensureCursorVisible()
+}
+
+// ensureCursorVisible adjusts offset so the cursor row is not hidden behind
+// the "(N more above)" or "(N more below)" scroll indicators. Each indicator
+// steals one visible row, shrinking the effective visible range.
+func (t *tableModel) ensureCursorVisible() {
+	vh := t.viewHeight()
+	if vh <= 0 || len(t.items) == 0 {
+		return
+	}
+
+	// Basic bounds: cursor must be within [offset, offset+vh)
+	if t.cursor < t.offset {
+		t.offset = t.cursor
+	}
+	if t.cursor >= t.offset+vh {
+		t.offset = t.cursor - vh + 1
+	}
+
+	// Account for indicator lines: when offset > 0, "more above" takes
+	// one row — the cursor at offset would be displaced. Scroll up one
+	// more to keep it visible.
+	if t.offset > 0 && t.cursor <= t.offset {
+		t.offset = max(0, t.cursor-1)
+	}
+
+	// Similarly, when items exist below the visible window, "more below"
+	// takes one row. If cursor is at the last visible position, scroll
+	// down one more.
+	lastVisible := t.offset + vh
+	hasBelow := lastVisible < len(t.items)
+	if hasBelow && t.cursor >= lastVisible-1 {
+		t.offset = min(t.cursor-vh+2, max(0, len(t.items)-vh))
+	}
 }
 
 // CycleSort advances to the next sort column.
@@ -475,6 +506,8 @@ func (t tableModel) renderHeader(c colLayout) string {
 		row += " " + zone.Mark("col-desc", t.headerCell("Description", sortByDesc, c.desc))
 	}
 
+	// Hard-clip before styling to prevent wrapping
+	row = truncateLine(row, t.width)
 	return boldStyle.Width(t.width).MaxWidth(t.width).Render(row)
 }
 
@@ -517,6 +550,10 @@ func (t tableModel) renderRow(index int, c colLayout) string {
 	if c.desc > 0 {
 		row += " " + truncate(r.description, c.desc)
 	}
+
+	// Hard-clip the assembled row to prevent lipgloss Width() from wrapping
+	// to multiple lines (which would break table height calculations).
+	row = truncateLine(row, t.width)
 
 	style := mutedStyle
 	if isCursor && t.focused {
