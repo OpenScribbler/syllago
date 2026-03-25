@@ -14,13 +14,15 @@ type contentGroup struct {
 	items    []catalog.ContentItem
 }
 
-// contentsSidebarModel shows grouped items inside the selected card.
+// contentsSidebarModel shows card info and grouped items inside the selected card.
 type contentsSidebarModel struct {
-	groups  []contentGroup
-	offset  int
-	width   int
-	height  int
-	focused bool
+	cardName string
+	cardDesc string
+	groups   []contentGroup
+	offset   int
+	width    int
+	height   int
+	focused  bool
 }
 
 func newContentsSidebarModel() contentsSidebarModel {
@@ -33,11 +35,20 @@ func (m *contentsSidebarModel) SetSize(width, height int) {
 	m.height = height
 }
 
-// SetCard updates the sidebar to show items from the given card.
+// SetCard updates the sidebar to show info and items from the given card.
 func (m *contentsSidebarModel) SetCard(card *cardData) {
 	m.offset = 0
 	m.groups = nil
-	if card == nil || len(card.items) == 0 {
+	m.cardName = ""
+	m.cardDesc = ""
+	if card == nil {
+		return
+	}
+
+	m.cardName = card.name
+	m.cardDesc = card.desc
+
+	if len(card.items) == 0 {
 		return
 	}
 
@@ -60,11 +71,16 @@ func (m *contentsSidebarModel) SetCard(card *cardData) {
 	}
 }
 
-// SetGroups directly sets content groups from a counts map (for loadouts
-// where we don't have resolved items, just names from the manifest).
-func (m *contentsSidebarModel) SetGroups(groups []contentGroup) {
+// SetGroups sets content groups and card info for loadouts without resolved items.
+func (m *contentsSidebarModel) SetGroups(card *cardData, groups []contentGroup) {
 	m.offset = 0
 	m.groups = groups
+	m.cardName = ""
+	m.cardDesc = ""
+	if card != nil {
+		m.cardName = card.name
+		m.cardDesc = card.desc
+	}
 }
 
 // ScrollUp scrolls the sidebar up one line.
@@ -84,12 +100,42 @@ func (m *contentsSidebarModel) ScrollDown() {
 
 // totalLines returns the total number of rendered lines.
 func (m contentsSidebarModel) totalLines() int {
-	n := 0
+	n := m.headerLines()
 	for _, g := range m.groups {
-		n++ // header
+		n++ // type header
 		n += len(g.items)
 	}
 	return n
+}
+
+// headerLines returns lines used by Name, Description, and Contents header.
+func (m contentsSidebarModel) headerLines() int {
+	n := 0
+	if m.cardName != "" {
+		n++ // Name: ...
+	}
+	if m.cardDesc != "" {
+		// Wrap description across multiple lines
+		n += m.descLines()
+	}
+	if m.cardName != "" || m.cardDesc != "" {
+		n++ // blank line
+		n++ // "Contents" header
+	}
+	return n
+}
+
+// descLines returns how many lines the description wraps to.
+func (m contentsSidebarModel) descLines() int {
+	if m.cardDesc == "" {
+		return 0
+	}
+	maxW := max(10, m.width-2)
+	desc := sanitizeLine(m.cardDesc)
+	if len(desc) <= maxW {
+		return 1
+	}
+	return (len(desc) + maxW - 1) / maxW
 }
 
 // View renders the contents sidebar.
@@ -98,7 +144,7 @@ func (m contentsSidebarModel) View() string {
 		return ""
 	}
 
-	if len(m.groups) == 0 {
+	if m.cardName == "" && len(m.groups) == 0 {
 		return lipgloss.NewStyle().
 			Width(m.width).
 			Height(m.height).
@@ -107,11 +153,43 @@ func (m contentsSidebarModel) View() string {
 			Render("Select a card")
 	}
 
-	// Build all lines first, then slice for scrolling
 	var allLines []string
+
+	// Name
+	if m.cardName != "" {
+		allLines = append(allLines, boldStyle.Render("Name: ")+mutedStyle.Render(truncate(sanitizeLine(m.cardName), max(0, m.width-6))))
+	}
+
+	// Description (may wrap)
+	if m.cardDesc != "" {
+		desc := sanitizeLine(m.cardDesc)
+		maxW := max(10, m.width-2)
+		firstLine := truncate(desc, maxW)
+		allLines = append(allLines, mutedStyle.Render(firstLine))
+		// Wrap remaining
+		rest := desc
+		if len(rest) > maxW {
+			rest = rest[maxW:]
+			for len(rest) > 0 {
+				chunk := rest
+				if len(chunk) > maxW {
+					chunk = chunk[:maxW]
+				}
+				allLines = append(allLines, mutedStyle.Render(chunk))
+				rest = rest[len(chunk):]
+			}
+		}
+	}
+
+	// Blank line + Contents header
+	if m.cardName != "" || m.cardDesc != "" {
+		allLines = append(allLines, "")
+		allLines = append(allLines, boldStyle.Render("Contents"))
+	}
+
+	// Grouped items
 	for _, g := range m.groups {
-		header := boldStyle.Render(g.typeName)
-		allLines = append(allLines, header)
+		allLines = append(allLines, sectionTitleStyle.Render(g.typeName))
 		for _, item := range g.items {
 			name := itemDisplayName(item)
 			line := "  " + truncate(sanitizeLine(name), max(0, m.width-2))
@@ -124,12 +202,10 @@ func (m contentsSidebarModel) View() string {
 	end := min(start+m.height, len(allLines))
 	visible := allLines[start:end]
 
-	// Pad to full height
 	for len(visible) < m.height {
 		visible = append(visible, strings.Repeat(" ", m.width))
 	}
 
-	// Clamp line width
 	for i, line := range visible {
 		visible[i] = lipgloss.NewStyle().MaxWidth(m.width).Render(line)
 		if g := m.width - lipgloss.Width(visible[i]); g > 0 {
