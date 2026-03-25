@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -57,7 +58,11 @@ func (l *libraryModel) SetSize(width, height int) {
 
 	switch l.mode {
 	case libraryBrowse:
-		l.table.SetSize(width-borderSize, height-borderSize)
+		innerH := height - borderSize
+		if l.table.Len() > 0 {
+			innerH = max(3, innerH-metaBarHeight)
+		}
+		l.table.SetSize(width-borderSize, innerH)
 	case libraryDetail:
 		l.sizeDetailPanes()
 	}
@@ -377,10 +382,27 @@ func (l libraryModel) View() string {
 	}
 }
 
-// viewBrowse renders the full-width table.
+// metaBarHeight is the number of lines reserved for the metadata bar below the table.
+const metaBarHeight = 3
+
+// viewBrowse renders the full-width table with a metadata bar below.
 func (l libraryModel) viewBrowse() string {
 	l.table.focused = true
-	return borderedPanel(l.table.View(), l.width-borderSize, l.height-borderSize, focusedBorderFg)
+	innerW := l.width - borderSize
+	innerH := l.height - borderSize
+
+	// Reserve space for metadata bar when there are items
+	tableH := innerH
+	if l.table.Len() > 0 {
+		tableH = max(3, innerH-metaBarHeight)
+	}
+	l.table.SetSize(innerW, tableH)
+
+	content := l.table.View()
+	if l.table.Len() > 0 {
+		content += "\n" + l.renderMetadataBar(innerW, innerH-tableH)
+	}
+	return borderedPanel(content, innerW, innerH, focusedBorderFg)
 }
 
 // viewDetail renders file tree + preview with bordered panes.
@@ -431,6 +453,75 @@ func (l libraryModel) viewDetail() string {
 		borderedPanel(previewContent, previewInnerW, innerH, previewFg))
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+}
+
+// renderMetadataBar renders a detail panel for the currently selected item.
+// Shows: name, type, provider, file count, installed providers, and path/description.
+func (l libraryModel) renderMetadataBar(width, height int) string {
+	item := l.table.Selected()
+	if item == nil || height < 2 {
+		return strings.Repeat(" ", width)
+	}
+
+	// Line 1: separator
+	sep := sectionRuleStyle.Render(strings.Repeat("─", width))
+
+	// Build tag-style detail chips
+	name := boldStyle.Render(itemDisplayName(*item))
+	typeLbl := mutedStyle.Render(typeLabel(item.Type))
+	provLbl := ""
+	if item.Provider != "" {
+		provLbl = mutedStyle.Render(item.Provider)
+	}
+	filesLbl := mutedStyle.Render(fmt.Sprintf("%d files", len(item.Files)))
+
+	row := l.table.rows[l.table.cursor]
+	installedLbl := ""
+	if row.installed != "--" {
+		installedLbl = lipgloss.NewStyle().Foreground(primaryColor).Render(row.installed)
+	}
+
+	dot := mutedStyle.Render(" · ")
+	line1 := " " + name + dot + typeLbl
+	if provLbl != "" {
+		line1 += dot + provLbl
+	}
+	line1 += dot + filesLbl
+	if installedLbl != "" {
+		line1 += dot + installedLbl
+	}
+
+	// Line 2: path and description
+	var parts []string
+	if item.Path != "" {
+		path := item.Path
+		if home, err := homeDir(); err == nil && strings.HasPrefix(path, home) {
+			path = "~" + path[len(home):]
+		}
+		parts = append(parts, mutedStyle.Render(truncate(path, width-2)))
+	}
+	if item.Description != "" && width > 40 {
+		parts = append(parts, mutedStyle.Render(truncate(item.Description, width-2)))
+	}
+	line2 := " "
+	if len(parts) > 0 {
+		line2 += strings.Join(parts, dot)
+	}
+
+	result := sep + "\n" + truncateLine(line1, width) + "\n" + truncateLine(line2, width)
+
+	// Pad remaining height
+	usedLines := 3
+	for usedLines < height {
+		result += "\n" + strings.Repeat(" ", width)
+		usedLines++
+	}
+	return result
+}
+
+// homeDir returns the user's home directory path, cached for rendering.
+func homeDir() (string, error) {
+	return os.UserHomeDir()
 }
 
 // renderPreviewBody renders just the preview content lines (no header).

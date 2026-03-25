@@ -952,6 +952,18 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, proje
 			continue
 		}
 
+		// Bundle any scripts referenced by hook commands.
+		// sourceDir is the directory of the settings.json we're reading from,
+		// used to resolve relative script paths.
+		sourceDir := filepath.Dir(loc.Path)
+		bundled, bundleErr := converter.BundleHookScripts(&hook, sourceDir, itemDir)
+		if bundleErr != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to bundle scripts for %s: %v\n", name, bundleErr)
+		}
+		if len(bundled) > 0 {
+			fmt.Fprintf(output.Writer, "    bundled %d script(s)\n", len(bundled))
+		}
+
 		hookJSON, err := json.MarshalIndent(hook, "", "  ")
 		if err != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: failed to marshal hook %s: %v\n", name, err)
@@ -967,10 +979,21 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, proje
 		if displayName != "" {
 			metaName = displayName
 		}
+
+		// Convert bundled script info to metadata format.
+		var bundledMeta []metadata.BundledScriptMeta
+		for _, b := range bundled {
+			bundledMeta = append(bundledMeta, metadata.BundledScriptMeta{
+				OriginalPath: b.OriginalPath,
+				Filename:     b.Filename,
+			})
+		}
+
 		meta := &metadata.Meta{
 			ID:               metadata.NewID(),
 			Name:             metaName,
 			Type:             string(catalog.Hooks),
+			BundledScripts:   bundledMeta,
 			AddedAt:          &now,
 			SourceProvider:   fromSlug,
 			SourceFormat:     "json",
