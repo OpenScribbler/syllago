@@ -1,0 +1,75 @@
+{
+  "$schema": "handoff-v1",
+  "current": {
+    "project": "syllago",
+    "updated": "2026-03-25T06:20:00Z",
+    "sessionId": "phase3-complete-naming-in-progress",
+    "summary": "TUI v3 Phase 3 COMPLETE. Hook/MCP naming feature 2 of 5 tasks done, 3 remaining (TUI modal, import prompting, registry validation).",
+    "activeWork": {
+      "description": "Hook/MCP Naming Feature — making hooks and MCP servers user-nameable across CLI and TUI",
+      "feature": "hook-mcp-naming",
+      "stage": "executing",
+      "planRef": "docs/specs/tui-phase1-shell.md",
+      "designRef": "docs/design/tui-adaptive-zones.md",
+      "progress": "Scanner enhanced with DisplayName heuristics (script filenames, event+matcher). CLI `syllago rename` command shipped. TUI text input modal, import --name flag, and registry validation remaining.",
+      "blockers": [],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 3,
+      "lastCommit": "cad6ff4 docs: update tui-builder skill with Phase 3 patterns and decisions",
+      "modifiedFiles": [
+        "cli/cov.out (build artifact)",
+        "cli/coverage.out (build artifact)",
+        "cli/test_results.txt (build artifact)"
+      ]
+    },
+    "recentDecisions": [
+      "Library view = full-width table with columns Name/Type/Scope/Files/Installed/Description",
+      "Enter on table row → drill-in with file tree + preview pane (file tree supports expand/collapse)",
+      "Tab = sub-tab cycling (higher-level), h/l = pane focus switching (spatial) — swapped from original",
+      "Minimum terminal width 80 (was 60) — Content group needs space for 6 tabs + buttons",
+      "Help bar wraps to 2 lines at narrow widths instead of dropping hints",
+      "Middle dot (·) separator in help bar, not asterisk",
+      "borderedPanel() with MaxWidth+MaxHeight — never use raw lipgloss Width/Height for panels",
+      "Hooks/MCP require names: prompt at import, require in registries, rename CLI command",
+      "TUI rename via basic text input modal (keyboard+mouse), reusable for future prompts",
+      "Tools column removed from table — will surface in metadata pane (Phase 4)",
+      "Search (/) in Library table: filters by name/description/type, app bypasses shortcuts during input",
+      "Sort (s/S) cycles columns with ▲/▼ header indicator"
+    ],
+    "nextSteps": [
+      "1. BUILD TUI text input modal (modal.go): centered overlay, text field, Cancel/Save buttons, MUST have keyboard AND mouse support. First modal component — will be reused.",
+      "2. WIRE [r] Rename button in topbar or as context action: opens modal for selected item, saves to .syllago.yaml, refreshes table/list.",
+      "3. BUILD --name flag on `syllago add` for hooks/MCP: interactive prompt when adding content without a name.",
+      "4. BUILD registry validation: warn on unnamed hooks/MCP during `syllago validate` or registry sync.",
+      "5. AFTER NAMING FEATURE: Continue Phase 4 (metadata bar) and Phase 5 (file tree split for Content > Skills/Hooks tabs).",
+      "6. UPDATE docs/design/tui-adaptive-zones.md: Library section needs update — design doc still describes gallery grid but we built a table instead.",
+      "7. UPDATE cli/internal/tui/CLAUDE.md: add documentation for new components (table, filetree, library, explorer)."
+    ],
+    "context": {
+      "notes": "Phase 3 was significantly expanded beyond the original spec — added Library table view, file tree, search/sort, naming feature. The original Phase 3 spec only called for explorer+items+preview. Design doc (tui-adaptive-zones.md) still describes Gallery Grid for Library which was replaced with a table. tui-builder SKILL.md has been updated with all Phase 3 patterns. 49 tests passing, all green.",
+      "testCount": 49,
+      "tuiFiles": "app.go, explorer.go, library.go, table.go, filetree.go, items.go, preview.go, topbar.go, helpbar.go, styles.go, keys.go",
+      "newCliCommand": "syllago rename <name> --name 'Display Name' [--type hooks]"
+    }
+  },
+  "previousSessions": [
+    {
+      "date": "2026-03-25T05:01:46Z",
+      "sessionId": "design-pause-multifile-content",
+      "summary": "Brief session — paused to clarify file tree expansion UI. Resolved: file tree supports expand/collapse."
+    },
+    {
+      "date": "2026-03-24T23:45:00Z",
+      "sessionId": "phase1-2-complete",
+      "summary": "TUI v3 Phase 1+2 complete. Shell, styles, test infrastructure, two-tier tab navigation."
+    },
+    {
+      "date": "2026-03-24T21:30:00Z",
+      "sessionId": "tui-v3-research",
+      "summary": "TUI v3 research session: deep research into 10+ Go TUI projects."
+    }
+  ]
+}
