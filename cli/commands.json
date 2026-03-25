@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-25T05:53:49Z",
-  "syllagoVersion": "dev",
+  "generatedAt": "2026-03-25T06:25:05Z",
+  "syllagoVersion": "0.7.0",
   "commands": [
     {
       "name": "add",
@@ -2615,6 +2615,72 @@
       "seeAlso": [],
       "examples": "  # Remove a skill from library and all providers\n  syllago remove my-skill\n\n  # Disambiguate by type when name exists in multiple types\n  syllago remove my-rule --type rules\n\n  # Skip confirmation prompt\n  syllago remove my-skill --force\n\n  # Preview what would happen\n  syllago remove my-skill --dry-run",
       "source": "cli/cmd/syllago/remove.go"
+    },
+    {
+      "name": "rename",
+      "displayName": "Rename",
+      "slug": "rename",
+      "parent": null,
+      "synopsis": "syllago rename \u003cname\u003e [flags]",
+      "description": "Set a human-readable display name for a content item",
+      "longDescription": "Updates the display name stored in the item's .syllago.yaml metadata.\nThis is especially useful for hooks and MCP servers where the directory\nname alone isn't descriptive enough.\n\nThe display name is shown in the TUI, list output, and anywhere items\nare presented to users. The directory name (used for install paths and\nreferences) is not changed.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--name",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": true,
+          "description": "The new display name (required)"
+        },
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Content type to disambiguate (skills, hooks, mcp, etc.)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Name a hook\n  syllago rename my-hook --name \"Pre-commit Linter\"\n\n  # Name an MCP server\n  syllago rename postgres --name \"Local Postgres Dev\" --type mcp\n\n  # Disambiguate by type when name exists in multiple types\n  syllago rename my-item --name \"Better Name\" --type hooks",
+      "source": "cli/cmd/syllago/rename.go"
     },
     {
       "name": "sandbox",
