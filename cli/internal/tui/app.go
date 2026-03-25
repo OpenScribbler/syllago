@@ -132,6 +132,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.helpBar.SetHints(a.currentHints())
 				return a, nil
 			}
+			if !a.isLibraryTab() && a.explorer.mode == explorerDetail {
+				a.explorer.mode = explorerBrowse
+				a.explorer.detailItem = nil
+				a.explorer.sizeBrowsePanes()
+				a.explorer.preview.LoadItem(a.explorer.items.Selected())
+				a.helpBar.SetHints(a.currentHints())
+				return a, nil
+			}
 			if !a.isLibraryTab() {
 				// Return to landing page (Collections > Library)
 				cmd := a.topBar.SetGroup(0)
@@ -207,6 +215,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case libraryCloseMsg:
+		a.helpBar.SetHints(a.currentHints())
+		return a, nil
+
+	case explorerDrillMsg:
+		a.helpBar.SetHints(a.currentHints())
+		return a, nil
+
+	case explorerCloseMsg:
 		a.helpBar.SetHints(a.currentHints())
 		return a, nil
 
@@ -443,7 +459,12 @@ func (a App) currentHints() []string {
 		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "r rename", "R refresh", "a add", "n create", "? help", "q quit")
 	}
 
-	hints := append(base, "↑/↓ navigate", "←/→ switch pane")
+	// Explorer in detail mode
+	if a.explorer.mode == explorerDetail {
+		return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "r rename", "? help", "q back")
+	}
+
+	hints := append(base, "↑/↓ navigate", "←/→ switch pane", "enter detail")
 	if group != "Config" {
 		hints = append(hints, "r rename", "a add", "n create")
 	}
