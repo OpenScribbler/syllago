@@ -358,6 +358,11 @@ func (t tableModel) View() string {
 		lines = append(lines, strings.Repeat(" ", t.width))
 	}
 
+	// Clamp to exact height — never render more lines than allocated
+	if len(lines) > t.height {
+		lines = lines[:t.height]
+	}
+
 	return strings.Join(lines, "\n")
 }
 
@@ -444,22 +449,27 @@ func (t tableModel) renderHeader(c colLayout) string {
 		row += " " + t.headerCell("Description", sortByDesc, c.desc)
 	}
 
-	return boldStyle.Width(t.width).Render(row)
+	return boldStyle.Width(t.width).MaxWidth(t.width).Render(row)
 }
 
 // headerCell renders a column header, fitting the label + sort indicator within colWidth.
 func (t tableModel) headerCell(label string, col sortColumn, colWidth int) string {
 	indicator := t.sortIndicator(col)
-	full := label + indicator
-	if len(full) > colWidth {
-		// Truncate label to make room for the indicator
-		maxLabel := colWidth - len(indicator)
-		if maxLabel < 1 {
-			return padRight(indicator, colWidth)
-		}
-		full = label[:maxLabel] + indicator
+	if indicator == "" {
+		return padRight(label, colWidth)
 	}
-	return padRight(full, colWidth)
+	// Use rune-based widths since indicator contains multi-byte chars (▲/▼)
+	indicatorRunes := []rune(indicator)
+	labelRunes := []rune(label)
+	indicatorW := len(indicatorRunes)
+	maxLabel := colWidth - indicatorW
+	if maxLabel < 1 {
+		return padRight(string(indicatorRunes), colWidth)
+	}
+	if len(labelRunes) > maxLabel {
+		labelRunes = labelRunes[:maxLabel]
+	}
+	return padRight(string(labelRunes)+indicator, colWidth)
 }
 
 // renderRow renders a single data row.
@@ -482,13 +492,13 @@ func (t tableModel) renderRow(index int, c colLayout) string {
 		row += " " + truncate(r.description, c.desc)
 	}
 
+	style := mutedStyle
 	if isCursor && t.focused {
-		return zone.Mark("tbl-"+itoa(index), selectedRowStyle.Width(t.width).Render(row))
+		style = selectedRowStyle
+	} else if isCursor {
+		style = boldStyle
 	}
-	if isCursor {
-		return zone.Mark("tbl-"+itoa(index), boldStyle.Width(t.width).Render(row))
-	}
-	return zone.Mark("tbl-"+itoa(index), mutedStyle.Width(t.width).Render(row))
+	return zone.Mark("tbl-"+itoa(index), style.Width(t.width).MaxWidth(t.width).Render(row))
 }
 
 // renderEmpty shows guidance when no items exist.
