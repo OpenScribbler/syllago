@@ -38,7 +38,8 @@ type App struct {
 	width, height int
 
 	// State
-	ready bool // false until first WindowSizeMsg
+	ready          bool // false until first WindowSizeMsg
+	galleryDrillIn bool // true when viewing card contents as a library
 }
 
 // NewApp creates a new TUI app. Signature matches main.go.
@@ -128,6 +129,23 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.String() == keyQuit:
 			// Only quit from top-level browse. If in a drill-down or
 			// non-landing view, back out one level instead.
+
+			// Gallery drill-in: back out through library detail → library browse → gallery
+			if a.isGalleryTab() && a.galleryDrillIn {
+				if a.library.mode == libraryDetail {
+					a.library.mode = libraryBrowse
+					a.library.detailItem = nil
+					a.library.SetSize(a.width, a.contentHeight())
+					a.helpBar.SetHints(a.currentHints())
+					return a, nil
+				}
+				// Exit drill-in back to gallery
+				a.galleryDrillIn = false
+				a.library.SetItems(a.catalog.Items) // restore full library
+				a.helpBar.SetHints(a.currentHints())
+				return a, nil
+			}
+
 			if a.isLibraryTab() && a.library.mode == libraryDetail {
 				a.library.mode = libraryBrowse
 				a.library.detailItem = nil
@@ -146,6 +164,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if !a.isLibraryTab() {
 				// Return to landing page (Collections > Library)
 				cmd := a.topBar.SetGroup(0)
+				a.galleryDrillIn = false
 				a.refreshContent()
 				a.helpBar.SetHints(a.currentHints())
 				return a, cmd
@@ -206,6 +225,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tabChangedMsg:
+		a.galleryDrillIn = false
 		a.refreshContent()
 		a.helpBar.SetHints(a.currentHints())
 		return a, nil
@@ -233,10 +253,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case cardDrillMsg:
-		// Drill into the card by switching to explorer with filtered items
+		// Drill into the card — show a library view filtered to this card's items
 		if msg.card != nil && len(msg.card.items) > 0 {
-			a.explorer.SetItems(msg.card.items, true)
-			a.explorer.SetSize(a.width, a.contentHeight())
+			a.galleryDrillIn = true
+			a.library.SetItems(msg.card.items)
+			a.library.SetSize(a.width, a.contentHeight())
+			a.helpBar.SetHints(a.currentHints())
 		}
 		return a, nil
 
@@ -252,7 +274,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // handleRename opens the rename modal for the currently selected item.
 func (a App) handleRename() (tea.Model, tea.Cmd) {
 	var item *catalog.ContentItem
-	if a.isLibraryTab() {
+	if a.isLibraryTab() || (a.isGalleryTab() && a.galleryDrillIn) {
 		item = a.library.table.Selected()
 	} else {
 		item = a.explorer.items.Selected()
@@ -303,6 +325,11 @@ func (a App) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return a, cmd
 	}
 	if a.isGalleryTab() {
+		if a.galleryDrillIn {
+			var cmd tea.Cmd
+			a.library, cmd = a.library.Update(msg)
+			return a, cmd
+		}
 		var cmd tea.Cmd
 		a.gallery, cmd = a.gallery.Update(msg)
 		return a, cmd
@@ -319,6 +346,8 @@ func (a App) routeMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 	var contentCmd tea.Cmd
 	if a.isLibraryTab() {
+		a.library, contentCmd = a.library.Update(msg)
+	} else if a.isGalleryTab() && a.galleryDrillIn {
 		a.library, contentCmd = a.library.Update(msg)
 	} else if a.isGalleryTab() {
 		a.gallery, contentCmd = a.gallery.Update(msg)
@@ -373,6 +402,9 @@ func (a App) renderContent() string {
 	}
 
 	if a.isGalleryTab() {
+		if a.galleryDrillIn {
+			return a.library.View()
+		}
 		return a.gallery.View()
 	}
 
@@ -413,15 +445,19 @@ func (a *App) rescanCatalog() {
 func (a *App) refreshContent() {
 	ch := a.contentHeight()
 	if a.isLibraryTab() {
+		a.galleryDrillIn = false
 		a.library.SetItems(a.catalog.Items)
 		a.library.SetSize(a.width, ch)
 		return
 	}
 	if a.isGalleryTab() {
-		a.refreshGallery()
-		a.gallery.SetSize(a.width, ch)
+		if !a.galleryDrillIn {
+			a.refreshGallery()
+			a.gallery.SetSize(a.width, ch)
+		}
 		return
 	}
+	a.galleryDrillIn = false
 	items, mixed := a.itemsForCurrentTab()
 	a.explorer.SetItems(items, mixed)
 	a.explorer.SetSize(a.width, ch)
@@ -481,17 +517,23 @@ func (a App) currentHints() []string {
 	base := []string{"1/2/3 groups", "tab items"}
 
 	if group == "Config" {
-		return append(base, "? help", "q quit")
+		return append(base, "R refresh", "? help", "q quit")
 	}
 
 	// Gallery tabs (Loadouts/Registries)
+	if a.isGalleryTab() && a.galleryDrillIn {
+		if a.library.mode == libraryDetail {
+			return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "R refresh", "? help", "q back")
+		}
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "r rename", "R refresh", "? help", "q back")
+	}
 	if a.isGalleryTab() {
-		return append(base, "arrows grid", "enter select", "tab grid/contents", "a add", "n create", "? help", "q back")
+		return append(base, "arrows grid", "enter select", "tab grid/contents", "R refresh", "a add", "n create", "? help", "q back")
 	}
 
 	// Library in detail mode has different hints
 	if a.isLibraryTab() && a.library.mode == libraryDetail {
-		return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "? help", "q quit")
+		return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "R refresh", "? help", "q quit")
 	}
 
 	if a.isLibraryTab() {
@@ -500,12 +542,12 @@ func (a App) currentHints() []string {
 
 	// Explorer in detail mode
 	if a.explorer.mode == explorerDetail {
-		return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "r rename", "? help", "q back")
+		return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "r rename", "R refresh", "? help", "q back")
 	}
 
 	hints := append(base, "↑/↓ navigate", "←/→ switch pane", "enter detail")
 	if group != "Config" {
-		hints = append(hints, "r rename", "a add", "n create")
+		hints = append(hints, "r rename", "R refresh", "a add", "n create")
 	}
 	return append(hints, "? help", "q quit")
 }

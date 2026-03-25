@@ -2,7 +2,6 @@ package tui
 
 import (
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -18,12 +17,15 @@ var borderColor = lipgloss.AdaptiveColor{Light: "#CECDC3", Dark: "#343331"}
 // cardData holds the display data for a single gallery card.
 type cardData struct {
 	name     string
-	subtitle string                // target provider (loadouts) or URL (registries)
+	subtitle string                // "Target: Claude Code" or "Source: /path"
 	desc     string                // description from manifest or registry metadata
 	counts   map[string]int        // type label -> count (e.g. "Skills": 4)
 	status   string                // "local", "registry", etc.
 	items    []catalog.ContentItem // items inside this card
 }
+
+// allContentTypeLabels is the fixed list of content type labels shown on every card.
+var allContentTypeLabels = []string{"Agents", "Commands", "Hooks", "MCP Servers", "Rules", "Skills"}
 
 // cardGridModel renders a responsive grid of cards with cursor navigation.
 type cardGridModel struct {
@@ -46,30 +48,9 @@ func newCardGridModel(cards []cardData) cardGridModel {
 // cardWidth is the fixed inner width of each card (excluding border).
 const cardWidth = 26
 
-// cardRenderHeight returns the height of a single rendered card including borders.
-func cardRenderHeight(c cardData) int {
-	// name + each count line + subtitle + border top/bottom
-	lines := 1 // name
-	lines += len(c.counts)
-	if c.subtitle != "" {
-		lines++
-	}
-	return lines + borderSize // +2 for border
-}
-
-// maxCardHeight returns the tallest card height in the set.
-func maxCardHeight(cards []cardData) int {
-	h := 0
-	for _, c := range cards {
-		if ch := cardRenderHeight(c); ch > h {
-			h = ch
-		}
-	}
-	if h == 0 {
-		h = 5 // minimum
-	}
-	return h
-}
+// fixedCardHeight is the constant height of every card (border included).
+// name(1) + 6 content types + subtitle(1) + border(2) = 10
+const fixedCardHeight = 10
 
 // SetSize updates grid dimensions and recomputes column count.
 func (m *cardGridModel) SetSize(width, height int) {
@@ -105,7 +86,6 @@ func (m *cardGridModel) CursorUp() {
 	}
 	m.cursor -= m.cols
 	if m.cursor < 0 {
-		// Wrap to last row, same column
 		lastRow := (len(m.cards) - 1) / m.cols
 		m.cursor += (lastRow + 1) * m.cols
 		if m.cursor >= len(m.cards) {
@@ -122,7 +102,6 @@ func (m *cardGridModel) CursorDown() {
 	}
 	m.cursor += m.cols
 	if m.cursor >= len(m.cards) {
-		// Wrap to first row, same column
 		col := (m.cursor - m.cols) % m.cols
 		m.cursor = col
 		if m.cursor >= len(m.cards) {
@@ -161,11 +140,7 @@ func (m *cardGridModel) scrollToCursor() {
 	if len(m.cards) == 0 || m.cols == 0 {
 		return
 	}
-	ch := maxCardHeight(m.cards)
-	if ch == 0 {
-		ch = 5
-	}
-	visibleRows := max(1, m.height/ch)
+	visibleRows := max(1, m.height/fixedCardHeight)
 	cursorRow := m.cursor / m.cols
 	if cursorRow < m.offset {
 		m.offset = cursorRow
@@ -186,8 +161,7 @@ func (m cardGridModel) View() string {
 			Render("No items found")
 	}
 
-	ch := maxCardHeight(m.cards)
-	visibleRows := max(1, m.height/ch)
+	visibleRows := max(1, m.height/fixedCardHeight)
 	totalRows := (len(m.cards) + m.cols - 1) / m.cols
 
 	startRow := m.offset
@@ -199,18 +173,16 @@ func (m cardGridModel) View() string {
 		for col := 0; col < m.cols; col++ {
 			idx := row*m.cols + col
 			if idx >= len(m.cards) {
-				// Empty cell — pad to card width
 				rowCards = append(rowCards, strings.Repeat(" ", cardWidth+borderSize))
 				continue
 			}
-			rowCards = append(rowCards, m.renderCard(idx, ch))
+			rowCards = append(rowCards, m.renderCard(idx))
 		}
 		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, rowCards...))
 	}
 
 	result := lipgloss.JoinVertical(lipgloss.Left, rows...)
 
-	// Pad height
 	resultLines := strings.Split(result, "\n")
 	for len(resultLines) < m.height {
 		resultLines = append(resultLines, strings.Repeat(" ", m.width))
@@ -221,12 +193,12 @@ func (m cardGridModel) View() string {
 	return strings.Join(resultLines, "\n")
 }
 
-// renderCard renders a single card with border.
-func (m cardGridModel) renderCard(index, targetHeight int) string {
+// renderCard renders a single card with border. All cards have the same height.
+func (m cardGridModel) renderCard(index int) string {
 	c := m.cards[index]
 	isSelected := index == m.cursor
 
-	innerH := targetHeight - borderSize // subtract border
+	innerH := fixedCardHeight - borderSize
 	var lines []string
 
 	// Name line
@@ -237,19 +209,17 @@ func (m cardGridModel) renderCard(index, targetHeight int) string {
 		lines = append(lines, name)
 	}
 
-	// Count lines (sorted by type name for consistency)
-	countKeys := sortedKeys(c.counts)
-	for _, k := range countKeys {
-		v := c.counts[k]
-		lines = append(lines, mutedStyle.Render("  "+itoa(v)+" "+k))
+	// Always show all 6 content types in fixed order
+	for _, label := range allContentTypeLabels {
+		v := c.counts[label]
+		lines = append(lines, mutedStyle.Render("  "+itoa(v)+" "+label))
 	}
 
-	// Subtitle line
+	// Subtitle always at bottom
 	if c.subtitle != "" {
 		lines = append(lines, mutedStyle.Render(truncate(c.subtitle, cardWidth)))
 	}
 
-	// Pad to target height
 	for len(lines) < innerH {
 		lines = append(lines, "")
 	}
@@ -259,7 +229,6 @@ func (m cardGridModel) renderCard(index, targetHeight int) string {
 
 	content := strings.Join(lines, "\n")
 
-	// Border color
 	bc := borderColor
 	if isSelected && m.focused {
 		bc = accentColor
@@ -278,22 +247,18 @@ func buildLoadoutCards(items []catalog.ContentItem) []cardData {
 		c := cardData{
 			name:   itemDisplayName(item),
 			status: "local",
-			items:  nil, // will be populated if we have the full catalog
+			counts: ensureAllTypes(nil),
 		}
 
-		// Try to parse the manifest for richer data
 		manifestPath := filepath.Join(item.Path, "loadout.yaml")
 		if m, err := loadout.Parse(manifestPath); err == nil {
-			c.subtitle = "Target: " + providerAbbrev(m.Provider)
+			c.subtitle = "Target: " + providerFullName(m.Provider)
 			c.desc = sanitizeLine(m.Description)
-			c.counts = make(map[string]int)
+			raw := make(map[string]int)
 			for ct, refs := range m.RefsByType() {
-				c.counts[ct.Label()] = len(refs)
+				raw[ct.Label()] = len(refs)
 			}
-		} else {
-			// Fallback: count files
-			c.subtitle = "Loadout"
-			c.counts = map[string]int{"Files": len(item.Files)}
+			c.counts = ensureAllTypes(raw)
 		}
 
 		if item.Registry != "" {
@@ -311,15 +276,15 @@ func buildRegistryCards(sources []catalog.RegistrySource, cat *catalog.Catalog) 
 	for _, src := range sources {
 		items := cat.ByRegistry(src.Name)
 
-		counts := make(map[string]int)
+		raw := make(map[string]int)
 		for _, item := range items {
-			counts[item.Type.Label()]++
+			raw[item.Type.Label()]++
 		}
 
 		c := cardData{
 			name:     src.Name,
-			subtitle: src.Path,
-			counts:   counts,
+			subtitle: "Source: " + src.Path,
+			counts:   ensureAllTypes(raw),
 			status:   itoa(len(items)) + " items",
 			items:    items,
 		}
@@ -328,12 +293,74 @@ func buildRegistryCards(sources []catalog.RegistrySource, cat *catalog.Catalog) 
 	return cards
 }
 
+// ensureAllTypes returns a counts map that has all 6 content type labels,
+// filling in 0 for any missing types.
+func ensureAllTypes(raw map[string]int) map[string]int {
+	result := make(map[string]int, len(allContentTypeLabels))
+	for _, label := range allContentTypeLabels {
+		result[label] = 0
+	}
+	for k, v := range raw {
+		result[k] = v
+	}
+	return result
+}
+
+// providerFullName maps a provider slug to its full display name.
+func providerFullName(slug string) string {
+	switch slug {
+	case "claude-code":
+		return "Claude Code"
+	case "gemini-cli":
+		return "Gemini CLI"
+	case "cursor":
+		return "Cursor"
+	case "copilot":
+		return "Copilot"
+	case "windsurf":
+		return "Windsurf"
+	case "kiro":
+		return "Kiro"
+	case "cline":
+		return "Cline"
+	case "roo-code":
+		return "Roo Code"
+	case "amp":
+		return "Amp"
+	case "opencode":
+		return "OpenCode"
+	case "zed":
+		return "Zed"
+	default:
+		return slug
+	}
+}
+
 // sortedKeys returns map keys in sorted order.
 func sortedKeys(m map[string]int) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
-	return keys
+	// Use the fixed order from allContentTypeLabels when possible
+	ordered := make([]string, 0, len(keys))
+	for _, label := range allContentTypeLabels {
+		if _, ok := m[label]; ok {
+			ordered = append(ordered, label)
+		}
+	}
+	// Any extra keys not in the standard list
+	for _, k := range keys {
+		found := false
+		for _, o := range ordered {
+			if k == o {
+				found = true
+				break
+			}
+		}
+		if !found {
+			ordered = append(ordered, k)
+		}
+	}
+	return ordered
 }
