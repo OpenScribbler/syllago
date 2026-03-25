@@ -9,15 +9,15 @@
 │ Status: local  0 Agents, 0 Commands, 0 Hooks, 0 MCP Servers, 0 Rules, 0 Skill│
 │                                                                              │
 ├──────────────────────────────────────────────────────┬───────────────────────┤
-│╭──────────────────────────╮                          │Agents                 │
-││Python-Web                │                          │Commands               │
-││  0 Agents                │                          │Hooks                  │
-││  0 Commands              │                          │MCP Servers            │
-││  0 Hooks                 │                          │Rules                  │
-││  0 MCP Servers           │                          │Skills                 │
-││  0 Rules                 │                          │                       │
-││  0 Skills                │                          │                       │
-││                          │                          │                       │
+│╭──────────────────────────╮                          │Name: Python-Web       │
+││Python-Web                │                          │                       │
+││  0 Agents                │                          │Contents               │
+││  0 Commands              │                          │Agents                 │
+││  0 Hooks                 │                          │Commands               │
+││  0 MCP Servers           │                          │Hooks                  │
+││  0 Rules                 │                          │MCP Servers            │
+││  0 Skills                │                          │Rules                  │
+││                          │                          │Skills                 │
 │╰──────────────────────────╯                          │                       │
 │                                                      │                       │
 │                                                      │                       │

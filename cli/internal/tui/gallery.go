@@ -81,7 +81,7 @@ func (g *galleryModel) updateSidebar() {
 				typeName: k,
 			})
 		}
-		g.sidebar.SetGroups(groups)
+		g.sidebar.SetGroups(card, groups)
 	} else {
 		g.sidebar.SetCard(nil)
 	}

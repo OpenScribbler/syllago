@@ -265,3 +265,27 @@ func TestGoldenGallery_80x30(t *testing.T) {
 
 	requireGolden(t, "gallery-80x30", snapshotApp(t, a))
 }
+
+func TestGoldenGallery_120x40(t *testing.T) {
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "python-web", DisplayName: "Python-Web", Type: catalog.Loadouts, Source: "project", Files: []string{"loadout.yaml"}},
+			{Name: "alpha-skill", Type: catalog.Skills, Source: "my-registry", Registry: "my-registry", Files: []string{"SKILL.md"}, Description: "A helpful skill"},
+			{Name: "beta-rule", Type: catalog.Rules, Source: "my-registry", Registry: "my-registry", Files: []string{"rule.md"}},
+		},
+	}
+	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
+		{Name: "my-registry", Path: "/tmp/fake-registry"},
+	}, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	a := m.(App)
+
+	// Navigate to Collections > Registries (Tab)
+	m, cmd := a.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	requireGolden(t, "gallery-registries-120x40", snapshotApp(t, a))
+}
