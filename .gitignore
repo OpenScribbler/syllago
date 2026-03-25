@@ -5,6 +5,11 @@ cli/syllago-*
 cli/syl
 cli/syl.exe
 
+# Test artifacts
+cli/cov.out
+cli/coverage.out
+cli/test_results.txt
+
 # Local user content
 local/
 content/.syllago/

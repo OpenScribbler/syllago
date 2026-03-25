@@ -2,23 +2,23 @@
   "$schema": "handoff-v1",
   "current": {
     "project": "syllago",
-    "updated": "2026-03-25T06:20:00Z",
-    "sessionId": "phase3-complete-naming-in-progress",
-    "summary": "TUI v3 Phase 3 COMPLETE. Hook/MCP naming feature 2 of 5 tasks done, 3 remaining (TUI modal, import prompting, registry validation).",
+    "updated": "2026-03-25T07:30:00Z",
+    "sessionId": "naming-feature-complete-mcp-fix",
+    "summary": "Hook/MCP naming feature COMPLETE. MCP scanner fix shipped (provider grouping dirs). Clickable sort headers added. Input field styling updated to background tint. Next: Phase 4 (metadata bar), hook script bundling, doc updates.",
     "activeWork": {
-      "description": "Hook/MCP Naming Feature — making hooks and MCP servers user-nameable across CLI and TUI",
-      "feature": "hook-mcp-naming",
-      "stage": "executing",
+      "description": "TUI v3 — naming feature done, moving to Phase 4 (metadata bar) and hook script bundling",
+      "feature": "tui-v3-phase4",
+      "stage": "planning",
       "planRef": "docs/specs/tui-phase1-shell.md",
       "designRef": "docs/design/tui-adaptive-zones.md",
-      "progress": "Scanner enhanced with DisplayName heuristics (script filenames, event+matcher). CLI `syllago rename` command shipped. TUI text input modal, import --name flag, and registry validation remaining.",
+      "progress": "Phases 1-3 complete. Naming feature complete (modal, rename, --name flag, search fix). MCP scanner fixed for provider grouping dirs. Clickable column headers added.",
       "blockers": [],
       "beads": null
     },
     "git": {
       "branch": "main",
       "uncommittedFiles": 3,
-      "lastCommit": "cad6ff4 docs: update tui-builder skill with Phase 3 patterns and decisions",
+      "lastCommit": "198bb84 chore: regenerate commands.json for --name flag on add",
       "modifiedFiles": [
         "cli/cov.out (build artifact)",
         "cli/coverage.out (build artifact)",
@@ -26,36 +26,35 @@
       ]
     },
     "recentDecisions": [
-      "Library view = full-width table with columns Name/Type/Scope/Files/Installed/Description",
-      "Enter on table row → drill-in with file tree + preview pane (file tree supports expand/collapse)",
-      "Tab = sub-tab cycling (higher-level), h/l = pane focus switching (spatial) — swapped from original",
-      "Minimum terminal width 80 (was 60) — Content group needs space for 6 tabs + buttons",
-      "Help bar wraps to 2 lines at narrow widths instead of dropping hints",
-      "Middle dot (·) separator in help bar, not asterisk",
-      "borderedPanel() with MaxWidth+MaxHeight — never use raw lipgloss Width/Height for panels",
-      "Hooks/MCP require names: prompt at import, require in registries, rename CLI command",
-      "TUI rename via basic text input modal (keyboard+mouse), reusable for future prompts",
-      "Tools column removed from table — will surface in metadata pane (Phase 4)",
-      "Search (/) in Library table: filters by name/description/type, app bypasses shortcuts during input",
-      "Sort (s/S) cycles columns with ▲/▼ header indicator"
+      "Text input modal: lipgloss.Place centering (not custom overlay), background-tinted fields (not underlines/borders)",
+      "Input field styling: dim cyan BG when active (#1A3836 dark), dim grey BG when inactive (#282726 dark)",
+      "Modal buttons: all use background+padding (no borders) for consistent height",
+      "Search includes DisplayName — renamed items are searchable",
+      "Rename saves in-place (update catalog item DisplayName, no full re-scan)",
+      "MCP scanner: detect provider grouping dirs (no config.json + has subdirs with config.json) and recurse",
+      "Column headers clickable: click sorts by column, click again reverses direction",
+      "Hook script bundling design: flat layout (scripts alongside hook.json), detect both absolute+relative paths, rewrite paths at install time, config option for global vs project script location"
     ],
     "nextSteps": [
-      "1. BUILD TUI text input modal (modal.go): centered overlay, text field, Cancel/Save buttons, MUST have keyboard AND mouse support. First modal component — will be reused.",
-      "2. WIRE [r] Rename button in topbar or as context action: opens modal for selected item, saves to .syllago.yaml, refreshes table/list.",
-      "3. BUILD --name flag on `syllago add` for hooks/MCP: interactive prompt when adding content without a name.",
-      "4. BUILD registry validation: warn on unnamed hooks/MCP during `syllago validate` or registry sync.",
-      "5. AFTER NAMING FEATURE: Continue Phase 4 (metadata bar) and Phase 5 (file tree split for Content > Skills/Hooks tabs).",
-      "6. UPDATE docs/design/tui-adaptive-zones.md: Library section needs update — design doc still describes gallery grid but we built a table instead.",
-      "7. UPDATE cli/internal/tui/CLAUDE.md: add documentation for new components (table, filetree, library, explorer)."
+      "1. HOOK SCRIPT BUNDLING: During `syllago add hooks`, detect script refs in command fields, copy scripts into hook dir, store original path in metadata. At install time, copy scripts and rewrite paths.",
+      "2. PHASE 4 — METADATA BAR: Item detail panel below table/explorer showing DisplayName, type, source, description, installed providers, file count, path.",
+      "3. PHASE 5 — FILE TREE SPLIT: Content > Skills/Hooks tabs get file tree + preview split (like Library detail mode).",
+      "4. REGISTRY VALIDATION: Warn on unnamed hooks/MCP during `syllago validate` or registry sync.",
+      "5. DOC UPDATES: Update tui-adaptive-zones.md (Library section still describes gallery grid). Update cli/internal/tui/CLAUDE.md with new components (modal, table sort, input field styles)."
     ],
     "context": {
-      "notes": "Phase 3 was significantly expanded beyond the original spec — added Library table view, file tree, search/sort, naming feature. The original Phase 3 spec only called for explorer+items+preview. Design doc (tui-adaptive-zones.md) still describes Gallery Grid for Library which was replaced with a table. tui-builder SKILL.md has been updated with all Phase 3 patterns. 49 tests passing, all green.",
-      "testCount": 49,
-      "tuiFiles": "app.go, explorer.go, library.go, table.go, filetree.go, items.go, preview.go, topbar.go, helpbar.go, styles.go, keys.go",
-      "newCliCommand": "syllago rename <name> --name 'Display Name' [--type hooks]"
+      "notes": "All tests passing (22 packages). Binary rebuilt. The naming feature added: modal.go (text input modal), [r] rename hotkey, --name flag on add, search includes DisplayName, clickable column headers, input field background tint styling. MCP scanner now handles mcp/<provider>/<server-name>/ layout correctly. Hook script bundling is next major feature — design decisions captured in memory and handoff.",
+      "testCount": 62,
+      "tuiFiles": "app.go, explorer.go, library.go, table.go, filetree.go, items.go, preview.go, topbar.go, helpbar.go, styles.go, keys.go, modal.go",
+      "newComponents": "textInputModal (modal.go), SortByColumn (table.go), scanMCPSubdirs (scanner.go)"
     }
   },
   "previousSessions": [
+    {
+      "date": "2026-03-25T06:20:00Z",
+      "sessionId": "phase3-complete-naming-in-progress",
+      "summary": "TUI v3 Phase 3 complete. Naming feature started — scanner DisplayName heuristics and CLI rename command shipped."
+    },
     {
       "date": "2026-03-25T05:01:46Z",
       "sessionId": "design-pause-multifile-content",
