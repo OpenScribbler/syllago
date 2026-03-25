@@ -1117,13 +1117,13 @@ cli/internal/tui/
 
 ### Build order
 
-1. **Shell:** app.go + styles.go + keys.go + helpbar.go — renders empty frame
-2. **Top bar:** topbar.go + dropdown.go — navigation works, dropdowns open/close
-3. **Explorer layout:** explorer.go + items.go + content_preview.go — list items, show preview
-4. **Metadata bar:** metadata.go — selected item info + actions
-5. **Split content zone:** content_split.go — Skills/Hooks file tree + preview
-6. **Gallery Grid:** gallery.go + cards.go + contents.go — collection browsing
-7. **Modals:** modal.go — all four types with scroll support
+1. **Shell:** app.go + styles.go + keys.go + helpbar.go — renders empty frame -- DONE
+2. **Top bar:** topbar.go — two-tier tab navigation (no dropdowns) -- DONE
+3. **Explorer layout:** explorer.go + items.go + preview.go — list items, show preview -- DONE
+4. **Metadata bar:** metapanel.go — selected item info as reusable component -- DONE
+5. **Split content zone:** filetree.go + explorer drill-in — file tree + preview detail mode -- DONE
+6. **Gallery Grid + Registry Validation:** gallery.go + cards.go + contents.go — collection browsing for Loadouts/Registries. Registry validation warns on unnamed hooks/MCP. See `docs/specs/tui-phase6-gallery.md`.
+7. **Modals + Help Overlay:** Expand modal system — edit modal (name + description, replaces single-field rename), install/uninstall wizard, loadout apply/remove confirmation, help overlay (`?` key). `[r] Rename` becomes `[e] Edit`.
 8. **Toasts:** toast.go — success/warning/error with copy
-9. **Search:** search.go — live filtering
+9. **Search:** Extend search to explorer/content tabs (Library search already done)
 10. **Polish:** golden tests, responsive sizes, mouse support, accessibility
