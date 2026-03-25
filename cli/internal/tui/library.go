@@ -98,6 +98,10 @@ func (l libraryModel) updateBrowse(msg tea.KeyMsg) (libraryModel, tea.Cmd) {
 			l.drillIn(item)
 			return l, func() tea.Msg { return libraryDrillMsg{item: item} }
 		}
+	case "pgup", "ctrl+u":
+		l.table.PageUp()
+	case "pgdown", "ctrl+d":
+		l.table.PageDown()
 	case "g", "home":
 		l.table.cursor = 0
 		l.table.offset = 0
@@ -144,6 +148,12 @@ func (l libraryModel) updateTree(msg tea.KeyMsg) (libraryModel, tea.Cmd) {
 		l.loadSelectedFile()
 	case keyUp, "up":
 		l.tree.CursorUp()
+		l.loadSelectedFile()
+	case "pgup", "ctrl+u":
+		l.tree.PageUp()
+		l.loadSelectedFile()
+	case "pgdown", "ctrl+d":
+		l.tree.PageDown()
 		l.loadSelectedFile()
 	case "enter", " ":
 		if l.tree.cursor >= 0 && l.tree.cursor < len(l.tree.nodes) {

@@ -192,6 +192,14 @@ func (e explorerModel) updateItems(msg tea.KeyMsg) (explorerModel, tea.Cmd) {
 		e.items.CursorUp()
 		e.preview.LoadItem(e.items.Selected())
 		return e, e.itemSelectedCmd()
+	case "pgup", "ctrl+u":
+		e.items.PageUp()
+		e.preview.LoadItem(e.items.Selected())
+		return e, e.itemSelectedCmd()
+	case "pgdown", "ctrl+d":
+		e.items.PageDown()
+		e.preview.LoadItem(e.items.Selected())
+		return e, e.itemSelectedCmd()
 	case "g", "home":
 		e.items.cursor = 0
 		e.items.offset = 0

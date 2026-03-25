@@ -84,6 +84,19 @@ func (m *fileTreeModel) CursorDown() {
 	}
 }
 
+// PageUp moves cursor up by one page.
+func (m *fileTreeModel) PageUp() {
+	m.cursor = max(0, m.cursor-m.height)
+	m.offset = max(0, m.offset-m.height)
+}
+
+// PageDown moves cursor down by one page.
+func (m *fileTreeModel) PageDown() {
+	m.cursor = min(len(m.nodes)-1, m.cursor+m.height)
+	maxOffset := max(0, len(m.nodes)-m.height)
+	m.offset = min(maxOffset, m.offset+m.height)
+}
+
 // ToggleDir expands/collapses the directory at the cursor.
 func (m *fileTreeModel) ToggleDir() {
 	if m.cursor < 0 || m.cursor >= len(m.nodes) {

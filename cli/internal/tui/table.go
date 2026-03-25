@@ -106,6 +106,21 @@ func (t *tableModel) CursorDown() {
 	}
 }
 
+// PageUp moves cursor up by one page.
+func (t *tableModel) PageUp() {
+	vh := t.viewHeight()
+	t.cursor = max(0, t.cursor-vh)
+	t.offset = max(0, t.offset-vh)
+}
+
+// PageDown moves cursor down by one page.
+func (t *tableModel) PageDown() {
+	vh := t.viewHeight()
+	t.cursor = min(len(t.items)-1, t.cursor+vh)
+	maxOffset := max(0, len(t.items)-vh)
+	t.offset = min(maxOffset, t.offset+vh)
+}
+
 // viewHeight returns the number of rows available for data (minus header).
 func (t tableModel) viewHeight() int {
 	return max(0, t.height-1) // 1 for header row
@@ -173,48 +188,45 @@ type colLayout struct {
 func (t tableModel) columnWidths() colLayout {
 	w := t.width - 4 // prefix (3) + right padding (1)
 
-	// Fixed columns
-	files := 5
+	// Give non-name columns reasonable fixed sizes first, then name gets capped remainder
 	ctype := 8
-	scope := 10
+	scope := 12
+	files := 5
 	tools := 10
 	installed := 10
 
-	fixed := files + ctype + scope + tools + installed + 5 // 5 gaps
-
 	if w >= 110 {
 		// Wide: show all columns with description
-		ctype = 10
+		ctype = 9
 		scope = 12
-		tools = 14
-		installed = 12
-		fixed = files + ctype + scope + tools + installed + 6
-		desc := max(10, (w-fixed)/3)
-		name := w - fixed - desc
-		return colLayout{name, ctype, scope, files, tools, installed, desc}
+		tools = 12
+		installed = 10
+		nameW := 22
+		fixed := nameW + ctype + scope + files + tools + installed + 6 // 6 gaps
+		desc := max(15, w-fixed)
+		return colLayout{nameW, ctype, scope, files, tools, installed, desc}
 	}
 
-	// Standard: drop description
-	name := max(12, w-fixed)
-	return colLayout{name, ctype, scope, files, tools, installed, 0}
+	// Standard: drop description, cap name at 20
+	fixed := ctype + scope + files + tools + installed + 5 // 5 gaps
+	nameW := min(20, max(12, w-fixed))
+	return colLayout{nameW, ctype, scope, files, tools, installed, 0}
 }
 
 // renderHeader renders the column header row.
 func (t tableModel) renderHeader(c colLayout) string {
-	h := boldStyle.Render
-
-	row := "   " // prefix space (matches item prefix)
-	row += h(padRight("Name", c.name))
-	row += " " + h(padRight("Type", c.ctype))
-	row += " " + h(padRight("Scope", c.scope))
-	row += " " + h(padRight("Files", c.files))
-	row += " " + h(padRight("Tools", c.tools))
-	row += " " + h(padRight("Inst.", c.installed))
+	row := "   " // prefix space
+	row += padRight("Name", c.name)
+	row += " " + padRight("Type", c.ctype)
+	row += " " + padRight("Scope", c.scope)
+	row += " " + padRight("Files", c.files)
+	row += " " + padRight("Tools", c.tools)
+	row += " " + padRight("Inst.", c.installed)
 	if c.desc > 0 {
-		row += " " + h(padRight("Description", c.desc))
+		row += " " + padRight("Description", c.desc)
 	}
 
-	return lipgloss.NewStyle().Width(t.width).Render(row)
+	return boldStyle.Width(t.width).Render(row)
 }
 
 // renderRow renders a single data row.
@@ -227,25 +239,27 @@ func (t tableModel) renderRow(index int, c colLayout) string {
 		prefix = " > "
 	}
 
+	// Build plain text row — no per-column styling so selectedRowStyle background
+	// can span the entire row without being overridden by column foreground colors.
 	row := prefix
 	row += padRight(truncate(r.name, c.name), c.name)
-	row += " " + mutedStyle.Render(padRight(truncate(r.contentType, c.ctype), c.ctype))
-	row += " " + mutedStyle.Render(padRight(truncate(r.scope, c.scope), c.scope))
-	row += " " + mutedStyle.Render(padRight(truncate(r.files, c.files), c.files))
+	row += " " + padRight(truncate(r.contentType, c.ctype), c.ctype)
+	row += " " + padRight(truncate(r.scope, c.scope), c.scope)
+	row += " " + padRight(truncate(r.files, c.files), c.files)
 	row += " " + padRight(truncate(r.tools, c.tools), c.tools)
 	row += " " + padRight(truncate(r.installed, c.installed), c.installed)
 	if c.desc > 0 {
-		row += " " + mutedStyle.Render(truncate(r.description, c.desc))
+		row += " " + truncate(r.description, c.desc)
 	}
 
-	styled := lipgloss.NewStyle().Width(t.width)
 	if isCursor && t.focused {
 		return zone.Mark("tbl-"+itoa(index), selectedRowStyle.Width(t.width).Render(row))
 	}
 	if isCursor {
 		return zone.Mark("tbl-"+itoa(index), boldStyle.Width(t.width).Render(row))
 	}
-	return zone.Mark("tbl-"+itoa(index), styled.Render(row))
+	// Non-selected rows use muted style for a subtler look
+	return zone.Mark("tbl-"+itoa(index), mutedStyle.Width(t.width).Render(row))
 }
 
 // renderEmpty shows guidance when no items exist.
