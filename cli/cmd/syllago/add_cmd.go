@@ -83,9 +83,19 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	if fromSlug == "" {
 		return output.NewStructuredError(output.ErrInputMissing, "missing --from flag", "Usage: syllago add [type] --from <provider>")
 	}
+
+	// Handle --from shared: add content from the project's shared content directory.
+	if fromSlug == "shared" {
+		addAll, _ := cmd.Flags().GetBool("all")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		force, _ := cmd.Flags().GetBool("force")
+		return runAddFromShared(root, args, addAll, dryRun, force)
+	}
+
 	prov := findProviderBySlug(fromSlug)
 	if prov == nil {
 		slugs := providerSlugs()
+		slugs = append(slugs, "shared")
 		return output.NewStructuredError(
 			output.ErrProviderNotFound,
 			"unknown provider: "+fromSlug,
@@ -985,6 +995,95 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, proje
 }
 
 // uniqueItemDir returns a unique directory path by appending -2, -3, etc.
+// runAddFromShared copies items from the project's shared content directory to the user's library.
+func runAddFromShared(projectRoot string, args []string, addAll, dryRun, force bool) error {
+	globalDir := catalog.GlobalContentDir()
+	if globalDir == "" {
+		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
+	}
+
+	// Scan the project root to find shared content.
+	cat, err := catalog.Scan(projectRoot, projectRoot)
+	if err != nil {
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning project content failed", "Check that the content directories exist", err.Error())
+	}
+
+	// Filter to shared items (non-library, non-builtin).
+	var items []catalog.ContentItem
+	for _, item := range cat.Items {
+		if item.Library || item.IsBuiltin() {
+			continue
+		}
+		if len(args) > 0 && item.Name != args[0] {
+			continue
+		}
+		items = append(items, item)
+	}
+
+	if len(items) == 0 {
+		if len(args) > 0 {
+			return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no shared item named %q found", args[0]), "Run 'syllago list --source shared' to see available items")
+		}
+		fmt.Fprintln(output.ErrWriter, "No shared content found in this project.")
+		return nil
+	}
+
+	if !addAll && len(args) == 0 {
+		// Discovery mode: show what's available.
+		fmt.Fprintf(output.Writer, "Shared content in %s:\n", filepath.Base(projectRoot))
+		for _, item := range items {
+			fmt.Fprintf(output.Writer, "  %s (%s)\n", item.Name, item.Type.Label())
+		}
+		fmt.Fprintf(output.Writer, "\n%d item(s). Use --all to add everything, or specify a name.\n", len(items))
+		return nil
+	}
+
+	if dryRun {
+		fmt.Fprintf(output.Writer, "[dry-run] would add %d item(s) from shared content:\n", len(items))
+		for _, item := range items {
+			fmt.Fprintf(output.Writer, "  %s (%s)\n", item.Name, item.Type.Label())
+		}
+		return nil
+	}
+
+	count := 0
+	for _, item := range items {
+		destDir := filepath.Join(globalDir, string(item.Type), item.Name)
+
+		if !force {
+			if _, err := os.Stat(destDir); err == nil {
+				fmt.Fprintf(output.Writer, "  SKIP %s (already in library, use --force to overwrite)\n", item.Name)
+				continue
+			}
+		}
+
+		if err := installer.CopyContent(item.Path, destDir); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to copy %s: %v\n", item.Name, err)
+			continue
+		}
+
+		// Write metadata.
+		now := time.Now().UTC()
+		meta := &metadata.Meta{
+			ID:           metadata.NewID(),
+			Name:         item.Name,
+			Type:         string(item.Type),
+			AddedAt:      &now,
+			SourceType:   "shared",
+			SourceFormat: "md",
+		}
+		if err := metadata.Save(destDir, meta); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to write metadata for %s: %v\n", item.Name, err)
+		}
+
+		fmt.Fprintf(output.Writer, "  Added %s (%s)\n", item.Name, item.Type.Label())
+		count++
+	}
+
+	fmt.Fprintf(output.Writer, "\nAdded %d item(s) from shared content.\n", count)
+	return nil
+}
+
 func uniqueItemDir(base string) string {
 	for i := 2; i < 100; i++ {
 		candidate := fmt.Sprintf("%s-%d", base, i)
