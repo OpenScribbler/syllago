@@ -56,18 +56,19 @@ func init() {
 func runDoctor(cmd *cobra.Command, args []string) error {
 	var checks []checkResult
 
+	projectRoot, _ := findProjectRoot()
+
 	checks = append(checks, checkLibrary())
-	checks = append(checks, checkConfig())
+	checks = append(checks, checkConfigWith(projectRoot))
 	checks = append(checks, checkProviders())
 
-	projectRoot, _ := findProjectRoot()
 	if projectRoot != "" {
 		checks = append(checks, checkSymlinks(projectRoot))
 		checks = append(checks, checkContentDrift(projectRoot))
 		checks = append(checks, checkOrphans(projectRoot))
 	}
 
-	checks = append(checks, checkRegistries())
+	checks = append(checks, checkRegistriesWith(projectRoot))
 
 	// Compute summary
 	warns, errs := 0, 0
@@ -156,9 +157,8 @@ func checkLibrary() checkResult {
 	return checkResult{Name: "library", Status: checkOK, Message: fmt.Sprintf("Library: %s (%d items)", dir, count)}
 }
 
-func checkConfig() checkResult {
+func checkConfigWith(projectRoot string) checkResult {
 	globalCfg, gErr := config.LoadGlobal()
-	projectRoot, _ := findProjectRoot()
 	projectCfg, pErr := config.Load(projectRoot)
 
 	if gErr != nil && pErr != nil {
@@ -271,9 +271,8 @@ func checkOrphans(projectRoot string) checkResult {
 	return checkResult{Name: "orphans", Status: checkOK, Message: "Orphans: all installed content accounted for"}
 }
 
-func checkRegistries() checkResult {
+func checkRegistriesWith(projectRoot string) checkResult {
 	globalCfg, _ := config.LoadGlobal()
-	projectRoot, _ := findProjectRoot()
 	projectCfg, _ := config.Load(projectRoot)
 	merged := config.Merge(globalCfg, projectCfg)
 
