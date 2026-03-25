@@ -508,7 +508,7 @@ func (l libraryModel) renderMetadataBar(width int) string {
 		line2 = " " + label("Path", truncate(path, width-8))
 	}
 	if item.Description != "" && width > 50 {
-		desc := mutedStyle.Render(truncate(item.Description, width-8))
+		desc := mutedStyle.Render(truncate(sanitizeLine(item.Description), width-8))
 		if line2 == "" {
 			line2 = " " + desc
 		} else {
