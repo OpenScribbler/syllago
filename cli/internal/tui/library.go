@@ -360,7 +360,7 @@ func (l libraryModel) View() string {
 // viewBrowse renders the full-width table.
 func (l libraryModel) viewBrowse() string {
 	l.table.focused = true
-	return renderBorderedPanel(l.table.View(), l.width, l.height, primaryColor)
+	return borderedPanel(l.table.View(), l.width-borderSize, l.height-borderSize, focusedBorderFg)
 }
 
 // viewDetail renders file tree + preview with bordered panes.
@@ -368,44 +368,47 @@ func (l libraryModel) viewDetail() string {
 	treeOuterW := l.detailTreeWidth()
 	previewOuterW := l.width - treeOuterW
 
-	treeFg := borderColor
-	previewFg := borderColor
+	treeFg := unfocusedBorderFg
+	previewFg := unfocusedBorderFg
 	if l.focus == paneItems {
-		treeFg = primaryColor
+		treeFg = focusedBorderFg
 	} else {
-		previewFg = primaryColor
+		previewFg = focusedBorderFg
 	}
+
+	innerH := max(0, l.height-borderSize)
+	treeInnerW := max(0, treeOuterW-borderSize)
+	previewInnerW := max(0, previewOuterW-borderSize)
 
 	// Tree content: item name header + file tree + close button
 	itemName := ""
 	if l.detailItem != nil {
 		itemName = itemDisplayName(*l.detailItem)
 	}
-	innerH := max(0, l.height-borderSize)
-	treeHeader := boldStyle.Render(truncate(itemName, treeOuterW-borderSize))
+	treeHeader := boldStyle.Render(truncate(itemName, treeInnerW))
 	closeBtn := zone.Mark("lib-close", mutedStyle.Render("[x] Close"))
 
 	treeContentH := max(0, innerH-2) // header + footer
-	l.tree.SetSize(max(0, treeOuterW-borderSize), treeContentH)
+	l.tree.SetSize(treeInnerW, treeContentH)
 	treeContent := treeHeader + "\n" + l.tree.View() + "\n" + closeBtn
 
 	left := zone.Mark("lib-tree",
-		renderBorderedPanel(treeContent, treeOuterW, l.height, treeFg))
+		borderedPanel(treeContent, treeInnerW, innerH, treeFg))
 
 	// Preview pane with file count indicator
 	fileCount := ""
 	if l.detailItem != nil {
 		fileCount = fmt.Sprintf(" (%d files)", len(l.detailItem.Files))
 	}
-	previewHeader := renderSectionTitle(l.preview.fileName+fileCount, previewOuterW-borderSize)
+	previewHeader := renderSectionTitle(l.preview.fileName+fileCount, previewInnerW)
 	previewContentH := max(0, innerH-1)
-	l.preview.SetSize(max(0, previewOuterW-borderSize), previewContentH)
+	l.preview.SetSize(previewInnerW, previewContentH)
 
-	previewBody := l.renderPreviewBody(previewContentH, previewOuterW-borderSize)
+	previewBody := l.renderPreviewBody(previewContentH, previewInnerW)
 	previewContent := previewHeader + "\n" + previewBody
 
 	right := zone.Mark("lib-preview",
-		renderBorderedPanel(previewContent, previewOuterW, l.height, previewFg))
+		borderedPanel(previewContent, previewInnerW, innerH, previewFg))
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 }

@@ -263,21 +263,21 @@ func (e explorerModel) View() string {
 func (e explorerModel) viewSideBySide() string {
 	itemsOuterW := e.itemsWidth()
 	previewOuterW := e.width - itemsOuterW
-	outerH := e.height
+	innerH := e.height - borderSize
 
-	itemsFg := borderColor
-	previewFg := borderColor
+	itemsFg := unfocusedBorderFg
+	previewFg := unfocusedBorderFg
 	if e.focus == paneItems {
-		itemsFg = primaryColor
+		itemsFg = focusedBorderFg
 	} else {
-		previewFg = primaryColor
+		previewFg = focusedBorderFg
 	}
 
 	left := zone.Mark("pane-items",
-		renderBorderedPanel(e.items.View(), itemsOuterW, outerH, itemsFg))
+		borderedPanel(e.items.View(), itemsOuterW-borderSize, innerH, itemsFg))
 
 	right := zone.Mark("pane-preview",
-		renderBorderedPanel(e.preview.View(), previewOuterW, outerH, previewFg))
+		borderedPanel(e.preview.View(), previewOuterW-borderSize, innerH, previewFg))
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 }
@@ -288,7 +288,7 @@ func (e explorerModel) viewStacked() string {
 	if e.focus == panePreview {
 		content = e.preview.View()
 	}
-	return renderBorderedPanel(content, e.width, e.height, primaryColor)
+	return borderedPanel(content, e.width-borderSize, e.height-borderSize, focusedBorderFg)
 }
 
 // itemsWidth returns the OUTER width (including border) allocated to the items list.
