@@ -80,9 +80,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.MouseMsg:
-		var cmd tea.Cmd
-		a.topBar, cmd = a.topBar.Update(msg)
-		return a, cmd
+		var topCmd, explorerCmd tea.Cmd
+		a.topBar, topCmd = a.topBar.Update(msg)
+		a.explorer, explorerCmd = a.explorer.Update(msg)
+		return a, tea.Batch(topCmd, explorerCmd)
 
 	case tea.KeyMsg:
 		switch {
