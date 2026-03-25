@@ -69,6 +69,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	}
 
 	checks = append(checks, checkRegistriesWith(projectRoot))
+	checks = append(checks, checkNamingQuality(projectRoot))
 
 	// Compute summary
 	warns, errs := 0, 0
@@ -308,6 +309,35 @@ func checkRegistriesWith(projectRoot string) checkResult {
 		Status:  checkOK,
 		Message: fmt.Sprintf("Registries: %d configured (%s)", len(merged.Registries), joinWords(parts)),
 	}
+}
+
+func checkNamingQuality(projectRoot string) checkResult {
+	cat, err := catalog.ScanWithGlobalAndRegistries(projectRoot, projectRoot, nil)
+	if err != nil {
+		return checkResult{Name: "naming", Status: checkWarn, Message: "Naming: could not scan content", Details: []string{err.Error()}}
+	}
+
+	var unnamed int
+	var details []string
+	for _, item := range cat.Items {
+		if item.Type != catalog.Hooks && item.Type != catalog.MCP {
+			continue
+		}
+		if item.DisplayName == "" || item.DisplayName == item.Name {
+			unnamed++
+			details = append(details, fmt.Sprintf("%s %s: no display name", item.Type, item.Name))
+		}
+	}
+
+	if unnamed > 0 {
+		return checkResult{
+			Name:    "naming",
+			Status:  checkWarn,
+			Message: fmt.Sprintf("Naming: %d hooks/MCP items have no display name", unnamed),
+			Details: details,
+		}
+	}
+	return checkResult{Name: "naming", Status: checkOK, Message: "Naming: all hooks/MCP items have display names"}
 }
 
 func joinWords(parts []string) string {

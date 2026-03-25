@@ -1105,7 +1105,25 @@ func ScanWithGlobalAndRegistries(contentRoot string, projectRoot string, registr
 			cat.Overridden = append(cat.Overridden, globalCat.Items[i])
 		}
 	}
+	cat.checkNamingWarnings()
 	return cat, nil
+}
+
+// checkNamingWarnings flags hooks and MCP items that lack a meaningful display name.
+// Items are considered unnamed if DisplayName is empty or equals the raw Name
+// (meaning no override was set via .syllago.yaml or heuristics).
+func (c *Catalog) checkNamingWarnings() {
+	for _, item := range c.Items {
+		if item.Type != Hooks && item.Type != MCP {
+			continue
+		}
+		if item.DisplayName == "" || item.DisplayName == item.Name {
+			c.Warnings = append(c.Warnings, fmt.Sprintf(
+				"%s %q has no display name — add a name field to .syllago.yaml",
+				item.Type, item.Name,
+			))
+		}
+	}
 }
 
 // PrintWarnings writes any collected scan warnings to stderr.

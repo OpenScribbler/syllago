@@ -411,16 +411,20 @@ func TestApp_ConfigTabPlaceholder(t *testing.T) {
 	assertContains(t, view, "Settings view coming soon")
 }
 
-func TestApp_RegistriesPlaceholder(t *testing.T) {
+func TestApp_RegistriesGallery(t *testing.T) {
 	app := testApp(t)
 
+	// Tab from Library to Registries
 	m, cmd := app.Update(keyTab)
 	if cmd != nil {
 		m, _ = m.Update(cmd())
 	}
 	a := m.(App)
 	view := a.View()
-	assertContains(t, view, "Registries view coming soon")
+	// Gallery renders with "No items found" when no registries are configured
+	assertContains(t, view, "No items found")
+	// Should show gallery hints
+	assertContains(t, view, "arrows grid")
 }
 
 func TestApp_CursorWrapsInExplorer(t *testing.T) {

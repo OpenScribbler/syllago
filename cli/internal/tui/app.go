@@ -30,6 +30,7 @@ type App struct {
 	topBar   topBarModel
 	library  libraryModel  // Library tab: table + drill-in
 	explorer explorerModel // Content/Loadout tabs: items list + preview
+	gallery  galleryModel  // Loadouts/Registries tabs: card grid + contents sidebar
 	helpBar  helpBarModel
 	modal    textInputModal // reusable text input overlay
 
@@ -62,6 +63,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		topBar:          newTopBar(),
 		library:         newLibraryModel(cat.Items, providers, projectRoot),
 		explorer:        newExplorerModel(nil, false, providers, projectRoot),
+		gallery:         newGalleryModel(),
 		helpBar:         newHelpBar(version),
 		modal:           newTextInputModal(),
 	}
@@ -86,6 +88,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		ch := a.contentHeight()
 		a.library.SetSize(msg.Width, ch)
 		a.explorer.SetSize(msg.Width, ch)
+		a.gallery.SetSize(msg.Width, ch)
 		return a, nil
 
 	case tea.MouseMsg:
@@ -226,6 +229,17 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.helpBar.SetHints(a.currentHints())
 		return a, nil
 
+	case cardSelectedMsg:
+		return a, nil
+
+	case cardDrillMsg:
+		// Drill into the card by switching to explorer with filtered items
+		if msg.card != nil && len(msg.card.items) > 0 {
+			a.explorer.SetItems(msg.card.items, true)
+			a.explorer.SetSize(a.width, a.contentHeight())
+		}
+		return a, nil
+
 	case itemSelectedMsg:
 		return a, nil
 
@@ -288,6 +302,11 @@ func (a App) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		a.library, cmd = a.library.Update(msg)
 		return a, cmd
 	}
+	if a.isGalleryTab() {
+		var cmd tea.Cmd
+		a.gallery, cmd = a.gallery.Update(msg)
+		return a, cmd
+	}
 	var cmd tea.Cmd
 	a.explorer, cmd = a.explorer.Update(msg)
 	return a, cmd
@@ -301,6 +320,8 @@ func (a App) routeMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	var contentCmd tea.Cmd
 	if a.isLibraryTab() {
 		a.library, contentCmd = a.library.Update(msg)
+	} else if a.isGalleryTab() {
+		a.gallery, contentCmd = a.gallery.Update(msg)
 	} else {
 		a.explorer, contentCmd = a.explorer.Update(msg)
 	}
@@ -342,18 +363,17 @@ func (a App) contentHeight() int {
 // renderContent renders the main content area based on the active tab.
 func (a App) renderContent() string {
 	group := a.topBar.ActiveGroupLabel()
-	tab := a.topBar.ActiveTabLabel()
 
 	if group == "Config" {
 		return a.renderPlaceholder("Settings view coming soon")
 	}
 
-	if group == "Collections" && tab == "Registries" {
-		return a.renderPlaceholder("Registries view coming soon")
-	}
-
 	if a.isLibraryTab() {
 		return a.library.View()
+	}
+
+	if a.isGalleryTab() {
+		return a.gallery.View()
 	}
 
 	return a.explorer.View()
@@ -362,6 +382,13 @@ func (a App) renderContent() string {
 // isLibraryTab returns true if the active tab is Collections > Library.
 func (a App) isLibraryTab() bool {
 	return a.topBar.ActiveGroupLabel() == "Collections" && a.topBar.ActiveTabLabel() == "Library"
+}
+
+// isGalleryTab returns true if the active tab should show the gallery grid.
+func (a App) isGalleryTab() bool {
+	group := a.topBar.ActiveGroupLabel()
+	tab := a.topBar.ActiveTabLabel()
+	return group == "Collections" && (tab == "Loadouts" || tab == "Registries")
 }
 
 // rescanCatalog re-reads all content from disk and refreshes the active view.
@@ -384,13 +411,32 @@ func (a *App) rescanCatalog() {
 
 // refreshContent updates the active content model based on the current tab.
 func (a *App) refreshContent() {
+	ch := a.contentHeight()
 	if a.isLibraryTab() {
 		a.library.SetItems(a.catalog.Items)
-		a.library.SetSize(a.width, a.contentHeight())
-	} else {
-		items, mixed := a.itemsForCurrentTab()
-		a.explorer.SetItems(items, mixed)
-		a.explorer.SetSize(a.width, a.contentHeight())
+		a.library.SetSize(a.width, ch)
+		return
+	}
+	if a.isGalleryTab() {
+		a.refreshGallery()
+		a.gallery.SetSize(a.width, ch)
+		return
+	}
+	items, mixed := a.itemsForCurrentTab()
+	a.explorer.SetItems(items, mixed)
+	a.explorer.SetSize(a.width, ch)
+}
+
+// refreshGallery populates the gallery with cards for the current tab.
+func (a *App) refreshGallery() {
+	tab := a.topBar.ActiveTabLabel()
+	switch tab {
+	case "Loadouts":
+		cards := buildLoadoutCards(a.catalog.ByType(catalog.Loadouts))
+		a.gallery.SetCards(cards, "Loadout")
+	case "Registries":
+		cards := buildRegistryCards(a.registrySources, a.catalog)
+		a.gallery.SetCards(cards, "Registry")
 	}
 }
 
@@ -400,13 +446,6 @@ func (a App) itemsForCurrentTab() ([]catalog.ContentItem, bool) {
 	tab := a.topBar.ActiveTabLabel()
 
 	switch group {
-	case "Collections":
-		switch tab {
-		case "Loadouts":
-			return a.catalog.ByType(catalog.Loadouts), false
-		default:
-			return nil, false
-		}
 	case "Content":
 		ct := tabToContentType(tab)
 		if ct != "" {
@@ -438,7 +477,6 @@ func tabToContentType(tab string) catalog.ContentType {
 // currentHints returns context-sensitive help hints based on current state.
 func (a App) currentHints() []string {
 	group := a.topBar.ActiveGroupLabel()
-	tab := a.topBar.ActiveTabLabel()
 
 	base := []string{"1/2/3 groups", "tab items"}
 
@@ -446,8 +484,9 @@ func (a App) currentHints() []string {
 		return append(base, "? help", "q quit")
 	}
 
-	if group == "Collections" && tab == "Registries" {
-		return append(base, "a add", "? help", "q quit")
+	// Gallery tabs (Loadouts/Registries)
+	if a.isGalleryTab() {
+		return append(base, "arrows grid", "enter select", "tab grid/contents", "a add", "n create", "? help", "q back")
 	}
 
 	// Library in detail mode has different hints
