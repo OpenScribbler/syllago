@@ -3,8 +3,8 @@ syllago           │Home > Loadouts > Create  (1 of 10)
   Content         │Uncheck any types to skip.                       │  (no preview)
   Skills        3 │                                                 │
   Agents        1 │  > [x] Skills (3)                               │
-  MCP Configs   1 │    [x] Agents (1)                               │
-  Rules         1 │    [x] MCP Configs !! (1)                       │
+  MCP Servers   1 │    [x] Agents (1)                               │
+  Rules         1 │    [x] MCP Servers !! (1)                       │
   Hooks         1 │    [x] Rules (1)                                │
   Commands      1 │    [x] Hooks !! (1)                             │
   ─────────────   │    [x] Commands (1)                             │

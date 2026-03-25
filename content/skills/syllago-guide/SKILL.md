@@ -59,7 +59,7 @@ syllago export --to codex --llm-hooks generate     # Generate hook wrapper scrip
 | Skills | `skills/<name>/` | Universal | SKILL.md |
 | Agents | `agents/<name>/` | Universal | AGENT.md |
 | Prompts | `prompts/<name>/` | Universal | PROMPT.md |
-| MCP Configs | `mcp/<name>/` | Universal | config.json |
+| MCP Servers | `mcp/<name>/` | Universal | config.json |
 | Apps | `apps/<name>/` | Universal | README.md + install.sh |
 | Rules | `rules/<provider>/<name>/` | Provider-specific | varies |
 | Hooks | `hooks/<provider>/<name>/` | Provider-specific | config.json |

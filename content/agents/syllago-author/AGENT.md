@@ -115,7 +115,7 @@ When importing rules, syllago stores the original format in `.source/` for lossl
 
 **Only Claude Code, Gemini CLI, and Copilot CLI support hooks.** Exporting to other providers emits a warning.
 
-### MCP Configs (config.json)
+### MCP Servers (config.json)
 
 ```json
 {

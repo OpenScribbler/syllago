@@ -3,7 +3,7 @@ syllago           │Home > Settings
   Content         │  > Update check  on
   Skills        3 │    Auto-update  off
   Agents        1 │    Registry auto-sync  off
-  MCP Configs   1 │
+  MCP Servers   1 │
   Rules         1 │ ─────────────────────────────────────────────
   Hooks         1 │ Check for new versions on launch. Requires network access to the git remote.
   Commands      1 │ Disable for air-gapped or offline environments.

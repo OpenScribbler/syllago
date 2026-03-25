@@ -3,7 +3,7 @@ syllago           │Home > Library
   Content         │ [a] Add Content
   Skills        3 │
   Agents        1 │╭────────────────────────────────────────────────╮
-  MCP Configs   1 ││ Skills (1)                                     │
+  MCP Servers   1 ││ Skills (1)                                     │
   Rules         1 ││ Reusable skill definitions that extend AI tool │
   Hooks         1 ││ capabilities                                   │
   Commands      1 │╰────────────────────────────────────────────────╯

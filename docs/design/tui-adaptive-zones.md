@@ -187,7 +187,7 @@ The metadata bar always shows these fields in a consistent layout:
 |---|---|---|
 | Skills | Files: {n} | Description from SKILL.md frontmatter |
 | Agents | Permission: {mode} | Description from agent frontmatter |
-| MCP Configs | Transport: {stdio/http} | Command: {command + args summary} |
+| MCP Servers | Transport: {stdio/http} | Command: {command + args summary} |
 | Rules | Scope: {globs} | Description from frontmatter (if any) |
 | Hooks | Events: {event names} | Matcher: {matcher} + Handler: {type} |
 | Commands | Effort: {level} | Description from frontmatter |
@@ -451,7 +451,7 @@ Single-file types. No file tree needed — the content zone is a full-width scro
 
 ---
 
-### MCP Configs — Full-Width JSON Preview
+### MCP Servers — Full-Width JSON Preview
 
 Same full-width preview pattern. The metadata bar surfaces MCP-specific fields (transport, command, env vars) so the JSON preview is supplementary, not the only way to see key info.
 
@@ -466,7 +466,7 @@ Same full-width preview pattern. The metadata bar surfaces MCP-specific fields (
 │ Command: npx -y @modelcontextprotocol/server-postgres * Env: DATABASE_URL                                            │
 ├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
 ┌─────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────┐
-│ MCP Configs (3)         │ Preview                                                                                     │
+│ MCP Servers (3)         │ Preview                                                                                     │
 │                         │ ──────────────────────────────────────────────────────────────────────────────────────────── │
 │ > postgres-server        │  1  {                                                                                      │
 │   github-mcp             │  2    "mcpServers": {                                                                      │
@@ -510,7 +510,7 @@ Same full-width preview pattern. The metadata bar surfaces MCP-specific fields (
 | **Hooks** | Split + tab | Files tree / Compat matrix (tabbed) | Preview |
 | **Agents** | Full-width | -- | Preview |
 | **Rules** | Full-width | -- | Preview |
-| **MCP Configs** | Full-width | -- | Preview |
+| **MCP Servers** | Full-width | -- | Preview |
 | **Commands** | Full-width | -- | Preview |
 
 Only **2 content zone patterns** to implement:
@@ -570,7 +570,7 @@ The metadata bar still spans full width and shows info about the selected card.
 │ │   ────────────────────── │  │   ────────────────────── │  │   ──────────────── │   Py-Doc-Gen                      │
 │ │   4 Skills               │  │   6 Skills               │  │   2 Agents         │   Django-Patterns                 │
 │ │   2 Rules                │  │   1 Agent                │  │   5 Rules          │   Test-Generator                  │
-│ │   1 Agent                │  │   2 MCP Configs          │  │   3 Hooks          │                                   │
+│ │   1 Agent                │  │   2 MCP Servers          │  │   3 Hooks          │                                   │
 │ │   Target: Claude Code    │  │   Target: Cursor         │  │   Target: CC       │ Rules                             │
 │ ╰──────────────────────────╯  ╰──────────────────────────╯  ╰─────────────────── │   Strict-Types                    │
 │                                                                                   │   PEP8-Lint                       │
@@ -648,7 +648,7 @@ Same Gallery Grid layout, but cards show registry info and contents shows availa
 │ │   github.com/acme/syllago-rules      │  │   github.com/syllago/community      ││   Py-Doc-Gen                      │
 │ │   ──────────────────────────────     │  │   ──────────────────────────────     ││   Test-Generator                  │
 │ │   4 Skills, 3 Rules, 2 Hooks        │  │   15 Skills, 8 Rules, 5 Agents      ││   Django-Patterns                 │
-│ │   3 Agents                           │  │   12 Commands, 4 MCP Configs        ││                                   │
+│ │   3 Agents                           │  │   12 Commands, 4 MCP Servers        ││                                   │
 │ │   Last sync: 2h ago  [up to date]   │  │   Last sync: 1d ago  [outdated]     ││ Rules (3)                         │
 │ ╰──────────────────────────────────────╯  ╰──────────────────────────────────────╯│   Strict-Types                    │
 │                                                                                   │   PEP8-Lint                       │
@@ -694,7 +694,7 @@ Library uses the same Gallery Grid but cards represent content types (Skills, Ag
 │ Library                                                                                       │ Recent Activity       │
 │                                                                                               │                       │
 │ ╭──────────────────────────╮  ╭──────────────────────────╮  ╭──────────────────────────╮      │ Installed              │
-│ │ > Skills (8)             │  │   Agents (4)             │  │   MCP Configs (3)        │      │   Refactor-Py -> CC   │
+│ │ > Skills (8)             │  │   Agents (4)             │  │   MCP Servers (3)        │      │   Refactor-Py -> CC   │
 │ │   ────────────────────── │  │   ────────────────────── │  │   ────────────────────── │      │   Auditor -> CC       │
 │ │   5 from registries      │  │   2 from registries      │  │   1 from registry        │      │   Strict-Types -> CC  │
 │ │   3 locally created      │  │   2 locally created      │  │   2 locally created      │      │                       │

@@ -3,7 +3,7 @@ syllago           │Home > Loadouts > Create  (9 of 10)
   Content         │Choose destination:
   Skills        3 │
   Agents        1 │  > Project (loadouts/ in repo)
-  MCP Configs   1 │    Library (~/.syllago/content/loadouts/)
+  MCP Servers   1 │    Library (~/.syllago/content/loadouts/)
   Rules         1 │
   Hooks         1 │ [enter] Next
   Commands      1 │

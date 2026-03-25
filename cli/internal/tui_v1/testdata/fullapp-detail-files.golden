@@ -3,7 +3,7 @@ syllago           │Home > Skills > alpha-skill
   Content         │ Files  |  Install
 > Skills        3 │Type: Skills
   Agents        1 │Path: <TESTDIR>/skills/alpha-skill
-  MCP Configs   1 │Providers: Claude Code
+  MCP Servers   1 │Providers: Claude Code
   Rules         1 │─────────────────────────────────────────────────────────────
   Hooks         1 │
   Commands      1 │Files

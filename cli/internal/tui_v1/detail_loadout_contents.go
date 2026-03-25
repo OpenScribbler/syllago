@@ -55,7 +55,7 @@ func newLoadoutContents(manifest *loadout.Manifest, cat *catalog.Catalog) loadou
 		{"Hooks", catalog.Hooks, nil},
 		{"Skills", catalog.Skills, nil},
 		{"Agents", catalog.Agents, nil},
-		{"MCP Configs", catalog.MCP, nil},
+		{"MCP Servers", catalog.MCP, nil},
 		{"Commands", catalog.Commands, nil},
 	}
 

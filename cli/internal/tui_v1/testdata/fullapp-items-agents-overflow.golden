@@ -3,7 +3,7 @@ syllago           │Home > Agents
   Content         │ [a] Add Agents
   Skills       50 │
 > Agents       20 │    Name       Description                           Provider
-  MCP Configs  15 │    ─────────  ────────────────────────────────────  ────────
+  MCP Servers  15 │    ─────────  ────────────────────────────────────  ────────
   Rules         0 │  > agent-000  Agent number 0
   Hooks         0 │    agent-001  Agent number 1
   Commands      0 │    agent-002  Agent number 2

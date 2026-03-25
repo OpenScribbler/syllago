@@ -3,7 +3,7 @@ syllago           │Home > Loadouts > Create  (10 of 10)
   Content         │ Review  |  Preview
   Skills        3 │
   Agents        1 │Review & Create                    │  (no preview)
-  MCP Configs   1 │                                   │
+  MCP Servers   1 │                                   │
   Rules         1 │  Provider: Claude Code            │
   Hooks         1 │  Name: test-loadout               │
   Commands      1 │  Destination: Project (loadouts/ in repo)│

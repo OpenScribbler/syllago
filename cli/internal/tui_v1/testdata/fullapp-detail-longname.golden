@@ -3,7 +3,7 @@ syllago           │Home > Skills > extremely-long-skill-name-that-should-be-tr
   Content         │ Files  |  Install
 > Skills       50 │Type: Skills
   Agents       20 │Path: <TESTDIR>/skills/extremely-long-skill-name-that-should-be-truncated-in-narrow-terminals-010
-  MCP Configs  15 │Providers: Claude Code
+  MCP Servers  15 │Providers: Claude Code
   Rules         0 │─────────────────────────────────────────────────────────────
   Hooks         0 │
   Commands      0 │Files

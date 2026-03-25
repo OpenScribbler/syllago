@@ -3,7 +3,7 @@ syllago           │Home > Skills
   Content         │ [a] Add Skills
 > Skills        3 │
   Agents        1 │    Name         Description                                                                 Provider
-  MCP Configs   1 │    ───────────  ──────────────────────────────────────────────────────────────────────────  ────────
+  MCP Servers   1 │    ───────────  ──────────────────────────────────────────────────────────────────────────  ────────
   Rules         1 │  > alpha-skill  A helpful skill
   Hooks         1 │    beta-skill   Another skill
   Commands      1 │    local-skill  [LIBRARY] A library skill with LLM prompt
