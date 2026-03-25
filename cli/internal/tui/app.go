@@ -109,12 +109,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.helpBar.SetHints(a.currentHints())
 			return a, cmd
 
-		// h/l switch sub-tabs within active group
-		case msg.String() == keyRight, msg.String() == "right":
+		// Tab cycles sub-tabs within active group
+		case msg.Type == tea.KeyTab:
 			cmd := a.topBar.NextTab()
 			a.refreshExplorer()
 			return a, cmd
-		case msg.String() == keyLeft, msg.String() == "left":
+		case msg.Type == tea.KeyShiftTab:
 			cmd := a.topBar.PrevTab()
 			a.refreshExplorer()
 			return a, cmd
@@ -248,7 +248,7 @@ func (a App) currentHints() []string {
 	group := a.topBar.ActiveGroupLabel()
 	tab := a.topBar.ActiveTabLabel()
 
-	base := []string{"1/2/3 groups", "h/l tabs"}
+	base := []string{"1/2/3 groups", "tab tabs"}
 
 	if group == "Config" {
 		return append(base, "? help", "q quit")
@@ -258,7 +258,7 @@ func (a App) currentHints() []string {
 		return append(base, "a add", "? help", "q quit")
 	}
 
-	hints := append(base, "j/k navigate", "tab focus")
+	hints := append(base, "j/k navigate", "h/l pane")
 	if group != "Config" {
 		hints = append(hints, "a add", "n create")
 	}

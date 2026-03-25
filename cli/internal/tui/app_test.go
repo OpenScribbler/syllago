@@ -109,27 +109,27 @@ func TestApp_GroupSwitchWith123(t *testing.T) {
 	}
 }
 
-func TestApp_SubTabNavHL(t *testing.T) {
+func TestApp_SubTabNavTab(t *testing.T) {
 	app := testApp(t)
 
-	// l moves to next sub-tab (Library -> Registries)
-	m, cmd := app.Update(keyRune('l'))
+	// Tab moves to next sub-tab (Library -> Registries)
+	m, cmd := app.Update(keyTab)
 	if cmd != nil {
 		m, _ = m.Update(cmd())
 	}
 	a := m.(App)
 	if a.topBar.ActiveTabLabel() != "Registries" {
-		t.Errorf("expected Registries after l, got %q", a.topBar.ActiveTabLabel())
+		t.Errorf("expected Registries after Tab, got %q", a.topBar.ActiveTabLabel())
 	}
 
-	// h moves back (Registries -> Library)
-	m, cmd = a.Update(keyRune('h'))
+	// Shift+Tab moves back (Registries -> Library)
+	m, cmd = a.Update(keyShiftTab)
 	if cmd != nil {
 		m, _ = m.Update(cmd())
 	}
 	a = m.(App)
 	if a.topBar.ActiveTabLabel() != "Library" {
-		t.Errorf("expected Library after h, got %q", a.topBar.ActiveTabLabel())
+		t.Errorf("expected Library after Shift+Tab, got %q", a.topBar.ActiveTabLabel())
 	}
 }
 
@@ -264,25 +264,25 @@ func TestApp_JKNavigation(t *testing.T) {
 	}
 }
 
-func TestApp_TabSwitchesFocus(t *testing.T) {
+func TestApp_HLSwitchesFocus(t *testing.T) {
 	app := testAppWithItems(t)
 
 	if app.explorer.focus != paneItems {
 		t.Fatal("expected initial focus on items pane")
 	}
 
-	// Tab switches to preview
-	m, _ := app.Update(keyTab)
+	// l (right) switches to preview
+	m, _ := app.Update(keyRune('l'))
 	a := m.(App)
 	if a.explorer.focus != panePreview {
-		t.Fatal("expected focus on preview pane after tab")
+		t.Fatal("expected focus on preview pane after l")
 	}
 
-	// Tab switches back to items
-	m, _ = a.Update(keyTab)
+	// h (left) switches back to items
+	m, _ = a.Update(keyRune('h'))
 	a = m.(App)
 	if a.explorer.focus != paneItems {
-		t.Fatal("expected focus back on items pane after second tab")
+		t.Fatal("expected focus back on items pane after h")
 	}
 }
 
@@ -302,8 +302,8 @@ func TestApp_ConfigTabPlaceholder(t *testing.T) {
 func TestApp_RegistriesPlaceholder(t *testing.T) {
 	app := testApp(t)
 
-	// Navigate to Collections > Registries
-	m, cmd := app.Update(keyRune('l'))
+	// Navigate to Collections > Registries via Tab
+	m, cmd := app.Update(keyTab)
 	if cmd != nil {
 		m, _ = m.Update(cmd())
 	}
@@ -328,7 +328,8 @@ func TestApp_HelpHintsContextSensitive(t *testing.T) {
 	app := testAppWithItems(t)
 	view := app.View()
 	assertContains(t, view, "j/k navigate")
-	assertContains(t, view, "tab focus")
+	assertContains(t, view, "h/l pane")
+	assertContains(t, view, "tab tabs")
 }
 
 // --- Items search tests ---
