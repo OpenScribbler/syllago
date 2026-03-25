@@ -1,8 +1,9 @@
-// Package audit provides structured JSON audit logging for hook lifecycle events.
+// Package audit provides structured JSON audit logging for content and hook lifecycle events.
 //
-// Two categories of events are logged:
-//   - Lifecycle events (syllago controls): install, uninstall, update, scan results
-//   - Execution events (hook scripts report): before/after tool execute, exit codes, duration
+// Three categories of events are logged:
+//   - Content events: add, install, remove, share operations on library items
+//   - Hook lifecycle events (syllago controls): install, uninstall, update, scan results
+//   - Hook execution events (hook scripts report): before/after tool execute, exit codes, duration
 //
 // Log format is JSON Lines (one JSON object per line), compatible with jq, Splunk,
 // Datadog, ELK, and grep.
@@ -22,6 +23,13 @@ import (
 type EventType string
 
 const (
+	// Content lifecycle events
+	EventContentAdd     EventType = "content.add"
+	EventContentInstall EventType = "content.install"
+	EventContentRemove  EventType = "content.remove"
+	EventContentShare   EventType = "content.share"
+
+	// Hook-specific events
 	EventHookInstall   EventType = "hook.install"
 	EventHookUninstall EventType = "hook.uninstall"
 	EventHookExecute   EventType = "hook.execute"
@@ -35,9 +43,15 @@ type Event struct {
 	Version   int       `json:"version"`
 	EventType EventType `json:"event_type"`
 
-	// Common fields
-	HookName  string `json:"hook_name"`
-	HookEvent string `json:"hook_event"`
+	// Common fields (at least one of HookName or ItemName is set)
+	HookName  string `json:"hook_name,omitempty"`
+	HookEvent string `json:"hook_event,omitempty"`
+
+	// Content fields (for content.* events)
+	ItemName    string `json:"item_name,omitempty"`
+	ItemType    string `json:"item_type,omitempty"`
+	ContentHash string `json:"content_hash,omitempty"`
+	Target      string `json:"target,omitempty"` // provider slug or registry name
 
 	// Lifecycle fields
 	Provider   string `json:"provider,omitempty"`
@@ -105,6 +119,16 @@ func (l *Logger) Close() error {
 		return l.file.Close()
 	}
 	return nil
+}
+
+// LogContent is a convenience method for logging content lifecycle events.
+func (l *Logger) LogContent(eventType EventType, itemName, itemType, target string) error {
+	return l.Log(Event{
+		EventType: eventType,
+		ItemName:  itemName,
+		ItemType:  itemType,
+		Target:    target,
+	})
 }
 
 // DefaultLogPath returns the default audit log path within a project.
