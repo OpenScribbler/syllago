@@ -2,14 +2,18 @@ package tui
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+	"github.com/tidwall/gjson"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/loadout"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -64,6 +68,10 @@ type tableRow struct {
 	installed   string
 	description string
 	sortFiles   int // numeric for sorting
+
+	// Type-specific detail for metadata bar line 3 (hooks, MCP, loadouts).
+	// Empty for content types with no extra metadata.
+	typeDetail string
 }
 
 func newTableModel(items []catalog.ContentItem, provs []provider.Provider, repoRoot string) tableModel {
@@ -603,9 +611,125 @@ func (t tableModel) computeRows(items []catalog.ContentItem) []tableRow {
 			sortFiles:   len(item.Files),
 			installed:   t.installedTools(item),
 			description: sanitizeLine(item.Description),
+			typeDetail:  computeTypeDetail(item),
 		}
 	}
 	return rows
+}
+
+// computeTypeDetail returns type-specific metadata for hooks, MCP, and loadouts.
+// Returns empty string for other content types.
+func computeTypeDetail(item catalog.ContentItem) string {
+	switch item.Type {
+	case catalog.Hooks:
+		return computeHookDetail(item)
+	case catalog.MCP:
+		return computeMCPDetail(item)
+	case catalog.Loadouts:
+		return computeLoadoutDetail(item)
+	}
+	return ""
+}
+
+// computeHookDetail extracts event, matcher, and handler type from hook.json.
+func computeHookDetail(item catalog.ContentItem) string {
+	hookPath := filepath.Join(item.Path, "hook.json")
+	data, err := os.ReadFile(hookPath)
+	if err != nil {
+		return ""
+	}
+	event := gjson.GetBytes(data, "event").String()
+	matcher := gjson.GetBytes(data, "matcher").String()
+	hookType := gjson.GetBytes(data, "hooks.0.type").String()
+	if hookType == "" {
+		hookType = "command"
+	}
+
+	var parts []string
+	if event != "" {
+		parts = append(parts, "Event: "+event)
+	}
+	if matcher != "" {
+		parts = append(parts, "Matcher: "+matcher)
+	}
+	parts = append(parts, "Handler: "+hookType)
+	return strings.Join(parts, " · ")
+}
+
+// computeMCPDetail extracts server key and command from config.json.
+func computeMCPDetail(item catalog.ContentItem) string {
+	configPath := filepath.Join(item.Path, "config.json")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return ""
+	}
+	servers := gjson.GetBytes(data, "mcpServers")
+	if !servers.Exists() || !servers.IsObject() {
+		return ""
+	}
+
+	var parts []string
+	// Use ServerKey if set, otherwise take first key
+	key := item.ServerKey
+	if key == "" {
+		servers.ForEach(func(k, _ gjson.Result) bool {
+			key = k.String()
+			return false // stop after first
+		})
+	}
+	if key != "" {
+		parts = append(parts, "Server: "+key)
+	}
+	cmd := gjson.GetBytes(data, "mcpServers."+key+".command").String()
+	args := gjson.GetBytes(data, "mcpServers."+key+".args")
+	if cmd != "" {
+		cmdStr := cmd
+		if args.Exists() && args.IsArray() {
+			for _, a := range args.Array() {
+				cmdStr += " " + a.String()
+			}
+		}
+		parts = append(parts, "Command: "+cmdStr)
+	}
+	return strings.Join(parts, " · ")
+}
+
+// computeLoadoutDetail extracts target provider and item counts from loadout.yaml.
+func computeLoadoutDetail(item catalog.ContentItem) string {
+	manifest, err := loadout.Parse(filepath.Join(item.Path, "loadout.yaml"))
+	if err != nil {
+		return ""
+	}
+
+	var parts []string
+	if manifest.Provider != "" {
+		parts = append(parts, "Target: "+manifest.Provider)
+	}
+
+	// Build item count summary
+	var counts []string
+	if n := len(manifest.Skills); n > 0 {
+		counts = append(counts, itoa(n)+" skills")
+	}
+	if n := len(manifest.Rules); n > 0 {
+		counts = append(counts, itoa(n)+" rules")
+	}
+	if n := len(manifest.Hooks); n > 0 {
+		counts = append(counts, itoa(n)+" hooks")
+	}
+	if n := len(manifest.Agents); n > 0 {
+		counts = append(counts, itoa(n)+" agents")
+	}
+	if n := len(manifest.MCP); n > 0 {
+		counts = append(counts, itoa(n)+" mcp")
+	}
+	if n := len(manifest.Commands); n > 0 {
+		counts = append(counts, itoa(n)+" commands")
+	}
+	if len(counts) > 0 {
+		parts = append(parts, strings.Join(counts, ", "))
+	}
+	return strings.Join(parts, " · ")
 }
 
 // installedTools returns abbreviated provider names where this item is installed.
