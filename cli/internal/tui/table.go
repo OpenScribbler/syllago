@@ -271,12 +271,15 @@ func (t *tableModel) applyFilterAndSort() {
 		t.items = nil
 		t.rows = nil
 		for i, item := range t.allItems {
+			row := t.allRows[i]
 			if strings.Contains(strings.ToLower(item.Name), q) ||
 				strings.Contains(strings.ToLower(item.DisplayName), q) ||
 				strings.Contains(strings.ToLower(item.Description), q) ||
-				strings.Contains(strings.ToLower(string(item.Type)), q) {
+				strings.Contains(strings.ToLower(string(item.Type)), q) ||
+				strings.Contains(strings.ToLower(row.scope), q) ||
+				matchesInstalled(row.installed, q) {
 				t.items = append(t.items, item)
-				t.rows = append(t.rows, t.allRows[i])
+				t.rows = append(t.rows, row)
 			}
 		}
 	}
@@ -776,6 +779,57 @@ func providerAbbrev(slug string) string {
 			return strings.ToUpper(slug[:2])
 		}
 		return slug
+	}
+}
+
+// matchesInstalled checks if a search query matches the installed field.
+// Matches against the raw abbreviation string (e.g. "CC,GC") and also
+// resolves full provider names so "claude code" matches "CC".
+func matchesInstalled(installed, query string) bool {
+	if installed == "" || installed == "--" {
+		return false
+	}
+	// Direct match on the abbreviation string
+	if strings.Contains(strings.ToLower(installed), query) {
+		return true
+	}
+	// Expand abbreviations to full names and check those
+	for _, abbr := range strings.Split(installed, ",") {
+		fullName := strings.ToLower(providerFullName(abbrevToSlug(strings.TrimSpace(abbr))))
+		if strings.Contains(fullName, query) {
+			return true
+		}
+	}
+	return false
+}
+
+// abbrevToSlug reverses providerAbbrev: maps "CC" -> "claude-code", etc.
+func abbrevToSlug(abbr string) string {
+	switch abbr {
+	case "CC":
+		return "claude-code"
+	case "GC":
+		return "gemini-cli"
+	case "Cu":
+		return "cursor"
+	case "Co":
+		return "copilot"
+	case "WS":
+		return "windsurf"
+	case "Ki":
+		return "kiro"
+	case "Cl":
+		return "cline"
+	case "RC":
+		return "roo-code"
+	case "Am":
+		return "amp"
+	case "OC":
+		return "opencode"
+	case "Zd":
+		return "zed"
+	default:
+		return strings.ToLower(abbr)
 	}
 }
 

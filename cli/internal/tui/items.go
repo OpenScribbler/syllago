@@ -106,7 +106,7 @@ func (m *itemsModel) PageDown() {
 	m.offset = min(maxOffset, m.offset+m.height)
 }
 
-// ApplySearch filters items by name substring match (case-insensitive).
+// ApplySearch filters items across name, display name, description, type, and source.
 func (m *itemsModel) ApplySearch(query string) {
 	m.search = query
 	if query == "" {
@@ -115,7 +115,11 @@ func (m *itemsModel) ApplySearch(query string) {
 		q := strings.ToLower(query)
 		filtered := make([]catalog.ContentItem, 0)
 		for _, item := range m.allItems {
-			if strings.Contains(strings.ToLower(item.Name), q) {
+			if strings.Contains(strings.ToLower(item.Name), q) ||
+				strings.Contains(strings.ToLower(item.DisplayName), q) ||
+				strings.Contains(strings.ToLower(item.Description), q) ||
+				strings.Contains(strings.ToLower(string(item.Type)), q) ||
+				strings.Contains(strings.ToLower(item.Source), q) {
 				filtered = append(filtered, item)
 			}
 		}
