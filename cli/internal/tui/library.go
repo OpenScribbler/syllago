@@ -550,124 +550,17 @@ func (l libraryModel) viewDetail() string {
 }
 
 // renderMetadataContent returns exactly metaBarLines (3) lines of metadata text.
-// No border, no separator — the caller wraps this in the panel frame.
-//
-// Line 1: name (40 fixed), type, files, origin, installed
-// Line 2: scope, registry, path
-// Line 3: type-specific detail + [r] Rename button (right-aligned)
+// Delegates to the shared renderMetaPanel function.
 func (l libraryModel) renderMetadataContent(width int) string {
 	item := l.table.Selected()
 	if item == nil {
-		blank := strings.Repeat(" ", width)
-		return blank + "\n" + blank + "\n" + blank
+		return renderMetaPanel(nil, metaPanelData{}, width)
 	}
-
-	// chip renders a fixed-width labeled field: "Key: value" padded to w.
-	chip := func(key, val string, w int) string {
-		valW := w - len(key) - 2 // -2 for ": "
-		val = padRight(truncate(sanitizeLine(val), valW), valW)
-		return boldStyle.Render(key+": ") + mutedStyle.Render(val)
-	}
-
-	gap := "  " // fixed spacing between chips (no dots)
-
-	// tryAdd appends a chip to line only if it fits within width.
-	tryAdd := func(line, c string) string {
-		candidate := line + gap + c
-		if lipgloss.Width(candidate) <= width {
-			return candidate
-		}
-		return line
-	}
-
 	row := l.table.rows[l.table.cursor]
-
-	// --- Line 1: name (40), type (10), files (5), origin (15), installed, registry ---
-	nameMaxW := 40
-	displayName := truncate(sanitizeLine(itemDisplayName(*item)), nameMaxW)
-	line1 := " " + boldStyle.Render(padRight(displayName, nameMaxW))
-	line1 += "  " + chip("Type", typeLabel(item.Type), 14)
-
-	line1 = tryAdd(line1, chip("Files", itoa(len(item.Files)), 9))
-
-	// Origin: provider it was imported from, or "syllago" if created locally
-	origin := "syllago"
-	if item.Meta != nil && item.Meta.SourceProvider != "" {
-		origin = item.Meta.SourceProvider
-	} else if item.Provider != "" {
-		origin = item.Provider
-	}
-	line1 = tryAdd(line1, chip("Origin", origin, 19))
-
-	// Installed: variable width, can be long
-	if row.installed != "--" {
-		line1 = tryAdd(line1, boldStyle.Render("Installed: ")+mutedStyle.Render(row.installed))
-	} else {
-		line1 = tryAdd(line1, boldStyle.Render("Installed: ")+mutedStyle.Render("--"))
-	}
-
-	// --- Line 2: scope, registry, path ---
-	scope := "project"
-	if item.Meta != nil && item.Meta.SourceScope != "" {
-		scope = item.Meta.SourceScope
-	} else if item.Library {
-		scope = "global"
-	}
-	line2 := " " + chip("Scope", scope, 15)
-
-	regName := "not in a registry"
-	if item.Registry != "" {
-		regName = item.Registry
-	} else if item.Meta != nil && item.Meta.SourceRegistry != "" {
-		regName = item.Meta.SourceRegistry
-	}
-	line2 += gap + chip("Registry", regName, 30)
-
-	if item.Path != "" {
-		path := item.Path
-		if home, err := homeDir(); err == nil && strings.HasPrefix(path, home) {
-			path = "~" + path[len(home):]
-		}
-		pathW := max(20, width-lipgloss.Width(line2)-10)
-		line2 = tryAdd(line2, boldStyle.Render("Path: ")+mutedStyle.Render(truncateMiddle(path, pathW)))
-	}
-
-	// --- Line 3: type-specific detail or blank ---
-	// Pre-computed typeDetail is plain text "Key: val · Key: val".
-	// Re-render with bold labels to match lines 1-2.
-	line3 := ""
-	if row.typeDetail != "" {
-		segments := strings.Split(sanitizeLine(row.typeDetail), " · ")
-		styled := " "
-		for i, seg := range segments {
-			if i > 0 {
-				styled += gap
-			}
-			if idx := strings.Index(seg, ": "); idx >= 0 {
-				styled += boldStyle.Render(seg[:idx+2]) + mutedStyle.Render(seg[idx+2:])
-			} else {
-				styled += mutedStyle.Render(seg)
-			}
-		}
-		line3 = styled
-	}
-
-	// Add rename button right-aligned on line 3
-	renameBtn := zone.Mark("meta-rename", activeButtonStyle.Render("[r] Rename"))
-	renameBtnW := lipgloss.Width(renameBtn)
-	line3W := lipgloss.Width(line3)
-	btnGap := max(1, width-line3W-renameBtnW)
-	line3 += strings.Repeat(" ", btnGap) + renameBtn
-
-	// Pad each line to exact width (MaxWidth clips, manual pad fills).
-	pad := func(s string) string {
-		s = lipgloss.NewStyle().MaxWidth(width).Render(s)
-		if g := width - lipgloss.Width(s); g > 0 {
-			s += strings.Repeat(" ", g)
-		}
-		return s
-	}
-	return pad(line1) + "\n" + pad(line2) + "\n" + pad(line3)
+	return renderMetaPanel(item, metaPanelData{
+		installed:  row.installed,
+		typeDetail: row.typeDetail,
+	}, width)
 }
 
 // truncateMiddle keeps the first 2 path segments and last 3 segments,
