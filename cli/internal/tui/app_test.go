@@ -1,9 +1,12 @@
 package tui
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
@@ -375,6 +378,70 @@ func TestItemsModel_SearchNoResults(t *testing.T) {
 	}
 	if m.Selected() != nil {
 		t.Error("expected nil selection with no results")
+	}
+}
+
+// --- Preview scroll indicator tests ---
+
+func TestPreview_ScrollIndicators(t *testing.T) {
+	p := newPreviewModel()
+	p.SetSize(40, 7) // header + 6 content lines
+
+	// Load 20 lines of content
+	p.lines = make([]string, 20)
+	for i := range p.lines {
+		p.lines[i] = fmt.Sprintf("line %d content", i+1)
+	}
+	p.fileName = "test.md"
+
+	// At top: no "above" indicator, should show "below"
+	view := p.View()
+	stripped := ansi.Strip(view)
+	if strings.Contains(stripped, "more above") {
+		t.Error("should not show 'above' indicator at top")
+	}
+	if !strings.Contains(stripped, "more below") {
+		t.Error("should show 'below' indicator when content overflows")
+	}
+
+	// Scroll down: should show both indicators
+	p.offset = 5
+	view = p.View()
+	stripped = ansi.Strip(view)
+	if !strings.Contains(stripped, "more above") {
+		t.Error("should show 'above' indicator when scrolled down")
+	}
+	if !strings.Contains(stripped, "more below") {
+		t.Error("should show 'below' indicator when more content exists")
+	}
+	if !strings.Contains(stripped, "(5 more above)") {
+		t.Errorf("expected '(5 more above)', got:\n%s", stripped)
+	}
+
+	// Scroll to bottom: should show "above" but not "below"
+	p.offset = 14 // 20 lines - 6 content lines = offset 14
+	view = p.View()
+	stripped = ansi.Strip(view)
+	if !strings.Contains(stripped, "more above") {
+		t.Error("should show 'above' indicator at bottom")
+	}
+	if strings.Contains(stripped, "more below") {
+		t.Error("should not show 'below' indicator at bottom")
+	}
+}
+
+func TestPreview_NoIndicatorsWhenContentFits(t *testing.T) {
+	p := newPreviewModel()
+	p.SetSize(40, 10) // header + 9 content lines
+
+	// Only 3 lines of content — fits without scrolling
+	p.lines = []string{"line 1", "line 2", "line 3"}
+	p.fileName = "short.md"
+
+	view := p.View()
+	stripped := ansi.Strip(view)
+	if strings.Contains(stripped, "more above") || strings.Contains(stripped, "more below") {
+		t.Error("should not show scroll indicators when all content fits")
 	}
 }
 
