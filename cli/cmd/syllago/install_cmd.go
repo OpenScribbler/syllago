@@ -217,7 +217,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		// Audit log the install (best-effort, don't fail the operation)
 		if auditLogger, aErr := audit.NewLogger(audit.DefaultLogPath(projectRoot)); aErr == nil {
 			_ = auditLogger.LogContent(audit.EventContentInstall, item.Name, string(item.Type), toSlug)
-			auditLogger.Close()
+			_ = auditLogger.Close()
 		}
 
 		if !output.JSON && !output.Quiet {
