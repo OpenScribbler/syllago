@@ -521,16 +521,7 @@ func (l libraryModel) renderMetadataBar(width int) string {
 		line1 = tryAdd(line1, boldStyle.Render("Installed: ")+mutedStyle.Render("--"))
 	}
 
-	// Registry
-	regName := "not in a registry"
-	if item.Registry != "" {
-		regName = item.Registry
-	} else if item.Meta != nil && item.Meta.SourceRegistry != "" {
-		regName = item.Meta.SourceRegistry
-	}
-	line1 = tryAdd(line1, boldStyle.Render("Registry: ")+mutedStyle.Render(regName))
-
-	// --- Line 2: scope + path ---
+	// --- Line 2: scope, registry, path ---
 	scope := "project"
 	if item.Meta != nil && item.Meta.SourceScope != "" {
 		scope = item.Meta.SourceScope
@@ -538,12 +529,21 @@ func (l libraryModel) renderMetadataBar(width int) string {
 		scope = "global"
 	}
 	line2 := " " + chip("Scope", scope, 15)
+
+	regName := "not in a registry"
+	if item.Registry != "" {
+		regName = item.Registry
+	} else if item.Meta != nil && item.Meta.SourceRegistry != "" {
+		regName = item.Meta.SourceRegistry
+	}
+	line2 += gap + chip("Registry", regName, 30)
+
 	if item.Path != "" {
 		path := item.Path
 		if home, err := homeDir(); err == nil && strings.HasPrefix(path, home) {
 			path = "~" + path[len(home):]
 		}
-		pathW := max(20, width-lipgloss.Width(line2)-10) // leave room for dot+label
+		pathW := max(20, width-lipgloss.Width(line2)-10)
 		line2 = tryAdd(line2, boldStyle.Render("Path: ")+mutedStyle.Render(truncateMiddle(path, pathW)))
 	}
 
