@@ -382,10 +382,11 @@ func (l libraryModel) View() string {
 	}
 }
 
-// metaBarHeight is the number of lines reserved for the metadata bar below the table.
+// metaBarHeight is the number of lines reserved for the metadata bar above the table.
+// Line 1: name + type + provider chips. Line 2: path + description. Line 3: separator.
 const metaBarHeight = 3
 
-// viewBrowse renders the full-width table with a metadata bar below.
+// viewBrowse renders the metadata bar above the table.
 func (l libraryModel) viewBrowse() string {
 	l.table.focused = true
 	innerW := l.width - borderSize
@@ -398,9 +399,11 @@ func (l libraryModel) viewBrowse() string {
 	}
 	l.table.SetSize(innerW, tableH)
 
-	content := l.table.View()
+	var content string
 	if l.table.Len() > 0 {
-		content += "\n" + l.renderMetadataBar(innerW, innerH-tableH)
+		content = l.renderMetadataBar(innerW) + "\n" + l.table.View()
+	} else {
+		content = l.table.View()
 	}
 	return borderedPanel(content, innerW, innerH, focusedBorderFg)
 }
@@ -456,67 +459,57 @@ func (l libraryModel) viewDetail() string {
 }
 
 // renderMetadataBar renders a detail panel for the currently selected item.
-// Shows: name, type, provider, file count, installed providers, and path/description.
-func (l libraryModel) renderMetadataBar(width, height int) string {
+// Always exactly metaBarHeight (3) lines: name+type, path/desc, separator.
+func (l libraryModel) renderMetadataBar(width int) string {
 	item := l.table.Selected()
-	if item == nil || height < 2 {
-		return strings.Repeat(" ", width)
-	}
-
-	// Line 1: separator
-	sep := sectionRuleStyle.Render(strings.Repeat("─", width))
-
-	// Build tag-style detail chips
-	name := boldStyle.Render(itemDisplayName(*item))
-	typeLbl := mutedStyle.Render(typeLabel(item.Type))
-	provLbl := ""
-	if item.Provider != "" {
-		provLbl = mutedStyle.Render(item.Provider)
-	}
-	filesLbl := mutedStyle.Render(fmt.Sprintf("%d files", len(item.Files)))
-
-	row := l.table.rows[l.table.cursor]
-	installedLbl := ""
-	if row.installed != "--" {
-		installedLbl = lipgloss.NewStyle().Foreground(primaryColor).Render(row.installed)
+	if item == nil {
+		// Empty placeholder: 2 blank lines + separator
+		blank := strings.Repeat(" ", width)
+		sep := sectionRuleStyle.Render(strings.Repeat("─", width))
+		return blank + "\n" + blank + "\n" + sep
 	}
 
 	dot := mutedStyle.Render(" · ")
-	line1 := " " + name + dot + typeLbl
-	if provLbl != "" {
-		line1 += dot + provLbl
-	}
-	line1 += dot + filesLbl
-	if installedLbl != "" {
-		line1 += dot + installedLbl
+	label := func(key, val string) string {
+		return boldStyle.Render(key+": ") + mutedStyle.Render(val)
 	}
 
-	// Line 2: path and description
+	// Line 1: name, type, provider, files, installed
+	name := boldStyle.Render(itemDisplayName(*item))
+	chips := name
+	chips += dot + label("Type", typeLabel(item.Type))
+	if item.Provider != "" {
+		chips += dot + label("Source", item.Provider)
+	}
+	chips += dot + label("Files", itoa(len(item.Files)))
+
+	row := l.table.rows[l.table.cursor]
+	if row.installed != "--" {
+		chips += dot + label("Installed", row.installed)
+	}
+	line1 := " " + chips
+
+	// Line 2: path and/or description
+	line2 := " "
 	var parts []string
 	if item.Path != "" {
 		path := item.Path
 		if home, err := homeDir(); err == nil && strings.HasPrefix(path, home) {
 			path = "~" + path[len(home):]
 		}
-		parts = append(parts, mutedStyle.Render(truncate(path, width-2)))
+		parts = append(parts, label("Path", truncate(path, width-8)))
 	}
-	if item.Description != "" && width > 40 {
-		parts = append(parts, mutedStyle.Render(truncate(item.Description, width-2)))
+	if item.Description != "" && width > 50 {
+		parts = append(parts, mutedStyle.Render(truncate(item.Description, width-8)))
 	}
-	line2 := " "
 	if len(parts) > 0 {
 		line2 += strings.Join(parts, dot)
 	}
 
-	result := sep + "\n" + truncateLine(line1, width) + "\n" + truncateLine(line2, width)
+	// Line 3: separator
+	sep := sectionRuleStyle.Render(strings.Repeat("─", width))
 
-	// Pad remaining height
-	usedLines := 3
-	for usedLines < height {
-		result += "\n" + strings.Repeat(" ", width)
-		usedLines++
-	}
-	return result
+	return truncateLine(line1, width) + "\n" + truncateLine(line2, width) + "\n" + sep
 }
 
 // homeDir returns the user's home directory path, cached for rendering.
