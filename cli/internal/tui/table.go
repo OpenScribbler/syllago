@@ -435,16 +435,31 @@ func (t tableModel) sortIndicator(col sortColumn) string {
 // renderHeader renders the column header row.
 func (t tableModel) renderHeader(c colLayout) string {
 	row := "   " // prefix space
-	row += padRight("Name"+t.sortIndicator(sortByName), c.name)
-	row += " " + padRight("Type"+t.sortIndicator(sortByType), c.ctype)
-	row += " " + padRight("Scope"+t.sortIndicator(sortByScope), c.scope)
-	row += " " + padRight("Files"+t.sortIndicator(sortByFiles), c.files)
-	row += " " + padRight("Installed"+t.sortIndicator(sortByInstalled), c.installed)
+	row += t.headerCell("Name", sortByName, c.name)
+	row += " " + t.headerCell("Type", sortByType, c.ctype)
+	row += " " + t.headerCell("Scope", sortByScope, c.scope)
+	row += " " + t.headerCell("Files", sortByFiles, c.files)
+	row += " " + t.headerCell("Installed", sortByInstalled, c.installed)
 	if c.desc > 0 {
-		row += " " + padRight("Description"+t.sortIndicator(sortByDesc), c.desc)
+		row += " " + t.headerCell("Description", sortByDesc, c.desc)
 	}
 
 	return boldStyle.Width(t.width).Render(row)
+}
+
+// headerCell renders a column header, fitting the label + sort indicator within colWidth.
+func (t tableModel) headerCell(label string, col sortColumn, colWidth int) string {
+	indicator := t.sortIndicator(col)
+	full := label + indicator
+	if len(full) > colWidth {
+		// Truncate label to make room for the indicator
+		maxLabel := colWidth - len(indicator)
+		if maxLabel < 1 {
+			return padRight(indicator, colWidth)
+		}
+		full = label[:maxLabel] + indicator
+	}
+	return padRight(full, colWidth)
 }
 
 // renderRow renders a single data row.
