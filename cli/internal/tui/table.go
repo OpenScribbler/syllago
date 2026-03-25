@@ -171,6 +171,17 @@ func (t *tableModel) CycleSort() {
 	t.applyFilterAndSort()
 }
 
+// SortByColumn sorts by the given column. If already sorting by that column,
+// reverses direction. Otherwise sorts by the new column keeping current direction.
+func (t *tableModel) SortByColumn(col sortColumn) {
+	if t.sortCol == col {
+		t.sortAsc = !t.sortAsc
+	} else {
+		t.sortCol = col
+	}
+	t.applyFilterAndSort()
+}
+
 // ReverseSort toggles sort direction.
 func (t *tableModel) ReverseSort() {
 	t.sortAsc = !t.sortAsc
@@ -225,6 +236,7 @@ func (t *tableModel) applyFilterAndSort() {
 		t.rows = nil
 		for i, item := range t.allItems {
 			if strings.Contains(strings.ToLower(item.Name), q) ||
+				strings.Contains(strings.ToLower(item.DisplayName), q) ||
 				strings.Contains(strings.ToLower(item.Description), q) ||
 				strings.Contains(strings.ToLower(string(item.Type)), q) {
 				t.items = append(t.items, item)
@@ -366,7 +378,7 @@ func (t tableModel) View() string {
 	return strings.Join(lines, "\n")
 }
 
-// renderSearchBar renders the search input line.
+// renderSearchBar renders the search input line with a background-tinted field.
 func (t tableModel) renderSearchBar() string {
 	prompt := "/ "
 	query := t.searchQuery
@@ -380,20 +392,34 @@ func (t tableModel) renderSearchBar() string {
 		matchInfo = fmt.Sprintf("  (%d/%d)", len(t.items), len(t.allItems))
 	}
 
-	left := prompt + query + cursor
-	right := matchInfo
+	hints := ""
 	if t.searching {
-		right += "  esc cancel · enter confirm"
+		hints = "  esc cancel · enter confirm"
 	} else {
-		right += "  / edit · esc clear"
+		hints = "  / edit · esc clear"
 	}
-	right = mutedStyle.Render(right)
 
-	leftW := lipgloss.Width(left)
-	rightW := lipgloss.Width(right)
-	gap := max(1, t.width-leftW-rightW)
+	// Right side: match count + hints (rendered outside the input field)
+	rightText := matchInfo + hints
+	rightRendered := mutedStyle.Render(rightText)
+	rightW := lipgloss.Width(rightRendered)
 
-	return primaryStyle.Render(left) + strings.Repeat(" ", gap) + right
+	// Input field gets the remaining width
+	fieldW := max(10, t.width-rightW-1) // -1 for gap
+	fieldContent := prompt + query + cursor
+
+	bg := inputActiveBG
+	if !t.searching {
+		bg = inputInactiveBG
+	}
+	fieldStyle := lipgloss.NewStyle().
+		Background(bg).
+		Foreground(primaryText).
+		Width(fieldW).
+		Padding(0, 0)
+	field := fieldStyle.Render(fieldContent)
+
+	return field + " " + rightRendered
 }
 
 // columnWidths computes column widths based on available space.
@@ -437,16 +463,16 @@ func (t tableModel) sortIndicator(col sortColumn) string {
 	return " ▼"
 }
 
-// renderHeader renders the column header row.
+// renderHeader renders the column header row with clickable zone markers.
 func (t tableModel) renderHeader(c colLayout) string {
 	row := "   " // prefix space
-	row += t.headerCell("Name", sortByName, c.name)
-	row += " " + t.headerCell("Type", sortByType, c.ctype)
-	row += " " + t.headerCell("Scope", sortByScope, c.scope)
-	row += " " + t.headerCell("Files", sortByFiles, c.files)
-	row += " " + t.headerCell("Installed", sortByInstalled, c.installed)
+	row += zone.Mark("col-name", t.headerCell("Name", sortByName, c.name))
+	row += " " + zone.Mark("col-type", t.headerCell("Type", sortByType, c.ctype))
+	row += " " + zone.Mark("col-scope", t.headerCell("Scope", sortByScope, c.scope))
+	row += " " + zone.Mark("col-files", t.headerCell("Files", sortByFiles, c.files))
+	row += " " + zone.Mark("col-installed", t.headerCell("Installed", sortByInstalled, c.installed))
 	if c.desc > 0 {
-		row += " " + t.headerCell("Description", sortByDesc, c.desc)
+		row += " " + zone.Mark("col-desc", t.headerCell("Description", sortByDesc, c.desc))
 	}
 
 	return boldStyle.Width(t.width).MaxWidth(t.width).Render(row)

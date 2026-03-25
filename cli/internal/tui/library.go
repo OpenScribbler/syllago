@@ -219,6 +219,26 @@ func (l libraryModel) updateMouse(msg tea.MouseMsg) (libraryModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 		switch l.mode {
 		case libraryBrowse:
+			// Column header clicks for sorting
+			colZones := []struct {
+				id  string
+				col sortColumn
+			}{
+				{"col-name", sortByName},
+				{"col-type", sortByType},
+				{"col-scope", sortByScope},
+				{"col-files", sortByFiles},
+				{"col-installed", sortByInstalled},
+				{"col-desc", sortByDesc},
+			}
+			for _, cz := range colZones {
+				if zone.Get(cz.id).InBounds(msg) {
+					l.table.SortByColumn(cz.col)
+					return l, nil
+				}
+			}
+
+			// Row clicks
 			for i := range l.table.items {
 				if zone.Get("tbl-" + itoa(i)).InBounds(msg) {
 					l.table.cursor = i

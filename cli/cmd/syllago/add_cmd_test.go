@@ -542,7 +542,7 @@ func TestAddHooksForce(t *testing.T) {
 		os.WriteFile(filepath.Join(existingDir, "hook.json"), []byte(`{"event":"old"}`), 0644)
 
 		stdout, _ := output.SetForTest(t)
-		if err := runAddHooks(tmp, "claude-code", false, nil, false, "project", nil, "", ""); err != nil {
+		if err := runAddHooks(tmp, "claude-code", false, nil, false, "project", nil, "", "", ""); err != nil {
 			t.Fatalf("runAddHooks without force failed: %v", err)
 		}
 		out := stdout.String()
@@ -572,7 +572,7 @@ func TestAddHooksForce(t *testing.T) {
 		os.WriteFile(filepath.Join(existingDir, "hook.json"), []byte(`{"event":"old"}`), 0644)
 
 		_, _ = output.SetForTest(t)
-		if err := runAddHooks(tmp, "claude-code", false, nil, true, "project", nil, "", ""); err != nil {
+		if err := runAddHooks(tmp, "claude-code", false, nil, true, "project", nil, "", "", ""); err != nil {
 			t.Fatalf("runAddHooks with force failed: %v", err)
 		}
 		data, _ := os.ReadFile(filepath.Join(existingDir, "hook.json"))
@@ -1034,5 +1034,44 @@ func TestAddPreservesSourceForNonCanonicalFormat(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dest, ".source", "my-rule.mdc")); err != nil {
 		t.Errorf("expected .source/my-rule.mdc: %v", err)
+	}
+}
+
+func TestAddHooks_DisplayNameFlag(t *testing.T) {
+	tmp := setupHooksProject(t)
+	globalDir := t.TempDir()
+
+	original := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = original })
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	_, _ = output.SetForTest(t)
+	if err := runAddHooks(tmp, "claude-code", false, nil, false, "project", nil, "", "", "My Custom Name"); err != nil {
+		t.Fatalf("runAddHooks with displayName failed: %v", err)
+	}
+
+	// Find an added hook and verify its metadata has the display name
+	entries, err := os.ReadDir(filepath.Join(globalDir, "hooks", "claude-code"))
+	if err != nil {
+		t.Fatalf("reading hooks dir: %v", err)
+	}
+	if len(entries) == 0 {
+		t.Fatal("expected at least one hook directory")
+	}
+
+	hookDir := filepath.Join(globalDir, "hooks", "claude-code", entries[0].Name())
+	meta, err := metadata.Load(hookDir)
+	if err != nil {
+		t.Fatalf("loading metadata: %v", err)
+	}
+	if meta == nil {
+		t.Fatal("expected metadata to exist")
+	}
+	if meta.Name != "My Custom Name" {
+		t.Errorf("expected display name 'My Custom Name', got %q", meta.Name)
 	}
 }

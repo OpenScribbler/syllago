@@ -17,4 +17,5 @@ const (
 	keyDown   = "j"
 	keyAdd    = "a"
 	keyCreate = "n"
+	keyRename = "r"
 )

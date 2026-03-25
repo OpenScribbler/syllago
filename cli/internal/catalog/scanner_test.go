@@ -937,6 +937,60 @@ func TestScanMCP_FilesSharedAcrossExplodedItems(t *testing.T) {
 	}
 }
 
+func TestScanMCP_ProviderGroupingDir(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+
+	// Simulate the layout created by "syllago add mcp --from claude-code":
+	// mcp/claude-code/server-a/config.json
+	// mcp/claude-code/server-b/config.json
+	// No config.json at mcp/claude-code/ level.
+	writeFile(t, filepath.Join(root, "mcp", "claude-code", "server-a", "config.json"), `{
+		"mcpServers": {
+			"server-a": {"command": "npx", "args": ["-y", "@example/a"]}
+		}
+	}`)
+	writeFile(t, filepath.Join(root, "mcp", "claude-code", "server-b", "config.json"), `{
+		"mcpServers": {
+			"server-b": {"url": "https://mcp.example.com/b"}
+		}
+	}`)
+
+	cat, err := Scan(root, root)
+	if err != nil {
+		t.Fatalf("Scan error: %v", err)
+	}
+
+	mcps := cat.ByType(MCP)
+	if len(mcps) != 2 {
+		t.Fatalf("expected 2 individual MCP servers, got %d", len(mcps))
+	}
+
+	byName := make(map[string]ContentItem)
+	for _, m := range mcps {
+		byName[m.Name] = m
+	}
+
+	a, ok := byName["server-a"]
+	if !ok {
+		t.Fatal("missing 'server-a'")
+	}
+	if a.ServerKey != "server-a" {
+		t.Errorf("server-a ServerKey = %q, want %q", a.ServerKey, "server-a")
+	}
+	if !strings.HasSuffix(a.Path, filepath.Join("claude-code", "server-a")) {
+		t.Errorf("server-a Path = %q, expected to end with claude-code/server-a", a.Path)
+	}
+
+	b, ok := byName["server-b"]
+	if !ok {
+		t.Fatal("missing 'server-b'")
+	}
+	if b.ServerKey != "server-b" {
+		t.Errorf("server-b ServerKey = %q, want %q", b.ServerKey, "server-b")
+	}
+}
+
 func TestMCPServerDescription(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

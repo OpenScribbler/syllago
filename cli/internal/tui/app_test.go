@@ -659,5 +659,93 @@ func TestGolden_Explorer_Skills_80x30(t *testing.T) {
 	requireGolden(t, "explorer-skills-80x30", snapshotApp(t, a))
 }
 
+// --- Modal integration tests ---
+
+func TestApp_RenameOpensModal(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// Press 'r' to open rename modal
+	m, _ := app.Update(keyRune('r'))
+	a := m.(App)
+	if !a.modal.active {
+		t.Fatal("expected modal to be active after 'r'")
+	}
+	if a.modal.title == "" {
+		t.Fatal("expected modal title to be set")
+	}
+	// Modal value should be pre-filled with the selected item's display name
+	if a.modal.value == "" {
+		t.Fatal("expected modal value to be pre-filled")
+	}
+	// Context is the item's path — test items have empty paths, which is fine
+	// as long as the modal opened with a non-empty value
+}
+
+func TestApp_ModalCapturesKeys(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// Open modal
+	m, _ := app.Update(keyRune('r'))
+	a := m.(App)
+
+	// 'q' should NOT quit when modal is active (it should be typed into the input)
+	m, cmd := a.Update(keyRune('q'))
+	if cmd != nil {
+		msg := cmd()
+		if msg == tea.Quit() {
+			t.Fatal("'q' should not quit when modal is active")
+		}
+	}
+	a = m.(App)
+	if !a.modal.active {
+		t.Fatal("modal should still be active after typing 'q'")
+	}
+}
+
+func TestApp_ModalEscCancels(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// Open modal
+	m, _ := app.Update(keyRune('r'))
+	a := m.(App)
+
+	// Esc closes modal
+	m, cmd := a.Update(keyPress(tea.KeyEsc))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+	if a.modal.active {
+		t.Fatal("modal should be inactive after Esc")
+	}
+}
+
+func TestApp_ModalViewOverlay(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// Open modal
+	m, _ := app.Update(keyRune('r'))
+	a := m.(App)
+
+	view := a.View()
+	stripped := ansi.Strip(view)
+	// Modal should be visible in the view
+	if !strings.Contains(stripped, "Cancel") {
+		t.Error("expected Cancel button visible in modal overlay")
+	}
+	if !strings.Contains(stripped, "Save") {
+		t.Error("expected Save button visible in modal overlay")
+	}
+}
+
+func TestApp_RenameHintVisible(t *testing.T) {
+	app := testAppWithItemsSize(t, 120, 40)
+	view := app.View()
+	stripped := ansi.Strip(view)
+	if !strings.Contains(stripped, "r rename") {
+		t.Error("expected 'r rename' hint in Library view")
+	}
+}
+
 // Verify unused catalog import is consumed
 var _ = catalog.Skills
