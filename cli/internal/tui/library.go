@@ -486,8 +486,11 @@ func (l libraryModel) renderMetadataBar(width int) string {
 		return line
 	}
 
-	// Line 1: name + chips (greedy — add until width reached)
-	line1 := " " + boldStyle.Render(itemDisplayName(*item))
+	// Line 1: name (fixed width) + chips (greedy)
+	// Fixed name width prevents chips from bouncing as cursor moves.
+	nameMaxW := 30
+	displayName := truncate(sanitizeLine(itemDisplayName(*item)), nameMaxW)
+	line1 := " " + boldStyle.Render(padRight(displayName, nameMaxW))
 	line1 = tryAdd(line1, label("Type", typeLabel(item.Type)))
 	if item.Provider != "" {
 		line1 = tryAdd(line1, label("Source", item.Provider))
@@ -498,7 +501,7 @@ func (l libraryModel) renderMetadataBar(width int) string {
 		line1 = tryAdd(line1, label("Installed", row.installed))
 	}
 
-	// Line 2: path and/or description (greedy)
+	// Line 2: path only (no description — visible in table column)
 	line2 := ""
 	if item.Path != "" {
 		path := item.Path
@@ -506,14 +509,6 @@ func (l libraryModel) renderMetadataBar(width int) string {
 			path = "~" + path[len(home):]
 		}
 		line2 = " " + label("Path", truncate(path, width-8))
-	}
-	if item.Description != "" && width > 50 {
-		desc := mutedStyle.Render(truncate(sanitizeLine(item.Description), width-8))
-		if line2 == "" {
-			line2 = " " + desc
-		} else {
-			line2 = tryAdd(line2, desc)
-		}
 	}
 
 	// Line 3: separator
