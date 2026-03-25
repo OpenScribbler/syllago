@@ -93,6 +93,19 @@ func (m *itemsModel) CursorDown() {
 	}
 }
 
+// PageUp moves cursor up by one page.
+func (m *itemsModel) PageUp() {
+	m.cursor = max(0, m.cursor-m.height)
+	m.offset = max(0, m.offset-m.height)
+}
+
+// PageDown moves cursor down by one page.
+func (m *itemsModel) PageDown() {
+	m.cursor = min(len(m.items)-1, m.cursor+m.height)
+	maxOffset := max(0, len(m.items)-m.height)
+	m.offset = min(maxOffset, m.offset+m.height)
+}
+
 // ApplySearch filters items by name substring match (case-insensitive).
 func (m *itemsModel) ApplySearch(query string) {
 	m.search = query
