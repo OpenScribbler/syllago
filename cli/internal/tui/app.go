@@ -123,6 +123,22 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.Type == tea.KeyCtrlC:
 			return a, tea.Quit
 		case msg.String() == keyQuit:
+			// Only quit from top-level browse. If in a drill-down or
+			// non-landing view, back out one level instead.
+			if a.isLibraryTab() && a.library.mode == libraryDetail {
+				a.library.mode = libraryBrowse
+				a.library.detailItem = nil
+				a.library.SetSize(a.width, a.contentHeight())
+				a.helpBar.SetHints(a.currentHints())
+				return a, nil
+			}
+			if !a.isLibraryTab() {
+				// Return to landing page (Collections > Library)
+				cmd := a.topBar.SetGroup(0)
+				a.refreshContent()
+				a.helpBar.SetHints(a.currentHints())
+				return a, cmd
+			}
 			return a, tea.Quit
 
 		// 1/2/3 switch groups
