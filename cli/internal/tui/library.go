@@ -477,8 +477,6 @@ func (l libraryModel) renderMetadataBar(width int) string {
 		return blank + "\n" + blank + "\n" + blank + "\n" + sep
 	}
 
-	dot := mutedStyle.Render(" · ")
-
 	// chip renders a fixed-width labeled field: "Key: value" padded to w.
 	chip := func(key, val string, w int) string {
 		valW := w - len(key) - 2 // -2 for ": "
@@ -486,9 +484,11 @@ func (l libraryModel) renderMetadataBar(width int) string {
 		return boldStyle.Render(key+": ") + mutedStyle.Render(val)
 	}
 
+	gap := "  " // fixed spacing between chips (no dots)
+
 	// tryAdd appends a chip to line only if it fits within width.
 	tryAdd := func(line, c string) string {
-		candidate := line + dot + c
+		candidate := line + gap + c
 		if lipgloss.Width(candidate) <= width {
 			return candidate
 		}
@@ -548,9 +548,23 @@ func (l libraryModel) renderMetadataBar(width int) string {
 	}
 
 	// --- Line 3: type-specific detail or blank ---
+	// Pre-computed typeDetail is plain text "Key: val · Key: val".
+	// Re-render with bold labels to match lines 1-2.
 	line3 := ""
 	if row.typeDetail != "" {
-		line3 = " " + mutedStyle.Render(sanitizeLine(row.typeDetail))
+		segments := strings.Split(sanitizeLine(row.typeDetail), " · ")
+		styled := " "
+		for i, seg := range segments {
+			if i > 0 {
+				styled += gap
+			}
+			if idx := strings.Index(seg, ": "); idx >= 0 {
+				styled += boldStyle.Render(seg[:idx+2]) + mutedStyle.Render(seg[idx+2:])
+			} else {
+				styled += mutedStyle.Render(seg)
+			}
+		}
+		line3 = styled
 	}
 
 	// --- Line 4: separator ---
