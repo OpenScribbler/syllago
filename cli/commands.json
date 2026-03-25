@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-25T00:15:34Z",
+  "generatedAt": "2026-03-25T05:28:55Z",
   "syllagoVersion": "dev",
   "commands": [
     {
@@ -969,34 +969,18 @@
       "displayName": "Convert",
       "slug": "convert",
       "parent": null,
-      "synopsis": "syllago convert \u003cname\u003e [flags]",
-      "description": "Convert library content to a provider format",
-      "longDescription": "Renders a library item to a target provider's format without installing it.\nOutput goes to stdout by default, or to a file with --output.\n\nNo state changes are made — this is purely for ad-hoc sharing.",
+      "synopsis": "syllago convert \u003cfile-or-name\u003e [flags]",
+      "description": "Convert content between provider formats",
+      "longDescription": "Transform content between provider formats using syllago's hub-and-spoke\nconversion model (source -\u003e canonical -\u003e target).\n\nAccepts either a file path or a library item name:\n  - File path: reads the file directly (requires --from and --to)\n  - Library name: looks up the item in your library (--from is optional)\n\nOutput goes to stdout by default, or to a file with --output.",
       "aliases": [],
       "flags": [
-        {
-          "name": "--batch",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Directory of hook files to batch-canonicalize (mutual exclusive with \u003cname\u003e)"
-        },
-        {
-          "name": "--dry-run",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Show what would be converted without writing files"
-        },
         {
           "name": "--from",
           "shorthand": null,
           "type": "string",
           "default": null,
           "required": false,
-          "description": "Source provider slug (required with --batch)"
+          "description": "Source provider (required for file input, optional for library items)"
         },
         {
           "name": "--output",
@@ -1013,6 +997,14 @@
           "default": null,
           "required": true,
           "description": "Target provider (required)"
+        },
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": "rules",
+          "required": false,
+          "description": "Content type for file input (rules, hooks, skills, agents, commands, mcp)"
         }
       ],
       "inheritedFlags": [
@@ -1051,7 +1043,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": "  # Convert a skill to Cursor format (stdout)\n  syllago convert my-skill --to cursor\n\n  # Convert and save to a file\n  syllago convert my-rule --to windsurf --output ./windsurf-rule.md\n\n  # Batch-canonicalize a directory of hooks\n  syllago convert --batch ./hooks/ --from claude-code --to canonical\n\n  # Batch dry-run\n  syllago convert --batch ./hooks/ --from claude-code --to canonical --dry-run",
+      "examples": "  # Convert a Cursor rule to Claude Code format\n  syllago convert ./my-rule.mdc --from cursor --to claude-code\n\n  # Convert a library item to Windsurf format\n  syllago convert my-rule --to windsurf\n\n  # Convert and save to a file\n  syllago convert my-rule --to cursor --output ./cursor-rule.mdc\n\n  # Convert a Copilot instructions file to Cursor\n  syllago convert ./.github/copilot-instructions.md --from copilot-cli --to cursor --type rules",
       "source": "cli/cmd/syllago/convert.go"
     },
     {
