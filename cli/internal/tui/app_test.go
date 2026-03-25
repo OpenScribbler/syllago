@@ -34,10 +34,10 @@ func TestApp_NotReadyBeforeWindowSize(t *testing.T) {
 }
 
 func TestApp_TooSmall(t *testing.T) {
-	app := testAppSize(t, 50, 15)
+	app := testAppSize(t, 70, 15)
 	view := app.View()
 	assertContains(t, view, "Terminal too small")
-	assertContains(t, view, "60x20")
+	assertContains(t, view, "80x20")
 }
 
 func TestApp_QuitOnCtrlC(t *testing.T) {
@@ -75,11 +75,18 @@ func TestApp_Branding(t *testing.T) {
 }
 
 func TestApp_ContentHeight(t *testing.T) {
-	app := testAppSize(t, 80, 30)
+	app := testAppSize(t, 120, 30)
 	h := app.contentHeight()
-	// 30 total - 5 topbar - 1 helpbar = 24
+	// 120 cols: hints fit on 1 line → 30 total - 5 topbar - 1 helpbar = 24
 	if h != 24 {
-		t.Errorf("expected contentHeight 24, got %d", h)
+		t.Errorf("expected contentHeight 24 at 120 cols, got %d", h)
+	}
+
+	app80 := testAppSize(t, 80, 30)
+	h80 := app80.contentHeight()
+	// 80 cols: hints wrap to 2 lines → 30 total - 5 topbar - 2 helpbar = 23
+	if h80 != 23 {
+		t.Errorf("expected contentHeight 23 at 80 cols, got %d", h80)
 	}
 }
 
@@ -330,9 +337,9 @@ func TestApp_CursorWraps(t *testing.T) {
 func TestApp_HelpHintsContextSensitive(t *testing.T) {
 	app := testAppWithItems(t)
 	view := app.View()
-	assertContains(t, view, "j/k navigate")
-	assertContains(t, view, "h/l pane")
-	assertContains(t, view, "tab tabs")
+	assertContains(t, view, "navigate")
+	assertContains(t, view, "switch pane")
+	assertContains(t, view, "tab items")
 }
 
 // --- Items search tests ---
@@ -447,11 +454,6 @@ func TestPreview_NoIndicatorsWhenContentFits(t *testing.T) {
 
 // --- Golden tests ---
 
-func TestGolden_Shell_60x20(t *testing.T) {
-	app := testAppSize(t, 60, 20)
-	requireGolden(t, "shell-empty-60x20", snapshotApp(t, app))
-}
-
 func TestGolden_Shell_80x30(t *testing.T) {
 	app := testAppSize(t, 80, 30)
 	requireGolden(t, "shell-empty-80x30", snapshotApp(t, app))
@@ -463,8 +465,8 @@ func TestGolden_Shell_120x40(t *testing.T) {
 }
 
 func TestGolden_Shell_TooSmall(t *testing.T) {
-	app := testAppSize(t, 50, 15)
-	requireGolden(t, "shell-toosmall-50x15", snapshotApp(t, app))
+	app := testAppSize(t, 70, 15)
+	requireGolden(t, "shell-toosmall-70x15", snapshotApp(t, app))
 }
 
 func TestGolden_Content_80x30(t *testing.T) {

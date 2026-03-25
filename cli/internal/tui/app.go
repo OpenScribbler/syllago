@@ -153,7 +153,7 @@ func (a App) View() string {
 	if !a.ready {
 		return ""
 	}
-	if a.width < 60 || a.height < 20 {
+	if a.width < 80 || a.height < 20 {
 		return a.renderTooSmall()
 	}
 
@@ -171,7 +171,7 @@ func (a App) View() string {
 // contentHeight returns the available height for the main content area.
 func (a App) contentHeight() int {
 	topBarHeight := a.topBar.Height()
-	helpBarHeight := 1
+	helpBarHeight := a.helpBar.Height()
 	return a.height - topBarHeight - helpBarHeight
 }
 
@@ -248,7 +248,7 @@ func (a App) currentHints() []string {
 	group := a.topBar.ActiveGroupLabel()
 	tab := a.topBar.ActiveTabLabel()
 
-	base := []string{"1/2/3 groups", "tab tabs"}
+	base := []string{"1/2/3 groups", "tab items"}
 
 	if group == "Config" {
 		return append(base, "? help", "q quit")
@@ -258,7 +258,7 @@ func (a App) currentHints() []string {
 		return append(base, "a add", "? help", "q quit")
 	}
 
-	hints := append(base, "j/k navigate", "h/l pane")
+	hints := append(base, "↑/↓ navigate", "←/→ switch pane")
 	if group != "Config" {
 		hints = append(hints, "a add", "n create")
 	}
@@ -281,6 +281,6 @@ func (a App) renderTooSmall() string {
 	return lipgloss.Place(
 		a.width, a.height,
 		lipgloss.Center, lipgloss.Center,
-		warningStyle.Render("Terminal too small\nMinimum: 60x20"),
+		warningStyle.Render("Terminal too small\nMinimum: 80x20"),
 	)
 }
