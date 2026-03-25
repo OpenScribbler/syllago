@@ -309,7 +309,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 	autoUpdate := cfgErr == nil && cfg.Preferences["autoUpdate"] == "true"
 
 	isReleaseBuild := buildCommit == "" && version != ""
-	app := tui.NewApp(cat, providers, version, autoUpdate, regSources, cfg, isReleaseBuild, projectRoot)
+	app := tui.NewApp(cat, providers, version, autoUpdate, regSources, cfg, isReleaseBuild, root, projectRoot)
 	zone.NewGlobal()
 	p := tea.NewProgram(app,
 		tea.WithAltScreen(),

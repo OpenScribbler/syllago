@@ -14,7 +14,7 @@ import (
 // --- Unit tests ---
 
 func TestApp_WindowSizeMsg(t *testing.T) {
-	app := NewApp(testCatalog(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "")
+	app := NewApp(testCatalog(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	a := m.(App)
 	if a.width != 120 || a.height != 40 {
@@ -26,7 +26,7 @@ func TestApp_WindowSizeMsg(t *testing.T) {
 }
 
 func TestApp_NotReadyBeforeWindowSize(t *testing.T) {
-	app := NewApp(testCatalog(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "")
+	app := NewApp(testCatalog(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", "")
 	view := app.View()
 	if view != "" {
 		t.Errorf("expected empty view before WindowSizeMsg, got %q", view)
