@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
@@ -181,6 +183,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.helpBar.SetHints(a.currentHints())
 		return a, nil
 
+	case libraryRenameMsg:
+		return a.handleRename()
+
 	case libraryDrillMsg:
 		a.helpBar.SetHints(a.currentHints())
 		return a, nil
@@ -283,11 +288,9 @@ func (a App) View() string {
 	content := a.renderContent()
 	helpBar := a.helpBar.View()
 
-	// When modal is active, replace content area with centered modal
+	// When modal is active, overlay it on top of existing content
 	if a.modal.active {
-		ch := a.contentHeight()
-		modalView := a.modal.View()
-		content = lipgloss.Place(a.width, ch, lipgloss.Center, lipgloss.Center, modalView)
+		content = overlayModal(content, a.modal.View(), a.width, a.contentHeight())
 	}
 
 	return zone.Scan(lipgloss.JoinVertical(lipgloss.Left,
@@ -449,4 +452,56 @@ func (a App) renderTooSmall() string {
 		lipgloss.Center, lipgloss.Center,
 		warningStyle.Render("Terminal too small\nMinimum: 80x20"),
 	)
+}
+
+// overlayModal places the modal box on top of the background content,
+// centered horizontally and vertically. Background content remains visible
+// around the modal, giving context while editing.
+func overlayModal(bg, modal string, width, height int) string {
+	bgLines := strings.Split(bg, "\n")
+	modalLines := strings.Split(modal, "\n")
+
+	// Pad bg to full height
+	for len(bgLines) < height {
+		bgLines = append(bgLines, strings.Repeat(" ", width))
+	}
+
+	modalW := lipgloss.Width(modal)
+	modalH := len(modalLines)
+
+	// Center position
+	startRow := max(0, (height-modalH)/2)
+	startCol := max(0, (width-modalW)/2)
+
+	// Overlay modal lines onto background
+	for i, mLine := range modalLines {
+		row := startRow + i
+		if row >= len(bgLines) {
+			break
+		}
+		bgLine := bgLines[row]
+		bgRunes := []rune(bgLine)
+
+		// Build: bg prefix + modal line + bg suffix
+		prefix := ""
+		if startCol > 0 && startCol <= len(bgRunes) {
+			prefix = string(bgRunes[:startCol])
+		} else if startCol > 0 {
+			prefix = string(bgRunes) + strings.Repeat(" ", startCol-len(bgRunes))
+		}
+
+		mLineW := lipgloss.Width(mLine)
+		suffixStart := startCol + mLineW
+		suffix := ""
+		if suffixStart < len(bgRunes) {
+			suffix = string(bgRunes[suffixStart:])
+		}
+
+		bgLines[row] = prefix + mLine + suffix
+	}
+
+	if len(bgLines) > height {
+		bgLines = bgLines[:height]
+	}
+	return strings.Join(bgLines, "\n")
 }
