@@ -21,6 +21,7 @@ type App struct {
 	isReleaseBuild  bool
 	registrySources []catalog.RegistrySource
 	cfg             *config.Config
+	contentRoot     string // syllago content repo root (for re-scanning)
 	projectRoot     string
 
 	// Sub-models
@@ -38,7 +39,7 @@ type App struct {
 }
 
 // NewApp creates a new TUI app. Signature matches main.go.
-func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string, autoUpdate bool, registrySources []catalog.RegistrySource, cfg *config.Config, isReleaseBuild bool, projectRoot string) App {
+func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string, autoUpdate bool, registrySources []catalog.RegistrySource, cfg *config.Config, isReleaseBuild bool, contentRoot, projectRoot string) App {
 	if cfg == nil {
 		cfg = &config.Config{}
 	}
@@ -54,6 +55,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		isReleaseBuild:  isReleaseBuild,
 		registrySources: registrySources,
 		cfg:             cfg,
+		contentRoot:     contentRoot,
 		projectRoot:     projectRoot,
 		topBar:          newTopBar(),
 		library:         newLibraryModel(cat.Items, providers, projectRoot),
@@ -157,6 +159,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Rename selected item
 		case msg.String() == keyRename:
 			return a.handleRename()
+
+		// Refresh catalog (re-scan content from disk)
+		case msg.String() == keyRefresh:
+			a.rescanCatalog()
+			return a, nil
 
 		// Route to active content model
 		default:
@@ -322,6 +329,24 @@ func (a App) isLibraryTab() bool {
 	return a.topBar.ActiveGroupLabel() == "Collections" && a.topBar.ActiveTabLabel() == "Library"
 }
 
+// rescanCatalog re-reads all content from disk and refreshes the active view.
+func (a *App) rescanCatalog() {
+	root := a.contentRoot
+	if root == "" {
+		root = a.projectRoot
+	}
+	projectRoot := a.projectRoot
+	if projectRoot == "" {
+		projectRoot = root
+	}
+	cat, err := catalog.ScanWithGlobalAndRegistries(root, projectRoot, a.registrySources)
+	if err != nil {
+		return // silently fail — keep existing data
+	}
+	a.catalog = cat
+	a.refreshContent()
+}
+
 // refreshContent updates the active content model based on the current tab.
 func (a *App) refreshContent() {
 	if a.isLibraryTab() {
@@ -396,7 +421,7 @@ func (a App) currentHints() []string {
 	}
 
 	if a.isLibraryTab() {
-		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "r rename", "a add", "n create", "? help", "q quit")
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "r rename", "R refresh", "a add", "n create", "? help", "q quit")
 	}
 
 	hints := append(base, "↑/↓ navigate", "←/→ switch pane")

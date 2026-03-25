@@ -74,7 +74,7 @@ func testAppWithItems(t *testing.T) App {
 // testAppWithItemsSize creates a test app with sample catalog items at custom dimensions.
 func testAppWithItemsSize(t *testing.T, w, h int) App {
 	t.Helper()
-	app := NewApp(testCatalogWithItems(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "")
+	app := NewApp(testCatalogWithItems(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
 	return m.(App)
 }
@@ -87,7 +87,7 @@ func testApp(t *testing.T) App {
 
 func testAppSize(t *testing.T, w, h int) App {
 	t.Helper()
-	app := NewApp(testCatalog(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "")
+	app := NewApp(testCatalog(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
 	return m.(App)
 }
