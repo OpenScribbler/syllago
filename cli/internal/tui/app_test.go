@@ -342,6 +342,66 @@ func TestApp_HelpHintsContextSensitive(t *testing.T) {
 	assertContains(t, view, "tab items")
 }
 
+// --- Items scroll indicator tests ---
+
+func TestItemsModel_ScrollIndicators(t *testing.T) {
+	items := make([]catalog.ContentItem, 20)
+	for i := range items {
+		items[i] = catalog.ContentItem{Name: fmt.Sprintf("item-%02d", i), Type: catalog.Skills}
+	}
+	m := newItemsModel(items, false)
+	m.SetSize(30, 5) // only 5 rows visible
+
+	// At top: no "above", should show "below"
+	view := m.View()
+	stripped := ansi.Strip(view)
+	if strings.Contains(stripped, "more above") {
+		t.Error("should not show 'above' at top")
+	}
+	if !strings.Contains(stripped, "more below") {
+		t.Error("should show 'below' when items overflow")
+	}
+
+	// Scroll down: both indicators
+	m.offset = 5
+	m.cursor = 5
+	view = m.View()
+	stripped = ansi.Strip(view)
+	if !strings.Contains(stripped, "(5 more above)") {
+		t.Errorf("expected '(5 more above)', got:\n%s", stripped)
+	}
+	if !strings.Contains(stripped, "more below") {
+		t.Error("should show 'below' indicator")
+	}
+
+	// At bottom: "above" only
+	m.offset = 15
+	m.cursor = 19
+	view = m.View()
+	stripped = ansi.Strip(view)
+	if !strings.Contains(stripped, "more above") {
+		t.Error("should show 'above' at bottom")
+	}
+	if strings.Contains(stripped, "more below") {
+		t.Error("should not show 'below' at bottom")
+	}
+}
+
+func TestItemsModel_NoIndicatorsWhenFits(t *testing.T) {
+	items := []catalog.ContentItem{
+		{Name: "a", Type: catalog.Skills},
+		{Name: "b", Type: catalog.Skills},
+	}
+	m := newItemsModel(items, false)
+	m.SetSize(30, 10) // more rows than items
+
+	view := m.View()
+	stripped := ansi.Strip(view)
+	if strings.Contains(stripped, "more above") || strings.Contains(stripped, "more below") {
+		t.Error("should not show indicators when all items fit")
+	}
+}
+
 // --- Items search tests ---
 
 func TestItemsModel_Search(t *testing.T) {

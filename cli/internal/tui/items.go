@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -127,11 +128,38 @@ func (m itemsModel) View() string {
 	}
 
 	visibleCount := min(m.height, len(m.items))
-	lines := make([]string, 0, visibleCount)
+	lastVisible := min(m.offset+visibleCount, len(m.items))
 
-	for i := m.offset; i < m.offset+visibleCount && i < len(m.items); i++ {
-		line := m.renderItem(i)
-		lines = append(lines, line)
+	// Scroll indicators
+	itemsAbove := m.offset
+	itemsBelow := max(0, len(m.items)-lastVisible)
+	showAbove := itemsAbove > 0
+	showBelow := itemsBelow > 0
+
+	// Adjust visible range to make room for indicators
+	contentStart := m.offset
+	contentEnd := lastVisible
+	if showAbove {
+		contentStart++
+	}
+	if showBelow && contentEnd > contentStart {
+		contentEnd--
+	}
+
+	lines := make([]string, 0, m.height)
+
+	if showAbove {
+		indicator := fmt.Sprintf("(%d more above)", itemsAbove)
+		lines = append(lines, mutedStyle.Render(indicator))
+	}
+
+	for i := contentStart; i < contentEnd; i++ {
+		lines = append(lines, m.renderItem(i))
+	}
+
+	if showBelow {
+		indicator := fmt.Sprintf("(%d more below)", itemsBelow)
+		lines = append(lines, mutedStyle.Render(indicator))
 	}
 
 	// Pad remaining height
