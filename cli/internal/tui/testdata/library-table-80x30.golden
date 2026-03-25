@@ -7,7 +7,7 @@
 │ alpha-skill · Type: Skill · Files: 1                                         │
 │                                                                              │
 │──────────────────────────────────────────────────────────────────────────────│
-│   Name ▲               Type     Scope        Files Installed                 │
+│   Name ▲               Type     Scope                                        │
 │ > alpha-skill          Skill    team-rules   1     --                        │
 │   beta-skill           Skill    team-rules   1     --                        │
 │   delta-agent          Agent    my-registry  1     --                        │

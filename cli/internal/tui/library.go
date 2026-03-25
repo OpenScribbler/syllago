@@ -509,7 +509,11 @@ func (l libraryModel) renderMetadataBar(width int) string {
 	// Line 3: separator
 	sep := sectionRuleStyle.Render(strings.Repeat("─", width))
 
-	return truncateLine(line1, width) + "\n" + truncateLine(line2, width) + "\n" + sep
+	// Use lipgloss Width+MaxWidth to pad and clip each line. truncateLine
+	// can't be used on styled text — it clips by rune count and would cut
+	// mid-ANSI-sequence, producing border fragment artifacts.
+	lineStyle := lipgloss.NewStyle().Width(width).MaxWidth(width)
+	return lineStyle.Render(line1) + "\n" + lineStyle.Render(line2) + "\n" + sep
 }
 
 // homeDir returns the user's home directory path, cached for rendering.
