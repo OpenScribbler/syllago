@@ -8,60 +8,117 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/spf13/cobra"
 )
 
 // convertResult is the JSON-serializable output for syllago convert.
 type convertResult struct {
 	Name     string   `json:"name"`
-	Provider string   `json:"provider"`
+	From     string   `json:"from"`
+	To       string   `json:"to"`
 	Output   string   `json:"output,omitempty"`   // path if --output was used; empty for stdout
 	Warnings []string `json:"warnings,omitempty"` // portability warnings from conversion
 }
 
 var convertCmd = &cobra.Command{
-	Use:   "convert <name>",
-	Short: "Convert library content to a provider format",
-	Long: `Renders a library item to a target provider's format without installing it.
-Output goes to stdout by default, or to a file with --output.
+	Use:   "convert <file-or-name>",
+	Short: "Convert content between provider formats",
+	Long: `Transform content between provider formats using syllago's hub-and-spoke
+conversion model (source -> canonical -> target).
 
-No state changes are made — this is purely for ad-hoc sharing.`,
-	Example: `  # Convert a skill to Cursor format (stdout)
-  syllago convert my-skill --to cursor
+Accepts either a file path or a library item name:
+  - File path: reads the file directly (requires --from and --to)
+  - Library name: looks up the item in your library (--from is optional)
+
+Output goes to stdout by default, or to a file with --output.`,
+	Example: `  # Convert a Cursor rule to Claude Code format
+  syllago convert ./my-rule.mdc --from cursor --to claude-code
+
+  # Convert a library item to Windsurf format
+  syllago convert my-rule --to windsurf
 
   # Convert and save to a file
-  syllago convert my-rule --to windsurf --output ./windsurf-rule.md
+  syllago convert my-rule --to cursor --output ./cursor-rule.mdc
 
-  # Batch-canonicalize a directory of hooks
-  syllago convert --batch ./hooks/ --from claude-code --to canonical
-
-  # Batch dry-run
-  syllago convert --batch ./hooks/ --from claude-code --to canonical --dry-run`,
-	Args: cobra.MaximumNArgs(1),
+  # Convert a Copilot instructions file to Cursor
+  syllago convert ./.github/copilot-instructions.md --from copilot-cli --to cursor --type rules`,
+	Args: cobra.ExactArgs(1),
 	RunE: runConvert,
 }
 
 func init() {
 	convertCmd.Flags().String("to", "", "Target provider (required)")
 	convertCmd.MarkFlagRequired("to")
+	convertCmd.Flags().String("from", "", "Source provider (required for file input, optional for library items)")
+	convertCmd.Flags().String("type", "rules", "Content type for file input (rules, hooks, skills, agents, commands, mcp)")
 	convertCmd.Flags().StringP("output", "o", "", "Write output to this file path (default: stdout)")
-	convertCmd.Flags().String("batch", "", "Directory of hook files to batch-canonicalize (mutual exclusive with <name>)")
-	convertCmd.Flags().String("from", "", "Source provider slug (required with --batch)")
-	convertCmd.Flags().Bool("dry-run", false, "Show what would be converted without writing files")
 	rootCmd.AddCommand(convertCmd)
 }
 
 func runConvert(cmd *cobra.Command, args []string) error {
-	name := args[0]
+	input := args[0]
 	toSlug, _ := cmd.Flags().GetString("to")
+	fromSlug, _ := cmd.Flags().GetString("from")
+	typeStr, _ := cmd.Flags().GetString("type")
 	outputPath, _ := cmd.Flags().GetString("output")
 
-	prov := findProviderBySlug(toSlug)
-	if prov == nil {
+	toProv := findProviderBySlug(toSlug)
+	if toProv == nil {
 		slugs := providerSlugs()
-		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+toSlug, "Available: "+strings.Join(slugs, ", "))
+		return output.NewStructuredError(output.ErrProviderNotFound, "unknown target provider: "+toSlug, "Available: "+strings.Join(slugs, ", "))
 	}
 
+	// Determine mode: file path or library item name.
+	if isFilePath(input) {
+		return convertFile(input, fromSlug, toSlug, typeStr, outputPath, *toProv)
+	}
+	return convertLibraryItem(input, fromSlug, toSlug, outputPath, *toProv)
+}
+
+// isFilePath returns true if the input exists on disk as a file.
+func isFilePath(input string) bool {
+	info, err := os.Stat(input)
+	return err == nil && !info.IsDir()
+}
+
+// convertFile reads a file directly and converts it between providers.
+func convertFile(path, fromSlug, toSlug, typeStr, outputPath string, toProv provider.Provider) error {
+	if fromSlug == "" {
+		return output.NewStructuredError(output.ErrInputMissing, "--from is required when converting a file", "Example: syllago convert ./rule.mdc --from cursor --to claude-code")
+	}
+
+	if findProviderBySlug(fromSlug) == nil {
+		slugs := providerSlugs()
+		return output.NewStructuredError(output.ErrProviderNotFound, "unknown source provider: "+fromSlug, "Available: "+strings.Join(slugs, ", "))
+	}
+
+	ct := catalog.ContentType(typeStr)
+	conv := converter.For(ct)
+	if conv == nil {
+		return output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("no converter for content type %q", typeStr), "Supported types: rules, hooks, skills, agents, commands, mcp")
+	}
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "reading file failed", "Check file path and permissions", err.Error())
+	}
+
+	canonical, err := conv.Canonicalize(raw, fromSlug)
+	if err != nil {
+		return output.NewStructuredErrorDetail(output.ErrConvertParseFailed, fmt.Sprintf("failed to parse %s as %s format", path, fromSlug), "Check that the file matches the expected provider format", err.Error())
+	}
+
+	rendered, err := conv.Render(canonical.Content, toProv)
+	if err != nil {
+		return output.NewStructuredErrorDetail(output.ErrConvertRenderFailed, fmt.Sprintf("rendering to %s format failed", toProv.Name), "This content may not be compatible with the target provider", err.Error())
+	}
+
+	return emitConvertOutput(path, fromSlug, toSlug, outputPath, rendered)
+}
+
+// convertLibraryItem looks up an item in the library and converts it.
+func convertLibraryItem(name, fromSlug, toSlug, outputPath string, toProv provider.Provider) error {
 	globalDir := catalog.GlobalContentDir()
 	cat, err := catalog.ScanWithGlobalAndRegistries(globalDir, globalDir, nil)
 	if err != nil {
@@ -81,7 +138,7 @@ func runConvert(cmd *cobra.Command, args []string) error {
 
 	conv := converter.For(item.Type)
 	if conv == nil {
-		return output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s does not support format conversion", item.Type.Label()), "Only hooks and rules support cross-provider conversion")
+		return output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s does not support format conversion", item.Type.Label()), "Supported types: rules, hooks, skills, agents, commands, mcp")
 	}
 
 	contentFile := converter.ResolveContentFile(*item)
@@ -93,12 +150,15 @@ func runConvert(cmd *cobra.Command, args []string) error {
 		return output.NewStructuredErrorDetail(output.ErrSystemIO, "reading content failed", "Check file permissions", err.Error())
 	}
 
-	srcProvider := ""
-	if item.Meta != nil {
-		srcProvider = item.Meta.SourceProvider
-	}
-	if srcProvider == "" && item.Provider != "" {
-		srcProvider = item.Provider
+	// Determine source provider: explicit flag > metadata > item directory
+	srcProvider := fromSlug
+	if srcProvider == "" {
+		if item.Meta != nil {
+			srcProvider = item.Meta.SourceProvider
+		}
+		if srcProvider == "" {
+			srcProvider = item.Provider
+		}
 	}
 
 	canonical, err := conv.Canonicalize(raw, srcProvider)
@@ -106,12 +166,22 @@ func runConvert(cmd *cobra.Command, args []string) error {
 		return output.NewStructuredErrorDetail(output.ErrConvertParseFailed, "canonicalizing content failed", "Check that the content is valid for its source provider format", err.Error())
 	}
 
-	rendered, err := conv.Render(canonical.Content, *prov)
+	rendered, err := conv.Render(canonical.Content, toProv)
 	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrConvertRenderFailed, fmt.Sprintf("rendering to %s format failed", prov.Name), "This content may not be compatible with the target provider", err.Error())
+		return output.NewStructuredErrorDetail(output.ErrConvertRenderFailed, fmt.Sprintf("rendering to %s format failed", toProv.Name), "This content may not be compatible with the target provider", err.Error())
 	}
+
+	displayFrom := srcProvider
+	if displayFrom == "" {
+		displayFrom = "(canonical)"
+	}
+	return emitConvertOutput(name, displayFrom, toSlug, outputPath, rendered)
+}
+
+// emitConvertOutput writes the conversion result to stdout, a file, or JSON.
+func emitConvertOutput(name, fromSlug, toSlug, outputPath string, rendered *converter.Result) error {
 	if rendered.Content == nil {
-		return output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s is not compatible with %s format", name, prov.Name), "Try a different target provider")
+		return output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s is not compatible with %s format", name, toSlug), "Try a different target provider")
 	}
 
 	if outputPath != "" {
@@ -119,18 +189,18 @@ func runConvert(cmd *cobra.Command, args []string) error {
 			return output.NewStructuredErrorDetail(output.ErrSystemIO, "writing output failed", "Check that the output path is writable", err.Error())
 		}
 		if output.JSON {
-			output.Print(convertResult{Name: name, Provider: prov.Slug, Output: outputPath, Warnings: rendered.Warnings})
+			output.Print(convertResult{Name: name, From: fromSlug, To: toSlug, Output: outputPath, Warnings: rendered.Warnings})
 		} else if !output.Quiet {
-			fmt.Fprintf(output.Writer, "Rendered %s as %s format to %s\n", name, prov.Name, outputPath)
+			fmt.Fprintf(output.Writer, "Converted %s (%s -> %s) to %s\n", name, fromSlug, toSlug, outputPath)
 		}
 	} else {
 		if output.JSON {
-			output.Print(convertResult{Name: name, Provider: prov.Slug, Warnings: rendered.Warnings})
+			output.Print(convertResult{Name: name, From: fromSlug, To: toSlug, Warnings: rendered.Warnings})
 		}
 		os.Stdout.Write(rendered.Content)
 	}
 
-	// Surface portability warnings to stderr so they're visible even with stdout output.
+	// Surface portability warnings to stderr.
 	if !output.JSON && !output.Quiet && len(rendered.Warnings) > 0 {
 		fmt.Fprintf(output.ErrWriter, "\n  Portability warnings:\n")
 		for _, w := range rendered.Warnings {
