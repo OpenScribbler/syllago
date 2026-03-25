@@ -24,7 +24,8 @@ type App struct {
 
 	// Sub-models
 	topBar   topBarModel
-	explorer explorerModel
+	library  libraryModel  // Library tab: table + drill-in
+	explorer explorerModel // Content/Loadout tabs: items list + preview
 	helpBar  helpBarModel
 
 	// Dimensions
@@ -43,8 +44,6 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		cat = &catalog.Catalog{}
 	}
 
-	// Default view: Collections > Library = all items
-	items := cat.Items
 	a := App{
 		catalog:         cat,
 		providers:       providers,
@@ -55,7 +54,8 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		cfg:             cfg,
 		projectRoot:     projectRoot,
 		topBar:          newTopBar(),
-		explorer:        newExplorerModel(items, true), // Library = mixed types
+		library:         newLibraryModel(cat.Items, providers, projectRoot),
+		explorer:        newExplorerModel(nil, false),
 		helpBar:         newHelpBar(version),
 	}
 	a.helpBar.SetHints(a.currentHints())
@@ -76,16 +76,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.ready = true
 		a.topBar.SetSize(msg.Width)
 		a.helpBar.SetSize(msg.Width)
-		a.explorer.SetSize(msg.Width, a.contentHeight())
+		ch := a.contentHeight()
+		a.library.SetSize(msg.Width, ch)
+		a.explorer.SetSize(msg.Width, ch)
 		return a, nil
 
 	case tea.MouseMsg:
-		var topCmd, explorerCmd tea.Cmd
-		a.topBar, topCmd = a.topBar.Update(msg)
-		a.explorer, explorerCmd = a.explorer.Update(msg)
-		return a, tea.Batch(topCmd, explorerCmd)
+		return a.routeMouse(msg)
 
 	case tea.KeyMsg:
+		// Global keys always handled first
 		switch {
 		case msg.Type == tea.KeyCtrlC:
 			return a, tea.Quit
@@ -95,28 +95,28 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// 1/2/3 switch groups
 		case msg.String() == keyGroup1:
 			cmd := a.topBar.SetGroup(0)
-			a.refreshExplorer()
+			a.refreshContent()
 			a.helpBar.SetHints(a.currentHints())
 			return a, cmd
 		case msg.String() == keyGroup2:
 			cmd := a.topBar.SetGroup(1)
-			a.refreshExplorer()
+			a.refreshContent()
 			a.helpBar.SetHints(a.currentHints())
 			return a, cmd
 		case msg.String() == keyGroup3:
 			cmd := a.topBar.SetGroup(2)
-			a.refreshExplorer()
+			a.refreshContent()
 			a.helpBar.SetHints(a.currentHints())
 			return a, cmd
 
 		// Tab cycles sub-tabs within active group
 		case msg.Type == tea.KeyTab:
 			cmd := a.topBar.NextTab()
-			a.refreshExplorer()
+			a.refreshContent()
 			return a, cmd
 		case msg.Type == tea.KeyShiftTab:
 			cmd := a.topBar.PrevTab()
-			a.refreshExplorer()
+			a.refreshContent()
 			return a, cmd
 
 		// Action button hotkeys
@@ -125,27 +125,57 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.String() == keyCreate:
 			return a, a.topBar.actionCmd("create")
 
-		// Everything else routes to the explorer
+		// Route to active content model
 		default:
-			var cmd tea.Cmd
-			a.explorer, cmd = a.explorer.Update(msg)
-			return a, cmd
+			return a.routeKey(msg)
 		}
 
 	case tabChangedMsg:
-		a.refreshExplorer()
+		a.refreshContent()
+		a.helpBar.SetHints(a.currentHints())
+		return a, nil
+
+	case libraryDrillMsg:
+		a.helpBar.SetHints(a.currentHints())
+		return a, nil
+
+	case libraryCloseMsg:
 		a.helpBar.SetHints(a.currentHints())
 		return a, nil
 
 	case itemSelectedMsg:
-		// Preview updates happen inside explorer; nothing to do at app level yet
 		return a, nil
 
 	case actionPressedMsg:
-		// Phase 4+: open add/create wizards based on msg.group and msg.tab
 		return a, nil
 	}
 	return a, nil
+}
+
+// routeKey sends key messages to the active content model.
+func (a App) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if a.isLibraryTab() {
+		var cmd tea.Cmd
+		a.library, cmd = a.library.Update(msg)
+		return a, cmd
+	}
+	var cmd tea.Cmd
+	a.explorer, cmd = a.explorer.Update(msg)
+	return a, cmd
+}
+
+// routeMouse sends mouse messages to topbar + active content model.
+func (a App) routeMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	var topCmd tea.Cmd
+	a.topBar, topCmd = a.topBar.Update(msg)
+
+	var contentCmd tea.Cmd
+	if a.isLibraryTab() {
+		a.library, contentCmd = a.library.Update(msg)
+	} else {
+		a.explorer, contentCmd = a.explorer.Update(msg)
+	}
+	return a, tea.Batch(topCmd, contentCmd)
 }
 
 // View implements tea.Model.
@@ -180,24 +210,36 @@ func (a App) renderContent() string {
 	group := a.topBar.ActiveGroupLabel()
 	tab := a.topBar.ActiveTabLabel()
 
-	// Config tabs don't have explorer content
 	if group == "Config" {
 		return a.renderPlaceholder("Settings view coming soon")
 	}
 
-	// Registries needs gallery grid (Phase 6)
 	if group == "Collections" && tab == "Registries" {
 		return a.renderPlaceholder("Registries view coming soon")
+	}
+
+	if a.isLibraryTab() {
+		return a.library.View()
 	}
 
 	return a.explorer.View()
 }
 
-// refreshExplorer updates the explorer items based on the current tab.
-func (a *App) refreshExplorer() {
-	items, mixed := a.itemsForCurrentTab()
-	a.explorer.SetItems(items, mixed)
-	a.explorer.SetSize(a.width, a.contentHeight())
+// isLibraryTab returns true if the active tab is Collections > Library.
+func (a App) isLibraryTab() bool {
+	return a.topBar.ActiveGroupLabel() == "Collections" && a.topBar.ActiveTabLabel() == "Library"
+}
+
+// refreshContent updates the active content model based on the current tab.
+func (a *App) refreshContent() {
+	if a.isLibraryTab() {
+		a.library.SetItems(a.catalog.Items)
+		a.library.SetSize(a.width, a.contentHeight())
+	} else {
+		items, mixed := a.itemsForCurrentTab()
+		a.explorer.SetItems(items, mixed)
+		a.explorer.SetSize(a.width, a.contentHeight())
+	}
 }
 
 // itemsForCurrentTab returns the catalog items for the active tab.
@@ -208,8 +250,6 @@ func (a App) itemsForCurrentTab() ([]catalog.ContentItem, bool) {
 	switch group {
 	case "Collections":
 		switch tab {
-		case "Library":
-			return a.catalog.Items, true // all items, mixed types
 		case "Loadouts":
 			return a.catalog.ByType(catalog.Loadouts), false
 		default:
@@ -256,6 +296,15 @@ func (a App) currentHints() []string {
 
 	if group == "Collections" && tab == "Registries" {
 		return append(base, "a add", "? help", "q quit")
+	}
+
+	// Library in detail mode has different hints
+	if a.isLibraryTab() && a.library.mode == libraryDetail {
+		return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "? help", "q quit")
+	}
+
+	if a.isLibraryTab() {
+		return append(base, "↑/↓ navigate", "enter preview", "a add", "n create", "? help", "q quit")
 	}
 
 	hints := append(base, "↑/↓ navigate", "←/→ switch pane")
