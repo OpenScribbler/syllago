@@ -139,6 +139,50 @@ func TestClose_NilFile(t *testing.T) {
 	}
 }
 
+func TestLogContent(t *testing.T) {
+	var buf bytes.Buffer
+	logger := NewLoggerWriter(&buf)
+
+	err := logger.LogContent(EventContentInstall, "my-skill", "skills", "claude-code")
+	if err != nil {
+		t.Fatalf("LogContent: %v", err)
+	}
+
+	line := strings.TrimSpace(buf.String())
+	var event Event
+	if err := json.Unmarshal([]byte(line), &event); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	if event.EventType != EventContentInstall {
+		t.Errorf("expected event_type %q, got %q", EventContentInstall, event.EventType)
+	}
+	if event.ItemName != "my-skill" {
+		t.Errorf("expected item_name %q, got %q", "my-skill", event.ItemName)
+	}
+	if event.ItemType != "skills" {
+		t.Errorf("expected item_type %q, got %q", "skills", event.ItemType)
+	}
+	if event.Target != "claude-code" {
+		t.Errorf("expected target %q, got %q", "claude-code", event.Target)
+	}
+}
+
+func TestContentEventTypes(t *testing.T) {
+	// Verify all content event types are distinct and non-empty
+	types := []EventType{EventContentAdd, EventContentInstall, EventContentRemove, EventContentShare}
+	seen := make(map[EventType]bool)
+	for _, et := range types {
+		if et == "" {
+			t.Error("empty event type")
+		}
+		if seen[et] {
+			t.Errorf("duplicate event type: %s", et)
+		}
+		seen[et] = true
+	}
+}
+
 func TestDefaultLogPath(t *testing.T) {
 	got := DefaultLogPath("/home/user/project")
 	want := "/home/user/project/.syllago/audit.jsonl"

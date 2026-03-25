@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/OpenScribbler/syllago/cli/internal/audit"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
@@ -212,6 +213,13 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			Path:     desc,
 			Warnings: warnings,
 		})
+
+		// Audit log the install (best-effort, don't fail the operation)
+		if auditLogger, aErr := audit.NewLogger(audit.DefaultLogPath(projectRoot)); aErr == nil {
+			_ = auditLogger.LogContent(audit.EventContentInstall, item.Name, string(item.Type), toSlug)
+			auditLogger.Close()
+		}
+
 		if !output.JSON && !output.Quiet {
 			if method == installer.MethodSymlink {
 				fmt.Fprintf(output.Writer, "Symlinked %s to %s\n", item.Name, desc)
