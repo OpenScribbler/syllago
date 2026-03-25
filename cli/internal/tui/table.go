@@ -582,18 +582,27 @@ func (t tableModel) renderEmpty() string {
 		Render("No content in library.\nPress [a] to add your first item.")
 }
 
+// sanitizeLine strips newlines, carriage returns, and tabs from a string
+// so it is safe to use as a single-line table cell.
+func sanitizeLine(s string) string {
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\r", "")
+	s = strings.ReplaceAll(s, "\t", " ")
+	return strings.TrimSpace(s)
+}
+
 // computeRows pre-computes display strings for items.
 func (t tableModel) computeRows(items []catalog.ContentItem) []tableRow {
 	rows := make([]tableRow, len(items))
 	for i, item := range items {
 		rows[i] = tableRow{
-			name:        itemDisplayName(item),
+			name:        sanitizeLine(itemDisplayName(item)),
 			contentType: typeLabel(item.Type),
-			scope:       item.Source,
+			scope:       sanitizeLine(item.Source),
 			files:       itoa(len(item.Files)),
 			sortFiles:   len(item.Files),
 			installed:   t.installedTools(item),
-			description: item.Description,
+			description: sanitizeLine(item.Description),
 		}
 	}
 	return rows
