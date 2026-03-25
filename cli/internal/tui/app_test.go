@@ -75,11 +75,12 @@ func TestApp_Branding(t *testing.T) {
 }
 
 func TestApp_ContentHeight(t *testing.T) {
+	// Use a wide enough terminal that hints fit on 1 line for the default tab
 	app := testAppSize(t, 120, 30)
 	h := app.contentHeight()
-	// 120 cols: hints fit on 1 line → 30 total - 5 topbar - 1 helpbar = 24
-	if h != 24 {
-		t.Errorf("expected contentHeight 24 at 120 cols, got %d", h)
+	expected := 30 - 5 - app.helpBar.Height()
+	if h != expected {
+		t.Errorf("expected contentHeight %d at 120 cols, got %d", expected, h)
 	}
 }
 
@@ -228,6 +229,67 @@ func TestApp_LibraryJKNavigation(t *testing.T) {
 	sel = a.library.table.Selected()
 	if sel == nil || sel.Name != "alpha-skill" {
 		t.Fatalf("expected alpha-skill after k, got %v", sel)
+	}
+}
+
+func TestApp_LibrarySearch(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// / starts search
+	m, _ := app.Update(keyRune('/'))
+	a := m.(App)
+	if !a.library.table.searching {
+		t.Fatal("expected searching mode after /")
+	}
+
+	// Type "gamma"
+	for _, ch := range "gamma" {
+		m, _ = a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		a = m.(App)
+	}
+	if a.library.table.Len() != 1 {
+		t.Errorf("expected 1 match for 'gamma', got %d", a.library.table.Len())
+	}
+
+	// Enter confirms search
+	m, _ = a.Update(keyPress(tea.KeyEnter))
+	a = m.(App)
+	if a.library.table.searching {
+		t.Fatal("expected search mode ended after Enter")
+	}
+	if a.library.table.Len() != 1 {
+		t.Error("search filter should persist after confirm")
+	}
+
+	// Esc clears search
+	m, _ = a.Update(keyPress(tea.KeyEsc))
+	a = m.(App)
+	if a.library.table.Len() != 7 {
+		t.Errorf("expected all 7 items after Esc, got %d", a.library.table.Len())
+	}
+}
+
+func TestApp_LibrarySort(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// Default sort is by name ascending
+	sel := app.library.table.Selected()
+	if sel == nil || sel.Name != "alpha-skill" {
+		t.Fatalf("expected alpha-skill first by default, got %v", sel)
+	}
+
+	// s cycles to sort by Type
+	m, _ := app.Update(keyRune('s'))
+	a := m.(App)
+	if a.library.table.sortCol != sortByType {
+		t.Errorf("expected sort by type, got %d", a.library.table.sortCol)
+	}
+
+	// S reverses sort direction
+	m, _ = a.Update(keyRune('S'))
+	a = m.(App)
+	if a.library.table.sortAsc {
+		t.Fatal("expected sort descending after S")
 	}
 }
 

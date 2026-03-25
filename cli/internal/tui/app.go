@@ -85,6 +85,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.routeMouse(msg)
 
 	case tea.KeyMsg:
+		// When library search is active, only handle ctrl+c — everything
+		// else goes to the search input so letters like 'a', 'q', '1' etc.
+		// are typed into the query rather than triggering shortcuts.
+		if a.isLibraryTab() && a.library.table.searching {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			return a.routeKey(msg)
+		}
+
 		// Global keys always handled first
 		switch {
 		case msg.Type == tea.KeyCtrlC:
@@ -304,7 +314,7 @@ func (a App) currentHints() []string {
 	}
 
 	if a.isLibraryTab() {
-		return append(base, "↑/↓ navigate", "enter preview", "a add", "n create", "? help", "q quit")
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "a add", "n create", "? help", "q quit")
 	}
 
 	hints := append(base, "↑/↓ navigate", "←/→ switch pane")

@@ -88,6 +88,11 @@ func (l libraryModel) Update(msg tea.Msg) (libraryModel, tea.Cmd) {
 
 // updateBrowse handles keys in table browse mode.
 func (l libraryModel) updateBrowse(msg tea.KeyMsg) (libraryModel, tea.Cmd) {
+	// When actively searching, route most keys to the search input
+	if l.table.searching {
+		return l.updateSearch(msg)
+	}
+
 	switch msg.String() {
 	case keyDown, "down":
 		l.table.CursorDown()
@@ -97,6 +102,16 @@ func (l libraryModel) updateBrowse(msg tea.KeyMsg) (libraryModel, tea.Cmd) {
 		if item := l.table.Selected(); item != nil {
 			l.drillIn(item)
 			return l, func() tea.Msg { return libraryDrillMsg{item: item} }
+		}
+	case keySearch:
+		l.table.StartSearch()
+	case "s":
+		l.table.CycleSort()
+	case "S":
+		l.table.ReverseSort()
+	case "esc":
+		if l.table.searchQuery != "" {
+			l.table.CancelSearch()
 		}
 	case "pgup", "ctrl+u":
 		l.table.PageUp()
@@ -109,6 +124,23 @@ func (l libraryModel) updateBrowse(msg tea.KeyMsg) (libraryModel, tea.Cmd) {
 		if len(l.table.items) > 0 {
 			l.table.cursor = len(l.table.items) - 1
 			l.table.offset = max(0, len(l.table.items)-l.table.viewHeight())
+		}
+	}
+	return l, nil
+}
+
+// updateSearch handles keys when the search input is active.
+func (l libraryModel) updateSearch(msg tea.KeyMsg) (libraryModel, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		l.table.CancelSearch()
+	case tea.KeyEnter:
+		l.table.SearchConfirm()
+	case tea.KeyBackspace:
+		l.table.SearchBackspace()
+	case tea.KeyRunes:
+		for _, r := range msg.Runes {
+			l.table.SearchType(r)
 		}
 	}
 	return l, nil

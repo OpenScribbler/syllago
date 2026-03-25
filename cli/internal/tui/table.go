@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -12,17 +13,44 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
+// sortColumn identifies which column to sort by.
+type sortColumn int
+
+const (
+	sortByName sortColumn = iota
+	sortByType
+	sortByScope
+	sortByFiles
+	sortByInstalled
+	sortByDesc
+	sortColCount // sentinel for cycling
+)
+
 // tableModel renders a full-width scrollable table for the Library view.
 type tableModel struct {
-	items   []catalog.ContentItem
-	rows    []tableRow // pre-computed display data
+	// Source data (unfiltered)
+	allItems []catalog.ContentItem
+	allRows  []tableRow
+
+	// Displayed data (after search filter + sort)
+	items []catalog.ContentItem
+	rows  []tableRow
+
 	cursor  int
 	offset  int
 	width   int
 	height  int
 	focused bool
 
-	// Provider data for Tools/Installed columns
+	// Search
+	searching   bool
+	searchQuery string
+
+	// Sort
+	sortCol sortColumn
+	sortAsc bool
+
+	// Provider data for Installed column
 	providers []provider.Provider
 	repoRoot  string
 }
@@ -33,19 +61,27 @@ type tableRow struct {
 	contentType string
 	scope       string
 	files       string
-	tools       string
 	installed   string
 	description string
+	sortFiles   int // numeric for sorting
 }
 
 func newTableModel(items []catalog.ContentItem, provs []provider.Provider, repoRoot string) tableModel {
 	t := tableModel{
-		items:     items,
 		providers: provs,
 		repoRoot:  repoRoot,
+		sortCol:   sortByName,
+		sortAsc:   true,
 	}
-	t.rows = t.computeRows()
+	t.setSourceItems(items)
 	return t
+}
+
+// setSourceItems sets the underlying data and recomputes display rows.
+func (t *tableModel) setSourceItems(items []catalog.ContentItem) {
+	t.allItems = items
+	t.allRows = t.computeRows(items)
+	t.applyFilterAndSort()
 }
 
 // SetSize updates table dimensions.
@@ -54,10 +90,11 @@ func (t *tableModel) SetSize(width, height int) {
 	t.height = height
 }
 
-// SetItems replaces the table data.
+// SetItems replaces the table data and resets state.
 func (t *tableModel) SetItems(items []catalog.ContentItem) {
-	t.items = items
-	t.rows = t.computeRows()
+	t.searchQuery = ""
+	t.searching = false
+	t.setSourceItems(items)
 	t.cursor = 0
 	t.offset = 0
 }
@@ -70,7 +107,7 @@ func (t tableModel) Selected() *catalog.ContentItem {
 	return &t.items[t.cursor]
 }
 
-// Len returns item count.
+// Len returns displayed item count.
 func (t tableModel) Len() int {
 	return len(t.items)
 }
@@ -121,9 +158,145 @@ func (t *tableModel) PageDown() {
 	t.offset = min(maxOffset, t.offset+vh)
 }
 
-// viewHeight returns the number of rows available for data (minus header).
+// CycleSort advances to the next sort column.
+func (t *tableModel) CycleSort() {
+	// Skip Description column if it won't be visible
+	for {
+		t.sortCol = (t.sortCol + 1) % sortColCount
+		if t.sortCol == sortByDesc && t.width < 110+borderSize {
+			continue // skip desc at narrow widths
+		}
+		break
+	}
+	t.applyFilterAndSort()
+}
+
+// ReverseSort toggles sort direction.
+func (t *tableModel) ReverseSort() {
+	t.sortAsc = !t.sortAsc
+	t.applyFilterAndSort()
+}
+
+// StartSearch enters search mode.
+func (t *tableModel) StartSearch() {
+	t.searching = true
+	t.searchQuery = ""
+}
+
+// CancelSearch exits search mode and restores all items.
+func (t *tableModel) CancelSearch() {
+	t.searching = false
+	t.searchQuery = ""
+	t.applyFilterAndSort()
+}
+
+// SearchType adds a character to the search query.
+func (t *tableModel) SearchType(ch rune) {
+	t.searchQuery += string(ch)
+	t.applyFilterAndSort()
+}
+
+// SearchBackspace removes the last character from the search query.
+func (t *tableModel) SearchBackspace() {
+	if len(t.searchQuery) > 0 {
+		runes := []rune(t.searchQuery)
+		t.searchQuery = string(runes[:len(runes)-1])
+		t.applyFilterAndSort()
+	}
+}
+
+// SearchConfirm exits search mode but keeps the filter active.
+func (t *tableModel) SearchConfirm() {
+	t.searching = false
+	// searchQuery stays applied
+}
+
+// applyFilterAndSort rebuilds displayed items from source data.
+func (t *tableModel) applyFilterAndSort() {
+	// Filter
+	if t.searchQuery == "" {
+		t.items = make([]catalog.ContentItem, len(t.allItems))
+		copy(t.items, t.allItems)
+		t.rows = make([]tableRow, len(t.allRows))
+		copy(t.rows, t.allRows)
+	} else {
+		q := strings.ToLower(t.searchQuery)
+		t.items = nil
+		t.rows = nil
+		for i, item := range t.allItems {
+			if strings.Contains(strings.ToLower(item.Name), q) ||
+				strings.Contains(strings.ToLower(item.Description), q) ||
+				strings.Contains(strings.ToLower(string(item.Type)), q) {
+				t.items = append(t.items, item)
+				t.rows = append(t.rows, t.allRows[i])
+			}
+		}
+	}
+
+	// Sort
+	t.sortItems()
+
+	// Clamp cursor
+	if t.cursor >= len(t.items) {
+		t.cursor = max(0, len(t.items)-1)
+	}
+	t.offset = 0
+}
+
+// sortItems sorts the displayed items+rows by the current sort column.
+func (t *tableModel) sortItems() {
+	if len(t.items) <= 1 {
+		return
+	}
+
+	indices := make([]int, len(t.items))
+	for i := range indices {
+		indices[i] = i
+	}
+
+	sort.SliceStable(indices, func(a, b int) bool {
+		ra, rb := t.rows[indices[a]], t.rows[indices[b]]
+		var less bool
+		switch t.sortCol {
+		case sortByName:
+			less = strings.ToLower(ra.name) < strings.ToLower(rb.name)
+		case sortByType:
+			less = ra.contentType < rb.contentType
+		case sortByScope:
+			less = ra.scope < rb.scope
+		case sortByFiles:
+			less = ra.sortFiles < rb.sortFiles
+		case sortByInstalled:
+			less = ra.installed < rb.installed
+		case sortByDesc:
+			less = ra.description < rb.description
+		default:
+			less = strings.ToLower(ra.name) < strings.ToLower(rb.name)
+		}
+		if !t.sortAsc {
+			less = !less
+		}
+		return less
+	})
+
+	// Reorder items and rows by sorted indices
+	sortedItems := make([]catalog.ContentItem, len(t.items))
+	sortedRows := make([]tableRow, len(t.rows))
+	for i, idx := range indices {
+		sortedItems[i] = t.items[idx]
+		sortedRows[i] = t.rows[idx]
+	}
+	t.items = sortedItems
+	t.rows = sortedRows
+}
+
+// viewHeight returns rows available for data (minus header, minus search bar if active).
 func (t tableModel) viewHeight() int {
-	return max(0, t.height-1) // 1 for header row
+	h := t.height - 1 // header
+	if t.searching || t.searchQuery != "" {
+		h-- // search bar
+	}
+	return max(0, h)
 }
 
 // View renders the table.
@@ -132,47 +305,55 @@ func (t tableModel) View() string {
 		return ""
 	}
 
-	if len(t.items) == 0 {
+	if len(t.allItems) == 0 {
 		return t.renderEmpty()
 	}
 
 	cols := t.columnWidths()
 	lines := make([]string, 0, t.height)
 
+	// Search bar (when searching or query active)
+	if t.searching || t.searchQuery != "" {
+		lines = append(lines, t.renderSearchBar())
+	}
+
 	// Header row
 	lines = append(lines, t.renderHeader(cols))
 
-	vh := t.viewHeight()
-	lastVisible := min(t.offset+vh, len(t.items))
+	if len(t.items) == 0 {
+		// Search has no results
+		lines = append(lines, mutedStyle.Render(fmt.Sprintf("  No matches for %q", t.searchQuery)))
+	} else {
+		vh := t.viewHeight()
+		lastVisible := min(t.offset+vh, len(t.items))
 
-	// Scroll indicators
-	itemsAbove := t.offset
-	itemsBelow := max(0, len(t.items)-lastVisible)
-	showAbove := itemsAbove > 0
-	showBelow := itemsBelow > 0
+		itemsAbove := t.offset
+		itemsBelow := max(0, len(t.items)-lastVisible)
+		showAbove := itemsAbove > 0
+		showBelow := itemsBelow > 0
 
-	contentStart := t.offset
-	contentEnd := lastVisible
-	if showAbove {
-		contentStart++
+		contentStart := t.offset
+		contentEnd := lastVisible
+		if showAbove {
+			contentStart++
+		}
+		if showBelow && contentEnd > contentStart {
+			contentEnd--
+		}
+
+		if showAbove {
+			lines = append(lines, mutedStyle.Render(fmt.Sprintf("(%d more above)", itemsAbove)))
+		}
+
+		for i := contentStart; i < contentEnd; i++ {
+			lines = append(lines, t.renderRow(i, cols))
+		}
+
+		if showBelow {
+			lines = append(lines, mutedStyle.Render(fmt.Sprintf("(%d more below)", itemsBelow)))
+		}
 	}
-	if showBelow && contentEnd > contentStart {
-		contentEnd--
-	}
 
-	if showAbove {
-		lines = append(lines, mutedStyle.Render(fmt.Sprintf("(%d more above)", itemsAbove)))
-	}
-
-	for i := contentStart; i < contentEnd; i++ {
-		lines = append(lines, t.renderRow(i, cols))
-	}
-
-	if showBelow {
-		lines = append(lines, mutedStyle.Render(fmt.Sprintf("(%d more below)", itemsBelow)))
-	}
-
-	// Pad remaining height
 	for len(lines) < t.height {
 		lines = append(lines, strings.Repeat(" ", t.width))
 	}
@@ -180,50 +361,87 @@ func (t tableModel) View() string {
 	return strings.Join(lines, "\n")
 }
 
+// renderSearchBar renders the search input line.
+func (t tableModel) renderSearchBar() string {
+	prompt := "/ "
+	query := t.searchQuery
+	cursor := ""
+	if t.searching {
+		cursor = "█"
+	}
+
+	matchInfo := ""
+	if t.searchQuery != "" {
+		matchInfo = fmt.Sprintf("  (%d/%d)", len(t.items), len(t.allItems))
+	}
+
+	left := prompt + query + cursor
+	right := matchInfo
+	if t.searching {
+		right += "  esc cancel · enter confirm"
+	} else {
+		right += "  / edit · esc clear"
+	}
+	right = mutedStyle.Render(right)
+
+	leftW := lipgloss.Width(left)
+	rightW := lipgloss.Width(right)
+	gap := max(1, t.width-leftW-rightW)
+
+	return primaryStyle.Render(left) + strings.Repeat(" ", gap) + right
+}
+
 // columnWidths computes column widths based on available space.
 type colLayout struct {
-	name, ctype, scope, files, tools, installed, desc int
+	name, ctype, scope, files, installed, desc int
 }
 
 func (t tableModel) columnWidths() colLayout {
 	w := t.width - 4 // prefix (3) + right padding (1)
 
-	// Give non-name columns reasonable fixed sizes first, then name gets capped remainder
 	ctype := 8
 	scope := 12
 	files := 5
-	tools := 10
-	installed := 10
+	installed := 12
 
-	if w >= 110 {
+	if w >= 100 {
 		// Wide: show all columns with description
 		ctype = 9
 		scope = 12
-		tools = 12
-		installed = 10
+		installed = 14
 		nameW := 22
-		fixed := nameW + ctype + scope + files + tools + installed + 6 // 6 gaps
+		fixed := nameW + ctype + scope + files + installed + 5 // 5 gaps
 		desc := max(15, w-fixed)
-		return colLayout{nameW, ctype, scope, files, tools, installed, desc}
+		return colLayout{nameW, ctype, scope, files, installed, desc}
 	}
 
-	// Standard: drop description, cap name at 20
-	fixed := ctype + scope + files + tools + installed + 5 // 5 gaps
+	// Standard: drop description
+	fixed := ctype + scope + files + installed + 4 // 4 gaps
 	nameW := min(20, max(12, w-fixed))
-	return colLayout{nameW, ctype, scope, files, tools, installed, 0}
+	return colLayout{nameW, ctype, scope, files, installed, 0}
+}
+
+// sortIndicator returns ▲ or ▼ if this column is the sort column, else "".
+func (t tableModel) sortIndicator(col sortColumn) string {
+	if t.sortCol != col {
+		return ""
+	}
+	if t.sortAsc {
+		return " ▲"
+	}
+	return " ▼"
 }
 
 // renderHeader renders the column header row.
 func (t tableModel) renderHeader(c colLayout) string {
 	row := "   " // prefix space
-	row += padRight("Name", c.name)
-	row += " " + padRight("Type", c.ctype)
-	row += " " + padRight("Scope", c.scope)
-	row += " " + padRight("Files", c.files)
-	row += " " + padRight("Tools", c.tools)
-	row += " " + padRight("Inst.", c.installed)
+	row += padRight("Name"+t.sortIndicator(sortByName), c.name)
+	row += " " + padRight("Type"+t.sortIndicator(sortByType), c.ctype)
+	row += " " + padRight("Scope"+t.sortIndicator(sortByScope), c.scope)
+	row += " " + padRight("Files"+t.sortIndicator(sortByFiles), c.files)
+	row += " " + padRight("Installed"+t.sortIndicator(sortByInstalled), c.installed)
 	if c.desc > 0 {
-		row += " " + padRight("Description", c.desc)
+		row += " " + padRight("Description"+t.sortIndicator(sortByDesc), c.desc)
 	}
 
 	return boldStyle.Width(t.width).Render(row)
@@ -239,14 +457,11 @@ func (t tableModel) renderRow(index int, c colLayout) string {
 		prefix = " > "
 	}
 
-	// Build plain text row — no per-column styling so selectedRowStyle background
-	// can span the entire row without being overridden by column foreground colors.
 	row := prefix
 	row += padRight(truncate(r.name, c.name), c.name)
 	row += " " + padRight(truncate(r.contentType, c.ctype), c.ctype)
 	row += " " + padRight(truncate(r.scope, c.scope), c.scope)
 	row += " " + padRight(truncate(r.files, c.files), c.files)
-	row += " " + padRight(truncate(r.tools, c.tools), c.tools)
 	row += " " + padRight(truncate(r.installed, c.installed), c.installed)
 	if c.desc > 0 {
 		row += " " + truncate(r.description, c.desc)
@@ -258,7 +473,6 @@ func (t tableModel) renderRow(index int, c colLayout) string {
 	if isCursor {
 		return zone.Mark("tbl-"+itoa(index), boldStyle.Width(t.width).Render(row))
 	}
-	// Non-selected rows use muted style for a subtler look
 	return zone.Mark("tbl-"+itoa(index), mutedStyle.Width(t.width).Render(row))
 }
 
@@ -272,32 +486,21 @@ func (t tableModel) renderEmpty() string {
 		Render("No content in library.\nPress [a] to add your first item.")
 }
 
-// computeRows pre-computes display strings for all items.
-func (t tableModel) computeRows() []tableRow {
-	rows := make([]tableRow, len(t.items))
-	for i, item := range t.items {
+// computeRows pre-computes display strings for items.
+func (t tableModel) computeRows(items []catalog.ContentItem) []tableRow {
+	rows := make([]tableRow, len(items))
+	for i, item := range items {
 		rows[i] = tableRow{
 			name:        itemDisplayName(item),
 			contentType: typeLabel(item.Type),
 			scope:       item.Source,
 			files:       itoa(len(item.Files)),
-			tools:       t.supportedTools(item),
+			sortFiles:   len(item.Files),
 			installed:   t.installedTools(item),
 			description: item.Description,
 		}
 	}
 	return rows
-}
-
-// supportedTools returns abbreviated provider names that support this item's type.
-func (t tableModel) supportedTools(item catalog.ContentItem) string {
-	var abbrevs []string
-	for _, prov := range t.providers {
-		if prov.SupportsType(item.Type) {
-			abbrevs = append(abbrevs, providerAbbrev(prov.Slug))
-		}
-	}
-	return strings.Join(abbrevs, ",")
 }
 
 // installedTools returns abbreviated provider names where this item is installed.

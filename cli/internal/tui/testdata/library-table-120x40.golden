@@ -4,15 +4,14 @@
 │   Library     Registries     Loadouts                                                      [a] Add      [n] Create   │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│   Name                   Type      Scope        Files Tools        Inst.      Description                            │
-│ > alpha-skill            Skill     team-rules   1                  --                                                │
-│   beta-skill             Skill     team-rules   1                  --                                                │
-│   gamma-rule             Rule      library      1                  --                                                │
-│   delta-agent            Agent     my-registry  1                  --                                                │
-│   epsilon-hook           Hook      team-rules   1                  --                                                │
-│   zeta-mcp               MCP       library      1                  --                                                │
-│   eta-command            Command   team-rules   1                  --                                                │
-│                                                                                                                      │
+│   Name ▲                 Type      Scope        Files Installed      Description                                     │
+│ > alpha-skill            Skill     team-rules   1     --                                                             │
+│   beta-skill             Skill     team-rules   1     --                                                             │
+│   delta-agent            Agent     my-registry  1     --                                                             │
+│   epsilon-hook           Hook      team-rules   1     --                                                             │
+│   eta-command            Command   team-rules   1     --                                                             │
+│   gamma-rule             Rule      library      1     --                                                             │
+│   zeta-mcp               MCP       library      1     --                                                             │
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
@@ -37,4 +36,5 @@
 │                                                                                                                      │
 │                                                                                                                      │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-1/2/3 groups · tab items · ↑/↓ navigate · enter preview · a add · n create · ? help · q quit        syllago v0.0.0-test
+1/2/3 groups · tab items · ↑/↓ navigate · enter preview · / search · s sort · a add · n create      syllago v0.0.0-test
+? help · q quit
