@@ -44,6 +44,7 @@ func init() {
 	syncAndExportCmd.Flags().String("name", "", "Filter by item name (substring match)")
 	syncAndExportCmd.Flags().String("source", "local", "Which items to export: local (default), shared, registry, builtin, all")
 	syncAndExportCmd.Flags().String("llm-hooks", "skip", "How to handle LLM-evaluated hooks: skip (drop with warning) or generate (create wrapper scripts)")
+	syncAndExportCmd.Flags().BoolP("dry-run", "n", false, "Show what would be exported without making changes")
 	rootCmd.AddCommand(syncAndExportCmd)
 }
 
@@ -86,8 +87,9 @@ func runSyncAndExport(cmd *cobra.Command, args []string) error {
 	nameFilter, _ := cmd.Flags().GetString("name")
 	sourceFilter, _ := cmd.Flags().GetString("source")
 	llmHooksMode, _ := cmd.Flags().GetString("llm-hooks")
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
-	return runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMode, "")
+	return runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMode, "", dryRun)
 }
 
 // exportResult is the JSON-serializable output for export operations.
@@ -113,9 +115,9 @@ type exportSkippedItem struct {
 // runExportOp contains the core export logic shared by sync-and-export.
 //
 //nolint:gocyclo // CLI command runner with many flags
-func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir string) error {
+func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir string, dryRun bool) error {
 	if toSlug == "all" {
-		return runExportAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir)
+		return runExportAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir, dryRun)
 	}
 
 	prov := findProviderBySlug(toSlug)
@@ -179,6 +181,16 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 			msg += " matching filters"
 		}
 		fmt.Fprintln(output.ErrWriter, msg)
+		return nil
+	}
+
+	if dryRun {
+		if !output.Quiet {
+			fmt.Fprintf(output.Writer, "[dry-run] would export %d item(s) to %s\n", len(items), toSlug)
+			for _, item := range items {
+				fmt.Fprintf(output.Writer, "  %s (%s)\n", item.Name, item.Type.Label())
+			}
+		}
 		return nil
 	}
 
@@ -375,7 +387,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 }
 
 // runExportAll exports to every known provider in sequence.
-func runExportAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir string) error {
+func runExportAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir string, dryRun bool) error {
 	type providerSummary struct {
 		Slug string
 		Err  error
@@ -388,7 +400,7 @@ func runExportAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, base
 			fmt.Fprintf(output.Writer, "\n--- %s (%s) ---\n", prov.Name, prov.Slug)
 		}
 
-		err := runExportOp(root, prov.Slug, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir)
+		err := runExportOp(root, prov.Slug, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir, dryRun)
 		summaries = append(summaries, providerSummary{Slug: prov.Slug, Err: err})
 	}
 

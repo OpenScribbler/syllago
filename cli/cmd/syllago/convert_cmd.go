@@ -54,6 +54,7 @@ func init() {
 	convertCmd.Flags().String("from", "", "Source provider (required for file input, optional for library items)")
 	convertCmd.Flags().String("type", "rules", "Content type for file input (rules, hooks, skills, agents, commands, mcp)")
 	convertCmd.Flags().StringP("output", "o", "", "Write output to this file path (default: stdout)")
+	convertCmd.Flags().Bool("diff", false, "Show unified diff between source and converted output")
 	rootCmd.AddCommand(convertCmd)
 }
 
@@ -63,6 +64,7 @@ func runConvert(cmd *cobra.Command, args []string) error {
 	fromSlug, _ := cmd.Flags().GetString("from")
 	typeStr, _ := cmd.Flags().GetString("type")
 	outputPath, _ := cmd.Flags().GetString("output")
+	showDiff, _ := cmd.Flags().GetBool("diff")
 
 	toProv := findProviderBySlug(toSlug)
 	if toProv == nil {
@@ -72,9 +74,9 @@ func runConvert(cmd *cobra.Command, args []string) error {
 
 	// Determine mode: file path or library item name.
 	if isFilePath(input) {
-		return convertFile(input, fromSlug, toSlug, typeStr, outputPath, *toProv)
+		return convertFile(input, fromSlug, toSlug, typeStr, outputPath, *toProv, showDiff)
 	}
-	return convertLibraryItem(input, fromSlug, toSlug, outputPath, *toProv)
+	return convertLibraryItem(input, fromSlug, toSlug, outputPath, *toProv, showDiff)
 }
 
 // isFilePath returns true if the input exists on disk as a file.
@@ -84,7 +86,7 @@ func isFilePath(input string) bool {
 }
 
 // convertFile reads a file directly and converts it between providers.
-func convertFile(path, fromSlug, toSlug, typeStr, outputPath string, toProv provider.Provider) error {
+func convertFile(path, fromSlug, toSlug, typeStr, outputPath string, toProv provider.Provider, showDiff bool) error {
 	if fromSlug == "" {
 		return output.NewStructuredError(output.ErrInputMissing, "--from is required when converting a file", "Example: syllago convert ./rule.mdc --from cursor --to claude-code")
 	}
@@ -115,11 +117,11 @@ func convertFile(path, fromSlug, toSlug, typeStr, outputPath string, toProv prov
 		return output.NewStructuredErrorDetail(output.ErrConvertRenderFailed, fmt.Sprintf("rendering to %s format failed", toProv.Name), "This content may not be compatible with the target provider", err.Error())
 	}
 
-	return emitConvertOutput(path, fromSlug, toSlug, outputPath, rendered)
+	return emitConvertOutput(path, fromSlug, toSlug, outputPath, rendered, raw, showDiff)
 }
 
 // convertLibraryItem looks up an item in the library and converts it.
-func convertLibraryItem(name, fromSlug, toSlug, outputPath string, toProv provider.Provider) error {
+func convertLibraryItem(name, fromSlug, toSlug, outputPath string, toProv provider.Provider, showDiff bool) error {
 	globalDir := catalog.GlobalContentDir()
 	cat, err := catalog.ScanWithGlobalAndRegistries(globalDir, globalDir, nil)
 	if err != nil {
@@ -176,13 +178,17 @@ func convertLibraryItem(name, fromSlug, toSlug, outputPath string, toProv provid
 	if displayFrom == "" {
 		displayFrom = "(canonical)"
 	}
-	return emitConvertOutput(name, displayFrom, toSlug, outputPath, rendered)
+	return emitConvertOutput(name, displayFrom, toSlug, outputPath, rendered, raw, showDiff)
 }
 
 // emitConvertOutput writes the conversion result to stdout, a file, or JSON.
-func emitConvertOutput(name, fromSlug, toSlug, outputPath string, rendered *converter.Result) error {
+func emitConvertOutput(name, fromSlug, toSlug, outputPath string, rendered *converter.Result, sourceContent []byte, showDiff bool) error {
 	if rendered.Content == nil {
 		return output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s is not compatible with %s format", name, toSlug), "Try a different target provider")
+	}
+
+	if showDiff {
+		return printUnifiedDiff(name, fromSlug, toSlug, sourceContent, rendered.Content)
 	}
 
 	if outputPath != "" {
@@ -209,5 +215,26 @@ func emitConvertOutput(name, fromSlug, toSlug, outputPath string, rendered *conv
 		fmt.Fprintln(output.ErrWriter)
 	}
 
+	return nil
+}
+
+// printUnifiedDiff shows a simple line-by-line comparison between source and target content.
+func printUnifiedDiff(name, fromSlug, toSlug string, source, target []byte) error {
+	srcLines := strings.Split(string(source), "\n")
+	tgtLines := strings.Split(string(target), "\n")
+
+	fmt.Fprintf(output.Writer, "--- %s (%s)\n", name, fromSlug)
+	fmt.Fprintf(output.Writer, "+++ %s (%s)\n", name, toSlug)
+
+	// Simple diff: show all source lines as removed, all target lines as added.
+	// For a real unified diff we'd need an LCS algorithm, but for conversion
+	// preview, showing the full before/after is more useful than a minimal diff
+	// since the formats are structurally different.
+	for _, line := range srcLines {
+		fmt.Fprintf(output.Writer, "-%s\n", line)
+	}
+	for _, line := range tgtLines {
+		fmt.Fprintf(output.Writer, "+%s\n", line)
+	}
 	return nil
 }

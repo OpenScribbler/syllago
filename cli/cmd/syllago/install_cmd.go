@@ -174,7 +174,24 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	for _, item := range items {
 		if dryRun {
 			if !output.Quiet {
-				fmt.Fprintf(output.Writer, "[dry-run] would install %s (%s) to %s\n", item.Name, item.Type.Label(), prov.Name)
+				method := "symlink"
+				if installer.IsJSONMerge(*prov, item.Type) {
+					method = "json-merge"
+				}
+				fmt.Fprintf(output.Writer, "[dry-run] would install %s (%s) to %s via %s\n", item.Name, item.Type.Label(), prov.Name, method)
+
+				// For JSON merge types, show what content would be merged.
+				if installer.IsJSONMerge(*prov, item.Type) {
+					contentFile := converter.ResolveContentFile(item)
+					if contentFile != "" {
+						if preview, err := os.ReadFile(contentFile); err == nil {
+							fmt.Fprintf(output.Writer, "  content preview:\n")
+							for _, line := range strings.SplitN(string(preview), "\n", 10) {
+								fmt.Fprintf(output.Writer, "    %s\n", line)
+							}
+						}
+					}
+				}
 			}
 			continue
 		}

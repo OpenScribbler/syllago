@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-25T05:28:55Z",
+  "generatedAt": "2026-03-25T05:53:49Z",
   "syllagoVersion": "dev",
   "commands": [
     {
@@ -974,6 +974,14 @@
       "longDescription": "Transform content between provider formats using syllago's hub-and-spoke\nconversion model (source -\u003e canonical -\u003e target).\n\nAccepts either a file path or a library item name:\n  - File path: reads the file directly (requires --from and --to)\n  - Library name: looks up the item in your library (--from is optional)\n\nOutput goes to stdout by default, or to a file with --output.",
       "aliases": [],
       "flags": [
+        {
+          "name": "--diff",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show unified diff between source and converted output"
+        },
         {
           "name": "--from",
           "shorthand": null,
@@ -3547,6 +3555,14 @@
       "longDescription": "Convenience command that syncs all registries then installs.\n\nEquivalent to running:\n  syllago registry sync \u0026\u0026 syllago install --to \u003cprovider\u003e\n\nThis is useful in CI/CD or automation where you want a single command\nto ensure registries are up-to-date before installing.",
       "aliases": [],
       "flags": [
+        {
+          "name": "--dry-run",
+          "shorthand": "-n",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show what would be exported without making changes"
+        },
         {
           "name": "--llm-hooks",
           "shorthand": null,
