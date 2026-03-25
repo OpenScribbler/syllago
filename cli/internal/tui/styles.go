@@ -79,6 +79,10 @@ var (
 			Bold(true).
 			Align(lipgloss.Center)
 
+	// Panel borders — focus indicated by border color
+	focusedBorderFg   = primaryColor
+	unfocusedBorderFg = borderColor
+
 	// General text
 	mutedStyle   = lipgloss.NewStyle().Foreground(mutedColor)
 	primaryStyle = lipgloss.NewStyle().Foreground(primaryColor)
@@ -100,54 +104,18 @@ func itoa(n int) string {
 	return itoa(n/10) + string(rune('0'+n%10))
 }
 
-// renderBorderedPanel draws a rounded border around content with exact outerW x outerH
-// dimensions. Content is split on newlines, each line truncated/padded to innerW,
-// and the total is clamped to innerH lines. This bypasses lipgloss Width/Height which
-// can wrap or fail to clamp, causing layout shifts.
-func renderBorderedPanel(content string, outerW, outerH int, borderFg lipgloss.TerminalColor) string {
-	innerW := outerW - 2
-	innerH := outerH - 2
-	if innerW < 0 || innerH < 0 {
-		return ""
-	}
-
-	borderStyle := lipgloss.NewStyle().Foreground(borderFg)
-	br := func(s string) string { return borderStyle.Render(s) }
-
-	// Split content into lines, clamp/pad to exact dimensions
-	contentLines := strings.Split(content, "\n")
-	if len(contentLines) > innerH {
-		contentLines = contentLines[:innerH]
-	}
-	for len(contentLines) < innerH {
-		contentLines = append(contentLines, "")
-	}
-
-	lines := make([]string, 0, outerH)
-
-	// Top border
-	lines = append(lines, br("╭")+br(strings.Repeat("─", innerW))+br("╮"))
-
-	// Content lines — each padded/truncated to innerW
-	for _, cl := range contentLines {
-		// Truncate to innerW visual chars
-		runes := []rune(cl)
-		if len(runes) > innerW {
-			cl = string(runes[:innerW])
-		}
-		// Pad with spaces
-		visW := lipgloss.Width(cl)
-		pad := ""
-		if visW < innerW {
-			pad = strings.Repeat(" ", innerW-visW)
-		}
-		lines = append(lines, br("│")+cl+pad+br("│"))
-	}
-
-	// Bottom border
-	lines = append(lines, br("╰")+br(strings.Repeat("─", innerW))+br("╯"))
-
-	return strings.Join(lines, "\n")
+// borderedPanel renders content inside a rounded border with exact dimensions.
+// Uses lipgloss Border + Width/MaxWidth + Height/MaxHeight to both pad AND clamp,
+// preserving zone markers (which manual string splitting would destroy).
+func borderedPanel(content string, innerW, innerH int, fg lipgloss.TerminalColor) string {
+	return lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(fg).
+		Width(innerW).
+		MaxWidth(innerW + borderSize). // +border chars to get exact outer width
+		Height(innerH).
+		MaxHeight(innerH + borderSize). // +border chars to get exact outer height
+		Render(content)
 }
 
 // renderSectionTitle renders a divider line: ──Title────────────
