@@ -125,8 +125,8 @@ func (e explorerModel) Update(msg tea.Msg) (explorerModel, tea.Cmd) {
 
 // updateMouse handles mouse clicks on items and scroll wheel.
 func (e explorerModel) updateMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
-	// Click on an item row
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
+		// Click on a specific item row — select it
 		for i := range e.items.items {
 			if zone.Get("item-" + itoa(i)).InBounds(msg) {
 				e.items.cursor = i
@@ -135,28 +135,43 @@ func (e explorerModel) updateMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 				return e, e.itemSelectedCmd()
 			}
 		}
+
+		// Click anywhere in items pane — focus it
+		if zone.Get("pane-items").InBounds(msg) {
+			e.setFocus(paneItems)
+			return e, nil
+		}
+
+		// Click anywhere in preview pane — focus it
+		if zone.Get("pane-preview").InBounds(msg) {
+			e.setFocus(panePreview)
+			return e, nil
+		}
 	}
 
-	// Scroll wheel on items pane
+	// Scroll wheel — scroll whichever pane the mouse is over
 	if msg.Action == tea.MouseActionPress {
+		onItems := zone.Get("pane-items").InBounds(msg)
+		onPreview := zone.Get("pane-preview").InBounds(msg)
+
 		switch msg.Button {
 		case tea.MouseButtonWheelUp:
-			if e.focus == paneItems {
+			if onItems {
 				e.items.CursorUp()
 				e.preview.LoadItem(e.items.Selected())
 				return e, e.itemSelectedCmd()
 			}
-			if e.focus == panePreview {
+			if onPreview {
 				e.preview.ScrollUp()
 				return e, nil
 			}
 		case tea.MouseButtonWheelDown:
-			if e.focus == paneItems {
+			if onItems {
 				e.items.CursorDown()
 				e.preview.LoadItem(e.items.Selected())
 				return e, e.itemSelectedCmd()
 			}
-			if e.focus == panePreview {
+			if onPreview {
 				e.preview.ScrollDown()
 				return e, nil
 			}
@@ -251,15 +266,15 @@ func (e explorerModel) viewSideBySide() string {
 		previewBorder = focusedPanelStyle
 	}
 
-	left := itemsBorder.
-		Width(itemsOuterW - borderSize).
-		Height(outerH - borderSize).
-		Render(e.items.View())
+	left := zone.Mark("pane-items", itemsBorder.
+		Width(itemsOuterW-borderSize).
+		Height(outerH-borderSize).
+		Render(e.items.View()))
 
-	right := previewBorder.
-		Width(previewOuterW - borderSize).
-		Height(outerH - borderSize).
-		Render(e.preview.View())
+	right := zone.Mark("pane-preview", previewBorder.
+		Width(previewOuterW-borderSize).
+		Height(outerH-borderSize).
+		Render(e.preview.View()))
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 }

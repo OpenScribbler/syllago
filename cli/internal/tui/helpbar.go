@@ -49,7 +49,7 @@ func (h helpBarModel) renderHints() string {
 		return ""
 	}
 
-	sep := mutedStyle.Render(" * ")
+	sep := mutedStyle.Render(" · ")
 	maxWidth := h.width - lipgloss.Width(h.version) - 4
 
 	var parts []string
