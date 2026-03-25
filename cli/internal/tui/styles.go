@@ -84,9 +84,8 @@ var (
 	unfocusedBorderFg = borderColor
 
 	// General text
-	mutedStyle   = lipgloss.NewStyle().Foreground(mutedColor)
-	primaryStyle = lipgloss.NewStyle().Foreground(primaryColor)
-	boldStyle    = lipgloss.NewStyle().Bold(true).Foreground(primaryText)
+	mutedStyle = lipgloss.NewStyle().Foreground(mutedColor)
+	boldStyle  = lipgloss.NewStyle().Bold(true).Foreground(primaryText)
 
 	// Inline section title: ──Title──────────────────
 	sectionTitleStyle = lipgloss.NewStyle().Foreground(primaryColor)

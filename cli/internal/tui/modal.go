@@ -8,13 +8,6 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 )
 
-// openModalMsg requests the app to open the text input modal.
-type openModalMsg struct {
-	title   string // e.g. "Rename Hook"
-	value   string // pre-filled text
-	context string // opaque string passed back on save (e.g. item path)
-}
-
 // modalSavedMsg is emitted when the user confirms the modal input.
 type modalSavedMsg struct {
 	value   string

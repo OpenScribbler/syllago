@@ -198,7 +198,7 @@ func TestTextInputModal_TypingOnlyInTextField(t *testing.T) {
 func TestTextInputModal_InactiveIgnoresInput(t *testing.T) {
 	m := newTextInputModal()
 
-	m, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if cmd != nil {
 		t.Fatal("inactive modal should not produce commands")
 	}
