@@ -1,7 +1,8 @@
 ╭──syllago─────────────────────────────────────────────────────────────────────╮
 │               [1] Collections      [2] Content      [3] Config               │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│   Skills     Agents     MCP     Rules     Hooks     Commands     [a] Add      [n] Create   │
+│   Skills     Agents     MCP     Rules     Hooks     Commands     [n] Create   │
+│                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ alpha-skill                               Type: Skill     Files: 1           │
@@ -24,7 +25,6 @@
 │                           │                                                  │
 │                           │                                                  │
 │                           │                                                  │
-│                           │                                                  │
 ╰───────────────────────────┴──────────────────────────────────────────────────╯
 1/2/3 groups · tab items · ↑/↓ navigate · ←/→ switch pane   syllago v0.0.0-test
-enter detail · r rename · R refresh · a add · n create · ? help · q quit
+enter detail · r rename · R refresh · n create · ? help · q quit

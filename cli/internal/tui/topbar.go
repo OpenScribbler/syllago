@@ -30,12 +30,18 @@ type actionPressedMsg struct {
 	tab    string // which sub-tab was active (e.g., "Skills", "Library")
 }
 
+// breadcrumbClickMsg is sent when a breadcrumb segment is clicked.
+type breadcrumbClickMsg struct {
+	index int // which segment was clicked (0 = first after the tab anchor)
+}
+
 // topBarModel manages a two-tier tab navigation bar with a bordered frame.
 type topBarModel struct {
 	groups      []tabGroup
 	activeGroup int
 	activeTab   int // sub-tab index within the active group
 	width       int
+	breadcrumbs []string // when non-empty, shown on row 3 under the active tab
 }
 
 func newTopBar() topBarModel {
@@ -45,13 +51,13 @@ func newTopBar() topBarModel {
 				label:   "Collections",
 				hotkey:  "1",
 				tabs:    []string{"Library", "Registries", "Loadouts"},
-				actions: []string{"[a] Add", "[n] Create"},
+				actions: []string{"[n] Create"},
 			},
 			{
 				label:   "Content",
 				hotkey:  "2",
 				tabs:    []string{"Skills", "Agents", "MCP", "Rules", "Hooks", "Commands"},
-				actions: []string{"[a] Add", "[n] Create"},
+				actions: []string{"[n] Create"},
 			},
 			{
 				label:   "Config",
@@ -82,6 +88,16 @@ func (t topBarModel) ActiveTabLabel() string {
 		return g.tabs[t.activeTab]
 	}
 	return ""
+}
+
+// SetBreadcrumbs sets the breadcrumb trail shown under the active tab.
+func (t *topBarModel) SetBreadcrumbs(crumbs []string) {
+	t.breadcrumbs = crumbs
+}
+
+// ClearBreadcrumbs removes the breadcrumb trail.
+func (t *topBarModel) ClearBreadcrumbs() {
+	t.breadcrumbs = nil
 }
 
 // SetGroup switches to a group by index (0-based) and resets sub-tab to 0.
@@ -135,10 +151,15 @@ func (t topBarModel) Update(msg tea.Msg) (topBarModel, tea.Cmd) {
 		}
 	}
 
-	// Check action button clicks
-	if zone.Get("btn-add").InBounds(mouseMsg) {
-		return t, t.actionCmd("add")
+	// Check breadcrumb clicks
+	for i := range t.breadcrumbs {
+		if zone.Get("crumb-" + itoa(i)).InBounds(mouseMsg) {
+			idx := i
+			return t, func() tea.Msg { return breadcrumbClickMsg{index: idx} }
+		}
 	}
+
+	// Check action button clicks
 	if zone.Get("btn-create").InBounds(mouseMsg) {
 		return t, t.actionCmd("create")
 	}
@@ -157,12 +178,12 @@ func (t topBarModel) actionCmd(action string) tea.Cmd {
 	}
 }
 
-// Height returns the rendered height of the topbar (always 5: top border + groups + separator + tabs + bottom border).
+// Height returns the rendered height of the topbar (always 6: top border + groups + separator + tabs + breadcrumbs + bottom border).
 func (t topBarModel) Height() int {
-	return 5
+	return 6
 }
 
-// View renders the full bordered topbar with two-tier tabs.
+// View renders the full bordered topbar with two-tier tabs and breadcrumb row.
 func (t topBarModel) View() string {
 	innerW := t.width - 2 // subtract left+right border chars
 
@@ -175,6 +196,9 @@ func (t topBarModel) View() string {
 	// Row 2: sub-tabs + action buttons
 	tabRow := t.renderTabRow(innerW)
 
+	// Row 3: breadcrumbs (blank when no drill-in)
+	crumbRow := t.renderBreadcrumbRow(innerW)
+
 	// Top border with ──syllago── inline
 	topBorder := t.renderTopBorder(innerW)
 
@@ -186,6 +210,7 @@ func (t topBarModel) View() string {
 		"│" + groupRow + "│",
 		sep,
 		"│" + tabRow + "│",
+		"│" + crumbRow + "│",
 		botBorder,
 	}, "\n")
 }
@@ -245,13 +270,9 @@ func (t topBarModel) renderTabRow(innerW int) string {
 
 	// Action buttons
 	var btnParts []string
-	for i, action := range g.actions {
+	for _, action := range g.actions {
 		btn := activeButtonStyle.Render(action)
-		// Zone IDs: btn-add (index 0), btn-create (index 1)
-		ids := []string{"btn-add", "btn-create"}
-		if i < len(ids) {
-			btn = zone.Mark(ids[i], btn)
-		}
+		btn = zone.Mark("btn-create", btn)
 		btnParts = append(btnParts, btn)
 	}
 	right := strings.Join(btnParts, " ")
@@ -261,6 +282,45 @@ func (t topBarModel) renderTabRow(innerW int) string {
 	gap := max(1, innerW-leftW-rightW-1) // -1 for leading space
 
 	return " " + left + strings.Repeat(" ", gap) + right
+}
+
+// renderBreadcrumbRow renders the breadcrumb trail aligned under the active tab.
+// Returns an empty padded line when no breadcrumbs are set.
+func (t topBarModel) renderBreadcrumbRow(innerW int) string {
+	if len(t.breadcrumbs) == 0 {
+		return strings.Repeat(" ", innerW)
+	}
+
+	// Calculate the x-offset of the active tab in the tab row.
+	// Tab row starts with " " (1 char), then each tab is rendered with padding.
+	g := t.groups[t.activeGroup]
+	offset := 1 // leading space
+	for i := 0; i < t.activeTab && i < len(g.tabs); i++ {
+		// Each tab is rendered with Padding(0, 2) = 2 chars each side = +4
+		offset += len(g.tabs[i]) + 4
+		offset++ // space between tabs
+	}
+
+	// Build the breadcrumb string with clickable zones
+	var parts []string
+	for i, crumb := range t.breadcrumbs {
+		seg := zone.Mark("crumb-"+itoa(i), sectionTitleStyle.Render("> ")+boldStyle.Render(truncate(crumb, 20)))
+		parts = append(parts, seg)
+	}
+	trail := strings.Join(parts, " ")
+	trailW := lipgloss.Width(trail)
+
+	// Clamp offset so trail fits
+	if offset+trailW > innerW {
+		offset = max(1, innerW-trailW)
+	}
+
+	line := strings.Repeat(" ", offset) + trail
+	lineW := lipgloss.Width(line)
+	if lineW < innerW {
+		line += strings.Repeat(" ", innerW-lineW)
+	}
+	return lipgloss.NewStyle().MaxWidth(innerW).Render(line)
 }
 
 func (t topBarModel) tabChangedCmd() tea.Cmd {
