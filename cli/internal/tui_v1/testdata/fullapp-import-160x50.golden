@@ -3,7 +3,7 @@ syllago           │Home > Add
   Content         │Add content from an installed provider, local files, or a git repository.
   Skills        3 │Create New scaffolds a blank template.
   Agents        1 │
-  MCP Configs   1 │ > From Provider
+  MCP Servers   1 │ > From Provider
   Rules         1 │   Local Path
   Hooks         1 │   Git URL
   Commands      1 │   Create New

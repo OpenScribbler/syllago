@@ -40,7 +40,7 @@ func (ct ContentType) Label() string {
 	case Agents:
 		return "Agents"
 	case MCP:
-		return "MCP Configs"
+		return "MCP Servers"
 	case Rules:
 		return "Rules"
 	case Hooks:

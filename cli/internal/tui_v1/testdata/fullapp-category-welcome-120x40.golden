@@ -3,10 +3,10 @@ syllago           │  Content
   Content         │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
 > Skills        3 ││ Skills (3)                                     │ │ Agents (1)                                     │
   Agents        1 ││ Reusable skill definitions that extend AI tool │ │ Agent configurations with specialized roles    │
-  MCP Configs   1 ││ capabilities                                   │ │ and personalities                              │
+  MCP Servers   1 ││ capabilities                                   │ │ and personalities                              │
   Rules         1 │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
   Hooks         1 │╭────────────────────────────────────────────────╮ ╭────────────────────────────────────────────────╮
-  Commands      1 ││ MCP Configs (1)                                │ │ Rules (1)                                      │
+  Commands      1 ││ MCP Servers (1)                                │ │ Rules (1)                                      │
   ─────────────   ││ Model Context Protocol server configurations   │ │ Rule files that guide AI coding tool behavior  │
   Collections     ││                                                │ │                                                │
   Library       1 │╰────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────╯
