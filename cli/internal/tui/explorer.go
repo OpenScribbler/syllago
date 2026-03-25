@@ -79,9 +79,7 @@ func (e *explorerModel) SetSize(width, height int) {
 // SetItems replaces the item list and reloads preview.
 func (e *explorerModel) SetItems(items []catalog.ContentItem, mixed bool) {
 	e.items.SetItems(items, mixed)
-	e.focus = paneItems
-	e.items.focused = true
-	e.preview.focused = false
+	e.setFocus(paneItems)
 	if len(items) > 0 {
 		e.preview.LoadItem(&items[0])
 	} else {
@@ -97,8 +95,16 @@ func (e explorerModel) Update(msg tea.Msg) (explorerModel, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "tab":
-			e.toggleFocus()
+		// h/l and arrow keys switch pane focus
+		case keyLeft, "left":
+			if e.focus != paneItems {
+				e.setFocus(paneItems)
+			}
+			return e, nil
+		case keyRight, "right":
+			if e.focus != panePreview {
+				e.setFocus(panePreview)
+			}
 			return e, nil
 
 		case keySearch:
@@ -124,9 +130,7 @@ func (e explorerModel) updateMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 		for i := range e.items.items {
 			if zone.Get("item-" + itoa(i)).InBounds(msg) {
 				e.items.cursor = i
-				e.items.focused = true
-				e.preview.focused = false
-				e.focus = paneItems
+				e.setFocus(paneItems)
 				e.preview.LoadItem(e.items.Selected())
 				return e, e.itemSelectedCmd()
 			}
@@ -187,9 +191,7 @@ func (e explorerModel) updateItems(msg tea.KeyMsg) (explorerModel, tea.Cmd) {
 		return e, e.itemSelectedCmd()
 	case "enter":
 		if e.stacked && e.items.Selected() != nil {
-			e.focus = panePreview
-			e.items.focused = false
-			e.preview.focused = true
+			e.setFocus(panePreview)
 		}
 		return e, nil
 	}
@@ -209,26 +211,17 @@ func (e explorerModel) updatePreview(msg tea.KeyMsg) (explorerModel, tea.Cmd) {
 		e.preview.PageUp()
 	case "esc":
 		if e.stacked {
-			e.focus = paneItems
-			e.items.focused = true
-			e.preview.focused = false
+			e.setFocus(paneItems)
 		}
 	}
 	return e, nil
 }
 
-// toggleFocus switches between items and preview panes.
-func (e *explorerModel) toggleFocus() {
-	switch e.focus {
-	case paneItems:
-		e.focus = panePreview
-		e.items.focused = false
-		e.preview.focused = true
-	case panePreview:
-		e.focus = paneItems
-		e.items.focused = true
-		e.preview.focused = false
-	}
+// setFocus switches focus to the given pane.
+func (e *explorerModel) setFocus(pane explorerPane) {
+	e.focus = pane
+	e.items.focused = pane == paneItems
+	e.preview.focused = pane == panePreview
 }
 
 // View renders the explorer layout with bordered panes.

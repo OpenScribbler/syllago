@@ -29,7 +29,10 @@ func keyPress(k tea.KeyType) tea.KeyMsg {
 	return tea.KeyMsg{Type: k}
 }
 
-var keyTab = keyPress(tea.KeyTab)
+var (
+	keyTab      = keyPress(tea.KeyTab)
+	keyShiftTab = keyPress(tea.KeyShiftTab)
+)
 
 // --- Test data ---
 
