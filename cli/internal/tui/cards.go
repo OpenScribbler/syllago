@@ -241,7 +241,15 @@ func (m cardGridModel) renderCard(index int) string {
 // --- Card data construction ---
 
 // buildLoadoutCards creates card data from loadout catalog items.
-func buildLoadoutCards(items []catalog.ContentItem) []cardData {
+// The full catalog is needed to resolve item references from the manifest.
+func buildLoadoutCards(items []catalog.ContentItem, cat *catalog.Catalog) []cardData {
+	// Build a lookup: type/name -> ContentItem for resolving manifest refs
+	itemLookup := make(map[string]*catalog.ContentItem, len(cat.Items))
+	for i := range cat.Items {
+		key := string(cat.Items[i].Type) + "/" + cat.Items[i].Name
+		itemLookup[key] = &cat.Items[i]
+	}
+
 	cards := make([]cardData, 0, len(items))
 	for _, item := range items {
 		c := cardData{
@@ -255,10 +263,18 @@ func buildLoadoutCards(items []catalog.ContentItem) []cardData {
 			c.subtitle = "Target: " + providerFullName(m.Provider)
 			c.desc = sanitizeLine(m.Description)
 			raw := make(map[string]int)
+			var resolved []catalog.ContentItem
 			for ct, refs := range m.RefsByType() {
 				raw[ct.Label()] = len(refs)
+				for _, ref := range refs {
+					key := string(ct) + "/" + ref.Name
+					if ci, ok := itemLookup[key]; ok {
+						resolved = append(resolved, *ci)
+					}
+				}
 			}
 			c.counts = ensureAllTypes(raw)
+			c.items = resolved
 		}
 
 		if item.Registry != "" {

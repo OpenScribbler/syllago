@@ -468,7 +468,7 @@ func (a *App) refreshGallery() {
 	tab := a.topBar.ActiveTabLabel()
 	switch tab {
 	case "Loadouts":
-		cards := buildLoadoutCards(a.catalog.ByType(catalog.Loadouts))
+		cards := buildLoadoutCards(a.catalog.ByType(catalog.Loadouts), a.catalog)
 		a.gallery.SetCards(cards, "Loadout")
 	case "Registries":
 		cards := buildRegistryCards(a.registrySources, a.catalog)
