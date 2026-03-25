@@ -215,16 +215,21 @@ func assertNotContains(t *testing.T, view, substr string) {
 - [ ] Unit: Hooks compat tab toggle
 - [ ] Golden: split zone for Skills and Hooks
 
-### Phase 6 (Gallery Grid)
+### Phase 6 (Gallery Grid + Registry Validation)
 - [ ] Unit: card grid navigation (arrows)
 - [ ] Unit: contents sidebar updates on card selection
-- [ ] Golden: gallery at each size for Library, Registries, Loadouts
+- [ ] Unit: registry validation warns on unnamed hooks/MCP
+- [ ] Golden: gallery at each size for Registries, Loadouts
 
-### Phase 7 (Modals + Toasts + Search)
-- [ ] Unit: modal lifecycle (open, button focus, confirm, cancel)
-- [ ] Unit: wizard step transitions + validateStep()
+### Phase 7 (Modals + Help Overlay)
+- [ ] Unit: edit modal lifecycle (open, tab between fields, save, cancel)
+- [ ] Unit: edit modal saves both name + description to .syllago.yaml
+- [ ] Unit: install/uninstall wizard step transitions + validateStep()
+- [ ] Unit: loadout apply/remove confirmation modal
+- [ ] Unit: help overlay shows all bindings for current screen
 - [ ] Unit: toast dismiss behavior (success vs error)
 - [ ] Unit: search filter, match count, Esc cancel
 - [ ] Integration (teatest): async install workflow
 - [ ] Integration (teatest): toast auto-dismiss timing
 - [ ] Golden: modal overlay at each size
+- [ ] Golden: help overlay at each size

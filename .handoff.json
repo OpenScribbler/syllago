@@ -2,54 +2,67 @@
   "$schema": "handoff-v1",
   "current": {
     "project": "syllago",
-    "updated": "2026-03-25T07:30:00Z",
-    "sessionId": "naming-feature-complete-mcp-fix",
-    "summary": "Hook/MCP naming feature COMPLETE. MCP scanner fix shipped (provider grouping dirs). Clickable sort headers added. Input field styling updated to background tint. Next: Phase 4 (metadata bar), hook script bundling, doc updates.",
+    "updated": "2026-03-25T21:55:00Z",
+    "sessionId": "phase5-complete-roadmap-update",
+    "summary": "Phase 5 COMPLETE (explorer drill-in). Cleaned up test hooks (release skill uninstalled from 7 providers). Updated phase roadmap: Phase 6 = Gallery Grid + Registry Validation, Phase 7 = Modals + Edit Modal + Help Overlay. Phase 6 spec written.",
     "activeWork": {
-      "description": "TUI v3 — naming feature done, moving to Phase 4 (metadata bar) and hook script bundling",
-      "feature": "tui-v3-phase4",
-      "stage": "planning",
-      "planRef": "docs/specs/tui-phase1-shell.md",
+      "description": "TUI v3 — Phases 1-5 complete, Phase 6 spec ready for implementation",
+      "feature": "tui-v3-phase6",
+      "stage": "ready-to-implement",
+      "planRef": "docs/specs/tui-phase6-gallery.md",
       "designRef": "docs/design/tui-adaptive-zones.md",
-      "progress": "Phases 1-3 complete. Naming feature complete (modal, rename, --name flag, search fix). MCP scanner fixed for provider grouping dirs. Clickable column headers added.",
+      "progress": "Phases 1-5 complete. Phase 6 spec written (Gallery Grid + Registry Validation). Phase 7 scope defined (modals, edit modal, help overlay). All 22 test packages passing.",
       "blockers": [],
       "beads": null
     },
     "git": {
       "branch": "main",
-      "uncommittedFiles": 3,
-      "lastCommit": "198bb84 chore: regenerate commands.json for --name flag on add",
+      "uncommittedFiles": 8,
+      "lastCommit": "5d8f158 docs: update TUI docs with Phase 4.5 patterns and decisions",
       "modifiedFiles": [
-        "cli/cov.out (build artifact)",
-        "cli/coverage.out (build artifact)",
-        "cli/test_results.txt (build artifact)"
-      ]
+        "cli/internal/tui/explorer.go (drill-in detail mode for Content tabs)",
+        "cli/internal/tui/app.go (explorer detail mode routing, q back-out, hints)",
+        "cli/internal/tui/testdata/content-80x30.golden (new hints)",
+        "cli/internal/tui/testdata/explorer-skills-80x30.golden (new hints)",
+        "docs/specs/tui-phase6-gallery.md (NEW - Phase 6 spec)",
+        "docs/design/tui-adaptive-zones.md (updated build order, phases 1-5 marked DONE)",
+        ".claude/skills/tui-builder/references/testing-setup.md (Phase 6+7 test checklists)"
+      ],
+      "actionRequired": "COMMIT AND PUSH — all changes are tested and ready. Two logical commits: (1) feat: explorer drill-in detail mode, (2) docs: Phase 6 spec and roadmap updates."
     },
     "recentDecisions": [
-      "Text input modal: lipgloss.Place centering (not custom overlay), background-tinted fields (not underlines/borders)",
-      "Input field styling: dim cyan BG when active (#1A3836 dark), dim grey BG when inactive (#282726 dark)",
-      "Modal buttons: all use background+padding (no borders) for consistent height",
-      "Search includes DisplayName — renamed items are searchable",
-      "Rename saves in-place (update catalog item DisplayName, no full re-scan)",
-      "MCP scanner: detect provider grouping dirs (no config.json + has subdirs with config.json) and recurse",
-      "Column headers clickable: click sorts by column, click again reverses direction",
-      "Hook script bundling design: flat layout (scripts alongside hook.json), detect both absolute+relative paths, rewrite paths at install time, config option for global vs project script location"
+      "Phase 5 = explorer drill-in (Enter on Content tab items → file tree + preview). DONE.",
+      "Phase 6 = Gallery Grid for Loadouts/Registries + Registry Validation (warn unnamed hooks/MCP)",
+      "Phase 7 = Modals expansion: [r] Rename becomes [e] Edit with two-field modal (name + description). Install/uninstall wizard. Loadout apply/remove confirmation. Help overlay (? key).",
+      "Phase 8 = Toasts, Phase 9 = Search extension, Phase 10 = Polish",
+      "Explorer drill-in mirrors library pattern: explorerMode enum, drillIn(), loadSelectedFile(), viewDetail(), file tree + preview split",
+      "Double-click on explorer item row also drills in (same as library)",
+      "Release skill uninstalled from all 7 providers (was test artifact)"
     ],
     "nextSteps": [
-      "1. HOOK SCRIPT BUNDLING: During `syllago add hooks`, detect script refs in command fields, copy scripts into hook dir, store original path in metadata. At install time, copy scripts and rewrite paths.",
-      "2. PHASE 4 — METADATA BAR: Item detail panel below table/explorer showing DisplayName, type, source, description, installed providers, file count, path.",
-      "3. PHASE 5 — FILE TREE SPLIT: Content > Skills/Hooks tabs get file tree + preview split (like Library detail mode).",
-      "4. REGISTRY VALIDATION: Warn on unnamed hooks/MCP during `syllago validate` or registry sync.",
-      "5. DOC UPDATES: Update tui-adaptive-zones.md (Library section still describes gallery grid). Update cli/internal/tui/CLAUDE.md with new components (modal, table sort, input field styles)."
+      "1. COMMIT+PUSH this session's changes (explorer drill-in + Phase 6 spec + roadmap docs)",
+      "2. PHASE 6 — GALLERY GRID: Implement gallery.go, cards.go, contents.go per spec at docs/specs/tui-phase6-gallery.md",
+      "3. PHASE 6 — REGISTRY VALIDATION: Add checkNamingWarnings() to scanner, naming quality check to doctor command",
+      "4. PHASE 7 — when Phase 6 is done: modals, edit modal, install/uninstall wizard, help overlay"
     ],
     "context": {
-      "notes": "All tests passing (22 packages). Binary rebuilt. The naming feature added: modal.go (text input modal), [r] rename hotkey, --name flag on add, search includes DisplayName, clickable column headers, input field background tint styling. MCP scanner now handles mcp/<provider>/<server-name>/ layout correctly. Hook script bundling is next major feature — design decisions captured in memory and handoff.",
-      "testCount": 62,
-      "tuiFiles": "app.go, explorer.go, library.go, table.go, filetree.go, items.go, preview.go, topbar.go, helpbar.go, styles.go, keys.go, modal.go",
-      "newComponents": "textInputModal (modal.go), SortByColumn (table.go), scanMCPSubdirs (scanner.go)"
+      "notes": "All 22 test packages passing. Binary rebuilt. Explorer now has full browse/detail mode parity with Library. The explorer detail mode reuses fileTreeModel, loadSelectedFile pattern, and the same bordered frame assembly with T-junctions.",
+      "tuiFiles": "app.go, explorer.go, library.go, table.go, filetree.go, items.go, preview.go, topbar.go, helpbar.go, styles.go, keys.go, modal.go, metapanel.go",
+      "phase6Spec": "docs/specs/tui-phase6-gallery.md — covers Gallery Grid (cards.go, gallery.go, contents.go) + Registry Validation (scanner warnings, doctor check). Build order: card data model → card grid → contents sidebar → gallery model → app integration → registry validation → tests.",
+      "phase7Scope": "Edit modal (name + description, replaces rename), install/uninstall wizard, loadout apply/remove confirmation, help overlay. [r]→[e] shortcut change."
     }
   },
   "previousSessions": [
+    {
+      "date": "2026-03-25T15:30:00Z",
+      "sessionId": "phase4-metadata-panel-hook-bundling",
+      "summary": "Phase 4+ COMPLETE. Metadata panel as reusable bordered component across all tabs. Hook script bundling shipped. Multiple UX improvements: R refresh, q backs out, transparent modal, double-click drill-in, rename button."
+    },
+    {
+      "date": "2026-03-25T07:30:00Z",
+      "sessionId": "naming-feature-complete-mcp-fix",
+      "summary": "Hook/MCP naming feature complete. MCP scanner fix shipped. Clickable sort headers. Input field styling. Hook script bundling design decisions captured."
+    },
     {
       "date": "2026-03-25T06:20:00Z",
       "sessionId": "phase3-complete-naming-in-progress",
@@ -64,11 +77,6 @@
       "date": "2026-03-24T23:45:00Z",
       "sessionId": "phase1-2-complete",
       "summary": "TUI v3 Phase 1+2 complete. Shell, styles, test infrastructure, two-tier tab navigation."
-    },
-    {
-      "date": "2026-03-24T21:30:00Z",
-      "sessionId": "tui-v3-research",
-      "summary": "TUI v3 research session: deep research into 10+ Go TUI projects."
     }
   ]
 }
