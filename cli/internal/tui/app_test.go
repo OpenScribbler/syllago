@@ -140,15 +140,25 @@ func TestApp_SubTabNavTab(t *testing.T) {
 func TestApp_ActionButtonHotkeys(t *testing.T) {
 	app := testApp(t)
 
-	_, cmd := app.Update(keyRune('n'))
+	_, cmd := app.Update(keyRune('a'))
 	if cmd == nil {
-		t.Fatal("'n' should produce an action command")
+		t.Fatal("'a' should produce an action command")
 	}
 	msg := cmd()
 	action, ok := msg.(actionPressedMsg)
 	if !ok {
 		t.Fatalf("expected actionPressedMsg, got %T", msg)
 	}
+	if action.action != "add" {
+		t.Errorf("expected action=add, got %q", action.action)
+	}
+
+	_, cmd = app.Update(keyRune('n'))
+	if cmd == nil {
+		t.Fatal("'n' should produce an action command")
+	}
+	msg = cmd()
+	action = msg.(actionPressedMsg)
 	if action.action != "create" {
 		t.Errorf("expected action=create, got %q", action.action)
 	}

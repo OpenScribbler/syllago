@@ -202,6 +202,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, cmd
 
 		// Action button hotkeys
+		case msg.String() == keyAdd:
+			return a, a.topBar.actionCmd("add")
 		case msg.String() == keyCreate:
 			return a, a.topBar.actionCmd("create")
 
@@ -553,7 +555,7 @@ func (a App) currentHints() []string {
 		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "r rename", "R refresh", "? help", "q back")
 	}
 	if a.isGalleryTab() {
-		return append(base, "arrows grid", "enter select", "tab grid/contents", "R refresh", "n create", "? help", "q back")
+		return append(base, "arrows grid", "enter select", "tab grid/contents", "R refresh", "a add", "n create", "? help", "q back")
 	}
 
 	// Library in detail mode has different hints
@@ -562,7 +564,7 @@ func (a App) currentHints() []string {
 	}
 
 	if a.isLibraryTab() {
-		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "r rename", "R refresh", "n create", "? help", "q quit")
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "r rename", "R refresh", "a add", "n create", "? help", "q quit")
 	}
 
 	// Explorer in detail mode
@@ -572,7 +574,7 @@ func (a App) currentHints() []string {
 
 	hints := append(base, "↑/↓ navigate", "←/→ switch pane", "enter detail")
 	if group != "Config" {
-		hints = append(hints, "r rename", "R refresh", "n create")
+		hints = append(hints, "r rename", "R refresh", "a add", "n create")
 	}
 	return append(hints, "? help", "q quit")
 }

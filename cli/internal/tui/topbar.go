@@ -51,13 +51,13 @@ func newTopBar() topBarModel {
 				label:   "Collections",
 				hotkey:  "1",
 				tabs:    []string{"Library", "Registries", "Loadouts"},
-				actions: []string{"[n] Create"},
+				actions: []string{"[a] Add", "[n] Create"},
 			},
 			{
 				label:   "Content",
 				hotkey:  "2",
 				tabs:    []string{"Skills", "Agents", "MCP", "Rules", "Hooks", "Commands"},
-				actions: []string{"[n] Create"},
+				actions: []string{"[a] Add", "[n] Create"},
 			},
 			{
 				label:   "Config",
@@ -160,6 +160,9 @@ func (t topBarModel) Update(msg tea.Msg) (topBarModel, tea.Cmd) {
 	}
 
 	// Check action button clicks
+	if zone.Get("btn-add").InBounds(mouseMsg) {
+		return t, t.actionCmd("add")
+	}
 	if zone.Get("btn-create").InBounds(mouseMsg) {
 		return t, t.actionCmd("create")
 	}
@@ -270,9 +273,12 @@ func (t topBarModel) renderTabRow(innerW int) string {
 
 	// Action buttons
 	var btnParts []string
-	for _, action := range g.actions {
+	btnZones := []string{"btn-add", "btn-create"}
+	for i, action := range g.actions {
 		btn := activeButtonStyle.Render(action)
-		btn = zone.Mark("btn-create", btn)
+		if i < len(btnZones) {
+			btn = zone.Mark(btnZones[i], btn)
+		}
 		btnParts = append(btnParts, btn)
 	}
 	right := strings.Join(btnParts, " ")
@@ -291,20 +297,21 @@ func (t topBarModel) renderBreadcrumbRow(innerW int) string {
 		return strings.Repeat(" ", innerW)
 	}
 
-	// Calculate the x-offset of the active tab in the tab row.
-	// Tab row starts with " " (1 char), then each tab is rendered with padding.
+	// Calculate the x-offset so ">" aligns with the first letter of the active tab.
+	// Tab row: " " (1) + for each preceding tab: Padding(0,2) adds 2+label+2 + 1 space gap.
+	// The active tab's first letter is at offset + 2 (left padding).
 	g := t.groups[t.activeGroup]
-	offset := 1 // leading space
+	offset := 1 // leading " " in the tab row
 	for i := 0; i < t.activeTab && i < len(g.tabs); i++ {
-		// Each tab is rendered with Padding(0, 2) = 2 chars each side = +4
-		offset += len(g.tabs[i]) + 4
-		offset++ // space between tabs
+		offset += len(g.tabs[i]) + 4 // label + Padding(0,2) = +4
+		offset++                     // space between tabs
 	}
+	offset += 2 // skip the active tab's left padding so ">" aligns with first letter
 
 	// Build the breadcrumb string with clickable zones
 	var parts []string
 	for i, crumb := range t.breadcrumbs {
-		seg := zone.Mark("crumb-"+itoa(i), sectionTitleStyle.Render("> ")+boldStyle.Render(truncate(crumb, 20)))
+		seg := zone.Mark("crumb-"+itoa(i), sectionTitleStyle.Render("> ")+boldStyle.Render(truncate(crumb, 30)))
 		parts = append(parts, seg)
 	}
 	trail := strings.Join(parts, " ")
