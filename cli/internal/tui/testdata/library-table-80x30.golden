@@ -7,7 +7,7 @@
 │ alpha-skill                               Type: Skill     Files: 1           │
 │ Scope: project   Registry: not in a registry                                 │
 │                                                                              │
-│──────────────────────────────────────────────────────────────────────────────│
+│─────────────────────────────────────────────────────────────────── [r] Rename│
 │   Name ▲               Type     Scope        Files Installed                 │
 │ > alpha-skill          Skill    team-rules   1     --                        │
 │   beta-skill           Skill    team-rules   1     --                        │

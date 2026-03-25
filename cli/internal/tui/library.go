@@ -26,6 +26,9 @@ type libraryDrillMsg struct {
 	item *catalog.ContentItem
 }
 
+// libraryRenameMsg is sent when the rename button is clicked in the metadata bar.
+type libraryRenameMsg struct{}
+
 // libraryCloseMsg is sent when the user closes the detail view.
 type libraryCloseMsg struct{}
 
@@ -224,6 +227,11 @@ func (l libraryModel) updateMouse(msg tea.MouseMsg) (libraryModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 		switch l.mode {
 		case libraryBrowse:
+			// Rename button click
+			if zone.Get("meta-rename").InBounds(msg) {
+				return l, func() tea.Msg { return libraryRenameMsg{} }
+			}
+
 			// Column header clicks for sorting
 			colZones := []struct {
 				id  string
@@ -243,14 +251,25 @@ func (l libraryModel) updateMouse(msg tea.MouseMsg) (libraryModel, tea.Cmd) {
 				}
 			}
 
-			// Row clicks
+			// Row clicks — double-click drills in
 			for i := range l.table.items {
 				if zone.Get("tbl-" + itoa(i)).InBounds(msg) {
+					if l.table.cursor == i {
+						// Second click on same row — drill in
+						if item := l.table.Selected(); item != nil {
+							l.drillIn(item)
+							return l, func() tea.Msg { return libraryDrillMsg{item: item} }
+						}
+					}
 					l.table.cursor = i
 					return l, nil
 				}
 			}
 		case libraryDetail:
+			// Rename button click (in detail view too)
+			if zone.Get("meta-rename").InBounds(msg) {
+				return l, func() tea.Msg { return libraryRenameMsg{} }
+			}
 			// Click on file tree nodes
 			for i := range l.tree.nodes {
 				if zone.Get("ftnode-" + itoa(i)).InBounds(msg) {
@@ -347,7 +366,8 @@ func (l *libraryModel) loadSelectedFile() {
 func (l *libraryModel) sizeDetailPanes() {
 	treeOuterW := l.detailTreeWidth()
 	previewOuterW := l.width - treeOuterW
-	innerH := max(0, l.height-borderSize)
+	paneH := max(0, l.height-metaBarHeight)
+	innerH := max(0, paneH-borderSize)
 
 	l.tree.SetSize(max(0, treeOuterW-borderSize), innerH)
 	l.preview.SetSize(max(0, previewOuterW-borderSize), innerH)
@@ -411,8 +431,11 @@ func (l libraryModel) viewBrowse() string {
 	return borderedPanel(content, innerW, innerH, focusedBorderFg)
 }
 
-// viewDetail renders file tree + preview with bordered panes.
+// viewDetail renders metadata bar + file tree + preview with bordered panes.
 func (l libraryModel) viewDetail() string {
+	// Metadata bar at top, spanning full width
+	metaBar := l.renderMetadataBar(l.width)
+
 	treeOuterW := l.detailTreeWidth()
 	previewOuterW := l.width - treeOuterW
 
@@ -424,7 +447,9 @@ func (l libraryModel) viewDetail() string {
 		previewFg = focusedBorderFg
 	}
 
-	innerH := max(0, l.height-borderSize)
+	// Reduce pane height to account for metadata bar
+	paneH := max(0, l.height-metaBarHeight)
+	innerH := max(0, paneH-borderSize)
 	treeInnerW := max(0, treeOuterW-borderSize)
 	previewInnerW := max(0, previewOuterW-borderSize)
 
@@ -458,7 +483,8 @@ func (l libraryModel) viewDetail() string {
 	right := zone.Mark("lib-preview",
 		borderedPanel(previewContent, previewInnerW, innerH, previewFg))
 
-	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	panes := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+	return metaBar + "\n" + panes
 }
 
 // renderMetadataBar renders a detail panel for the currently selected item.
@@ -567,8 +593,11 @@ func (l libraryModel) renderMetadataBar(width int) string {
 		line3 = styled
 	}
 
-	// --- Line 4: separator ---
-	sep := sectionRuleStyle.Render(strings.Repeat("─", width))
+	// --- Line 4: separator with rename button right-aligned ---
+	renameBtn := zone.Mark("meta-rename", mutedStyle.Render("[r] Rename"))
+	renameBtnW := lipgloss.Width(renameBtn)
+	sepW := max(0, width-renameBtnW-1)
+	sep := sectionRuleStyle.Render(strings.Repeat("─", sepW)) + " " + renameBtn
 
 	// Pad each line to exact width (MaxWidth clips, manual pad fills).
 	pad := func(s string) string {
