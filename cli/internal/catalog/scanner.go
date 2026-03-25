@@ -317,6 +317,7 @@ func scanFromIndex(cat *Catalog, baseDir string, resolvedBase string, items []ma
 			if metaErr == nil {
 				item.Meta = meta
 			}
+			applyMetaOverrides(&item, item.Meta)
 		} else {
 			// Single file items.
 			switch ct {
@@ -426,7 +427,7 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 								serverName, entry.Name()))
 							return true
 						}
-						cat.Items = append(cat.Items, ContentItem{
+						mcpItem := ContentItem{
 							Name:        serverName,
 							Type:        MCP,
 							Path:        itemDir,
@@ -435,7 +436,9 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 							Description: mcpServerDescription(value),
 							Files:       files,
 							Meta:        meta,
-						})
+						}
+						applyMetaOverrides(&mcpItem, meta)
+						cat.Items = append(cat.Items, mcpItem)
 						return true
 					})
 					continue // skip appending the parent directory item
@@ -448,6 +451,7 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 			// For other universal types, no additional description extraction.
 		}
 
+		applyMetaOverrides(&item, item.Meta)
 		cat.Items = append(cat.Items, item)
 	}
 	return nil
@@ -528,9 +532,7 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 					return metaErr
 				}
 				item.Meta = meta
-				if meta != nil && meta.Description != "" {
-					item.Description = meta.Description
-				}
+				applyMetaOverrides(&item, meta)
 				cat.Items = append(cat.Items, item)
 			}
 		}
@@ -619,12 +621,170 @@ func scanProviderDir(itemDir string, ct ContentType, providerName string, local 
 	}
 	item.Meta = meta
 
-	// Use metadata description as primary source (overrides content-file parsing)
-	if meta != nil && meta.Description != "" {
+	// Use metadata as primary source for display name and description
+	applyMetaOverrides(&item, meta)
+
+	return &item, nil
+}
+
+// applyMetaOverrides sets DisplayName and Description from .syllago.yaml metadata.
+// For hooks/MCP without a metadata name, it attempts to derive a display name from
+// the hook's script filename or event information.
+func applyMetaOverrides(item *ContentItem, meta *metadata.Meta) {
+	if meta == nil {
+		// No metadata — try heuristic display name for hooks/MCP
+		if item.DisplayName == "" {
+			item.DisplayName = deriveDisplayName(item)
+		}
+		return
+	}
+
+	if meta.Name != "" && item.DisplayName == "" {
+		item.DisplayName = meta.Name
+	}
+	if meta.Description != "" {
 		item.Description = meta.Description
 	}
 
-	return &item, nil
+	// If metadata exists but has no name, try heuristic
+	if item.DisplayName == "" {
+		item.DisplayName = deriveDisplayName(item)
+	}
+}
+
+// deriveDisplayName attempts to build a human-readable display name for items
+// that lack one (primarily hooks and MCP). For hooks, it tries the referenced
+// script filename, then event+matcher. Returns empty string if no heuristic applies.
+func deriveDisplayName(item *ContentItem) string {
+	if item.Type != Hooks && item.Type != MCP {
+		return ""
+	}
+
+	if item.Type == Hooks {
+		return deriveHookDisplayName(item)
+	}
+
+	// MCP: use the server key if available (it's often the best name)
+	if item.ServerKey != "" {
+		return item.ServerKey
+	}
+	return ""
+}
+
+// deriveHookDisplayName extracts a display name from hook JSON content.
+// Priority: script filename > event+matcher > empty.
+func deriveHookDisplayName(item *ContentItem) string {
+	hookFile := PrimaryFileName(item.Files, Hooks)
+	if hookFile == "" {
+		return ""
+	}
+
+	data, err := os.ReadFile(filepath.Join(item.Path, hookFile))
+	if err != nil {
+		return ""
+	}
+
+	// Try to find a script/command reference
+	if name := hookScriptName(data); name != "" {
+		return name
+	}
+
+	// Fall back to event+matcher
+	return hookEventName(data)
+}
+
+// hookScriptName extracts the script filename from a hook's command field.
+// Returns the basename without extension (e.g., "./scripts/lint-check.sh" → "lint-check").
+func hookScriptName(data []byte) string {
+	// Try nested format: hooks.Event[0].command
+	hooksObj := gjson.GetBytes(data, "hooks")
+	if hooksObj.Exists() && hooksObj.IsObject() {
+		var cmd string
+		hooksObj.ForEach(func(_, value gjson.Result) bool {
+			if value.IsArray() {
+				for _, entry := range value.Array() {
+					c := entry.Get("command").String()
+					if c != "" && looksLikeScript(c) {
+						cmd = c
+						return false
+					}
+				}
+			}
+			return cmd == ""
+		})
+		if cmd != "" {
+			return scriptBaseName(cmd)
+		}
+	}
+
+	// Try flat format
+	cmd := gjson.GetBytes(data, "command").String()
+	if cmd != "" && looksLikeScript(cmd) {
+		return scriptBaseName(cmd)
+	}
+
+	return ""
+}
+
+// hookEventName builds a display name from event+matcher fields.
+func hookEventName(data []byte) string {
+	// Nested format
+	hooksObj := gjson.GetBytes(data, "hooks")
+	if hooksObj.Exists() && hooksObj.IsObject() {
+		var parts []string
+		hooksObj.ForEach(func(key, value gjson.Result) bool {
+			event := key.String()
+			if value.IsArray() && len(value.Array()) > 0 {
+				matcher := value.Array()[0].Get("matcher").String()
+				if matcher != "" {
+					parts = append(parts, event+" · "+matcher)
+				} else {
+					parts = append(parts, event)
+				}
+			} else {
+				parts = append(parts, event)
+			}
+			return true
+		})
+		if len(parts) > 0 {
+			return strings.Join(parts, ", ")
+		}
+	}
+
+	// Flat format
+	event := gjson.GetBytes(data, "event").String()
+	matcher := gjson.GetBytes(data, "matcher").String()
+	if event != "" {
+		if matcher != "" {
+			return event + " · " + matcher
+		}
+		return event
+	}
+	return ""
+}
+
+// looksLikeScript returns true if a command string references a script file
+// (contains a path separator or common script extension).
+func looksLikeScript(cmd string) bool {
+	return strings.Contains(cmd, "/") ||
+		strings.Contains(cmd, "\\") ||
+		strings.HasSuffix(cmd, ".sh") ||
+		strings.HasSuffix(cmd, ".py") ||
+		strings.HasSuffix(cmd, ".js") ||
+		strings.HasSuffix(cmd, ".ts") ||
+		strings.HasSuffix(cmd, ".rb") ||
+		strings.HasSuffix(cmd, ".bash")
+}
+
+// scriptBaseName extracts a clean display name from a script path.
+// "./scripts/lint-check.sh" → "lint-check"
+func scriptBaseName(path string) string {
+	base := filepath.Base(path)
+	ext := filepath.Ext(base)
+	if ext != "" {
+		base = strings.TrimSuffix(base, ext)
+	}
+	return base
 }
 
 // shouldSkip returns true for files/dirs that should always be ignored.
