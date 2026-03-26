@@ -37,7 +37,8 @@ type App struct {
 	gallery  galleryModel  // Loadouts/Registries tabs: card grid + contents sidebar
 	helpBar  helpBarModel
 	modal    editModal    // reusable edit overlay (name + description)
-	confirm  confirmModal // reusable confirm overlay (remove/uninstall)
+	confirm  confirmModal // reusable confirm overlay (uninstall + simple confirms)
+	remove   removeModal  // multi-step remove overlay (library item removal)
 	help     helpOverlay  // keyboard shortcut reference (? key)
 	toast    toastModel   // bottom-right notification overlay
 
@@ -76,6 +77,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		helpBar:         newHelpBar(version),
 		modal:           newEditModal(),
 		confirm:         newConfirmModal(),
+		remove:          newRemoveModal(),
 		help:            newHelpOverlay(),
 		toast:           newToastModel(),
 	}
@@ -105,6 +107,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.toast.SetSize(msg.Width, ch)
 		a.confirm.width = msg.Width
 		a.confirm.height = ch
+		a.remove.width = msg.Width
+		a.remove.height = ch
 		return a, nil
 
 	case tea.MouseMsg:
@@ -117,6 +121,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.confirm.active {
 			var cmd tea.Cmd
 			a.confirm, cmd = a.confirm.Update(msg)
+			return a, cmd
+		}
+		if a.remove.active {
+			var cmd tea.Cmd
+			a.remove, cmd = a.remove.Update(msg)
 			return a, cmd
 		}
 		if a.help.active {
@@ -144,6 +153,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			a.confirm, cmd = a.confirm.Update(msg)
+			return a, cmd
+		}
+
+		// Remove modal captures all key input when active (except ctrl+c)
+		if a.remove.active {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			var cmd tea.Cmd
+			a.remove, cmd = a.remove.Update(msg)
 			return a, cmd
 		}
 
@@ -294,6 +313,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case confirmResultMsg:
 		return a.handleConfirmResult(msg)
+
+	case removeResultMsg:
+		return a.handleRemoveResult(msg)
 
 	case removeDoneMsg:
 		return a.handleRemoveDone(msg)
@@ -478,6 +500,9 @@ func (a App) View() string {
 	}
 	if a.confirm.active {
 		content = overlayModal(content, a.confirm.View(), a.width, a.contentHeight())
+	}
+	if a.remove.active {
+		content = overlayModal(content, a.remove.View(), a.width, a.contentHeight())
 	}
 	if a.help.active {
 		content = overlayModal(content, a.help.View(), a.width, a.contentHeight())

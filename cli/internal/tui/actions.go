@@ -56,41 +56,20 @@ func (a App) handleRemove() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 
-	// Phase A only supports library item remove.
+	// Only library items use the multi-step remove flow.
 	if !item.Library {
 		return a, nil
 	}
 
-	// Check which providers have this item installed.
-	var checks []confirmCheckbox
+	// Find installed providers for the multi-step flow.
+	var installed []provider.Provider
 	for _, prov := range a.providers {
 		if installer.CheckStatus(*item, prov, a.catalog.RepoRoot) == installer.StatusInstalled {
-			checks = append(checks, confirmCheckbox{
-				label:   "Uninstall from " + prov.Name,
-				checked: true,
-			})
+			installed = append(installed, prov)
 		}
 	}
-	// Always-checked "delete from library" checkbox.
-	checks = append(checks, confirmCheckbox{
-		label:    "Delete from library",
-		checked:  true,
-		readOnly: true,
-	})
 
-	body := "This cannot be undone."
-	if len(checks) > 1 {
-		body = fmt.Sprintf("This item is installed in %d provider(s).\n\n%s", len(checks)-1, body)
-	}
-
-	a.confirm.OpenForItem(
-		fmt.Sprintf("Remove %q?", item.DisplayName),
-		body,
-		"Remove",
-		true,
-		checks,
-		*item,
-	)
+	a.remove.Open(*item, installed)
 	return a, nil
 }
 
@@ -181,49 +160,34 @@ func (a App) handleUninstall() (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
-// handleConfirmResult dispatches the confirm modal result to the appropriate handler.
+// handleConfirmResult handles confirmModal results (uninstall + loadout simple removes).
 func (a App) handleConfirmResult(msg confirmResultMsg) (tea.Model, tea.Cmd) {
 	if !msg.confirmed {
 		return a, nil
 	}
 
-	// Check if this is a remove (has "Delete from library" checkbox) or uninstall.
-	isRemove := false
-	for _, c := range msg.checks {
-		if c.readOnly && c.label == "Delete from library" {
-			isRemove = true
-			break
-		}
-	}
-	// Also handle loadout remove (no checkboxes, item type is Loadouts).
-	if !isRemove && msg.item.Type == catalog.Loadouts && len(msg.checks) == 0 {
-		isRemove = true
+	// Loadout remove (simple confirm, no providers).
+	if msg.item.Type == catalog.Loadouts && len(msg.checks) == 0 {
+		return a, a.doSimpleRemoveCmd(msg.item)
 	}
 
-	if isRemove {
-		return a, a.doRemoveCmd(msg)
-	}
+	// Otherwise it's an uninstall.
 	return a, a.doUninstallCmd(msg)
 }
 
-// doRemoveCmd creates a tea.Cmd that removes an item from the library.
-func (a App) doRemoveCmd(msg confirmResultMsg) tea.Cmd {
-	item := msg.item
-	providers := a.providers
-	repoRoot := a.catalog.RepoRoot
-
-	// Build list of providers to uninstall from based on checked checkboxes.
-	var targetProviders []provider.Provider
-	for _, c := range msg.checks {
-		if !c.readOnly && c.checked {
-			provName := strings.TrimPrefix(c.label, "Uninstall from ")
-			for _, prov := range providers {
-				if prov.Name == provName {
-					targetProviders = append(targetProviders, prov)
-				}
-			}
-		}
+// handleRemoveResult handles removeModal results (multi-step library item removal).
+func (a App) handleRemoveResult(msg removeResultMsg) (tea.Model, tea.Cmd) {
+	if !msg.confirmed {
+		return a, nil
 	}
+	return a, a.doRemoveCmd(msg)
+}
+
+// doRemoveCmd creates a tea.Cmd that removes a library item, optionally uninstalling first.
+func (a App) doRemoveCmd(msg removeResultMsg) tea.Cmd {
+	item := msg.item
+	targetProviders := msg.uninstallProviders
+	repoRoot := a.catalog.RepoRoot
 
 	return func() tea.Msg {
 		var uninstalledFrom []string
@@ -240,6 +204,16 @@ func (a App) doRemoveCmd(msg confirmResultMsg) tea.Cmd {
 		}
 
 		return removeDoneMsg{itemName: item.Name, uninstalledFrom: uninstalledFrom}
+	}
+}
+
+// doSimpleRemoveCmd creates a tea.Cmd that removes an item from disk (no uninstall).
+func (a App) doSimpleRemoveCmd(item catalog.ContentItem) tea.Cmd {
+	return func() tea.Msg {
+		if err := os.RemoveAll(item.Path); err != nil {
+			return removeDoneMsg{itemName: item.Name, err: fmt.Errorf("removing: %w", err)}
+		}
+		return removeDoneMsg{itemName: item.Name}
 	}
 }
 
