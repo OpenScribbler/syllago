@@ -147,7 +147,11 @@ The benefits over a raw GitHub secret:
 - **Single rotation point.** When the credential expires, rotate it once in Aembit instead of updating GitHub secrets.
 - **No secret in GitHub at all.** The credential never touches GitHub's secret storage. There's nothing to leak from a repo settings compromise.
 
-We tested it end-to-end by creating a GitHub issue tagged with `@claude`. The workflow triggered, Aembit delivered the credential, and Claude responded successfully -- confirming the full OIDC attestation pipeline works in production.
+We applied the same pattern to the release pipeline's `HOMEBREW_TAP_TOKEN` -- a GitHub PAT used to push formula updates to the Homebrew tap repository. Same trust provider (the runner attests as `OpenScribbler/syllago`), different credential provider and server workload (`github.com` instead of `api.anthropic.com`). One Aembit policy per credential, both secretless.
+
+The result: **zero static secrets in GitHub**. Both credentials are delivered just-in-time via OIDC attestation.
+
+We tested the Claude integration end-to-end by creating a GitHub issue tagged with `@claude`. The workflow triggered, Aembit delivered the credential, and Claude responded successfully -- confirming the full OIDC attestation pipeline works in production.
 
 ## The Result
 
