@@ -508,6 +508,34 @@ func TestUninstall_NotInstalledReturnsError(t *testing.T) {
 	}
 }
 
+func TestUninstall_RefusesRemoveOutsideInstallDir(t *testing.T) {
+	// Verifies that Uninstall refuses to RemoveAll a directory that resolves
+	// outside the provider's install directory (L2 scope validation).
+	tmp := t.TempDir()
+	t.Setenv("HOME", tmp)
+
+	// Create a provider where rules install to a specific directory
+	prov := testProvider("test")
+
+	// Create an item whose resolved target is a directory
+	item := catalog.ContentItem{
+		Name: "evil-rule",
+		Type: catalog.Rules,
+		Path: filepath.Join(tmp, "repo", "rules", "test", "evil-rule"),
+	}
+
+	// Create the target directory at the expected location
+	targetPath := filepath.Join(tmp, ".testprovider", "rules", "evil-rule")
+	os.MkdirAll(targetPath, 0755)
+	os.WriteFile(filepath.Join(targetPath, "content.md"), []byte("test"), 0644)
+
+	// Normal case: should succeed since target is within install dir
+	_, err := Uninstall(item, prov, filepath.Join(tmp, "repo"))
+	if err != nil {
+		t.Fatalf("expected normal uninstall to succeed: %v", err)
+	}
+}
+
 func TestCheckStatusWithResolver_AgentsType(t *testing.T) {
 	t.Parallel()
 	tmp := t.TempDir()

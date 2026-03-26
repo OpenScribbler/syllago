@@ -98,6 +98,42 @@ func TestCreateSymlink_ReplacesExistingFile(t *testing.T) {
 	}
 }
 
+func TestCreateSymlink_AtomicNoTempLeftBehind(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+
+	source := filepath.Join(tmp, "source")
+	os.WriteFile(source, []byte("content"), 0644)
+	target := filepath.Join(tmp, "target")
+
+	if err := CreateSymlink(source, target); err != nil {
+		t.Fatalf("CreateSymlink: %v", err)
+	}
+
+	// Verify no .symlink-* temp files remain in the directory
+	entries, err := os.ReadDir(tmp)
+	if err != nil {
+		t.Fatalf("ReadDir: %v", err)
+	}
+	for _, e := range entries {
+		if len(e.Name()) > 9 && e.Name()[:9] == ".symlink-" {
+			t.Errorf("temp symlink left behind: %s", e.Name())
+		}
+	}
+}
+
+func TestRandomHex_UniqueAndCorrectLength(t *testing.T) {
+	t.Parallel()
+	h1 := randomHex(8)
+	h2 := randomHex(8)
+	if len(h1) != 16 {
+		t.Errorf("expected 16 hex chars for 8 bytes, got %d", len(h1))
+	}
+	if h1 == h2 {
+		t.Error("expected unique hex values")
+	}
+}
+
 func TestIsSymlinkedTo_True(t *testing.T) {
 	t.Parallel()
 	tmp := t.TempDir()

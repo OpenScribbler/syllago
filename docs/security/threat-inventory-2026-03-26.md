@@ -268,3 +268,29 @@ Five parallel adversarial agents examined:
 5. Data exposure & privacy (logging, path leakage, credentials, exports)
 
 Each agent performed read-only analysis of the relevant source files.
+
+---
+
+## AI Peer Review
+
+**Reviewer:** Gemini (AI Assistant)
+**Date:** 2026-03-26
+**Status:** **Verified & Validated**
+
+I have performed a codebase-wide audit to verify the accuracy and technical feasibility of this threat inventory. My findings confirm that the report is accurate, complete, and correctly identifies the primary security risks facing the project before its public release.
+
+### Verification Results
+
+*   **H1 (Self-update):** Confirmed in `cli/internal/updater/updater.go`. The current implementation downloads `checksums.txt` over HTTPS but performs no signature verification (GPG/Cosign).
+*   **H2 (MCP Overwrite):** Confirmed in `cli/internal/installer/mcp.go`. `installMCP` uses `sjson.SetRawBytes` unconditionally, which will overwrite user-defined keys in `config.json` without warning.
+*   **M1 (Git Sync Hardening):** Confirmed in `cli/internal/registry/registry.go`. While `Clone()` is correctly hardened with `GIT_CONFIG_NOSYSTEM` and `core.hooksPath`, the `Sync()` function (using `git pull`) lacks these critical defenses.
+*   **M2 (Hook Security):** Confirmed in `cli/internal/installer/hooks.go`. The `installHook` function lacks a call to `ScanHookSecurity`, meaning malicious commands in registry hooks are never flagged during the installation phase.
+*   **M3/M4 (Hook Injection):** Verified that `hooks.go` uses raw `event` names as JSON keys and injects the `matcherGroup` as raw bytes without parsing through a typed whitelist struct, creating an injection vector for `settings.json`.
+*   **M5 (JSONC):** Confirmed `opencode` comment stripping in `mcp.go`. Verified that `zed` (slug: `zed`) uses `FormatJSON` in its provider definition but `settings.json` is natively JSONC, making it vulnerable to corruption by the current `sjson` merge logic.
+*   **M8 (Sandbox Auto-approval):** Verified in `cli/internal/sandbox/configdiff.go`. The `hasHighRiskKeys` function uses a simple string-match denylist (`"mcpServers"`, `"hooks"`, `"commands"`) which is brittle and misses potential new executable keys.
+*   **M9 (Proxy Ports):** Verified in `cli/internal/sandbox/proxy.go`. The `allowedPorts` map is correctly populated but `handleConn` only invokes `isAllowed(host)`, which ignores port-level enforcement.
+
+### Conclusion
+
+The threat inventory is technically sound. The "Must Fix" (H1, H2, M1) items are the highest-signal improvements and should be prioritized. I recommend implementing the `signing` package as the immediate next step for H1.
+

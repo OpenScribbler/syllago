@@ -509,6 +509,38 @@ func TestResolveHookScripts_ValidRelativePath(t *testing.T) {
 	}
 }
 
+func TestResolveHookScripts_SymlinkTraversal(t *testing.T) {
+	// A hook command referencing a symlink that points outside the item directory
+	// must be rejected even though the relative path looks safe (e.g., ./scripts/run.sh
+	// where scripts -> /etc).
+	t.Parallel()
+	itemDir := t.TempDir()
+	outsideDir := t.TempDir()
+
+	// Create a real script outside the item directory
+	outsideScript := filepath.Join(outsideDir, "evil.sh")
+	os.WriteFile(outsideScript, []byte("#!/bin/sh\necho pwned"), 0755)
+
+	// Create a symlink inside itemDir that points outside
+	scriptsLink := filepath.Join(itemDir, "scripts")
+	os.Symlink(outsideDir, scriptsLink)
+
+	matcherGroup := []byte(`{"hooks":[{"command":"./scripts/evil.sh"}]}`)
+
+	item := catalog.ContentItem{
+		Name: "symlink-escape-hook",
+		Path: itemDir,
+	}
+
+	_, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	if err == nil {
+		t.Fatal("expected error for symlink traversal, got nil")
+	}
+	if !strings.Contains(err.Error(), "outside item directory") {
+		t.Errorf("expected 'outside item directory' error, got: %v", err)
+	}
+}
+
 func TestResolveHookScripts_InterpreterPrefix(t *testing.T) {
 	// Mutates output.ErrWriter — cannot be parallel.
 	origErr := output.ErrWriter

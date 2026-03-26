@@ -225,15 +225,14 @@ func isUnder(path, dir string) bool {
 }
 
 // readMCPConfig reads and returns the JSON bytes from a provider's MCP config file.
-// For OpenCode, strips JSONC comments before returning.
+// Strips JSONC comments for all providers — sjson requires valid JSON input.
+// This permanently removes comments from settings files that use JSONC (e.g. Zed, OpenCode).
 func readMCPConfig(cfgPath string, prov provider.Provider) ([]byte, error) {
 	data, err := readJSONFile(cfgPath)
 	if err != nil {
 		return nil, err
 	}
-	if prov.Slug == "opencode" {
-		data = converter.StripJSONCComments(data)
-	}
+	data = converter.StripJSONCComments(data)
 	return data, nil
 }
 
@@ -325,6 +324,12 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		return "", fmt.Errorf("reading %s: %w", cfgPath, err)
 	}
 
+	// Load installed.json to check for syllago-managed entries
+	inst, err := LoadInstalled(repoRoot)
+	if err != nil {
+		return "", fmt.Errorf("loading installed.json: %w", err)
+	}
+
 	// Merge each server entry into the target config
 	var serverNames []string
 	for name, configData := range entries {
@@ -332,6 +337,31 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 			return "", fmt.Errorf("invalid MCP server name %q: names may only contain letters, numbers, hyphens, and underscores", name)
 		}
 		key := jsonKey + "." + name
+
+		// H2: Check for collision with user-defined (non-syllago) server keys
+		if gjson.GetBytes(fileData, key).Exists() {
+			// Check if this key was installed by syllago (safe to overwrite)
+			syllagoManaged := false
+			for _, m := range inst.MCP {
+				if m.ServerKey == name {
+					syllagoManaged = true
+					break
+				}
+				for _, sn := range m.ServerNames {
+					if sn == name {
+						syllagoManaged = true
+						break
+					}
+				}
+				if syllagoManaged {
+					break
+				}
+			}
+			if !syllagoManaged {
+				return "", fmt.Errorf("MCP server %q already exists in %s and was not installed by syllago; use --force to overwrite", name, cfgPath)
+			}
+		}
+
 		fileData, err = sjson.SetRawBytes(fileData, key, configData)
 		if err != nil {
 			return "", fmt.Errorf("setting %s: %w", key, err)
@@ -343,12 +373,7 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		return "", fmt.Errorf("writing %s: %w", cfgPath, err)
 	}
 
-	// Record in installed.json
-	inst, err := LoadInstalled(repoRoot)
-	if err != nil {
-		return "", fmt.Errorf("loading installed.json: %w", err)
-	}
-
+	// Record in installed.json (inst already loaded above for collision check)
 	if item.ServerKey != "" {
 		// Per-server install: one entry per server key
 		inst.MCP = append(inst.MCP, InstalledMCP{

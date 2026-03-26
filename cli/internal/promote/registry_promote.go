@@ -92,6 +92,17 @@ func PromoteToRegistry(repoRoot string, registryName string, item catalog.Conten
 		return nil, fmt.Errorf("copying content: %w", err)
 	}
 
+	// 6b. Sanitize metadata in the copy — strip absolute paths to prevent
+	// leaking local filesystem paths into the registry.
+	if item.Meta != nil {
+		destMeta := *item.Meta
+		sanitizeBundledScripts(&destMeta)
+		if err := metadata.Save(destPath, &destMeta); err != nil {
+			cleanup()
+			return nil, fmt.Errorf("sanitizing metadata: %w", err)
+		}
+	}
+
 	// 7. Git add + commit
 	if err := gitRun(cloneDir, "add", destPath); err != nil {
 		cleanup()

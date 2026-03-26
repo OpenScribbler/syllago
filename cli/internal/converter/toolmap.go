@@ -196,6 +196,25 @@ func TranslateHookEvent(event, targetSlug string) (string, bool) {
 	return translated, true
 }
 
+// IsValidHookEvent reports whether the event name is a known canonical or
+// provider-native hook event. This prevents sjson key injection via dots or
+// other special characters in crafted event names.
+func IsValidHookEvent(event string) bool {
+	// Check canonical names (map keys)
+	if _, ok := HookEvents[event]; ok {
+		return true
+	}
+	// Check all provider-native names (map values)
+	for _, provMap := range HookEvents {
+		for _, native := range provMap {
+			if native == event {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // ReverseTranslateHookEvent finds the canonical event name from a provider-specific one.
 func ReverseTranslateHookEvent(event, sourceSlug string) string {
 	for canonical, m := range HookEvents {

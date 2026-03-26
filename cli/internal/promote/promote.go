@@ -83,6 +83,9 @@ func Promote(repoRoot string, item catalog.ContentItem, noInput bool) (*Result, 
 	sharedMeta := *item.Meta
 	sharedMeta.PromotedAt = &now
 	sharedMeta.PRBranch = branchName
+	// Sanitize bundled script paths — replace absolute OriginalPath with just the filename
+	// to prevent leaking local filesystem paths into the shared/registry branch.
+	sanitizeBundledScripts(&sharedMeta)
 	if err := metadata.Save(sharedDir, &sharedMeta); err != nil {
 		cleanup()
 		return nil, fmt.Errorf("writing metadata: %w", err)
@@ -222,4 +225,15 @@ func commandOutput(dir string, name string, args ...string) (string, error) {
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	return string(out), err
+}
+
+// sanitizeBundledScripts replaces absolute OriginalPath values with just the
+// filename. This prevents leaking local filesystem paths (e.g.
+// /home/user/.claude/hooks/lint.sh) into shared/registry content.
+func sanitizeBundledScripts(m *metadata.Meta) {
+	for i := range m.BundledScripts {
+		if m.BundledScripts[i].OriginalPath != "" {
+			m.BundledScripts[i].OriginalPath = filepath.Base(m.BundledScripts[i].OriginalPath)
+		}
+	}
 }

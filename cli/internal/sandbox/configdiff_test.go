@@ -401,7 +401,7 @@ func TestComputeDiffs_DeletedLowRiskFileInDir(t *testing.T) {
 	configDir := filepath.Join(srcDir, "dotclaude")
 	os.MkdirAll(configDir, 0755)
 	os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(`{"theme":"dark"}`), 0644)
-	os.WriteFile(filepath.Join(configDir, "prefs.json"), []byte(`{"verbose":true}`), 0644)
+	os.WriteFile(filepath.Join(configDir, "prefs.json"), []byte(`{"model":"claude"}`), 0644)
 
 	snaps, err := StageConfigs(stagingDir, []string{configDir})
 	if err != nil {
@@ -468,6 +468,10 @@ func TestHasHighRiskKeys(t *testing.T) {
 		{"hooks", `{"hooks":{}}`, true},
 		{"commands", `{"commands":{}}`, true},
 		{"mixed safe", `{"model":"claude","theme":"dark"}`, false},
+		{"unknown key is high risk", `{"unknownNewFeature":"value"}`, true},
+		{"context_servers", `{"context_servers":{}}`, true},
+		{"safe temperature", `{"temperature":0.7}`, false},
+		{"mixed safe and unknown", `{"model":"claude","dangerousField":true}`, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -479,6 +483,15 @@ func TestHasHighRiskKeys(t *testing.T) {
 	}
 }
 
+func TestHasOnlySafeKeys_UnknownKeyIsUnsafe(t *testing.T) {
+	// This is the key security property: unknown keys must be treated as high-risk.
+	// If a provider adds a new key we haven't vetted, we don't auto-approve it.
+	data := []byte(`{"neverSeenBefore": "some value"}`)
+	if hasOnlySafeKeys(data) {
+		t.Error("unknown key should NOT be treated as safe")
+	}
+}
+
 func TestIsHighRiskDiff(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -486,7 +499,8 @@ func TestIsHighRiskDiff(t *testing.T) {
 		staged string
 		want   bool
 	}{
-		{"neither has keys", `{"a":1}`, `{"a":2}`, false},
+		{"both have only safe keys", `{"model":"v1"}`, `{"model":"v2"}`, false},
+		{"unknown keys are high risk", `{"a":1}`, `{"a":2}`, true},
 		{"staged introduces MCP", `{}`, `{"mcpServers":{}}`, true},
 		{"original had MCP, staged removes", `{"mcpServers":{}}`, `{}`, true},
 		{"both have MCP", `{"mcpServers":{"a":{}}}`, `{"mcpServers":{"b":{}}}`, true},

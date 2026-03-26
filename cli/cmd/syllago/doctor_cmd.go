@@ -266,8 +266,30 @@ func checkOrphans(projectRoot string) checkResult {
 		}
 	}
 
+	// Check for orphaned hooks/MCP entries in provider settings.json files.
+	// These can appear when syllago crashes between writing settings.json and
+	// updating installed.json — the "crash window" for merged content.
+	// Only check for orphaned merges if there are tracked installs.
+	// Without any tracked content, settings.json entries are user-managed.
+	detected := provider.DetectProviders()
+	var mergeOrphans []installer.OrphanEntry
+	var mergeErr error
+	if len(inst.Hooks) > 0 || len(inst.MCP) > 0 {
+		mergeOrphans, mergeErr = installer.CheckOrphanedMerges(projectRoot, detected)
+	}
+	if mergeErr == nil && len(mergeOrphans) > 0 {
+		for _, o := range mergeOrphans {
+			orphaned++
+			if o.Type == "hook" {
+				details = append(details, fmt.Sprintf("%s: untracked hook in hooks.%s (provider: %s)", o.Type, o.Key, o.Provider))
+			} else {
+				details = append(details, fmt.Sprintf("%s: untracked server %q (provider: %s)", o.Type, o.Key, o.Provider))
+			}
+		}
+	}
+
 	if orphaned > 0 {
-		return checkResult{Name: "orphans", Status: checkWarn, Message: fmt.Sprintf("Orphans: %d installed item(s) missing from disk", orphaned), Details: details}
+		return checkResult{Name: "orphans", Status: checkWarn, Message: fmt.Sprintf("Orphans: %d installed item(s) missing from disk or untracked", orphaned), Details: details}
 	}
 	return checkResult{Name: "orphans", Status: checkOK, Message: "Orphans: all installed content accounted for"}
 }

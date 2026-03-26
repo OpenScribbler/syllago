@@ -161,7 +161,12 @@ func Sync(name string) error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("git", "-C", dir, "pull", "--ff-only")
+	cmd := exec.Command("git",
+		"-C", dir,
+		"-c", "core.hooksPath=/dev/null",
+		"pull", "--ff-only", "--no-recurse-submodules",
+	)
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git pull failed for %q: %s\n(Hint: delete the clone at ~/.syllago/registries/%s and re-run `syllago registry add`)", name, strings.TrimSpace(string(out)), name)
