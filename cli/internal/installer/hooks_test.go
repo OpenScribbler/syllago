@@ -1,6 +1,9 @@
 package installer
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -157,17 +160,23 @@ func TestCheckHookStatus_UsesInstalledJSON(t *testing.T) {
 	}
 
 	// Add to installed.json
+	matcherGroup := []byte(`{"matcher":".*","hooks":[{"type":"command","command":"echo status"}]}`)
+	groupHash := sha256.Sum256(matcherGroup)
 	inst := &Installed{
 		Hooks: []InstalledHook{
-			{Name: "status-hook", Event: "PostToolUse", Command: "echo status", Source: "export"},
+			{Name: "status-hook", Event: "PostToolUse", Command: "echo status", Source: "export", GroupHash: hex.EncodeToString(groupHash[:])},
 		},
 	}
 	SaveInstalled(projectRoot, inst)
 
-	// With installed.json entry: should be Installed
+	// Also add the hook to the provider's settings.json so the hash matches.
+	settingsJSON := fmt.Sprintf(`{"hooks":{"PostToolUse":[%s]}}`, matcherGroup)
+	os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(settingsJSON), 0644)
+
+	// With installed.json entry + matching settings: should be Installed
 	status = checkHookStatus(item, prov, projectRoot)
 	if status != StatusInstalled {
-		t.Errorf("expected Installed with installed.json entry, got %v", status)
+		t.Errorf("expected Installed with installed.json entry + matching settings, got %v", status)
 	}
 }
 

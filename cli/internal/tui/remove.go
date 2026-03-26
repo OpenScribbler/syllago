@@ -48,7 +48,7 @@ type removeModal struct {
 	// Focus index — meaning varies by step (see buttonCount/firstButtonIdx)
 	focusIdx int
 
-	// Tracks whether user chose "Remove Only" (skip Step 2)
+	// Tracks whether user chose "No" (skip Step 2)
 	skippedProviders bool
 }
 
@@ -404,7 +404,7 @@ func (m removeModal) viewConfirm(usableW int, pad string) string {
 		lines = append(lines, "")
 		lines = append(lines, m.renderButtons(usableW, pad,
 			buttonDef{"Cancel", "rm-cancel", 0},
-			buttonDef{"Remove Only", "rm-remove-only", 1},
+			buttonDef{"No", "rm-remove-only", 1},
 			buttonDef{"Yes", "rm-yes", 2},
 		))
 	} else {
@@ -444,7 +444,7 @@ func (m removeModal) viewProviders(usableW int, pad string) string {
 	lines = append(lines, "")
 	lines = append(lines, m.renderButtons(usableW, pad,
 		buttonDef{"Back", "rm-back", backIdx},
-		buttonDef{"Done", "rm-done", doneIdx},
+		buttonDef{"Next", "rm-done", doneIdx},
 	))
 
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)

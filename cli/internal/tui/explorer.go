@@ -274,9 +274,15 @@ func (e explorerModel) updateMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 // updateBrowseMouse handles mouse events in browse mode.
 func (e explorerModel) updateBrowseMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
-		// Edit button click
+		// Metadata bar button clicks
 		if zone.Get("meta-edit").InBounds(msg) {
 			return e, func() tea.Msg { return libraryEditMsg{} }
+		}
+		if zone.Get("meta-remove").InBounds(msg) {
+			return e, func() tea.Msg { return libraryRemoveMsg{} }
+		}
+		if zone.Get("meta-uninstall").InBounds(msg) {
+			return e, func() tea.Msg { return libraryUninstallMsg{} }
 		}
 
 		// Click on a specific item row — select it
@@ -347,6 +353,12 @@ func (e explorerModel) updateDetailMouse(msg tea.MouseMsg) (explorerModel, tea.C
 		// Edit button click
 		if zone.Get("meta-edit").InBounds(msg) {
 			return e, func() tea.Msg { return libraryEditMsg{} }
+		}
+		if zone.Get("meta-remove").InBounds(msg) {
+			return e, func() tea.Msg { return libraryRemoveMsg{} }
+		}
+		if zone.Get("meta-uninstall").InBounds(msg) {
+			return e, func() tea.Msg { return libraryUninstallMsg{} }
 		}
 
 		// Close button click

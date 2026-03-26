@@ -332,6 +332,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case libraryEditMsg:
 		return a.handleEdit()
 
+	case libraryRemoveMsg:
+		return a.handleRemove()
+
+	case libraryUninstallMsg:
+		return a.handleUninstall()
+
 	case libraryDrillMsg:
 		a.updateNavState()
 		return a, nil
