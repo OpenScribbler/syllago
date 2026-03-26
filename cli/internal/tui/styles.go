@@ -19,7 +19,9 @@ var (
 	primaryColor = lipgloss.AdaptiveColor{Light: "#24837B", Dark: "#3AA99F"} // cyan
 	accentColor  = lipgloss.AdaptiveColor{Light: "#5E409D", Dark: "#8B7EC8"} // purple
 	mutedColor   = lipgloss.AdaptiveColor{Light: "#6F6E69", Dark: "#878580"} // base-600/500
+	successColor = lipgloss.AdaptiveColor{Light: "#879A39", Dark: "#879A39"} // green-600/400
 	warningColor = lipgloss.AdaptiveColor{Light: "#BC5215", Dark: "#DA702C"} // orange
+	dangerColor  = lipgloss.AdaptiveColor{Light: "#AF3029", Dark: "#D14D41"} // red-600/400
 )
 
 // Flexoki structural colors.

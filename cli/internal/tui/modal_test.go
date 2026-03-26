@@ -455,6 +455,90 @@ func TestEditModal_FullEditFlow(t *testing.T) {
 	}
 }
 
+func TestEditModal_SpacesInFields(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "", "", "ctx")
+
+	// Type "hello world" with a space in the name field
+	for _, ch := range "hello" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+	}
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeySpace})
+	for _, ch := range "world" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+	}
+	if m.name != "hello world" {
+		t.Errorf("expected 'hello world', got %q", m.name)
+	}
+
+	// Move to description field and type with spaces
+	m.focusIdx = 1
+	m.cursor = 0
+	for _, ch := range "foo" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+	}
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeySpace})
+	for _, ch := range "bar" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+	}
+	if m.description != "foo bar" {
+		t.Errorf("expected 'foo bar', got %q", m.description)
+	}
+
+	// Space on button fields should NOT modify text
+	m.focusIdx = 2
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeySpace})
+	if m.name != "hello world" || m.description != "foo bar" {
+		t.Error("space on button should not modify fields")
+	}
+}
+
+func TestApp_EditDescriptionViaAllNavigationMethods(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// Method 1: Tab to description
+	m, _ := app.Update(keyRune('e'))
+	a := m.(App)
+	m, _ = a.Update(keyPress(tea.KeyTab))
+	a = m.(App)
+	if a.modal.focusIdx != 1 {
+		t.Fatalf("Tab: expected focus on description (1), got %d", a.modal.focusIdx)
+	}
+	m, _ = a.Update(keyRune('x'))
+	a = m.(App)
+	if !strings.Contains(a.modal.description, "x") {
+		t.Errorf("Tab then type: expected 'x' in description, got %q", a.modal.description)
+	}
+	a.modal.Close()
+
+	// Method 2: Enter advances to description
+	a.modal.Open("Test", "name", "original", "/path")
+	m, _ = a.Update(keyPress(tea.KeyEnter))
+	a = m.(App)
+	if a.modal.focusIdx != 1 {
+		t.Fatalf("Enter: expected focus on description (1), got %d", a.modal.focusIdx)
+	}
+	m, _ = a.Update(keyRune('Z'))
+	a = m.(App)
+	if !strings.Contains(a.modal.description, "Z") {
+		t.Errorf("Enter then type: expected 'Z' in description %q", a.modal.description)
+	}
+	a.modal.Close()
+
+	// Method 3: Down arrow to description
+	a.modal.Open("Test", "name", "original", "/path")
+	m, _ = a.Update(keyPress(tea.KeyDown))
+	a = m.(App)
+	if a.modal.focusIdx != 1 {
+		t.Fatalf("Down: expected focus on description (1), got %d", a.modal.focusIdx)
+	}
+	m, _ = a.Update(keyRune('W'))
+	a = m.(App)
+	if !strings.Contains(a.modal.description, "W") {
+		t.Errorf("Down then type: expected 'W' in description %q", a.modal.description)
+	}
+}
+
 func contains(s, sub string) bool {
 	return len(s) > 0 && len(sub) > 0 && len(s) >= len(sub) && indexStr(s, sub) >= 0
 }
