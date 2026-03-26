@@ -473,6 +473,29 @@ func TestConfirmModal_DownUpNavigation(t *testing.T) {
 	}
 }
 
+func TestConfirmModal_TitleTruncated(t *testing.T) {
+	m := newConfirmModal()
+	longName := "this-is-a-very-long-item-name-that-should-get-truncated-by-the-modal"
+	m.Open("Remove \""+longName+"\"?", "body", "Remove", true, nil)
+	m.width = 60
+	m.height = 20
+
+	view := m.View()
+	stripped := ansi.Strip(view)
+	lines := strings.Split(stripped, "\n")
+
+	if len(lines) < 3 {
+		t.Fatalf("expected at least 3 lines, got %d", len(lines))
+	}
+	borderW := len([]rune(lines[0]))
+	for i, line := range lines {
+		runeW := len([]rune(line))
+		if runeW != borderW {
+			t.Errorf("line %d width %d differs from border width %d (title may be wrapping): %q", i, runeW, borderW, line)
+		}
+	}
+}
+
 func TestConfirmModal_LeftRightBetweenButtons(t *testing.T) {
 	m := newConfirmModal()
 	m.Open("Test", "body", "OK", false, testChecks())

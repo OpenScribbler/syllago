@@ -214,16 +214,16 @@ func (m confirmModal) View() string {
 		return ""
 	}
 
-	modalW := min(50, m.width-10)
-	if modalW < 30 {
-		modalW = 30
+	modalW := min(54, m.width-10)
+	if modalW < 34 {
+		modalW = 34
 	}
 	contentW := modalW - borderSize
 	usableW := contentW - 2
 	pad := " "
 
-	// Title
-	titleText := lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(m.title)
+	// Title — constrained to prevent wrapping past modal border
+	titleText := lipgloss.NewStyle().Bold(true).Foreground(primaryText).MaxWidth(usableW).Render(m.title)
 	title := pad + titleText
 
 	// Body
