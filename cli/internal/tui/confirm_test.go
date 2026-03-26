@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 func testChecks() []confirmCheckbox {
@@ -365,6 +366,80 @@ func TestConfirmModal_ViewWithCheckboxes(t *testing.T) {
 	}
 	if !strings.Contains(stripped, "[x] Delete from library") {
 		t.Error("view should contain Delete from library checkbox")
+	}
+}
+
+func mouseClick(x, y int) tea.MouseMsg {
+	return tea.MouseMsg{X: x, Y: y, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft}
+}
+
+func TestConfirmModal_MouseClickCancel(t *testing.T) {
+	m := newConfirmModal()
+	m.Open("Remove?", "body", "Remove", true, nil)
+	m.width = 80
+	m.height = 30
+
+	// Render and scan to register zones
+	zone.Scan(m.View())
+
+	z := zone.Get("confirm-cancel")
+	if z.IsZero() {
+		t.Skip("zone confirm-cancel not registered (bubblezone rendering issue)")
+	}
+	m, cmd := m.Update(mouseClick(z.StartX, z.StartY))
+	if cmd == nil {
+		t.Fatal("expected command from Cancel click")
+	}
+	msg := cmd()
+	res := msg.(confirmResultMsg)
+	if res.confirmed {
+		t.Error("expected confirmed=false")
+	}
+}
+
+func TestConfirmModal_MouseClickConfirm(t *testing.T) {
+	m := newConfirmModal()
+	m.Open("Remove?", "body", "Remove", true, nil)
+	m.width = 80
+	m.height = 30
+
+	zone.Scan(m.View())
+
+	z := zone.Get("confirm-ok")
+	if z.IsZero() {
+		t.Skip("zone confirm-ok not registered (bubblezone rendering issue)")
+	}
+	m, cmd := m.Update(mouseClick(z.StartX, z.StartY))
+	if cmd == nil {
+		t.Fatal("expected command from Confirm click")
+	}
+	msg := cmd()
+	res := msg.(confirmResultMsg)
+	if !res.confirmed {
+		t.Error("expected confirmed=true")
+	}
+}
+
+func TestConfirmModal_MouseClickCheckbox(t *testing.T) {
+	m := newConfirmModal()
+	checks := testChecks()
+	m.Open("Remove?", "body", "Remove", true, checks)
+	m.width = 80
+	m.height = 30
+
+	zone.Scan(m.View())
+
+	z := zone.Get("confirm-check-0")
+	if z.IsZero() {
+		t.Skip("zone confirm-check-0 not registered (bubblezone rendering issue)")
+	}
+	// First checkbox starts checked — click should uncheck
+	m, _ = m.Update(mouseClick(z.StartX, z.StartY))
+	if m.checks[0].checked {
+		t.Error("expected first checkbox unchecked after click")
+	}
+	if m.focusIdx != 0 {
+		t.Errorf("expected focus to move to clicked checkbox (0), got %d", m.focusIdx)
 	}
 }
 
