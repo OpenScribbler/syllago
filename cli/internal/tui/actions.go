@@ -64,7 +64,7 @@ func (a App) handleRemove() (tea.Model, tea.Cmd) {
 	// Find installed providers for the multi-step flow.
 	var installed []provider.Provider
 	for _, prov := range a.providers {
-		if installer.CheckStatus(*item, prov, a.catalog.RepoRoot) == installer.StatusInstalled {
+		if installer.CheckStatus(*item, prov, a.projectRoot) == installer.StatusInstalled {
 			installed = append(installed, prov)
 		}
 	}
@@ -115,7 +115,7 @@ func (a App) handleUninstall() (tea.Model, tea.Cmd) {
 
 	var installedProviders []provider.Provider
 	for _, prov := range a.providers {
-		if installer.CheckStatus(*item, prov, a.catalog.RepoRoot) == installer.StatusInstalled {
+		if installer.CheckStatus(*item, prov, a.projectRoot) == installer.StatusInstalled {
 			installedProviders = append(installedProviders, prov)
 		}
 	}
@@ -187,7 +187,7 @@ func (a App) handleRemoveResult(msg removeResultMsg) (tea.Model, tea.Cmd) {
 func (a App) doRemoveCmd(msg removeResultMsg) tea.Cmd {
 	item := msg.item
 	targetProviders := msg.uninstallProviders
-	repoRoot := a.catalog.RepoRoot
+	repoRoot := a.projectRoot
 
 	return func() tea.Msg {
 		var uninstalledFrom []string
@@ -221,7 +221,7 @@ func (a App) doSimpleRemoveCmd(item catalog.ContentItem) tea.Cmd {
 func (a App) doUninstallCmd(msg confirmResultMsg) tea.Cmd {
 	item := msg.item
 	providers := msg.uninstallProviders
-	repoRoot := a.catalog.RepoRoot
+	repoRoot := a.projectRoot
 
 	var targetProviders []provider.Provider
 	if len(msg.checks) == 0 {
@@ -257,13 +257,13 @@ func (a App) handleRemoveDone(msg removeDoneMsg) (tea.Model, tea.Cmd) {
 		cmd := a.toast.Push("Remove failed: "+msg.err.Error(), toastError)
 		return a, cmd
 	}
-	cmd := a.rescanCatalog()
 	toastText := fmt.Sprintf("Removed %q", msg.itemName)
 	if len(msg.uninstalledFrom) > 0 {
 		toastText += " (uninstalled from " + strings.Join(msg.uninstalledFrom, ", ") + ")"
 	}
-	cmd2 := a.toast.Push(toastText, toastSuccess)
-	return a, tea.Batch(cmd, cmd2)
+	cmd1 := a.toast.Push(toastText, toastSuccess)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
 }
 
 // handleUninstallDone processes the result of an uninstall operation.
@@ -272,8 +272,8 @@ func (a App) handleUninstallDone(msg uninstallDoneMsg) (tea.Model, tea.Cmd) {
 		cmd := a.toast.Push("Uninstall failed: "+msg.err.Error(), toastError)
 		return a, cmd
 	}
-	cmd := a.rescanCatalog()
 	toastText := fmt.Sprintf("Uninstalled %q from %s", msg.itemName, strings.Join(msg.uninstalledFrom, ", "))
-	cmd2 := a.toast.Push(toastText, toastSuccess)
-	return a, tea.Batch(cmd, cmd2)
+	cmd1 := a.toast.Push(toastText, toastSuccess)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
 }

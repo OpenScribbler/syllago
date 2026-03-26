@@ -35,23 +35,39 @@ type toastTickMsg struct {
 	seq int // sequence number to ignore stale ticks
 }
 
-// toastModel manages a queue of toast notifications shown one at a time.
+const maxVisibleToasts = 3
+
+// toastModel manages a queue of toast notifications, showing up to 3 stacked.
 type toastModel struct {
 	queue   []toastEntry
 	seq     int // incremented on each new toast to invalidate old ticks
 	width   int
 	height  int
-	visible bool // true when a toast is actively displayed
+	visible bool // true when any toast is actively displayed
 }
 
 func newToastModel() toastModel {
 	return toastModel{}
 }
 
-// Push adds a toast to the queue. If nothing is currently showing, it
-// becomes visible immediately and returns a tick command for auto-dismiss.
+// Push adds a toast to the queue. Shows immediately if not visible. Drops the
+// oldest non-error toast when the queue exceeds maxVisibleToasts.
 func (t *toastModel) Push(msg string, level toastLevel) tea.Cmd {
 	t.queue = append(t.queue, toastEntry{message: msg, level: level})
+	// Drop oldest non-error toasts when over the limit.
+	for len(t.queue) > maxVisibleToasts {
+		dropped := false
+		for i, e := range t.queue {
+			if e.level != toastError {
+				t.queue = append(t.queue[:i], t.queue[i+1:]...)
+				dropped = true
+				break
+			}
+		}
+		if !dropped {
+			break // all are errors, keep them all
+		}
+	}
 	if !t.visible {
 		return t.showNext()
 	}
@@ -163,16 +179,26 @@ func (t *toastModel) tickCmd() tea.Cmd {
 	})
 }
 
-// View renders the toast as a small bordered box. Caller places it via overlayToast.
+// View renders up to maxVisibleToasts stacked vertically. Caller places via overlayToast.
 func (t toastModel) View() string {
-	cur := t.Current()
-	if cur == nil {
+	if !t.visible || len(t.queue) == 0 {
 		return ""
 	}
 
+	count := min(maxVisibleToasts, len(t.queue))
+	var rendered []string
+	for i := 0; i < count; i++ {
+		rendered = append(rendered, t.renderOne(t.queue[i]))
+	}
+
+	return strings.Join(rendered, "\n")
+}
+
+// renderOne renders a single toast entry as a bordered box.
+func (t toastModel) renderOne(entry toastEntry) string {
 	var borderColor lipgloss.TerminalColor
 	var icon string
-	switch cur.level {
+	switch entry.level {
 	case toastSuccess:
 		borderColor = successColor
 		icon = lipgloss.NewStyle().Foreground(successColor).Render("✓ ")
@@ -185,15 +211,14 @@ func (t toastModel) View() string {
 	}
 
 	maxMsgW := 50
-	msg := cur.message
+	msg := entry.message
 	if len([]rune(msg)) > maxMsgW {
 		msg = string([]rune(msg)[:maxMsgW-1]) + "…"
 	}
 
 	content := icon + lipgloss.NewStyle().Foreground(primaryText).Render(msg)
 
-	// For errors, show dismiss hint
-	if cur.level == toastError {
+	if entry.level == toastError {
 		hint := lipgloss.NewStyle().Foreground(mutedColor).Faint(true).Render("  [esc] dismiss · [c] copy")
 		content += "\n" + hint
 	}
