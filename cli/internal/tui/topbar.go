@@ -10,10 +10,16 @@ import (
 
 // tabGroup represents a top-level navigation group (Content, Collections, Config).
 type tabGroup struct {
-	label   string
-	hotkey  string   // display hint: "1", "2", "3"
-	tabs    []string // sub-tab labels
-	actions []string // right-aligned action button labels
+	label  string
+	hotkey string   // display hint: "1", "2", "3"
+	tabs   []string // sub-tab labels
+}
+
+// tabAction defines a clickable action button with its zone ID and action name.
+type tabAction struct {
+	label  string // e.g., "[a] Add"
+	zone   string // bubblezone ID, e.g., "btn-add"
+	action string // action name for actionPressedMsg, e.g., "add"
 }
 
 // tabChangedMsg is fired when the active group or sub-tab changes.
@@ -25,7 +31,7 @@ type tabChangedMsg struct {
 
 // actionPressedMsg is fired when an action button is activated (keyboard or mouse).
 type actionPressedMsg struct {
-	action string // "add" or "create"
+	action string // "add", "remove", or "uninstall"
 	group  string // which group was active (e.g., "Content", "Collections")
 	tab    string // which sub-tab was active (e.g., "Skills", "Library")
 }
@@ -48,26 +54,52 @@ func newTopBar() topBarModel {
 	return topBarModel{
 		groups: []tabGroup{
 			{
-				label:   "Collections",
-				hotkey:  "1",
-				tabs:    []string{"Library", "Registries", "Loadouts"},
-				actions: []string{"[a] Add"},
+				label:  "Collections",
+				hotkey: "1",
+				tabs:   []string{"Library", "Registries", "Loadouts"},
 			},
 			{
-				label:   "Content",
-				hotkey:  "2",
-				tabs:    []string{"Skills", "Agents", "MCP", "Rules", "Hooks", "Commands"},
-				actions: []string{"[a] Add"},
+				label:  "Content",
+				hotkey: "2",
+				tabs:   []string{"Skills", "Agents", "MCP", "Rules", "Hooks", "Commands"},
 			},
 			{
-				label:   "Config",
-				hotkey:  "3",
-				tabs:    []string{"Settings", "Sandbox"},
-				actions: nil,
+				label:  "Config",
+				hotkey: "3",
+				tabs:   []string{"Settings", "Sandbox"},
 			},
 		},
 		activeGroup: 0, // Collections
 		activeTab:   0, // Library
+	}
+}
+
+// tabActions returns the context-sensitive action buttons for the current tab.
+func (t topBarModel) tabActions() []tabAction {
+	switch t.ActiveTabLabel() {
+	case "Library":
+		return []tabAction{
+			{"[a] Add", "btn-add", "add"},
+			{"[d] Remove", "btn-remove", "remove"},
+			{"[x] Uninstall", "btn-uninstall", "uninstall"},
+		}
+	case "Registries":
+		return []tabAction{
+			{"[a] Add", "btn-add", "add"},
+			{"[d] Remove", "btn-remove", "remove"},
+		}
+	case "Loadouts":
+		return []tabAction{
+			{"[d] Remove", "btn-remove", "remove"},
+		}
+	case "Skills", "Agents", "MCP", "Rules", "Hooks", "Commands":
+		return []tabAction{
+			{"[a] Add", "btn-add", "add"},
+			{"[d] Remove", "btn-remove", "remove"},
+			{"[x] Uninstall", "btn-uninstall", "uninstall"},
+		}
+	default: // Config tabs
+		return nil
 	}
 }
 
@@ -159,9 +191,11 @@ func (t topBarModel) Update(msg tea.Msg) (topBarModel, tea.Cmd) {
 		}
 	}
 
-	// Check action button clicks
-	if zone.Get("btn-add").InBounds(mouseMsg) {
-		return t, t.actionCmd("add")
+	// Check action button clicks (context-sensitive per tab)
+	for _, a := range t.tabActions() {
+		if zone.Get(a.zone).InBounds(mouseMsg) {
+			return t, t.actionCmd(a.action)
+		}
 	}
 	// Help button click
 	if zone.Get("btn-help").InBounds(mouseMsg) {
@@ -263,11 +297,10 @@ func (t topBarModel) renderGroupRow(innerW int) string {
 	return strings.Repeat(" ", leftPad) + content + strings.Repeat(" ", rightPad)
 }
 
-// renderTabRow renders sub-tabs on the left and action buttons on the right.
+// renderTabRow renders sub-tabs only (buttons moved to breadcrumb row).
 func (t topBarModel) renderTabRow(innerW int) string {
 	g := t.groups[t.activeGroup]
 
-	// Sub-tabs
 	var tabParts []string
 	for i, tab := range g.tabs {
 		var rendered string
@@ -280,59 +313,59 @@ func (t topBarModel) renderTabRow(innerW int) string {
 		tabParts = append(tabParts, rendered)
 	}
 	left := strings.Join(tabParts, " ")
+	leftW := lipgloss.Width(left)
+	pad := max(0, innerW-leftW-1)
+	return " " + left + strings.Repeat(" ", pad)
+}
 
-	// Action buttons
+// renderBreadcrumbRow renders breadcrumbs (left) and action buttons (right).
+func (t topBarModel) renderBreadcrumbRow(innerW int) string {
+	// Right side: action buttons
+	actions := t.tabActions()
 	var btnParts []string
-	btnZones := []string{"btn-add"}
-	for i, action := range g.actions {
-		btn := activeButtonStyle.Render(action)
-		if i < len(btnZones) {
-			btn = zone.Mark(btnZones[i], btn)
-		}
+	for _, a := range actions {
+		btn := activeButtonStyle.Render(a.label)
+		btn = zone.Mark(a.zone, btn)
 		btnParts = append(btnParts, btn)
 	}
 	right := strings.Join(btnParts, " ")
+	rightW := lipgloss.Width(right)
+
+	// Left side: breadcrumbs (if any)
+	left := ""
+	if len(t.breadcrumbs) > 0 {
+		// Calculate the x-offset so ">" aligns with the first letter of the active tab.
+		g := t.groups[t.activeGroup]
+		offset := 1
+		for i := 0; i < t.activeTab && i < len(g.tabs); i++ {
+			offset += len(g.tabs[i]) + 4
+			offset++
+		}
+		offset += 2
+
+		var parts []string
+		for i, crumb := range t.breadcrumbs {
+			seg := zone.Mark("crumb-"+itoa(i), sectionTitleStyle.Render("> ")+boldStyle.Render(truncate(crumb, 30)))
+			parts = append(parts, seg)
+		}
+		trail := strings.Join(parts, " ")
+		trailW := lipgloss.Width(trail)
+
+		// Clamp offset so trail + buttons fit
+		maxTrailSpace := innerW - rightW - 1
+		if offset+trailW > maxTrailSpace {
+			offset = max(1, maxTrailSpace-trailW)
+		}
+		left = strings.Repeat(" ", offset) + trail
+	}
 
 	leftW := lipgloss.Width(left)
-	rightW := lipgloss.Width(right)
-	gap := max(1, innerW-leftW-rightW-1) // -1 for leading space
-
-	return " " + left + strings.Repeat(" ", gap) + right
-}
-
-// renderBreadcrumbRow renders the breadcrumb trail aligned under the active tab.
-// Returns an empty padded line when no breadcrumbs are set.
-func (t topBarModel) renderBreadcrumbRow(innerW int) string {
-	if len(t.breadcrumbs) == 0 {
-		return strings.Repeat(" ", innerW)
+	gap := max(1, innerW-leftW-rightW)
+	if left == "" {
+		gap = max(0, innerW-rightW)
 	}
 
-	// Calculate the x-offset so ">" aligns with the first letter of the active tab.
-	// Tab row: " " (1) + for each preceding tab: Padding(0,2) adds 2+label+2 + 1 space gap.
-	// The active tab's first letter is at offset + 2 (left padding).
-	g := t.groups[t.activeGroup]
-	offset := 1 // leading " " in the tab row
-	for i := 0; i < t.activeTab && i < len(g.tabs); i++ {
-		offset += len(g.tabs[i]) + 4 // label + Padding(0,2) = +4
-		offset++                     // space between tabs
-	}
-	offset += 2 // skip the active tab's left padding so ">" aligns with first letter
-
-	// Build the breadcrumb string with clickable zones
-	var parts []string
-	for i, crumb := range t.breadcrumbs {
-		seg := zone.Mark("crumb-"+itoa(i), sectionTitleStyle.Render("> ")+boldStyle.Render(truncate(crumb, 30)))
-		parts = append(parts, seg)
-	}
-	trail := strings.Join(parts, " ")
-	trailW := lipgloss.Width(trail)
-
-	// Clamp offset so trail fits
-	if offset+trailW > innerW {
-		offset = max(1, innerW-trailW)
-	}
-
-	line := strings.Repeat(" ", offset) + trail
+	line := left + strings.Repeat(" ", gap) + right
 	lineW := lipgloss.Width(line)
 	if lineW < innerW {
 		line += strings.Repeat(" ", innerW-lineW)

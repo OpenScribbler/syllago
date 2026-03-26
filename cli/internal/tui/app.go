@@ -369,6 +369,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case actionPressedMsg:
+		switch msg.action {
+		case "remove":
+			return a.handleRemove()
+		case "uninstall":
+			return a.handleUninstall()
+		}
 		return a, nil
 
 	case helpToggleMsg:
