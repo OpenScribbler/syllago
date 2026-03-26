@@ -121,11 +121,11 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 		line3 = styled
 	}
 
-	renameBtn := zone.Mark("meta-rename", activeButtonStyle.Render("[r] Rename"))
-	renameBtnW := lipgloss.Width(renameBtn)
+	editBtn := zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit"))
+	editBtnW := lipgloss.Width(editBtn)
 	line3W := lipgloss.Width(line3)
-	btnGap := max(1, width-line3W-renameBtnW)
-	line3 += strings.Repeat(" ", btnGap) + renameBtn
+	btnGap := max(1, width-line3W-editBtnW)
+	line3 += strings.Repeat(" ", btnGap) + editBtn
 
 	pad := func(s string) string {
 		s = lipgloss.NewStyle().MaxWidth(width).Render(s)

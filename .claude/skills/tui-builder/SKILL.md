@@ -24,13 +24,12 @@ Root model owns child models as struct fields. `Update()` routes messages to the
 ```go
 type App struct {
     topBar    topBarModel     // two-tier tab navigation
-    metadata  metadataModel
-    explorer  explorerModel   // items list + content zone
-    gallery   galleryModel    // card grid + contents sidebar
+    library   libraryModel   // Library tab: table + drill-in
+    explorer  explorerModel   // Content tabs: items list + preview
+    gallery   galleryModel    // Loadouts/Registries: card grid + contents sidebar
     helpBar   helpBarModel
-    modal     *modalModel     // nil when not shown
-    toast     *toastModel     // nil when not shown
-    focus     focusZone
+    modal     editModal       // name + description editor overlay
+    help      helpOverlay     // keyboard shortcuts overlay
     width, height int
 }
 ```
@@ -112,7 +111,8 @@ Parent calls `SetSize()` on children during `WindowSizeMsg` handling. Children n
 | `j` / `k` (or ↑/↓) | Navigate items list / scroll preview |
 | `a` | Add action (context-sensitive to current group+tab) |
 | `n` | Create action (context-sensitive to current group+tab) |
-| `r` | Rename selected item |
+| `e` | Edit selected item (name + description) |
+| `?` | Help overlay (keyboard shortcuts) |
 | `/` | Search/filter (Library table) |
 | `s` / `S` | Cycle sort column / reverse sort (Library table) |
 | `PgUp` / `PgDn` | Page navigation in any scrollable pane |
@@ -205,13 +205,32 @@ Focus indicated by border foreground color: `focusedBorderFg` (cyan) vs `unfocus
 
 **CRITICAL**: Never use raw `lipgloss.Width().Height().Render()` for bordered panels — `Width()` wraps (doesn't truncate) and `Height()` pads (doesn't clamp). This causes layout overflow that pushes the header offscreen.
 
-### Modals — Text Input Modal Pattern
+### Modals — Edit Modal Pattern
 
-- Centered overlay with rounded border in accent color
-- Text input field + Cancel/Save buttons
-- Full keyboard support: type to edit, Enter confirms, Esc cancels, Tab switches fields
-- Full mouse support: click buttons, click field to focus
+- Centered overlay with rounded border in accent color, composited onto background via `overlayModal()`
+- **Two fields**: Display Name + Description, with field labels
+- Focus: Tab cycles name → description → Cancel → Save. Up/Down arrows navigate between fields.
+- Enter in text field advances to next field (not submit). Ctrl+S saves from anywhere.
+- Full mouse support: click buttons, click fields to focus
 - When modal is active, it consumes ALL input except Ctrl+C
+- **Zone-safe borders**: Build modal borders manually (`╭─╮│╰─╯`) instead of `lipgloss.Border()` — lipgloss dimension styling mangles bubblezone's invisible markers
+- Messages: `editSavedMsg{name, description, path}` / `editCancelledMsg`
+
+### Help Overlay
+
+- Full-shortcut reference in two-column layout, composited over content via `overlayModal()`
+- Toggle with `?` key or clickable `[?]` in topbar corner (zone: `btn-help`)
+- Bordered box built manually (zone-safe), centered over content
+- Clickable `[Esc] Close` button (zone: `help-close`), centered at bottom
+- Captures all input when active (keys + mouse)
+- Message: `helpToggleMsg` from topbar click
+
+### Overlay Compositing — overlayModal()
+
+`overlayModal(bg, modal, width, height)` composites a modal onto background content:
+- Uses `ansi.Truncate()` and `ansi.Cut()` to splice modal into background lines
+- Background shows through on both sides of the modal (no full-width black bar)
+- Vertically centered within the content area
 
 ### Toasts — Below Topbar
 
@@ -353,7 +372,7 @@ zone.Scan(fullOutput)             // in root View()
 zone.Get("item-0").InBounds(msg)  // in Update()
 ```
 
-Zone IDs: `group-N`, `tab-G-N`, `btn-add`, `btn-create`, `item-N`, `modal-zone`
+Zone IDs: `group-N`, `tab-G-N`, `btn-add`, `btn-create`, `btn-help`, `item-N`, `card-N`, `meta-edit`, `modal-name`, `modal-desc`, `modal-cancel`, `modal-save`, `help-close`, `crumb-N`
 
 ---
 
@@ -456,6 +475,35 @@ Zone IDs: `group-N`, `tab-G-N`, `btn-add`, `btn-create`, `item-N`, `modal-zone`
 - **R refresh hotkey**: `rescanCatalog()` re-reads all content from disk. App stores `contentRoot` for re-scanning.
 - **q backs out**: Only quits from Collections > Library browse. Detail view → browse, other tabs → Library.
 - **Double-click drill-in**: Second click on already-selected row triggers drill-in (same as Enter).
-- **[r] Rename button**: Styled button on metadata line 3, clickable zone `meta-rename`, triggers `libraryRenameMsg`.
+- **[e] Edit button**: Styled button on metadata line 3, clickable zone `meta-edit`, triggers `libraryEditMsg`. Opens two-field modal for name + description.
 - **Data sanitization**: `sanitizeLine()` strips \n, \r, \t from all text fields. YAML folded scalars (`>`) add trailing newlines that break table height.
 - **No lipgloss Width()**: Eliminated all `Width()` calls — use `MaxWidth()` + manual space padding. `Width()` word-wraps, creating multi-line output that breaks height calculations.
+
+### Phase 5 (Split Content Zone) — 2026-03-25
+- **File tree drill-in**: Enter on Library item opens file tree (left) + preview (right) in a split pane
+- **Breadcrumbs**: New row in topbar (6 lines total), blank at top level, fills in when drilled down
+- **Breadcrumb alignment**: `>` arrow aligns with first letter of active tab, max 30 chars per segment
+- **Clickable breadcrumbs**: Each segment is zone-marked (`crumb-N`), clicking navigates back
+
+### Phase 6 (Gallery Grid + Registry Validation) — 2026-03-25
+- **Gallery grid**: Responsive card layout for Loadouts/Registries (replaces explorer for those tabs)
+- **Card grid + contents sidebar**: `galleryModel` orchestrates `cardGridModel` (left 70%) + `contentsSidebarModel` (right 30%)
+- **Card data**: `cardData` struct holds name, desc, counts, items, status, path
+- **Gallery metadata panel**: 3-line panel (name, status/counts, description) matching Library/Explorer style
+- **Card rendering**: Fixed-height cards showing type counts (always 6 types, 0 for missing)
+- **Drill-in**: Enter on gallery card opens library view filtered to card's items
+- **Contents sidebar**: Name, description (word-wrapped), grouped items by type
+- **Search**: Matches all visible fields (name, display name, description, type, scope, installed)
+- **R refresh**: Reloads registries from content root config
+
+### Phase 7 (Edit Modal + Help Overlay) — 2026-03-25
+- **[r] Rename → [e] Edit**: Two-field modal (name + description) replaces single-field rename. Saves to `.syllago.yaml` via metadata package.
+- **Up/Down arrow field navigation**: Natural keyboard navigation between name and description fields
+- **Left/Right on buttons**: Navigate between Cancel and Save when focused on buttons
+- **Help overlay**: `?` key toggles full keyboard shortcut reference. Two-column layout, zone-safe manual border.
+- **`[?]` topbar button**: Clickable help trigger in top-right corner of topbar frame, mirrored position from logo. Zone: `btn-help`.
+- **`[Esc] Close` button**: Centered clickable close button in help overlay. Zone: `help-close`.
+- **overlayModal compositing**: Fixed to splice modal into background using `ansi.Truncate()`/`ansi.Cut()` — background visible on both sides.
+- **Word wrapping**: `wordWrap()` function for description text in contents sidebar — breaks at word boundaries instead of mid-word.
+- **Gallery edit support**: `[e] Edit` button + keyboard shortcut on Loadouts/Registries gallery views. Cards track `path` for metadata saves.
+- **Card description sourcing**: Loadout cards use `item.Description` (includes `.syllago.yaml` override) instead of re-parsing manifest. Registry cards check for `.syllago.yaml` override after manifest.

@@ -131,11 +131,7 @@ func (m contentsSidebarModel) descLines() int {
 		return 0
 	}
 	maxW := max(10, m.width-2)
-	desc := sanitizeLine(m.cardDesc)
-	if len(desc) <= maxW {
-		return 1
-	}
-	return (len(desc) + maxW - 1) / maxW
+	return len(wordWrap(sanitizeLine(m.cardDesc), maxW))
 }
 
 // View renders the contents sidebar.
@@ -160,24 +156,12 @@ func (m contentsSidebarModel) View() string {
 		allLines = append(allLines, boldStyle.Render("Name: ")+mutedStyle.Render(truncate(sanitizeLine(m.cardName), max(0, m.width-6))))
 	}
 
-	// Description (may wrap)
+	// Description (may wrap at word boundaries)
 	if m.cardDesc != "" {
 		desc := sanitizeLine(m.cardDesc)
 		maxW := max(10, m.width-2)
-		firstLine := truncate(desc, maxW)
-		allLines = append(allLines, mutedStyle.Render(firstLine))
-		// Wrap remaining
-		rest := desc
-		if len(rest) > maxW {
-			rest = rest[maxW:]
-			for len(rest) > 0 {
-				chunk := rest
-				if len(chunk) > maxW {
-					chunk = chunk[:maxW]
-				}
-				allLines = append(allLines, mutedStyle.Render(chunk))
-				rest = rest[len(chunk):]
-			}
+		for _, line := range wordWrap(desc, maxW) {
+			allLines = append(allLines, mutedStyle.Render(line))
 		}
 	}
 
