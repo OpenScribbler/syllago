@@ -121,11 +121,20 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 		line3 = styled
 	}
 
-	editBtn := zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit"))
-	editBtnW := lipgloss.Width(editBtn)
+	// Per-item action buttons: [e] Edit, [d] Remove, and [x] Uninstall (when installed)
+	var btns []string
+	btns = append(btns, zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit")))
+	if item.Library {
+		btns = append(btns, zone.Mark("meta-remove", activeButtonStyle.Render("[d] Remove")))
+	}
+	if data.installed != "--" {
+		btns = append(btns, zone.Mark("meta-uninstall", activeButtonStyle.Render("[x] Uninstall")))
+	}
+	btnRow := strings.Join(btns, " ")
+	btnRowW := lipgloss.Width(btnRow)
 	line3W := lipgloss.Width(line3)
-	btnGap := max(1, width-line3W-editBtnW)
-	line3 += strings.Repeat(" ", btnGap) + editBtn
+	btnGap := max(1, width-line3W-btnRowW)
+	line3 += strings.Repeat(" ", btnGap) + btnRow
 
 	pad := func(s string) string {
 		s = lipgloss.NewStyle().MaxWidth(width).Render(s)

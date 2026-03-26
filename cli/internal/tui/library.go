@@ -29,6 +29,12 @@ type libraryDrillMsg struct {
 // libraryEditMsg is sent when the edit button is clicked in the metadata bar.
 type libraryEditMsg struct{}
 
+// libraryRemoveMsg is sent when the remove button is clicked in the metadata bar.
+type libraryRemoveMsg struct{}
+
+// libraryUninstallMsg is sent when the uninstall button is clicked in the metadata bar.
+type libraryUninstallMsg struct{}
+
 // libraryCloseMsg is sent when the user closes the detail view.
 type libraryCloseMsg struct{}
 
@@ -227,9 +233,15 @@ func (l libraryModel) updateMouse(msg tea.MouseMsg) (libraryModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 		switch l.mode {
 		case libraryBrowse:
-			// Edit button click
+			// Metadata bar button clicks
 			if zone.Get("meta-edit").InBounds(msg) {
 				return l, func() tea.Msg { return libraryEditMsg{} }
+			}
+			if zone.Get("meta-remove").InBounds(msg) {
+				return l, func() tea.Msg { return libraryRemoveMsg{} }
+			}
+			if zone.Get("meta-uninstall").InBounds(msg) {
+				return l, func() tea.Msg { return libraryUninstallMsg{} }
 			}
 
 			// Column header clicks for sorting
@@ -266,9 +278,15 @@ func (l libraryModel) updateMouse(msg tea.MouseMsg) (libraryModel, tea.Cmd) {
 				}
 			}
 		case libraryDetail:
-			// Edit button click (in detail view too)
+			// Metadata bar button clicks
 			if zone.Get("meta-edit").InBounds(msg) {
 				return l, func() tea.Msg { return libraryEditMsg{} }
+			}
+			if zone.Get("meta-remove").InBounds(msg) {
+				return l, func() tea.Msg { return libraryRemoveMsg{} }
+			}
+			if zone.Get("meta-uninstall").InBounds(msg) {
+				return l, func() tea.Msg { return libraryUninstallMsg{} }
 			}
 			// Click on file tree nodes
 			for i := range l.tree.nodes {

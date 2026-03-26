@@ -74,30 +74,16 @@ func newTopBar() topBarModel {
 	}
 }
 
-// tabActions returns the context-sensitive action buttons for the current tab.
+// tabActions returns the global action buttons for the current tab (topbar Row 3).
+// Per-item actions ([e] Edit, [d] Remove, [x] Uninstall) are in the metadata panel.
 func (t topBarModel) tabActions() []tabAction {
 	switch t.ActiveTabLabel() {
-	case "Library":
+	case "Library", "Registries", "Skills", "Agents", "MCP", "Rules", "Hooks", "Commands":
 		return []tabAction{
 			{"[a] Add", "btn-add", "add"},
-			{"[d] Remove", "btn-remove", "remove"},
-			{"[x] Uninstall", "btn-uninstall", "uninstall"},
-		}
-	case "Registries":
-		return []tabAction{
-			{"[a] Add", "btn-add", "add"},
-			{"[d] Remove", "btn-remove", "remove"},
 		}
 	case "Loadouts":
-		return []tabAction{
-			{"[d] Remove", "btn-remove", "remove"},
-		}
-	case "Skills", "Agents", "MCP", "Rules", "Hooks", "Commands":
-		return []tabAction{
-			{"[a] Add", "btn-add", "add"},
-			{"[d] Remove", "btn-remove", "remove"},
-			{"[x] Uninstall", "btn-uninstall", "uninstall"},
-		}
+		return nil // no global actions on loadouts
 	default: // Config tabs
 		return nil
 	}

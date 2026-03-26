@@ -175,9 +175,12 @@ func (g galleryModel) updateSidebarKeys(msg tea.KeyMsg) (galleryModel, tea.Cmd) 
 
 func (g galleryModel) updateMouse(msg tea.MouseMsg) (galleryModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
-		// Edit button click
+		// Metadata bar button clicks
 		if zone.Get("meta-edit").InBounds(msg) {
 			return g, func() tea.Msg { return libraryEditMsg{} }
+		}
+		if zone.Get("meta-remove").InBounds(msg) {
+			return g, func() tea.Msg { return libraryRemoveMsg{} }
 		}
 
 		for i := range g.grid.cards {
@@ -338,18 +341,20 @@ func (g galleryModel) renderMetadata(width int) string {
 		line2 += gap + mutedStyle.Render(strings.Join(countParts, ", "))
 	}
 
-	// Line 3: Description + [e] Edit button right-aligned
+	// Line 3: Description + action buttons right-aligned
 	editBtn := zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit"))
-	editBtnW := lipgloss.Width(editBtn)
+	removeBtn := zone.Mark("meta-remove", activeButtonStyle.Render("[d] Remove"))
+	btnRow := editBtn + " " + removeBtn
+	btnRowW := lipgloss.Width(btnRow)
 
 	line3 := ""
 	if card.desc != "" {
-		maxDescW := max(10, width-editBtnW-3) // -3 for padding
+		maxDescW := max(10, width-btnRowW-3) // -3 for padding
 		line3 = " " + mutedStyle.Render(truncate(sanitizeLine(card.desc), maxDescW))
 	}
 	line3W := lipgloss.Width(line3)
-	btnGap := max(1, width-line3W-editBtnW)
-	line3 += strings.Repeat(" ", btnGap) + editBtn
+	btnGap := max(1, width-line3W-btnRowW)
+	line3 += strings.Repeat(" ", btnGap) + btnRow
 
 	pad := func(s string) string {
 		s = lipgloss.NewStyle().MaxWidth(width).Render(s)

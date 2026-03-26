@@ -128,7 +128,7 @@ func TestRemoveModal_Installed_Step1(t *testing.T) {
 	if !strings.Contains(stripped, "2 provider") {
 		t.Error("should mention 2 providers")
 	}
-	if !strings.Contains(stripped, "Remove Only") {
+	if !strings.Contains(stripped, "No") {
 		t.Error("should show Remove Only button")
 	}
 	if !strings.Contains(stripped, "Yes") {
@@ -140,7 +140,7 @@ func TestRemoveModal_Installed_RemoveOnly(t *testing.T) {
 	m := newRemoveModal()
 	m.Open(testItem(), testInstalledProviders())
 
-	// Press "Remove Only" (focus 1)
+	// Press "No" (focus 1)
 	m.focusIdx = 1
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if m.step != removeStepReview {
