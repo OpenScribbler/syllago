@@ -400,12 +400,12 @@ func (m removeModal) viewConfirm(usableW int, pad string) string {
 		lines = append(lines, "")
 		provMsg := fmt.Sprintf("This content is installed in %d provider(s).", len(m.installedProviders))
 		lines = append(lines, pad+lipgloss.NewStyle().Foreground(primaryText).Render(provMsg))
-		lines = append(lines, pad+lipgloss.NewStyle().Foreground(primaryText).Render("Uninstall from them too?"))
+		lines = append(lines, pad+lipgloss.NewStyle().Foreground(primaryText).Render("Also uninstall from those providers?"))
 		lines = append(lines, "")
 		lines = append(lines, m.renderButtons(usableW, pad,
 			buttonDef{"Cancel", "rm-cancel", 0},
-			buttonDef{"No", "rm-remove-only", 1},
-			buttonDef{"Yes", "rm-yes", 2},
+			buttonDef{"Remove only", "rm-remove-only", 1},
+			buttonDef{"Remove and uninstall", "rm-yes", 2},
 		))
 	} else {
 		lines = append(lines, "")

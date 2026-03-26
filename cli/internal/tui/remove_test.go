@@ -128,11 +128,11 @@ func TestRemoveModal_Installed_Step1(t *testing.T) {
 	if !strings.Contains(stripped, "2 provider") {
 		t.Error("should mention 2 providers")
 	}
-	if !strings.Contains(stripped, "No") {
-		t.Error("should show Remove Only button")
+	if !strings.Contains(stripped, "Remove only") {
+		t.Error("should show 'Remove only' button")
 	}
-	if !strings.Contains(stripped, "Yes") {
-		t.Error("should show Yes button")
+	if !strings.Contains(stripped, "Remove and uninstall") {
+		t.Error("should show 'Remove and uninstall' button")
 	}
 }
 
