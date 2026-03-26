@@ -28,7 +28,7 @@ func CreateSymlink(source, target string) error {
 		return fmt.Errorf("creating temp symlink: %w", err)
 	}
 	if err := os.Rename(tmp, target); err != nil {
-		os.Remove(tmp) // clean up on failure
+		_ = os.Remove(tmp) // clean up on failure (best-effort)
 		return fmt.Errorf("renaming symlink: %w", err)
 	}
 	return nil
