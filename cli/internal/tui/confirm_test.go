@@ -270,7 +270,7 @@ func TestConfirmModal_InactiveIgnoresInput(t *testing.T) {
 	if cmd != nil {
 		t.Error("inactive modal should not produce commands")
 	}
-	m, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
 	if cmd != nil {
 		t.Error("inactive modal should not produce commands for y")
 	}
