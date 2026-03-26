@@ -121,15 +121,15 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 		line3 = styled
 	}
 
-	// Per-item action buttons: [e] Edit, [d] Remove, and [x] Uninstall (when installed)
+	// Per-item action buttons ordered: [x] Uninstall, [d] Remove, [e] Edit
+	// Uninstall only shows when installed. Remove always shows (handler guards non-library).
+	// Order: left=conditional (less jank when buttons appear/disappear), right=always present.
 	var btns []string
-	btns = append(btns, zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit")))
-	if item.Library {
-		btns = append(btns, zone.Mark("meta-remove", activeButtonStyle.Render("[d] Remove")))
-	}
 	if data.installed != "--" {
 		btns = append(btns, zone.Mark("meta-uninstall", activeButtonStyle.Render("[x] Uninstall")))
 	}
+	btns = append(btns, zone.Mark("meta-remove", activeButtonStyle.Render("[d] Remove")))
+	btns = append(btns, zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit")))
 	btnRow := strings.Join(btns, " ")
 	btnRowW := lipgloss.Width(btnRow)
 	line3W := lipgloss.Width(line3)
