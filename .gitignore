@@ -36,6 +36,7 @@ docs/*
 !docs/vhs/
 !docs/spec/
 !docs/security/
+!docs/blogs/
 tmp/
 
 # Development workflow state
