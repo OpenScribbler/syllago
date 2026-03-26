@@ -1007,17 +1007,21 @@ blockers are complete. This is enforced via bead dependencies.
    │  validateStep prerequisites reflected, async safety patterns included.
    │  BLOCKING: no implementation begins until parity confirmed.
    │
-3. Implementation Tasks (may run in parallel where deps allow)
-   │  Each task has explicit success criteria defined in the plan.
-   │  Task is not marked complete until criteria are met.
+3. Sequential Task → Validate Chain
+   │  Tasks execute one at a time in strict sequence:
+   │    Impl Task A → Validate Task A → Impl Task B → Validate Task B → ...
    │
-4. Per-Task Validation
-   │  Separate bead per implementation task. A DIFFERENT agent validates
-   │  the work meets success criteria — the implementing agent does not
-   │  self-validate. Runs tests, reviews goldens, checks criteria.
+   │  Rules:
+   │  - Each task has explicit success criteria defined in the plan.
+   │  - After completing a task, a DIFFERENT sub-agent validates it
+   │    against the success criteria before the next task begins.
+   │  - The implementing agent does NOT self-validate.
+   │  - Validation runs tests, reviews code, checks criteria.
+   │  - If validation fails, fix the task before moving on.
+   │  - The validation bead BLOCKS the next implementation bead.
    │
-5. Phase Validation
-      Final bead blocked by all per-task validations.
+4. Phase Validation
+      Final bead blocked by the last per-task validation.
       Runs full test suite (make test), builds binary, smoke tests in
       real TUI. Confirms phase is complete and ready for next phase.
 ```
@@ -1027,12 +1031,20 @@ blockers are complete. This is enforced via bead dependencies.
 ```
 Plan (READY)
   └── Parity Check (blocked by plan)
-      ├── Impl Task A ──→ Validate Task A
-      ├── Impl Task B ──→ Validate Task B  (B may depend on A)
-      ├── Impl Task C ──→ Validate Task C
-      └── ...
-          └── Phase Validation (blocked by ALL task validations)
+      └── Impl Task A (blocked by parity)
+          └── Validate Task A (blocked by impl A)
+              └── Impl Task B (blocked by validate A)
+                  └── Validate Task B (blocked by impl B)
+                      └── Impl Task C (blocked by validate B)
+                          └── Validate Task C (blocked by impl C)
+                              └── Phase Validation (blocked by last validate)
 ```
+
+**Why sequential, not parallel?** A validation failure on Task A may change the
+approach for Task B. Running tasks in parallel defeats the purpose of the gate —
+you'd have to undo work if an earlier validation fails. The cost of sequential
+execution is small (each task is focused), and the benefit is catching issues
+before they compound.
 
 **Incremental planning:** Only the current phase gets a full implementation
 plan and beads. The next phase is planned after the current phase passes
