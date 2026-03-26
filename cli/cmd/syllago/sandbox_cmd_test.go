@@ -125,3 +125,60 @@ func TestSandboxAllowPort_InvalidPort(t *testing.T) {
 		t.Error("expected error for non-integer port")
 	}
 }
+
+func TestRemoveIntItem(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		slice []int
+		item  int
+		want  []int
+	}{
+		{"remove from middle", []int{1, 2, 3}, 2, []int{1, 3}},
+		{"remove first", []int{1, 2, 3}, 1, []int{2, 3}},
+		{"remove last", []int{1, 2, 3}, 3, []int{1, 2}},
+		{"missing item", []int{1, 2, 3}, 4, []int{1, 2, 3}},
+		{"empty slice", []int{}, 1, nil},
+		{"single element removed", []int{5}, 5, nil},
+		{"single element kept", []int{5}, 3, []int{5}},
+		{"duplicates", []int{1, 2, 2, 3}, 2, []int{1, 3}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := removeIntItem(tt.slice, tt.item)
+			if len(got) != len(tt.want) {
+				t.Errorf("removeIntItem(%v, %d) = %v, want %v", tt.slice, tt.item, got, tt.want)
+				return
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("removeIntItem(%v, %d) = %v, want %v", tt.slice, tt.item, got, tt.want)
+					return
+				}
+			}
+		})
+	}
+}
+
+func TestSandboxFormatList(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		items []string
+		want  string
+	}{
+		{"empty", []string{}, "(none)"},
+		{"single", []string{"foo"}, "foo"},
+		{"multiple", []string{"foo", "bar", "baz"}, "foo, bar, baz"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := sandboxFormatList(tt.items)
+			if got != tt.want {
+				t.Errorf("sandboxFormatList(%v) = %q, want %q", tt.items, got, tt.want)
+			}
+		})
+	}
+}
