@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -36,6 +38,7 @@ type App struct {
 	helpBar  helpBarModel
 	modal    editModal   // reusable edit overlay (name + description)
 	help     helpOverlay // keyboard shortcut reference (? key)
+	toast    toastModel  // bottom-right notification overlay
 
 	// Dimensions
 	width, height int
@@ -72,6 +75,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		helpBar:         newHelpBar(version),
 		modal:           newEditModal(),
 		help:            newHelpOverlay(),
+		toast:           newToastModel(),
 	}
 	a.updateNavState()
 	return a
@@ -96,6 +100,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.explorer.SetSize(msg.Width, ch)
 		a.gallery.SetSize(msg.Width, ch)
 		a.help.SetSize(msg.Width, ch)
+		a.toast.SetSize(msg.Width, ch)
 		return a, nil
 
 	case tea.MouseMsg:
@@ -128,6 +133,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			a.help, cmd = a.help.Update(msg)
 			return a, cmd
+		}
+
+		// Toast consumes Esc and 'c' when visible (after modal/help)
+		if a.toast.visible {
+			consumed, cmd := a.toast.HandleKey(msg)
+			if consumed {
+				return a, cmd
+			}
 		}
 
 		// When library search is active, only handle ctrl+c — everything
@@ -234,13 +247,18 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Refresh catalog (re-scan content from disk)
 		case msg.String() == keyRefresh:
-			a.rescanCatalog()
-			return a, nil
+			cmd := a.rescanCatalog()
+			return a, cmd
 
 		// Route to active content model
 		default:
 			return a.routeKey(msg)
 		}
+
+	case toastTickMsg:
+		var cmd tea.Cmd
+		a.toast, cmd = a.toast.Update(msg)
+		return a, cmd
 
 	case editSavedMsg:
 		return a.handleEditSaved(msg)
@@ -330,23 +348,27 @@ func (a App) handleEdit() (tea.Model, tea.Cmd) {
 }
 
 // handleEditSaved persists name and description to .syllago.yaml and updates in-place.
+// Directory items use metadata.Load/Save (writes <dir>/.syllago.yaml).
+// Single-file items (legacy hooks/MCP) use metadata.LoadProvider/SaveProvider
+// (writes <parentdir>/.syllago.<filename>.yaml).
 func (a App) handleEditSaved(msg editSavedMsg) (tea.Model, tea.Cmd) {
 	if msg.path == "" {
 		return a, nil
 	}
 
-	// Load or create metadata
-	meta, err := metadata.Load(msg.path)
+	meta, err := loadMetaForPath(msg.path)
 	if err != nil {
-		return a, nil
+		cmd := a.toast.Push("Failed to load metadata: "+err.Error(), toastError)
+		return a, cmd
 	}
 	if meta == nil {
 		meta = &metadata.Meta{}
 	}
 	meta.Name = msg.name
 	meta.Description = msg.description
-	if err := metadata.Save(msg.path, meta); err != nil {
-		return a, nil
+	if err := saveMetaForPath(msg.path, meta); err != nil {
+		cmd := a.toast.Push("Failed to save: "+err.Error(), toastError)
+		return a, cmd
 	}
 
 	// Update in-place in the catalog (avoid full re-scan)
@@ -358,7 +380,8 @@ func (a App) handleEditSaved(msg editSavedMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	a.refreshContent()
-	return a, nil
+	cmd := a.toast.Push("Saved", toastSuccess)
+	return a, cmd
 }
 
 // routeKey sends key messages to the active content model.
@@ -421,6 +444,9 @@ func (a App) View() string {
 	if a.help.active {
 		content = overlayModal(content, a.help.View(), a.width, a.contentHeight())
 	}
+	if a.toast.visible {
+		content = overlayToast(content, a.toast.View(), a.width, a.contentHeight())
+	}
 
 	return zone.Scan(lipgloss.JoinVertical(lipgloss.Left,
 		topBar,
@@ -472,7 +498,7 @@ func (a App) isGalleryTab() bool {
 
 // rescanCatalog re-reads all content from disk and refreshes the active view.
 // Re-reads the config to pick up registries added/removed since startup.
-func (a *App) rescanCatalog() {
+func (a *App) rescanCatalog() tea.Cmd {
 	root := a.contentRoot
 	if root == "" {
 		root = a.projectRoot
@@ -500,12 +526,13 @@ func (a *App) rescanCatalog() {
 
 	cat, err := catalog.ScanWithGlobalAndRegistries(root, projectRoot, regSources)
 	if err != nil {
-		return // silently fail — keep existing data
+		return a.toast.Push("Refresh failed: "+err.Error(), toastError)
 	}
 	a.catalog = cat
 	a.galleryDrillIn = false
 	a.refreshContent()
 	a.updateNavState()
+	return a.toast.Push("Catalog refreshed", toastSuccess)
 }
 
 // refreshContent updates the active content model based on the current tab.
@@ -747,4 +774,30 @@ func overlayModal(bg, modal string, width, height int) string {
 		bgLines = bgLines[:height]
 	}
 	return strings.Join(bgLines, "\n")
+}
+
+// isFilePath returns true if path points to a file (not a directory).
+func isFilePath(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		// If path doesn't exist, check if it has an extension (heuristic for files).
+		return filepath.Ext(path) != ""
+	}
+	return !info.IsDir()
+}
+
+// loadMetaForPath loads metadata for either a directory or single-file item.
+func loadMetaForPath(path string) (*metadata.Meta, error) {
+	if isFilePath(path) {
+		return metadata.LoadProvider(filepath.Dir(path), filepath.Base(path))
+	}
+	return metadata.Load(path)
+}
+
+// saveMetaForPath saves metadata for either a directory or single-file item.
+func saveMetaForPath(path string, meta *metadata.Meta) error {
+	if isFilePath(path) {
+		return metadata.SaveProvider(filepath.Dir(path), filepath.Base(path), meta)
+	}
+	return metadata.Save(path, meta)
 }

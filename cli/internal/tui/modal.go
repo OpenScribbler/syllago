@@ -195,6 +195,18 @@ func (m editModal) updateKey(msg tea.KeyMsg) (editModal, tea.Cmd) {
 			m.cursor = len([]rune(*m.focusedValue()))
 		}
 
+	case tea.KeySpace:
+		if m.isTextField() {
+			val := m.focusedValue()
+			runes := []rune(*val)
+			newRunes := make([]rune, 0, len(runes)+1)
+			newRunes = append(newRunes, runes[:m.cursor]...)
+			newRunes = append(newRunes, ' ')
+			newRunes = append(newRunes, runes[m.cursor:]...)
+			*val = string(newRunes)
+			m.cursor++
+		}
+
 	case tea.KeyRunes:
 		if m.isTextField() {
 			val := m.focusedValue()
