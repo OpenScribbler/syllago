@@ -990,6 +990,57 @@ Where `installed` maps item names to install status, avoiding filesystem checks.
 
 ## Build Order (Implementation Phases)
 
+### Phase Execution Process
+
+Every phase follows the same gated workflow. No step begins until its
+blockers are complete. This is enforced via bead dependencies.
+
+```
+1. Write Implementation Plan
+   │  Detailed spec: file changes, function signatures, message types,
+   │  test list with success criteria per task.
+   │
+2. Parity Validation Gate
+   │  Sub-agent cross-references the plan against this design doc.
+   │  Verifies: every design requirement covered, no contradictions
+   │  with Go Architecture Rules, all test cases have success criteria,
+   │  validateStep prerequisites reflected, async safety patterns included.
+   │  BLOCKING: no implementation begins until parity confirmed.
+   │
+3. Implementation Tasks (may run in parallel where deps allow)
+   │  Each task has explicit success criteria defined in the plan.
+   │  Task is not marked complete until criteria are met.
+   │
+4. Per-Task Validation
+   │  Separate bead per implementation task. A DIFFERENT agent validates
+   │  the work meets success criteria — the implementing agent does not
+   │  self-validate. Runs tests, reviews goldens, checks criteria.
+   │
+5. Phase Validation
+      Final bead blocked by all per-task validations.
+      Runs full test suite (make test), builds binary, smoke tests in
+      real TUI. Confirms phase is complete and ready for next phase.
+```
+
+**Bead dependency structure per phase:**
+
+```
+Plan (READY)
+  └── Parity Check (blocked by plan)
+      ├── Impl Task A ──→ Validate Task A
+      ├── Impl Task B ──→ Validate Task B  (B may depend on A)
+      ├── Impl Task C ──→ Validate Task C
+      └── ...
+          └── Phase Validation (blocked by ALL task validations)
+```
+
+**Incremental planning:** Only the current phase gets a full implementation
+plan and beads. The next phase is planned after the current phase passes
+its final validation. This prevents wasted planning if earlier phases
+reveal design changes.
+
+---
+
 ### Phase A: Foundation
 
 **Confirm modal + per-item actions**
