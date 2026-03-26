@@ -7,7 +7,7 @@
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ Python-Web                                Loadout  0 items                   │
 │ Status: local  0 Agents, 0 Commands, 0 Hooks, 0 MCP Servers, 0 Rules, 0 Skill│
-│                                                   [d] Remove      [e] Edit   │
+│                                [x] Uninstall      [d] Remove      [e] Edit   │
 ├──────────────────────────────────────────────────────┬───────────────────────┤
 │╭──────────────────────────╮                          │Name: Python-Web       │
 ││Python-Web                │                          │                       │

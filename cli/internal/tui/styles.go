@@ -43,6 +43,13 @@ var (
 				Padding(0, 2).
 				MarginRight(1)
 
+	// Disabled button — same shape, muted colors (not clickable)
+	disabledButtonStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.AdaptiveColor{Light: "#B7B5AC", Dark: "#575653"}). // base-300/700
+				Background(lipgloss.AdaptiveColor{Light: "#E6E4D9", Dark: "#343331"}). // base-100/850
+				Padding(0, 2).
+				MarginRight(1)
+
 	// Selected row (full-width background, gh-dash pattern)
 	selectedRowStyle = lipgloss.NewStyle().
 				Background(selectedBG).

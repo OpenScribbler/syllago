@@ -342,9 +342,11 @@ func (g galleryModel) renderMetadata(width int) string {
 	}
 
 	// Line 3: Description + action buttons right-aligned
+	// All buttons always visible; uninstall grayed out for cards (not applicable).
+	uninstallBtn := disabledButtonStyle.Render("[x] Uninstall")
 	removeBtn := zone.Mark("meta-remove", activeButtonStyle.Render("[d] Remove"))
 	editBtn := zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit"))
-	btnRow := removeBtn + " " + editBtn
+	btnRow := uninstallBtn + " " + removeBtn + " " + editBtn
 	btnRowW := lipgloss.Width(btnRow)
 
 	line3 := ""
