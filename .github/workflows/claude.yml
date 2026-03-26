@@ -33,21 +33,21 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Get Claude credentials from Aembit
+        id: aembit
+        uses: Aembit/get-credentials@3de1076cbb219a12107a6f3f92b2ae8bc018e618 # v1.1.1
+        with:
+          client-id: aembit:useast2:c7053f:identity:github_idtoken:2bbc8270-85a4-4c27-8c49-19e5590dfa87
+          credential-type: ApiKey
+          server-host: api.anthropic.com
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@273fe825408ddced56cb02b228a74c72bed8241e # v1
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_code_oauth_token: ${{ steps.aembit.outputs.api-key }}
 
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
             actions: read
-
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
-
-          # Optional: Add claude_args to customize behavior and configuration
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
-          # claude_args: '--allowed-tools Bash(gh pr:*)'
 
