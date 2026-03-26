@@ -370,6 +370,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case actionPressedMsg:
 		switch msg.action {
+		case "add":
+			// Add wizard (Phase D) — no-op for now
 		case "remove":
 			return a.handleRemove()
 		case "uninstall":
