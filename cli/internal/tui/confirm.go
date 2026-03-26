@@ -60,6 +60,9 @@ func (m confirmModal) confirmIdx() int { return len(m.checks) + 1 }
 // focusCount returns the total number of focusable elements.
 func (m confirmModal) focusCount() int { return len(m.checks) + 2 }
 
+// isButtonFocus returns true if the current focus is on a button (not a checkbox).
+func (m confirmModal) isButtonFocus() bool { return m.focusIdx >= m.cancelIdx() }
+
 // Open activates the modal with the given parameters. Default focus on Cancel (safe default).
 func (m *confirmModal) Open(title, body, confirmLabel string, danger bool, checks []confirmCheckbox) {
 	m.active = true
@@ -160,6 +163,23 @@ func (m confirmModal) updateKey(msg tea.KeyMsg) (confirmModal, tea.Cmd) {
 	case msg.Type == tea.KeyUp || (msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'k'):
 		if m.focusIdx > 0 {
 			m.focusIdx--
+		}
+
+	case msg.Type == tea.KeyLeft:
+		if m.isButtonFocus() {
+			if m.focusIdx == m.cancelIdx() {
+				m.focusIdx = m.confirmIdx() // wrap to last button
+			} else {
+				m.focusIdx--
+			}
+		}
+	case msg.Type == tea.KeyRight:
+		if m.isButtonFocus() {
+			if m.focusIdx == m.confirmIdx() {
+				m.focusIdx = m.cancelIdx() // wrap to first button
+			} else {
+				m.focusIdx++
+			}
 		}
 	}
 	return m, nil
