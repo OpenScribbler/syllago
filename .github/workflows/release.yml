@@ -107,16 +107,25 @@ jobs:
             commands.json sbom.spdx.json \
             checksums.txt checksums.txt.bundle
 
+      - name: Get Homebrew tap credentials from Aembit
+        id: aembit-homebrew
+        continue-on-error: true
+        uses: Aembit/get-credentials@3de1076cbb219a12107a6f3f92b2ae8bc018e618 # v1.1.1
+        with:
+          client-id: aembit:useast2:c7053f:identity:github_idtoken:2bbc8270-85a4-4c27-8c49-19e5590dfa87
+          credential-type: ApiKey
+          server-host: github.com
+
       - name: Update Homebrew formula
         continue-on-error: true
         env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ steps.aembit-homebrew.outputs.api-key }}
           VERSION: ${{ env.VERSION }}
           TAG_NAME: ${{ github.ref_name }}
         working-directory: cli
         run: |
           if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
-            echo "HOMEBREW_TAP_TOKEN not set, skipping Homebrew update"
+            echo "Homebrew tap token not available, skipping Homebrew update"
             exit 0
           fi
 
