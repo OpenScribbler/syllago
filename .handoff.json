@@ -2,81 +2,85 @@
   "$schema": "handoff-v1",
   "current": {
     "project": "syllago",
-    "updated": "2026-03-25T21:55:00Z",
-    "sessionId": "phase5-complete-roadmap-update",
-    "summary": "Phase 5 COMPLETE (explorer drill-in). Cleaned up test hooks (release skill uninstalled from 7 providers). Updated phase roadmap: Phase 6 = Gallery Grid + Registry Validation, Phase 7 = Modals + Edit Modal + Help Overlay. Phase 6 spec written.",
+    "updated": "2026-03-26T20:35:00Z",
+    "sessionId": "1e4d29d2-db13-46ea-ac43-c4818dd48fdf",
+    "summary": "TUI wizards design doc finalized (1096 lines), Phase A beads created with dependency chain and parity validation gate",
     "activeWork": {
-      "description": "TUI v3 — Phases 1-5 complete, Phase 6 spec ready for implementation",
-      "feature": "tui-v3-phase6",
-      "stage": "ready-to-implement",
-      "planRef": "docs/specs/tui-phase6-gallery.md",
-      "designRef": "docs/design/tui-adaptive-zones.md",
-      "progress": "Phases 1-5 complete. Phase 6 spec written (Gallery Grid + Registry Validation). Phase 7 scope defined (modals, edit modal, help overlay). All 22 test packages passing.",
+      "description": "Phase A Foundation - build confirmModal, wire [d] Remove and [x] Uninstall actions, hide [n] Create button",
+      "feature": "Phase A Foundation",
+      "stage": "planning",
+      "planRef": "syllago-kopxr",
+      "designRef": "docs/design-systems/2026-03-19-tui-v3-wizard-design.md",
+      "progress": "Design doc complete with Go/TUI expert recommendations integrated. Phase A bead structure created (12 beads: 1 epic, 1 plan, 5 implementation, 4 validation). Parity validation gate established between planning and implementation. Ready to write Phase A implementation plan.",
       "blockers": [],
-      "beads": null
+      "beads": {
+        "epic": "syllago-hsmy6",
+        "plan": "syllago-kopxr (READY)",
+        "gateValidation": "syllago-jin25 (blocked by plan)",
+        "implementation": [
+          "syllago-ogh65",
+          "syllago-d5e3g",
+          "syllago-a3vvt"
+        ],
+        "perTaskValidation": [
+          "syllago-cwdw7",
+          "syllago-j5q6b",
+          "syllago-ob8vo"
+        ],
+        "phaseValidation": "syllago-9d3iw"
+      }
     },
     "git": {
       "branch": "main",
-      "uncommittedFiles": 8,
-      "lastCommit": "5d8f158 docs: update TUI docs with Phase 4.5 patterns and decisions",
+      "uncommittedFiles": 3,
+      "lastCommit": "965dd0e docs: add phase execution process to wizards design doc",
       "modifiedFiles": [
-        "cli/internal/tui/explorer.go (drill-in detail mode for Content tabs)",
-        "cli/internal/tui/app.go (explorer detail mode routing, q back-out, hints)",
-        "cli/internal/tui/testdata/content-80x30.golden (new hints)",
-        "cli/internal/tui/testdata/explorer-skills-80x30.golden (new hints)",
-        "docs/specs/tui-phase6-gallery.md (NEW - Phase 6 spec)",
-        "docs/design/tui-adaptive-zones.md (updated build order, phases 1-5 marked DONE)",
-        ".claude/skills/tui-builder/references/testing-setup.md (Phase 6+7 test checklists)"
-      ],
-      "actionRequired": "COMMIT AND PUSH — all changes are tested and ready. Two logical commits: (1) feat: explorer drill-in detail mode, (2) docs: Phase 6 spec and roadmap updates."
+        ".handoff.json",
+        "cli/.syllago/audit.jsonl",
+        "content/skills/syllago-guide/.syllago.yaml"
+      ]
     },
     "recentDecisions": [
-      "Phase 5 = explorer drill-in (Enter on Content tab items → file tree + preview). DONE.",
-      "Phase 6 = Gallery Grid for Loadouts/Registries + Registry Validation (warn unnamed hooks/MCP)",
-      "Phase 7 = Modals expansion: [r] Rename becomes [e] Edit with two-field modal (name + description). Install/uninstall wizard. Loadout apply/remove confirmation. Help overlay (? key).",
-      "Phase 8 = Toasts, Phase 9 = Search extension, Phase 10 = Polish",
-      "Explorer drill-in mirrors library pattern: explorerMode enum, drillIn(), loadSelectedFile(), viewDetail(), file tree + preview split",
-      "Double-click on explorer item row also drills in (same as library)",
-      "Release skill uninstalled from all 7 providers (was test artifact)"
+      "Pointer fields for wizard models on App (avoid value copy overhead)",
+      "Top-level wizardMode flag with early-return routing",
+      "Wizard shell includes step breadcrumbs (no separate component)",
+      "Parameterize existing edit modal (avoid modal duplication)",
+      "Parity validation gate: plan → gate → implementation → validation",
+      "Incremental bead creation: Phase A only, Phase B after A validated"
     ],
     "nextSteps": [
-      "1. COMMIT+PUSH this session's changes (explorer drill-in + Phase 6 spec + roadmap docs)",
-      "2. PHASE 6 — GALLERY GRID: Implement gallery.go, cards.go, contents.go per spec at docs/specs/tui-phase6-gallery.md",
-      "3. PHASE 6 — REGISTRY VALIDATION: Add checkNamingWarnings() to scanner, naming quality check to doctor command",
-      "4. PHASE 7 — when Phase 6 is done: modals, edit modal, install/uninstall wizard, help overlay"
+      "syllago-kopxr: Write Phase A implementation plan (confirmModal structure, [d]/[x] wiring logic, inline error display)",
+      "syllago-jin25: Run parity validation (sub-agent confirms plan vs design doc alignment)",
+      "syllago-ogh65: Build confirmModal component (parameterized field count, state machine)",
+      "syllago-cwdw7 + syllago-98lgb: Wire [d] Remove and [x] Uninstall (execution logic, validation)",
+      "Validation beads: Confirm each task meets success criteria",
+      "syllago-9d3iw: Phase A final validation, then create Phase B spec"
     ],
     "context": {
-      "notes": "All 22 test packages passing. Binary rebuilt. Explorer now has full browse/detail mode parity with Library. The explorer detail mode reuses fileTreeModel, loadSelectedFile pattern, and the same bordered frame assembly with T-junctions.",
-      "tuiFiles": "app.go, explorer.go, library.go, table.go, filetree.go, items.go, preview.go, topbar.go, helpbar.go, styles.go, keys.go, modal.go, metapanel.go",
-      "phase6Spec": "docs/specs/tui-phase6-gallery.md — covers Gallery Grid (cards.go, gallery.go, contents.go) + Registry Validation (scanner warnings, doctor check). Build order: card data model → card grid → contents sidebar → gallery model → app integration → registry validation → tests.",
-      "phase7Scope": "Edit modal (name + description, replaces rename), install/uninstall wizard, loadout apply/remove confirmation, help overlay. [r]→[e] shortcut change."
+      "designDocUrl": "docs/design-systems/2026-03-19-tui-v3-wizard-design.md",
+      "designDocSize": "1096 lines",
+      "expertReviews": [
+        "QA expert: state invalidation, async patterns, 60+ test cases",
+        "Go/TUI expert: architecture (pointer fields, wizardMode), component design (parameterized modals), error handling (inline display)"
+      ],
+      "phaseExecutionProcess": "Added to design doc: gated workflow (plan → parity → impl → validation), bead dependency diagram, incremental planning rules",
+      "readyToExecute": true
     }
   },
   "previousSessions": [
     {
-      "date": "2026-03-25T15:30:00Z",
-      "sessionId": "phase4-metadata-panel-hook-bundling",
-      "summary": "Phase 4+ COMPLETE. Metadata panel as reusable bordered component across all tabs. Hook script bundling shipped. Multiple UX improvements: R refresh, q backs out, transparent modal, double-click drill-in, rename button."
+      "date": "2026-03-26T20:30:00Z",
+      "summary": "Phase 8 shipped, TUI wizards design doc completed (1096 lines) with two expert reviews, Phase A beads created",
+      "completedWork": [
+        "Go/TUI expert review: architecture + component design + error handling recommendations",
+        "Design doc integrated all recommendations (pointer fields, wizardMode routing, parameterized edit modal, inline errors, phase execution process)",
+        "Phase A bead structure: 12 beads with correct dependency chain and parity validation gate",
+        "Ready to execute Phase A implementation"
+      ]
     },
     {
-      "date": "2026-03-25T07:30:00Z",
-      "sessionId": "naming-feature-complete-mcp-fix",
-      "summary": "Hook/MCP naming feature complete. MCP scanner fix shipped. Clickable sort headers. Input field styling. Hook script bundling design decisions captured."
-    },
-    {
-      "date": "2026-03-25T06:20:00Z",
-      "sessionId": "phase3-complete-naming-in-progress",
-      "summary": "TUI v3 Phase 3 complete. Naming feature started — scanner DisplayName heuristics and CLI rename command shipped."
-    },
-    {
-      "date": "2026-03-25T05:01:46Z",
-      "sessionId": "design-pause-multifile-content",
-      "summary": "Brief session — paused to clarify file tree expansion UI. Resolved: file tree supports expand/collapse."
-    },
-    {
-      "date": "2026-03-24T23:45:00Z",
-      "sessionId": "phase1-2-complete",
-      "summary": "TUI v3 Phase 1+2 complete. Shell, styles, test infrastructure, two-tier tab navigation."
+      "date": "2026-03-25T23:55:00Z",
+      "summary": "Phases 1-7 complete: shell, styles, keys, help, explorer, metadata, modals"
     }
   ]
 }
