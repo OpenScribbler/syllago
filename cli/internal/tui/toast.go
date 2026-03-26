@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"encoding/base64"
+	"fmt"
 	"strings"
 	"time"
 
@@ -152,10 +154,15 @@ func (t *toastModel) HandleKey(msg tea.KeyMsg) (consumed bool, cmd tea.Cmd) {
 }
 
 // copyAndDismiss writes OSC 52 clipboard escape sequence and dismisses.
+// OSC 52 is supported by Windows Terminal, iTerm2, kitty, and most modern terminals.
 func (t *toastModel) copyAndDismiss(text string) tea.Cmd {
 	dismissCmd := t.Dismiss()
-	// OSC 52 clipboard: \x1b]52;c;<base64>\x07
-	return dismissCmd
+	encoded := base64.StdEncoding.EncodeToString([]byte(text))
+	osc52 := fmt.Sprintf("\x1b]52;c;%s\x07", encoded)
+	return tea.Batch(
+		tea.Printf("%s", osc52),
+		dismissCmd,
+	)
 }
 
 // tickCmd returns a tea.Tick command for the current toast's auto-dismiss duration.
