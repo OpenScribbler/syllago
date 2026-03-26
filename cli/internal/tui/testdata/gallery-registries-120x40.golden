@@ -7,7 +7,7 @@
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ my-registry                               Registry  2 items  Source: /tmp/fake-registry                              │
 │ Status: 2 items  0 Agents, 0 Commands, 0 Hooks, 0 MCP Servers, 1 Rules, 1 Skills                                     │
-│                                                                        [x] Uninstall      [d] Remove      [e] Edit   │
+│                                                                                           [d] Remove      [e] Edit   │
 ├──────────────────────────────────────────────────────────────────────────────────┬───────────────────────────────────┤
 │╭──────────────────────────╮                                                      │Name: my-registry                  │
 ││my-registry               │                                                      │                                   │

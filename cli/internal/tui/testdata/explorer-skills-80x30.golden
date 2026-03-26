@@ -7,7 +7,7 @@
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ alpha-skill                               Type: Skill     Files: 1           │
 │ Scope: project   Registry: not in a registry                                 │
-│                                [x] Uninstall      [d] Remove      [e] Edit   │
+│                                                                   [e] Edit   │
 ├───────────────────────────┬──────────────────────────────────────────────────┤
 │ > alpha-skill             │──SKILL.md────────────────────────────────────────│
 │   beta-skill              │ 1 Error reading file:                            │
