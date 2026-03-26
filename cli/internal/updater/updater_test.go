@@ -1,6 +1,7 @@
 package updater
 
 import (
+	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -504,4 +505,132 @@ func TestParseVersion(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestVerifyChecksumSignature(t *testing.T) {
+	// Generate a test Ed25519 key pair
+	pub, priv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatalf("generating key: %v", err)
+	}
+	pubHex := hex.EncodeToString(pub)
+
+	// Create test checksums.txt content
+	checksumContent := []byte("abc123  syllago-linux-amd64\ndef456  syllago-darwin-arm64\n")
+	validSig := ed25519.Sign(priv, checksumContent)
+	invalidSig := []byte("this is not a valid signature at all and is definitely wrong")
+
+	t.Run("no signing key configured", func(t *testing.T) {
+		origKey := SigningPublicKey
+		SigningPublicKey = ""
+		defer func() { SigningPublicKey = origKey }()
+
+		var msgs []string
+		err := verifyChecksumSignature(ReleaseInfo{}, "/dev/null", t.TempDir(),
+			func(msg string) { msgs = append(msgs, msg) })
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+		if len(msgs) == 0 || !strings.Contains(msgs[0], "no signing key") {
+			t.Errorf("expected warning about no signing key, got: %v", msgs)
+		}
+	})
+
+	t.Run("key configured but no signature URL", func(t *testing.T) {
+		origKey := SigningPublicKey
+		SigningPublicKey = pubHex
+		defer func() { SigningPublicKey = origKey }()
+
+		err := verifyChecksumSignature(ReleaseInfo{}, "/dev/null", t.TempDir(),
+			func(string) {})
+		if err == nil {
+			t.Fatal("expected error for missing signature URL")
+		}
+		if !strings.Contains(err.Error(), "missing checksums.txt.sig") {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("valid signature", func(t *testing.T) {
+		origKey := SigningPublicKey
+		SigningPublicKey = pubHex
+		defer func() { SigningPublicKey = origKey }()
+
+		tmpDir := t.TempDir()
+		checksumPath := filepath.Join(tmpDir, "checksums.txt")
+		os.WriteFile(checksumPath, checksumContent, 0644)
+
+		// Serve the signature file
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Write(validSig)
+		}))
+		defer srv.Close()
+
+		var msgs []string
+		err := verifyChecksumSignature(
+			ReleaseInfo{SignatureURL: srv.URL + "/checksums.txt.sig"},
+			checksumPath, tmpDir,
+			func(msg string) { msgs = append(msgs, msg) })
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+		if len(msgs) == 0 || !strings.Contains(msgs[0], "Signature verified") {
+			t.Errorf("expected verification success message, got: %v", msgs)
+		}
+	})
+
+	t.Run("invalid signature", func(t *testing.T) {
+		origKey := SigningPublicKey
+		SigningPublicKey = pubHex
+		defer func() { SigningPublicKey = origKey }()
+
+		tmpDir := t.TempDir()
+		checksumPath := filepath.Join(tmpDir, "checksums.txt")
+		os.WriteFile(checksumPath, checksumContent, 0644)
+
+		// Serve an invalid signature
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Write(invalidSig)
+		}))
+		defer srv.Close()
+
+		err := verifyChecksumSignature(
+			ReleaseInfo{SignatureURL: srv.URL + "/checksums.txt.sig"},
+			checksumPath, tmpDir,
+			func(string) {})
+		if err == nil {
+			t.Fatal("expected error for invalid signature")
+		}
+		if !strings.Contains(err.Error(), "FAILED") {
+			t.Errorf("expected FAILED in error, got: %v", err)
+		}
+	})
+
+	t.Run("tampered checksums", func(t *testing.T) {
+		origKey := SigningPublicKey
+		SigningPublicKey = pubHex
+		defer func() { SigningPublicKey = origKey }()
+
+		tmpDir := t.TempDir()
+		// Write different content than what was signed
+		checksumPath := filepath.Join(tmpDir, "checksums.txt")
+		os.WriteFile(checksumPath, []byte("tampered content\n"), 0644)
+
+		// Serve signature that was valid for the original content
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Write(validSig)
+		}))
+		defer srv.Close()
+
+		err := verifyChecksumSignature(
+			ReleaseInfo{SignatureURL: srv.URL + "/checksums.txt.sig"},
+			checksumPath, tmpDir,
+			func(string) {})
+		if err == nil {
+			t.Fatal("expected error for tampered checksums")
+		}
+		if !strings.Contains(err.Error(), "FAILED") {
+			t.Errorf("expected FAILED in error, got: %v", err)
+		}
+	})
 }

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 // StagingDir manages the per-session temporary directory.
@@ -76,6 +77,13 @@ func CleanStale() {
 				info, err := os.Lstat(fullPath)
 				if err != nil || !info.IsDir() {
 					continue
+				}
+				// Only remove directories owned by the current user to avoid
+				// interfering with other users' staging dirs in shared /tmp.
+				if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+					if stat.Uid != uint32(os.Getuid()) {
+						continue
+					}
 				}
 				_ = os.RemoveAll(fullPath)
 			}

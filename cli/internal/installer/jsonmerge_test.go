@@ -189,6 +189,42 @@ func TestBackupFile_MissingFile(t *testing.T) {
 	}
 }
 
+func TestBackupFile_AtomicWrite(t *testing.T) {
+	// Verify that backupFile uses atomic write (temp+rename) by checking
+	// that the .bak file is created correctly even when overwriting.
+	t.Parallel()
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "config.json")
+	os.WriteFile(filePath, []byte(`{"version":1}`), 0644)
+
+	// Create an existing .bak file
+	os.WriteFile(filePath+".bak", []byte(`{"old":"backup"}`), 0644)
+
+	if err := backupFile(filePath); err != nil {
+		t.Fatalf("backupFile: %v", err)
+	}
+
+	// Verify backup was overwritten atomically with correct content
+	bakData, err := os.ReadFile(filePath + ".bak")
+	if err != nil {
+		t.Fatalf("reading backup: %v", err)
+	}
+	if string(bakData) != `{"version":1}` {
+		t.Errorf("backup content = %q, want %q", string(bakData), `{"version":1}`)
+	}
+
+	// Verify no temp files left behind
+	entries, err := os.ReadDir(tmpDir)
+	if err != nil {
+		t.Fatalf("ReadDir: %v", err)
+	}
+	for _, e := range entries {
+		if e.Name() != "config.json" && e.Name() != "config.json.bak" {
+			t.Errorf("unexpected file left behind: %s", e.Name())
+		}
+	}
+}
+
 func TestWriteJSONFile_OverwritesExisting(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()

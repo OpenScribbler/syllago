@@ -5,6 +5,7 @@ package updater
 
 import (
 	"bufio"
+	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -26,14 +27,21 @@ var githubAPIURL = "https://api.github.com/repos/OpenScribbler/syllago/releases/
 // fast; we don't want to hang the TUI or CLI waiting on a slow network.
 var httpClient = &http.Client{Timeout: 15 * time.Second}
 
+// SigningPublicKey is the Ed25519 public key used to verify release signatures.
+// Set at build time via -ldflags for release builds. Empty means "no signing
+// key configured" — verification is skipped with a warning.
+// The value should be hex-encoded (64 chars = 32 bytes).
+var SigningPublicKey string
+
 // ReleaseInfo holds information about the latest GitHub release.
 type ReleaseInfo struct {
-	Version     string // e.g. "0.5.0" (no "v" prefix)
-	TagName     string // e.g. "v0.5.0"
-	Body        string // release notes markdown
-	UpdateAvail bool   // true if Version is newer than the version passed to CheckLatest
-	AssetURL    string // direct download URL for the correct platform binary
-	ChecksumURL string // direct download URL for checksums.txt
+	Version      string // e.g. "0.5.0" (no "v" prefix)
+	TagName      string // e.g. "v0.5.0"
+	Body         string // release notes markdown
+	UpdateAvail  bool   // true if Version is newer than the version passed to CheckLatest
+	AssetURL     string // direct download URL for the correct platform binary
+	ChecksumURL  string // direct download URL for checksums.txt
+	SignatureURL string // direct download URL for checksums.txt.sig (Ed25519)
 }
 
 // githubRelease is the subset of the GitHub API response we care about.
@@ -89,6 +97,8 @@ func CheckLatest(currentVersion string) (ReleaseInfo, error) {
 			info.AssetURL = a.BrowserDownloadURL
 		case "checksums.txt":
 			info.ChecksumURL = a.BrowserDownloadURL
+		case "checksums.txt.sig":
+			info.SignatureURL = a.BrowserDownloadURL
 		}
 	}
 
@@ -137,6 +147,12 @@ func Update(currentVersion string, progress func(string)) error {
 		if err := downloadFile(info.ChecksumURL, checksumPath); err != nil {
 			return fmt.Errorf("downloading checksums: %w", err)
 		}
+
+		// Verify checksums.txt signature if a signing key is configured.
+		if err := verifyChecksumSignature(info, checksumPath, tmpDir, progress); err != nil {
+			return err
+		}
+
 		expectedHash, err = findChecksum(checksumPath, assetName())
 		if err != nil {
 			return fmt.Errorf("reading checksum: %w", err)
@@ -286,6 +302,51 @@ func parseVersion(v string) [3]int {
 		out[i], _ = strconv.Atoi(parts[i])
 	}
 	return out
+}
+
+// verifyChecksumSignature verifies the Ed25519 signature of checksums.txt.
+// Behavior depends on whether a signing key is embedded in the binary:
+//   - No key configured: warn and continue (dev builds, pre-signing releases)
+//   - Key configured, no .sig file in release: abort (release should be signed)
+//   - Key configured, .sig present, valid: continue silently
+//   - Key configured, .sig present, invalid: abort (tampered)
+func verifyChecksumSignature(info ReleaseInfo, checksumPath, tmpDir string, progress func(string)) error {
+	pubKeyHex := SigningPublicKey
+	if pubKeyHex == "" {
+		progress("Warning: no signing key configured — checksum signature not verified")
+		return nil
+	}
+
+	pubKeyBytes, err := hex.DecodeString(pubKeyHex)
+	if err != nil || len(pubKeyBytes) != ed25519.PublicKeySize {
+		return fmt.Errorf("invalid embedded signing key (expected %d hex bytes)", ed25519.PublicKeySize*2)
+	}
+	pubKey := ed25519.PublicKey(pubKeyBytes)
+
+	if info.SignatureURL == "" {
+		return fmt.Errorf("release is missing checksums.txt.sig — cannot verify integrity (signing key is configured but release has no signature)")
+	}
+
+	sigPath := filepath.Join(tmpDir, "checksums.txt.sig")
+	if err := downloadFile(info.SignatureURL, sigPath); err != nil {
+		return fmt.Errorf("downloading signature: %w", err)
+	}
+
+	checksumData, err := os.ReadFile(checksumPath)
+	if err != nil {
+		return fmt.Errorf("reading checksums for verification: %w", err)
+	}
+	sigData, err := os.ReadFile(sigPath)
+	if err != nil {
+		return fmt.Errorf("reading signature: %w", err)
+	}
+
+	if !ed25519.Verify(pubKey, checksumData, sigData) {
+		return fmt.Errorf("signature verification FAILED — checksums.txt may have been tampered with")
+	}
+
+	progress("Signature verified")
+	return nil
 }
 
 // versionNewer returns true if a is strictly newer than b.

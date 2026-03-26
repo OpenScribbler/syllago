@@ -113,6 +113,109 @@ func TestProxy_NonConnectMethod(t *testing.T) {
 	}
 }
 
+func TestProxy_PortFiltering_BlocksUnallowedPort(t *testing.T) {
+	sock := filepath.Join(t.TempDir(), "proxy.sock")
+	// Allow localhost in domain list, but only port 8080 in port list.
+	p := NewProxy(sock, []string{"localhost", "127.0.0.1"}, []int{8080})
+	if err := p.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	defer p.Shutdown()
+
+	// Try connecting to localhost:5432 (not in allowed ports) — should get 403.
+	conn, err := net.Dial("unix", sock)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	fmt.Fprintf(conn, "CONNECT 127.0.0.1:5432 HTTP/1.1\r\nHost: 127.0.0.1:5432\r\n\r\n")
+	resp, err := http.ReadResponse(bufio.NewReader(conn), nil)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+	if resp.StatusCode != 403 {
+		t.Errorf("expected 403 for disallowed localhost port, got %d", resp.StatusCode)
+	}
+}
+
+func TestProxy_PortFiltering_AllowsConfiguredPort(t *testing.T) {
+	sock := filepath.Join(t.TempDir(), "proxy.sock")
+	p := NewProxy(sock, []string{"localhost", "127.0.0.1"}, []int{8080})
+	if err := p.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	defer p.Shutdown()
+
+	// Try connecting to localhost:8080 (allowed) — should get 502 (can't connect) not 403.
+	conn, err := net.Dial("unix", sock)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	fmt.Fprintf(conn, "CONNECT 127.0.0.1:8080 HTTP/1.1\r\nHost: 127.0.0.1:8080\r\n\r\n")
+	resp, err := http.ReadResponse(bufio.NewReader(conn), nil)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+	if resp.StatusCode == 403 {
+		t.Error("expected allowed port 8080 to not be blocked")
+	}
+}
+
+func TestProxy_PortFiltering_NoPortsConfigured(t *testing.T) {
+	sock := filepath.Join(t.TempDir(), "proxy.sock")
+	// No port filtering — nil ports means all ports allowed.
+	p := NewProxy(sock, []string{"localhost", "127.0.0.1"}, nil)
+	if err := p.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	defer p.Shutdown()
+
+	conn, err := net.Dial("unix", sock)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	// Any port should work when no port filtering is configured.
+	fmt.Fprintf(conn, "CONNECT 127.0.0.1:5432 HTTP/1.1\r\nHost: 127.0.0.1:5432\r\n\r\n")
+	resp, err := http.ReadResponse(bufio.NewReader(conn), nil)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+	if resp.StatusCode == 403 {
+		t.Error("expected no port filtering when allowedPorts is empty")
+	}
+}
+
+func TestProxy_PortFiltering_NonLocalhostIgnored(t *testing.T) {
+	sock := filepath.Join(t.TempDir(), "proxy.sock")
+	// Port filtering configured, but external domains should not be affected.
+	p := NewProxy(sock, []string{"api.example.com"}, []int{8080})
+	if err := p.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	defer p.Shutdown()
+
+	conn, err := net.Dial("unix", sock)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	// External domain on port 443 — port filtering should not apply.
+	fmt.Fprintf(conn, "CONNECT api.example.com:443 HTTP/1.1\r\nHost: api.example.com:443\r\n\r\n")
+	resp, err := http.ReadResponse(bufio.NewReader(conn), nil)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+	if resp.StatusCode == 403 {
+		t.Error("port filtering should not affect non-localhost domains")
+	}
+}
+
 func TestProxy_Shutdown(t *testing.T) {
 	sock := filepath.Join(t.TempDir(), "proxy.sock")
 	p := NewProxy(sock, []string{"api.anthropic.com"}, nil)

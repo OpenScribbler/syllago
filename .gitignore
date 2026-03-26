@@ -14,6 +14,12 @@ cli/test_results.txt
 local/
 content/.syllago/
 
+# Machine-local state (audit logs, install tracking, snapshots)
+.syllago/audit.jsonl
+.syllago/installed.json
+.syllago/snapshots/
+cli/.syllago/audit.jsonl
+
 # OS
 .DS_Store
 

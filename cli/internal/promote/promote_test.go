@@ -727,6 +727,88 @@ func TestPromoteToRegistry_FullFlow_PushSucceeds(t *testing.T) {
 	}
 }
 
+// --- sanitizeBundledScripts tests ---
+
+func TestSanitizeBundledScripts_StripsAbsolutePaths(t *testing.T) {
+	t.Parallel()
+	m := &metadata.Meta{
+		ID:   "test-id",
+		Name: "test-hook",
+		BundledScripts: []metadata.BundledScriptMeta{
+			{OriginalPath: "/home/user/.claude/hooks/lint.sh", Filename: "lint.sh"},
+			{OriginalPath: "/var/data/scripts/format.py", Filename: "format.py"},
+			{OriginalPath: "already-filename.sh", Filename: "already-filename.sh"},
+			{OriginalPath: "", Filename: "no-path.sh"},
+		},
+	}
+
+	sanitizeBundledScripts(m)
+
+	tests := []struct {
+		idx  int
+		want string
+	}{
+		{0, "lint.sh"},
+		{1, "format.py"},
+		{2, "already-filename.sh"},
+		{3, ""},
+	}
+	for _, tt := range tests {
+		got := m.BundledScripts[tt.idx].OriginalPath
+		if got != tt.want {
+			t.Errorf("BundledScripts[%d].OriginalPath = %q, want %q", tt.idx, got, tt.want)
+		}
+	}
+}
+
+func TestSanitizeBundledScripts_NilScripts(t *testing.T) {
+	t.Parallel()
+	m := &metadata.Meta{ID: "test-id", Name: "no-scripts"}
+	// Should not panic.
+	sanitizeBundledScripts(m)
+}
+
+func TestCopyForPromote_SanitizesOriginalPath(t *testing.T) {
+	// Integration test: verify that after copyForPromote + metadata save,
+	// the .syllago.yaml in the destination has sanitized paths.
+	src := t.TempDir()
+	dst := filepath.Join(t.TempDir(), "dest")
+
+	// Create source with .syllago.yaml containing absolute OriginalPath.
+	m := &metadata.Meta{
+		ID:   metadata.NewID(),
+		Name: "my-hook",
+		Type: "hooks",
+		BundledScripts: []metadata.BundledScriptMeta{
+			{OriginalPath: "/home/user/.claude/hooks/lint.sh", Filename: "lint.sh"},
+		},
+	}
+	metadata.Save(src, m)
+	os.WriteFile(filepath.Join(src, "hook.sh"), []byte("#!/bin/sh\necho hi"), 0644)
+
+	// Simulate what Promote does: copy then sanitize metadata.
+	if err := copyForPromote(src, dst); err != nil {
+		t.Fatalf("copyForPromote: %v", err)
+	}
+	destMeta := *m
+	sanitizeBundledScripts(&destMeta)
+	if err := metadata.Save(dst, &destMeta); err != nil {
+		t.Fatalf("metadata.Save: %v", err)
+	}
+
+	// Read back the metadata from the destination.
+	loaded, err := metadata.Load(dst)
+	if err != nil {
+		t.Fatalf("metadata.Load: %v", err)
+	}
+	if len(loaded.BundledScripts) != 1 {
+		t.Fatalf("expected 1 bundled script, got %d", len(loaded.BundledScripts))
+	}
+	if loaded.BundledScripts[0].OriginalPath != "lint.sh" {
+		t.Errorf("OriginalPath = %q, want %q", loaded.BundledScripts[0].OriginalPath, "lint.sh")
+	}
+}
+
 // --- detectDefaultBranch with origin/HEAD set ---
 
 func TestDetectDefaultBranch_WithOriginHead(t *testing.T) {

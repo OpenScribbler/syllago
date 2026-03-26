@@ -3,6 +3,7 @@ package installer
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -70,6 +71,25 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	event, matcherGroup, err := parseHookFile(item.Path)
 	if err != nil {
 		return "", fmt.Errorf("parsing hook file: %w", err)
+	}
+
+	// M3: Validate event name to prevent sjson key injection via dots
+	if !converter.IsValidHookEvent(event) {
+		return "", fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", event)
+	}
+
+	// M4: Whitelist-filter the matcher group through a typed struct to strip
+	// unknown JSON fields before merging into settings.json.
+	matcherGroup, err = whitelistMatcherGroup(matcherGroup)
+	if err != nil {
+		return "", fmt.Errorf("filtering matcher group: %w", err)
+	}
+
+	// M2: Run security scanner on the hook before installing
+	warnings := converter.ScanHookSecurityFromRaw(matcherGroup)
+	for _, w := range warnings {
+		fmt.Fprintf(output.ErrWriter, "  %s WARNING [%s]: %s\n    command: %s\n",
+			strings.ToUpper(w.Severity), w.HookName, w.Description, w.Command)
 	}
 
 	// Copy script files referenced by hook commands to a stable location.
@@ -319,6 +339,11 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 		var scriptPath string
 		if strings.HasPrefix(ref, "./") || strings.HasPrefix(ref, "../") {
 			scriptPath = filepath.Clean(filepath.Join(itemDir, ref))
+			// Resolve symlinks before containment check to prevent symlink-based
+			// path traversal (e.g., ./scripts -> /etc via a crafted symlink).
+			if resolved, evalErr := filepath.EvalSymlinks(scriptPath); evalErr == nil {
+				scriptPath = resolved
+			}
 			// Verify the resolved path stays within the item directory
 			rel, relErr := filepath.Rel(itemDir, scriptPath)
 			if relErr != nil || strings.HasPrefix(rel, "..") {
@@ -373,4 +398,23 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 	}
 
 	return result, nil
+}
+
+// hookMatcherGroup is a typed struct for whitelist-filtering hook matcher groups.
+// Only known fields are preserved when merging into settings.json, matching
+// the approach used by ExtractServerEntries for MCP configs.
+type hookMatcherGroup struct {
+	Matcher string          `json:"matcher,omitempty"`
+	Hooks   json.RawMessage `json:"hooks,omitempty"`
+	Timeout int             `json:"timeout,omitempty"`
+}
+
+// whitelistMatcherGroup parses a raw matcher group through a typed struct to
+// strip unknown JSON fields before merging into provider settings.
+func whitelistMatcherGroup(raw []byte) ([]byte, error) {
+	var mg hookMatcherGroup
+	if err := json.Unmarshal(raw, &mg); err != nil {
+		return nil, fmt.Errorf("parsing matcher group: %w", err)
+	}
+	return json.Marshal(mg)
 }

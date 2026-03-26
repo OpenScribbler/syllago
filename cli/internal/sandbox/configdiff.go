@@ -271,18 +271,79 @@ func buildDiff(orig, staged string) (string, bool) {
 	return diff, highRisk
 }
 
-// hasHighRiskKeys checks if data contains MCP server, hooks, or commands definitions.
-func hasHighRiskKeys(data []byte) bool {
+// safeKeys is the allowlist of JSON keys whose changes are considered low-risk
+// and can be auto-approved. Everything not in this list requires explicit user
+// approval. This is an allowlist (not a denylist) so that unknown/new keys
+// default to high-risk — the safe choice when we don't know what a key does.
+var safeKeys = map[string]bool{
+	// User preferences and display settings
+	"model": true, "theme": true, "locale": true, "editor": true,
+	"fontSize": true, "fontFamily": true, "tabSize": true,
+	"lineNumbers": true, "wordWrap": true, "minimap": true,
+	"colorScheme": true, "autoSave": true, "formatOnSave": true,
+	// Provider-specific settings
+	"temperature": true, "maxTokens": true, "apiVersion": true,
+	"systemPrompt": true, "contextWindow": true,
+	// Telemetry / analytics
+	"telemetry": true, "analytics": true, "crashReporting": true,
+}
+
+// hasOnlySafeKeys checks if all JSON keys in the data are in the safe allowlist.
+// Returns false (meaning high-risk) if any key is not explicitly listed as safe,
+// or if the data is not valid JSON. This ensures unknown keys require user approval.
+func hasOnlySafeKeys(data []byte) bool {
 	s := string(data)
-	return strings.Contains(s, `"mcpServers"`) ||
+	// Check for known dangerous keys explicitly — even if somehow added to
+	// safeKeys by mistake, these are always high-risk.
+	if strings.Contains(s, `"mcpServers"`) ||
+		strings.Contains(s, `"context_servers"`) ||
 		strings.Contains(s, `"hooks"`) ||
-		strings.Contains(s, `"commands"`)
+		strings.Contains(s, `"commands"`) {
+		return false
+	}
+	// Parse top-level keys. If any key is not in the allowlist, treat as high-risk.
+	// Simple approach: scan for `"key":` patterns at the top level.
+	// We look for quoted strings followed by colons in the JSON.
+	for i := 0; i < len(s); i++ {
+		if s[i] == '"' {
+			j := i + 1
+			for j < len(s) && s[j] != '"' {
+				if s[j] == '\\' {
+					j++ // skip escaped char
+				}
+				j++
+			}
+			if j >= len(s) {
+				break
+			}
+			key := s[i+1 : j]
+			// Check if the next non-whitespace char is ':' (this is a key, not a value)
+			k := j + 1
+			for k < len(s) && (s[k] == ' ' || s[k] == '\t' || s[k] == '\n' || s[k] == '\r') {
+				k++
+			}
+			if k < len(s) && s[k] == ':' {
+				if !safeKeys[key] {
+					return false
+				}
+			}
+			i = j // skip past the closing quote
+		}
+	}
+	return true
+}
+
+// hasHighRiskKeys checks if data contains keys not in the safe allowlist.
+// Returns true if any key is unknown/unsafe. This is the inverse of the old
+// denylist approach — unknown keys are treated as high-risk by default.
+func hasHighRiskKeys(data []byte) bool {
+	return !hasOnlySafeKeys(data)
 }
 
 // isHighRiskDiff returns true if either the original or staged content contains
-// high-risk keys (MCP servers, hooks, commands). Conservative: any change to a
-// file containing these keys requires explicit approval, even if the change
-// doesn't touch the high-risk sections directly.
+// keys not in the safe allowlist. Conservative: any change to a file containing
+// unknown keys requires explicit approval, even if the change doesn't touch
+// those keys directly.
 func isHighRiskDiff(origData, stagedData []byte) bool {
 	return hasHighRiskKeys(origData) || hasHighRiskKeys(stagedData)
 }

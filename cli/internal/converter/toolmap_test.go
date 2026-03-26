@@ -482,6 +482,45 @@ func TestReverseTranslateMatcher(t *testing.T) {
 	}
 }
 
+func TestIsValidHookEvent(t *testing.T) {
+	tests := []struct {
+		event string
+		want  bool
+	}{
+		// Canonical names (map keys)
+		{"before_tool_execute", true},
+		{"after_tool_execute", true},
+		{"session_start", true},
+		{"agent_stop", true},
+		{"notification", true},
+		{"elicitation", true},
+		// Provider-native names (map values)
+		{"PreToolUse", true},
+		{"PostToolUse", true},
+		{"BeforeTool", true},
+		{"AfterTool", true},
+		{"UserPromptSubmit", true},
+		{"Stop", true},
+		{"SessionStart", true},
+		{"TaskStart", true},  // Cline
+		{"TaskResume", true}, // Cline
+		// Invalid names
+		{"", false},
+		{"FakeEvent", false},
+		{"PreToolUse.evil.path", false}, // sjson key injection attempt
+		{"hooks.PreToolUse", false},     // dotted path
+		{"../../../etc/passwd", false},  // path traversal
+	}
+	for _, tt := range tests {
+		t.Run(tt.event, func(t *testing.T) {
+			got := IsValidHookEvent(tt.event)
+			if got != tt.want {
+				t.Errorf("IsValidHookEvent(%q) = %v, want %v", tt.event, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestTranslateMCPToolName(t *testing.T) {
 	tests := []struct {
 		name   string

@@ -62,6 +62,8 @@ func writeJSONFileWithPerm(path string, data []byte, perm os.FileMode) error {
 }
 
 // backupFile creates a .bak copy of a file before modifying it.
+// Uses the same atomic temp-then-rename pattern as writeJSONFile to avoid
+// partial writes leaving a corrupt backup that can't be restored from.
 func backupFile(path string) error {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -77,5 +79,5 @@ func backupFile(path string) error {
 			perm = 0600
 		}
 	}
-	return os.WriteFile(path+".bak", data, perm)
+	return writeJSONFileWithPerm(path+".bak", data, perm)
 }
