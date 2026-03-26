@@ -95,8 +95,10 @@ func (h helpOverlay) View() string {
 	col2 := lipgloss.JoinVertical(lipgloss.Left,
 		section("Actions", [][2]string{
 			{"a", "Add content"},
-			{"n", "Create new"},
+			{"n", "Create new (coming soon)"},
 			{"e", "Edit name/description"},
+			{"d", "Remove from library"},
+			{"x", "Uninstall from provider"},
 			{"/", "Search"},
 			{"s / S", "Sort / reverse sort"},
 			{"R", "Refresh catalog"},

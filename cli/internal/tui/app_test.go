@@ -153,14 +153,10 @@ func TestApp_ActionButtonHotkeys(t *testing.T) {
 		t.Errorf("expected action=add, got %q", action.action)
 	}
 
+	// 'n' (create) is deferred — should be a no-op
 	_, cmd = app.Update(keyRune('n'))
-	if cmd == nil {
-		t.Fatal("'n' should produce an action command")
-	}
-	msg = cmd()
-	action = msg.(actionPressedMsg)
-	if action.action != "create" {
-		t.Errorf("expected action=create, got %q", action.action)
+	if cmd != nil {
+		t.Fatal("'n' should be a no-op (create is deferred)")
 	}
 }
 

@@ -51,13 +51,13 @@ func newTopBar() topBarModel {
 				label:   "Collections",
 				hotkey:  "1",
 				tabs:    []string{"Library", "Registries", "Loadouts"},
-				actions: []string{"[a] Add", "[n] Create"},
+				actions: []string{"[a] Add"},
 			},
 			{
 				label:   "Content",
 				hotkey:  "2",
 				tabs:    []string{"Skills", "Agents", "MCP", "Rules", "Hooks", "Commands"},
-				actions: []string{"[a] Add", "[n] Create"},
+				actions: []string{"[a] Add"},
 			},
 			{
 				label:   "Config",
@@ -163,10 +163,6 @@ func (t topBarModel) Update(msg tea.Msg) (topBarModel, tea.Cmd) {
 	if zone.Get("btn-add").InBounds(mouseMsg) {
 		return t, t.actionCmd("add")
 	}
-	if zone.Get("btn-create").InBounds(mouseMsg) {
-		return t, t.actionCmd("create")
-	}
-
 	// Help button click
 	if zone.Get("btn-help").InBounds(mouseMsg) {
 		return t, func() tea.Msg { return helpToggleMsg{} }
@@ -287,7 +283,7 @@ func (t topBarModel) renderTabRow(innerW int) string {
 
 	// Action buttons
 	var btnParts []string
-	btnZones := []string{"btn-add", "btn-create"}
+	btnZones := []string{"btn-add"}
 	for i, action := range g.actions {
 		btn := activeButtonStyle.Render(action)
 		if i < len(btnZones) {
