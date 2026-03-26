@@ -575,11 +575,11 @@ func (t tableModel) renderRow(index int, c colLayout) string {
 	} else if isCursor {
 		style = boldStyle
 	}
-	// MaxWidth clips without wrapping. Manual pad for full-width row background.
-	rendered := style.MaxWidth(t.width).Render(row)
-	if gap := t.width - lipgloss.Width(rendered); gap > 0 {
-		rendered += strings.Repeat(" ", gap)
+	// Pad row to full width BEFORE styling so the background color fills the entire row.
+	if gap := t.width - len([]rune(row)); gap > 0 {
+		row += strings.Repeat(" ", gap)
 	}
+	rendered := style.MaxWidth(t.width).Render(row)
 	return zone.Mark("tbl-"+itoa(index), rendered)
 }
 
