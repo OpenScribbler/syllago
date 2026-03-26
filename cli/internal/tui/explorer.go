@@ -274,9 +274,9 @@ func (e explorerModel) updateMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 // updateBrowseMouse handles mouse events in browse mode.
 func (e explorerModel) updateBrowseMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
-		// Rename button click
-		if zone.Get("meta-rename").InBounds(msg) {
-			return e, func() tea.Msg { return libraryRenameMsg{} }
+		// Edit button click
+		if zone.Get("meta-edit").InBounds(msg) {
+			return e, func() tea.Msg { return libraryEditMsg{} }
 		}
 
 		// Click on a specific item row — select it
@@ -344,9 +344,9 @@ func (e explorerModel) updateBrowseMouse(msg tea.MouseMsg) (explorerModel, tea.C
 // updateDetailMouse handles mouse events in detail mode.
 func (e explorerModel) updateDetailMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
-		// Rename button click
-		if zone.Get("meta-rename").InBounds(msg) {
-			return e, func() tea.Msg { return libraryRenameMsg{} }
+		// Edit button click
+		if zone.Get("meta-edit").InBounds(msg) {
+			return e, func() tea.Msg { return libraryEditMsg{} }
 		}
 
 		// Close button click

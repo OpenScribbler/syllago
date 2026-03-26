@@ -1,4 +1,4 @@
-╭──syllago─────────────────────────────────────────────────────────────────────╮
+╭──syllago────────────────────────────────────────────────────────────────[?]──╮
 │               [1] Collections      [2] Content      [3] Config               │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │   Skills     Agents     MCP     Rules     Hooks     Commands     [a] Add      [n] Create   │
@@ -7,7 +7,7 @@
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ alpha-skill                               Type: Skill     Files: 1           │
 │ Scope: project   Registry: not in a registry                                 │
-│                                                                 [r] Rename   │
+│                                                                   [e] Edit   │
 ├───────────────────────────┬──────────────────────────────────────────────────┤
 │ > alpha-skill             │──SKILL.md────────────────────────────────────────│
 │   beta-skill              │ 1 Error reading file:                            │
@@ -27,4 +27,4 @@
 │                           │                                                  │
 ╰───────────────────────────┴──────────────────────────────────────────────────╯
 1/2/3 groups · tab items · ↑/↓ navigate · ←/→ switch pane   syllago v0.0.0-test
-enter detail · r rename · R refresh · a add · n create · ? help · q quit
+enter detail · e edit · R refresh · a add · n create · ? help · q quit

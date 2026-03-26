@@ -26,8 +26,8 @@ type libraryDrillMsg struct {
 	item *catalog.ContentItem
 }
 
-// libraryRenameMsg is sent when the rename button is clicked in the metadata bar.
-type libraryRenameMsg struct{}
+// libraryEditMsg is sent when the edit button is clicked in the metadata bar.
+type libraryEditMsg struct{}
 
 // libraryCloseMsg is sent when the user closes the detail view.
 type libraryCloseMsg struct{}
@@ -227,9 +227,9 @@ func (l libraryModel) updateMouse(msg tea.MouseMsg) (libraryModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 		switch l.mode {
 		case libraryBrowse:
-			// Rename button click
-			if zone.Get("meta-rename").InBounds(msg) {
-				return l, func() tea.Msg { return libraryRenameMsg{} }
+			// Edit button click
+			if zone.Get("meta-edit").InBounds(msg) {
+				return l, func() tea.Msg { return libraryEditMsg{} }
 			}
 
 			// Column header clicks for sorting
@@ -266,9 +266,9 @@ func (l libraryModel) updateMouse(msg tea.MouseMsg) (libraryModel, tea.Cmd) {
 				}
 			}
 		case libraryDetail:
-			// Rename button click (in detail view too)
-			if zone.Get("meta-rename").InBounds(msg) {
-				return l, func() tea.Msg { return libraryRenameMsg{} }
+			// Edit button click (in detail view too)
+			if zone.Get("meta-edit").InBounds(msg) {
+				return l, func() tea.Msg { return libraryEditMsg{} }
 			}
 			// Click on file tree nodes
 			for i := range l.tree.nodes {

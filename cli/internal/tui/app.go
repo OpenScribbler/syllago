@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -33,7 +34,8 @@ type App struct {
 	explorer explorerModel // Content/Loadout tabs: items list + preview
 	gallery  galleryModel  // Loadouts/Registries tabs: card grid + contents sidebar
 	helpBar  helpBarModel
-	modal    textInputModal // reusable text input overlay
+	modal    editModal   // reusable edit overlay (name + description)
+	help     helpOverlay // keyboard shortcut reference (? key)
 
 	// Dimensions
 	width, height int
@@ -68,7 +70,8 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		explorer:        newExplorerModel(nil, false, providers, projectRoot),
 		gallery:         newGalleryModel(),
 		helpBar:         newHelpBar(version),
-		modal:           newTextInputModal(),
+		modal:           newEditModal(),
+		help:            newHelpOverlay(),
 	}
 	a.updateNavState()
 	return a
@@ -92,13 +95,19 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.library.SetSize(msg.Width, ch)
 		a.explorer.SetSize(msg.Width, ch)
 		a.gallery.SetSize(msg.Width, ch)
+		a.help.SetSize(msg.Width, ch)
 		return a, nil
 
 	case tea.MouseMsg:
-		// Modal captures all mouse input when active
+		// Modal and help overlay capture all mouse input when active
 		if a.modal.active {
 			var cmd tea.Cmd
 			a.modal, cmd = a.modal.Update(msg)
+			return a, cmd
+		}
+		if a.help.active {
+			var cmd tea.Cmd
+			a.help, cmd = a.help.Update(msg)
 			return a, cmd
 		}
 		return a.routeMouse(msg)
@@ -111,6 +120,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			a.modal, cmd = a.modal.Update(msg)
+			return a, cmd
+		}
+
+		// Help overlay captures all key input when active
+		if a.help.active {
+			var cmd tea.Cmd
+			a.help, cmd = a.help.Update(msg)
 			return a, cmd
 		}
 
@@ -207,9 +223,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.String() == keyCreate:
 			return a, a.topBar.actionCmd("create")
 
-		// Rename selected item
-		case msg.String() == keyRename:
-			return a.handleRename()
+		// Edit selected item (name + description)
+		case msg.String() == keyEdit:
+			return a.handleEdit()
+
+		// Help overlay
+		case msg.String() == keyHelp:
+			a.help.Toggle()
+			return a, nil
 
 		// Refresh catalog (re-scan content from disk)
 		case msg.String() == keyRefresh:
@@ -221,10 +242,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a.routeKey(msg)
 		}
 
-	case modalSavedMsg:
-		return a.handleModalSaved(msg)
+	case editSavedMsg:
+		return a.handleEditSaved(msg)
 
-	case modalCancelledMsg:
+	case editCancelledMsg:
 		return a, nil
 
 	case tabChangedMsg:
@@ -233,8 +254,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.updateNavState()
 		return a, nil
 
-	case libraryRenameMsg:
-		return a.handleRename()
+	case libraryEditMsg:
+		return a.handleEdit()
 
 	case libraryDrillMsg:
 		a.updateNavState()
@@ -274,12 +295,26 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case actionPressedMsg:
 		return a, nil
+
+	case helpToggleMsg:
+		a.help.Toggle()
+		return a, nil
 	}
 	return a, nil
 }
 
-// handleRename opens the rename modal for the currently selected item.
-func (a App) handleRename() (tea.Model, tea.Cmd) {
+// handleEdit opens the edit modal for the currently selected item or card.
+func (a App) handleEdit() (tea.Model, tea.Cmd) {
+	// Gallery card (not drilled in) — edit the card directly
+	if a.isGalleryTab() && !a.galleryDrillIn {
+		card := a.gallery.grid.Selected()
+		if card == nil || card.path == "" {
+			return a, nil
+		}
+		a.modal.Open("Edit: "+card.name, card.name, card.desc, card.path)
+		return a, nil
+	}
+
 	var item *catalog.ContentItem
 	if a.isLibraryTab() || (a.isGalleryTab() && a.galleryDrillIn) {
 		item = a.library.table.Selected()
@@ -290,33 +325,35 @@ func (a App) handleRename() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 	currentName := itemDisplayName(*item)
-	a.modal.Open("Rename: "+item.Name, currentName, item.Path)
+	a.modal.Open("Edit: "+item.Name, currentName, item.Description, item.Path)
 	return a, nil
 }
 
-// handleModalSaved persists the rename to .syllago.yaml and updates in-place.
-func (a App) handleModalSaved(msg modalSavedMsg) (tea.Model, tea.Cmd) {
-	if msg.value == "" || msg.context == "" {
+// handleEditSaved persists name and description to .syllago.yaml and updates in-place.
+func (a App) handleEditSaved(msg editSavedMsg) (tea.Model, tea.Cmd) {
+	if msg.path == "" {
 		return a, nil
 	}
 
 	// Load or create metadata
-	meta, err := metadata.Load(msg.context)
+	meta, err := metadata.Load(msg.path)
 	if err != nil {
 		return a, nil
 	}
 	if meta == nil {
 		meta = &metadata.Meta{}
 	}
-	meta.Name = msg.value
-	if err := metadata.Save(msg.context, meta); err != nil {
+	meta.Name = msg.name
+	meta.Description = msg.description
+	if err := metadata.Save(msg.path, meta); err != nil {
 		return a, nil
 	}
 
-	// Update DisplayName in-place in the catalog (avoid full re-scan)
+	// Update in-place in the catalog (avoid full re-scan)
 	for i := range a.catalog.Items {
-		if a.catalog.Items[i].Path == msg.context {
-			a.catalog.Items[i].DisplayName = msg.value
+		if a.catalog.Items[i].Path == msg.path {
+			a.catalog.Items[i].DisplayName = msg.name
+			a.catalog.Items[i].Description = msg.description
 			break
 		}
 	}
@@ -377,9 +414,12 @@ func (a App) View() string {
 	content := a.renderContent()
 	helpBar := a.helpBar.View()
 
-	// When modal is active, overlay it on top of existing content
+	// Overlay modals on top of existing content
 	if a.modal.active {
 		content = overlayModal(content, a.modal.View(), a.width, a.contentHeight())
+	}
+	if a.help.active {
+		content = overlayModal(content, a.help.View(), a.width, a.contentHeight())
 	}
 
 	return zone.Scan(lipgloss.JoinVertical(lipgloss.Left,
@@ -552,10 +592,10 @@ func (a App) currentHints() []string {
 		if a.library.mode == libraryDetail {
 			return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "R refresh", "? help", "q back")
 		}
-		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "r rename", "R refresh", "? help", "q back")
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "e edit", "R refresh", "? help", "q back")
 	}
 	if a.isGalleryTab() {
-		return append(base, "arrows grid", "enter select", "tab grid/contents", "R refresh", "a add", "n create", "? help", "q back")
+		return append(base, "arrows grid", "enter select", "tab grid/contents", "e edit", "R refresh", "a add", "n create", "? help", "q back")
 	}
 
 	// Library in detail mode has different hints
@@ -564,17 +604,17 @@ func (a App) currentHints() []string {
 	}
 
 	if a.isLibraryTab() {
-		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "r rename", "R refresh", "a add", "n create", "? help", "q quit")
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "e edit", "R refresh", "a add", "n create", "? help", "q quit")
 	}
 
 	// Explorer in detail mode
 	if a.explorer.mode == explorerDetail {
-		return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "r rename", "R refresh", "? help", "q back")
+		return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "e edit", "R refresh", "? help", "q back")
 	}
 
 	hints := append(base, "↑/↓ navigate", "←/→ switch pane", "enter detail")
 	if group != "Config" {
-		hints = append(hints, "r rename", "R refresh", "a add", "n create")
+		hints = append(hints, "e edit", "R refresh", "a add", "n create")
 	}
 	return append(hints, "? help", "q quit")
 }
@@ -672,7 +712,7 @@ func (a App) renderTooSmall() string {
 }
 
 // overlayModal centers the modal within the content area. The background
-// content above and below the modal row range remains visible.
+// content shows through on all sides of the modal.
 func overlayModal(bg, modal string, width, height int) string {
 	bgLines := strings.Split(bg, "\n")
 	modalLines := strings.Split(modal, "\n")
@@ -682,7 +722,7 @@ func overlayModal(bg, modal string, width, height int) string {
 		bgLines = append(bgLines, strings.Repeat(" ", width))
 	}
 
-	// Center the modal vertically, replace those rows with centered modal lines
+	// Center the modal vertically, splice modal into each background row
 	startRow := max(0, (height-modalH)/2)
 	for i, mLine := range modalLines {
 		row := startRow + i
@@ -692,7 +732,15 @@ func overlayModal(bg, modal string, width, height int) string {
 		// Center the modal line horizontally
 		mLineW := lipgloss.Width(mLine)
 		pad := max(0, (width-mLineW)/2)
-		bgLines[row] = strings.Repeat(" ", pad) + mLine
+		rightStart := pad + mLineW
+
+		// Splice: bg_left + modal + bg_right
+		left := ansi.Truncate(bgLines[row], pad, "")
+		right := ""
+		if rightStart < width {
+			right = ansi.Cut(bgLines[row], rightStart, width)
+		}
+		bgLines[row] = left + mLine + right
 	}
 
 	if len(bgLines) > height {

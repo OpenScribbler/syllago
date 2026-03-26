@@ -167,6 +167,11 @@ func (t topBarModel) Update(msg tea.Msg) (topBarModel, tea.Cmd) {
 		return t, t.actionCmd("create")
 	}
 
+	// Help button click
+	if zone.Get("btn-help").InBounds(mouseMsg) {
+		return t, func() tea.Msg { return helpToggleMsg{} }
+	}
+
 	return t, nil
 }
 
@@ -218,17 +223,26 @@ func (t topBarModel) View() string {
 	}, "\n")
 }
 
-// renderTopBorder renders ╭──syllago────────...╮ with colored logo.
+// helpToggleMsg is sent when the help button in the topbar corner is clicked.
+type helpToggleMsg struct{}
+
+// renderTopBorder renders ╭──syllago────...──[?]──╮ with colored logo and help button.
+// The [?] is inset 2 dashes from the right edge, mirroring the logo's 2-dash inset on the left.
 func (t topBarModel) renderTopBorder(innerW int) string {
 	logo := logoStyle.Render("syl") + accentLogoStyle.Render("lago")
 	logoW := lipgloss.Width(logo)
 	prefix := "╭──"
-	suffix := "╮"
-	fill := innerW - logoW - 2 // -2 for the "──" before logo
+	suffix := "──╮"
+
+	helpBtn := zone.Mark("btn-help", mutedStyle.Render("[?]"))
+	helpW := lipgloss.Width(helpBtn)
+
+	// -2 for "──" before logo, -2 for "──" after [?]
+	fill := innerW - logoW - 2 - helpW - 2
 	if fill < 0 {
 		fill = 0
 	}
-	return prefix + logo + strings.Repeat("─", fill) + suffix
+	return prefix + logo + strings.Repeat("─", fill) + helpBtn + suffix
 }
 
 // renderGroupRow renders the group tabs: [1 Content]  2 Collections  3 Config

@@ -8,58 +8,75 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 )
 
-// modalSavedMsg is emitted when the user confirms the modal input.
-type modalSavedMsg struct {
-	value   string
-	context string
+// editSavedMsg is emitted when the user confirms the edit modal.
+type editSavedMsg struct {
+	name        string
+	description string
+	path        string // item directory path (context for saving)
 }
 
-// modalCancelledMsg is emitted when the user cancels the modal.
-type modalCancelledMsg struct{}
+// editCancelledMsg is emitted when the user cancels the edit modal.
+type editCancelledMsg struct{}
 
-// textInputModal is a centered overlay with a text field, title, and Cancel/Save buttons.
-type textInputModal struct {
-	active  bool
-	title   string
-	value   string
-	context string
-	cursor  int // cursor position within value
+// editModal is a centered overlay with name and description fields plus Cancel/Save buttons.
+// Focus indices: 0 = name field, 1 = description field, 2 = Cancel button, 3 = Save button.
+type editModal struct {
+	active      bool
+	title       string
+	name        string
+	description string
+	path        string // item directory path
+	cursor      int    // cursor position within the focused text field
+	focusIdx    int    // 0=name, 1=description, 2=Cancel, 3=Save
 
-	// Focus: 0 = text field, 1 = Cancel button, 2 = Save button
-	focusIdx int
-
-	width  int // outer width of the modal box
-	height int // outer height of the modal box
+	width  int
+	height int
 }
 
-func newTextInputModal() textInputModal {
-	return textInputModal{
-		width:  50,
-		height: 8,
+func newEditModal() editModal {
+	return editModal{
+		width:  56,
+		height: 14,
 	}
 }
 
-// Open activates the modal with a title and pre-filled value.
-func (m *textInputModal) Open(title, value, context string) {
+// Open activates the modal with pre-filled values.
+func (m *editModal) Open(title, name, description, path string) {
 	m.active = true
 	m.title = title
-	m.value = value
-	m.context = context
-	m.cursor = len([]rune(value))
+	m.name = name
+	m.description = description
+	m.path = path
+	m.cursor = len([]rune(name))
 	m.focusIdx = 0
 }
 
-// Close deactivates the modal.
-func (m *textInputModal) Close() {
+// Close deactivates the modal and clears state.
+func (m *editModal) Close() {
 	m.active = false
-	m.value = ""
-	m.context = ""
+	m.title = ""
+	m.name = ""
+	m.description = ""
+	m.path = ""
 	m.cursor = 0
 	m.focusIdx = 0
 }
 
+// focusedValue returns a pointer to the text value for the currently focused field.
+func (m *editModal) focusedValue() *string {
+	if m.focusIdx == 1 {
+		return &m.description
+	}
+	return &m.name
+}
+
+// isTextField returns true if the current focus is on a text input field.
+func (m *editModal) isTextField() bool {
+	return m.focusIdx == 0 || m.focusIdx == 1
+}
+
 // Update handles input when the modal is active.
-func (m textInputModal) Update(msg tea.Msg) (textInputModal, tea.Cmd) {
+func (m editModal) Update(msg tea.Msg) (editModal, tea.Cmd) {
 	if !m.active {
 		return m, nil
 	}
@@ -73,131 +90,174 @@ func (m textInputModal) Update(msg tea.Msg) (textInputModal, tea.Cmd) {
 	return m, nil
 }
 
-func (m textInputModal) updateKey(msg tea.KeyMsg) (textInputModal, tea.Cmd) {
+func (m editModal) save() (editModal, tea.Cmd) {
+	name := m.name
+	desc := m.description
+	path := m.path
+	m.Close()
+	return m, func() tea.Msg { return editSavedMsg{name: name, description: desc, path: path} }
+}
+
+func (m editModal) cancel() (editModal, tea.Cmd) {
+	m.Close()
+	return m, func() tea.Msg { return editCancelledMsg{} }
+}
+
+func (m editModal) updateKey(msg tea.KeyMsg) (editModal, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyEsc:
-		m.Close()
-		return m, func() tea.Msg { return modalCancelledMsg{} }
+		return m.cancel()
+
+	case tea.KeyCtrlS:
+		return m.save()
 
 	case tea.KeyEnter:
-		if m.focusIdx == 1 {
-			// Cancel button focused
-			m.Close()
-			return m, func() tea.Msg { return modalCancelledMsg{} }
+		switch m.focusIdx {
+		case 0:
+			// Name field: move to description field
+			m.focusIdx = 1
+			m.cursor = len([]rune(m.description))
+		case 1:
+			// Description field: move to Save button
+			m.focusIdx = 3
+		case 2:
+			return m.cancel()
+		case 3:
+			return m.save()
 		}
-		// Save (text field or Save button)
-		val := m.value
-		ctx := m.context
-		m.Close()
-		return m, func() tea.Msg { return modalSavedMsg{value: val, context: ctx} }
 
 	case tea.KeyTab:
-		m.focusIdx = (m.focusIdx + 1) % 3
+		m.focusIdx = (m.focusIdx + 1) % 4
+		if m.isTextField() {
+			m.cursor = len([]rune(*m.focusedValue()))
+		}
 	case tea.KeyShiftTab:
-		m.focusIdx = (m.focusIdx + 2) % 3
+		m.focusIdx = (m.focusIdx + 3) % 4
+		if m.isTextField() {
+			m.cursor = len([]rune(*m.focusedValue()))
+		}
 
 	case tea.KeyBackspace:
-		if m.focusIdx == 0 && m.cursor > 0 {
-			runes := []rune(m.value)
-			m.value = string(runes[:m.cursor-1]) + string(runes[m.cursor:])
+		if m.isTextField() && m.cursor > 0 {
+			val := m.focusedValue()
+			runes := []rune(*val)
+			*val = string(runes[:m.cursor-1]) + string(runes[m.cursor:])
 			m.cursor--
 		}
 
 	case tea.KeyDelete:
-		if m.focusIdx == 0 {
-			runes := []rune(m.value)
+		if m.isTextField() {
+			val := m.focusedValue()
+			runes := []rune(*val)
 			if m.cursor < len(runes) {
-				m.value = string(runes[:m.cursor]) + string(runes[m.cursor+1:])
+				*val = string(runes[:m.cursor]) + string(runes[m.cursor+1:])
 			}
 		}
 
+	case tea.KeyUp:
+		// Move between fields: description → name, or buttons → description
+		if m.focusIdx == 1 {
+			m.focusIdx = 0
+			m.cursor = min(m.cursor, len([]rune(m.name)))
+		} else if m.focusIdx >= 2 {
+			m.focusIdx = 1
+			m.cursor = len([]rune(m.description))
+		}
+	case tea.KeyDown:
+		// Move between fields: name → description, or description → buttons
+		switch m.focusIdx {
+		case 0:
+			m.focusIdx = 1
+			m.cursor = min(m.cursor, len([]rune(m.description)))
+		case 1:
+			m.focusIdx = 3 // Jump to Save button
+		}
+
 	case tea.KeyLeft:
-		if m.focusIdx == 0 && m.cursor > 0 {
+		if m.isTextField() && m.cursor > 0 {
 			m.cursor--
+		} else if m.focusIdx == 3 {
+			m.focusIdx = 2 // Save → Cancel
 		}
 	case tea.KeyRight:
-		if m.focusIdx == 0 && m.cursor < len([]rune(m.value)) {
+		if m.isTextField() && m.cursor < len([]rune(*m.focusedValue())) {
 			m.cursor++
+		} else if m.focusIdx == 2 {
+			m.focusIdx = 3 // Cancel → Save
 		}
 
 	case tea.KeyHome, tea.KeyCtrlA:
-		if m.focusIdx == 0 {
+		if m.isTextField() {
 			m.cursor = 0
 		}
 	case tea.KeyEnd, tea.KeyCtrlE:
-		if m.focusIdx == 0 {
-			m.cursor = len([]rune(m.value))
+		if m.isTextField() {
+			m.cursor = len([]rune(*m.focusedValue()))
 		}
 
 	case tea.KeyRunes:
-		if m.focusIdx == 0 {
-			runes := []rune(m.value)
+		if m.isTextField() {
+			val := m.focusedValue()
+			runes := []rune(*val)
 			newRunes := make([]rune, 0, len(runes)+len(msg.Runes))
 			newRunes = append(newRunes, runes[:m.cursor]...)
 			newRunes = append(newRunes, msg.Runes...)
 			newRunes = append(newRunes, runes[m.cursor:]...)
-			m.value = string(newRunes)
+			*val = string(newRunes)
 			m.cursor += len(msg.Runes)
 		}
 	}
 	return m, nil
 }
 
-func (m textInputModal) updateMouse(msg tea.MouseMsg) (textInputModal, tea.Cmd) {
+func (m editModal) updateMouse(msg tea.MouseMsg) (editModal, tea.Cmd) {
 	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
 		return m, nil
 	}
 
 	if zone.Get("modal-cancel").InBounds(msg) {
-		m.Close()
-		return m, func() tea.Msg { return modalCancelledMsg{} }
+		return m.cancel()
 	}
 	if zone.Get("modal-save").InBounds(msg) {
-		val := m.value
-		ctx := m.context
-		m.Close()
-		return m, func() tea.Msg { return modalSavedMsg{value: val, context: ctx} }
+		return m.save()
 	}
-	if zone.Get("modal-input").InBounds(msg) {
+	if zone.Get("modal-name").InBounds(msg) {
 		m.focusIdx = 0
+		m.cursor = len([]rune(m.name))
+	}
+	if zone.Get("modal-desc").InBounds(msg) {
+		m.focusIdx = 1
+		m.cursor = len([]rune(m.description))
 	}
 
 	return m, nil
 }
 
 // View renders the modal overlay content (without placement — the app handles centering).
-func (m textInputModal) View() string {
+func (m editModal) View() string {
 	if !m.active {
 		return ""
 	}
 
-	// Width math: outer = m.width, border = 2, so content area = m.width - 2.
-	// We add 1-char padding manually on each side, so usable = contentW - 2.
-	contentW := m.width - borderSize // width inside the border
-	usableW := contentW - 2          // width inside 1-char manual padding
-
-	pad := " " // manual 1-char padding prefix/suffix
+	contentW := m.width - borderSize
+	usableW := contentW - 2
+	pad := " "
 
 	// Title
 	titleText := lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(m.title)
 	title := pad + titleText
 
-	// Text input: background-tinted field
-	inputBG := inputInactiveBG
-	if m.focusIdx == 0 {
-		inputBG = inputActiveBG
-	}
-	displayVal := m.renderValueWithCursor(usableW - 2) // -2 for inner padding
-	inputStyle := lipgloss.NewStyle().
-		Background(inputBG).
-		Foreground(primaryText).
-		Width(usableW).
-		Padding(0, 1)
-	input := zone.Mark("modal-input", pad+inputStyle.Render(displayVal)+pad)
+	// Name label + field
+	nameLabel := pad + mutedStyle.Render("Display Name")
+	nameInput := m.renderField(m.name, 0, usableW, "modal-name")
 
-	// Buttons — right-aligned within usable width
-	cancelBtn := m.renderButton("Cancel", 1, "modal-cancel")
-	saveBtn := m.renderButton("Save", 2, "modal-save")
+	// Description label + field
+	descLabel := pad + mutedStyle.Render("Description")
+	descInput := m.renderField(m.description, 1, usableW, "modal-desc")
+
+	// Buttons
+	cancelBtn := m.renderButton("Cancel", 2, "modal-cancel")
+	saveBtn := m.renderButton("Save", 3, "modal-save")
 	buttons := lipgloss.JoinHorizontal(lipgloss.Top, cancelBtn, " ", saveBtn)
 	buttonsW := lipgloss.Width(buttons)
 	buttonPad := max(0, usableW-buttonsW)
@@ -206,7 +266,11 @@ func (m textInputModal) View() string {
 	content := lipgloss.JoinVertical(lipgloss.Left,
 		title,
 		"",
-		input,
+		nameLabel,
+		nameInput,
+		"",
+		descLabel,
+		descInput,
 		"",
 		buttonRow,
 	)
@@ -219,19 +283,31 @@ func (m textInputModal) View() string {
 		Render(content)
 }
 
-// renderValueWithCursor renders the text value with a block cursor at the current position.
-func (m textInputModal) renderValueWithCursor(maxW int) string {
-	if m.focusIdx != 0 {
-		// Not focused — show plain text
-		return truncate(m.value, maxW)
+// renderField renders a text input field with background tinting and cursor.
+func (m editModal) renderField(value string, fieldIdx, usableW int, zoneID string) string {
+	bg := inputInactiveBG
+	if m.focusIdx == fieldIdx {
+		bg = inputActiveBG
+	}
+	displayVal := m.renderValueWithCursor(value, fieldIdx, usableW-2)
+	style := lipgloss.NewStyle().
+		Background(bg).
+		Foreground(primaryText).
+		Width(usableW).
+		Padding(0, 1)
+	return zone.Mark(zoneID, " "+style.Render(displayVal)+" ")
+}
+
+// renderValueWithCursor renders text with a block cursor when the field is focused.
+func (m editModal) renderValueWithCursor(value string, fieldIdx, maxW int) string {
+	if m.focusIdx != fieldIdx {
+		return truncate(value, maxW)
 	}
 
-	runes := []rune(m.value)
+	runes := []rune(value)
 	if m.cursor >= len(runes) {
-		// Cursor at end — append block cursor
-		return truncate(m.value+"█", maxW)
+		return truncate(value+"\u2588", maxW)
 	}
-	// Cursor in middle — highlight character under cursor
 	before := string(runes[:m.cursor])
 	under := string(runes[m.cursor : m.cursor+1])
 	after := string(runes[m.cursor+1:])
@@ -240,8 +316,7 @@ func (m textInputModal) renderValueWithCursor(maxW int) string {
 }
 
 // renderButton renders a button label with focus styling.
-// All buttons use background+padding for consistent height (no borders).
-func (m textInputModal) renderButton(label string, idx int, zoneID string) string {
+func (m editModal) renderButton(label string, idx int, zoneID string) string {
 	style := lipgloss.NewStyle().Padding(0, 2)
 	if m.focusIdx == idx {
 		style = style.
@@ -251,7 +326,7 @@ func (m textInputModal) renderButton(label string, idx int, zoneID string) strin
 	} else {
 		style = style.
 			Foreground(primaryText).
-			Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"}) // inactive bg
+			Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"})
 	}
 	return zone.Mark(zoneID, style.Render(label))
 }

@@ -662,31 +662,29 @@ func TestGolden_Explorer_Skills_80x30(t *testing.T) {
 
 // --- Modal integration tests ---
 
-func TestApp_RenameOpensModal(t *testing.T) {
+func TestApp_EditOpensModal(t *testing.T) {
 	app := testAppWithItems(t)
 
-	// Press 'r' to open rename modal
-	m, _ := app.Update(keyRune('r'))
+	// Press 'e' to open edit modal
+	m, _ := app.Update(keyRune('e'))
 	a := m.(App)
 	if !a.modal.active {
-		t.Fatal("expected modal to be active after 'r'")
+		t.Fatal("expected modal to be active after 'e'")
 	}
 	if a.modal.title == "" {
 		t.Fatal("expected modal title to be set")
 	}
-	// Modal value should be pre-filled with the selected item's display name
-	if a.modal.value == "" {
-		t.Fatal("expected modal value to be pre-filled")
+	// Modal name should be pre-filled with the selected item's display name
+	if a.modal.name == "" {
+		t.Fatal("expected modal name to be pre-filled")
 	}
-	// Context is the item's path — test items have empty paths, which is fine
-	// as long as the modal opened with a non-empty value
 }
 
 func TestApp_ModalCapturesKeys(t *testing.T) {
 	app := testAppWithItems(t)
 
 	// Open modal
-	m, _ := app.Update(keyRune('r'))
+	m, _ := app.Update(keyRune('e'))
 	a := m.(App)
 
 	// 'q' should NOT quit when modal is active (it should be typed into the input)
@@ -707,7 +705,7 @@ func TestApp_ModalEscCancels(t *testing.T) {
 	app := testAppWithItems(t)
 
 	// Open modal
-	m, _ := app.Update(keyRune('r'))
+	m, _ := app.Update(keyRune('e'))
 	a := m.(App)
 
 	// Esc closes modal
@@ -725,7 +723,7 @@ func TestApp_ModalViewOverlay(t *testing.T) {
 	app := testAppWithItems(t)
 
 	// Open modal
-	m, _ := app.Update(keyRune('r'))
+	m, _ := app.Update(keyRune('e'))
 	a := m.(App)
 
 	view := a.View()
@@ -739,12 +737,12 @@ func TestApp_ModalViewOverlay(t *testing.T) {
 	}
 }
 
-func TestApp_RenameHintVisible(t *testing.T) {
+func TestApp_EditHintVisible(t *testing.T) {
 	app := testAppWithItemsSize(t, 120, 40)
 	view := app.View()
 	stripped := ansi.Strip(view)
-	if !strings.Contains(stripped, "r rename") {
-		t.Error("expected 'r rename' hint in Library view")
+	if !strings.Contains(stripped, "e edit") {
+		t.Error("expected 'e edit' hint in Library view")
 	}
 }
 

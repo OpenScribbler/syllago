@@ -17,6 +17,7 @@ const (
 	keyDown    = "j"
 	keyAdd     = "a"
 	keyCreate  = "n"
-	keyRename  = "r"
+	keyEdit    = "e"
 	keyRefresh = "R"
+	keyHelp    = "?"
 )

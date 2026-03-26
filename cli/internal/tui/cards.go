@@ -9,6 +9,8 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/loadout"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 // borderColor for card borders (Flexoki base-200/850).
@@ -22,6 +24,7 @@ type cardData struct {
 	counts   map[string]int        // type label -> count (e.g. "Skills": 4)
 	status   string                // "local", "registry", etc.
 	items    []catalog.ContentItem // items inside this card
+	path     string                // directory path for metadata editing
 }
 
 // allContentTypeLabels is the fixed list of content type labels shown on every card.
@@ -256,12 +259,14 @@ func buildLoadoutCards(items []catalog.ContentItem, cat *catalog.Catalog) []card
 			name:   itemDisplayName(item),
 			status: "local",
 			counts: ensureAllTypes(nil),
+			path:   item.Path,
 		}
 
 		manifestPath := filepath.Join(item.Path, "loadout.yaml")
 		if m, err := loadout.Parse(manifestPath); err == nil {
 			c.subtitle = "Target: " + providerFullName(m.Provider)
-			c.desc = sanitizeLine(m.Description)
+			// Use item.Description which includes .syllago.yaml override from the scanner
+			c.desc = sanitizeLine(item.Description)
 			raw := make(map[string]int)
 			var resolved []catalog.ContentItem
 			for ct, refs := range m.RefsByType() {
@@ -303,7 +308,27 @@ func buildRegistryCards(sources []catalog.RegistrySource, cat *catalog.Catalog) 
 			counts:   ensureAllTypes(raw),
 			status:   itoa(len(items)) + " items",
 			items:    items,
+			path:     src.Path,
 		}
+
+		// Load description from registry.yaml manifest
+		if manifest, _ := registry.LoadManifestFromDir(src.Path); manifest != nil {
+			c.desc = sanitizeLine(manifest.Description)
+			if manifest.Name != "" {
+				c.name = manifest.Name
+			}
+		}
+
+		// .syllago.yaml override (survives registry sync since it's untracked by git)
+		if meta, _ := metadata.Load(src.Path); meta != nil {
+			if meta.Name != "" {
+				c.name = meta.Name
+			}
+			if meta.Description != "" {
+				c.desc = sanitizeLine(meta.Description)
+			}
+		}
+
 		cards = append(cards, c)
 	}
 	return cards

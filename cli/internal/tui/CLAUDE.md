@@ -74,7 +74,8 @@ Key bindings are defined in `keys.go`. For the topbar, key routing is handled di
 | `h` / `l` / left / right | Cycle sub-tabs |
 | `a` | Add action |
 | `n` | Create action |
-| `?` | Help overlay (future) |
+| `e` | Edit name/description |
+| `?` | Help overlay |
 
 ## Mouse Handling
 
@@ -145,15 +146,23 @@ Type-specific details:
 ╰────────┴────────────────╯
 ```
 
-## Text Input Modal
+## Edit Modal
 
-`textInputModal` in `modal.go` provides centered overlay for single-field input (rename, etc.):
+`editModal` in `modal.go` provides a two-field overlay for editing display name and description:
 - Overlay via `overlayModal()` in app.go — background content visible above/below modal rows
-- Background-tinted input field: dim cyan when active (`inputActiveBG`), dim grey when inactive (`inputInactiveBG`)
-- Buttons use background+padding (no borders) for consistent height
-- `Tab` cycles focus: input → save → cancel
-- `Enter` submits, `Esc` cancels
-- `modalSavedMsg` / `modalCancelledMsg` for message passing
+- Two fields: name (focus 0), description (focus 1), with background-tinted input styling
+- Buttons: Cancel (focus 2), Save (focus 3)
+- `Tab` cycles focus through all 4 targets, `Enter` advances between fields
+- `Ctrl+S` saves from any field, `Esc` cancels
+- `editSavedMsg{name, description, path}` / `editCancelledMsg` for message passing
+- Saves both fields to `.syllago.yaml` via the metadata package
+
+## Help Overlay
+
+`helpOverlay` in `help.go` shows all keyboard shortcuts in a two-column layout:
+- Toggle with `?` key, dismiss with `?` or `Esc`
+- Captures all input when active (like the edit modal)
+- Sections: Navigation, Actions, File Tree, Gallery
 
 ## Navigation — q Backs Out
 

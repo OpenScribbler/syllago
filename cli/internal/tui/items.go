@@ -285,6 +285,50 @@ func truncate(s string, maxWidth int) string {
 	return s[:maxWidth-3] + "..."
 }
 
+// wordWrap breaks text into lines at word boundaries. Words longer than maxW
+// are force-broken. Returns at least one line (empty string → [""])
+func wordWrap(s string, maxW int) []string {
+	if maxW <= 0 {
+		return []string{s}
+	}
+	words := strings.Fields(s)
+	if len(words) == 0 {
+		return []string{""}
+	}
+
+	var lines []string
+	line := ""
+	for _, word := range words {
+		// Force-break words longer than maxW
+		for len(word) > maxW {
+			if line != "" {
+				lines = append(lines, line)
+				line = ""
+			}
+			lines = append(lines, word[:maxW])
+			word = word[maxW:]
+		}
+		if word == "" {
+			continue
+		}
+		if line == "" {
+			line = word
+		} else if len(line)+1+len(word) <= maxW {
+			line += " " + word
+		} else {
+			lines = append(lines, line)
+			line = word
+		}
+	}
+	if line != "" {
+		lines = append(lines, line)
+	}
+	if len(lines) == 0 {
+		return []string{""}
+	}
+	return lines
+}
+
 // truncateLine hard-clips a line to maxWidth characters. Handles tabs by
 // expanding them to spaces first. No ellipsis — just clip for preview content.
 func truncateLine(s string, maxWidth int) string {
