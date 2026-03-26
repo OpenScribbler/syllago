@@ -44,6 +44,17 @@ func newGalleryModel() galleryModel {
 	}
 }
 
+// selectedCard returns the currently focused card, or nil if the grid is empty.
+func (g galleryModel) selectedCard() *cardData {
+	if len(g.grid.cards) == 0 {
+		return nil
+	}
+	if g.grid.cursor >= 0 && g.grid.cursor < len(g.grid.cards) {
+		return &g.grid.cards[g.grid.cursor]
+	}
+	return nil
+}
+
 // SetSize recalculates child dimensions.
 func (g *galleryModel) SetSize(width, height int) {
 	g.width = width

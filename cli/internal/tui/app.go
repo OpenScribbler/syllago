@@ -36,9 +36,10 @@ type App struct {
 	explorer explorerModel // Content/Loadout tabs: items list + preview
 	gallery  galleryModel  // Loadouts/Registries tabs: card grid + contents sidebar
 	helpBar  helpBarModel
-	modal    editModal   // reusable edit overlay (name + description)
-	help     helpOverlay // keyboard shortcut reference (? key)
-	toast    toastModel  // bottom-right notification overlay
+	modal    editModal    // reusable edit overlay (name + description)
+	confirm  confirmModal // reusable confirm overlay (remove/uninstall)
+	help     helpOverlay  // keyboard shortcut reference (? key)
+	toast    toastModel   // bottom-right notification overlay
 
 	// Dimensions
 	width, height int
@@ -74,6 +75,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		gallery:         newGalleryModel(),
 		helpBar:         newHelpBar(version),
 		modal:           newEditModal(),
+		confirm:         newConfirmModal(),
 		help:            newHelpOverlay(),
 		toast:           newToastModel(),
 	}
@@ -101,6 +103,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.gallery.SetSize(msg.Width, ch)
 		a.help.SetSize(msg.Width, ch)
 		a.toast.SetSize(msg.Width, ch)
+		a.confirm.width = msg.Width
+		a.confirm.height = ch
 		return a, nil
 
 	case tea.MouseMsg:
@@ -108,6 +112,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.modal.active {
 			var cmd tea.Cmd
 			a.modal, cmd = a.modal.Update(msg)
+			return a, cmd
+		}
+		if a.confirm.active {
+			var cmd tea.Cmd
+			a.confirm, cmd = a.confirm.Update(msg)
 			return a, cmd
 		}
 		if a.help.active {
@@ -125,6 +134,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			a.modal, cmd = a.modal.Update(msg)
+			return a, cmd
+		}
+
+		// Confirm modal captures all key input when active (except ctrl+c)
+		if a.confirm.active {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			var cmd tea.Cmd
+			a.confirm, cmd = a.confirm.Update(msg)
 			return a, cmd
 		}
 
@@ -233,12 +252,19 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Action button hotkeys
 		case msg.String() == keyAdd:
 			return a, a.topBar.actionCmd("add")
-		case msg.String() == keyCreate:
-			return a, a.topBar.actionCmd("create")
+		// keyCreate ("n") is deferred — no-op for now
 
 		// Edit selected item (name + description)
 		case msg.String() == keyEdit:
 			return a.handleEdit()
+
+		// Remove item from library
+		case msg.String() == keyRemove:
+			return a.handleRemove()
+
+		// Uninstall item from provider
+		case msg.String() == keyUninstall:
+			return a.handleUninstall()
 
 		// Help overlay
 		case msg.String() == keyHelp:
@@ -265,6 +291,15 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case editCancelledMsg:
 		return a, nil
+
+	case confirmResultMsg:
+		return a.handleConfirmResult(msg)
+
+	case removeDoneMsg:
+		return a.handleRemoveDone(msg)
+
+	case uninstallDoneMsg:
+		return a.handleUninstallDone(msg)
 
 	case tabChangedMsg:
 		a.galleryDrillIn = false
@@ -440,6 +475,9 @@ func (a App) View() string {
 	// Overlay modals on top of existing content
 	if a.modal.active {
 		content = overlayModal(content, a.modal.View(), a.width, a.contentHeight())
+	}
+	if a.confirm.active {
+		content = overlayModal(content, a.confirm.View(), a.width, a.contentHeight())
 	}
 	if a.help.active {
 		content = overlayModal(content, a.help.View(), a.width, a.contentHeight())
@@ -619,10 +657,10 @@ func (a App) currentHints() []string {
 		if a.library.mode == libraryDetail {
 			return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "R refresh", "? help", "q back")
 		}
-		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "e edit", "R refresh", "? help", "q back")
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "e edit", "d remove", "x uninstall", "R refresh", "? help", "q back")
 	}
 	if a.isGalleryTab() {
-		return append(base, "arrows grid", "enter select", "tab grid/contents", "e edit", "R refresh", "a add", "n create", "? help", "q back")
+		return append(base, "arrows grid", "enter select", "tab grid/contents", "e edit", "d remove", "R refresh", "a add", "? help", "q back")
 	}
 
 	// Library in detail mode has different hints
@@ -631,7 +669,7 @@ func (a App) currentHints() []string {
 	}
 
 	if a.isLibraryTab() {
-		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "e edit", "R refresh", "a add", "n create", "? help", "q quit")
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "e edit", "d remove", "x uninstall", "R refresh", "a add", "? help", "q quit")
 	}
 
 	// Explorer in detail mode
@@ -641,7 +679,7 @@ func (a App) currentHints() []string {
 
 	hints := append(base, "↑/↓ navigate", "←/→ switch pane", "enter detail")
 	if group != "Config" {
-		hints = append(hints, "e edit", "R refresh", "a add", "n create")
+		hints = append(hints, "e edit", "d remove", "x uninstall", "R refresh", "a add")
 	}
 	return append(hints, "? help", "q quit")
 }

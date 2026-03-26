@@ -100,7 +100,7 @@ func TestTopBar_RenderContainsElements(t *testing.T) {
 	assertContains(t, view, "Library")
 	assertContains(t, view, "Registries")
 	assertContains(t, view, "[a] Add")
-	assertContains(t, view, "[n] Create")
+	assertNotContains(t, view, "[n] Create")
 }
 
 func TestTopBar_GroupSwitchShowsDifferentTabs(t *testing.T) {

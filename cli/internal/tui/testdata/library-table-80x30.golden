@@ -1,7 +1,7 @@
 ╭──syllago────────────────────────────────────────────────────────────────[?]──╮
 │               [1] Collections      [2] Content      [3] Config               │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│   Library     Registries     Loadouts              [a] Add      [n] Create   │
+│   Library     Registries     Loadouts                              [a] Add   │
 │                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -27,4 +27,4 @@
 │                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 1/2/3 groups · tab items · ↑/↓ navigate · enter preview     syllago v0.0.0-test
-/ search · s sort · e edit · R refresh · a add · n create · ? help · q quit
+/ search · s sort · e edit · d remove · x uninstall · R refresh · a add · ? help · q quit
