@@ -1001,11 +1001,13 @@ blockers are complete. This is enforced via bead dependencies.
    │  test list with success criteria per task.
    │
 2. Parity Validation Gate
-   │  Sub-agent cross-references the plan against this design doc.
-   │  Verifies: every design requirement covered, no contradictions
+   │  A DIFFERENT sub-agent cross-references the plan against this design
+   │  doc. Verifies: every design requirement covered, no contradictions
    │  with Go Architecture Rules, all test cases have success criteria,
    │  validateStep prerequisites reflected, async safety patterns included.
-   │  BLOCKING: no implementation begins until parity confirmed.
+   │  If issues found: fix the plan, re-run parity validation.
+   │  BLOCKING: the parity bead blocks the first implementation bead.
+   │  No implementation begins until parity is confirmed and the bead closed.
    │
 3. Sequential Task → Validate Chain
    │  Tasks execute one at a time in strict sequence:
