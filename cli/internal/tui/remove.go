@@ -207,7 +207,7 @@ func (m removeModal) updateKey(msg tea.KeyMsg) (removeModal, tea.Cmd) {
 			m.focusIdx--
 		}
 
-	case msg.Type == tea.KeyLeft:
+	case msg.Type == tea.KeyLeft || (msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'h'):
 		if m.isButtonFocus() {
 			if m.focusIdx == m.firstButtonIdx() {
 				m.focusIdx = m.lastButtonIdx()
@@ -215,7 +215,7 @@ func (m removeModal) updateKey(msg tea.KeyMsg) (removeModal, tea.Cmd) {
 				m.focusIdx--
 			}
 		}
-	case msg.Type == tea.KeyRight:
+	case msg.Type == tea.KeyRight || (msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'l'):
 		if m.isButtonFocus() {
 			if m.focusIdx == m.lastButtonIdx() {
 				m.focusIdx = m.firstButtonIdx()

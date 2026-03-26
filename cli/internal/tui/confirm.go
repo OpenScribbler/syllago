@@ -165,7 +165,7 @@ func (m confirmModal) updateKey(msg tea.KeyMsg) (confirmModal, tea.Cmd) {
 			m.focusIdx--
 		}
 
-	case msg.Type == tea.KeyLeft:
+	case msg.Type == tea.KeyLeft || (msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'h'):
 		if m.isButtonFocus() {
 			if m.focusIdx == m.cancelIdx() {
 				m.focusIdx = m.confirmIdx() // wrap to last button
@@ -173,7 +173,7 @@ func (m confirmModal) updateKey(msg tea.KeyMsg) (confirmModal, tea.Cmd) {
 				m.focusIdx--
 			}
 		}
-	case msg.Type == tea.KeyRight:
+	case msg.Type == tea.KeyRight || (msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'l'):
 		if m.isButtonFocus() {
 			if m.focusIdx == m.confirmIdx() {
 				m.focusIdx = m.cancelIdx() // wrap to first button
