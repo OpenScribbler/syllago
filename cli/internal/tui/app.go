@@ -136,6 +136,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.routeMouse(msg)
 
 	case tea.KeyMsg:
+		// Toast dismissal takes priority over modals — Esc dismisses toast first.
+		if a.toast.visible && msg.Type == tea.KeyEsc {
+			cmd := a.toast.Dismiss()
+			return a, cmd
+		}
+
 		// Modal captures all key input when active (except ctrl+c)
 		if a.modal.active {
 			if msg.Type == tea.KeyCtrlC {

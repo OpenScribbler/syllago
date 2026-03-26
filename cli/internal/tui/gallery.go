@@ -342,9 +342,9 @@ func (g galleryModel) renderMetadata(width int) string {
 	}
 
 	// Line 3: Description + action buttons right-aligned
-	editBtn := zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit"))
 	removeBtn := zone.Mark("meta-remove", activeButtonStyle.Render("[d] Remove"))
-	btnRow := editBtn + " " + removeBtn
+	editBtn := zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit"))
+	btnRow := removeBtn + " " + editBtn
 	btnRowW := lipgloss.Width(btnRow)
 
 	line3 := ""

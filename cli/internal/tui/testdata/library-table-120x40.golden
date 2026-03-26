@@ -7,7 +7,7 @@
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ alpha-skill                               Type: Skill     Files: 1   Origin: syllago      Installed: --              │
 │ Scope: project   Registry: not in a registry                                                                         │
-│                                                                                                           [e] Edit   │
+│                                                                                           [d] Remove      [e] Edit   │
 ├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
 │   Name ▲                 Type      Scope        Files Installed      Description                                     │
 │ > alpha-skill            Skill     team-rules   1     --                                                             │
