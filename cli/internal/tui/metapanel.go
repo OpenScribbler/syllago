@@ -132,7 +132,14 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 	btns = append(btns, zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit")))
 	btnRow := strings.Join(btns, " ")
 	btnRowW := lipgloss.Width(btnRow)
+
+	// Truncate type detail to ensure buttons always fit — buttons must never be clipped.
+	maxDetailW := max(0, width-btnRowW-2) // -2 for minimum gap
 	line3W := lipgloss.Width(line3)
+	if line3W > maxDetailW {
+		line3 = lipgloss.NewStyle().MaxWidth(maxDetailW).Render(line3)
+		line3W = lipgloss.Width(line3)
+	}
 	btnGap := max(1, width-line3W-btnRowW)
 	line3 += strings.Repeat(" ", btnGap) + btnRow
 

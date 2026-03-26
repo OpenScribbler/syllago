@@ -357,9 +357,9 @@ func (m removeModal) View() string {
 		return ""
 	}
 
-	modalW := min(54, m.width-10)
-	if modalW < 34 {
-		modalW = 34
+	modalW := min(64, m.width-6)
+	if modalW < 40 {
+		modalW = 40
 	}
 	contentW := modalW - borderSize
 	usableW := contentW - 2
