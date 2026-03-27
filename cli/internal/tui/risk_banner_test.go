@@ -195,7 +195,7 @@ func TestRiskBanner_Empty(t *testing.T) {
 	}
 
 	// Update is a no-op on empty banner
-	b, cmd := b.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := b.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if cmd != nil {
 		t.Error("expected nil cmd from Enter on empty banner")
 	}
