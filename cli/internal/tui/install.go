@@ -743,7 +743,13 @@ func (m *installWizardModel) View() string {
 		}
 	}
 
-	return header + "\n" + content
+	// Pad to fill content area so helpbar stays at the bottom
+	output := header + "\n" + content
+	outputLines := strings.Count(output, "\n") + 1
+	if outputLines < m.height {
+		output += strings.Repeat("\n", m.height-outputLines)
+	}
+	return output
 }
 
 // viewProvider renders the provider picker step.
@@ -791,12 +797,21 @@ func (m *installWizardModel) viewProvider() string {
 // enterReview transitions to the review step, computing risks and initializing
 // the risk banner. shellIdx is the wizard shell step index for Review (varies
 // by content type: 3 for filesystem, 1 for JSON merge).
+// reviewFocus tracks what's focused on the review step.
+// -1 = risk banner (default when risks exist), 0-2 = buttons.
+const reviewFocusBanner = -1
+
 func (m *installWizardModel) enterReview(shellIdx int) {
 	m.step = installStepReview
 	m.shell.SetActive(shellIdx)
 	m.risks = catalog.RiskIndicators(m.item)
 	m.riskBanner = newRiskBanner(m.risks, m.width-4)
-	m.focusIdx = 2 // Default focus on Install button
+	// Default focus: risk banner if risks exist, otherwise no button selected
+	if len(m.risks) > 0 {
+		m.focusIdx = reviewFocusBanner
+	} else {
+		m.focusIdx = 1 // Back button (safe default, not Install)
+	}
 	m.confirmed = false
 	m.riskDrillIn = false
 }
@@ -861,40 +876,74 @@ func (m *installWizardModel) updateKeyReviewNormal(msg tea.KeyMsg) (*installWiza
 	case msg.Type == tea.KeyEsc:
 		return m.reviewGoBack()
 
+	case msg.Type == tea.KeyTab:
+		// Tab cycles: banner -> Cancel(0) -> Back(1) -> Install(2) -> banner
+		if m.focusIdx == reviewFocusBanner {
+			m.focusIdx = 0
+		} else if m.focusIdx < 2 {
+			m.focusIdx++
+		} else if len(m.risks) > 0 {
+			m.focusIdx = reviewFocusBanner
+		} else {
+			m.focusIdx = 0
+		}
+
+	case msg.Type == tea.KeyShiftTab:
+		if m.focusIdx == reviewFocusBanner {
+			m.focusIdx = 2
+		} else if m.focusIdx > 0 {
+			m.focusIdx--
+		} else if len(m.risks) > 0 {
+			m.focusIdx = reviewFocusBanner
+		} else {
+			m.focusIdx = 2
+		}
+
 	case msg.Type == tea.KeyLeft ||
 		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'h'):
+		// Left/Right only work in button row
 		if m.focusIdx > 0 {
 			m.focusIdx--
 		}
 
 	case msg.Type == tea.KeyRight ||
 		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'l'):
-		if m.focusIdx < 2 {
+		if m.focusIdx >= 0 && m.focusIdx < 2 {
 			m.focusIdx++
 		}
 
-	case msg.Type == tea.KeyTab:
-		m.focusIdx = (m.focusIdx + 1) % 3
+	case msg.Type == tea.KeyUp ||
+		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'k'):
+		if m.focusIdx == reviewFocusBanner {
+			// Navigate up within risk banner
+			m.riskBanner, _ = m.riskBanner.Update(msg)
+		} else {
+			// From button row, move focus to risk banner (if risks exist)
+			if len(m.risks) > 0 {
+				m.focusIdx = reviewFocusBanner
+			}
+		}
 
-	case msg.Type == tea.KeyShiftTab:
-		m.focusIdx = (m.focusIdx + 2) % 3
-
-	case msg.Type == tea.KeyUp || msg.Type == tea.KeyDown ||
-		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 &&
-			(msg.Runes[0] == 'j' || msg.Runes[0] == 'k')):
-		// Delegate to risk banner for vertical navigation
-		var cmd tea.Cmd
-		m.riskBanner, cmd = m.riskBanner.Update(msg)
-		if cmd != nil {
-			// Check if it's a drill-in message
-			result := cmd()
-			if drillMsg, ok := result.(riskDrillInMsg); ok {
-				m.enterDrillIn(drillMsg.risk)
-				return m, nil
+	case msg.Type == tea.KeyDown ||
+		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'j'):
+		if m.focusIdx == reviewFocusBanner {
+			// Navigate down within risk banner, or move to buttons if at bottom
+			if m.riskBanner.cursor >= len(m.risks)-1 {
+				// At bottom of risk list — move to button row
+				m.focusIdx = 0
+			} else {
+				m.riskBanner, _ = m.riskBanner.Update(msg)
 			}
 		}
 
 	case msg.Type == tea.KeyEnter:
+		if m.focusIdx == reviewFocusBanner {
+			// Enter on risk item → drill in
+			if m.riskBanner.cursor >= 0 && m.riskBanner.cursor < len(m.risks) {
+				m.enterDrillIn(m.risks[m.riskBanner.cursor])
+			}
+			return m, nil
+		}
 		switch m.focusIdx {
 		case 0: // Cancel
 			return m, func() tea.Msg { return installCloseMsg{} }
@@ -1034,7 +1083,7 @@ func (m *installWizardModel) viewReview() string {
 	bannerView := m.riskBanner.View()
 	if bannerView != "" {
 		lines = append(lines, "")
-		lines = append(lines, pad+bannerView)
+		lines = append(lines, bannerView)
 	}
 
 	// Buttons: Cancel, Back, Install

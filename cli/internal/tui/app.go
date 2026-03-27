@@ -129,13 +129,17 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.MouseMsg:
-		// Wizard mode captures all mouse input (topbar non-interactive)
+		// Wizard mode: topbar [?] button and help overlay still work
 		if a.wizardMode != wizardNone {
-			// Allow help overlay mouse handling when active
 			if a.help.active {
 				var cmd tea.Cmd
 				a.help, cmd = a.help.Update(msg)
 				return a, cmd
+			}
+			// Allow [?] help button clicks on the topbar
+			if zone.Get("btn-help").InBounds(msg) {
+				a.help.Toggle()
+				return a, nil
 			}
 			return a.routeToWizard(msg)
 		}
