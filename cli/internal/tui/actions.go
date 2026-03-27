@@ -309,7 +309,7 @@ func (a App) handleInstall() (tea.Model, tea.Cmd) {
 
 	a.installWizard = openInstallWizard(*item, detected, a.projectRoot)
 	a.installWizard.width = a.width
-	a.installWizard.height = a.height
+	a.installWizard.height = a.contentHeight()
 	a.installWizard.shell.SetWidth(a.width)
 	a.wizardMode = wizardInstall
 	return a, nil

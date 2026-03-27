@@ -78,14 +78,32 @@ func hookRisks(item ContentItem) []RiskIndicator {
 
 		if hasCommand {
 			var riskLines []RiskLine
+			var firstCmd string
 			for lineNum, line := range lines {
 				if strings.Contains(line, `"command"`) {
 					riskLines = append(riskLines, RiskLine{File: f, Line: lineNum + 1})
 				}
 			}
+			// Extract the first command value for the description.
+			gjson.GetBytes(data, "hooks").ForEach(func(_, eventHooks gjson.Result) bool {
+				eventHooks.ForEach(func(_, hook gjson.Result) bool {
+					if firstCmd == "" {
+						firstCmd = hook.Get("command").String()
+					}
+					return firstCmd == ""
+				})
+				return firstCmd == ""
+			})
+			desc := "Hook executes shell commands on your machine"
+			if firstCmd != "" {
+				if len(firstCmd) > 60 {
+					firstCmd = firstCmd[:57] + "..."
+				}
+				desc = "Runs: " + firstCmd
+			}
 			risks = appendIfMissing(risks, RiskIndicator{
 				Label:       "Runs commands",
-				Description: "Hook executes shell commands on your machine",
+				Description: desc,
 				Level:       RiskHigh,
 				Lines:       riskLines,
 			})

@@ -72,8 +72,8 @@ func (b riskBanner) View() string {
 		return ""
 	}
 
-	// Leave margin for surrounding layout; minimum usable width.
-	boxW := b.width - 4
+	// Use the width as-is — caller is responsible for passing the correct usable width.
+	boxW := b.width
 	if boxW < 30 {
 		boxW = 30
 	}

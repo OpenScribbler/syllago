@@ -123,14 +123,20 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.remove.height = ch
 		if a.installWizard != nil {
 			a.installWizard.width = msg.Width
-			a.installWizard.height = msg.Height
+			a.installWizard.height = a.contentHeight()
 			a.installWizard.shell.SetWidth(msg.Width)
 		}
 		return a, nil
 
 	case tea.MouseMsg:
-		// Wizard mode captures all mouse input
+		// Wizard mode captures all mouse input (topbar non-interactive)
 		if a.wizardMode != wizardNone {
+			// Allow help overlay mouse handling when active
+			if a.help.active {
+				var cmd tea.Cmd
+				a.help, cmd = a.help.Update(msg)
+				return a, cmd
+			}
 			return a.routeToWizard(msg)
 		}
 		// Modal and help overlay capture all mouse input when active
@@ -163,10 +169,20 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, cmd
 		}
 
-		// Wizard mode captures all key input (except ctrl+c and toast dismiss)
+		// Wizard mode captures all key input (except ctrl+c, help, and group keys)
 		if a.wizardMode != wizardNone {
 			if msg.Type == tea.KeyCtrlC {
 				return a, tea.Quit
+			}
+			// Help overlay always available during wizard
+			if msg.String() == keyHelp {
+				a.help.Toggle()
+				return a, nil
+			}
+			// Suppress group/tab navigation during wizard — user must Esc out first
+			switch msg.String() {
+			case keyGroup1, keyGroup2, keyGroup3:
+				return a, nil
 			}
 			return a.routeToWizard(msg)
 		}
@@ -569,15 +585,6 @@ func (a App) View() string {
 		return a.renderTooSmall()
 	}
 
-	// Full-screen wizard takes over the entire viewport.
-	if a.wizardMode == wizardInstall && a.installWizard != nil {
-		view := a.installWizard.View()
-		if a.toast.visible {
-			view = overlayToast(view, a.toast.View(), a.width, a.height)
-		}
-		return zone.Scan(view)
-	}
-
 	topBar := a.topBar.View()
 	content := a.renderContent()
 	helpBar := a.helpBar.View()
@@ -615,6 +622,11 @@ func (a App) contentHeight() int {
 
 // renderContent renders the main content area based on the active tab.
 func (a App) renderContent() string {
+	// Wizard renders inside the content area (topbar + helpbar stay visible).
+	if a.wizardMode == wizardInstall && a.installWizard != nil {
+		return a.installWizard.View()
+	}
+
 	group := a.topBar.ActiveGroupLabel()
 
 	if group == "Config" {

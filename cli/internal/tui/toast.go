@@ -230,10 +230,15 @@ func (t toastModel) renderOne(entry toastEntry) string {
 		content += "\n" + hint
 	}
 
+	// Fixed width so all toasts render at the same size regardless of message length.
+	const toastFixedWidth = 60
+
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(borderColor).
 		Padding(0, 1).
+		Width(toastFixedWidth).
+		MaxWidth(toastFixedWidth + 2). // +2 for border chars
 		Render(content)
 }
 
