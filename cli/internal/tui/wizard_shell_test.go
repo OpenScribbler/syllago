@@ -21,7 +21,6 @@ func TestWizardShell_Render4Steps(t *testing.T) {
 	assertContains(t, view, "Method")
 	assertContains(t, view, "Review")
 	assertContains(t, view, "Install")
-	assertContains(t, view, "syllago")
 
 	// Should have 3 lines (top border, step row, bottom border)
 	lines := strings.Split(stripped, "\n")

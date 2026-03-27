@@ -66,28 +66,21 @@ func (s wizardShell) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, topBorder, stepRow, bottomBorder)
 }
 
-// renderTopBorder renders ╭──syllago─── Title ──...──╮ with colored logo.
+// renderTopBorder renders ╭─── Title ──...──╮ (no logo — wizard-specific header).
 func (s wizardShell) renderTopBorder(innerW int) string {
-	logo := logoStyle.Render("syl") + accentLogoStyle.Render("lago")
-	logoW := lipgloss.Width(logo)
-
 	titleRendered := lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(s.title)
 	titleW := lipgloss.Width(titleRendered)
 
-	prefix := mutedStyle.Render("╭──")
+	prefix := mutedStyle.Render("╭───")
 	suffix := mutedStyle.Render("──╮")
 
-	// Layout: ╭── logo ─── title space fill ──╮
-	// Content area (innerW) = ── (2) + logo + ─── (3) + title + space (1) + fill + ── (2)
-	sepAfterLogo := mutedStyle.Render("───")
-	spaceAfterTitle := " "
-
-	fill := innerW - 2 - logoW - 3 - titleW - 1 - 2
+	// Layout: ╭─── title space fill ──╮
+	fill := innerW - 3 - titleW - 1 - 2
 	if fill < 0 {
 		fill = 0
 	}
 
-	return prefix + logo + sepAfterLogo + titleRendered + spaceAfterTitle +
+	return prefix + titleRendered + " " +
 		mutedStyle.Render(strings.Repeat("─", fill)) + suffix
 }
 

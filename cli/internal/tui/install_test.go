@@ -874,8 +874,8 @@ func TestInstallWizard_ReviewRender(t *testing.T) {
 	if !strings.Contains(view, "my-rule") {
 		t.Error("review view should contain item name")
 	}
-	if !strings.Contains(view, "Location") {
-		t.Error("review view should contain Location label")
+	if !strings.Contains(view, "Target") {
+		t.Error("review view should contain Target label")
 	}
 	if !strings.Contains(view, "Symlink") {
 		t.Error("review view should contain method label")
@@ -908,8 +908,11 @@ func TestInstallWizard_ReviewJSONMerge(t *testing.T) {
 
 	view := w.viewReview()
 
-	if !strings.Contains(view, "merge into") {
-		t.Error("JSON merge review should contain 'merge into' text")
+	if !strings.Contains(view, "Target") {
+		t.Error("JSON merge review should contain Target label")
+	}
+	if !strings.Contains(view, "JSON merge") {
+		t.Error("JSON merge review should contain 'JSON merge' method")
 	}
 	if !strings.Contains(view, "Claude Code") {
 		t.Error("review view should contain provider name")
