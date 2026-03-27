@@ -11,6 +11,15 @@
         ]
       },
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/tui-docs-gate.sh\""
+          }
+        ]
+      },
+      {
         "matcher": "Edit|Write",
         "hooks": [
           {
@@ -20,11 +29,11 @@
         ]
       },
       {
-        "matcher": "Read",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/tui-rules-reminder.sh\""
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/tui-context-gate.sh\""
           }
         ]
       }
@@ -36,6 +45,15 @@
           {
             "type": "command",
             "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/wizard-invariant-gate.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/tui-pattern-nudge.sh\""
           }
         ]
       }
