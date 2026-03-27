@@ -25,6 +25,17 @@ const (
 	installStepReview
 )
 
+// reviewFocusZone tracks which zone is focused on the review step.
+// Tab cycles through: risks -> tree -> preview -> buttons -> risks.
+type reviewFocusZone int
+
+const (
+	reviewZoneRisks   reviewFocusZone = iota // risk indicator list
+	reviewZoneTree                           // file tree (skipped for single-file items)
+	reviewZonePreview                        // file preview (scroll only)
+	reviewZoneButtons                        // Cancel / Back / Install
+)
+
 // --- Messages ---
 
 // installResultMsg is emitted when the user confirms the install.
@@ -73,15 +84,17 @@ type installWizardModel struct {
 	// Method step
 	methodCursor int
 
-	// Review step
-	risks        []catalog.RiskIndicator
-	riskBanner   riskBanner
-	riskCursor   int
-	riskDrillIn  bool
-	drillPreview previewModel
+	// Review step — risk indicators + file browser
+	risks      []catalog.RiskIndicator
+	riskBanner riskBanner
 
-	// Focus
-	focusIdx int
+	// Review step — focus zone system
+	reviewZone   reviewFocusZone
+	buttonCursor int // 0=Cancel, 1=Back, 2=Install (-1 = no button focused)
+
+	// Review step — file browser
+	reviewTree    fileTreeModel
+	reviewPreview previewModel
 
 	// Double-confirm prevention
 	confirmed bool
@@ -136,7 +149,7 @@ func openInstallWizard(item catalog.ContentItem, providers []provider.Provider, 
 		providerInstalled: providerInstalled,
 		isJSONMerge:       isJSONMerge,
 		projectRoot:       projectRoot,
-		riskCursor:        -1, // no risk item focused initially
+		buttonCursor:      -1, // no button focused initially
 	}
 
 	// Single-provider auto-skip: jump past the provider step when there's only
@@ -290,7 +303,6 @@ func (m *installWizardModel) navigateToStep(target installStep) {
 	m.shell.SetActive(shellIdx)
 	// Reset review state when navigating away from review
 	m.confirmed = false
-	m.riskDrillIn = false
 }
 
 func (m *installWizardModel) updateMouse(msg tea.MouseMsg) (*installWizardModel, tea.Cmd) {
@@ -736,11 +748,7 @@ func (m *installWizardModel) View() string {
 	case installStepMethod:
 		content = m.viewMethod()
 	case installStepReview:
-		if m.riskDrillIn {
-			content = m.viewReviewDrillIn()
-		} else {
-			content = m.viewReview()
-		}
+		content = m.viewReview()
 	}
 
 	// Pad to fill content area so helpbar stays at the bottom
@@ -795,25 +803,84 @@ func (m *installWizardModel) viewProvider() string {
 // --- Review step ---
 
 // enterReview transitions to the review step, computing risks and initializing
-// the risk banner. shellIdx is the wizard shell step index for Review (varies
-// by content type: 3 for filesystem, 1 for JSON merge).
-// reviewFocus tracks what's focused on the review step.
-// -1 = risk banner (default when risks exist), 0-2 = buttons.
-const reviewFocusBanner = -1
-
+// the file browser and risk banner. shellIdx is the wizard shell step index
+// for Review (varies by content type: 3 for filesystem, 1 for JSON merge).
 func (m *installWizardModel) enterReview(shellIdx int) {
 	m.step = installStepReview
 	m.shell.SetActive(shellIdx)
+
+	// Compute risks
 	m.risks = catalog.RiskIndicators(m.item)
 	m.riskBanner = newRiskBanner(m.risks, m.width-4)
-	// Default focus: risk banner if risks exist, otherwise no button selected
+
+	// Create file tree from the item's files
+	m.reviewTree = newFileTreeModel(m.item.Files)
+	m.reviewTree.focused = false
+
+	// Load primary file into preview
+	m.reviewPreview = newPreviewModel()
+	m.reviewPreview.LoadItem(&m.item)
+
+	// Default focus zone: risks if present, otherwise tree (or preview for single file)
 	if len(m.risks) > 0 {
-		m.focusIdx = reviewFocusBanner
+		m.reviewZone = reviewZoneRisks
+		// Auto-scroll to the first risk's highlighted line
+		m.syncPreviewToRisk()
+	} else if m.hasMultipleFiles() {
+		m.reviewZone = reviewZoneTree
+		m.reviewTree.focused = true
 	} else {
-		m.focusIdx = 1 // Back button (safe default, not Install)
+		m.reviewZone = reviewZonePreview
+		m.reviewPreview.focused = true
 	}
+	m.buttonCursor = -1
 	m.confirmed = false
-	m.riskDrillIn = false
+}
+
+// hasMultipleFiles returns true if the item has more than one file.
+func (m *installWizardModel) hasMultipleFiles() bool {
+	return len(m.item.Files) > 1
+}
+
+// syncPreviewToRisk loads the file and scrolls to the highlighted lines
+// for the currently selected risk indicator.
+func (m *installWizardModel) syncPreviewToRisk() {
+	if m.riskBanner.cursor < 0 || m.riskBanner.cursor >= len(m.risks) {
+		return
+	}
+	risk := m.risks[m.riskBanner.cursor]
+	if len(risk.Lines) == 0 {
+		// No specific lines — keep current preview
+		m.reviewPreview.SetHighlightLines(nil)
+		return
+	}
+
+	rl := risk.Lines[0]
+
+	// Load file if different from current
+	if m.reviewPreview.fileName != rl.File {
+		content, err := catalog.ReadFileContent(m.item.Path, rl.File, 500)
+		if err == nil {
+			m.reviewPreview.lines = strings.Split(content, "\n")
+			m.reviewPreview.fileName = rl.File
+		}
+		// Update tree cursor to match the file
+		m.reviewTree.SelectPath(rl.File)
+	}
+
+	// Set highlight lines (all lines from this risk in the same file)
+	highlights := make(map[int]bool)
+	for _, l := range risk.Lines {
+		if l.File == rl.File {
+			highlights[l.Line] = true
+		}
+	}
+	m.reviewPreview.SetHighlightLines(highlights)
+
+	// Scroll to center on the first highlighted line
+	if rl.Line > 0 {
+		m.reviewPreview.offset = max(0, rl.Line-3)
+	}
 }
 
 // installResult builds the installResultMsg from the current wizard state.
@@ -865,86 +932,167 @@ func (m *installWizardModel) reviewGoBack() (*installWizardModel, tea.Cmd) {
 }
 
 func (m *installWizardModel) updateKeyReview(msg tea.KeyMsg) (*installWizardModel, tea.Cmd) {
-	if m.riskDrillIn {
-		return m.updateKeyReviewDrillIn(msg)
-	}
-	return m.updateKeyReviewNormal(msg)
-}
-
-func (m *installWizardModel) updateKeyReviewNormal(msg tea.KeyMsg) (*installWizardModel, tea.Cmd) {
-	switch {
-	case msg.Type == tea.KeyEsc:
+	switch msg.Type {
+	case tea.KeyEsc:
 		return m.reviewGoBack()
 
-	case msg.Type == tea.KeyTab:
-		// Tab cycles: banner -> Cancel(0) -> Back(1) -> Install(2) -> banner
-		if m.focusIdx == reviewFocusBanner {
-			m.focusIdx = 0
-		} else if m.focusIdx < 2 {
-			m.focusIdx++
-		} else if len(m.risks) > 0 {
-			m.focusIdx = reviewFocusBanner
-		} else {
-			m.focusIdx = 0
-		}
+	case tea.KeyTab:
+		m.reviewTabForward()
 
-	case msg.Type == tea.KeyShiftTab:
-		if m.focusIdx == reviewFocusBanner {
-			m.focusIdx = 2
-		} else if m.focusIdx > 0 {
-			m.focusIdx--
-		} else if len(m.risks) > 0 {
-			m.focusIdx = reviewFocusBanner
-		} else {
-			m.focusIdx = 2
-		}
+	case tea.KeyShiftTab:
+		m.reviewTabBackward()
 
-	case msg.Type == tea.KeyLeft ||
-		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'h'):
-		// Left/Right only work in button row
-		if m.focusIdx > 0 {
-			m.focusIdx--
+	default:
+		// Delegate to zone-specific handler
+		switch m.reviewZone {
+		case reviewZoneRisks:
+			return m.updateKeyReviewRisks(msg)
+		case reviewZoneTree:
+			return m.updateKeyReviewTree(msg)
+		case reviewZonePreview:
+			return m.updateKeyReviewPreview(msg)
+		case reviewZoneButtons:
+			return m.updateKeyReviewButtons(msg)
 		}
+	}
+	return m, nil
+}
 
-	case msg.Type == tea.KeyRight ||
-		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'l'):
-		if m.focusIdx >= 0 && m.focusIdx < 2 {
-			m.focusIdx++
+// reviewTabForward cycles focus: risks -> tree -> preview -> buttons -> risks.
+// Zones are skipped when not applicable (no risks, single file).
+func (m *installWizardModel) reviewTabForward() {
+	zones := m.reviewZoneOrder()
+	for i, z := range zones {
+		if z == m.reviewZone {
+			next := zones[(i+1)%len(zones)]
+			m.setReviewZone(next)
+			return
 		}
+	}
+	// Fallback: jump to first zone
+	m.setReviewZone(zones[0])
+}
 
+// reviewTabBackward cycles focus in reverse.
+func (m *installWizardModel) reviewTabBackward() {
+	zones := m.reviewZoneOrder()
+	for i, z := range zones {
+		if z == m.reviewZone {
+			prev := zones[(i-1+len(zones))%len(zones)]
+			m.setReviewZone(prev)
+			return
+		}
+	}
+	m.setReviewZone(zones[len(zones)-1])
+}
+
+// reviewZoneOrder returns the ordered list of active zones for Tab cycling.
+func (m *installWizardModel) reviewZoneOrder() []reviewFocusZone {
+	var zones []reviewFocusZone
+	if len(m.risks) > 0 {
+		zones = append(zones, reviewZoneRisks)
+	}
+	if m.hasMultipleFiles() {
+		zones = append(zones, reviewZoneTree)
+	}
+	zones = append(zones, reviewZonePreview)
+	zones = append(zones, reviewZoneButtons)
+	return zones
+}
+
+// setReviewZone switches focus to the given zone, updating sub-model focus state.
+func (m *installWizardModel) setReviewZone(z reviewFocusZone) {
+	m.reviewZone = z
+	m.reviewTree.focused = z == reviewZoneTree
+	m.reviewPreview.focused = z == reviewZonePreview
+	if z == reviewZoneButtons && m.buttonCursor < 0 {
+		m.buttonCursor = 1 // Default to Back (safe, not Install)
+	}
+}
+
+func (m *installWizardModel) updateKeyReviewRisks(msg tea.KeyMsg) (*installWizardModel, tea.Cmd) {
+	switch {
 	case msg.Type == tea.KeyUp ||
 		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'k'):
-		if m.focusIdx == reviewFocusBanner {
-			// Navigate up within risk banner
-			m.riskBanner, _ = m.riskBanner.Update(msg)
-		} else {
-			// From button row, move focus to risk banner (if risks exist)
-			if len(m.risks) > 0 {
-				m.focusIdx = reviewFocusBanner
-			}
+		if m.riskBanner.cursor > 0 {
+			m.riskBanner.cursor--
+			m.syncPreviewToRisk()
 		}
-
 	case msg.Type == tea.KeyDown ||
 		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'j'):
-		if m.focusIdx == reviewFocusBanner {
-			// Navigate down within risk banner, or move to buttons if at bottom
-			if m.riskBanner.cursor >= len(m.risks)-1 {
-				// At bottom of risk list — move to button row
-				m.focusIdx = 0
-			} else {
-				m.riskBanner, _ = m.riskBanner.Update(msg)
-			}
+		if m.riskBanner.cursor < len(m.risks)-1 {
+			m.riskBanner.cursor++
+			m.syncPreviewToRisk()
 		}
+	}
+	return m, nil
+}
 
+func (m *installWizardModel) updateKeyReviewTree(msg tea.KeyMsg) (*installWizardModel, tea.Cmd) {
+	switch {
+	case msg.Type == tea.KeyUp ||
+		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'k'):
+		m.reviewTree.CursorUp()
+	case msg.Type == tea.KeyDown ||
+		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'j'):
+		m.reviewTree.CursorDown()
 	case msg.Type == tea.KeyEnter:
-		if m.focusIdx == reviewFocusBanner {
-			// Enter on risk item → drill in
-			if m.riskBanner.cursor >= 0 && m.riskBanner.cursor < len(m.risks) {
-				m.enterDrillIn(m.risks[m.riskBanner.cursor])
+		if m.reviewTree.cursor >= 0 && m.reviewTree.cursor < len(m.reviewTree.nodes) {
+			if m.reviewTree.nodes[m.reviewTree.cursor].isDir {
+				m.reviewTree.ToggleDir()
+			} else {
+				m.loadReviewTreeFile()
 			}
-			return m, nil
 		}
-		switch m.focusIdx {
+	}
+	return m, nil
+}
+
+// loadReviewTreeFile loads the file at the tree cursor into the review preview.
+func (m *installWizardModel) loadReviewTreeFile() {
+	path := m.reviewTree.SelectedPath()
+	if path == "" {
+		return
+	}
+	content, err := catalog.ReadFileContent(m.item.Path, path, 500)
+	if err == nil {
+		m.reviewPreview.lines = strings.Split(content, "\n")
+		m.reviewPreview.fileName = path
+		m.reviewPreview.offset = 0
+		m.reviewPreview.SetHighlightLines(nil) // Clear risk highlights when browsing files manually
+	}
+}
+
+func (m *installWizardModel) updateKeyReviewPreview(msg tea.KeyMsg) (*installWizardModel, tea.Cmd) {
+	switch {
+	case msg.Type == tea.KeyUp ||
+		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'k'):
+		m.reviewPreview.ScrollUp()
+	case msg.Type == tea.KeyDown ||
+		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'j'):
+		m.reviewPreview.ScrollDown()
+	case msg.Type == tea.KeyPgUp:
+		m.reviewPreview.PageUp()
+	case msg.Type == tea.KeyPgDown:
+		m.reviewPreview.PageDown()
+	}
+	return m, nil
+}
+
+func (m *installWizardModel) updateKeyReviewButtons(msg tea.KeyMsg) (*installWizardModel, tea.Cmd) {
+	switch {
+	case msg.Type == tea.KeyLeft ||
+		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'h'):
+		if m.buttonCursor > 0 {
+			m.buttonCursor--
+		}
+	case msg.Type == tea.KeyRight ||
+		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'l'):
+		if m.buttonCursor < 2 {
+			m.buttonCursor++
+		}
+	case msg.Type == tea.KeyEnter:
+		switch m.buttonCursor {
 		case 0: // Cancel
 			return m, func() tea.Msg { return installCloseMsg{} }
 		case 1: // Back
@@ -960,70 +1108,7 @@ func (m *installWizardModel) updateKeyReviewNormal(msg tea.KeyMsg) (*installWiza
 	return m, nil
 }
 
-func (m *installWizardModel) updateKeyReviewDrillIn(msg tea.KeyMsg) (*installWizardModel, tea.Cmd) {
-	switch {
-	case msg.Type == tea.KeyEsc:
-		m.riskDrillIn = false
-
-	case msg.Type == tea.KeyUp ||
-		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'k'):
-		m.drillPreview.ScrollUp()
-
-	case msg.Type == tea.KeyDown ||
-		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'j'):
-		m.drillPreview.ScrollDown()
-
-	case msg.Type == tea.KeyPgUp:
-		m.drillPreview.PageUp()
-
-	case msg.Type == tea.KeyPgDown:
-		m.drillPreview.PageDown()
-	}
-	return m, nil
-}
-
-// enterDrillIn sets up the drill-in preview for a risk indicator.
-func (m *installWizardModel) enterDrillIn(risk catalog.RiskIndicator) {
-	m.riskDrillIn = true
-	if len(risk.Lines) == 0 {
-		// No specific lines — show the primary file
-		m.drillPreview = newPreviewModel()
-		m.drillPreview.SetSize(m.width-4, m.height-5)
-		m.drillPreview.LoadItem(&m.item)
-		return
-	}
-
-	rl := risk.Lines[0]
-	m.drillPreview = newPreviewModel()
-	m.drillPreview.SetSize(m.width-4, m.height-5)
-	content, err := catalog.ReadFileContent(m.item.Path, rl.File, 500)
-	if err == nil {
-		m.drillPreview.lines = strings.Split(content, "\n")
-		m.drillPreview.fileName = rl.File
-	} else {
-		m.drillPreview.lines = []string{"Error reading file:", err.Error()}
-		m.drillPreview.fileName = rl.File
-	}
-
-	// Set highlight lines (all lines from this risk in the same file)
-	highlights := make(map[int]bool)
-	for _, l := range risk.Lines {
-		if l.File == rl.File {
-			highlights[l.Line] = true
-		}
-	}
-	m.drillPreview.SetHighlightLines(highlights)
-
-	// Scroll to center on the first highlighted line
-	if rl.Line > 0 {
-		m.drillPreview.offset = max(0, rl.Line-3)
-	}
-}
-
 func (m *installWizardModel) updateMouseReview(msg tea.MouseMsg) (*installWizardModel, tea.Cmd) {
-	if m.riskDrillIn {
-		return m, nil // drill-in only supports keyboard
-	}
 	if zone.Get("inst-cancel").InBounds(msg) {
 		return m, func() tea.Msg { return installCloseMsg{} }
 	}
@@ -1041,6 +1126,21 @@ func (m *installWizardModel) updateMouseReview(msg tea.MouseMsg) (*installWizard
 	for i := range m.risks {
 		if zone.Get(fmt.Sprintf("risk-%d", i)).InBounds(msg) {
 			m.riskBanner.cursor = i
+			m.setReviewZone(reviewZoneRisks)
+			m.syncPreviewToRisk()
+			return m, nil
+		}
+	}
+	// File tree node clicks
+	for i := range m.reviewTree.nodes {
+		if zone.Get("ftnode-" + itoa(i)).InBounds(msg) {
+			m.reviewTree.cursor = i
+			m.setReviewZone(reviewZoneTree)
+			if m.reviewTree.nodes[i].isDir {
+				m.reviewTree.ToggleDir()
+			} else {
+				m.loadReviewTreeFile()
+			}
 			return m, nil
 		}
 	}
@@ -1051,67 +1151,254 @@ func (m *installWizardModel) viewReview() string {
 	pad := "  "
 	usableW := m.width - 4
 
+	// --- Summary above the frame ---
 	provName := m.providers[m.providerCursor].Name
-	title := pad + lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(
-		fmt.Sprintf("Installing %q to %s", m.itemName, provName))
-
-	var lines []string
-	lines = append(lines, title, "")
+	var summaryLines []string
+	summaryLines = append(summaryLines, pad+lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(
+		fmt.Sprintf("Installing %q to %s", m.itemName, provName)))
 
 	if m.isJSONMerge {
-		// JSON merge items show merge target
-		lines = append(lines, pad+mutedStyle.Render("Will merge into ")+
+		summaryLines = append(summaryLines, pad+mutedStyle.Render("Will merge into ")+
 			lipgloss.NewStyle().Foreground(primaryText).Render(provName+" settings"))
 	} else {
-		// Filesystem items show location and method
 		locLabels := []string{"Global", "Project", "Custom"}
 		locLabel := locLabels[m.locationCursor]
 		locPath := m.resolvedInstallPath(m.locationCursor)
-
 		methodLabel := "Symlink"
 		if m.methodCursor == 1 {
 			methodLabel = "Copy"
 		}
-
-		lines = append(lines, pad+mutedStyle.Render("Location: ")+
+		summaryLines = append(summaryLines, pad+mutedStyle.Render("Location: ")+
 			lipgloss.NewStyle().Foreground(primaryText).Render(locLabel+" ("+locPath+")"))
-		lines = append(lines, pad+mutedStyle.Render("Method:   ")+
+		summaryLines = append(summaryLines, pad+mutedStyle.Render("Method:   ")+
 			lipgloss.NewStyle().Foreground(primaryText).Render(methodLabel))
 	}
 
-	// Risk banner (renders empty string when no risks)
-	bannerView := m.riskBanner.View()
-	if bannerView != "" {
-		lines = append(lines, "")
-		lines = append(lines, bannerView)
+	summary := strings.Join(summaryLines, "\n")
+
+	// --- Compute frame dimensions ---
+	border := sectionRuleStyle.Render
+	innerW := m.width - borderSize
+	summaryH := len(summaryLines) + 1 // +1 for blank line after summary
+	shellH := 3                       // wizard shell header
+	buttonH := 2                      // blank line + button row
+	frameH := max(6, m.height-shellH-summaryH-buttonH)
+	frameInnerH := max(3, frameH-borderSize)
+
+	// Risk section height
+	riskH := 0
+	if len(m.risks) > 0 {
+		riskH = len(m.risks)
 	}
 
-	// Buttons: Cancel, Back, Install
-	lines = append(lines, "")
-	lines = append(lines, renderModalButtons(m.focusIdx, usableW, pad,
-		[]string{"Install"}, // Install uses danger styling when focused
+	// Separator between risk and panes = 1 line
+	sepH := 0
+	if riskH > 0 {
+		sepH = 1
+	}
+
+	// Pane height (tree + preview area)
+	paneH := max(3, frameInnerH-riskH-sepH)
+
+	// --- Determine layout: tree+preview or preview only ---
+	showTree := m.hasMultipleFiles()
+	treeInnerW := 0
+	previewInnerW := innerW
+	if showTree {
+		treeInnerW = max(18, innerW*30/100)
+		if innerW >= 100 {
+			treeInnerW = 30
+		}
+		previewInnerW = innerW - treeInnerW - 1 // -1 for vertical divider
+	}
+
+	// Size sub-models
+	m.reviewTree.SetSize(treeInnerW, paneH)
+	m.reviewPreview.SetSize(previewInnerW, paneH)
+
+	// --- Build the frame ---
+	wrapLine := func(s string, w int) string {
+		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
+		if gap := w - lipgloss.Width(s); gap > 0 {
+			s += strings.Repeat(" ", gap)
+		}
+		return s
+	}
+
+	var frameLines []string
+
+	// Top border: ╭── Risk Indicators ──╮ or ╭──────╮
+	if riskH > 0 {
+		riskTitle := " Risk Indicators "
+		riskTitleStyled := lipgloss.NewStyle().Bold(true).Foreground(m.riskBanner.borderColor()).Render(riskTitle)
+		dashesLeft := "─"
+		remaining := innerW - 1 - lipgloss.Width(riskTitle) - 1
+		dashesRight := strings.Repeat("─", max(1, remaining))
+		frameLines = append(frameLines, border("╭"+dashesLeft)+riskTitleStyled+border(dashesRight+"╮"))
+	} else {
+		frameLines = append(frameLines, border("╭"+strings.Repeat("─", innerW)+"╮"))
+	}
+
+	// Risk items (if any)
+	if riskH > 0 {
+		riskView := m.riskBanner.ViewInline(innerW, m.reviewZone == reviewZoneRisks)
+		for _, rl := range strings.Split(riskView, "\n") {
+			frameLines = append(frameLines, border("│")+wrapLine(rl, innerW)+border("│"))
+		}
+	}
+
+	// Separator between risks/top and panes
+	if showTree {
+		if riskH > 0 {
+			frameLines = append(frameLines, border("├"+strings.Repeat("─", treeInnerW)+"┬"+strings.Repeat("─", previewInnerW)+"┤"))
+		} else {
+			// Top border already drawn; add separator for tree|preview split
+			// Replace the generic top border with a split one
+			frameLines[0] = border("╭" + strings.Repeat("─", treeInnerW) + "┬" + strings.Repeat("─", previewInnerW) + "╮")
+		}
+	} else {
+		if riskH > 0 {
+			frameLines = append(frameLines, border("├"+strings.Repeat("─", innerW)+"┤"))
+		}
+		// If no risks and no tree, we just have the top border already
+	}
+
+	// Build tree and preview content
+	treeContent := strings.Split(m.reviewTree.View(), "\n")
+	for len(treeContent) < paneH {
+		treeContent = append(treeContent, strings.Repeat(" ", treeInnerW))
+	}
+
+	// Preview: render header + body
+	previewHeader := renderSectionTitle(m.reviewPreview.fileName, previewInnerW)
+	previewBodyH := max(0, paneH-1)
+	m.reviewPreview.SetSize(previewInnerW, previewBodyH+1) // +1 for header line consumed by View
+	previewContent := []string{previewHeader}
+	if previewBodyH > 0 {
+		previewBody := m.renderReviewPreviewBody(previewBodyH, previewInnerW)
+		previewContent = append(previewContent, strings.Split(previewBody, "\n")...)
+	}
+	for len(previewContent) < paneH {
+		previewContent = append(previewContent, strings.Repeat(" ", previewInnerW))
+	}
+
+	// Pane rows
+	for i := 0; i < paneH; i++ {
+		if showTree {
+			tl := ""
+			if i < len(treeContent) {
+				tl = treeContent[i]
+			}
+			pl := ""
+			if i < len(previewContent) {
+				pl = previewContent[i]
+			}
+			frameLines = append(frameLines, border("│")+wrapLine(tl, treeInnerW)+border("│")+wrapLine(pl, previewInnerW)+border("│"))
+		} else {
+			pl := ""
+			if i < len(previewContent) {
+				pl = previewContent[i]
+			}
+			frameLines = append(frameLines, border("│")+wrapLine(pl, innerW)+border("│"))
+		}
+	}
+
+	// Bottom border
+	if showTree {
+		frameLines = append(frameLines, border("╰"+strings.Repeat("─", treeInnerW)+"┴"+strings.Repeat("─", previewInnerW)+"╯"))
+	} else {
+		frameLines = append(frameLines, border("╰"+strings.Repeat("─", innerW)+"╯"))
+	}
+
+	// --- Buttons ---
+	btnFocus := -1
+	if m.reviewZone == reviewZoneButtons {
+		btnFocus = m.buttonCursor
+	}
+	buttons := renderModalButtons(btnFocus, usableW, pad,
+		[]string{"Install"},
 		buttonDef{"Cancel", "inst-cancel", 0},
 		buttonDef{"Back", "inst-back", 1},
 		buttonDef{"Install", "inst-install", 2},
-	))
+	)
 
-	return strings.Join(lines, "\n")
+	// --- Assemble ---
+	var result []string
+	result = append(result, summary)
+	result = append(result, "") // blank line between summary and frame
+	result = append(result, frameLines...)
+	result = append(result, "") // blank line before buttons
+	result = append(result, buttons)
+
+	return strings.Join(result, "\n")
 }
 
-func (m *installWizardModel) viewReviewDrillIn() string {
-	pad := "  "
-
-	// Find the label of the risk being inspected
-	riskLabel := "Risk"
-	if m.riskBanner.cursor >= 0 && m.riskBanner.cursor < len(m.risks) {
-		riskLabel = m.risks[m.riskBanner.cursor].Label
+// renderReviewPreviewBody renders just the preview content lines (no header),
+// similar to libraryModel.renderPreviewBody. This is needed because the preview
+// model's View() includes its own header which we render separately.
+func (m *installWizardModel) renderReviewPreviewBody(height, width int) string {
+	p := &m.reviewPreview
+	if len(p.lines) == 0 {
+		return lipgloss.NewStyle().
+			Width(width).
+			Height(height).
+			Align(lipgloss.Center, lipgloss.Center).
+			Foreground(mutedColor).
+			Render("No preview available")
 	}
 
-	var lines []string
-	lines = append(lines, pad+lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(
-		"Inspecting: "+riskLabel)+" "+mutedStyle.Render("(Esc to return)"))
-	lines = append(lines, "")
-	lines = append(lines, m.drillPreview.View())
+	linesAbove := p.offset
+	lastVisible := min(p.offset+height, len(p.lines))
+	linesBelow := max(0, len(p.lines)-lastVisible)
+	showAbove := linesAbove > 0
+	showBelow := linesBelow > 0
+
+	contentStart := p.offset
+	contentEnd := lastVisible
+	if showAbove {
+		contentStart++
+	}
+	if showBelow && contentEnd > contentStart {
+		contentEnd--
+	}
+
+	lineNumW := len(fmt.Sprintf("%d", len(p.lines)))
+	if lineNumW < 2 {
+		lineNumW = 2
+	}
+
+	lines := make([]string, 0, height)
+
+	if showAbove {
+		lines = append(lines, mutedStyle.Render(fmt.Sprintf("(%d more above)", linesAbove)))
+	}
+
+	for i := contentStart; i < contentEnd; i++ {
+		lineNum := i + 1
+		if p.highlightLines != nil && p.highlightLines[lineNum] {
+			num := lipgloss.NewStyle().Foreground(dangerColor).Render(fmt.Sprintf("%*d", lineNumW, lineNum))
+			gutterChar := lipgloss.NewStyle().Foreground(dangerColor).Render("\u258c")
+			lineW := width - lipgloss.Width(num) - 1
+			lineContent := truncateLine(p.lines[i], lineW)
+			padded := lineContent + strings.Repeat(" ", max(0, lineW-lipgloss.Width(lineContent)))
+			styledLine := lipgloss.NewStyle().Background(highlightBG).Foreground(primaryText).Render(padded)
+			lines = append(lines, num+gutterChar+styledLine)
+		} else {
+			num := mutedStyle.Render(fmt.Sprintf("%*d ", lineNumW, lineNum))
+			numW := lipgloss.Width(num)
+			lineW := width - numW
+			line := truncateLine(p.lines[i], lineW)
+			lines = append(lines, num+line)
+		}
+	}
+
+	if showBelow {
+		lines = append(lines, mutedStyle.Render(fmt.Sprintf("(%d more below)", linesBelow)))
+	}
+
+	for len(lines) < height {
+		lines = append(lines, strings.Repeat(" ", width))
+	}
 
 	return strings.Join(lines, "\n")
 }

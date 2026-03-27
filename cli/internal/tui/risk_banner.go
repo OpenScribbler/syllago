@@ -98,6 +98,71 @@ func (b riskBanner) View() string {
 		Render(content)
 }
 
+// ViewInline renders risk items as plain lines (no surrounding border).
+// The caller is responsible for wrapping these lines in a bordered frame.
+// When focused is false, the cursor highlight is dimmed.
+func (b riskBanner) ViewInline(width int, focused bool) string {
+	if b.IsEmpty() {
+		return ""
+	}
+
+	var lines []string
+	for i, r := range b.risks {
+		if !focused && b.cursor == i {
+			// Dim the cursor when not focused: show as bold text without background
+			line := b.renderRiskLineDim(r, i, width)
+			lines = append(lines, zone.Mark(fmt.Sprintf("risk-%d", i), line))
+		} else {
+			line := b.renderRiskLine(r, i, width)
+			lines = append(lines, zone.Mark(fmt.Sprintf("risk-%d", i), line))
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// renderRiskLineDim renders a risk item with a dimmed cursor (bold, no background).
+func (b riskBanner) renderRiskLineDim(r catalog.RiskIndicator, idx, maxW int) string {
+	var icon string
+	if r.Level == catalog.RiskHigh {
+		icon = lipgloss.NewStyle().Foreground(dangerColor).Render("!!")
+	} else {
+		icon = lipgloss.NewStyle().Foreground(warningColor).Render("! ")
+	}
+
+	prefixW := 4
+	availW := maxW - prefixW
+	if availW < 10 {
+		availW = 10
+	}
+
+	text := r.Label
+	if r.Description != "" {
+		full := r.Label + " — " + r.Description
+		if lipgloss.Width(full) > availW {
+			maxDesc := availW - lipgloss.Width(r.Label) - lipgloss.Width(" — ") - lipgloss.Width("...")
+			if maxDesc > 0 {
+				desc := r.Description
+				for lipgloss.Width(desc) > maxDesc {
+					desc = desc[:len(desc)-1]
+				}
+				text = r.Label + " — " + desc + "..."
+			} else {
+				text = r.Label
+			}
+		} else {
+			text = full
+		}
+	}
+
+	styledText := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(primaryText).
+		MaxWidth(availW).
+		Render(text)
+
+	return " " + icon + " " + styledText
+}
+
 // borderColor returns dangerColor (red) if any risk is RiskHigh, otherwise warningColor (orange).
 func (b riskBanner) borderColor() lipgloss.TerminalColor {
 	for _, r := range b.risks {
