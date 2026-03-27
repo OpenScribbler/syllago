@@ -10,6 +10,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 func TestEnsureGlobalContentDir_CreatesDirectory(t *testing.T) {
@@ -247,7 +248,8 @@ func TestInitWizard_EnterMarksDone(t *testing.T) {
 		t.Fatal("Enter on provider step should advance to registry step, not finish")
 	}
 
-	// Move cursor to "Skip for now" (index 2) and confirm
+	// Move cursor to "Skip for now" (index 3) and confirm
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -353,7 +355,8 @@ func TestInitWizard_SkipRegistryMarksDone(t *testing.T) {
 	// Advance past provider step
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
-	// Move cursor to "Skip for now" (index 2) and select it
+	// Move cursor to "Skip for now" (index 3) and select it
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -363,5 +366,26 @@ func TestInitWizard_SkipRegistryMarksDone(t *testing.T) {
 	}
 	if w.registryAction != "skip" {
 		t.Errorf("registryAction should be 'skip', got %q", w.registryAction)
+	}
+}
+
+func TestInitWizard_OfficialRegistryOption(t *testing.T) {
+	detected := []provider.Provider{{Name: "Claude Code", Slug: "claude-code", Detected: true}}
+	w := newInitWizard(detected, detected)
+
+	// Advance past provider step
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	// Option 0 is "Add the official syllago meta-registry" — just press Enter
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if !w.done {
+		t.Error("selecting official registry should mark wizard as done")
+	}
+	if w.registryAction != "add" {
+		t.Errorf("registryAction should be 'add', got %q", w.registryAction)
+	}
+	if w.registryURL != registry.OfficialRegistryURL {
+		t.Errorf("registryURL should be %q, got %q", registry.OfficialRegistryURL, w.registryURL)
 	}
 }
