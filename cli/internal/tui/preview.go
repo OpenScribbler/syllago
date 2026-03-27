@@ -11,12 +11,13 @@ import (
 
 // previewModel renders a scrollable text preview of a file's content.
 type previewModel struct {
-	lines    []string // content lines
-	fileName string   // displayed in header
-	offset   int      // scroll offset (first visible line)
-	width    int
-	height   int
-	focused  bool
+	lines          []string // content lines
+	fileName       string   // displayed in header
+	offset         int      // scroll offset (first visible line)
+	width          int
+	height         int
+	focused        bool
+	highlightLines map[int]bool // 1-based line numbers to highlight (nil = no highlights)
 }
 
 func newPreviewModel() previewModel {
@@ -27,6 +28,12 @@ func newPreviewModel() previewModel {
 func (p *previewModel) SetSize(width, height int) {
 	p.width = width
 	p.height = height
+}
+
+// SetHighlightLines sets the line numbers (1-based) to highlight with a danger tint.
+// Pass nil to clear highlights.
+func (p *previewModel) SetHighlightLines(lines map[int]bool) {
+	p.highlightLines = lines
 }
 
 // LoadItem loads the primary file content for a catalog item.
@@ -133,11 +140,23 @@ func (p previewModel) View() string {
 	}
 
 	for i := contentStart; i < contentEnd; i++ {
-		num := mutedStyle.Render(fmt.Sprintf("%*d ", lineNumW, i+1))
-		numW := lipgloss.Width(num)
-		lineW := p.width - numW
-		line := truncateLine(p.lines[i], lineW)
-		visibleLines = append(visibleLines, num+line)
+		lineNum := i + 1
+		if p.highlightLines != nil && p.highlightLines[lineNum] {
+			// Highlighted line: danger gutter marker + tinted background
+			num := lipgloss.NewStyle().Foreground(dangerColor).Render(fmt.Sprintf("%*d", lineNumW, lineNum))
+			gutter := lipgloss.NewStyle().Foreground(dangerColor).Render("\u258c") // ▌
+			lineW := p.width - lipgloss.Width(num) - 1
+			line := truncateLine(p.lines[i], lineW)
+			styledLine := lipgloss.NewStyle().Background(highlightBG).Foreground(primaryText).Render(line)
+			visibleLines = append(visibleLines, num+gutter+styledLine)
+		} else {
+			// Normal line
+			num := mutedStyle.Render(fmt.Sprintf("%*d ", lineNumW, lineNum))
+			numW := lipgloss.Width(num)
+			lineW := p.width - numW
+			line := truncateLine(p.lines[i], lineW)
+			visibleLines = append(visibleLines, num+line)
+		}
 	}
 
 	if showBelow {

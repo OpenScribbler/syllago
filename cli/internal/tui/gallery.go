@@ -176,6 +176,9 @@ func (g galleryModel) updateSidebarKeys(msg tea.KeyMsg) (galleryModel, tea.Cmd) 
 func (g galleryModel) updateMouse(msg tea.MouseMsg) (galleryModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 		// Metadata bar button clicks
+		if zone.Get("meta-install").InBounds(msg) {
+			return g, func() tea.Msg { return libraryInstallMsg{} }
+		}
 		if zone.Get("meta-edit").InBounds(msg) {
 			return g, func() tea.Msg { return libraryEditMsg{} }
 		}

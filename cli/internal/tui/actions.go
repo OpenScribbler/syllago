@@ -277,3 +277,98 @@ func (a App) handleUninstallDone(msg uninstallDoneMsg) (tea.Model, tea.Cmd) {
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)
 }
+
+// handleInstall opens the install wizard for the currently selected library item.
+func (a App) handleInstall() (tea.Model, tea.Cmd) {
+	// Gallery card install not supported (must drill into a card first).
+	if a.isGalleryTab() && !a.galleryDrillIn {
+		return a, nil
+	}
+
+	item := a.selectedItem()
+	if item == nil {
+		return a, nil
+	}
+
+	if !item.Library {
+		cmd := a.toast.Push("Only library items can be installed", toastWarning)
+		return a, cmd
+	}
+
+	// Filter to detected providers only.
+	var detected []provider.Provider
+	for _, prov := range a.providers {
+		if prov.Detected {
+			detected = append(detected, prov)
+		}
+	}
+	if len(detected) == 0 {
+		cmd := a.toast.Push("No providers detected", toastWarning)
+		return a, cmd
+	}
+
+	a.installWizard = openInstallWizard(*item, detected, a.projectRoot)
+	a.installWizard.width = a.width
+	a.installWizard.height = a.height
+	a.installWizard.shell.SetWidth(a.width)
+	a.wizardMode = wizardInstall
+	return a, nil
+}
+
+// handleInstallResult receives the wizard's confirmation and kicks off the async install.
+func (a App) handleInstallResult(msg installResultMsg) (tea.Model, tea.Cmd) {
+	// Close wizard immediately — the install happens async.
+	a.installWizard = nil
+	a.wizardMode = wizardNone
+	return a, a.doInstallCmd(msg)
+}
+
+// doInstallCmd creates a tea.Cmd that performs the install operation in the background.
+func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
+	item := msg.item
+	prov := msg.provider
+	method := msg.method
+	projectRoot := msg.projectRoot
+
+	var baseDir string
+	switch msg.location {
+	case "global":
+		baseDir = ""
+	case "project":
+		baseDir = projectRoot
+	default:
+		baseDir = msg.location
+	}
+
+	return func() tea.Msg {
+		desc, err := installer.Install(item, prov, projectRoot, method, baseDir)
+		if err != nil {
+			return installDoneMsg{
+				itemName:     item.DisplayName,
+				providerName: prov.Name,
+				err:          err,
+			}
+		}
+		return installDoneMsg{
+			itemName:     item.DisplayName,
+			providerName: prov.Name,
+			targetPath:   desc,
+		}
+	}
+}
+
+// handleInstallDone processes the result of an install operation.
+func (a App) handleInstallDone(msg installDoneMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		cmd := a.toast.Push("Install failed: "+msg.err.Error(), toastError)
+		return a, cmd
+	}
+	name := msg.itemName
+	if name == "" {
+		name = "item"
+	}
+	toastText := fmt.Sprintf("Installed %q to %s", name, msg.providerName)
+	cmd1 := a.toast.Push(toastText, toastSuccess)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
+}

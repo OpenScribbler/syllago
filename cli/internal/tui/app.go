@@ -17,6 +17,14 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
+// wizardKind identifies the active full-screen wizard (if any).
+type wizardKind int
+
+const (
+	wizardNone    wizardKind = iota
+	wizardInstall            // install wizard (B3+)
+)
+
 // App is the root bubbletea model for the TUI.
 type App struct {
 	// Backend data (passed from main.go, used by future phases)
@@ -41,6 +49,10 @@ type App struct {
 	remove   removeModal  // multi-step remove overlay (library item removal)
 	help     helpOverlay  // keyboard shortcut reference (? key)
 	toast    toastModel   // bottom-right notification overlay
+
+	// Wizard mode — when active, captures all key/mouse input
+	wizardMode    wizardKind
+	installWizard *installWizardModel // nil when not active
 
 	// Dimensions
 	width, height int
@@ -109,9 +121,18 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.confirm.height = ch
 		a.remove.width = msg.Width
 		a.remove.height = ch
+		if a.installWizard != nil {
+			a.installWizard.width = msg.Width
+			a.installWizard.height = msg.Height
+			a.installWizard.shell.SetWidth(msg.Width)
+		}
 		return a, nil
 
 	case tea.MouseMsg:
+		// Wizard mode captures all mouse input
+		if a.wizardMode != wizardNone {
+			return a.routeToWizard(msg)
+		}
 		// Modal and help overlay capture all mouse input when active
 		if a.modal.active {
 			var cmd tea.Cmd
@@ -140,6 +161,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.toast.visible && msg.Type == tea.KeyEsc {
 			cmd := a.toast.Dismiss()
 			return a, cmd
+		}
+
+		// Wizard mode captures all key input (except ctrl+c and toast dismiss)
+		if a.wizardMode != wizardNone {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			return a.routeToWizard(msg)
 		}
 
 		// Modal captures all key input when active (except ctrl+c)
@@ -291,6 +320,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.String() == keyUninstall:
 			return a.handleUninstall()
 
+		// Install item to a provider
+		case msg.String() == keyInstall:
+			return a.handleInstall()
+
 		// Help overlay
 		case msg.String() == keyHelp:
 			a.help.Toggle()
@@ -329,6 +362,17 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case uninstallDoneMsg:
 		return a.handleUninstallDone(msg)
 
+	case installResultMsg:
+		return a.handleInstallResult(msg)
+
+	case installDoneMsg:
+		return a.handleInstallDone(msg)
+
+	case installCloseMsg:
+		a.installWizard = nil
+		a.wizardMode = wizardNone
+		return a, nil
+
 	case tabChangedMsg:
 		a.galleryDrillIn = false
 		a.refreshContent()
@@ -337,6 +381,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case libraryEditMsg:
 		return a.handleEdit()
+
+	case libraryInstallMsg:
+		return a.handleInstall()
 
 	case libraryRemoveMsg:
 		return a.handleRemove()
@@ -501,6 +548,18 @@ func (a App) routeMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	return a, tea.Batch(topCmd, contentCmd)
 }
 
+// routeToWizard dispatches messages to the active wizard.
+func (a App) routeToWizard(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch a.wizardMode {
+	case wizardInstall:
+		if a.installWizard != nil {
+			_, cmd := a.installWizard.Update(msg)
+			return a, cmd
+		}
+	}
+	return a, nil
+}
+
 // View implements tea.Model.
 func (a App) View() string {
 	if !a.ready {
@@ -508,6 +567,15 @@ func (a App) View() string {
 	}
 	if a.width < 80 || a.height < 20 {
 		return a.renderTooSmall()
+	}
+
+	// Full-screen wizard takes over the entire viewport.
+	if a.wizardMode == wizardInstall && a.installWizard != nil {
+		view := a.installWizard.View()
+		if a.toast.visible {
+			view = overlayToast(view, a.toast.View(), a.width, a.height)
+		}
+		return zone.Scan(view)
 	}
 
 	topBar := a.topBar.View()
@@ -714,7 +782,7 @@ func (a App) currentHints() []string {
 	}
 
 	if a.isLibraryTab() {
-		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "e edit", "d remove", "x uninstall", "R refresh", "a add", "? help", "q quit")
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "i install", "e edit", "d remove", "x uninstall", "R refresh", "a add", "? help", "q quit")
 	}
 
 	// Explorer in detail mode
@@ -724,7 +792,7 @@ func (a App) currentHints() []string {
 
 	hints := append(base, "↑/↓ navigate", "←/→ switch pane", "enter detail")
 	if group != "Config" {
-		hints = append(hints, "e edit", "d remove", "x uninstall", "R refresh", "a add")
+		hints = append(hints, "i install", "e edit", "d remove", "x uninstall", "R refresh", "a add")
 	}
 	return append(hints, "? help", "q quit")
 }

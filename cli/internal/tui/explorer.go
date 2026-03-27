@@ -275,6 +275,9 @@ func (e explorerModel) updateMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 func (e explorerModel) updateBrowseMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 		// Metadata bar button clicks
+		if zone.Get("meta-install").InBounds(msg) {
+			return e, func() tea.Msg { return libraryInstallMsg{} }
+		}
 		if zone.Get("meta-edit").InBounds(msg) {
 			return e, func() tea.Msg { return libraryEditMsg{} }
 		}
@@ -350,7 +353,10 @@ func (e explorerModel) updateBrowseMouse(msg tea.MouseMsg) (explorerModel, tea.C
 // updateDetailMouse handles mouse events in detail mode.
 func (e explorerModel) updateDetailMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
-		// Edit button click
+		// Metadata bar button clicks
+		if zone.Get("meta-install").InBounds(msg) {
+			return e, func() tea.Msg { return libraryInstallMsg{} }
+		}
 		if zone.Get("meta-edit").InBounds(msg) {
 			return e, func() tea.Msg { return libraryEditMsg{} }
 		}
