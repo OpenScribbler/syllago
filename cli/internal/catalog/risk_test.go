@@ -27,6 +27,14 @@ func TestRiskIndicators_Hook_Command(t *testing.T) {
 	if risks[0].Label != "Runs commands" {
 		t.Errorf("Label = %q, want %q", risks[0].Label, "Runs commands")
 	}
+	if risks[0].Level != RiskHigh {
+		t.Errorf("Level = %d, want RiskHigh (%d)", risks[0].Level, RiskHigh)
+	}
+	if len(risks[0].Lines) == 0 {
+		t.Error("expected Lines to be populated for command hook")
+	} else if risks[0].Lines[0].File != "hook.json" {
+		t.Errorf("Lines[0].File = %q, want %q", risks[0].Lines[0].File, "hook.json")
+	}
 }
 
 func TestRiskIndicators_Hook_URL(t *testing.T) {
@@ -49,6 +57,14 @@ func TestRiskIndicators_Hook_URL(t *testing.T) {
 	if risks[0].Label != "Network access" {
 		t.Errorf("Label = %q, want %q", risks[0].Label, "Network access")
 	}
+	if risks[0].Level != RiskMedium {
+		t.Errorf("Level = %d, want RiskMedium (%d)", risks[0].Level, RiskMedium)
+	}
+	if len(risks[0].Lines) == 0 {
+		t.Error("expected Lines to be populated for URL hook")
+	} else if risks[0].Lines[0].File != "hook.json" {
+		t.Errorf("Lines[0].File = %q, want %q", risks[0].Lines[0].File, "hook.json")
+	}
 }
 
 func TestRiskIndicators_Hook_CommandAndURL_Deduped(t *testing.T) {
@@ -68,6 +84,18 @@ func TestRiskIndicators_Hook_CommandAndURL_Deduped(t *testing.T) {
 	risks := RiskIndicators(item)
 	if len(risks) != 2 {
 		t.Fatalf("expected 2 risks (Runs commands + Network access), got %d: %+v", len(risks), risks)
+	}
+	for _, r := range risks {
+		switch r.Label {
+		case "Runs commands":
+			if r.Level != RiskHigh {
+				t.Errorf("Runs commands: Level = %d, want RiskHigh", r.Level)
+			}
+		case "Network access":
+			if r.Level != RiskMedium {
+				t.Errorf("Network access: Level = %d, want RiskMedium", r.Level)
+			}
+		}
 	}
 }
 
@@ -95,6 +123,23 @@ func TestRiskIndicators_MCP_WithEnv(t *testing.T) {
 	if !labels["Environment variables"] {
 		t.Error("expected risk label 'Environment variables'")
 	}
+	for _, r := range risks {
+		switch r.Label {
+		case "Network access":
+			if r.Level != RiskMedium {
+				t.Errorf("Network access: Level = %d, want RiskMedium", r.Level)
+			}
+		case "Environment variables":
+			if r.Level != RiskMedium {
+				t.Errorf("Environment variables: Level = %d, want RiskMedium", r.Level)
+			}
+			if len(r.Lines) == 0 {
+				t.Error("expected Lines for Environment variables risk")
+			} else if r.Lines[0].File != "mcp.json" {
+				t.Errorf("Lines[0].File = %q, want %q", r.Lines[0].File, "mcp.json")
+			}
+		}
+	}
 }
 
 func TestRiskIndicators_MCP_NoEnv(t *testing.T) {
@@ -117,6 +162,9 @@ func TestRiskIndicators_MCP_NoEnv(t *testing.T) {
 	if risks[0].Label != "Network access" {
 		t.Errorf("Label = %q, want %q", risks[0].Label, "Network access")
 	}
+	if risks[0].Level != RiskMedium {
+		t.Errorf("Level = %d, want RiskMedium (%d)", risks[0].Level, RiskMedium)
+	}
 }
 
 func TestRiskIndicators_Skill_WithBash(t *testing.T) {
@@ -138,6 +186,20 @@ func TestRiskIndicators_Skill_WithBash(t *testing.T) {
 	}
 	if risks[0].Label != "Bash access" {
 		t.Errorf("Label = %q, want %q", risks[0].Label, "Bash access")
+	}
+	if risks[0].Level != RiskHigh {
+		t.Errorf("Level = %d, want RiskHigh (%d)", risks[0].Level, RiskHigh)
+	}
+	if len(risks[0].Lines) == 0 {
+		t.Error("expected Lines for Bash access risk")
+	} else {
+		if risks[0].Lines[0].File != "SKILL.md" {
+			t.Errorf("Lines[0].File = %q, want %q", risks[0].Lines[0].File, "SKILL.md")
+		}
+		// "Bash" appears on line 5: "Use the Bash tool to run commands."
+		if risks[0].Lines[0].Line != 5 {
+			t.Errorf("Lines[0].Line = %d, want 5", risks[0].Lines[0].Line)
+		}
 	}
 }
 
@@ -197,5 +259,44 @@ func TestRiskIndicators_Rules_NoRisk(t *testing.T) {
 	risks := RiskIndicators(item)
 	if len(risks) != 0 {
 		t.Errorf("expected no risks for rules, got %d: %+v", len(risks), risks)
+	}
+}
+
+func TestRiskIndicators_LinesAccurate(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	// Multi-line hook JSON with "command" on a specific line (line 5).
+	hookJSON := `{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "command": "echo hello",
+        "matcher": "Write"
+      }
+    ]
+  }
+}`
+	if err := os.WriteFile(filepath.Join(dir, "hooks.json"), []byte(hookJSON), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	item := ContentItem{
+		Type:  Hooks,
+		Path:  dir,
+		Files: []string{"hooks.json"},
+	}
+	risks := RiskIndicators(item)
+	if len(risks) != 1 {
+		t.Fatalf("expected 1 risk, got %d: %+v", len(risks), risks)
+	}
+	if len(risks[0].Lines) != 1 {
+		t.Fatalf("expected 1 line, got %d: %+v", len(risks[0].Lines), risks[0].Lines)
+	}
+	rl := risks[0].Lines[0]
+	if rl.File != "hooks.json" {
+		t.Errorf("File = %q, want %q", rl.File, "hooks.json")
+	}
+	if rl.Line != 5 {
+		t.Errorf("Line = %d, want 5", rl.Line)
 	}
 }

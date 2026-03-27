@@ -81,6 +81,18 @@ func TestHelpOverlay_ViewContainsSections(t *testing.T) {
 	}
 }
 
+func TestHelpOverlay_ViewContainsInstall(t *testing.T) {
+	h := newHelpOverlay()
+	h.SetSize(100, 40)
+	h.active = true
+
+	view := h.View()
+	stripped := ansi.Strip(view)
+	if !strings.Contains(stripped, "i") || !strings.Contains(stripped, "Install to provider") {
+		t.Error("help view should contain 'i' and 'Install to provider' in the Actions section")
+	}
+}
+
 func TestHelpOverlay_ViewContainsCloseButton(t *testing.T) {
 	h := newHelpOverlay()
 	h.SetSize(100, 40)

@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -497,34 +496,6 @@ func (m removeModal) viewReview(usableW int, pad string) string {
 
 // --- Button rendering ---
 
-type buttonDef struct {
-	label   string
-	zoneID  string
-	focusAt int
-}
-
 func (m removeModal) renderButtons(usableW int, pad string, buttons ...buttonDef) string {
-	var parts []string
-	for _, b := range buttons {
-		style := lipgloss.NewStyle().Padding(0, 2)
-		if m.focusIdx == b.focusAt {
-			fg := lipgloss.AdaptiveColor{Light: "#FFFCF0", Dark: "#100F0F"}
-			bg := accentColor
-			// Danger style for the final "Remove" button
-			if b.label == "Remove" {
-				bg = dangerColor
-			}
-			style = style.Bold(true).Foreground(fg).Background(bg)
-		} else {
-			style = style.
-				Foreground(primaryText).
-				Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"})
-		}
-		parts = append(parts, zone.Mark(b.zoneID, style.Render(b.label)))
-	}
-
-	buttons_str := strings.Join(parts, "  ")
-	buttonsW := lipgloss.Width(buttons_str)
-	buttonPad := max(0, usableW-buttonsW)
-	return pad + strings.Repeat(" ", buttonPad) + buttons_str
+	return renderModalButtons(m.focusIdx, usableW, pad, []string{"Remove"}, buttons...)
 }

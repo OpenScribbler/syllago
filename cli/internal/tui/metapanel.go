@@ -15,6 +15,7 @@ import (
 type metaPanelData struct {
 	installed  string // "CC,GC,Cu" or "--"
 	typeDetail string // type-specific detail (hooks/MCP/loadouts) or ""
+	canInstall bool   // true when item is in library and has at least one uninstalled provider
 }
 
 // computeMetaPanelData computes installed status and type-specific detail for an item.
@@ -30,9 +31,20 @@ func computeMetaPanelData(item catalog.ContentItem, providers []provider.Provide
 		installed = strings.Join(abbrevs, ",")
 	}
 
+	canInstall := false
+	if item.Library {
+		for _, prov := range providers {
+			if prov.Detected && installer.CheckStatus(item, prov, repoRoot) != installer.StatusInstalled {
+				canInstall = true
+				break
+			}
+		}
+	}
+
 	return metaPanelData{
 		installed:  installed,
 		typeDetail: computeTypeDetail(item),
+		canInstall: canInstall,
 	}
 }
 
@@ -121,9 +133,12 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 		line3 = styled
 	}
 
-	// Per-item action buttons ordered: [x] Uninstall, [d] Remove, [e] Edit
+	// Per-item action buttons ordered: [i] Install, [x] Uninstall, [d] Remove, [e] Edit
 	// Only show buttons that are actionable for this item.
 	var btns []string
+	if data.canInstall {
+		btns = append(btns, zone.Mark("meta-install", activeButtonStyle.Render("[i] Install")))
+	}
 	if data.installed != "--" {
 		btns = append(btns, zone.Mark("meta-uninstall", activeButtonStyle.Render("[x] Uninstall")))
 	}
