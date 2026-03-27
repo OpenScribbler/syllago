@@ -33,9 +33,13 @@ func TestNameFromURL(t *testing.T) {
 	}
 }
 
-func TestExpandAlias_KnownAliasTableIsEmpty(t *testing.T) {
-	if len(KnownAliases) != 0 {
-		t.Errorf("KnownAliases should be empty, got %d entries: %v", len(KnownAliases), KnownAliases)
+func TestExpandAlias_OfficialAlias(t *testing.T) {
+	url, expanded := ExpandAlias("syllago")
+	if !expanded {
+		t.Fatal("expected syllago alias to expand")
+	}
+	if url != OfficialRegistryURL {
+		t.Errorf("got %q, want %q", url, OfficialRegistryURL)
 	}
 }
 
