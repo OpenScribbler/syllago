@@ -278,10 +278,39 @@ func (m *installWizardModel) updateKeyProvider(msg tea.KeyMsg) (*installWizardMo
 	return m, nil
 }
 
+// navigateToStep jumps to a previously completed step, preserving wizard state.
+// Only safe to call for steps < m.step (going backwards).
+func (m *installWizardModel) navigateToStep(target installStep) {
+	// Map install step to shell step index. JSON merge wizards have fewer shell steps.
+	shellIdx := int(target)
+	if m.isJSONMerge && target == installStepReview {
+		shellIdx = 1
+	}
+	m.step = target
+	m.shell.SetActive(shellIdx)
+	// Reset review state when navigating away from review
+	m.confirmed = false
+	m.riskDrillIn = false
+}
+
 func (m *installWizardModel) updateMouse(msg tea.MouseMsg) (*installWizardModel, tea.Cmd) {
 	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
 		return m, nil
 	}
+
+	// Check wizard shell breadcrumb clicks (completed steps are clickable)
+	if step, ok := m.shell.HandleClick(msg); ok {
+		// Map shell step index back to install step.
+		target := installStep(step)
+		if m.isJSONMerge && step == 1 {
+			target = installStepReview
+		}
+		if target < m.step {
+			m.navigateToStep(target)
+		}
+		return m, nil
+	}
+
 	switch m.step {
 	case installStepProvider:
 		return m.updateMouseProvider(msg)
