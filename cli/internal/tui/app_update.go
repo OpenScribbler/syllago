@@ -1,0 +1,487 @@
+package tui
+
+import (
+	tea "github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
+
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+)
+
+// Update implements tea.Model.
+func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		a.width = msg.Width
+		a.height = msg.Height
+		a.ready = true
+		a.topBar.SetSize(msg.Width)
+		a.helpBar.SetSize(msg.Width)
+		ch := a.contentHeight()
+		a.library.SetSize(msg.Width, ch)
+		a.explorer.SetSize(msg.Width, ch)
+		a.gallery.SetSize(msg.Width, ch)
+		a.help.SetSize(msg.Width, ch)
+		a.toast.SetSize(msg.Width, ch)
+		a.confirm.width = msg.Width
+		a.confirm.height = ch
+		a.remove.width = msg.Width
+		a.remove.height = ch
+		if a.installWizard != nil {
+			a.installWizard.width = msg.Width
+			a.installWizard.height = a.contentHeight()
+			a.installWizard.shell.SetWidth(msg.Width)
+		}
+		return a, nil
+
+	case tea.MouseMsg:
+		// Wizard mode: topbar [?] button and help overlay still work
+		if a.wizardMode != wizardNone {
+			if a.help.active {
+				var cmd tea.Cmd
+				a.help, cmd = a.help.Update(msg)
+				return a, cmd
+			}
+			// Allow [?] help button clicks on the topbar
+			if zone.Get("btn-help").InBounds(msg) {
+				a.help.Toggle()
+				return a, nil
+			}
+			return a.routeToWizard(msg)
+		}
+		// Modal and help overlay capture all mouse input when active
+		if a.modal.active {
+			var cmd tea.Cmd
+			a.modal, cmd = a.modal.Update(msg)
+			return a, cmd
+		}
+		if a.confirm.active {
+			var cmd tea.Cmd
+			a.confirm, cmd = a.confirm.Update(msg)
+			return a, cmd
+		}
+		if a.remove.active {
+			var cmd tea.Cmd
+			a.remove, cmd = a.remove.Update(msg)
+			return a, cmd
+		}
+		if a.help.active {
+			var cmd tea.Cmd
+			a.help, cmd = a.help.Update(msg)
+			return a, cmd
+		}
+		return a.routeMouse(msg)
+
+	case tea.KeyMsg:
+		// Toast dismissal takes priority over modals — Esc dismisses toast first.
+		if a.toast.visible && msg.Type == tea.KeyEsc {
+			cmd := a.toast.Dismiss()
+			return a, cmd
+		}
+
+		// Wizard mode captures all key input (except ctrl+c, help, and group keys)
+		if a.wizardMode != wizardNone {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			// Help overlay always available during wizard
+			if msg.String() == keyHelp {
+				a.help.Toggle()
+				return a, nil
+			}
+			// Suppress group/tab navigation during wizard — user must Esc out first
+			switch msg.String() {
+			case keyGroup1, keyGroup2, keyGroup3:
+				return a, nil
+			}
+			return a.routeToWizard(msg)
+		}
+
+		// Modal captures all key input when active (except ctrl+c)
+		if a.modal.active {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			var cmd tea.Cmd
+			a.modal, cmd = a.modal.Update(msg)
+			return a, cmd
+		}
+
+		// Confirm modal captures all key input when active (except ctrl+c)
+		if a.confirm.active {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			var cmd tea.Cmd
+			a.confirm, cmd = a.confirm.Update(msg)
+			return a, cmd
+		}
+
+		// Remove modal captures all key input when active (except ctrl+c)
+		if a.remove.active {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			var cmd tea.Cmd
+			a.remove, cmd = a.remove.Update(msg)
+			return a, cmd
+		}
+
+		// Help overlay captures all key input when active
+		if a.help.active {
+			var cmd tea.Cmd
+			a.help, cmd = a.help.Update(msg)
+			return a, cmd
+		}
+
+		// Toast consumes Esc and 'c' when visible (after modal/help)
+		if a.toast.visible {
+			consumed, cmd := a.toast.HandleKey(msg)
+			if consumed {
+				return a, cmd
+			}
+		}
+
+		// When library search is active, only handle ctrl+c — everything
+		// else goes to the search input so letters like 'a', 'q', '1' etc.
+		// are typed into the query rather than triggering shortcuts.
+		if a.isLibraryTab() && a.library.table.searching {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			return a.routeKey(msg)
+		}
+
+		// Global keys always handled first
+		switch {
+		case msg.Type == tea.KeyCtrlC:
+			return a, tea.Quit
+		case msg.String() == keyQuit:
+			// Only quit from top-level browse. If in a drill-down or
+			// non-landing view, back out one level instead.
+
+			// Gallery drill-in: back out through library detail → library browse → gallery
+			if a.isGalleryTab() && a.galleryDrillIn {
+				if a.library.mode == libraryDetail {
+					a.library.mode = libraryBrowse
+					a.library.detailItem = nil
+					a.library.SetSize(a.width, a.contentHeight())
+					a.updateNavState()
+					return a, nil
+				}
+				// Exit drill-in back to gallery
+				a.galleryDrillIn = false
+				a.galleryDrillCard = ""
+				a.library.SetItems(a.catalog.Items) // restore full library
+				a.updateNavState()
+				return a, nil
+			}
+
+			if a.isLibraryTab() && a.library.mode == libraryDetail {
+				a.library.mode = libraryBrowse
+				a.library.detailItem = nil
+				a.library.SetSize(a.width, a.contentHeight())
+				a.updateNavState()
+				return a, nil
+			}
+			if !a.isLibraryTab() && a.explorer.mode == explorerDetail {
+				a.explorer.mode = explorerBrowse
+				a.explorer.detailItem = nil
+				a.explorer.sizeBrowsePanes()
+				a.explorer.preview.LoadItem(a.explorer.items.Selected())
+				a.updateNavState()
+				return a, nil
+			}
+			if !a.isLibraryTab() {
+				// Return to landing page (Collections > Library)
+				cmd := a.topBar.SetGroup(0)
+				a.galleryDrillIn = false
+				a.refreshContent()
+				a.updateNavState()
+				return a, cmd
+			}
+			return a, tea.Quit
+
+		// 1/2/3 switch groups
+		case msg.String() == keyGroup1:
+			cmd := a.topBar.SetGroup(0)
+			a.refreshContent()
+			a.updateNavState()
+			return a, cmd
+		case msg.String() == keyGroup2:
+			cmd := a.topBar.SetGroup(1)
+			a.refreshContent()
+			a.updateNavState()
+			return a, cmd
+		case msg.String() == keyGroup3:
+			cmd := a.topBar.SetGroup(2)
+			a.refreshContent()
+			a.updateNavState()
+			return a, cmd
+
+		// Tab cycles sub-tabs within active group
+		case msg.Type == tea.KeyTab:
+			cmd := a.topBar.NextTab()
+			a.refreshContent()
+			return a, cmd
+		case msg.Type == tea.KeyShiftTab:
+			cmd := a.topBar.PrevTab()
+			a.refreshContent()
+			return a, cmd
+
+		// Action button hotkeys
+		case msg.String() == keyAdd:
+			return a, a.topBar.actionCmd("add")
+		// keyCreate ("n") is deferred — no-op for now
+
+		// Edit selected item (name + description)
+		case msg.String() == keyEdit:
+			return a.handleEdit()
+
+		// Remove item from library
+		case msg.String() == keyRemove:
+			return a.handleRemove()
+
+		// Uninstall item from provider
+		case msg.String() == keyUninstall:
+			return a.handleUninstall()
+
+		// Install item to a provider
+		case msg.String() == keyInstall:
+			return a.handleInstall()
+
+		// Help overlay
+		case msg.String() == keyHelp:
+			a.help.Toggle()
+			return a, nil
+
+		// Refresh catalog (re-scan content from disk)
+		case msg.String() == keyRefresh:
+			cmd := a.rescanCatalog()
+			return a, cmd
+
+		// Route to active content model
+		default:
+			return a.routeKey(msg)
+		}
+
+	case toastTickMsg:
+		var cmd tea.Cmd
+		a.toast, cmd = a.toast.Update(msg)
+		return a, cmd
+
+	case editSavedMsg:
+		return a.handleEditSaved(msg)
+
+	case editCancelledMsg:
+		return a, nil
+
+	case confirmResultMsg:
+		return a.handleConfirmResult(msg)
+
+	case removeResultMsg:
+		return a.handleRemoveResult(msg)
+
+	case removeDoneMsg:
+		return a.handleRemoveDone(msg)
+
+	case uninstallDoneMsg:
+		return a.handleUninstallDone(msg)
+
+	case installResultMsg:
+		return a.handleInstallResult(msg)
+
+	case installDoneMsg:
+		return a.handleInstallDone(msg)
+
+	case installCloseMsg:
+		a.installWizard = nil
+		a.wizardMode = wizardNone
+		return a, nil
+
+	case tabChangedMsg:
+		a.galleryDrillIn = false
+		a.refreshContent()
+		a.updateNavState()
+		return a, nil
+
+	case libraryEditMsg:
+		return a.handleEdit()
+
+	case libraryInstallMsg:
+		return a.handleInstall()
+
+	case libraryRemoveMsg:
+		return a.handleRemove()
+
+	case libraryUninstallMsg:
+		return a.handleUninstall()
+
+	case libraryDrillMsg:
+		a.updateNavState()
+		return a, nil
+
+	case libraryCloseMsg:
+		a.updateNavState()
+		return a, nil
+
+	case explorerDrillMsg:
+		a.updateNavState()
+		return a, nil
+
+	case explorerCloseMsg:
+		a.updateNavState()
+		return a, nil
+
+	case cardSelectedMsg:
+		return a, nil
+
+	case cardDrillMsg:
+		// Drill into the card — show a library view filtered to this card's items
+		if msg.card != nil && len(msg.card.items) > 0 {
+			a.galleryDrillIn = true
+			a.galleryDrillCard = msg.card.name
+			a.library.SetItems(msg.card.items)
+			a.library.SetSize(a.width, a.contentHeight())
+			a.updateNavState()
+		}
+		return a, nil
+
+	case breadcrumbClickMsg:
+		return a.handleBreadcrumbClick(msg)
+
+	case itemSelectedMsg:
+		return a, nil
+
+	case actionPressedMsg:
+		switch msg.action {
+		case "add":
+			// Add wizard (Phase D) — no-op for now
+		case "remove":
+			return a.handleRemove()
+		case "uninstall":
+			return a.handleUninstall()
+		}
+		return a, nil
+
+	case helpToggleMsg:
+		a.help.Toggle()
+		return a, nil
+	}
+	return a, nil
+}
+
+// handleEdit opens the edit modal for the currently selected item or card.
+func (a App) handleEdit() (tea.Model, tea.Cmd) {
+	// Gallery card (not drilled in) — edit the card directly
+	if a.isGalleryTab() && !a.galleryDrillIn {
+		card := a.gallery.grid.Selected()
+		if card == nil || card.path == "" {
+			return a, nil
+		}
+		a.modal.Open("Edit: "+card.name, card.name, card.desc, card.path)
+		return a, nil
+	}
+
+	var item *catalog.ContentItem
+	if a.isLibraryTab() || (a.isGalleryTab() && a.galleryDrillIn) {
+		item = a.library.table.Selected()
+	} else {
+		item = a.explorer.items.Selected()
+	}
+	if item == nil {
+		return a, nil
+	}
+	currentName := itemDisplayName(*item)
+	a.modal.Open("Edit: "+item.Name, currentName, item.Description, item.Path)
+	return a, nil
+}
+
+// handleEditSaved persists name and description to .syllago.yaml and updates in-place.
+// Directory items use metadata.Load/Save (writes <dir>/.syllago.yaml).
+// Single-file items (legacy hooks/MCP) use metadata.LoadProvider/SaveProvider
+// (writes <parentdir>/.syllago.<filename>.yaml).
+func (a App) handleEditSaved(msg editSavedMsg) (tea.Model, tea.Cmd) {
+	if msg.path == "" {
+		return a, nil
+	}
+
+	meta, err := loadMetaForPath(msg.path)
+	if err != nil {
+		cmd := a.toast.Push("Failed to load metadata: "+err.Error(), toastError)
+		return a, cmd
+	}
+	if meta == nil {
+		meta = &metadata.Meta{}
+	}
+	meta.Name = msg.name
+	meta.Description = msg.description
+	if err := saveMetaForPath(msg.path, meta); err != nil {
+		cmd := a.toast.Push("Failed to save: "+err.Error(), toastError)
+		return a, cmd
+	}
+
+	// Update in-place in the catalog (avoid full re-scan)
+	for i := range a.catalog.Items {
+		if a.catalog.Items[i].Path == msg.path {
+			a.catalog.Items[i].DisplayName = msg.name
+			a.catalog.Items[i].Description = msg.description
+			break
+		}
+	}
+	a.refreshContent()
+	cmd := a.toast.Push("Saved", toastSuccess)
+	return a, cmd
+}
+
+// routeKey sends key messages to the active content model.
+func (a App) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if a.isLibraryTab() {
+		var cmd tea.Cmd
+		a.library, cmd = a.library.Update(msg)
+		return a, cmd
+	}
+	if a.isGalleryTab() {
+		if a.galleryDrillIn {
+			var cmd tea.Cmd
+			a.library, cmd = a.library.Update(msg)
+			return a, cmd
+		}
+		var cmd tea.Cmd
+		a.gallery, cmd = a.gallery.Update(msg)
+		return a, cmd
+	}
+	var cmd tea.Cmd
+	a.explorer, cmd = a.explorer.Update(msg)
+	return a, cmd
+}
+
+// routeMouse sends mouse messages to topbar + active content model.
+func (a App) routeMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	var topCmd tea.Cmd
+	a.topBar, topCmd = a.topBar.Update(msg)
+
+	var contentCmd tea.Cmd
+	if a.isLibraryTab() {
+		a.library, contentCmd = a.library.Update(msg)
+	} else if a.isGalleryTab() && a.galleryDrillIn {
+		a.library, contentCmd = a.library.Update(msg)
+	} else if a.isGalleryTab() {
+		a.gallery, contentCmd = a.gallery.Update(msg)
+	} else {
+		a.explorer, contentCmd = a.explorer.Update(msg)
+	}
+	return a, tea.Batch(topCmd, contentCmd)
+}
+
+// routeToWizard dispatches messages to the active wizard.
+func (a App) routeToWizard(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch a.wizardMode {
+	case wizardInstall:
+		if a.installWizard != nil {
+			_, cmd := a.installWizard.Update(msg)
+			return a, cmd
+		}
+	}
+	return a, nil
+}
