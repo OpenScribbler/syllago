@@ -967,8 +967,12 @@ func TestInstallWizard_ReviewConfirm(t *testing.T) {
 	if w.step != installStepReview {
 		t.Fatalf("expected step=installStepReview, got %d", w.step)
 	}
+
+	// No risks on this item, so focus starts on Back button (safe default).
+	// Tab to Install button: Back(1) -> Install(2)
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
 	if w.focusIdx != 2 {
-		t.Fatalf("expected focusIdx=2 (Install), got %d", w.focusIdx)
+		t.Fatalf("expected focusIdx=2 (Install) after Tab, got %d", w.focusIdx)
 	}
 
 	_, cmd := w.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -1002,6 +1006,9 @@ func TestInstallWizard_ReviewDoubleConfirm(t *testing.T) {
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // provider -> location
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // location -> method
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // method -> review
+
+	// Tab to Install button: Back(1) -> Install(2)
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
 
 	w, cmd := w.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if cmd == nil {
@@ -1211,40 +1218,42 @@ func TestInstallWizard_ReviewButtonNav(t *testing.T) {
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // location -> method
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // method -> review
 
-	if w.focusIdx != 2 {
-		t.Fatalf("expected focusIdx=2, got %d", w.focusIdx)
-	}
-
-	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	// No risks, so default focus is Back button (1), not Install
 	if w.focusIdx != 1 {
-		t.Errorf("expected focusIdx=1 after Left, got %d", w.focusIdx)
+		t.Fatalf("expected focusIdx=1 (Back, safe default), got %d", w.focusIdx)
 	}
 
-	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyLeft})
-	if w.focusIdx != 0 {
-		t.Errorf("expected focusIdx=0 after Left, got %d", w.focusIdx)
-	}
-
-	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyLeft})
-	if w.focusIdx != 0 {
-		t.Errorf("expected focusIdx=0 (clamped), got %d", w.focusIdx)
-	}
-
-	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyRight})
-	if w.focusIdx != 1 {
-		t.Errorf("expected focusIdx=1 after Right, got %d", w.focusIdx)
-	}
-
+	// Tab: Back(1) -> Install(2)
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
 	if w.focusIdx != 2 {
 		t.Errorf("expected focusIdx=2 after Tab, got %d", w.focusIdx)
 	}
 
+	// Tab wraps: Install(2) -> Cancel(0) (no risks, so no banner stop)
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
 	if w.focusIdx != 0 {
 		t.Errorf("expected focusIdx=0 after Tab wrap, got %d", w.focusIdx)
 	}
 
+	// Right: Cancel(0) -> Back(1)
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyRight})
+	if w.focusIdx != 1 {
+		t.Errorf("expected focusIdx=1 after Right, got %d", w.focusIdx)
+	}
+
+	// Left: Back(1) -> Cancel(0)
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	if w.focusIdx != 0 {
+		t.Errorf("expected focusIdx=0 after Left, got %d", w.focusIdx)
+	}
+
+	// Left clamped at 0
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	if w.focusIdx != 0 {
+		t.Errorf("expected focusIdx=0 (clamped), got %d", w.focusIdx)
+	}
+
+	// Shift-Tab: Cancel(0) -> Install(2)
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
 	if w.focusIdx != 2 {
 		t.Errorf("expected focusIdx=2 after Shift-Tab, got %d", w.focusIdx)
@@ -1262,9 +1271,9 @@ func TestInstallWizard_ReviewBackButton(t *testing.T) {
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // location -> method
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // method -> review
 
-	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyLeft}) // 2 -> 1
+	// No risks, default focus is Back(1)
 	if w.focusIdx != 1 {
-		t.Fatalf("expected focusIdx=1, got %d", w.focusIdx)
+		t.Fatalf("expected focusIdx=1 (Back), got %d", w.focusIdx)
 	}
 
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -1287,6 +1296,9 @@ func TestInstallWizard_ReviewCopyMethod(t *testing.T) {
 		t.Fatalf("expected methodCursor=1, got %d", w.methodCursor)
 	}
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // method -> review
+
+	// Tab to Install: Back(1) -> Install(2)
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
 
 	_, cmd := w.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if cmd == nil {
