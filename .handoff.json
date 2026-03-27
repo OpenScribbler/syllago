@@ -1,31 +1,44 @@
 {
   "$schema": "handoff-v1",
   "current": {
+    "claimedBy": null,
     "project": "syllago",
-    "updated": "2026-03-27T00:05:00-07:00",
-    "sessionId": "1e4d29d2-db13-46ea-ac43-c4818dd48fdf",
-    "summary": "Phase A + A.1 complete: confirmModal, multi-step Remove, action buttons, extensive UX iteration from user testing",
+    "updated": "2026-03-27T15:45:00Z",
+    "sessionId": "d0f3ec6d-fe40-4b61-8090-c00c464c32f1",
+    "summary": "Executed full 18-task TUI AI Context Architecture bead chain. All file splits, rule rewrites, CLAUDE.md consolidation, skill restructure, and 3 enforcement hooks implemented and verified.",
 
     "activeWork": {
-      "description": "Phase B: Install Modal with provider picker — next phase in TUI wizard implementation",
-      "feature": "TUI Wizards",
-      "stage": "planning",
-      "planRef": null,
-      "designRef": "docs/plans/2026-03-26-tui-wizards-design.md",
-      "progress": "Phase A (confirmModal + [d] Remove + [x] Uninstall + [n] hidden) and Phase A.1 (multi-step Remove modal, action buttons on metadata panel, title wrapping, left/right nav) are complete. Multiple rounds of UX fixes from live user testing applied. Ready to plan Phase B (Install Modal).",
+      "description": "TUI AI Context Architecture — all implementation complete. Needs live hook testing in a fresh session.",
+      "feature": "TUI AI Context Architecture",
+      "stage": "complete",
+      "planRef": ".develop/tui-ai-context-plan.md",
+      "designRef": "docs/plans/2026-03-27-tui-ai-context-design.md",
+      "progress": "All 43 beads closed (4 gates + 19 impl + 19 validate + 1 phase validation). 10-point system check passed.",
       "blockers": [],
       "beads": {
         "inProgress": [],
         "completedThisSession": [
-          "syllago-hsmy6 (Phase A epic)",
-          "syllago-wxtkw (Phase A.1 epic)",
-          "syllago-kopxr (plan)",
-          "syllago-jin25 (parity)",
-          "syllago-ogh65, syllago-d5e3g, syllago-a3vvt (Phase A impl)",
-          "syllago-ob8vo, syllago-v0d1a, syllago-j5q6b, syllago-9d3iw (Phase A validation)",
-          "syllago-y5n9e, syllago-y6bx5, syllago-k6zjz (Phase A.1 spec/plan/parity)",
-          "syllago-av1zg, syllago-geobs, syllago-rvcvh, syllago-h5xst (Phase A.1 impl)",
-          "syllago-q8kqs, syllago-gduzh, syllago-afjux, syllago-y00ue, syllago-ivvgx (Phase A.1 validation)"
+          "syllago-tb0pw (T1: Split app.go)",
+          "syllago-gq52v (T2: Split install.go)",
+          "syllago-cenew (T3: Delete v1 rules)",
+          "syllago-nukub (T4: Delete tui_v1/CLAUDE.md)",
+          "syllago-6akwp (T4b: Remove tui-rules-reminder.sh)",
+          "syllago-v5u8e (T5: tui-elm.md)",
+          "syllago-h2php (T6: tui-layout.md)",
+          "syllago-pjhq0 (T7: tui-modals.md)",
+          "syllago-r5ari (T8: tui-testing.md)",
+          "syllago-e6m72 (T9: Verify existing rules)",
+          "syllago-bc73o (T10: Rewrite CLAUDE.md)",
+          "syllago-6dapj (T11: Rewrite SKILL.md)",
+          "syllago-5vu23 (T12: tui-context-gate.sh)",
+          "syllago-lsc6y (T13: Register context-gate)",
+          "syllago-m4x60 (T14: tui-pattern-nudge.sh)",
+          "syllago-cn366 (T15: Register pattern-nudge)",
+          "syllago-5nyqx (T16: tui-docs-gate.sh)",
+          "syllago-o1kab (T17: Register docs-gate)",
+          "syllago-dlskz (T18: Final verification)",
+          "syllago-439xq (Phase Validation)",
+          "+ 18 validate beads"
         ],
         "readyNext": []
       }
@@ -33,63 +46,82 @@
 
     "git": {
       "branch": "main",
-      "uncommittedFiles": 0,
-      "lastCommit": "3abe52b revert: remove disabled button style, back to show/hide for action buttons",
-      "modifiedFiles": []
+      "uncommittedFiles": 59,
+      "lastCommit": "f22c2e5 bd sync: 2026-03-27 08:06:11",
+      "modifiedFiles": [
+        "cli/internal/tui/app.go (rewritten — model+constructors+helpers only)",
+        "cli/internal/tui/app_update.go (NEW — Update + handlers)",
+        "cli/internal/tui/app_view.go (NEW — View + render helpers)",
+        "cli/internal/tui/install.go (rewritten — model+constructors+utilities only)",
+        "cli/internal/tui/install_update.go (NEW — Update + key/mouse handlers)",
+        "cli/internal/tui/install_view.go (NEW — View + per-step rendering)",
+        "cli/internal/tui/CLAUDE.md (rewritten 198→84 lines)",
+        ".claude/skills/tui-builder/SKILL.md (rewritten 510→56 lines)",
+        ".claude/rules/tui-elm.md (NEW)",
+        ".claude/rules/tui-layout.md (NEW)",
+        ".claude/rules/tui-modals.md (NEW)",
+        ".claude/rules/tui-testing.md (NEW)",
+        ".claude/rules/tui-items-rebuild.md (rewritten for v3)",
+        ".claude/rules/tui-wizard-patterns.md (updated for v3)",
+        ".claude/hooks/tui-context-gate.sh (NEW)",
+        ".claude/hooks/tui-pattern-nudge.sh (NEW)",
+        ".claude/hooks/tui-docs-gate.sh (NEW)",
+        ".claude/settings.json (3 hooks registered)",
+        "12 v1 rule files DELETED",
+        "cli/internal/tui_v1/CLAUDE.md DELETED",
+        ".claude/hooks/tui-rules-reminder.sh DELETED"
+      ]
     },
 
+    "actionItems": [
+      "ACTION REQUIRED: Commit all changes (59 uncommitted files including implementation + prior session work)",
+      "ACTION REQUIRED: Live-test 3 new hooks in a fresh Claude Code session — test plan at .claude/plans/piped-dancing-tarjan.md",
+      "P0 tests: context-gate warns on TUI edit (4A), docs-gate blocks commit without docs (6A)",
+      "P1 tests: context-gate suppressed after /tui-builder (4B), rules load on TUI file read (2), skill loads (3)"
+    ],
+
     "recentDecisions": [
-      "Sequential task→validate→task chaining enforced (not parallel) — design doc and memory updated",
-      "Parity validation blocks first implementation bead — different sub-agent validates",
-      "Multi-step Remove modal (3 steps: confirm → provider select → review) replaces single confirm",
-      "Per-item action buttons ([d] [x] [e]) in metadata panel, global ([a]) in topbar",
-      "Buttons show/hide based on capability (not grayed out — looked bad)",
-      "Type detail text truncated to fit buttons (not buttons truncated)",
-      "checkHookStatus must verify hook in provider's settings.json, not just installed.json",
-      "Branch protection disabled during rapid iteration",
-      "Builtin/shared content should move to OpenScribbler/syllago-registry (syllago-5wdcb)",
-      "Toast stacking: up to 3 visible, oldest non-error dropped",
-      "Toast ordering: action toast fires before catalog rescan",
-      "Esc dismisses toast before modal when both visible",
-      "OSC 52 clipboard for WSL2 support"
+      "tui-items-rebuild.md fully rewritten — old content referenced itemsModel/itemsContext/rebuildItems which don't exist in v3",
+      "tui-wizard-patterns.md updated — only installWizardModel exists in v3, removed 4 non-existent wizards",
+      "Moved nav state helpers (refreshContent, currentHints, updateNavState, etc.) to app.go instead of app_update.go — shared by constructor and Update",
+      "SKILL.md gotchas preserved verbatim (18 entries), everything else removed"
     ],
 
     "nextSteps": [
-      "Start Phase B: Install Modal — write design spec, implementation plan, parity validation",
-      "Follow the bead chain protocol: spec → plan → parity → impl-1 → validate-1 → impl-2 → validate-2 → ... → phase-validation",
-      "Phase B scope (from design doc): provider picker with 'already installed' detection, location selection (global/project/custom), method selection (symlink/copy), JSON merge path for hooks/MCP, risk banner component",
-      "syllago-5wdcb: Create OpenScribbler/syllago-registry (separate initiative, P2)"
+      "Commit all changes (large commit — file splits, rule rewrites, hooks, docs)",
+      "Start fresh session to live-test hooks (test plan in .claude/plans/piped-dancing-tarjan.md)",
+      "Run P0 tests first: context-gate + docs-gate",
+      "If hooks work, the TUI AI context architecture is complete"
     ],
 
     "context": {
-      "notes": "Branch protection is OFF on main (disabled for fast iteration). Re-enable when iteration speed slows. The design doc at docs/plans/2026-03-26-tui-wizards-design.md has the full Phase B spec including install modal steps, provider picker, and test requirements. installed.json has a known architectural gap: hooks don't track which provider they were installed to (workaround in place via settings.json hash verification).",
-      "branchProtection": "OFF — disabled this session for rapid iteration",
-      "cleanedLibrary": "Removed 3 duplicate obsidian MCP entries, 5 empty/test loadouts from ~/.syllago/content/"
+      "notes": "PAI security hook blocked rm on .claude/ paths — Holden had to run deletions manually after enabling maintenance mode. shellcheck not installed on this system. Hook live testing is the remaining verification — the Go code is fully verified (build, tests, golden files all pass). Test plan written to .claude/plans/piped-dancing-tarjan.md with 8 test areas prioritized P0-P3."
     }
   },
 
   "previousSessions": [
     {
-      "summary": "TUI wizards design doc finalized (1096 lines), Phase A beads created with dependency chain and parity validation gate",
-      "updated": "2026-03-26T20:35:00Z",
+      "summary": "Deep research + full bead chain for TUI AI context architecture. 4 gate beads complete, 39 impl+validate beads wired and ready to execute.",
+      "updated": "2026-03-27T07:30:00Z",
       "completedWork": [
-        "Design doc with Go/TUI expert recommendations",
-        "Phase A bead structure with parity validation gate",
-        "Phase execution process added to design doc"
+        "Gates 1-4 (Spec, Plan, Parity, Sanity Check) all complete",
+        "39 beads created and chained for implementation",
+        "Design doc, spec, and plan written"
       ],
       "nextSteps": [
-        "Write Phase A implementation plan",
-        "Run parity validation",
-        "Build confirmModal component"
+        "Execute bead chain starting with T1: Split app.go"
       ]
     },
     {
-      "summary": "Phase 8 shipped, TUI wizards design doc completed with two expert reviews",
-      "updated": "2026-03-26T20:30:00Z",
+      "summary": "Deep research on Go TUI + AI patterns; auditing stale v1 rule files in v3 rewrite; brainstorming TUI development approach with /develop",
+      "updated": "2026-03-27T05:48:38Z",
       "completedWork": [
-        "Go/TUI expert review integrated",
-        "Phase A bead structure created",
-        "Ready to execute Phase A"
+        "Deep research across 4 agents: community strategies, CLAUDE.md patterns, failure modes, golden file testing",
+        "Discovered ALL 12 TUI rule files scoped to tui_v1/ — none trigger for v3",
+        "Started /develop brainstorm phase"
+      ],
+      "nextSteps": [
+        "Complete brainstorm and create implementation plan"
       ]
     }
   ]
