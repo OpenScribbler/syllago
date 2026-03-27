@@ -54,6 +54,24 @@ func (m fileTreeModel) SelectedPath() string {
 	return n.path
 }
 
+// SelectPath moves the cursor to the node matching the given relative path.
+// If not found, the cursor stays where it is.
+func (m *fileTreeModel) SelectPath(path string) {
+	for i, n := range m.nodes {
+		if n.path == path {
+			m.cursor = i
+			// Ensure visible
+			if m.cursor < m.offset {
+				m.offset = m.cursor
+			}
+			if m.height > 0 && m.cursor >= m.offset+m.height {
+				m.offset = m.cursor - m.height + 1
+			}
+			return
+		}
+	}
+}
+
 // CursorUp moves cursor up.
 func (m *fileTreeModel) CursorUp() {
 	if len(m.nodes) == 0 {

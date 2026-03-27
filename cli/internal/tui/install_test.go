@@ -860,6 +860,7 @@ func TestInstallWizard_ReviewRender(t *testing.T) {
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // location -> method
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // method -> review
 	w.width = 80
+	w.height = 30
 
 	if w.step != installStepReview {
 		t.Fatalf("expected step=installStepReview, got %d", w.step)
@@ -899,6 +900,7 @@ func TestInstallWizard_ReviewJSONMerge(t *testing.T) {
 	w := openInstallWizard(item, []provider.Provider{provA, provB}, t.TempDir())
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	w.width = 80
+	w.height = 30
 
 	if w.step != installStepReview {
 		t.Fatalf("expected step=installStepReview, got %d", w.step)
@@ -938,6 +940,7 @@ func TestInstallWizard_ReviewRiskBanner(t *testing.T) {
 
 	w := openInstallWizard(item, []provider.Provider{prov}, t.TempDir())
 	w.width = 80
+	w.height = 30
 
 	if w.step != installStepReview {
 		t.Fatalf("expected step=installStepReview, got %d", w.step)
@@ -949,7 +952,7 @@ func TestInstallWizard_ReviewRiskBanner(t *testing.T) {
 		t.Error("review should show 'Runs commands' risk for hook with command")
 	}
 	if !strings.Contains(view, "Risk Indicators") {
-		t.Error("review should show 'Risk Indicators' title")
+		t.Error("review should show 'Risk Indicators' in frame")
 	}
 }
 
@@ -968,11 +971,15 @@ func TestInstallWizard_ReviewConfirm(t *testing.T) {
 		t.Fatalf("expected step=installStepReview, got %d", w.step)
 	}
 
-	// No risks on this item, so focus starts on Back button (safe default).
-	// Tab to Install button: Back(1) -> Install(2)
-	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
-	if w.focusIdx != 2 {
-		t.Fatalf("expected focusIdx=2 (Install) after Tab, got %d", w.focusIdx)
+	// No risks, single file: focus starts on preview zone.
+	// Tab to buttons, then Tab/Right to Install.
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab}) // preview -> buttons (default: Back=1)
+	if w.reviewZone != reviewZoneButtons {
+		t.Fatalf("expected reviewZone=reviewZoneButtons, got %d", w.reviewZone)
+	}
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyRight}) // Back(1) -> Install(2)
+	if w.buttonCursor != 2 {
+		t.Fatalf("expected buttonCursor=2 (Install), got %d", w.buttonCursor)
 	}
 
 	_, cmd := w.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -1007,8 +1014,9 @@ func TestInstallWizard_ReviewDoubleConfirm(t *testing.T) {
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // location -> method
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // method -> review
 
-	// Tab to Install button: Back(1) -> Install(2)
-	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
+	// Tab to buttons, then right to Install
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})   // preview -> buttons
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyRight}) // Back(1) -> Install(2)
 
 	w, cmd := w.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if cmd == nil {
@@ -1032,11 +1040,12 @@ func TestInstallWizard_ReviewCancel(t *testing.T) {
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // location -> method
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // method -> review
 
-	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyLeft}) // 2 -> 1
-	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyLeft}) // 1 -> 0
+	// Tab to buttons, then left to Cancel
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})  // preview -> buttons (default: Back=1)
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyLeft}) // Back(1) -> Cancel(0)
 
-	if w.focusIdx != 0 {
-		t.Fatalf("expected focusIdx=0, got %d", w.focusIdx)
+	if w.buttonCursor != 0 {
+		t.Fatalf("expected buttonCursor=0, got %d", w.buttonCursor)
 	}
 
 	_, cmd := w.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -1110,7 +1119,7 @@ func TestInstallWizard_ReviewEscBackJSONMergeAutoSkip(t *testing.T) {
 	}
 }
 
-func TestInstallWizard_ReviewDrillIn(t *testing.T) {
+func TestInstallWizard_ReviewAutoScroll(t *testing.T) {
 	t.Parallel()
 	prov := testInstallProvider("Claude Code", "claude-code", true)
 
@@ -1143,31 +1152,33 @@ func TestInstallWizard_ReviewDrillIn(t *testing.T) {
 		t.Fatal("expected risks to be non-empty")
 	}
 
-	w.enterDrillIn(w.risks[0])
-
-	if !w.riskDrillIn {
-		t.Error("expected riskDrillIn=true")
+	// Focus should start on risks zone with auto-scroll applied
+	if w.reviewZone != reviewZoneRisks {
+		t.Errorf("expected reviewZone=reviewZoneRisks, got %d", w.reviewZone)
 	}
-	if len(w.drillPreview.lines) == 0 {
-		t.Error("expected drill preview to have content")
-	}
-	if w.drillPreview.fileName != "hooks.json" {
-		t.Errorf("expected fileName=hooks.json, got %s", w.drillPreview.fileName)
-	}
-	if w.drillPreview.highlightLines == nil {
-		t.Error("expected highlight lines to be set")
+	if w.riskBanner.cursor != 0 {
+		t.Errorf("expected riskBanner.cursor=0, got %d", w.riskBanner.cursor)
 	}
 
-	view := w.viewReviewDrillIn()
-	if !strings.Contains(view, "Inspecting") {
-		t.Error("drill-in view should contain 'Inspecting'")
+	// Preview should have content loaded (auto-scroll synced to first risk)
+	if len(w.reviewPreview.lines) == 0 {
+		t.Error("expected preview to have content from auto-scroll")
 	}
-	if !strings.Contains(view, "Esc to return") {
-		t.Error("drill-in view should contain 'Esc to return'")
+	if w.reviewPreview.highlightLines == nil {
+		t.Error("expected highlight lines to be set from auto-scroll")
+	}
+
+	// Verify the view renders without panicking
+	view := w.viewReview()
+	if !strings.Contains(view, "Runs commands") {
+		t.Error("review should show 'Runs commands' risk")
+	}
+	if !strings.Contains(view, "Risk Indicators") {
+		t.Error("review should show 'Risk Indicators' in frame border")
 	}
 }
 
-func TestInstallWizard_ReviewDrillInEsc(t *testing.T) {
+func TestInstallWizard_ReviewTabCycle(t *testing.T) {
 	t.Parallel()
 	prov := testInstallProvider("Claude Code", "claude-code", true)
 
@@ -1193,17 +1204,66 @@ func TestInstallWizard_ReviewDrillInEsc(t *testing.T) {
 	w.width = 80
 	w.height = 30
 
-	w.enterDrillIn(w.risks[0])
-	if !w.riskDrillIn {
-		t.Fatal("expected riskDrillIn=true")
+	// Single file + risks: zones are [risks, preview, buttons]
+	if w.reviewZone != reviewZoneRisks {
+		t.Fatalf("expected initial zone=reviewZoneRisks, got %d", w.reviewZone)
 	}
 
-	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEsc})
-	if w.riskDrillIn {
-		t.Error("expected riskDrillIn=false after Esc")
+	// Tab: risks -> preview (single file, no tree)
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if w.reviewZone != reviewZonePreview {
+		t.Errorf("expected zone=reviewZonePreview after Tab, got %d", w.reviewZone)
 	}
+
+	// Tab: preview -> buttons
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if w.reviewZone != reviewZoneButtons {
+		t.Errorf("expected zone=reviewZoneButtons after Tab, got %d", w.reviewZone)
+	}
+
+	// Tab: buttons -> risks (wraps)
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if w.reviewZone != reviewZoneRisks {
+		t.Errorf("expected zone=reviewZoneRisks after Tab wrap, got %d", w.reviewZone)
+	}
+
+	// Shift-Tab: risks -> buttons (reverse)
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	if w.reviewZone != reviewZoneButtons {
+		t.Errorf("expected zone=reviewZoneButtons after Shift-Tab, got %d", w.reviewZone)
+	}
+}
+
+func TestInstallWizard_ReviewSingleFile(t *testing.T) {
+	t.Parallel()
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	item := testInstallItem("my-rule", catalog.Rules, "/fake/rules/my-rule")
+	item.Files = []string{"rule.md"}
+
+	w := openInstallWizard(item, []provider.Provider{prov}, t.TempDir())
+	// Single provider auto-skips to location; advance to review
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // location -> method
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // method -> review
+	w.width = 80
+	w.height = 30
+
 	if w.step != installStepReview {
-		t.Errorf("expected step=installStepReview, got %d", w.step)
+		t.Fatalf("expected step=installStepReview, got %d", w.step)
+	}
+
+	// No risks, single file: should start on preview zone (tree is skipped)
+	if w.reviewZone != reviewZonePreview {
+		t.Errorf("expected reviewZone=reviewZonePreview for single file, got %d", w.reviewZone)
+	}
+
+	// Tab cycle: preview -> buttons -> preview (no tree, no risks)
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if w.reviewZone != reviewZoneButtons {
+		t.Errorf("expected zone=reviewZoneButtons, got %d", w.reviewZone)
+	}
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if w.reviewZone != reviewZonePreview {
+		t.Errorf("expected zone=reviewZonePreview (wrap), got %d", w.reviewZone)
 	}
 }
 
@@ -1218,45 +1278,49 @@ func TestInstallWizard_ReviewButtonNav(t *testing.T) {
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // location -> method
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // method -> review
 
-	// No risks, so default focus is Back button (1), not Install
-	if w.focusIdx != 1 {
-		t.Fatalf("expected focusIdx=1 (Back, safe default), got %d", w.focusIdx)
+	// No risks, single file: starts on preview zone
+	if w.reviewZone != reviewZonePreview {
+		t.Fatalf("expected reviewZone=reviewZonePreview, got %d", w.reviewZone)
 	}
 
-	// Tab: Back(1) -> Install(2)
+	// Tab to buttons zone
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
-	if w.focusIdx != 2 {
-		t.Errorf("expected focusIdx=2 after Tab, got %d", w.focusIdx)
+	if w.reviewZone != reviewZoneButtons {
+		t.Fatalf("expected reviewZone=reviewZoneButtons, got %d", w.reviewZone)
+	}
+	// Default button is Back(1)
+	if w.buttonCursor != 1 {
+		t.Fatalf("expected buttonCursor=1 (Back, safe default), got %d", w.buttonCursor)
 	}
 
-	// Tab wraps: Install(2) -> Cancel(0) (no risks, so no banner stop)
-	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
-	if w.focusIdx != 0 {
-		t.Errorf("expected focusIdx=0 after Tab wrap, got %d", w.focusIdx)
-	}
-
-	// Right: Cancel(0) -> Back(1)
+	// Right: Back(1) -> Install(2)
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyRight})
-	if w.focusIdx != 1 {
-		t.Errorf("expected focusIdx=1 after Right, got %d", w.focusIdx)
+	if w.buttonCursor != 2 {
+		t.Errorf("expected buttonCursor=2 after Right, got %d", w.buttonCursor)
+	}
+
+	// Right clamped at 2
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyRight})
+	if w.buttonCursor != 2 {
+		t.Errorf("expected buttonCursor=2 (clamped), got %d", w.buttonCursor)
+	}
+
+	// Left: Install(2) -> Back(1)
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	if w.buttonCursor != 1 {
+		t.Errorf("expected buttonCursor=1 after Left, got %d", w.buttonCursor)
 	}
 
 	// Left: Back(1) -> Cancel(0)
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyLeft})
-	if w.focusIdx != 0 {
-		t.Errorf("expected focusIdx=0 after Left, got %d", w.focusIdx)
+	if w.buttonCursor != 0 {
+		t.Errorf("expected buttonCursor=0 after Left, got %d", w.buttonCursor)
 	}
 
 	// Left clamped at 0
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyLeft})
-	if w.focusIdx != 0 {
-		t.Errorf("expected focusIdx=0 (clamped), got %d", w.focusIdx)
-	}
-
-	// Shift-Tab: Cancel(0) -> Install(2)
-	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
-	if w.focusIdx != 2 {
-		t.Errorf("expected focusIdx=2 after Shift-Tab, got %d", w.focusIdx)
+	if w.buttonCursor != 0 {
+		t.Errorf("expected buttonCursor=0 (clamped), got %d", w.buttonCursor)
 	}
 }
 
@@ -1271,9 +1335,13 @@ func TestInstallWizard_ReviewBackButton(t *testing.T) {
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // location -> method
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // method -> review
 
-	// No risks, default focus is Back(1)
-	if w.focusIdx != 1 {
-		t.Fatalf("expected focusIdx=1 (Back), got %d", w.focusIdx)
+	// Tab to buttons zone (Back is default)
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if w.reviewZone != reviewZoneButtons {
+		t.Fatalf("expected reviewZone=reviewZoneButtons, got %d", w.reviewZone)
+	}
+	if w.buttonCursor != 1 {
+		t.Fatalf("expected buttonCursor=1 (Back), got %d", w.buttonCursor)
 	}
 
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -1297,8 +1365,9 @@ func TestInstallWizard_ReviewCopyMethod(t *testing.T) {
 	}
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // method -> review
 
-	// Tab to Install: Back(1) -> Install(2)
-	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})
+	// Tab to buttons, right to Install
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyTab})   // preview -> buttons
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyRight}) // Back(1) -> Install(2)
 
 	_, cmd := w.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if cmd == nil {

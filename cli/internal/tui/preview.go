@@ -142,12 +142,14 @@ func (p previewModel) View() string {
 	for i := contentStart; i < contentEnd; i++ {
 		lineNum := i + 1
 		if p.highlightLines != nil && p.highlightLines[lineNum] {
-			// Highlighted line: danger gutter marker + tinted background
+			// Highlighted line: danger gutter marker + tinted background (full-width)
 			num := lipgloss.NewStyle().Foreground(dangerColor).Render(fmt.Sprintf("%*d", lineNumW, lineNum))
 			gutter := lipgloss.NewStyle().Foreground(dangerColor).Render("\u258c") // ▌
 			lineW := p.width - lipgloss.Width(num) - 1
-			line := truncateLine(p.lines[i], lineW)
-			styledLine := lipgloss.NewStyle().Background(highlightBG).Foreground(primaryText).Render(line)
+			lineContent := truncateLine(p.lines[i], lineW)
+			// Pad to full line width so the highlight background covers the entire row
+			padded := lineContent + strings.Repeat(" ", max(0, lineW-lipgloss.Width(lineContent)))
+			styledLine := lipgloss.NewStyle().Background(highlightBG).Foreground(primaryText).Render(padded)
 			visibleLines = append(visibleLines, num+gutter+styledLine)
 		} else {
 			// Normal line
