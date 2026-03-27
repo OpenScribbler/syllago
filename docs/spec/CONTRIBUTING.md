@@ -125,6 +125,29 @@ test-vectors/
 
 Each canonical file has a corresponding file in each provider directory showing the expected encode output. File names should match across directories.
 
+### Conventions
+
+Test vectors use the following non-normative fields (prefixed with `_` to distinguish from canonical fields):
+
+- **`_comment`**: A human-readable string explaining what the test vector exercises. Present in both canonical and provider files. Implementations MUST ignore this field (per the forward-compatibility rule in Section 3.2 of the spec).
+- **`_warnings`**: An array of strings in provider output files documenting information lost or approximated during conversion. Used to verify that adapters produce the expected degradation warnings.
+
+These conventions are informational. They are not part of the canonical format and MUST NOT appear in production hook manifests.
+
+### Validating Test Vectors
+
+To validate test vectors against the JSON Schema:
+
+```bash
+# Using ajv-cli (Node.js)
+npx ajv validate -s docs/spec/schema/hook.schema.json -d "docs/spec/test-vectors/canonical/*.json"
+
+# Using check-jsonschema (Python)
+check-jsonschema --schemafile docs/spec/schema/hook.schema.json docs/spec/test-vectors/canonical/*.json
+```
+
+Provider output files are NOT validated against the canonical schema (they use provider-native formats).
+
 ---
 
 ## Style Guide
