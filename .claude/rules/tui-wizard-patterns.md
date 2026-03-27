@@ -5,7 +5,7 @@ TUI wizards use typed step enums with deterministic transitions enforced by `val
 ## Pattern Overview
 
 Each wizard model has:
-1. A typed step enum (e.g., `importStep`, `clStep`, `installStep`) defined with `iota`
+1. A typed step enum (e.g., `installStep`) defined with `iota`
 2. A `validateStep()` method that checks entry-prerequisites for the current step
 3. A call to `validateStep()` at the top of `Update()`
 
@@ -25,18 +25,13 @@ panic("wizard invariant: stepProvider entered with empty providerNames")
 
 ## Placement
 
-- **Full-screen wizards** (importModel, createLoadoutScreen, updateModel): call `validateStep()` unconditionally at the top of `Update()`
-- **Modal wizards** (envSetupModal, installModal): call `validateStep()` AFTER the `if !m.active { return }` guard
+- **Full-screen wizards** (installWizardModel): call `validateStep()` unconditionally at the top of `Update()`
 
-## Covered Wizards (5 total)
+## Covered Wizards (1 total)
 
 | File | Model | Steps |
 |------|-------|-------|
-| import.go | importModel | 15 |
-| loadout_create.go | createLoadoutScreen | 6 |
-| modal.go | installModal | 3 |
-| modal.go | envSetupModal | 4 |
-| update.go | updateModel | 4 |
+| install.go | installWizardModel | 4 |
 
 ## Test Enforcement
 
