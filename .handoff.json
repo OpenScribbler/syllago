@@ -1,127 +1,73 @@
 {
   "$schema": "handoff-v1",
   "current": {
-    "claimedBy": null,
-    "project": "syllago",
-    "updated": "2026-03-27T15:45:00Z",
-    "sessionId": "d0f3ec6d-fe40-4b61-8090-c00c464c32f1",
-    "summary": "Executed full 18-task TUI AI Context Architecture bead chain. All file splits, rule rewrites, CLAUDE.md consolidation, skill restructure, and 3 enforcement hooks implemented and verified.",
-
-    "activeWork": {
-      "description": "TUI AI Context Architecture — all implementation complete. Needs live hook testing in a fresh session.",
-      "feature": "TUI AI Context Architecture",
-      "stage": "complete",
-      "planRef": ".develop/tui-ai-context-plan.md",
-      "designRef": "docs/plans/2026-03-27-tui-ai-context-design.md",
-      "progress": "All 43 beads closed (4 gates + 19 impl + 19 validate + 1 phase validation). 10-point system check passed.",
-      "blockers": [],
-      "beads": {
-        "inProgress": [],
-        "completedThisSession": [
-          "syllago-tb0pw (T1: Split app.go)",
-          "syllago-gq52v (T2: Split install.go)",
-          "syllago-cenew (T3: Delete v1 rules)",
-          "syllago-nukub (T4: Delete tui_v1/CLAUDE.md)",
-          "syllago-6akwp (T4b: Remove tui-rules-reminder.sh)",
-          "syllago-v5u8e (T5: tui-elm.md)",
-          "syllago-h2php (T6: tui-layout.md)",
-          "syllago-pjhq0 (T7: tui-modals.md)",
-          "syllago-r5ari (T8: tui-testing.md)",
-          "syllago-e6m72 (T9: Verify existing rules)",
-          "syllago-bc73o (T10: Rewrite CLAUDE.md)",
-          "syllago-6dapj (T11: Rewrite SKILL.md)",
-          "syllago-5vu23 (T12: tui-context-gate.sh)",
-          "syllago-lsc6y (T13: Register context-gate)",
-          "syllago-m4x60 (T14: tui-pattern-nudge.sh)",
-          "syllago-cn366 (T15: Register pattern-nudge)",
-          "syllago-5nyqx (T16: tui-docs-gate.sh)",
-          "syllago-o1kab (T17: Register docs-gate)",
-          "syllago-dlskz (T18: Final verification)",
-          "syllago-439xq (Phase Validation)",
-          "+ 18 validate beads"
-        ],
-        "readyNext": []
-      }
+    "claimedBy": {
+      "sessionId": "current-session",
+      "claimedAt": "2026-03-27T16:36:00.000Z"
     },
-
+    "project": "syllago",
+    "updated": "2026-03-27T16:35:38.550Z",
+    "sessionId": "7066de8d-5da6-44dc-8b7e-00efa6699785",
+    "summary": "TUI AI Context Architecture implementation complete. All 18 implementation tasks done, 7 commits grouped and pushed. Ready for live hook testing.",
+    "activeWork": {
+      "description": "TUI AI Context Architecture - hook enforcement and testing",
+      "feature": "TUI AI Context Architecture",
+      "stage": "testing",
+      "planRef": ".claude/plans/piped-dancing-tarjan.md",
+      "designRef": "docs/plans/2026-03-27-tui-ai-context-design.md",
+      "progress": "All 43 beads closed. File splits (app.go, install.go → 6 files), v1 cleanup, 4 new rule files, CLAUDE.md/SKILL.md consolidation, 3 enforcement hooks all implemented and committed. Ready to run live hook tests in fresh session.",
+      "blockers": [],
+      "beads": null
+    },
     "git": {
       "branch": "main",
-      "uncommittedFiles": 59,
-      "lastCommit": "f22c2e5 bd sync: 2026-03-27 08:06:11",
-      "modifiedFiles": [
-        "cli/internal/tui/app.go (rewritten — model+constructors+helpers only)",
-        "cli/internal/tui/app_update.go (NEW — Update + handlers)",
-        "cli/internal/tui/app_view.go (NEW — View + render helpers)",
-        "cli/internal/tui/install.go (rewritten — model+constructors+utilities only)",
-        "cli/internal/tui/install_update.go (NEW — Update + key/mouse handlers)",
-        "cli/internal/tui/install_view.go (NEW — View + per-step rendering)",
-        "cli/internal/tui/CLAUDE.md (rewritten 198→84 lines)",
-        ".claude/skills/tui-builder/SKILL.md (rewritten 510→56 lines)",
-        ".claude/rules/tui-elm.md (NEW)",
-        ".claude/rules/tui-layout.md (NEW)",
-        ".claude/rules/tui-modals.md (NEW)",
-        ".claude/rules/tui-testing.md (NEW)",
-        ".claude/rules/tui-items-rebuild.md (rewritten for v3)",
-        ".claude/rules/tui-wizard-patterns.md (updated for v3)",
-        ".claude/hooks/tui-context-gate.sh (NEW)",
-        ".claude/hooks/tui-pattern-nudge.sh (NEW)",
-        ".claude/hooks/tui-docs-gate.sh (NEW)",
-        ".claude/settings.json (3 hooks registered)",
-        "12 v1 rule files DELETED",
-        "cli/internal/tui_v1/CLAUDE.md DELETED",
-        ".claude/hooks/tui-rules-reminder.sh DELETED"
-      ]
+      "uncommittedFiles": 3,
+      "lastCommit": "4592bde chore: update handoff and audit state",
+      "modifiedFiles": []
     },
-
-    "actionItems": [
-      "ACTION REQUIRED: Commit all changes (59 uncommitted files including implementation + prior session work)",
-      "ACTION REQUIRED: Live-test 3 new hooks in a fresh Claude Code session — test plan at .claude/plans/piped-dancing-tarjan.md",
-      "P0 tests: context-gate warns on TUI edit (4A), docs-gate blocks commit without docs (6A)",
-      "P1 tests: context-gate suppressed after /tui-builder (4B), rules load on TUI file read (2), skill loads (3)"
-    ],
-
     "recentDecisions": [
-      "tui-items-rebuild.md fully rewritten — old content referenced itemsModel/itemsContext/rebuildItems which don't exist in v3",
-      "tui-wizard-patterns.md updated — only installWizardModel exists in v3, removed 4 non-existent wizards",
-      "Moved nav state helpers (refreshContent, currentHints, updateNavState, etc.) to app.go instead of app_update.go — shared by constructor and Update",
-      "SKILL.md gotchas preserved verbatim (18 entries), everything else removed"
+      "Grouped 18 implementation tasks into 7 logical commits: prior work, file splits, v1 cleanup, new rules, context consolidation, hook enforcement, session state",
+      "File splits: app.go → app.go + app_update.go + app_view.go; install.go → install.go + install_update.go + install_view.go",
+      "Deleted 12 v1 rule files, tui_v1/CLAUDE.md, and tui-rules-reminder.sh hook",
+      "Created 4 new rule files: tui-elm.md, tui-layout.md, tui-modals.md, tui-testing.md",
+      "CLAUDE.md consolidated (198→84 lines), SKILL.md consolidated (510→56 lines)",
+      "3 enforcement hooks: tui-context-gate.sh, tui-pattern-nudge.sh, tui-docs-gate.sh registered in settings.json"
     ],
-
     "nextSteps": [
-      "Commit all changes (large commit — file splits, rule rewrites, hooks, docs)",
-      "Start fresh session to live-test hooks (test plan in .claude/plans/piped-dancing-tarjan.md)",
-      "Run P0 tests first: context-gate + docs-gate",
-      "If hooks work, the TUI AI context architecture is complete"
+      "Start fresh session to activate hooks (added during this session, not active yet)",
+      "Run live hook tests per .claude/plans/piped-dancing-tarjan.md",
+      "Tests 1, 7, 8 (static checks) can run now; tests 2-6 need fresh session",
+      "Run P0 tests first: context-gate + docs-gate for validation"
     ],
-
     "context": {
-      "notes": "PAI security hook blocked rm on .claude/ paths — Holden had to run deletions manually after enabling maintenance mode. shellcheck not installed on this system. Hook live testing is the remaining verification — the Go code is fully verified (build, tests, golden files all pass). Test plan written to .claude/plans/piped-dancing-tarjan.md with 8 test areas prioritized P0-P3."
+      "notes": "Implementation is complete; all enforcement hooks wired but require session restart to activate. 3 uncommitted files (.copilot/, opencode.json, reviews/) are from prior unrelated work. Test plan ready at .claude/plans/piped-dancing-tarjan.md with 8 test areas prioritized P0-P3. Next session can run hook tests autonomously."
     }
   },
-
   "previousSessions": [
+    {
+      "summary": "Executed full 18-task TUI AI Context Architecture bead chain. All file splits, rule rewrites, CLAUDE.md consolidation, skill restructure, and 3 enforcement hooks implemented and verified.",
+      "updated": "2026-03-27T15:45:00Z",
+      "completedWork": [
+        "All 43 beads closed (4 gates + 19 impl + 19 validate + 1 phase validation)",
+        "10-point system check passed",
+        "Go build and tests all pass; golden files verified"
+      ],
+      "nextSteps": [
+        "Commit all changes (7 logical commits grouped and pushed)",
+        "Start fresh session to live-test hooks",
+        "Run live hook enforcement tests (test plan in .claude/plans/piped-dancing-tarjan.md)"
+      ]
+    },
     {
       "summary": "Deep research + full bead chain for TUI AI context architecture. 4 gate beads complete, 39 impl+validate beads wired and ready to execute.",
       "updated": "2026-03-27T07:30:00Z",
       "completedWork": [
         "Gates 1-4 (Spec, Plan, Parity, Sanity Check) all complete",
         "39 beads created and chained for implementation",
-        "Design doc, spec, and plan written"
+        "Design doc and implementation plan written"
       ],
       "nextSteps": [
         "Execute bead chain starting with T1: Split app.go"
-      ]
-    },
-    {
-      "summary": "Deep research on Go TUI + AI patterns; auditing stale v1 rule files in v3 rewrite; brainstorming TUI development approach with /develop",
-      "updated": "2026-03-27T05:48:38Z",
-      "completedWork": [
-        "Deep research across 4 agents: community strategies, CLAUDE.md patterns, failure modes, golden file testing",
-        "Discovered ALL 12 TUI rule files scoped to tui_v1/ — none trigger for v3",
-        "Started /develop brainstorm phase"
-      ],
-      "nextSteps": [
-        "Complete brainstorm and create implementation plan"
       ]
     }
   ]
