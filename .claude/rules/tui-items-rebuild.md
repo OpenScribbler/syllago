@@ -1,69 +1,37 @@
-# Items Model Rebuild Pattern
+# Content Refresh Pattern
 
-The `itemsModel` has two kinds of state:
-- **Data state** (items, providers, repoRoot) — changes on refresh
-- **Navigation context** (`itemsContext`) — must survive refreshes
+The App has multiple content models (library, explorer, gallery) that display catalog items. When the catalog changes (install, remove, edit, rescan), all active views must be refreshed.
 
-When refreshing item data (after install, remove, toggle-hidden, search cancel), **always use `rebuildItems()` or `rebuildItemsFiltered(query)`**. Never construct a new `itemsModel` directly in app.go handlers.
+## Always Use refreshContent()
 
-## The `itemsContext` Struct
+After any operation that changes catalog state, call `a.refreshContent()`. Never set items on sub-models directly from message handlers.
 
 ```go
-type itemsContext struct {
-    sourceRegistry   string // set when browsing items from a specific registry
-    sourceProvider   string // provider slug when drilled in from loadout cards
-    parentLabel      string // intermediate breadcrumb (e.g. "Library", "Loadouts")
-    hiddenCount      int    // number of hidden items filtered out
-    hideLibraryBadge bool   // suppress [LIBRARY] badge (when already in Library view)
-}
+// WRONG — only updates one model, misses gallery/explorer
+a.library.SetItems(a.catalog.Items)
+
+// RIGHT — refreshContent() updates the correct model for the active tab
+a.refreshContent()
 ```
 
-These fields control breadcrumb rendering, provider filtering, and display flags. Losing them causes broken breadcrumbs and incorrect item lists.
+## What refreshContent() Does
 
-## When to Use Each Method
+1. Checks which tab is active (library, gallery, or explorer)
+2. Calls `SetItems()` on the correct sub-model with fresh catalog data
+3. Calls `SetSize()` to recalculate layout with current dimensions
+4. For gallery tabs, calls `refreshGallery()` to rebuild cards
+
+## When to Call
 
 | Situation | Method |
 |-----------|--------|
-| Refresh data (install/remove/toggle-hidden done) | `a.rebuildItems()` |
-| Cancel search (restore full list) | `a.rebuildItems()` |
-| Apply search filter | `a.rebuildItemsFiltered(query)` |
-| Live search typing | `a.rebuildItemsFiltered(query)` |
-| Initial navigation (first time entering items) | `newItemsModel()` + set `ctx` fields |
+| After install/remove/uninstall completes | `a.refreshContent()` |
+| After edit saved (name/description) | `a.refreshContent()` |
+| After tab/group change | `a.refreshContent()` |
+| After catalog rescan (R key) | Called inside `a.rescanCatalog()` |
 
-## What the Methods Do
+## rescanCatalog() for Full Refresh
 
-Both methods:
-1. Save the current `itemsContext`
-2. Fetch fresh items from the catalog
-3. Apply the provider filter if `sourceProvider` is set
-4. Apply search filter if query is provided
-5. Create a new `itemsModel` with fresh data
-6. Restore the saved context
-7. Clamp the cursor to valid range
-
-## Initial Navigation (newItemsModel is OK)
-
-When navigating to a NEW items view (e.g., clicking a card, entering from sidebar), you create a fresh `itemsModel` and set context fields explicitly:
-
-```go
-items := newItemsModel(catalog.Loadouts, filtered, a.providers, a.catalog.RepoRoot)
-items.ctx.sourceProvider = prov
-items.ctx.parentLabel = "Loadouts"
-items.ctx.hiddenCount = countHidden(a.catalog.ByType(catalog.Loadouts))
-items.width = a.width - sidebarWidth - 1
-items.height = a.panelHeight()
-a.items = items
-```
-
-## Never Do This in Rebuild Handlers
-
-```go
-// WRONG — loses navigation context
-items := newItemsModel(ct, src, a.providers, a.catalog.RepoRoot)
-items.width = a.width
-items.height = a.panelHeight()
-a.items = items
-
-// RIGHT — use rebuildItems
-a.rebuildItems()
-```
+When the user presses `R`, `rescanCatalog()` re-reads all content from disk,
+reloads config (to pick up registry changes), rebuilds the catalog, then calls
+`refreshContent()` + `updateNavState()`.
