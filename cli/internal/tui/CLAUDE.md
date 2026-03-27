@@ -17,6 +17,27 @@ Root model is `App` (defined in `app.go`). Sub-models own their state and are co
 
 **Message routing priority:** global keys -> modal/wizard -> toast -> focused panel
 
+### Delegation Principle
+
+The TUI is a **presentation layer only**. All business logic lives in CLI packages:
+
+| Concern | Package |
+|---------|---------|
+| Content discovery, metadata, removal | `internal/catalog` |
+| Install/uninstall operations | `internal/installer` |
+| Provider detection, config paths | `internal/provider` |
+| Loadout parsing and application | `internal/loadout` |
+| Format conversion | `internal/converter` |
+| Registry operations | `internal/registry` |
+| User configuration | `internal/config` |
+
+The TUI may call these packages from `tea.Cmd` functions (async) but must never:
+- Read or parse content files directly (use `catalog.HookSummary`, `catalog.MCPSummary`, `catalog.ReadFileContent`)
+- Delete files directly (use `catalog.RemoveLibraryItem`)
+- Install/uninstall without going through the `installer` package
+
+When adding features, ask: "Could a CLI command need this same logic?" If yes, it belongs in a shared package.
+
 ## File Organization (post-split)
 
 | File | Contents |

@@ -148,7 +148,7 @@ func runRemove(cmd *cobra.Command, args []string) error {
 	}
 
 	removedPath := item.Path
-	if err := os.RemoveAll(item.Path); err != nil {
+	if err := catalog.RemoveLibraryItem(item.Path); err != nil {
 		return output.NewStructuredErrorDetail(output.ErrSystemIO, "removing from library failed", "Check filesystem permissions", err.Error())
 	}
 

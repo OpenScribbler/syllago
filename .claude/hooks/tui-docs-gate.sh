@@ -55,7 +55,6 @@ If this commit introduces or changes a pattern, update:
   - cli/internal/tui/CLAUDE.md (architecture)
 
 If no doc update is needed (e.g., pure bug fix with no new pattern),
-stage a no-op touch to SKILL.md or add --no-doc-update to the commit
-message to bypass this gate.
+add --no-doc-update to the commit message to bypass this gate.
 EOF
 exit 2
