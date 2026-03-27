@@ -29,7 +29,15 @@
       "properties": {
         "event": {
           "type": "string",
-          "description": "Canonical event name from the Event Registry."
+          "description": "Canonical event name from the Event Registry.",
+          "examples": [
+            "before_tool_execute",
+            "after_tool_execute",
+            "session_start",
+            "session_end",
+            "before_prompt",
+            "agent_stop"
+          ]
         },
         "matcher": {
           "$ref": "#/$defs/matcher",
@@ -132,7 +140,8 @@
       "properties": {
         "type": {
           "type": "string",
-          "description": "Handler type (e.g. \"command\", \"http\", \"prompt\", \"agent\")."
+          "description": "Handler type (e.g. \"command\", \"http\", \"prompt\", \"agent\").",
+          "examples": ["command", "http", "prompt", "agent"]
         },
         "command": {
           "type": "string",

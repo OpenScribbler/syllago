@@ -105,35 +105,45 @@ Hook distribution packages SHOULD include SHA-256 hashes for every file in the h
 
 Implementations SHOULD verify file hashes before hook execution when hashes are available.
 
-### 3.2 Signatures
+### 3.2 Signatures (Future)
 
-The specification defines an optional `signatures` field for cryptographic signatures. The specification does not mandate a specific signing mechanism. Implementations MAY support:
+The canonical format does not currently define a `signatures` field. A future version of the specification or a companion signing specification may add cryptographic signature support. Implementations MAY support signing mechanisms outside the scope of this spec, such as:
 
 - Sigstore/cosign for keyless signing with identity verification
 - GPG/PGP signatures for traditional key-based signing
 - Other mechanisms appropriate to their ecosystem
 
-### 3.3 Author Metadata
+### 3.3 Author Metadata (Future)
 
-The specification defines optional author identity fields:
+The canonical format does not currently define author identity fields. A future version may add optional author metadata. Until then, implementations that track authorship SHOULD do so outside the hook manifest (e.g., in registry metadata or package manifests).
 
-```json
-{
-  "author": {
-    "name": "Jane Smith",
-    "email": "jane@example.com",
-    "url": "https://github.com/janesmith"
-  }
-}
-```
-
-Author metadata is self-reported and MUST NOT be treated as verified identity without independent verification (e.g., Sigstore identity binding, GPG key verification).
+Author metadata, when present in any form, is self-reported and MUST NOT be treated as verified identity without independent verification (e.g., Sigstore identity binding, GPG key verification).
 
 ---
 
-## 4. Recommendations for Implementations
+## 4. Additional Threat Vectors
 
-### 4.1 Installation Prompts
+### 4.1 Prompt Injection via Hook Output
+
+Hooks that return `context` or `system_message` fields inject text into the AI agent's conversation or system prompt. A malicious hook bound to `session_start` could inject adversarial instructions that influence agent behavior for the entire session. Implementations SHOULD treat hook-injected context with the same caution as any untrusted input to the agent's prompt.
+
+### 4.2 Transitive Prompt Injection via LLM-Evaluated Hooks
+
+Hooks with `type: "prompt"` or `type: "agent"` process event data that may include content from untrusted sources. For example, an `after_tool_execute` hook evaluating the output of a file read may encounter attacker-controlled content (e.g., a malicious README in a cloned repository). This creates a transitive prompt injection vector where the attacker influences the hook's LLM evaluation indirectly. Hook authors using LLM evaluation SHOULD sanitize or constrain the input data passed to the LLM.
+
+### 4.3 Async Execution and Observability
+
+Hooks with `async: true` run fire-and-forget: the calling tool does not wait for completion or check exit codes. This makes async hooks suitable for background exfiltration, persistent processes, or operations that leave no visible trace in the tool's output. Implementations SHOULD log async hook launches with the same detail as synchronous hooks, and SHOULD enforce timeouts on async hooks to prevent indefinite background processes.
+
+### 4.4 Policy File Integrity
+
+Policy files (when implemented per the [policy interface](policy-interface.md)) are read from the filesystem at multiple scopes (system, organization, user, project). A malicious contributor could commit a project-level policy file that weakens protections. Higher-scope policies take precedence, which mitigates this when they exist, but organizations that rely solely on project-level policies are vulnerable. Implementations SHOULD warn when project-level policy files are detected in repositories and SHOULD NOT allow project-level policies to weaken restrictions set at higher scopes.
+
+---
+
+## 5. Recommendations for Implementations
+
+### 5.1 Installation Prompts
 
 Implementations SHOULD prompt the user before installing hooks, displaying:
 - The hook's event bindings and blocking behavior
@@ -141,17 +151,17 @@ Implementations SHOULD prompt the user before installing hooks, displaying:
 - Any capabilities that grant elevated privileges (especially `input_rewrite`)
 - The source of the hook (registry, repository, local file)
 
-### 4.2 Script Scanning
+### 5.2 Script Scanning
 
 Implementations SHOULD provide a mechanism for integrating external security scanning tools. A pluggable scanner interface allows organizations to apply their own SAST/DAST tools to hook scripts before installation.
 
 The specification does not mandate specific scanning tools or rules. Pattern-based scanning of manifest `command` fields catches trivial threats; scanning actual script file contents is necessary for meaningful security analysis.
 
-### 4.3 Execution Sandboxing
+### 5.3 Execution Sandboxing
 
 Implementations SHOULD consider executing hooks with reduced privileges where the operating system supports it. Hooks generally need read access to the project directory and network access for HTTP handlers, but rarely need write access outside the project or access to sensitive system paths.
 
-### 4.4 Audit Logging
+### 5.4 Audit Logging
 
 Implementations SHOULD log hook executions with sufficient detail for security auditing:
 - Timestamp
@@ -160,6 +170,6 @@ Implementations SHOULD log hook executions with sufficient detail for security a
 - Exit code
 - Whether the hook blocked an action
 
-### 4.5 Timeout Enforcement
+### 5.5 Timeout Enforcement
 
 Implementations MUST enforce timeouts on hook execution. A hook that hangs indefinitely blocks the AI coding tool's operation. The recommended default timeout is 30 seconds. Implementations SHOULD terminate hook processes that exceed their timeout and treat the result as a non-blocking error (exit code 1).

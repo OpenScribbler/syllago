@@ -88,7 +88,7 @@ A canonical hook manifest is a JSON object with the following fields:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `spec` | string | REQUIRED | Specification version identifier. MUST be `"hooks/1.0"` for this version. |
-| `hooks` | array | REQUIRED | Non-empty array of hook definition objects. |
+| `hooks` | array | REQUIRED | Non-empty array of hook definition objects. Implementations MUST reject a manifest with an empty `hooks` array as a validation error. |
 
 ### 3.4 Hook Definition
 
@@ -102,8 +102,7 @@ Each element of the `hooks` array is an object with the following fields:
 | `blocking` | boolean | OPTIONAL | Whether this hook can prevent the triggering action. Default: `false`. |
 | `degradation` | object | OPTIONAL | Per-capability fallback strategies (Section 11). Keys are capability identifiers, values are strategy strings. |
 | `provider_data` | object | OPTIONAL | Opaque provider-specific data, keyed by provider slug. |
-
-The `capabilities` field MAY appear on a hook definition. When present, it is an array of capability identifier strings. Implementations SHOULD infer capabilities from manifest fields and handler output patterns rather than relying on this field. See Section 9 for the inference rules.
+| `capabilities` | array | OPTIONAL | Informational list of capability identifier strings. Implementations SHOULD infer capabilities from manifest fields and handler output patterns rather than relying on this field. See Section 9 for the inference rules. |
 
 ### 3.5 Handler Definition
 
@@ -114,7 +113,7 @@ The `capabilities` field MAY appear on a hook definition. When present, it is an
 | `platform` | object | OPTIONAL | Per-OS command overrides. Keys MUST be `"windows"`, `"linux"`, or `"osx"`. Values are command strings. The `command` field serves as the default when no platform override matches. |
 | `cwd` | string | OPTIONAL | Working directory for the hook process, relative to the project root. |
 | `env` | object | OPTIONAL | Environment variables passed to the hook process. Keys are variable names, values are strings. |
-| `timeout` | number | OPTIONAL | Maximum execution time in seconds. Implementations SHOULD apply a reasonable default (30 seconds is RECOMMENDED). |
+| `timeout` | number | OPTIONAL | Maximum execution time in seconds. Implementations SHOULD apply a reasonable default (30 seconds is RECOMMENDED). A value of `0` means no timeout (the implementation's default applies). |
 | `async` | boolean | OPTIONAL | Whether the hook runs asynchronously (fire-and-forget). Default: `false`. When `true`, the triggering action does not wait for the hook to complete. |
 
 ### 3.6 Provider Data
@@ -254,6 +253,8 @@ Implementations MUST NOT treat exit code 1 or other non-zero codes (besides 2) a
 
 When a hook exceeds its timeout, implementations SHOULD terminate the process and treat the result as exit code 1 (non-blocking warning). Implementations MAY treat timeout of a blocking hook as exit code 2 (block) if the hook author has specified `"timeout_behavior": "block"` in `provider_data`.
 
+> **Note:** A future version of this specification may promote `timeout_behavior` to a canonical field on the handler definition, removing the need to use `provider_data` for this safety-critical setting.
+
 ---
 
 ## 5. Canonical Output Schema
@@ -276,8 +277,34 @@ When both exit code and JSON output are present:
 - `decision: "deny"` with exit code 0 MUST be treated as a block (equivalent to exit code 2).
 - `decision: "allow"` with exit code 0 is the normal success path.
 - `decision: "ask"` with exit code 0 defers to the user; if the provider does not support interactive confirmation, it MUST be treated as `"deny"`.
+- When the `decision` field is absent and exit code is 0, the implementation MUST treat the result as `decision: "allow"`.
+- When a hook exits with code 0 and stdout is not valid JSON, implementations MUST treat the result as exit code 1 (hook error) and SHOULD log stderr and stdout for debugging.
 
-### 5.3 Advanced Output Fields
+### 5.3 Evaluation Order
+
+When both exit code and JSON `decision` are present, the following evaluation order applies:
+
+1. **Non-blocking downgrade first.** If `blocking` is `false`, exit code 2 MUST be treated as exit code 1 before any further evaluation.
+2. **Exit code / decision resolution.** After the downgrade, apply the precedence rules from Section 5.2.
+
+The combined truth table:
+
+| `blocking` | Exit Code | `decision` | Result |
+|------------|-----------|------------|--------|
+| `true` | 0 | `"allow"` | Allow |
+| `true` | 0 | `"deny"` | Block |
+| `true` | 0 | `"ask"` | Ask user (deny if unsupported) |
+| `true` | 0 | absent | Allow |
+| `true` | 2 | `"allow"` | Block (exit code 2 overrides) |
+| `true` | 2 | `"deny"` | Block |
+| `true` | 1 | any | Warning, allow |
+| `false` | 0 | `"allow"` | Allow |
+| `false` | 0 | `"deny"` | Block |
+| `false` | 0 | absent | Allow |
+| `false` | 2 | any | Warning, allow (downgraded to exit 1) |
+| `false` | 1 | any | Warning, allow |
+
+### 5.4 Advanced Output Fields
 
 The following fields are capability-specific. They are defined in the Capability Registry (Section 9) alongside their respective capabilities, not in the core output schema. Implementations MUST ignore these fields if the corresponding capability is not supported.
 
@@ -358,7 +385,7 @@ Core events have near-universal provider support. Conforming implementations at 
 | Event | Description | Blocking Semantic |
 |-------|-------------|-------------------|
 | `before_tool_execute` | Fires before any tool runs. The hook receives the tool name and input arguments. | Can prevent the tool from executing. |
-| `after_tool_execute` | Fires after a tool completes. The hook receives the tool name, input, and result. | Observational only; the action has already occurred. |
+| `after_tool_execute` | Fires after a tool completes. The hook receives the tool name, input, and result. | Observational only; the action has already occurred. Setting `blocking: true` on an observe-only event is not a validation error, but implementations SHOULD warn that the blocking intent has no effect. |
 | `session_start` | Fires when a coding session begins, resumes, or resets. | Observational; may inject context. |
 | `session_end` | Fires when a session terminates. Best-effort delivery; the process may exit before the hook completes. | Observational. |
 | `before_prompt` | Fires after user input is submitted but before it reaches the agent. | Can modify or reject user input. |
@@ -452,7 +479,7 @@ When a blocking hook returns exit code 2 (or `decision: "deny"`), the resulting 
 
 A `--` indicates the provider does not support the event (same as the Event Name Mapping table).
 
-When encoding a hook with `"blocking": true` for a provider where the behavior is `observe`, adapters SHOULD emit a warning indicating that the blocking intent cannot be honored on the target provider.
+When encoding a hook with `"blocking": true` for a provider where the behavior is `observe`, adapters MUST emit a warning indicating that the blocking intent cannot be honored on the target provider. If the hook defines a `degradation` strategy for the relevant capability, that strategy applies; otherwise the hook is encoded with the blocking field preserved and the warning emitted.
 
 ---
 
@@ -466,7 +493,7 @@ Capabilities are **inferred by tooling** from manifest fields and handler output
 
 Hook produces JSON output with fields beyond simple exit codes.
 
-**Inference rule:** Tooling infers this capability when the hook is known to produce JSON stdout with any of the core output fields (`decision`, `reason`, `continue`, `context`).
+**Inference rule:** Tooling infers this capability when the hook manifest includes `blocking: true` (implying the hook returns structured decisions), when the hook's `degradation` field references output-dependent capabilities, or when the hook author has explicitly listed `"structured_output"` in the `capabilities` array.
 
 **Advanced output fields** defined by this capability:
 
@@ -633,16 +660,7 @@ For split-event providers (Cursor, Windsurf), certain tool vocabulary entries ma
 
 ### 10.2 MCP Tool Names
 
-MCP tools use structured objects in the canonical format (Section 6.3). Provider adapters encode these into provider-specific combined string formats:
-
-| Provider | Format | Example |
-|----------|--------|---------|
-| claude-code, kiro | `mcp__<server>__<tool>` | `mcp__github__create_issue` |
-| gemini-cli | `mcp_<server>_<tool>` | `mcp_github_create_issue` |
-| copilot-cli | `<server>/<tool>` | `github/create_issue` |
-| cursor, windsurf | `<server>__<tool>` | `github__create_issue` |
-
-When decoding from a provider, adapters MUST parse the combined string format back into the structured `{"mcp": {"server": "...", "tool": "..."}}` representation.
+MCP tools use structured objects in the canonical format. The provider-specific combined string formats and encoding rules are defined in Section 6.3. When decoding from a provider, adapters MUST parse the combined string format back into the structured `{"mcp": {"server": "...", "tool": "..."}}` representation.
 
 ---
 
@@ -793,7 +811,7 @@ The specification itself follows [Semantic Versioning 2.0](https://semver.org/).
 - **Minor** version increments indicate additive changes (new optional fields, clarifications).
 - **Patch** version increments indicate editorial corrections (typos, examples).
 
-The `spec` field in manifests includes only major and minor versions. Implementations MUST accept any patch version for a given major.minor.
+The `spec` field in manifests includes only major and minor versions (e.g., `"hooks/1.0"`). The specification document itself uses semver with a patch component (e.g., `1.0.0-draft`), but this patch version is not represented in manifests. Implementations MUST accept any manifest whose `spec` field matches the major and minor version they support.
 
 ### 14.2 Registries
 

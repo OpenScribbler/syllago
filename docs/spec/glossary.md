@@ -40,6 +40,9 @@ The numeric status returned by a hook process upon termination. Exit code 0 indi
 **extended event**
 An event with partial provider support that is not required for Core conformance but is supported at the Extended conformance level.
 
+**hook directory**
+The directory containing the hook manifest file. When a handler's `command` field specifies a relative path, it is resolved relative to this directory.
+
 **handler**
 The executable component of a hook that runs when the hook's event fires. The most common handler type is `"command"` (shell script execution). Other handler types (`"http"`, `"prompt"`, `"agent"`) are defined as capabilities.
 
@@ -54,6 +57,9 @@ An expression on a hook definition that filters which tools trigger the hook. Ma
 
 **MCP (Model Context Protocol)**
 A protocol for connecting AI models to external tools and data sources. MCP tools are identified by a server name and tool name pair. The canonical format uses structured objects for MCP references to avoid the parsing ambiguity of combined string formats.
+
+**project root**
+The root directory of the project in which the AI coding tool is operating. Typically the directory containing `.git/`. When a handler's `cwd` field specifies a relative path, it is resolved relative to this directory.
 
 **provider**
 An AI coding tool that implements a hook system. Each provider is identified by a canonical slug.
@@ -72,6 +78,9 @@ A regular expression syntax defined by Google's RE2 library. RE2 is recommended 
 
 **round-trip**
 The process of decoding a hook from provider P into canonical format and encoding it back to provider P. A Full-conformant implementation must produce structurally equivalent output.
+
+**structurally equivalent**
+Two hook manifests are structurally equivalent when they have the same number of hooks, the same canonical event names, the same handler types, the same command strings, and the same matcher semantics. Field ordering, whitespace, and non-normative fields (such as `_comment`) are not significant for structural equivalence.
 
 **split-event provider**
 A provider that maps the canonical `before_tool_execute` event to multiple category-specific native events based on tool type. Cursor and Windsurf are split-event providers.
