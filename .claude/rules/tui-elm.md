@@ -73,3 +73,21 @@ paths:
        m.child.SetSize(msg.Width, childHeight)
        return m, nil
    ```
+
+7. **No business logic in the TUI** — the TUI is a presentation layer. File I/O, content parsing, and disk mutations belong in CLI packages (`catalog`, `installer`, `provider`, etc.).
+   ```go
+   // WRONG — TUI reads and parses content files directly
+   data, _ := os.ReadFile(filepath.Join(item.Path, "hook.json"))
+   event := gjson.GetBytes(data, "event").String()
+
+   // RIGHT — delegate to catalog package
+   summary := catalog.HookSummary(item)
+   ```
+
+   ```go
+   // WRONG — TUI removes files directly
+   os.RemoveAll(item.Path)
+
+   // RIGHT — delegate to catalog package
+   catalog.RemoveLibraryItem(item.Path)
+   ```

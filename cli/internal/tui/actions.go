@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -199,7 +198,7 @@ func (a App) doRemoveCmd(msg removeResultMsg) tea.Cmd {
 			uninstalledFrom = append(uninstalledFrom, prov.Name)
 		}
 
-		if err := os.RemoveAll(item.Path); err != nil {
+		if err := catalog.RemoveLibraryItem(item.Path); err != nil {
 			return removeDoneMsg{itemName: item.Name, err: fmt.Errorf("removing from library: %w", err)}
 		}
 
@@ -210,7 +209,7 @@ func (a App) doRemoveCmd(msg removeResultMsg) tea.Cmd {
 // doSimpleRemoveCmd creates a tea.Cmd that removes an item from disk (no uninstall).
 func (a App) doSimpleRemoveCmd(item catalog.ContentItem) tea.Cmd {
 	return func() tea.Msg {
-		if err := os.RemoveAll(item.Path); err != nil {
+		if err := catalog.RemoveLibraryItem(item.Path); err != nil {
 			return removeDoneMsg{itemName: item.Name, err: fmt.Errorf("removing: %w", err)}
 		}
 		return removeDoneMsg{itemName: item.Name}
