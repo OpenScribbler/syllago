@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -503,6 +504,20 @@ func (m *installWizardModel) resolvedInstallPath(loc int) string {
 		return m.customPath
 	}
 	return ""
+}
+
+// resolveSettingsPath returns the provider's settings file path for JSON merge types.
+// For hooks/MCP, content merges into the provider's settings.json (or equivalent).
+func (m *installWizardModel) resolveSettingsPath(prov provider.Provider) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "~/" + prov.ConfigDir + "/settings.json"
+	}
+	path := filepath.Join(home, prov.ConfigDir, "settings.json")
+	if strings.HasPrefix(path, home) {
+		return "~" + path[len(home):]
+	}
+	return path
 }
 
 // renderLocationInput renders the custom path text input with cursor.
@@ -1151,15 +1166,20 @@ func (m *installWizardModel) viewReview() string {
 	pad := "  "
 	usableW := m.width - 4
 
-	// --- Summary above the frame ---
-	provName := m.providers[m.providerCursor].Name
+	// --- Summary + buttons above the frame ---
+	prov := m.providers[m.providerCursor]
+	provName := prov.Name
 	var summaryLines []string
 	summaryLines = append(summaryLines, pad+lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(
 		fmt.Sprintf("Installing %q to %s", m.itemName, provName)))
 
 	if m.isJSONMerge {
-		summaryLines = append(summaryLines, pad+mutedStyle.Render("Will merge into ")+
-			lipgloss.NewStyle().Foreground(primaryText).Render(provName+" settings"))
+		// Show the actual settings file path for JSON merge
+		targetPath := m.resolveSettingsPath(prov)
+		summaryLines = append(summaryLines, pad+mutedStyle.Render("Target:   ")+
+			lipgloss.NewStyle().Foreground(primaryText).Render(targetPath))
+		summaryLines = append(summaryLines, pad+mutedStyle.Render("Method:   ")+
+			lipgloss.NewStyle().Foreground(primaryText).Render("JSON merge"))
 	} else {
 		locLabels := []string{"Global", "Project", "Custom"}
 		locLabel := locLabels[m.locationCursor]
@@ -1168,11 +1188,26 @@ func (m *installWizardModel) viewReview() string {
 		if m.methodCursor == 1 {
 			methodLabel = "Copy"
 		}
-		summaryLines = append(summaryLines, pad+mutedStyle.Render("Location: ")+
-			lipgloss.NewStyle().Foreground(primaryText).Render(locLabel+" ("+locPath+")"))
+		summaryLines = append(summaryLines, pad+mutedStyle.Render("Target:   ")+
+			lipgloss.NewStyle().Foreground(primaryText).Render(locPath))
+		summaryLines = append(summaryLines, pad+mutedStyle.Render("Scope:    ")+
+			lipgloss.NewStyle().Foreground(primaryText).Render(locLabel))
 		summaryLines = append(summaryLines, pad+mutedStyle.Render("Method:   ")+
 			lipgloss.NewStyle().Foreground(primaryText).Render(methodLabel))
 	}
+
+	// Buttons on the last line of the summary area
+	btnFocus := -1
+	if m.reviewZone == reviewZoneButtons {
+		btnFocus = m.buttonCursor
+	}
+	buttons := renderModalButtons(btnFocus, usableW, pad,
+		[]string{"Install"},
+		buttonDef{"Cancel", "inst-cancel", 0},
+		buttonDef{"Back", "inst-back", 1},
+		buttonDef{"Install", "inst-install", 2},
+	)
+	summaryLines = append(summaryLines, buttons)
 
 	summary := strings.Join(summaryLines, "\n")
 
@@ -1181,8 +1216,7 @@ func (m *installWizardModel) viewReview() string {
 	innerW := m.width - borderSize
 	summaryH := len(summaryLines) + 1 // +1 for blank line after summary
 	shellH := 3                       // wizard shell header
-	buttonH := 2                      // blank line + button row
-	frameH := max(6, m.height-shellH-summaryH-buttonH)
+	frameH := max(6, m.height-shellH-summaryH)
 	frameInnerH := max(3, frameH-borderSize)
 
 	// Risk section height
@@ -1227,14 +1261,18 @@ func (m *installWizardModel) viewReview() string {
 
 	var frameLines []string
 
-	// Top border: ╭── Risk Indicators ──╮ or ╭──────╮
+	// Top border: ╭─ Risk Indicators ───...──╮ or ╭──────╮
 	if riskH > 0 {
 		riskTitle := " Risk Indicators "
 		riskTitleStyled := lipgloss.NewStyle().Bold(true).Foreground(m.riskBanner.borderColor()).Render(riskTitle)
-		dashesLeft := "─"
-		remaining := innerW - 1 - lipgloss.Width(riskTitle) - 1
-		dashesRight := strings.Repeat("─", max(1, remaining))
-		frameLines = append(frameLines, border("╭"+dashesLeft)+riskTitleStyled+border(dashesRight+"╮"))
+		titleVisualW := lipgloss.Width(riskTitle)
+		// innerW = total chars between ╭ and ╮
+		// Layout: ╭ + ─ + title + dashes + ╮
+		//         ^   ^content^^^^^^^^^^^^   ^
+		// content = 1 + titleVisualW + dashesRight = innerW
+		dashesRight := max(1, innerW-1-titleVisualW)
+		frameLines = append(frameLines,
+			border("╭")+border("─")+riskTitleStyled+border(strings.Repeat("─", dashesRight))+border("╮"))
 	} else {
 		frameLines = append(frameLines, border("╭"+strings.Repeat("─", innerW)+"╮"))
 	}
@@ -1310,25 +1348,11 @@ func (m *installWizardModel) viewReview() string {
 		frameLines = append(frameLines, border("╰"+strings.Repeat("─", innerW)+"╯"))
 	}
 
-	// --- Buttons ---
-	btnFocus := -1
-	if m.reviewZone == reviewZoneButtons {
-		btnFocus = m.buttonCursor
-	}
-	buttons := renderModalButtons(btnFocus, usableW, pad,
-		[]string{"Install"},
-		buttonDef{"Cancel", "inst-cancel", 0},
-		buttonDef{"Back", "inst-back", 1},
-		buttonDef{"Install", "inst-install", 2},
-	)
-
 	// --- Assemble ---
 	var result []string
 	result = append(result, summary)
-	result = append(result, "") // blank line between summary and frame
+	result = append(result, "") // blank line between summary/buttons and frame
 	result = append(result, frameLines...)
-	result = append(result, "") // blank line before buttons
-	result = append(result, buttons)
 
 	return strings.Join(result, "\n")
 }
