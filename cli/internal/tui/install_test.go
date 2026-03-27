@@ -971,7 +971,7 @@ func TestInstallWizard_ReviewConfirm(t *testing.T) {
 		t.Fatalf("expected focusIdx=2 (Install), got %d", w.focusIdx)
 	}
 
-	w, cmd := w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := w.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if cmd == nil {
 		t.Fatal("expected cmd from Enter on Install, got nil")
 	}
@@ -1288,7 +1288,7 @@ func TestInstallWizard_ReviewCopyMethod(t *testing.T) {
 	}
 	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // method -> review
 
-	w, cmd := w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := w.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if cmd == nil {
 		t.Fatal("expected cmd from Install confirm")
 	}
