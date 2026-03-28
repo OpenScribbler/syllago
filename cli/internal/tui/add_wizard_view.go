@@ -410,41 +410,55 @@ func (m *addWizardModel) viewReview() string {
 			}
 		}
 
-		nameCol := padRight(truncate(sanitizeLine(name), cols.name), cols.name)
-		typeCol := padRight(truncate(typeLbl, cols.ctype), cols.ctype)
-
-		var statusCol string
-		if statusColor != nil {
-			statusCol = lipgloss.NewStyle().Foreground(statusColor).Render(padRight(truncate(statusLbl, cols.status), cols.status))
-		} else {
-			statusCol = padRight(truncate(statusLbl, cols.status), cols.status)
-		}
-
-		var riskCol string
-		switch riskLbl {
-		case "!!":
-			riskCol = lipgloss.NewStyle().Foreground(dangerColor).Render(padRight(riskLbl, cols.risk))
-		case "!":
-			riskCol = lipgloss.NewStyle().Foreground(warningColor).Render(padRight(riskLbl, cols.risk))
-		default:
-			riskCol = padRight("", cols.risk)
-		}
-
 		isCursor := m.reviewZone == addReviewZoneItems && i == m.reviewItemCursor
 
-		// Build the full row with colored columns, then apply background for cursor
-		line := pad + cursor + nameCol + " " + typeCol + " " + statusCol + " " + riskCol
-		line = truncateLine(line, m.width)
+		// Build columns with appropriate styling
+		nameText := padRight(truncate(sanitizeLine(name), cols.name), cols.name)
+		typeText := padRight(truncate(typeLbl, cols.ctype), cols.ctype)
+		statusText := padRight(truncate(statusLbl, cols.status), cols.status)
 
+		var nameCol, typeCol, statusCol, riskCol string
 		if isCursor {
-			// Pad to full width then apply selectedRowStyle background
-			if gap := m.width - len([]rune(line)); gap > 0 {
-				line += strings.Repeat(" ", gap)
+			// Cursor row: bold name + background on each column, preserve status/risk fg colors
+			bg := selectedBG
+			nameCol = lipgloss.NewStyle().Bold(true).Foreground(primaryText).Background(bg).Render(nameText)
+			typeCol = lipgloss.NewStyle().Foreground(primaryText).Background(bg).Render(typeText)
+			if statusColor != nil {
+				statusCol = lipgloss.NewStyle().Foreground(statusColor).Background(bg).Render(statusText)
+			} else {
+				statusCol = lipgloss.NewStyle().Background(bg).Render(statusText)
 			}
-			line = selectedRowStyle.MaxWidth(m.width).Render(line)
+			switch riskLbl {
+			case "!!":
+				riskCol = lipgloss.NewStyle().Foreground(dangerColor).Background(bg).Render(padRight(riskLbl, cols.risk))
+			case "!":
+				riskCol = lipgloss.NewStyle().Foreground(warningColor).Background(bg).Render(padRight(riskLbl, cols.risk))
+			default:
+				riskCol = lipgloss.NewStyle().Background(bg).Render(padRight("", cols.risk))
+			}
+			cursorStyled := lipgloss.NewStyle().Bold(true).Foreground(primaryText).Background(bg).Render(cursor)
+			line := pad + cursorStyled + nameCol + " " + typeCol + " " + statusCol + " " + riskCol
+			lines = append(lines, zone.Mark(fmt.Sprintf("add-rev-item-%d", i), truncateLine(line, m.width)))
+		} else {
+			// Normal row
+			nameCol = nameText
+			typeCol = typeText
+			if statusColor != nil {
+				statusCol = lipgloss.NewStyle().Foreground(statusColor).Render(statusText)
+			} else {
+				statusCol = statusText
+			}
+			switch riskLbl {
+			case "!!":
+				riskCol = lipgloss.NewStyle().Foreground(dangerColor).Render(padRight(riskLbl, cols.risk))
+			case "!":
+				riskCol = lipgloss.NewStyle().Foreground(warningColor).Render(padRight(riskLbl, cols.risk))
+			default:
+				riskCol = padRight("", cols.risk)
+			}
+			line := pad + cursor + nameCol + " " + typeCol + " " + statusCol + " " + riskCol
+			lines = append(lines, zone.Mark(fmt.Sprintf("add-rev-item-%d", i), truncateLine(line, m.width)))
 		}
-
-		lines = append(lines, zone.Mark(fmt.Sprintf("add-rev-item-%d", i), line))
 	}
 
 	return strings.Join(lines, "\n")
@@ -622,8 +636,17 @@ func (m *addWizardModel) viewExecute() string {
 	}
 	lines = append(lines, "")
 
-	// Per-item progress
-	for i, item := range selected {
+	// Per-item progress (windowed to available height)
+	execH := max(3, m.height-8) // shell(3) + header(1) + blank(1) + footer(2) + pad(1)
+
+	// Auto-scroll to keep current item visible
+	if m.executeCurrent >= m.executeOffset+execH {
+		m.executeOffset = m.executeCurrent - execH + 1
+	}
+	endIdx := min(m.executeOffset+execH, len(selected))
+
+	for i := m.executeOffset; i < endIdx; i++ {
+		item := selected[i]
 		var icon, statusText string
 		if i < len(m.executeResults) {
 			r := m.executeResults[i]
@@ -645,8 +668,8 @@ func (m *addWizardModel) viewExecute() string {
 				icon = mutedStyle.Render("-")
 				statusText = "Cancelled"
 			case "skipped":
-				icon = mutedStyle.Render("-")
-				statusText = "Skipped"
+				icon = mutedStyle.Render("○")
+				statusText = "Skipped — same version already in library"
 			default:
 				if i == m.executeCurrent && m.executing {
 					icon = lipgloss.NewStyle().Foreground(primaryColor).Render("◐")
@@ -664,6 +687,14 @@ func (m *addWizardModel) viewExecute() string {
 		}
 		line := pad + icon + " " + name + "  " + mutedStyle.Render(statusText)
 		lines = append(lines, line)
+	}
+
+	// Scroll indicator
+	if m.executeOffset > 0 {
+		lines = append(lines, pad+mutedStyle.Render(fmt.Sprintf("(%d more above)", m.executeOffset)))
+	}
+	if endIdx < len(selected) {
+		lines = append(lines, pad+mutedStyle.Render(fmt.Sprintf("(%d more below)", len(selected)-endIdx)))
 	}
 
 	if m.executeDone {

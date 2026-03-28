@@ -162,6 +162,7 @@ type addWizardModel struct {
 	// Execute step
 	executeResults   []addExecResult
 	executeCurrent   int
+	executeOffset    int
 	executeDone      bool
 	executeCancelled bool
 	executing        bool
@@ -475,18 +476,30 @@ func (m *addWizardModel) enterReviewDrillIn() {
 	}
 	item := selected[m.reviewItemCursor]
 
-	// Build a minimal ContentItem for the file tree + preview
+	// Build a minimal ContentItem for the file tree + preview.
+	// Path must be a directory for ReadFileContent to work.
+	itemPath := item.path
+	if item.sourceDir != "" {
+		itemPath = item.sourceDir
+	}
+
 	ci := catalog.ContentItem{
 		Name: item.name,
 		Type: item.itemType,
-		Path: item.path,
-	}
-	if item.sourceDir != "" {
-		ci.Path = item.sourceDir
 	}
 
-	// Scan files from the path
-	ci.Files = scanDrillInFiles(ci.Path)
+	info, err := os.Stat(itemPath)
+	if err != nil {
+		return
+	}
+	if info.IsDir() {
+		ci.Path = itemPath
+		ci.Files = scanDrillInFiles(itemPath)
+	} else {
+		// Single file: use parent dir as Path, filename as the only File
+		ci.Path = filepath.Dir(itemPath)
+		ci.Files = []string{filepath.Base(itemPath)}
+	}
 
 	m.reviewDrillTree = newFileTreeModel(ci.Files)
 	m.reviewDrillTree.focused = true
@@ -510,6 +523,11 @@ func (m *addWizardModel) loadDrillInFile() {
 	basePath := item.path
 	if item.sourceDir != "" {
 		basePath = item.sourceDir
+	}
+
+	// Ensure basePath is a directory for ReadFileContent
+	if info, err := os.Stat(basePath); err == nil && !info.IsDir() {
+		basePath = filepath.Dir(basePath)
 	}
 
 	relPath := m.reviewDrillTree.SelectedPath()
@@ -958,12 +976,20 @@ func discoverHooksFromProvider(prov provider.Provider, projectRoot string, resol
 				status = add.StatusInLibrary
 			}
 
+			di := add.DiscoveryItem{
+				Name:   name,
+				Type:   catalog.Hooks,
+				Path:   loc.Path,
+				Status: status,
+				Scope:  loc.Scope.String(),
+			}
 			result = append(result, addDiscoveryItem{
-				name:     name,
-				itemType: catalog.Hooks,
-				path:     loc.Path,
-				status:   status,
-				scope:    loc.Scope.String(),
+				name:       name,
+				itemType:   catalog.Hooks,
+				path:       loc.Path,
+				status:     status,
+				scope:      loc.Scope.String(),
+				underlying: &di,
 			})
 		}
 	}
@@ -1006,12 +1032,20 @@ func discoverMcpFromProvider(prov provider.Provider, projectRoot string, resolve
 			if inLib {
 				status = add.StatusInLibrary
 			}
+			di := add.DiscoveryItem{
+				Name:   name,
+				Type:   catalog.MCP,
+				Path:   loc.Path,
+				Status: status,
+				Scope:  loc.Scope.String(),
+			}
 			result = append(result, addDiscoveryItem{
-				name:     name,
-				itemType: catalog.MCP,
-				path:     loc.Path,
-				status:   status,
-				scope:    loc.Scope.String(),
+				name:       name,
+				itemType:   catalog.MCP,
+				path:       loc.Path,
+				status:     status,
+				scope:      loc.Scope.String(),
+				underlying: &di,
 			})
 			return true
 		})

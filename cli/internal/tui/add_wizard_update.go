@@ -153,6 +153,20 @@ func (m *addWizardModel) updateMouseWheel(msg tea.MouseMsg) (*addWizardModel, te
 				m.typeChecks.adjustOffset()
 			}
 		}
+	case addStepExecute:
+		if m.executeDone {
+			execH := max(3, m.height-8)
+			maxOff := max(0, len(m.selectedItems())-execH)
+			if up {
+				if m.executeOffset > 0 {
+					m.executeOffset--
+				}
+			} else {
+				if m.executeOffset < maxOff {
+					m.executeOffset++
+				}
+			}
+		}
 	}
 	return m, nil
 }
@@ -896,8 +910,24 @@ func (m *addWizardModel) reviewZoneOrder() []addReviewZone {
 
 func (m *addWizardModel) updateKeyExecute(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
 	if m.executeDone {
-		if msg.Type == tea.KeyEnter || msg.Type == tea.KeyEsc {
+		switch msg.Type {
+		case tea.KeyEnter, tea.KeyEsc:
 			return m, func() tea.Msg { return addCloseMsg{} }
+		case tea.KeyUp:
+			if m.executeOffset > 0 {
+				m.executeOffset--
+			}
+		case tea.KeyDown:
+			execH := max(3, m.height-8)
+			maxOff := max(0, len(m.selectedItems())-execH)
+			if m.executeOffset < maxOff {
+				m.executeOffset++
+			}
+		case tea.KeyHome:
+			m.executeOffset = 0
+		case tea.KeyEnd:
+			execH := max(3, m.height-8)
+			m.executeOffset = max(0, len(m.selectedItems())-execH)
 		}
 		return m, nil
 	}
