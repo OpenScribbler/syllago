@@ -10,10 +10,13 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/tidwall/gjson"
 
 	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -572,15 +575,16 @@ func discoverFromProvider(
 		_ = resolver.ExpandPaths() // non-fatal
 	}
 
-	discovered, err := add.DiscoverFromProvider(prov, projectRoot, resolver, contentRoot)
-	if err != nil {
-		return nil, err
-	}
-
 	// Build type filter set
 	typeSet := make(map[catalog.ContentType]bool)
 	for _, t := range selectedTypes {
 		typeSet[t] = true
+	}
+
+	// File-based discovery (rules, skills, agents, commands)
+	discovered, err := add.DiscoverFromProvider(prov, projectRoot, resolver, contentRoot)
+	if err != nil {
+		return nil, err
 	}
 
 	var items []addDiscoveryItem
@@ -613,7 +617,117 @@ func discoverFromProvider(
 		items = append(items, item)
 	}
 
+	// Hooks discovery (JSON merge — separate from file-based)
+	if typeSet[catalog.Hooks] {
+		hookItems := discoverHooksFromProvider(prov, projectRoot, resolver, contentRoot)
+		items = append(items, hookItems...)
+	}
+
+	// MCP discovery (JSON merge — separate from file-based)
+	if typeSet[catalog.MCP] {
+		mcpItems := discoverMcpFromProvider(prov, projectRoot, resolver, contentRoot)
+		items = append(items, mcpItems...)
+	}
+
 	return items, nil
+}
+
+// discoverHooksFromProvider reads provider settings files and extracts
+// individual hook entries, annotated with library status.
+func discoverHooksFromProvider(prov provider.Provider, projectRoot string, resolver *config.PathResolver, contentRoot string) []addDiscoveryItem {
+	baseDir := ""
+	if resolver != nil {
+		baseDir = resolver.BaseDir(prov.Slug)
+	}
+	locations, err := installer.FindSettingsLocationsWithBase(prov, projectRoot, baseDir)
+	if err != nil {
+		return nil
+	}
+
+	idx, err := add.BuildLibraryIndex(contentRoot)
+	if err != nil {
+		return nil
+	}
+
+	var result []addDiscoveryItem
+	for _, loc := range locations {
+		data, err := os.ReadFile(loc.Path)
+		if err != nil {
+			continue
+		}
+		hooks, err := converter.SplitSettingsHooks(data, prov.Slug)
+		if err != nil {
+			continue
+		}
+		for _, hook := range hooks {
+			name := converter.DeriveHookName(hook)
+
+			key := string(catalog.Hooks) + "/" + prov.Slug + "/" + name
+			_, inLib := idx[key]
+			status := add.StatusNew
+			if inLib {
+				status = add.StatusInLibrary
+			}
+
+			result = append(result, addDiscoveryItem{
+				name:     name,
+				itemType: catalog.Hooks,
+				path:     loc.Path,
+				status:   status,
+				scope:    loc.Scope.String(),
+			})
+		}
+	}
+	return result
+}
+
+// discoverMcpFromProvider reads provider MCP config files and extracts
+// individual server entries, annotated with library status.
+func discoverMcpFromProvider(prov provider.Provider, projectRoot string, resolver *config.PathResolver, contentRoot string) []addDiscoveryItem {
+	baseDir := ""
+	if resolver != nil {
+		baseDir = resolver.BaseDir(prov.Slug)
+	}
+	locations := installer.FindMCPLocations(prov, projectRoot, baseDir)
+
+	idx, err := add.BuildLibraryIndex(contentRoot)
+	if err != nil {
+		return nil
+	}
+
+	var result []addDiscoveryItem
+	for _, loc := range locations {
+		data, err := os.ReadFile(loc.Path)
+		if err != nil {
+			continue
+		}
+		if prov.Slug == "opencode" {
+			data = converter.StripJSONCComments(data)
+		}
+
+		servers := gjson.GetBytes(data, loc.JSONKey)
+		if !servers.Exists() || servers.Type != gjson.JSON {
+			continue
+		}
+		servers.ForEach(func(key, _ gjson.Result) bool {
+			name := key.String()
+			libKey := string(catalog.MCP) + "/" + prov.Slug + "/" + name
+			_, inLib := idx[libKey]
+			status := add.StatusNew
+			if inLib {
+				status = add.StatusInLibrary
+			}
+			result = append(result, addDiscoveryItem{
+				name:     name,
+				itemType: catalog.MCP,
+				path:     loc.Path,
+				status:   status,
+				scope:    loc.Scope.String(),
+			})
+			return true
+		})
+	}
+	return result
 }
 
 func discoverFromRegistry(
