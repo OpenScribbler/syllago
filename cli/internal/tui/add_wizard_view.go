@@ -391,9 +391,10 @@ func (m *addWizardModel) viewReview() string {
 		}
 
 		var riskCol string
-		if riskLbl == "!!" {
+		switch riskLbl {
+		case "!!":
 			riskCol = lipgloss.NewStyle().Foreground(dangerColor).Render(riskLbl)
-		} else if riskLbl == "!" {
+		case "!":
 			riskCol = lipgloss.NewStyle().Foreground(warningColor).Render(riskLbl)
 		}
 
