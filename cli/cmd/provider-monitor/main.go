@@ -71,7 +71,10 @@ func main() {
 	if jsonOutput {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		enc.Encode(reports)
+		if err := enc.Encode(reports); err != nil {
+			fmt.Fprintf(os.Stderr, "error encoding JSON: %v\n", err)
+			os.Exit(1)
+		}
 	} else {
 		printReports(reports)
 	}
