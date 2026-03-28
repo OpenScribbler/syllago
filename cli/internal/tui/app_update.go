@@ -41,6 +41,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.addWizard.width = msg.Width
 			a.addWizard.height = a.contentHeight()
 			a.addWizard.shell.SetWidth(msg.Width)
+			// Rebuild discovery list so column widths match the new width
+			if a.addWizard.step == addStepDiscovery && len(a.addWizard.discoveredItems) > 0 && !a.addWizard.discovering {
+				a.addWizard.rebuildDiscoveryListPreserveSelection()
+			}
 		}
 		return a, nil
 

@@ -33,7 +33,7 @@ func (m *addWizardModel) updateMouse(msg tea.MouseMsg) (*addWizardModel, tea.Cmd
 		return m, nil
 	}
 
-	// Wizard shell breadcrumb clicks (completed steps are clickable)
+	// Wizard shell breadcrumb clicks (completed and previously-visited steps are clickable)
 	if step, ok := m.shell.HandleClick(msg); ok {
 		target := addStep(step)
 		if m.preFilterType != "" {
@@ -48,7 +48,7 @@ func (m *addWizardModel) updateMouse(msg tea.MouseMsg) (*addWizardModel, tea.Cmd
 				target = addStepExecute
 			}
 		}
-		if target < m.step {
+		if target != m.step && target <= m.maxStep {
 			m.step = target
 			m.shell.SetActive(step)
 			m.reviewAcknowledged = false
@@ -530,6 +530,7 @@ func (m *addWizardModel) updateKeyType(msg tea.KeyMsg) (*addWizardModel, tea.Cmd
 			m.step = addStepDiscovery
 			m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
 			m.discovering = true
+			m.updateMaxStep()
 			return m, m.startDiscoveryCmd()
 		}
 		return m, nil
@@ -667,15 +668,29 @@ func (m *addWizardModel) updateKeyReviewRisks(msg tea.KeyMsg) (*addWizardModel, 
 }
 
 func (m *addWizardModel) updateKeyReviewItems(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
+	itemCount := len(m.selectedItems())
+	if itemCount == 0 {
+		return m, nil
+	}
 	switch {
 	case msg.Type == tea.KeyUp || (msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'k'):
 		if m.reviewItemCursor > 0 {
 			m.reviewItemCursor--
 		}
 	case msg.Type == tea.KeyDown || (msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'j'):
-		if m.reviewItemCursor < len(m.selectedItems())-1 {
+		if m.reviewItemCursor < itemCount-1 {
 			m.reviewItemCursor++
 		}
+	case msg.Type == tea.KeyPgUp:
+		pageSize := max(1, m.height/3)
+		m.reviewItemCursor = max(0, m.reviewItemCursor-pageSize)
+	case msg.Type == tea.KeyPgDown:
+		pageSize := max(1, m.height/3)
+		m.reviewItemCursor = min(itemCount-1, m.reviewItemCursor+pageSize)
+	case msg.Type == tea.KeyHome:
+		m.reviewItemCursor = 0
+	case msg.Type == tea.KeyEnd:
+		m.reviewItemCursor = itemCount - 1
 	}
 	return m, nil
 }

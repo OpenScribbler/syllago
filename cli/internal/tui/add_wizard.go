@@ -103,11 +103,12 @@ type addExecResult struct {
 // --- Model ---
 
 type addWizardModel struct {
-	shell  wizardShell
-	step   addStep
-	width  int
-	height int
-	seq    int // sequence number for stale message detection
+	shell   wizardShell
+	step    addStep
+	maxStep addStep // furthest step reached, for forward breadcrumb navigation
+	width   int
+	height  int
+	seq     int // sequence number for stale message detection
 
 	// Source step
 	source         addSource
@@ -251,6 +252,15 @@ func (m *addWizardModel) validateStep() {
 	}
 }
 
+// updateMaxStep updates maxStep to the current step if it's further than before,
+// and syncs the shell's maxCompleted for breadcrumb clickability.
+func (m *addWizardModel) updateMaxStep() {
+	if m.step > m.maxStep {
+		m.maxStep = m.step
+	}
+	m.shell.maxCompleted = m.shellIndexForStep(m.maxStep)
+}
+
 // stepHints returns helpbar hints for the current wizard step.
 func (m *addWizardModel) stepHints() []string {
 	base := []string{"? help"}
@@ -357,6 +367,7 @@ func (m *addWizardModel) advanceFromSource() {
 		m.step = addStepType
 		m.shell.SetActive(m.shellIndexForStep(addStepType))
 	}
+	m.updateMaxStep()
 }
 
 // buildTypeCheckList builds the checkbox list for the Type step.
@@ -442,6 +453,7 @@ func (m *addWizardModel) enterReview() {
 	m.reviewZone = addReviewZoneButtons
 	m.buttonCursor = 1 // [Back]
 	m.reviewAcknowledged = false
+	m.updateMaxStep()
 }
 
 // enterExecute transitions to the Execute step.
@@ -455,6 +467,7 @@ func (m *addWizardModel) enterExecute() {
 	m.executeDone = false
 	m.executeCancelled = false
 	m.executing = true
+	m.updateMaxStep()
 }
 
 // startDiscoveryCmd creates an async tea.Cmd to discover content from the selected source.
@@ -557,6 +570,31 @@ func (m *addWizardModel) toggleInstalled() {
 			m.discoveryList.selected[idx] = true
 		}
 	}
+}
+
+// rebuildDiscoveryListPreserveSelection rebuilds the discovery list (e.g., after resize)
+// while preserving the current selection and cursor state.
+func (m *addWizardModel) rebuildDiscoveryListPreserveSelection() {
+	oldSelected := make(map[int]bool)
+	for _, idx := range m.discoveryList.SelectedIndices() {
+		oldSelected[idx] = true
+	}
+	oldCursor := m.discoveryList.cursor
+	oldOffset := m.discoveryList.offset
+
+	m.discoveryList = m.buildDiscoveryList()
+
+	// Restore selections
+	for idx := range oldSelected {
+		if idx < len(m.discoveryList.selected) {
+			m.discoveryList.selected[idx] = true
+		}
+	}
+	// Restore cursor/offset
+	if oldCursor < len(m.discoveryList.items) {
+		m.discoveryList.cursor = oldCursor
+	}
+	m.discoveryList.offset = oldOffset
 }
 
 // visibleDiscoveryItems returns the items visible based on the showInstalled toggle.
