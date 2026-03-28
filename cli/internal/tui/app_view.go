@@ -54,6 +54,9 @@ func (a App) renderContent() string {
 	if a.wizardMode == wizardInstall && a.installWizard != nil {
 		return a.installWizard.View()
 	}
+	if a.wizardMode == wizardAdd && a.addWizard != nil {
+		return a.addWizard.View()
+	}
 
 	group := a.topBar.ActiveGroupLabel()
 

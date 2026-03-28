@@ -437,6 +437,29 @@ func (a App) doRegistryRemoveCmd(name string) tea.Cmd {
 	}
 }
 
+// handleAdd opens the add wizard for importing content into the library.
+func (a App) handleAdd() (tea.Model, tea.Cmd) {
+	// Determine preFilterType from the current Content tab (if any)
+	var preFilterType catalog.ContentType
+	if a.isContentTab() {
+		preFilterType = tabToContentType(a.topBar.ActiveTabLabel())
+	}
+
+	a.addWizard = openAddWizard(
+		a.providers,
+		a.registrySources,
+		a.cfg,
+		a.projectRoot,
+		a.contentRoot,
+		preFilterType,
+	)
+	a.addWizard.width = a.width
+	a.addWizard.height = a.contentHeight()
+	a.addWizard.shell.SetWidth(a.width)
+	a.wizardMode = wizardAdd
+	return a, nil
+}
+
 // handleInstall opens the install wizard for the currently selected library item.
 func (a App) handleInstall() (tea.Model, tea.Cmd) {
 	// Gallery card install not supported (must drill into a card first).

@@ -19,6 +19,7 @@ type wizardKind int
 const (
 	wizardNone    wizardKind = iota
 	wizardInstall            // install wizard (B3+)
+	wizardAdd                // add wizard (Phase D)
 )
 
 // App is the root bubbletea model for the TUI.
@@ -50,6 +51,7 @@ type App struct {
 	// Wizard mode — when active, captures all key/mouse input
 	wizardMode    wizardKind
 	installWizard *installWizardModel // nil when not active
+	addWizard     *addWizardModel     // nil when not active
 
 	// Dimensions
 	width, height int
@@ -118,6 +120,11 @@ func (a App) isGalleryTab() bool {
 	group := a.topBar.ActiveGroupLabel()
 	tab := a.topBar.ActiveTabLabel()
 	return group == "Collections" && (tab == "Loadouts" || tab == "Registries")
+}
+
+// isContentTab returns true if the active tab is in the Content group.
+func (a App) isContentTab() bool {
+	return a.topBar.ActiveGroupLabel() == "Content"
 }
 
 // isRegistriesTab returns true if the active tab is Collections > Registries.

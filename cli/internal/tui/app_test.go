@@ -141,21 +141,16 @@ func TestApp_SubTabNavTab(t *testing.T) {
 func TestApp_ActionButtonHotkeys(t *testing.T) {
 	app := testApp(t)
 
-	_, cmd := app.Update(keyRune('a'))
-	if cmd == nil {
-		t.Fatal("'a' should produce an action command")
-	}
-	msg := cmd()
-	action, ok := msg.(actionPressedMsg)
-	if !ok {
-		t.Fatalf("expected actionPressedMsg, got %T", msg)
-	}
-	if action.action != "add" {
-		t.Errorf("expected action=add, got %q", action.action)
+	// 'a' on Library tab now opens the add wizard directly
+	m, _ := app.Update(keyRune('a'))
+	a := m.(App)
+	if a.wizardMode != wizardAdd {
+		t.Fatal("'a' on Library should open add wizard")
 	}
 
 	// 'n' (create) is deferred — should be a no-op
-	_, cmd = app.Update(keyRune('n'))
+	app2 := testApp(t)
+	_, cmd := app2.Update(keyRune('n'))
 	if cmd != nil {
 		t.Fatal("'n' should be a no-op (create is deferred)")
 	}
@@ -1797,3 +1792,137 @@ func TestGolden_RegistryAddModal_Buttons_80x30(t *testing.T) {
 
 // Verify unused catalog import is consumed
 var _ = catalog.Skills
+
+// --- Add Wizard Integration Tests ---
+
+func TestApp_AddKeyOpensWizardOnLibrary(t *testing.T) {
+	app := testAppWithItems(t)
+
+	m, _ := app.Update(keyRune('a'))
+	a := m.(App)
+
+	if a.wizardMode != wizardAdd {
+		t.Fatal("expected wizardAdd mode after [a] on Library tab")
+	}
+	if a.addWizard == nil {
+		t.Fatal("expected addWizard not nil")
+	}
+	if a.addWizard.preFilterType != "" {
+		t.Fatalf("expected no preFilterType on Library tab, got %s", a.addWizard.preFilterType)
+	}
+
+	view := a.View()
+	assertContains(t, view, "Where is the content?")
+}
+
+func TestApp_AddKeyOpensWizardOnContentTab(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// Switch to Content group (2), then tab to get to a content tab
+	m, cmd := app.Update(keyRune('2'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a := m.(App)
+
+	// Press 'a' to open add wizard with preFilterType
+	m, _ = a.Update(keyRune('a'))
+	a = m.(App)
+
+	if a.wizardMode != wizardAdd {
+		t.Fatal("expected wizardAdd mode on Content tab")
+	}
+	if a.addWizard == nil {
+		t.Fatal("expected addWizard not nil")
+	}
+	// Content tab defaults to first sub-tab which should set a preFilterType
+	if a.addWizard.preFilterType == "" {
+		t.Fatal("expected preFilterType set on Content tab")
+	}
+}
+
+func TestApp_AddKeyOnRegistriesDoesNotOpenWizard(t *testing.T) {
+	// Registries tab should still use registry add modal, not add wizard
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "test-loadout", Type: catalog.Loadouts, Source: "library"},
+		},
+	}
+	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
+		{Name: "my-registry", Path: "/tmp/fake-registry"},
+	}, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	a := m.(App)
+
+	// Navigate to Registries tab
+	m, cmd := a.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	// Press 'a' — should open registry add modal, not add wizard
+	m, _ = a.Update(keyRune('a'))
+	a = m.(App)
+
+	if a.wizardMode == wizardAdd {
+		t.Fatal("should not open add wizard on Registries tab")
+	}
+}
+
+func TestApp_AddWizardEscCloses(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// Open add wizard
+	m, _ := app.Update(keyRune('a'))
+	a := m.(App)
+
+	if a.wizardMode != wizardAdd {
+		t.Fatal("expected wizardAdd mode")
+	}
+
+	// Esc closes wizard
+	m, cmd := a.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	if a.wizardMode != wizardNone {
+		t.Fatal("expected wizardNone after Esc")
+	}
+	if a.addWizard != nil {
+		t.Fatal("expected addWizard nil after close")
+	}
+}
+
+func TestApp_AddWizardSuppressesGroupKeys(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// Open add wizard
+	m, _ := app.Update(keyRune('a'))
+	a := m.(App)
+
+	// Press '1' — should be suppressed, not switch groups
+	m, _ = a.Update(keyRune('1'))
+	a = m.(App)
+
+	if a.wizardMode != wizardAdd {
+		t.Fatal("expected to still be in add wizard after '1'")
+	}
+}
+
+func TestApp_AddWizardWindowResize(t *testing.T) {
+	app := testAppWithItems(t)
+
+	m, _ := app.Update(keyRune('a'))
+	a := m.(App)
+
+	// Resize
+	m, _ = a.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	a = m.(App)
+
+	if a.addWizard.width != 120 {
+		t.Fatalf("expected wizard width 120 after resize, got %d", a.addWizard.width)
+	}
+}

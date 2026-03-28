@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
@@ -199,4 +200,140 @@ func TestInstallWizard_ValidateStep_PanicsOnJSONMergeMethod(t *testing.T) {
 		projectRoot:       root,
 	}
 	w.validateStep() // should panic
+}
+
+// --- Add Wizard invariants ---
+
+func TestAddWizard_ValidateStep_Forward(t *testing.T) {
+	t.Parallel()
+	m := openAddWizard(
+		[]provider.Provider{testInstallProvider("Claude Code", "claude-code", true)},
+		nil, nil, "/tmp", "/tmp", "",
+	)
+
+	// Step 0: Source — no prerequisites
+	m.step = addStepSource
+	m.validateStep()
+
+	// Step 1: Type — requires source set
+	m.source = addSourceProvider
+	m.step = addStepType
+	m.shell.SetActive(1)
+	m.validateStep()
+
+	// Step 2: Discovery — requires source + types
+	m.typeChecks = m.buildTypeCheckList()
+	m.step = addStepDiscovery
+	m.discovering = true // during scan, types not checked
+	m.shell.SetActive(2)
+	m.validateStep()
+
+	// Step 3: Review — requires discovered + selected items
+	m.discovering = false
+	m.discoveredItems = []addDiscoveryItem{
+		{name: "test", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "test", Type: catalog.Rules}},
+	}
+	m.discoveryList = m.buildDiscoveryList()
+	m.step = addStepReview
+	m.shell.SetActive(3)
+	m.validateStep()
+
+	// Step 4: Execute — requires selected + acknowledged
+	m.reviewAcknowledged = true
+	m.step = addStepExecute
+	m.shell.SetActive(4)
+	m.validateStep()
+}
+
+func TestAddWizard_ValidateStep_Esc(t *testing.T) {
+	t.Parallel()
+	m := openAddWizard(
+		[]provider.Provider{testInstallProvider("Claude Code", "claude-code", true)},
+		nil, nil, "/tmp", "/tmp", "",
+	)
+
+	// Set up to Execute step
+	m.source = addSourceProvider
+	m.typeChecks = m.buildTypeCheckList()
+	m.discoveredItems = []addDiscoveryItem{
+		{name: "test", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "test", Type: catalog.Rules}},
+	}
+	m.discoveryList = m.buildDiscoveryList()
+	m.reviewAcknowledged = true
+
+	// Walk backwards
+	m.step = addStepExecute
+	m.shell.SetActive(4)
+	m.validateStep()
+
+	m.step = addStepReview
+	m.shell.SetActive(3)
+	m.validateStep()
+
+	m.discovering = false
+	m.step = addStepDiscovery
+	m.shell.SetActive(2)
+	m.validateStep()
+
+	m.step = addStepType
+	m.shell.SetActive(1)
+	m.validateStep()
+
+	m.step = addStepSource
+	m.shell.SetActive(0)
+	m.validateStep()
+}
+
+func TestAddWizard_ValidateStep_PanicsOnTypeWithoutSource(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for Type without source")
+		}
+	}()
+
+	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
+	m.source = addSourceNone
+	m.step = addStepType
+	m.validateStep()
+}
+
+func TestAddWizard_ValidateStep_PanicsOnReviewWithoutItems(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for Review without items")
+		}
+	}()
+
+	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
+	m.source = addSourceLocal
+	m.discoveredItems = nil
+	m.step = addStepReview
+	m.validateStep()
+}
+
+func TestAddWizard_ValidateStep_PanicsOnExecuteWithoutAck(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for Execute without acknowledgment")
+		}
+	}()
+
+	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
+	m.source = addSourceLocal
+	m.discoveredItems = []addDiscoveryItem{
+		{name: "test", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "test", Type: catalog.Rules}},
+	}
+	m.discoveryList = m.buildDiscoveryList()
+	m.reviewAcknowledged = false
+	m.step = addStepExecute
+	m.validateStep()
 }

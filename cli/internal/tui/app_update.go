@@ -1,6 +1,9 @@
 package tui
 
 import (
+	"fmt"
+	"os"
+
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
@@ -33,6 +36,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.installWizard.width = msg.Width
 			a.installWizard.height = a.contentHeight()
 			a.installWizard.shell.SetWidth(msg.Width)
+		}
+		if a.addWizard != nil {
+			a.addWizard.width = msg.Width
+			a.addWizard.height = a.contentHeight()
+			a.addWizard.shell.SetWidth(msg.Width)
 		}
 		return a, nil
 
@@ -255,6 +263,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return a.handleRegistryAdd()
 			}
+			if a.isLibraryTab() || a.isContentTab() {
+				return a.handleAdd()
+			}
 			return a, a.topBar.actionCmd("add")
 		// keyCreate ("n") is deferred — no-op for now
 
@@ -333,6 +344,32 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.wizardMode = wizardNone
 		return a, nil
 
+	case addCloseMsg:
+		if a.addWizard != nil && a.addWizard.gitTempDir != "" {
+			os.RemoveAll(a.addWizard.gitTempDir)
+		}
+		a.addWizard = nil
+		a.wizardMode = wizardNone
+		cmd := a.rescanCatalog()
+		return a, cmd
+
+	case addDiscoveryDoneMsg:
+		if a.addWizard != nil {
+			_, cmd := a.addWizard.Update(msg)
+			if msg.err != nil {
+				toastCmd := a.toast.Push("Discovery failed: "+msg.err.Error(), toastError)
+				return a, tea.Batch(cmd, toastCmd)
+			}
+			return a, cmd
+		}
+
+	case addExecAllDoneMsg:
+		if a.addWizard != nil {
+			count := len(a.addWizard.selectedItems())
+			cmd := a.toast.Push(fmt.Sprintf("Added %d items to library", count), toastSuccess)
+			return a, cmd
+		}
+
 	case registryAddMsg:
 		return a.handleRegistryAddResult(msg)
 	case registryAddDoneMsg:
@@ -406,7 +443,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return a.handleRegistryAdd()
 			}
-			// Phase D: Add wizard for non-registry tabs
+			if a.isLibraryTab() || a.isContentTab() {
+				return a.handleAdd()
+			}
 		case "sync":
 			if a.isRegistriesTab() && !a.galleryDrillIn && !a.registryOpInProgress {
 				return a.handleSync()
@@ -538,6 +577,11 @@ func (a App) routeToWizard(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case wizardInstall:
 		if a.installWizard != nil {
 			_, cmd := a.installWizard.Update(msg)
+			return a, cmd
+		}
+	case wizardAdd:
+		if a.addWizard != nil {
+			_, cmd := a.addWizard.Update(msg)
 			return a, cmd
 		}
 	}
