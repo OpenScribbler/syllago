@@ -154,6 +154,11 @@ type addWizardModel struct {
 	buttonCursor       int
 	reviewAcknowledged bool
 
+	// Review drill-in sub-view
+	reviewDrillIn      bool
+	reviewDrillTree    fileTreeModel
+	reviewDrillPreview previewModel
+
 	// Execute step
 	executeResults   []addExecResult
 	executeCurrent   int
@@ -460,6 +465,68 @@ func (m *addWizardModel) enterReview() {
 	m.reviewItemOffset = 0
 	m.reviewAcknowledged = false
 	m.updateMaxStep()
+}
+
+// enterReviewDrillIn opens the drill-in sub-view for the selected review item.
+func (m *addWizardModel) enterReviewDrillIn() {
+	selected := m.selectedItems()
+	if m.reviewItemCursor >= len(selected) {
+		return
+	}
+	item := selected[m.reviewItemCursor]
+
+	// Build a minimal ContentItem for the file tree + preview
+	ci := catalog.ContentItem{
+		Name: item.name,
+		Type: item.itemType,
+		Path: item.path,
+	}
+	if item.sourceDir != "" {
+		ci.Path = item.sourceDir
+	}
+
+	// Scan files from the path
+	ci.Files = scanDrillInFiles(ci.Path)
+
+	m.reviewDrillTree = newFileTreeModel(ci.Files)
+	m.reviewDrillTree.focused = true
+	m.reviewDrillPreview = newPreviewModel()
+	m.reviewDrillPreview.LoadItem(&ci)
+	m.reviewDrillIn = true
+}
+
+// exitReviewDrillIn closes the drill-in sub-view and returns to the review list.
+func (m *addWizardModel) exitReviewDrillIn() {
+	m.reviewDrillIn = false
+}
+
+// loadDrillInFile loads the file selected in the drill-in tree into the preview.
+func (m *addWizardModel) loadDrillInFile() {
+	selected := m.selectedItems()
+	if m.reviewItemCursor >= len(selected) {
+		return
+	}
+	item := selected[m.reviewItemCursor]
+	basePath := item.path
+	if item.sourceDir != "" {
+		basePath = item.sourceDir
+	}
+
+	relPath := m.reviewDrillTree.SelectedPath()
+	if relPath == "" {
+		return
+	}
+
+	content, err := catalog.ReadFileContent(basePath, relPath, 500)
+	if err != nil {
+		m.reviewDrillPreview.lines = []string{"Error: " + err.Error()}
+		m.reviewDrillPreview.fileName = relPath
+		m.reviewDrillPreview.offset = 0
+		return
+	}
+	m.reviewDrillPreview.lines = strings.Split(content, "\n")
+	m.reviewDrillPreview.fileName = relPath
+	m.reviewDrillPreview.offset = 0
 }
 
 // enterExecute transitions to the Execute step.
@@ -1122,6 +1189,39 @@ func validGitURL(url string) bool {
 		strings.HasPrefix(lower, "http://") ||
 		strings.HasPrefix(lower, "ssh://") ||
 		strings.HasPrefix(lower, "git@")
+}
+
+// scanDrillInFiles collects visible files from a path for the drill-in preview.
+// For files it returns the basename. For directories it walks and collects relative paths.
+func scanDrillInFiles(path string) []string {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil
+	}
+	if !info.IsDir() {
+		return []string{filepath.Base(path)}
+	}
+	var files []string
+	_ = filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if strings.HasPrefix(d.Name(), ".") {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		rel, _ := filepath.Rel(path, p)
+		if rel != "" {
+			files = append(files, rel)
+		}
+		return nil
+	})
+	return files
 }
 
 // cloneGitURL performs a hardened git clone with security restrictions.

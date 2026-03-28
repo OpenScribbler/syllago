@@ -306,6 +306,10 @@ func (m *addWizardModel) viewDiscovery() string {
 // --- Review step view ---
 
 func (m *addWizardModel) viewReview() string {
+	if m.reviewDrillIn {
+		return m.viewReviewDrillIn()
+	}
+
 	pad := "  "
 	usableW := m.width - 4
 
@@ -441,6 +445,135 @@ func (m *addWizardModel) viewReview() string {
 		}
 
 		lines = append(lines, zone.Mark(fmt.Sprintf("add-rev-item-%d", i), line))
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// viewReviewDrillIn renders the file tree + preview for a selected review item.
+func (m *addWizardModel) viewReviewDrillIn() string {
+	selected := m.selectedItems()
+	name := ""
+	if m.reviewItemCursor < len(selected) {
+		name = selected[m.reviewItemCursor].displayName
+		if name == "" {
+			name = selected[m.reviewItemCursor].name
+		}
+	}
+
+	var lines []string
+	lines = append(lines, m.renderTitleRow("Inspecting: "+name, true, ""))
+	lines = append(lines, "")
+
+	// Compute pane dimensions
+	innerW := m.width - borderSize
+	paneH := max(5, m.height-7) // shell(3) + title(1) + blank(1) + border(2)
+
+	showTree := len(m.reviewDrillTree.allNodes) > 1
+	treeW := 0
+	previewW := innerW
+	if showTree {
+		treeW = max(18, innerW*30/100)
+		previewW = innerW - treeW - 1
+	}
+
+	m.reviewDrillTree.SetSize(treeW, paneH)
+	m.reviewDrillPreview.SetSize(previewW, paneH)
+
+	border := sectionRuleStyle.Render
+
+	wrapLine := func(s string, w int) string {
+		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
+		if gap := w - lipgloss.Width(s); gap > 0 {
+			s += strings.Repeat(" ", gap)
+		}
+		return s
+	}
+
+	// Top border
+	if showTree {
+		lines = append(lines, border("╭"+strings.Repeat("─", treeW)+"┬"+strings.Repeat("─", previewW)+"╮"))
+	} else {
+		lines = append(lines, border("╭"+strings.Repeat("─", innerW)+"╮"))
+	}
+
+	// Build tree + preview content
+	treeContent := strings.Split(m.reviewDrillTree.View(), "\n")
+	for len(treeContent) < paneH {
+		treeContent = append(treeContent, strings.Repeat(" ", treeW))
+	}
+
+	previewHeader := renderSectionTitle(m.reviewDrillPreview.fileName, previewW)
+	previewContent := []string{previewHeader}
+	bodyH := max(0, paneH-1)
+	if bodyH > 0 {
+		body := m.renderDrillInPreviewBody(bodyH, previewW)
+		previewContent = append(previewContent, strings.Split(body, "\n")...)
+	}
+	for len(previewContent) < paneH {
+		previewContent = append(previewContent, strings.Repeat(" ", previewW))
+	}
+
+	// Pane rows
+	for i := 0; i < paneH; i++ {
+		if showTree {
+			tl := ""
+			if i < len(treeContent) {
+				tl = treeContent[i]
+			}
+			pl := ""
+			if i < len(previewContent) {
+				pl = previewContent[i]
+			}
+			lines = append(lines, border("│")+wrapLine(tl, treeW)+border("│")+wrapLine(pl, previewW)+border("│"))
+		} else {
+			pl := ""
+			if i < len(previewContent) {
+				pl = previewContent[i]
+			}
+			lines = append(lines, border("│")+wrapLine(pl, innerW)+border("│"))
+		}
+	}
+
+	// Bottom border
+	if showTree {
+		lines = append(lines, border("╰"+strings.Repeat("─", treeW)+"┴"+strings.Repeat("─", previewW)+"╯"))
+	} else {
+		lines = append(lines, border("╰"+strings.Repeat("─", innerW)+"╯"))
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// renderDrillInPreviewBody renders the preview content for the drill-in view.
+func (m *addWizardModel) renderDrillInPreviewBody(height, width int) string {
+	p := &m.reviewDrillPreview
+	if len(p.lines) == 0 {
+		return lipgloss.NewStyle().
+			Width(width).
+			Height(height).
+			Align(lipgloss.Center, lipgloss.Center).
+			Foreground(mutedColor).
+			Render("No preview available")
+	}
+
+	lineNumW := len(fmt.Sprintf("%d", len(p.lines)))
+	if lineNumW < 2 {
+		lineNumW = 2
+	}
+
+	var lines []string
+	end := min(p.offset+height, len(p.lines))
+	for i := p.offset; i < end; i++ {
+		num := mutedStyle.Render(fmt.Sprintf("%*d ", lineNumW, i+1))
+		numW := lipgloss.Width(num)
+		lineW := width - numW
+		line := truncateLine(p.lines[i], lineW)
+		lines = append(lines, num+line)
+	}
+
+	for len(lines) < height {
+		lines = append(lines, strings.Repeat(" ", width))
 	}
 
 	return strings.Join(lines, "\n")

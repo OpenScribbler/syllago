@@ -29,7 +29,16 @@ func (m *addWizardModel) Update(msg tea.Msg) (*addWizardModel, tea.Cmd) {
 }
 
 func (m *addWizardModel) updateMouse(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
-	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
+	if msg.Action != tea.MouseActionPress {
+		return m, nil
+	}
+
+	// Mouse wheel scrolling
+	if msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown {
+		return m.updateMouseWheel(msg)
+	}
+
+	if msg.Button != tea.MouseButtonLeft {
 		return m, nil
 	}
 
@@ -78,6 +87,73 @@ func (m *addWizardModel) updateMouse(msg tea.MouseMsg) (*addWizardModel, tea.Cmd
 		return m.updateMouseExecute(msg)
 	}
 
+	return m, nil
+}
+
+// updateMouseWheel handles scroll wheel events on the current step.
+func (m *addWizardModel) updateMouseWheel(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
+	up := msg.Button == tea.MouseButtonWheelUp
+
+	switch m.step {
+	case addStepDiscovery:
+		if m.discovering || m.discoveryErr != "" || len(m.discoveredItems) == 0 {
+			return m, nil
+		}
+		if up {
+			if m.discoveryList.cursor > 0 {
+				m.discoveryList.cursor--
+				m.discoveryList.adjustOffset()
+			}
+		} else {
+			if m.discoveryList.cursor < len(m.discoveryList.items)-1 {
+				m.discoveryList.cursor++
+				m.discoveryList.adjustOffset()
+			}
+		}
+	case addStepReview:
+		if m.reviewDrillIn {
+			if m.reviewDrillTree.focused {
+				if up {
+					m.reviewDrillTree.CursorUp()
+				} else {
+					m.reviewDrillTree.CursorDown()
+				}
+				m.loadDrillInFile()
+			} else {
+				if up {
+					m.reviewDrillPreview.ScrollUp()
+				} else {
+					m.reviewDrillPreview.ScrollDown()
+				}
+			}
+			return m, nil
+		}
+		if m.reviewZone == addReviewZoneItems {
+			items := m.selectedItems()
+			if up {
+				if m.reviewItemCursor > 0 {
+					m.reviewItemCursor--
+				}
+			} else {
+				if m.reviewItemCursor < len(items)-1 {
+					m.reviewItemCursor++
+				}
+			}
+			m.adjustReviewOffset()
+		}
+	case addStepType:
+		if up {
+			if m.typeChecks.cursor > 0 {
+				m.typeChecks.cursor--
+				m.typeChecks.adjustOffset()
+			}
+		} else {
+			if m.typeChecks.cursor < len(m.typeChecks.items)-1 {
+				m.typeChecks.cursor++
+				m.typeChecks.adjustOffset()
+			}
+		}
+	}
 	return m, nil
 }
 
@@ -220,6 +296,15 @@ func (m *addWizardModel) updateMouseDiscovery(msg tea.MouseMsg) (*addWizardModel
 // --- Review step mouse ---
 
 func (m *addWizardModel) updateMouseReview(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
+	// Drill-in: nav-back closes drill-in
+	if m.reviewDrillIn {
+		if zone.Get("add-nav-back").InBounds(msg) {
+			m.exitReviewDrillIn()
+			return m, nil
+		}
+		return m, nil
+	}
+
 	// Button clicks (already zone-marked by renderModalButtons)
 	if zone.Get("add-cancel").InBounds(msg) {
 		return m, func() tea.Msg { return addCloseMsg{} }
@@ -239,10 +324,15 @@ func (m *addWizardModel) updateMouseReview(msg tea.MouseMsg) (*addWizardModel, t
 		return m, nil
 	}
 
-	// Review item clicks
+	// Review item clicks — click to select, click again to drill in
 	selected := m.selectedItems()
 	for i := range selected {
 		if zone.Get("add-rev-item-" + itoa(i)).InBounds(msg) {
+			if m.reviewZone == addReviewZoneItems && m.reviewItemCursor == i {
+				// Already selected — drill in
+				m.enterReviewDrillIn()
+				return m, nil
+			}
 			m.reviewZone = addReviewZoneItems
 			m.reviewItemCursor = i
 			m.adjustReviewOffset()
@@ -634,6 +724,11 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 // --- Review step ---
 
 func (m *addWizardModel) updateKeyReview(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
+	// Drill-in sub-view captures all input
+	if m.reviewDrillIn {
+		return m.updateKeyReviewDrillIn(msg)
+	}
+
 	switch msg.Type {
 	case tea.KeyEsc:
 		// Go back to Discovery (selections preserved)
@@ -659,6 +754,36 @@ func (m *addWizardModel) updateKeyReview(msg tea.KeyMsg) (*addWizardModel, tea.C
 		case addReviewZoneButtons:
 			return m.updateKeyReviewButtons(msg)
 		}
+	}
+	return m, nil
+}
+
+// updateKeyReviewDrillIn handles keys while viewing item detail in review.
+func (m *addWizardModel) updateKeyReviewDrillIn(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.exitReviewDrillIn()
+		return m, nil
+	case tea.KeyUp:
+		if m.reviewDrillTree.focused {
+			m.reviewDrillTree.CursorUp()
+			m.loadDrillInFile()
+		} else {
+			m.reviewDrillPreview.ScrollUp()
+		}
+	case tea.KeyDown:
+		if m.reviewDrillTree.focused {
+			m.reviewDrillTree.CursorDown()
+			m.loadDrillInFile()
+		} else {
+			m.reviewDrillPreview.ScrollDown()
+		}
+	case tea.KeyLeft, tea.KeyRight:
+		m.reviewDrillTree.focused = !m.reviewDrillTree.focused
+		m.reviewDrillPreview.focused = !m.reviewDrillTree.focused
+	case tea.KeyTab:
+		m.reviewDrillTree.focused = !m.reviewDrillTree.focused
+		m.reviewDrillPreview.focused = !m.reviewDrillTree.focused
 	}
 	return m, nil
 }
@@ -692,6 +817,9 @@ func (m *addWizardModel) updateKeyReviewItems(msg tea.KeyMsg) (*addWizardModel, 
 		m.reviewItemCursor = 0
 	case msg.Type == tea.KeyEnd:
 		m.reviewItemCursor = itemCount - 1
+	case msg.Type == tea.KeyEnter:
+		m.enterReviewDrillIn()
+		return m, nil
 	}
 	m.adjustReviewOffset()
 	return m, nil
