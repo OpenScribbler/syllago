@@ -20,6 +20,7 @@ build:
 
 gendocs: build
 	./$(OUTPUT) _gendocs > commands.json
+	./$(OUTPUT) _genproviders > providers.json
 
 clean:
 	rm -f $(BINARY) $(BINARY).exe $(BINARY)-* syl syl.exe
