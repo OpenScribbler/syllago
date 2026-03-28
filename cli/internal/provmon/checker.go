@@ -82,7 +82,7 @@ func checkOneURL(ctx context.Context, url string) URLResult {
 	if err != nil {
 		return URLResult{URL: url, Error: err}
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	// Some servers don't support HEAD well — fall back to GET if we get 405.
 	if resp.StatusCode == http.StatusMethodNotAllowed {
@@ -91,8 +91,8 @@ func checkOneURL(ctx context.Context, url string) URLResult {
 		if err != nil {
 			return URLResult{URL: url, Error: err}
 		}
-		io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
 	}
 
 	return URLResult{URL: url, StatusCode: resp.StatusCode}
@@ -121,7 +121,7 @@ func CheckVersion(ctx context.Context, m *Manifest) (*VersionDrift, error) {
 	if err != nil {
 		return nil, fmt.Errorf("fetching releases for %s: %w", m.Slug, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("releases API for %s returned %d", m.Slug, resp.StatusCode)
