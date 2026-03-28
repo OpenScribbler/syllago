@@ -27,6 +27,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.confirm.height = ch
 		a.remove.width = msg.Width
 		a.remove.height = ch
+		a.registryAdd.width = msg.Width
+		a.registryAdd.height = ch
 		if a.installWizard != nil {
 			a.installWizard.width = msg.Width
 			a.installWizard.height = a.contentHeight()
@@ -63,6 +65,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.remove.active {
 			var cmd tea.Cmd
 			a.remove, cmd = a.remove.Update(msg)
+			return a, cmd
+		}
+		if a.registryAdd.active {
+			var cmd tea.Cmd
+			a.registryAdd, cmd = a.registryAdd.Update(msg)
 			return a, cmd
 		}
 		if a.help.active {
@@ -124,6 +131,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			a.remove, cmd = a.remove.Update(msg)
+			return a, cmd
+		}
+
+		// Registry add modal captures all key input when active (except ctrl+c)
+		if a.registryAdd.active {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			var cmd tea.Cmd
+			a.registryAdd, cmd = a.registryAdd.Update(msg)
 			return a, cmd
 		}
 
@@ -231,6 +248,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Action button hotkeys
 		case msg.String() == keyAdd:
+			if a.isRegistriesTab() && !a.galleryDrillIn {
+				if a.registryOpInProgress {
+					cmd := a.toast.Push("Registry operation in progress", toastWarning)
+					return a, cmd
+				}
+				return a.handleRegistryAdd()
+			}
 			return a, a.topBar.actionCmd("add")
 		// keyCreate ("n") is deferred — no-op for now
 
@@ -249,6 +273,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Install item to a provider
 		case msg.String() == keyInstall:
 			return a.handleInstall()
+
+		// Sync registry (only intercept S on Registries tab)
+		case msg.String() == keySync && a.isRegistriesTab():
+			if !a.galleryDrillIn && !a.registryOpInProgress {
+				return a.handleSync()
+			}
+			if a.registryOpInProgress {
+				cmd := a.toast.Push("Registry operation in progress", toastWarning)
+				return a, cmd
+			}
 
 		// Help overlay
 		case msg.String() == keyHelp:
@@ -298,6 +332,15 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.installWizard = nil
 		a.wizardMode = wizardNone
 		return a, nil
+
+	case registryAddMsg:
+		return a.handleRegistryAddResult(msg)
+	case registryAddDoneMsg:
+		return a.handleRegistryAddDone(msg)
+	case registrySyncDoneMsg:
+		return a.handleSyncDone(msg)
+	case registryRemoveDoneMsg:
+		return a.handleRegistryRemoveDone(msg)
 
 	case tabChangedMsg:
 		a.galleryDrillIn = false
@@ -356,7 +399,22 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case actionPressedMsg:
 		switch msg.action {
 		case "add":
-			// Add wizard (Phase D) — no-op for now
+			if a.isRegistriesTab() && !a.galleryDrillIn {
+				if a.registryOpInProgress {
+					cmd := a.toast.Push("Registry operation in progress", toastWarning)
+					return a, cmd
+				}
+				return a.handleRegistryAdd()
+			}
+			// Phase D: Add wizard for non-registry tabs
+		case "sync":
+			if a.isRegistriesTab() && !a.galleryDrillIn && !a.registryOpInProgress {
+				return a.handleSync()
+			}
+			if a.registryOpInProgress {
+				cmd := a.toast.Push("Registry operation in progress", toastWarning)
+				return a, cmd
+			}
 		case "remove":
 			return a.handleRemove()
 		case "uninstall":

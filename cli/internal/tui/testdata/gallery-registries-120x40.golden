@@ -7,7 +7,7 @@
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ my-registry                               Registry  2 items  Source: /tmp/fake-registry                              │
 │ Status: 2 items  0 Agents, 0 Commands, 0 Hooks, 0 MCP Servers, 1 Rules, 1 Skills                                     │
-│                                                                                           [d] Remove      [e] Edit   │
+│                                                                [a] Add      [S] Sync      [d] Remove      [e] Edit   │
 ├──────────────────────────────────────────────────────────────────────────────────┬───────────────────────────────────┤
 │╭──────────────────────────╮                                                      │Name: my-registry                  │
 ││my-registry               │                                                      │                                   │
@@ -36,5 +36,5 @@
 │                                                                                  │                                   │
 │                                                                                  │                                   │
 ╰──────────────────────────────────────────────────────────────────────────────────┴───────────────────────────────────╯
-1/2/3 groups · tab items · arrows grid · enter select · tab grid/contents · e edit · d remove       syllago v0.0.0-test
-R refresh · a add · ? help · q back
+1/2/3 groups · tab items · arrows grid · enter select · tab grid/contents · a add · S sync          syllago v0.0.0-test
+d remove · e edit · R refresh · ? help · q back

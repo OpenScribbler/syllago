@@ -185,6 +185,12 @@ func (g galleryModel) updateMouse(msg tea.MouseMsg) (galleryModel, tea.Cmd) {
 		if zone.Get("meta-remove").InBounds(msg) {
 			return g, func() tea.Msg { return libraryRemoveMsg{} }
 		}
+		if zone.Get("meta-add").InBounds(msg) {
+			return g, func() tea.Msg { return actionPressedMsg{action: "add"} }
+		}
+		if zone.Get("meta-sync").InBounds(msg) {
+			return g, func() tea.Msg { return actionPressedMsg{action: "sync"} }
+		}
 
 		for i := range g.grid.cards {
 			if zone.Get("card-" + itoa(i)).InBounds(msg) {
@@ -345,9 +351,18 @@ func (g galleryModel) renderMetadata(width int) string {
 	}
 
 	// Line 3: Description + action buttons right-aligned
-	removeBtn := zone.Mark("meta-remove", activeButtonStyle.Render("[d] Remove"))
-	editBtn := zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit"))
-	btnRow := removeBtn + " " + editBtn
+	var btnParts []string
+	if g.tabLabel == "Registry" {
+		btnParts = append(btnParts,
+			zone.Mark("meta-add", activeButtonStyle.Render("[a] Add")),
+			zone.Mark("meta-sync", activeButtonStyle.Render("[S] Sync")),
+		)
+	}
+	btnParts = append(btnParts,
+		zone.Mark("meta-remove", activeButtonStyle.Render("[d] Remove")),
+		zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit")),
+	)
+	btnRow := strings.Join(btnParts, " ")
 	btnRowW := lipgloss.Width(btnRow)
 
 	line3 := ""

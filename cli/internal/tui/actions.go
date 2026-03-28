@@ -7,8 +7,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 // removeDoneMsg is sent when a library item remove operation completes.
@@ -96,7 +98,21 @@ func (a App) handleGalleryCardRemove() (tea.Model, tea.Cmd) {
 		a.confirm.itemName = card.name
 		return a, nil
 	}
-	// Registry remove is Phase C — no-op for now.
+	if tabLabel == "Registries" {
+		if a.registryOpInProgress {
+			cmd := a.toast.Push("Registry operation in progress", toastWarning)
+			return a, cmd
+		}
+		a.confirm.Open(
+			fmt.Sprintf("Remove registry %q?", card.name),
+			"This will delete the local clone.\nInstalled content is not affected.",
+			"Remove",
+			true,
+			nil,
+		)
+		a.confirm.itemName = card.name
+		return a, nil
+	}
 	return a, nil
 }
 
@@ -163,6 +179,14 @@ func (a App) handleUninstall() (tea.Model, tea.Cmd) {
 func (a App) handleConfirmResult(msg confirmResultMsg) (tea.Model, tea.Cmd) {
 	if !msg.confirmed {
 		return a, nil
+	}
+
+	// Registry remove: on Registries tab, no ContentItem path, but name is set.
+	if a.isRegistriesTab() && msg.item.Path == "" && msg.itemName != "" {
+		a.registryOpInProgress = true
+		cmd1 := a.toast.Push("Removing registry: "+msg.itemName+"...", toastSuccess)
+		cmd2 := a.doRegistryRemoveCmd(msg.itemName)
+		return a, tea.Batch(cmd1, cmd2)
 	}
 
 	// Loadout remove (simple confirm, no providers).
@@ -275,6 +299,142 @@ func (a App) handleUninstallDone(msg uninstallDoneMsg) (tea.Model, tea.Cmd) {
 	cmd1 := a.toast.Push(toastText, toastSuccess)
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)
+}
+
+// registryAddDoneMsg is sent when a registry add operation completes.
+type registryAddDoneMsg struct {
+	name string
+	err  error
+}
+
+// registrySyncDoneMsg is sent when a registry sync operation completes.
+type registrySyncDoneMsg struct {
+	name string
+	err  error
+}
+
+// registryRemoveDoneMsg is sent when a registry remove operation completes.
+type registryRemoveDoneMsg struct {
+	name string
+	err  error
+}
+
+// handleRegistryAdd opens the registry add modal.
+func (a App) handleRegistryAdd() (tea.Model, tea.Cmd) {
+	var existingNames []string
+	for _, r := range a.cfg.Registries {
+		existingNames = append(existingNames, r.Name)
+	}
+	a.registryAdd.Open(existingNames, a.cfg)
+	return a, nil
+}
+
+// handleRegistryAddResult receives the registry add modal result.
+func (a App) handleRegistryAddResult(msg registryAddMsg) (tea.Model, tea.Cmd) {
+	a.registryOpInProgress = true
+	cmd1 := a.toast.Push("Adding registry: "+msg.name+"...", toastSuccess)
+	cmd2 := a.doRegistryAddCmd(msg)
+	return a, tea.Batch(cmd1, cmd2)
+}
+
+// doRegistryAddCmd creates a tea.Cmd that clones the registry and updates config.
+func (a App) doRegistryAddCmd(msg registryAddMsg) tea.Cmd {
+	url := msg.url
+	name := msg.name
+	ref := msg.ref
+	isLocal := msg.isLocal
+	return func() tea.Msg {
+		if !isLocal {
+			if err := registry.Clone(url, name, ref); err != nil {
+				return registryAddDoneMsg{name: name, err: err}
+			}
+		}
+		cfg, err := config.LoadGlobal()
+		if err != nil {
+			return registryAddDoneMsg{name: name, err: fmt.Errorf("loading config: %w", err)}
+		}
+		cfg.Registries = append(cfg.Registries, config.Registry{Name: name, URL: url, Ref: ref})
+		if err := config.SaveGlobal(cfg); err != nil {
+			return registryAddDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
+		}
+		return registryAddDoneMsg{name: name}
+	}
+}
+
+// handleRegistryAddDone processes the result of a registry add operation.
+func (a App) handleRegistryAddDone(msg registryAddDoneMsg) (tea.Model, tea.Cmd) {
+	a.registryOpInProgress = false
+	if msg.err != nil {
+		cmd := a.toast.Push("Add failed: "+msg.err.Error(), toastError)
+		return a, cmd
+	}
+	cmd1 := a.toast.Push("Added registry: "+msg.name, toastSuccess)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
+}
+
+// handleSync starts a registry sync operation.
+func (a App) handleSync() (tea.Model, tea.Cmd) {
+	card := a.gallery.selectedCard()
+	if card == nil {
+		return a, nil
+	}
+	name := card.name
+	a.registryOpInProgress = true
+	cmd1 := a.toast.Push("Syncing "+name+"...", toastSuccess)
+	cmd2 := func() tea.Msg {
+		err := registry.Sync(name)
+		return registrySyncDoneMsg{name: name, err: err}
+	}
+	return a, tea.Batch(cmd1, tea.Cmd(cmd2))
+}
+
+// handleSyncDone processes the result of a registry sync operation.
+func (a App) handleSyncDone(msg registrySyncDoneMsg) (tea.Model, tea.Cmd) {
+	a.registryOpInProgress = false
+	if msg.err != nil {
+		cmd := a.toast.Push("Sync failed: "+msg.err.Error(), toastError)
+		return a, cmd
+	}
+	cmd1 := a.toast.Push("Synced "+msg.name, toastSuccess)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
+}
+
+// handleRegistryRemoveDone processes the result of a registry remove operation.
+func (a App) handleRegistryRemoveDone(msg registryRemoveDoneMsg) (tea.Model, tea.Cmd) {
+	a.registryOpInProgress = false
+	if msg.err != nil {
+		cmd := a.toast.Push("Remove failed: "+msg.err.Error(), toastError)
+		return a, cmd
+	}
+	cmd1 := a.toast.Push("Removed registry: "+msg.name, toastSuccess)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
+}
+
+// doRegistryRemoveCmd creates a tea.Cmd that removes a registry clone and updates config.
+func (a App) doRegistryRemoveCmd(name string) tea.Cmd {
+	return func() tea.Msg {
+		if err := registry.Remove(name); err != nil {
+			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("removing clone: %w", err)}
+		}
+		cfg, err := config.LoadGlobal()
+		if err != nil {
+			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("loading config: %w", err)}
+		}
+		filtered := make([]config.Registry, 0, len(cfg.Registries))
+		for _, r := range cfg.Registries {
+			if r.Name != name {
+				filtered = append(filtered, r)
+			}
+		}
+		cfg.Registries = filtered
+		if err := config.SaveGlobal(cfg); err != nil {
+			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
+		}
+		return registryRemoveDoneMsg{name: name}
+	}
 }
 
 // handleInstall opens the install wizard for the currently selected library item.

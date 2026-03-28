@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 )
 
 // --- Unit tests ---
@@ -740,6 +741,1061 @@ func TestApp_EditHintVisible(t *testing.T) {
 	if !strings.Contains(stripped, "e edit") {
 		t.Error("expected 'e edit' hint in Library view")
 	}
+}
+
+// --- Registry wiring tests ---
+
+// testAppOnRegistries creates a test app navigated to the Registries tab.
+// It includes a registry source so the gallery tab has content.
+func testAppOnRegistries(t *testing.T) App {
+	t.Helper()
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "alpha-skill", Type: catalog.Skills, Source: "my-registry", Registry: "my-registry", Files: []string{"SKILL.md"}},
+		},
+	}
+	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
+		{Name: "my-registry", Path: "/tmp/fake-registry"},
+	}, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	a := m.(App)
+
+	// Navigate to Registries (one Tab from Library)
+	m, cmd := a.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	return m.(App)
+}
+
+func TestApp_RegistryWiring_IsRegistriesTab(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	if !a.isRegistriesTab() {
+		t.Fatal("expected isRegistriesTab() == true on Registries tab")
+	}
+
+	// Navigate back to Library
+	m, cmd := a.Update(keyRune('1'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	if a.isRegistriesTab() {
+		t.Fatal("expected isRegistriesTab() == false on Library tab")
+	}
+}
+
+func TestApp_RegistryWiring_AddOpensModal(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	// Press 'a' to open registry add modal
+	m, cmd := a.Update(keyRune('a'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	if !a.registryAdd.active {
+		t.Fatal("expected registryAdd.active == true after pressing 'a' on Registries tab")
+	}
+}
+
+func TestApp_RegistryWiring_AddNoOpOnLibrary(t *testing.T) {
+	app := testApp(t)
+
+	// Press 'a' on Library tab
+	m, cmd := app.Update(keyRune('a'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a := m.(App)
+
+	if a.registryAdd.active {
+		t.Fatal("expected registryAdd.active == false on Library tab")
+	}
+}
+
+func TestApp_RegistryWiring_AddNoOpOnLoadouts(t *testing.T) {
+	app := testApp(t)
+
+	// Navigate to Loadouts (two Tabs from Library)
+	m, cmd := app.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a := m.(App)
+	m, cmd = a.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	if a.topBar.ActiveTabLabel() != "Loadouts" {
+		t.Fatalf("expected Loadouts tab, got %q", a.topBar.ActiveTabLabel())
+	}
+
+	// Press 'a'
+	m, cmd = a.Update(keyRune('a'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	if a.registryAdd.active {
+		t.Fatal("expected registryAdd.active == false on Loadouts tab")
+	}
+}
+
+func TestApp_RegistryWiring_AddBlockedByOpInProgress(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	// Simulate an in-progress registry operation
+	a.registryOpInProgress = true
+
+	// Press 'a'
+	m, cmd := a.Update(keyRune('a'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	if a.registryAdd.active {
+		t.Fatal("expected registryAdd.active == false when registryOpInProgress is true")
+	}
+}
+
+func TestApp_RegistryWiring_SyncKeyNoOpOnLibrary(t *testing.T) {
+	app := testApp(t)
+
+	// Press 'S' on Library tab — should not panic or crash
+	m, _ := app.Update(keyRune('S'))
+	a := m.(App)
+
+	// Verify app is still functional (no crash, stays on Library)
+	if !a.isLibraryTab() {
+		t.Fatal("expected to stay on Library tab after pressing S")
+	}
+}
+
+func TestApp_RegistryWiring_ModalCapturesKeys(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	// Open registry add modal
+	a.registryAdd.Open(nil, testConfig())
+
+	// Press 'q' — should NOT quit, modal should stay open
+	m, cmd := a.Update(keyRune('q'))
+	if cmd != nil {
+		// If cmd produces tea.Quit, that's wrong
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+	if !a.registryAdd.active {
+		t.Fatal("modal should still be active after pressing 'q'")
+	}
+
+	// Press '1' — should NOT switch groups
+	m, cmd = a.Update(keyRune('1'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+	if !a.registryAdd.active {
+		t.Fatal("modal should still be active after pressing '1'")
+	}
+
+	// Press 'R' — should NOT refresh catalog
+	m, cmd = a.Update(keyRune('R'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+	if !a.registryAdd.active {
+		t.Fatal("modal should still be active after pressing 'R'")
+	}
+}
+
+func TestApp_RegistryWiring_ModalPassesCtrlC(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	// Open registry add modal
+	a.registryAdd.Open(nil, testConfig())
+
+	// Press Ctrl+C — should produce tea.Quit
+	_, cmd := a.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	if cmd == nil {
+		t.Fatal("Ctrl+C should produce a quit command even when modal is active")
+	}
+}
+
+func TestApp_RegistryWiring_WindowSizeMsg(t *testing.T) {
+	cat := &catalog.Catalog{}
+	app := NewApp(cat, nil, "0.0.0-test", false, nil, testConfig(), false, "", "")
+
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	a := m.(App)
+
+	if a.registryAdd.width != 120 {
+		t.Errorf("expected registryAdd.width == 120, got %d", a.registryAdd.width)
+	}
+	expectedHeight := a.contentHeight()
+	if a.registryAdd.height != expectedHeight {
+		t.Errorf("expected registryAdd.height == %d, got %d", expectedHeight, a.registryAdd.height)
+	}
+}
+
+func TestApp_RegistryWiring_OverlayRendered(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	// Open registry add modal
+	a.registryAdd.Open(nil, testConfig())
+
+	view := a.View()
+	assertContains(t, view, "Add Registry")
+}
+
+// --- Registry action handler tests ---
+
+// testAppOnRegistriesWithConfig creates a test app navigated to Registries with a custom config.
+func testAppOnRegistriesWithConfig(t *testing.T, cfg *config.Config) App {
+	t.Helper()
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "alpha-skill", Type: catalog.Skills, Source: "my-registry", Registry: "my-registry", Files: []string{"SKILL.md"}},
+		},
+	}
+	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
+		{Name: "my-registry", Path: "/tmp/fake-registry"},
+	}, cfg, false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	a := m.(App)
+
+	// Navigate to Registries (one Tab from Library)
+	m, cmd := a.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	return m.(App)
+}
+
+func TestApp_ActionHandler_AddOpensModalWithNames(t *testing.T) {
+	cfg := &config.Config{
+		Registries: []config.Registry{{Name: "existing-reg", URL: "https://example.com/existing"}},
+	}
+	a := testAppOnRegistriesWithConfig(t, cfg)
+
+	m, _ := a.handleRegistryAdd()
+	a = m.(App)
+
+	if !a.registryAdd.active {
+		t.Fatal("expected registryAdd.active == true after handleRegistryAdd()")
+	}
+	if len(a.registryAdd.existingNames) == 0 {
+		t.Fatal("expected existingNames to be populated")
+	}
+	found := false
+	for _, name := range a.registryAdd.existingNames {
+		if name == "existing-reg" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected existingNames to contain 'existing-reg', got %v", a.registryAdd.existingNames)
+	}
+}
+
+func TestApp_ActionHandler_AddResultSetsFlag(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	msg := registryAddMsg{url: "https://github.com/acme/tools", name: "acme/tools"}
+	m, _ := a.Update(msg)
+	a = m.(App)
+
+	if !a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == true after registryAddMsg")
+	}
+}
+
+func TestApp_ActionHandler_AddDoneSuccess(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	m, _ := a.Update(registryAddDoneMsg{name: "acme/tools"})
+	a = m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false after successful registryAddDoneMsg")
+	}
+}
+
+func TestApp_ActionHandler_AddDoneError(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	m, _ := a.Update(registryAddDoneMsg{name: "acme/tools", err: fmt.Errorf("clone failed")})
+	a = m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false after failed registryAddDoneMsg (flag cleared even on error)")
+	}
+}
+
+func TestApp_ActionHandler_SyncWithCard(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	m, cmd := a.handleSync()
+	a = m.(App)
+
+	if !a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == true after handleSync() with a selected card")
+	}
+	if cmd == nil {
+		t.Fatal("expected non-nil cmd from handleSync() when a card is selected")
+	}
+}
+
+func TestApp_ActionHandler_SyncNilCard(t *testing.T) {
+	// Create app with no registry sources (empty gallery)
+	app := NewApp(&catalog.Catalog{}, nil, "0.0.0-test", false, nil, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	a := m.(App)
+
+	// Navigate to Registries
+	m, cmd := a.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	m, cmd = a.handleSync()
+	a = m.(App)
+
+	if cmd != nil {
+		t.Fatal("expected nil cmd from handleSync() when no cards exist")
+	}
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false when no card is selected")
+	}
+}
+
+func TestApp_ActionHandler_SyncDoneSuccess(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	m, _ := a.Update(registrySyncDoneMsg{name: "my-reg"})
+	a = m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false after successful registrySyncDoneMsg")
+	}
+}
+
+func TestApp_ActionHandler_SyncDoneError(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	m, _ := a.Update(registrySyncDoneMsg{name: "my-reg", err: fmt.Errorf("pull failed")})
+	a = m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false after failed registrySyncDoneMsg")
+	}
+}
+
+func TestApp_ActionHandler_RemoveRegistryOpensConfirm(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	m, _ := a.handleRemove()
+	a = m.(App)
+
+	if !a.confirm.active {
+		t.Fatal("expected confirm.active == true after handleRemove() on Registries tab")
+	}
+	// The confirm title should reference registry removal.
+	view := a.confirm.View()
+	stripped := strings.TrimSpace(view)
+	if !strings.Contains(stripped, "Remove registry") && !strings.Contains(stripped, "remove") {
+		t.Errorf("expected confirm dialog to mention 'Remove registry', got: %s", stripped)
+	}
+}
+
+func TestApp_ActionHandler_RemoveRegistryBlockedByOp(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	m, _ := a.handleRemove()
+	a = m.(App)
+
+	if a.confirm.active {
+		t.Fatal("expected confirm.active == false when registryOpInProgress is true (remove should be blocked)")
+	}
+}
+
+func TestApp_ActionHandler_ConfirmRegistryRemoveDispatches(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	msg := confirmResultMsg{
+		confirmed: true,
+		itemName:  "my-reg",
+		item:      catalog.ContentItem{}, // empty path signals registry (not loadout)
+	}
+	m, _ := a.Update(msg)
+	a = m.(App)
+
+	if !a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == true after confirmed registry remove dispatch")
+	}
+}
+
+func TestApp_ActionHandler_ConfirmLoadoutStillWorks(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	// Navigate to Loadouts (Shift+Tab from Registries goes back to Library, then Tab twice)
+	// Actually, let's just create a fresh app on Loadouts.
+	app := NewApp(&catalog.Catalog{}, nil, "0.0.0-test", false, nil, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	a = m.(App)
+
+	// Tab twice to get to Loadouts (Library -> Registries -> Loadouts)
+	for i := 0; i < 2; i++ {
+		m2, cmd := a.Update(keyTab)
+		if cmd != nil {
+			m2, _ = m2.Update(cmd())
+		}
+		a = m2.(App)
+	}
+
+	msg := confirmResultMsg{
+		confirmed: true,
+		item:      catalog.ContentItem{Type: catalog.Loadouts, Path: "/tmp/fake"},
+		itemName:  "my-loadout",
+	}
+
+	// Should not panic — existing loadout remove logic should still work.
+	m2, cmd := a.Update(msg)
+	_ = m2.(App)
+	// The loadout branch returns a cmd (doSimpleRemoveCmd), so cmd should be non-nil.
+	if cmd == nil {
+		t.Fatal("expected non-nil cmd from loadout confirm remove (existing logic should still work)")
+	}
+}
+
+func TestApp_ActionHandler_RemoveDoneSuccess(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	m, _ := a.Update(registryRemoveDoneMsg{name: "old-reg"})
+	a = m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false after successful registryRemoveDoneMsg")
+	}
+}
+
+func TestApp_ActionHandler_RemoveDoneError(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	m, _ := a.Update(registryRemoveDoneMsg{name: "old-reg", err: fmt.Errorf("permission denied")})
+	a = m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false after failed registryRemoveDoneMsg (flag cleared even on error)")
+	}
+}
+
+// --- Gallery registry buttons tests ---
+
+func TestGallery_RegistryButtons_Visible(t *testing.T) {
+	a := testAppOnRegistries(t)
+	view := a.View()
+
+	assertContains(t, view, "[a] Add")
+	assertContains(t, view, "[S] Sync")
+}
+
+func TestGallery_RegistryButtons_NotOnLoadouts(t *testing.T) {
+	// Create app with loadout items for the Loadouts tab
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "python-web", DisplayName: "Python-Web", Type: catalog.Loadouts, Source: "project", Files: []string{"loadout.yaml"}},
+		},
+	}
+	app := NewApp(cat, nil, "0.0.0-test", false, nil, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	a := m.(App)
+
+	// Navigate to Loadouts (two Tabs from Library)
+	m, cmd := a.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	m, cmd = m.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	if a.topBar.ActiveTabLabel() != "Loadouts" {
+		t.Fatalf("expected Loadouts tab, got %q", a.topBar.ActiveTabLabel())
+	}
+
+	view := a.View()
+	assertNotContains(t, view, "[a] Add")
+	assertNotContains(t, view, "[S] Sync")
+}
+
+func TestGallery_RegistryButtons_StillHasRemoveEdit(t *testing.T) {
+	a := testAppOnRegistries(t)
+	view := a.View()
+
+	assertContains(t, view, "[d] Remove")
+	assertContains(t, view, "[e] Edit")
+}
+
+func TestApp_RegistryHints_ContainsSync(t *testing.T) {
+	a := testAppOnRegistries(t)
+	hints := a.currentHints()
+
+	found := false
+	for _, h := range hints {
+		if h == "S sync" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected 'S sync' in hints, got %v", hints)
+	}
+}
+
+func TestApp_RegistryHints_ContainsAdd(t *testing.T) {
+	a := testAppOnRegistries(t)
+	hints := a.currentHints()
+
+	found := false
+	for _, h := range hints {
+		if h == "a add" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected 'a add' in hints, got %v", hints)
+	}
+}
+
+func TestApp_RegistryHints_NotOnLoadouts(t *testing.T) {
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "python-web", DisplayName: "Python-Web", Type: catalog.Loadouts, Source: "project", Files: []string{"loadout.yaml"}},
+		},
+	}
+	app := NewApp(cat, nil, "0.0.0-test", false, nil, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	a := m.(App)
+
+	// Navigate to Loadouts (two Tabs from Library)
+	m, cmd := a.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	m, cmd = m.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	if a.topBar.ActiveTabLabel() != "Loadouts" {
+		t.Fatalf("expected Loadouts tab, got %q", a.topBar.ActiveTabLabel())
+	}
+
+	hints := a.currentHints()
+	for _, h := range hints {
+		if h == "S sync" {
+			t.Error("expected 'S sync' NOT in Loadouts hints")
+		}
+	}
+}
+
+func TestApp_RegistryHints_Order(t *testing.T) {
+	a := testAppOnRegistries(t)
+	hints := a.currentHints()
+
+	addIdx, syncIdx, removeIdx := -1, -1, -1
+	for i, h := range hints {
+		switch h {
+		case "a add":
+			addIdx = i
+		case "S sync":
+			syncIdx = i
+		case "d remove":
+			removeIdx = i
+		}
+	}
+
+	if addIdx == -1 {
+		t.Fatal("'a add' not found in hints")
+	}
+	if syncIdx == -1 {
+		t.Fatal("'S sync' not found in hints")
+	}
+	if removeIdx == -1 {
+		t.Fatal("'d remove' not found in hints")
+	}
+
+	if addIdx >= syncIdx {
+		t.Errorf("expected 'a add' (idx %d) before 'S sync' (idx %d)", addIdx, syncIdx)
+	}
+	if syncIdx >= removeIdx {
+		t.Errorf("expected 'S sync' (idx %d) before 'd remove' (idx %d)", syncIdx, removeIdx)
+	}
+}
+
+// --- Integration tests: Registry management flows ---
+
+func TestIntegration_Registry_AddFlow(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	// Press 'a' to open registry add modal
+	m, cmd := a.Update(keyRune('a'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	if !a.registryAdd.active {
+		t.Fatal("expected registry add modal to be active after pressing 'a'")
+	}
+
+	// Set URL and name fields directly on the modal
+	a.registryAdd.urlValue = "https://github.com/acme/tools"
+	a.registryAdd.nameValue = "acme/tools"
+	a.registryAdd.nameManuallySet = true
+
+	// Set focusIdx to 5 (Add button) and press Enter to submit
+	a.registryAdd.focusIdx = 5
+	m, cmd = a.Update(keyPress(tea.KeyEnter))
+	a = m.(App)
+
+	if a.registryAdd.active {
+		t.Fatal("expected registry add modal to be closed after submit")
+	}
+
+	// Process the cmd (registryAddMsg) to trigger handleRegistryAddResult
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+		a = m.(App)
+	}
+
+	if !a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == true after add flow")
+	}
+}
+
+func TestIntegration_Registry_AddModalEscape(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	// Open add modal
+	m, cmd := a.Update(keyRune('a'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	if !a.registryAdd.active {
+		t.Fatal("expected modal to be active")
+	}
+
+	// Press Esc
+	m, _ = a.Update(keyPress(tea.KeyEsc))
+	a = m.(App)
+
+	if a.registryAdd.active {
+		t.Fatal("expected modal to be closed after Esc")
+	}
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false after Esc (no op started)")
+	}
+}
+
+func TestIntegration_Registry_AddValidationError(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	// Open add modal
+	m, cmd := a.Update(keyRune('a'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	// Focus on Add button with empty URL
+	a.registryAdd.focusIdx = 5
+	m, _ = a.Update(keyPress(tea.KeyEnter))
+	a = m.(App)
+
+	// Modal should stay open with validation error
+	if !a.registryAdd.active {
+		t.Fatal("expected modal to stay open on validation error")
+	}
+
+	view := a.View()
+	assertContains(t, view, "URL is required")
+}
+
+func TestIntegration_Registry_SyncFlow(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	// Press 'S' to sync
+	m, _ := a.Update(keyRune('S'))
+	a = m.(App)
+
+	if !a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == true after pressing S on Registries")
+	}
+}
+
+func TestIntegration_Registry_RemoveFlow(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	// Press 'd' to remove
+	m, _ := a.Update(keyRune('d'))
+	a = m.(App)
+
+	if !a.confirm.active {
+		t.Fatal("expected confirm modal to open after pressing 'd'")
+	}
+
+	stripped := strings.TrimSpace(a.confirm.title)
+	if !strings.Contains(stripped, "Remove registry") {
+		t.Errorf("expected confirm title to contain 'Remove registry', got %q", stripped)
+	}
+}
+
+func TestIntegration_Registry_RemoveCancel(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	// Press 'd' to open confirm
+	m, _ := a.Update(keyRune('d'))
+	a = m.(App)
+
+	if !a.confirm.active {
+		t.Fatal("expected confirm modal active")
+	}
+
+	// Press 'n' (or Esc) to cancel — confirm modal uses Esc to cancel
+	m, cmd := a.Update(keyPress(tea.KeyEsc))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	if a.confirm.active {
+		t.Fatal("expected confirm modal closed after cancel")
+	}
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false after cancel")
+	}
+}
+
+func TestIntegration_Registry_ModalBlocksGlobalKeys(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	// Open add modal
+	m, cmd := a.Update(keyRune('a'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	if !a.registryAdd.active {
+		t.Fatal("expected modal active")
+	}
+
+	// Press various global keys — modal should stay active after each
+	globalKeys := []tea.Msg{
+		keyRune('1'),
+		keyRune('2'),
+		keyRune('3'),
+		keyRune('q'),
+		keyRune('R'),
+	}
+
+	for _, key := range globalKeys {
+		m, _ = a.Update(key)
+		a = m.(App)
+		if !a.registryAdd.active {
+			t.Fatalf("modal should still be active after pressing %v", key)
+		}
+	}
+}
+
+func TestIntegration_Registry_SyncKeyOnlyOnRegistries(t *testing.T) {
+	// Start on Library tab (default)
+	a := testAppWithItems(t)
+
+	if a.isRegistriesTab() {
+		t.Fatal("expected to NOT be on Registries tab")
+	}
+
+	// Press 'S' — should not set registryOpInProgress
+	m, _ := a.Update(keyRune('S'))
+	a = m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false — S should have no effect on Library tab")
+	}
+}
+
+func TestIntegration_Registry_AddDoneSuccess(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	m, _ := a.Update(registryAddDoneMsg{name: "acme/tools"})
+	a = m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false after successful registryAddDoneMsg")
+	}
+}
+
+func TestIntegration_Registry_AddDoneError(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	m, _ := a.Update(registryAddDoneMsg{name: "acme/tools", err: fmt.Errorf("clone failed")})
+	a = m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false after failed registryAddDoneMsg")
+	}
+}
+
+func TestIntegration_Registry_SyncDoneSuccess(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	m, _ := a.Update(registrySyncDoneMsg{name: "my-reg"})
+	a = m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false after successful registrySyncDoneMsg")
+	}
+}
+
+func TestIntegration_Registry_SyncDoneError(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	m, _ := a.Update(registrySyncDoneMsg{name: "my-reg", err: fmt.Errorf("pull failed")})
+	a = m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false after failed registrySyncDoneMsg")
+	}
+}
+
+func TestIntegration_Registry_RemoveDoneSuccess(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	m, _ := a.Update(registryRemoveDoneMsg{name: "old-reg"})
+	a = m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false after successful registryRemoveDoneMsg")
+	}
+}
+
+func TestIntegration_Registry_RemoveDoneError(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	m, _ := a.Update(registryRemoveDoneMsg{name: "old-reg", err: fmt.Errorf("permission denied")})
+	a = m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false after failed registryRemoveDoneMsg")
+	}
+}
+
+func TestIntegration_Registry_AddBlockedDuringOp(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	// Press 'a' — should NOT open modal
+	m, _ := a.Update(keyRune('a'))
+	a = m.(App)
+
+	if a.registryAdd.active {
+		t.Fatal("expected registry add modal NOT to open when registryOpInProgress is true")
+	}
+}
+
+func TestIntegration_Registry_SyncBlockedDuringOp(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	// First verify we're on registries and have a card
+	if !a.isRegistriesTab() {
+		t.Fatal("expected to be on Registries tab")
+	}
+
+	// Set flag before pressing S
+	a.registryOpInProgress = true
+
+	// Press 'S' — should not start another sync
+	beforeFlag := a.registryOpInProgress
+	m, _ := a.Update(keyRune('S'))
+	a = m.(App)
+
+	// Flag should still be true (unchanged — no new op started)
+	if !a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress to remain true")
+	}
+	if a.registryOpInProgress != beforeFlag {
+		t.Fatal("expected no state change when sync blocked by in-progress op")
+	}
+}
+
+func TestIntegration_Registry_RemoveBlockedDuringOp(t *testing.T) {
+	a := testAppOnRegistries(t)
+	a.registryOpInProgress = true
+
+	// Press 'd' — should NOT open confirm modal
+	m, _ := a.Update(keyRune('d'))
+	a = m.(App)
+
+	if a.confirm.active {
+		t.Fatal("expected confirm modal NOT to open when registryOpInProgress is true")
+	}
+}
+
+// --- Golden tests: Registry add modal ---
+
+func TestGolden_RegistryAddModal_Git_80x30(t *testing.T) {
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "alpha-skill", Type: catalog.Skills, Source: "my-registry", Registry: "my-registry", Files: []string{"SKILL.md"}},
+		},
+	}
+	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
+		{Name: "my-registry", Path: "/tmp/fake-registry"},
+	}, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	a := m.(App)
+
+	// Navigate to Registries
+	m, cmd := a.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	// Open add modal (default: git mode)
+	m, cmd = a.Update(keyRune('a'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	requireGolden(t, "registry-add-modal-git-80x30", snapshotApp(t, a))
+}
+
+func TestGolden_RegistryAddModal_Local_80x30(t *testing.T) {
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "alpha-skill", Type: catalog.Skills, Source: "my-registry", Registry: "my-registry", Files: []string{"SKILL.md"}},
+		},
+	}
+	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
+		{Name: "my-registry", Path: "/tmp/fake-registry"},
+	}, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	a := m.(App)
+
+	// Navigate to Registries
+	m, cmd := a.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	// Open modal
+	m, cmd = a.Update(keyRune('a'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	// Switch to local mode: Shift+Tab to radio (idx 0), then Space
+	m, _ = a.Update(keyShiftTab)
+	a = m.(App)
+	m, _ = a.Update(keyPress(tea.KeySpace))
+	a = m.(App)
+
+	requireGolden(t, "registry-add-modal-local-80x30", snapshotApp(t, a))
+}
+
+func TestGolden_RegistryAddModal_Error_80x30(t *testing.T) {
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "alpha-skill", Type: catalog.Skills, Source: "my-registry", Registry: "my-registry", Files: []string{"SKILL.md"}},
+		},
+	}
+	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
+		{Name: "my-registry", Path: "/tmp/fake-registry"},
+	}, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	a := m.(App)
+
+	// Navigate to Registries
+	m, cmd := a.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	// Open modal
+	m, cmd = a.Update(keyRune('a'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	// Navigate to Add button and press Enter (empty URL triggers error)
+	// Tab through: URL(1) → Name(2) → Branch(3) → Cancel(4) → Add(5)
+	for i := 0; i < 4; i++ {
+		m, _ = a.Update(keyTab)
+		a = m.(App)
+	}
+	m, _ = a.Update(keyPress(tea.KeyEnter))
+	a = m.(App)
+
+	requireGolden(t, "registry-add-modal-error-80x30", snapshotApp(t, a))
+}
+
+func TestGolden_RegistryAddModal_Buttons_80x30(t *testing.T) {
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "alpha-skill", Type: catalog.Skills, Source: "my-registry", Registry: "my-registry", Files: []string{"SKILL.md"}},
+		},
+	}
+	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
+		{Name: "my-registry", Path: "/tmp/fake-registry"},
+	}, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	a := m.(App)
+
+	// Navigate to Registries (no modal) to show [a] Add [S] Sync buttons
+	m, cmd := a.Update(keyTab)
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a = m.(App)
+
+	requireGolden(t, "gallery-registries-buttons-80x30", snapshotApp(t, a))
 }
 
 // Verify unused catalog import is consumed
