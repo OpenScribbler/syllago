@@ -489,16 +489,22 @@ func TestAddWizard_Review_ButtonNavigation(t *testing.T) {
 		t.Fatalf("expected button cursor 1 (Back), got %d", m.buttonCursor)
 	}
 
-	// Right moves to Add (2)
+	// Right moves to Cancel (2)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
 	if m.buttonCursor != 2 {
-		t.Fatalf("expected button cursor 2, got %d", m.buttonCursor)
+		t.Fatalf("expected button cursor 2 (Cancel), got %d", m.buttonCursor)
 	}
 
 	// Left back to Back (1)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
 	if m.buttonCursor != 1 {
 		t.Fatalf("expected button cursor 1, got %d", m.buttonCursor)
+	}
+
+	// Left again to Add (0)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	if m.buttonCursor != 0 {
+		t.Fatalf("expected button cursor 0 (Add), got %d", m.buttonCursor)
 	}
 }
 
@@ -512,8 +518,8 @@ func TestAddWizard_Review_AddAdvancesToExecute(t *testing.T) {
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
 
-	// Navigate to Add button
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // cursor 2
+	// Navigate to Add button (now at index 0, left of default Back=1)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft}) // cursor 0 = Add
 
 	// Press Enter to Add
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -554,8 +560,8 @@ func TestAddWizard_Review_CancelClosesWizard(t *testing.T) {
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
 
-	// Move to Cancel (0)
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	// Move to Cancel (now at index 2, right of default Back=1)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
 
 	var cmd tea.Cmd
 	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -646,8 +652,8 @@ func TestAddWizard_Execute_ItemDoneProgresses(t *testing.T) {
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // Discovery → Review
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})  // Back(1) → Add(0)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
 	// Now in Execute step
@@ -675,8 +681,8 @@ func TestAddWizard_Execute_AllDone(t *testing.T) {
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // Discovery → Review
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})  // Back(1) → Add(0)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
 	selected := m.selectedItems()
@@ -705,8 +711,8 @@ func TestAddWizard_Execute_EscCancelsRemaining(t *testing.T) {
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // Discovery → Review
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})  // Back(1) → Add(0)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
 	// Cancel before any complete
@@ -724,8 +730,8 @@ func TestAddWizard_Execute_EnterOnDoneCloses(t *testing.T) {
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // Discovery → Review
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})  // Back(1) → Add(0)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
 	// Complete all items
@@ -797,7 +803,7 @@ func TestAddWizard_View_DiscoveryResults(t *testing.T) {
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
 
 	view := m.View()
-	assertContains(t, view, "Found 3 items")
+	assertContains(t, view, "Found 2 new items")
 	assertContains(t, view, "2 selected")
 }
 
@@ -823,8 +829,8 @@ func TestAddWizard_View_ExecuteStep(t *testing.T) {
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // Discovery → Review
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})  // Back(1) → Add(0)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
 	view := m.View()

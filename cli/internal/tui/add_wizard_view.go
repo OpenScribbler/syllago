@@ -8,6 +8,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/add"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 // View renders the add wizard.
@@ -40,14 +41,38 @@ func (m *addWizardModel) View() string {
 	return output
 }
 
+// renderNavButtons renders right-aligned [Esc] Back and [Enter] Next indicators.
+// showBack=false hides the Back button (e.g., Source step has no prior step).
+// nextLabel overrides the default "Next" label (e.g., "Add" for Review, "Close" for Execute).
+func (m *addWizardModel) renderNavButtons(showBack bool, nextLabel string) string {
+	if nextLabel == "" {
+		nextLabel = "Next"
+	}
+	back := zone.Mark("add-nav-back", mutedStyle.Render("[Esc] Back"))
+	next := zone.Mark("add-nav-next", mutedStyle.Render("[Enter] "+nextLabel))
+
+	var btns string
+	if showBack {
+		btns = back + "  " + next
+	} else {
+		btns = next
+	}
+
+	btnsW := lipgloss.Width(btns)
+	pad := max(0, m.width-btnsW-4)
+	return strings.Repeat(" ", pad) + btns
+}
+
 // --- Source step view ---
 
 func (m *addWizardModel) viewSource() string {
 	pad := "  "
 
+	nav := m.renderNavButtons(false, "")
 	title := pad + lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render("Where is the content?")
 
 	var lines []string
+	lines = append(lines, nav)
 	lines = append(lines, title, "")
 
 	type sourceOption struct {
@@ -193,9 +218,11 @@ func (m *addWizardModel) viewPathInput(pad string, isGit bool) []string {
 func (m *addWizardModel) viewType() string {
 	pad := "  "
 
+	nav := m.renderNavButtons(true, "")
 	title := pad + lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render("What type of content?")
 
 	var lines []string
+	lines = append(lines, nav)
 	lines = append(lines, title, "")
 	lines = append(lines, m.typeChecks.View())
 	lines = append(lines, "")
@@ -210,11 +237,14 @@ func (m *addWizardModel) viewDiscovery() string {
 	pad := "  "
 
 	if m.discovering {
-		return pad + lipgloss.NewStyle().Foreground(primaryColor).Render("Discovering content...")
+		nav := m.renderNavButtons(true, "")
+		return nav + "\n" + pad + lipgloss.NewStyle().Foreground(primaryColor).Render("Discovering content...")
 	}
 
 	if m.discoveryErr != "" {
+		nav := m.renderNavButtons(true, "")
 		var lines []string
+		lines = append(lines, nav)
 		lines = append(lines, "")
 		errBox := lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -232,7 +262,9 @@ func (m *addWizardModel) viewDiscovery() string {
 	}
 
 	if len(m.discoveredItems) == 0 {
+		nav := m.renderNavButtons(true, "")
 		var lines []string
+		lines = append(lines, nav)
 		lines = append(lines, "")
 		lines = append(lines, pad+mutedStyle.Render("No content found"))
 		lines = append(lines, "")
@@ -240,15 +272,36 @@ func (m *addWizardModel) viewDiscovery() string {
 		return strings.Join(lines, "\n")
 	}
 
+	nav := m.renderNavButtons(true, "")
 	var lines []string
+	lines = append(lines, nav)
 	selected := len(m.discoveryList.SelectedIndices())
 	total := len(m.discoveredItems)
+	actionable := m.actionableCount
 	header := fmt.Sprintf("Found %d items (%d selected)", total, selected)
+	if m.installedCount > 0 && !m.showInstalled {
+		header = fmt.Sprintf("Found %d new items (%d selected)", actionable, selected)
+	}
 	lines = append(lines, pad+lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(header))
 	lines = append(lines, "")
+	lines = append(lines, m.discoveryHeader())
 	lines = append(lines, m.discoveryList.View())
-	lines = append(lines, "")
 
+	// Installed items toggle
+	if m.installedCount > 0 {
+		lines = append(lines, "")
+		if m.showInstalled {
+			toggle := zone.Mark("add-installed-toggle",
+				mutedStyle.Render(fmt.Sprintf("  [h] Hide %d already-installed items", m.installedCount)))
+			lines = append(lines, toggle)
+		} else {
+			toggle := zone.Mark("add-installed-toggle",
+				mutedStyle.Render(fmt.Sprintf("  [h] Show %d already-installed items", m.installedCount)))
+			lines = append(lines, toggle)
+		}
+	}
+
+	lines = append(lines, "")
 	nextBtn := zone.Mark("add-disc-next", mutedStyle.Render("[enter/→] next"))
 	lines = append(lines, pad+mutedStyle.Render("[space] toggle  [a] all  [n] none  ")+nextBtn+mutedStyle.Render("  [esc] back"))
 
@@ -275,7 +328,15 @@ func (m *addWizardModel) viewReview() string {
 		lines = append(lines, "")
 	}
 
-	// Item list
+	// Item list with column headers
+	cols := m.reviewColumns()
+	reviewHdr := pad + "  " + // cursor space
+		boldStyle.Render(padRight("Name", cols.name)) + " " +
+		boldStyle.Render(padRight("Type", cols.ctype)) + " " +
+		boldStyle.Render(padRight("Status", cols.status)) + " " +
+		boldStyle.Render(padRight("Risk", cols.risk))
+	lines = append(lines, truncateLine(reviewHdr, m.width))
+
 	for i, item := range selected {
 		cursor := "  "
 		if m.reviewZone == addReviewZoneItems && i == m.reviewItemCursor {
@@ -286,24 +347,63 @@ func (m *addWizardModel) viewReview() string {
 		if name == "" {
 			name = item.name
 		}
-		nameStyled := lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(name)
-		typeStyled := mutedStyle.Render("(" + string(item.itemType) + ")")
 
-		var statusStyled string
+		typeLbl := typeLabel(item.itemType)
+
+		var statusLbl string
+		var statusColor lipgloss.TerminalColor
 		switch item.status {
 		case add.StatusNew:
-			statusStyled = lipgloss.NewStyle().Foreground(successColor).Render("new")
+			statusLbl = "new"
+			statusColor = successColor
 		case add.StatusOutdated:
-			statusStyled = lipgloss.NewStyle().Foreground(warningColor).Render("update — content differs")
+			statusLbl = "update"
+			statusColor = warningColor
 		case add.StatusInLibrary:
-			statusStyled = mutedStyle.Render("in library")
+			statusLbl = "in library"
+			statusColor = mutedColor
 		}
 
-		line := pad + cursor + nameStyled + " " + typeStyled
-		if statusStyled != "" {
-			line += " " + statusStyled
+		var riskLbl string
+		if len(item.risks) > 0 {
+			hasHigh := false
+			for _, r := range item.risks {
+				if r.Level == catalog.RiskHigh {
+					hasHigh = true
+					break
+				}
+			}
+			if hasHigh {
+				riskLbl = "!!"
+			} else {
+				riskLbl = "!"
+			}
 		}
-		lines = append(lines, zone.Mark(fmt.Sprintf("add-rev-item-%d", i), line))
+
+		nameCol := padRight(truncate(sanitizeLine(name), cols.name), cols.name)
+		typeCol := padRight(truncate(typeLbl, cols.ctype), cols.ctype)
+
+		var statusCol string
+		if statusColor != nil {
+			statusCol = lipgloss.NewStyle().Foreground(statusColor).Render(padRight(truncate(statusLbl, cols.status), cols.status))
+		} else {
+			statusCol = padRight(truncate(statusLbl, cols.status), cols.status)
+		}
+
+		var riskCol string
+		if riskLbl == "!!" {
+			riskCol = lipgloss.NewStyle().Foreground(dangerColor).Render(riskLbl)
+		} else if riskLbl == "!" {
+			riskCol = lipgloss.NewStyle().Foreground(warningColor).Render(riskLbl)
+		}
+
+		isCursor := m.reviewZone == addReviewZoneItems && i == m.reviewItemCursor
+		if isCursor {
+			nameCol = lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(nameCol)
+		}
+
+		line := pad + cursor + nameCol + " " + typeCol + " " + statusCol + " " + riskCol
+		lines = append(lines, zone.Mark(fmt.Sprintf("add-rev-item-%d", i), truncateLine(line, m.width)))
 	}
 
 	// Buttons (already zone-marked by renderModalButtons via buttonDef.zoneID)
@@ -314,13 +414,19 @@ func (m *addWizardModel) viewReview() string {
 	}
 	addLabel := fmt.Sprintf("Add %d items", len(selected))
 	buttons := renderModalButtons(btnFocus, usableW, pad, nil,
-		buttonDef{"Cancel", "add-cancel", 0},
+		buttonDef{addLabel, "add-confirm", 0},
 		buttonDef{"Back", "add-back", 1},
-		buttonDef{addLabel, "add-confirm", 2},
+		buttonDef{"Cancel", "add-cancel", 2},
 	)
 	lines = append(lines, buttons)
 
 	return strings.Join(lines, "\n")
+}
+
+// reviewColumns computes column widths for the review table.
+func (m *addWizardModel) reviewColumns() discoveryColLayout {
+	// Reuse the same layout as discovery for visual consistency
+	return m.discoveryColumns()
 }
 
 // --- Execute step view ---
@@ -332,6 +438,8 @@ func (m *addWizardModel) viewExecute() string {
 	var lines []string
 
 	if m.executeDone {
+		nav := m.renderNavButtons(false, "Close")
+		lines = append(lines, nav)
 		// Count results
 		added, updated := 0, 0
 		for _, r := range m.executeResults {

@@ -268,6 +268,14 @@ func (a App) itemsForCurrentTab() ([]catalog.ContentItem, bool) {
 
 // currentHints returns context-sensitive help hints based on current state.
 func (a App) currentHints() []string {
+	// Wizard mode: show step-specific hints instead of app hints
+	if a.wizardMode == wizardAdd && a.addWizard != nil {
+		return a.addWizard.stepHints()
+	}
+	if a.wizardMode == wizardInstall && a.installWizard != nil {
+		return a.installWizard.stepHints()
+	}
+
 	group := a.topBar.ActiveGroupLabel()
 
 	base := []string{"1/2/3 groups", "tab items"}
