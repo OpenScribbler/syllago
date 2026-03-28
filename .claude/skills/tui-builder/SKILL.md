@@ -12,15 +12,16 @@ description: Use when building, modifying, or debugging the syllago TUI. Provide
 
 Before any layout or component work, verify:
 
-1. Subtract 2 from height for borders, 2 from width for borders
-2. Never rely on auto-wrap — truncate explicitly (`maxTextWidth = panelWidth - 4`)
-3. Use `MaxWidth()` not `Width()` — Width word-wraps
-4. Use `borderedPanel()` for all bordered panels
-5. Parent owns child sizes — call `SetSize()`, never let children calculate
-6. All async work via `tea.Cmd` — never goroutines
-7. All state changes returned from `Update()` — never mutate elsewhere
-8. Always propagate `Update()` to active sub-models
-9. Handle `tea.WindowSizeMsg` — store and recalculate
+1. **Mouse + keyboard parity on EVERY interactive element** — `zone.Mark()` in View, `zone.Get().InBounds()` in updateMouse. No exceptions. If it responds to a keypress, it must respond to a click.
+2. Subtract 2 from height for borders, 2 from width for borders
+3. Never rely on auto-wrap — truncate explicitly (`maxTextWidth = panelWidth - 4`)
+4. Use `MaxWidth()` not `Width()` — Width word-wraps
+5. Use `borderedPanel()` for all bordered panels
+6. Parent owns child sizes — call `SetSize()`, never let children calculate
+7. All async work via `tea.Cmd` — never goroutines
+8. All state changes returned from `Update()` — never mutate elsewhere
+9. Always propagate `Update()` to active sub-models
+10. Handle `tea.WindowSizeMsg` — store and recalculate
 
 ## Component Message Contracts
 
@@ -54,3 +55,4 @@ Before any layout or component work, verify:
 - **Unified frame requires manual border construction.** `borderedPanel()` can't create shared borders between sections. Build frames manually: `╭`/`╰` for corners, `├──┤` for internal separators, `├──┬──┤`/`╰──┴──╯` for split pane junctions.
 - **Metadata panel height is constant (metaBarLines=3 + 1 separator).** Type-specific line 3 is blank for simple types, not omitted. This prevents the frame from shifting when scrolling between hooks and skills.
 - **Explorer needs providers for metadata.** Pass providers + repoRoot to `newExplorerModel()` so it can compute installed status via `computeMetaPanelData()`.
+- **Keyboard-only components are bugs.** If a View renders interactive elements without `zone.Mark()`, mouse users can't interact with them. Every radio option, checkbox row, list item, button, and text input needs a zone mark in View and a corresponding `zone.Get().InBounds()` check in updateMouse. The `checkboxList` component automates this via `zonePrefix` — set it and call `HandleClick()` in the parent's mouse handler.

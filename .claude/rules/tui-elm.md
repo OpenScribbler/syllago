@@ -74,7 +74,29 @@ paths:
        return m, nil
    ```
 
-7. **No business logic in the TUI** — the TUI is a presentation layer. File I/O, content parsing, and disk mutations belong in CLI packages (`catalog`, `installer`, `provider`, etc.).
+7. **No keyboard-only interactions** — every element the user can interact with via keyboard MUST also be clickable with the mouse. No exceptions.
+   ```go
+   // WRONG — View renders interactive rows without zone marks
+   for i, opt := range options {
+       lines = append(lines, renderOption(opt))
+   }
+
+   // RIGHT — every interactive row gets a zone mark
+   for i, opt := range options {
+       lines = append(lines, zone.Mark(fmt.Sprintf("my-opt-%d", i), renderOption(opt)))
+   }
+   // AND the Update function handles clicks:
+   func (m model) updateMouse(msg tea.MouseMsg) {
+       for i := range options {
+           if zone.Get(fmt.Sprintf("my-opt-%d", i)).InBounds(msg) {
+               m.cursor = i
+               // perform action
+           }
+       }
+   }
+   ```
+
+8. **No business logic in the TUI** — the TUI is a presentation layer. File I/O, content parsing, and disk mutations belong in CLI packages (`catalog`, `installer`, `provider`, etc.).
    ```go
    // WRONG — TUI reads and parses content files directly
    data, _ := os.ReadFile(filepath.Join(item.Path, "hook.json"))

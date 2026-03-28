@@ -4,6 +4,24 @@ This directory is the BubbleTea terminal UI for syllago (v3). Components follow 
 
 **Skill reference:** Run `/tui-builder` before editing TUI files to load the golden rules checklist and component message contracts.
 
+## Mouse + Keyboard Parity (MANDATORY)
+
+**Every interactive element MUST support both keyboard AND mouse.** No exceptions.
+
+If a user can navigate to it with arrow keys, they must be able to click it. If they can press Enter to activate it, they must be able to click it. This applies to:
+
+- Radio options, checkbox rows, list items
+- Buttons (Cancel, Back, Next, confirm actions)
+- Sub-list items (provider pickers, registry pickers)
+- Text input fields (click to focus)
+- Breadcrumb steps (click to navigate back)
+- Help text actions like `[r] Retry`, `[Esc] Back`
+- Tab bar groups and sub-tabs
+
+**How:** Use `zone.Mark(id, renderedContent)` in View() on every interactive element. Add `zone.Get(id).InBounds(msg)` checks in an `updateMouse(msg tea.MouseMsg)` handler. The `checkboxList` component has built-in support via the `zonePrefix` field.
+
+**When reviewing:** If a View() function renders something interactive without a `zone.Mark()` call, that's a bug. Fix it before merging.
+
 ## Before You Edit
 
 1. Read `styles.go` — all colors (Flexoki palette) and named styles defined there
