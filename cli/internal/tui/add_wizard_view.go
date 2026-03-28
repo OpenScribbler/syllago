@@ -351,7 +351,19 @@ func (m *addWizardModel) viewReview() string {
 		boldStyle.Render(padRight("Risk", cols.risk))
 	lines = append(lines, truncateLine(reviewHdr, m.width))
 
-	for i, item := range selected {
+	// Window the item list to the visible range using reviewItemOffset
+	vh := m.reviewVisibleHeight()
+	endIdx := m.reviewItemOffset + vh
+	if endIdx > len(selected) {
+		endIdx = len(selected)
+	}
+	startIdx := m.reviewItemOffset
+	if startIdx > len(selected) {
+		startIdx = len(selected)
+	}
+
+	for i := startIdx; i < endIdx; i++ {
+		item := selected[i]
 		cursor := "  "
 		if m.reviewZone == addReviewZoneItems && i == m.reviewItemCursor {
 			cursor = "> "
