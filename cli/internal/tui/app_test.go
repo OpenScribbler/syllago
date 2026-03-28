@@ -1150,13 +1150,10 @@ func TestApp_ActionHandler_ConfirmRegistryRemoveDispatches(t *testing.T) {
 }
 
 func TestApp_ActionHandler_ConfirmLoadoutStillWorks(t *testing.T) {
-	a := testAppOnRegistries(t)
-
-	// Navigate to Loadouts (Shift+Tab from Registries goes back to Library, then Tab twice)
-	// Actually, let's just create a fresh app on Loadouts.
+	// Create a fresh app on Loadouts (not Registries).
 	app := NewApp(&catalog.Catalog{}, nil, "0.0.0-test", false, nil, testConfig(), false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
-	a = m.(App)
+	a := m.(App)
 
 	// Tab twice to get to Loadouts (Library -> Registries -> Loadouts)
 	for i := 0; i < 2; i++ {
