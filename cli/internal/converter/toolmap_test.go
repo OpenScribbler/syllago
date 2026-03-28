@@ -179,11 +179,41 @@ func TestTranslateHookEvent(t *testing.T) {
 		{"before_model to Kiro (unsupported)", "before_model", "kiro", "before_model", false},
 		{"after_model to Cline (unsupported)", "after_model", "cline", "after_model", false},
 		// CC-only events have no targets except CC
-		{"after_tool_failure (CC-only) to Gemini", "after_tool_failure", "gemini-cli", "after_tool_failure", false},
 		{"elicitation (CC-only) to Cline", "elicitation", "cline", "elicitation", false},
 		// CC-only events translate to CC
-		{"after_tool_failure to CC", "after_tool_failure", "claude-code", "PostToolUseFailure", true},
 		{"elicitation to CC", "elicitation", "claude-code", "Elicitation", true},
+		// tool_use_failure (renamed from after_tool_failure)
+		{"tool_use_failure to CC", "tool_use_failure", "claude-code", "PostToolUseFailure", true},
+		{"tool_use_failure to Cursor", "tool_use_failure", "cursor", "postToolUseFailure", true},
+		{"tool_use_failure to Copilot", "tool_use_failure", "copilot-cli", "errorOccurred", true},
+		{"tool_use_failure to Gemini (unsupported)", "tool_use_failure", "gemini-cli", "tool_use_failure", false},
+		// Windsurf events
+		{"session_start to Windsurf", "session_start", "windsurf", "session_start", true},
+		{"session_end to Windsurf", "session_end", "windsurf", "session_end", true},
+		{"before_prompt to Windsurf", "before_prompt", "windsurf", "pre_user_prompt", true},
+		{"agent_stop to Windsurf", "agent_stop", "windsurf", "post_cascade_response", true},
+		// Opencode events
+		{"before_tool_execute to Opencode", "before_tool_execute", "opencode", "tool.execute.before", true},
+		{"after_tool_execute to Opencode", "after_tool_execute", "opencode", "tool.execute.after", true},
+		{"session_start to Opencode", "session_start", "opencode", "session.created", true},
+		{"agent_stop to Opencode", "agent_stop", "opencode", "session.idle", true},
+		{"error_occurred to Opencode", "error_occurred", "opencode", "session.error", true},
+		{"permission_request to Opencode", "permission_request", "opencode", "permission.asked", true},
+		// Cursor extended events
+		{"subagent_start to Cursor", "subagent_start", "cursor", "SubagentStart", true},
+		{"subagent_stop to Cursor", "subagent_stop", "cursor", "SubagentStop", true},
+		{"before_model to Cursor", "before_model", "cursor", "beforeAgentResponse", true},
+		{"after_model to Cursor", "after_model", "cursor", "afterAgentResponse", true},
+		{"before_tool_selection to Cursor", "before_tool_selection", "cursor", "beforeToolSelection", true},
+		// New events
+		{"file_changed to CC", "file_changed", "claude-code", "FileChanged", true},
+		{"file_changed to Cursor", "file_changed", "cursor", "afterFileEdit", true},
+		{"file_changed to Kiro", "file_changed", "kiro", "File Save", true},
+		{"file_changed to Opencode", "file_changed", "opencode", "file.edited", true},
+		{"file_created to Kiro", "file_created", "kiro", "File Create", true},
+		{"file_deleted to Kiro", "file_deleted", "kiro", "File Delete", true},
+		{"before_task to Kiro", "before_task", "kiro", "Pre Task Execution", true},
+		{"after_task to Kiro", "after_task", "kiro", "Post Task Execution", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -215,17 +245,39 @@ func TestReverseTranslateHookEvent(t *testing.T) {
 		// Copilot new events
 		{"Copilot subagentStop", "subagentStop", "copilot-cli", "subagent_stop"},
 		{"Copilot agentStop", "agentStop", "copilot-cli", "agent_stop"},
-		{"Copilot errorOccurred", "errorOccurred", "copilot-cli", "error_occurred"},
+		// Note: errorOccurred maps to both error_occurred and tool_use_failure;
+		// test moved to TestReverseTranslateHookEvent_CopilotAmbiguous below.
 		// Gemini-only events
 		{"Gemini BeforeModel", "BeforeModel", "gemini-cli", "before_model"},
 		{"Gemini AfterModel", "AfterModel", "gemini-cli", "after_model"},
 		{"Gemini BeforeToolSelection", "BeforeToolSelection", "gemini-cli", "before_tool_selection"},
+		// Opencode reverse
+		{"Opencode tool.execute.before", "tool.execute.before", "opencode", "before_tool_execute"},
+		{"Opencode session.created", "session.created", "opencode", "session_start"},
+		// Windsurf reverse
+		{"Windsurf pre_user_prompt", "pre_user_prompt", "windsurf", "before_prompt"},
+		{"Windsurf post_cascade_response", "post_cascade_response", "windsurf", "agent_stop"},
+		// Cursor extended reverse
+		{"Cursor beforeAgentResponse", "beforeAgentResponse", "cursor", "before_model"},
+		{"Cursor afterAgentResponse", "afterAgentResponse", "cursor", "after_model"},
+		// Kiro new events reverse
+		{"Kiro File Save", "File Save", "kiro", "file_changed"},
+		{"Kiro File Create", "File Create", "kiro", "file_created"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := ReverseTranslateHookEvent(tt.event, tt.source)
 			assertEqual(t, tt.want, got)
 		})
+	}
+}
+
+func TestReverseTranslateHookEvent_CopilotAmbiguous(t *testing.T) {
+	// Copilot's "errorOccurred" maps to both error_occurred and tool_use_failure.
+	// Go map iteration order is non-deterministic, so either is valid.
+	got := ReverseTranslateHookEvent("errorOccurred", "copilot-cli")
+	if got != "error_occurred" && got != "tool_use_failure" {
+		t.Errorf("expected error_occurred or tool_use_failure, got %q", got)
 	}
 }
 
@@ -504,6 +556,13 @@ func TestIsValidHookEvent(t *testing.T) {
 		{"SessionStart", true},
 		{"TaskStart", true},  // Cline
 		{"TaskResume", true}, // Cline
+		// New events and provider-native names
+		{"file_changed", true},
+		{"file_created", true},
+		{"tool_use_failure", true},
+		{"tool.execute.before", true}, // Opencode
+		{"pre_user_prompt", true},     // Windsurf
+		{"File Save", true},           // Kiro
 		// Invalid names
 		{"", false},
 		{"FakeEvent", false},

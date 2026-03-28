@@ -48,7 +48,7 @@ func (a *GeminiCLIAdapter) Capabilities() ProviderCapabilities {
 		SupportsMatchers:         true,
 		SupportsAsync:            true,
 		SupportsStatusMessage:    true,
-		SupportsStructuredOutput: false,
+		SupportsStructuredOutput: true,
 		SupportsBlocking:         true,
 		TimeoutUnit:              "milliseconds",
 		SupportsPlatform:         false,

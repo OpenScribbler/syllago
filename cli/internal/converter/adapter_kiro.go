@@ -43,6 +43,7 @@ func (a *KiroAdapter) Capabilities() ProviderCapabilities {
 		Events: []string{
 			"before_tool_execute", "after_tool_execute", "before_prompt",
 			"agent_stop", "session_start",
+			"file_changed", "file_created", "file_deleted", "before_task", "after_task",
 		},
 		SupportsMatchers:         true,
 		SupportsAsync:            false,

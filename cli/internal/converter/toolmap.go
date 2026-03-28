@@ -126,21 +126,25 @@ var ToolNames = map[string]map[string]string{
 // HookEvents maps canonical (provider-neutral) event names to provider-specific equivalents.
 // Keys are snake_case neutral names; every provider including claude-code has an explicit entry.
 var HookEvents = map[string]map[string]string{
-	"before_tool_execute": {"claude-code": "PreToolUse", "gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse", "cline": "PreToolUse", "cursor": "PreToolUse"},
-	"after_tool_execute":  {"claude-code": "PostToolUse", "gemini-cli": "AfterTool", "copilot-cli": "postToolUse", "kiro": "postToolUse", "cline": "PostToolUse", "cursor": "PostToolUse"},
-	"before_prompt":       {"claude-code": "UserPromptSubmit", "gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted", "kiro": "userPromptSubmit", "cline": "UserPromptSubmit", "cursor": "UserPromptSubmit"},
-	"agent_stop":          {"claude-code": "Stop", "gemini-cli": "AfterAgent", "kiro": "stop", "copilot-cli": "agentStop", "cursor": "Stop"},
-	"session_start":       {"claude-code": "SessionStart", "gemini-cli": "SessionStart", "copilot-cli": "sessionStart", "kiro": "agentSpawn", "cline": "TaskStart", "cursor": "SessionStart"},
-	"session_end":         {"claude-code": "SessionEnd", "gemini-cli": "SessionEnd", "copilot-cli": "sessionEnd", "cline": "TaskComplete", "cursor": "SessionEnd"},
+	"before_tool_execute": {"claude-code": "PreToolUse", "gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse", "cline": "PreToolUse", "cursor": "PreToolUse", "opencode": "tool.execute.before"},
+	"after_tool_execute":  {"claude-code": "PostToolUse", "gemini-cli": "AfterTool", "copilot-cli": "postToolUse", "kiro": "postToolUse", "cline": "PostToolUse", "cursor": "PostToolUse", "opencode": "tool.execute.after"},
+	"before_prompt":       {"claude-code": "UserPromptSubmit", "gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted", "kiro": "userPromptSubmit", "cline": "UserPromptSubmit", "cursor": "UserPromptSubmit", "windsurf": "pre_user_prompt"},
+	"agent_stop":          {"claude-code": "Stop", "gemini-cli": "AfterAgent", "kiro": "stop", "copilot-cli": "agentStop", "cursor": "Stop", "windsurf": "post_cascade_response", "opencode": "session.idle"},
+	"session_start":       {"claude-code": "SessionStart", "gemini-cli": "SessionStart", "copilot-cli": "sessionStart", "kiro": "agentSpawn", "cline": "TaskStart", "cursor": "SessionStart", "windsurf": "session_start", "opencode": "session.created"},
+	"session_end":         {"claude-code": "SessionEnd", "gemini-cli": "SessionEnd", "copilot-cli": "sessionEnd", "cline": "TaskComplete", "cursor": "SessionEnd", "windsurf": "session_end"},
 	"before_compact":      {"claude-code": "PreCompact", "gemini-cli": "PreCompress", "cline": "PreCompact", "cursor": "PreCompact"},
 	"notification":        {"claude-code": "Notification", "gemini-cli": "Notification"},
-	"subagent_start":      {"claude-code": "SubagentStart"},
-	"subagent_stop":       {"claude-code": "SubagentStop", "copilot-cli": "subagentStop"},
-	"error_occurred":      {"claude-code": "ErrorOccurred", "copilot-cli": "errorOccurred"},
+	"subagent_start":      {"claude-code": "SubagentStart", "cursor": "SubagentStart"},
+	"subagent_stop":       {"claude-code": "SubagentStop", "copilot-cli": "subagentStop", "cursor": "SubagentStop"},
+	"error_occurred":      {"claude-code": "ErrorOccurred", "copilot-cli": "errorOccurred", "opencode": "session.error"},
+
+	// tool_use_failure: distinct from error_occurred — fires on tool invocation failure.
+	// Note: Copilot maps both error_occurred and tool_use_failure to "errorOccurred";
+	// ReverseTranslateHookEvent will return whichever it finds first (Go map iteration order).
+	"tool_use_failure": {"claude-code": "PostToolUseFailure", "cursor": "postToolUseFailure", "copilot-cli": "errorOccurred"},
 
 	// CC-only events (no cross-provider equivalents)
-	"after_tool_failure":  {"claude-code": "PostToolUseFailure"},
-	"permission_request":  {"claude-code": "PermissionRequest"},
+	"permission_request":  {"claude-code": "PermissionRequest", "opencode": "permission.asked"},
 	"after_compact":       {"claude-code": "PostCompact"},
 	"instructions_loaded": {"claude-code": "InstructionsLoaded"},
 	"config_change":       {"claude-code": "ConfigChange"},
@@ -152,10 +156,18 @@ var HookEvents = map[string]map[string]string{
 	"task_completed":      {"claude-code": "TaskCompleted"},
 	"stop_failure":        {"claude-code": "StopFailure"},
 
-	// Gemini-only events
-	"before_model":          {"gemini-cli": "BeforeModel"},
-	"after_model":           {"gemini-cli": "AfterModel"},
-	"before_tool_selection": {"gemini-cli": "BeforeToolSelection"},
+	// Extended events with multiple-provider support
+	"before_model":          {"gemini-cli": "BeforeModel", "cursor": "beforeAgentResponse"},
+	"after_model":           {"gemini-cli": "AfterModel", "cursor": "afterAgentResponse"},
+	"before_tool_selection": {"gemini-cli": "BeforeToolSelection", "cursor": "beforeToolSelection"},
+
+	"file_changed": {"claude-code": "FileChanged", "cursor": "afterFileEdit", "kiro": "File Save", "opencode": "file.edited"},
+
+	// Kiro-exclusive events
+	"file_created": {"kiro": "File Create"},
+	"file_deleted": {"kiro": "File Delete"},
+	"before_task":  {"kiro": "Pre Task Execution"},
+	"after_task":   {"kiro": "Post Task Execution"},
 
 	// Cline-only events
 	"task_resume": {"cline": "TaskResume"},

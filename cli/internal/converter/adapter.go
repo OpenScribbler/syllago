@@ -6,7 +6,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
-// CanonicalHooks is the spec-compliant canonical representation (hooks/1.0).
+// CanonicalHooks is the spec-compliant canonical representation (hooks/0.1).
 // This is the enhanced format with all spec fields. The older hooksConfig/HookData
 // types are used internally for backward compatibility with existing code paths.
 type CanonicalHooks struct {
@@ -16,11 +16,13 @@ type CanonicalHooks struct {
 
 // CanonicalHook is a single hook definition in the canonical format.
 type CanonicalHook struct {
+	Name         string            `json:"name,omitempty"`
 	Event        string            `json:"event"`
 	Matcher      json.RawMessage   `json:"matcher,omitempty"`
 	Handler      HookHandler       `json:"handler"`
 	Blocking     bool              `json:"blocking,omitempty"`
 	Degradation  map[string]string `json:"degradation,omitempty"`
+	Capabilities []string          `json:"capabilities,omitempty"`
 	ProviderData map[string]any    `json:"provider_data,omitempty"`
 }
 
@@ -33,6 +35,7 @@ type HookHandler struct {
 	CWD           string            `json:"cwd,omitempty"`
 	Env           map[string]string `json:"env,omitempty"`
 	Timeout       int               `json:"timeout,omitempty"`
+	TimeoutAction string            `json:"timeout_action,omitempty"`
 	StatusMessage string            `json:"statusMessage,omitempty"`
 	Async         bool              `json:"async,omitempty"`
 
@@ -141,7 +144,7 @@ func Adapters() map[string]HookAdapter {
 }
 
 // SpecVersion is the current canonical hook specification version.
-const SpecVersion = "hooks/1.0"
+const SpecVersion = "hooks/0.1"
 
 // --- Conversion between legacy and spec formats ---
 
@@ -208,6 +211,10 @@ func FromLegacyHooksConfig(cfg hooksConfig) *CanonicalHooks {
 						Agent:          entry.Agent,
 					},
 				}
+
+				// Note: Name, TimeoutAction, and Capabilities fields are not populated here
+				// because the legacy hooksConfig types don't carry them. These fields flow
+				// through only when adapters are migrated off the legacy bridge (Tier 2).
 
 				if m.Matcher != "" {
 					matcherJSON, _ := json.Marshal(m.Matcher)
