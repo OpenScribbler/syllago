@@ -41,10 +41,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.addWizard.width = msg.Width
 			a.addWizard.height = a.contentHeight()
 			a.addWizard.shell.SetWidth(msg.Width)
-			// Rebuild discovery list so column widths match the new width
+			// Resize type checkbox list
+			a.addWizard.typeChecks = a.addWizard.typeChecks.SetSize(msg.Width-4, a.addWizard.typeListHeight())
+			// Rebuild discovery list so column widths and height match the new size
 			if a.addWizard.step == addStepDiscovery && len(a.addWizard.discoveredItems) > 0 && !a.addWizard.discovering {
 				a.addWizard.rebuildDiscoveryListPreserveSelection()
+			} else {
+				a.addWizard.discoveryList = a.addWizard.discoveryList.SetSize(msg.Width-4, a.addWizard.discoveryListHeight())
 			}
+			// Adjust review item offset for new height
+			a.addWizard.adjustReviewOffset()
 		}
 		return a, nil
 

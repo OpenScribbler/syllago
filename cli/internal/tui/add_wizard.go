@@ -150,6 +150,7 @@ type addWizardModel struct {
 	conflicts          []int
 	reviewZone         addReviewZone
 	reviewItemCursor   int
+	reviewItemOffset   int
 	buttonCursor       int
 	reviewAcknowledged bool
 
@@ -405,6 +406,9 @@ func (m *addWizardModel) buildTypeCheckList() checkboxList {
 		}
 	}
 
+	// Apply height constraint so the list scrolls instead of overflowing
+	cl = cl.SetSize(m.width-4, m.typeListHeight())
+
 	return cl
 }
 
@@ -452,6 +456,8 @@ func (m *addWizardModel) enterReview() {
 	// Default focus: buttons zone, cursor on [Back]
 	m.reviewZone = addReviewZoneButtons
 	m.buttonCursor = 1 // [Back]
+	m.reviewItemCursor = 0
+	m.reviewItemOffset = 0
 	m.reviewAcknowledged = false
 	m.updateMaxStep()
 }
@@ -682,7 +688,61 @@ func (m *addWizardModel) buildDiscoveryList() checkboxList {
 		}
 	}
 
+	// Apply height constraint so the list scrolls instead of overflowing
+	cl = cl.SetSize(m.width-4, m.discoveryListHeight())
+
 	return cl
+}
+
+// listHeight returns the available height for checkbox lists inside the wizard.
+// The wizard shell is 3 lines. The title row is 1 line. The blank line after
+// title is 1. The column header (discovery) is 1. The installed toggle section
+// is ~2 lines. A small padding buffer rounds it out. For the type step (no
+// column header or toggle), overhead is smaller.
+func (m *addWizardModel) discoveryListHeight() int {
+	// shell(3) + title(1) + blank(1) + colHeader(1) + toggle(2) + padding(1) = 9
+	h := m.height - 9
+	if h < 3 {
+		h = 3
+	}
+	return h
+}
+
+func (m *addWizardModel) typeListHeight() int {
+	// shell(3) + title(1) + blank(1) + padding(1) = 6
+	h := m.height - 6
+	if h < 3 {
+		h = 3
+	}
+	return h
+}
+
+// reviewVisibleHeight returns the number of review items that fit in the
+// visible area. The review page has: header(1) + blank(1) + buttons(1) +
+// blank(1) + risk banner(~3 if present) + microcopy(2) + blank(1) +
+// colHeader(1) + shell(3) = ~14 lines of overhead (with risks).
+func (m *addWizardModel) reviewVisibleHeight() int {
+	overhead := 3 + 1 + 1 + 1 + 1 + 2 + 1 + 1 // shell + header + blank + buttons + blank + microcopy + blank + colHeader
+	if len(m.risks) > 0 {
+		// Risk banner + blank line after it
+		overhead += 3
+	}
+	h := m.height - overhead
+	if h < 3 {
+		h = 3
+	}
+	return h
+}
+
+// adjustReviewOffset ensures the review item cursor stays within the visible window.
+func (m *addWizardModel) adjustReviewOffset() {
+	vh := m.reviewVisibleHeight()
+	if m.reviewItemCursor < m.reviewItemOffset {
+		m.reviewItemOffset = m.reviewItemCursor
+	}
+	if m.reviewItemCursor >= m.reviewItemOffset+vh {
+		m.reviewItemOffset = m.reviewItemCursor - vh + 1
+	}
 }
 
 // addItemCmd creates an async tea.Cmd for adding a single item.

@@ -245,6 +245,7 @@ func (m *addWizardModel) updateMouseReview(msg tea.MouseMsg) (*addWizardModel, t
 		if zone.Get("add-rev-item-" + itoa(i)).InBounds(msg) {
 			m.reviewZone = addReviewZoneItems
 			m.reviewItemCursor = i
+			m.adjustReviewOffset()
 			return m, nil
 		}
 	}
@@ -682,16 +683,17 @@ func (m *addWizardModel) updateKeyReviewItems(msg tea.KeyMsg) (*addWizardModel, 
 			m.reviewItemCursor++
 		}
 	case msg.Type == tea.KeyPgUp:
-		pageSize := max(1, m.height/3)
+		pageSize := max(1, m.reviewVisibleHeight())
 		m.reviewItemCursor = max(0, m.reviewItemCursor-pageSize)
 	case msg.Type == tea.KeyPgDown:
-		pageSize := max(1, m.height/3)
+		pageSize := max(1, m.reviewVisibleHeight())
 		m.reviewItemCursor = min(itemCount-1, m.reviewItemCursor+pageSize)
 	case msg.Type == tea.KeyHome:
 		m.reviewItemCursor = 0
 	case msg.Type == tea.KeyEnd:
 		m.reviewItemCursor = itemCount - 1
 	}
+	m.adjustReviewOffset()
 	return m, nil
 }
 
