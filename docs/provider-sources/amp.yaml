@@ -1,0 +1,73 @@
+# Amp — Provider Source Manifest
+# Mixed sources: GitHub example/guide repos + minimal llms.txt stub. Docs are thin.
+
+schema_version: "1"
+last_verified: "2026-03-27"
+provider_version: "" # No public version tracking
+
+slug: amp
+display_name: Amp
+vendor: Sourcegraph
+status: active
+fetch_tier: gh-api
+repo: sourcegraph/amp-examples-and-guides
+repo_branch: main
+
+change_detection:
+  method: github-commits
+  endpoint: https://api.github.com/repos/sourcegraph/amp-examples-and-guides/commits
+  # Also track sourcegraph/amp-contrib for community tools.
+
+changelog:
+  - url: https://ampcode.com/llms.txt
+    label: llms.txt (stub — only 2 URLs)
+
+content_types:
+
+  rules:
+    sources:
+      - url: https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/AGENT.md
+        type: example
+        format: markdown
+        extracts: [file_format]
+
+      - url: https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/agent-file/AGENT.md
+        type: docs
+        format: markdown
+        extracts: [file_format, features]
+
+      - url: https://ampcode.com/manual
+        type: docs
+        format: html
+        extracts: [file_format, features]
+    # Format: AGENT.md (plain markdown). Amp's equivalent of CLAUDE.md/.cursorrules.
+
+  hooks:
+    supported: false
+    # Amp has "checks" but no traditional lifecycle hook system.
+
+  mcp:
+    sources:
+      - url: https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/mcp/amp-mcp-setup-guide.md
+        type: docs
+        format: markdown
+        extracts: [config_examples, setup_examples]
+
+  skills:
+    sources:
+      - url: https://ampcode.com/news/agent-skills
+        type: docs
+        format: html
+        extracts: [features]
+    # Amp has skills but documentation is thin (announcement blog post, not a reference page).
+
+  agents:
+    supported: false
+    # No dedicated agent file format beyond AGENT.md.
+
+  commands:
+    supported: false
+
+  # Additional repos worth monitoring:
+  # - sourcegraph/amp-contrib: community tools, slash commands, skills
+  # - sourcegraph/amp-sdk-demo: SDK usage examples

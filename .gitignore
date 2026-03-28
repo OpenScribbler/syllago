@@ -37,6 +37,8 @@ docs/*
 !docs/spec/
 !docs/security/
 !docs/blogs/
+!docs/provider-sources/
+!docs/research/
 tmp/
 
 # Development workflow state

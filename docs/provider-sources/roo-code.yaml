@@ -1,0 +1,100 @@
+# Roo Code — Provider Source Manifest
+# Good sources: Cline fork with significant divergence. Has custom modes (unique), no hooks.
+
+schema_version: "1"
+last_verified: "2026-03-27"
+provider_version: "v3.51.1"
+
+slug: roo-code
+display_name: Roo Code
+vendor: RooVet
+status: active
+fetch_tier: gh-api
+repo: RooVetGit/Roo-Code
+repo_branch: main
+
+change_detection:
+  method: github-releases
+  endpoint: https://api.github.com/repos/RooVetGit/Roo-Code/releases/latest
+  # Uses changesets (.changeset/) for versioning.
+
+changelog:
+  - url: https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/CHANGELOG.md
+    label: Changelog
+
+content_types:
+
+  rules:
+    sources:
+      - url: https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/rules/rules.md
+        type: example
+        format: markdown
+        extracts: [file_format, file_locations]
+
+      - url: https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/rules-code/use-safeWriteJson.md
+        type: example
+        format: markdown
+        extracts: [file_format]
+    # Format: .roo/rules/ (global) + .roo/rules-{mode-slug}/ (per-mode, e.g. .roo/rules-code/).
+    # Markdown and XML files. Also reads .clinerules/ for backward compat.
+
+  hooks:
+    supported: false
+    # Major divergence from Cline — Roo Code has no lifecycle hook system.
+
+  mcp:
+    sources:
+      - url: https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/src/services/mcp/McpHub.ts
+        type: source-code
+        format: typescript
+        extracts: [server_config_fields, transport_types]
+
+      - url: https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mcp.ts
+        type: source-code
+        format: typescript
+        extracts: [server_config_fields]
+
+      - url: https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/src/shared/globalFileNames.ts
+        type: source-code
+        format: typescript
+        extracts: [file_locations]
+    # Settings file: mcp_settings.json.
+    # Transports: stdio, SSE, streamable-http (kebab-case — differs from Cline's streamableHttp).
+    # Fields: alwaysAllow[] (not autoApprove), disabledTools[], watchPaths[], disabled, timeout.
+
+  skills:
+    sources:
+      - url: https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/skills/roo-translation/SKILL.md
+        type: example
+        format: markdown
+        extracts: [file_format, frontmatter_fields]
+    # Format: .roo/skills/*/SKILL.md.
+
+  agents:
+    # Roo Code's unique "Custom Modes" system — not present in Cline.
+    sources:
+      - url: https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mode.ts
+        type: source-code
+        format: typescript
+        extracts: [config_fields, file_format]
+
+      - url: https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/src/core/config/CustomModesManager.ts
+        type: source-code
+        format: typescript
+        extracts: [file_locations, features]
+
+      - url: https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roomodes
+        type: example
+        format: yaml
+        extracts: [config_fields]
+    # Format: .roomodes (project, YAML) or custom_modes.yaml (global).
+    # Schema: slug, name, roleDefinition, whenToUse?, description?, customInstructions?, groups[].
+    # 5 built-in: architect, code, ask, debug, orchestrator.
+
+  commands:
+    sources:
+      - url: https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/commands/commit.md
+        type: example
+        format: markdown
+        extracts: [file_format]
+    # Format: .roo/commands/*.md. Markdown command files.
