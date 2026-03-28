@@ -1,0 +1,759 @@
+{
+  "version": "1",
+  "generatedAt": "2026-03-28T17:35:53Z",
+  "syllagoVersion": "dev",
+  "providers": [
+    {
+      "name": "Claude Code",
+      "slug": "claude-code",
+      "configDir": ".claude",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.claude/agents",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.claude/agents"
+          ]
+        },
+        "commands": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.claude/commands",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.claude/commands"
+          ]
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.claude/settings.json"
+          ]
+        },
+        "loadouts": {
+          "supported": true,
+          "fileFormat": "md",
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.claude.json",
+            "{project}/.mcp.json"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.claude/rules",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/CLAUDE.md",
+            "{project}/.claude/rules"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.claude/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.claude/skills"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Gemini CLI",
+      "slug": "gemini-cli",
+      "configDir": ".gemini",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.gemini/agents",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.gemini/agents"
+          ]
+        },
+        "commands": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.gemini/commands",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.gemini/commands"
+          ]
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.gemini/settings.json"
+          ]
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.gemini/settings.json"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.gemini",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/GEMINI.md"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.gemini/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.gemini/skills",
+            "{project}/.agents/skills"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Cursor",
+      "slug": "cursor",
+      "configDir": ".cursor",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.cursor/agents",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.cursor/agents",
+            "{project}/AGENTS.md"
+          ]
+        },
+        "commands": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.cursor/commands",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.cursor/commands"
+          ]
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.cursor/settings.json"
+          ]
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.cursor/mcp.json"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "mdc",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.cursor",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.cursor/rules",
+            "{project}/.cursorrules"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.cursor/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.cursor/skills"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Windsurf",
+      "slug": "windsurf",
+      "configDir": ".codeium/windsurf",
+      "content": {
+        "agents": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "commands": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.codeium/windsurf",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.windsurfrules",
+            "{project}/.windsurf/rules"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.codeium/windsurf/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.windsurf/skills",
+            "{project}/.agents/skills"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Codex",
+      "slug": "codex",
+      "configDir": ".codex",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "toml",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.codex",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.codex/agents"
+          ]
+        },
+        "commands": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.codex",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.codex/commands"
+          ]
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.codex",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.codex/hooks.json"
+          ]
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "json-merge",
+          "symlinkSupport": false
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.codex",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/AGENTS.md"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.agents/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.agents/skills"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Copilot CLI",
+      "slug": "copilot-cli",
+      "configDir": ".copilot",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.github/agents",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.copilot/agents",
+            "{project}/.github/agents",
+            "{project}/.claude/agents"
+          ]
+        },
+        "commands": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.copilot/commands",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.copilot/commands"
+          ]
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.github/hooks"
+          ]
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.copilot/mcp-config.json"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.copilot",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.github/copilot-instructions.md",
+            "{project}/AGENTS.md"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.github/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.github/skills"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Zed",
+      "slug": "zed",
+      "configDir": ".config/zed",
+      "content": {
+        "agents": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "commands": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "hooks": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.rules",
+            "{project}/.cursorrules",
+            "{project}/CLAUDE.md"
+          ]
+        },
+        "skills": {
+          "supported": false,
+          "symlinkSupport": false
+        }
+      }
+    },
+    {
+      "name": "Cline",
+      "slug": "cline",
+      "configDir": ".clinerules",
+      "content": {
+        "agents": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "commands": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.clinerules/hooks"
+          ]
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "/home/hhewett/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.clinerules",
+            "/home/hhewett/Documents/Cline/Rules"
+          ]
+        },
+        "skills": {
+          "supported": false,
+          "symlinkSupport": false
+        }
+      }
+    },
+    {
+      "name": "Roo Code",
+      "slug": "roo-code",
+      "configDir": ".roo",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "yaml",
+          "installMethod": "project-scope",
+          "symlinkSupport": true
+        },
+        "commands": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "hooks": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.roo/mcp.json"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.roo/rules",
+            "{project}/.roo/rules-code",
+            "{project}/.roo/rules-architect",
+            "{project}/.roo/rules-ask",
+            "{project}/.roo/rules-debug",
+            "{project}/.roo/rules-orchestrator",
+            "{project}/.roorules",
+            "/home/hhewett/.roo/rules"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.roo/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.roo/skills",
+            "{project}/.agents/skills"
+          ]
+        }
+      }
+    },
+    {
+      "name": "OpenCode",
+      "slug": "opencode",
+      "configDir": ".config/opencode",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.config/opencode/agents",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.opencode/agents"
+          ]
+        },
+        "commands": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.config/opencode/commands",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.opencode/commands"
+          ]
+        },
+        "hooks": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "jsonc",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/opencode.json",
+            "{project}/opencode.jsonc"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.config/opencode",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/AGENTS.md",
+            "{project}/CLAUDE.md"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.config/opencode/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.opencode/skills"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Kiro",
+      "slug": "kiro",
+      "configDir": ".kiro",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.kiro/agents",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.kiro/agents"
+          ]
+        },
+        "commands": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.kiro/agents"
+          ]
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.kiro/settings/mcp.json"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.kiro/steering"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.kiro/steering"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Amp",
+      "slug": "amp",
+      "configDir": ".config/amp",
+      "content": {
+        "agents": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "commands": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "hooks": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.amp/settings.json"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.config/amp",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/AGENTS.md",
+            "{project}/AGENT.md",
+            "{project}/CLAUDE.md"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.config/agents/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.agents/skills",
+            "{project}/.claude/skills"
+          ]
+        }
+      }
+    }
+  ],
+  "contentTypes": [
+    "skills",
+    "agents",
+    "mcp",
+    "rules",
+    "hooks",
+    "commands",
+    "loadouts"
+  ]
+}
