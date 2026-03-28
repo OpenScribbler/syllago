@@ -436,9 +436,16 @@ func (m *addWizardModel) viewReview() string {
 			default:
 				riskCol = lipgloss.NewStyle().Background(bg).Render(padRight("", cols.risk))
 			}
+			bgSpace := lipgloss.NewStyle().Background(bg).Render(" ")
 			cursorStyled := lipgloss.NewStyle().Bold(true).Foreground(primaryText).Background(bg).Render(cursor)
-			line := pad + cursorStyled + nameCol + " " + typeCol + " " + statusCol + " " + riskCol
-			lines = append(lines, zone.Mark(fmt.Sprintf("add-rev-item-%d", i), truncateLine(line, m.width)))
+			row := pad + cursorStyled + nameCol + bgSpace + typeCol + bgSpace + statusCol + bgSpace + riskCol
+			// Pad to full width with background, then hard-clip
+			rowW := lipgloss.Width(row)
+			if rowW < m.width {
+				row += lipgloss.NewStyle().Background(bg).Render(strings.Repeat(" ", m.width-rowW))
+			}
+			line := lipgloss.NewStyle().MaxWidth(m.width).Render(row)
+			lines = append(lines, zone.Mark(fmt.Sprintf("add-rev-item-%d", i), line))
 		} else {
 			// Normal row
 			nameCol = nameText
@@ -483,13 +490,9 @@ func (m *addWizardModel) viewReviewDrillIn() string {
 	innerW := m.width - borderSize
 	paneH := max(5, m.height-7) // shell(3) + title(1) + blank(1) + border(2)
 
-	showTree := len(m.reviewDrillTree.allNodes) > 1
-	treeW := 0
-	previewW := innerW
-	if showTree {
-		treeW = max(18, innerW*30/100)
-		previewW = innerW - treeW - 1
-	}
+	// Always show the file tree pane for consistent drill-in experience
+	treeW := max(18, innerW*30/100)
+	previewW := innerW - treeW - 1
 
 	m.reviewDrillTree.SetSize(treeW, paneH)
 	m.reviewDrillPreview.SetSize(previewW, paneH)
@@ -505,11 +508,7 @@ func (m *addWizardModel) viewReviewDrillIn() string {
 	}
 
 	// Top border
-	if showTree {
-		lines = append(lines, border("╭"+strings.Repeat("─", treeW)+"┬"+strings.Repeat("─", previewW)+"╮"))
-	} else {
-		lines = append(lines, border("╭"+strings.Repeat("─", innerW)+"╮"))
-	}
+	lines = append(lines, border("╭"+strings.Repeat("─", treeW)+"┬"+strings.Repeat("─", previewW)+"╮"))
 
 	// Build tree + preview content
 	treeContent := strings.Split(m.reviewDrillTree.View(), "\n")
@@ -530,31 +529,19 @@ func (m *addWizardModel) viewReviewDrillIn() string {
 
 	// Pane rows
 	for i := 0; i < paneH; i++ {
-		if showTree {
-			tl := ""
-			if i < len(treeContent) {
-				tl = treeContent[i]
-			}
-			pl := ""
-			if i < len(previewContent) {
-				pl = previewContent[i]
-			}
-			lines = append(lines, border("│")+wrapLine(tl, treeW)+border("│")+wrapLine(pl, previewW)+border("│"))
-		} else {
-			pl := ""
-			if i < len(previewContent) {
-				pl = previewContent[i]
-			}
-			lines = append(lines, border("│")+wrapLine(pl, innerW)+border("│"))
+		tl := ""
+		if i < len(treeContent) {
+			tl = treeContent[i]
 		}
+		pl := ""
+		if i < len(previewContent) {
+			pl = previewContent[i]
+		}
+		lines = append(lines, border("│")+wrapLine(tl, treeW)+border("│")+wrapLine(pl, previewW)+border("│"))
 	}
 
 	// Bottom border
-	if showTree {
-		lines = append(lines, border("╰"+strings.Repeat("─", treeW)+"┴"+strings.Repeat("─", previewW)+"╯"))
-	} else {
-		lines = append(lines, border("╰"+strings.Repeat("─", innerW)+"╯"))
-	}
+	lines = append(lines, border("╰"+strings.Repeat("─", treeW)+"┴"+strings.Repeat("─", previewW)+"╯"))
 
 	return strings.Join(lines, "\n")
 }

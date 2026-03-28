@@ -505,12 +505,22 @@ func (m *addWizardModel) enterReviewDrillIn() {
 	m.reviewDrillTree.focused = true
 	m.reviewDrillPreview = newPreviewModel()
 	m.reviewDrillPreview.LoadItem(&ci)
+
+	// Pre-size the panes so scroll works before the first View()
+	innerW := m.width - borderSize
+	treeW := max(18, innerW*30/100)
+	previewW := innerW - treeW - 1
+	paneH := max(5, m.height-7)
+	m.reviewDrillTree.SetSize(treeW, paneH)
+	m.reviewDrillPreview.SetSize(previewW, paneH)
+
 	m.reviewDrillIn = true
 }
 
 // exitReviewDrillIn closes the drill-in sub-view and returns to the review list.
 func (m *addWizardModel) exitReviewDrillIn() {
 	m.reviewDrillIn = false
+	m.reviewZone = addReviewZoneItems // return focus to the item list, not buttons
 }
 
 // loadDrillInFile loads the file selected in the drill-in tree into the preview.

@@ -526,12 +526,19 @@ func (m *addWizardModel) updateKeySourceInput(msg tea.KeyMsg) (*addWizardModel, 
 			return m, nil
 		}
 		if m.sourceCursor == 2 {
-			// Local path validation
-			if !filepath.IsAbs(m.pathInput) {
-				m.sourceErr = "Path must be absolute"
+			// Local path validation — expand ~ to home dir
+			inputPath := m.pathInput
+			if strings.HasPrefix(inputPath, "~/") || inputPath == "~" {
+				if home, err := os.UserHomeDir(); err == nil {
+					inputPath = filepath.Join(home, inputPath[1:])
+				}
+			}
+			if !filepath.IsAbs(inputPath) {
+				m.sourceErr = "Path must be absolute (use ~ for home directory)"
 				return m, nil
 			}
-			info, err := os.Stat(m.pathInput)
+			m.pathInput = inputPath // normalize for downstream use
+			info, err := os.Stat(inputPath)
 			if err != nil {
 				m.sourceErr = "Path does not exist"
 				return m, nil
@@ -791,6 +798,14 @@ func (m *addWizardModel) updateKeyReviewDrillIn(msg tea.KeyMsg) (*addWizardModel
 			m.loadDrillInFile()
 		} else {
 			m.reviewDrillPreview.ScrollDown()
+		}
+	case tea.KeyPgUp:
+		if !m.reviewDrillTree.focused {
+			m.reviewDrillPreview.PageUp()
+		}
+	case tea.KeyPgDown:
+		if !m.reviewDrillTree.focused {
+			m.reviewDrillPreview.PageDown()
 		}
 	case tea.KeyLeft, tea.KeyRight:
 		m.reviewDrillTree.focused = !m.reviewDrillTree.focused
