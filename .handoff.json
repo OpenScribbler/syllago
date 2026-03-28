@@ -1,98 +1,88 @@
 {
   "$schema": "handoff-v1",
   "current": {
-    "claimedBy": null,
+    "claimedBy": {
+      "sessionId": "80c54703-f745-4279-a7c7-e926fca00906",
+      "claimedAt": "2026-03-28T13:59:29.757Z"
+    },
     "project": "syllago",
-    "updated": "2026-03-27T17:35:58-07:00",
-    "sessionId": "76510d86-d5aa-434b-b706-ec48a8a13e03",
-    "summary": "Phase C complete: Registry Management — add modal, sync, remove. Full bead-chain with TDD, expert panel review, 27 beads all closed. 116 new tests.",
+    "updated": "2026-03-28T01:45:00.000Z",
+    "sessionId": null,
+    "summary": "Phase D Add Wizard: full bead-chain setup complete — spec, expert panel, plan, parity, sanity all passed. Ready for implementation.",
     "activeWork": {
-      "description": "Phase C complete. All 27 beads closed. Binary rebuilt. Ready to commit+push.",
-      "feature": "TUI Wizards — Phase C Registry Management",
-      "stage": "complete",
-      "planRef": "docs/plans/2026-03-27-phase-c-registry-management-spec.md",
+      "description": "Phase D Add Wizard — 5-step full-screen wizard for importing content into the library from providers, registries, local paths, or git URLs",
+      "feature": null,
+      "stage": "execute",
+      "planRef": "docs/plans/2026-03-27-phase-d-implementation-plan.md",
       "designRef": "docs/plans/2026-03-26-tui-wizards-design.md",
-      "progress": "Phase C fully implemented via bead-chain skill. Expert panel (4 agents) reviewed spec, found 9 MUST-FIX items (config race, ext:: injection, AllowedRegistries, etc). All addressed in spec v2. 27 beads executed with TDD (test→impl→validate). 64 component tests + 52 app-level tests + 4 golden files. Registry add modal with 9 validation checks, hand-rolled text input, radio source toggle. Sync and remove wired via existing confirmModal + toast patterns. registryOpInProgress flag with complete lifecycle.",
+      "progress": "All gates passed: spec v2 (expert panel: 4 agents, ~30 MUST-FIX addressed), plan v3 (parity: 5 GAPs fixed, sanity: 3 BLOCKs fixed). 21 beads created with full dependency chain. First 4 beads closed (spec, plan, parity, sanity). Next bead ready: Task 1 Checkbox List Component (syllago-iifdz).",
       "blockers": [],
       "beads": {
         "inProgress": [],
         "completedThisSession": [
-          "syllago-7bywq (Phase C epic)",
-          "syllago-6wny2 (parity check)",
-          "syllago-99mck (sanity check)",
-          "syllago-yiz4o through syllago-t7oe7 (C1.1-C1.12: Registry Add Modal)",
-          "syllago-lgfud through syllago-4w8yp (C2.1-C2.3: App Wiring)",
-          "syllago-bevfa through syllago-dycl5 (C3.1-C3.3: Action Handlers)",
-          "syllago-smfwj through syllago-49uze (C4.1-C4.3: Gallery + Helpbar)",
-          "syllago-6f033 through syllago-61x7d (C5.1-C5.4: Integration + Golden + Phase Validation)"
+          "syllago-nkx1x",
+          "syllago-28ax9",
+          "syllago-jaeri",
+          "syllago-27cc8"
         ],
         "readyNext": [
-          "syllago-dma9e (add status checks on main, P1)",
-          "syllago-5us6u (close Phase B epic, P1)",
-          "syllago-7xm4e (hook spec T6a: update toolmap_test.go, P1 in_progress)"
+          "syllago-iifdz"
         ]
       }
     },
     "git": {
       "branch": "main",
-      "uncommittedFiles": 44,
-      "lastCommit": "7fc0f69 bd sync: 2026-03-27 17:24:14",
+      "uncommittedFiles": 21,
+      "lastCommit": "a9fe62b bd sync: 2026-03-27 18:10:56",
       "modifiedFiles": [
-        "cli/internal/tui/registry_add.go (NEW — full component)",
-        "cli/internal/tui/registry_add_test.go (NEW — 64 component tests)",
-        "cli/internal/tui/actions.go (8 new handlers, 3 msg types, updated handleGalleryCardRemove + handleConfirmResult)",
-        "cli/internal/tui/app.go (registryAdd field, registryOpInProgress, isRegistriesTab, currentHints)",
-        "cli/internal/tui/app_update.go (WindowSizeMsg, key/mouse capture, keySync, message dispatch)",
-        "cli/internal/tui/app_view.go (registryAdd overlay)",
-        "cli/internal/tui/app_test.go (52 new tests)",
-        "cli/internal/tui/gallery.go (conditional [a] Add [S] Sync buttons, meta-add/meta-sync zones)",
-        "cli/internal/tui/keys.go (keySync = S)",
-        "cli/internal/tui/testdata/ (4 new golden files)",
-        "docs/plans/2026-03-27-phase-c-registry-management-spec.md (NEW — spec v2)"
+        "docs/plans/2026-03-27-phase-d-add-wizard-spec.md",
+        "docs/plans/2026-03-27-phase-d-implementation-plan.md",
+        ".beads/issues.jsonl",
+        ".handoff.json"
       ]
     },
     "recentDecisions": [
-      "Full Phase Chain with expert panel for Phase C (not quick feature — user chose thoroughness)",
-      "TDD bead pattern: test (red) → impl (green) → validate (conventions) — 3 beads per unit",
-      "Hand-rolled text input (not bubbles/textinput) — consistency with editModal",
-      "Config mutation via fresh LoadGlobal() in tea.Cmd closures — never mutate a.cfg from goroutine",
-      "No 'sync all' — [S] always syncs selected registry only",
-      "Registry remove dispatched via existing confirmModal + itemName field (no new fields on confirmModal)",
-      "Tab label distinction: isRegistriesTab checks topbar 'Registries' (plural), gallery tabLabel is 'Registry' (singular)",
-      "keySync scoped to Registries tab only — was breaking Library sort when global",
-      "Success criteria must be runnable commands with exit codes, not prose descriptions"
+      "Bead-chain approach for Phase D (full gated workflow like Phase C: spec → expert panel → plan → parity → sanity → sequential impl/validate pairs)",
+      "Skip code scanning research spike — use existing risk.go as-is for all content types",
+      "Expert panel found key issues: git URL ext:: protocol attack, taint propagation gaps, reviewAcknowledged never assigned, Enter ambiguity on Discovery step (Enter=drill-in only, →=advance), two-level Esc on Source step",
+      "Sanity check found 3 BLOCKs: config.PathResolver not config.Config for discovery, Outdated items need Force=true auto-set, toast mechanism via App-level message handling not invented toastPushMsg type",
+      "Always clear downstream state on source change (simple > fragile prevSource tracking)"
     ],
     "nextSteps": [
-      "Commit and push Phase C changes (44 uncommitted files)",
-      "Live smoke test in real TUI: [a] Add, [S] Sync, [d] Remove on Registries tab",
-      "Phase D (Add Wizard) or other priority work from bd ready",
-      "Close Phase B epic (syllago-5us6u) if no remaining issues"
+      "Commit spec + plan + beads changes (21 uncommitted files)",
+      "Start syllago-iifdz: Task 1 Checkbox List Component (checkbox_list.go + checkbox_list_test.go)",
+      "After Task 1 validate, proceed to Task 2: Add Wizard Model + Source Step (the big wiring task)",
+      "Continue sequential impl→validate chain through all 8 tasks + phase validation"
     ],
     "context": {
-      "notes": "Implementation plan at ~/.claude/plans/ancient-noodling-minsky.md — very detailed, used as source of truth for all subagents. The [a] button on Library/Content tabs is Phase D (Add Wizard, not yet built). Loadouts tab intentionally has no [a] per design doc. Branch protection still OFF on main. 44 uncommitted files include Phase C code AND uncommitted hook spec changes from a prior session."
+      "notes": "Phase D has 17 remaining beads (8 impl + 8 validate + 1 phase validation). Task 8 (Git URL Source) is marked as stretch but should be done for completeness. The spec and plan have been through 3 review gates (expert panel, parity, sanity) — they are thorough. Key files: spec at docs/plans/2026-03-27-phase-d-add-wizard-spec.md, plan at docs/plans/2026-03-27-phase-d-implementation-plan.md. The plan references existing install wizard patterns extensively — read install.go, install_update.go, install_view.go for the template to follow. The provider-monitor uncommitted files from the previous session are still present (20 files) but are separate work — don't mix them with Phase D commits."
     }
   },
   "previousSessions": [
     {
-      "summary": "Hooks specification v0.1 finalized: all 17 v0.1 items completed, changelog updated, file renamed from hooks-v1.md to hooks.md",
-      "updated": "2026-03-27T23:05:11.366Z",
+      "summary": "Provider sources pipeline: schema validated and committed, Go provider-monitor tool implementation in progress",
+      "updated": "2026-03-28T00:45:58.351Z",
       "completedWork": [
-        "All v0.1 spec items implemented and tested",
-        "Changelog updated with categorized changes",
-        "File renamed and all live references updated"
+        "Schema and 12 YAML manifests committed",
+        "Started Go provider-monitor implementation (URL health checker, change detection)",
+        "Three fetch backends (gh-api, llms-txt, html-scrape) mapped to fetch_tier"
       ],
       "nextSteps": [
-        "Commit and push hooks spec changes",
-        "Resume Phase C work"
+        "Complete provider-monitor implementation",
+        "Add unit tests for fetcher and change detection"
       ]
     },
     {
-      "summary": "Phase B complete: full-screen install wizard with risk review, 3 rounds of UX iteration. Created bead-chain skill for future phased work.",
-      "updated": "2026-03-27T13:15:00-07:00",
+      "summary": "Phase C complete: Registry Management — add modal, sync, remove. Full bead-chain with TDD, expert panel review, 27 beads all closed. 116 new tests.",
+      "updated": "2026-03-27T17:35:58-07:00",
       "completedWork": [
-        "Phase B (Install Wizard) fully implemented and pushed. All 21 impl+validate beads closed.",
-        "3 rounds of UX fixes from live user testing",
-        "bead-chain skill created for phased development workflow"
+        "Phase C fully implemented via bead-chain skill with expert panel review",
+        "27 beads executed with TDD. 64 component tests + 52 app-level tests + 4 golden files",
+        "Registry add modal, sync, remove all wired via existing patterns"
+      ],
+      "nextSteps": [
+        "Commit and push Phase C changes",
+        "Live smoke test in real TUI"
       ]
     }
   ]
