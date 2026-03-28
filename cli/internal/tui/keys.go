@@ -22,5 +22,6 @@ const (
 	keyUninstall = "x"
 	keyInstall   = "i"
 	keyRefresh   = "R"
+	keySync      = "S"
 	keyHelp      = "?"
 )

@@ -31,6 +31,9 @@ func (a App) View() string {
 	if a.remove.active {
 		content = overlayModal(content, a.remove.View(), a.width, a.contentHeight())
 	}
+	if a.registryAdd.active {
+		content = overlayModal(content, a.registryAdd.View(), a.width, a.contentHeight())
+	}
 	if a.help.active {
 		content = overlayModal(content, a.help.View(), a.width, a.contentHeight())
 	}

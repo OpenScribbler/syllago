@@ -35,16 +35,17 @@ type App struct {
 	projectRoot     string
 
 	// Sub-models
-	topBar   topBarModel
-	library  libraryModel  // Library tab: table + drill-in
-	explorer explorerModel // Content/Loadout tabs: items list + preview
-	gallery  galleryModel  // Loadouts/Registries tabs: card grid + contents sidebar
-	helpBar  helpBarModel
-	modal    editModal    // reusable edit overlay (name + description)
-	confirm  confirmModal // reusable confirm overlay (uninstall + simple confirms)
-	remove   removeModal  // multi-step remove overlay (library item removal)
-	help     helpOverlay  // keyboard shortcut reference (? key)
-	toast    toastModel   // bottom-right notification overlay
+	topBar      topBarModel
+	library     libraryModel  // Library tab: table + drill-in
+	explorer    explorerModel // Content/Loadout tabs: items list + preview
+	gallery     galleryModel  // Loadouts/Registries tabs: card grid + contents sidebar
+	helpBar     helpBarModel
+	modal       editModal        // reusable edit overlay (name + description)
+	confirm     confirmModal     // reusable confirm overlay (uninstall + simple confirms)
+	remove      removeModal      // multi-step remove overlay (library item removal)
+	help        helpOverlay      // keyboard shortcut reference (? key)
+	toast       toastModel       // bottom-right notification overlay
+	registryAdd registryAddModal // registry add overlay
 
 	// Wizard mode — when active, captures all key/mouse input
 	wizardMode    wizardKind
@@ -54,9 +55,10 @@ type App struct {
 	width, height int
 
 	// State
-	ready            bool   // false until first WindowSizeMsg
-	galleryDrillIn   bool   // true when viewing card contents as a library
-	galleryDrillCard string // name of the card we drilled into (for breadcrumbs)
+	ready                bool   // false until first WindowSizeMsg
+	galleryDrillIn       bool   // true when viewing card contents as a library
+	galleryDrillCard     string // name of the card we drilled into (for breadcrumbs)
+	registryOpInProgress bool   // true during async registry operation (add/sync/remove)
 }
 
 // NewApp creates a new TUI app. Signature matches main.go.
@@ -88,6 +90,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		remove:          newRemoveModal(),
 		help:            newHelpOverlay(),
 		toast:           newToastModel(),
+		registryAdd:     newRegistryAddModal(),
 	}
 	a.updateNavState()
 	return a
@@ -115,6 +118,11 @@ func (a App) isGalleryTab() bool {
 	group := a.topBar.ActiveGroupLabel()
 	tab := a.topBar.ActiveTabLabel()
 	return group == "Collections" && (tab == "Loadouts" || tab == "Registries")
+}
+
+// isRegistriesTab returns true if the active tab is Collections > Registries.
+func (a App) isRegistriesTab() bool {
+	return a.isGalleryTab() && a.topBar.ActiveTabLabel() == "Registries"
 }
 
 // tabToContentType maps a sub-tab label to its content type.
@@ -267,6 +275,9 @@ func (a App) currentHints() []string {
 			return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "R refresh", "? help", "q back")
 		}
 		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "e edit", "d remove", "x uninstall", "R refresh", "? help", "q back")
+	}
+	if a.isRegistriesTab() && !a.galleryDrillIn {
+		return append(base, "arrows grid", "enter select", "tab grid/contents", "a add", "S sync", "d remove", "e edit", "R refresh", "? help", "q back")
 	}
 	if a.isGalleryTab() {
 		return append(base, "arrows grid", "enter select", "tab grid/contents", "e edit", "d remove", "R refresh", "a add", "? help", "q back")
