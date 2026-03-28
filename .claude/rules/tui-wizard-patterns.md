@@ -27,11 +27,12 @@ panic("wizard invariant: stepProvider entered with empty providerNames")
 
 - **Full-screen wizards** (installWizardModel): call `validateStep()` unconditionally at the top of `Update()`
 
-## Covered Wizards (1 total)
+## Covered Wizards (2 total)
 
 | File | Model | Steps |
 |------|-------|-------|
 | install.go | installWizardModel | 4 |
+| add_wizard.go | addWizardModel | 5 |
 
 ## Test Enforcement
 
@@ -49,7 +50,9 @@ The PostToolUse hook (`wizard-invariant-gate.sh`) runs these tests after any TUI
 1. Define step enum with `iota`
 2. Add `validateStep()` method with entry-prerequisites per step
 3. Call `validateStep()` at top of `Update()` (after active guard for modals)
-4. Add forward-path tests to `wizard_invariant_test.go`
-5. Add Esc/back-path tests
-6. Add special case tests for conditional branches
-7. Add parallel array tests if the wizard uses correlated slices
+4. **Zone-mark every interactive element in every step's View function** — radio options, sub-list items, checkbox rows, buttons, text inputs, help-text actions. Use `zone.Mark(id, content)` on each one.
+5. **Add `updateMouse(msg tea.MouseMsg)` with per-step handlers** — route clicks to every zone-marked element. Every keyboard interaction must have a mouse equivalent.
+6. Add forward-path tests to `wizard_invariant_test.go`
+7. Add Esc/back-path tests
+8. Add special case tests for conditional branches
+9. Add parallel array tests if the wizard uses correlated slices
