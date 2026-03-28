@@ -21,11 +21,10 @@ const (
 
 // checkboxItem represents a single item in a multi-select checkbox list.
 type checkboxItem struct {
-	label       string
-	description string
-	disabled    bool
-	badge       string
-	badgeStyle  checkboxBadgeStyle
+	label      string
+	disabled   bool
+	badge      string
+	badgeStyle checkboxBadgeStyle
 }
 
 // checkboxList is a reusable multi-select list component with keyboard navigation,

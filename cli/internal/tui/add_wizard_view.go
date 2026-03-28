@@ -88,9 +88,10 @@ func (m *addWizardModel) viewSource() string {
 
 		// Render expanded sub-list or text input inline
 		if m.sourceExpanded && i == m.sourceCursor {
-			if i == 0 {
+			switch i {
+			case 0:
 				lines = append(lines, m.viewProviderSubList(pad)...)
-			} else if i == 1 {
+			case 1:
 				lines = append(lines, m.viewRegistrySubList(pad)...)
 			}
 		}

@@ -266,13 +266,13 @@ func (m *addWizardModel) updateKeySourceInput(msg tea.KeyMsg) (*addWizardModel, 
 // --- Type step ---
 
 func (m *addWizardModel) updateKeyType(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
-	switch {
-	case msg.Type == tea.KeyEsc:
+	switch msg.Type {
+	case tea.KeyEsc:
 		m.step = addStepSource
 		m.shell.SetActive(0)
 		return m, nil
 
-	case msg.Type == tea.KeyEnter:
+	case tea.KeyEnter:
 		if len(m.selectedTypes()) > 0 {
 			m.step = addStepDiscovery
 			m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
@@ -318,18 +318,12 @@ func (m *addWizardModel) updateKeyDiscovery(msg tea.KeyMsg) (*addWizardModel, te
 	}
 
 	// Normal results
-	switch {
-	case msg.Type == tea.KeyEsc:
+	switch msg.Type {
+	case tea.KeyEsc:
 		m.goBackFromDiscovery()
 		return m, nil
 
-	case msg.Type == tea.KeyRight:
-		if len(m.discoveryList.SelectedIndices()) > 0 {
-			m.enterReview()
-			return m, nil
-		}
-
-	case msg.Type == tea.KeyEnter:
+	case tea.KeyRight, tea.KeyEnter:
 		if len(m.discoveryList.SelectedIndices()) > 0 {
 			m.enterReview()
 			return m, nil

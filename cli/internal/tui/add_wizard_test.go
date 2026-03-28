@@ -260,7 +260,7 @@ func TestAddWizard_Source_EscClosesWizard(t *testing.T) {
 	m := testOpenAddWizard(t)
 
 	var cmd tea.Cmd
-	m, cmd = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
 
 	if cmd == nil {
 		t.Fatal("expected cmd from Esc on Source")
@@ -558,7 +558,7 @@ func TestAddWizard_Review_CancelClosesWizard(t *testing.T) {
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
 
 	var cmd tea.Cmd
-	m, cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if cmd == nil {
 		t.Fatal("expected cmd from Cancel")
 	}
@@ -740,7 +740,7 @@ func TestAddWizard_Execute_EnterOnDoneCloses(t *testing.T) {
 
 	// Enter on done screen
 	var cmd tea.Cmd
-	m, cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if cmd == nil {
 		t.Fatal("expected cmd from Enter on done")
 	}
