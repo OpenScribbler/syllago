@@ -346,7 +346,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case addCloseMsg:
 		if a.addWizard != nil && a.addWizard.gitTempDir != "" {
-			os.RemoveAll(a.addWizard.gitTempDir)
+			_ = os.RemoveAll(a.addWizard.gitTempDir)
 		}
 		a.addWizard = nil
 		a.wizardMode = wizardNone

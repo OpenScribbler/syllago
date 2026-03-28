@@ -150,7 +150,7 @@ func TestCheckboxList_DrillIn(t *testing.T) {
 
 	// Enter on cursor 2
 	var cmd tea.Cmd
-	c, cmd = c.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd = c.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if cmd == nil {
 		t.Fatal("expected cmd from Enter")
 	}

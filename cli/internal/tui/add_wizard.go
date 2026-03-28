@@ -360,7 +360,7 @@ func (m *addWizardModel) goBackFromDiscovery() {
 	m.discovering = false
 
 	if m.gitTempDir != "" {
-		os.RemoveAll(m.gitTempDir)
+		_ = os.RemoveAll(m.gitTempDir)
 		m.gitTempDir = ""
 	}
 
@@ -725,7 +725,7 @@ func discoverFromGitURL(
 	}
 	items, err := discoverFromLocalPath(tmpDir, selectedTypes, contentRoot)
 	if err != nil {
-		os.RemoveAll(filepath.Dir(tmpDir))
+		_ = os.RemoveAll(filepath.Dir(tmpDir))
 		return nil, "", err
 	}
 	return items, tmpDir, nil
@@ -810,7 +810,7 @@ func cloneGitURL(url string, timeoutSec int) (string, error) {
 	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
 
 	if err := cmd.Run(); err != nil {
-		os.RemoveAll(parentDir)
+		_ = os.RemoveAll(parentDir)
 		return "", fmt.Errorf("git clone: %w", err)
 	}
 	return repoDir, nil
