@@ -24,7 +24,7 @@ cd cli && go test ./internal/tui/ -update-golden
 ## Key Conventions
 
 - **Hooks and MCP configs** merge into provider settings files (JSON merge). All other content types use filesystem (files, dirs, symlinks).
-- **Hook canonical format** is defined in `docs/spec/hooks-v1.md`. Canonical event names are provider-neutral snake_case (`before_tool_execute`, not `PreToolUse`). Canonical tool names are descriptive lowercase (`shell`, `file_read`, `file_edit`). Provider-native names (CC's `PreToolUse`, Gemini's `BeforeTool`, etc.) live in the `HookEvents`/`ToolNames` maps in `toolmap.go` — Claude Code is a regular provider entry, not the implicit key.
+- **Hook canonical format** is defined in `docs/spec/hooks.md`. Canonical event names are provider-neutral snake_case (`before_tool_execute`, not `PreToolUse`). Canonical tool names are descriptive lowercase (`shell`, `file_read`, `file_edit`). Provider-native names (CC's `PreToolUse`, Gemini's `BeforeTool`, etc.) live in the `HookEvents`/`ToolNames` maps in `toolmap.go` — Claude Code is a regular provider entry, not the implicit key.
 - Go conventions: see `cli/CLAUDE.md`
 - TUI component patterns: see `cli/internal/tui/CLAUDE.md`
 
