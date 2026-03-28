@@ -135,6 +135,9 @@ type addWizardModel struct {
 	discoveredItems []addDiscoveryItem
 	discoveryList   checkboxList
 	discoveryErr    string
+	showInstalled   bool // toggle for showing "in library" items
+	installedCount  int  // number of installed items (at end of discoveredItems)
+	actionableCount int  // number of actionable items (New/Outdated)
 
 	// Taint
 	sourceRegistry   string
@@ -248,6 +251,43 @@ func (m *addWizardModel) validateStep() {
 	}
 }
 
+// stepHints returns helpbar hints for the current wizard step.
+func (m *addWizardModel) stepHints() []string {
+	base := []string{"? help"}
+	switch m.step {
+	case addStepSource:
+		if m.inputActive {
+			return append([]string{"type path/URL", "enter confirm", "esc cancel"}, base...)
+		}
+		if m.sourceExpanded {
+			return append([]string{"↑/↓ select", "enter confirm", "esc collapse"}, base...)
+		}
+		return append([]string{"↑/↓ select", "enter expand", "esc close wizard"}, base...)
+	case addStepType:
+		return append([]string{"↑/↓ navigate", "space toggle", "a all", "n none", "enter next", "esc back"}, base...)
+	case addStepDiscovery:
+		if m.discovering {
+			return append([]string{"esc cancel"}, base...)
+		}
+		if m.discoveryErr != "" {
+			return append([]string{"r retry", "esc back"}, base...)
+		}
+		hints := []string{"↑/↓ navigate", "space toggle", "a all", "n none"}
+		if m.installedCount > 0 {
+			hints = append(hints, "h show/hide installed")
+		}
+		return append(append(hints, "enter next", "esc back"), base...)
+	case addStepReview:
+		return append([]string{"tab cycle zones", "↑/↓ navigate", "←/→ buttons", "enter confirm", "esc back"}, base...)
+	case addStepExecute:
+		if m.executeDone {
+			return append([]string{"enter close"}, base...)
+		}
+		return append([]string{"esc cancel remaining"}, base...)
+	}
+	return base
+}
+
 // selectedTypes returns the content types checked in the type step.
 // If preFilterType is set, returns just that type.
 func (m *addWizardModel) selectedTypes() []catalog.ContentType {
@@ -269,10 +309,11 @@ func (m *addWizardModel) selectedTypes() []catalog.ContentType {
 
 // selectedItems returns the discovered items that are checked in the discovery list.
 func (m *addWizardModel) selectedItems() []addDiscoveryItem {
+	visible := m.visibleDiscoveryItems()
 	var result []addDiscoveryItem
 	for _, idx := range m.discoveryList.SelectedIndices() {
-		if idx < len(m.discoveredItems) {
-			result = append(result, m.discoveredItems[idx])
+		if idx < len(visible) {
+			result = append(result, visible[idx])
 		}
 	}
 	return result
@@ -463,46 +504,126 @@ func (m *addWizardModel) startDiscoveryCmd() tea.Cmd {
 	return nil
 }
 
+// discoveryColLayout holds column widths for the discovery table.
+type discoveryColLayout struct {
+	name   int
+	ctype  int
+	status int
+	risk   int
+}
+
+// discoveryColumns computes column widths for the discovery list.
+func (m *addWizardModel) discoveryColumns() discoveryColLayout {
+	w := m.width - 12 // prefix (6: "> [x] ") + right padding (4) + gaps (2)
+	ctype := 8
+	status := 12
+	risk := 6
+	fixed := ctype + status + risk + 3 // 3 gaps
+	nameW := max(12, w-fixed)
+	return discoveryColLayout{nameW, ctype, status, risk}
+}
+
+// discoveryHeader renders the column header for the discovery table.
+func (m *addWizardModel) discoveryHeader() string {
+	cols := m.discoveryColumns()
+	prefix := "      " // matches checkbox row prefix width ("> [x] ")
+	row := prefix +
+		boldStyle.Render(padRight("Name", cols.name)) + " " +
+		boldStyle.Render(padRight("Type", cols.ctype)) + " " +
+		boldStyle.Render(padRight("Status", cols.status)) + " " +
+		boldStyle.Render(padRight("Risk", cols.risk))
+	return truncateLine(row, m.width)
+}
+
+// toggleInstalled toggles the showInstalled flag and rebuilds the discovery list,
+// preserving selection state for the actionable items.
+func (m *addWizardModel) toggleInstalled() {
+	// Save current selections (indices into visible items)
+	oldVisible := m.visibleDiscoveryItems()
+	oldSelected := make(map[int]bool)
+	for _, idx := range m.discoveryList.SelectedIndices() {
+		if idx < len(oldVisible) {
+			// Map to discoveredItems index
+			oldSelected[idx] = true
+		}
+	}
+
+	m.showInstalled = !m.showInstalled
+	m.discoveryList = m.buildDiscoveryList()
+
+	// Restore selections — actionable items keep the same indices (they're first)
+	for idx := range oldSelected {
+		if idx < len(m.discoveryList.selected) {
+			m.discoveryList.selected[idx] = true
+		}
+	}
+}
+
+// visibleDiscoveryItems returns the items visible based on the showInstalled toggle.
+func (m *addWizardModel) visibleDiscoveryItems() []addDiscoveryItem {
+	if m.showInstalled || m.installedCount == 0 {
+		return m.discoveredItems
+	}
+	return m.discoveredItems[:m.actionableCount]
+}
+
 // buildDiscoveryList creates a checkboxList from discovered items.
 func (m *addWizardModel) buildDiscoveryList() checkboxList {
-	items := make([]checkboxItem, len(m.discoveredItems))
-	for i, d := range m.discoveredItems {
-		var badge string
-		var bStyle checkboxBadgeStyle
-
-		switch d.status {
-		case add.StatusNew:
-			badge = "new"
-			bStyle = badgeStyleSuccess
-		case add.StatusInLibrary:
-			badge = "in library"
-			bStyle = badgeStyleMuted
-		case add.StatusOutdated:
-			badge = "outdated"
-			bStyle = badgeStyleWarning
+	visible := m.visibleDiscoveryItems()
+	cols := m.discoveryColumns()
+	items := make([]checkboxItem, len(visible))
+	for i, d := range visible {
+		name := d.displayName
+		if name == "" {
+			name = d.name
 		}
 
-		// Add risk badge if present
+		typeLbl := typeLabel(d.itemType)
+
+		var statusLbl string
+		var statusBadge checkboxBadgeStyle
+		switch d.status {
+		case add.StatusNew:
+			statusLbl = "new"
+			statusBadge = badgeStyleSuccess
+		case add.StatusInLibrary:
+			statusLbl = "in library"
+			statusBadge = badgeStyleMuted
+		case add.StatusOutdated:
+			statusLbl = "outdated"
+			statusBadge = badgeStyleWarning
+		}
+
+		var riskLbl string
 		if len(d.risks) > 0 {
+			hasHigh := false
 			for _, r := range d.risks {
 				if r.Level == catalog.RiskHigh {
-					badge = "⚠ " + badge
-					bStyle = badgeStyleDanger
+					hasHigh = true
 					break
+				}
+			}
+			if hasHigh {
+				riskLbl = "!!"
+				statusBadge = badgeStyleDanger
+			} else {
+				riskLbl = "!"
+				if statusBadge != badgeStyleWarning {
+					statusBadge = badgeStyleWarning
 				}
 			}
 		}
 
-		label := d.displayName
-		if label == "" {
-			label = d.name
-		}
-		label += "  " + mutedStyle.Render("("+string(d.itemType)+")")
+		// Build fixed-width columnar label
+		label := padRight(truncate(sanitizeLine(name), cols.name), cols.name) + " " +
+			padRight(truncate(typeLbl, cols.ctype), cols.ctype) + " " +
+			padRight(truncate(statusLbl, cols.status), cols.status) + " " +
+			riskLbl
 
 		items[i] = checkboxItem{
 			label:      label,
-			badge:      badge,
-			badgeStyle: bStyle,
+			badge:      "",
+			badgeStyle: statusBadge,
 		}
 	}
 
@@ -511,13 +632,14 @@ func (m *addWizardModel) buildDiscoveryList() checkboxList {
 	cl.zonePrefix = "add-disc"
 
 	// Pre-select: New and Outdated checked, InLibrary unchecked
-	for i, d := range m.discoveredItems {
+	for i, d := range visible {
 		switch d.status {
 		case add.StatusNew, add.StatusOutdated:
 			cl.selected[i] = true
 		}
 		// Auto-set overwrite for outdated items
 		if d.status == add.StatusOutdated {
+			// Find the actual index in discoveredItems
 			m.discoveredItems[i].overwrite = true
 		}
 	}

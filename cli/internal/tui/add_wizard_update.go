@@ -7,6 +7,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
+
+	"github.com/OpenScribbler/syllago/cli/internal/add"
 )
 
 // Update handles messages for the add wizard.
@@ -52,6 +54,14 @@ func (m *addWizardModel) updateMouse(msg tea.MouseMsg) (*addWizardModel, tea.Cmd
 			m.reviewAcknowledged = false
 		}
 		return m, nil
+	}
+
+	// Nav button clicks (shared across steps)
+	if zone.Get("add-nav-back").InBounds(msg) {
+		return m.updateKey(tea.KeyMsg{Type: tea.KeyEsc})
+	}
+	if zone.Get("add-nav-next").InBounds(msg) {
+		return m.updateKey(tea.KeyMsg{Type: tea.KeyEnter})
 	}
 
 	// Per-step mouse routing
@@ -176,6 +186,14 @@ func (m *addWizardModel) updateMouseDiscovery(msg tea.MouseMsg) (*addWizardModel
 	// Empty state back button
 	if zone.Get("add-empty-back").InBounds(msg) {
 		m.goBackFromDiscovery()
+		return m, nil
+	}
+
+	// Installed items toggle
+	if zone.Get("add-installed-toggle").InBounds(msg) {
+		if m.installedCount > 0 {
+			m.toggleInstalled()
+		}
 		return m, nil
 	}
 
@@ -553,14 +571,20 @@ func (m *addWizardModel) updateKeyDiscovery(msg tea.KeyMsg) (*addWizardModel, te
 	}
 
 	// Normal results
-	switch msg.Type {
-	case tea.KeyEsc:
+	switch {
+	case msg.Type == tea.KeyEsc:
 		m.goBackFromDiscovery()
 		return m, nil
 
-	case tea.KeyRight, tea.KeyEnter:
+	case msg.Type == tea.KeyRight || msg.Type == tea.KeyEnter:
 		if len(m.discoveryList.SelectedIndices()) > 0 {
 			m.enterReview()
+			return m, nil
+		}
+
+	case msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'h':
+		if m.installedCount > 0 {
+			m.toggleInstalled()
 			return m, nil
 		}
 
@@ -581,7 +605,21 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 		m.discoveryErr = msg.err.Error()
 		return m, nil
 	}
-	m.discoveredItems = msg.items
+
+	// Sort items: actionable (New/Outdated) first, installed (InLibrary) last
+	var actionable, installed []addDiscoveryItem
+	for _, item := range msg.items {
+		if item.status == add.StatusInLibrary {
+			installed = append(installed, item)
+		} else {
+			actionable = append(actionable, item)
+		}
+	}
+	m.actionableCount = len(actionable)
+	m.installedCount = len(installed)
+	m.discoveredItems = append(actionable, installed...)
+	m.showInstalled = false
+
 	if msg.tmpDir != "" {
 		m.gitTempDir = msg.tmpDir
 	}
@@ -654,19 +692,19 @@ func (m *addWizardModel) updateKeyReviewButtons(msg tea.KeyMsg) (*addWizardModel
 		}
 	case msg.Type == tea.KeyEnter:
 		switch m.buttonCursor {
-		case 0: // Cancel
-			return m, func() tea.Msg { return addCloseMsg{} }
-		case 1: // Back
-			m.step = addStepDiscovery
-			m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
-			m.reviewAcknowledged = false
-			return m, nil
-		case 2: // Add
+		case 0: // Add
 			if !m.reviewAcknowledged {
 				m.reviewAcknowledged = true
 				m.enterExecute()
 				return m, m.addItemCmd(0)
 			}
+		case 1: // Back
+			m.step = addStepDiscovery
+			m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+			m.reviewAcknowledged = false
+			return m, nil
+		case 2: // Cancel
+			return m, func() tea.Msg { return addCloseMsg{} }
 		}
 	}
 	return m, nil

@@ -24,6 +24,22 @@ const (
 	installStepReview
 )
 
+// stepHints returns helpbar hints for the current install wizard step.
+func (m *installWizardModel) stepHints() []string {
+	base := []string{"? help"}
+	switch m.step {
+	case installStepProvider:
+		return append([]string{"↑/↓ select", "enter next", "esc close wizard"}, base...)
+	case installStepLocation:
+		return append([]string{"↑/↓ select", "enter next", "esc back"}, base...)
+	case installStepMethod:
+		return append([]string{"↑/↓ select", "enter next", "esc back"}, base...)
+	case installStepReview:
+		return append([]string{"tab cycle zones", "↑/↓ navigate", "enter confirm", "esc back"}, base...)
+	}
+	return base
+}
+
 // reviewFocusZone tracks which zone is focused on the review step.
 // Tab cycles through: risks -> tree -> preview -> buttons -> risks.
 type reviewFocusZone int

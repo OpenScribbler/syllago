@@ -342,6 +342,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case installCloseMsg:
 		a.installWizard = nil
 		a.wizardMode = wizardNone
+		a.updateNavState()
 		return a, nil
 
 	case addCloseMsg:
@@ -350,6 +351,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		a.addWizard = nil
 		a.wizardMode = wizardNone
+		a.updateNavState()
 		cmd := a.rescanCatalog()
 		return a, cmd
 
@@ -577,11 +579,13 @@ func (a App) routeToWizard(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case wizardInstall:
 		if a.installWizard != nil {
 			_, cmd := a.installWizard.Update(msg)
+			a.helpBar.SetHints(a.currentHints())
 			return a, cmd
 		}
 	case wizardAdd:
 		if a.addWizard != nil {
 			_, cmd := a.addWizard.Update(msg)
+			a.helpBar.SetHints(a.currentHints())
 			return a, cmd
 		}
 	}

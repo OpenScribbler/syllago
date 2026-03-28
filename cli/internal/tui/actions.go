@@ -457,6 +457,7 @@ func (a App) handleAdd() (tea.Model, tea.Cmd) {
 	a.addWizard.height = a.contentHeight()
 	a.addWizard.shell.SetWidth(a.width)
 	a.wizardMode = wizardAdd
+	a.updateNavState()
 	return a, nil
 }
 
@@ -494,6 +495,7 @@ func (a App) handleInstall() (tea.Model, tea.Cmd) {
 	a.installWizard.height = a.contentHeight()
 	a.installWizard.shell.SetWidth(a.width)
 	a.wizardMode = wizardInstall
+	a.updateNavState()
 	return a, nil
 }
 
@@ -502,6 +504,7 @@ func (a App) handleInstallResult(msg installResultMsg) (tea.Model, tea.Cmd) {
 	// Close wizard immediately — the install happens async.
 	a.installWizard = nil
 	a.wizardMode = wizardNone
+	a.updateNavState()
 	return a, a.doInstallCmd(msg)
 }
 
