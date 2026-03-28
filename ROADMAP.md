@@ -54,7 +54,7 @@ Syllago defines provider-neutral interchange formats for each content type. The 
 
 | Content Type | Spec | Status |
 |---|---|---|
-| Hooks | [`docs/spec/hooks-v1.md`](docs/spec/hooks-v1.md) | Draft |
+| Hooks | [`docs/spec/hooks.md`](docs/spec/hooks.md) | Draft |
 | Skills | `docs/spec/skills-v1.md` | Planned |
 | Agents | `docs/spec/agents-v1.md` | Planned |
 | Rules | `docs/spec/rules-v1.md` | Planned |

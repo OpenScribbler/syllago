@@ -1,73 +1,98 @@
 {
   "$schema": "handoff-v1",
   "current": {
-    "claimedBy": {
-      "sessionId": "current-session",
-      "claimedAt": "2026-03-27T16:36:00.000Z"
-    },
+    "claimedBy": null,
     "project": "syllago",
-    "updated": "2026-03-27T16:35:38.550Z",
-    "sessionId": "7066de8d-5da6-44dc-8b7e-00efa6699785",
-    "summary": "TUI AI Context Architecture implementation complete. All 18 implementation tasks done, 7 commits grouped and pushed. Ready for live hook testing.",
+    "updated": "2026-03-27T17:35:58-07:00",
+    "sessionId": "76510d86-d5aa-434b-b706-ec48a8a13e03",
+    "summary": "Phase C complete: Registry Management — add modal, sync, remove. Full bead-chain with TDD, expert panel review, 27 beads all closed. 116 new tests.",
     "activeWork": {
-      "description": "TUI AI Context Architecture - hook enforcement and testing",
-      "feature": "TUI AI Context Architecture",
-      "stage": "testing",
-      "planRef": ".claude/plans/piped-dancing-tarjan.md",
-      "designRef": "docs/plans/2026-03-27-tui-ai-context-design.md",
-      "progress": "All 43 beads closed. File splits (app.go, install.go → 6 files), v1 cleanup, 4 new rule files, CLAUDE.md/SKILL.md consolidation, 3 enforcement hooks all implemented and committed. Ready to run live hook tests in fresh session.",
+      "description": "Phase C complete. All 27 beads closed. Binary rebuilt. Ready to commit+push.",
+      "feature": "TUI Wizards — Phase C Registry Management",
+      "stage": "complete",
+      "planRef": "docs/plans/2026-03-27-phase-c-registry-management-spec.md",
+      "designRef": "docs/plans/2026-03-26-tui-wizards-design.md",
+      "progress": "Phase C fully implemented via bead-chain skill. Expert panel (4 agents) reviewed spec, found 9 MUST-FIX items (config race, ext:: injection, AllowedRegistries, etc). All addressed in spec v2. 27 beads executed with TDD (test→impl→validate). 64 component tests + 52 app-level tests + 4 golden files. Registry add modal with 9 validation checks, hand-rolled text input, radio source toggle. Sync and remove wired via existing confirmModal + toast patterns. registryOpInProgress flag with complete lifecycle.",
       "blockers": [],
-      "beads": null
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": [
+          "syllago-7bywq (Phase C epic)",
+          "syllago-6wny2 (parity check)",
+          "syllago-99mck (sanity check)",
+          "syllago-yiz4o through syllago-t7oe7 (C1.1-C1.12: Registry Add Modal)",
+          "syllago-lgfud through syllago-4w8yp (C2.1-C2.3: App Wiring)",
+          "syllago-bevfa through syllago-dycl5 (C3.1-C3.3: Action Handlers)",
+          "syllago-smfwj through syllago-49uze (C4.1-C4.3: Gallery + Helpbar)",
+          "syllago-6f033 through syllago-61x7d (C5.1-C5.4: Integration + Golden + Phase Validation)"
+        ],
+        "readyNext": [
+          "syllago-dma9e (add status checks on main, P1)",
+          "syllago-5us6u (close Phase B epic, P1)",
+          "syllago-7xm4e (hook spec T6a: update toolmap_test.go, P1 in_progress)"
+        ]
+      }
     },
     "git": {
       "branch": "main",
-      "uncommittedFiles": 3,
-      "lastCommit": "4592bde chore: update handoff and audit state",
-      "modifiedFiles": []
+      "uncommittedFiles": 44,
+      "lastCommit": "7fc0f69 bd sync: 2026-03-27 17:24:14",
+      "modifiedFiles": [
+        "cli/internal/tui/registry_add.go (NEW — full component)",
+        "cli/internal/tui/registry_add_test.go (NEW — 64 component tests)",
+        "cli/internal/tui/actions.go (8 new handlers, 3 msg types, updated handleGalleryCardRemove + handleConfirmResult)",
+        "cli/internal/tui/app.go (registryAdd field, registryOpInProgress, isRegistriesTab, currentHints)",
+        "cli/internal/tui/app_update.go (WindowSizeMsg, key/mouse capture, keySync, message dispatch)",
+        "cli/internal/tui/app_view.go (registryAdd overlay)",
+        "cli/internal/tui/app_test.go (52 new tests)",
+        "cli/internal/tui/gallery.go (conditional [a] Add [S] Sync buttons, meta-add/meta-sync zones)",
+        "cli/internal/tui/keys.go (keySync = S)",
+        "cli/internal/tui/testdata/ (4 new golden files)",
+        "docs/plans/2026-03-27-phase-c-registry-management-spec.md (NEW — spec v2)"
+      ]
     },
     "recentDecisions": [
-      "Grouped 18 implementation tasks into 7 logical commits: prior work, file splits, v1 cleanup, new rules, context consolidation, hook enforcement, session state",
-      "File splits: app.go → app.go + app_update.go + app_view.go; install.go → install.go + install_update.go + install_view.go",
-      "Deleted 12 v1 rule files, tui_v1/CLAUDE.md, and tui-rules-reminder.sh hook",
-      "Created 4 new rule files: tui-elm.md, tui-layout.md, tui-modals.md, tui-testing.md",
-      "CLAUDE.md consolidated (198→84 lines), SKILL.md consolidated (510→56 lines)",
-      "3 enforcement hooks: tui-context-gate.sh, tui-pattern-nudge.sh, tui-docs-gate.sh registered in settings.json"
+      "Full Phase Chain with expert panel for Phase C (not quick feature — user chose thoroughness)",
+      "TDD bead pattern: test (red) → impl (green) → validate (conventions) — 3 beads per unit",
+      "Hand-rolled text input (not bubbles/textinput) — consistency with editModal",
+      "Config mutation via fresh LoadGlobal() in tea.Cmd closures — never mutate a.cfg from goroutine",
+      "No 'sync all' — [S] always syncs selected registry only",
+      "Registry remove dispatched via existing confirmModal + itemName field (no new fields on confirmModal)",
+      "Tab label distinction: isRegistriesTab checks topbar 'Registries' (plural), gallery tabLabel is 'Registry' (singular)",
+      "keySync scoped to Registries tab only — was breaking Library sort when global",
+      "Success criteria must be runnable commands with exit codes, not prose descriptions"
     ],
     "nextSteps": [
-      "Start fresh session to activate hooks (added during this session, not active yet)",
-      "Run live hook tests per .claude/plans/piped-dancing-tarjan.md",
-      "Tests 1, 7, 8 (static checks) can run now; tests 2-6 need fresh session",
-      "Run P0 tests first: context-gate + docs-gate for validation"
+      "Commit and push Phase C changes (44 uncommitted files)",
+      "Live smoke test in real TUI: [a] Add, [S] Sync, [d] Remove on Registries tab",
+      "Phase D (Add Wizard) or other priority work from bd ready",
+      "Close Phase B epic (syllago-5us6u) if no remaining issues"
     ],
     "context": {
-      "notes": "Implementation is complete; all enforcement hooks wired but require session restart to activate. 3 uncommitted files (.copilot/, opencode.json, reviews/) are from prior unrelated work. Test plan ready at .claude/plans/piped-dancing-tarjan.md with 8 test areas prioritized P0-P3. Next session can run hook tests autonomously."
+      "notes": "Implementation plan at ~/.claude/plans/ancient-noodling-minsky.md — very detailed, used as source of truth for all subagents. The [a] button on Library/Content tabs is Phase D (Add Wizard, not yet built). Loadouts tab intentionally has no [a] per design doc. Branch protection still OFF on main. 44 uncommitted files include Phase C code AND uncommitted hook spec changes from a prior session."
     }
   },
   "previousSessions": [
     {
-      "summary": "Executed full 18-task TUI AI Context Architecture bead chain. All file splits, rule rewrites, CLAUDE.md consolidation, skill restructure, and 3 enforcement hooks implemented and verified.",
-      "updated": "2026-03-27T15:45:00Z",
+      "summary": "Hooks specification v0.1 finalized: all 17 v0.1 items completed, changelog updated, file renamed from hooks-v1.md to hooks.md",
+      "updated": "2026-03-27T23:05:11.366Z",
       "completedWork": [
-        "All 43 beads closed (4 gates + 19 impl + 19 validate + 1 phase validation)",
-        "10-point system check passed",
-        "Go build and tests all pass; golden files verified"
+        "All v0.1 spec items implemented and tested",
+        "Changelog updated with categorized changes",
+        "File renamed and all live references updated"
       ],
       "nextSteps": [
-        "Commit all changes (7 logical commits grouped and pushed)",
-        "Start fresh session to live-test hooks",
-        "Run live hook enforcement tests (test plan in .claude/plans/piped-dancing-tarjan.md)"
+        "Commit and push hooks spec changes",
+        "Resume Phase C work"
       ]
     },
     {
-      "summary": "Deep research + full bead chain for TUI AI context architecture. 4 gate beads complete, 39 impl+validate beads wired and ready to execute.",
-      "updated": "2026-03-27T07:30:00Z",
+      "summary": "Phase B complete: full-screen install wizard with risk review, 3 rounds of UX iteration. Created bead-chain skill for future phased work.",
+      "updated": "2026-03-27T13:15:00-07:00",
       "completedWork": [
-        "Gates 1-4 (Spec, Plan, Parity, Sanity Check) all complete",
-        "39 beads created and chained for implementation",
-        "Design doc and implementation plan written"
-      ],
-      "nextSteps": [
-        "Execute bead chain starting with T1: Split app.go"
+        "Phase B (Install Wizard) fully implemented and pushed. All 21 impl+validate beads closed.",
+        "3 rounds of UX fixes from live user testing",
+        "bead-chain skill created for phased development workflow"
       ]
     }
   ]
