@@ -381,7 +381,7 @@ func (m *addWizardModel) viewReview() string {
 		switch item.status {
 		case add.StatusNew:
 			statusLbl = "new"
-			statusColor = successColor
+			statusColor = primaryColor
 		case add.StatusOutdated:
 			statusLbl = "update"
 			statusColor = warningColor
@@ -496,10 +496,10 @@ func (m *addWizardModel) viewExecute() string {
 			r := m.executeResults[i]
 			switch r.status {
 			case "added":
-				icon = lipgloss.NewStyle().Foreground(successColor).Render("✓")
+				icon = lipgloss.NewStyle().Foreground(successColor).Render("●")
 				statusText = "Added"
 			case "updated":
-				icon = lipgloss.NewStyle().Foreground(successColor).Render("✓")
+				icon = lipgloss.NewStyle().Foreground(successColor).Render("●")
 				statusText = "Updated"
 			case "error":
 				icon = lipgloss.NewStyle().Foreground(dangerColor).Render("✗")
@@ -519,7 +519,7 @@ func (m *addWizardModel) viewExecute() string {
 					icon = lipgloss.NewStyle().Foreground(primaryColor).Render("◐")
 					statusText = "Adding..."
 				} else {
-					icon = mutedStyle.Render(" ")
+					icon = mutedStyle.Render("○")
 					statusText = "Pending"
 				}
 			}

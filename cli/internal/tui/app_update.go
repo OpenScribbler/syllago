@@ -375,6 +375,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, cmd
 		}
 
+	case addExecItemDoneMsg:
+		if a.addWizard != nil {
+			_, cmd := a.addWizard.Update(msg)
+			return a, cmd
+		}
+
 	case addExecAllDoneMsg:
 		if a.addWizard != nil {
 			count := len(a.addWizard.selectedItems())
