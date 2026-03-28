@@ -1,0 +1,4 @@
+{
+  "_comment": "MUST be rejected: missing required 'hooks' field.",
+  "spec": "hooks/0.1"
+}

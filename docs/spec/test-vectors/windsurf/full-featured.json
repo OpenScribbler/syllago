@@ -1,0 +1,27 @@
+{
+  "_comment": "Expected Windsurf output for canonical/full-featured.json. Tests: (1) before_tool_execute + shell -> pre_run_command with provider_data.windsurf rendered (show_output, working_directory); (2) MCP matcher -> pre_mcp_tool_use; (3) session_start -> unsupported (dropped with warning). Windsurf does not support: timeout, env, platform overrides, structured output, or session lifecycle events.",
+  "_warnings": [
+    "Hook 1: timeout field dropped — Windsurf does not support configurable timeouts",
+    "Hook 1: platform overrides dropped — Windsurf does not support per-OS command overrides (platform_commands capability degraded: warn)",
+    "Hook 1: env field dropped — Windsurf does not support custom environment variables (custom_env capability degraded: warn)",
+    "Hook 1: cwd field mapped to working_directory via provider_data — Windsurf requires absolute paths",
+    "Hook 1: provider_data.windsurf.show_output and working_directory rendered into native format",
+    "Hook 2: MCP matcher {server: 'github', tool: 'create_issue'} mapped to pre_mcp_tool_use — Windsurf pre_mcp_tool_use fires for ALL MCP tools, not filtered by server/tool. The matcher granularity is lost.",
+    "Hook 2: timeout field dropped — Windsurf does not support configurable timeouts",
+    "Hook 3: session_start is not supported by Windsurf — hook excluded"
+  ],
+  "hooks": {
+    "pre_run_command": [
+      {
+        "command": "./safety-check.sh",
+        "show_output": true,
+        "working_directory": "/opt/hooks"
+      }
+    ],
+    "pre_mcp_tool_use": [
+      {
+        "command": "./validate-issue.sh"
+      }
+    ]
+  }
+}

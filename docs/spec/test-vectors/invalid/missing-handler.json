@@ -1,0 +1,9 @@
+{
+  "_comment": "MUST be rejected: hook definition missing required 'handler' field.",
+  "spec": "hooks/0.1",
+  "hooks": [
+    {
+      "event": "before_tool_execute"
+    }
+  ]
+}

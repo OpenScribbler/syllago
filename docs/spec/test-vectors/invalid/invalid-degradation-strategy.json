@@ -1,0 +1,13 @@
+{
+  "_comment": "MUST be rejected: degradation strategy 'ignore' is not a valid value (must be 'block', 'warn', or 'exclude').",
+  "spec": "hooks/0.1",
+  "hooks": [
+    {
+      "event": "before_tool_execute",
+      "handler": { "type": "command", "command": "./check.sh" },
+      "degradation": {
+        "input_rewrite": "ignore"
+      }
+    }
+  ]
+}

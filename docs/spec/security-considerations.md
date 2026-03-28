@@ -1,6 +1,6 @@
 # Security Considerations
 
-This document describes the threat model, attack surface, and security recommendations for implementations of the [Hook Interchange Format Specification](hooks-v1.md).
+This document describes the threat model, attack surface, and security recommendations for implementations of the [Hook Interchange Format Specification](hooks.md).
 
 ---
 
@@ -20,6 +20,10 @@ Hooks execute arbitrary code on a developer's machine with the privileges of the
 ### 1.2 Historical Context
 
 In February 2026, hooks in AI coding tools were identified as an RCE vector (CVE details vary by provider). This demonstrated that hook distribution without provenance controls is an active, exploited attack surface.
+
+### 1.3 Cross-Provider Amplification
+
+The hub-and-spoke conversion model is a force multiplier for supply chain attacks. A single malicious hook, once converted to canonical format, can be deployed to all supported providers simultaneously. A compromised hook in a community registry could propagate across Claude Code, Gemini CLI, Cursor, Windsurf, and other providers in a single conversion operation. Distribution mechanisms (registries, package managers) MUST account for this amplification when designing integrity and review controls.
 
 ---
 
@@ -58,9 +62,11 @@ Hooks with `type: "http"` send request data to external endpoints. This creates 
 - **SSRF (Server-Side Request Forgery):** If the hook runs in an environment with access to internal networks, the URL endpoint could target internal services.
 - **Credential leakage:** HTTP handlers that interpolate environment variables into headers (e.g., `Authorization: Bearer $TOKEN`) may leak secrets if the URL is attacker-controlled.
 
+Implementations MUST:
+- Restrict HTTP handler URLs to HTTPS. There is no legitimate reason for a hook to send data over plaintext HTTP.
+- Display the target URL to the user before executing HTTP hooks for the first time.
+
 Implementations SHOULD:
-- Display the target URL to the user before executing HTTP hooks.
-- Restrict HTTP handler URLs to HTTPS.
 - Warn when environment variables are interpolated into HTTP headers.
 
 ### 2.5 LLM-Evaluated Hooks

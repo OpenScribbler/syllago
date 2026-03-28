@@ -1,7 +1,7 @@
 # Hook Interchange Format Specification
 
-**Version:** 1.0.0-draft
-**Status:** Draft
+**Version:** 0.1.0
+**Status:** Initial Development
 **License:** CC-BY-4.0
 
 ## Abstract
@@ -10,7 +10,7 @@ This specification defines a provider-neutral interchange format for AI coding t
 
 ## Status of This Document
 
-This is a draft specification. It has not been finalized and is subject to change. Implementations SHOULD treat this document as informative until the status changes to "Final."
+This specification is in initial development (major version zero). Per [Semantic Versioning](https://semver.org/), anything MAY change at any time. The public interface should not be considered stable until version 1.0.
 
 ---
 
@@ -87,8 +87,10 @@ A canonical hook manifest is a JSON object with the following fields:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `spec` | string | REQUIRED | Specification version identifier. MUST be `"hooks/1.0"` for this version. |
+| `spec` | string | REQUIRED | Specification version identifier. MUST be `"hooks/0.1"` for this version. |
 | `hooks` | array | REQUIRED | Non-empty array of hook definition objects. Implementations MUST reject a manifest with an empty `hooks` array as a validation error. |
+
+When multiple hooks bind to the same event, implementations MUST execute them in the order they appear in the `hooks` array. Implementations MUST NOT reorder hooks.
 
 ### 3.4 Hook Definition
 
@@ -96,6 +98,7 @@ Each element of the `hooks` array is an object with the following fields:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
+| `name` | string | OPTIONAL | Human-readable identifier for this hook. Used in warnings, logs, and policy references. When omitted, implementations SHOULD refer to the hook by its position in the array (e.g., "Hook 1"). |
 | `event` | string | REQUIRED | Canonical event name from the Event Registry (Section 7). |
 | `matcher` | string, object, or array | OPTIONAL | Tool matcher expression (Section 6). When omitted, the hook matches all tools for the bound event. |
 | `handler` | object | REQUIRED | Handler definition (Section 3.5). |
@@ -110,11 +113,21 @@ Each element of the `hooks` array is an object with the following fields:
 |-------|------|----------|-------------|
 | `type` | string | REQUIRED | Handler type. MUST be `"command"` for shell-based handlers. Other types are defined as capabilities in Section 9. |
 | `command` | string | Conditional | Shell command or script path, relative to the hook directory. REQUIRED when `type` is `"command"`. |
-| `platform` | object | OPTIONAL | Per-OS command overrides. Keys MUST be `"windows"`, `"linux"`, or `"osx"`. Values are command strings. The `command` field serves as the default when no platform override matches. |
+| `platform` | object | OPTIONAL | Per-OS command overrides. Keys MUST be `"windows"`, `"linux"`, or `"darwin"`. Values are command strings. The `command` field serves as the default when no platform override matches. |
 | `cwd` | string | OPTIONAL | Working directory for the hook process, relative to the project root. |
 | `env` | object | OPTIONAL | Environment variables passed to the hook process. Keys are variable names, values are strings. |
 | `timeout` | number | OPTIONAL | Maximum execution time in seconds. Implementations SHOULD apply a reasonable default (30 seconds is RECOMMENDED). A value of `0` means no timeout (the implementation's default applies). |
+| `timeout_action` | string | OPTIONAL | Behavior when the hook exceeds its timeout. MUST be `"warn"` or `"block"`. Default: `"warn"`. When `"warn"`, timeout is treated as exit code 1 (non-blocking warning). When `"block"`, timeout is treated as exit code 2 (action prevented). Only meaningful when `blocking` is `true` on the parent hook definition; when `blocking` is `false`, timeout always degrades to a warning regardless of this field. |
 | `async` | boolean | OPTIONAL | Whether the hook runs asynchronously (fire-and-forget). Default: `false`. When `true`, the triggering action does not wait for the hook to complete. |
+
+#### Script References vs. Inline Commands
+
+The `command` field accepts two forms:
+
+- **Script reference:** A relative path starting with `./` or containing a path separator (e.g., `"./check.sh"`, `"./scripts/audit.py"`). Resolved relative to the hook directory.
+- **Inline command:** A shell command string (e.g., `"grep -r TODO . | wc -l"`). Passed directly to the system shell.
+
+Hook authors SHOULD use script references for blocking hooks. Script references enable content integrity verification (SHA-256 hashing of script files), security scanning (static analysis of script contents), and explicit shell selection (via shebang line). Inline commands bypass all three and are passed to the system's default shell, which varies across platforms and providers.
 
 ### 3.6 Provider Data
 
@@ -142,7 +155,7 @@ Canonical provider slugs:
 
 ```json
 {
-  "spec": "hooks/1.0",
+  "spec": "hooks/0.1",
   "hooks": [
     {
       "event": "before_tool_execute",
@@ -160,9 +173,10 @@ Canonical provider slugs:
 
 ```json
 {
-  "spec": "hooks/1.0",
+  "spec": "hooks/0.1",
   "hooks": [
     {
+      "name": "safety-check",
       "event": "before_tool_execute",
       "matcher": "shell",
       "handler": {
@@ -251,9 +265,7 @@ When a hook handler of type `"command"` terminates, the exit code determines how
 
 Implementations MUST NOT treat exit code 1 or other non-zero codes (besides 2) as blocking, regardless of the `blocking` field.
 
-When a hook exceeds its timeout, implementations SHOULD terminate the process and treat the result as exit code 1 (non-blocking warning). Implementations MAY treat timeout of a blocking hook as exit code 2 (block) if the hook author has specified `"timeout_behavior": "block"` in `provider_data`.
-
-> **Note:** A future version of this specification may promote `timeout_behavior` to a canonical field on the handler definition, removing the need to use `provider_data` for this safety-critical setting.
+When a hook exceeds its timeout, the `timeout_action` field on the handler definition determines the behavior (see Section 3.5). The default is `"warn"` (treat as exit code 1, action proceeds).
 
 ---
 
@@ -276,7 +288,7 @@ When both exit code and JSON output are present:
 - Exit code 2 takes precedence over `decision: "allow"` in the JSON output.
 - `decision: "deny"` with exit code 0 MUST be treated as a block (equivalent to exit code 2).
 - `decision: "allow"` with exit code 0 is the normal success path.
-- `decision: "ask"` with exit code 0 defers to the user; if the provider does not support interactive confirmation, it MUST be treated as `"deny"`.
+- `decision: "ask"` with exit code 0 defers to the user; if the provider does not support interactive confirmation, it MUST be treated as `"deny"`. This includes non-interactive environments such as CI/CD pipelines, headless sessions, and automated workflows where no user is available to respond.
 - When the `decision` field is absent and exit code is 0, the implementation MUST treat the result as `decision: "allow"`.
 - When a hook exits with code 0 and stdout is not valid JSON, implementations MUST treat the result as exit code 1 (hook error) and SHOULD log stderr and stdout for debugging.
 
@@ -322,17 +334,21 @@ The `matcher` field on a hook definition controls which tools trigger the hook f
 
 A bare string value is a **tool vocabulary lookup**. It MUST match against the canonical tool names defined in the Tool Vocabulary (Section 10). Implementations resolve the canonical name to the provider-native tool name during encoding.
 
+When a bare string does not match any canonical tool name in the Tool Vocabulary, implementations MUST pass it through as a literal string and SHOULD emit a warning. This ensures forward compatibility when new tool names are added to the vocabulary: manifests using the new name will work with older implementations that do not yet recognize it.
+
 ```json
 "matcher": "shell"
 ```
 
 ### 6.2 Pattern Object
 
-An object with a `pattern` key specifies a regular expression matched against the provider-native tool name. The regex flavor SHOULD be RE2 for cross-language compatibility. Implementations MAY support additional regex features but MUST document any deviations from RE2.
+An object with a `pattern` key specifies a regular expression matched against the provider-native tool name. The regex flavor MUST be RE2 for cross-language compatibility. RE2 guarantees linear-time matching and is available in Go, Rust, Python, JavaScript (via libraries), Java, and other languages. Implementations MUST NOT accept patterns that require features beyond RE2 (e.g., backreferences, lookahead).
 
 ```json
 "matcher": {"pattern": "file_(read|write|edit)"}
 ```
+
+Pattern matchers are **not portable** across providers. The pattern is passed through to the target provider and matched at runtime against that provider's native tool names. Hook authors who need cross-provider portability SHOULD use bare string matchers (Section 6.1), which are translated through the Tool Vocabulary. Pattern matchers are an escape hatch for provider-specific tool names that the vocabulary does not cover.
 
 ### 6.3 MCP Object
 
@@ -400,22 +416,23 @@ Extended events have partial provider support. They appear in the event registry
 | `before_compact` | Fires before context window compression. |
 | `notification` | Non-blocking system notification (e.g., permission prompts, status updates). |
 | `error_occurred` | Fires when the agent encounters an error. |
+| `tool_use_failure` | Fires when a tool invocation fails. Distinct from `after_tool_execute` in that it signals an error, not a successful completion. |
+| `file_changed` | Fires when a file is created, modified, or saved in the project. |
 | `subagent_start` | Fires when a nested agent is spawned. |
 | `subagent_stop` | Fires when a nested agent finishes. |
 | `permission_request` | Fires when a sensitive action requires permission. |
+| `before_model` | Fires before an LLM API call. Hook can intercept or mock the request. |
+| `after_model` | Fires after an LLM response is received. Hook can redact or modify. |
+| `before_tool_selection` | Fires before the LLM chooses which tool to use. Hook can filter the tool list. |
 
 ### 7.3 Provider-Exclusive Events
 
-Provider-exclusive events exist in only one or two providers. They are included in the registry for lossless round-tripping but are expected to be dropped or degraded during cross-provider conversion.
+Provider-exclusive events exist in only one provider. They are included in the registry for lossless round-tripping but are expected to be dropped or degraded during cross-provider conversion.
 
 | Event | Description | Origin Provider(s) |
 |-------|-------------|-------------------|
-| `before_model` | Fires before an LLM API call. Hook can intercept or mock the request. | Gemini CLI |
-| `after_model` | Fires after an LLM response is received. Hook can redact or modify. | Gemini CLI |
-| `before_tool_selection` | Fires before the LLM chooses which tool to use. Hook can filter the tool list. | Gemini CLI |
 | `config_change` | Fires when configuration is modified. | Claude Code |
 | `file_created` | Fires when a new file is created in the project. | Kiro |
-| `file_saved` | Fires when a file is saved. | Kiro |
 | `file_deleted` | Fires when a file is deleted from the project. | Kiro |
 | `before_task` | Fires before a spec task executes. | Kiro |
 | `after_task` | Fires after a spec task completes. | Kiro |
@@ -435,15 +452,16 @@ The following table maps canonical event names to provider-native names. Adapter
 | `before_compact` | PreCompact | PreCompress | -- | -- | PreCompact | -- | -- | -- |
 | `notification` | Notification | Notification | -- | -- | -- | -- | -- | -- |
 | `error_occurred` | StopFailure | -- | -- | -- | -- | errorOccurred | -- | session.error |
-| `subagent_start` | SubagentStart | -- | -- | -- | SubagentStart | -- | -- | -- |
-| `subagent_stop` | SubagentStop | -- | -- | -- | SubagentStop | -- | -- | -- |
+| `tool_use_failure` | PostToolUseFailure | -- | postToolUseFailure | -- | -- | errorOccurred | -- | -- |
+| `file_changed` | FileChanged | -- | afterFileEdit | -- | -- | -- | File Save | file.edited |
+| `subagent_start` | SubagentStart | -- | subagentStart | -- | SubagentStart | -- | -- | -- |
+| `subagent_stop` | SubagentStop | -- | subagentStop | -- | SubagentStop | -- | -- | -- |
 | `permission_request` | PermissionRequest | -- | -- | -- | -- | -- | -- | permission.asked |
-| `before_model` | -- | BeforeModel | -- | -- | -- | -- | -- | -- |
-| `after_model` | -- | AfterModel | -- | -- | -- | -- | -- | -- |
-| `before_tool_selection` | -- | BeforeToolSelection | -- | -- | -- | -- | -- | -- |
+| `before_model` | -- | BeforeModel | beforeAgentResponse | -- | -- | -- | -- | -- |
+| `after_model` | -- | AfterModel | afterAgentResponse | -- | -- | -- | -- | -- |
+| `before_tool_selection` | -- | BeforeToolSelection | beforeToolSelection | -- | -- | -- | -- | -- |
 | `config_change` | ConfigChange | -- | -- | -- | -- | -- | -- | -- |
-| `file_created` | -- | -- | -- | -- | -- | -- | File Create | file.edited |
-| `file_saved` | -- | -- | -- | -- | -- | -- | File Save | -- |
+| `file_created` | -- | -- | -- | -- | -- | -- | File Create | -- |
 | `file_deleted` | -- | -- | -- | -- | -- | -- | File Delete | -- |
 | `before_task` | -- | -- | -- | -- | -- | -- | Pre Task Execution | -- |
 | `after_task` | -- | -- | -- | -- | -- | -- | Post Task Execution | -- |
@@ -480,6 +498,12 @@ When a blocking hook returns exit code 2 (or `decision: "deny"`), the resulting 
 A `--` indicates the provider does not support the event (same as the Event Name Mapping table).
 
 When encoding a hook with `"blocking": true` for a provider where the behavior is `observe`, adapters MUST emit a warning indicating that the blocking intent cannot be honored on the target provider. If the hook defines a `degradation` strategy for the relevant capability, that strategy applies; otherwise the hook is encoded with the blocking field preserved and the warning emitted.
+
+### 8.3 Timing Shift Warning
+
+For split-event providers, some canonical `before_tool_execute` matchers may map to a provider-native event that fires **after** the action rather than before it. For example, Cursor has no `beforeFileEdit` event — the closest match is `afterFileEdit`, which fires after the file is written.
+
+This timing inversion is more severe than a capability gap: a blocking safety hook intended to prevent an action will instead observe it after the fact. Adapters MUST emit a prominent warning when a before-event hook is mapped to an after-event on the target provider. The warning MUST indicate that the hook's blocking intent cannot prevent the action, only observe it.
 
 ---
 
@@ -596,7 +620,7 @@ Per-operating-system command overrides.
 
 | Provider | Mechanism |
 |----------|-----------|
-| vs-code-copilot | `windows`, `linux`, `osx` fields with `command` fallback |
+| vs-code-copilot | `windows`, `linux`, `osx` fields with `command` fallback (note: native format uses `osx`; the canonical format uses `darwin`) |
 | copilot-cli | `bash`, `powershell` fields |
 | All others | Single `command` field only |
 
@@ -811,7 +835,7 @@ The specification itself follows [Semantic Versioning 2.0](https://semver.org/).
 - **Minor** version increments indicate additive changes (new optional fields, clarifications).
 - **Patch** version increments indicate editorial corrections (typos, examples).
 
-The `spec` field in manifests includes only major and minor versions (e.g., `"hooks/1.0"`). The specification document itself uses semver with a patch component (e.g., `1.0.0-draft`), but this patch version is not represented in manifests. Implementations MUST accept any manifest whose `spec` field matches the major and minor version they support.
+The `spec` field in manifests includes only major and minor versions (e.g., `"hooks/0.1"`). The specification document itself uses semver with a patch component (e.g., `0.1.0`), but this patch version is not represented in manifests. Implementations MUST accept any manifest whose `spec` field matches the major and minor version they support.
 
 ### 14.2 Registries
 
