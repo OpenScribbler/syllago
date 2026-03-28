@@ -112,21 +112,21 @@ func HookProviders() []string {
 
 // --- Structured output capabilities ---
 //
-// Claude Code hooks can return structured JSON on stdout to influence behavior.
-// These fields are parsed by the host and trigger side effects (arg rewriting,
-// output suppression, permission decisions, etc.). Other providers support
-// subsets of these fields — or none at all.
+// Hooks can return structured JSON on stdout to influence behavior.
+// Field names use the spec's canonical snake_case vocabulary.
+// Provider-native field names (e.g., CC's camelCase "updatedInput") are
+// handled by the provider's adapter, not by these canonical constants.
 
 // HookOutputField identifies a structured output field that a hook can return.
 type HookOutputField string
 
 const (
-	OutputUpdatedInput       HookOutputField = "updatedInput"
-	OutputSuppressOutput     HookOutputField = "suppressOutput"
-	OutputSystemMessage      HookOutputField = "systemMessage"
-	OutputAdditionalContext  HookOutputField = "additionalContext"
-	OutputContinue           HookOutputField = "continue"
-	OutputPermissionDecision HookOutputField = "permissionDecision"
+	OutputUpdatedInput   HookOutputField = "updated_input"
+	OutputSuppressOutput HookOutputField = "suppress_output"
+	OutputSystemMessage  HookOutputField = "system_message"
+	OutputContext        HookOutputField = "context"
+	OutputContinue       HookOutputField = "continue"
+	OutputDecision       HookOutputField = "decision"
 )
 
 // AllOutputFields lists every structured output field, in documentation order.
@@ -134,30 +134,37 @@ var AllOutputFields = []HookOutputField{
 	OutputUpdatedInput,
 	OutputSuppressOutput,
 	OutputSystemMessage,
-	OutputAdditionalContext,
+	OutputContext,
 	OutputContinue,
-	OutputPermissionDecision,
+	OutputDecision,
 }
 
 // HookOutputCapabilities maps provider slugs to the set of structured output
 // fields they support. A missing provider means no structured output support.
 var HookOutputCapabilities = map[string]map[HookOutputField]bool{
 	"claude-code": {
-		OutputUpdatedInput:       true,
-		OutputSuppressOutput:     true,
-		OutputSystemMessage:      true,
-		OutputAdditionalContext:  true,
-		OutputContinue:           true,
-		OutputPermissionDecision: true,
+		OutputUpdatedInput:   true,
+		OutputSuppressOutput: true,
+		OutputSystemMessage:  true,
+		OutputContext:        true,
+		OutputContinue:       true,
+		OutputDecision:       true,
 	},
 	"copilot-cli": {
-		// Copilot CLI supports permissionDecision in preToolUse hooks
-		OutputPermissionDecision: true,
+		// Copilot CLI supports decision in preToolUse hooks
+		OutputDecision: true,
 	},
-	"gemini-cli": {}, // No structured output support
-	"kiro":       {}, // No structured output support
-	"cursor":     {}, // No structured output support
-	"windsurf":   {}, // No structured output support
+	"gemini-cli": {
+		// Gemini CLI supports decision and system_message (partial structured output)
+		OutputDecision:      true,
+		OutputSystemMessage: true,
+	},
+	"cursor": {
+		// Cursor supports decision field (partial structured output)
+		OutputDecision: true,
+	},
+	"kiro":     {}, // No structured output support
+	"windsurf": {}, // No structured output support
 }
 
 // OutputFieldsLostWarnings compares source and target provider structured output

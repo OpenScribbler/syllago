@@ -525,3 +525,39 @@ func TestCapabilities(t *testing.T) {
 		t.Error("Copilot should not support matchers")
 	}
 }
+
+func TestCanonicalHookNewFields(t *testing.T) {
+	t.Parallel()
+	hook := CanonicalHook{
+		Name:  "test-hook",
+		Event: "before_tool_execute",
+		Handler: HookHandler{
+			Type:          "command",
+			Command:       "echo test",
+			TimeoutAction: "block",
+		},
+		Capabilities: []string{"structured_output", "input_rewrite"},
+	}
+
+	data, err := json.Marshal(hook)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	var decoded CanonicalHook
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	assertEqual(t, "test-hook", decoded.Name)
+	assertEqual(t, "block", decoded.Handler.TimeoutAction)
+	if len(decoded.Capabilities) != 2 {
+		t.Fatalf("expected 2 capabilities, got %d", len(decoded.Capabilities))
+	}
+	assertEqual(t, "structured_output", decoded.Capabilities[0])
+}
+
+func TestSpecVersion(t *testing.T) {
+	t.Parallel()
+	assertEqual(t, "hooks/0.1", SpecVersion)
+}

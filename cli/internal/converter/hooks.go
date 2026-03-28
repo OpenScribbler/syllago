@@ -258,7 +258,6 @@ func canonicalizeFlatHook(content []byte, sourceProvider string) (*Result, error
 // hooklessProviders lists providers that have no hook system.
 // Converting hooks to these providers emits a warning instead of content.
 var hooklessProviders = map[string]bool{
-	"opencode": true,
 	"zed":      true,
 	"roo-code": true,
 }
