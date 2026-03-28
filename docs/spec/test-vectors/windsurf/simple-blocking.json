@@ -1,0 +1,14 @@
+{
+  "_comment": "Expected Windsurf output for canonical/simple-blocking.json. Windsurf is a split-event provider: before_tool_execute + matcher 'shell' maps directly to the pre_run_command event. Windsurf hooks use arrays per event key. Timeout is dropped (Windsurf does not support configurable timeouts). Blocking is implicit via exit code 2, not a field.",
+  "_warnings": [
+    "Hook 1: timeout field dropped — Windsurf does not support configurable timeouts",
+    "Hook 1: blocking field dropped — Windsurf blocking is implicit via exit code 2 on pre-events"
+  ],
+  "hooks": {
+    "pre_run_command": [
+      {
+        "command": "./safety-check.sh"
+      }
+    ]
+  }
+}

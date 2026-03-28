@@ -1,6 +1,6 @@
 {
   "_comment": "Diverse events and matcher styles. Tests: (1) before_tool_execute with array matcher (OR semantics) — matches shell OR file_write; (2) after_tool_execute with omitted matcher (wildcard — all tools); (3) before_prompt with no matcher (not a tool event, matcher ignored); (4) agent_stop with no matcher. Exercises event name mapping across all providers, array matcher encoding, and wildcard matcher handling.",
-  "spec": "hooks/1.0",
+  "spec": "hooks/0.1",
   "hooks": [
     {
       "event": "before_tool_execute",

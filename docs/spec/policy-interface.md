@@ -2,7 +2,7 @@
 
 This document defines the interface contract for hook execution policies. It specifies the fields and their semantics but does not define the full policy enforcement mechanism, configuration format, or distribution model. Those are deferred to a future Hook Policy Specification.
 
-This interface ships alongside the [Hook Interchange Format Specification v1](hooks-v1.md) because enterprise adopters need to understand the policy surface area before adopting the hook manifest format.
+This interface ships alongside the [Hook Interchange Format Specification](hooks.md) because enterprise adopters need to understand the policy surface area before adopting the hook manifest format.
 
 ---
 

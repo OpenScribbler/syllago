@@ -1,6 +1,6 @@
 # Glossary
 
-This glossary defines terms used in the [Hook Interchange Format Specification](hooks-v1.md). Terms are listed alphabetically.
+This glossary defines terms used in the [Hook Interchange Format Specification](hooks.md). Terms are listed alphabetically.
 
 ---
 
@@ -47,7 +47,10 @@ The directory containing the hook manifest file. When a handler's `command` fiel
 The executable component of a hook that runs when the hook's event fires. The most common handler type is `"command"` (shell script execution). Other handler types (`"http"`, `"prompt"`, `"agent"`) are defined as capabilities.
 
 **hook**
-A user-defined action that executes at a specific lifecycle point in an AI coding tool. A hook consists of an event binding, a handler, and optional configuration (matcher, blocking flag, degradation strategies, provider data).
+A user-defined action that executes at a specific lifecycle point in an AI coding tool. A hook consists of an event binding, a handler, and optional configuration (name, matcher, blocking flag, degradation strategies, provider data).
+
+**hook name**
+An optional human-readable identifier for a hook within a manifest. Used in warnings, logs, and policy references. When absent, implementations refer to the hook by its position in the `hooks` array.
 
 **hook manifest**
 A JSON (or YAML) document conforming to this specification that declares one or more hooks. The top-level structure includes a `spec` version field and a `hooks` array.

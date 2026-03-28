@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://syllago.dev/spec/hooks/1.0/hook.schema.json",
+  "$id": "https://syllago.dev/spec/hooks/0.1/hook.schema.json",
   "title": "Hook Canonical Format",
-  "description": "Canonical interchange format for AI coding tool hooks (hooks/1.0).",
+  "description": "Canonical interchange format for AI coding tool hooks (hooks/0.1).",
   "type": "object",
   "required": ["spec", "hooks"],
   "additionalProperties": true,
@@ -10,7 +10,7 @@
     "spec": {
       "type": "string",
       "pattern": "^hooks/\\d+\\.\\d+$",
-      "description": "Specification version identifier (e.g. \"hooks/1.0\")."
+      "description": "Specification version identifier (e.g. \"hooks/0.1\")."
     },
     "hooks": {
       "type": "array",
@@ -27,6 +27,10 @@
       "required": ["event", "handler"],
       "additionalProperties": true,
       "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable identifier for this hook. Used in warnings, logs, and policy references."
+        },
         "event": {
           "type": "string",
           "description": "Canonical event name from the Event Registry.",
@@ -159,7 +163,7 @@
               "type": "string",
               "description": "Linux-specific command override."
             },
-            "osx": {
+            "darwin": {
               "type": "string",
               "description": "macOS-specific command override."
             }
@@ -180,6 +184,11 @@
           "type": "number",
           "minimum": 0,
           "description": "Maximum execution time in seconds."
+        },
+        "timeout_action": {
+          "type": "string",
+          "enum": ["warn", "block"],
+          "description": "Behavior when the hook exceeds its timeout. Default: \"warn\"."
         },
         "async": {
           "type": "boolean",

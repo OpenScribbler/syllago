@@ -1,0 +1,15 @@
+{
+  "_comment": "Expected Windsurf output for canonical/degradation-input-rewrite.json. Windsurf does not support input_rewrite. The default degradation strategy is 'block', so the converted hook MUST always block (exit code 2). The adapter wraps the original command in a script that unconditionally exits 2 with a message explaining why.",
+  "_warnings": [
+    "Hook 1: input_rewrite capability not supported by Windsurf — degradation strategy 'block' applied. The converted hook blocks all matching actions unconditionally. The original command (./sanitize-input.sh) is NOT executed because its output (updated_input) cannot be applied.",
+    "Hook 1: structured_output capability not supported by Windsurf — exit codes only",
+    "Hook 1: timeout field dropped — Windsurf does not support configurable timeouts"
+  ],
+  "hooks": {
+    "pre_run_command": [
+      {
+        "command": "echo 'BLOCKED: input_rewrite capability required but not supported by this provider. The hook ./sanitize-input.sh sanitizes tool input, which cannot be applied without input_rewrite support. Allowing unmodified input would create a false sense of security.' >&2; exit 2"
+      }
+    ]
+  }
+}
