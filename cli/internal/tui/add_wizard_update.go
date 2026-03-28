@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 // Update handles messages for the add wizard.
@@ -15,11 +16,65 @@ func (m *addWizardModel) Update(msg tea.Msg) (*addWizardModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.updateKey(msg)
+	case tea.MouseMsg:
+		return m.updateMouse(msg)
 	case addDiscoveryDoneMsg:
 		return m.handleDiscoveryDone(msg)
 	case addExecItemDoneMsg:
 		return m.handleExecItemDone(msg)
 	}
+	return m, nil
+}
+
+func (m *addWizardModel) updateMouse(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
+	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
+		return m, nil
+	}
+
+	// Wizard shell breadcrumb clicks (completed steps are clickable)
+	if step, ok := m.shell.HandleClick(msg); ok {
+		target := addStep(step)
+		if m.preFilterType != "" {
+			// 4-step shell: map shell index back to addStep
+			switch step {
+			case 0:
+				target = addStepSource
+			case 1:
+				target = addStepDiscovery
+			case 2:
+				target = addStepReview
+			case 3:
+				target = addStepExecute
+			}
+		}
+		if target < m.step {
+			m.step = target
+			m.shell.SetActive(step)
+			m.reviewAcknowledged = false
+		}
+		return m, nil
+	}
+
+	// Review step button clicks
+	if m.step == addStepReview {
+		if zone.Get("add-cancel").InBounds(msg) {
+			return m, func() tea.Msg { return addCloseMsg{} }
+		}
+		if zone.Get("add-back").InBounds(msg) {
+			m.step = addStepDiscovery
+			m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+			m.reviewAcknowledged = false
+			return m, nil
+		}
+		if zone.Get("add-confirm").InBounds(msg) {
+			if !m.reviewAcknowledged {
+				m.reviewAcknowledged = true
+				m.enterExecute()
+				return m, m.addItemCmd(0)
+			}
+		}
+	}
+
 	return m, nil
 }
 
