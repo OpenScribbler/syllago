@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 // checkboxBadgeStyle controls the color of the right-aligned badge on a checkbox item.
@@ -31,13 +32,14 @@ type checkboxItem struct {
 // toggling, select-all/none, and scrolling. All methods use value receivers
 // (matching the riskBanner pattern) so copies are returned from Update.
 type checkboxList struct {
-	items    []checkboxItem
-	selected []bool
-	cursor   int
-	offset   int
-	width    int
-	height   int
-	focused  bool
+	items      []checkboxItem
+	selected   []bool
+	cursor     int
+	offset     int
+	width      int
+	height     int
+	focused    bool
+	zonePrefix string // if set, each row is zone-marked as "{prefix}-{i}" for mouse clicks
 }
 
 // checkboxDrillInMsg is emitted when the user presses Enter on a checkbox item.
@@ -172,10 +174,28 @@ func (c checkboxList) View() string {
 
 	var lines []string
 	for i := c.offset; i < end; i++ {
-		lines = append(lines, c.renderRow(i))
+		row := c.renderRow(i)
+		if c.zonePrefix != "" {
+			row = zone.Mark(c.zonePrefix+"-"+itoa(i), row)
+		}
+		lines = append(lines, row)
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+// HandleClick checks if any row was clicked. Returns (index, true) if a row
+// was clicked, allowing the caller to decide the action (toggle, select, etc.).
+func (c checkboxList) HandleClick(msg tea.MouseMsg) (int, bool) {
+	if c.zonePrefix == "" {
+		return 0, false
+	}
+	for i := range c.items {
+		if zone.Get(c.zonePrefix + "-" + itoa(i)).InBounds(msg) {
+			return i, true
+		}
+	}
+	return 0, false
 }
 
 // renderRow renders a single checkbox row.

@@ -330,6 +330,7 @@ func (m *addWizardModel) buildTypeCheckList() checkboxList {
 	}
 	cl := newCheckboxList(items)
 	cl.focused = true
+	cl.zonePrefix = "add-type"
 
 	// Default: all checked for most sources.
 	// For provider source: only check types supported by that provider.
@@ -507,6 +508,7 @@ func (m *addWizardModel) buildDiscoveryList() checkboxList {
 
 	cl := newCheckboxList(items)
 	cl.focused = true
+	cl.zonePrefix = "add-disc"
 
 	// Pre-select: New and Outdated checked, InLibrary unchecked
 	for i, d := range m.discoveredItems {

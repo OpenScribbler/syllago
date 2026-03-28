@@ -35,7 +35,6 @@ func (m *addWizardModel) updateMouse(msg tea.MouseMsg) (*addWizardModel, tea.Cmd
 	if step, ok := m.shell.HandleClick(msg); ok {
 		target := addStep(step)
 		if m.preFilterType != "" {
-			// 4-step shell: map shell index back to addStep
 			switch step {
 			case 0:
 				target = addStepSource
@@ -55,26 +54,207 @@ func (m *addWizardModel) updateMouse(msg tea.MouseMsg) (*addWizardModel, tea.Cmd
 		return m, nil
 	}
 
-	// Review step button clicks
-	if m.step == addStepReview {
-		if zone.Get("add-cancel").InBounds(msg) {
-			return m, func() tea.Msg { return addCloseMsg{} }
-		}
-		if zone.Get("add-back").InBounds(msg) {
-			m.step = addStepDiscovery
-			m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
-			m.reviewAcknowledged = false
-			return m, nil
-		}
-		if zone.Get("add-confirm").InBounds(msg) {
-			if !m.reviewAcknowledged {
-				m.reviewAcknowledged = true
-				m.enterExecute()
-				return m, m.addItemCmd(0)
+	// Per-step mouse routing
+	switch m.step {
+	case addStepSource:
+		return m.updateMouseSource(msg)
+	case addStepType:
+		return m.updateMouseType(msg)
+	case addStepDiscovery:
+		return m.updateMouseDiscovery(msg)
+	case addStepReview:
+		return m.updateMouseReview(msg)
+	case addStepExecute:
+		return m.updateMouseExecute(msg)
+	}
+
+	return m, nil
+}
+
+// --- Source step mouse ---
+
+func (m *addWizardModel) updateMouseSource(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
+	// Top-level source option clicks
+	for i := 0; i < 4; i++ {
+		if zone.Get("add-src-" + itoa(i)).InBounds(msg) {
+			if m.sourceExpanded || m.inputActive {
+				// Already in a sub-mode — clicking a source option resets to top-level
+				m.sourceExpanded = false
+				m.inputActive = false
 			}
+			m.sourceCursor = i
+
+			// Activate like Enter
+			switch i {
+			case 0: // Provider
+				if len(m.providers) > 0 {
+					m.sourceExpanded = true
+					m.providerCursor = 0
+				}
+			case 1: // Registry
+				if len(m.registries) > 0 {
+					m.sourceExpanded = true
+					m.registryCursor = 0
+				}
+			case 2: // Local
+				m.inputActive = true
+				m.sourceErr = ""
+			case 3: // Git
+				m.inputActive = true
+				m.sourceErr = ""
+			}
+			return m, nil
 		}
 	}
 
+	// Provider sub-list clicks
+	for i := range m.providers {
+		if zone.Get("add-prov-" + itoa(i)).InBounds(msg) {
+			m.providerCursor = i
+			// Double-click-like: select and advance
+			m.source = addSourceProvider
+			m.sourceExpanded = false
+			m.advanceFromSource()
+			return m, nil
+		}
+	}
+
+	// Registry sub-list clicks
+	for i := range m.registries {
+		if zone.Get("add-reg-" + itoa(i)).InBounds(msg) {
+			m.registryCursor = i
+			m.source = addSourceRegistry
+			m.sourceExpanded = false
+			m.advanceFromSource()
+			return m, nil
+		}
+	}
+
+	// Path input click — focus the input
+	if zone.Get("add-path-input").InBounds(msg) {
+		if !m.inputActive {
+			m.inputActive = true
+			m.sourceErr = ""
+		}
+		return m, nil
+	}
+
+	return m, nil
+}
+
+// --- Type step mouse ---
+
+func (m *addWizardModel) updateMouseType(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
+	if idx, ok := m.typeChecks.HandleClick(msg); ok {
+		m.typeChecks.cursor = idx
+		if !m.typeChecks.items[idx].disabled {
+			m.typeChecks.selected[idx] = !m.typeChecks.selected[idx]
+		}
+		return m, nil
+	}
+	return m, nil
+}
+
+// --- Discovery step mouse ---
+
+func (m *addWizardModel) updateMouseDiscovery(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
+	// Error state buttons
+	if m.discoveryErr != "" {
+		if zone.Get("add-retry").InBounds(msg) {
+			m.discoveryErr = ""
+			m.seq++
+			m.discovering = true
+			return m, m.startDiscoveryCmd()
+		}
+		if zone.Get("add-err-back").InBounds(msg) {
+			m.goBackFromDiscovery()
+			return m, nil
+		}
+		return m, nil
+	}
+
+	// Empty state back button
+	if zone.Get("add-empty-back").InBounds(msg) {
+		m.goBackFromDiscovery()
+		return m, nil
+	}
+
+	// Next button
+	if zone.Get("add-disc-next").InBounds(msg) {
+		if len(m.discoveryList.SelectedIndices()) > 0 {
+			m.enterReview()
+		}
+		return m, nil
+	}
+
+	// Checkbox list row clicks — toggle selection
+	if idx, ok := m.discoveryList.HandleClick(msg); ok {
+		m.discoveryList.cursor = idx
+		if !m.discoveryList.items[idx].disabled {
+			m.discoveryList.selected[idx] = !m.discoveryList.selected[idx]
+		}
+		return m, nil
+	}
+
+	return m, nil
+}
+
+// --- Review step mouse ---
+
+func (m *addWizardModel) updateMouseReview(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
+	// Button clicks (already zone-marked by renderModalButtons)
+	if zone.Get("add-cancel").InBounds(msg) {
+		return m, func() tea.Msg { return addCloseMsg{} }
+	}
+	if zone.Get("add-back").InBounds(msg) {
+		m.step = addStepDiscovery
+		m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+		m.reviewAcknowledged = false
+		return m, nil
+	}
+	if zone.Get("add-confirm").InBounds(msg) {
+		if !m.reviewAcknowledged {
+			m.reviewAcknowledged = true
+			m.enterExecute()
+			return m, m.addItemCmd(0)
+		}
+		return m, nil
+	}
+
+	// Review item clicks
+	selected := m.selectedItems()
+	for i := range selected {
+		if zone.Get("add-rev-item-" + itoa(i)).InBounds(msg) {
+			m.reviewZone = addReviewZoneItems
+			m.reviewItemCursor = i
+			return m, nil
+		}
+	}
+
+	// Risk item clicks (delegated to riskBanner's zone marks)
+	for i := range m.risks {
+		if zone.Get("risk-" + itoa(i)).InBounds(msg) {
+			m.riskBanner.cursor = i
+			m.reviewZone = addReviewZoneRisks
+			return m, nil
+		}
+	}
+
+	return m, nil
+}
+
+// --- Execute step mouse ---
+
+func (m *addWizardModel) updateMouseExecute(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
+	if m.executeDone {
+		if zone.Get("add-exec-done").InBounds(msg) {
+			return m, func() tea.Msg { return addCloseMsg{} }
+		}
+	} else if !m.executeCancelled {
+		if zone.Get("add-exec-cancel").InBounds(msg) {
+			m.executeCancelled = true
+		}
+	}
 	return m, nil
 }
 
