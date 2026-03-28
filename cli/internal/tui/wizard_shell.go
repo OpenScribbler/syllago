@@ -12,10 +12,11 @@ import (
 // bordered topbar showing the wizard title and numbered step labels, with
 // completed steps clickable to navigate backwards.
 type wizardShell struct {
-	title  string   // e.g., "Install"
-	steps  []string // step labels: ["Provider", "Location", "Method", "Review"]
-	active int      // 0-based index of current step
-	width  int      // terminal width
+	title        string   // e.g., "Install"
+	steps        []string // step labels: ["Provider", "Location", "Method", "Review"]
+	active       int      // 0-based index of current step
+	maxCompleted int      // furthest step index that is clickable (default: active-1)
+	width        int      // terminal width
 }
 
 func newWizardShell(title string, steps []string) wizardShell {
@@ -84,10 +85,21 @@ func (s wizardShell) renderTopBorder(innerW int) string {
 		mutedStyle.Render(strings.Repeat("─", fill)) + suffix
 }
 
+// clickableMax returns the highest step index that should be clickable.
+// If maxCompleted is explicitly set (> 0 or == 0 with active > 0), use it.
+// Otherwise fall back to active-1 (default: only completed steps are clickable).
+func (s wizardShell) clickableMax() int {
+	if s.maxCompleted > 0 {
+		return s.maxCompleted
+	}
+	return s.active - 1
+}
+
 // renderStepRow renders the step labels with appropriate styling.
 func (s wizardShell) renderStepRow(innerW int) string {
 	border := mutedStyle.Render("│")
 	padding := "  "
+	clickMax := s.clickableMax()
 
 	var parts []string
 	for i, label := range s.steps {
@@ -99,8 +111,8 @@ func (s wizardShell) renderStepRow(innerW int) string {
 		case i == s.active:
 			// Active step: bold + primary
 			rendered = lipgloss.NewStyle().Bold(true).Foreground(primaryColor).Render(stepLabel)
-		case i < s.active:
-			// Completed: underlined + primary, clickable zone
+		case i <= clickMax:
+			// Reachable (completed or previously visited): underlined + primary, clickable zone
 			styled := lipgloss.NewStyle().Underline(true).Foreground(primaryColor).Render(stepLabel)
 			rendered = zone.Mark("wiz-step-"+itoa(i), styled)
 		default:
@@ -129,7 +141,7 @@ func (s wizardShell) renderStepRow(innerW int) string {
 			switch {
 			case i == s.active:
 				rendered = lipgloss.NewStyle().Bold(true).Foreground(primaryColor).Render(stepLabel)
-			case i < s.active:
+			case i <= clickMax:
 				styled := lipgloss.NewStyle().Underline(true).Foreground(primaryColor).Render(stepLabel)
 				rendered = zone.Mark("wiz-step-"+itoa(i), styled)
 			default:
@@ -150,14 +162,18 @@ func (s wizardShell) renderStepRow(innerW int) string {
 	return border + lipgloss.NewStyle().MaxWidth(innerW).Render(row) + border
 }
 
-// HandleClick checks if a completed step was clicked. Returns (step index, true) if so.
-// Only completed steps (index < active) have zone marks and are clickable.
+// HandleClick checks if a clickable step was clicked. Returns (step index, true) if so.
+// Steps up to clickableMax() (excluding the active step) have zone marks and are clickable.
 func (s wizardShell) HandleClick(msg tea.MouseMsg) (int, bool) {
 	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
 		return 0, false
 	}
 
-	for i := 0; i < s.active; i++ {
+	clickMax := s.clickableMax()
+	for i := 0; i <= clickMax; i++ {
+		if i == s.active {
+			continue // active step is not clickable
+		}
 		if zone.Get("wiz-step-" + itoa(i)).InBounds(msg) {
 			return i, true
 		}

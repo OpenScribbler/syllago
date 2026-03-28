@@ -41,26 +41,39 @@ func (m *addWizardModel) View() string {
 	return output
 }
 
-// renderNavButtons renders right-aligned [Esc] Back and [Enter] Next indicators.
+// renderTitleRow renders a step title on the left and nav buttons on the right, on the same line.
 // showBack=false hides the Back button (e.g., Source step has no prior step).
-// nextLabel overrides the default "Next" label (e.g., "Add" for Review, "Close" for Execute).
-func (m *addWizardModel) renderNavButtons(showBack bool, nextLabel string) string {
+// nextLabel overrides the default "Next" label (e.g., "Close" for Execute).
+func (m *addWizardModel) renderTitleRow(title string, showBack bool, nextLabel string) string {
+	pad := "  "
 	if nextLabel == "" {
 		nextLabel = "Next"
 	}
-	back := zone.Mark("add-nav-back", mutedStyle.Render("[Esc] Back"))
-	next := zone.Mark("add-nav-next", mutedStyle.Render("[Enter] "+nextLabel))
 
-	var btns string
+	titleRendered := pad + lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(title)
+	titleW := lipgloss.Width(titleRendered)
+
+	var buttons []buttonDef
 	if showBack {
-		btns = back + "  " + next
+		buttons = append(buttons, buttonDef{"Back", "add-nav-back", 0})
+		buttons = append(buttons, buttonDef{nextLabel, "add-nav-next", 1})
 	} else {
-		btns = next
+		buttons = append(buttons, buttonDef{nextLabel, "add-nav-next", 0})
 	}
 
+	// Render buttons with no focus (pass -1 so none is highlighted)
+	var parts []string
+	for _, b := range buttons {
+		style := lipgloss.NewStyle().Padding(0, 2).
+			Foreground(primaryText).
+			Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"})
+		parts = append(parts, zone.Mark(b.zoneID, style.Render(b.label)))
+	}
+	btns := strings.Join(parts, "  ")
 	btnsW := lipgloss.Width(btns)
-	pad := max(0, m.width-btnsW-4)
-	return strings.Repeat(" ", pad) + btns
+
+	gap := max(1, m.width-titleW-btnsW-4)
+	return titleRendered + strings.Repeat(" ", gap) + btns
 }
 
 // --- Source step view ---
@@ -68,12 +81,9 @@ func (m *addWizardModel) renderNavButtons(showBack bool, nextLabel string) strin
 func (m *addWizardModel) viewSource() string {
 	pad := "  "
 
-	nav := m.renderNavButtons(false, "")
-	title := pad + lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render("Where is the content?")
-
 	var lines []string
-	lines = append(lines, nav)
-	lines = append(lines, title, "")
+	lines = append(lines, m.renderTitleRow("Where is the content?", false, ""))
+	lines = append(lines, "")
 
 	type sourceOption struct {
 		label    string
@@ -216,17 +226,10 @@ func (m *addWizardModel) viewPathInput(pad string, isGit bool) []string {
 // --- Type step view ---
 
 func (m *addWizardModel) viewType() string {
-	pad := "  "
-
-	nav := m.renderNavButtons(true, "")
-	title := pad + lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render("What type of content?")
-
 	var lines []string
-	lines = append(lines, nav)
-	lines = append(lines, title, "")
-	lines = append(lines, m.typeChecks.View())
+	lines = append(lines, m.renderTitleRow("What type of content?", true, ""))
 	lines = append(lines, "")
-	lines = append(lines, pad+mutedStyle.Render("[space] toggle  [a] all  [n] none  [enter] next  [esc] back"))
+	lines = append(lines, m.typeChecks.View())
 
 	return strings.Join(lines, "\n")
 }
@@ -237,14 +240,13 @@ func (m *addWizardModel) viewDiscovery() string {
 	pad := "  "
 
 	if m.discovering {
-		nav := m.renderNavButtons(true, "")
-		return nav + "\n" + pad + lipgloss.NewStyle().Foreground(primaryColor).Render("Discovering content...")
+		return m.renderTitleRow("Discovering content...", true, "") + "\n" +
+			pad + lipgloss.NewStyle().Foreground(primaryColor).Render("Scanning...")
 	}
 
 	if m.discoveryErr != "" {
-		nav := m.renderNavButtons(true, "")
 		var lines []string
-		lines = append(lines, nav)
+		lines = append(lines, m.renderTitleRow("Discovery Error", true, ""))
 		lines = append(lines, "")
 		errBox := lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -262,9 +264,8 @@ func (m *addWizardModel) viewDiscovery() string {
 	}
 
 	if len(m.discoveredItems) == 0 {
-		nav := m.renderNavButtons(true, "")
 		var lines []string
-		lines = append(lines, nav)
+		lines = append(lines, m.renderTitleRow("No content found", true, ""))
 		lines = append(lines, "")
 		lines = append(lines, pad+mutedStyle.Render("No content found"))
 		lines = append(lines, "")
@@ -272,17 +273,15 @@ func (m *addWizardModel) viewDiscovery() string {
 		return strings.Join(lines, "\n")
 	}
 
-	nav := m.renderNavButtons(true, "")
-	var lines []string
-	lines = append(lines, nav)
 	selected := len(m.discoveryList.SelectedIndices())
-	total := len(m.discoveredItems)
 	actionable := m.actionableCount
-	header := fmt.Sprintf("Found %d items (%d selected)", total, selected)
+	header := fmt.Sprintf("Found %d items (%d selected)", len(m.discoveredItems), selected)
 	if m.installedCount > 0 && !m.showInstalled {
 		header = fmt.Sprintf("Found %d new items (%d selected)", actionable, selected)
 	}
-	lines = append(lines, pad+lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(header))
+
+	var lines []string
+	lines = append(lines, m.renderTitleRow(header, true, ""))
 	lines = append(lines, "")
 	lines = append(lines, m.discoveryHeader())
 	lines = append(lines, m.discoveryList.View())
@@ -301,10 +300,6 @@ func (m *addWizardModel) viewDiscovery() string {
 		}
 	}
 
-	lines = append(lines, "")
-	nextBtn := zone.Mark("add-disc-next", mutedStyle.Render("[enter/→] next"))
-	lines = append(lines, pad+mutedStyle.Render("[space] toggle  [a] all  [n] none  ")+nextBtn+mutedStyle.Render("  [esc] back"))
-
 	return strings.Join(lines, "\n")
 }
 
@@ -319,6 +314,20 @@ func (m *addWizardModel) viewReview() string {
 
 	var lines []string
 	lines = append(lines, pad+lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(header))
+
+	// Buttons at the top, below the header
+	lines = append(lines, "")
+	btnFocus := -1
+	if m.reviewZone == addReviewZoneButtons {
+		btnFocus = m.buttonCursor
+	}
+	addLabel := fmt.Sprintf("Add %d items", len(selected))
+	buttons := renderModalButtons(btnFocus, usableW, pad, nil,
+		buttonDef{addLabel, "add-confirm", 0},
+		buttonDef{"Back", "add-back", 1},
+		buttonDef{"Cancel", "add-cancel", 2},
+	)
+	lines = append(lines, buttons)
 	lines = append(lines, "")
 
 	// Risk banner
@@ -327,6 +336,11 @@ func (m *addWizardModel) viewReview() string {
 		lines = append(lines, riskView)
 		lines = append(lines, "")
 	}
+
+	// Microcopy
+	lines = append(lines, pad+mutedStyle.Render("Review your selections. Press Enter on an item to inspect its files."))
+	lines = append(lines, pad+mutedStyle.Render("Items marked with ! or !! contain executable code — inspect before adding."))
+	lines = append(lines, "")
 
 	// Item list with column headers
 	cols := m.reviewColumns()
@@ -393,33 +407,29 @@ func (m *addWizardModel) viewReview() string {
 		var riskCol string
 		switch riskLbl {
 		case "!!":
-			riskCol = lipgloss.NewStyle().Foreground(dangerColor).Render(riskLbl)
+			riskCol = lipgloss.NewStyle().Foreground(dangerColor).Render(padRight(riskLbl, cols.risk))
 		case "!":
-			riskCol = lipgloss.NewStyle().Foreground(warningColor).Render(riskLbl)
+			riskCol = lipgloss.NewStyle().Foreground(warningColor).Render(padRight(riskLbl, cols.risk))
+		default:
+			riskCol = padRight("", cols.risk)
 		}
 
 		isCursor := m.reviewZone == addReviewZoneItems && i == m.reviewItemCursor
+
+		// Build the full row with colored columns, then apply background for cursor
+		line := pad + cursor + nameCol + " " + typeCol + " " + statusCol + " " + riskCol
+		line = truncateLine(line, m.width)
+
 		if isCursor {
-			nameCol = lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(nameCol)
+			// Pad to full width then apply selectedRowStyle background
+			if gap := m.width - len([]rune(line)); gap > 0 {
+				line += strings.Repeat(" ", gap)
+			}
+			line = selectedRowStyle.MaxWidth(m.width).Render(line)
 		}
 
-		line := pad + cursor + nameCol + " " + typeCol + " " + statusCol + " " + riskCol
-		lines = append(lines, zone.Mark(fmt.Sprintf("add-rev-item-%d", i), truncateLine(line, m.width)))
+		lines = append(lines, zone.Mark(fmt.Sprintf("add-rev-item-%d", i), line))
 	}
-
-	// Buttons (already zone-marked by renderModalButtons via buttonDef.zoneID)
-	lines = append(lines, "")
-	btnFocus := -1
-	if m.reviewZone == addReviewZoneButtons {
-		btnFocus = m.buttonCursor
-	}
-	addLabel := fmt.Sprintf("Add %d items", len(selected))
-	buttons := renderModalButtons(btnFocus, usableW, pad, nil,
-		buttonDef{addLabel, "add-confirm", 0},
-		buttonDef{"Back", "add-back", 1},
-		buttonDef{"Cancel", "add-cancel", 2},
-	)
-	lines = append(lines, buttons)
 
 	return strings.Join(lines, "\n")
 }
@@ -439,8 +449,6 @@ func (m *addWizardModel) viewExecute() string {
 	var lines []string
 
 	if m.executeDone {
-		nav := m.renderNavButtons(false, "Close")
-		lines = append(lines, nav)
 		// Count results
 		added, updated := 0, 0
 		for _, r := range m.executeResults {
@@ -454,7 +462,16 @@ func (m *addWizardModel) viewExecute() string {
 
 		total := added + updated
 		header := fmt.Sprintf("Done! %d items added to library.", total)
-		lines = append(lines, pad+lipgloss.NewStyle().Bold(true).Foreground(successColor).Render(header))
+		// Use success color for the done header, with Close button on the right
+		titleRendered := pad + lipgloss.NewStyle().Bold(true).Foreground(successColor).Render(header)
+		closeStyle := lipgloss.NewStyle().Padding(0, 2).
+			Foreground(primaryText).
+			Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"})
+		closeBtn := zone.Mark("add-nav-next", closeStyle.Render("Close"))
+		titleW := lipgloss.Width(titleRendered)
+		btnW := lipgloss.Width(closeBtn)
+		gap := max(1, m.width-titleW-btnW-4)
+		lines = append(lines, titleRendered+strings.Repeat(" ", gap)+closeBtn)
 	} else {
 		lines = append(lines, pad+lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render("Adding items..."))
 	}

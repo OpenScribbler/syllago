@@ -254,6 +254,15 @@ func (c checkboxList) renderRow(i int) string {
 		return leftStyled
 	}
 
+	// Selected (checked) items get cyan foreground to stand out from unchecked
+	if c.selected[i] {
+		leftStyled := lipgloss.NewStyle().Foreground(primaryColor).Render(left)
+		if badge != "" {
+			return c.alignRow(leftStyled, badge)
+		}
+		return leftStyled
+	}
+
 	if badge != "" {
 		return c.alignRow(left, badge)
 	}
