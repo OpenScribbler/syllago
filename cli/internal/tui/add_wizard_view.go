@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/add"
 )
@@ -84,7 +85,7 @@ func (m *addWizardModel) viewSource() string {
 			row = pad + lipgloss.NewStyle().Foreground(primaryText).Render(cursor+opt.label) +
 				"  " + mutedStyle.Render(opt.desc)
 		}
-		lines = append(lines, row)
+		lines = append(lines, zone.Mark(fmt.Sprintf("add-src-%d", i), row))
 
 		// Render expanded sub-list or text input inline
 		if m.sourceExpanded && i == m.sourceCursor {
@@ -111,11 +112,13 @@ func (m *addWizardModel) viewProviderSubList(pad string) []string {
 			cursor = "  > "
 		}
 		name := prov.Name
+		var row string
 		if i == m.providerCursor {
-			lines = append(lines, pad+lipgloss.NewStyle().Bold(true).Foreground(primaryColor).Render(cursor+name))
+			row = pad + lipgloss.NewStyle().Bold(true).Foreground(primaryColor).Render(cursor+name)
 		} else {
-			lines = append(lines, pad+lipgloss.NewStyle().Foreground(primaryText).Render(cursor+name))
+			row = pad + lipgloss.NewStyle().Foreground(primaryText).Render(cursor+name)
 		}
+		lines = append(lines, zone.Mark(fmt.Sprintf("add-prov-%d", i), row))
 	}
 	return lines
 }
@@ -128,11 +131,13 @@ func (m *addWizardModel) viewRegistrySubList(pad string) []string {
 			cursor = "  > "
 		}
 		name := reg.Name
+		var row string
 		if i == m.registryCursor {
-			lines = append(lines, pad+lipgloss.NewStyle().Bold(true).Foreground(primaryColor).Render(cursor+name))
+			row = pad + lipgloss.NewStyle().Bold(true).Foreground(primaryColor).Render(cursor+name)
 		} else {
-			lines = append(lines, pad+lipgloss.NewStyle().Foreground(primaryText).Render(cursor+name))
+			row = pad + lipgloss.NewStyle().Foreground(primaryText).Render(cursor+name)
 		}
+		lines = append(lines, zone.Mark(fmt.Sprintf("add-reg-%d", i), row))
 	}
 	return lines
 }
@@ -172,7 +177,7 @@ func (m *addWizardModel) viewPathInput(pad string, isGit bool) []string {
 		MaxWidth(fieldW).
 		Padding(0, 1)
 
-	lines = append(lines, pad+"    "+style.Render(displayVal))
+	lines = append(lines, zone.Mark("add-path-input", pad+"    "+style.Render(displayVal)))
 
 	// Inline error
 	if m.sourceErr != "" {
@@ -220,7 +225,9 @@ func (m *addWizardModel) viewDiscovery() string {
 			Render("Error: " + m.discoveryErr)
 		lines = append(lines, errBox)
 		lines = append(lines, "")
-		lines = append(lines, pad+mutedStyle.Render("[r] Retry  [Esc] Back"))
+		retryBtn := zone.Mark("add-retry", mutedStyle.Render("[r] Retry"))
+		backBtn := zone.Mark("add-err-back", mutedStyle.Render("[Esc] Back"))
+		lines = append(lines, pad+retryBtn+"  "+backBtn)
 		return strings.Join(lines, "\n")
 	}
 
@@ -229,7 +236,7 @@ func (m *addWizardModel) viewDiscovery() string {
 		lines = append(lines, "")
 		lines = append(lines, pad+mutedStyle.Render("No content found"))
 		lines = append(lines, "")
-		lines = append(lines, pad+mutedStyle.Render("[Esc] Back"))
+		lines = append(lines, pad+zone.Mark("add-empty-back", mutedStyle.Render("[Esc] Back")))
 		return strings.Join(lines, "\n")
 	}
 
@@ -241,7 +248,9 @@ func (m *addWizardModel) viewDiscovery() string {
 	lines = append(lines, "")
 	lines = append(lines, m.discoveryList.View())
 	lines = append(lines, "")
-	lines = append(lines, pad+mutedStyle.Render("[space] toggle  [a] all  [n] none  [enter/→] next  [esc] back"))
+
+	nextBtn := zone.Mark("add-disc-next", mutedStyle.Render("[enter/→] next"))
+	lines = append(lines, pad+mutedStyle.Render("[space] toggle  [a] all  [n] none  ")+nextBtn+mutedStyle.Render("  [esc] back"))
 
 	return strings.Join(lines, "\n")
 }
@@ -294,10 +303,10 @@ func (m *addWizardModel) viewReview() string {
 		if statusStyled != "" {
 			line += " " + statusStyled
 		}
-		lines = append(lines, line)
+		lines = append(lines, zone.Mark(fmt.Sprintf("add-rev-item-%d", i), line))
 	}
 
-	// Buttons
+	// Buttons (already zone-marked by renderModalButtons via buttonDef.zoneID)
 	lines = append(lines, "")
 	btnFocus := -1
 	if m.reviewZone == addReviewZoneButtons {
@@ -324,17 +333,13 @@ func (m *addWizardModel) viewExecute() string {
 
 	if m.executeDone {
 		// Count results
-		added, updated, errors, cancelled := 0, 0, 0, 0
+		added, updated := 0, 0
 		for _, r := range m.executeResults {
 			switch r.status {
 			case "added":
 				added++
 			case "updated":
 				updated++
-			case "error":
-				errors++
-			case "cancelled":
-				cancelled++
 			}
 		}
 
@@ -392,13 +397,13 @@ func (m *addWizardModel) viewExecute() string {
 
 	if m.executeDone {
 		lines = append(lines, "")
-		lines = append(lines, pad+mutedStyle.Render("[Enter] Go to Library"))
+		lines = append(lines, pad+zone.Mark("add-exec-done", mutedStyle.Render("[Enter] Go to Library")))
 	} else if m.executeCancelled {
 		lines = append(lines, "")
 		lines = append(lines, pad+mutedStyle.Render("Cancelling..."))
 	} else {
 		lines = append(lines, "")
-		lines = append(lines, pad+mutedStyle.Render("[Esc] Cancel remaining"))
+		lines = append(lines, pad+zone.Mark("add-exec-cancel", mutedStyle.Render("[Esc] Cancel remaining")))
 	}
 
 	return strings.Join(lines, "\n")
