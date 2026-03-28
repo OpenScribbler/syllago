@@ -3,99 +3,79 @@
   "current": {
     "claimedBy": null,
     "project": "syllago",
-    "updated": "2026-03-28T15:10:00.000Z",
-    "sessionId": null,
-    "summary": "Phase D Add Wizard: full implementation complete — 8 tasks, all 17 beads closed, 68+ tests, pushed to main.",
+    "updated": "2026-03-28T17:55:00-07:00",
+    "sessionId": "dede094e-3a09-471b-bdbf-789940ebd5bf",
+    "summary": "Built provider monitoring pipeline end-to-end: source manifests (12 providers, 147 URLs), provider-monitor Go tool, _genproviders CLI command, and sync-providers.ts for docs site. All verified and tested.",
+
     "activeWork": {
-      "description": "Phase D Add Wizard — 5-step full-screen wizard for importing content into the library from providers, registries, local paths, or git URLs",
+      "description": "Provider capability data pipeline — source manifests → monitor tool → providers.json → docs site sync",
       "feature": null,
-      "stage": "complete",
-      "planRef": "docs/plans/2026-03-27-phase-d-implementation-plan.md",
-      "designRef": "docs/plans/2026-03-26-tui-wizards-design.md",
-      "progress": "All 8 tasks implemented and validated. 17 Phase D beads closed. New files: checkbox_list.go, add_wizard.go, add_wizard_update.go, add_wizard_view.go + tests. App wiring: [a] on Library/Content opens add wizard, Registries still uses registry add modal. Hardened git clone with security flags. 47 wizard tests + 10 checkbox tests + 5 invariant tests + 6 app integration tests. Lint clean, pushed to main.",
+      "stage": "execute",
+      "planRef": "docs/design/provider-matrix-docs-site.md",
+      "designRef": "docs/design/capability-schema-draft.yaml",
+      "progress": "Core pipeline complete and shipping. Source manifests verified (147/147 URLs). Go monitor tool built and tested. _genproviders command exports provider capabilities as JSON. sync-providers.ts generates MDX pages for docs site. All committed and pushed. Capability schema draft written but needs expansion (hook events, frontmatter fields, tool name mappings). Change classification pipeline not started.",
       "blockers": [],
       "beads": {
         "inProgress": [],
-        "completedThisSession": [
-          "syllago-iifdz",
-          "syllago-4brl7",
-          "syllago-wbuub",
-          "syllago-1s9aa",
-          "syllago-sigqs",
-          "syllago-i6jux",
-          "syllago-o74s2",
-          "syllago-zx4q9",
-          "syllago-lr69t",
-          "syllago-raejw",
-          "syllago-3vr1x",
-          "syllago-bwidz",
-          "syllago-4t6cd",
-          "syllago-zlchv",
-          "syllago-3creg",
-          "syllago-gegog",
-          "syllago-28r1g"
-        ],
-        "readyNext": [
-          "syllago-dma9e",
-          "syllago-5us6u"
-        ]
+        "completedThisSession": [],
+        "readyNext": []
       }
     },
+
     "git": {
       "branch": "main",
-      "uncommittedFiles": 18,
-      "lastCommit": "2493cc0 fix: lint issues in Phase D add wizard",
+      "uncommittedFiles": 22,
+      "lastCommit": "ca7bc6f add tests for _genproviders command",
       "modifiedFiles": [
-        "cli/internal/tui/add_wizard.go",
-        "cli/internal/tui/add_wizard_update.go",
-        "cli/internal/tui/add_wizard_view.go",
-        "cli/internal/tui/add_wizard_test.go",
-        "cli/internal/tui/checkbox_list.go",
-        "cli/internal/tui/checkbox_list_test.go",
-        "cli/internal/tui/app.go",
-        "cli/internal/tui/app_update.go",
-        "cli/internal/tui/actions.go"
+        "docs/provider-sources/gemini-cli.yaml"
       ]
     },
+
     "recentDecisions": [
-      "Implemented all 8 tasks as a single pass rather than sequential impl/validate pairs — the files are structurally interdependent",
-      "Enter and Right arrow both advance from Discovery to Review (spec said → only, but Enter is more natural)",
-      "Updated TestApp_ActionButtonHotkeys to expect wizardAdd mode instead of actionPressedMsg (behavioral change from Phase D wiring)"
+      "YAML + JSON Schema for source manifests (human-readable with validation)",
+      "One file per provider for source manifests (not monolithic)",
+      "Codegen-only (option A) for capability data — no runtime loader. Provider data baked into binary via go generate.",
+      "Provider capability export follows same pattern as commands.json: _genproviders command → providers.json → sync-providers.ts → MDX pages",
+      "Change classification taxonomy: additive (auto-PR), modify (review PR), removal (issue), behavioral (issue)"
     ],
+
     "nextSteps": [
-      "Live smoke test in real TUI — open add wizard, try provider source, verify navigation",
-      "Phase B Install Modal (syllago-5us6u) is next ready feature bead",
-      "Consider Phase 8 Toasts (from TUI roadmap) to support add wizard completion toasts"
+      "Write the plan for docs site provider pages — what needs to happen in syllago-docs to fully surface the provider data (matrix page, provider detail pages, hook event matrix, comparison component)",
+      "Expand capability schema draft to include hook events, frontmatter fields, tool name mappings (the Layer 2 data haiku validated as incomplete)",
+      "Build change classification pipeline (detect additive vs breaking changes when provider data updates)",
+      "Wire provider-monitor into CI as daily cron job"
     ],
+
     "context": {
-      "notes": "The 18 uncommitted files are research docs, opencode.json, reviews/, .copilot/ — not Phase D code. All Phase D code is committed and pushed. Two pre-existing test failures in cmd/syllago (TestDoctorCheckRegistries_WithConfig, TestFindProjectRootFallbackWarning) are unrelated to Phase D. The discovery backends (discoverFromProvider, discoverFromRegistry, discoverFromLocalPath) have 0% unit test coverage because they require real filesystem — they'll be tested via integration tests or manual smoke test."
+      "notes": "The docs site repo is at ../syllago-docs/. sync-providers.ts is already written and tested — it generates all 12 provider pages from providers.json. The sidebar.ts was updated (Copilot slug fixed, Amp added). The site builds clean. The capability-schema-draft.yaml has 6 open design questions at the bottom — platform-specific paths, hook detail level, and tool name mappings are the biggest. Haiku validation found significant gaps in the draft: hook types (4 not 1), frontmatter fields (12+ per type not 2), MCP transports (4 not 3). These need to be addressed before the schema is finalized."
     }
   },
+
   "previousSessions": [
     {
-      "summary": "Phase D Add Wizard: full bead-chain setup complete — spec, expert panel, plan, parity, sanity all passed. Ready for implementation.",
-      "updated": "2026-03-28T01:45:00.000Z",
+      "summary": "Phase D Add Wizard complete + bug fixes (mouse support, hook/MCP discovery) + mouse parity rule added to 4 doc files + UX Polish bead chain created (11 beads).",
+      "updated": "2026-03-28T17:45:00.000Z",
       "completedWork": [
-        "Spec v2 with expert panel review (4 agents, ~30 MUST-FIX addressed)",
-        "Plan v3 with parity check (5 GAPs fixed) and sanity check (3 BLOCKs fixed)",
-        "21 beads created with full dependency chain, first 4 closed (spec, plan, parity, sanity)"
+        "Add Wizard Phase D complete",
+        "Mouse support bug fixes",
+        "Hook/MCP discovery fixes",
+        "UX Polish bead chain created"
       ],
       "nextSteps": [
-        "Start Task 1 Checkbox List Component",
-        "Continue sequential impl→validate chain through all 8 tasks"
+        "Add Wizard UX Polish plan bead (syllago-76jtp)",
+        "Nav buttons, proper tables, button reorder, helpbar override, installed-item filtering"
       ]
     },
     {
-      "summary": "Provider sources pipeline: schema validated and committed, Go provider-monitor tool implementation in progress",
-      "updated": "2026-03-28T00:45:58.351Z",
+      "summary": "Hooks specification v0.1 finalized: all 17 v0.1 items completed, changelog updated, file renamed from hooks-v1.md to hooks.md",
+      "updated": "2026-03-27T23:06:20.224Z",
       "completedWork": [
-        "Schema and 12 YAML manifests committed",
-        "Started Go provider-monitor implementation (URL health checker, change detection)",
-        "Three fetch backends (gh-api, llms-txt, html-scrape) mapped to fetch_tier"
+        "All 17 hooks spec v0.1 items completed",
+        "Changelog updated",
+        "File renamed hooks-v1.md → hooks.md"
       ],
       "nextSteps": [
-        "Complete provider-monitor implementation",
-        "Add unit tests for fetcher and change detection"
+        "Provider matrix docs site feature"
       ]
     }
   ]
