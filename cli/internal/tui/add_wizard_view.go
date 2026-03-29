@@ -351,10 +351,42 @@ func (m *addWizardModel) viewReview() string {
 	var lines []string
 	lines = append(lines, pad+titleRendered+strings.Repeat(" ", btnGap)+btnsStr)
 
-	// Risk banner
-	if len(m.risks) > 0 {
-		riskView := m.riskBanner.View()
-		lines = append(lines, riskView)
+	// Per-item risk info box (for the currently highlighted item)
+	if m.reviewZone == addReviewZoneItems && m.reviewItemCursor < len(selected) {
+		itemRisks := selected[m.reviewItemCursor].risks
+		if len(itemRisks) > 0 {
+			maxRiskLines := 5
+			hasHigh := false
+			var riskLines []string
+			for i, r := range itemRisks {
+				if i >= maxRiskLines {
+					remaining := len(itemRisks) - maxRiskLines
+					riskLines = append(riskLines, mutedStyle.Render(fmt.Sprintf("+%d more — drill in to see all", remaining)))
+					break
+				}
+				prefix := "! "
+				color := warningColor
+				if r.Level == catalog.RiskHigh {
+					prefix = "!! "
+					color = dangerColor
+					hasHigh = true
+				}
+				line := lipgloss.NewStyle().Foreground(color).Render(prefix+r.Label) +
+					" — " + mutedStyle.Render(r.Description)
+				riskLines = append(riskLines, line)
+			}
+			borderColor := warningColor
+			if hasHigh {
+				borderColor = dangerColor
+			}
+			riskBox := lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(borderColor).
+				MaxWidth(m.width-4).
+				Padding(0, 1).
+				Render(strings.Join(riskLines, "\n"))
+			lines = append(lines, riskBox)
+		}
 	}
 
 	// Microcopy
@@ -364,9 +396,9 @@ func (m *addWizardModel) viewReview() string {
 	cols := m.reviewColumns()
 	reviewHdr := pad + "  " + // cursor space
 		boldStyle.Render(padRight("Name", cols.name)) + " " +
+		boldStyle.Render(padRight("Risk", cols.risk)) + " " +
 		boldStyle.Render(padRight("Type", cols.ctype)) + " " +
-		boldStyle.Render(padRight("Status", cols.status)) + " " +
-		boldStyle.Render(padRight("Risk", cols.risk))
+		boldStyle.Render(padRight("Status", cols.status))
 	lines = append(lines, truncateLine(reviewHdr, m.width))
 
 	// Window the item list to the visible range using reviewItemOffset
@@ -452,7 +484,7 @@ func (m *addWizardModel) viewReview() string {
 			}
 			bgSpace := lipgloss.NewStyle().Background(bg).Render(" ")
 			cursorStyled := lipgloss.NewStyle().Bold(true).Foreground(primaryText).Background(bg).Render(cursor)
-			row := pad + cursorStyled + nameCol + bgSpace + typeCol + bgSpace + statusCol + bgSpace + riskCol
+			row := pad + cursorStyled + nameCol + bgSpace + riskCol + bgSpace + typeCol + bgSpace + statusCol
 			// Pad to full width with background, then hard-clip
 			rowW := lipgloss.Width(row)
 			if rowW < m.width {
@@ -477,7 +509,7 @@ func (m *addWizardModel) viewReview() string {
 			default:
 				riskCol = padRight("", cols.risk)
 			}
-			line := pad + cursor + nameCol + " " + typeCol + " " + statusCol + " " + riskCol
+			line := pad + cursor + nameCol + " " + riskCol + " " + typeCol + " " + statusCol
 			line = truncateLine(line, m.width)
 			// Pad to full width to reset any lingering background
 			if lineW := lipgloss.Width(line); lineW < m.width {
