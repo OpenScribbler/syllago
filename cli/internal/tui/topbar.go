@@ -78,12 +78,24 @@ func newTopBar() topBarModel {
 // Per-item actions ([e] Edit, [d] Remove, [x] Uninstall) are in the metadata panel.
 func (t topBarModel) tabActions() []tabAction {
 	switch t.ActiveTabLabel() {
-	case "Library", "Registries", "Skills", "Agents", "MCP", "Rules", "Hooks", "Commands":
-		return []tabAction{
-			{"[a] Add", "btn-add", "add"},
-		}
+	case "Library":
+		return []tabAction{{"[a] Add content", "btn-add", "add"}}
+	case "Registries":
+		return []tabAction{{"[a] Add registry", "btn-add", "add"}}
 	case "Loadouts":
-		return nil // no global actions on loadouts
+		return []tabAction{{"[a] Add loadout", "btn-add", "add"}}
+	case "Skills":
+		return []tabAction{{"[a] Add skills", "btn-add", "add"}}
+	case "Agents":
+		return []tabAction{{"[a] Add agents", "btn-add", "add"}}
+	case "MCP":
+		return []tabAction{{"[a] Add MCP", "btn-add", "add"}}
+	case "Rules":
+		return []tabAction{{"[a] Add rules", "btn-add", "add"}}
+	case "Hooks":
+		return []tabAction{{"[a] Add hooks", "btn-add", "add"}}
+	case "Commands":
+		return []tabAction{{"[a] Add commands", "btn-add", "add"}}
 	default: // Config tabs
 		return nil
 	}

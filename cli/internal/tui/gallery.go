@@ -354,7 +354,6 @@ func (g galleryModel) renderMetadata(width int) string {
 	var btnParts []string
 	if g.tabLabel == "Registry" {
 		btnParts = append(btnParts,
-			zone.Mark("meta-add", activeButtonStyle.Render("[a] Add")),
 			zone.Mark("meta-sync", activeButtonStyle.Render("[S] Sync")),
 		)
 	}
