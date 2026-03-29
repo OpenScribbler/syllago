@@ -42,27 +42,33 @@ func (m *addWizardModel) updateMouse(msg tea.MouseMsg) (*addWizardModel, tea.Cmd
 		return m, nil
 	}
 
-	// Wizard shell breadcrumb clicks (completed and previously-visited steps are clickable)
-	if step, ok := m.shell.HandleClick(msg); ok {
-		target := addStep(step)
-		if m.preFilterType != "" {
-			switch step {
-			case 0:
-				target = addStepSource
-			case 1:
-				target = addStepDiscovery
-			case 2:
-				target = addStepReview
-			case 3:
-				target = addStepExecute
+	// Wizard shell breadcrumb clicks — disabled during Execute step (can't undo adds)
+	if m.step != addStepExecute {
+		if step, ok := m.shell.HandleClick(msg); ok {
+			target := addStep(step)
+			if m.preFilterType != "" {
+				switch step {
+				case 0:
+					target = addStepSource
+				case 1:
+					target = addStepDiscovery
+				case 2:
+					target = addStepReview
+				case 3:
+					target = addStepExecute
+				}
 			}
+			// Don't allow navigating to Execute via breadcrumb
+			if target == addStepExecute {
+				return m, nil
+			}
+			if target != m.step && target <= m.maxStep {
+				m.step = target
+				m.shell.SetActive(step)
+				m.reviewAcknowledged = false
+			}
+			return m, nil
 		}
-		if target != m.step && target <= m.maxStep {
-			m.step = target
-			m.shell.SetActive(step)
-			m.reviewAcknowledged = false
-		}
-		return m, nil
 	}
 
 	// Nav button clicks (shared across steps)
