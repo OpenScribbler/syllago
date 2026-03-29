@@ -311,30 +311,45 @@ func (m *addWizardModel) viewReview() string {
 	}
 
 	pad := "  "
-	usableW := m.width - 4
 
 	selected := m.selectedItems()
 	header := fmt.Sprintf("Adding %d items to library:", len(selected))
 
-	// Title + buttons on one line
-	titleRendered := pad + lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(header)
-	titleW := lipgloss.Width(titleRendered)
+	// Title on left, buttons right-aligned on the same line
+	titleRendered := lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(header)
 
 	btnFocus := -1
 	if m.reviewZone == addReviewZoneButtons {
 		btnFocus = m.buttonCursor
 	}
 	addLabel := fmt.Sprintf("Add %d items", len(selected))
-	buttons := renderModalButtons(btnFocus, usableW, pad, nil,
-		buttonDef{addLabel, "add-confirm", 0},
-		buttonDef{"Back", "add-back", 1},
-		buttonDef{"Cancel", "add-cancel", 2},
-	)
-	btnsW := lipgloss.Width(buttons)
-	gap := max(1, usableW-titleW-btnsW+4)
+
+	// Build button string (right-aligned)
+	var btnParts []string
+	for _, b := range []buttonDef{
+		{addLabel, "add-confirm", 0},
+		{"Back", "add-back", 1},
+		{"Cancel", "add-cancel", 2},
+	} {
+		style := lipgloss.NewStyle().Padding(0, 2)
+		if btnFocus == b.focusAt {
+			style = style.Bold(true).
+				Foreground(lipgloss.AdaptiveColor{Light: "#FFFCF0", Dark: "#100F0F"}).
+				Background(accentColor)
+		} else {
+			style = style.
+				Foreground(primaryText).
+				Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"})
+		}
+		btnParts = append(btnParts, zone.Mark(b.zoneID, style.Render(b.label)))
+	}
+	btnsStr := strings.Join(btnParts, "  ")
+	btnsW := lipgloss.Width(btnsStr)
+	titleW := lipgloss.Width(titleRendered)
+	btnGap := max(2, m.width-titleW-btnsW-6)
 
 	var lines []string
-	lines = append(lines, titleRendered+strings.Repeat(" ", gap)+strings.TrimLeft(buttons, " "))
+	lines = append(lines, pad+titleRendered+strings.Repeat(" ", btnGap)+btnsStr)
 
 	// Risk banner
 	if len(m.risks) > 0 {
@@ -446,13 +461,13 @@ func (m *addWizardModel) viewReview() string {
 			line := lipgloss.NewStyle().MaxWidth(m.width).Render(row)
 			lines = append(lines, zone.Mark(fmt.Sprintf("add-rev-item-%d", i), line))
 		} else {
-			// Normal row
-			nameCol = nameText
-			typeCol = typeText
+			// Normal row — explicit foreground to prevent background bleed
+			nameCol = lipgloss.NewStyle().Foreground(primaryText).Render(nameText)
+			typeCol = lipgloss.NewStyle().Foreground(primaryText).Render(typeText)
 			if statusColor != nil {
 				statusCol = lipgloss.NewStyle().Foreground(statusColor).Render(statusText)
 			} else {
-				statusCol = statusText
+				statusCol = lipgloss.NewStyle().Foreground(primaryText).Render(statusText)
 			}
 			switch riskLbl {
 			case "!!":
@@ -463,7 +478,12 @@ func (m *addWizardModel) viewReview() string {
 				riskCol = padRight("", cols.risk)
 			}
 			line := pad + cursor + nameCol + " " + typeCol + " " + statusCol + " " + riskCol
-			lines = append(lines, zone.Mark(fmt.Sprintf("add-rev-item-%d", i), truncateLine(line, m.width)))
+			line = truncateLine(line, m.width)
+			// Pad to full width to reset any lingering background
+			if lineW := lipgloss.Width(line); lineW < m.width {
+				line += strings.Repeat(" ", m.width-lineW)
+			}
+			lines = append(lines, zone.Mark(fmt.Sprintf("add-rev-item-%d", i), line))
 		}
 	}
 
@@ -496,7 +516,17 @@ func (m *addWizardModel) viewReviewDrillIn() string {
 	m.reviewDrillTree.SetSize(treeW, paneH)
 	m.reviewDrillPreview.SetSize(previewW, paneH)
 
-	border := sectionRuleStyle.Render
+	mBorder := mutedStyle.Render                                   // inactive border
+	fBorder := lipgloss.NewStyle().Foreground(primaryColor).Render // focused border
+
+	// Pick border style per pane
+	treeBorder := mBorder
+	prevBorder := mBorder
+	if m.reviewDrillTree.focused {
+		treeBorder = fBorder
+	} else {
+		prevBorder = fBorder
+	}
 
 	wrapLine := func(s string, w int) string {
 		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
@@ -506,8 +536,11 @@ func (m *addWizardModel) viewReviewDrillIn() string {
 		return s
 	}
 
-	// Top border
-	lines = append(lines, border("╭"+strings.Repeat("─", treeW)+"┬"+strings.Repeat("─", previewW)+"╮"))
+	// Top border with focus coloring
+	lines = append(lines,
+		treeBorder("╭")+treeBorder(strings.Repeat("─", treeW))+
+			mBorder("┬")+
+			prevBorder(strings.Repeat("─", previewW))+prevBorder("╮"))
 
 	// Build tree + preview content
 	treeContent := strings.Split(m.reviewDrillTree.View(), "\n")
@@ -536,11 +569,17 @@ func (m *addWizardModel) viewReviewDrillIn() string {
 		if i < len(previewContent) {
 			pl = previewContent[i]
 		}
-		lines = append(lines, border("│")+wrapLine(tl, treeW)+border("│")+wrapLine(pl, previewW)+border("│"))
+		lines = append(lines,
+			treeBorder("│")+wrapLine(tl, treeW)+
+				mBorder("│")+
+				wrapLine(pl, previewW)+prevBorder("│"))
 	}
 
 	// Bottom border
-	lines = append(lines, border("╰"+strings.Repeat("─", treeW)+"┴"+strings.Repeat("─", previewW)+"╯"))
+	lines = append(lines,
+		treeBorder("╰")+treeBorder(strings.Repeat("─", treeW))+
+			mBorder("┴")+
+			prevBorder(strings.Repeat("─", previewW))+prevBorder("╯"))
 
 	return strings.Join(lines, "\n")
 }
