@@ -325,10 +325,13 @@ func (m *addWizardModel) updateMouseReview(msg tea.MouseMsg) (*addWizardModel, t
 				m.reviewDrillTree.focused = true
 				m.reviewDrillPreview.focused = false
 			}
-			// Handle tree item clicks
+			// Handle tree item clicks (zone IDs are "ftnode-N" from fileTreeModel)
 			for i := range m.reviewDrillTree.nodes {
-				if zone.Get("tree-" + itoa(i)).InBounds(msg) {
+				if zone.Get("ftnode-" + itoa(i)).InBounds(msg) {
 					m.reviewDrillTree.cursor = i
+					if m.reviewDrillTree.nodes[i].isDir {
+						m.reviewDrillTree.ToggleDir()
+					}
 					m.loadDrillInFile()
 					return m, nil
 				}
