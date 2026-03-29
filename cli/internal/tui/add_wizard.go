@@ -57,6 +57,7 @@ const (
 // --- Messages ---
 
 type addCloseMsg struct{}
+type addRestartMsg struct{} // restart the wizard from Source step
 
 type addDiscoveryDoneMsg struct {
 	seq              int
@@ -305,7 +306,7 @@ func (m *addWizardModel) stepHints() []string {
 		return append([]string{"tab cycle zones", "↑/↓ navigate", "←/→ buttons", "enter inspect", "esc back"}, base...)
 	case addStepExecute:
 		if m.executeDone {
-			return append([]string{"enter close"}, base...)
+			return append([]string{"enter close", "a add more", "↑/↓ scroll"}, base...)
 		}
 		return append([]string{"esc cancel remaining"}, base...)
 	}

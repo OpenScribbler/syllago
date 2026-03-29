@@ -800,7 +800,13 @@ func (m *addWizardModel) viewExecute() string {
 
 	if m.executeDone {
 		lines = append(lines, "")
-		lines = append(lines, pad+zone.Mark("add-exec-done", mutedStyle.Render("[Enter] Go to Library")))
+		// Styled action buttons
+		btnStyle := lipgloss.NewStyle().Padding(0, 2).
+			Foreground(primaryText).
+			Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"})
+		closeBtn := zone.Mark("add-exec-done", btnStyle.Render("Go to Library"))
+		addMoreBtn := zone.Mark("add-exec-restart", btnStyle.Render("Add More"))
+		lines = append(lines, pad+closeBtn+"  "+addMoreBtn)
 	} else if m.executeCancelled {
 		lines = append(lines, "")
 		lines = append(lines, pad+mutedStyle.Render("Cancelling..."))
