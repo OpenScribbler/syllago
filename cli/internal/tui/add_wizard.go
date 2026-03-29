@@ -366,7 +366,9 @@ func (m *addWizardModel) shellIndexForStep(s addStep) int {
 
 // advanceFromSource transitions from the Source step to the next step.
 // Always clears downstream state to avoid showing stale data.
-func (m *addWizardModel) advanceFromSource() {
+// Returns a tea.Cmd that callers must propagate (non-nil when preFilterType
+// triggers immediate discovery).
+func (m *addWizardModel) advanceFromSource() tea.Cmd {
 	m.typeChecks = m.buildTypeCheckList()
 	m.discoveredItems = nil
 	m.discoveryList = checkboxList{}
@@ -376,13 +378,17 @@ func (m *addWizardModel) advanceFromSource() {
 	m.seq++
 
 	if m.preFilterType != "" {
+		// Skip Type step — go straight to Discovery and start scanning
 		m.step = addStepDiscovery
 		m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
-	} else {
-		m.step = addStepType
-		m.shell.SetActive(m.shellIndexForStep(addStepType))
+		m.discovering = true
+		m.updateMaxStep()
+		return m.startDiscoveryCmd()
 	}
+	m.step = addStepType
+	m.shell.SetActive(m.shellIndexForStep(addStepType))
 	m.updateMaxStep()
+	return nil
 }
 
 // buildTypeCheckList builds the checkbox list for the Type step.

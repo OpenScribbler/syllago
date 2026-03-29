@@ -510,8 +510,8 @@ func (m *addWizardModel) updateKeySourceExpanded(msg tea.KeyMsg) (*addWizardMode
 			m.source = addSourceRegistry
 		}
 		m.sourceExpanded = false
-		m.advanceFromSource()
-		return m, nil
+		cmd := m.advanceFromSource()
+		return m, cmd
 	}
 	return m, nil
 }
