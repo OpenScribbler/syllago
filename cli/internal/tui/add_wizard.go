@@ -90,6 +90,7 @@ type addDiscoveryItem struct {
 	risks       []catalog.RiskIndicator
 	overwrite   bool
 	underlying  *add.DiscoveryItem
+	catalogItem *catalog.ContentItem // original catalog item when available (has correct Files/Path)
 }
 
 // --- Execute result ---
@@ -476,29 +477,33 @@ func (m *addWizardModel) enterReviewDrillIn() {
 	}
 	item := selected[m.reviewItemCursor]
 
-	// Build a minimal ContentItem for the file tree + preview.
-	// Path must be a directory for ReadFileContent to work.
-	itemPath := item.path
-	if item.sourceDir != "" {
-		itemPath = item.sourceDir
-	}
-
-	ci := catalog.ContentItem{
-		Name: item.name,
-		Type: item.itemType,
-	}
-
-	info, err := os.Stat(itemPath)
-	if err != nil {
-		return
-	}
-	if info.IsDir() {
-		ci.Path = itemPath
-		ci.Files = scanDrillInFiles(itemPath)
+	// Use the catalogItem directly when available (has correct Path + Files
+	// from the catalog scanner). Fall back to filesystem scan for items
+	// discovered from providers (hooks, MCP, file-based without catalog scan).
+	var ci catalog.ContentItem
+	if item.catalogItem != nil {
+		ci = *item.catalogItem
 	} else {
-		// Single file: use parent dir as Path, filename as the only File
-		ci.Path = filepath.Dir(itemPath)
-		ci.Files = []string{filepath.Base(itemPath)}
+		// Construct from discovery item fields
+		itemPath := item.path
+		if item.sourceDir != "" {
+			itemPath = item.sourceDir
+		}
+		ci = catalog.ContentItem{
+			Name: item.name,
+			Type: item.itemType,
+		}
+		info, err := os.Stat(itemPath)
+		if err != nil {
+			return
+		}
+		if info.IsDir() {
+			ci.Path = itemPath
+			ci.Files = scanDrillInFiles(itemPath)
+		} else {
+			ci.Path = filepath.Dir(itemPath)
+			ci.Files = []string{filepath.Base(itemPath)}
+		}
 	}
 
 	m.reviewDrillTree = newFileTreeModel(ci.Files)
@@ -530,14 +535,20 @@ func (m *addWizardModel) loadDrillInFile() {
 		return
 	}
 	item := selected[m.reviewItemCursor]
-	basePath := item.path
-	if item.sourceDir != "" {
-		basePath = item.sourceDir
-	}
 
-	// Ensure basePath is a directory for ReadFileContent
-	if info, err := os.Stat(basePath); err == nil && !info.IsDir() {
-		basePath = filepath.Dir(basePath)
+	// Use catalogItem.Path when available (authoritative), fall back to discovery fields
+	var basePath string
+	if item.catalogItem != nil {
+		basePath = item.catalogItem.Path
+	} else {
+		basePath = item.path
+		if item.sourceDir != "" {
+			basePath = item.sourceDir
+		}
+		// Ensure basePath is a directory for ReadFileContent
+		if info, err := os.Stat(basePath); err == nil && !info.IsDir() {
+			basePath = filepath.Dir(basePath)
+		}
 	}
 
 	relPath := m.reviewDrillTree.SelectedPath()
@@ -627,13 +638,39 @@ type discoveryColLayout struct {
 }
 
 // discoveryColumns computes column widths for the discovery list.
+// Name column is sized to the longest item name (capped at 50% of available width).
 func (m *addWizardModel) discoveryColumns() discoveryColLayout {
 	w := m.width - 12 // prefix (6: "> [x] ") + right padding (4) + gaps (2)
 	ctype := 8
 	status := 12
 	risk := 6
 	fixed := ctype + status + risk + 3 // 3 gaps
-	nameW := max(12, w-fixed)
+
+	// Find longest name in visible items
+	maxName := 4 // minimum for "Name" header
+	for _, d := range m.visibleDiscoveryItems() {
+		name := d.displayName
+		if name == "" {
+			name = d.name
+		}
+		if len(name) > maxName {
+			maxName = len(name)
+		}
+	}
+	// Also check selected items (for review reuse)
+	for _, d := range m.selectedItems() {
+		name := d.displayName
+		if name == "" {
+			name = d.name
+		}
+		if len(name) > maxName {
+			maxName = len(name)
+		}
+	}
+
+	// Cap at 50% of available width, minimum 12
+	maxAvail := max(12, (w-fixed)*50/100)
+	nameW := max(12, min(maxName+2, maxAvail)) // +2 for breathing room
 	return discoveryColLayout{nameW, ctype, status, risk}
 }
 
@@ -920,7 +957,7 @@ func discoverFromProvider(
 			underlying: &d,
 		}
 
-		// Annotate with risks
+		// Build a ContentItem for risk scanning and drill-in preview
 		ci := catalog.ContentItem{
 			Name: d.Name,
 			Type: d.Type,
@@ -929,7 +966,9 @@ func discoverFromProvider(
 		if d.SourceDir != "" {
 			ci.Path = d.SourceDir
 		}
+		ci.Files = scanDrillInFiles(ci.Path)
 		item.risks = catalog.RiskIndicators(ci)
+		item.catalogItem = &ci
 
 		items = append(items, item)
 	}
@@ -1100,13 +1139,16 @@ func discoverFromRegistry(
 			SourceDir: ci.Path,
 			Status:    status,
 		}
+		ciCopy := ci // capture for pointer
 		item := addDiscoveryItem{
-			name:       ci.Name,
-			itemType:   ci.Type,
-			path:       ci.Path,
-			status:     status,
-			risks:      catalog.RiskIndicators(ci),
-			underlying: &di,
+			name:        ci.Name,
+			displayName: ci.DisplayName,
+			itemType:    ci.Type,
+			path:        ci.Path,
+			status:      status,
+			risks:       catalog.RiskIndicators(ci),
+			underlying:  &di,
+			catalogItem: &ciCopy,
 		}
 		items = append(items, item)
 	}
@@ -1163,13 +1205,16 @@ func discoverFromLocalPath(
 			SourceDir: ci.Path,
 			Status:    status,
 		}
+		ciCopy := ci
 		item := addDiscoveryItem{
-			name:       ci.Name,
-			itemType:   ci.Type,
-			path:       ci.Path,
-			status:     status,
-			risks:      catalog.RiskIndicators(ci),
-			underlying: &di,
+			name:        ci.Name,
+			displayName: ci.DisplayName,
+			itemType:    ci.Type,
+			path:        ci.Path,
+			status:      status,
+			risks:       catalog.RiskIndicators(ci),
+			underlying:  &di,
+			catalogItem: &ciCopy,
 		}
 		items = append(items, item)
 	}
