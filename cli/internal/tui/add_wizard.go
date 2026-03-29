@@ -1129,12 +1129,35 @@ func discoverHooksFromProvider(prov provider.Provider, projectRoot string, resol
 				Status: status,
 				Scope:  loc.Scope.String(),
 			}
+
+			// Compute risk from the hook's structured data
+			var hookRisks []catalog.RiskIndicator
+			for _, entry := range hook.Hooks {
+				if entry.Command != "" {
+					hookRisks = append(hookRisks, catalog.RiskIndicator{
+						Label:       "Runs commands",
+						Description: "Hook executes: " + truncate(entry.Command, 60),
+						Level:       catalog.RiskHigh,
+					})
+					break // one "Runs commands" indicator is enough
+				}
+				if entry.URL != "" {
+					hookRisks = append(hookRisks, catalog.RiskIndicator{
+						Label:       "Network access",
+						Description: "Hook calls: " + truncate(entry.URL, 60),
+						Level:       catalog.RiskMedium,
+					})
+					break
+				}
+			}
+
 			result = append(result, addDiscoveryItem{
 				name:       name,
 				itemType:   catalog.Hooks,
 				path:       loc.Path,
 				status:     status,
 				scope:      loc.Scope.String(),
+				risks:      hookRisks,
 				underlying: &di,
 			})
 		}
@@ -1170,7 +1193,7 @@ func discoverMcpFromProvider(prov provider.Provider, projectRoot string, resolve
 		if !servers.Exists() || servers.Type != gjson.JSON {
 			continue
 		}
-		servers.ForEach(func(key, _ gjson.Result) bool {
+		servers.ForEach(func(key, val gjson.Result) bool {
 			name := key.String()
 			libKey := string(catalog.MCP) + "/" + prov.Slug + "/" + name
 			_, inLib := idx[libKey]
@@ -1185,12 +1208,43 @@ func discoverMcpFromProvider(prov provider.Provider, projectRoot string, resolve
 				Status: status,
 				Scope:  loc.Scope.String(),
 			}
+
+			// Compute risk from actual server config
+			var mcpRisks []catalog.RiskIndicator
+			cmd := val.Get("command").String()
+			url := val.Get("url").String()
+			transport := val.Get("type").String() // "stdio", "sse", "http"
+			hasEnv := val.Get("env").Exists() && len(val.Get("env").Map()) > 0
+
+			if cmd != "" {
+				mcpRisks = append(mcpRisks, catalog.RiskIndicator{
+					Label:       "Runs process",
+					Description: "Launches: " + truncate(cmd, 60),
+					Level:       catalog.RiskHigh,
+				})
+			}
+			if url != "" || transport == "sse" || transport == "http" {
+				mcpRisks = append(mcpRisks, catalog.RiskIndicator{
+					Label:       "Network access",
+					Description: "Connects to remote endpoint",
+					Level:       catalog.RiskMedium,
+				})
+			}
+			if hasEnv {
+				mcpRisks = append(mcpRisks, catalog.RiskIndicator{
+					Label:       "Environment variables",
+					Description: "Server receives environment variables",
+					Level:       catalog.RiskMedium,
+				})
+			}
+
 			result = append(result, addDiscoveryItem{
 				name:       name,
 				itemType:   catalog.MCP,
 				path:       loc.Path,
 				status:     status,
 				scope:      loc.Scope.String(),
+				risks:      mcpRisks,
 				underlying: &di,
 			})
 			return true
