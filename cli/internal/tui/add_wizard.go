@@ -1093,12 +1093,20 @@ func discoverFromRegistry(
 			status = add.StatusInLibrary
 		}
 
+		di := add.DiscoveryItem{
+			Name:      ci.Name,
+			Type:      ci.Type,
+			Path:      ci.Path,
+			SourceDir: ci.Path,
+			Status:    status,
+		}
 		item := addDiscoveryItem{
-			name:     ci.Name,
-			itemType: ci.Type,
-			path:     ci.Path,
-			status:   status,
-			risks:    catalog.RiskIndicators(ci),
+			name:       ci.Name,
+			itemType:   ci.Type,
+			path:       ci.Path,
+			status:     status,
+			risks:      catalog.RiskIndicators(ci),
+			underlying: &di,
 		}
 		items = append(items, item)
 	}
@@ -1148,12 +1156,20 @@ func discoverFromLocalPath(
 			status = add.StatusInLibrary
 		}
 
+		di := add.DiscoveryItem{
+			Name:      ci.Name,
+			Type:      ci.Type,
+			Path:      ci.Path,
+			SourceDir: ci.Path,
+			Status:    status,
+		}
 		item := addDiscoveryItem{
-			name:     ci.Name,
-			itemType: ci.Type,
-			path:     ci.Path,
-			status:   status,
-			risks:    catalog.RiskIndicators(ci),
+			name:       ci.Name,
+			itemType:   ci.Type,
+			path:       ci.Path,
+			status:     status,
+			risks:      catalog.RiskIndicators(ci),
+			underlying: &di,
 		}
 		items = append(items, item)
 	}

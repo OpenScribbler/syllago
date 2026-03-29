@@ -316,11 +316,10 @@ func (m *addWizardModel) viewReview() string {
 	selected := m.selectedItems()
 	header := fmt.Sprintf("Adding %d items to library:", len(selected))
 
-	var lines []string
-	lines = append(lines, pad+lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(header))
+	// Title + buttons on one line
+	titleRendered := pad + lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(header)
+	titleW := lipgloss.Width(titleRendered)
 
-	// Buttons at the top, below the header
-	lines = append(lines, "")
 	btnFocus := -1
 	if m.reviewZone == addReviewZoneButtons {
 		btnFocus = m.buttonCursor
@@ -331,20 +330,20 @@ func (m *addWizardModel) viewReview() string {
 		buttonDef{"Back", "add-back", 1},
 		buttonDef{"Cancel", "add-cancel", 2},
 	)
-	lines = append(lines, buttons)
-	lines = append(lines, "")
+	btnsW := lipgloss.Width(buttons)
+	gap := max(1, usableW-titleW-btnsW+4)
+
+	var lines []string
+	lines = append(lines, titleRendered+strings.Repeat(" ", gap)+strings.TrimLeft(buttons, " "))
 
 	// Risk banner
 	if len(m.risks) > 0 {
 		riskView := m.riskBanner.View()
 		lines = append(lines, riskView)
-		lines = append(lines, "")
 	}
 
 	// Microcopy
-	lines = append(lines, pad+mutedStyle.Render("Review your selections. Press Enter on an item to inspect its files."))
-	lines = append(lines, pad+mutedStyle.Render("Items marked with ! or !! contain executable code — inspect before adding."))
-	lines = append(lines, "")
+	lines = append(lines, pad+mutedStyle.Render("Enter to inspect files. Items with ! or !! contain executable code."))
 
 	// Item list with column headers
 	cols := m.reviewColumns()
