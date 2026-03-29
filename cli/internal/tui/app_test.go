@@ -1235,7 +1235,8 @@ func TestGallery_RegistryButtons_NotOnLoadouts(t *testing.T) {
 	}
 
 	view := a.View()
-	assertNotContains(t, view, "[a] Add")
+	assertContains(t, view, "[a] Add loadout")     // loadouts now have their own add button
+	assertNotContains(t, view, "[a] Add registry") // registry add should NOT appear on loadouts
 	assertNotContains(t, view, "[S] Sync")
 }
 
