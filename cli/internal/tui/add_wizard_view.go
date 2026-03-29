@@ -351,41 +351,52 @@ func (m *addWizardModel) viewReview() string {
 	var lines []string
 	lines = append(lines, pad+titleRendered+strings.Repeat(" ", btnGap)+btnsStr)
 
-	// Per-item risk info box (for the currently highlighted item)
-	if m.reviewZone == addReviewZoneItems && m.reviewItemCursor < len(selected) {
-		itemRisks := selected[m.reviewItemCursor].risks
-		if len(itemRisks) > 0 {
-			maxRiskLines := 5
-			hasHigh := false
-			var riskLines []string
-			for i, r := range itemRisks {
-				if i >= maxRiskLines {
-					remaining := len(itemRisks) - maxRiskLines
-					riskLines = append(riskLines, mutedStyle.Render(fmt.Sprintf("+%d more — drill in to see all", remaining)))
-					break
-				}
-				prefix := "! "
-				color := warningColor
-				if r.Level == catalog.RiskHigh {
-					prefix = "!! "
-					color = dangerColor
-					hasHigh = true
-				}
-				line := lipgloss.NewStyle().Foreground(color).Render(prefix+r.Label) +
-					" — " + mutedStyle.Render(r.Description)
-				riskLines = append(riskLines, line)
+	// Per-item risk info — fixed height area to prevent list from jumping.
+	// Inner content is reviewRiskBoxLines-2 lines (minus top/bottom border).
+	innerLines := reviewRiskBoxLines - 2
+	var riskContent []string
+	var itemRisks []catalog.RiskIndicator
+	if m.reviewItemCursor < len(selected) {
+		itemRisks = selected[m.reviewItemCursor].risks
+	}
+	if len(itemRisks) > 0 {
+		hasHigh := false
+		maxShow := innerLines
+		for i, r := range itemRisks {
+			if i >= maxShow {
+				remaining := len(itemRisks) - maxShow
+				riskContent = append(riskContent, mutedStyle.Render(fmt.Sprintf("+%d more — drill in to see all", remaining)))
+				break
 			}
-			borderColor := warningColor
-			if hasHigh {
-				borderColor = dangerColor
+			prefix := "! "
+			color := warningColor
+			if r.Level == catalog.RiskHigh {
+				prefix = "!! "
+				color = dangerColor
+				hasHigh = true
 			}
-			riskBox := lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(borderColor).
-				MaxWidth(m.width-4).
-				Padding(0, 1).
-				Render(strings.Join(riskLines, "\n"))
-			lines = append(lines, riskBox)
+			riskContent = append(riskContent, lipgloss.NewStyle().Foreground(color).Render(prefix+r.Label)+
+				" — "+mutedStyle.Render(truncate(r.Description, m.width-20)))
+		}
+		borderColor := warningColor
+		if hasHigh {
+			borderColor = dangerColor
+		}
+		// Pad to fixed inner height
+		for len(riskContent) < innerLines {
+			riskContent = append(riskContent, "")
+		}
+		riskBox := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(borderColor).
+			MaxWidth(m.width-4).
+			Padding(0, 1).
+			Render(strings.Join(riskContent, "\n"))
+		lines = append(lines, riskBox)
+	} else {
+		// No risks — render empty space to keep layout stable
+		for i := 0; i < reviewRiskBoxLines; i++ {
+			lines = append(lines, "")
 		}
 	}
 
