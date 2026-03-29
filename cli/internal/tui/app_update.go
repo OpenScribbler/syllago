@@ -365,6 +365,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd := a.rescanCatalog()
 		return a, cmd
 
+	case addRestartMsg:
+		// Close current wizard, rescan catalog, then reopen a fresh one
+		if a.addWizard != nil && a.addWizard.gitTempDir != "" {
+			_ = os.RemoveAll(a.addWizard.gitTempDir)
+		}
+		a.addWizard = nil
+		a.wizardMode = wizardNone
+		a.rescanCatalog()
+		return a.handleAdd()
+
 	case addDiscoveryDoneMsg:
 		if a.addWizard != nil {
 			_, cmd := a.addWizard.Update(msg)

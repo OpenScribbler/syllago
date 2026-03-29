@@ -399,6 +399,9 @@ func (m *addWizardModel) updateMouseExecute(msg tea.MouseMsg) (*addWizardModel, 
 		if zone.Get("add-exec-done").InBounds(msg) {
 			return m, func() tea.Msg { return addCloseMsg{} }
 		}
+		if zone.Get("add-exec-restart").InBounds(msg) {
+			return m, func() tea.Msg { return addRestartMsg{} }
+		}
 	} else if !m.executeCancelled {
 		if zone.Get("add-exec-cancel").InBounds(msg) {
 			m.executeCancelled = true
@@ -956,6 +959,10 @@ func (m *addWizardModel) reviewZoneOrder() []addReviewZone {
 
 func (m *addWizardModel) updateKeyExecute(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
 	if m.executeDone {
+		// 'a' key = Add More
+		if msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'a' {
+			return m, func() tea.Msg { return addRestartMsg{} }
+		}
 		switch msg.Type {
 		case tea.KeyEnter, tea.KeyEsc:
 			return m, func() tea.Msg { return addCloseMsg{} }
