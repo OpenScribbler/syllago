@@ -470,8 +470,8 @@ func (m *addWizardModel) enterReview() {
 		}
 	}
 
-	// Default focus: buttons zone, cursor on [Back]
-	m.reviewZone = addReviewZoneButtons
+	// Default focus: items zone so per-item risk info shows immediately
+	m.reviewZone = addReviewZoneItems
 	m.buttonCursor = 1 // [Back]
 	m.reviewItemCursor = 0
 	m.reviewItemOffset = 0
@@ -777,9 +777,9 @@ func (m *addWizardModel) discoveryHeader() string {
 	prefix := "      " // matches checkbox row prefix width ("> [x] ")
 	row := prefix +
 		boldStyle.Render(padRight("Name", cols.name)) + " " +
+		boldStyle.Render(padRight("Risk", cols.risk)) + " " +
 		boldStyle.Render(padRight("Type", cols.ctype)) + " " +
-		boldStyle.Render(padRight("Status", cols.status)) + " " +
-		boldStyle.Render(padRight("Risk", cols.risk))
+		boldStyle.Render(padRight("Status", cols.status))
 	return truncateLine(row, m.width)
 }
 
@@ -889,9 +889,9 @@ func (m *addWizardModel) buildDiscoveryList() checkboxList {
 
 		// Build fixed-width columnar label
 		label := padRight(truncate(sanitizeLine(name), cols.name), cols.name) + " " +
+			padRight(riskLbl, cols.risk) + " " +
 			padRight(truncate(typeLbl, cols.ctype), cols.ctype) + " " +
-			padRight(truncate(statusLbl, cols.status), cols.status) + " " +
-			riskLbl
+			padRight(truncate(statusLbl, cols.status), cols.status)
 
 		items[i] = checkboxItem{
 			label:      label,
@@ -947,14 +947,18 @@ func (m *addWizardModel) typeListHeight() int {
 }
 
 // reviewVisibleHeight returns the number of review items that fit in the
-// visible area. The review page has: header(1) + blank(1) + buttons(1) +
-// blank(1) + risk banner(~3 if present) + microcopy(2) + blank(1) +
-// colHeader(1) + shell(3) = ~14 lines of overhead (with risks).
+// visible area. The review page has: header(1) + microcopy(1) +
+// colHeader(1) + shell(3) + risk box (~4 if present) = overhead.
 func (m *addWizardModel) reviewVisibleHeight() int {
-	overhead := 3 + 1 + 1 + 1 + 1 + 2 + 1 + 1 // shell + header + blank + buttons + blank + microcopy + blank + colHeader
-	if len(m.risks) > 0 {
-		// Risk banner + blank line after it
-		overhead += 3
+	overhead := 3 + 1 + 1 + 1 // shell + header + microcopy + colHeader
+	// Reserve space for per-item risk box when the current item has risks
+	selected := m.selectedItems()
+	if m.reviewItemCursor < len(selected) && len(selected[m.reviewItemCursor].risks) > 0 {
+		riskCount := len(selected[m.reviewItemCursor].risks)
+		if riskCount > 5 {
+			riskCount = 6 // 5 lines + "+N more" line
+		}
+		overhead += riskCount + 2 // risk lines + border top/bottom
 	}
 	h := m.height - overhead
 	if h < 3 {

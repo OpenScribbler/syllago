@@ -383,15 +383,6 @@ func (m *addWizardModel) updateMouseReview(msg tea.MouseMsg) (*addWizardModel, t
 		}
 	}
 
-	// Risk item clicks (delegated to riskBanner's zone marks)
-	for i := range m.risks {
-		if zone.Get("risk-" + itoa(i)).InBounds(msg) {
-			m.riskBanner.cursor = i
-			m.reviewZone = addReviewZoneRisks
-			return m, nil
-		}
-	}
-
 	return m, nil
 }
 
@@ -948,13 +939,7 @@ func (m *addWizardModel) reviewTabBackward() {
 }
 
 func (m *addWizardModel) reviewZoneOrder() []addReviewZone {
-	var zones []addReviewZone
-	if len(m.risks) > 0 {
-		zones = append(zones, addReviewZoneRisks)
-	}
-	zones = append(zones, addReviewZoneItems)
-	zones = append(zones, addReviewZoneButtons)
-	return zones
+	return []addReviewZone{addReviewZoneItems, addReviewZoneButtons}
 }
 
 // --- Execute step ---

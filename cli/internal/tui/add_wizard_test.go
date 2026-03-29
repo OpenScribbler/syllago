@@ -481,9 +481,15 @@ func TestAddWizard_Review_ButtonNavigation(t *testing.T) {
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // advance to Review
 
-	// Default focus is buttons, cursor on Back (1)
+	// Default focus is items zone (so per-item risk info shows)
+	if m.reviewZone != addReviewZoneItems {
+		t.Fatalf("expected items zone, got %d", m.reviewZone)
+	}
+
+	// Tab to buttons
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
 	if m.reviewZone != addReviewZoneButtons {
-		t.Fatalf("expected buttons zone, got %d", m.reviewZone)
+		t.Fatalf("expected buttons zone after Tab, got %d", m.reviewZone)
 	}
 	if m.buttonCursor != 1 {
 		t.Fatalf("expected button cursor 1 (Back), got %d", m.buttonCursor)
@@ -518,8 +524,9 @@ func TestAddWizard_Review_AddAdvancesToExecute(t *testing.T) {
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
 
-	// Navigate to Add button (now at index 0, left of default Back=1)
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft}) // cursor 0 = Add
+	// Tab from items to buttons, then navigate to Add button
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})  // items -> buttons
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft}) // Back(1) -> Add(0)
 
 	// Press Enter to Add
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -542,7 +549,8 @@ func TestAddWizard_Review_BackGoesToDiscovery(t *testing.T) {
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
 
-	// Default cursor is on Back (1), press Enter
+	// Tab to buttons (default cursor is Back=1), press Enter
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
 	if m.step != addStepDiscovery {
@@ -560,7 +568,8 @@ func TestAddWizard_Review_CancelClosesWizard(t *testing.T) {
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
 
-	// Move to Cancel (now at index 2, right of default Back=1)
+	// Tab to buttons, then move to Cancel (index 2, right of default Back=1)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
 
 	var cmd tea.Cmd
@@ -620,25 +629,20 @@ func TestAddWizard_Review_TabCyclesZones(t *testing.T) {
 	m = injectDiscoveryResults(t, m, items)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
 
-	// Default: buttons
-	if m.reviewZone != addReviewZoneButtons {
-		t.Fatalf("expected buttons zone, got %d", m.reviewZone)
+	// Default: items (so per-item risk info shows immediately)
+	if m.reviewZone != addReviewZoneItems {
+		t.Fatalf("expected items zone, got %d", m.reviewZone)
 	}
 
-	// Tab cycles: buttons -> risks -> items -> buttons
+	// Tab cycles: items -> buttons -> items (risk zone removed from cycle)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
-	if m.reviewZone != addReviewZoneRisks {
-		t.Fatalf("expected risks zone after Tab, got %d", m.reviewZone)
+	if m.reviewZone != addReviewZoneButtons {
+		t.Fatalf("expected buttons zone after Tab, got %d", m.reviewZone)
 	}
 
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
 	if m.reviewZone != addReviewZoneItems {
 		t.Fatalf("expected items zone after Tab, got %d", m.reviewZone)
-	}
-
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
-	if m.reviewZone != addReviewZoneButtons {
-		t.Fatalf("expected buttons zone after Tab, got %d", m.reviewZone)
 	}
 }
 
@@ -653,6 +657,7 @@ func TestAddWizard_Execute_ItemDoneProgresses(t *testing.T) {
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // Discovery → Review
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})   // items → buttons
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})  // Back(1) → Add(0)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
@@ -682,6 +687,7 @@ func TestAddWizard_Execute_AllDone(t *testing.T) {
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // Discovery → Review
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})   // items → buttons
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})  // Back(1) → Add(0)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
@@ -712,6 +718,7 @@ func TestAddWizard_Execute_EscCancelsRemaining(t *testing.T) {
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // Discovery → Review
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})   // items → buttons
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})  // Back(1) → Add(0)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
@@ -731,6 +738,7 @@ func TestAddWizard_Execute_EnterOnDoneCloses(t *testing.T) {
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // Discovery → Review
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})   // items → buttons
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})  // Back(1) → Add(0)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
@@ -830,6 +838,7 @@ func TestAddWizard_View_ExecuteStep(t *testing.T) {
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight}) // Discovery → Review
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})   // items → buttons
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})  // Back(1) → Add(0)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
