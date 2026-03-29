@@ -584,7 +584,8 @@ func (m *addWizardModel) viewReviewDrillIn() string {
 	return strings.Join(lines, "\n")
 }
 
-// renderDrillInPreviewBody renders the preview content for the drill-in view.
+// renderDrillInPreviewBody renders the preview content for the drill-in view,
+// with support for highlighted risk lines (same pattern as install wizard).
 func (m *addWizardModel) renderDrillInPreviewBody(height, width int) string {
 	p := &m.reviewDrillPreview
 	if len(p.lines) == 0 {
@@ -596,19 +597,54 @@ func (m *addWizardModel) renderDrillInPreviewBody(height, width int) string {
 			Render("No preview available")
 	}
 
+	linesAbove := p.offset
+	lastVisible := min(p.offset+height, len(p.lines))
+	linesBelow := max(0, len(p.lines)-lastVisible)
+	showAbove := linesAbove > 0
+	showBelow := linesBelow > 0
+
+	contentStart := p.offset
+	contentEnd := lastVisible
+	if showAbove {
+		contentStart++
+	}
+	if showBelow && contentEnd > contentStart {
+		contentEnd--
+	}
+
 	lineNumW := len(fmt.Sprintf("%d", len(p.lines)))
 	if lineNumW < 2 {
 		lineNumW = 2
 	}
 
-	var lines []string
-	end := min(p.offset+height, len(p.lines))
-	for i := p.offset; i < end; i++ {
-		num := mutedStyle.Render(fmt.Sprintf("%*d ", lineNumW, i+1))
-		numW := lipgloss.Width(num)
-		lineW := width - numW
-		line := truncateLine(p.lines[i], lineW)
-		lines = append(lines, num+line)
+	lines := make([]string, 0, height)
+
+	if showAbove {
+		lines = append(lines, mutedStyle.Render(fmt.Sprintf("(%d more above)", linesAbove)))
+	}
+
+	for i := contentStart; i < contentEnd; i++ {
+		lineNum := i + 1
+		if p.highlightLines != nil && p.highlightLines[lineNum] {
+			// Highlighted line: danger gutter marker + tinted background
+			num := lipgloss.NewStyle().Foreground(dangerColor).Render(fmt.Sprintf("%*d", lineNumW, lineNum))
+			gutterChar := lipgloss.NewStyle().Foreground(dangerColor).Render("\u258c")
+			lineW := width - lipgloss.Width(num) - 1
+			lineContent := truncateLine(p.lines[i], lineW)
+			padded := lineContent + strings.Repeat(" ", max(0, lineW-lipgloss.Width(lineContent)))
+			styledLine := lipgloss.NewStyle().Background(highlightBG).Foreground(primaryText).Render(padded)
+			lines = append(lines, num+gutterChar+styledLine)
+		} else {
+			num := mutedStyle.Render(fmt.Sprintf("%*d ", lineNumW, lineNum))
+			numW := lipgloss.Width(num)
+			lineW := width - numW
+			line := truncateLine(p.lines[i], lineW)
+			lines = append(lines, num+line)
+		}
+	}
+
+	if showBelow {
+		lines = append(lines, mutedStyle.Render(fmt.Sprintf("(%d more below)", linesBelow)))
 	}
 
 	for len(lines) < height {
