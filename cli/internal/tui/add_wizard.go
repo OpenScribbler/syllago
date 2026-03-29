@@ -505,6 +505,27 @@ func (m *addWizardModel) enterReviewDrillIn() {
 	var ci catalog.ContentItem
 	if item.catalogItem != nil {
 		ci = *item.catalogItem
+	} else if (item.itemType == catalog.Hooks || item.itemType == catalog.MCP) && item.path != "" {
+		// Hooks/MCP from providers: extract just the relevant JSON section
+		// instead of showing the entire settings file.
+		ci = catalog.ContentItem{
+			Name:  item.name,
+			Type:  item.itemType,
+			Path:  filepath.Dir(item.path),
+			Files: []string{filepath.Base(item.path)},
+		}
+		// Override the preview content with just the relevant section
+		extracted := extractJSONSection(item.path, item.name, item.itemType)
+		if extracted != "" {
+			m.reviewDrillTree = newFileTreeModel([]string{item.name + ".json"})
+			m.reviewDrillTree.focused = true
+			m.reviewDrillPreview = newPreviewModel()
+			m.reviewDrillPreview.fileName = item.name + ".json"
+			m.reviewDrillPreview.lines = strings.Split(extracted, "\n")
+			m.setupDrillInRisks(item)
+			return
+		}
+		// Fall through to normal handling if extraction fails
 	} else {
 		// Construct from discovery item fields
 		itemPath := item.path
@@ -528,7 +549,17 @@ func (m *addWizardModel) enterReviewDrillIn() {
 		}
 	}
 
-	// Build a set of risky file paths from the item's risks for tree annotation
+	m.reviewDrillTree = newFileTreeModel(ci.Files)
+	m.reviewDrillTree.focused = true
+	m.reviewDrillPreview = newPreviewModel()
+	m.reviewDrillPreview.LoadItem(&ci)
+	m.setupDrillInRisks(item)
+}
+
+// setupDrillInRisks configures risk badges on the tree, highlight lines on the
+// preview, and sizes the panes. Called at the end of enterReviewDrillIn.
+func (m *addWizardModel) setupDrillInRisks(item addDiscoveryItem) {
+	// Build a set of risky file paths for tree annotation
 	m.drillInRiskyFiles = make(map[string]catalog.RiskLevel)
 	for _, r := range item.risks {
 		for _, rl := range r.Lines {
@@ -539,12 +570,7 @@ func (m *addWizardModel) enterReviewDrillIn() {
 			}
 		}
 	}
-
-	// Store item risks for highlight support during file preview
 	m.drillInItemRisks = item.risks
-
-	m.reviewDrillTree = newFileTreeModel(ci.Files)
-	m.reviewDrillTree.focused = true
 
 	// Set risk badges on tree nodes
 	if len(m.drillInRiskyFiles) > 0 {
@@ -558,9 +584,6 @@ func (m *addWizardModel) enterReviewDrillIn() {
 		}
 		m.reviewDrillTree.nodeBadges = badges
 	}
-
-	m.reviewDrillPreview = newPreviewModel()
-	m.reviewDrillPreview.LoadItem(&ci)
 
 	// Set initial highlight lines for the primary file
 	if m.reviewDrillPreview.fileName != "" && len(m.drillInItemRisks) > 0 {
@@ -946,20 +969,16 @@ func (m *addWizardModel) typeListHeight() int {
 	return h
 }
 
+// reviewRiskBoxLines is the fixed number of lines reserved for the risk box area.
+// Always reserved regardless of whether the current item has risks, to prevent
+// the item list from jumping when scrolling between items with/without risks.
+const reviewRiskBoxLines = 4 // border(1) + up to 2 risk lines + border(1)
+
 // reviewVisibleHeight returns the number of review items that fit in the
-// visible area. The review page has: header(1) + microcopy(1) +
-// colHeader(1) + shell(3) + risk box (~4 if present) = overhead.
+// visible area. Uses a fixed overhead so the list doesn't jump.
 func (m *addWizardModel) reviewVisibleHeight() int {
-	overhead := 3 + 1 + 1 + 1 // shell + header + microcopy + colHeader
-	// Reserve space for per-item risk box when the current item has risks
-	selected := m.selectedItems()
-	if m.reviewItemCursor < len(selected) && len(selected[m.reviewItemCursor].risks) > 0 {
-		riskCount := len(selected[m.reviewItemCursor].risks)
-		if riskCount > 5 {
-			riskCount = 6 // 5 lines + "+N more" line
-		}
-		overhead += riskCount + 2 // risk lines + border top/bottom
-	}
+	// shell(3) + header(1) + riskBox(4) + microcopy(1) + colHeader(1) = 10
+	overhead := 3 + 1 + reviewRiskBoxLines + 1 + 1
 	h := m.height - overhead
 	if h < 3 {
 		h = 3
@@ -1507,6 +1526,60 @@ func scanDrillInFiles(path string) []string {
 // cloneGitURL performs a hardened git clone with security restrictions.
 // Returns the path to the cloned repo directory. The caller must clean up
 // via os.RemoveAll(filepath.Dir(repoDir)) to remove the parent temp dir.
+// extractJSONSection reads a JSON settings file and extracts just the relevant
+// section for a hook or MCP server by name. Returns pretty-printed JSON of
+// just that item, or "" if not found.
+func extractJSONSection(filePath, name string, itemType catalog.ContentType) string {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return ""
+	}
+
+	switch itemType {
+	case catalog.MCP:
+		// Try common MCP config paths
+		for _, path := range []string{
+			"mcpServers." + name,
+			"mcp.mcpServers." + name,
+		} {
+			result := gjson.GetBytes(data, path)
+			if result.Exists() {
+				// Pretty-print the server config as {"name": {config}}
+				return "{\n  " + fmt.Sprintf("%q", name) + ": " + result.Raw + "\n}"
+			}
+		}
+
+	case catalog.Hooks:
+		// Search through hook events to find entries matching this name
+		hooksResult := gjson.GetBytes(data, "hooks")
+		if !hooksResult.Exists() {
+			return ""
+		}
+		var matched []string
+		hooksResult.ForEach(func(event, entries gjson.Result) bool {
+			entries.ForEach(func(_, entry gjson.Result) bool {
+				derived := converter.DeriveHookName(converter.HookData{
+					Event: event.String(),
+					Hooks: []converter.HookEntry{{
+						Command: entry.Get("command").String(),
+						URL:     entry.Get("url").String(),
+					}},
+				})
+				if derived == name {
+					matched = append(matched, fmt.Sprintf("  // Event: %s\n  %s", event.String(), entry.Raw))
+				}
+				return true
+			})
+			return true
+		})
+		if len(matched) > 0 {
+			return "{\n" + strings.Join(matched, ",\n") + "\n}"
+		}
+	}
+
+	return ""
+}
+
 func cloneGitURL(url string, timeoutSec int) (string, error) {
 	parentDir, err := os.MkdirTemp("", "syllago-add-*")
 	if err != nil {
