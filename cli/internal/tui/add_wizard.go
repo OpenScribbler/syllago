@@ -1135,11 +1135,21 @@ func discoverFromRegistry(
 			status = add.StatusInLibrary
 		}
 
+		// Path must point to the primary content file (not the directory)
+		// for add.writeItem to read it. SourceDir is the item directory.
+		primaryFile := catalog.PrimaryFileName(ci.Files, ci.Type)
+		contentPath := ci.Path
+		sourceDir := ""
+		if primaryFile != "" {
+			contentPath = filepath.Join(ci.Path, primaryFile)
+			sourceDir = ci.Path
+		}
+
 		di := add.DiscoveryItem{
 			Name:      ci.Name,
 			Type:      ci.Type,
-			Path:      ci.Path,
-			SourceDir: ci.Path,
+			Path:      contentPath,
+			SourceDir: sourceDir,
 			Status:    status,
 		}
 		ciCopy := ci // capture for pointer
@@ -1147,7 +1157,8 @@ func discoverFromRegistry(
 			name:        ci.Name,
 			displayName: ci.DisplayName,
 			itemType:    ci.Type,
-			path:        ci.Path,
+			path:        contentPath,
+			sourceDir:   sourceDir,
 			status:      status,
 			risks:       catalog.RiskIndicators(ci),
 			underlying:  &di,
@@ -1201,11 +1212,19 @@ func discoverFromLocalPath(
 			status = add.StatusInLibrary
 		}
 
+		primaryFile := catalog.PrimaryFileName(ci.Files, ci.Type)
+		contentPath := ci.Path
+		sourceDir := ""
+		if primaryFile != "" {
+			contentPath = filepath.Join(ci.Path, primaryFile)
+			sourceDir = ci.Path
+		}
+
 		di := add.DiscoveryItem{
 			Name:      ci.Name,
 			Type:      ci.Type,
-			Path:      ci.Path,
-			SourceDir: ci.Path,
+			Path:      contentPath,
+			SourceDir: sourceDir,
 			Status:    status,
 		}
 		ciCopy := ci
@@ -1213,7 +1232,8 @@ func discoverFromLocalPath(
 			name:        ci.Name,
 			displayName: ci.DisplayName,
 			itemType:    ci.Type,
-			path:        ci.Path,
+			path:        contentPath,
+			sourceDir:   sourceDir,
 			status:      status,
 			risks:       catalog.RiskIndicators(ci),
 			underlying:  &di,
