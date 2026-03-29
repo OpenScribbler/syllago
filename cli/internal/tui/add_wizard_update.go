@@ -310,11 +310,35 @@ func (m *addWizardModel) updateMouseDiscovery(msg tea.MouseMsg) (*addWizardModel
 // --- Review step mouse ---
 
 func (m *addWizardModel) updateMouseReview(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
-	// Drill-in: nav-back closes drill-in
+	// Drill-in: handle clicks within the drill-in view
 	if m.reviewDrillIn {
 		if zone.Get("add-nav-back").InBounds(msg) {
 			m.exitReviewDrillIn()
 			return m, nil
+		}
+		// Click-to-focus: left portion = tree, right portion = preview
+		innerW := m.width - borderSize
+		treeW := max(18, innerW*30/100)
+		if msg.X <= treeW+1 {
+			// Click in tree area — focus tree
+			if !m.reviewDrillTree.focused {
+				m.reviewDrillTree.focused = true
+				m.reviewDrillPreview.focused = false
+			}
+			// Handle tree item clicks
+			for i := range m.reviewDrillTree.nodes {
+				if zone.Get("tree-" + itoa(i)).InBounds(msg) {
+					m.reviewDrillTree.cursor = i
+					m.loadDrillInFile()
+					return m, nil
+				}
+			}
+		} else {
+			// Click in preview area — focus preview
+			if m.reviewDrillTree.focused {
+				m.reviewDrillTree.focused = false
+				m.reviewDrillPreview.focused = true
+			}
 		}
 		return m, nil
 	}
