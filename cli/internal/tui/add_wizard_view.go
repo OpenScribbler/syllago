@@ -503,7 +503,7 @@ func (m *addWizardModel) viewReviewDrillIn() string {
 
 	var lines []string
 	lines = append(lines, m.renderTitleRow("Inspecting: "+name, true, ""))
-	lines = append(lines, "")
+	lines = append(lines, "  "+mutedStyle.Render("Tab/←/→ switch panes · ↑/↓ navigate · click to focus · Esc back"))
 
 	// Compute pane dimensions
 	innerW := m.width - borderSize

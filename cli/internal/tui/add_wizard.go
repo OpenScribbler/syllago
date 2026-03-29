@@ -296,7 +296,10 @@ func (m *addWizardModel) stepHints() []string {
 		}
 		return append(append(hints, "enter next", "esc back"), base...)
 	case addStepReview:
-		return append([]string{"tab cycle zones", "↑/↓ navigate", "←/→ buttons", "enter confirm", "esc back"}, base...)
+		if m.reviewDrillIn {
+			return append([]string{"tab/←/→ switch panes", "↑/↓ navigate", "pgup/pgdn scroll", "esc back to review"}, base...)
+		}
+		return append([]string{"tab cycle zones", "↑/↓ navigate", "←/→ buttons", "enter inspect", "esc back"}, base...)
 	case addStepExecute:
 		if m.executeDone {
 			return append([]string{"enter close"}, base...)
