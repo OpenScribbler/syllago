@@ -548,9 +548,13 @@ func (m *addWizardModel) updateKeySourceInput(msg tea.KeyMsg) (*addWizardModel, 
 		if m.sourceCursor == 2 {
 			// Local path validation — expand ~ to home dir
 			inputPath := m.pathInput
-			if strings.HasPrefix(inputPath, "~/") || inputPath == "~" {
+			if strings.HasPrefix(inputPath, "~/") {
 				if home, err := os.UserHomeDir(); err == nil {
-					inputPath = filepath.Join(home, inputPath[1:])
+					inputPath = filepath.Join(home, inputPath[2:]) // skip "~/"
+				}
+			} else if inputPath == "~" {
+				if home, err := os.UserHomeDir(); err == nil {
+					inputPath = home
 				}
 			}
 			if !filepath.IsAbs(inputPath) {
