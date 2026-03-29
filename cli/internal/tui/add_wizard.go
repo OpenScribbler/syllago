@@ -522,6 +522,22 @@ func (m *addWizardModel) enterReviewDrillIn() {
 			m.reviewDrillPreview = newPreviewModel()
 			m.reviewDrillPreview.fileName = item.name + ".json"
 			m.reviewDrillPreview.lines = strings.Split(extracted, "\n")
+
+			// Highlight key config lines (command, url, env) so the user
+			// can immediately see what this hook/MCP server does
+			highlights := make(map[int]bool)
+			for lineNum, line := range m.reviewDrillPreview.lines {
+				lower := strings.ToLower(line)
+				if strings.Contains(lower, `"command"`) ||
+					strings.Contains(lower, `"url"`) ||
+					strings.Contains(lower, `"env"`) {
+					highlights[lineNum+1] = true // 1-based
+				}
+			}
+			if len(highlights) > 0 {
+				m.reviewDrillPreview.SetHighlightLines(highlights)
+			}
+
 			m.setupDrillInRisks(item)
 			return
 		}
@@ -1346,33 +1362,139 @@ func discoverFromLocalPath(
 	selectedTypes []catalog.ContentType,
 	contentRoot string,
 ) ([]addDiscoveryItem, error) {
-	// Check if it has syllago structure (registry or content type dirs)
-	nativeResult := catalog.ScanNativeContent(dir)
-
-	var cat *catalog.Catalog
-	var err error
-	if nativeResult.HasSyllagoStructure {
-		cat, err = catalog.Scan(dir, dir)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// No syllago structure — scan as-is
-		cat, err = catalog.Scan(dir, dir)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	typeSet := make(map[catalog.ContentType]bool)
 	for _, t := range selectedTypes {
 		typeSet[t] = true
 	}
-
 	idx, _ := add.BuildLibraryIndex(contentRoot)
 
+	// First try syllago structure (registry or content type dirs)
+	nativeResult := catalog.ScanNativeContent(dir)
 	var items []addDiscoveryItem
-	for _, ci := range cat.Items {
+
+	if nativeResult.HasSyllagoStructure {
+		cat, err := catalog.Scan(dir, dir)
+		if err != nil {
+			return nil, err
+		}
+		items = catalogItemsToDiscovery(cat.Items, typeSet, idx)
+	}
+
+	// If syllago scan found nothing, try provider-native patterns
+	// (e.g., .claude/rules/, .claude/skills/, .gemini/rules/, etc.)
+	if len(items) == 0 && len(nativeResult.Providers) > 0 {
+		items = nativeItemsToDiscovery(dir, nativeResult, typeSet, idx)
+	}
+
+	// Last resort: try syllago scan anyway (might find something)
+	if len(items) == 0 && !nativeResult.HasSyllagoStructure {
+		cat, err := catalog.Scan(dir, dir)
+		if err == nil && len(cat.Items) > 0 {
+			items = catalogItemsToDiscovery(cat.Items, typeSet, idx)
+		}
+	}
+
+	return items, nil
+}
+
+// nativeItemsToDiscovery converts NativeScanResult provider items into addDiscoveryItems.
+func nativeItemsToDiscovery(
+	baseDir string,
+	result catalog.NativeScanResult,
+	typeSet map[catalog.ContentType]bool,
+	idx add.LibraryIndex,
+) []addDiscoveryItem {
+	// Map native type labels to catalog content types
+	typeLabelMap := map[string]catalog.ContentType{
+		"rules":    catalog.Rules,
+		"skills":   catalog.Skills,
+		"agents":   catalog.Agents,
+		"commands": catalog.Commands,
+		"hooks":    catalog.Hooks,
+		"mcp":      catalog.MCP,
+	}
+
+	var items []addDiscoveryItem
+	for _, pc := range result.Providers {
+		for typeLabel, nativeItems := range pc.Items {
+			ct, ok := typeLabelMap[typeLabel]
+			if !ok || !typeSet[ct] {
+				continue
+			}
+			for _, ni := range nativeItems {
+				fullPath := filepath.Join(baseDir, ni.Path)
+
+				status := add.StatusNew
+				key := string(ct) + "/" + ni.Name
+				if _, exists := idx[key]; exists {
+					status = add.StatusInLibrary
+				}
+
+				di := add.DiscoveryItem{
+					Name:   ni.Name,
+					Type:   ct,
+					Path:   fullPath,
+					Status: status,
+					Scope:  pc.ProviderSlug,
+				}
+
+				// Check if path is a directory or file
+				info, err := os.Stat(fullPath)
+				if err != nil {
+					continue
+				}
+				if info.IsDir() {
+					di.SourceDir = fullPath
+					// Find primary file
+					files := scanDrillInFiles(fullPath)
+					primary := catalog.PrimaryFileName(files, ct)
+					if primary != "" {
+						di.Path = filepath.Join(fullPath, primary)
+					}
+				}
+
+				item := addDiscoveryItem{
+					name:        ni.Name,
+					displayName: ni.DisplayName,
+					itemType:    ct,
+					path:        di.Path,
+					sourceDir:   di.SourceDir,
+					status:      status,
+					scope:       pc.ProviderSlug,
+					underlying:  &di,
+				}
+
+				// Build catalogItem for drill-in
+				ci := catalog.ContentItem{
+					Name:        ni.Name,
+					DisplayName: ni.DisplayName,
+					Type:        ct,
+					Path:        fullPath,
+				}
+				if info.IsDir() {
+					ci.Files = scanDrillInFiles(fullPath)
+				} else {
+					ci.Path = filepath.Dir(fullPath)
+					ci.Files = []string{filepath.Base(fullPath)}
+				}
+				item.catalogItem = &ci
+				item.risks = catalog.RiskIndicators(ci)
+
+				items = append(items, item)
+			}
+		}
+	}
+	return items
+}
+
+// catalogItemsToDiscovery converts catalog.ContentItems into addDiscoveryItems.
+func catalogItemsToDiscovery(
+	catItems []catalog.ContentItem,
+	typeSet map[catalog.ContentType]bool,
+	idx add.LibraryIndex,
+) []addDiscoveryItem {
+	var items []addDiscoveryItem
+	for _, ci := range catItems {
 		if !typeSet[ci.Type] {
 			continue
 		}
@@ -1413,7 +1535,7 @@ func discoverFromLocalPath(
 		items = append(items, item)
 	}
 
-	return items, nil
+	return items
 }
 
 func discoverFromGitURL(
