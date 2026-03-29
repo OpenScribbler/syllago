@@ -257,8 +257,11 @@ func (m *addWizardModel) viewDiscovery() string {
 			Render("Error: " + m.discoveryErr)
 		lines = append(lines, errBox)
 		lines = append(lines, "")
-		retryBtn := zone.Mark("add-retry", mutedStyle.Render("[r] Retry"))
-		backBtn := zone.Mark("add-err-back", mutedStyle.Render("[Esc] Back"))
+		btnStyle := lipgloss.NewStyle().Padding(0, 2).
+			Foreground(primaryText).
+			Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"})
+		retryBtn := zone.Mark("add-retry", btnStyle.Render("Retry"))
+		backBtn := zone.Mark("add-err-back", btnStyle.Render("Back"))
 		lines = append(lines, pad+retryBtn+"  "+backBtn)
 		return strings.Join(lines, "\n")
 	}
@@ -269,7 +272,10 @@ func (m *addWizardModel) viewDiscovery() string {
 		lines = append(lines, "")
 		lines = append(lines, pad+mutedStyle.Render("No content found"))
 		lines = append(lines, "")
-		lines = append(lines, pad+zone.Mark("add-empty-back", mutedStyle.Render("[Esc] Back")))
+		emptyBtnStyle := lipgloss.NewStyle().Padding(0, 2).
+			Foreground(primaryText).
+			Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"})
+		lines = append(lines, pad+zone.Mark("add-empty-back", emptyBtnStyle.Render("Back")))
 		return strings.Join(lines, "\n")
 	}
 
@@ -543,7 +549,6 @@ func (m *addWizardModel) viewReviewDrillIn() string {
 
 	var lines []string
 	lines = append(lines, m.renderTitleRow("Inspecting: "+name, true, ""))
-	lines = append(lines, "  "+mutedStyle.Render("Tab/←/→ switch panes · ↑/↓ navigate · click to focus · Esc back"))
 
 	// Compute pane dimensions
 	innerW := m.width - borderSize
@@ -812,7 +817,10 @@ func (m *addWizardModel) viewExecute() string {
 		lines = append(lines, pad+mutedStyle.Render("Cancelling..."))
 	} else {
 		lines = append(lines, "")
-		lines = append(lines, pad+zone.Mark("add-exec-cancel", mutedStyle.Render("[Esc] Cancel remaining")))
+		cancelBtnStyle := lipgloss.NewStyle().Padding(0, 2).
+			Foreground(primaryText).
+			Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"})
+		lines = append(lines, pad+zone.Mark("add-exec-cancel", cancelBtnStyle.Render("Cancel remaining")))
 	}
 
 	return strings.Join(lines, "\n")

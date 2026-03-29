@@ -49,7 +49,7 @@ const (
 type addReviewZone int
 
 const (
-	addReviewZoneRisks addReviewZone = iota
+	addReviewZoneRisks addReviewZone = iota // unused — kept to preserve iota values
 	addReviewZoneItems
 	addReviewZoneButtons
 )

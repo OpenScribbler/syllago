@@ -435,7 +435,7 @@ func TestAddWizard_Discovery_ErrorRendersRetry(t *testing.T) {
 
 	view := m.View()
 	assertContains(t, view, "scan failed")
-	assertContains(t, view, "[r] Retry")
+	assertContains(t, view, "Retry")
 }
 
 func TestAddWizard_Discovery_EscDuringScan(t *testing.T) {
