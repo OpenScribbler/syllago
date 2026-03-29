@@ -19,9 +19,10 @@ type riskDrillInMsg struct {
 // riskBanner renders a navigable list of risk indicators inside a bordered box.
 // Reused by Install Wizard (Phase B), Add Wizard (Phase D), and Loadout Apply (Phase E).
 type riskBanner struct {
-	risks  []catalog.RiskIndicator
-	cursor int // -1 = no focus, 0+ = focused item
-	width  int
+	risks       []catalog.RiskIndicator
+	cursor      int // -1 = no focus, 0+ = focused item
+	width       int
+	highlighted map[int]bool // indices to visually highlight (e.g., risks for the selected item)
 }
 
 func newRiskBanner(risks []catalog.RiskIndicator, width int) riskBanner {
@@ -35,6 +36,19 @@ func newRiskBanner(risks []catalog.RiskIndicator, width int) riskBanner {
 // IsEmpty returns true when there are no risk indicators to display.
 func (b riskBanner) IsEmpty() bool {
 	return len(b.risks) == 0
+}
+
+// SetHighlighted sets which risk indices should be visually highlighted.
+// Pass nil to clear highlighting.
+func (b *riskBanner) SetHighlighted(indices []int) {
+	if len(indices) == 0 {
+		b.highlighted = nil
+		return
+	}
+	b.highlighted = make(map[int]bool, len(indices))
+	for _, i := range indices {
+		b.highlighted[i] = true
+	}
 }
 
 // Update handles keyboard navigation within the risk list.
@@ -135,24 +149,7 @@ func (b riskBanner) renderRiskLineDim(r catalog.RiskIndicator, idx, maxW int) st
 		availW = 10
 	}
 
-	text := r.Label
-	if r.Description != "" {
-		full := r.Label + " — " + r.Description
-		if lipgloss.Width(full) > availW {
-			maxDesc := availW - lipgloss.Width(r.Label) - lipgloss.Width(" — ") - lipgloss.Width("...")
-			if maxDesc > 0 {
-				desc := r.Description
-				for lipgloss.Width(desc) > maxDesc {
-					desc = desc[:len(desc)-1]
-				}
-				text = r.Label + " — " + desc + "..."
-			} else {
-				text = r.Label
-			}
-		} else {
-			text = full
-		}
-	}
+	text := riskLabelWithFile(r, availW)
 
 	styledText := lipgloss.NewStyle().
 		Bold(true).
@@ -173,6 +170,44 @@ func (b riskBanner) borderColor() lipgloss.TerminalColor {
 	return warningColor
 }
 
+// riskLabelWithFile builds the display text for a risk item, including the file
+// name when available. Returns "Label — Description (file.json)" or similar.
+func riskLabelWithFile(r catalog.RiskIndicator, availW int) string {
+	text := r.Label
+
+	// Append file name if the risk has line references
+	var fileSuffix string
+	if len(r.Lines) > 0 && r.Lines[0].File != "" {
+		fileSuffix = " (" + r.Lines[0].File + ")"
+	}
+
+	if r.Description != "" {
+		full := r.Label + " — " + r.Description + fileSuffix
+		if lipgloss.Width(full) > availW {
+			// Try without file suffix first
+			withoutFile := r.Label + " — " + r.Description
+			if lipgloss.Width(withoutFile) > availW {
+				maxDesc := availW - lipgloss.Width(r.Label) - lipgloss.Width(" — ") - lipgloss.Width("...")
+				if maxDesc > 0 {
+					desc := r.Description
+					for lipgloss.Width(desc) > maxDesc {
+						desc = desc[:len(desc)-1]
+					}
+					text = r.Label + " — " + desc + "..."
+				}
+			} else {
+				text = withoutFile
+			}
+		} else {
+			text = full
+		}
+	} else if fileSuffix != "" {
+		text = r.Label + fileSuffix
+	}
+
+	return text
+}
+
 // renderRiskLine renders a single risk item with severity icon and selection highlight.
 func (b riskBanner) renderRiskLine(r catalog.RiskIndicator, idx, maxW int) string {
 	// Severity icon: "!!" for high (red), "! " for medium (orange).
@@ -183,7 +218,7 @@ func (b riskBanner) renderRiskLine(r catalog.RiskIndicator, idx, maxW int) strin
 		icon = lipgloss.NewStyle().Foreground(warningColor).Render("! ")
 	}
 
-	// Build the text portion: " Label — Description"
+	// Build the text portion: " Label — Description (file)"
 	// Icon "!!" is 2 rendered chars, then " " prefix = 3 chars before label.
 	// We also have a leading " " pad for the whole line = 4 chars total prefix.
 	prefixW := 4 // " " + icon(2) + " "
@@ -192,34 +227,22 @@ func (b riskBanner) renderRiskLine(r catalog.RiskIndicator, idx, maxW int) strin
 		availW = 10
 	}
 
-	text := r.Label
-	if r.Description != "" {
-		full := r.Label + " — " + r.Description
-		if lipgloss.Width(full) > availW {
-			// Truncate description to fit.
-			maxDesc := availW - lipgloss.Width(r.Label) - lipgloss.Width(" — ") - lipgloss.Width("...")
-			if maxDesc > 0 {
-				desc := r.Description
-				for lipgloss.Width(desc) > maxDesc {
-					desc = desc[:len(desc)-1]
-				}
-				text = r.Label + " — " + desc + "..."
-			} else {
-				// Not enough room even for label + separator; just show label.
-				text = r.Label
-			}
-		} else {
-			text = full
-		}
-	}
+	text := riskLabelWithFile(r, availW)
 
 	// Apply selection highlight or default style.
+	isHighlighted := b.highlighted != nil && b.highlighted[idx]
 	var styledText string
 	if b.cursor == idx {
 		styledText = lipgloss.NewStyle().
 			Bold(true).
 			Background(accentColor).
 			Foreground(lipgloss.AdaptiveColor{Light: "#FFFCF0", Dark: "#100F0F"}).
+			MaxWidth(availW).
+			Render(text)
+	} else if isHighlighted {
+		styledText = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(warningColor).
 			MaxWidth(availW).
 			Render(text)
 	} else {

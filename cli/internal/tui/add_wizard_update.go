@@ -140,6 +140,7 @@ func (m *addWizardModel) updateMouseWheel(msg tea.MouseMsg) (*addWizardModel, te
 				}
 			}
 			m.adjustReviewOffset()
+			m.highlightRisksForItem(m.reviewItemCursor)
 		}
 	case addStepType:
 		if up {
@@ -377,6 +378,7 @@ func (m *addWizardModel) updateMouseReview(msg tea.MouseMsg) (*addWizardModel, t
 			m.reviewZone = addReviewZoneItems
 			m.reviewItemCursor = i
 			m.adjustReviewOffset()
+			m.highlightRisksForItem(i)
 			return m, nil
 		}
 	}
@@ -827,11 +829,17 @@ func (m *addWizardModel) updateKeyReviewDrillIn(msg tea.KeyMsg) (*addWizardModel
 			m.reviewDrillPreview.ScrollDown()
 		}
 	case tea.KeyPgUp:
-		if !m.reviewDrillTree.focused {
+		if m.reviewDrillTree.focused {
+			m.reviewDrillTree.PageUp()
+			m.loadDrillInFile()
+		} else {
 			m.reviewDrillPreview.PageUp()
 		}
 	case tea.KeyPgDown:
-		if !m.reviewDrillTree.focused {
+		if m.reviewDrillTree.focused {
+			m.reviewDrillTree.PageDown()
+			m.loadDrillInFile()
+		} else {
 			m.reviewDrillPreview.PageDown()
 		}
 	case tea.KeyLeft, tea.KeyRight:
@@ -878,6 +886,7 @@ func (m *addWizardModel) updateKeyReviewItems(msg tea.KeyMsg) (*addWizardModel, 
 		return m, nil
 	}
 	m.adjustReviewOffset()
+	m.highlightRisksForItem(m.reviewItemCursor)
 	return m, nil
 }
 

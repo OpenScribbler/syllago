@@ -147,6 +147,7 @@ type addWizardModel struct {
 
 	// Review step
 	risks              []catalog.RiskIndicator
+	riskItemMap        []int // maps each index in m.risks to the index in selectedItems()
 	riskBanner         riskBanner
 	conflicts          []int
 	reviewZone         addReviewZone
@@ -159,6 +160,8 @@ type addWizardModel struct {
 	reviewDrillIn      bool
 	reviewDrillTree    fileTreeModel
 	reviewDrillPreview previewModel
+	drillInRiskyFiles  map[string]catalog.RiskLevel // file path -> highest risk level
+	drillInItemRisks   []catalog.RiskIndicator      // risks for the drilled-in item
 
 	// Execute step
 	executeResults   []addExecResult
@@ -448,9 +451,13 @@ func (m *addWizardModel) enterReview() {
 	m.step = addStepReview
 	m.shell.SetActive(m.shellIndexForStep(addStepReview))
 
-	// Compute aggregate risks
+	// Compute aggregate risks with per-item mapping
 	m.risks = nil
-	for _, item := range m.selectedItems() {
+	m.riskItemMap = nil
+	for i, item := range m.selectedItems() {
+		for range item.risks {
+			m.riskItemMap = append(m.riskItemMap, i)
+		}
 		m.risks = append(m.risks, item.risks...)
 	}
 	m.riskBanner = newRiskBanner(m.risks, m.width-4)
@@ -470,6 +477,18 @@ func (m *addWizardModel) enterReview() {
 	m.reviewItemOffset = 0
 	m.reviewAcknowledged = false
 	m.updateMaxStep()
+}
+
+// highlightRisksForItem updates the risk banner highlighting to show which risks
+// belong to the currently selected review item.
+func (m *addWizardModel) highlightRisksForItem(itemIdx int) {
+	var indices []int
+	for i, mappedItem := range m.riskItemMap {
+		if mappedItem == itemIdx {
+			indices = append(indices, i)
+		}
+	}
+	m.riskBanner.SetHighlighted(indices)
 }
 
 // enterReviewDrillIn opens the drill-in sub-view for the selected review item.
@@ -509,10 +528,61 @@ func (m *addWizardModel) enterReviewDrillIn() {
 		}
 	}
 
+	// Build a set of risky file paths from the item's risks for tree annotation
+	m.drillInRiskyFiles = make(map[string]catalog.RiskLevel)
+	for _, r := range item.risks {
+		for _, rl := range r.Lines {
+			if rl.File != "" {
+				if existing, ok := m.drillInRiskyFiles[rl.File]; !ok || r.Level > existing {
+					m.drillInRiskyFiles[rl.File] = r.Level
+				}
+			}
+		}
+	}
+
+	// Store item risks for highlight support during file preview
+	m.drillInItemRisks = item.risks
+
 	m.reviewDrillTree = newFileTreeModel(ci.Files)
 	m.reviewDrillTree.focused = true
+
+	// Set risk badges on tree nodes
+	if len(m.drillInRiskyFiles) > 0 {
+		badges := make(map[string]string, len(m.drillInRiskyFiles))
+		for f, level := range m.drillInRiskyFiles {
+			if level == catalog.RiskHigh {
+				badges[f] = "!!"
+			} else {
+				badges[f] = "!"
+			}
+		}
+		m.reviewDrillTree.nodeBadges = badges
+	}
+
 	m.reviewDrillPreview = newPreviewModel()
 	m.reviewDrillPreview.LoadItem(&ci)
+
+	// Set initial highlight lines for the primary file
+	if m.reviewDrillPreview.fileName != "" && len(m.drillInItemRisks) > 0 {
+		highlights := make(map[int]bool)
+		firstLine := 0
+		for _, r := range m.drillInItemRisks {
+			for _, rl := range r.Lines {
+				if rl.File == m.reviewDrillPreview.fileName {
+					highlights[rl.Line] = true
+					if firstLine == 0 || rl.Line < firstLine {
+						firstLine = rl.Line
+					}
+				}
+			}
+		}
+		if len(highlights) > 0 {
+			m.reviewDrillPreview.SetHighlightLines(highlights)
+			if firstLine > 0 {
+				m.reviewDrillPreview.offset = max(0, firstLine-3)
+			}
+		}
+	}
 
 	// Pre-size the panes so scroll works before the first View()
 	innerW := m.width - borderSize
@@ -564,11 +634,35 @@ func (m *addWizardModel) loadDrillInFile() {
 		m.reviewDrillPreview.lines = []string{"Error: " + err.Error()}
 		m.reviewDrillPreview.fileName = relPath
 		m.reviewDrillPreview.offset = 0
+		m.reviewDrillPreview.SetHighlightLines(nil)
 		return
 	}
 	m.reviewDrillPreview.lines = strings.Split(content, "\n")
 	m.reviewDrillPreview.fileName = relPath
 	m.reviewDrillPreview.offset = 0
+
+	// Check if this file has any risk lines and set highlights
+	highlights := make(map[int]bool)
+	firstLine := 0
+	for _, r := range m.drillInItemRisks {
+		for _, rl := range r.Lines {
+			if rl.File == relPath {
+				highlights[rl.Line] = true
+				if firstLine == 0 || rl.Line < firstLine {
+					firstLine = rl.Line
+				}
+			}
+		}
+	}
+	if len(highlights) > 0 {
+		m.reviewDrillPreview.SetHighlightLines(highlights)
+		// Scroll to center on the first highlighted line
+		if firstLine > 0 {
+			m.reviewDrillPreview.offset = max(0, firstLine-3)
+		}
+	} else {
+		m.reviewDrillPreview.SetHighlightLines(nil)
+	}
 }
 
 // enterExecute transitions to the Execute step.
