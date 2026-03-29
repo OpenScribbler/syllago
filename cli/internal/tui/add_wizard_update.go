@@ -294,14 +294,6 @@ func (m *addWizardModel) updateMouseDiscovery(msg tea.MouseMsg) (*addWizardModel
 		return m, nil
 	}
 
-	// Next button
-	if zone.Get("add-disc-next").InBounds(msg) {
-		if len(m.discoveryList.SelectedIndices()) > 0 {
-			m.enterReview()
-		}
-		return m, nil
-	}
-
 	// Checkbox list row clicks — toggle selection
 	if idx, ok := m.discoveryList.HandleClick(msg); ok {
 		m.discoveryList.cursor = idx
@@ -801,8 +793,6 @@ func (m *addWizardModel) updateKeyReview(msg tea.KeyMsg) (*addWizardModel, tea.C
 
 	default:
 		switch m.reviewZone {
-		case addReviewZoneRisks:
-			return m.updateKeyReviewRisks(msg)
 		case addReviewZoneItems:
 			return m.updateKeyReviewItems(msg)
 		case addReviewZoneButtons:
@@ -853,11 +843,6 @@ func (m *addWizardModel) updateKeyReviewDrillIn(msg tea.KeyMsg) (*addWizardModel
 		m.reviewDrillTree.focused = !m.reviewDrillTree.focused
 		m.reviewDrillPreview.focused = !m.reviewDrillTree.focused
 	}
-	return m, nil
-}
-
-func (m *addWizardModel) updateKeyReviewRisks(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
-	m.riskBanner, _ = m.riskBanner.Update(msg)
 	return m, nil
 }
 
