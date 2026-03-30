@@ -1,12 +1,13 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-28T17:35:53Z",
+  "generatedAt": "2026-03-29T01:59:41Z",
   "syllagoVersion": "dev",
   "providers": [
     {
       "name": "Claude Code",
       "slug": "claude-code",
       "configDir": ".claude",
+      "emitPath": "{project}/CLAUDE.md",
       "content": {
         "agents": {
           "supported": true,
@@ -16,6 +17,26 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.claude/agents"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "tools",
+            "disallowedTools",
+            "model",
+            "maxTurns",
+            "permissionMode",
+            "skills",
+            "mcpServers",
+            "memory",
+            "background",
+            "isolation",
+            "effort",
+            "hooks",
+            "color",
+            "temperature",
+            "timeout_mins",
+            "kind"
           ]
         },
         "commands": {
@@ -26,6 +47,18 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.claude/commands"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "allowed-tools",
+            "context",
+            "agent",
+            "model",
+            "disable-model-invocation",
+            "user-invocable",
+            "argument-hint",
+            "effort"
           ]
         },
         "hooks": {
@@ -35,7 +68,131 @@
           "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.claude/settings.json"
-          ]
+          ],
+          "hookEvents": [
+            {
+              "canonical": "after_compact",
+              "nativeName": "PostCompact",
+              "category": "context"
+            },
+            {
+              "canonical": "after_tool_execute",
+              "nativeName": "PostToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "after_tool_failure",
+              "nativeName": "PostToolUseFailure",
+              "category": "tool"
+            },
+            {
+              "canonical": "agent_stop",
+              "nativeName": "Stop",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_compact",
+              "nativeName": "PreCompact",
+              "category": "context"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "UserPromptSubmit",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_tool_execute",
+              "nativeName": "PreToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "config_change",
+              "nativeName": "ConfigChange",
+              "category": "config"
+            },
+            {
+              "canonical": "elicitation",
+              "nativeName": "Elicitation",
+              "category": "interaction"
+            },
+            {
+              "canonical": "elicitation_result",
+              "nativeName": "ElicitationResult",
+              "category": "interaction"
+            },
+            {
+              "canonical": "error_occurred",
+              "nativeName": "ErrorOccurred",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "instructions_loaded",
+              "nativeName": "InstructionsLoaded",
+              "category": "context"
+            },
+            {
+              "canonical": "notification",
+              "nativeName": "Notification",
+              "category": "output"
+            },
+            {
+              "canonical": "permission_request",
+              "nativeName": "PermissionRequest",
+              "category": "security"
+            },
+            {
+              "canonical": "session_end",
+              "nativeName": "SessionEnd",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "SessionStart",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "stop_failure",
+              "nativeName": "StopFailure",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "subagent_start",
+              "nativeName": "SubagentStart",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "subagent_stop",
+              "nativeName": "SubagentStop",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "task_completed",
+              "nativeName": "TaskCompleted",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "teammate_idle",
+              "nativeName": "TeammateIdle",
+              "category": "collaboration"
+            },
+            {
+              "canonical": "worktree_create",
+              "nativeName": "WorktreeCreate",
+              "category": "workspace"
+            },
+            {
+              "canonical": "worktree_remove",
+              "nativeName": "WorktreeRemove",
+              "category": "workspace"
+            }
+          ],
+          "hookTypes": [
+            "command",
+            "http",
+            "prompt",
+            "agent"
+          ],
+          "configLocation": ".claude/settings.json"
         },
         "loadouts": {
           "supported": true,
@@ -50,6 +207,12 @@
           "discoveryPaths": [
             "{project}/.claude.json",
             "{project}/.mcp.json"
+          ],
+          "configLocation": ".mcp.json",
+          "mcpTransports": [
+            "stdio",
+            "sse",
+            "streamable-http"
           ]
         },
         "rules": {
@@ -61,6 +224,9 @@
           "discoveryPaths": [
             "{project}/CLAUDE.md",
             "{project}/.claude/rules"
+          ],
+          "frontmatterFields": [
+            "paths"
           ]
         },
         "skills": {
@@ -71,6 +237,23 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.claude/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "license",
+            "compatibility",
+            "metadata",
+            "allowed-tools",
+            "disallowed-tools",
+            "context",
+            "agent",
+            "model",
+            "effort",
+            "disable-model-invocation",
+            "user-invocable",
+            "argument-hint",
+            "hooks"
           ]
         }
       }
@@ -79,6 +262,7 @@
       "name": "Gemini CLI",
       "slug": "gemini-cli",
       "configDir": ".gemini",
+      "emitPath": "{project}/GEMINI.md",
       "content": {
         "agents": {
           "supported": true,
@@ -88,6 +272,16 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.gemini/agents"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "tools",
+            "model",
+            "max_turns",
+            "temperature",
+            "timeout_mins",
+            "kind"
           ]
         },
         "commands": {
@@ -98,6 +292,11 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.gemini/commands"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "prompt"
           ]
         },
         "hooks": {
@@ -107,7 +306,68 @@
           "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.gemini/settings.json"
-          ]
+          ],
+          "hookEvents": [
+            {
+              "canonical": "after_model",
+              "nativeName": "AfterModel",
+              "category": "model"
+            },
+            {
+              "canonical": "after_tool_execute",
+              "nativeName": "AfterTool",
+              "category": "tool"
+            },
+            {
+              "canonical": "agent_stop",
+              "nativeName": "AfterAgent",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_compact",
+              "nativeName": "PreCompress",
+              "category": "context"
+            },
+            {
+              "canonical": "before_model",
+              "nativeName": "BeforeModel",
+              "category": "model"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "BeforeAgent",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_tool_execute",
+              "nativeName": "BeforeTool",
+              "category": "tool"
+            },
+            {
+              "canonical": "before_tool_selection",
+              "nativeName": "BeforeToolSelection",
+              "category": "model"
+            },
+            {
+              "canonical": "notification",
+              "nativeName": "Notification",
+              "category": "output"
+            },
+            {
+              "canonical": "session_end",
+              "nativeName": "SessionEnd",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "SessionStart",
+              "category": "lifecycle"
+            }
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".gemini/settings.json"
         },
         "loadouts": {
           "supported": false,
@@ -120,6 +380,11 @@
           "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.gemini/settings.json"
+          ],
+          "configLocation": ".gemini/settings.json",
+          "mcpTransports": [
+            "stdio",
+            "sse"
           ]
         },
         "rules": {
@@ -141,6 +406,10 @@
           "discoveryPaths": [
             "{project}/.gemini/skills",
             "{project}/.agents/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description"
           ]
         }
       }
@@ -149,6 +418,7 @@
       "name": "Cursor",
       "slug": "cursor",
       "configDir": ".cursor",
+      "emitPath": "{project}/.cursor/rules/syllago-context.mdc",
       "content": {
         "agents": {
           "supported": true,
@@ -159,6 +429,13 @@
           "discoveryPaths": [
             "{project}/.cursor/agents",
             "{project}/AGENTS.md"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "model",
+            "readonly",
+            "is_background"
           ]
         },
         "commands": {
@@ -178,7 +455,48 @@
           "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.cursor/settings.json"
-          ]
+          ],
+          "hookEvents": [
+            {
+              "canonical": "after_tool_execute",
+              "nativeName": "PostToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "agent_stop",
+              "nativeName": "Stop",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_compact",
+              "nativeName": "PreCompact",
+              "category": "context"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "UserPromptSubmit",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_tool_execute",
+              "nativeName": "PreToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "session_end",
+              "nativeName": "SessionEnd",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "SessionStart",
+              "category": "lifecycle"
+            }
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".cursor/settings.json"
         },
         "loadouts": {
           "supported": false,
@@ -191,6 +509,12 @@
           "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.cursor/mcp.json"
+          ],
+          "configLocation": ".cursor/mcp.json",
+          "mcpTransports": [
+            "stdio",
+            "sse",
+            "streamable-http"
           ]
         },
         "rules": {
@@ -202,6 +526,11 @@
           "discoveryPaths": [
             "{project}/.cursor/rules",
             "{project}/.cursorrules"
+          ],
+          "frontmatterFields": [
+            "description",
+            "alwaysApply",
+            "globs"
           ]
         },
         "skills": {
@@ -212,6 +541,14 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.cursor/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "license",
+            "compatibility",
+            "metadata",
+            "disable-model-invocation"
           ]
         }
       }
@@ -220,6 +557,7 @@
       "name": "Windsurf",
       "slug": "windsurf",
       "configDir": ".codeium/windsurf",
+      "emitPath": "{project}/.windsurf/rules",
       "content": {
         "agents": {
           "supported": false,
@@ -233,7 +571,11 @@
           "supported": true,
           "fileFormat": "json",
           "installMethod": "json-merge",
-          "symlinkSupport": false
+          "symlinkSupport": false,
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".windsurf/hooks.json"
         },
         "loadouts": {
           "supported": false,
@@ -243,7 +585,12 @@
           "supported": true,
           "fileFormat": "json",
           "installMethod": "json-merge",
-          "symlinkSupport": false
+          "symlinkSupport": false,
+          "configLocation": ".windsurf/mcp_config.json",
+          "mcpTransports": [
+            "stdio",
+            "sse"
+          ]
         },
         "rules": {
           "supported": true,
@@ -254,6 +601,11 @@
           "discoveryPaths": [
             "{project}/.windsurfrules",
             "{project}/.windsurf/rules"
+          ],
+          "frontmatterFields": [
+            "trigger",
+            "description",
+            "globs"
           ]
         },
         "skills": {
@@ -265,6 +617,10 @@
           "discoveryPaths": [
             "{project}/.windsurf/skills",
             "{project}/.agents/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description"
           ]
         }
       }
@@ -273,6 +629,7 @@
       "name": "Codex",
       "slug": "codex",
       "configDir": ".codex",
+      "emitPath": "{project}/AGENTS.md",
       "content": {
         "agents": {
           "supported": true,
@@ -292,6 +649,10 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.codex/commands"
+          ],
+          "frontmatterFields": [
+            "description",
+            "argument-hint"
           ]
         },
         "hooks": {
@@ -302,7 +663,11 @@
           "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.codex/hooks.json"
-          ]
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".codex/hooks.json"
         },
         "loadouts": {
           "supported": false,
@@ -310,9 +675,13 @@
         },
         "mcp": {
           "supported": true,
-          "fileFormat": "md",
+          "fileFormat": "toml",
           "installMethod": "json-merge",
-          "symlinkSupport": false
+          "symlinkSupport": false,
+          "configLocation": ".codex/config.toml",
+          "mcpTransports": [
+            "stdio"
+          ]
         },
         "rules": {
           "supported": true,
@@ -340,6 +709,7 @@
       "name": "Copilot CLI",
       "slug": "copilot-cli",
       "configDir": ".copilot",
+      "emitPath": "{project}/.github/copilot-instructions.md",
       "content": {
         "agents": {
           "supported": true,
@@ -351,6 +721,14 @@
             "{project}/.copilot/agents",
             "{project}/.github/agents",
             "{project}/.claude/agents"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "tools",
+            "model",
+            "target",
+            "mcp-servers"
           ]
         },
         "commands": {
@@ -361,6 +739,14 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.copilot/commands"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "agent",
+            "model",
+            "tools",
+            "argument-hint"
           ]
         },
         "hooks": {
@@ -370,7 +756,53 @@
           "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.github/hooks"
-          ]
+          ],
+          "hookEvents": [
+            {
+              "canonical": "after_tool_execute",
+              "nativeName": "postToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "agent_stop",
+              "nativeName": "agentStop",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "userPromptSubmitted",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_tool_execute",
+              "nativeName": "preToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "error_occurred",
+              "nativeName": "errorOccurred",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_end",
+              "nativeName": "sessionEnd",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "sessionStart",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "subagent_stop",
+              "nativeName": "subagentStop",
+              "category": "lifecycle"
+            }
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".github/hooks/"
         },
         "loadouts": {
           "supported": false,
@@ -383,6 +815,11 @@
           "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.copilot/mcp-config.json"
+          ],
+          "configLocation": ".copilot/mcp-config.json",
+          "mcpTransports": [
+            "stdio",
+            "sse"
           ]
         },
         "rules": {
@@ -394,6 +831,9 @@
           "discoveryPaths": [
             "{project}/.github/copilot-instructions.md",
             "{project}/AGENTS.md"
+          ],
+          "frontmatterFields": [
+            "applyTo"
           ]
         },
         "skills": {
@@ -404,6 +844,14 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.github/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "license",
+            "argument-hint",
+            "user-invocable",
+            "disable-model-invocation"
           ]
         }
       }
@@ -412,6 +860,7 @@
       "name": "Zed",
       "slug": "zed",
       "configDir": ".config/zed",
+      "emitPath": "{project}/.rules",
       "content": {
         "agents": {
           "supported": false,
@@ -433,7 +882,11 @@
           "supported": true,
           "fileFormat": "json",
           "installMethod": "json-merge",
-          "symlinkSupport": false
+          "symlinkSupport": false,
+          "configLocation": "~/.config/zed/settings.json",
+          "mcpTransports": [
+            "stdio"
+          ]
         },
         "rules": {
           "supported": true,
@@ -456,6 +909,7 @@
       "name": "Cline",
       "slug": "cline",
       "configDir": ".clinerules",
+      "emitPath": "{project}/.clinerules",
       "content": {
         "agents": {
           "supported": false,
@@ -472,7 +926,53 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.clinerules/hooks"
-          ]
+          ],
+          "hookEvents": [
+            {
+              "canonical": "after_tool_execute",
+              "nativeName": "PostToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "before_compact",
+              "nativeName": "PreCompact",
+              "category": "context"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "UserPromptSubmit",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_tool_execute",
+              "nativeName": "PreToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "session_end",
+              "nativeName": "TaskComplete",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "TaskStart",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "task_cancel",
+              "nativeName": "TaskCancel",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "task_resume",
+              "nativeName": "TaskResume",
+              "category": "lifecycle"
+            }
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".clinerules/hooks"
         },
         "loadouts": {
           "supported": false,
@@ -484,7 +984,13 @@
           "installMethod": "json-merge",
           "symlinkSupport": false,
           "discoveryPaths": [
-            "/home/hhewett/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json"
+            "{home}/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json"
+          ],
+          "configLocation": "cline_mcp_settings.json",
+          "mcpTransports": [
+            "stdio",
+            "sse",
+            "streamable-http"
           ]
         },
         "rules": {
@@ -494,7 +1000,10 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.clinerules",
-            "/home/hhewett/Documents/Cline/Rules"
+            "{home}/Documents/Cline/Rules"
+          ],
+          "frontmatterFields": [
+            "paths"
           ]
         },
         "skills": {
@@ -507,12 +1016,21 @@
       "name": "Roo Code",
       "slug": "roo-code",
       "configDir": ".roo",
+      "emitPath": "{project}/.roo/rules",
       "content": {
         "agents": {
           "supported": true,
           "fileFormat": "yaml",
           "installMethod": "project-scope",
-          "symlinkSupport": true
+          "symlinkSupport": true,
+          "frontmatterFields": [
+            "slug",
+            "name",
+            "roleDefinition",
+            "whenToUse",
+            "customInstructions",
+            "groups"
+          ]
         },
         "commands": {
           "supported": false,
@@ -533,6 +1051,12 @@
           "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.roo/mcp.json"
+          ],
+          "configLocation": ".roo/mcp.json",
+          "mcpTransports": [
+            "stdio",
+            "sse",
+            "streamable-http"
           ]
         },
         "rules": {
@@ -548,7 +1072,7 @@
             "{project}/.roo/rules-debug",
             "{project}/.roo/rules-orchestrator",
             "{project}/.roorules",
-            "/home/hhewett/.roo/rules"
+            "{home}/.roo/rules"
           ]
         },
         "skills": {
@@ -560,6 +1084,10 @@
           "discoveryPaths": [
             "{project}/.roo/skills",
             "{project}/.agents/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description"
           ]
         }
       }
@@ -568,6 +1096,7 @@
       "name": "OpenCode",
       "slug": "opencode",
       "configDir": ".config/opencode",
+      "emitPath": "{project}/AGENTS.md",
       "content": {
         "agents": {
           "supported": true,
@@ -577,6 +1106,15 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.opencode/agents"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "tools",
+            "model",
+            "steps",
+            "color",
+            "temperature"
           ]
         },
         "commands": {
@@ -587,6 +1125,12 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.opencode/commands"
+          ],
+          "frontmatterFields": [
+            "description",
+            "agent",
+            "model",
+            "subtask"
           ]
         },
         "hooks": {
@@ -605,6 +1149,10 @@
           "discoveryPaths": [
             "{project}/opencode.json",
             "{project}/opencode.jsonc"
+          ],
+          "configLocation": "opencode.json",
+          "mcpTransports": [
+            "stdio"
           ]
         },
         "rules": {
@@ -626,6 +1174,13 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.opencode/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "license",
+            "compatibility",
+            "metadata"
           ]
         }
       }
@@ -634,6 +1189,7 @@
       "name": "Kiro",
       "slug": "kiro",
       "configDir": ".kiro",
+      "emitPath": "{project}/.kiro/steering",
       "content": {
         "agents": {
           "supported": true,
@@ -643,6 +1199,22 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.kiro/agents"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "model",
+            "tools",
+            "allowedTools",
+            "toolAliases",
+            "toolsSettings",
+            "mcpServers",
+            "resources",
+            "includeMcpJson",
+            "includePowers",
+            "keyboardShortcut",
+            "welcomeMessage",
+            "hooks"
           ]
         },
         "commands": {
@@ -656,7 +1228,38 @@
           "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.kiro/agents"
-          ]
+          ],
+          "hookEvents": [
+            {
+              "canonical": "after_tool_execute",
+              "nativeName": "postToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "agent_stop",
+              "nativeName": "stop",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "userPromptSubmit",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_tool_execute",
+              "nativeName": "preToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "agentSpawn",
+              "category": "lifecycle"
+            }
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".kiro/agents/"
         },
         "loadouts": {
           "supported": false,
@@ -669,6 +1272,11 @@
           "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.kiro/settings/mcp.json"
+          ],
+          "configLocation": ".kiro/settings/mcp.json",
+          "mcpTransports": [
+            "stdio",
+            "sse"
           ]
         },
         "rules": {
@@ -678,6 +1286,12 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.kiro/steering"
+          ],
+          "frontmatterFields": [
+            "inclusion",
+            "fileMatchPattern",
+            "name",
+            "description"
           ]
         },
         "skills": {
@@ -687,6 +1301,13 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.kiro/steering"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "license",
+            "compatibility",
+            "metadata"
           ]
         }
       }
@@ -695,6 +1316,7 @@
       "name": "Amp",
       "slug": "amp",
       "configDir": ".config/amp",
+      "emitPath": "{project}/AGENTS.md",
       "content": {
         "agents": {
           "supported": false,
@@ -719,6 +1341,11 @@
           "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.amp/settings.json"
+          ],
+          "configLocation": ".amp/settings.json",
+          "mcpTransports": [
+            "stdio",
+            "sse"
           ]
         },
         "rules": {
@@ -731,6 +1358,9 @@
             "{project}/AGENTS.md",
             "{project}/AGENT.md",
             "{project}/CLAUDE.md"
+          ],
+          "frontmatterFields": [
+            "globs"
           ]
         },
         "skills": {
@@ -742,6 +1372,10 @@
           "discoveryPaths": [
             "{project}/.agents/skills",
             "{project}/.claude/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description"
           ]
         }
       }
