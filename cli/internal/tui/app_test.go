@@ -85,6 +85,51 @@ func TestApp_ContentHeight(t *testing.T) {
 	}
 }
 
+func TestApp_ContentHeightAdjustsOnTabSwitch(t *testing.T) {
+	// At 80 cols, Config has fewer hints (1 line) and Content has more (2 lines).
+	// Switching between them must resize content models to avoid clipping.
+	app := testAppWithItems(t) // 80x30
+
+	// Go to Config (group 3) — fewer hints
+	m, cmd := app.Update(keyRune('3'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a3 := m.(App)
+	configHelpH := a3.helpBar.Height()
+	configContentH := a3.contentHeight()
+
+	// Go to Content (group 2) — more hints
+	m, cmd = a3.Update(keyRune('2'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a2 := m.(App)
+	contentHelpH := a2.helpBar.Height()
+	contentContentH := a2.contentHeight()
+
+	// If help bar grew, content height must have shrunk
+	if contentHelpH > configHelpH {
+		if contentContentH >= configContentH {
+			t.Errorf("content height should shrink when help bar grows: config=%d, content=%d (help: %d→%d)",
+				configContentH, contentContentH, configHelpH, contentHelpH)
+		}
+	}
+
+	// The explorer model should have been resized to the new content height
+	if a2.explorer.height != contentContentH {
+		t.Errorf("explorer height %d should match contentHeight %d after tab switch",
+			a2.explorer.height, contentContentH)
+	}
+
+	// Total rendered output should fit within terminal height
+	view := a2.View()
+	lines := strings.Split(view, "\n")
+	if len(lines) > 30 {
+		t.Errorf("rendered output has %d lines, exceeds terminal height 30", len(lines))
+	}
+}
+
 // --- Tab navigation tests ---
 
 func TestApp_GroupSwitchWith123(t *testing.T) {
@@ -255,6 +300,160 @@ func TestApp_LibrarySearch(t *testing.T) {
 	a = m.(App)
 	if a.library.table.Len() != 7 {
 		t.Errorf("expected all 7 items after Esc, got %d", a.library.table.Len())
+	}
+}
+
+func TestApp_ExplorerSearch(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// Switch to Content group (Skills tab)
+	m, cmd := app.Update(keyRune('2'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a := m.(App)
+
+	// Verify we're on Content tab with explorer
+	if !a.isContentTab() {
+		t.Fatal("expected Content tab after pressing 2")
+	}
+	initialLen := a.explorer.items.Len()
+	if initialLen == 0 {
+		t.Fatal("expected items in explorer")
+	}
+
+	// / starts search
+	m, _ = a.Update(keyRune('/'))
+	a = m.(App)
+	if !a.explorer.searching {
+		t.Fatal("expected searching mode after /")
+	}
+
+	// Type "alpha"
+	for _, ch := range "alpha" {
+		m, _ = a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+		a = m.(App)
+	}
+	if a.explorer.items.Len() >= initialLen {
+		t.Errorf("expected filtered items, got %d (same as initial %d)", a.explorer.items.Len(), initialLen)
+	}
+	if a.explorer.items.Len() == 0 {
+		t.Error("expected at least one match for 'alpha'")
+	}
+
+	// Enter confirms search
+	m, _ = a.Update(keyPress(tea.KeyEnter))
+	a = m.(App)
+	if a.explorer.searching {
+		t.Fatal("expected search mode ended after Enter")
+	}
+	if a.explorer.searchQuery != "alpha" {
+		t.Error("search query should persist after confirm")
+	}
+
+	// Esc clears search
+	m, _ = a.Update(keyPress(tea.KeyEsc))
+	a = m.(App)
+	if a.explorer.items.Len() != initialLen {
+		t.Errorf("expected all %d items after Esc, got %d", initialLen, a.explorer.items.Len())
+	}
+}
+
+func TestApp_ExplorerSearchSuppressesGlobalKeys(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// Switch to Content tab
+	m, cmd := app.Update(keyRune('2'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a := m.(App)
+
+	// Start search
+	m, _ = a.Update(keyRune('/'))
+	a = m.(App)
+	if !a.explorer.searching {
+		t.Fatal("expected searching mode")
+	}
+
+	// Typing 'a' should go to search, not trigger Add
+	m, _ = a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	a = m.(App)
+	if a.explorer.searchQuery != "a" {
+		t.Errorf("expected search query 'a', got %q", a.explorer.searchQuery)
+	}
+	// '1' should go to search, not switch to group 1
+	m, _ = a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
+	a = m.(App)
+	if a.explorer.searchQuery != "a1" {
+		t.Errorf("expected search query 'a1', got %q", a.explorer.searchQuery)
+	}
+}
+
+func TestApp_ExplorerSearchBarInView(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// Switch to Content tab
+	m, cmd := app.Update(keyRune('2'))
+	if cmd != nil {
+		m, _ = m.Update(cmd())
+	}
+	a := m.(App)
+
+	// No search bar initially
+	view := a.View()
+	stripped := ansi.Strip(view)
+	if strings.Contains(stripped, "esc cancel") {
+		t.Error("search bar hints should not appear before search starts")
+	}
+
+	// Start search
+	m, _ = a.Update(keyRune('/'))
+	a = m.(App)
+	view = a.View()
+	stripped = ansi.Strip(view)
+	if !strings.Contains(stripped, "esc cancel") {
+		t.Error("search bar should show 'esc cancel' when searching")
+	}
+}
+
+func TestApp_GallerySearch(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// Switch to Collections > Loadouts (tab past Library)
+	m, _ := app.Update(keyPress(tea.KeyTab))
+	a := m.(App)
+	if !a.isGalleryTab() {
+		t.Fatal("expected gallery tab after Tab")
+	}
+
+	// Gallery might be empty in test — that's OK, verify search mechanics work
+	// / starts search
+	m, _ = a.Update(keyRune('/'))
+	a = m.(App)
+	if !a.gallery.searching {
+		t.Fatal("expected gallery searching mode after /")
+	}
+
+	// Enter confirms
+	m, _ = a.Update(keyPress(tea.KeyEnter))
+	a = m.(App)
+	if a.gallery.searching {
+		t.Fatal("expected gallery search mode ended after Enter")
+	}
+
+	// Start search again, then Esc cancels
+	m, _ = a.Update(keyRune('/'))
+	a = m.(App)
+	m, _ = a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}})
+	a = m.(App)
+	if a.gallery.searchQuery != "x" {
+		t.Errorf("expected query 'x', got %q", a.gallery.searchQuery)
+	}
+	m, _ = a.Update(keyPress(tea.KeyEsc))
+	a = m.(App)
+	if a.gallery.searchQuery != "" {
+		t.Error("expected empty query after Esc")
 	}
 }
 

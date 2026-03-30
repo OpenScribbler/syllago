@@ -3,12 +3,14 @@ package tui
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 // toastLevel controls the appearance and auto-dismiss behavior.
@@ -155,14 +157,17 @@ func (t *toastModel) HandleKey(msg tea.KeyMsg) (consumed bool, cmd tea.Cmd) {
 
 // copyAndDismiss writes OSC 52 clipboard escape sequence and dismisses.
 // OSC 52 is supported by Windows Terminal, iTerm2, kitty, and most modern terminals.
+// We write directly to stdout from a tea.Cmd goroutine because tea.Printf is
+// swallowed by BubbleTea's alt-screen renderer — the terminal never sees the escape.
 func (t *toastModel) copyAndDismiss(text string) tea.Cmd {
 	dismissCmd := t.Dismiss()
 	encoded := base64.StdEncoding.EncodeToString([]byte(text))
 	osc52 := fmt.Sprintf("\x1b]52;c;%s\x07", encoded)
-	return tea.Batch(
-		tea.Printf("%s", osc52),
-		dismissCmd,
-	)
+	writeClipboard := func() tea.Msg {
+		_, _ = os.Stdout.Write([]byte(osc52))
+		return nil
+	}
+	return tea.Batch(writeClipboard, dismissCmd)
 }
 
 // tickCmd returns a tea.Tick command for the current toast's auto-dismiss duration.
@@ -201,6 +206,17 @@ func (t toastModel) View() string {
 	return strings.Join(rendered, "\n")
 }
 
+// HandleMouse processes mouse clicks on toast zones. Returns true if consumed.
+func (t *toastModel) HandleMouse(msg tea.MouseMsg) (consumed bool, cmd tea.Cmd) {
+	if !t.visible || len(t.queue) == 0 {
+		return false, nil
+	}
+	if zone.Get("toast-close").InBounds(msg) {
+		return true, t.Dismiss()
+	}
+	return false, nil
+}
+
 // renderOne renders a single toast entry as a bordered box.
 func (t toastModel) renderOne(entry toastEntry) string {
 	var borderColor lipgloss.TerminalColor
@@ -217,21 +233,35 @@ func (t toastModel) renderOne(entry toastEntry) string {
 		icon = lipgloss.NewStyle().Foreground(dangerColor).Render("✗ ")
 	}
 
-	maxMsgW := 50
+	// Fixed width so all toasts render at the same size regardless of message length.
+	const toastFixedWidth = 60
+	// Inner width = total - 2 (border) - 2 (padding)
+	const innerWidth = toastFixedWidth - 2 - 2
+
+	maxMsgW := innerWidth - 6 // icon(2) + close btn(4 = " [×]")
 	msg := entry.message
 	if len([]rune(msg)) > maxMsgW {
 		msg = string([]rune(msg)[:maxMsgW-1]) + "…"
 	}
 
-	content := icon + lipgloss.NewStyle().Foreground(primaryText).Render(msg)
+	// Build first line: icon + message + right-aligned close button
+	msgText := icon + lipgloss.NewStyle().Foreground(primaryText).Render(msg)
+	msgVisualW := lipgloss.Width(msgText)
+	closeBtn := zone.Mark("toast-close",
+		lipgloss.NewStyle().Foreground(mutedColor).Faint(true).Render("[×]"))
+	closeBtnW := 3 // visual width of "[×]"
+	gap := innerWidth - msgVisualW - closeBtnW
+	if gap < 1 {
+		gap = 1
+	}
+	firstLine := msgText + strings.Repeat(" ", gap) + closeBtn
+
+	content := firstLine
 
 	if entry.level == toastError {
 		hint := lipgloss.NewStyle().Foreground(mutedColor).Faint(true).Render("  [esc] dismiss · [c] copy")
 		content += "\n" + hint
 	}
-
-	// Fixed width so all toasts render at the same size regardless of message length.
-	const toastFixedWidth = 60
 
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
