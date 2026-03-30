@@ -95,6 +95,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.help, cmd = a.help.Update(msg)
 			return a, cmd
 		}
+		// Toast close button takes priority over content
+		if a.toast.visible {
+			consumed, cmd := a.toast.HandleMouse(msg)
+			if consumed {
+				return a, cmd
+			}
+		}
 		return a.routeMouse(msg)
 
 	case tea.KeyMsg:
@@ -177,10 +184,22 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// When library search is active, only handle ctrl+c — everything
+		// When search is active, only handle ctrl+c — everything
 		// else goes to the search input so letters like 'a', 'q', '1' etc.
 		// are typed into the query rather than triggering shortcuts.
 		if a.isLibraryTab() && a.library.table.searching {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			return a.routeKey(msg)
+		}
+		if a.isContentTab() && a.explorer.searching {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			return a.routeKey(msg)
+		}
+		if a.isGalleryTab() && !a.galleryDrillIn && a.gallery.searching {
 			if msg.Type == tea.KeyCtrlC {
 				return a, tea.Quit
 			}

@@ -292,10 +292,10 @@ func (a App) currentHints() []string {
 		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "e edit", "d remove", "x uninstall", "R refresh", "? help", "q back")
 	}
 	if a.isRegistriesTab() && !a.galleryDrillIn {
-		return append(base, "arrows grid", "enter select", "tab grid/contents", "a add", "S sync", "d remove", "e edit", "R refresh", "? help", "q back")
+		return append(base, "arrows grid", "enter select", "tab grid/contents", "/ search", "a add", "S sync", "d remove", "e edit", "R refresh", "? help", "q back")
 	}
 	if a.isGalleryTab() {
-		return append(base, "arrows grid", "enter select", "tab grid/contents", "e edit", "d remove", "R refresh", "a add", "? help", "q back")
+		return append(base, "arrows grid", "enter select", "tab grid/contents", "/ search", "e edit", "d remove", "R refresh", "a add", "? help", "q back")
 	}
 
 	// Library in detail mode has different hints
@@ -312,7 +312,7 @@ func (a App) currentHints() []string {
 		return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "e edit", "R refresh", "? help", "q back")
 	}
 
-	hints := append(base, "↑/↓ navigate", "←/→ switch pane", "enter detail")
+	hints := append(base, "↑/↓ navigate", "←/→ switch pane", "enter detail", "/ search")
 	if group != "Config" {
 		hints = append(hints, "i install", "e edit", "d remove", "x uninstall", "R refresh", "a add")
 	}
@@ -354,9 +354,43 @@ func (a App) handleBreadcrumbClick(msg breadcrumbClickMsg) (tea.Model, tea.Cmd) 
 
 // updateNavState refreshes hints and breadcrumbs to match the current navigation state.
 // Call this after any state transition that changes drill-in/tab state.
+// Also resizes content models when the help bar height changes (e.g. hints
+// wrap to two lines or shrink to one) so the total layout fits the terminal.
 func (a *App) updateNavState() {
+	prevH := a.helpBar.Height()
 	a.helpBar.SetHints(a.currentHints())
 	a.updateBreadcrumbs()
+	if a.helpBar.Height() != prevH {
+		a.resizeContent()
+	}
+}
+
+// resizeContent recalculates sizes for all content models using the current
+// content height. Call after anything that changes contentHeight() (window
+// resize, help bar height change, etc.).
+func (a *App) resizeContent() {
+	ch := a.contentHeight()
+	a.library.SetSize(a.width, ch)
+	a.explorer.SetSize(a.width, ch)
+	a.gallery.SetSize(a.width, ch)
+	a.help.SetSize(a.width, ch)
+	a.toast.SetSize(a.width, ch)
+	a.confirm.width = a.width
+	a.confirm.height = ch
+	a.remove.width = a.width
+	a.remove.height = ch
+	a.registryAdd.width = a.width
+	a.registryAdd.height = ch
+	if a.installWizard != nil {
+		a.installWizard.width = a.width
+		a.installWizard.height = ch
+		a.installWizard.shell.SetWidth(a.width)
+	}
+	if a.addWizard != nil {
+		a.addWizard.width = a.width
+		a.addWizard.height = ch
+		a.addWizard.shell.SetWidth(a.width)
+	}
 }
 
 // updateBreadcrumbs sets the topbar breadcrumbs based on the current navigation state.
