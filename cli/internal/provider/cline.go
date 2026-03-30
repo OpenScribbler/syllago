@@ -96,4 +96,10 @@ var Cline = Provider{
 		catalog.Hooks: true,  // File-based executables
 		catalog.MCP:   false, // JSON merge
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.Hooks: ".clinerules/hooks",
+		catalog.MCP:   "cline_mcp_settings.json",
+	},
+	MCPTransports: []string{"stdio", "sse", "streamable-http"},
+	HookTypes:     []string{"command"},
 }

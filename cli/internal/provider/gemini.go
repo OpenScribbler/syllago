@@ -81,4 +81,10 @@ var GeminiCLI = Provider{
 		catalog.MCP:      false, // JSON merge
 		catalog.Hooks:    false, // JSON merge
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.Hooks: ".gemini/settings.json",
+		catalog.MCP:   ".gemini/settings.json",
+	},
+	MCPTransports: []string{"stdio", "sse"},
+	HookTypes:     []string{"command"},
 }

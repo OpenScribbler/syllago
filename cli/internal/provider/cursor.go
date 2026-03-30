@@ -86,4 +86,10 @@ var Cursor = Provider{
 		catalog.Hooks:    false, // JSON merge
 		catalog.MCP:      false, // JSON merge
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.Hooks: ".cursor/settings.json",
+		catalog.MCP:   ".cursor/mcp.json",
+	},
+	MCPTransports: []string{"stdio", "sse", "streamable-http"},
+	HookTypes:     []string{"command"},
 }

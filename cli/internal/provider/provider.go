@@ -52,6 +52,19 @@ type Provider struct {
 	// If nil, symlinks are assumed supported for filesystem types.
 	// Hooks and MCP are always false (JSON merge, not filesystem).
 	SymlinkSupport map[catalog.ContentType]bool
+
+	// ConfigLocations maps content types to the config file path where that type
+	// is configured for this provider (e.g. hooks config, MCP config).
+	// Only populated for types where configuration is file-based.
+	ConfigLocations map[catalog.ContentType]string
+
+	// MCPTransports lists the MCP transports this provider supports.
+	// Example: []string{"stdio", "sse", "streamable-http"}.
+	MCPTransports []string
+
+	// HookTypes lists the hook handler types this provider supports.
+	// Example: []string{"command", "http", "prompt", "agent"}.
+	HookTypes []string
 }
 
 // AllProviders returns the full list of known providers (detected or not).
