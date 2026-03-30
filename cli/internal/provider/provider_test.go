@@ -190,3 +190,39 @@ func TestAllProviders_InstallDirSentinels(t *testing.T) {
 		}
 	}
 }
+
+// TestAllProviders_HooksFieldCompleteness verifies that every provider which
+// supports hooks has non-empty HookTypes and a ConfigLocations[Hooks] entry.
+// This prevents a new provider from adding SupportsType=hooks without filling
+// in the struct fields that genproviders depends on.
+func TestAllProviders_HooksFieldCompleteness(t *testing.T) {
+	t.Parallel()
+	for _, prov := range AllProviders {
+		if prov.SupportsType == nil || !prov.SupportsType(catalog.Hooks) {
+			continue
+		}
+		if len(prov.HookTypes) == 0 {
+			t.Errorf("provider %q supports hooks but HookTypes is empty", prov.Slug)
+		}
+		if prov.ConfigLocations[catalog.Hooks] == "" {
+			t.Errorf("provider %q supports hooks but ConfigLocations[Hooks] is empty", prov.Slug)
+		}
+	}
+}
+
+// TestAllProviders_MCPFieldCompleteness verifies that every provider which
+// supports MCP has non-empty MCPTransports and a ConfigLocations[MCP] entry.
+func TestAllProviders_MCPFieldCompleteness(t *testing.T) {
+	t.Parallel()
+	for _, prov := range AllProviders {
+		if prov.SupportsType == nil || !prov.SupportsType(catalog.MCP) {
+			continue
+		}
+		if len(prov.MCPTransports) == 0 {
+			t.Errorf("provider %q supports MCP but MCPTransports is empty", prov.Slug)
+		}
+		if prov.ConfigLocations[catalog.MCP] == "" {
+			t.Errorf("provider %q supports MCP but ConfigLocations[MCP] is empty", prov.Slug)
+		}
+	}
+}

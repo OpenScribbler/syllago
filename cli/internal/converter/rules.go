@@ -13,6 +13,13 @@ import (
 
 func init() {
 	Register(&RulesConverter{})
+	RegisterFrontmatter(catalog.Rules, "claude-code", claudeCodePathsFrontmatter{})
+	RegisterFrontmatter(catalog.Rules, "cursor", cursorRuleFrontmatter{})
+	RegisterFrontmatter(catalog.Rules, "windsurf", windsurfOutput{})
+	RegisterFrontmatter(catalog.Rules, "kiro", kiroRuleFrontmatter{})
+	RegisterFrontmatter(catalog.Rules, "copilot-cli", copilotFrontmatter{})
+	RegisterFrontmatter(catalog.Rules, "cline", clineFrontmatter{})
+	RegisterFrontmatter(catalog.Rules, "amp", ampRuleFrontmatter{})
 }
 
 // RuleMeta is the canonical rule metadata (YAML frontmatter fields).

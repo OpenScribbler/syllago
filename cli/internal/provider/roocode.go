@@ -84,4 +84,8 @@ var RooCode = Provider{
 		catalog.Agents: true,
 		catalog.MCP:    false, // JSON merge
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.MCP: ".roo/mcp.json",
+	},
+	MCPTransports: []string{"stdio", "sse", "streamable-http"},
 }

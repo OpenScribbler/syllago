@@ -101,6 +101,16 @@ func formatSkillHookWarnings(skillName string, hooks any, targetSlug string) []s
 
 func init() {
 	Register(&SkillsConverter{})
+	RegisterFrontmatter(catalog.Skills, "claude-code", SkillMeta{})
+	RegisterFrontmatter(catalog.Skills, "cursor", cursorSkillMeta{})
+	RegisterFrontmatter(catalog.Skills, "copilot-cli", copilotSkillMeta{})
+	RegisterFrontmatter(catalog.Skills, "kiro", kiroSkillMeta{})
+	RegisterFrontmatter(catalog.Skills, "opencode", opencodeSkillMeta{})
+	RegisterFrontmatter(catalog.Skills, "gemini-cli", geminiSkillMeta{})
+	RegisterFrontmatter(catalog.Skills, "windsurf", windsurfSkillMeta{})
+	RegisterFrontmatter(catalog.Skills, "amp", ampSkillMeta{})
+	RegisterFrontmatter(catalog.Skills, "cline", clineSkillMeta{})
+	RegisterFrontmatter(catalog.Skills, "roo-code", rooCodeSkillMeta{})
 }
 
 // flexStringList is a []string that also accepts a single YAML scalar string.

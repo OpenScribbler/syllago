@@ -84,4 +84,10 @@ var Amp = Provider{
 		catalog.Skills: true,
 		catalog.MCP:    false, // JSON merge
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.Hooks: ".amp/hooks.json",
+		catalog.MCP:   ".amp/settings.json",
+	},
+	MCPTransports: []string{"stdio", "sse"},
+	HookTypes:     []string{"command"},
 }

@@ -92,4 +92,10 @@ var CopilotCLI = Provider{
 		catalog.Hooks:    false, // JSON merge
 		catalog.MCP:      false, // JSON merge
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.Hooks: ".github/hooks/",
+		catalog.MCP:   ".copilot/mcp-config.json",
+	},
+	MCPTransports: []string{"stdio", "sse"},
+	HookTypes:     []string{"command"},
 }

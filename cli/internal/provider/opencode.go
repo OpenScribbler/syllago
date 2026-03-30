@@ -86,4 +86,8 @@ var OpenCode = Provider{
 		catalog.Skills:   true,
 		catalog.MCP:      false, // JSON merge
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.MCP: "opencode.json",
+	},
+	MCPTransports: []string{"stdio"},
 }
