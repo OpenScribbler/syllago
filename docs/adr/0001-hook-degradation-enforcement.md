@@ -1,3 +1,13 @@
+---
+id: "0001"
+title: Hook Degradation Enforcement
+status: accepted
+date: 2026-03-28
+enforcement: strict
+files: ["cli/internal/converter/*"]
+tags: [hooks, conversion, safety, degradation]
+---
+
 # ADR 0001: Hook Degradation Enforcement
 
 ## Status
