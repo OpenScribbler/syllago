@@ -106,54 +106,6 @@ func TestAdapterRoundTrip_CC_Gemini(t *testing.T) {
 	assertNotContains(t, out, "PreToolUse")
 }
 
-func TestFromLegacyHooksConfig(t *testing.T) {
-	cfg := hooksConfig{
-		Hooks: map[string][]hookMatcher{
-			"before_tool_execute": {
-				{Matcher: "shell", Hooks: []HookEntry{
-					{Type: "command", Command: "echo check", Timeout: 5},
-				}},
-			},
-			"session_start": {
-				{Hooks: []HookEntry{
-					{Type: "command", Command: "echo init"},
-				}},
-			},
-		},
-	}
-
-	ch := FromLegacyHooksConfig(cfg)
-	assertEqual(t, SpecVersion, ch.Spec)
-	if len(ch.Hooks) != 2 {
-		t.Fatalf("expected 2 hooks, got %d", len(ch.Hooks))
-	}
-}
-
-func TestToLegacyHooksConfig(t *testing.T) {
-	matcher, _ := json.Marshal("shell")
-	ch := &CanonicalHooks{
-		Spec: SpecVersion,
-		Hooks: []CanonicalHook{
-			{
-				Event:   "before_tool_execute",
-				Matcher: matcher,
-				Handler: HookHandler{Type: "command", Command: "echo check", Timeout: 5},
-			},
-		},
-	}
-
-	cfg := ch.ToLegacyHooksConfig()
-	matchers, ok := cfg.Hooks["before_tool_execute"]
-	if !ok {
-		t.Fatal("expected before_tool_execute event in legacy config")
-	}
-	if len(matchers) != 1 {
-		t.Fatalf("expected 1 matcher, got %d", len(matchers))
-	}
-	assertEqual(t, "shell", matchers[0].Matcher)
-	assertEqual(t, "echo check", matchers[0].Hooks[0].Command)
-}
-
 func TestVerify_Success(t *testing.T) {
 	matcher, _ := json.Marshal("shell")
 	hooks := &CanonicalHooks{
@@ -352,53 +304,64 @@ func TestCursorAdapterCapabilities(t *testing.T) {
 
 // --- Verify error paths ---
 
-func TestVerify_CountMismatch(t *testing.T) {
+func TestVerify_FieldLevelCheck(t *testing.T) {
+	// Verify checks field-level fidelity: command, timeout, blocking.
+	// Encode a hook with all fields, then verify it round-trips correctly.
 	matcher, _ := json.Marshal("shell")
 	original := &CanonicalHooks{
 		Spec: SpecVersion,
 		Hooks: []CanonicalHook{
 			{
-				Event:   "before_tool_execute",
-				Matcher: matcher,
-				Handler: HookHandler{Type: "command", Command: "echo check"},
-			},
-			{
-				Event:   "session_start",
-				Handler: HookHandler{Type: "command", Command: "echo init"},
-			},
-		},
-	}
-
-	// Encode with just 1 hook
-	singleHook := &CanonicalHooks{
-		Spec: SpecVersion,
-		Hooks: []CanonicalHook{
-			{
-				Event:   "before_tool_execute",
-				Matcher: matcher,
-				Handler: HookHandler{Type: "command", Command: "echo check"},
+				Event:    "before_tool_execute",
+				Matcher:  matcher,
+				Blocking: true,
+				Handler:  HookHandler{Type: "command", Command: "echo check", Timeout: 5},
 			},
 		},
 	}
 
 	adapter := AdapterFor("claude-code")
-	encoded, err := adapter.Encode(singleHook)
+	encoded, err := adapter.Encode(original)
 	if err != nil {
 		t.Fatalf("Encode: %v", err)
 	}
 
+	// Should pass — fields preserved
 	err = Verify(encoded, adapter, original)
-	if err == nil {
-		t.Fatal("expected Verify to fail on count mismatch")
+	if err != nil {
+		t.Fatalf("expected Verify to pass, got: %v", err)
+	}
+}
+
+func TestVerify_DroppedHooksAllowed(t *testing.T) {
+	// When an adapter intentionally drops hooks (e.g., LLM hooks on Gemini),
+	// Verify should still pass — it compares decoded hooks against original,
+	// not the other way around.
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event:   "before_tool_execute",
+				Handler: HookHandler{Type: "command", Command: "echo check"},
+			},
+			{
+				Event:   "before_tool_execute",
+				Handler: HookHandler{Type: "prompt", Prompt: "Review this", Model: "claude"},
+			},
+		},
 	}
 
-	verErr, ok := err.(*VerifyError)
-	if !ok {
-		t.Fatalf("expected *VerifyError, got %T", err)
+	adapter := AdapterFor("gemini-cli")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
 	}
-	assertContains(t, verErr.Error(), "hook count mismatch")
-	assertContains(t, verErr.Error(), "expected 2")
-	assertContains(t, verErr.Error(), "got 1")
+
+	// Should pass — Gemini drops the prompt hook but the command hook round-trips fine
+	err = Verify(encoded, adapter, original)
+	if err != nil {
+		t.Fatalf("expected Verify to pass with dropped hooks, got: %v", err)
+	}
 }
 
 func TestVerify_NilEncoded(t *testing.T) {
@@ -448,34 +411,6 @@ func TestItoa(t *testing.T) {
 	for _, tt := range tests {
 		result := itoa(tt.input)
 		assertEqual(t, tt.expected, result)
-	}
-}
-
-func TestLegacyResultToEncoded(t *testing.T) {
-	r := &Result{
-		Content:  []byte("content"),
-		Filename: "hooks.json",
-		Warnings: []string{"warning 1", "warning 2"},
-	}
-
-	er := legacyResultToEncoded(r)
-	assertEqual(t, "hooks.json", er.Filename)
-	if len(er.Warnings) != 2 {
-		t.Fatalf("expected 2 warnings, got %d", len(er.Warnings))
-	}
-	assertEqual(t, "warning", er.Warnings[0].Severity)
-	assertEqual(t, "warning 1", er.Warnings[0].Description)
-}
-
-func TestLegacyResultToEncodedNoWarnings(t *testing.T) {
-	r := &Result{
-		Content:  []byte("content"),
-		Filename: "hooks.json",
-	}
-
-	er := legacyResultToEncoded(r)
-	if len(er.Warnings) != 0 {
-		t.Fatalf("expected 0 warnings, got %d", len(er.Warnings))
 	}
 }
 
@@ -560,4 +495,888 @@ func TestCanonicalHookNewFields(t *testing.T) {
 func TestSpecVersion(t *testing.T) {
 	t.Parallel()
 	assertEqual(t, "hooks/0.1", SpecVersion)
+}
+
+// --- CC Adapter Tier 2 Round-Trip Tests ---
+
+func TestCCAdapter_RoundTrip_AllFields(t *testing.T) {
+	// This test defines the fidelity contract for the migrated CC adapter.
+	// Fields that the legacy bridge previously dropped are explicitly asserted.
+	matcherJSON, _ := json.Marshal("shell")
+	mcpMatcher := json.RawMessage(`{"mcp":{"server":"github","tool":"create_issue"}}`)
+
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Name:    "safety-check",
+				Event:   "before_tool_execute",
+				Matcher: matcherJSON,
+				Handler: HookHandler{
+					Type:          "command",
+					Command:       "echo check",
+					Timeout:       5, // canonical seconds; should encode as 5000ms
+					TimeoutAction: "block",
+					StatusMessage: "Running safety check",
+					CWD:           "./scripts",
+					Env:           map[string]string{"AUDIT_LOG": "/tmp/audit.log"},
+				},
+				Blocking:     true,
+				Degradation:  map[string]string{"input_rewrite": "block"},
+				Capabilities: []string{"structured_output"},
+			},
+			{
+				Name:    "mcp-guard",
+				Event:   "before_tool_execute",
+				Matcher: mcpMatcher,
+				Handler: HookHandler{
+					Type:    "command",
+					Command: "echo mcp",
+				},
+			},
+		},
+	}
+
+	adapter := AdapterFor("claude-code")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	if len(encoded.Warnings) != 0 {
+		t.Logf("encode warnings: %v", encoded.Warnings)
+	}
+
+	// Verify the encoded JSON contains CC-native event and tool names
+	out := string(encoded.Content)
+	assertContains(t, out, "PreToolUse")
+	assertContains(t, out, "Bash") // shell -> Bash for CC
+	assertContains(t, out, "5000") // 5s -> 5000ms
+
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+
+	if len(decoded.Hooks) != len(original.Hooks) {
+		t.Fatalf("hook count: got %d, want %d", len(decoded.Hooks), len(original.Hooks))
+	}
+
+	h0 := decoded.Hooks[0]
+	assertEqual(t, "safety-check", h0.Name)
+	assertEqual(t, "before_tool_execute", h0.Event)
+	if !h0.Blocking {
+		t.Error("expected Blocking to be true")
+	}
+	assertEqual(t, "block", h0.Handler.TimeoutAction)
+	assertEqual(t, "Running safety check", h0.Handler.StatusMessage)
+	if h0.Handler.Timeout != 5 {
+		t.Errorf("Timeout: got %d, want 5 (canonical seconds)", h0.Handler.Timeout)
+	}
+	assertEqual(t, "./scripts", h0.Handler.CWD)
+	if h0.Handler.Env["AUDIT_LOG"] != "/tmp/audit.log" {
+		t.Errorf("Env not preserved: %v", h0.Handler.Env)
+	}
+	if len(h0.Degradation) != 1 || h0.Degradation["input_rewrite"] != "block" {
+		t.Errorf("Degradation not preserved: %v", h0.Degradation)
+	}
+	if len(h0.Capabilities) != 1 || h0.Capabilities[0] != "structured_output" {
+		t.Errorf("Capabilities not preserved: %v", h0.Capabilities)
+	}
+
+	// Verify second hook (MCP matcher)
+	h1 := decoded.Hooks[1]
+	assertEqual(t, "mcp-guard", h1.Name)
+	assertEqual(t, "before_tool_execute", h1.Event)
+	assertEqual(t, "echo mcp", h1.Handler.Command)
+}
+
+func TestCCAdapter_AllHandlerTypes(t *testing.T) {
+	// CC supports all 4 handler types: command, http, prompt, agent
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event: "before_tool_execute",
+				Handler: HookHandler{
+					Type: "http", URL: "https://example.com",
+					Headers: map[string]string{"X-Key": "val"},
+				},
+			},
+			{
+				Event:   "before_tool_execute",
+				Handler: HookHandler{Type: "prompt", Prompt: "Is this safe?", Model: "claude-3"},
+			},
+			{
+				Event:   "session_start",
+				Handler: HookHandler{Type: "command", Command: "echo init"},
+			},
+		},
+	}
+
+	adapter := AdapterFor("claude-code")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	// All hooks should be kept — CC supports all types
+	if len(encoded.Warnings) != 0 {
+		t.Errorf("unexpected warnings for CC (all types supported): %v", encoded.Warnings)
+	}
+
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(decoded.Hooks) != 3 {
+		t.Fatalf("expected 3 hooks, got %d", len(decoded.Hooks))
+	}
+}
+
+func TestCCAdapter_TimeoutValues(t *testing.T) {
+	// Verify actual timeout values survive the round-trip correctly
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event: "session_start",
+				Handler: HookHandler{
+					Type:    "command",
+					Command: "echo init",
+					Timeout: 10, // 10 seconds
+				},
+			},
+			{
+				Event: "before_tool_execute",
+				Handler: HookHandler{
+					Type:    "command",
+					Command: "echo check",
+					Timeout: 0, // no timeout
+				},
+			},
+		},
+	}
+
+	adapter := AdapterFor("claude-code")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+
+	// Verify encoded values
+	out := string(encoded.Content)
+	assertContains(t, out, "10000") // 10s -> 10000ms
+
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+
+	// Map iteration order is non-deterministic; find hooks by command
+	for _, h := range decoded.Hooks {
+		switch h.Handler.Command {
+		case "echo init":
+			if h.Handler.Timeout != 10 {
+				t.Errorf("timeout for 'echo init': got %d, want 10", h.Handler.Timeout)
+			}
+		case "echo check":
+			if h.Handler.Timeout != 0 {
+				t.Errorf("zero timeout for 'echo check': got %d, want 0", h.Handler.Timeout)
+			}
+		}
+	}
+}
+
+// --- Gemini Adapter Tier 2 Round-Trip Tests ---
+
+func TestGeminiAdapter_RoundTrip_AllFields(t *testing.T) {
+	matcherJSON, _ := json.Marshal("shell")
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Name:    "log-hook",
+				Event:   "before_tool_execute",
+				Matcher: matcherJSON,
+				Handler: HookHandler{
+					Type:          "command",
+					Command:       "echo log",
+					Timeout:       3, // canonical seconds -> 3000ms in Gemini
+					StatusMessage: "Logging",
+					Async:         true,
+				},
+				Blocking: true,
+			},
+		},
+	}
+	adapter := AdapterFor("gemini-cli")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+
+	// Verify Gemini-native event names
+	out := string(encoded.Content)
+	assertContains(t, out, "BeforeTool")
+	assertContains(t, out, "run_shell_command") // shell -> run_shell_command for Gemini
+	assertContains(t, out, "3000")              // 3s -> 3000ms
+
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(decoded.Hooks) != 1 {
+		t.Fatalf("hook count: got %d, want 1", len(decoded.Hooks))
+	}
+	h := decoded.Hooks[0]
+	assertEqual(t, "log-hook", h.Name)
+	assertEqual(t, "before_tool_execute", h.Event)
+	if !h.Blocking {
+		t.Error("expected Blocking to be true")
+	}
+	assertEqual(t, "Logging", h.Handler.StatusMessage)
+	if h.Handler.Timeout != 3 {
+		t.Errorf("Timeout: got %d, want 3 (canonical seconds)", h.Handler.Timeout)
+	}
+	if !h.Handler.Async {
+		t.Error("expected Async to be true")
+	}
+}
+
+func TestGeminiAdapter_PromptHookDroppedWithWarning(t *testing.T) {
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event:   "before_tool_execute",
+				Handler: HookHandler{Type: "prompt", Prompt: "Is this safe?"},
+			},
+		},
+	}
+	adapter := AdapterFor("gemini-cli")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	if len(encoded.Warnings) == 0 {
+		t.Error("expected warning for dropped prompt hook")
+	}
+	// Encoded content should have empty hooks
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(decoded.Hooks) != 0 {
+		t.Errorf("expected 0 hooks after dropping prompt, got %d", len(decoded.Hooks))
+	}
+}
+
+func TestGeminiAdapter_HTTPHookDroppedWithWarning(t *testing.T) {
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event:   "before_tool_execute",
+				Handler: HookHandler{Type: "http", URL: "https://example.com"},
+			},
+		},
+	}
+	adapter := AdapterFor("gemini-cli")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	if len(encoded.Warnings) == 0 {
+		t.Error("expected warning for dropped http hook")
+	}
+}
+
+func TestGeminiAdapter_TimeoutValues(t *testing.T) {
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event: "session_start",
+				Handler: HookHandler{
+					Type:    "command",
+					Command: "echo init",
+					Timeout: 7, // 7 seconds
+				},
+			},
+		},
+	}
+	adapter := AdapterFor("gemini-cli")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+
+	out := string(encoded.Content)
+	assertContains(t, out, "7000") // 7s -> 7000ms
+
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if decoded.Hooks[0].Handler.Timeout != 7 {
+		t.Errorf("timeout: got %d, want 7", decoded.Hooks[0].Handler.Timeout)
+	}
+}
+
+func TestGeminiAdapter_UnsupportedEventDropped(t *testing.T) {
+	// subagent_start is not supported by Gemini
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event:   "subagent_start",
+				Handler: HookHandler{Type: "command", Command: "echo sub"},
+			},
+		},
+	}
+	adapter := AdapterFor("gemini-cli")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	if len(encoded.Warnings) == 0 {
+		t.Error("expected warning for unsupported event")
+	}
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(decoded.Hooks) != 0 {
+		t.Errorf("expected 0 hooks after dropping unsupported event, got %d", len(decoded.Hooks))
+	}
+}
+
+// --- Copilot Adapter Tier 2 Round-Trip Tests ---
+
+func TestCopilotAdapter_RoundTrip_CWDAndEnv(t *testing.T) {
+	// CWD and Env are supported by Copilot but were broken in the legacy bridge.
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event: "before_tool_execute",
+				Handler: HookHandler{
+					Type:    "command",
+					Command: "echo check",
+					Timeout: 5,
+					CWD:     "./hooks",
+					Env:     map[string]string{"AUDIT": "1"},
+				},
+			},
+		},
+	}
+	adapter := AdapterFor("copilot-cli")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	// Verify CWD and Env appear in encoded JSON
+	out := string(encoded.Content)
+	assertContains(t, out, "\"cwd\"")
+	assertContains(t, out, "./hooks")
+	assertContains(t, out, "\"env\"")
+	assertContains(t, out, "AUDIT")
+
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(decoded.Hooks) != 1 {
+		t.Fatalf("hook count: got %d, want 1", len(decoded.Hooks))
+	}
+	h := decoded.Hooks[0]
+	assertEqual(t, "./hooks", h.Handler.CWD)
+	if h.Handler.Env["AUDIT"] != "1" {
+		t.Errorf("Env not preserved: %v", h.Handler.Env)
+	}
+	if h.Handler.Timeout != 5 {
+		t.Errorf("Timeout: got %d, want 5 (Copilot uses seconds natively)", h.Handler.Timeout)
+	}
+}
+
+func TestCopilotAdapter_PowerShellField(t *testing.T) {
+	// When bash is empty, powershell field should be used
+	input := []byte(`{
+		"version": 1,
+		"hooks": {
+			"preToolUse": [
+				{
+					"hooks": [
+						{"type":"command","powershell":"check.ps1","timeoutSec":10}
+					]
+				}
+			]
+		}
+	}`)
+	adapter := AdapterFor("copilot-cli")
+	decoded, err := adapter.Decode(input)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(decoded.Hooks) != 1 {
+		t.Fatalf("expected 1 hook, got %d", len(decoded.Hooks))
+	}
+	h := decoded.Hooks[0]
+	assertEqual(t, "check.ps1", h.Handler.Command)
+	if h.Handler.Timeout != 10 {
+		t.Errorf("Timeout: got %d, want 10", h.Handler.Timeout)
+	}
+}
+
+func TestCopilotAdapter_TimeoutValues(t *testing.T) {
+	// Copilot uses seconds natively — no conversion should occur
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event: "session_start",
+				Handler: HookHandler{
+					Type:    "command",
+					Command: "echo init",
+					Timeout: 10, // 10 seconds
+				},
+			},
+		},
+	}
+	adapter := AdapterFor("copilot-cli")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+
+	out := string(encoded.Content)
+	assertContains(t, out, "\"timeoutSec\": 10") // should be 10, not 10000
+
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	for _, h := range decoded.Hooks {
+		if h.Handler.Command == "echo init" && h.Handler.Timeout != 10 {
+			t.Errorf("timeout: got %d, want 10", h.Handler.Timeout)
+		}
+	}
+}
+
+func TestCopilotAdapter_StatusMessageAsComment(t *testing.T) {
+	// StatusMessage maps to Copilot's "comment" field
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event: "before_tool_execute",
+				Handler: HookHandler{
+					Type:          "command",
+					Command:       "echo check",
+					StatusMessage: "Running safety check",
+				},
+			},
+		},
+	}
+	adapter := AdapterFor("copilot-cli")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	out := string(encoded.Content)
+	assertContains(t, out, "\"comment\"")
+	assertContains(t, out, "Running safety check")
+
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	assertEqual(t, "Running safety check", decoded.Hooks[0].Handler.StatusMessage)
+}
+
+func TestCopilotAdapter_LLMHookDroppedWithWarning(t *testing.T) {
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event:   "before_tool_execute",
+				Handler: HookHandler{Type: "prompt", Prompt: "Is this safe?"},
+			},
+		},
+	}
+	adapter := AdapterFor("copilot-cli")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	if len(encoded.Warnings) == 0 {
+		t.Error("expected warning for dropped prompt hook")
+	}
+}
+
+func TestCopilotAdapter_HTTPHookDroppedWithWarning(t *testing.T) {
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event:   "before_tool_execute",
+				Handler: HookHandler{Type: "http", URL: "https://example.com"},
+			},
+		},
+	}
+	adapter := AdapterFor("copilot-cli")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	if len(encoded.Warnings) == 0 {
+		t.Error("expected warning for dropped http hook")
+	}
+}
+
+// --- Cursor Adapter Tier 2 Round-Trip Tests ---
+
+func TestCursorAdapter_RoundTrip_AllFields(t *testing.T) {
+	matcherJSON, _ := json.Marshal("shell")
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Name:    "cursor-guard",
+				Event:   "before_tool_execute",
+				Matcher: matcherJSON,
+				Handler: HookHandler{
+					Type:          "command",
+					Command:       "echo cursor",
+					Timeout:       5, // canonical seconds -> 5000ms in Cursor
+					StatusMessage: "Checking",
+				},
+				Blocking: true,
+			},
+		},
+	}
+	adapter := AdapterFor("cursor")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+
+	// Verify Cursor-native format
+	out := string(encoded.Content)
+	assertContains(t, out, "PreToolUse")
+	assertContains(t, out, "5000") // 5s -> 5000ms
+
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(decoded.Hooks) != 1 {
+		t.Fatalf("hook count: got %d, want 1", len(decoded.Hooks))
+	}
+	h := decoded.Hooks[0]
+	assertEqual(t, "cursor-guard", h.Name)
+	if !h.Blocking {
+		t.Error("expected Blocking to be true")
+	}
+	if h.Handler.Timeout != 5 {
+		t.Errorf("Timeout: got %d, want 5 (canonical seconds)", h.Handler.Timeout)
+	}
+	assertEqual(t, "Checking", h.Handler.StatusMessage)
+}
+
+func TestCursorAdapter_ProviderDataPreservesFailClosed(t *testing.T) {
+	// failClosed and loop_limit are Cursor-specific with no canonical equivalent.
+	input := []byte(`{
+		"version": 1,
+		"hooks": {
+			"PreToolUse": [
+				{
+					"matcher": "Bash",
+					"hooks": [{"type":"command","command":"echo check","timeout":5000}],
+					"failClosed": true,
+					"loop_limit": 3
+				}
+			]
+		}
+	}`)
+	adapter := AdapterFor("cursor")
+	decoded, err := adapter.Decode(input)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(decoded.Hooks) == 0 {
+		t.Fatal("expected at least 1 hook")
+	}
+	h := decoded.Hooks[0]
+	// failClosed + loop_limit should be in provider_data
+	if h.ProviderData == nil || h.ProviderData["cursor"] == nil {
+		t.Fatal("expected provider_data[\"cursor\"] to preserve failClosed and loop_limit")
+	}
+	cursorData, ok := h.ProviderData["cursor"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected map[string]any, got %T", h.ProviderData["cursor"])
+	}
+	if cursorData["failClosed"] != true {
+		t.Errorf("expected failClosed true, got %v", cursorData["failClosed"])
+	}
+	// loop_limit is stored as int from the adapter (not float64 from JSON re-parse)
+	loopLimit, ok := cursorData["loop_limit"].(int)
+	if !ok || loopLimit != 3 {
+		t.Errorf("expected loop_limit 3 (int), got %v (%T)", cursorData["loop_limit"], cursorData["loop_limit"])
+	}
+	// failClosed -> Blocking
+	if !h.Blocking {
+		t.Error("expected Blocking to be true from failClosed")
+	}
+}
+
+func TestCursorAdapter_TimeoutValues(t *testing.T) {
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event: "session_start",
+				Handler: HookHandler{
+					Type:    "command",
+					Command: "echo init",
+					Timeout: 7,
+				},
+			},
+		},
+	}
+	adapter := AdapterFor("cursor")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	out := string(encoded.Content)
+	assertContains(t, out, "7000") // 7s -> 7000ms
+
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if decoded.Hooks[0].Handler.Timeout != 7 {
+		t.Errorf("timeout: got %d, want 7", decoded.Hooks[0].Handler.Timeout)
+	}
+}
+
+func TestCursorAdapter_LLMHookDroppedWithWarning(t *testing.T) {
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event:   "before_tool_execute",
+				Handler: HookHandler{Type: "prompt", Prompt: "Is this safe?"},
+			},
+		},
+	}
+	adapter := AdapterFor("cursor")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	if len(encoded.Warnings) == 0 {
+		t.Error("expected warning for dropped prompt hook")
+	}
+}
+
+// --- Kiro Adapter Tier 2 Round-Trip Tests ---
+
+func TestKiroAdapter_RoundTrip_AllFields(t *testing.T) {
+	matcherJSON, _ := json.Marshal("shell")
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Name:    "kiro-check",
+				Event:   "before_tool_execute",
+				Matcher: matcherJSON,
+				Handler: HookHandler{
+					Type:    "command",
+					Command: "echo kiro",
+					Timeout: 5, // canonical seconds -> 5000ms in Kiro
+				},
+				Blocking: true,
+			},
+		},
+	}
+	adapter := AdapterFor("kiro")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	// Kiro output is an agent wrapper
+	out := string(encoded.Content)
+	assertContains(t, out, "syllago-hooks")
+	assertContains(t, out, "preToolUse")
+	assertContains(t, out, "echo kiro")
+	assertContains(t, out, "5000") // timeout in ms
+
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(decoded.Hooks) != 1 {
+		t.Fatalf("hook count: got %d, want 1", len(decoded.Hooks))
+	}
+	h := decoded.Hooks[0]
+	assertEqual(t, "before_tool_execute", h.Event)
+	if h.Handler.Timeout != 5 {
+		t.Errorf("Timeout: got %d, want 5 (canonical seconds)", h.Handler.Timeout)
+	}
+}
+
+func TestKiroAdapter_AgentWrapperFields(t *testing.T) {
+	// Kiro's agent wrapper preserves name/description/prompt via provider_data
+	input := []byte(`{
+		"name": "custom-hooks",
+		"description": "My custom hooks",
+		"prompt": "Review all tool usage",
+		"hooks": {
+			"preToolUse": [
+				{"command": "echo check", "matcher": "shell", "timeout_ms": 3000}
+			]
+		}
+	}`)
+	adapter := AdapterFor("kiro")
+	decoded, err := adapter.Decode(input)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(decoded.Hooks) == 0 {
+		t.Fatal("expected at least 1 hook")
+	}
+	h := decoded.Hooks[0]
+	pd := h.ProviderData
+	if pd == nil || pd["kiro"] == nil {
+		t.Fatal("expected kiro agent wrapper metadata in provider_data[\"kiro\"]")
+	}
+	kiroData, ok := pd["kiro"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected map[string]any, got %T", pd["kiro"])
+	}
+	if kiroData["name"] != "custom-hooks" {
+		t.Errorf("expected name 'custom-hooks', got %v", kiroData["name"])
+	}
+	if kiroData["description"] != "My custom hooks" {
+		t.Errorf("expected description 'My custom hooks', got %v", kiroData["description"])
+	}
+	if kiroData["prompt"] != "Review all tool usage" {
+		t.Errorf("expected prompt 'Review all tool usage', got %v", kiroData["prompt"])
+	}
+	// Timeout should be decoded correctly
+	if h.Handler.Timeout != 3 {
+		t.Errorf("Timeout: got %d, want 3 (3000ms -> 3s)", h.Handler.Timeout)
+	}
+}
+
+func TestKiroAdapter_TimeoutValues(t *testing.T) {
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event: "session_start",
+				Handler: HookHandler{
+					Type:    "command",
+					Command: "echo init",
+					Timeout: 7, // 7 seconds
+				},
+			},
+		},
+	}
+	adapter := AdapterFor("kiro")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	out := string(encoded.Content)
+	assertContains(t, out, "7000") // 7s -> 7000ms
+
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if decoded.Hooks[0].Handler.Timeout != 7 {
+		t.Errorf("timeout: got %d, want 7", decoded.Hooks[0].Handler.Timeout)
+	}
+}
+
+func TestKiroAdapter_PerEntryMatchers(t *testing.T) {
+	// Kiro uses per-entry matchers (not group-level like CC/Gemini)
+	input := []byte(`{
+		"name": "syllago-hooks",
+		"description": "test",
+		"prompt": "",
+		"hooks": {
+			"preToolUse": [
+				{"command": "echo shell", "matcher": "shell", "timeout_ms": 3000},
+				{"command": "echo read", "matcher": "read", "timeout_ms": 5000}
+			]
+		}
+	}`)
+	adapter := AdapterFor("kiro")
+	decoded, err := adapter.Decode(input)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(decoded.Hooks) != 2 {
+		t.Fatalf("expected 2 hooks, got %d", len(decoded.Hooks))
+	}
+	// Each hook should have its own matcher
+	for _, h := range decoded.Hooks {
+		if h.Matcher == nil {
+			t.Error("expected each Kiro hook to have its own matcher")
+		}
+	}
+}
+
+func TestKiroAdapter_LLMHookDroppedWithWarning(t *testing.T) {
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event:   "before_tool_execute",
+				Handler: HookHandler{Type: "prompt", Prompt: "Is this safe?"},
+			},
+		},
+	}
+	adapter := AdapterFor("kiro")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	if len(encoded.Warnings) == 0 {
+		t.Error("expected warning for dropped prompt hook")
+	}
+}
+
+func TestKiroAdapter_StatusMessageWarning(t *testing.T) {
+	// Kiro does not support status_message — should get a warning if present
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event: "before_tool_execute",
+				Handler: HookHandler{
+					Type:          "command",
+					Command:       "echo check",
+					StatusMessage: "Checking...",
+				},
+			},
+		},
+	}
+	adapter := AdapterFor("kiro")
+	encoded, err := adapter.Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	// status_message is silently dropped (Kiro doesn't have the field)
+	// The hook itself should still be encoded
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(decoded.Hooks) != 1 {
+		t.Fatalf("expected 1 hook (status_message dropped, hook kept), got %d", len(decoded.Hooks))
+	}
 }

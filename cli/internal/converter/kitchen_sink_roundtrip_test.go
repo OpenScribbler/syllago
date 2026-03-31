@@ -30,8 +30,7 @@ type skillRoundTripTarget struct {
 }
 
 func TestKitchenSinkSkillRoundTrip(t *testing.T) {
-	root := repoRoot(t)
-	skillPath := filepath.Join(root, "content", "skills", "example-kitchen-sink-skill", "SKILL.md")
+	skillPath := filepath.Join("testdata", "kitchen-sink-skill.md")
 
 	original, err := os.ReadFile(skillPath)
 	if err != nil {
@@ -167,8 +166,7 @@ type agentRoundTripTarget struct {
 }
 
 func TestKitchenSinkAgentRoundTrip(t *testing.T) {
-	root := repoRoot(t)
-	agentPath := filepath.Join(root, "content", "agents", "example-kitchen-sink-agent", "AGENT.md")
+	agentPath := filepath.Join("testdata", "kitchen-sink-agent.md")
 
 	original, err := os.ReadFile(agentPath)
 	if err != nil {
