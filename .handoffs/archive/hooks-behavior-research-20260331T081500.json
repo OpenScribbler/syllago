@@ -1,0 +1,74 @@
+{
+  "$schema": "handoff-v2",
+  "name": "hooks-behavior-research",
+  "createdAt": "2026-03-31T00:45:00-07:00",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-03-31T08:00:00-07:00",
+    "sessionId": null,
+    "summary": "Executed full hooks behavior research: 6 phases, 20+ subagents, 2,388 lines across 15 new research files. Validated hooks spec v0.1.0 against 8 spec agents + 6 non-spec agents. Found 27 spec errors (3 critical). Multi-persona panel review applied.",
+
+    "activeWork": {
+      "description": "Hooks behavior research — COMPLETE. Ready for spec patching and commit.",
+      "feature": null,
+      "stage": "complete",
+      "planRef": "docs/research/hook-behavior-checks/README.md",
+      "designRef": null,
+      "progress": "All 6 phases COMPLETE. Phase 1: spec validation (4 groups x 8 agents, 3 categories). Phase 2: runtime behavior (D1-D6 for 8 agents). Phase 3: security audit (E1-E5). Phase 4: non-spec agents (6 agents). Phase 5: validation (4 validators, 51 VALID / 7 PARTIALLY VALID / 0 INVALID, all issues fixed). Phase 6: deliverables compiled + 5-persona panel review with 10 action items applied.",
+      "blockers": [],
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": [],
+        "readyNext": []
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": "290+",
+      "lastCommit": "26c73f7 feat: add ADR awareness system with INDEX.md and tiered enforcement",
+      "modifiedFiles": [
+        "docs/research/hook-behavior-checks/00-hook-behavior-matrix.md",
+        "docs/research/hook-behavior-checks/spec-validation-report.md",
+        "docs/research/hook-behavior-checks/spec-influences.md",
+        "docs/research/hook-behavior-checks/panel-review.md",
+        "docs/research/hook-behavior-checks/group-1-cc-copilot-cli.md",
+        "docs/research/hook-behavior-checks/group-2-gemini-kiro.md",
+        "docs/research/hook-behavior-checks/group-3-cursor-windsurf.md",
+        "docs/research/hook-behavior-checks/group-4-vscode-copilot-opencode.md",
+        "docs/research/hook-behavior-checks/phase2-runtime-cc-copilot-gemini-kiro.md",
+        "docs/research/hook-behavior-checks/phase2-runtime-cursor-windsurf-vscode-opencode.md",
+        "docs/research/hook-behavior-checks/phase3-security-audit.md",
+        "docs/research/hook-behavior-checks/phase4-non-spec-agents.md"
+      ]
+    },
+
+    "recentDecisions": [
+      "Hooks spec v0.1.0 has 27 confirmed errors: 3 critical, 6 high, 13 medium, 5 low",
+      "VS Code Copilot UserPromptSubmit is OBSERVE, not PREVENT — critical security finding",
+      "Gemini CLI and Cursor both support input_rewrite — spec incorrectly said they don't",
+      "agent_stop 'retry' relabeled to 'continue' — mechanism is prevent-termination, not automatic retry",
+      "Kiro IDE vs CLI: both use camelCase; IDE before_prompt=prevent, CLI=observe",
+      "Kiro event names must use camelCase identifiers, not display names (fileEdited not 'File Save')",
+      "OpenCode converter is out of scope — requires TypeScript source generation, not config transformation",
+      "Kiro IDE is documentation-only, not a converter output target",
+      "Copilot CLI ephemeral runner is NOT a sandbox — provides run isolation only",
+      "Amazon Q, Cline, Augment recommended for spec addition (High priority); gptme, Pi (Medium)"
+    ],
+
+    "nextSteps": [
+      "Commit all research outputs (hooks behavior checks — 15 new files, ~2,400 lines)",
+      "Apply spec v0.1.1 patch corrections to docs/spec/hooks/hooks.md (Section 7.4 event table, Section 8.2 blocking matrix, Section 9 capability matrices)",
+      "Fix toolmap.go Kiro event mappings (File Save → fileEdited, etc.)",
+      "Verify CC ErrorOccurred event exists before including in spec patch",
+      "Apply v0.2 architectural changes: split Kiro provider, add stop_failure canonical, rename retry→continue, add runtime behavior section, add security section"
+    ],
+
+    "context": {
+      "notes": "This session executed the full hooks behavior research plan from README.md. Pipeline: 4 parallel Phase 1 research agents → 3 parallel Phase 2+4 agents + 1 Phase 3 agent → 4 parallel Phase 5 validation agents → 1 Phase 6 panel agent. Total: 20+ subagent dispatches. The validation round found 7 partially-valid findings out of 58 total, all fixed. The multi-persona panel (Spec Author, Security Reviewer, Converter Implementor, Hook Author, Enterprise Admin) produced 10 action items, 7 of which were applied to the deliverables. Key deliverables: 00-hook-behavior-matrix.md (corrected master matrix), spec-validation-report.md (27 errors catalogued with severity), spec-influences.md (v0.2 roadmap with converter rules and panel feedback applied)."
+    }
+  },
+
+  "previousSessions": []
+}

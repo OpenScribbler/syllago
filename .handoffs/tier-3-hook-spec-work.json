@@ -1,0 +1,86 @@
+{
+  "$schema": "handoff-v2",
+  "name": "tier-3-hook-spec-work",
+  "createdAt": "2026-03-31T07:11:09-07:00",
+  "current": {
+    "claimedBy": {
+      "sessionId": "5ec96635-ac64-4198-9663-f3f5098e1eb1",
+      "claimedAt": "2026-03-31T07:13:00-07:00"
+    },
+    "project": "syllago",
+    "updated": "2026-03-31T07:11:09-07:00",
+    "sessionId": null,
+    "summary": "Completed full develop workflow (brainstorm→plan→validate→beads) for Tier 3 hook adapters: 6 providers researched, 4 adapters designed, implementation plan written and validated",
+
+    "activeWork": {
+      "description": "Tier 3 hook adapter implementation — 4 new adapters + 6 provider research docs",
+      "feature": "hook-adapter-tier3-new-providers",
+      "stage": "execute",
+      "planRef": "docs/plans/2026-03-30-hook-adapter-tier3-new-providers-implementation.md",
+      "designRef": "docs/plans/2026-03-30-hook-adapter-tier3-new-providers-design.md",
+      "progress": "All pre-execution work complete: design doc (multi-persona reviewed), implementation plan (1035 lines, 47 tasks, quality-reviewed, validated), 7 phase beads with dependency chain, Phase B deep analysis done. Ready for Phase 0 execution.",
+      "blockers": [],
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": ["syllago-h5rsk", "syllago-ms77k", "syllago-pg2cy", "syllago-svgtp"],
+        "readyNext": ["syllago-18rcp", "syllago-1ol5p"]
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": "277",
+      "lastCommit": "ac403a1 bd sync: 2026-03-31 06:28:55",
+      "modifiedFiles": [
+        "docs/plans/2026-03-30-hook-adapter-tier3-new-providers-design.md (NEW — design doc, 450+ lines)",
+        "docs/plans/2026-03-30-hook-adapter-tier3-new-providers-implementation.md (NEW — implementation plan, 1035 lines)",
+        ".develop/hook-adapter-tier3-new-providers.json (NEW — develop state)",
+        ".develop/hook-adapter-tier3-new-providers-quality-report.md (NEW — PASSED)",
+        ".develop/hook-adapter-tier3-new-providers-validation-report.md (NEW — PASSED attempt 2/5)",
+        ".develop/hook-adapter-tier3-new-providers-phase-b.md (NEW — 47 tasks analyzed)",
+        ".handoffs/tier2-complete-ready-for-tier3.json (claimed by this session)"
+      ]
+    },
+
+    "recentDecisions": [
+      "Pure-Go TS parsing: esbuild (TS→JS strip) + go-fAST (JS→AST) — avoids CGO entirely, no build pipeline changes",
+      "Adapter order: Windsurf > VS Code Copilot > Factory Droid > Pi (highest user impact first)",
+      "Pi adapter uses structured marker comments for lossless round-trip + heuristic AST decode for hand-written extensions",
+      "Security: json.Marshal() for all TS interpolation, fail-closed blocking, marker/code cross-validation",
+      "OpenCode = SST's anomalyco/opencode (133K stars, TypeScript), NOT the archived Go project that became Crush",
+      "Crush (Charm) has NO hooks — docs only, no adapter needed",
+      "Factory Droid is CC-identical for hooks (9 events, same JSON schema)",
+      "Provider research docs require Sonnet validation loops until zero issues"
+    ],
+
+    "nextSteps": [
+      "Start execution: claim syllago-18rcp and run Phase 0 (toolmap updates + VerifyFields extension)",
+      "Phase 1: Windsurf adapter (split-event encode/decode) — the most architecturally interesting adapter",
+      "Phase 2-3: VS Code Copilot + Factory Droid adapters (straightforward CC variants)",
+      "Phase 4: Pi adapter (esbuild + go-fAST TS parsing, template codegen, security mitigations)",
+      "Phase 5: Provider research docs for 6 providers with Sonnet validation loops",
+      "Phase 6: Final validation (build, test, coverage, registry completeness)"
+    ],
+
+    "context": {
+      "notes": "277 uncommitted files are pre-existing (content library, TUI work, etc.) — not from this session. This session only produced design/plan docs and develop state files. The tier2-complete-ready-for-tier3 handoff was claimed and its beads (syllago-h5rsk, syllago-ms77k, syllago-pg2cy) were closed as superseded by the new phase beads. Key research findings cached in this session: Pi has 25+ extension events (TypeScript pi.on() pattern), Factory Droid uses CC-identical hook JSON, Crush confirmed no hooks, OpenCode/SST vs OpenCode/Crush split documented. go-fAST (164 stars) chosen over goja (6.8K) for better ES6+ support — verify arrow function parsing works in Phase 4a."
+    }
+  },
+
+  "previousSessions": [
+    {
+      "summary": "Completed hook adapter Tier 2 migration — all 5 adapters off legacy bridge, shared helpers, degradation enforcement, ADR",
+      "updated": "2026-03-30T23:45:00-07:00",
+      "completedWork": [
+        "All 8 Tier 2 phases executed: hookhelpers.go (11 shared helpers), 5 adapter migrations, legacy bridge removal, Verify() upgrade",
+        "Added degradation enforcement (block/exclude/warn) and ADR 0001",
+        "Kitchen sink test fixtures moved to testdata/"
+      ],
+      "nextSteps": [
+        "Start Tier 3: new provider adapters",
+        "Factory Droid smoke test (CC-identical events)",
+        "VS Code Copilot adapter, Windsurf split-event adapter"
+      ]
+    }
+  ]
+}

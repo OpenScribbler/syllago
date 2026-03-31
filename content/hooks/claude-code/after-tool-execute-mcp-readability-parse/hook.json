@@ -1,0 +1,368 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(./secrets/**)",
+      "Read(**/secrets/**)",
+      "Read(**/credentials.json)",
+      "Read(**/credentials.yaml)",
+      "Read(**/credentials.yml)",
+      "Read(**/.credentials)",
+      "Read(**/.credentials.*)",
+      "Read(**/secrets.json)",
+      "Read(**/secrets.yaml)",
+      "Read(**/secrets.yml)",
+      "Read(**/.secret)",
+      "Read(**/.secret.*)",
+      "Read(**/passwords.json)",
+      "Read(**/passwords.txt)",
+      "Read(**/.password)",
+      "Read(**/.password.*)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.config/gh/**)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/id_rsa)",
+      "Read(**/id_rsa.*)",
+      "Read(**/id_ed25519)",
+      "Read(**/id_ed25519.*)",
+      "Write(.env)",
+      "Write(.env.*)",
+      "Write(**/.env)",
+      "Write(**/.env.*)",
+      "Write(./secrets/**)",
+      "Write(**/secrets/**)",
+      "Write(**/credentials.json)",
+      "Write(**/credentials.yaml)",
+      "Write(**/credentials.yml)",
+      "Write(**/.credentials)",
+      "Write(**/.credentials.*)",
+      "Write(**/secrets.json)",
+      "Write(**/secrets.yaml)",
+      "Write(**/secrets.yml)",
+      "Write(**/.secret)",
+      "Write(**/.secret.*)",
+      "Write(**/passwords.json)",
+      "Write(**/passwords.txt)",
+      "Write(**/.password)",
+      "Write(**/.password.*)",
+      "Write(~/.ssh/**)",
+      "Write(~/.aws/**)",
+      "Write(~/.config/gh/**)",
+      "Write(**/*.pem)",
+      "Write(**/*.key)",
+      "Write(**/id_rsa)",
+      "Write(**/id_rsa.*)",
+      "Write(**/id_ed25519)",
+      "Write(**/id_ed25519.*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run /home/hhewett/.config/pai/hooks/post-brainstorm.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run /home/hhewett/.config/pai/hooks/post-plan.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run /home/hhewett/.config/pai/hooks/validate-parity.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run /home/hhewett/.config/pai/hooks/create-beads.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run /home/hhewett/.config/pai/hooks/phase-b-gate.ts"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__readability__parse",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/hhewett/.config/pai/hooks/mcp-research-wrapper.sh"
+          },
+          {
+            "type": "command",
+            "command": "python3 /home/hhewett/.config/pai/hooks/readability-failure-tracker.py"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/capture-all-events.ts --event-type PostToolUse"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bd prime"
+          },
+          {
+            "type": "command",
+            "command": "bun run /home/hhewett/.config/pai/hooks/develop-precompact.ts"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "WebFetch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/hhewett/.config/pai/hooks/webfetch-enforcer.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/sandbox-bypass-gate.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/security-validator.ts"
+          },
+          {
+            "type": "command",
+            "command": "$PAI_DIR/hooks/release-guard.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/security-validator.ts"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/security-validator.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run /home/hhewett/.config/pai/skills/DemoBuilder/hooks/validate-demo-write.ts"
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/village-gate.ts"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__duckduckgo__search",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/hhewett/.config/pai/hooks/research-workflow-enforcer.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__readability__parse",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/hhewett/.config/pai/hooks/research-workflow-enforcer.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/hhewett/.config/pai/hooks/atlassian-account-gate.sh"
+          },
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/capture-all-events.ts --event-type PreToolUse"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/hhewett/.config/pai/hooks/clear-research-state.sh"
+          },
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/capture-session-summary.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/capture-all-events.ts --event-type SessionEnd"
+          },
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/session-handoff-fallback.ts"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/initialize-session.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/load-core-context.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/session-clear-handoff.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/session-handoff-read.ts"
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.config/learnings/inject-learning-context.sh"
+          },
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/capture-all-events.ts --event-type SessionStart"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bd prime"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/stop-hook.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun ~/.config/learnings/extract-learnings.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/capture-all-events.ts --event-type Stop"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/subagent-stop-hook.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/capture-all-events.ts --event-type SubagentStop"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/hhewett/.config/pai/hooks/handoff-action-reminder.sh"
+          },
+          {
+            "type": "command",
+            "command": "/home/hhewett/.config/pai/hooks/detect-research-intent.sh"
+          },
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/update-tab-titles.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/capture-rating.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run $PAI_DIR/hooks/capture-all-events.ts --event-type UserPromptSubmit"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline-rich.sh"
+  },
+  "enabledPlugins": {
+    "agent-sdk-dev@claude-code-plugins": true,
+    "atlassian@claude-plugins-official": true,
+    "code-review@claude-code-plugins": true,
+    "explanatory-output-style@claude-code-plugins": true,
+    "hookify@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "security-guidance@claude-code-plugins": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true
+  },
+  "sandbox": {
+    "enabled": false,
+    "autoAllowBashIfSandboxed": true,
+    "excludedCommands": [
+      "docker"
+    ]
+  },
+  "alwaysThinkingEnabled": true,
+  "skipDangerousModePermissionPrompt": true,
+  "feedbackSurveyState": {
+    "lastShownTime": 1754057307775
+  }
+}
