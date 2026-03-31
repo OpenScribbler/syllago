@@ -31,8 +31,9 @@ func computeMetaPanelData(item catalog.ContentItem, providers []provider.Provide
 		installed = strings.Join(abbrevs, ",")
 	}
 
+	// Any local item (library or content root) can be installed — not registry-only items.
 	canInstall := false
-	if item.Library {
+	if item.Library || item.Registry == "" {
 		for _, prov := range providers {
 			if prov.Detected && installer.CheckStatus(item, prov, repoRoot) != installer.StatusInstalled {
 				canInstall = true
@@ -142,7 +143,7 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 	if data.installed != "--" {
 		btns = append(btns, zone.Mark("meta-uninstall", activeButtonStyle.Render("[x] Uninstall")))
 	}
-	if item.Library {
+	if item.Library || item.Registry == "" {
 		btns = append(btns, zone.Mark("meta-remove", activeButtonStyle.Render("[d] Remove")))
 	}
 	btns = append(btns, zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit")))

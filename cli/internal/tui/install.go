@@ -373,7 +373,7 @@ func (m *installWizardModel) syncPreviewToRisk() {
 
 	// Load file if different from current
 	if m.reviewPreview.fileName != rl.File {
-		content, err := catalog.ReadFileContent(m.item.Path, rl.File, 500)
+		content, err := catalog.ReadFileContent(m.item.Path, rl.File, 10000)
 		if err == nil {
 			m.reviewPreview.lines = strings.Split(content, "\n")
 			m.reviewPreview.fileName = rl.File
@@ -458,7 +458,7 @@ func (m *installWizardModel) loadReviewTreeFile() {
 	if path == "" {
 		return
 	}
-	content, err := catalog.ReadFileContent(m.item.Path, path, 500)
+	content, err := catalog.ReadFileContent(m.item.Path, path, 10000)
 	if err == nil {
 		m.reviewPreview.lines = strings.Split(content, "\n")
 		m.reviewPreview.fileName = path

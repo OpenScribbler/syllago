@@ -221,8 +221,8 @@ func (m *addWizardModel) updateMouseSource(msg tea.MouseMsg) (*addWizardModel, t
 			// Double-click-like: select and advance
 			m.source = addSourceProvider
 			m.sourceExpanded = false
-			m.advanceFromSource()
-			return m, nil
+			cmd := m.advanceFromSource()
+			return m, cmd
 		}
 	}
 
@@ -232,8 +232,8 @@ func (m *addWizardModel) updateMouseSource(msg tea.MouseMsg) (*addWizardModel, t
 			m.registryCursor = i
 			m.source = addSourceRegistry
 			m.sourceExpanded = false
-			m.advanceFromSource()
-			return m, nil
+			cmd := m.advanceFromSource()
+			return m, cmd
 		}
 	}
 
@@ -575,8 +575,8 @@ func (m *addWizardModel) updateKeySourceInput(msg tea.KeyMsg) (*addWizardModel, 
 			m.sourceErr = ""
 			m.source = addSourceLocal
 			m.inputActive = false
-			m.advanceFromSource()
-			return m, nil
+			cmd := m.advanceFromSource()
+			return m, cmd
 		}
 		if m.sourceCursor == 3 {
 			// Git URL validation
@@ -594,8 +594,8 @@ func (m *addWizardModel) updateKeySourceInput(msg tea.KeyMsg) (*addWizardModel, 
 			m.sourceErr = ""
 			m.source = addSourceGit
 			m.inputActive = false
-			m.advanceFromSource()
-			return m, nil
+			cmd := m.advanceFromSource()
+			return m, cmd
 		}
 		return m, nil
 

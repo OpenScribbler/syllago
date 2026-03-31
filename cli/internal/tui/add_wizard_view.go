@@ -809,7 +809,15 @@ func (m *addWizardModel) viewExecute() string {
 		btnStyle := lipgloss.NewStyle().Padding(0, 2).
 			Foreground(primaryText).
 			Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"})
-		closeBtn := zone.Mark("add-exec-done", btnStyle.Render("Go to Library"))
+		closeLbl := "Go to Library"
+		if m.preFilterType != "" {
+			name := string(m.preFilterType)
+			if len(name) > 0 {
+				name = strings.ToUpper(name[:1]) + name[1:]
+			}
+			closeLbl = "Go to " + name
+		}
+		closeBtn := zone.Mark("add-exec-done", btnStyle.Render(closeLbl))
 		addMoreBtn := zone.Mark("add-exec-restart", btnStyle.Render("Add More"))
 		lines = append(lines, pad+closeBtn+"  "+addMoreBtn)
 	} else if m.executeCancelled {

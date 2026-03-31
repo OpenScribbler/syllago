@@ -382,7 +382,7 @@ func (l *libraryModel) loadSelectedFile() {
 	}
 	l.preview.fileName = path
 	l.preview.offset = 0
-	content, err := catalog.ReadFileContent(l.detailItem.Path, path, 500)
+	content, err := catalog.ReadFileContent(l.detailItem.Path, path, 10000)
 	if err != nil {
 		l.preview.lines = []string{"Error reading file:", err.Error()}
 		return
@@ -586,7 +586,7 @@ func (l libraryModel) renderMetadataContent(width int) string {
 	}
 	row := l.table.rows[l.table.cursor]
 	canInstall := false
-	if item.Library {
+	if item.Library || item.Registry == "" {
 		for _, prov := range l.table.providers {
 			if prov.Detected && installer.CheckStatus(*item, prov, l.table.repoRoot) != installer.StatusInstalled {
 				canInstall = true

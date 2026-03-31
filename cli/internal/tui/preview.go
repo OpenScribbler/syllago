@@ -54,7 +54,7 @@ func (p *previewModel) LoadItem(item *catalog.ContentItem) {
 	}
 
 	p.fileName = primary
-	content, err := catalog.ReadFileContent(item.Path, primary, 500)
+	content, err := catalog.ReadFileContent(item.Path, primary, 10000)
 	if err != nil {
 		p.lines = []string{"Error reading file:", err.Error()}
 		return
