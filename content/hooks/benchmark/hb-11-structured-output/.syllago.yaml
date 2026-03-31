@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-11-structured-output
+type: hooks
+description: "Benchmark: validates agent parses hook stdout as JSON"
+hook:
+  event: before_tool_execute
+  blocking: false
+  command: ./hb-11.sh

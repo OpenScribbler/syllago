@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-10-stop-continue
+type: hooks
+description: "Benchmark: validates agent_stop continue (block-stop) behavior"
+hook:
+  event: agent_stop
+  blocking: true
+  command: ./hb-10.sh
