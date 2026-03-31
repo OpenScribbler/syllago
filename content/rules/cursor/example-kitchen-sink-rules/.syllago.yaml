@@ -1,7 +1,0 @@
-id: example-kitchen-sink-rules-cursor
-name: example-kitchen-sink-rules
-description: Example Cursor rule with glob-scoped activation demonstrating all available fields
-tags:
-  - builtin
-  - example
-hidden: true

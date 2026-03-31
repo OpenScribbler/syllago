@@ -1,7 +1,0 @@
-id: example-kitchen-sink-prompt
-name: example-kitchen-sink-prompt
-description: Example prompt populating every available metadata field for testing and reference
-tags:
-  - builtin
-  - example
-hidden: true

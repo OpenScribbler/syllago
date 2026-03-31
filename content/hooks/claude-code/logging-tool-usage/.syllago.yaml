@@ -1,6 +1,0 @@
-name: logging-tool-usage
-description: Example hook that logs tool usage telemetry
-hidden: true
-tags:
-  - builtin
-  - example
