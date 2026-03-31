@@ -1,0 +1,88 @@
+# Crush — Provider Source Manifest
+# Good source: public Go repo with JSON Schema. No hooks, no commands. Skills via Agent Skills standard.
+
+schema_version: "1" # Manifest format version — bump when the schema changes
+last_verified: "2026-03-30" # When URLs and data were last confirmed accurate
+provider_version: "" # Provider version at time of last verification (not pinned)
+
+slug: crush
+display_name: Crush
+vendor: Charmbracelet
+status: active # active | archived | beta
+fetch_tier: gh-api # gh-api | llms-txt | html-scrape
+repo: charmbracelet/crush
+repo_branch: main
+
+# How to detect when this provider's content has changed
+change_detection:
+  method: github-releases # github-releases | github-commits | content-hash
+  endpoint: https://api.github.com/repos/charmbracelet/crush/releases/latest
+
+changelog:
+  - url: https://github.com/charmbracelet/crush/releases
+    label: GitHub releases
+
+# Primary config schema — covers MCP, tools, permissions, models in one file
+config_schema:
+  url: https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json
+  format: json-schema # json-schema | zod | rust-schemars | go-struct | none
+  draft: "" # Draft version not specified in schema
+
+content_types:
+
+  # --- Rules / Instructions ---
+  # Crush uses AGENTS.md only. No provider-specific rules format.
+  rules:
+    sources:
+      - url: https://github.com/charmbracelet/crush/blob/main/AGENTS.md
+        type: example # schema | source-code | docs | example
+        format: markdown
+        extracts: [file_format, file_locations]
+    # Format: standard AGENTS.md (cross-provider markdown, no frontmatter).
+    # Location: project root only. No global user rules file.
+    # No .crushrules or .crush/rules/ equivalent.
+
+  # --- Hooks ---
+  # Not supported. internal/event/ is PostHog telemetry only.
+  hooks:
+    supported: false
+    # Plugin proposal: https://github.com/charmbracelet/crush/issues/2038 (open, not implemented)
+
+  # --- MCP ---
+  # Configured via crush.json "mcp" key. Supports stdio, http, sse transports.
+  mcp:
+    sources:
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json
+        type: schema
+        format: json-schema
+        json_path: "$.properties.mcp"
+        extracts: [server_config_fields, transport_types]
+
+      - url: https://github.com/charmbracelet/crush/blob/main/README.md
+        type: docs
+        format: markdown
+        extracts: [config_examples, setup_examples]
+    # Transports: stdio, http, sse
+    # Config file: crush.json "mcp" key (project or global)
+
+  # --- Skills ---
+  # Supports Agent Skills standard (SKILL.md folders).
+  skills:
+    sources:
+      - url: https://github.com/charmbracelet/crush/blob/main/README.md
+        type: docs
+        format: markdown
+        extracts: [file_locations, discovery_rules]
+    # Format: SKILL.md with YAML frontmatter (name, description).
+    # Dirs: .crush/skills/, .agents/skills/ (project), ~/.config/crush/skills/ (user).
+    # Also discovers .claude/skills/ and .cursor/skills/ for cross-provider compat.
+
+  # --- Agents ---
+  # No user-definable agent format. Two-model (large/small) architecture is fixed.
+  agents:
+    supported: false
+
+  # --- Commands ---
+  # No slash-command or custom command system.
+  commands:
+    supported: false
