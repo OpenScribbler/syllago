@@ -1,0 +1,27 @@
+---
+description: Example glob-scoped rule demonstrating all Cursor rule fields
+alwaysApply: false
+globs:
+  - "*.ts"
+  - "*.tsx"
+  - "src/**/*.js"
+---
+
+# Kitchen Sink Cursor Rule
+
+This is an example rule that demonstrates the glob-scoped activation mode for Cursor rules. It only activates when the user is working with TypeScript or JavaScript files.
+
+## Guidelines
+
+When working with TypeScript or JavaScript files:
+
+1. **Prefer const over let** - Use `const` by default, only use `let` when reassignment is needed
+2. **Explicit return types** - Always declare return types on exported functions
+3. **No any** - Avoid `any` type; use `unknown` if the type is truly unknown
+4. **Null checks** - Use optional chaining (`?.`) and nullish coalescing (`??`) over manual checks
+
+## Fields Demonstrated
+
+- **description**: Human-readable activation hint for the AI model
+- **alwaysApply**: Set to false (conditional activation)
+- **globs**: File patterns that trigger this rule (*.ts, *.tsx, src/**/*.js)

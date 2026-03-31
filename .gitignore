@@ -32,7 +32,9 @@ cli/.syllago/audit.jsonl
 
 # Working docs — ignore all except design specs and the hook spec
 docs/*
+!docs/adr/
 !docs/design/
+!docs/plans/
 !docs/vhs/
 !docs/spec/
 !docs/security/

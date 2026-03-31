@@ -9,133 +9,136 @@ import "strings"
 // round-trips through these providers lose the file_write/file_edit distinction.
 var ToolNames = map[string]map[string]string{
 	"file_read": {
-		"claude-code": "Read",
-		"gemini-cli":  "read_file",
-		"copilot-cli": "view",
-		"kiro":        "read",
-		"opencode":    "read",
-		"zed":         "read_file",
-		"cline":       "read_file",
-		"roo-code":    "read_file",
-		"cursor":      "read_file",
-		"windsurf":    "view_line_range",
-		"codex":       "read_file",
+		"claude-code":     "Read",
+		"gemini-cli":      "read_file",
+		"copilot-cli":     "view",
+		"kiro":            "read",
+		"opencode":        "read",
+		"vs-code-copilot": "Read",
+		"zed":             "read_file",
+		"roo-code":        "read_file",
+		"cursor":          "read_file",
+		"windsurf":        "view_line_range",
+		"codex":           "read_file",
 	},
 	"file_write": {
-		"claude-code": "Write",
-		"gemini-cli":  "write_file",
-		"copilot-cli": "create",
-		"kiro":        "fs_write",
-		"opencode":    "write",
-		"zed":         "edit_file",
-		"cline":       "write_to_file",
-		"roo-code":    "write_to_file",
-		"cursor":      "edit_file",
-		"windsurf":    "write_to_file",
-		"codex":       "apply_patch",
+		"claude-code":     "Write",
+		"gemini-cli":      "write_file",
+		"copilot-cli":     "create",
+		"kiro":            "fs_write",
+		"opencode":        "write",
+		"vs-code-copilot": "Write",
+		"zed":             "edit_file",
+		"roo-code":        "write_to_file",
+		"cursor":          "edit_file",
+		"windsurf":        "write_to_file",
+		"codex":           "apply_patch",
 	},
 	"file_edit": {
-		"claude-code": "Edit",
-		"gemini-cli":  "replace",
-		"copilot-cli": "edit",
-		"kiro":        "fs_write",
-		"opencode":    "edit",
-		"zed":         "edit_file",
-		"cline":       "replace_in_file",
-		"roo-code":    "replace_in_file",
-		"cursor":      "edit_file",
-		"windsurf":    "edit_file",
-		"codex":       "apply_patch",
+		"claude-code":     "Edit",
+		"gemini-cli":      "replace",
+		"copilot-cli":     "edit",
+		"kiro":            "fs_write",
+		"opencode":        "edit",
+		"vs-code-copilot": "Edit",
+		"zed":             "edit_file",
+		"roo-code":        "replace_in_file",
+		"cursor":          "edit_file",
+		"windsurf":        "edit_file",
+		"codex":           "apply_patch",
 	},
 	"shell": {
-		"claude-code": "Bash",
-		"gemini-cli":  "run_shell_command",
-		"copilot-cli": "bash",
-		"kiro":        "shell",
-		"opencode":    "bash",
-		"zed":         "terminal",
-		"cline":       "execute_command",
-		"roo-code":    "execute_command",
-		"cursor":      "run_terminal_cmd",
-		"windsurf":    "run_command",
-		"codex":       "shell",
+		"claude-code":     "Bash",
+		"gemini-cli":      "run_shell_command",
+		"copilot-cli":     "bash",
+		"kiro":            "shell",
+		"opencode":        "bash",
+		"vs-code-copilot": "Bash",
+		"zed":             "terminal",
+		"roo-code":        "execute_command",
+		"cursor":          "run_terminal_cmd",
+		"windsurf":        "run_command",
+		"codex":           "shell",
 	},
 	"find": {
-		"claude-code": "Glob",
-		"gemini-cli":  "glob",
-		"copilot-cli": "glob",
-		"kiro":        "glob",
-		"opencode":    "glob",
-		"zed":         "find_path",
-		"cline":       "list_files",
-		"roo-code":    "list_files",
-		"cursor":      "file_search",
-		"windsurf":    "find_by_name",
-		"codex":       "list_dir",
+		"claude-code":     "Glob",
+		"gemini-cli":      "glob",
+		"copilot-cli":     "glob",
+		"kiro":            "glob",
+		"opencode":        "glob",
+		"vs-code-copilot": "Glob",
+		"zed":             "find_path",
+		"roo-code":        "list_files",
+		"cursor":          "file_search",
+		"windsurf":        "find_by_name",
+		"codex":           "list_dir",
 	},
 	"search": {
-		"claude-code": "Grep",
-		"gemini-cli":  "grep_search",
-		"copilot-cli": "grep",
-		"kiro":        "grep",
-		"opencode":    "grep",
-		"zed":         "grep",
-		"cline":       "search_files",
-		"roo-code":    "search_files",
-		"cursor":      "grep_search",
-		"windsurf":    "grep_search",
-		"codex":       "grep_files",
+		"claude-code":     "Grep",
+		"gemini-cli":      "grep_search",
+		"copilot-cli":     "grep",
+		"kiro":            "grep",
+		"opencode":        "grep",
+		"vs-code-copilot": "Grep",
+		"zed":             "grep",
+		"roo-code":        "search_files",
+		"cursor":          "grep_search",
+		"windsurf":        "grep_search",
+		"codex":           "grep_files",
 	},
 	"web_search": {
-		"claude-code": "WebSearch",
-		"gemini-cli":  "google_web_search",
-		"opencode":    "websearch",
-		"zed":         "web_search",
-		"cursor":      "web_search",
-		"windsurf":    "search_web",
-		"codex":       "web_search",
-		"kiro":        "web_search",
+		"claude-code":     "WebSearch",
+		"gemini-cli":      "google_web_search",
+		"opencode":        "websearch",
+		"vs-code-copilot": "WebSearch",
+		"zed":             "web_search",
+		"cursor":          "web_search",
+		"windsurf":        "search_web",
+		"codex":           "web_search",
+		"kiro":            "web_search",
 	},
 	"agent": {
-		"claude-code": "Agent",
-		"copilot-cli": "task",
-		"opencode":    "task",
-		"zed":         "spawn_agent",
-		"codex":       "spawn_agent",
-		"kiro":        "use_subagent",
+		"claude-code":     "Agent",
+		"copilot-cli":     "task",
+		"opencode":        "task",
+		"vs-code-copilot": "Agent",
+		"zed":             "spawn_agent",
+		"codex":           "spawn_agent",
+		"kiro":            "use_subagent",
 	},
 	"web_fetch": {
-		"claude-code": "WebFetch",
-		"gemini-cli":  "web_fetch",
-		"copilot-cli": "web_fetch",
-		"kiro":        "web_fetch",
-		"opencode":    "webfetch",
-		"zed":         "fetch",
-		"windsurf":    "read_url_content",
+		"claude-code":     "WebFetch",
+		"gemini-cli":      "web_fetch",
+		"copilot-cli":     "web_fetch",
+		"kiro":            "web_fetch",
+		"opencode":        "webfetch",
+		"vs-code-copilot": "WebFetch",
+		"zed":             "fetch",
+		"windsurf":        "read_url_content",
 	},
-	// CC-only tools with no cross-provider equivalents
-	"notebook_edit": {"claude-code": "NotebookEdit"},
-	"multi_edit":    {"claude-code": "MultiEdit"},
-	"list_dir":      {"claude-code": "LS"},
-	"notebook_read": {"claude-code": "NotebookRead"},
-	"kill_shell":    {"claude-code": "KillBash"},
-	"skill":         {"claude-code": "Skill"},
-	"ask_user":      {"claude-code": "AskUserQuestion"},
+	// CC-only tools with no cross-provider equivalents (vs-code-copilot shares these)
+	"notebook_edit": {"claude-code": "NotebookEdit", "vs-code-copilot": "NotebookEdit"},
+	"multi_edit":    {"claude-code": "MultiEdit", "vs-code-copilot": "MultiEdit"},
+	"list_dir":      {"claude-code": "LS", "vs-code-copilot": "LS"},
+	"notebook_read": {"claude-code": "NotebookRead", "vs-code-copilot": "NotebookRead"},
+	"kill_shell":    {"claude-code": "KillBash", "vs-code-copilot": "KillBash"},
+	"skill":         {"claude-code": "Skill", "vs-code-copilot": "Skill"},
+	"ask_user":      {"claude-code": "AskUserQuestion", "vs-code-copilot": "AskUserQuestion"},
 }
 
 // HookEvents maps canonical (provider-neutral) event names to provider-specific equivalents.
 // Keys are snake_case neutral names; every provider including claude-code has an explicit entry.
 var HookEvents = map[string]map[string]string{
-	"before_tool_execute": {"claude-code": "PreToolUse", "gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse", "cline": "PreToolUse", "cursor": "PreToolUse", "opencode": "tool.execute.before"},
-	"after_tool_execute":  {"claude-code": "PostToolUse", "gemini-cli": "AfterTool", "copilot-cli": "postToolUse", "kiro": "postToolUse", "cline": "PostToolUse", "cursor": "PostToolUse", "opencode": "tool.execute.after"},
-	"before_prompt":       {"claude-code": "UserPromptSubmit", "gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted", "kiro": "userPromptSubmit", "cline": "UserPromptSubmit", "cursor": "UserPromptSubmit", "windsurf": "pre_user_prompt"},
-	"agent_stop":          {"claude-code": "Stop", "gemini-cli": "AfterAgent", "kiro": "stop", "copilot-cli": "agentStop", "cursor": "Stop", "windsurf": "post_cascade_response", "opencode": "session.idle"},
-	"session_start":       {"claude-code": "SessionStart", "gemini-cli": "SessionStart", "copilot-cli": "sessionStart", "kiro": "agentSpawn", "cline": "TaskStart", "cursor": "SessionStart", "windsurf": "session_start", "opencode": "session.created"},
-	"session_end":         {"claude-code": "SessionEnd", "gemini-cli": "SessionEnd", "copilot-cli": "sessionEnd", "cline": "TaskComplete", "cursor": "SessionEnd", "windsurf": "session_end"},
-	"before_compact":      {"claude-code": "PreCompact", "gemini-cli": "PreCompress", "cline": "PreCompact", "cursor": "PreCompact"},
+	"before_tool_execute": {"claude-code": "PreToolUse", "gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse", "cursor": "PreToolUse", "opencode": "tool.execute.before", "vs-code-copilot": "PreToolUse"},
+	"after_tool_execute":  {"claude-code": "PostToolUse", "gemini-cli": "AfterTool", "copilot-cli": "postToolUse", "kiro": "postToolUse", "cursor": "PostToolUse", "opencode": "tool.execute.after", "vs-code-copilot": "PostToolUse"},
+	"before_prompt":       {"claude-code": "UserPromptSubmit", "gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted", "kiro": "userPromptSubmit", "cursor": "UserPromptSubmit", "windsurf": "pre_user_prompt", "vs-code-copilot": "UserPromptSubmit"},
+	"agent_stop":          {"claude-code": "Stop", "gemini-cli": "AfterAgent", "kiro": "stop", "copilot-cli": "agentStop", "cursor": "Stop", "windsurf": "post_cascade_response", "opencode": "session.idle", "vs-code-copilot": "Stop"},
+	"session_start":       {"claude-code": "SessionStart", "gemini-cli": "SessionStart", "copilot-cli": "sessionStart", "kiro": "agentSpawn", "cursor": "SessionStart", "windsurf": "session_start", "opencode": "session.created", "vs-code-copilot": "SessionStart"},
+	"session_end":         {"claude-code": "SessionEnd", "gemini-cli": "SessionEnd", "copilot-cli": "sessionEnd", "cursor": "SessionEnd", "windsurf": "session_end"},
+	"before_compact":      {"claude-code": "PreCompact", "gemini-cli": "PreCompress", "cursor": "PreCompact", "vs-code-copilot": "PreCompact"},
 	"notification":        {"claude-code": "Notification", "gemini-cli": "Notification"},
-	"subagent_start":      {"claude-code": "SubagentStart", "cursor": "SubagentStart"},
-	"subagent_stop":       {"claude-code": "SubagentStop", "copilot-cli": "subagentStop", "cursor": "SubagentStop"},
+	"subagent_start":      {"claude-code": "SubagentStart", "cursor": "SubagentStart", "vs-code-copilot": "SubagentStart"},
+	"subagent_stop":       {"claude-code": "SubagentStop", "copilot-cli": "subagentStop", "cursor": "SubagentStop", "vs-code-copilot": "SubagentStop"},
 	"error_occurred":      {"claude-code": "ErrorOccurred", "copilot-cli": "errorOccurred", "opencode": "session.error"},
 
 	// tool_use_failure: distinct from error_occurred — fires on tool invocation failure.
@@ -168,10 +171,6 @@ var HookEvents = map[string]map[string]string{
 	"file_deleted": {"kiro": "File Delete"},
 	"before_task":  {"kiro": "Pre Task Execution"},
 	"after_task":   {"kiro": "Post Task Execution"},
-
-	// Cline-only events
-	"task_resume": {"cline": "TaskResume"},
-	"task_cancel": {"cline": "TaskCancel"},
 }
 
 // TranslateTool translates a single canonical tool name to the target provider.
@@ -228,11 +227,33 @@ func IsValidHookEvent(event string) bool {
 }
 
 // ReverseTranslateHookEvent finds the canonical event name from a provider-specific one.
+// When multiple canonical events map to the same provider-native name (e.g., Copilot's
+// "errorOccurred" maps to both error_occurred and tool_use_failure), applies a
+// deterministic tiebreaker: prefers "error_occurred" over "tool_use_failure".
 func ReverseTranslateHookEvent(event, sourceSlug string) string {
+	var first string
 	for canonical, m := range HookEvents {
 		if provName, ok := m[sourceSlug]; ok && provName == event {
-			return canonical
+			if first == "" {
+				first = canonical
+				continue
+			}
+			// Multiple matches — apply tiebreaker: prefer error_occurred
+			if canonical == "error_occurred" {
+				return canonical
+			}
+			if first == "error_occurred" {
+				return first
+			}
+			// Generic tiebreaker: pick lexicographically smaller for determinism
+			if canonical < first {
+				return canonical
+			}
+			return first
 		}
+	}
+	if first != "" {
+		return first
 	}
 	return event
 }

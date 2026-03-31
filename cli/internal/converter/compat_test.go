@@ -197,3 +197,44 @@ func TestAnalyzeHookCompat_UnknownProvider(t *testing.T) {
 		t.Errorf("expected None for unknown provider, got %v", r.Level)
 	}
 }
+
+func TestHookOutputCapabilities_VSCodeCopilot(t *testing.T) {
+	t.Parallel()
+	caps, ok := HookOutputCapabilities["vs-code-copilot"]
+	if !ok {
+		t.Fatal("expected vs-code-copilot in HookOutputCapabilities")
+	}
+	for _, field := range AllOutputFields {
+		if !caps[field] {
+			t.Errorf("expected vs-code-copilot to support output field %q", field)
+		}
+	}
+}
+
+func TestHookCapabilities_VSCodeCopilot(t *testing.T) {
+	t.Parallel()
+	cap, ok := HookCapabilities["vs-code-copilot"]
+	if !ok {
+		t.Fatal("expected vs-code-copilot in HookCapabilities")
+	}
+	// VS Code Copilot should support all features like Claude Code
+	for _, feat := range []HookFeature{FeatureMatcher, FeatureAsync, FeatureStatusMessage, FeatureLLMHook, FeatureTimeout} {
+		fs := cap.Features[feat]
+		if !fs.Supported {
+			t.Errorf("expected vs-code-copilot to support feature %d", feat)
+		}
+	}
+}
+
+func TestAnalyzeHookCompat_VSCodeCopilotFull(t *testing.T) {
+	t.Parallel()
+	hook := HookData{
+		Event:   "before_tool_execute",
+		Matcher: "shell",
+		Hooks:   []HookEntry{{Type: "command", Command: "echo check", StatusMessage: "Checking...", Timeout: 5}},
+	}
+	r := AnalyzeHookCompat(hook, "vs-code-copilot")
+	if r.Level != CompatFull {
+		t.Errorf("expected Full compat for vs-code-copilot, got %v", r.Level)
+	}
+}

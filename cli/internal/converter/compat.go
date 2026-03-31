@@ -103,11 +103,20 @@ var HookCapabilities = map[string]ProviderCapability{
 			FeatureTimeout:       {Supported: true, Notes: "milliseconds"},
 		},
 	},
+	"vs-code-copilot": {
+		Features: map[HookFeature]FeatureSupport{
+			FeatureMatcher:       {Supported: true},
+			FeatureAsync:         {Supported: true},
+			FeatureStatusMessage: {Supported: true},
+			FeatureLLMHook:       {Supported: true},
+			FeatureTimeout:       {Supported: true, Notes: "milliseconds"},
+		},
+	},
 }
 
 // HookProviders returns the slugs of providers that support hooks, in display order.
 func HookProviders() []string {
-	return []string{"claude-code", "gemini-cli", "copilot-cli", "kiro"}
+	return []string{"claude-code", "gemini-cli", "copilot-cli", "kiro", "vs-code-copilot"}
 }
 
 // --- Structured output capabilities ---
@@ -153,6 +162,14 @@ var HookOutputCapabilities = map[string]map[HookOutputField]bool{
 	"copilot-cli": {
 		// Copilot CLI supports decision in preToolUse hooks
 		OutputDecision: true,
+	},
+	"vs-code-copilot": {
+		OutputUpdatedInput:   true,
+		OutputSuppressOutput: true,
+		OutputSystemMessage:  true,
+		OutputContext:        true,
+		OutputContinue:       true,
+		OutputDecision:       true,
 	},
 	"gemini-cli": {
 		// Gemini CLI supports decision and system_message (partial structured output)

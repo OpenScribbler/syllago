@@ -2,8 +2,7 @@
 
 **Goal:** Align CLI hook conversion data structures, event/tool maps, and constants with the updated hooks spec v0.1.0.
 
-**Branch:** `worktree-hook-spec-alignment` (commit `be71ed1`)
-**Status:** Tier 1 complete, ready to rebase onto main and merge.
+**Status:** Tier 1 merged to main (`91ccb23`). Tiers 2-3 tracked in beads.
 
 ---
 
@@ -13,7 +12,7 @@ The hooks spec (`docs/spec/hooks.md`) was updated to v0.1.0 with: version reset,
 
 ## Three-Tier Approach
 
-### Tier 1: Data Layer (DONE — `be71ed1`)
+### Tier 1: Data Layer (DONE — merged to main as `91ccb23`)
 
 All changes are additive struct fields, map entries, and constants. No behavioral changes to the conversion pipeline.
 
@@ -74,7 +73,7 @@ All 5 adapters delegate to the legacy pipeline via `ToLegacyHooksConfig()` / `Fr
 
 ## Merge Notes
 
-The worktree branch has no conflicts with current main. `fa6ef31` on main added new files (`frontmatter_registry.go`, etc.) that don't overlap with our changes. Clean rebase expected.
+Tier 1 rebased and fast-forward merged to main on 2026-03-30. Worktree branch `worktree-hook-spec-alignment` deleted.
 
 ## Beads
 

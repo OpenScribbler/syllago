@@ -2,8 +2,6 @@ package converter
 
 import (
 	"encoding/json"
-
-	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // CanonicalHooks is the spec-compliant canonical representation (hooks/0.1).
@@ -36,7 +34,7 @@ type HookHandler struct {
 	Env           map[string]string `json:"env,omitempty"`
 	Timeout       int               `json:"timeout,omitempty"`
 	TimeoutAction string            `json:"timeout_action,omitempty"`
-	StatusMessage string            `json:"statusMessage,omitempty"`
+	StatusMessage string            `json:"status_message,omitempty"`
 	Async         bool              `json:"async,omitempty"`
 
 	// HTTP handler fields (type: "http")
@@ -146,91 +144,17 @@ func Adapters() map[string]HookAdapter {
 // SpecVersion is the current canonical hook specification version.
 const SpecVersion = "hooks/0.1"
 
-// --- Conversion between legacy and spec formats ---
-
-// ToLegacyHooksConfig converts a CanonicalHooks to the legacy hooksConfig format.
-// This bridges between the spec format and the existing converter code paths.
-func (ch *CanonicalHooks) ToLegacyHooksConfig() hooksConfig {
-	cfg := hooksConfig{Hooks: make(map[string][]hookMatcher)}
-
-	for _, hook := range ch.Hooks {
-		matcher := ""
-		if hook.Matcher != nil {
-			// For legacy compat, only handle string matchers
-			var s string
-			if json.Unmarshal(hook.Matcher, &s) == nil {
-				matcher = s
-			}
-		}
-
-		entry := HookEntry{
-			Type:           hook.Handler.Type,
-			Command:        hook.Handler.Command,
-			Timeout:        hook.Handler.Timeout,
-			StatusMessage:  hook.Handler.StatusMessage,
-			Async:          hook.Handler.Async,
-			URL:            hook.Handler.URL,
-			Headers:        hook.Handler.Headers,
-			AllowedEnvVars: hook.Handler.AllowedEnvVars,
-			Prompt:         hook.Handler.Prompt,
-			Model:          hook.Handler.Model,
-			Agent:          hook.Handler.Agent,
-		}
-
-		cfg.Hooks[hook.Event] = append(cfg.Hooks[hook.Event], hookMatcher{
-			Matcher: matcher,
-			Hooks:   []HookEntry{entry},
-		})
-	}
-
-	return cfg
-}
-
-// FromLegacyHooksConfig converts a legacy hooksConfig to the spec format.
-func FromLegacyHooksConfig(cfg hooksConfig) *CanonicalHooks {
-	ch := &CanonicalHooks{
-		Spec: SpecVersion,
-	}
-
-	for event, matchers := range cfg.Hooks {
-		for _, m := range matchers {
-			for _, entry := range m.Hooks {
-				hook := CanonicalHook{
-					Event: event,
-					Handler: HookHandler{
-						Type:           entry.Type,
-						Command:        entry.Command,
-						Timeout:        entry.Timeout,
-						StatusMessage:  entry.StatusMessage,
-						Async:          entry.Async,
-						URL:            entry.URL,
-						Headers:        entry.Headers,
-						AllowedEnvVars: entry.AllowedEnvVars,
-						Prompt:         entry.Prompt,
-						Model:          entry.Model,
-						Agent:          entry.Agent,
-					},
-				}
-
-				// Note: Name, TimeoutAction, and Capabilities fields are not populated here
-				// because the legacy hooksConfig types don't carry them. These fields flow
-				// through only when adapters are migrated off the legacy bridge (Tier 2).
-
-				if m.Matcher != "" {
-					matcherJSON, _ := json.Marshal(m.Matcher)
-					hook.Matcher = matcherJSON
-				}
-
-				ch.Hooks = append(ch.Hooks, hook)
-			}
-		}
-	}
-
-	return ch
-}
+// --- Legacy bridge removed (Tier 2) ---
+// ToLegacyHooksConfig and FromLegacyHooksConfig were removed in Tier 2.
+// All 5 adapters now encode/decode directly with CanonicalHook structs.
+// The HookEntry/hooksConfig types remain for LoadHookData and the HooksConverter
+// file-level pipeline (used by the CLI convert command).
 
 // Verify re-decodes encoded output with the target adapter to check fidelity.
 // Returns nil if verification passes, or an error describing the mismatch.
+// Hook count may differ from original when the adapter intentionally drops hooks
+// (e.g., LLM hooks on providers that don't support them). The count check compares
+// against the encoded result's actual hook count, not the original.
 func Verify(encoded *EncodedResult, adapter HookAdapter, original *CanonicalHooks) error {
 	if encoded == nil || len(encoded.Content) == 0 {
 		return nil // nothing to verify (e.g., hookless provider)
@@ -244,13 +168,47 @@ func Verify(encoded *EncodedResult, adapter HookAdapter, original *CanonicalHook
 		}
 	}
 
-	// Compare structural fidelity: event count and handler commands
-	if len(decoded.Hooks) != len(original.Hooks) {
-		return &VerifyError{
-			Provider: adapter.ProviderSlug(),
-			Detail:   "hook count mismatch after round-trip",
-			Expected: len(original.Hooks),
-			Got:      len(decoded.Hooks),
+	// Build a map of original hooks by event+command for field-level comparison.
+	// Only compare hooks that survived encoding (some may be intentionally dropped).
+	slug := adapter.ProviderSlug()
+	for i, dh := range decoded.Hooks {
+		// Find matching original hook by event + command
+		var oh *CanonicalHook
+		for j := range original.Hooks {
+			if original.Hooks[j].Event == dh.Event &&
+				original.Hooks[j].Handler.Command == dh.Handler.Command {
+				oh = &original.Hooks[j]
+				break
+			}
+		}
+		if oh == nil {
+			continue // decoded hook has no original match (shouldn't happen but not a failure)
+		}
+
+		// Verify command preserved
+		if dh.Handler.Command != oh.Handler.Command {
+			return &VerifyError{
+				Provider: slug,
+				Detail:   "hook " + itoa(i) + " command mismatch: " + dh.Handler.Command + " != " + oh.Handler.Command,
+			}
+		}
+
+		// Verify timeout value preserved (within conversion tolerance)
+		expectedTimeout := oh.Handler.Timeout
+		if expectedTimeout > 0 && dh.Handler.Timeout != expectedTimeout {
+			return &VerifyError{
+				Provider: slug,
+				Detail:   "hook " + itoa(i) + " timeout mismatch: " + itoa(dh.Handler.Timeout) + "s != " + itoa(expectedTimeout) + "s",
+			}
+		}
+
+		// Verify blocking preserved (only for providers that support it)
+		caps := adapter.Capabilities()
+		if caps.SupportsBlocking && dh.Blocking != oh.Blocking {
+			return &VerifyError{
+				Provider: slug,
+				Detail:   "hook " + itoa(i) + " blocking mismatch",
+			}
 		}
 	}
 
@@ -283,30 +241,4 @@ func itoa(i int) string {
 		i /= 10
 	}
 	return s
-}
-
-// providerBySlug finds a provider.Provider by slug from the global AllProviders list.
-func providerBySlug(slug string) provider.Provider {
-	for _, p := range provider.AllProviders {
-		if p.Slug == slug {
-			return p
-		}
-	}
-	return provider.Provider{Slug: slug, Name: slug}
-}
-
-// legacyResultToEncoded converts a legacy converter.Result to an EncodedResult.
-func legacyResultToEncoded(r *Result) *EncodedResult {
-	er := &EncodedResult{
-		Content:  r.Content,
-		Filename: r.Filename,
-		Scripts:  r.ExtraFiles,
-	}
-	for _, w := range r.Warnings {
-		er.Warnings = append(er.Warnings, ConversionWarning{
-			Severity:    "warning",
-			Description: w,
-		})
-	}
-	return er
 }
