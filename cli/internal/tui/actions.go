@@ -57,8 +57,8 @@ func (a App) handleRemove() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 
-	// Only library items use the multi-step remove flow.
-	if !item.Library {
+	// Only local items (library or content root) can be removed — not registry-only items.
+	if !item.Library && item.Registry != "" {
 		return a, nil
 	}
 
@@ -473,8 +473,9 @@ func (a App) handleInstall() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 
-	if !item.Library {
-		cmd := a.toast.Push("Only library items can be installed", toastWarning)
+	// Registry-only items must be added to the library first.
+	if !item.Library && item.Registry != "" {
+		cmd := a.toast.Push("Add this item to your library first", toastWarning)
 		return a, cmd
 	}
 

@@ -675,7 +675,7 @@ func (m *addWizardModel) loadDrillInFile() {
 		return
 	}
 
-	content, err := catalog.ReadFileContent(basePath, relPath, 500)
+	content, err := catalog.ReadFileContent(basePath, relPath, 10000)
 	if err != nil {
 		m.reviewDrillPreview.lines = []string{"Error: " + err.Error()}
 		m.reviewDrillPreview.fileName = relPath

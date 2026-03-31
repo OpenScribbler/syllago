@@ -1430,16 +1430,17 @@ func TestApp_InstallKeyOpens(t *testing.T) {
 	}
 }
 
-func TestApp_InstallKeyNonLibrary(t *testing.T) {
-	// Create an app with a non-library item.
+func TestApp_InstallKeyRegistryOnly(t *testing.T) {
+	// Registry-only items (not in library) cannot be installed directly.
 	cat := &catalog.Catalog{
 		Items: []catalog.ContentItem{
 			{
-				Name:    "ext-rule",
-				Type:    catalog.Rules,
-				Path:    "/fake/rules/ext",
-				Files:   []string{"rule.md"},
-				Library: false,
+				Name:     "ext-rule",
+				Type:     catalog.Rules,
+				Path:     "/fake/rules/ext",
+				Files:    []string{"rule.md"},
+				Library:  false,
+				Registry: "some-registry",
 			},
 		},
 	}
@@ -1452,14 +1453,14 @@ func TestApp_InstallKeyNonLibrary(t *testing.T) {
 	app = m.(App)
 
 	if app.wizardMode != wizardNone {
-		t.Errorf("expected wizardMode=wizardNone for non-library item, got %d", app.wizardMode)
+		t.Errorf("expected wizardMode=wizardNone for registry-only item, got %d", app.wizardMode)
 	}
 	if app.installWizard != nil {
-		t.Error("expected installWizard to remain nil for non-library item")
+		t.Error("expected installWizard to remain nil for registry-only item")
 	}
 	// Should show toast warning
 	if !app.toast.visible {
-		t.Error("expected toast warning for non-library item")
+		t.Error("expected toast warning for registry-only item")
 	}
 }
 
@@ -1752,19 +1753,36 @@ func TestComputeMetaPanelData_CanInstall(t *testing.T) {
 	}
 }
 
-func TestComputeMetaPanelData_CanInstallNonLibrary(t *testing.T) {
+func TestComputeMetaPanelData_CanInstallRegistryOnly(t *testing.T) {
 	t.Parallel()
 	prov := testInstallProvider("Claude Code", "claude-code", true)
 	item := catalog.ContentItem{
-		Name:    "ext-rule",
-		Type:    catalog.Rules,
-		Path:    filepath.Join(t.TempDir(), "rules", "ext"),
-		Library: false,
+		Name:     "ext-rule",
+		Type:     catalog.Rules,
+		Path:     filepath.Join(t.TempDir(), "rules", "ext"),
+		Library:  false,
+		Registry: "some-registry",
 	}
 
 	data := computeMetaPanelData(item, []provider.Provider{prov}, t.TempDir())
 	if data.canInstall {
-		t.Error("expected canInstall=false for non-library item")
+		t.Error("expected canInstall=false for registry-only item")
+	}
+}
+
+func TestComputeMetaPanelData_CanInstallContentRoot(t *testing.T) {
+	t.Parallel()
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	item := catalog.ContentItem{
+		Name:    "local-rule",
+		Type:    catalog.Rules,
+		Path:    filepath.Join(t.TempDir(), "rules", "local"),
+		Library: false, // content root item, not global library
+	}
+
+	data := computeMetaPanelData(item, []provider.Provider{prov}, t.TempDir())
+	if !data.canInstall {
+		t.Error("expected canInstall=true for content root item (Library=false, Registry empty)")
 	}
 }
 
