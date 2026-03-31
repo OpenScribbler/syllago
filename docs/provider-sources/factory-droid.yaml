@@ -1,0 +1,82 @@
+# Factory Droid — Provider Source Manifest
+# Good official docs at docs.factory.ai with llms.txt index. Public GitHub repo.
+
+schema_version: "1"
+last_verified: "2026-03-30"
+provider_version: "" # Not pinned to a specific version
+
+slug: factory-droid
+display_name: Factory Droid
+vendor: Factory AI
+status: active
+fetch_tier: gh-api
+repo: Factory-AI/factory
+repo_branch: main
+
+change_detection:
+  method: github-releases
+  endpoint: https://api.github.com/repos/Factory-AI/factory/releases/latest
+
+changelog:
+  - url: https://docs.factory.ai/llms.txt
+    label: llms.txt index (lists all doc pages)
+
+content_types:
+
+  rules:
+    sources:
+      - url: https://docs.factory.ai/cli/configuration
+        type: docs
+        format: markdown
+        extracts: [file_format, file_locations]
+    # Format: AGENTS.md in project root (plain Markdown, no frontmatter)
+    # Cross-provider convention shared with Cursor, Windsurf, etc.
+
+  hooks:
+    sources:
+      - url: https://docs.factory.ai/cli/configuration/hooks-guide
+        type: docs
+        format: markdown
+        extracts: [event_names, hook_config_fields, matcher_format, exit_codes]
+      - url: https://docs.factory.ai/reference/hooks-reference
+        type: docs
+        format: markdown
+        extracts: [event_names, event_io_schemas, hook_decisions, exit_codes]
+    # Events: PreToolUse, PostToolUse, UserPromptSubmit, Stop, SessionStart,
+    #         SessionEnd, PreCompact, SubagentStart, SubagentStop
+    # Hook types: command
+    # Same JSON schema as Claude Code (event → matcher groups → hook entries)
+
+  mcp:
+    sources:
+      - url: https://docs.factory.ai/llms.txt
+        type: docs
+        format: markdown
+        extracts: [server_config_fields, transport_types]
+    # Transports: stdio, http
+    # Config file: .factory/mcp.json (project) and ~/.factory/mcp.json (user)
+
+  skills:
+    sources:
+      - url: https://docs.factory.ai/cli/configuration/skills
+        type: docs
+        format: markdown
+        extracts: [file_format, frontmatter_fields, file_locations]
+    # Format: .factory/skills/<name>/SKILL.md (Markdown + YAML frontmatter)
+
+  agents:
+    sources:
+      - url: https://docs.factory.ai/cli/configuration/custom-droids
+        type: docs
+        format: markdown
+        extracts: [file_format, config_fields, file_locations]
+    # Format: .factory/droids/<name>.md (Markdown + YAML frontmatter)
+    # Called "Custom Droids" — specialized subagents with model/tool restrictions
+
+  commands:
+    sources:
+      - url: https://docs.factory.ai/cli/configuration/custom-slash-commands
+        type: docs
+        format: markdown
+        extracts: [file_format, file_locations, config_fields]
+    # Format: .factory/commands/<name>.md (Markdown or shebang script)
