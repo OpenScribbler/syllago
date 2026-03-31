@@ -7,7 +7,7 @@ import (
 
 func TestAdapterRegistry(t *testing.T) {
 	// All expected adapters should be registered via init()
-	expected := []string{"claude-code", "gemini-cli", "copilot-cli", "kiro", "cursor"}
+	expected := []string{"claude-code", "gemini-cli", "copilot-cli", "kiro", "cursor", "windsurf", "vs-code-copilot", "factory-droid", "pi"}
 	for _, slug := range expected {
 		if AdapterFor(slug) == nil {
 			t.Errorf("expected adapter for %q to be registered", slug)
@@ -459,6 +459,27 @@ func TestCapabilities(t *testing.T) {
 	if copilot.SupportsMatchers {
 		t.Error("Copilot should not support matchers")
 	}
+}
+
+// Compile-time check: VerifyFields interface is accessible from adapter implementations.
+type stubVerifyFields struct{ ClaudeCodeAdapter }
+
+func (s *stubVerifyFields) FieldsToVerify() []string {
+	return []string{VerifyFieldEvent, VerifyFieldName, VerifyFieldMatcher}
+}
+
+var _ VerifyFields = (*stubVerifyFields)(nil)
+
+func TestVerifyFields_InterfaceCheck(t *testing.T) {
+	t.Parallel()
+	s := &stubVerifyFields{}
+	fields := s.FieldsToVerify()
+	if len(fields) != 3 {
+		t.Fatalf("expected 3 fields, got %d", len(fields))
+	}
+	assertEqual(t, VerifyFieldEvent, fields[0])
+	assertEqual(t, VerifyFieldName, fields[1])
+	assertEqual(t, VerifyFieldMatcher, fields[2])
 }
 
 func TestCanonicalHookNewFields(t *testing.T) {
