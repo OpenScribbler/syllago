@@ -123,6 +123,19 @@ type ProviderCapabilities struct {
 	SupportsHTTPHooks bool
 }
 
+// VerifyField constants for FieldsToVerify() return values.
+const (
+	VerifyFieldEvent   = "event"
+	VerifyFieldName    = "name"
+	VerifyFieldMatcher = "matcher"
+)
+
+// VerifyFields is an optional interface adapters can implement to declare
+// which additional fields Verify() should check beyond command/timeout/blocking.
+type VerifyFields interface {
+	FieldsToVerify() []string // use VerifyField* constants
+}
+
 // adapterRegistry maps provider slugs to their hook adapters.
 var adapterRegistry = map[string]HookAdapter{}
 
@@ -210,6 +223,26 @@ func Verify(encoded *EncodedResult, adapter HookAdapter, original *CanonicalHook
 				Detail:   "hook " + itoa(i) + " blocking mismatch",
 			}
 		}
+
+		// Check additional fields declared by adapters implementing VerifyFields.
+		if vf, ok := adapter.(VerifyFields); ok {
+			for _, field := range vf.FieldsToVerify() {
+				switch field {
+				case VerifyFieldEvent:
+					if dh.Event != oh.Event {
+						return &VerifyError{Provider: slug, Detail: "hook " + itoa(i) + " event mismatch: " + dh.Event + " != " + oh.Event}
+					}
+				case VerifyFieldName:
+					if dh.Name != oh.Name {
+						return &VerifyError{Provider: slug, Detail: "hook " + itoa(i) + " name mismatch: " + dh.Name + " != " + oh.Name}
+					}
+				case VerifyFieldMatcher:
+					if string(dh.Matcher) != string(oh.Matcher) {
+						return &VerifyError{Provider: slug, Detail: "hook " + itoa(i) + " matcher mismatch: " + string(dh.Matcher) + " != " + string(oh.Matcher)}
+					}
+				}
+			}
+		}
 	}
 
 	return nil
@@ -242,3 +275,5 @@ func itoa(i int) string {
 	}
 	return s
 }
+
+// test

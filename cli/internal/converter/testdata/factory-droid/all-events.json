@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "PreToolUse":      [{"hooks": [{"type": "command", "command": "echo pre"}]}],
+    "PostToolUse":     [{"hooks": [{"type": "command", "command": "echo post"}]}],
+    "UserPromptSubmit":[{"hooks": [{"type": "command", "command": "echo prompt"}]}],
+    "Stop":            [{"hooks": [{"type": "command", "command": "echo stop"}]}],
+    "SessionStart":    [{"hooks": [{"type": "command", "command": "echo start"}]}],
+    "SessionEnd":      [{"hooks": [{"type": "command", "command": "echo end"}]}],
+    "PreCompact":      [{"hooks": [{"type": "command", "command": "echo compact"}]}],
+    "SubagentStart":   [{"hooks": [{"type": "command", "command": "echo sub-start"}]}],
+    "SubagentStop":    [{"hooks": [{"type": "command", "command": "echo sub-stop"}]}]
+  }
+}

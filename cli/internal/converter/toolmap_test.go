@@ -620,6 +620,161 @@ func TestTranslateHookEvent_VSCodeCopilot(t *testing.T) {
 	}
 }
 
+func TestToolmap_FactoryDroidEntries(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ canonical, native string }{
+		{"shell", "Execute"},
+		{"file_write", "Create"},
+		{"file_edit", "Edit"},
+		{"file_read", "Read"},
+		{"agent", "Task"},
+		{"find", "Glob"},
+		{"search", "Grep"},
+		{"web_search", "WebSearch"},
+		{"web_fetch", "FetchUrl"},
+	}
+	for _, c := range cases {
+		t.Run(c.canonical, func(t *testing.T) {
+			got := TranslateTool(c.canonical, "factory-droid")
+			if got != c.native {
+				t.Errorf("TranslateTool(%q, factory-droid) = %q, want %q", c.canonical, got, c.native)
+			}
+			back := ReverseTranslateTool(c.native, "factory-droid")
+			if back != c.canonical {
+				t.Errorf("ReverseTranslateTool(%q, factory-droid) = %q, want %q", c.native, back, c.canonical)
+			}
+		})
+	}
+}
+
+func TestToolmap_PiEntries(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ canonical, native string }{
+		{"shell", "bash"},
+		{"file_read", "read"},
+		{"file_write", "write"},
+		{"file_edit", "edit"},
+		{"search", "grep"},
+		{"find", "find"},
+	}
+	for _, c := range cases {
+		t.Run(c.canonical, func(t *testing.T) {
+			got := TranslateTool(c.canonical, "pi")
+			if got != c.native {
+				t.Errorf("TranslateTool(%q, pi) = %q, want %q", c.canonical, got, c.native)
+			}
+			back := ReverseTranslateTool(c.native, "pi")
+			if back != c.canonical {
+				t.Errorf("ReverseTranslateTool(%q, pi) = %q, want %q", c.native, back, c.canonical)
+			}
+		})
+	}
+}
+
+func TestToolmap_PiListTool(t *testing.T) {
+	t.Parallel()
+	// Pi has a unique "list" canonical tool that maps to "ls"
+	got := TranslateTool("list", "pi")
+	if got != "ls" {
+		t.Errorf("TranslateTool(list, pi) = %q, want ls", got)
+	}
+	back := ReverseTranslateTool("ls", "pi")
+	if back != "list" {
+		t.Errorf("ReverseTranslateTool(ls, pi) = %q, want list", back)
+	}
+}
+
+func TestToolmap_FactoryDroidEvents(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ canonical, native string }{
+		{"before_tool_execute", "PreToolUse"},
+		{"after_tool_execute", "PostToolUse"},
+		{"before_prompt", "UserPromptSubmit"},
+		{"agent_stop", "Stop"},
+		{"session_start", "SessionStart"},
+		{"session_end", "SessionEnd"},
+		{"before_compact", "PreCompact"},
+		{"subagent_start", "SubagentStart"},
+		{"subagent_stop", "SubagentStop"},
+	}
+	for _, c := range cases {
+		t.Run(c.canonical, func(t *testing.T) {
+			got, ok := TranslateHookEvent(c.canonical, "factory-droid")
+			if !ok || got != c.native {
+				t.Errorf("TranslateHookEvent(%q, factory-droid) = %q/%v, want %q/true", c.canonical, got, ok, c.native)
+			}
+		})
+	}
+}
+
+func TestToolmap_PiEvents(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ canonical, native string }{
+		{"before_tool_execute", "tool_call"},
+		{"after_tool_execute", "tool_result"},
+		{"session_start", "session_start"},
+		{"session_end", "session_shutdown"},
+		{"before_prompt", "input"},
+		{"agent_stop", "agent_end"},
+		{"before_compact", "session_before_compact"},
+		{"subagent_start", "before_agent_start"},
+		// Pi-specific canonical events
+		{"turn_start", "turn_start"},
+		{"turn_end", "turn_end"},
+		{"model_select", "model_select"},
+		{"user_bash", "user_bash"},
+		{"context_update", "context"},
+		{"message_start", "message_start"},
+		{"message_end", "message_end"},
+	}
+	for _, c := range cases {
+		t.Run(c.canonical, func(t *testing.T) {
+			got, ok := TranslateHookEvent(c.canonical, "pi")
+			if !ok || got != c.native {
+				t.Errorf("TranslateHookEvent(%q, pi) = %q/%v, want %q/true", c.canonical, got, ok, c.native)
+			}
+		})
+	}
+}
+
+func TestToolmap_WindsurfSplitEventsAbsent(t *testing.T) {
+	// before_tool_execute and after_tool_execute must NOT have windsurf entries
+	// (Windsurf uses split-event logic in its adapter, not direct toolmap entries)
+	t.Parallel()
+	for _, canonical := range []string{"before_tool_execute", "after_tool_execute"} {
+		_, ok := TranslateHookEvent(canonical, "windsurf")
+		if ok {
+			t.Errorf("windsurf must not have a toolmap entry for %q (uses split-event logic)", canonical)
+		}
+	}
+}
+
+func TestToolmap_WindsurfSpecificEvents(t *testing.T) {
+	t.Parallel()
+	// Windsurf-specific events
+	got, ok := TranslateHookEvent("worktree_create", "windsurf")
+	if !ok || got != "post_setup_worktree" {
+		t.Errorf("TranslateHookEvent(worktree_create, windsurf) = %q/%v, want post_setup_worktree/true", got, ok)
+	}
+	got, ok = TranslateHookEvent("transcript_export", "windsurf")
+	if !ok || got != "post_cascade_response_with_transcript" {
+		t.Errorf("TranslateHookEvent(transcript_export, windsurf) = %q/%v, want post_cascade_response_with_transcript/true", got, ok)
+	}
+}
+
+func TestToolmap_FactoryDroidMCP(t *testing.T) {
+	t.Parallel()
+	// Factory Droid uses the same mcp__server__tool format as CC
+	got := TranslateMCPToolName("mcp__github__search_repos", "factory-droid", "claude-code")
+	if got != "mcp__github__search_repos" {
+		t.Errorf("Factory Droid to CC: got %q, want mcp__github__search_repos", got)
+	}
+	got = TranslateMCPToolName("mcp__github__search_repos", "claude-code", "factory-droid")
+	if got != "mcp__github__search_repos" {
+		t.Errorf("CC to Factory Droid: got %q, want mcp__github__search_repos", got)
+	}
+}
+
 func TestTranslateTool_VSCodeCopilot(t *testing.T) {
 	tests := []struct {
 		canonical string

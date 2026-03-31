@@ -20,6 +20,8 @@ var ToolNames = map[string]map[string]string{
 		"cursor":          "read_file",
 		"windsurf":        "view_line_range",
 		"codex":           "read_file",
+		"factory-droid":   "Read",
+		"pi":              "read",
 	},
 	"file_write": {
 		"claude-code":     "Write",
@@ -33,6 +35,8 @@ var ToolNames = map[string]map[string]string{
 		"cursor":          "edit_file",
 		"windsurf":        "write_to_file",
 		"codex":           "apply_patch",
+		"factory-droid":   "Create",
+		"pi":              "write",
 	},
 	"file_edit": {
 		"claude-code":     "Edit",
@@ -46,6 +50,8 @@ var ToolNames = map[string]map[string]string{
 		"cursor":          "edit_file",
 		"windsurf":        "edit_file",
 		"codex":           "apply_patch",
+		"factory-droid":   "Edit",
+		"pi":              "edit",
 	},
 	"shell": {
 		"claude-code":     "Bash",
@@ -59,6 +65,8 @@ var ToolNames = map[string]map[string]string{
 		"cursor":          "run_terminal_cmd",
 		"windsurf":        "run_command",
 		"codex":           "shell",
+		"factory-droid":   "Execute",
+		"pi":              "bash",
 	},
 	"find": {
 		"claude-code":     "Glob",
@@ -72,6 +80,8 @@ var ToolNames = map[string]map[string]string{
 		"cursor":          "file_search",
 		"windsurf":        "find_by_name",
 		"codex":           "list_dir",
+		"factory-droid":   "Glob",
+		"pi":              "find",
 	},
 	"search": {
 		"claude-code":     "Grep",
@@ -85,6 +95,8 @@ var ToolNames = map[string]map[string]string{
 		"cursor":          "grep_search",
 		"windsurf":        "grep_search",
 		"codex":           "grep_files",
+		"factory-droid":   "Grep",
+		"pi":              "grep",
 	},
 	"web_search": {
 		"claude-code":     "WebSearch",
@@ -96,6 +108,7 @@ var ToolNames = map[string]map[string]string{
 		"windsurf":        "search_web",
 		"codex":           "web_search",
 		"kiro":            "web_search",
+		"factory-droid":   "WebSearch",
 	},
 	"agent": {
 		"claude-code":     "Agent",
@@ -105,6 +118,7 @@ var ToolNames = map[string]map[string]string{
 		"zed":             "spawn_agent",
 		"codex":           "spawn_agent",
 		"kiro":            "use_subagent",
+		"factory-droid":   "Task",
 	},
 	"web_fetch": {
 		"claude-code":     "WebFetch",
@@ -115,7 +129,10 @@ var ToolNames = map[string]map[string]string{
 		"vs-code-copilot": "WebFetch",
 		"zed":             "fetch",
 		"windsurf":        "read_url_content",
+		"factory-droid":   "FetchUrl",
 	},
+	// Pi exposes an `ls` directory-listing tool distinct from `find`
+	"list": {"pi": "ls"},
 	// CC-only tools with no cross-provider equivalents (vs-code-copilot shares these)
 	"notebook_edit": {"claude-code": "NotebookEdit", "vs-code-copilot": "NotebookEdit"},
 	"multi_edit":    {"claude-code": "MultiEdit", "vs-code-copilot": "MultiEdit"},
@@ -129,16 +146,16 @@ var ToolNames = map[string]map[string]string{
 // HookEvents maps canonical (provider-neutral) event names to provider-specific equivalents.
 // Keys are snake_case neutral names; every provider including claude-code has an explicit entry.
 var HookEvents = map[string]map[string]string{
-	"before_tool_execute": {"claude-code": "PreToolUse", "gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse", "cursor": "PreToolUse", "opencode": "tool.execute.before", "vs-code-copilot": "PreToolUse"},
-	"after_tool_execute":  {"claude-code": "PostToolUse", "gemini-cli": "AfterTool", "copilot-cli": "postToolUse", "kiro": "postToolUse", "cursor": "PostToolUse", "opencode": "tool.execute.after", "vs-code-copilot": "PostToolUse"},
-	"before_prompt":       {"claude-code": "UserPromptSubmit", "gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted", "kiro": "userPromptSubmit", "cursor": "UserPromptSubmit", "windsurf": "pre_user_prompt", "vs-code-copilot": "UserPromptSubmit"},
-	"agent_stop":          {"claude-code": "Stop", "gemini-cli": "AfterAgent", "kiro": "stop", "copilot-cli": "agentStop", "cursor": "Stop", "windsurf": "post_cascade_response", "opencode": "session.idle", "vs-code-copilot": "Stop"},
-	"session_start":       {"claude-code": "SessionStart", "gemini-cli": "SessionStart", "copilot-cli": "sessionStart", "kiro": "agentSpawn", "cursor": "SessionStart", "windsurf": "session_start", "opencode": "session.created", "vs-code-copilot": "SessionStart"},
-	"session_end":         {"claude-code": "SessionEnd", "gemini-cli": "SessionEnd", "copilot-cli": "sessionEnd", "cursor": "SessionEnd", "windsurf": "session_end"},
-	"before_compact":      {"claude-code": "PreCompact", "gemini-cli": "PreCompress", "cursor": "PreCompact", "vs-code-copilot": "PreCompact"},
+	"before_tool_execute": {"claude-code": "PreToolUse", "gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse", "cursor": "PreToolUse", "opencode": "tool.execute.before", "vs-code-copilot": "PreToolUse", "factory-droid": "PreToolUse", "pi": "tool_call"},
+	"after_tool_execute":  {"claude-code": "PostToolUse", "gemini-cli": "AfterTool", "copilot-cli": "postToolUse", "kiro": "postToolUse", "cursor": "PostToolUse", "opencode": "tool.execute.after", "vs-code-copilot": "PostToolUse", "factory-droid": "PostToolUse", "pi": "tool_result"},
+	"before_prompt":       {"claude-code": "UserPromptSubmit", "gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted", "kiro": "userPromptSubmit", "cursor": "UserPromptSubmit", "windsurf": "pre_user_prompt", "vs-code-copilot": "UserPromptSubmit", "factory-droid": "UserPromptSubmit", "pi": "input"},
+	"agent_stop":          {"claude-code": "Stop", "gemini-cli": "AfterAgent", "kiro": "stop", "copilot-cli": "agentStop", "cursor": "Stop", "windsurf": "post_cascade_response", "opencode": "session.idle", "vs-code-copilot": "Stop", "factory-droid": "Stop", "pi": "agent_end"},
+	"session_start":       {"claude-code": "SessionStart", "gemini-cli": "SessionStart", "copilot-cli": "sessionStart", "kiro": "agentSpawn", "cursor": "SessionStart", "windsurf": "session_start", "opencode": "session.created", "vs-code-copilot": "SessionStart", "factory-droid": "SessionStart", "pi": "session_start"},
+	"session_end":         {"claude-code": "SessionEnd", "gemini-cli": "SessionEnd", "copilot-cli": "sessionEnd", "cursor": "SessionEnd", "windsurf": "session_end", "factory-droid": "SessionEnd", "pi": "session_shutdown"},
+	"before_compact":      {"claude-code": "PreCompact", "gemini-cli": "PreCompress", "cursor": "PreCompact", "vs-code-copilot": "PreCompact", "factory-droid": "PreCompact", "pi": "session_before_compact"},
 	"notification":        {"claude-code": "Notification", "gemini-cli": "Notification"},
-	"subagent_start":      {"claude-code": "SubagentStart", "cursor": "SubagentStart", "vs-code-copilot": "SubagentStart"},
-	"subagent_stop":       {"claude-code": "SubagentStop", "copilot-cli": "subagentStop", "cursor": "SubagentStop", "vs-code-copilot": "SubagentStop"},
+	"subagent_start":      {"claude-code": "SubagentStart", "cursor": "SubagentStart", "vs-code-copilot": "SubagentStart", "factory-droid": "SubagentStart", "pi": "before_agent_start"},
+	"subagent_stop":       {"claude-code": "SubagentStop", "copilot-cli": "subagentStop", "cursor": "SubagentStop", "vs-code-copilot": "SubagentStop", "factory-droid": "SubagentStop"},
 	"error_occurred":      {"claude-code": "ErrorOccurred", "copilot-cli": "errorOccurred", "opencode": "session.error"},
 
 	// tool_use_failure: distinct from error_occurred — fires on tool invocation failure.
@@ -151,7 +168,7 @@ var HookEvents = map[string]map[string]string{
 	"after_compact":       {"claude-code": "PostCompact"},
 	"instructions_loaded": {"claude-code": "InstructionsLoaded"},
 	"config_change":       {"claude-code": "ConfigChange"},
-	"worktree_create":     {"claude-code": "WorktreeCreate"},
+	"worktree_create":     {"claude-code": "WorktreeCreate", "windsurf": "post_setup_worktree"},
 	"worktree_remove":     {"claude-code": "WorktreeRemove"},
 	"elicitation":         {"claude-code": "Elicitation"},
 	"elicitation_result":  {"claude-code": "ElicitationResult"},
@@ -171,6 +188,18 @@ var HookEvents = map[string]map[string]string{
 	"file_deleted": {"kiro": "File Delete"},
 	"before_task":  {"kiro": "Pre Task Execution"},
 	"after_task":   {"kiro": "Post Task Execution"},
+
+	// Windsurf-exclusive events
+	"transcript_export": {"windsurf": "post_cascade_response_with_transcript"},
+
+	// Pi-exclusive events (no other provider maps to these)
+	"turn_start":     {"pi": "turn_start"},
+	"turn_end":       {"pi": "turn_end"},
+	"model_select":   {"pi": "model_select"},
+	"user_bash":      {"pi": "user_bash"},
+	"context_update": {"pi": "context"},
+	"message_start":  {"pi": "message_start"},
+	"message_end":    {"pi": "message_end"},
 }
 
 // TranslateTool translates a single canonical tool name to the target provider.
@@ -371,7 +400,7 @@ func TranslateMCPToolName(name, sourceSlug, targetSlug string) string {
 	}
 
 	switch targetSlug {
-	case "claude-code", "kiro":
+	case "claude-code", "kiro", "factory-droid":
 		return "mcp__" + server + "__" + tool
 	case "gemini-cli":
 		return "mcp_" + server + "_" + tool
@@ -390,7 +419,7 @@ func TranslateMCPToolName(name, sourceSlug, targetSlug string) string {
 // Providers group into four parsing patterns by separator format.
 func parseMCPToolName(name, sourceSlug string) (server, tool string) {
 	switch sourceSlug {
-	case "claude-code", "kiro":
+	case "claude-code", "kiro", "factory-droid":
 		// mcp__server__tool
 		if !strings.HasPrefix(name, "mcp__") {
 			return "", ""
