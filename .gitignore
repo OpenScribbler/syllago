@@ -37,6 +37,7 @@ docs/*
 !docs/plans/
 !docs/vhs/
 !docs/spec/
+!docs/checks/
 !docs/security/
 !docs/blogs/
 !docs/provider-sources/

@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-07-block-exit2
+type: hooks
+description: "Benchmark: validates before_tool_execute exit-2 blocking"
+hook:
+  event: before_tool_execute
+  blocking: true
+  command: ./hb-07.sh
