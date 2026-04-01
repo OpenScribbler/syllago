@@ -463,7 +463,7 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 							Path:        itemDir,
 							ServerKey:   serverName,
 							Library:     local,
-							Description: mcpServerDescription(value),
+							Description: MCPServerDescription(value),
 							Files:       files,
 							Meta:        meta,
 						}
@@ -564,7 +564,7 @@ func scanMCPSubdirs(cat *Catalog, groupDir string, entries []os.DirEntry, local 
 						Path:        serverDir,
 						ServerKey:   serverName,
 						Library:     local,
-						Description: mcpServerDescription(value),
+						Description: MCPServerDescription(value),
 						Files:       files,
 						Meta:        meta,
 					}
@@ -987,9 +987,9 @@ func describeHookJSON(data []byte) string {
 	return ""
 }
 
-// mcpServerDescription generates a short description from a nested MCP server entry.
+// MCPServerDescription generates a short description from a nested MCP server entry.
 // Shows the command (for stdio servers) or URL (for HTTP servers).
-func mcpServerDescription(value gjson.Result) string {
+func MCPServerDescription(value gjson.Result) string {
 	if cmd := value.Get("command").String(); cmd != "" {
 		if args := value.Get("args"); args.Exists() && args.IsArray() {
 			// Include first non-flag arg for context (e.g., package name).
