@@ -14,20 +14,63 @@ document are to be interpreted as described in
 
 This document is a **companion convention** to the Agent Skills
 specification at agentskills.io. It does not replace, fork, or
-override that specification. Instead, it defines structured metadata
-fields that live inside the Agent Skills spec's existing `metadata`
-extension point.
+override that specification. It defines structured metadata fields
+that live in a **sidecar file** (`SKILL.meta.yaml`) alongside the
+SKILL.md, referenced by a single optional `metadata_file` field in
+the SKILL.md frontmatter.
 
 The Agent Skills spec defines the **mechanism** — a YAML frontmatter
 format with `name`, `description`, `license`, `compatibility`,
 `metadata`, and `allowed-tools`. This convention defines a
-**vocabulary** — what specific keys inside `metadata` mean, how they
-should be formatted, and how agents and tools should interpret them.
+**vocabulary** of structured metadata (provenance, triggers,
+expectations, agent compatibility) and places it in an external
+sidecar file to preserve the spec's token-efficient design.
+
+### Why a sidecar file, not `metadata:`
+
+The Agent Skills spec's `metadata` field is defined as "a map from
+string keys to string values." This convention requires structured
+data (nested objects, arrays) that exceeds that definition. Earlier
+drafts placed convention fields inside `metadata:` as nested YAML,
+but this caused two problems:
+
+1.  **Token cost.** Agents that do not strip frontmatter before
+    context injection (confirmed: Codex CLI, GitHub Copilot) would
+    inject ~30 lines of metadata YAML into the model's context on
+    every skill activation. The Agent Skills spec's original design
+    — just `name` and `description` — is deliberately minimal to
+    avoid this. Adding 30 lines of tooling metadata directly
+    contradicts that design philosophy.
+
+2.  **Spec boundary.** Nested YAML objects inside a string→string
+    map exceed the base spec's stated definition of `metadata`.
+
+Moving convention fields to a sidecar file resolves both: the
+SKILL.md frontmatter stays minimal (3–4 lines), and structured
+data lives in a file the model never sees. See the
+[Token Efficiency Decision](reference/token-efficiency-metadata-separation.md)
+for the full design rationale including a 5-persona panel review.
+
+### The `metadata_file` field
+
+This convention introduces `metadata_file` as a **top-level
+frontmatter field** — alongside `name`, `description`, `license`,
+`compatibility`, `metadata`, and `allowed-tools`.
+
+This is the convention's **single addition** to the SKILL.md
+frontmatter schema. It is proposed for inclusion in the Agent Skills
+spec as a top-level field. Until adopted, agents SHOULD ignore
+unknown top-level fields without error (standard forward-compatibility
+practice, per JSON Schema, OpenAPI, and similar specifications).
+
+`metadata_file` and convention fields inside `metadata:` are
+**mutually exclusive**. A SKILL.md MUST NOT contain both
+`metadata_file` and convention-defined keys inside `metadata:`.
 
 A SKILL.md file using this convention remains fully valid under the
-Agent Skills spec. Agents that do not implement this convention will
-see the extended fields as opaque `metadata` entries and MUST ignore
-them without error, per the Agent Skills spec's existing behavior.
+Agent Skills spec — agents that do not recognize `metadata_file`
+will ignore it, and the skill's `name`, `description`, and body
+content are unaffected.
 
 ### Compatibility
 
@@ -38,33 +81,98 @@ Agent Skills spec.
 
 This convention's fields are additive. A minimal SKILL.md needs only
 `name` and `description`. Everything in this convention is optional.
+A SKILL.md without `metadata_file` is fully valid — no degraded
+status, no warnings.
 
 ### Example: Minimal + Convention
+
+**SKILL.md** (3 lines of frontmatter — the model sees only this):
 
 ``` yaml
 ---
 name: code-review
 description: Reviews code for quality, security, and style issues. Use when reviewing PRs or checking code quality.
 license: MIT
-metadata:
-  convention: "https://github.com/agent-ecosystem/metadata-convention/v0.1"
-  provenance:
-    version: "1.2.0"
-    source_repo: "https://github.com/acme/skills"
-    source_repo_subdirectory: "/skills/code-review"
-    authors:
-      - "Alice Smith <alice@example.com>"
-  triggers:
-    mode: auto
-    keywords:
-      - "code review"
-      - "review this PR"
+metadata_file: ./SKILL.meta.yaml
 ---
 
 ## Instructions
 
 Review the code for...
 ```
+
+**SKILL.meta.yaml** (tooling reads this — the model never sees it):
+
+``` yaml
+metadata_spec: "https://github.com/agent-ecosystem/metadata-convention/v0.1"
+provenance:
+  version: "1.2.0"
+  source_repo: "https://github.com/acme/skills"
+  source_repo_subdirectory: "/skills/code-review"
+  authors:
+    - "Alice Smith <alice@example.com>"
+triggers:
+  mode: auto
+  keywords:
+    - "code review"
+    - "review this PR"
+```
+
+---
+
+## Sidecar File Format
+
+The metadata sidecar is a YAML file containing all convention fields.
+The RECOMMENDED filename is `SKILL.meta.yaml`, placed alongside the
+SKILL.md in the skill directory:
+
+```
+skill-name/
+├── SKILL.md            # name, description, metadata_file pointer
+├── SKILL.meta.yaml     # all convention metadata
+├── scripts/            # optional
+└── references/         # optional
+```
+
+### Schema
+
+The sidecar file is **flat YAML** — no wrapping `metadata:` key.
+The entire file IS metadata; wrapping it would be redundant. Top-level
+keys are `metadata_spec`, `provenance`, `triggers`, `expectations`,
+`tags`, `status`, `durability`, and `supported_agents`.
+
+**Required fields:** `metadata_spec` (identifies the convention version).
+
+**Optional fields:** All other convention fields defined in this
+document (sections 1–9 below).
+
+Agents implementing this convention MUST ignore unknown keys in the
+sidecar file without error. This ensures forward compatibility when
+newer convention versions add fields.
+
+### Discovery rules
+
+1.  If `metadata_file` is present in the SKILL.md frontmatter,
+    tooling MUST resolve it as a relative path from the SKILL.md
+    file's directory.
+
+2.  If `metadata_file` is absent, tooling MUST NOT search for
+    sidecar files by naming convention. Absent field = no convention
+    metadata exists. Period.
+
+3.  If `metadata_file` is present but the referenced file does not
+    exist, tooling SHOULD warn the author (broken reference). The
+    SKILL.md remains valid and functional — the skill just has no
+    convention metadata.
+
+### Content hash interaction
+
+When computing `content_hash` (section 1), the sidecar file
+(`SKILL.meta.yaml`) IS included in the hash computation — it is a
+regular file in the skill directory. The `content_hash` blanking
+step applies only to the file containing the hash value itself
+(typically the sidecar file in this two-file pattern, not the
+SKILL.md).
 
 ---
 
@@ -104,33 +212,36 @@ These terms are used throughout this convention:
 
 ## Convention Fields
 
-All fields below are placed inside the Agent Skills spec's `metadata`
-map. The top-level `convention` key identifies which version of this
-convention the metadata follows.
+All fields below are placed in the **metadata sidecar file**
+(`SKILL.meta.yaml`), not in the SKILL.md frontmatter. The SKILL.md
+contains only `metadata_file` pointing to the sidecar. See
+[Sidecar File Format](#sidecar-file-format) for the file schema
+and discovery rules.
 
-Agents implementing this convention MUST ignore unknown keys within
-convention sub-maps without error. This ensures forward compatibility
-when newer convention versions add fields.
+The `metadata_spec` key identifies which version of this convention
+the sidecar follows. Agents implementing this convention MUST ignore
+unknown keys within convention sub-maps without error. This ensures
+forward compatibility when newer convention versions add fields.
 
-### convention
+### metadata_spec
 
 **Stability:** Stable
 
 A URI identifying the version of this metadata convention. This value
 is an opaque identifier, not a locator — agents MUST NOT attempt to
 dereference it. Agents MUST use exact string comparison to match the
-`convention` value against known convention versions.
+`metadata_spec` value against known convention versions.
 
 Agents that recognize the URI MAY parse the structured metadata
 fields defined below. Agents that do not recognize it MUST ignore
 all convention fields without error. Agents MUST NOT interpret
 convention-defined fields (provenance, triggers, expectations,
-supported\_agents) unless the `convention` key is present and matches
+supported\_agents) unless the `metadata_spec` key is present and matches
 a recognized value.
 
 ``` yaml
-metadata:
-  convention: "https://github.com/agent-ecosystem/metadata-convention/v0.1"
+# In SKILL.meta.yaml (top-level key, not nested under metadata:)
+metadata_spec: "https://github.com/agent-ecosystem/metadata-convention/v0.1"
 ```
 
 ### 1. Provenance
@@ -149,6 +260,11 @@ Registries MAY reject skill submissions that omit `version`, as
 versioning is essential for update detection, deduplication, and
 dependency resolution in registry contexts.
 
+**Immutability:** Registries MUST reject submissions where `version`
+matches an existing entry but `content_hash` differs. Published
+versions are immutable — to publish different content, bump the
+version.
+
 ``` yaml
 provenance:
   version: "4.2.0"
@@ -157,18 +273,42 @@ provenance:
 #### provenance.source\_repo
 
 A URL indicating where the canonical version of this skill can be
-found. MUST be an HTTPS URL.
+found. MUST be an HTTPS URL. The URL is forge-agnostic — GitHub,
+GitLab, Codeberg, self-hosted Gitea, or any git hosting service.
 
-This field is a **self-asserted claim** by the skill author.
+REQUIRED for content submitted to registries. Registries MUST
+reject submissions without `source_repo` and MUST verify the URL
+resolves at submission time. OPTIONAL for local-only content.
+
+This field is a **self-asserted claim** by the skill author unless
+independently verified through attestation (see section 8).
 Distribution tools and registries SHOULD NOT treat it as verified
-provenance without additional verification (e.g., confirming the
-skill was fetched from this repository, or validating a signature
-from the repository owner). Future convention versions will address
-verified provenance through the planned signing mechanism (v0.2).
+provenance without attestation or equivalent verification.
 
 ``` yaml
 provenance:
   source_repo: "https://github.com/my_username/cool_skill_repo"
+```
+
+#### provenance.source\_commit
+
+*Strongly recommended.* The full git commit SHA at which the content
+was published. MUST be exactly 40 lowercase hexadecimal characters.
+
+`source_commit` provides an immutable reference point. Unlike branch
+names or tags, commit SHAs cannot be rewritten after the fact. When
+both `source_commit` and `content_hash` are present, verification
+tools can deterministically check whether the content at a specific
+repo at a specific commit produces a specific hash.
+
+`source_commit` SHOULD be captured automatically by tooling, not
+manually entered by authors. Registries SHOULD capture the commit
+SHA at submission time. Distribution tools SHOULD capture the
+current HEAD SHA during publishing workflows.
+
+``` yaml
+provenance:
+  source_commit: "abc123def456789012345678901234567890abcd"
 ```
 
 #### provenance.source\_repo\_subdirectory
@@ -251,9 +391,10 @@ This field is typically set by a distribution tool or registry, not by
 the skill author. It is a plain string identifier. Like `source_repo`,
 this is a **self-asserted claim** — any skill can claim any publisher.
 Distribution tools SHOULD NOT make authorization or trust decisions
-based solely on this field without independent verification.
+based solely on this field without attestation (section 8) or
+equivalent independent verification.
 
-#### provenance.license\_spdx
+#### provenance.license\_spdx\_id
 
 *Strongly recommended.* An [SPDX license identifier](https://spdx.org/licenses/).
 MUST be a valid SPDX expression. Ex. `MIT`, `Apache-2.0`, `GPL-3.0-only`.
@@ -263,7 +404,7 @@ unknown, use `NOASSERTION`.
 
 This complements the Agent Skills spec's existing `license` field
 (which is freeform) with a machine-parseable identifier. When both
-are present, `license_spdx` is the authoritative value for machine
+are present, `license_spdx_id` is the authoritative value for machine
 processing. Authors SHOULD keep both fields consistent.
 
 #### provenance.license\_url
@@ -289,8 +430,8 @@ full chain, follow the links (each upstream has its own
 All fields within `derived_from` entries are **self-asserted** by the
 skill author. A skill can claim derivation from any upstream without
 proof. Enterprise tooling SHOULD treat `derived_from` as informational
-metadata, not a verified supply chain attestation, until signing
-(v0.2) provides cryptographic linkage.
+metadata, not a verified supply chain attestation, until attestation
+(section 8) or signing (future version) provides independent linkage.
 
 Each entry in the array contains:
 
@@ -345,37 +486,37 @@ provenance:
 #### Full provenance example
 
 ``` yaml
-metadata:
-  convention: "https://github.com/agent-ecosystem/metadata-convention/v0.1"
-  provenance:
-    version: "4.2.0"
-    source_repo: "https://github.com/my_username/cool_skill_repo"
-    source_repo_subdirectory: "/skills/tool_x/integration"
-    content_hash: "sha256:a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890"
-    authors:
-      - "Mary Smith <mary@example.com>"
-    publisher: "acme-skills-registry"
-    license_spdx: "MIT"
-    license_url: "https://github.com/my_username/cool_skill_repo/blob/main/LICENSE"
-    script_hashes:
-      "scripts/setup.sh": "sha256:a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890"
-    derived_from:
-      - source_repo: "https://github.com/original_author/skills"
-        source_repo_subdirectory: "/skills/tool_x/integration"
-        version: "2.0.0"
-        content_hash: "sha256:f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5"
-        relation: "fork"
+# In SKILL.meta.yaml
+metadata_spec: "https://github.com/agent-ecosystem/metadata-convention/v0.1"
+provenance:
+  version: "4.2.0"
+  source_repo: "https://github.com/my_username/cool_skill_repo"
+  source_repo_subdirectory: "/skills/tool_x/integration"
+  content_hash: "sha256:a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890"
+  authors:
+    - "Mary Smith <mary@example.com>"
+  publisher: "acme-skills-registry"
+  license_spdx_id: "MIT"
+  license_url: "https://github.com/my_username/cool_skill_repo/blob/main/LICENSE"
+  script_hashes:
+    "scripts/setup.sh": "sha256:a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890"
+  derived_from:
+    - source_repo: "https://github.com/original_author/skills"
+      source_repo_subdirectory: "/skills/tool_x/integration"
+      version: "2.0.0"
+      content_hash: "sha256:f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5"
+      relation: "fork"
 ```
 
-**Note on frontmatter visibility:** Convention fields in `metadata`
-may be visible to the model on agents that do not strip frontmatter
-(confirmed: Codex CLI, GitHub Copilot). Of 12 surveyed agents, 5
-strip frontmatter before the model sees skill content (Claude Code,
-Gemini CLI, Cline, Roo Code, OpenCode), 2 include raw frontmatter in
-model context (Codex CLI, GitHub Copilot), and 5 are undocumented.
-Skill authors SHOULD NOT store secrets in metadata fields. Distribution
-tools SHOULD be aware that metadata adds to token budget on agents that
-include frontmatter.
+**Note on token efficiency:** Convention fields live in the sidecar
+file, which the model never sees. The SKILL.md frontmatter contains
+only `name`, `description`, `license`, and optionally `metadata_file`
+— at most 4 lines. This preserves the Agent Skills spec's
+token-efficient design. Agents that do not strip frontmatter
+(confirmed: Codex CLI, GitHub Copilot) see at most one extra line
+(`metadata_file`) instead of 30+ lines of convention metadata.
+Skill authors SHOULD NOT store secrets in the sidecar file, as it
+may be distributed alongside the skill.
 
 ### 2. Expectations
 
@@ -508,12 +649,25 @@ treat the skill as if `mode: auto` was specified.
 | `manual` | Only activated by explicit user invocation. |
 | `always` | Always loaded into the agent's context. |
 
-When `mode` is `manual`, all trigger fields except `commands` are
-ignored — the skill activates only when explicitly invoked. When
-`mode` is `always`, all trigger fields are ignored — the skill is
-always loaded.
+**Precedence:** Mode is evaluated first. If mode resolves to a
+definitive state (`always` → active, `manual` → inactive unless
+commanded), trigger evaluation is skipped entirely.
 
-#### triggers.file\_patterns
+| Mode | `activation_file_globs` | `activation_workspace_globs` | `commands` | `keywords` |
+|------|------------------------|------------------------------|-----------|------------|
+| `always` | Ignored | Ignored | Ignored | Ignored |
+| `auto` | Evaluated | Evaluated | Evaluated | Evaluated |
+| `manual` | Ignored | Ignored | Evaluated | Ignored |
+
+**Worked example:** A skill has `mode: always` and
+`activation_file_globs: ["**/*.rs"]`. The skill activates on every
+project, including those with no Rust files. The globs are not
+evaluated — `always` takes precedence unconditionally.
+
+All trigger patterns use standard glob syntax (not regex, not
+gitignore syntax). See pattern operators below.
+
+#### triggers.activation\_file\_globs
 
 An array of glob patterns. The skill SHOULD activate when the user
 is working with files matching any pattern. Paths are relative to
@@ -535,12 +689,12 @@ NOT require them.
 
 ``` yaml
 triggers:
-  file_patterns:
+  activation_file_globs:
     - "**/*.test.ts"
     - "**/*.spec.ts"
 ```
 
-#### triggers.workspace\_contains
+#### triggers.activation\_workspace\_globs
 
 An array of glob patterns. The skill SHOULD activate when the project
 contains files matching any pattern. Evaluated once at project load,
@@ -548,7 +702,7 @@ not on every file change.
 
 ``` yaml
 triggers:
-  workspace_contains:
+  activation_workspace_globs:
     - "docker-compose.yml"
     - "Dockerfile"
 ```
@@ -560,6 +714,11 @@ The format is agent-specific — some agents use `/command`, others use
 `@command` or other syntax. The value SHOULD be the bare command name
 without prefix (e.g., `test-review` not `/test-review`), and agents
 SHOULD apply their own prefix convention.
+
+When multiple skills register the same command name, agents are
+responsible for disambiguation (e.g., prompting the user, using
+skill name as a namespace). Registries SHOULD flag command name
+collisions across indexed skills.
 
 ``` yaml
 triggers:
@@ -624,11 +783,11 @@ Tags SHOULD be lowercase. Avoid redundancy with the skill's `name`
 or `description`.
 
 ``` yaml
-metadata:
-  tags:
-    - "testing"
-    - "code-quality"
-    - "typescript"
+# In SKILL.meta.yaml
+tags:
+  - "testing"
+  - "code-quality"
+  - "typescript"
 ```
 
 ### 5. Status
@@ -645,8 +804,8 @@ to be `active`.
 | `archived`   | The skill is no longer maintained. It may not work with current agents. |
 
 ``` yaml
-metadata:
-  status: "deprecated"
+# In SKILL.meta.yaml
+status: "deprecated"
 ```
 
 ### 6. Durability
@@ -676,8 +835,8 @@ is marked `persistent` but Agent X has no compaction protection"), and
 creates a spec-level hook that agents can adopt incrementally.
 
 ``` yaml
-metadata:
-  durability: persistent
+# In SKILL.meta.yaml
+durability: persistent
 ```
 
 ### 7. Supported Agents
@@ -702,14 +861,14 @@ integrations required for the skill. Each integration has an
 `required` boolean.
 
 ``` yaml
-metadata:
-  supported_agents:
-    - name: "claude-code"
-      integrations:
-        - identifier: "google-drive"
-          required: true
-        - identifier: "google-sheets"
-          required: false
+# In SKILL.meta.yaml
+supported_agents:
+  - name: "claude-code"
+    integrations:
+      - identifier: "google-drive"
+        required: true
+      - identifier: "google-sheets"
+        required: false
 ```
 
 #### Behavioral assumptions checklist
@@ -746,65 +905,237 @@ verify the following (non-normative):
     Security-sensitive skills may want to declare a minimum trust
     requirement in their instructions.
 
+### 8. Attestation
+
+*Stability: Draft*
+
+All provenance fields in this convention (section 1) are self-asserted
+— any skill can claim any `source_repo`, any author, any hash. Of 12
+surveyed AI agents, 7 auto-load skills without user approval, and
+skills can contain executable scripts. Attestation provides a mechanism
+for independent verification of provenance claims, so that consumers
+can distinguish verified origins from unverified ones.
+
+Attestation is the mechanism by which a third party — typically a
+registry — independently verifies provenance claims. Without
+attestation, provenance fields (`source_repo`, `content_hash`,
+`source_commit`) are self-asserted and unverifiable.
+
+**Attestation means authenticity, not safety.** A `source_verified`
+attestation proves the content bytes match a specific commit in a
+specific repository. It does NOT prove the content is safe, that
+scripts have been reviewed, or that the content is free of prompt
+injection.
+
+#### Attestation records
+
+An attestation record is a JSON object published by an attester:
+
+``` json
+{
+  "schema": "https://agentskills.io/attestation/v0.1",
+  "subject": {
+    "content_hash": "sha256:a1b2c3d4...",
+    "source_repo": "https://github.com/alice/skills",
+    "source_commit": "abc123def456..."
+  },
+  "attester": {
+    "id": "https://registry.example.com",
+    "display_name": "Community Skills Registry"
+  },
+  "claims": [
+    { "type": "source_verified" }
+  ],
+  "self_attestation": false,
+  "issued_at": "2026-03-31T12:00:00Z",
+  "expires_at": "2027-03-31T12:00:00Z"
+}
+```
+
+**Required fields:** `schema`, `subject` (with `content_hash`,
+`source_repo`, `source_commit`), `attester.id`, `claims`,
+`self_attestation`, `issued_at`, `expires_at`.
+
+**Optional fields:** `attester.display_name`, `review_policy` (URL
+to the attester's published review policy).
+
+The `claims` array is extensible. Consumers MUST ignore unknown
+claim types without error.
+
+#### Claim types
+
+v0.1 defines one claim type:
+
+**`source_verified`** — The attester fetched content from
+`source_repo` at `source_commit` and confirmed the computed hash
+matches `content_hash`. Asserts only that the bytes at the declared
+source match the bytes being distributed.
+
+Renewed attestations MUST include `last_reviewed` (ISO 8601
+timestamp) and `review_type` (`automated_hash_check`,
+`manual_audit`, `dependency_scan`, or other values). `review_type`
+is self-reported and informational — consumers MUST accept unknown
+values without error.
+
+Future claim types (`script_reviewed`, `conversion_verified`,
+`publisher_vouched`, `content_safety_reviewed`) will be defined in
+subsequent convention versions. The `claims` array accommodates
+them without schema changes.
+
+#### Self-attestation disclosure
+
+Self-attestation (where the attester is also the content author or
+publisher) is disclosed, not prohibited. Asymmetric enforcement:
+
+-   If `attester.id` and `subject.source_repo` share the same
+    hostname AND first path segment (user/org), `self_attestation`
+    MUST be `true` regardless of declared value.
+-   An attester MAY freely declare `self_attestation: true`.
+-   An attester MUST NOT declare `self_attestation: false` when
+    the domain comparison indicates self-attestation.
+
+Acceptable error direction: false positive (independent attester
+flagged as self) is acceptable. False negative (self-attester
+escaping to `false`) is a spec violation.
+
+This hostname comparison is a heuristic disclosure mechanism, not
+a security boundary. It catches the common case (same GitHub org)
+but cannot detect all self-attestation scenarios (e.g., an attester
+using a different org on the same forge). Future versions may use
+cryptographic identity for stronger binding.
+
+#### Verification contract
+
+1.  Verification inputs are `source_repo` + `source_commit`.
+2.  Implementations MUST resolve to the exact commit SHA. Branch
+    names and tags MUST NOT be accepted as substitutes.
+3.  Unresolvable SHA (repo deleted, force-pushed, made private)
+    MUST be treated as verification failure, not a warning.
+
+The algorithm MUST be implementable using only standard `git` CLI
+operations. Forge-specific API calls are a tooling optimization,
+not a requirement.
+
+#### Expiry
+
+`expires_at` is REQUIRED. After expiry, the attestation provides
+no trust signal. Recommended default: 12 months. Allowed range:
+6–24 months.
+
+When content changes, `content_hash` changes, and all attestations
+for the old hash are automatically invalid. Re-attestation is
+required for the new content.
+
+#### Attestation location
+
+Registries that publish attestations MUST store them at
+`.attestations/{content_hash}.json` in the registry repository,
+where the colon in the hash prefix is replaced with a hyphen.
+Example: content hash `sha256:a1b2c3d4...` → filename
+`sha256-a1b2c3d4....json`.
+
+Content authors MAY include attestation breadcrumbs in their source
+repository at `.syllago/attestations/{content_hash}.json`. Source-
+side records are informational audit trails, not trust anchors.
+
+When content moves between registries, the receiving registry
+SHOULD verify independently and issue its own attestation.
+
+#### Display requirements
+
+v0.1 attestation records are unsigned. Tooling MUST show the
+attester identity alongside any attestation status. Tooling MUST
+NOT display a bare "verified" or "trusted" badge without attester
+context. Tooling SHOULD indicate that v0.1 attestations are
+unsigned.
+
+### 9. Trust States
+
+*Stability: Draft*
+
+Registries MAY assign trust states to indexed content. These are
+registry-level metadata — a registry flags content; content does
+not flag itself.
+
+| State | Meaning |
+|-------|---------|
+| `active` | No issues known. May or may not have attestations. |
+| `quarantined` | Flagged for review. Not yet confirmed safe or malicious. |
+| `denounced` | Confirmed problematic. Removed from active index. |
+
+Tooling SHOULD NOT silently install `denounced` content.
+
+Registries MAY publish a `maintenance_status` for themselves
+(`active`, `maintenance-mode`, `archived`) to help consumers
+contextualize expired attestations.
+
 ---
 
 ## Full Example
+
+**SKILL.md:**
 
 ``` yaml
 ---
 name: code-review
 description: Reviews code for quality, security, and style. Use when reviewing PRs, checking code quality, or preparing code for merge.
 license: MIT
-metadata:
-  convention: "https://github.com/agent-ecosystem/metadata-convention/v0.1"
-  provenance:
-    version: "2.1.0"
-    source_repo: "https://github.com/acme-org/agent-skills"
-    source_repo_subdirectory: "/skills/code-review"
-    content_hash: "sha256:a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890"
-    authors:
-      - "Alice Smith <alice@example.com>"
-      - "Bob Jones <bob@acme.org>"
-    publisher: "acme-skills-registry"
-    license_spdx: "MIT"
-    license_url: "https://github.com/acme-org/agent-skills/blob/main/LICENSE"
-  tags:
-    - "code-quality"
-    - "review"
-    - "typescript"
-  status: "active"
-  durability: persistent
-  expectations:
-    software:
-      - name: "git"
-        version: ">=2.30"
-    runtimes:
-      - name: "node"
-        version: ">=18"
-  triggers:
-    mode: auto
-    activation: single
-    file_patterns:
-      - "**/*.ts"
-      - "**/*.js"
-    workspace_contains:
-      - ".github/pull_request_template.md"
-    commands:
-      - "review"
-    keywords:
-      - "code review"
-      - "review this PR"
-      - "check my code"
-  supported_agents:
-    - name: "claude-code"
-    - name: "cursor"
-    - name: "gemini-cli"
+metadata_file: ./SKILL.meta.yaml
 ---
 
 ## Instructions
 
 When reviewing code, follow these steps:
 ...
+```
+
+**SKILL.meta.yaml:**
+
+``` yaml
+metadata_spec: "https://github.com/agent-ecosystem/metadata-convention/v0.1"
+provenance:
+  version: "2.1.0"
+  source_repo: "https://github.com/acme-org/agent-skills"
+  source_commit: "abc123def456789012345678901234567890abcd"
+  source_repo_subdirectory: "/skills/code-review"
+  content_hash: "sha256:a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890"
+  authors:
+    - "Alice Smith <alice@example.com>"
+    - "Bob Jones <bob@acme.org>"
+  publisher: "acme-skills-registry"
+  license_spdx_id: "MIT"
+  license_url: "https://github.com/acme-org/agent-skills/blob/main/LICENSE"
+tags:
+  - "code-quality"
+  - "review"
+  - "typescript"
+status: "active"
+durability: persistent
+expectations:
+  software:
+    - name: "git"
+      version: ">=2.30"
+  runtimes:
+    - name: "node"
+      version: ">=18"
+triggers:
+  mode: auto
+  activation: single
+  activation_file_globs:
+    - "**/*.ts"
+    - "**/*.js"
+  activation_workspace_globs:
+    - ".github/pull_request_template.md"
+  commands:
+    - "review"
+  keywords:
+    - "code review"
+    - "review this PR"
+    - "check my code"
+supported_agents:
+  - name: "claude-code"
+  - name: "cursor"
+  - name: "gemini-cli"
 ```
 
 ---
@@ -816,18 +1147,23 @@ agents already implement — mostly for rules, not yet for skills. This
 table demonstrates that structured triggers are implementable without
 inventing new runtime capabilities.
 
+Convention trigger fields are read from the **sidecar file**
+(`SKILL.meta.yaml`), not from the SKILL.md frontmatter. Agents that
+implement this convention resolve `metadata_file` from the SKILL.md
+frontmatter, then read trigger fields from the sidecar.
+
 | Convention Field | Claude Code | Cursor | Kiro | Copilot | Gemini CLI |
 |---|---|---|---|---|---|
 | `mode: always` | Default behavior | `alwaysApply: true` | `inclusion: always` | Auto-attached instructions | N/D |
 | `mode: manual` | `/skill-name` invocation | Manual rule type | `inclusion: manual` + `#name` | N/D | N/D |
-| `file_patterns` | `paths:` (rules frontmatter) | `globs:` (rules frontmatter) | `fileMatch` + glob | `applyTo:` (instructions frontmatter) | N/D |
-| `workspace_contains` | No native equivalent | No native equivalent | No native equivalent | No native equivalent | No native equivalent |
+| `activation_file_globs` | `paths:` (rules frontmatter) | `globs:` (rules frontmatter) | `fileMatch` + glob | `applyTo:` (instructions frontmatter) | N/D |
+| `activation_workspace_globs` | No native equivalent | No native equivalent | No native equivalent | No native equivalent | No native equivalent |
 | `commands` | Slash command registration | N/D | N/D | N/D | `/command` registration |
 | `keywords` | `description` field (probabilistic) | `description` rule type | `description` for `auto` mode | Reminder prompt routing | N/D |
 
 **Notable findings:**
 
--   `workspace_contains` has **no native equivalent in any agent**. It
+-   `activation_workspace_globs` has **no native equivalent in any agent**. It
     is borrowed from VS Code's `activationEvents` and represents a
     genuinely new capability. Agents will need to build this, not just
     wire existing mechanisms.
@@ -851,21 +1187,28 @@ mechanisms across 12 agents.
 
 Agents consume SKILL.md files through three distinct loading
 architectures. Understanding which architecture an agent uses helps
-convention implementers predict how fields will be processed.
+convention implementers predict how sidecar fields will be processed.
 
-| Architecture | How It Works | Agents | How Convention Fields Are Consumed |
+With the sidecar pattern, convention field consumption is a two-step
+process: (1) the agent reads `metadata_file` from the SKILL.md
+frontmatter, (2) the agent reads convention fields from the sidecar.
+Agents that do not implement this convention skip both steps — the
+SKILL.md frontmatter contains at most one unrecognized field
+(`metadata_file`), not 30+ lines of convention metadata.
+
+| Architecture | How It Works | Agents | How Sidecar Fields Are Consumed |
 |---|---|---|---|
-| **Dedicated skill tool** | A specialized tool handler loads and injects skill content on activation | Codex CLI, Gemini CLI, Cline, Roo Code, OpenCode | Convention fields parsed by tool handler at activation time; can influence tool output format |
-| **Standard read\_file** | The model reads the skill file through the same mechanism as any file | GitHub Copilot | Convention fields visible to model as raw YAML (if not stripped); agent cannot act on them programmatically |
-| **Implicit injection** | The agent runtime reads and injects skill content without explicit model action | Claude Code, Cursor, Windsurf, Kiro, Amp, Junie | Convention fields parsed by runtime; can influence injection decisions (e.g., mode determines whether to inject) |
+| **Dedicated skill tool** | A specialized tool handler loads and injects skill content on activation | Codex CLI, Gemini CLI, Cline, Roo Code, OpenCode | Tool handler resolves `metadata_file`, reads sidecar at activation time; can influence tool output format |
+| **Standard read\_file** | The model reads the skill file through the same mechanism as any file | GitHub Copilot | Agent cannot programmatically read the sidecar. The model sees only `metadata_file: ./SKILL.meta.yaml` as a single line in frontmatter |
+| **Implicit injection** | The agent runtime reads and injects skill content without explicit model action | Claude Code, Cursor, Windsurf, Kiro, Amp, Junie | Runtime resolves `metadata_file`, reads sidecar; can influence injection decisions (e.g., mode determines whether to inject) |
 
 **Implications for convention fields:**
 
--   `triggers.mode` and `triggers.file_patterns` are only actionable on
+-   `triggers.mode` and `triggers.activation_file_globs` are only actionable on
     agents with dedicated skill tools or implicit injection. On
-    `read_file` agents (Copilot), the model sees triggers as YAML text
-    and must interpret them — which is the probabilistic activation
-    problem the convention aims to solve.
+    `read_file` agents (Copilot), the agent cannot read the sidecar
+    programmatically — the model sees only the `metadata_file` pointer,
+    not the trigger fields themselves.
 
 -   `durability` is only actionable on agents with implicit injection
     that also implement compaction protection. On other architectures,

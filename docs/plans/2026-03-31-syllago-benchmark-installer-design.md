@@ -1,6 +1,6 @@
 # Syllago Benchmark Installer - Design Document
 
-**Goal:** Use syllago to install the 17 agentskillimplementation.com benchmark skills across 12 AI coding agents, dogfooding syllago's cross-provider content distribution pipeline.
+**Goal:** Use syllago to install the 17 agentskillimplementation.com benchmark skills across 8 AI coding agents (the ones syllago currently supports with user-scope skill install), dogfooding syllago's cross-provider content distribution pipeline.
 
 **Decision Date:** 2026-03-31
 
@@ -8,9 +8,31 @@
 
 ## Problem Statement
 
-We need to install 17 benchmark skills (from `agent-ecosystem/agent-skill-implementation`) to 12 AI coding agents to run empirical behavioral checks. Today this requires manually copying SKILL.md directories to each agent's skill location — 204 copy operations (17 x 12). Syllago already supports skills as a universal content type and all 12 agents as providers. The gap is: no single command installs to all providers, and the benchmark repo isn't set up as a syllago registry.
+We need to install 17 benchmark skills (from `agent-ecosystem/agent-skill-implementation`) to AI coding agents to run empirical behavioral checks. Syllago supports 12 providers, of which 10 overlap with the benchmark's 12 agents. Of those 10, 2 are excluded for technical reasons: Cline (no skills support — `SupportsType` returns false) and Kiro (project-scope only — `InstallDir` returns `ProjectScopeSentinel`). Two more benchmark agents have no syllago provider at all: Junie CLI and GitHub Copilot VS Code extension (syllago has `copilot-cli` for the CLI tool, not the extension). Zed is supported by syllago but not in the benchmark.
+
+That gives us **8 agents** x 17 skills = 136 install operations that syllago should handle. Today this requires manually copying SKILL.md directories to each agent's skill location. Syllago already supports skills as a universal content type and all 8 target agents as providers. The gap is: no single command installs to all providers, and the benchmark repo isn't set up as a syllago registry.
 
 This is a perfect dogfooding opportunity: if syllago can't make this easy, it's failing at its core value proposition.
+
+### Agent Coverage
+
+| Agent | Syllago Slug | Installed? | In Benchmark? |
+|---|---|---|---|
+| Claude Code | `claude-code` | Yes | Yes |
+| Gemini CLI | `gemini-cli` | Yes | Yes |
+| Cursor | `cursor` | Yes | Yes |
+| Amp | `amp` | Yes | Yes |
+| Windsurf | `windsurf` | No | Yes |
+| Roo Code | `roo-code` | No | Yes |
+| OpenCode | `opencode` | No | Yes |
+| Codex | `codex` | No | Yes |
+
+**Excluded:**
+- Cline — syllago's Cline provider does not support skills (`SupportsType` returns false for `Skills`; Cline only supports rules, hooks, MCP)
+- Kiro — returns `ProjectScopeSentinel` for skills; installer refuses user-scope install. Kiro maps skills to project-level steering files in `.kiro/steering/`, which is a different concept than the benchmark expects
+- Junie CLI — no syllago provider
+- GitHub Copilot (VS Code extension) — syllago has `copilot-cli`, not the extension
+- Zed — syllago supports it but it's not in the benchmark
 
 ## Proposed Solution
 
@@ -46,7 +68,9 @@ syllago install --type skills --to-all
 - Install failure on one provider → continue with others, report at end
 - `--to-all` + `--to <provider>` → error, mutually exclusive
 
-**Scope:** ~30 lines of Go in the install command + flag registration. No new packages.
+**Scope:** ~50 lines of Go. Requires: (1) removing `MarkFlagRequired("to")` and adding runtime mutual-exclusion validation in `RunE`, (2) extracting a small `installToProvider` helper from the current interleaved install logic, (3) the detection loop + per-provider reporting. No new packages.
+
+**Note on WSL:** Providers with Windows-side config dirs (e.g., Cursor at `/mnt/c/Users/.../`) will automatically use copy instead of symlink — `IsWindowsMount()` in `symlink.go` handles this transparently. The "symlink default" in the design applies to Linux-native providers only.
 
 ### Layer 2: Benchmark repo as a syllago registry
 
@@ -67,9 +91,24 @@ syllago install --type skills --to-all
 **What this tests:**
 - `syllago registry add` — git clone + index
 - `syllago add` — discovery + canonicalization of SKILL.md files
-- Frontmatter parsing for all 17 skills (name, description, metadata fields)
-- Content types that are universal (skills) distribute without conversion
+- Frontmatter parsing for all 17 skills (name, description, metadata, allowed-tools, compatibility, etc.)
+- **Skill conversion pipeline** — skills are NOT just copied verbatim. Each provider gets a different SKILL.md with provider-appropriate frontmatter. Claude Code keeps the full superset (allowed-tools, context, agent, model, hooks, etc.). Gemini/Windsurf/Amp get only name+description. Cursor/Copilot/Kiro/OpenCode get intermediate subsets. Unsupported fields are embedded as prose behavioral notes. Tool names are translated between canonical and provider-native names via `TranslateTools()`. This is real hub-and-spoke conversion, not passthrough.
 - `--to-all` (Layer 1) for the actual installation
+
+**Converter coverage per provider:**
+
+| Provider | Frontmatter Fields Kept | Unsupported Fields Treatment |
+|---|---|---|
+| Claude Code | Full superset (13+ fields) | N/A — canonical source |
+| Cursor | name, description, license, compatibility, metadata, disable-model-invocation | Prose notes + tool name translation + hook warnings |
+| Copilot CLI | name, description, license, argument-hint, user-invocable, disable-model-invocation | Prose notes + hook warnings |
+| Kiro | name, description, license, compatibility, metadata | Prose notes + hook warnings |
+| OpenCode | name, description, license, compatibility, metadata | Prose notes |
+| Gemini CLI | name, description | Prose notes + tool name translation + hook warnings |
+| Windsurf | name, description | Prose notes + hook warnings |
+| Amp | name, description | Prose notes |
+| Roo Code | name, description | Prose notes |
+| Codex | Full superset (falls through to Claude Code renderer — no dedicated Codex case) | N/A — receives full CC frontmatter |
 
 **Registry structure concern:** The benchmark repo's skills are in `benchmark-skills/` not the standard `.agents/skills/` path. Syllago's scanner may need to handle this — either via a registry config that specifies the content root, or by the scanner being flexible enough to find SKILL.md files in non-standard locations. The scanner already does recursive SKILL.md discovery, so this may just work.
 
@@ -119,11 +158,14 @@ benchmark repo (GitHub)
     ↓ syllago add skills --all --from agent-skill-implementation
 ~/.syllago/content/skills/{17 benchmark skills}/   (canonical library)
     ↓ syllago install --type skills --to-all
-~/.claude/.agents/skills/probe-loading/            (symlink)
-~/.cursor/.agents/skills/probe-loading/            (symlink)
-~/.windsurf/.agents/skills/probe-loading/          (symlink)
-~/.config/gemini-cli/skills/probe-loading/         (symlink)
-... (12 providers total)
+~/.claude/skills/probe-loading/                    (symlink → claude-code)
+~/.cursor/skills/probe-loading/                    (symlink → cursor)
+~/.codeium/windsurf/skills/probe-loading/          (symlink → windsurf)
+~/.gemini/skills/probe-loading/                    (symlink → gemini-cli)
+~/.config/agents/skills/probe-loading/             (symlink → amp; shared cross-provider dir)
+~/.roo/skills/probe-loading/                       (symlink → roo-code)
+~/.config/opencode/skills/probe-loading/           (symlink → opencode)
+~/.agents/skills/probe-loading/                    (symlink → codex; shared cross-provider dir)
 ```
 
 ### Files Modified
@@ -151,6 +193,56 @@ benchmark repo (GitHub)
 3. `syllago install --type skills --to-all` installs to every detected provider
 4. Each agent can discover and list the benchmark skills (verified manually per agent)
 5. The canary phrase test works: open Claude Code, ask "Do you know CARDINAL-ZEBRA-7742?" — the skill is discoverable
+
+## Model Selection Per Agent
+
+Most of the 28 checks test **platform behavior** (does the harness load this file?), not model intelligence. The canary phrase approach ("do you know CARDINAL-ZEBRA-7742?") works with any model that can read its context and answer yes/no — Haiku-class models are fine.
+
+### Model-Sensitive Checks (6 of 28)
+
+These checks depend on the model's ability to follow prose instructions, chain activations, or handle edge cases. Results may differ between cheap and capable models:
+
+| Check | Why Model Matters |
+|---|---|
+| `cross-skill-invocation` | Model must follow prose instruction to activate another skill |
+| `invocation-depth-limit` | Model must chain A→B→C |
+| `invocation-language-sensitivity` | Model interprets non-English instructions |
+| `circular-invocation-handling` | Model must recognize or fail to recognize loops |
+| `informal-dependency-resolution` | Model follows prose dependency |
+| `missing-dependency-behavior` | Model's failure mode when skill doesn't exist |
+
+**Strategy:** Run all 28 checks with the cheapest available model first (platform behavior baseline). Then re-run only the 6 model-sensitive checks with a capable model to capture the delta. Record both results per the contribution template's "platform-level vs model-level" distinction.
+
+### Per-Agent Model Configuration
+
+| Agent | Installed? | Cheapest Model | Cost | Config |
+|---|---|---|---|---|
+| **Claude Code** | Yes | Haiku 4.5 | $0 (Pro subscription) | `claude --model haiku` or `/model haiku` in session |
+| **Gemini CLI** | Yes | Gemini 2.5 Flash | $0 (free tier) | `gemini --model gemini-2.5-flash` |
+| **Cursor** | Yes | Free tier model | $0 (50 slow requests) | Free plan auto-selects |
+| **Amp** | Yes | Frontier models (ad-supported) | $0 | Free tier, no model selection |
+| **Roo Code** | Not installed | Gemini Flash via Google AI Studio | $0 | Settings → API Provider → Google → gemini-2.0-flash |
+| **OpenCode** | Not installed | Gemini Flash via Google AI Studio | $0 | Config → provider: google, model: gemini-2.0-flash |
+| **Windsurf** | Not installed | Free tier model | $0 (25 credits) | Free plan auto-selects |
+| **Codex CLI** | Not installed | codex-mini | ~$0.10 total | `codex --model codex-mini-latest` |
+
+### Shared API Key Setup
+
+The 2 BYOK agents (Roo Code, OpenCode) accept a Google AI Studio API key. One key, two agents:
+
+1. Get a free API key from [aistudio.google.com](https://aistudio.google.com/)
+2. Configure each BYOK agent to use `gemini-2.0-flash` with that key
+3. Cost: $0 — Google AI Studio free tier covers thousands of requests/day
+
+### Total Benchmark Cost
+
+| Category | Agents | Cost |
+|---|---|---|
+| Already paying / free | Claude Code, Gemini CLI, Cursor, Amp | $0 |
+| BYOK with free API key | Roo Code, OpenCode | $0 |
+| Free tiers | Windsurf | $0 |
+| Paid auth required | Codex CLI | ~$0.10 |
+| **Total for 8 agents x 28 checks** | | **~$0.10** |
 
 ## Open Questions
 
