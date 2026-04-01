@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestNameFromURL(t *testing.T) {
@@ -377,6 +379,127 @@ items:
 	}
 	if len(hook.Scripts) != 1 || hook.Scripts[0] != "hooks/on-save.sh" {
 		t.Errorf("Items[1].Scripts = %v, want [hooks/on-save.sh]", hook.Scripts)
+	}
+}
+
+func TestManifestItemRoundtrip(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		item ManifestItem
+	}{
+		{
+			name: "all extended fields populated",
+			item: ManifestItem{
+				Name:         "my-skill",
+				Type:         "skills",
+				Provider:     "claude-code",
+				Path:         "skills/my-skill",
+				HookEvent:    "PostToolUse",
+				HookIndex:    2,
+				Scripts:      []string{"hooks/run.sh", "hooks/check.sh"},
+				DisplayName:  "My Awesome Skill",
+				Description:  "A skill that does awesome things",
+				ContentHash:  "sha256:abc123def456",
+				References:   []string{"lib/helper.ts", "config/settings.json"},
+				ConfigSource: ".claude/settings.json",
+				Providers:    []string{"claude-code", "gemini-cli"},
+			},
+		},
+		{
+			name: "only base fields",
+			item: ManifestItem{
+				Name:     "basic-rule",
+				Type:     "rules",
+				Provider: "gemini-cli",
+				Path:     "rules/basic.md",
+			},
+		},
+		{
+			name: "extended fields without base optional fields",
+			item: ManifestItem{
+				Name:        "analyzer-output",
+				Type:        "hooks",
+				Provider:    "claude-code",
+				Path:        ".claude/settings.json",
+				DisplayName: "Format on Save",
+				Description: "Runs formatter after file edits",
+				Providers:   []string{"claude-code"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Marshal to YAML
+			data, err := yaml.Marshal(&tt.item)
+			if err != nil {
+				t.Fatalf("Marshal: %v", err)
+			}
+
+			// Unmarshal back
+			var got ManifestItem
+			if err := yaml.Unmarshal(data, &got); err != nil {
+				t.Fatalf("Unmarshal: %v", err)
+			}
+
+			// Compare all fields
+			if got.Name != tt.item.Name {
+				t.Errorf("Name = %q, want %q", got.Name, tt.item.Name)
+			}
+			if got.Type != tt.item.Type {
+				t.Errorf("Type = %q, want %q", got.Type, tt.item.Type)
+			}
+			if got.Provider != tt.item.Provider {
+				t.Errorf("Provider = %q, want %q", got.Provider, tt.item.Provider)
+			}
+			if got.Path != tt.item.Path {
+				t.Errorf("Path = %q, want %q", got.Path, tt.item.Path)
+			}
+			if got.HookEvent != tt.item.HookEvent {
+				t.Errorf("HookEvent = %q, want %q", got.HookEvent, tt.item.HookEvent)
+			}
+			if got.HookIndex != tt.item.HookIndex {
+				t.Errorf("HookIndex = %d, want %d", got.HookIndex, tt.item.HookIndex)
+			}
+			if len(got.Scripts) != len(tt.item.Scripts) {
+				t.Errorf("Scripts len = %d, want %d", len(got.Scripts), len(tt.item.Scripts))
+			}
+			// Extended fields
+			if got.DisplayName != tt.item.DisplayName {
+				t.Errorf("DisplayName = %q, want %q", got.DisplayName, tt.item.DisplayName)
+			}
+			if got.Description != tt.item.Description {
+				t.Errorf("Description = %q, want %q", got.Description, tt.item.Description)
+			}
+			if got.ContentHash != tt.item.ContentHash {
+				t.Errorf("ContentHash = %q, want %q", got.ContentHash, tt.item.ContentHash)
+			}
+			if len(got.References) != len(tt.item.References) {
+				t.Errorf("References len = %d, want %d", len(got.References), len(tt.item.References))
+			} else {
+				for i := range got.References {
+					if got.References[i] != tt.item.References[i] {
+						t.Errorf("References[%d] = %q, want %q", i, got.References[i], tt.item.References[i])
+					}
+				}
+			}
+			if got.ConfigSource != tt.item.ConfigSource {
+				t.Errorf("ConfigSource = %q, want %q", got.ConfigSource, tt.item.ConfigSource)
+			}
+			if len(got.Providers) != len(tt.item.Providers) {
+				t.Errorf("Providers len = %d, want %d", len(got.Providers), len(tt.item.Providers))
+			} else {
+				for i := range got.Providers {
+					if got.Providers[i] != tt.item.Providers[i] {
+						t.Errorf("Providers[%d] = %q, want %q", i, got.Providers[i], tt.item.Providers[i])
+					}
+				}
+			}
+		})
 	}
 }
 
