@@ -298,7 +298,8 @@ items:
 }
 
 // TestScanFromIndex_EmptyRegistryYamlNoItems verifies a registry.yaml that
-// parses successfully but has zero items triggers the native walk (not the index path).
+// parses successfully but has zero items returns an empty catalog (Decision #41).
+// The items key is authoritative — an empty list means "no items," not "scan directories."
 func TestScanFromIndex_EmptyRegistryYamlNoItems(t *testing.T) {
 	t.Parallel()
 
@@ -307,7 +308,7 @@ func TestScanFromIndex_EmptyRegistryYamlNoItems(t *testing.T) {
 	// registry.yaml with explicit empty items list.
 	writeFile(t, filepath.Join(root, "registry.yaml"), "name: test-registry\nitems: []\n")
 
-	// Native layout skill — should be found via walk fallback.
+	// Native layout skill — should NOT be found (Decision #41: manifest is authoritative).
 	writeFile(t, filepath.Join(root, "skills", "walk-skill", "SKILL.md"),
 		"---\nname: Walk Skill\ndescription: By walk\n---\n")
 
@@ -316,12 +317,76 @@ func TestScanFromIndex_EmptyRegistryYamlNoItems(t *testing.T) {
 		t.Fatalf("scanRoot returned error: %v", err)
 	}
 
+	if len(cat.Items) != 0 {
+		t.Errorf("expected 0 items (empty items list is authoritative), got %d", len(cat.Items))
+	}
+}
+
+// TestScanFromIndex_ZeroItemsNoFallback verifies that a registry.yaml with an
+// explicit items list containing zero entries returns zero ContentItems and does
+// NOT fall back to native directory walking (Decision #41 — manifest is
+// authoritative when present).
+func TestScanFromIndex_ZeroItemsNoFallback(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+
+	// registry.yaml with zero items — should return zero results.
+	writeFile(t, filepath.Join(root, "registry.yaml"), "name: strict-registry\nitems: []\n")
+
+	// A skill exists in native layout — must NOT be discovered.
+	writeFile(t, filepath.Join(root, "skills", "hidden-skill", "SKILL.md"),
+		"---\nname: Hidden Skill\ndescription: Should not appear\n---\n")
+
+	cat := &Catalog{}
+	if err := scanRoot(cat, root, false); err != nil {
+		t.Fatalf("scanRoot returned error: %v", err)
+	}
+
+	if len(cat.Items) != 0 {
+		t.Errorf("expected 0 items (zero-item manifest is authoritative), got %d: %v",
+			len(cat.Items), cat.Items)
+	}
+}
+
+// TestScanFromIndex_ManifestFieldsFlowThrough verifies that displayName and
+// description fields in registry.yaml items flow through to ContentItem without
+// requiring the item's primary file to exist on disk.
+func TestScanFromIndex_ManifestFieldsFlowThrough(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+
+	// registry.yaml with extended fields — but NO files on disk for the item.
+	writeFile(t, filepath.Join(root, "registry.yaml"), `name: rich-registry
+items:
+  - name: phantom-skill
+    type: skills
+    provider: claude-code
+    path: skills/phantom-skill
+    displayName: Phantom Skill Display
+    description: A skill described only in the manifest
+`)
+
+	// Intentionally NOT creating skills/phantom-skill on disk.
+	// The manifest's displayName and description should still be available.
+
+	cat := &Catalog{}
+	if err := scanRoot(cat, root, false); err != nil {
+		t.Fatalf("scanRoot returned error: %v", err)
+	}
+
 	skills := cat.ByType(Skills)
 	if len(skills) != 1 {
-		t.Fatalf("expected 1 skill via native walk, got %d", len(skills))
+		t.Fatalf("expected 1 skill from manifest, got %d (items: %v)", len(skills), cat.Items)
 	}
-	if skills[0].Name != "walk-skill" {
-		t.Errorf("Name = %q, want %q", skills[0].Name, "walk-skill")
+
+	s := skills[0]
+	if s.DisplayName != "Phantom Skill Display" {
+		t.Errorf("DisplayName = %q, want %q", s.DisplayName, "Phantom Skill Display")
+	}
+	if s.Description != "A skill described only in the manifest" {
+		t.Errorf("Description = %q, want %q", s.Description, "A skill described only in the manifest")
 	}
 }
 

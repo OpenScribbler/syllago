@@ -218,6 +218,14 @@ type ManifestItem struct {
 	HookEvent string   `yaml:"hookEvent,omitempty"` // for hooks: event name
 	HookIndex int      `yaml:"hookIndex,omitempty"` // for hooks: index in event array
 	Scripts   []string `yaml:"scripts,omitempty"`   // for hooks: associated script files
+
+	// Extended fields (populated by analyzer; optional in authored manifests)
+	DisplayName  string   `yaml:"displayName,omitempty"`
+	Description  string   `yaml:"description,omitempty"`
+	ContentHash  string   `yaml:"contentHash,omitempty"`
+	References   []string `yaml:"references,omitempty"`
+	ConfigSource string   `yaml:"configSource,omitempty"`
+	Providers    []string `yaml:"providers,omitempty"`
 }
 
 // Manifest holds optional metadata from registry.yaml at the registry root.
