@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-25T07:31:51Z",
+  "generatedAt": "2026-04-01T16:13:30Z",
   "syllagoVersion": "dev",
   "commands": [
     {
@@ -2090,6 +2090,117 @@
       ],
       "examples": "  # Check if a loadout is active\n  syllago loadout status\n\n  # JSON output\n  syllago loadout status --json",
       "source": "cli/cmd/syllago/loadout_status.go"
+    },
+    {
+      "name": "manifest",
+      "displayName": "Manifest",
+      "slug": "manifest",
+      "parent": null,
+      "synopsis": "syllago manifest",
+      "description": "Manage registry manifests",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [
+        "generate"
+      ],
+      "seeAlso": [],
+      "examples": null,
+      "source": "cli/cmd/syllago/manifest_cmd.go"
+    },
+    {
+      "name": "manifest generate",
+      "displayName": "Manifest Generate",
+      "slug": "manifest-generate",
+      "parent": "manifest",
+      "synopsis": "syllago manifest generate [dir] [flags]",
+      "description": "Generate a registry.yaml for this repository",
+      "longDescription": "Analyze the current repository and generate a registry.yaml manifest.\nRun with --force to overwrite an existing registry.yaml. When overwriting,\na diff of added/removed/changed items is displayed before writing.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--force",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "overwrite existing registry.yaml"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "manifest"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/manifest_cmd.go"
     },
     {
       "name": "registry",
