@@ -52,7 +52,7 @@ func resolveRefs(path, repoRoot string, depth int, visited map[string]bool) []st
 	for _, sub := range knownSubdirs {
 		subDir := filepath.Join(itemDir, sub)
 		if info, err := os.Stat(subDir); err == nil && info.IsDir() {
-			filepath.WalkDir(subDir, func(p string, d os.DirEntry, e error) error {
+			_ = filepath.WalkDir(subDir, func(p string, d os.DirEntry, e error) error {
 				if e != nil || d.IsDir() {
 					return nil
 				}

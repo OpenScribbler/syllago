@@ -144,7 +144,7 @@ func TestSimpleDetectors_Classify(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Classify error: %v", err)
 			}
-			if items == nil || len(items) == 0 {
+			if len(items) == 0 {
 				t.Fatal("expected non-nil items, got nil")
 			}
 			if items[0].Type != tt.wantType {
