@@ -24,9 +24,10 @@ func TestWindsurfAdapterDecode_Simple(t *testing.T) {
 	var pre, post *CanonicalHook
 	for i := range hooks.Hooks {
 		h := &hooks.Hooks[i]
-		if h.Event == "before_tool_execute" {
+		switch h.Event {
+		case "before_tool_execute":
 			pre = h
-		} else if h.Event == "after_tool_execute" {
+		case "after_tool_execute":
 			post = h
 		}
 	}
