@@ -1,0 +1,75 @@
+{
+  "$schema": "handoff-v2",
+  "name": "provenance-attestation-spec-design",
+  "createdAt": "2026-04-01T19:45:00Z",
+  "current": {
+    "claimedBy": {
+      "sessionId": "current-session",
+      "claimedAt": "2026-04-02T01:35:05Z"
+    },
+    "project": "syllago",
+    "updated": "2026-04-02T01:33:22Z",
+    "sessionId": "b152b98b-f236-424a-bc20-2eb09c47ce33",
+    "summary": "Designed and wrote the Agent Content Provenance (ACP) specification — portable meta.yaml sidecar format for AI coding tool content provenance with dual hashes, Sigstore/SSH signing, and lineage tracking.",
+
+    "activeWork": {
+      "description": "ACP spec v0.1.0 draft complete. Went through full design cycle: brainstorm → content type mapping → adversarial panels (3 rounds) → external review (Claude + Gemini) → spec writing using spec-writing skill.",
+      "feature": null,
+      "stage": "execute",
+      "planRef": null,
+      "designRef": "docs/spec/skills/provenance.md",
+      "progress": "ACP spec draft complete at docs/spec/skills/acp-spec.md. Design doc with full decision history at docs/spec/skills/provenance.md. All 12 discussion points resolved or scoped out. Two rounds of external review feedback incorporated. One remaining task: generate inline test vectors for Appendix B.",
+      "blockers": [],
+      "beads": null
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": "21",
+      "lastCommit": "3b34379 handoff: CDR execution complete, content-based classification gap identified",
+      "modifiedFiles": [
+        "docs/spec/skills/acp-spec.md",
+        "docs/spec/skills/provenance.md",
+        "docs/spec/skills/llm-feedback.md"
+      ]
+    },
+
+    "recentDecisions": [
+      "Named the spec 'Agent Content Provenance (ACP)' — tool-agnostic, not syllago-branded",
+      "One provenance model for all content types — no executable vs instructional tiers. LLM is the execution engine; anything in context can cause execution.",
+      "Universal meta.yaml sidecar (not type-specific names like SKILL.meta.yaml) — type field inside is sufficient",
+      "Separate content_hash and meta_hash — content edits don't break metadata integrity and vice versa, but meta_hash INCLUDES content_hash to prevent mix-and-match attacks",
+      "Sigstore (OIDC) as primary signing method, SSH as fallback — platform-agnostic, not GitHub-specific. CI/CD Action = Let's Encrypt model for adoption.",
+      "JCS (RFC 8785) only for meta_hash, NOT for content files — raw bytes for all content hashing to reduce implementer burden",
+      "derived_from is a list (supports compose with multiple parents), all entries must use same relation type",
+      "Integer versioning (not semver), version resets to 1 on fork",
+      "Loadouts removed from spec (syllago-specific) — spec covers 6 types: skill, agent, hook, rule, mcp, command",
+      "Revocation is registry/distribution concern, not provenance spec — full design captured in roadmap for syllago implementation",
+      "Single .syllago/manifest.yaml for syllago bookkeeping (not per-item .syllago.yaml) — manifest is local, never travels",
+      "Collection-level provenance deferred — per-item meta.yaml for v0.1, collection approach needs more design"
+    ],
+
+    "nextSteps": [
+      "Generate inline test vectors for Appendix B — actual byte sequences and expected SHA-256 hashes for all 15 test cases",
+      "Run spec audit using /spec-writing audit workflow to catch any remaining issues",
+      "Commit all spec files (acp-spec.md, provenance.md, llm-feedback.md)",
+      "Consider moving acp-spec.md to its own top-level directory (docs/spec/acp/) since it covers all content types, not just skills",
+      "Plan syllago implementation: meta.yaml generation in publish flow, hash verification in install flow, Sigstore integration",
+      "Build reference implementation for content hash algorithm with the 15 test vectors",
+      "Design the CI/CD GitHub Action and GitLab CI template for automatic signing"
+    ],
+
+    "context": {
+      "notes": "KEY FILES:\n\n1. docs/spec/skills/acp-spec.md — THE SPEC. ACP v0.1.0 draft. Proper RFC 2119 language, conformance classes, security considerations.\n\n2. docs/spec/skills/provenance.md — DESIGN DOC. Full decision history with rationale for every choice. All 12 discussion points (D1-D12) documented with outcomes. Panel results preserved.\n\n3. docs/spec/skills/llm-feedback.md — EXTERNAL REVIEW. Feedback from Claude and Gemini on earlier draft. All issues addressed: derived_from list, meta_hash binding, namespace guidance, section numbering, test vectors, source format.\n\nARCHITECTURAL DECISIONS:\n- meta_hash includes content_hash (prevents mix-and-match attack where legitimate metadata paired with malicious content)\n- JCS only for meta_hash serialization, NOT for content file hashing (reduces implementer burden — consumers only need SHA-256)\n- Sigstore OIDC is platform-agnostic (GitHub, GitLab, CircleCI, Buildkite, Forgejo) — trust anchor is OIDC protocol, not any platform\n- Revocation system designed (revocations.json in registry index, signed entries, shrink detection) but scoped to registry layer, not provenance spec\n\nROADMAP ITEMS (in provenance.md):\n- Revocation system (registry layer) — panel-designed, ready for implementation\n- Collection-level provenance — single meta.yaml for repos with many items\n- Provenance fingerprint — 12-char hash in content frontmatter for orphan reconnection\n- Key-level revocation — revoke signing key, flag all content signed by it\n- Push-based revocation notifications"
+    }
+  },
+
+  "previousSessions": [
+    {
+      "summary": "Design provenance and attestation model for syllago content types — authorship, versioning, source binding, derivation lineage, content hashing.",
+      "updated": "2026-04-01T19:45:00Z",
+      "completedWork": ["Extensive prior research and adversarial review. Prior panel recommended 8-field minimum sidecar convention. Created initial handoff with full context from prior work."],
+      "nextSteps": ["Map content types to provenance needs", "Decide WHERE provenance lives", "Design content hash algorithm"]
+    }
+  ]
+}
