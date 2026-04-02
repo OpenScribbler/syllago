@@ -100,9 +100,12 @@ func (a *Analyzer) Analyze(repoDir string) (*AnalysisResult, error) {
 			}
 		}
 		csd := &ContentSignalDetector{}
-		fallbackItems, fallbackErr := csd.ClassifyUnmatched(unmatchedPaths, repoRoot, a.config.ScanAsPaths)
+		fallbackItems, skipEntries, fallbackErr := csd.ClassifyUnmatched(unmatchedPaths, repoRoot, a.config.ScanAsPaths, a.config.DebugSkips)
 		if fallbackErr != nil {
 			result.Warnings = append(result.Warnings, "content-signal fallback: "+fallbackErr.Error())
+		}
+		if a.config.DebugSkips {
+			result.SkipReasons = append(result.SkipReasons, skipEntries...)
 		}
 		for _, item := range fallbackItems {
 			if item == nil {

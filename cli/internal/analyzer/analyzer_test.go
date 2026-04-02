@@ -135,6 +135,30 @@ func TestAnalyzer_ContentSignalFallback_StrictDisabled(t *testing.T) {
 	}
 }
 
+func TestAnalyzer_DebugSkips_CollectsPreFilterExclusions(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	setupFile(t, root, "docs/overview.md", "# Overview\nDocumentation.\n")
+	setupFile(t, root, "agents/helper.go", "package agents\n")
+
+	cfg := DefaultConfig()
+	cfg.DebugSkips = true
+	a := New(cfg)
+	result, err := a.Analyze(root)
+	if err != nil {
+		t.Fatalf("Analyze error: %v", err)
+	}
+	var preFilterSkips int
+	for _, s := range result.SkipReasons {
+		if s.Reason == "pre_filter_excluded" {
+			preFilterSkips++
+		}
+	}
+	if preFilterSkips == 0 {
+		t.Error("expected pre_filter_excluded skip entries with debug-skips enabled")
+	}
+}
+
 func TestShouldTriggerInteractiveFallback(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

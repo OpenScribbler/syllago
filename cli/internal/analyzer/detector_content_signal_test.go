@@ -172,7 +172,7 @@ func TestContentSignalDetector_GlobalREADMEExcluded(t *testing.T) {
 	root := t.TempDir()
 	setupFile(t, root, "agents/README.md", "# Agents\nThis is documentation.\n")
 	d := &ContentSignalDetector{}
-	items, err := d.ClassifyUnmatched([]string{"agents/README.md"}, root, nil)
+	items, _, err := d.ClassifyUnmatched([]string{"agents/README.md"}, root, nil, false)
 	if err != nil {
 		t.Fatalf("ClassifyUnmatched error: %v", err)
 	}
