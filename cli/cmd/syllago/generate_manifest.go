@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
@@ -107,6 +110,15 @@ func runGenerateManifest(cmd *cobra.Command, args []string) error {
 	result, err := a.Analyze(absDir)
 	if err != nil {
 		return fmt.Errorf("analyzing repository: %w", err)
+	}
+
+	// Interactive fallback: when few items found and not in strict/batch mode,
+	// offer directory selection so the user can guide the scanner.
+	if analyzer.ShouldTriggerInteractiveFallback(result) && !generateManifestStrict && isInteractive() {
+		updated, fallbackErr := runInteractiveFallback(cmd, absDir, cfg, result)
+		if fallbackErr == nil && updated != nil {
+			result = updated
+		}
 	}
 
 	allItems := result.AllItems()
@@ -225,6 +237,124 @@ func validateScanAsPaths(paths map[string]catalog.ContentType, repoRoot string) 
 		}
 	}
 	return nil
+}
+
+// runInteractiveFallback presents a directory picker when few items are found.
+// Returns an updated AnalysisResult if the user selected directories, or nil.
+func runInteractiveFallback(cmd *cobra.Command, absDir string, cfg analyzer.AnalysisConfig, original *analyzer.AnalysisResult) (*analyzer.AnalysisResult, error) {
+	// List top-level directories (skip hidden, vendor, node_modules).
+	entries, err := os.ReadDir(absDir)
+	if err != nil {
+		return nil, err
+	}
+	var dirs []string
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" || name == "__pycache__" {
+			continue
+		}
+		dirs = append(dirs, name)
+	}
+	if len(dirs) == 0 {
+		return nil, nil
+	}
+
+	itemCount := len(original.AllItems())
+	fmt.Fprintf(cmd.ErrOrStderr(), "\nOnly %d item(s) detected. Select directories to scan for AI content:\n\n", itemCount)
+	for i, d := range dirs {
+		fmt.Fprintf(cmd.ErrOrStderr(), "  %3d) %s/\n", i+1, d)
+	}
+	fmt.Fprintf(cmd.ErrOrStderr(), "\nEnter directory numbers (comma-separated), or press Enter to skip: ")
+
+	scanner := bufio.NewScanner(os.Stdin)
+	if !scanner.Scan() {
+		return nil, nil
+	}
+	input := strings.TrimSpace(scanner.Text())
+	if input == "" {
+		return nil, nil
+	}
+
+	// Parse selected directories.
+	var selectedDirs []string
+	for _, part := range strings.Split(input, ",") {
+		idx, err := strconv.Atoi(strings.TrimSpace(part))
+		if err != nil || idx < 1 || idx > len(dirs) {
+			continue
+		}
+		selectedDirs = append(selectedDirs, dirs[idx-1])
+	}
+	if len(selectedDirs) == 0 {
+		return nil, nil
+	}
+
+	// Ask content type for each selected directory.
+	validTypes := "skills, agents, commands, rules, hooks, mcp"
+	newPaths := make(map[string]catalog.ContentType)
+	for _, dir := range selectedDirs {
+		fmt.Fprintf(cmd.ErrOrStderr(), "Content type for %s/ (%s): ", dir, validTypes)
+		if !scanner.Scan() {
+			break
+		}
+		typeName := strings.TrimSpace(scanner.Text())
+		ct := catalog.ContentType(typeName)
+		if !analyzer.IsValidContentType(ct) {
+			fmt.Fprintf(cmd.ErrOrStderr(), "  Skipping %s/ — unknown type %q\n", dir, typeName)
+			continue
+		}
+		newPaths[dir+"/"] = ct
+	}
+	if len(newPaths) == 0 {
+		return nil, nil
+	}
+
+	// Merge with existing scan-as paths and re-analyze.
+	for path, ct := range newPaths {
+		cfg.ScanAsPaths[path] = ct
+	}
+	a := analyzer.New(cfg)
+	updated, err := a.Analyze(absDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Offer to save selections to .syllago.yaml.
+	fmt.Fprintf(cmd.ErrOrStderr(), "\nSave selections to .syllago.yaml? [Y/n] ")
+	if scanner.Scan() {
+		answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
+		if answer == "" || answer == "y" || answer == "yes" {
+			existing, _ := analyzer.LoadScanAsConfig(absDir)
+			for path, ct := range newPaths {
+				existing.ScanAs = append(existing.ScanAs, analyzer.ScanAsEntry{Type: ct, Path: path})
+			}
+			if saveErr := analyzer.SaveScanAsConfig(absDir, existing); saveErr != nil {
+				fmt.Fprintf(cmd.ErrOrStderr(), "warning: could not save .syllago.yaml: %v\n", saveErr)
+			} else {
+				fmt.Fprintf(cmd.ErrOrStderr(), "Saved %d entries to .syllago.yaml\n", len(newPaths))
+			}
+		}
+	}
+
+	return updated, nil
+}
+
+// formatCapWarning returns a JSON-parseable warning for --json mode,
+// or a human-readable string for normal mode.
+func formatCapWarning(total int, jsonMode bool) string {
+	if jsonMode {
+		b, _ := json.Marshal(map[string]interface{}{
+			"type":    "cap_warning",
+			"message": fmt.Sprintf("content-signal candidate count %d exceeds 500-file cap", total),
+			"total":   total,
+			"capped":  500,
+			"hint":    "use --scan-as to target specific directories",
+		})
+		return string(b)
+	}
+	return fmt.Sprintf("warning: content-signal: %d files exceeded 500-file cap; use --scan-as to target directories", total)
 }
 
 // printManifestDiff prints a summary of what changed.

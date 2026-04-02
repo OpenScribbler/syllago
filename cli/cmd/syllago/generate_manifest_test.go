@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -148,6 +149,32 @@ func TestValidateScanAsEntries_ConflictRejected(t *testing.T) {
 	_, err := validateScanAsEntries([]string{"skills:Packs/", "agents:Packs/"})
 	if err == nil {
 		t.Error("expected error for conflicting type hints on same path")
+	}
+}
+
+func TestFormatCapWarning_JSON(t *testing.T) {
+	t.Parallel()
+	msg := formatCapWarning(600, true)
+	var v map[string]interface{}
+	if err := json.Unmarshal([]byte(msg), &v); err != nil {
+		t.Errorf("cap warning is not valid JSON: %v — %s", err, msg)
+	}
+	if v["type"] != "cap_warning" {
+		t.Errorf("cap warning missing type field: %v", v)
+	}
+	if v["total"].(float64) != 600 {
+		t.Errorf("expected total=600, got %v", v["total"])
+	}
+}
+
+func TestFormatCapWarning_Text(t *testing.T) {
+	t.Parallel()
+	msg := formatCapWarning(600, false)
+	if !strings.Contains(msg, "600") {
+		t.Errorf("text warning should contain count: %s", msg)
+	}
+	if !strings.Contains(msg, "--scan-as") {
+		t.Errorf("text warning should mention --scan-as: %s", msg)
 	}
 }
 
