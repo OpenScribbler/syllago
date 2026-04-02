@@ -71,6 +71,70 @@ func TestAnalyzer_HooksAlwaysConfirm(t *testing.T) {
 	}
 }
 
+func TestAnalyzer_ContentSignalFallback_PAIStyle(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	// PAI-style layout: Packs/<name>/SKILL.md — not matched by any pattern detector.
+	setupFile(t, root, "Packs/redteam-skill/SKILL.md",
+		"---\nname: Red Team Skill\ndescription: Security testing\n---\nContent.\n")
+	setupFile(t, root, "Packs/coding-skill/SKILL.md",
+		"---\nname: Coding Skill\ndescription: Writes code\n---\nContent.\n")
+
+	a := New(DefaultConfig())
+	result, err := a.Analyze(root)
+	if err != nil {
+		t.Fatalf("Analyze error: %v", err)
+	}
+	total := len(result.Auto) + len(result.Confirm)
+	if total < 2 {
+		t.Errorf("expected ≥2 detected items for PAI-style layout, got %d", total)
+	}
+	for _, item := range result.AllItems() {
+		if item.Provider == "content-signal" && item.Type != catalog.Skills {
+			t.Errorf("content-signal item %q should be Skills, got %v", item.Name, item.Type)
+		}
+	}
+}
+
+func TestAnalyzer_ContentSignalFallback_NoDoubleClassify(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	// Standard CC layout — should be handled by CC detector, NOT content-signal.
+	setupFile(t, root, ".claude/agents/my-agent.md",
+		"---\nname: My Agent\n---\nAgent body.\n")
+
+	a := New(DefaultConfig())
+	result, err := a.Analyze(root)
+	if err != nil {
+		t.Fatalf("Analyze error: %v", err)
+	}
+	for _, item := range result.AllItems() {
+		if item.Provider == "content-signal" {
+			t.Errorf("pattern-matched file %q should not be classified by content-signal detector", item.Path)
+		}
+	}
+}
+
+func TestAnalyzer_ContentSignalFallback_StrictDisabled(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	setupFile(t, root, "Packs/test-skill/SKILL.md",
+		"---\nname: Test\n---\nContent.\n")
+
+	cfg := DefaultConfig()
+	cfg.Strict = true
+	a := New(cfg)
+	result, err := a.Analyze(root)
+	if err != nil {
+		t.Fatalf("Analyze error: %v", err)
+	}
+	for _, item := range result.AllItems() {
+		if item.Provider == "content-signal" {
+			t.Errorf("strict mode should disable content-signal fallback, but found %q", item.Name)
+		}
+	}
+}
+
 func TestAnalyzer_SensitiveRoot(t *testing.T) {
 	t.Parallel()
 	a := New(DefaultConfig())

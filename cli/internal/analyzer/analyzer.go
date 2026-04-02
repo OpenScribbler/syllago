@@ -55,6 +55,12 @@ func (a *Analyzer) Analyze(repoDir string) (*AnalysisResult, error) {
 	// Step 2: Pattern matching.
 	candidates := MatchPatterns(walkResult.Paths, a.detectors)
 
+	// Build set of matched paths for content-signal fallback exclusion.
+	matchedPaths := make(map[string]bool, len(candidates))
+	for _, c := range candidates {
+		matchedPaths[c.Path] = true
+	}
+
 	// Step 3: Classify candidates.
 	var allItems []*DetectedItem
 	totalBytes := int64(0)
@@ -80,6 +86,29 @@ func (a *Analyzer) Analyze(repoDir string) (*AnalysisResult, error) {
 			if item.Type == catalog.Skills || item.Type == catalog.Agents {
 				item.References = ResolveReferences(item.Path, repoRoot)
 			}
+			SanitizeItem(item)
+			allItems = append(allItems, item)
+		}
+	}
+
+	// Step 3b: Content-signal fallback for unmatched files.
+	if !a.config.Strict {
+		var unmatchedPaths []string
+		for _, p := range walkResult.Paths {
+			if !matchedPaths[p] {
+				unmatchedPaths = append(unmatchedPaths, p)
+			}
+		}
+		csd := &ContentSignalDetector{}
+		fallbackItems, fallbackErr := csd.ClassifyUnmatched(unmatchedPaths, repoRoot, a.config.ScanAsPaths)
+		if fallbackErr != nil {
+			result.Warnings = append(result.Warnings, "content-signal fallback: "+fallbackErr.Error())
+		}
+		for _, item := range fallbackItems {
+			if item == nil {
+				continue
+			}
+			SanitizeItem(item)
 			allItems = append(allItems, item)
 		}
 	}

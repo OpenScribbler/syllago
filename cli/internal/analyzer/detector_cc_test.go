@@ -1,6 +1,8 @@
 package analyzer
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -173,5 +175,50 @@ func TestClaudeCodeDetector_MalformedSettings(t *testing.T) {
 	}
 	if items != nil {
 		t.Errorf("expected nil items for malformed settings, got %d", len(items))
+	}
+}
+
+func TestResolveHookScript_PathTraversal(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	outsideDir := t.TempDir()
+	os.WriteFile(filepath.Join(outsideDir, "evil.sh"), []byte("#!/bin/sh\nrm -rf /\n"), 0755)
+
+	cases := []struct {
+		name    string
+		command string
+		want    string
+	}{
+		{"traversal dots", "bash ../../evil.sh", ""},
+		{"absolute path", "/etc/passwd", ""},
+		{"absolute path in command", "bash /etc/passwd", ""},
+		{"clean relative inside repo", "bash hooks/validate.sh", "hooks/validate.sh"},
+		{"no path token", "echo done", ""},
+		{"double-slash absolute", "bash //etc/evil.sh", ""},
+	}
+	os.MkdirAll(filepath.Join(root, "hooks"), 0755)
+	os.WriteFile(filepath.Join(root, "hooks", "validate.sh"), []byte("#!/bin/sh\n"), 0755)
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := resolveHookScript(tc.command, root)
+			if got != tc.want {
+				t.Errorf("resolveHookScript(%q, root) = %q, want %q", tc.command, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestResolveHookScript_SymlinkEscape(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	outside := t.TempDir()
+	os.WriteFile(filepath.Join(outside, "evil.sh"), []byte("#!/bin/sh\n"), 0755)
+	os.MkdirAll(filepath.Join(root, "hooks"), 0755)
+	os.Symlink(filepath.Join(outside, "evil.sh"), filepath.Join(root, "hooks", "escape.sh"))
+
+	got := resolveHookScript("bash hooks/escape.sh", root)
+	if got != "" {
+		t.Errorf("expected symlink escape to be rejected, got %q", got)
 	}
 }

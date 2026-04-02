@@ -18,8 +18,8 @@ func TestTopLevelDetector_Patterns(t *testing.T) {
 	t.Parallel()
 	d := &TopLevelDetector{}
 	pats := d.Patterns()
-	if len(pats) != 13 {
-		t.Fatalf("Patterns() returned %d, want 13", len(pats))
+	if len(pats) != 17 {
+		t.Fatalf("Patterns() returned %d, want 17", len(pats))
 	}
 }
 
@@ -61,6 +61,34 @@ func TestTopLevelDetector_Classify(t *testing.T) {
 			relPath: "agents/empty.md",
 			content: "",
 			wantNil: true,
+		},
+		{
+			name:          "quick-win nested agents",
+			relPath:       "agents/coding/examples/helper.md",
+			content:       "# Helper\nHelper agent.\n",
+			wantType:      catalog.Agents,
+			wantConfident: 0.75,
+		},
+		{
+			name:          "quick-win examples agents",
+			relPath:       "examples/agents/my-agent.md",
+			content:       "# My Agent\nDoes things.\n",
+			wantType:      catalog.Agents,
+			wantConfident: 0.70,
+		},
+		{
+			name:          "quick-win examples skills",
+			relPath:       "examples/skills/my-skill/SKILL.md",
+			content:       "---\nname: My Skill\n---\nContent.\n",
+			wantType:      catalog.Skills,
+			wantConfident: 0.70,
+		},
+		{
+			name:          "quick-win examples commands",
+			relPath:       "examples/commands/run-tests.md",
+			content:       "# Run Tests\nRun all tests.\n",
+			wantType:      catalog.Commands,
+			wantConfident: 0.70,
 		},
 		{
 			name:          "prompts mapped to rules",
