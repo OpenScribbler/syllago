@@ -135,6 +135,30 @@ func TestAnalyzer_ContentSignalFallback_StrictDisabled(t *testing.T) {
 	}
 }
 
+func TestShouldTriggerInteractiveFallback(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		itemCount int
+		want      bool
+	}{
+		{0, true},
+		{3, true},
+		{5, true},
+		{6, false},
+		{20, false},
+	}
+	for _, tc := range cases {
+		result := &AnalysisResult{}
+		for range tc.itemCount {
+			result.Confirm = append(result.Confirm, &DetectedItem{})
+		}
+		got := ShouldTriggerInteractiveFallback(result)
+		if got != tc.want {
+			t.Errorf("itemCount=%d: got %v, want %v", tc.itemCount, got, tc.want)
+		}
+	}
+}
+
 func TestAnalyzer_SensitiveRoot(t *testing.T) {
 	t.Parallel()
 	a := New(DefaultConfig())

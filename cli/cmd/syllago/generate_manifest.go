@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -17,7 +19,11 @@ var manifestCmd = &cobra.Command{
 	Short: "Manage registry manifests",
 }
 
-var generateManifestForce bool
+var (
+	generateManifestForce  bool
+	generateManifestScanAs []string
+	generateManifestStrict bool
+)
 
 var generateManifestCmd = &cobra.Command{
 	Use:   "generate [dir]",
@@ -31,6 +37,10 @@ a diff of added/removed/changed items is displayed before writing.`,
 
 func init() {
 	generateManifestCmd.Flags().BoolVar(&generateManifestForce, "force", false, "overwrite existing registry.yaml")
+	generateManifestCmd.Flags().StringArrayVar(&generateManifestScanAs, "scan-as", nil,
+		"scan path as content type: type:path (e.g. skills:Packs/)")
+	generateManifestCmd.Flags().BoolVar(&generateManifestStrict, "strict", false,
+		"disable content-signal fallback; fatal on missing scan-as paths")
 	manifestCmd.AddCommand(generateManifestCmd)
 	rootCmd.AddCommand(manifestCmd)
 }
@@ -53,9 +63,20 @@ func runGenerateManifest(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Parse --scan-as flags.
+	scanAsPaths, err := validateScanAsEntries(generateManifestScanAs)
+	if err != nil {
+		return err
+	}
+	if err := validateScanAsPaths(scanAsPaths, absDir); err != nil {
+		return err
+	}
+
 	fmt.Fprintf(cmd.ErrOrStderr(), "Analyzing %s...\n", absDir)
 
 	cfg := analyzer.DefaultConfig()
+	cfg.ScanAsPaths = scanAsPaths
+	cfg.Strict = generateManifestStrict
 	a := analyzer.New(cfg)
 	result, err := a.Analyze(absDir)
 	if err != nil {
@@ -101,6 +122,67 @@ func runGenerateManifest(cmd *cobra.Command, args []string) error {
 
 	for _, w := range result.Warnings {
 		fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s\n", w)
+	}
+	return nil
+}
+
+// parseScanAsFlag parses a single "type:path" value.
+func parseScanAsFlag(s string) (catalog.ContentType, string, error) {
+	typePart, pathPart, ok := strings.Cut(s, ":")
+	if !ok {
+		return "", "", fmt.Errorf("--scan-as %q: expected type:path format", s)
+	}
+	typePart = strings.TrimSpace(typePart)
+	pathPart = strings.TrimSpace(pathPart)
+	if typePart == "" {
+		return "", "", fmt.Errorf("--scan-as %q: type is empty", s)
+	}
+	if pathPart == "" {
+		return "", "", fmt.Errorf("--scan-as %q: path is empty", s)
+	}
+	if strings.Contains(pathPart, " ") {
+		return "", "", fmt.Errorf("--scan-as %q: path contains spaces (use separate --scan-as flags for multiple paths)", s)
+	}
+	ct := catalog.ContentType(typePart)
+	valid := false
+	for _, vct := range catalog.AllContentTypes() {
+		if vct == ct {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		return "", "", fmt.Errorf("--scan-as %q: unknown content type %q (valid: skills, agents, commands, rules, hooks, mcp)", s, typePart)
+	}
+	return ct, pathPart, nil
+}
+
+// validateScanAsEntries parses all --scan-as values and checks for conflicting paths.
+func validateScanAsEntries(entries []string) (map[string]catalog.ContentType, error) {
+	if len(entries) == 0 {
+		return nil, nil
+	}
+	result := make(map[string]catalog.ContentType, len(entries))
+	for _, e := range entries {
+		ct, path, err := parseScanAsFlag(e)
+		if err != nil {
+			return nil, err
+		}
+		if existing, ok := result[path]; ok && existing != ct {
+			return nil, fmt.Errorf("--scan-as: conflicting type hints for path %q: %v vs %v", path, existing, ct)
+		}
+		result[path] = ct
+	}
+	return result, nil
+}
+
+// validateScanAsPaths checks that all scan-as paths exist within repoRoot.
+func validateScanAsPaths(paths map[string]catalog.ContentType, repoRoot string) error {
+	for p := range paths {
+		abs := filepath.Join(repoRoot, p)
+		if _, err := os.Stat(abs); err != nil {
+			return fmt.Errorf("--scan-as path %q not found: %w", p, err)
+		}
 	}
 	return nil
 }

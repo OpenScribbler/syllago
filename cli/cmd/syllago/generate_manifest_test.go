@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 )
 
@@ -115,4 +116,47 @@ func TestGenerateManifestCmd_HeaderComment(t *testing.T) {
 		t.Errorf("expected header comment, got:\n%s", string(data[:min(len(data), 100)]))
 	}
 	_ = stdout
+}
+
+func TestParseScanAsFlag_ValidFormats(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		input   string
+		wantErr bool
+	}{
+		{"skills:Packs/", false},
+		{"agents:src/bmm/agents/", false},
+		{"rules:governance/", false},
+		{"invalid-type:path/", true},
+		{"skills", true},
+		{"skills:", true},
+		{":path/", true},
+		{"skills:Packs/ agents:X", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			_, _, err := parseScanAsFlag(tc.input)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("parseScanAsFlag(%q) error=%v, wantErr=%v", tc.input, err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateScanAsEntries_ConflictRejected(t *testing.T) {
+	t.Parallel()
+	_, err := validateScanAsEntries([]string{"skills:Packs/", "agents:Packs/"})
+	if err == nil {
+		t.Error("expected error for conflicting type hints on same path")
+	}
+}
+
+func TestValidateScanAsPaths_PathNotFound(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	entries := map[string]catalog.ContentType{"nonexistent/": catalog.Skills}
+	err := validateScanAsPaths(entries, root)
+	if err == nil {
+		t.Error("expected error for nonexistent scan-as path")
+	}
 }

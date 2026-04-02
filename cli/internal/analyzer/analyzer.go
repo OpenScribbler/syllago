@@ -142,6 +142,12 @@ func (a *Analyzer) Analyze(repoDir string) (*AnalysisResult, error) {
 	return result, nil
 }
 
+// ShouldTriggerInteractiveFallback returns true if the result is sparse enough
+// to warrant user-directed discovery. Only applicable in interactive mode.
+func ShouldTriggerInteractiveFallback(result *AnalysisResult) bool {
+	return len(result.AllItems()) <= 5
+}
+
 // validateRepoRoot rejects paths that resolve to sensitive system roots.
 func validateRepoRoot(resolved string) error {
 	dangerous := []string{"/", "/etc", "/home", "/usr", "/var", "/sys", "/proc"}
