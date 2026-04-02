@@ -129,7 +129,7 @@ func checkWritable(dir string) error {
 	if err != nil {
 		return err
 	}
-	f.Close()
+	_ = f.Close()
 	_ = os.Remove(probe)
 	return nil
 }
