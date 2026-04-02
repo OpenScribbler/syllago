@@ -68,7 +68,7 @@ type Event struct {
 	ContentSignalFile          string        `json:"file,omitempty"`
 	ContentSignalConfidence    float64       `json:"confidence,omitempty"`
 	ContentSignalBucket        string        `json:"bucket,omitempty"`
-	ContentSignalSource        string        `json:"source,omitempty"`
+	ContentSignalSource        string        `json:"signal_source,omitempty"`
 	ContentSignalStaticSignals []SignalTrace `json:"signals_static,omitempty"`
 
 	// Execution fields
