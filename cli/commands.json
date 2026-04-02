@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-01T16:13:30Z",
+  "generatedAt": "2026-04-02T21:19:29Z",
   "syllagoVersion": "dev",
   "commands": [
     {
@@ -2153,12 +2153,44 @@
       "aliases": [],
       "flags": [
         {
+          "name": "--debug-skips",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "show per-file skip reasons for content-signal classification"
+        },
+        {
           "name": "--force",
           "shorthand": null,
           "type": "bool",
           "default": null,
           "required": false,
           "description": "overwrite existing registry.yaml"
+        },
+        {
+          "name": "--no-config",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "suppress .syllago.yaml loading (use with --strict for fully explicit CI control)"
+        },
+        {
+          "name": "--scan-as",
+          "shorthand": null,
+          "type": "stringArray",
+          "default": null,
+          "required": false,
+          "description": "scan path as content type: type:path (e.g. skills:Packs/)"
+        },
+        {
+          "name": "--strict",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "disable content-signal fallback; fatal on missing scan-as paths"
         }
       ],
       "inheritedFlags": [
