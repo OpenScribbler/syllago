@@ -135,7 +135,7 @@ func TestContentSignalDetector_FinalScore_Floor(t *testing.T) {
 	t.Parallel()
 	d := &ContentSignalDetector{}
 	// Base 0.40 + directory keyword 0.10 = 0.50 — must be dropped (below 0.55 floor).
-	score := d.computeScore([]signalEntry{{weight: 0.10}})
+	score := d.computeScore([]SignalEntry{{Weight: 0.10}})
 	if score >= 0.55 {
 		t.Errorf("base(0.40)+keyword(0.10)=0.50 must be below 0.55 floor, got %.2f", score)
 	}
@@ -145,12 +145,12 @@ func TestContentSignalDetector_FinalScore_Cap(t *testing.T) {
 	t.Parallel()
 	d := &ContentSignalDetector{}
 	// Many signals should be capped at 0.70.
-	score := d.computeScore([]signalEntry{
-		{weight: 0.25},
-		{weight: 0.25},
-		{weight: 0.20},
-		{weight: 0.15},
-		{weight: 0.10},
+	score := d.computeScore([]SignalEntry{
+		{Weight: 0.25},
+		{Weight: 0.25},
+		{Weight: 0.20},
+		{Weight: 0.15},
+		{Weight: 0.10},
 	})
 	if score > 0.70 {
 		t.Errorf("score should be capped at 0.70, got %.2f", score)
@@ -182,10 +182,10 @@ func TestContentSignalDetector_GlobalREADMEExcluded(t *testing.T) {
 }
 
 // sumWeights is a test helper.
-func sumWeights(signals []signalEntry) float64 {
+func sumWeights(signals []SignalEntry) float64 {
 	var total float64
 	for _, s := range signals {
-		total += s.weight
+		total += s.Weight
 	}
 	return total
 }

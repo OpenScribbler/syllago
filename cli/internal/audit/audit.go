@@ -35,6 +35,9 @@ const (
 	EventHookExecute   EventType = "hook.execute"
 	EventHookTimeout   EventType = "hook.timeout"
 	EventHookScan      EventType = "hook.scan"
+
+	// Content-signal classification events
+	EventContentSignalClassify EventType = "content-signal.classify"
 )
 
 // Event is a single audit log entry.
@@ -61,12 +64,25 @@ type Event struct {
 	ScanResult string `json:"scan_result,omitempty"`
 	ScanCount  int    `json:"scan_findings,omitempty"`
 
+	// Content-signal classification fields (for EventContentSignalClassify)
+	ContentSignalFile          string        `json:"file,omitempty"`
+	ContentSignalConfidence    float64       `json:"confidence,omitempty"`
+	ContentSignalBucket        string        `json:"bucket,omitempty"`
+	ContentSignalSource        string        `json:"source,omitempty"`
+	ContentSignalStaticSignals []SignalTrace `json:"signals_static,omitempty"`
+
 	// Execution fields
 	ExitCode   *int   `json:"exit_code,omitempty"`
 	Blocked    *bool  `json:"blocked,omitempty"`
 	DurationMs int    `json:"duration_ms,omitempty"`
 	Matcher    string `json:"matcher,omitempty"`
 	Error      string `json:"error,omitempty"`
+}
+
+// SignalTrace records one matched signal in a content-signal classification.
+type SignalTrace struct {
+	Signal string  `json:"signal"`
+	Weight float64 `json:"weight"`
 }
 
 // Logger writes audit events to a JSON Lines file.

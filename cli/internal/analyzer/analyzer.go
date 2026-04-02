@@ -91,6 +91,16 @@ func (a *Analyzer) Analyze(repoDir string) (*AnalysisResult, error) {
 		}
 	}
 
+	// Strict mode: validate config-file scan-as paths exist.
+	if a.config.Strict {
+		for p := range a.config.ScanAsPaths {
+			abs := filepath.Join(repoRoot, p)
+			if _, statErr := os.Stat(abs); statErr != nil {
+				return nil, fmt.Errorf("strict mode: scan-as path %q not found: %w", p, statErr)
+			}
+		}
+	}
+
 	// Step 3b: Content-signal fallback for unmatched files.
 	if !a.config.Strict {
 		var unmatchedPaths []string
@@ -99,6 +109,15 @@ func (a *Analyzer) Analyze(repoDir string) (*AnalysisResult, error) {
 				unmatchedPaths = append(unmatchedPaths, p)
 			}
 		}
+
+		// Cap content-signal candidates.
+		const maxContentSignalCandidates = 500
+		if len(unmatchedPaths) > maxContentSignalCandidates {
+			result.Warnings = append(result.Warnings,
+				fmt.Sprintf("content-signal: %d unmatched files exceeds 500-file cap; scanned first 500. Use --scan-as to target specific directories.", len(unmatchedPaths)))
+			unmatchedPaths = unmatchedPaths[:maxContentSignalCandidates]
+		}
+
 		csd := &ContentSignalDetector{}
 		fallbackItems, skipEntries, fallbackErr := csd.ClassifyUnmatched(unmatchedPaths, repoRoot, a.config.ScanAsPaths, a.config.DebugSkips)
 		if fallbackErr != nil {
