@@ -99,10 +99,10 @@ func (d *ContentSignalDetector) passesPreFilter(path string, userDirected bool) 
 	if userDirected {
 		return true
 	}
-	// Check that at least one path component contains a known keyword.
 	normalized := filepath.ToSlash(path)
 	parts := strings.Split(normalized, "/")
-	for _, part := range parts[:len(parts)-1] { // skip filename
+	// Check that at least one path component (including filename) contains a known keyword.
+	for _, part := range parts {
 		lower := strings.ToLower(part)
 		for _, kw := range directoryKeywords {
 			if strings.Contains(lower, kw) {
@@ -178,13 +178,13 @@ func (d *ContentSignalDetector) classifyFile(
 		}
 	}
 
-	if best.ct == "" || best.score < contentSignalFloor {
-		return nil
-	}
-
 	confidence := best.score
 	if userDirected {
 		confidence = min(confidence+0.20, 0.85)
+	}
+
+	if best.ct == "" || confidence < contentSignalFloor {
+		return nil
 	}
 
 	name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
