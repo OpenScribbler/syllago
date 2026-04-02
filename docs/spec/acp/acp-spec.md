@@ -193,7 +193,7 @@ Integer. The content version, incremented on each publish. Versions start at `1`
 
 #### 6.3.5 description (OPTIONAL)
 
-String. A short description of what the content does.
+String. A short description of what the content does. Default: absent.
 
 #### 6.3.6 authors (REQUIRED for team and public scope)
 
@@ -205,7 +205,7 @@ List of strings. Each entry identifies a human author. Format: `Name <email>` or
 
 #### 6.3.7 generated_by (OPTIONAL)
 
-String. Identifies the AI agent or tool used to generate the content. Format: `tool-name/version` (e.g., `claude-code/4.0`).
+String. Identifies the AI agent or tool used to generate the content. Format: `tool-name/version` (e.g., `claude-code/4.0`). Default: absent.
 
 This field is informational — it records tool involvement but does not independently affect verification outcomes. It IS included in `meta_hash` computation (Section 8), so changing this field changes the `meta_hash`.
 
@@ -217,13 +217,15 @@ String. The canonical source repository identifier. MUST be a URL without scheme
 
 #### 6.3.9 source_commit (OPTIONAL, RECOMMENDED for public scope)
 
-String. The git commit hash at publish time. SHOULD be included for publicly distributed content to support reproducibility and auditing.
+String. The git commit hash at publish time. Default: absent. SHOULD be included for publicly distributed content to support reproducibility and auditing.
 
 > **Note (Informative):** `source_commit` is a self-reported claim. It is verifiable by fetching the commit from the source repository but is not cryptographically bound to the content unless a signature is present.
 
 #### 6.3.10 published_at (REQUIRED for public scope)
 
-String. Timestamp of publication, conforming to [RFC3339] with mandatory UTC offset expressed as `Z` (not `+00:00`) and exactly seconds precision (e.g., `2026-04-01T14:32:00Z`). Sub-second precision MUST NOT be included — the canonical form is always `YYYY-MM-DDTHH:MM:SSZ`. MUST be computed by tooling at publish time. This constraint ensures a single canonical representation for identical timestamps, preventing `meta_hash` divergence from equivalent but differently-formatted timestamps.
+String. Timestamp of publication, conforming to [RFC3339] with mandatory UTC offset expressed as `Z` (not `+00:00`) and exactly seconds precision (e.g., `2026-04-01T14:32:00Z`). Sub-second precision MUST NOT be included — the canonical form is always `YYYY-MM-DDTHH:MM:SSZ`. MUST be computed by tooling at publish time.
+
+> **Note (Informative):** This constraint ensures a single canonical representation for identical timestamps, preventing `meta_hash` divergence from equivalent but differently-formatted timestamps.
 
 #### 6.3.11 content_hash (REQUIRED)
 
@@ -235,7 +237,7 @@ String. SHA-256 digest of the provenance metadata, computed according to Section
 
 #### 6.3.13 signature (OPTIONAL)
 
-Object. A cryptographic signature over both hashes. When present, consumers MUST verify it. Verification failure MUST result in rejection.
+Object. A cryptographic signature over both hashes. Default: absent. When present, consumers MUST verify it. Verification failure MUST result in rejection.
 
 The `signature` object contains:
 
@@ -253,7 +255,7 @@ The `signature` object contains:
 
 #### 6.3.14 derived_from (OPTIONAL)
 
-List of objects. Records lineage when content is created from existing content. Each entry represents one source and carries its own `relation` describing how that source was used.
+List of objects. Default: absent. Records lineage when content is created from existing content. Each entry represents one source and carries its own `relation` describing how that source was used.
 
 When the list contains a single entry, the relation describes the operation (`fork`, `convert`, or `adapt`). When the list contains two or more entries, composition is implied — the output was created by combining multiple sources. Each entry's `relation` describes how that specific source contributed (e.g., one source adapted, another forked).
 
@@ -622,19 +624,19 @@ Section 11.5 notes that SHA-256 compromise would require a new `meta_version`. A
 
 ### 12.1 Normative References
 
-- **[RFC2119]** Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997. https://www.rfc-editor.org/rfc/rfc2119
-- **[RFC3339]** Klyne, G. and C. Newman, "Date and Time on the Internet: Timestamps", RFC 3339, July 2002. https://www.rfc-editor.org/rfc/rfc3339
-- **[RFC8174]** Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words", BCP 14, RFC 8174, May 2017. https://www.rfc-editor.org/rfc/rfc8174
-- **[RFC8259]** Bray, T., Ed., "The JavaScript Object Notation (JSON) Data Interchange Format", STD 90, RFC 8259, December 2017. https://www.rfc-editor.org/rfc/rfc8259
-- **[RFC8785]** Rundgren, A., Jordan, B., and S. Erdtman, "JSON Canonicalization Scheme (JCS)", RFC 8785, June 2020. https://www.rfc-editor.org/rfc/rfc8785
-- **[UAX15]** Davis, M. and K. Whistler, "Unicode Normalization Forms", Unicode Standard Annex #15. https://unicode.org/reports/tr15/
-- **[YAML 1.2]** Ben-Kiki, O., Evans, C., and I. döt Net, "YAML Ain't Markup Language Version 1.2", October 2009. https://yaml.org/spec/1.2.2/
+- **[RFC2119]** Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997. <https://www.rfc-editor.org/rfc/rfc2119>
+- **[RFC3339]** Klyne, G. and C. Newman, "Date and Time on the Internet: Timestamps", RFC 3339, July 2002. <https://www.rfc-editor.org/rfc/rfc3339>
+- **[RFC8174]** Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words", BCP 14, RFC 8174, May 2017. <https://www.rfc-editor.org/rfc/rfc8174>
+- **[RFC8259]** Bray, T., Ed., "The JavaScript Object Notation (JSON) Data Interchange Format", STD 90, RFC 8259, December 2017. <https://www.rfc-editor.org/rfc/rfc8259>
+- **[RFC8785]** Rundgren, A., Jordan, B., and S. Erdtman, "JSON Canonicalization Scheme (JCS)", RFC 8785, June 2020. <https://www.rfc-editor.org/rfc/rfc8785>
+- **[UAX15]** Davis, M. and K. Whistler, "Unicode Normalization Forms", Unicode Standard Annex #15, Revision 53, February 2025. <https://unicode.org/reports/tr15/>
+- **[YAML 1.2]** Ben-Kiki, O., Evans, C., and I. döt Net, "YAML Ain't Markup Language Version 1.2", October 2009. <https://yaml.org/spec/1.2.2/>
 
 ### 12.2 Informative References
 
-- **[SIGSTORE]** Sigstore Project, "Sigstore: Software Signing for Everyone". https://docs.sigstore.dev/
-- **[REKOR]** Sigstore Project, "Rekor Transparency Log". https://docs.sigstore.dev/logging/overview/
-- **[FULCIO]** Sigstore Project, "Fulcio Certificate Authority". https://docs.sigstore.dev/certificate_authority/overview/
+- **[SIGSTORE]** Sigstore Project, "Sigstore: Software Signing for Everyone". <https://docs.sigstore.dev/>
+- **[REKOR]** Sigstore Project, "Rekor Transparency Log". <https://docs.sigstore.dev/logging/overview/>
+- **[FULCIO]** Sigstore Project, "Fulcio Certificate Authority". <https://docs.sigstore.dev/certificate_authority/overview/>
 
 ---
 
