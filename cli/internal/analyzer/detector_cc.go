@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -111,7 +110,8 @@ func classifyCCSettings(path, repoRoot string) ([]*DetectedItem, error) {
 }
 
 // resolveHookScript extracts a script path from a hook command string.
-// Returns the relative path if the file exists, empty string for inline commands.
+// Returns the relative path if the file exists within repoRoot, empty string otherwise.
+// Rejects absolute paths, path traversal (../), and symlinks that escape the repo root.
 func resolveHookScript(command, repoRoot string) string {
 	scriptExts := map[string]bool{
 		".sh": true, ".py": true, ".js": true, ".ts": true, ".rb": true, ".bash": true,
@@ -119,20 +119,35 @@ func resolveHookScript(command, repoRoot string) string {
 
 	tokens := strings.Fields(command)
 	for _, token := range tokens {
-		if strings.Contains(token, "/") || strings.Contains(token, "\\") {
-			// Token looks like a path.
-			abs := filepath.Join(repoRoot, token)
-			if _, err := os.Stat(abs); err == nil {
-				return token
-			}
+		if filepath.IsAbs(token) {
+			continue
 		}
-		ext := filepath.Ext(token)
-		if scriptExts[ext] {
-			abs := filepath.Join(repoRoot, token)
-			if _, err := os.Stat(abs); err == nil {
-				return token
-			}
+		cleaned := filepath.Clean(token)
+		if strings.HasPrefix(cleaned, "..") {
+			continue
 		}
+		hasPathSep := strings.Contains(token, "/") || strings.Contains(token, "\\")
+		hasScriptExt := scriptExts[filepath.Ext(token)]
+		if !hasPathSep && !hasScriptExt {
+			continue
+		}
+		abs := filepath.Join(repoRoot, cleaned)
+		resolved, err := filepath.EvalSymlinks(abs)
+		if err != nil {
+			continue
+		}
+		resolvedRoot, err := filepath.EvalSymlinks(repoRoot)
+		if err != nil {
+			continue
+		}
+		if !strings.HasPrefix(resolved+string(filepath.Separator), resolvedRoot+string(filepath.Separator)) {
+			continue
+		}
+		rel, err := filepath.Rel(resolvedRoot, resolved)
+		if err != nil || strings.HasPrefix(rel, "..") {
+			continue
+		}
+		return filepath.ToSlash(rel)
 	}
 	return ""
 }

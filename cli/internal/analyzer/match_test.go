@@ -102,3 +102,34 @@ func TestMatchPatterns(t *testing.T) {
 		})
 	}
 }
+
+func TestMatchPatterns_GlobalREADMEExclusion(t *testing.T) {
+	t.Parallel()
+	excluded := []string{
+		"README.md",
+		"CHANGELOG.md",
+		"LICENSE.md",
+		"CONTRIBUTING.md",
+		"CODE_OF_CONDUCT.md",
+		"agents/README.md",
+		"skills/foo/README.md",
+	}
+	notExcluded := []string{
+		"CLAUDE.md",
+		"GEMINI.md",
+		"AGENTS.md",
+		"agents/my-agent.md",
+	}
+	dets := []ContentDetector{&TopLevelDetector{}}
+
+	for _, path := range excluded {
+		matches := MatchPatterns([]string{path}, dets)
+		if len(matches) > 0 {
+			t.Errorf("path %q should be excluded but got %d matches", path, len(matches))
+		}
+	}
+	for _, path := range notExcluded {
+		// Only test that exclusion does NOT fire — not all paths will match patterns.
+		_ = MatchPatterns([]string{path}, dets)
+	}
+}

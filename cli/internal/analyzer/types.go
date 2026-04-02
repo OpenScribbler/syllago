@@ -79,10 +79,12 @@ type AnalysisResult struct {
 
 // AnalysisConfig controls analyzer behavior.
 type AnalysisConfig struct {
-	AutoThreshold float64  // default DefaultAutoThreshold
-	SkipThreshold float64  // default DefaultSkipThreshold
-	ExcludeDirs   []string // additional per-registry exclusions
-	SymlinkPolicy string   // "ask", "follow", "skip"
+	AutoThreshold float64                        // default DefaultAutoThreshold
+	SkipThreshold float64                        // default DefaultSkipThreshold
+	ExcludeDirs   []string                       // additional per-registry exclusions
+	SymlinkPolicy string                         // "ask", "follow", "skip"
+	Strict        bool                           // disables content-signal fallback
+	ScanAsPaths   map[string]catalog.ContentType // user-directed: path prefix → type
 }
 
 // DefaultConfig returns the default analysis configuration.

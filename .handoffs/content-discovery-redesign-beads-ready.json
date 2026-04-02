@@ -3,7 +3,7 @@
   "name": "content-discovery-redesign-beads-ready",
   "createdAt": "2026-04-01T04:50:00.000Z",
   "current": {
-    "claimedBy": null,
+    "claimedBy": { "sessionId": "b3109ea4-d949-4c1c-9da8-83998db2d4e4", "claimedAt": "2026-04-02T18:36:42Z" },
     "project": "syllago",
     "updated": "2026-04-02T00:20:49-07:00",
     "sessionId": "4de0a1d7-cc5a-4642-9fbc-4a696909c8ad",

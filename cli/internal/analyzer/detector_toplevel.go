@@ -29,6 +29,11 @@ func (d *TopLevelDetector) Patterns() []DetectionPattern {
 		{Glob: "hook-scripts/*/*.js", ContentType: catalog.Hooks, InternalLabel: "hook-script", Confidence: 0.70},
 		// B2 RESOLVED — prompts/*.md maps to catalog.Rules (not a separate Prompts type).
 		{Glob: "prompts/*.md", ContentType: catalog.Rules, Confidence: 0.75},
+		// Quick-win patterns for common non-standard layouts.
+		{Glob: "agents/*/*/*.md", ContentType: catalog.Agents, Confidence: 0.75},
+		{Glob: "examples/agents/*.md", ContentType: catalog.Agents, Confidence: 0.70},
+		{Glob: "examples/skills/*/SKILL.md", ContentType: catalog.Skills, Confidence: 0.70},
+		{Glob: "examples/commands/*.md", ContentType: catalog.Commands, Confidence: 0.70},
 	}
 }
 
