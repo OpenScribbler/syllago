@@ -1,0 +1,70 @@
+{
+  "$schema": "handoff-v2",
+  "name": "architectural-rethink-of-agent-skills-spec-moving",
+  "createdAt": "2026-04-01T08:08:44Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-01T11:03:05Z",
+    "sessionId": "33aa5ed8-94fd-466a-b75d-2f5965ea4b82",
+    "summary": "Architectural rethink of Agent Skills spec: moving from metadata convention refinement to foundational design of spec structure",
+    "activeWork": {
+      "description": "Agent Skills specification v0.1 — determining architectural approach (sidecar file vs. extend existing spec vs. new spec entirely) before fixing implementation details",
+      "feature": null,
+      "stage": "plan",
+      "planRef": null,
+      "designRef": "docs/spec/skills/metadata_convention.md",
+      "progress": "Identified 5 core pain points from research: activation reliability, no safety signal, no versioning, poor portability, no distribution story. User requested architectural pivot to reconsider spec foundation. Content_hash edge case analysis paused pending architecture decision.",
+      "blockers": [
+        "Architectural decision needed: sidecar file vs. extend existing spec vs. new spec entirely",
+        "Map 5 pain points to spec solutions (what does each pain point require?)",
+        "Balance community adoptability with realistic implementation scope"
+      ],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": "2",
+      "lastCommit": "c84848f chore: regenerate commands.json",
+      "modifiedFiles": [
+        "cli/.syllago/audit.jsonl"
+      ]
+    },
+    "recentDecisions": [
+      "Pivoted from incremental refinement to foundational architectural rethink",
+      "Committed research outputs (16 files, 2,205 lines) before architecture review"
+    ],
+    "nextSteps": [
+      "Map 5 pain points to potential spec solutions: which problems require which features?",
+      "Evaluate 3 architectural approaches (sidecar, integrated, new) against pain point map",
+      "Assess community adoptability and realistic implementation scope for each approach",
+      "Make architecture decision and document rationale",
+      "Design spec structure based on chosen architecture"
+    ],
+    "context": {
+      "notes": "Previous session completed deep community sentiment research (15 files) + 6-persona adversarial review of metadata convention. Spec has zero community contributions in 3.5 months. Current session: user recognized we were optimizing details on unvalidated structure. Wants to start from actual problems (5 pain points) and design spec architecture to solve them, rather than incrementally improving current metadata convention. No time pressure — emphasizing thoughtfulness and realism over speed."
+    }
+  },
+  "previousSessions": [
+    {
+      "summary": "Deep research on Agent Skills spec community sentiment, then adversarial review of metadata convention provenance design, leading to v0.1 strategy decisions",
+      "updated": "2026-04-01T10:45:00Z",
+      "completedWork": [
+        "Deep community sentiment research across GitHub, Reddit, HN, blogs, Twitter — 15 research files",
+        "Mapped all existing solution proposals for top 5 pain points",
+        "Discovered spec has ZERO community contributions in 3.5 months",
+        "6-persona adversarial review of full metadata convention",
+        "6-persona deep dive specifically on provenance design",
+        "Made two key strategy decisions: v0.1 ships with complete trust story (signed attestation, not unsigned), and outreach starts with agent ecosystem folks"
+      ],
+      "nextSteps": [
+        "Fix content_hash edge cases identified by panel (CRLF/binary, blanking regex, symlinks, unicode)",
+        "Evaluate SSH vs Sigstore for attestation signing — make decision",
+        "Build reference implementation for content_hash with 20+ test vectors",
+        "Prepare metadata convention for agent ecosystem community review",
+        "Reach out to agent ecosystem folks for real human review of provenance section",
+        "Commit all research files"
+      ]
+    }
+  ]
+}

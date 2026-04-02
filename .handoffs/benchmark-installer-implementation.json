@@ -1,0 +1,53 @@
+{
+  "$schema": "handoff-v2",
+  "name": "benchmark-installer-implementation",
+  "createdAt": "2026-04-02T17:49:49Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-02T10:49:49-07:00",
+    "sessionId": null,
+    "summary": "Reviewed benchmark installer implementation plan — assessed current state, all 4 layers are unstarted. Creating handoff for future execution.",
+
+    "activeWork": {
+      "description": "Implement --to-all flag and benchmark skill installer workflow",
+      "feature": null,
+      "stage": "plan",
+      "planRef": "docs/plans/2026-03-31-syllago-benchmark-installer-implementation.md",
+      "designRef": "docs/plans/2026-03-31-syllago-benchmark-installer-design.md",
+      "progress": "Plan is fully written with 4 layers and 14 tasks. No code or docs written yet. Layer 1 (--to-all flag) is the critical path — 8 tasks covering TDD tests, flag registration, mutual-exclusion validation, helper extraction, runInstallToAll implementation, regression suite, smoke test, and commit. Layers 2-4 follow after.",
+      "blockers": [],
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": [],
+        "readyNext": ["syllago-5dwo", "syllago-ohdb"]
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": "21",
+      "lastCommit": "a634fa5 docs: move ACP spec to docs/spec/acp/ with LICENSE",
+      "modifiedFiles": []
+    },
+
+    "recentDecisions": [
+      "Confirmed all 4 layers of the benchmark installer plan are unstarted — no partial work exists",
+      "Existing multi-provider loadout beads (syllago-5dwo, syllago-ohdb) are related but not the specific roadmap bead from Task 4.1"
+    ],
+
+    "nextSteps": [
+      "Execute Layer 1: Start with Task 1.1 (write failing tests for --to-all) in cli/cmd/syllago/install_cmd_test.go",
+      "Execute Layer 1 Tasks 1.2-1.7: Flag registration, validation, helper extraction, runInstallToAll, full test suite, smoke test",
+      "Execute Layer 1 Task 1.8: Commit with 'feat(install): add --to-all flag for multi-provider install'",
+      "Execute Layer 2: Manual benchmark registry setup and verification (depends on Layer 1)",
+      "Execute Layers 3-4: Workflow doc and roadmap bead (independent of Layer 2)"
+    ],
+
+    "context": {
+      "notes": "The implementation plan is very detailed with exact code blocks, file paths, and success criteria for each task. Follow it closely — it was designed for TDD (tests first in Task 1.1, implementation in 1.2-1.5). Key files: cli/cmd/syllago/install_cmd.go (implementation), cli/cmd/syllago/install_cmd_test.go (tests). The plan removes MarkFlagRequired('to') from cobra and replaces it with runtime validation in RunE — this is necessary for the mutual-exclusion logic to work. Watch for regressions in existing TestInstall* tests after removing MarkFlagRequired."
+    }
+  },
+
+  "previousSessions": []
+}
