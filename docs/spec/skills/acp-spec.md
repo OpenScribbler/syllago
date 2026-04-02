@@ -290,7 +290,7 @@ Computes the SHA-256 digest of a single file's raw bytes. This is used in Sectio
 
 ### 7.3 Directory Tree (Content Hash Algorithm)
 
-1. **Enumerate files.** Walk the content directory recursively. Exclude empty directories. Exclude `meta.yaml`. Exclude version control system directories (`.git/`, `.svn/`, `.hg/`, `CVS/`). Resolve symlinks whose fully resolved absolute target path is a descendant of the content directory's absolute path — use the resolved content under the symlink's path. Relative symlinks using `..` that resolve back inside the content directory are valid. Symlinks to directories MUST be recursively enumerated as if the directory contents existed at the symlink's path. Transitive symlink chains (A → B → C) MUST be fully resolved to the final target. Exclude symlinks with external targets (resolved target outside the content directory). Implementations MUST detect symlink cycles and reject the content as unpublishable.
+1. **Enumerate files.** Walk the content directory recursively. Exclude empty directories. Exclude the `meta.yaml` sidecar at the root of the content directory (nested `meta.yaml` files in subdirectories are included). Exclude version control system directories (`.git/`, `.svn/`, `_svn/`, `.hg/`, `CVS/`). Resolve symlinks whose fully resolved absolute target path is a descendant of the content directory's absolute path — use the resolved content under the symlink's path. Relative symlinks using `..` that resolve back inside the content directory are valid. Symlinks to directories MUST be recursively enumerated as if the directory contents existed at the symlink's path. Transitive symlink chains (A → B → C) MUST be fully resolved to the final target. Exclude symlinks with external targets (resolved target outside the content directory). Implementations MUST detect symlink cycles and reject the content as unpublishable.
 
 2. **Compute relative paths.** Each path MUST be relative to the content directory. Implementations MUST use forward slashes (`/`) as the path separator. Paths MUST NOT begin with `./` or end with `/`.
 
@@ -313,7 +313,7 @@ JSON content files (e.g., hook configurations, MCP settings) are hashed as raw b
 - Published content MUST use LF (0x0A) line endings. No CRLF normalization is performed; CRLF content produces a different hash than LF content (see Section 7.6).
 - Binary files are hashed as raw bytes with no transformation.
 - File permissions are excluded from the hash.
-- All files in the content directory are included, including hidden files, with the following exceptions: version control system directories (`.git/`, `.svn/`, `.hg/`, `CVS/`) MUST be excluded from content hash computation. These directories are repository metadata, not content. No other exclusion list is applied.
+- All files in the content directory are included, including hidden files, with the following exceptions: version control system directories (`.git/`, `.svn/`, `_svn/`, `.hg/`, `CVS/`) MUST be excluded from content hash computation. These directories are repository metadata, not content. No other exclusion list is applied.
 - Empty directories are excluded.
 - If enumeration produces zero files (e.g., content directory contains only `meta.yaml`), the content MUST be rejected as unpublishable. A content_hash requires at least one content file.
 
@@ -399,6 +399,7 @@ YAML parsers handle implicit typing differently — booleans, timestamps, intege
 **Additional YAML parsing requirements:**
 
 - YAML boolean coercion MUST NOT be applied to any field. Values like `yes`, `no`, `on`, `off` MUST be treated as strings if they appear in any field.
+- Integer fields (`meta_version`, `version`, `signature.log_index`) MUST be cast to 64-bit integers before JCS serialization. If a YAML parser returns a float (e.g., `version: 3.0`), implementations SHOULD reject the value with an error rather than silently coercing to integer — the publisher's YAML is malformed and should be corrected.
 - YAML anchors and aliases MUST be fully resolved before serialization.
 - Multi-line YAML strings (folded or literal block scalars) MUST be resolved to their final string value, with trailing newlines preserved as-is.
 - Absent optional fields MUST be omitted from the JSON object — they MUST NOT be serialized as `null`. An omitted field and a field set to `null` produce different JCS output and different `meta_hash` values.
@@ -484,7 +485,7 @@ When content is mechanically converted between provider formats (e.g., via hub-a
 
 ### 10.4 Lineage Chains
 
-Each `derived_from` entry records only the immediate source — not the full derivation history. If Alice publishes A, Bob adapts A into B, and Carol adapts B into C, Carol's `meta.yaml` records `derived_from: B` only. The full chain (C → B → A) is recoverable by following `source_hash` references across multiple `meta.yaml` files, but requires access to each intermediate source. ACP does not embed transitive lineage in a single sidecar.
+Each `derived_from` entry records only the immediate source — not the full derivation history. If Alice publishes A, Bob adapts A into B, and Carol adapts B into C, Carol's `meta.yaml` records `derived_from: B` only. The full chain (C → B → A) is recoverable by following `source_hash` references across multiple `meta.yaml` files, but requires access to each intermediate source. ACP does not embed transitive lineage in a single sidecar. ACP provides point-in-time integrity, not permanent availability — if an intermediate source is deleted, the lineage chain terminates at a verifiable but unretrievable hash.
 
 ## 11. Security Considerations
 
@@ -530,11 +531,11 @@ If a signing key is compromised, all content signed by that key SHOULD be consid
 
 ### 11.7 Content Execution Risk
 
-All content types covered by this specification can potentially cause code execution when loaded by an AI coding agent. ACP does not assess or attest to the safety of content. Provenance records facts about origin and integrity, not safety judgments. Install safety mechanisms (quarantine, behavioral scanning, health signals) are separate concerns.
+All content types covered by this specification can potentially cause code execution when loaded by an AI coding agent. ACP does not assess or attest to the safety of content. Provenance records facts about origin and integrity, not safety judgments. Install safety mechanisms (quarantine, behavioral scanning, health signals) are separate concerns. Additionally, ACP-verified content directories may contain filesystem artifacts not covered by the content hash — external symlinks are excluded from the hash (Section 7.3 step 1) but may still exist on disk and be readable by agents or tooling.
 
 ### 11.8 Sensitive Files in Content Directories
 
-Publishers MUST NOT include sensitive files (credentials, API keys, `.env` files, private keys) in content directories. All files in the content directory — including hidden files — are included in the content hash (Section 7.5) and may be redistributed with the content. OS-generated metadata files (`.DS_Store`, `Thumbs.db`) are included if present; publishers SHOULD remove them before publishing.
+Publishers MUST NOT include sensitive files (credentials, API keys, `.env` files, private keys) in content directories. All files in the content directory — including hidden files — are included in the content hash (Section 7.5) and may be redistributed with the content. OS-generated metadata files (`.DS_Store`, `Thumbs.db`) are included if present; publishers SHOULD remove them before publishing. Publishers SHOULD also audit content directories for external symlinks before publishing — these are excluded from the content hash but remain on disk and may be readable by agents or tooling.
 
 ACP does not provide a custom exclusion mechanism (e.g., `.acpignore`) beyond the hardcoded VCS directory exclusion. This is consistent with supply chain integrity tools (Sigstore DSSE, in-toto) that deliberately hash what exists rather than filtering during integrity computation. Exclusion logic in the integrity layer creates an implicit trust boundary — if the exclusion parser has a bug or is crafted maliciously, files silently leave the integrity envelope. Publishers are responsible for curating content directories before publishing.
 
@@ -547,6 +548,8 @@ Without identity verification, an attacker can sign content with their own valid
 The identity matching algorithm is deliberately unspecified — it is a consumer policy decision. Common approaches include exact string matching, prefix matching for organizational trust (e.g., trusting all identities under a GitHub organization), and regular expression patterns. Consumers SHOULD document their identity matching behavior.
 
 Additionally, Sigstore identity can be confusing at a glance. An attacker who creates `github.com/alice-security/code-review` (their own repository) can sign with a valid OIDC identity that visually resembles a trusted publisher. Consumers that display signer identities SHOULD present the full identity string without truncation.
+
+Implementations MUST NOT use substring matching or `contains()` checks for identity verification. For example, an attacker with identity `malicious@github.com/alice/code-review` would pass a `contains("github.com/alice/code-review")` check. Prefix matching anchored to a path boundary (e.g., `github.com/alice/` matching only identities that begin with that exact string followed by `/`) is safer than unconstrained substring matching.
 
 ### 11.10 Self-Reported Claims Exploitability
 
@@ -570,7 +573,7 @@ Section 11.4 describes full sidecar removal. Additional downgrade vectors exist:
 
 - **Signature stripping.** An attacker removes the `signature` field from `meta.yaml` without modifying other fields. Because `signature` is excluded from `meta_hash` computation (Section 8.1), removing it leaves `meta_hash` intact — no recomputation is needed. The content silently downgrades from signed to unsigned with all hashes still verifying. Strict consumers (Section 5.2.2) can defend against this when their policy requires signatures.
 
-- **No publisher-asserted signature requirement.** There is no mechanism for a publisher to assert "this content MUST be signed" in a way that consumers are required to enforce. A registry could strip signatures from all content and redistribute it as unsigned. Strict consumers with explicit signature requirements provide the strongest defense.
+- **No publisher-asserted signature requirement.** There is no mechanism for a publisher to assert "this content MUST be signed" in a way that consumers are required to enforce. A sidecar field (e.g., `enforce_signature: true`) would not solve this — an attacker stripping the signature can recompute `meta_hash` with the field removed or set to `false`, and permissive consumers have no obligation to honor it. Signature enforcement belongs in consumer policy configuration, not the sidecar. Strict consumers with explicit signature requirements provide the strongest defense.
 
 ### 11.12 Namespace and Version Attacks
 
@@ -606,7 +609,7 @@ Section 11.5 notes that SHA-256 compromise would require a new `meta_version`. A
 
 - **Deprecation and yanking.** ACP does not define a field for marking a version as unsafe or deprecated. This is deliberately deferred to registries, which control distribution and have the operational authority to remove or flag content. ACP records provenance, not lifecycle state.
 
-- **Rekor verification.** Sigstore consumers that fetch transparency log entries by `log_index` (Section 9.2) SHOULD verify inclusion proofs. Trusting Rekor responses without verification is vulnerable to a compromised or spoofed Rekor instance.
+- **Rekor verification.** Sigstore consumers that fetch transparency log entries by `log_index` (Section 9.2) SHOULD verify inclusion proofs. Inclusion proofs are returned as part of the Rekor transparency log response and cryptographically demonstrate that an entry exists in the log's Merkle tree. Trusting Rekor responses without verifying inclusion proofs is vulnerable to a compromised or spoofed Rekor instance. See [REKOR] for verification API details.
 
 - **Offline verification.** Sigstore verification requires network access for Rekor and Fulcio interactions. For air-gapped environments, SSH signing (Section 9.3) provides an offline-capable alternative that requires no network access.
 
@@ -1000,7 +1003,31 @@ JCS ([RFC8785]) canonical JSON:
 meta_hash: sha256:cc2faf328de4c45bd5d9816c3709e29fffdbcb9438dcf076213079f6be7aedc9
 ```
 
-Validates: JCS serialization of nested structures (`derived_from` list of objects). Keys within nested objects are sorted alphabetically per RFC 8785. The `source_hash` matches TV-MH's `content_hash`, forming a traceable lineage chain. The `version: 1` reflects the reset rule from Section 10.2 (adaptation creates a new lineage). Bob's `content_hash` (TV-06) differs from Alice's (TV-03) because the adapted content has different files.
+Validates: JCS serialization of nested structures (`derived_from` list of objects). Keys within nested objects are sorted alphabetically per RFC 8785. The `source_hash` matches TV-MH's `content_hash`, forming a traceable lineage chain. The `version: 1` reflects the reset rule from Section 10.2 (adaptation creates a new lineage). Bob's `content_hash` (TV-06) differs from Alice's (TV-03) because the adapted content has different files. Also validates: absent optional fields (`generated_by`, `source_commit`) are correctly omitted from JCS output — they do not appear as `null` values in the canonical JSON (Section 8.2).
+
+### TV-MH3: Minimal local-scope meta hash (Section 8)
+
+Input: A local-scope `meta.yaml` with only the 5 required fields — no optional fields present. This is the most common real-world case for personal-use content.
+
+```yaml
+meta_version: 1
+type: skill
+name: local-tool
+version: 1
+content_hash: "sha256:9c9c3591140eae4e0f047060470af98da00629b668f152ac6d4846e64ff91d40"
+```
+
+JCS ([RFC8785]) canonical JSON:
+
+```
+{"content_hash":"sha256:9c9c3591140eae4e0f047060470af98da00629b668f152ac6d4846e64ff91d40","meta_version":1,"name":"local-tool","type":"skill","version":1}
+```
+
+```
+meta_hash: sha256:8c0917eaaa0323f66b0213911a61b5407794f8145d258570deba77d1e59d0f4e
+```
+
+Validates: Minimal field set for local-scope content (Section 6.4). All optional fields (`authors`, `description`, `generated_by`, `source_repo`, `source_commit`, `published_at`, `derived_from`) are absent and correctly excluded from JCS output — not serialized as `null`. An implementation that accidentally includes absent fields as `null` will produce a different (incorrect) `meta_hash`. The `content_hash` reuses TV-03's value.
 
 ### TV-SI: Signing input construction (Section 9.1)
 
