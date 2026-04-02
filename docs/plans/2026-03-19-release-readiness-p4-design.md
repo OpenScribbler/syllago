@@ -69,7 +69,7 @@ Source: GitHub release notes in `releases/` directory and git log.
 
 Auto-close external PRs with a friendly redirect to issue templates.
 
-**Allowlist:** holdenhewett, OpenScribblerOwner, dependabot[bot]
+**Allowlist:** holdenhewett, Open-Scribbler, dependabot[bot]
 
 **Message:**
 ```

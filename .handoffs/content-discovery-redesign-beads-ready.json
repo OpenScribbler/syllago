@@ -3,78 +3,76 @@
   "name": "content-discovery-redesign-beads-ready",
   "createdAt": "2026-04-01T04:50:00.000Z",
   "current": {
-    "claimedBy": { "sessionId": "b3109ea4-d949-4c1c-9da8-83998db2d4e4", "claimedAt": "2026-04-02T18:36:42Z" },
+    "claimedBy": null,
     "project": "syllago",
-    "updated": "2026-04-02T00:20:49-07:00",
-    "sessionId": "4de0a1d7-cc5a-4642-9fbc-4a696909c8ad",
-    "summary": "Designed content-based classification feature: 3 panel reviews (4 personas × 5 rounds each), design doc with 9 components, implementation plan with 19 tasks, 19 beads created with dependency chains. Ready to execute in worktree.",
+    "updated": "2026-04-02T21:12:52Z",
+    "sessionId": "b3109ea4-d949-4c1c-9da8-83998db2d4e4",
+    "summary": "Executed all 18 implementation tasks for content-based classification (phases 1-9). 6 commits, +2,248 lines. Found and fixed 2 detector bugs via integration tests. Only TUI confirm-bucket rendering remains — ready for brainstorm.",
 
     "activeWork": {
-      "description": "Content-based classification: design complete, plan validated, beads created, ready for execution",
+      "description": "TUI confirm-bucket rendering with confidence tier labels — needs brainstorm before implementation",
       "feature": "content-based-classification",
-      "stage": "execute",
+      "stage": "brainstorm",
       "planRef": "docs/plans/2026-04-01-content-based-classification-implementation.md",
       "designRef": "docs/plans/2026-04-01-content-based-classification-design.md",
-      "progress": "Full develop workflow complete through beads stage. Design doc covers 9 components (content-signal detector, user-directed discovery, quick-win patterns, README exclusion, sanitization boundary, strict mode, config persistence, audit traces, confidence tiers). 3 panel reviews with 4 personas (developer, security, DevOps, IT admin) across 13 rounds total. 4 blocking security requirements (B1-B4), 10 important requirements (I1-I10). Implementation plan: 19 tasks across 9 phases, validated (8 gaps found and fixed). 19 beads with 24 dependency links created.",
+      "progress": "All 18 implementation beads from the plan are closed. 6 commits landed on main. New files: detector_content_signal.go, sanitize.go, vocabulary.go, scanconfig.go, confidence.go, integration_test.go. Modified: analyzer.go (pipeline wiring), generate_manifest.go (--scan-as, --strict, --no-config, --debug-skips, interactive fallback, confidence tier CLI output), audit.go (signal trace events), types.go (SkipEntry, DebugSkips, NoConfig, Signals, ScanAsPaths), detector_cc.go (path traversal fix), match.go (README exclusion), detector_toplevel.go (quick-win patterns). One remaining bead: syllago-6fubw (TUI confirm-bucket rendering). User chose 'full brainstorm first' for this — session ended before brainstorm started.",
       "blockers": [],
       "beads": {
         "inProgress": [],
-        "completedThisSession": [],
-        "readyNext": ["syllago-s3fh6", "syllago-6219t", "syllago-a4nur", "syllago-fuftm", "syllago-0cn7x", "syllago-03cei"]
+        "completedThisSession": [
+          "syllago-s3fh6", "syllago-6219t", "syllago-a4nur", "syllago-fuftm",
+          "syllago-1aso5", "syllago-3rp34", "syllago-s9g30", "syllago-0cn7x",
+          "syllago-dfl0b", "syllago-wajqv", "syllago-wedav", "syllago-0byne",
+          "syllago-94hvu", "syllago-ddxn2", "syllago-03cei", "syllago-sgbpg",
+          "syllago-yjbax", "syllago-a46mp", "syllago-4bjck", "syllago-2in3l"
+        ],
+        "readyNext": ["syllago-6fubw"]
       }
     },
 
     "git": {
       "branch": "main",
-      "uncommittedFiles": "19",
-      "lastCommit": "ed40f51 docs: ACP spec final polish — 11 edge case fixes from third-round review",
+      "uncommittedFiles": "10",
+      "lastCommit": "70a2fce fix: content-signal detector bugs found by integration tests",
       "modifiedFiles": [
-        "docs/plans/2026-04-01-content-based-classification-design.md (new — 9 components, panel findings)",
-        "docs/plans/2026-04-01-content-based-classification-implementation.md (new — 19 tasks, 2737 lines)",
-        ".develop/content-based-classification.json (develop state at execute stage)",
-        ".develop/content-based-classification-quality-report.md (passed)",
-        ".develop/content-based-classification-validation-report.md (passed, attempt 2)",
-        ".handoffs/content-discovery-redesign-beads-ready.json (updated)"
+        "docs/plans/2026-04-01-install-safety-design.md (from other session, not ours)",
+        "cli/.syllago/audit.jsonl (auto-generated)"
       ]
     },
 
     "recentDecisions": [
-      "Content-signal detector runs as FALLBACK only — after all pattern-based detectors, only on unmatched files",
-      "Dynamic converter signals are informational-only — excluded from threshold scoring to prevent injection attacks (B3)",
-      "All classification vocabulary hardcoded in binary — hook event names, fingerprints not loaded from converters (B4)",
-      "Threshold floor raised from 0.50 to 0.55 — eliminates .github/workflows/ false positives",
-      "Sanitization ordering: classify → sanitize → audit write (never raw values in audit log)",
-      "Layered config: org baseline → project additive → CLI additive, with locked + deny-scan-as",
-      "--strict mode: content-signal disabled, fatal errors, --no-config to suppress config files",
-      "Rejected confirm-bucket items re-surface by design (not persisted — attack surface concern)",
-      "User-directed zero-signal items labeled 'User-asserted, no content signals' not 'Medium confidence'",
-      "--debug-skips promoted to v1 scope (from follow-up), co-implements with structured output"
+      "SignalEntry exported (not private signalEntry) — stored on DetectedItem.Signals for audit logging",
+      "Interactive fallback uses existing bufio.Scanner numbered-list pattern from registry_create_native.go",
+      "syllago ignore (xjyng) deferred — needs its own design pass, not part of this feature",
+      "Task 7.2 split: CLI tier output done (ddxn2), TUI rendering is new bead (6fubw) since TUI has no confirm-bucket view",
+      "Audit wiring belongs in CLI command (not analyzer) — analyzer exposes Signals on DetectedItem, command emits audit events",
+      "Pre-filter bug fixed: include filename in keyword check (mcp-servers.json was missed)",
+      "Confidence boost bug fixed: apply user-directed +0.20 before floor check (0.40 base was dropped)"
     ],
 
     "nextSteps": [
-      "Execute beads in a worktree — start with Phase 1 security foundations (3 P1 beads ready: s3fh6, 6219t, a4nur)",
-      "Commit design doc + implementation plan + develop state before starting execution",
-      "Phase 1 tasks are standalone (no deps) — can be parallelized",
+      "Run /brainstorm for TUI confirm-bucket rendering (syllago-6fubw) — user chose full brainstorm",
+      "Key question: where does confirm bucket surface? Install wizard review step? Library metadata panel? Both?",
       "Pre-existing test failures still present: TestDoctorCheckRegistries_WithConfig, TestGenproviders_* (not related to this feature)"
     ],
 
     "context": {
-      "notes": "User explicitly requested execution in a new session AND in a worktree. The develop state is at 'execute' stage in .develop/content-based-classification.json. 7 additional roadmap beads exist from panel nice-to-haves (syllago-xloq3, syllago-juw90, syllago-yx6c1, syllago-rnrb8, syllago-xjyng, syllago-p5wh4, syllago-8e170). Bead syllago-0byne (the original gap analysis bead) is also ready but overlaps with the new implementation beads. The design and plan files are uncommitted — commit them first. Some uncommitted files in git status are from other sessions (agent-skills-spec work)."
+      "notes": "The implementation plan's 19 tasks are fully executed. The remaining work (syllago-6fubw) is genuinely new TUI feature work — the install wizard currently has no confirm-bucket rendering path, and the AnalysisResult type isn't referenced anywhere in the TUI package. This needs design work to determine UX surface, interaction model, and visual treatment. Also deferred: syllago-xjyng (ignore command, closed as out of scope). P3/P4 roadmap beads remain open (--dry-run, org-config docs, cap dynamic signals, converter manifest, user identity in audit, org-config staleness)."
     }
   },
 
   "previousSessions": [
     {
-      "summary": "Executed all 44 CDR beads (phases 1-16), real-world tested against 8 repos, created 5 ADRs, discovered content-based classification gap.",
-      "updated": "2026-04-01T10:30:00-07:00",
-      "completedWork": ["All 44 CDR beads executed", "Full analyzer package (20 files, ~3000 lines, 88.6% coverage)", "11 detectors, full pipeline", "5 ADRs created", "Real-world testing against 8 repos", "Gap analysis doc written"],
-      "nextSteps": ["Design pass for content-based classification", "Fix README.md false positives"]
+      "summary": "Designed content-based classification feature: 3 panel reviews (4 personas × 5 rounds each), design doc with 9 components, implementation plan with 19 tasks, 19 beads created with dependency chains.",
+      "updated": "2026-04-02T00:20:49-07:00",
+      "completedWork": ["Design doc with 9 components", "Implementation plan with 19 tasks across 9 phases", "19 beads with 24 dependency links", "3 panel reviews with 4 personas"],
+      "nextSteps": ["Execute Phase 1 security foundations", "Commit design doc + implementation plan"]
     },
     {
-      "summary": "Designed and planned the content discovery redesign — 45 design decisions, 3 panel reviews, 44 beads created",
-      "updated": "2026-04-01T04:50:00-07:00",
-      "completedWork": ["Design doc with 45 decisions", "Implementation plan with 23 tasks", "Quality review (8 blocking fixed)", "Validation (8 gaps fixed)", "44 beads created with dependency chains"],
-      "nextSteps": ["Execute bead 1 of 44", "Commit research + design artifacts"]
+      "summary": "Executed all 44 CDR beads (phases 1-16), real-world tested against 8 repos, created 5 ADRs, discovered content-based classification gap.",
+      "updated": "2026-04-01T10:30:00-07:00",
+      "completedWork": ["All 44 CDR beads executed", "Full analyzer package (20 files, ~3000 lines, 88.6% coverage)", "11 detectors, full pipeline", "5 ADRs created", "Real-world testing against 8 repos"],
+      "nextSteps": ["Design pass for content-based classification", "Fix README.md false positives"]
     }
   ]
 }

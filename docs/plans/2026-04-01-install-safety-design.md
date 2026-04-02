@@ -48,7 +48,7 @@ syllago install <source>
     |       +-- Standard: native Go pattern matching (always)
     |       +-- Sandboxed: bwrap (Linux) or sandbox-exec (macOS) if available
     |       +-- Optional: YARA rules via CLI (if yara installed)
-    |       +-- Optional: External scanners (Snyk, SafeDep — opt-in)
+    |       +-- GHSA feed check (if GitHub API accessible)
     |
     +-- 3. Git metadata extraction
     |       +-- git log, shortlog -- works on any git repo
@@ -196,6 +196,7 @@ The initial pattern set should be **small and high-confidence**. Better to miss 
 - Context-dependent instructions (legitimate vs malicious credential access)
 - Subtle behavioral manipulation
 - Zero-day techniques not yet in the pattern set
+- Content not published as an npm/PyPI package (GHSA feed only covers registered packages, not standalone git-hosted skills/rules)
 
 ### UX Language
 
@@ -219,15 +220,13 @@ Scan:   ! 3 issues found
 
 **YARA deep scan:** If `yara` CLI is installed, syllago shells out with embedded rule files (`//go:embed`). Same external-tool pattern as bubblewrap.
 
-**External scanners:** Snyk agent-scan, SafeDep vet. Opt-in integrations, not dependencies. Syllago detects availability and offers to use them.
+**External scanners:** Users can run third-party scanners (Snyk agent-scan, SafeDep vet) independently. Syllago does not invoke external scanner binaries in v1 — this avoids subprocess trust issues (typosquatted packages on PyPI could use syllago as a delivery mechanism). External scanner integration may be added in a future version with proper binary validation.
 
 ### Known-Bad Feed Integration (v1)
 
-**GHSA (GitHub Security Advisory):** Query GHSA via the GitHub API for known CVEs matching the content being installed. As of early 2026, 30+ CVEs exist for MCP servers (mostly command injection vulnerabilities). This uses the same GitHub API we already call for health signals -- one additional GraphQL query per install. Only matches content that's also a published npm/PyPI package.
+**GHSA (GitHub Security Advisory):** Query GHSA via the GitHub API for known CVEs matching the content being installed. As of early 2026, 30+ CVEs exist for MCP servers (mostly command injection vulnerabilities). This uses the same GitHub API we already call for health signals — one additional GraphQL query per install. Only matches content that's also a published npm/PyPI package.
 
-**Snyk Agent Scan:** If `snyk-agent-scan` CLI is installed (`uvx snyk-agent-scan@latest`), syllago invokes it for 15+ risk categories including prompt injection, tool poisoning, toxic flows, malware payloads, and credential exposure. Same optional-external-tool pattern as YARA. No API key required (local scanner).
-
-**Feed architecture:** Both integrations implement a `FeedChecker` interface that returns findings in the same format as the behavioral scanner. The scanner pipeline is: native Go patterns -> YARA (if available) -> GHSA check (if GitHub API accessible) -> Snyk (if installed). Results are merged into a single `ScanResult`.
+**Feed architecture:** GHSA implements a `FeedChecker` interface that returns findings in the same format as the behavioral scanner. The scanner pipeline is: native Go patterns -> YARA (if available) -> GHSA check (if GitHub API accessible). Results are merged into a single `ScanResult`. The `FeedChecker` interface is designed for future expansion (additional feeds, external scanners) without architectural changes.
 
 ### Scanner on Update/Sync
 
@@ -236,6 +235,8 @@ Scan:   ! 3 issues found
 - **When scan findings change on update:** The update is **held for user approval** — content stays in staging until the user reviews the new findings. This matches the install flow behavior.
 - **When no new findings:** Update applies silently.
 - This ensures malicious content injected into a previously-clean repo is always caught before installation, even from trusted sources.
+
+**Scanner version awareness:** `ScanResult` records `scanner_rule_version`. "New findings" means findings not present in the last stored ScanResult AND the scanner rule version is the same. When the scanner version changes (new patterns in a syllago release), a one-time notice is shown ("scanner updated — N installed items have new findings from updated rules. Run `syllago scan` to review.") but updates are NOT gated on scanner-version changes. This prevents every syllago upgrade from holding all trusted-source updates for manual review.
 
 ---
 
@@ -351,6 +352,16 @@ Last modified date, author (git blame), scan results, content type risk tier, fi
 
 **Sync follows existing `registryAutoSync` preference.** No separate signal-sync setting.
 
+**Signal freshness by context:**
+
+| Context | Fetch Behavior |
+|---------|---------------|
+| `syllago install` | Always fresh fetch (cache as fallback if network fails) |
+| TUI launch | Background fresh fetch on first load (non-blocking) |
+| TUI browsing | Cached after initial load. `R` key for manual refresh |
+| `syllago sync` / `syllago scan` | Fresh fetch |
+| `syllago inspect` | Fresh fetch (cache as fallback) |
+
 **Cache integrity:** Cache files use 0600 permissions. The signal cache is a convenience layer, not a security boundary -- fresh signals can always be re-fetched via `syllago sync`. A local attacker with write access to the home directory is outside our threat model (they already own the machine). This is a documented limitation.
 
 ### Graceful Degradation
@@ -448,6 +459,48 @@ Extends existing `sandbox.Check()` pre-flight infrastructure.
 
 ---
 
+## Install Prompt UX
+
+The install prompt is **conditional** based on scan findings:
+
+**No issues — simple prompt:**
+```
+some-skill v1.0.0 (skill, with scripts)
+──────────────────────────────────────────
+Scan:   no known issues detected
+        (checks known patterns, not a safety guarantee)
+Source: github.com/someone/some-skill@abc123
+Registry:
+  active · 3 contributors (avg 4.2yr) · 87% issues closed
+
+Install? [Y/n]
+```
+
+**Issues found (≤5 shown, >5 truncated at 5):**
+```
+some-skill v1.0.0 (skill, with scripts)
+──────────────────────────────────────────
+Scan:   ! 8 issues found
+        . shell: curl with piped execution (setup.sh:14)
+        . network: hardcoded IP address (SKILL.md:47)
+        . encoding: base64 blob (assets/config.dat)
+        . unicode: zero-width characters (SKILL.md:12)
+        . shell: eval with variable expansion (lib/run.sh:8)
+        ... 3 more
+
+! Review scan issues before installing
+  [d] details   [i] install anyway   [n] cancel
+```
+
+**Key behaviors:**
+- No issues: `Install? [Y/n]` — clean, fast, standard
+- Issues found: Different prompt — `[d] details / [i] install anyway / [n] cancel`
+- `[i] install anyway` makes it explicit the user is overriding warnings
+- `[d] details` expands all findings inline with file:line context and surrounding code
+- Truncation threshold: 5 findings. Items with >5 show top 5 + overflow count.
+
+---
+
 ## TUI Integration (High-Level)
 
 | View | What Shows | Data Source |
@@ -486,7 +539,9 @@ Extends existing `sandbox.Check()` pre-flight infrastructure.
 | TOCTOU integrity | Per-file SHA-256 at scan time, verify before move | Closes the scan-then-move integrity gap without the deferred cross-tool hash spec |
 | Update review gate | Hold update when new scan findings appear | Prevents malicious updates from silently installing even from trusted sources |
 | Scanner precision | Match dangerous patterns, not tool names | Avoids npm-audit-style alert fatigue that trains users to bypass |
-| Known-bad feeds | GHSA (built-in) + Snyk agent-scan (optional) | 30+ MCP CVEs exist in GHSA; Snyk covers 15+ risk categories for skills |
+| Known-bad feeds | GHSA (built-in), no external scanner binaries in v1 | 30+ MCP CVEs in GHSA; external scanners deferred due to subprocess trust concerns |
+| Signal freshness | Install = fresh fetch; TUI = fresh on launch, cached after | Stale signals at install time could mask recently-compromised repos |
+| Conditional prompt | Different prompt when issues found ([d]/[i]/[n] vs [Y/n]) | "install anyway" makes override explicit; details available without leaving flow |
 | Typosquatting corpus | Embedded attack data + registry-derived names | Seeded from SANDWORM_MODE campaign, supplemented with local registry names |
 | Install output | Compact by default (5-7 lines), --verbose for full signals | Prevents information overload at the install prompt |
 
@@ -566,6 +621,19 @@ Install Request
 - 12-month staleness threshold documented with rationale
 - Install output compacted to 5-7 lines default, --verbose for full signals
 - Footnote pattern replaced with dim contextual hint
+
+### Round 2 (2026-04-01)
+
+**Reviewers:** Security (re-review), Pragmatist (re-review)
+
+**Verdict:** Ready for implementation planning. Refinements only, no major issues.
+
+**Refinements Applied:**
+- Scanner version awareness: `scanner_rule_version` in ScanResult prevents upgrade-triggered review gates
+- Snyk dropped from v1: subprocess trust issue (typosquatted PyPI packages). GHSA stays as built-in feed.
+- GHSA coverage limitation added to "What It Does NOT Detect"
+- Signal freshness model: install = always fresh, TUI = fresh on launch then cached
+- Conditional install prompt: different prompt when issues found, truncate at 5 findings, [d] for inline details
 
 ---
 
