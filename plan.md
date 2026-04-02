@@ -15,7 +15,7 @@ Implement four components of the contribution model:
 **File:** `.github/workflows/close-external-prs.yml`
 
 - Triggers on `pull_request` events (opened)
-- Checks if PR author is NOT in an allowlist (maintainers: `holdenhewett`, `OpenScribblerOwner`)
+- Checks if PR author is NOT in an allowlist (maintainers: `holdenhewett`, `Open-Scribbler`)
 - Also allows PRs from bots/actions (for Dependabot, Claude Code Action, etc.)
 - Auto-comments with a friendly message explaining the contribution model:
   - Points to `syllago contribute` CLI command

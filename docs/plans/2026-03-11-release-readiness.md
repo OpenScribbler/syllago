@@ -68,7 +68,7 @@ updates:
 ```
 
 ### 2e. .github/workflows/pr-policy.yml
-Auto-close external PRs with redirect to issue templates. Allow: holdenhewett, OpenScribblerOwner, dependabot[bot].
+Auto-close external PRs with redirect to issue templates. Allow: holdenhewett, Open-Scribbler, dependabot[bot].
 
 ### 2f. Update CONTRIBUTING.md
 Add "Why no code?" section and mention that external PRs will be auto-closed.

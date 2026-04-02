@@ -623,3 +623,8 @@
 {"ts":"2026-04-01T16:20:41.537192203Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"detected-prov"}
 {"ts":"2026-04-01T16:20:41.538581921Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"undetected-json"}
 {"ts":"2026-04-01T16:20:41.569480809Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"test-prov-all"}
+{"ts":"2026-04-02T19:12:51.093646281Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"test-provider-json"}
+{"ts":"2026-04-02T19:12:51.10636706Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"undetected-prov"}
+{"ts":"2026-04-02T19:12:51.118780711Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"detected-prov"}
+{"ts":"2026-04-02T19:12:51.119434873Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"undetected-json"}
+{"ts":"2026-04-02T19:12:51.133517339Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"test-prov-all"}
