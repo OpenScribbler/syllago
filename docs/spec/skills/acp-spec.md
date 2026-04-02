@@ -145,7 +145,7 @@ generated_by: claude-code/4.0
 
 source_repo: github.com/alice/code-review
 source_commit: abc123def456789
-published_at: 2026-04-01T14:32:00Z
+published_at: "2026-04-01T14:32:00Z"
 
 content_hash: "sha256:9c9c3591..."
 meta_hash: "sha256:ff9c3684..."
@@ -210,7 +210,7 @@ String. The canonical source repository identifier. MUST be a URL without scheme
 
 > **Note (Informative):** `source_repo` identifies the repository containing this content. The `derived_from.source` field (Section 6.3.14) may optionally append a path to identify a specific content item within a repository.
 
-#### 6.3.9 source_commit (OPTIONAL)
+#### 6.3.9 source_commit (OPTIONAL, RECOMMENDED for public scope)
 
 String. The git commit hash at publish time. SHOULD be included for publicly distributed content to support reproducibility and auditing.
 
@@ -218,7 +218,7 @@ String. The git commit hash at publish time. SHOULD be included for publicly dis
 
 #### 6.3.10 published_at (REQUIRED for public scope)
 
-String. Timestamp of publication, conforming to [RFC3339] with mandatory UTC offset expressed as `Z` (not `+00:00`) and seconds precision (e.g., `2026-04-01T14:32:00Z`). Millisecond or finer precision MAY be included but MUST NOT affect `meta_hash` computation when truncated to seconds. MUST be computed by tooling at publish time. This constraint ensures a single canonical representation for identical timestamps, preventing `meta_hash` divergence from equivalent but differently-formatted timestamps.
+String. Timestamp of publication, conforming to [RFC3339] with mandatory UTC offset expressed as `Z` (not `+00:00`) and exactly seconds precision (e.g., `2026-04-01T14:32:00Z`). Sub-second precision MUST NOT be included — the canonical form is always `YYYY-MM-DDTHH:MM:SSZ`. MUST be computed by tooling at publish time. This constraint ensures a single canonical representation for identical timestamps, preventing `meta_hash` divergence from equivalent but differently-formatted timestamps.
 
 #### 6.3.11 content_hash (REQUIRED)
 
@@ -267,6 +267,8 @@ Each entry contains:
 | Local (personal use) | `meta_version`, `type`, `name`, `version`, `content_hash`, `meta_hash` |
 | Team (shared internally) | Above + `authors` |
 | Public (published to registry) | Above + `source_repo`, `published_at`. `signature` RECOMMENDED. |
+
+> **Note (Informative):** Promoting content to a wider scope (e.g., local → team) may require adding fields such as `authors`. Adding fields changes the `meta_hash`. Publishers promoting content SHOULD add the required fields, recompute `meta_hash`, and increment `version`. Any installations that stored the previous `meta_hash` will need to re-verify against the new version.
 
 ## 7. Content Hash Algorithm
 
@@ -339,7 +341,7 @@ The meta hash is a SHA-256 digest of provenance metadata bound to the content it
 
 Including `content_hash` in the hashed fields ensures that provenance metadata cannot be separated from its content and paired with different content. Without this binding, an attacker could take a legitimate `meta.yaml` from a trusted author and pair it with malicious content — both hashes would verify independently. By including `content_hash` in the meta hash, any such substitution invalidates `meta_hash`.
 
-Unknown fields (not in the allowlist for the applicable `meta_version`) MAY be present in `meta.yaml` for forward-compatibility or extension purposes, but they MUST NOT be included in `meta_hash` computation. This ensures that a consumer implementing `meta_version` 1 can verify `meta_hash` for content that includes fields added in a future `meta_version` 2, and that extension fields added by tooling do not affect integrity verification.
+Unknown fields (not in the allowlist for the applicable `meta_version`) MAY be present in `meta.yaml` for extension purposes, but they MUST NOT be included in `meta_hash` computation. This provision exists for tooling-added extension fields within a given `meta_version` — not for cross-version compatibility, since consumers MUST reject unrecognized `meta_version` values (Section 6.3.1). A `meta_version` 1 consumer will never attempt to verify `meta_version` 2 content; it will reject it at the `meta_version` check. Extension fields added by tooling to `meta_version` 1 content are the primary use case.
 
 ### 8.1 Hashed Fields per meta_version
 
@@ -480,6 +482,10 @@ When content is mechanically converted between provider formats (e.g., via hub-a
 1. The converted content receives a new `content_hash` (the content has changed).
 2. The converted content records `derived_from` with `relation: convert` and the `source_hash` of the original.
 
+### 10.4 Lineage Chains
+
+Each `derived_from` entry records only the immediate source — not the full derivation history. If Alice publishes A, Bob adapts A into B, and Carol adapts B into C, Carol's `meta.yaml` records `derived_from: B` only. The full chain (C → B → A) is recoverable by following `source_hash` references across multiple `meta.yaml` files, but requires access to each intermediate source. ACP does not embed transitive lineage in a single sidecar.
+
 ## 11. Security Considerations
 
 ### 11.1 Trust Model
@@ -562,7 +568,7 @@ All of these attacks work against unsigned content. When a signature is present,
 
 Section 11.4 describes full sidecar removal. Additional downgrade vectors exist:
 
-- **Signature stripping.** An attacker removes the `signature` field from `meta.yaml` without modifying other fields. The `meta_hash` is invalidated (since `signature` is excluded from `meta_hash`, removing it does not affect `meta_hash` — but the attacker can recompute `meta_hash` without the signature). The content now appears as unsigned but otherwise valid provenance. Strict consumers (Section 5.2.2) can defend against this when their policy requires signatures.
+- **Signature stripping.** An attacker removes the `signature` field from `meta.yaml` without modifying other fields. Because `signature` is excluded from `meta_hash` computation (Section 8.1), removing it leaves `meta_hash` intact — no recomputation is needed. The content silently downgrades from signed to unsigned with all hashes still verifying. Strict consumers (Section 5.2.2) can defend against this when their policy requires signatures.
 
 - **No publisher-asserted signature requirement.** There is no mechanism for a publisher to assert "this content MUST be signed" in a way that consumers are required to enforce. A registry could strip signatures from all content and redistribute it as unsigned. Strict consumers with explicit signature requirements provide the strongest defense.
 
@@ -636,7 +642,7 @@ Section 11.5 notes that SHA-256 compromise would require a new `meta_version`. A
 
 ## Appendix B: Test Vectors (Normative)
 
-Conforming implementations MUST produce the exact hashes listed below for the given inputs. All content uses LF (0x0A) line endings. Hex values are lowercase.
+Conforming implementations MUST produce the exact hashes listed below for the given inputs. All content uses LF (0x0A) line endings. Hex values are lowercase. All test vectors are normative except TV-15, which is informative (it demonstrates a design rationale, not a conformance requirement).
 
 ### TV-01: Per-file hash, ASCII content (Section 7.2)
 
@@ -913,6 +919,25 @@ Expected: ERROR — content MUST be rejected as unpublishable
 
 Validates: Symlink cycle detection per Section 7.3 step 1. Implementations MUST detect cycles and MUST NOT produce a hash or enter an infinite loop.
 
+### TV-17: VCS directory exclusion (Section 7.5)
+
+Input: A content directory containing `README.md` and a `.git/` directory with `config` inside it.
+
+| Path | Type | Content |
+|------|------|---------|
+| `README.md` | regular file | `# Hello\n` |
+| `.git/config` | regular file (inside VCS dir) | `[core]\nautocrlf = true\n` |
+
+The `.git/` directory is excluded per Section 7.5. Only `README.md` participates in the hash.
+
+```
+content_hash: sha256:032ef9ad13d8da0ccbc4f1762c995fb03ad689e03bd4dbaa3e734d2d465f2bc7
+```
+
+This is identical to TV-08's `content_hash` (a directory containing only `README.md` with the same content), confirming that the `.git/` directory is invisible to the hash algorithm.
+
+Validates: VCS directory exclusion per Section 7.5. Implementations that fail to exclude `.git/` will produce a different (incorrect) hash.
+
 ### TV-MH: Meta hash computation (Section 8)
 
 Input: All `meta.yaml` fields except `meta_hash` and `signature`. The `content_hash` is TV-03's real directory-tree hash.
@@ -928,7 +953,7 @@ authors:
 generated_by: claude-code/4.0
 source_repo: github.com/alice/code-review
 source_commit: abc123def456789
-published_at: 2026-04-01T14:32:00Z
+published_at: "2026-04-01T14:32:00Z"
 content_hash: "sha256:9c9c3591140eae4e0f047060470af98da00629b668f152ac6d4846e64ff91d40"
 ```
 
@@ -957,7 +982,7 @@ description: Testing utilities for React components.
 authors:
   - bob <bob@example.com>
 source_repo: github.com/bob/react-testing
-published_at: 2026-04-01T16:00:00Z
+published_at: "2026-04-01T16:00:00Z"
 content_hash: "sha256:9ea0a30f2b9a2ad72eb7cacff1870916ee64e64ade8c4b8aca4603c5aad0bc43"
 derived_from:
   - source: github.com/alice/code-review
