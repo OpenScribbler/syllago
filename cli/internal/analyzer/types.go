@@ -40,6 +40,9 @@ type DetectedItem struct {
 	// Providers holds alias paths for deduplicated items — paths of lower-confidence
 	// duplicates that were suppressed in favor of this item (same name+type+hash).
 	Providers []string
+	// Signals records the content-signal scoring breakdown for audit logging.
+	// Only populated for items from the ContentSignalDetector.
+	Signals []SignalEntry
 }
 
 // ContentDetector is the interface every provider detector implements.
@@ -93,6 +96,7 @@ type AnalysisConfig struct {
 	Strict        bool                           // disables content-signal fallback
 	ScanAsPaths   map[string]catalog.ContentType // user-directed: path prefix → type
 	DebugSkips    bool                           // collect per-file skip reasons
+	NoConfig      bool                           // suppress .syllago.yaml loading
 }
 
 // DefaultConfig returns the default analysis configuration.

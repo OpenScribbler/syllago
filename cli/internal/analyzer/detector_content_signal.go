@@ -9,10 +9,11 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// signalEntry records one matched signal and its weight contribution.
-type signalEntry struct {
-	signal string
-	weight float64
+// SignalEntry records one matched signal and its weight contribution.
+// Exported for audit logging; populated by ContentSignalDetector.
+type SignalEntry struct {
+	Signal string
+	Weight float64
 }
 
 // contentSignalBase is the starting score for any file that passes the pre-filter.
@@ -135,7 +136,7 @@ func (d *ContentSignalDetector) classifyFile(
 	// Score against all types and pick the winner.
 	type typeScore struct {
 		ct      catalog.ContentType
-		signals []signalEntry
+		signals []SignalEntry
 		score   float64
 	}
 
@@ -150,7 +151,7 @@ func (d *ContentSignalDetector) classifyFile(
 	}
 
 	for _, ct := range allTypes {
-		var signals []signalEntry
+		var signals []SignalEntry
 
 		// Filename fingerprints.
 		signals = append(signals, d.scoreFilename(filepath.Base(path), ct)...)
@@ -202,6 +203,7 @@ func (d *ContentSignalDetector) classifyFile(
 		ContentHash:   hashBytes(data),
 		Confidence:    confidence,
 		InternalLabel: "content-signal",
+		Signals:       best.signals,
 	}
 
 	if fm := parseFrontmatterBasic(data); fm != nil {
@@ -213,29 +215,29 @@ func (d *ContentSignalDetector) classifyFile(
 }
 
 // scoreFilename returns signals based on filename patterns for a given content type.
-func (d *ContentSignalDetector) scoreFilename(filename string, ct catalog.ContentType) []signalEntry {
+func (d *ContentSignalDetector) scoreFilename(filename string, ct catalog.ContentType) []SignalEntry {
 	lower := strings.ToLower(filename)
-	var signals []signalEntry
+	var signals []SignalEntry
 
 	switch ct {
 	case catalog.Skills:
 		if filename == "SKILL.md" {
-			signals = append(signals, signalEntry{"filename_SKILL.md", 0.25})
+			signals = append(signals, SignalEntry{"filename_SKILL.md", 0.25})
 		}
 	case catalog.Agents:
 		if filename == "AGENT.md" {
-			signals = append(signals, signalEntry{"filename_AGENT.md", 0.25})
+			signals = append(signals, SignalEntry{"filename_AGENT.md", 0.25})
 		}
 		if strings.HasSuffix(lower, ".agent.yaml") || strings.HasSuffix(lower, ".agent.md") {
-			signals = append(signals, signalEntry{"filename_agent_extension", 0.20})
+			signals = append(signals, SignalEntry{"filename_agent_extension", 0.20})
 		}
 	}
 	return signals
 }
 
 // scoreDirectory returns directory-context signals for the file path.
-func (d *ContentSignalDetector) scoreDirectory(path string) []signalEntry {
-	var signals []signalEntry
+func (d *ContentSignalDetector) scoreDirectory(path string) []SignalEntry {
+	var signals []SignalEntry
 	normalized := filepath.ToSlash(path)
 	parts := strings.Split(normalized, "/")
 	if len(parts) < 2 {
@@ -248,9 +250,9 @@ func (d *ContentSignalDetector) scoreDirectory(path string) []signalEntry {
 		for _, kw := range directoryKeywords {
 			if strings.Contains(lower, kw) {
 				if i == 0 {
-					signals = append(signals, signalEntry{"directory_keyword_" + kw, 0.10})
+					signals = append(signals, SignalEntry{"directory_keyword_" + kw, 0.10})
 				} else {
-					signals = append(signals, signalEntry{"subdirectory_keyword_" + kw, 0.05})
+					signals = append(signals, SignalEntry{"subdirectory_keyword_" + kw, 0.05})
 				}
 				break
 			}
@@ -260,14 +262,14 @@ func (d *ContentSignalDetector) scoreDirectory(path string) []signalEntry {
 }
 
 // scoreJSON scores a JSON file and returns signals + detected content type.
-func (d *ContentSignalDetector) scoreJSON(data []byte) ([]signalEntry, catalog.ContentType) {
+func (d *ContentSignalDetector) scoreJSON(data []byte) ([]SignalEntry, catalog.ContentType) {
 	if !json.Valid(data) {
 		return nil, ""
 	}
 
 	// MCP: top-level mcpServers key.
 	if gjson.GetBytes(data, "mcpServers").IsObject() {
-		return []signalEntry{{"json_mcpServers", 0.30}}, catalog.MCP
+		return []SignalEntry{{"json_mcpServers", 0.30}}, catalog.MCP
 	}
 
 	// Hooks: hooks key with ≥2 known event name subkeys.
@@ -281,7 +283,7 @@ func (d *ContentSignalDetector) scoreJSON(data []byte) ([]signalEntry, catalog.C
 			return true
 		})
 		if matchCount >= 2 {
-			return []signalEntry{{"json_hooks_event_names", 0.25}}, catalog.Hooks
+			return []SignalEntry{{"json_hooks_event_names", 0.25}}, catalog.Hooks
 		}
 	}
 
@@ -289,28 +291,28 @@ func (d *ContentSignalDetector) scoreJSON(data []byte) ([]signalEntry, catalog.C
 }
 
 // scoreFrontmatter scores YAML frontmatter and returns signals + detected content type.
-func (d *ContentSignalDetector) scoreFrontmatter(data []byte) ([]signalEntry, catalog.ContentType) {
+func (d *ContentSignalDetector) scoreFrontmatter(data []byte) ([]SignalEntry, catalog.ContentType) {
 	keys := parseFrontmatterKeys(data)
 	if len(keys) == 0 {
 		return nil, ""
 	}
 
-	var signals []signalEntry
+	var signals []SignalEntry
 	typeCounts := make(map[catalog.ContentType]float64)
 
 	for _, k := range keys {
 		switch k {
 		case "allowed-tools":
-			signals = append(signals, signalEntry{"frontmatter_allowed-tools", 0.20})
+			signals = append(signals, SignalEntry{"frontmatter_allowed-tools", 0.20})
 			typeCounts[catalog.Commands] += 0.20
 		case "argument-hint":
-			signals = append(signals, signalEntry{"frontmatter_argument-hint", 0.15})
+			signals = append(signals, SignalEntry{"frontmatter_argument-hint", 0.15})
 			typeCounts[catalog.Commands] += 0.15
 		case "alwaysApply":
-			signals = append(signals, signalEntry{"frontmatter_alwaysApply", 0.15})
+			signals = append(signals, SignalEntry{"frontmatter_alwaysApply", 0.15})
 			typeCounts[catalog.Rules] += 0.15
 		case "globs":
-			signals = append(signals, signalEntry{"frontmatter_globs", 0.10})
+			signals = append(signals, SignalEntry{"frontmatter_globs", 0.10})
 			typeCounts[catalog.Rules] += 0.10
 		}
 	}
@@ -352,10 +354,10 @@ func parseFrontmatterKeys(data []byte) []string {
 }
 
 // computeScore returns base + sum of signal weights, capped at contentSignalCap.
-func (d *ContentSignalDetector) computeScore(signals []signalEntry) float64 {
+func (d *ContentSignalDetector) computeScore(signals []SignalEntry) float64 {
 	total := contentSignalBase
 	for _, s := range signals {
-		total += s.weight
+		total += s.Weight
 	}
 	if total > contentSignalCap {
 		return contentSignalCap

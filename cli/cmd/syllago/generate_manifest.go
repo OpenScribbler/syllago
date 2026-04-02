@@ -24,6 +24,7 @@ var (
 	generateManifestScanAs     []string
 	generateManifestStrict     bool
 	generateManifestDebugSkips bool
+	generateManifestNoConfig   bool
 )
 
 var generateManifestCmd = &cobra.Command{
@@ -44,6 +45,8 @@ func init() {
 		"disable content-signal fallback; fatal on missing scan-as paths")
 	generateManifestCmd.Flags().BoolVar(&generateManifestDebugSkips, "debug-skips", false,
 		"show per-file skip reasons for content-signal classification")
+	generateManifestCmd.Flags().BoolVar(&generateManifestNoConfig, "no-config", false,
+		"suppress .syllago.yaml loading (use with --strict for fully explicit CI control)")
 	manifestCmd.AddCommand(generateManifestCmd)
 	rootCmd.AddCommand(manifestCmd)
 }
@@ -75,10 +78,29 @@ func runGenerateManifest(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Load project scan-as config (.syllago.yaml) unless --no-config.
+	allScanAsPaths := make(map[string]catalog.ContentType)
+	if !generateManifestNoConfig {
+		projectCfg, cfgErr := analyzer.LoadScanAsConfig(absDir)
+		if cfgErr != nil {
+			return fmt.Errorf("loading .syllago.yaml: %w", cfgErr)
+		}
+		for path, ct := range projectCfg.ToPathMap() {
+			allScanAsPaths[path] = ct
+		}
+	}
+	// CLI flags are additive on top of config file.
+	for path, ct := range scanAsPaths {
+		if existing, ok := allScanAsPaths[path]; ok && existing != ct {
+			return fmt.Errorf("--scan-as %v:%q conflicts with .syllago.yaml entry %v:%q", ct, path, existing, path)
+		}
+		allScanAsPaths[path] = ct
+	}
+
 	fmt.Fprintf(cmd.ErrOrStderr(), "Analyzing %s...\n", absDir)
 
 	cfg := analyzer.DefaultConfig()
-	cfg.ScanAsPaths = scanAsPaths
+	cfg.ScanAsPaths = allScanAsPaths
 	cfg.Strict = generateManifestStrict
 	cfg.DebugSkips = generateManifestDebugSkips
 	a := analyzer.New(cfg)
@@ -124,6 +146,20 @@ func runGenerateManifest(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(cmd.OutOrStdout(), "Wrote registry.yaml with %d items (%d auto-detected, %d requiring confirmation)\n",
 		len(allItems), len(result.Auto), len(result.Confirm))
 
+	// Show confirm items with confidence tier labels.
+	if len(result.Confirm) > 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "\nRequiring confirmation:\n")
+		for _, item := range result.Confirm {
+			tier := analyzer.TierForItem(item)
+			label := string(tier)
+			if label != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "  %s (%s) [%s]\n", item.Name, item.Type, label)
+			} else {
+				fmt.Fprintf(cmd.OutOrStdout(), "  %s (%s)\n", item.Name, item.Type)
+			}
+		}
+	}
+
 	for _, w := range result.Warnings {
 		fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s\n", w)
 	}
@@ -155,14 +191,7 @@ func parseScanAsFlag(s string) (catalog.ContentType, string, error) {
 		return "", "", fmt.Errorf("--scan-as %q: path contains spaces (use separate --scan-as flags for multiple paths)", s)
 	}
 	ct := catalog.ContentType(typePart)
-	valid := false
-	for _, vct := range catalog.AllContentTypes() {
-		if vct == ct {
-			valid = true
-			break
-		}
-	}
-	if !valid {
+	if !analyzer.IsValidContentType(ct) {
 		return "", "", fmt.Errorf("--scan-as %q: unknown content type %q (valid: skills, agents, commands, rules, hooks, mcp)", s, typePart)
 	}
 	return ct, pathPart, nil
