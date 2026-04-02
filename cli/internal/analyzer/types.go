@@ -72,9 +72,16 @@ const DefaultSkipThreshold = 0.50
 
 // AnalysisResult holds the output of a full repository analysis.
 type AnalysisResult struct {
-	Auto     []*DetectedItem // confidence > AutoThreshold (excluding hooks/MCP)
-	Confirm  []*DetectedItem // confidence in [SkipThreshold, AutoThreshold], plus ALL hooks/MCP
-	Warnings []string
+	Auto        []*DetectedItem // confidence > AutoThreshold (excluding hooks/MCP)
+	Confirm     []*DetectedItem // confidence in [SkipThreshold, AutoThreshold], plus ALL hooks/MCP
+	Warnings    []string
+	SkipReasons []SkipEntry // populated when DebugSkips=true
+}
+
+// SkipEntry records why a file was not classified by the content-signal detector.
+type SkipEntry struct {
+	Path   string `json:"path"`
+	Reason string `json:"reason"` // pre_filter_excluded, below_threshold, locked_conflict, walk_skipped
 }
 
 // AnalysisConfig controls analyzer behavior.
@@ -85,6 +92,7 @@ type AnalysisConfig struct {
 	SymlinkPolicy string                         // "ask", "follow", "skip"
 	Strict        bool                           // disables content-signal fallback
 	ScanAsPaths   map[string]catalog.ContentType // user-directed: path prefix → type
+	DebugSkips    bool                           // collect per-file skip reasons
 }
 
 // DefaultConfig returns the default analysis configuration.

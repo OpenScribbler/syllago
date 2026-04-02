@@ -42,16 +42,22 @@ func (d *ContentSignalDetector) Classify(path, repoRoot string) ([]*DetectedItem
 // ClassifyUnmatched inspects files not matched by any pattern-based detector.
 // unmatchedPaths are relative to repoRoot. scanAsPaths maps relative path prefixes
 // to their user-specified content type (bypasses directory keyword filter).
+// When debugSkips is true, skipped files are recorded in the returned skip entries.
 func (d *ContentSignalDetector) ClassifyUnmatched(
 	unmatchedPaths []string,
 	repoRoot string,
 	scanAsPaths map[string]catalog.ContentType,
-) ([]*DetectedItem, error) {
+	debugSkips bool,
+) ([]*DetectedItem, []SkipEntry, error) {
 	var items []*DetectedItem
+	var skips []SkipEntry
 
 	for _, p := range unmatchedPaths {
 		// Global README exclusion applies to content-signal detector too.
 		if globalExcludedBasenames[filepath.Base(p)] {
+			if debugSkips {
+				skips = append(skips, SkipEntry{Path: p, Reason: "pre_filter_excluded"})
+			}
 			continue
 		}
 
@@ -66,15 +72,20 @@ func (d *ContentSignalDetector) ClassifyUnmatched(
 		}
 
 		if !d.passesPreFilter(p, userDirected) {
+			if debugSkips {
+				skips = append(skips, SkipEntry{Path: p, Reason: "pre_filter_excluded"})
+			}
 			continue
 		}
 
 		item := d.classifyFile(p, repoRoot, userDirected, typeHint)
 		if item != nil {
 			items = append(items, item)
+		} else if debugSkips {
+			skips = append(skips, SkipEntry{Path: p, Reason: "below_threshold"})
 		}
 	}
-	return items, nil
+	return items, skips, nil
 }
 
 // passesPreFilter returns true if the file should be inspected for content signals.

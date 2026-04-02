@@ -20,9 +20,10 @@ var manifestCmd = &cobra.Command{
 }
 
 var (
-	generateManifestForce  bool
-	generateManifestScanAs []string
-	generateManifestStrict bool
+	generateManifestForce      bool
+	generateManifestScanAs     []string
+	generateManifestStrict     bool
+	generateManifestDebugSkips bool
 )
 
 var generateManifestCmd = &cobra.Command{
@@ -41,6 +42,8 @@ func init() {
 		"scan path as content type: type:path (e.g. skills:Packs/)")
 	generateManifestCmd.Flags().BoolVar(&generateManifestStrict, "strict", false,
 		"disable content-signal fallback; fatal on missing scan-as paths")
+	generateManifestCmd.Flags().BoolVar(&generateManifestDebugSkips, "debug-skips", false,
+		"show per-file skip reasons for content-signal classification")
 	manifestCmd.AddCommand(generateManifestCmd)
 	rootCmd.AddCommand(manifestCmd)
 }
@@ -77,6 +80,7 @@ func runGenerateManifest(cmd *cobra.Command, args []string) error {
 	cfg := analyzer.DefaultConfig()
 	cfg.ScanAsPaths = scanAsPaths
 	cfg.Strict = generateManifestStrict
+	cfg.DebugSkips = generateManifestDebugSkips
 	a := analyzer.New(cfg)
 	result, err := a.Analyze(absDir)
 	if err != nil {
@@ -122,6 +126,13 @@ func runGenerateManifest(cmd *cobra.Command, args []string) error {
 
 	for _, w := range result.Warnings {
 		fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s\n", w)
+	}
+
+	if generateManifestDebugSkips && len(result.SkipReasons) > 0 {
+		fmt.Fprintf(cmd.ErrOrStderr(), "\n--- debug-skips: %d files skipped ---\n", len(result.SkipReasons))
+		for _, s := range result.SkipReasons {
+			fmt.Fprintf(cmd.ErrOrStderr(), "  %-24s %s\n", s.Reason, s.Path)
+		}
 	}
 	return nil
 }
