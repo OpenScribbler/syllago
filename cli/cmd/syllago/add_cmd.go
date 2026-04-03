@@ -170,34 +170,20 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		scope, _ := cmd.Flags().GetString("scope")
 		srcReg, _ := cmd.Flags().GetString("source-registry")
 		srcVis, _ := cmd.Flags().GetString("source-visibility")
-		err := runAddHooks(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis, displayName)
-		if err == nil {
-			telemetry.Track("command_executed", map[string]any{
-				"command":      "add",
-				"from":         fromSlug,
-				"content_type": "hooks",
-				"success":      true,
-				"dry_run":      dryRun,
-			})
-		}
-		return err
+		telemetry.Enrich("from", fromSlug)
+		telemetry.Enrich("content_type", "hooks")
+		telemetry.Enrich("dry_run", dryRun)
+		return runAddHooks(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis, displayName)
 	}
 	if typeStr == string(catalog.MCP) {
 		exclude, _ := cmd.Flags().GetStringArray("exclude")
 		scope, _ := cmd.Flags().GetString("scope")
 		srcReg, _ := cmd.Flags().GetString("source-registry")
 		srcVis, _ := cmd.Flags().GetString("source-visibility")
-		err := runAddMcp(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis, displayName)
-		if err == nil {
-			telemetry.Track("command_executed", map[string]any{
-				"command":      "add",
-				"from":         fromSlug,
-				"content_type": "mcp",
-				"success":      true,
-				"dry_run":      dryRun,
-			})
-		}
-		return err
+		telemetry.Enrich("from", fromSlug)
+		telemetry.Enrich("content_type", "mcp")
+		telemetry.Enrich("dry_run", dryRun)
+		return runAddMcp(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis, displayName)
 	}
 
 	// For --all, also add hooks and MCP alongside file-based content.
@@ -289,18 +275,11 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		SourceVisibility: srcVisibility,
 	}, globalDir, canon, version)
 
-	if err := printAddResults(results, dryRun, prov.Name); err != nil {
-		return err
-	}
-	telemetry.Track("command_executed", map[string]any{
-		"command":       "add",
-		"from":          fromSlug,
-		"content_type":  typeStr,
-		"content_count": len(results),
-		"success":       true,
-		"dry_run":       dryRun,
-	})
-	return nil
+	telemetry.Enrich("from", fromSlug)
+	telemetry.Enrich("content_type", typeStr)
+	telemetry.Enrich("content_count", len(results))
+	telemetry.Enrich("dry_run", dryRun)
+	return printAddResults(results, dryRun, prov.Name)
 }
 
 // converterAdapter adapts converter.Converter to the add.Canonicalizer interface.

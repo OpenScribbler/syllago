@@ -5,6 +5,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -98,6 +99,14 @@ func runList(cmd *cobra.Command, args []string) error {
 			Items: items,
 		})
 	}
+
+	totalItems := 0
+	for _, g := range result.Groups {
+		totalItems += g.Count
+	}
+	telemetry.Enrich("source_filter", sourceFilter)
+	telemetry.Enrich("content_type", typeFilter)
+	telemetry.Enrich("item_count", totalItems)
 
 	if output.JSON {
 		output.Print(result)

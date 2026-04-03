@@ -16,6 +16,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -252,5 +253,8 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		fmt.Fprintln(output.Writer, "If auto-revert fails, run: syllago loadout remove")
 	}
 
+	telemetry.Enrich("provider", prov.Slug)
+	telemetry.Enrich("mode", mode)
+	telemetry.Enrich("action_count", len(result.Actions))
 	return nil
 }

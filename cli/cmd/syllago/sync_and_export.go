@@ -13,6 +13,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -89,6 +90,9 @@ func runSyncAndExport(cmd *cobra.Command, args []string) error {
 	llmHooksMode, _ := cmd.Flags().GetString("llm-hooks")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
+	telemetry.Enrich("provider", toSlug)
+	telemetry.Enrich("content_type", typeFilter)
+	telemetry.Enrich("dry_run", dryRun)
 	return runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMode, "", dryRun)
 }
 
