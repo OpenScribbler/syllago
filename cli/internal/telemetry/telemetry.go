@@ -191,7 +191,7 @@ func Shutdown() {
 // sendEvent performs the HTTP POST to the PostHog ingest endpoint.
 // All errors are silently discarded — telemetry failure is never user-visible.
 func sendEvent(client *http.Client, endpoint string, payload postHogPayload) {
-	data, err := json.Marshal(payload)
+	data, err := json.Marshal(payload) //nolint:gosec // G117: api_key is a public PostHog project key, not a secret
 	if err != nil {
 		return
 	}
@@ -204,7 +204,7 @@ func sendEvent(client *http.Client, endpoint string, payload postHogPayload) {
 	if err != nil {
 		return
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // telemetry errors are intentionally silent
 	_, _ = io.Copy(io.Discard, resp.Body)
 }
 
