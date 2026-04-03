@@ -15,6 +15,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/gitutil"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -364,6 +365,8 @@ and "syllago install" to activate updated content.`,
 			return err
 		}
 
+		telemetry.Enrich("registry_count", len(cfg.Registries))
+
 		if len(cfg.Registries) == 0 {
 			fmt.Println("No registries configured.")
 			return nil
@@ -484,6 +487,9 @@ Use --type to filter by content type. To install registry content, use
 		} else {
 			items = cat.Items
 		}
+
+		telemetry.Enrich("content_type", typeFilter)
+		telemetry.Enrich("item_count", len(items))
 
 		if output.JSON {
 			output.Print(items)

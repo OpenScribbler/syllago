@@ -73,23 +73,15 @@ func runConvert(cmd *cobra.Command, args []string) error {
 		return output.NewStructuredError(output.ErrProviderNotFound, "unknown target provider: "+toSlug, "Available: "+strings.Join(slugs, ", "))
 	}
 
+	telemetry.Enrich("from_provider", fromSlug)
+	telemetry.Enrich("to_provider", toSlug)
+	telemetry.Enrich("content_type", typeStr)
+
 	// Determine mode: file path or library item name.
-	var err error
 	if isFilePath(input) {
-		err = convertFile(input, fromSlug, toSlug, typeStr, outputPath, *toProv, showDiff)
-	} else {
-		err = convertLibraryItem(input, fromSlug, toSlug, outputPath, *toProv, showDiff)
+		return convertFile(input, fromSlug, toSlug, typeStr, outputPath, *toProv, showDiff)
 	}
-	if err == nil {
-		telemetry.Track("command_executed", map[string]any{
-			"command":       "convert",
-			"from_provider": fromSlug,
-			"to_provider":   toSlug,
-			"content_type":  typeStr,
-			"success":       true,
-		})
-	}
-	return err
+	return convertLibraryItem(input, fromSlug, toSlug, outputPath, *toProv, showDiff)
 }
 
 // isFilePath returns true if the input exists on disk as a file.

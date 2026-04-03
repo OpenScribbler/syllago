@@ -262,14 +262,10 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(output.Writer, "  syllago convert %s --to <provider>\n", firstArg(args))
 	}
 
-	telemetry.Track("command_executed", map[string]any{
-		"command":       "install",
-		"provider":      toSlug,
-		"content_type":  typeFilter,
-		"content_count": len(result.Installed),
-		"success":       true,
-		"dry_run":       dryRun,
-	})
+	telemetry.Enrich("provider", toSlug)
+	telemetry.Enrich("content_type", typeFilter)
+	telemetry.Enrich("content_count", len(result.Installed))
+	telemetry.Enrich("dry_run", dryRun)
 	return nil
 }
 

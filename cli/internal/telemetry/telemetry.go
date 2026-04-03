@@ -52,6 +52,43 @@ func SetVersion(v string) {
 // Override in tests to capture notice output.
 var NoticeWriter io.Writer = os.Stderr
 
+// enrichedProps stores command-specific properties set via Enrich().
+// These are merged into the next TrackCommand() call, then cleared.
+var enrichedProps = map[string]any{}
+var enrichMu sync.Mutex
+
+// Enrich adds a property that will be included in the next TrackCommand() call.
+// Call from command RunE functions to add context like provider, content_type, etc.
+func Enrich(key string, value any) {
+	enrichMu.Lock()
+	defer enrichMu.Unlock()
+	enrichedProps[key] = value
+}
+
+// TrackCommand fires a command_executed event with the given command name and
+// any properties set via Enrich(). Called from PersistentPostRun so every
+// command is tracked automatically. Enriched properties are cleared after use.
+func TrackCommand(command string) {
+	enrichMu.Lock()
+	props := make(map[string]any, len(enrichedProps)+1)
+	props["command"] = command
+	for k, v := range enrichedProps {
+		props[k] = v
+	}
+	enrichedProps = map[string]any{}
+	enrichMu.Unlock()
+
+	Track("command_executed", props)
+}
+
+// ResetEnrichment clears any pending enriched properties without firing an event.
+// Used in tests.
+func ResetEnrichment() {
+	enrichMu.Lock()
+	enrichedProps = map[string]any{}
+	enrichMu.Unlock()
+}
+
 // Init initializes the telemetry subsystem. Must be called once per process,
 // early in the command lifecycle (PersistentPreRun).
 //

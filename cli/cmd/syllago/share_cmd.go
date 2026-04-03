@@ -7,6 +7,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/promote"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -71,6 +72,7 @@ func runShare(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	telemetry.Enrich("content_type", string(item.Type))
 
 	root, err := findContentRepoRoot()
 	if err != nil {

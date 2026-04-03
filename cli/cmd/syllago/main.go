@@ -92,6 +92,12 @@ func init() {
 	}
 
 	rootCmd.PersistentPostRun = func(cmd *cobra.Command, args []string) {
+		// Build a dotted command name: "registry add" → "registry_add".
+		// Skip telemetry's own subcommands to avoid recursion/noise.
+		name := commandPath(cmd)
+		if name != "" && !strings.HasPrefix(name, "telemetry") {
+			telemetry.TrackCommand(name)
+		}
 		telemetry.Shutdown()
 	}
 
@@ -380,6 +386,17 @@ func validateVersion(v string) error {
 		return output.NewStructuredError(output.ErrInputInvalid, fmt.Sprintf("invalid version format: %q (must be semver like 1.0.0)", v), "Use semantic versioning format like 1.0.0 or 1.2.3-beta")
 	}
 	return nil
+}
+
+// commandPath returns a snake_case command name from a cobra command.
+// "syllago registry add" → "registry_add", "syllago install" → "install".
+func commandPath(cmd *cobra.Command) string {
+	parts := strings.Fields(cmd.CommandPath())
+	if len(parts) <= 1 {
+		return "" // root command (TUI) — tracked separately
+	}
+	// Drop "syllago" prefix, join with underscore.
+	return strings.Join(parts[1:], "_")
 }
 
 // ensureUpToDate checks if the binary's embedded commit matches the repo HEAD.
