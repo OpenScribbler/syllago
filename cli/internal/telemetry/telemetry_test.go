@@ -431,11 +431,18 @@ func TestEndToEnd_FullLifecycle(t *testing.T) {
 			t.Errorf("event %d: missing arch property", i)
 		}
 	}
-	if received[0].Event != "command_executed" {
-		t.Errorf("event 0: wrong name %q", received[0].Event)
+	// Find the install event (order is non-deterministic due to goroutines).
+	foundInstall := false
+	for _, ev := range received {
+		if ev.Event == "command_executed" && ev.Properties["command"] == "install" {
+			foundInstall = true
+			if ev.Properties["provider"] != "claude-code" {
+				t.Errorf("install event: wrong provider %v", ev.Properties["provider"])
+			}
+		}
 	}
-	if received[0].Properties["provider"] != "claude-code" {
-		t.Errorf("event 0: missing provider property")
+	if !foundInstall {
+		t.Error("install event not found in received events")
 	}
 	mu.Unlock()
 
