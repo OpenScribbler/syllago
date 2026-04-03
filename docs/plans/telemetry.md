@@ -4,15 +4,56 @@ Syllago collects anonymous usage data to help prioritize development. This page 
 
 ## What we collect
 
-Three event types, all fire-and-forget:
+Two event types, all fire-and-forget:
 
-| Event | Properties | Question it answers |
-|-------|-----------|-------------------|
-| `command_executed` | Command name, provider slug, content type, content count, success/failure, syllago version, OS, architecture | Which commands are used? Which providers matter most? |
-| `error_occurred` | Command name, structured error code | What breaks? Where should we focus bug fixes? |
-| `tui_session_started` | Success flag | How often is the TUI used vs CLI? |
+| Event | Fired when | Properties |
+|-------|-----------|-----------|
+| `command_executed` | `install`, `add`, or `convert` completes successfully | `command`, `provider`/`from`/`to_provider`, `content_type`, `content_count`, `success`, `dry_run` |
+| `tui_session_started` | TUI exits normally | `success` |
 
-**Example payload** (what a single `command_executed` event looks like):
+Every event also includes these standard properties: `version`, `os`, `arch`.
+
+### Per-command properties
+
+**install:**
+
+| Property | Type | Example | Description |
+|----------|------|---------|-------------|
+| `command` | string | `"install"` | Always `"install"` |
+| `provider` | string | `"claude-code"` | Target provider slug |
+| `content_type` | string | `"rules"` | Content type filter (empty = all) |
+| `content_count` | int | `3` | Number of items installed |
+| `success` | bool | `true` | Always true (only fires on success) |
+| `dry_run` | bool | `false` | Whether `--dry-run` was used |
+
+**add:**
+
+| Property | Type | Example | Description |
+|----------|------|---------|-------------|
+| `command` | string | `"add"` | Always `"add"` |
+| `from` | string | `"cursor"` | Source provider slug |
+| `content_type` | string | `"hooks"` | Content type (empty = all/mixed) |
+| `content_count` | int | `5` | Number of items added |
+| `success` | bool | `true` | Always true (only fires on success) |
+| `dry_run` | bool | `false` | Whether `--dry-run` was used |
+
+**convert:**
+
+| Property | Type | Example | Description |
+|----------|------|---------|-------------|
+| `command` | string | `"convert"` | Always `"convert"` |
+| `from_provider` | string | `"cursor"` | Source provider (may be empty for library items) |
+| `to_provider` | string | `"claude-code"` | Target provider slug |
+| `content_type` | string | `"rules"` | Content type being converted |
+| `success` | bool | `true` | Always true (only fires on success) |
+
+**tui_session_started:**
+
+| Property | Type | Example | Description |
+|----------|------|---------|-------------|
+| `success` | bool | `true` | TUI exited normally |
+
+### Example payload
 
 ```json
 {

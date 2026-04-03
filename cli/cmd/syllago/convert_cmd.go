@@ -85,6 +85,7 @@ func runConvert(cmd *cobra.Command, args []string) error {
 			"command":       "convert",
 			"from_provider": fromSlug,
 			"to_provider":   toSlug,
+			"content_type":  typeStr,
 			"success":       true,
 		})
 	}

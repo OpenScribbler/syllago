@@ -170,14 +170,34 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		scope, _ := cmd.Flags().GetString("scope")
 		srcReg, _ := cmd.Flags().GetString("source-registry")
 		srcVis, _ := cmd.Flags().GetString("source-visibility")
-		return runAddHooks(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis, displayName)
+		err := runAddHooks(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis, displayName)
+		if err == nil {
+			telemetry.Track("command_executed", map[string]any{
+				"command":      "add",
+				"from":         fromSlug,
+				"content_type": "hooks",
+				"success":      true,
+				"dry_run":      dryRun,
+			})
+		}
+		return err
 	}
 	if typeStr == string(catalog.MCP) {
 		exclude, _ := cmd.Flags().GetStringArray("exclude")
 		scope, _ := cmd.Flags().GetString("scope")
 		srcReg, _ := cmd.Flags().GetString("source-registry")
 		srcVis, _ := cmd.Flags().GetString("source-visibility")
-		return runAddMcp(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis, displayName)
+		err := runAddMcp(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis, displayName)
+		if err == nil {
+			telemetry.Track("command_executed", map[string]any{
+				"command":      "add",
+				"from":         fromSlug,
+				"content_type": "mcp",
+				"success":      true,
+				"dry_run":      dryRun,
+			})
+		}
+		return err
 	}
 
 	// For --all, also add hooks and MCP alongside file-based content.
@@ -273,9 +293,12 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	telemetry.Track("command_executed", map[string]any{
-		"command": "add",
-		"from":    fromSlug,
-		"success": true,
+		"command":       "add",
+		"from":          fromSlug,
+		"content_type":  typeStr,
+		"content_count": len(results),
+		"success":       true,
+		"dry_run":       dryRun,
 	})
 	return nil
 }
