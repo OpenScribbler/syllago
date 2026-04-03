@@ -211,15 +211,15 @@ func sendEvent(client *http.Client, endpoint string, payload postHogPayload) {
 // firstRunNotice is the exact first-run notice text printed to stderr.
 const firstRunNotice = `
 syllago collects anonymous usage data (commands run, provider
-types, error codes) to help prioritize development. Syllago is
-a solo-developer project and this data is invaluable for
-steering its direction.
+types, error codes) to help prioritize development. No file
+contents, paths, or identifying information is collected.
 
-No file contents, paths, or identifying information is collected.
+To opt out, run any of the following:
 
-  Disable:  syllago telemetry off
-  Env var:  DO_NOT_TRACK=1
-  Details:  https://syllago.dev/telemetry
+  syllago telemetry off       Turn off telemetry
+  export DO_NOT_TRACK=1       Disable via environment variable
+
+Learn more: https://syllago.dev/telemetry
 
 `
 
