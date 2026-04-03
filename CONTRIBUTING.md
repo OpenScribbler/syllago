@@ -59,6 +59,10 @@ make fmt      # Format code with gofmt
 make vet      # Run go vet
 ```
 
+### Telemetry
+
+Dev builds have telemetry compiled out — the PostHog API key is only embedded in release binaries via `SYLLAGO_POSTHOG_KEY` ldflags. You will never send telemetry data from a local build unless you explicitly set the environment variable.
+
 ### Code Organization
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full package map and data flow.

@@ -65,6 +65,8 @@ make setup    # configure git hooks (gofmt pre-commit check)
 make build
 ```
 
+Syllago collects anonymous usage data to help improve the tool. [Learn more and opt out.](https://syllago.dev/telemetry)
+
 ## Quick Start
 
 **Scenario:** You have Claude Code rules and skills you want to use in Cursor and Gemini CLI.
@@ -253,6 +255,7 @@ A **registry** is a git repository that distributes syllago content. Push curate
 | `syllago info` | Show capabilities, detected providers, library location |
 | `syllago doctor` | Diagnose setup problems (providers, config, integrity) |
 | `syllago completion` | Generate shell autocompletion scripts |
+| `syllago telemetry` | View and control anonymous usage data collection |
 | `syllago version` | Print version |
 
 ### Global Flags

@@ -28,8 +28,13 @@ jobs:
 
       - name: Build all targets
         working-directory: cli
+        env:
+          SYLLAGO_POSTHOG_KEY: ${{ secrets.SYLLAGO_POSTHOG_KEY }}
         run: |
           LDFLAGS="-X main.version=${VERSION}"
+          if [ -n "$SYLLAGO_POSTHOG_KEY" ]; then
+            LDFLAGS="$LDFLAGS -X github.com/OpenScribbler/syllago/cli/internal/telemetry.apiKey=$SYLLAGO_POSTHOG_KEY"
+          fi
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o syllago-linux-amd64 ./cmd/syllago
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" -o syllago-linux-arm64 ./cmd/syllago
           CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o syllago-darwin-amd64 ./cmd/syllago
