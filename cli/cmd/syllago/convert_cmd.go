@@ -9,6 +9,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -73,10 +74,21 @@ func runConvert(cmd *cobra.Command, args []string) error {
 	}
 
 	// Determine mode: file path or library item name.
+	var err error
 	if isFilePath(input) {
-		return convertFile(input, fromSlug, toSlug, typeStr, outputPath, *toProv, showDiff)
+		err = convertFile(input, fromSlug, toSlug, typeStr, outputPath, *toProv, showDiff)
+	} else {
+		err = convertLibraryItem(input, fromSlug, toSlug, outputPath, *toProv, showDiff)
 	}
-	return convertLibraryItem(input, fromSlug, toSlug, outputPath, *toProv, showDiff)
+	if err == nil {
+		telemetry.Track("command_executed", map[string]any{
+			"command":       "convert",
+			"from_provider": fromSlug,
+			"to_provider":   toSlug,
+			"success":       true,
+		})
+	}
+	return err
 }
 
 // isFilePath returns true if the input exists on disk as a file.

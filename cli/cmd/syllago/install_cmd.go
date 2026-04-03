@@ -12,6 +12,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -261,6 +262,14 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(output.Writer, "  syllago convert %s --to <provider>\n", firstArg(args))
 	}
 
+	telemetry.Track("command_executed", map[string]any{
+		"command":       "install",
+		"provider":      toSlug,
+		"content_type":  typeFilter,
+		"content_count": len(result.Installed),
+		"success":       true,
+		"dry_run":       dryRun,
+	})
 	return nil
 }
 

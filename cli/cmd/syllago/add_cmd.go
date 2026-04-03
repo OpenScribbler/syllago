@@ -16,6 +16,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 	"github.com/tidwall/gjson"
 )
@@ -268,7 +269,15 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		SourceVisibility: srcVisibility,
 	}, globalDir, canon, version)
 
-	return printAddResults(results, dryRun, prov.Name)
+	if err := printAddResults(results, dryRun, prov.Name); err != nil {
+		return err
+	}
+	telemetry.Track("command_executed", map[string]any{
+		"command": "add",
+		"from":    fromSlug,
+		"success": true,
+	})
+	return nil
 }
 
 // converterAdapter adapts converter.Converter to the add.Canonicalizer interface.
