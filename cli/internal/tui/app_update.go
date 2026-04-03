@@ -339,6 +339,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a.routeKey(msg)
 		}
 
+	case telemetryNoticeMsg:
+		const noticeText = "Syllago collects anonymous usage data to help prioritize\n" +
+			"development. No file contents or identifying info is collected.\n" +
+			"Run \"syllago telemetry off\" to disable.\n" +
+			"syllago.dev/telemetry"
+		cmd := a.toast.Push(noticeText, toastWarning)
+		return a, cmd
+
 	case toastTickMsg:
 		var cmd tea.Cmd
 		a.toast, cmd = a.toast.Update(msg)

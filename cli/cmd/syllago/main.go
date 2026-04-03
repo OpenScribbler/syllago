@@ -17,6 +17,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/OpenScribbler/syllago/cli/internal/tui"
 	"github.com/OpenScribbler/syllago/cli/internal/updater"
 	tea "github.com/charmbracelet/bubbletea"
@@ -83,7 +84,15 @@ func init() {
 		verbose, _ := cmd.Flags().GetBool("verbose")
 		output.Verbose = verbose
 
+		// Initialize telemetry after output flags are set so the first-run
+		// notice (if any) respects --no-color via lipgloss profile above.
+		telemetry.Init()
+
 		return nil
+	}
+
+	rootCmd.PersistentPostRun = func(cmd *cobra.Command, args []string) {
+		telemetry.Shutdown()
 	}
 
 	rootCmd.AddCommand(versionCmd)
@@ -184,6 +193,7 @@ func main() {
 	if buildCommit != "" {
 		ensureUpToDate()
 	}
+	telemetry.SetVersion(version)
 	if err := rootCmd.Execute(); err != nil {
 		printExecuteError(err)
 		os.Exit(output.ExitError)
@@ -318,6 +328,9 @@ func runTUI(cmd *cobra.Command, args []string) error {
 	if _, err := p.Run(); err != nil {
 		return wrapTTYError(err)
 	}
+	telemetry.Track("tui_session_started", map[string]any{
+		"success": true,
+	})
 	return nil
 }
 

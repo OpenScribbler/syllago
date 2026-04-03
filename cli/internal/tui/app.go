@@ -11,6 +11,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 )
 
 // wizardKind identifies the active full-screen wizard (if any).
@@ -61,6 +62,7 @@ type App struct {
 	galleryDrillIn       bool   // true when viewing card contents as a library
 	galleryDrillCard     string // name of the card we drilled into (for breadcrumbs)
 	registryOpInProgress bool   // true during async registry operation (add/sync/remove)
+	telemetryNotice      bool   // true if first-run telemetry notice should be shown as toast
 }
 
 // NewApp creates a new TUI app. Signature matches main.go.
@@ -70,6 +72,16 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 	}
 	if cat == nil {
 		cat = &catalog.Catalog{}
+	}
+
+	// Check if first-run telemetry notice should display as a TUI toast.
+	// PersistentPreRun already called telemetry.Init() which sets noticeSeen=true
+	// on the CLI path, so this will only be true if noticeSeen was already false
+	// before Init() ran (i.e., first-ever launch).
+	showTelemetryNotice := false
+	telemetryCfg := telemetry.Status()
+	if !telemetryCfg.NoticeSeen && telemetryCfg.Enabled {
+		showTelemetryNotice = true
 	}
 
 	a := App{
@@ -93,13 +105,21 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		help:            newHelpOverlay(),
 		toast:           newToastModel(),
 		registryAdd:     newRegistryAddModal(),
+
+		telemetryNotice: showTelemetryNotice,
 	}
 	a.updateNavState()
 	return a
 }
 
+// telemetryNoticeMsg triggers the first-run telemetry toast in Update().
+type telemetryNoticeMsg struct{}
+
 // Init implements tea.Model.
 func (a App) Init() tea.Cmd {
+	if a.telemetryNotice {
+		return func() tea.Msg { return telemetryNoticeMsg{} }
+	}
 	return nil
 }
 
