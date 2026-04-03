@@ -82,7 +82,7 @@ func TestInit_FirstRun_NoticeWritten(t *testing.T) {
 	t.Cleanup(func() { NoticeWriter = os.Stderr })
 
 	Init()
-	if !strings.Contains(notice.String(), "syllago collects anonymous usage data") {
+	if !strings.Contains(notice.String(), "To opt out") {
 		t.Errorf("first-run notice not written; got: %q", notice.String())
 	}
 }
@@ -102,7 +102,7 @@ func TestInit_NoticeWrittenOnce(t *testing.T) {
 	resetState()
 	Init() // second call
 
-	count := strings.Count(notice.String(), "syllago collects anonymous usage data")
+	count := strings.Count(notice.String(), "To opt out")
 	if count != 1 {
 		t.Errorf("expected notice exactly once, got %d occurrences", count)
 	}
@@ -319,5 +319,206 @@ func TestStatus_MissingConfig(t *testing.T) {
 	cfg := Status()
 	if cfg.Enabled {
 		t.Error("expected disabled status for missing config")
+	}
+}
+
+// TestEndToEnd_FullLifecycle exercises the complete telemetry lifecycle as a
+// user would experience it: fresh install → first-run notice → events sent →
+// second run (no notice) → off → on → reset. Uses httptest to verify events
+// actually arrive at the ingest endpoint with correct payloads.
+func TestEndToEnd_FullLifecycle(t *testing.T) {
+	// --- Setup: capture HTTP events ---
+	var received []postHogPayload
+	var mu sync.Mutex
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Errorf("expected Content-Type application/json, got %s", r.Header.Get("Content-Type"))
+		}
+		body, _ := io.ReadAll(r.Body)
+		var p postHogPayload
+		if err := json.Unmarshal(body, &p); err != nil {
+			t.Errorf("invalid JSON payload: %v", err)
+		}
+		mu.Lock()
+		received = append(received, p)
+		mu.Unlock()
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+
+	origKey := apiKey
+	apiKey = "phc_e2e_test"
+	origVersion := sysBuildVersion
+	sysBuildVersion = "1.0.0-test"
+	t.Cleanup(func() {
+		apiKey = origKey
+		sysBuildVersion = origVersion
+		resetState()
+	})
+	home := t.TempDir()
+	overrideHome(t, home)
+
+	var notice strings.Builder
+	NoticeWriter = &notice
+	t.Cleanup(func() { NoticeWriter = os.Stderr })
+
+	// --- Phase 1: First run (fresh install) ---
+	Init()
+
+	// Config file should exist now.
+	cfgPath := filepath.Join(home, ".syllago", "telemetry.json")
+	if _, err := os.Stat(cfgPath); err != nil {
+		t.Fatalf("config file not created: %v", err)
+	}
+
+	// First-run notice should have been written.
+	if !strings.Contains(notice.String(), "To opt out") {
+		t.Errorf("first-run notice missing; got: %q", notice.String())
+	}
+
+	// State should be active with a valid anonymous ID.
+	if state.disabled {
+		t.Fatal("telemetry should be enabled after first Init()")
+	}
+	if !isValidID(state.anonymousID) {
+		t.Errorf("invalid anonymous ID after Init(): %s", state.anonymousID)
+	}
+	firstID := state.anonymousID
+
+	// Override endpoint to our test server.
+	state.mu.Lock()
+	state.endpoint = srv.URL
+	state.mu.Unlock()
+
+	// --- Phase 2: Send events ---
+	Track("command_executed", map[string]any{
+		"command":  "install",
+		"provider": "claude-code",
+		"success":  true,
+	})
+	Track("command_executed", map[string]any{
+		"command": "convert",
+		"success": true,
+	})
+	Shutdown()
+
+	// Verify both events arrived.
+	mu.Lock()
+	eventCount := len(received)
+	mu.Unlock()
+	if eventCount != 2 {
+		t.Fatalf("expected 2 events, got %d", eventCount)
+	}
+
+	mu.Lock()
+	for i, ev := range received {
+		if ev.APIKey != "phc_e2e_test" {
+			t.Errorf("event %d: wrong API key %q", i, ev.APIKey)
+		}
+		if ev.DistinctID != firstID {
+			t.Errorf("event %d: wrong distinct_id %q, want %q", i, ev.DistinctID, firstID)
+		}
+		if ev.Properties["version"] != "1.0.0-test" {
+			t.Errorf("event %d: missing or wrong version property", i)
+		}
+		if ev.Properties["os"] == nil {
+			t.Errorf("event %d: missing os property", i)
+		}
+		if ev.Properties["arch"] == nil {
+			t.Errorf("event %d: missing arch property", i)
+		}
+	}
+	if received[0].Event != "command_executed" {
+		t.Errorf("event 0: wrong name %q", received[0].Event)
+	}
+	if received[0].Properties["provider"] != "claude-code" {
+		t.Errorf("event 0: missing provider property")
+	}
+	mu.Unlock()
+
+	// --- Phase 3: Second run (no notice) ---
+	resetState()
+	notice.Reset()
+
+	Init()
+	if notice.Len() > 0 {
+		t.Errorf("notice should not appear on second run; got: %q", notice.String())
+	}
+	if state.disabled {
+		t.Error("telemetry should still be enabled on second run")
+	}
+	Shutdown()
+
+	// --- Phase 4: Disable → re-enable → verify ---
+	resetState()
+	if err := SetEnabled(false); err != nil {
+		t.Fatalf("SetEnabled(false): %v", err)
+	}
+
+	cfg := Status()
+	if cfg.Enabled {
+		t.Error("expected disabled after SetEnabled(false)")
+	}
+
+	// Init with telemetry disabled should not create an HTTP client.
+	Init()
+	if !state.disabled {
+		t.Error("Init() should respect enabled=false in config")
+	}
+
+	// Track should be a no-op when disabled.
+	mu.Lock()
+	prevCount := len(received)
+	mu.Unlock()
+
+	state.mu.Lock()
+	state.endpoint = srv.URL
+	state.mu.Unlock()
+
+	Track("should_not_send", nil)
+	Shutdown()
+
+	mu.Lock()
+	if len(received) != prevCount {
+		t.Errorf("event sent while disabled: got %d events, want %d", len(received), prevCount)
+	}
+	mu.Unlock()
+
+	// Re-enable.
+	resetState()
+	if err := SetEnabled(true); err != nil {
+		t.Fatalf("SetEnabled(true): %v", err)
+	}
+
+	// --- Phase 5: Reset ID ---
+	newID, err := Reset()
+	if err != nil {
+		t.Fatalf("Reset(): %v", err)
+	}
+	if newID == firstID {
+		t.Error("Reset() should generate a different ID")
+	}
+	if !isValidID(newID) {
+		t.Errorf("Reset() returned invalid ID: %s", newID)
+	}
+
+	// Verify the new ID is used for subsequent events.
+	resetState()
+	Init()
+	state.mu.Lock()
+	state.endpoint = srv.URL
+	state.mu.Unlock()
+
+	Track("command_executed", map[string]any{"command": "version"})
+	Shutdown()
+
+	mu.Lock()
+	lastEvent := received[len(received)-1]
+	mu.Unlock()
+	if lastEvent.DistinctID != newID {
+		t.Errorf("event after Reset() used old ID %q, want %q", lastEvent.DistinctID, newID)
 	}
 }
