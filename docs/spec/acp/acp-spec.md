@@ -1,8 +1,8 @@
 # Agent Content Provenance (ACP) Specification
 
-**Version:** 0.1.0 (Draft)
+**Version:** 0.2.0 (Draft)
 **Status:** Draft
-**Date:** 2026-04-01
+**Date:** 2026-04-03
 **Editor:** Holden Hewett
 **License:** Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 **Repository:** https://github.com/hhewett/syllago
@@ -23,11 +23,40 @@ This specification defines a portable sidecar format (`meta.yaml`) for recording
 
 AI coding tool content — skills, rules, hooks, agents, MCP configurations, commands, and other artifacts — is increasingly authored, shared, and installed across tools and organizations. As this ecosystem grows, consumers need answers to basic provenance questions: Who made this? Has it been modified? Where did it come from? What was it derived from?
 
-ACP addresses these questions with a single provenance model applied uniformly to all content types. The specification defines:
+The ecosystem has mature standards for content formats and packaging, but no standard addresses the provenance question — verifying who made content, whether it has been tampered with, and where it came from. ACP fills this gap.
+
+### 2.1 Who Implements ACP
+
+ACP is a **platform-side and tooling-side specification**. The entities that implement it are:
+
+- **Tool vendors** building publishing and verification pipelines
+- **Registry operators** building distribution infrastructure
+- **Organizations** managing internal content libraries with CI/CD resources
+- **Developer-publishers** comfortable with the GitHub/GitLab ecosystem
+
+Individual content creators interact with ACP through the platforms and tools they use, not by managing cryptographic operations directly. A content author clicks "Publish" in a web interface; the platform computes hashes, signs, and produces the `meta.yaml`. This is the correct layering — ACP is the interoperability contract between platforms, analogous to TLS for web traffic.
+
+Content without ACP metadata — unsigned, unverified, shared informally — is a legitimate and expected use case, not a failure state. Permissive consumers (Section 5.2.3) surface the absence of provenance without blocking the user.
+
+### 2.2 The Trust Chain
+
+ACP provides a four-link trust chain. Each link depends on the previous. Breaking any one invalidates verification.
+
+1. **Content → content hash.** SHA-256 of the directory tree manifest (Section 7). Guarantees: these exact files were present when this hash was computed.
+2. **Content hash → meta hash.** SHA-256 of provenance metadata including the content hash, serialized as canonical JSON (Section 8). Guarantees: this metadata cannot be detached from the content it describes.
+3. **Meta hash → signature.** Cryptographic signature over both hashes, binding integrity to a verifiable identity (Section 9). Guarantees: a specific identity endorsed these exact hashes at a specific moment.
+4. **Signature → source binding.** Verification that the signer is authorized for the claimed `source_repo` (Section 9.2). Guarantees: the signer is demonstrably the operator of the claimed source repository.
+
+Without a signature (links 1–2 only), provenance metadata is a set of self-reported claims — useful for organization but not authoritative. With a signature but no source binding (links 1–3), the content was signed by *someone* with a valid identity but the relationship between signer and claimed source is unverified. The full chain (links 1–4) provides end-to-end assurance: content integrity, metadata integrity, identity binding, and source authorization.
+
+### 2.3 Specification Overview
+
+ACP addresses the trust chain with a single provenance model applied uniformly to all content types. The specification defines:
 
 - A sidecar file format (`meta.yaml`) placed alongside content
 - Two integrity hashes: one for content, one for metadata
 - Optional cryptographic signatures via Sigstore or SSH
+- Source binding via OIDC identity verification (Sigstore method)
 - A lineage model for tracking forks, conversions, and adaptations
 
 ACP is designed to be tool-agnostic. While syllago is the reference implementation, any content management system can produce and consume ACP metadata.
@@ -97,6 +126,7 @@ A strict consumer enforces provenance as a security boundary:
 
 - MUST NOT accept content without a valid `meta.yaml`.
 - MUST NOT accept content where `meta.yaml` is present but `signature` is absent, when the consumer's policy requires signatures.
+- MUST verify `source_repo` binding when a Sigstore signature is present (Section 9.2 step 6).
 - MUST clearly indicate to the user when content is rejected and why.
 
 > **Rationale:** Strict conformance is designed for security-conscious deployments — enterprise environments, CI/CD pipelines, and registries — where provenance is a gate, not advisory. By requiring `meta.yaml`, strict consumers defend against sidecar stripping (Section 11.4), where an attacker removes provenance from content to bypass integrity checks. Organizations that mandate strict conformance gain a guarantee that no unverified content enters their toolchain.
@@ -121,6 +151,7 @@ A conforming registry is any system that indexes or distributes content with ACP
 - MUST verify `content_hash` and `meta_hash` before accepting content for listing.
 - SHOULD require `meta.yaml` for listed content.
 - MAY impose additional requirements (e.g., mandatory signatures, minimum fields).
+- SHOULD implement a first-publish authorization policy for new `source_repo` bindings (see Section 11.19).
 
 ## 6. The meta.yaml Format
 
@@ -267,13 +298,43 @@ Each entry contains:
 
 > **Note (Informative):** `derived_from` fields are self-reported claims. The `source_hash` is verifiable if the source content is accessible, but is not independently authenticated without the source's own signature.
 
+#### 6.3.15 publisher_identity (CONDITIONAL)
+
+String. Identifies the publishing platform when content is published on behalf of the author rather than by the author directly. Default: absent.
+
+This field is REQUIRED when the signing identity differs from the `source_repo` owner — i.e., when the entity controlling the Fulcio certificate is not the natural author of the content. It MUST be absent for direct-publish (the common case for solo developers and organizations).
+
+The field value is a human-readable identifier for the publishing platform (e.g., `claude.ai`, `syllago-community`).
+
+This field is a self-reported claim — there is no mechanism for consumers to independently verify that the named platform actually published the content. Consumers MUST NOT treat `publisher_identity` as a verified identity. Consumers MUST NOT treat the absence of `publisher_identity` as proof of direct publishing.
+
+"Differs" is determined by comparing the Source Repository URI from Fulcio OID `1.3.6.1.4.1.57264.1.12` against `source_repo`. If the repository owner in the certificate matches the expected owner of `source_repo`, this is direct publishing and `publisher_identity` MUST be absent. If the repository owner is a platform namespace (e.g., `syllago/community-skills/*`), `publisher_identity` is REQUIRED. See Section 9.2 step 7 for verifier obligations.
+
+#### 6.3.16 repository_owner_id (RECOMMENDED)
+
+String. The numeric, immutable platform identifier for the repository owner (e.g., GitHub's numeric user/org ID). Default: absent.
+
+This field protects against account resurrection attacks: if a username is deleted and re-registered, the numeric ID changes, making the impersonation detectable. Not all platforms provide stable numeric identifiers. When available, the value SHOULD be extracted from the Fulcio certificate's OID `1.3.6.1.4.1.57264.1.17` (Source Repository Owner Identifier).
+
+Registries that enforce identity stability SHOULD check this field when present.
+
+#### 6.3.17 sigstore_trust_root (OPTIONAL)
+
+String. A reference to the TUF root used for Sigstore signing. Default: absent. Used in registry manifests and content bundles to enable consumers to verify content signed against any Sigstore instance.
+
+The public-good Sigstore instance (`tuf-repo-cdn.sigstore.dev`) is the RECOMMENDED default for open registries and community content. Enterprise deployments running private Sigstore instances use this field to advertise their TUF root. Consumers configure which trust roots to accept based on their own policy.
+
+> **Note (Informative):** No Sigstore federation mechanism exists — each deployment is an independent trust domain with its own TUF root. Trust roots are distributed out-of-band. This field defines the advertisement mechanism; consumer policy governs which roots to accept.
+
+> **Note (Informative):** Because `sigstore_trust_root` is excluded from `meta_hash` computation (Section 8.1), it is not integrity-protected. A relay or CDN could substitute the value without invalidating the content's hashes or signature. Consumers MUST validate the trust root against their own policy before using it for verification.
+
 ### 6.4 Distribution Scope Requirements
 
 | Scope | REQUIRED Fields |
 |-------|----------------|
 | Local (personal use) | `meta_version`, `type`, `name`, `version`, `content_hash`, `meta_hash` |
 | Team (shared internally) | Above + `authors` |
-| Public (published to registry) | Above + `source_repo`, `published_at`. `signature` RECOMMENDED. |
+| Public (published to registry) | Above + `source_repo`, `published_at`. `signature` RECOMMENDED. `publisher_identity` REQUIRED when signing identity ≠ source_repo owner. `repository_owner_id` RECOMMENDED. `sigstore_trust_root` OPTIONAL (RECOMMENDED for non-public-good Sigstore instances). |
 
 > **Note (Informative):** Promoting content to a wider scope (e.g., local → team) may require adding fields such as `authors`. Adding fields changes the `meta_hash`. Publishers promoting content SHOULD add the required fields, recompute `meta_hash`, and increment `version`. Any installations that stored the previous `meta_hash` will need to re-verify against the new version.
 
@@ -366,6 +427,8 @@ Each `meta_version` defines an explicit allowlist of fields included in `meta_ha
 | `meta_version` | Yes | |
 | `name` | Yes | |
 | `published_at` | Per scope | |
+| `publisher_identity` | Conditional | REQUIRED when signing identity ≠ source_repo owner (Section 6.3.15) |
+| `repository_owner_id` | No | RECOMMENDED (Section 6.3.16) |
 | `source_commit` | No | |
 | `source_repo` | Per scope | |
 | `type` | Yes | |
@@ -375,8 +438,9 @@ The following fields are explicitly NOT in the allowlist and MUST NOT be include
 
 - `meta_hash` — the output of this algorithm; including it would create a circular dependency
 - `signature` — computed over the `meta_hash`; including it would create a circular dependency
+- `sigstore_trust_root` — registry/distribution metadata, not content provenance; excluding it allows the same `meta.yaml` to be served by registries with different trust root configurations without invalidating the hash
 
-> **Note (Informative):** The fields in this allowlist match exactly the fields present in test vector TV-MH (Appendix B). Implementations can verify their field extraction logic against TV-MH's JCS output.
+> **Note (Informative):** The fields in this allowlist match exactly the fields present in test vector TV-MH (Appendix B) for the base case. TV-MH4 demonstrates the allowlist with `publisher_identity` and `repository_owner_id` included.
 
 ### 8.2 YAML-to-JSON Type Mapping
 
@@ -395,7 +459,10 @@ YAML parsers handle implicit typing differently — booleans, timestamps, intege
 | `source_commit` | string | |
 | `published_at` | string | MUST be parsed as a YAML string, NOT as a YAML timestamp. Implementations MUST quote this value in YAML or use a tag (`!!str`) to prevent implicit datetime parsing by the YAML library. |
 | `content_hash` | string | |
+| `publisher_identity` | string | |
+| `repository_owner_id` | string | MUST be serialized as a string, not an integer, even when the value is numeric |
 | `derived_from` | array of objects | Each object contains: `source` (string), `relation` (string), `source_hash` (string) |
+| `sigstore_trust_root` | string | Not included in meta_hash (distribution metadata) |
 | `signature.method` | string | Not included in meta_hash (signature is excluded) |
 | `signature.identity` | string | Not included in meta_hash |
 | `signature.log_index` | number (integer) | Not included in meta_hash |
@@ -443,10 +510,15 @@ Verification:
 1. Recompute both hashes per Sections 7 and 8.
 2. Construct the signing input per Section 9.1.
 3. Fetch the certificate from Rekor by `log_index`.
-4. Verify the signature against the certificate.
-5. Verify that the OIDC identity in the certificate is authorized for this content. Consumers MUST perform identity verification — accepting signatures from any OIDC identity without checking authorization is a security vulnerability (see Section 11.9). The matching algorithm (exact string match, prefix matching, regular expression, or policy-based lookup) is an implementation decision.
+4. Verify the signature against the certificate. Fulcio certificates are ephemeral (typically valid for minutes). Implementations MUST verify the certificate's validity against the Rekor log entry timestamp — not the current wall-clock time. A certificate that was valid when the Rekor entry was created is valid for ACP verification regardless of current time.
+5. Verify that the OIDC identity in the certificate is authorized for this content. Consumers SHOULD perform identity verification — accepting signatures from any OIDC identity without checking authorization is a security vulnerability (see Section 11.9). The matching algorithm (exact string match, prefix matching, regular expression, or policy-based lookup) is an implementation decision. Strict consumers MUST document their identity verification algorithm.
+6. **Verify `source_repo` binding.** Extract the Source Repository URI from the Fulcio signing certificate's OID extension `1.3.6.1.4.1.57264.1.12`. Strip the `https://` scheme prefix. This value MUST exactly equal the `source_repo` field value using exact string equality. Substring matching and `contains()` checks are explicitly prohibited — see Section 11.9 for exploitation details. Strict consumers MUST fail verification if `source_repo` is absent or if the values do not match. Permissive consumers SHOULD surface a distinct warning. In both cases, the cryptographic signature validity (step 4) and the source binding check (this step) are separate outcomes and MUST be reported separately. When OID `1.3.6.1.4.1.57264.1.12` is absent from the Fulcio certificate (e.g., custom OIDC issuers that do not populate Sigstore OID extensions), source binding cannot be performed. Strict consumers MUST fail verification. Permissive consumers SHOULD surface a distinct warning that source binding was not verified due to missing certificate metadata.
+7. **Check `publisher_identity`.** If `publisher_identity` is present in `meta.yaml`, verifiers MUST surface this to the user or audit log — this content was published by a platform on behalf of the author, not by the author directly. Verifiers MUST NOT present delegated and direct publishing identically. When `publisher_identity` is absent, verifiers MAY assume direct publishing but MUST NOT treat the absence as proof of direct publishing — the field may have been omitted in error or stripped by a relay.
+8. **Check `sigstore_trust_root`.** When `sigstore_trust_root` is present in `meta.yaml`, consumers SHOULD use the referenced TUF root for verification instead of assuming the public-good Sigstore instance. The `sigstore_trust_root` field is not included in `meta_hash` (Section 8.1) and is not integrity-protected — consumers MUST NOT blindly trust the field value. Consumer policy governs which trust roots are accepted.
 
-Sigstore [SIGSTORE] signing is supported by any OIDC-compliant CI/CD platform, including GitHub Actions, GitLab CI/CD, CircleCI, Buildkite, and Forgejo (v15+). Custom OIDC issuers are supported via Fulcio configuration.
+> **Note (Informative):** On first publish, `source_repo` is self-asserted — there is no prior state to validate against. This is an inherent property of decentralized systems without a central pre-registration authority. Verifiers MUST treat the first-publish `source_repo` binding as an unvalidated claim until the signer has an established publish history. Subsequent publishes from the same signing identity and `source_repo` reinforce the binding. A change in signing identity for the same `source_repo` is a red flag that consumers SHOULD surface prominently. Registries SHOULD implement their own first-publish authorization policies (see Section 11.19).
+
+Sigstore [SIGSTORE] signing is supported by any OIDC-compliant CI/CD platform, including GitHub Actions, GitLab CI/CD, CircleCI, and Buildkite. Custom OIDC issuers are supported via Fulcio configuration. See Appendix D for provider-specific certificate extension values.
 
 ### 9.3 SSH Method
 
@@ -498,14 +570,15 @@ Each `derived_from` entry records only the immediate source — not the full der
 
 ### 11.1 Trust Model
 
-ACP provides a layered trust model:
+ACP provides a layered trust model (see also Section 2.2):
 
 1. **Content hash** provides content integrity (mathematical).
 2. **Meta hash** provides metadata integrity (mathematical).
 3. **Signature** binds both to a verifiable identity (cryptographic).
-4. **Git history** provides an audit trail (operational).
+4. **Source binding** verifies the signer is authorized for the claimed `source_repo` (Section 9.2 step 6). Sigstore method only.
+5. **Git history** provides an audit trail (operational).
 
-Without a signature, provenance metadata is a set of self-reported claims. Consumers SHOULD treat unsigned provenance as informational, not authoritative.
+Without a signature, provenance metadata is a set of self-reported claims. Consumers SHOULD treat unsigned provenance as informational, not authoritative. Without source binding (links 1–3 only), the signature proves *someone* signed the content but not that the signer is the claimed source's operator.
 
 ### 11.2 Hash Binding
 
@@ -518,11 +591,11 @@ Without a signature, an attacker can still recompute both hashes for forged cont
 The following fields are self-reported and not independently verifiable without additional mechanisms:
 
 - `authors` — anyone can claim any authorship
-- `source_repo` — anyone can claim any source
+- `source_repo` — anyone can claim any source. However, when a Sigstore signature is present, the source binding check (Section 9.2 step 6) independently verifies that the signer controls the claimed `source_repo`.
 - `source_commit` — verifiable by fetching, but not bound to content without a signature
 - `derived_from` — source hash is verifiable if the source is accessible, but the claim of derivation itself is self-reported
 
-When a signature is present, these claims are bound to the signer's identity. The claims are as trustworthy as the signer.
+When a signature is present, these claims are bound to the signer's identity. The claims are as trustworthy as the signer. With source binding (Section 9.2 step 6), `source_repo` is additionally verified against the signing certificate — it is no longer a purely self-reported claim.
 
 ### 11.4 Sidecar Removal
 
@@ -619,6 +692,43 @@ Section 11.5 notes that SHA-256 compromise would require a new `meta_version`. A
 - **Rekor verification.** Sigstore consumers that fetch transparency log entries by `log_index` (Section 9.2) SHOULD verify inclusion proofs. Inclusion proofs are returned as part of the Rekor transparency log response and cryptographically demonstrate that an entry exists in the log's Merkle tree. Trusting Rekor responses without verifying inclusion proofs is vulnerable to a compromised or spoofed Rekor instance. See [REKOR] for verification API details.
 
 - **Offline verification.** Sigstore verification requires network access for Rekor and Fulcio interactions. For air-gapped environments, SSH signing (Section 9.3) provides an offline-capable alternative that requires no network access.
+
+### 11.17 Source Binding Residual Risks
+
+The `source_repo` binding (Section 9.2 step 6) closes the gap between "signature verified" and "signature verified against someone I trust." However, it introduces its own residual risks:
+
+- **Repository takeover.** If a GitHub/GitLab account is compromised, the attacker controls the repo and can obtain valid OIDC tokens. The failure mode maps to "trust the owner of this account" — which is how consumers already reason about repositories. This is not worse than key-based systems, where key compromise has the same effect.
+
+- **Repository transfer.** A new repository owner can sign with a valid matching OIDC identity. Old signed content still verifies against the old signing identity. Registries SHOULD implement namespace management to handle ownership transitions.
+
+- **Organization repositories with multiple contributors.** `source_repo` binds to the repository, not a specific person within it. Any team member with CI/CD write access can trigger signing. Mitigation: branch protection and required reviewers — operational controls, not spec concerns.
+
+- **Workflow file manipulation.** An attacker with repository write access can add a signing workflow. Same mitigation as above: branch protection rules.
+
+- **Provider OIDC compromise.** A systemic risk affecting all Sigstore-based verification, not specific to ACP. The Rekor transparency log provides partial detection capability via anomaly visibility at scale.
+
+- **Self-hosted instance OIDC trust.** Self-hosted git instances (GitLab CE, Gitea) at arbitrary domains present an ambiguous trust signal. A valid OIDC token from `git.alicecorp.com` does not indicate the security posture of the instance. Consumer policy governs for self-hosted instances — known providers (GitHub, GitLab SaaS) are trusted by default. Custom hosts require explicit consumer configuration via `sigstore_trust_root` (Section 6.3.17). The enterprise path is a self-hosted Fulcio instance with an internal CA.
+
+### 11.18 Version Rollback and Source Binding
+
+Source binding (Section 9.2 step 6) makes version rollback attacks *more* convincing, not less. An older, signed version of content passes all verification checks — including source binding. A v1.0 artifact from six months ago looks identical to a current artifact under the trust anchor model.
+
+Rekor timestamps attest *signing time*, not currency. A valid timestamp proves when content was signed, not whether a newer version exists. Source binding does not imply the content is the most recent valid version.
+
+Registries are encouraged to maintain a latest-version manifest per content package, enabling consumers to detect when they are being served stale content. This is a registry-layer responsibility — the trust anchor binds identity to source, not content to time. Consumers that require freshness guarantees are encouraged to query the registry's latest-version endpoint and compare against the Rekor timestamp of the content they received. The format and signing requirements for such manifests are outside the scope of this specification.
+
+### 11.19 First-Publish Trust (TOFU)
+
+On first publish, `source_repo` is self-asserted — there is no prior state to validate against. This is an inherent property of decentralized systems without a central pre-registration authority.
+
+Verifiers SHOULD treat the first-publish `source_repo` binding as an unvalidated claim until the signer has an established publish history. Subsequent publishes from the same signing identity and `source_repo` reinforce the binding. A change in signing identity for the same `source_repo` is a red flag that consumers SHOULD surface prominently.
+
+Registries SHOULD implement their own first-publish authorization policies:
+- Centralized registries MAY require explicit pre-registration (analogous to PyPI Trusted Publishers).
+- Community registries MAY accept TOFU with additional review.
+- The `repository_owner_id` field (Section 6.3.16) provides additional hardening: if a username is deleted and re-registered, the numeric ID changes, making account resurrection detectable even when the `source_repo` string matches.
+
+The spec does not mandate a specific first-publish policy — it documents the limitation and delegates policy to registries.
 
 ## 12. References
 
@@ -1072,6 +1182,37 @@ sha256:d0ca70699a613d284891d08cf9e70e7cc14098a25bfcb0051674300dec7d8c21
 
 Validates: Section 9.1 — domain separator (`ACP-V1:`), full `sha256:`-prefixed hash values, single newline separator, no trailing newline. The SHA-256 of the signing input allows implementations to verify correct construction without performing actual signing.
 
+### TV-MH4: Meta hash with publisher_identity and repository_owner_id (Section 8)
+
+Input: Metadata for platform-published content including `publisher_identity` and `repository_owner_id` — the fields added in v0.2.0 for delegated publishing and account resurrection protection. A platform (`syllago-community`) publishes Alice's code-review skill from a platform-managed monorepo.
+
+```yaml
+meta_version: 1
+type: skill
+name: community-code-review
+version: 1
+description: Code review skill published by a platform on behalf of Alice.
+authors:
+  - alice <alice@example.com>
+source_repo: github.com/syllago/community-skills
+published_at: "2026-04-01T18:00:00Z"
+content_hash: "sha256:9c9c3591140eae4e0f047060470af98da00629b668f152ac6d4846e64ff91d40"
+publisher_identity: syllago-community
+repository_owner_id: "12345678"
+```
+
+JCS ([RFC8785]) canonical JSON:
+
+```
+{"authors":["alice <alice@example.com>"],"content_hash":"sha256:9c9c3591140eae4e0f047060470af98da00629b668f152ac6d4846e64ff91d40","description":"Code review skill published by a platform on behalf of Alice.","meta_version":1,"name":"community-code-review","published_at":"2026-04-01T18:00:00Z","publisher_identity":"syllago-community","repository_owner_id":"12345678","source_repo":"github.com/syllago/community-skills","type":"skill","version":1}
+```
+
+```
+meta_hash: sha256:0dc0d6a15dfe63692f91d8faf208ae007f4e83682b82f1e240872703898eb7e0
+```
+
+Validates: Section 8.1 — the new `publisher_identity` and `repository_owner_id` fields are included in the hashed allowlist and sort correctly in JCS output (`publisher_identity` between `published_at` and `repository_owner_id`). The `content_hash` reuses TV-03's value. `repository_owner_id` is serialized as a string (not integer) per Section 8.2. `sigstore_trust_root` is absent and correctly excluded — it is not in the hashed allowlist regardless of presence.
+
 ## Appendix C: Platform Signing Support (Informative)
 
 Sigstore OIDC signing is supported by the following platforms as of April 2026:
@@ -1082,10 +1223,56 @@ Sigstore OIDC signing is supported by the following platforms as of April 2026:
 | GitLab CI/CD | Full support |
 | CircleCI | Supported via Fulcio |
 | Buildkite | Supported via Fulcio |
-| Forgejo/Codeberg | OIDC support merged January 2026, full support expected in v15 |
+| Forgejo/Codeberg | Forgejo Actions does not currently support OIDC `id_tokens`, and Fulcio has no Forgejo issuer type. Cannot participate in Sigstore keyless signing as of April 2026. |
 | Custom OIDC issuers | Supported via Fulcio `--oidc-issuer` configuration |
 
 SSH signing is available on all platforms.
+
+## Appendix D: Provider OIDC Certificate Extensions and Related Work (Informative)
+
+### D.1 Fulcio OID Extensions for Source Binding
+
+The `source_repo` binding (Section 9.2 step 6) uses the Fulcio OID extension for Source Repository URI. The following table documents the extension values populated by supported providers:
+
+| Provider | OID `1.3.6.1.4.1.57264.1.12` (Source Repository URI) | Matches `source_repo` |
+|---|---|---|
+| GitHub Actions | `https://github.com/{owner}/{repo}` | `github.com/{owner}/{repo}` |
+| GitLab CI/CD | `https://gitlab.com/{group}/{project}` | `gitlab.com/{group}/{project}` |
+| Custom OIDC | Consumer policy governs | — |
+
+Additional Fulcio OID extensions available for verification hardening:
+
+| OID | Name | Use |
+|-----|------|-----|
+| `1.3.6.1.4.1.57264.1.12` | Source Repository URI | Primary `source_repo` binding (Section 9.2 step 6) |
+| `1.3.6.1.4.1.57264.1.15` | Source Repository Identifier | Numeric repo ID (immutable, for hardening) |
+| `1.3.6.1.4.1.57264.1.16` | Source Repository Owner URI | Owner-level binding |
+| `1.3.6.1.4.1.57264.1.17` | Source Repository Owner Identifier | Numeric owner ID (for `repository_owner_id`, Section 6.3.16) |
+
+The extraction algorithm (Section 9.2 step 6) uses OID `1.3.6.1.4.1.57264.1.12` rather than parsing the OIDC `sub` claim. The `sub` claim is customizable (GitHub organizations can change its composition via REST API) and formatted differently per provider. The OID extension is populated from the `repository` claim (GitHub) or `project_path` claim (GitLab) and handles subgroups naturally.
+
+### D.2 Enterprise Self-Hosted Sigstore
+
+Organizations running self-hosted git instances (GitLab CE, Gitea) that require Sigstore signing can deploy an independent Sigstore instance:
+
+1. Deploy a self-hosted Fulcio instance configured to accept OIDC tokens from the organization's identity provider.
+2. Deploy a self-hosted Rekor instance for transparency logging.
+3. Generate a TUF root for the deployment.
+4. Advertise the TUF root via the `sigstore_trust_root` field (Section 6.3.17) in registry manifests.
+5. Consumers configure which trust roots to accept based on organizational policy.
+
+Each deployment is an independent trust domain with its own TUF root. No federation mechanism exists between Sigstore instances. Trust roots are distributed out-of-band.
+
+### D.3 Related Work: sigstore-a2a
+
+The [sigstore-a2a](https://github.com/sigstore/sigstore-a2a) project signs AI Agent Cards using Sigstore keyless infrastructure — cryptographically binding agent metadata to source repositories. This is conceptually close to ACP's content package signing but addresses a different layer:
+
+- **sigstore-a2a** signs agent cards — runtime identity and capability declarations for AI agents.
+- **ACP** signs content packages — installable artifacts (skills, rules, hooks) for AI coding tools.
+
+The signing infrastructure is shared (Fulcio, Rekor, TUF), providing implicit compatibility at the verification toolchain level. No explicit format coupling or alignment is needed at v1 — the specs serve different artifact types with different trust requirements.
+
+Both specs use Fulcio OID extension `1.3.6.1.4.1.57264.1.12` for source binding. Because the extraction logic is compatible by construction, implementations that support one spec's verification can be extended to the other with minimal effort. The two specs would benefit from coordinating on OID extension usage to prevent divergence — this is the one surface where incompatibility would create real integration cost.
 
 ## Acknowledgements
 
