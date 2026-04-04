@@ -222,6 +222,41 @@ func TestReadFileContent_ExactMaxLines(t *testing.T) {
 	}
 }
 
+func TestReadFileContent_PathTraversal(t *testing.T) {
+	t.Parallel()
+
+	// Create a parent dir with base/ and outside/ subdirs.
+	// Traversal from base/ via ../ can reach outside/.
+	parent := t.TempDir()
+	base := filepath.Join(parent, "base")
+	outside := filepath.Join(parent, "outside")
+	os.MkdirAll(base, 0755)
+	os.MkdirAll(outside, 0755)
+	os.WriteFile(filepath.Join(base, "safe.md"), []byte("ok"), 0644)
+	os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("secret data"), 0644)
+
+	tests := []struct {
+		name    string
+		relPath string
+		wantErr bool
+	}{
+		{"safe relative", "safe.md", false},
+		{"traversal dotdot", "../outside/secret.txt", true},
+		{"traversal embedded", "sub/../../outside/secret.txt", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			content, err := ReadFileContent(base, tt.relPath, 100)
+			if tt.wantErr && err == nil {
+				t.Errorf("expected path traversal error, got content: %q", content)
+			}
+			if !tt.wantErr && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
 func TestRemoveLibraryItem(t *testing.T) {
 	t.Parallel()
 	t.Run("removes existing directory", func(t *testing.T) {
