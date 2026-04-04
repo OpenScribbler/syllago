@@ -30459,3 +30459,70 @@ time=2026-04-03T22:53:12.763-07:00 level=INFO msg="Starting %s..." !BADKEY=auto-
 time=2026-04-03T22:53:12.765-07:00 level=INFO msg="Skipping %s: JSONL content unchanged" !BADKEY=auto-import
 time=2026-04-03T22:53:38.942-07:00 level=INFO msg="JSONL file created: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
 time=2026-04-03T22:53:38.943-07:00 level=INFO msg="File change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T22:53:39.390-07:00 level=INFO msg="JSONL file created: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T22:53:39.416-07:00 level=INFO msg="Git ref change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.git/refs/heads/main.lock
+time=2026-04-03T22:53:40.417-07:00 level=INFO msg="Import triggered by file change"
+time=2026-04-03T22:53:40.417-07:00 level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-04-03T22:53:40.421-07:00 level=INFO msg="Skipping %s: JSONL content unchanged" !BADKEY=auto-import
+time=2026-04-03T22:55:44.307-07:00 level=INFO msg="Git ref change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.git/refs/heads/worktree-agent-a0114795.lock
+time=2026-04-03T22:55:45.310-07:00 level=INFO msg="Import triggered by file change"
+time=2026-04-03T22:55:45.310-07:00 level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-04-03T22:55:45.312-07:00 level=INFO msg="Skipping %s: JSONL content unchanged" !BADKEY=auto-import
+time=2026-04-03T22:57:15.706-07:00 level=INFO msg="Mutation detected: %s %s" status=syllago-60z9l
+time=2026-04-03T22:57:15.715-07:00 level=INFO msg="Mutation detected: %s %s" status=syllago-ihytg
+time=2026-04-03T22:57:15.724-07:00 level=INFO msg="Mutation detected: %s %s" status=syllago-q9fpw
+time=2026-04-03T22:57:15.733-07:00 level=INFO msg="Mutation detected: %s %s" status=syllago-9f66s
+time=2026-04-03T22:57:15.742-07:00 level=INFO msg="Mutation detected: %s %s" status=syllago-klllx
+time=2026-04-03T22:57:15.750-07:00 level=INFO msg="Mutation detected: %s %s" status=syllago-oxtua
+time=2026-04-03T22:57:16.190-07:00 level=INFO msg="JSONL file created: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T22:57:16.190-07:00 level=INFO msg="File change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T22:57:16.243-07:00 level=INFO msg="Git ref change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.git/refs/heads/main.lock
+time=2026-04-03T22:57:16.251-07:00 level=INFO msg="Export triggered by mutation events"
+time=2026-04-03T22:57:16.251-07:00 level=INFO msg="Starting %s..." !BADKEY=export
+time=2026-04-03T22:57:16.436-07:00 level=INFO msg="JSONL file created: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T22:57:16.436-07:00 level=INFO msg="Exported to JSONL"
+time=2026-04-03T22:57:16.436-07:00 level=INFO msg="Export complete"
+time=2026-04-03T22:57:17.436-07:00 level=INFO msg="Import triggered by file change"
+time=2026-04-03T22:57:17.436-07:00 level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-04-03T22:57:17.439-07:00 level=INFO msg="Skipping %s: JSONL content unchanged" !BADKEY=auto-import
+time=2026-04-03T22:59:38.475-07:00 level=INFO msg="Git ref change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.git/refs/heads/worktree-agent-ac80b463.lock
+time=2026-04-03T22:59:39.484-07:00 level=INFO msg="Import triggered by file change"
+time=2026-04-03T22:59:39.484-07:00 level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-04-03T22:59:39.486-07:00 level=INFO msg="Skipping %s: JSONL content unchanged" !BADKEY=auto-import
+time=2026-04-03T23:03:49.230-07:00 level=INFO msg="Mutation detected: %s %s" status=syllago-kvf9f
+time=2026-04-03T23:03:49.238-07:00 level=INFO msg="Mutation detected: %s %s" status=syllago-n5yj8
+time=2026-04-03T23:03:49.246-07:00 level=INFO msg="Mutation detected: %s %s" status=syllago-80xgx
+time=2026-04-03T23:03:49.253-07:00 level=INFO msg="Mutation detected: %s %s" status=syllago-8f8ve
+time=2026-04-03T23:03:49.260-07:00 level=INFO msg="Mutation detected: %s %s" status=syllago-kxla3
+time=2026-04-03T23:03:49.673-07:00 level=INFO msg="JSONL file created: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T23:03:49.674-07:00 level=INFO msg="File change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T23:03:49.761-07:00 level=INFO msg="Export triggered by mutation events"
+time=2026-04-03T23:03:49.761-07:00 level=INFO msg="Starting %s..." !BADKEY=export
+time=2026-04-03T23:03:49.910-07:00 level=INFO msg="JSONL file created: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T23:03:49.910-07:00 level=INFO msg="Exported to JSONL"
+time=2026-04-03T23:03:49.910-07:00 level=INFO msg="Export complete"
+time=2026-04-03T23:03:50.912-07:00 level=INFO msg="Import triggered by file change"
+time=2026-04-03T23:03:50.912-07:00 level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-04-03T23:03:50.916-07:00 level=INFO msg="Skipping %s: JSONL content unchanged" !BADKEY=auto-import
+time=2026-04-03T23:03:56.067-07:00 level=INFO msg="JSONL file created: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T23:03:56.067-07:00 level=INFO msg="File change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T23:03:56.106-07:00 level=INFO msg="Git ref change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.git/refs/heads/main.lock
+time=2026-04-03T23:03:57.108-07:00 level=INFO msg="Import triggered by file change"
+time=2026-04-03T23:03:57.108-07:00 level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-04-03T23:03:57.111-07:00 level=INFO msg="Skipping %s: JSONL content unchanged" !BADKEY=auto-import
+time=2026-04-03T23:06:17.620-07:00 level=INFO msg="Mutation detected: %s %s" status=syllago-qcwrj
+time=2026-04-03T23:06:17.627-07:00 level=INFO msg="Mutation detected: %s %s" status=syllago-538v4
+time=2026-04-03T23:06:17.634-07:00 level=INFO msg="Mutation detected: %s %s" status=syllago-rbmrb
+time=2026-04-03T23:06:18.026-07:00 level=INFO msg="JSONL file created: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T23:06:18.026-07:00 level=INFO msg="File change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T23:06:18.078-07:00 level=INFO msg="Git ref change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.git/refs/heads/main.lock
+time=2026-04-03T23:06:18.134-07:00 level=INFO msg="Export triggered by mutation events"
+time=2026-04-03T23:06:18.134-07:00 level=INFO msg="Starting %s..." !BADKEY=export
+time=2026-04-03T23:06:18.280-07:00 level=INFO msg="JSONL file created: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T23:06:18.281-07:00 level=INFO msg="Exported to JSONL"
+time=2026-04-03T23:06:18.281-07:00 level=INFO msg="Export complete"
+time=2026-04-03T23:06:19.283-07:00 level=INFO msg="Import triggered by file change"
+time=2026-04-03T23:06:19.283-07:00 level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-04-03T23:06:19.285-07:00 level=INFO msg="Skipping %s: JSONL content unchanged" !BADKEY=auto-import
+time=2026-04-03T23:10:16.767-07:00 level=INFO msg="JSONL file created: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T23:10:16.768-07:00 level=INFO msg="File change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
