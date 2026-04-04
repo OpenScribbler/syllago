@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-03T17:18:27Z",
-  "syllagoVersion": "0.7.0",
+  "generatedAt": "2026-04-04T07:46:43Z",
+  "syllagoVersion": "dev",
   "commands": [
     {
       "name": "add",
@@ -1586,8 +1586,16 @@
           "shorthand": null,
           "type": "string",
           "default": null,
-          "required": true,
-          "description": "Provider to install into (required)"
+          "required": false,
+          "description": "Provider to install into"
+        },
+        {
+          "name": "--to-all",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Install to all detected providers"
         },
         {
           "name": "--type",
@@ -1634,7 +1642,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": "  # Install a skill to Claude Code\n  syllago install my-skill --to claude-code\n\n  # Install with a standalone copy instead of symlink\n  syllago install my-skill --to cursor --method copy\n\n  # Install all skills to a provider\n  syllago install --to claude-code --type skills\n\n  # Install everything from your library\n  syllago install --all --to claude-code\n\n  # Preview what would happen\n  syllago install my-skill --to claude-code --dry-run",
+      "examples": "  # Install a skill to Claude Code\n  syllago install my-skill --to claude-code\n\n  # Install with a standalone copy instead of symlink\n  syllago install my-skill --to cursor --method copy\n\n  # Install all skills to a provider\n  syllago install --to claude-code --type skills\n\n  # Install to every detected provider at once\n  syllago install --type skills --to-all\n\n  # Install everything from your library\n  syllago install --all --to claude-code\n\n  # Preview what would happen\n  syllago install my-skill --to claude-code --dry-run",
       "source": "cli/cmd/syllago/install.go"
     },
     {
