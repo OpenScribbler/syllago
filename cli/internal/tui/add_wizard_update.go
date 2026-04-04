@@ -9,6 +9,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/add"
+	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
 )
 
 // Update handles messages for the add wizard.
@@ -350,8 +351,13 @@ func (m *addWizardModel) updateMouseReview(msg tea.MouseMsg) (*addWizardModel, t
 		return m, func() tea.Msg { return addCloseMsg{} }
 	}
 	if zone.Get("add-back").InBounds(msg) {
-		m.step = addStepDiscovery
-		m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+		if m.hasTriageStep {
+			m.step = addStepTriage
+			m.shell.SetActive(m.shellIndexForStep(addStepTriage))
+		} else {
+			m.step = addStepDiscovery
+			m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+		}
 		m.reviewAcknowledged = false
 		return m, nil
 	}
@@ -764,6 +770,27 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 	m.sourceRegistry = msg.sourceRegistry
 	m.sourceVisibility = msg.sourceVisibility
 	m.discoveryList = m.buildDiscoveryList()
+
+	// Handle triage step activation
+	if len(msg.confirmItems) > 0 {
+		m.hasTriageStep = true
+		m.confirmItems = msg.confirmItems
+		m.confirmSelected = make(map[int]bool, len(msg.confirmItems))
+		for i, ci := range msg.confirmItems {
+			m.confirmSelected[i] = ci.tier == analyzer.TierHigh || ci.tier == analyzer.TierUser
+		}
+		m.confirmCursor = 0
+		m.confirmOffset = 0
+		m.confirmFocus = triageZoneItems
+	} else {
+		m.hasTriageStep = false
+		m.confirmItems = nil
+		m.confirmSelected = nil
+	}
+	// Rebuild shell labels now that hasTriageStep is determined
+	m.shell.SetSteps(m.buildShellLabels())
+	m.updateMaxStep()
+
 	return m, nil
 }
 
@@ -777,9 +804,14 @@ func (m *addWizardModel) updateKeyReview(msg tea.KeyMsg) (*addWizardModel, tea.C
 
 	switch msg.Type {
 	case tea.KeyEsc:
-		// Go back to Discovery (selections preserved)
-		m.step = addStepDiscovery
-		m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+		// Go back to Triage (if active) or Discovery
+		if m.hasTriageStep {
+			m.step = addStepTriage
+			m.shell.SetActive(m.shellIndexForStep(addStepTriage))
+		} else {
+			m.step = addStepDiscovery
+			m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+		}
 		m.reviewAcknowledged = false
 		return m, nil
 

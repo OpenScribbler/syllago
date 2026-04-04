@@ -894,8 +894,8 @@ func (m *addWizardModel) startDiscoveryCmd() tea.Cmd {
 		projectRoot := m.projectRoot
 		cfg := m.cfg
 		return func() tea.Msg {
-			items, err := discoverFromProvider(prov, projectRoot, cfg, contentRoot, types)
-			return addDiscoveryDoneMsg{seq: seq, items: items, err: err}
+			items, confirmItems, err := discoverFromProvider(prov, projectRoot, cfg, contentRoot, types)
+			return addDiscoveryDoneMsg{seq: seq, items: items, confirmItems: confirmItems, err: err}
 		}
 
 	case addSourceRegistry:
@@ -904,22 +904,22 @@ func (m *addWizardModel) startDiscoveryCmd() tea.Cmd {
 		}
 		reg := m.registries[m.registryCursor]
 		return func() tea.Msg {
-			items, err := discoverFromRegistry(reg, types, contentRoot)
-			return addDiscoveryDoneMsg{seq: seq, items: items, err: err, sourceRegistry: reg.Name}
+			items, confirmItems, err := discoverFromRegistry(reg, types, contentRoot)
+			return addDiscoveryDoneMsg{seq: seq, items: items, confirmItems: confirmItems, err: err, sourceRegistry: reg.Name}
 		}
 
 	case addSourceLocal:
 		dir := m.pathInput
 		return func() tea.Msg {
-			items, err := discoverFromLocalPath(dir, types, contentRoot)
-			return addDiscoveryDoneMsg{seq: seq, items: items, err: err}
+			items, confirmItems, err := discoverFromLocalPath(dir, types, contentRoot)
+			return addDiscoveryDoneMsg{seq: seq, items: items, confirmItems: confirmItems, err: err}
 		}
 
 	case addSourceGit:
 		url := m.pathInput
 		return func() tea.Msg {
-			items, tmpDir, err := discoverFromGitURL(url, types, contentRoot)
-			return addDiscoveryDoneMsg{seq: seq, items: items, err: err, tmpDir: tmpDir}
+			items, confirmItems, tmpDir, err := discoverFromGitURL(url, types, contentRoot)
+			return addDiscoveryDoneMsg{seq: seq, items: items, confirmItems: confirmItems, err: err, tmpDir: tmpDir}
 		}
 	}
 	return nil
@@ -1214,7 +1214,7 @@ func discoverFromProvider(
 	cfg *config.Config,
 	contentRoot string,
 	selectedTypes []catalog.ContentType,
-) ([]addDiscoveryItem, error) {
+) ([]addDiscoveryItem, []addConfirmItem, error) {
 	// Build resolver from config
 	var resolver *config.PathResolver
 	if cfg != nil {
@@ -1234,7 +1234,7 @@ func discoverFromProvider(
 	// File-based discovery (rules, skills, agents, commands)
 	discovered, err := add.DiscoverFromProvider(prov, projectRoot, resolver, contentRoot)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var items []addDiscoveryItem
@@ -1281,7 +1281,8 @@ func discoverFromProvider(
 		items = append(items, mcpItems...)
 	}
 
-	return items, nil
+	// Provider sources use pattern-only detection (I11: no analyzer for provider dirs)
+	return items, nil, nil
 }
 
 // discoverHooksFromProvider reads provider settings files and extracts
@@ -1456,10 +1457,10 @@ func discoverFromRegistry(
 	reg catalog.RegistrySource,
 	selectedTypes []catalog.ContentType,
 	contentRoot string,
-) ([]addDiscoveryItem, error) {
+) ([]addDiscoveryItem, []addConfirmItem, error) {
 	cats, err := catalog.ScanRegistriesOnly([]catalog.RegistrySource{reg})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	typeSet := make(map[catalog.ContentType]bool)
@@ -1514,14 +1515,74 @@ func discoverFromRegistry(
 		items = append(items, item)
 	}
 
-	return items, nil
+	// Run content-signal analyzer on registry clone dir
+	var confirmItems []addConfirmItem
+	if len(cats.Items) > 0 {
+		regDir := filepath.Dir(cats.Items[0].Path)
+		// Walk up to find the registry root (parent of content type dirs)
+		for regDir != "/" && filepath.Base(regDir) != reg.Name {
+			parent := filepath.Dir(regDir)
+			if parent == regDir {
+				break
+			}
+			regDir = parent
+		}
+		az := analyzer.New(analyzer.DefaultConfig())
+		result, azErr := az.Analyze(regDir)
+		if azErr == nil {
+			patternPaths := make(map[string]bool, len(items))
+			for _, it := range items {
+				patternPaths[filepath.ToSlash(filepath.Clean(it.path))] = true
+			}
+			for _, detected := range result.Auto {
+				if !typeSet[detected.Type] {
+					continue
+				}
+				canon := filepath.ToSlash(filepath.Clean(filepath.Join(regDir, detected.Path)))
+				if patternPaths[canon] {
+					continue
+				}
+				patternPaths[canon] = true
+				di := addDiscoveryItem{
+					name:            detected.DisplayName,
+					itemType:        detected.Type,
+					path:            filepath.Join(regDir, detected.Path),
+					sourceDir:       filepath.Join(regDir, filepath.Dir(detected.Path)),
+					status:          add.StatusNew,
+					detectionSource: "content-signal",
+					tier:            analyzer.TierForItem(detected),
+				}
+				items = append(items, di)
+			}
+			for _, detected := range result.Confirm {
+				if !typeSet[detected.Type] {
+					continue
+				}
+				name := detected.DisplayName
+				if name == "" {
+					name = detected.Name
+				}
+				ci := addConfirmItem{
+					detected:    detected,
+					tier:        analyzer.TierForItem(detected),
+					displayName: name,
+					itemType:    detected.Type,
+					path:        detected.Path,
+					sourceDir:   filepath.Join(regDir, filepath.Dir(detected.Path)),
+				}
+				confirmItems = append(confirmItems, ci)
+			}
+		}
+	}
+
+	return items, confirmItems, nil
 }
 
 func discoverFromLocalPath(
 	dir string,
 	selectedTypes []catalog.ContentType,
 	contentRoot string,
-) ([]addDiscoveryItem, error) {
+) ([]addDiscoveryItem, []addConfirmItem, error) {
 	typeSet := make(map[catalog.ContentType]bool)
 	for _, t := range selectedTypes {
 		typeSet[t] = true
@@ -1535,7 +1596,7 @@ func discoverFromLocalPath(
 	if nativeResult.HasSyllagoStructure {
 		cat, err := catalog.Scan(dir, dir)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		items = catalogItemsToDiscovery(cat.Items, typeSet, idx)
 	}
@@ -1554,7 +1615,64 @@ func discoverFromLocalPath(
 		}
 	}
 
-	return items, nil
+	// Run content-signal analyzer for fallback detection
+	az := analyzer.New(analyzer.DefaultConfig())
+	result, azErr := az.Analyze(dir)
+	if azErr != nil {
+		// Analyzer unavailable — return pattern items only
+		return items, nil, nil
+	}
+
+	// Build dedup set from pattern-detected paths
+	patternPaths := make(map[string]bool, len(items))
+	for _, it := range items {
+		patternPaths[filepath.ToSlash(filepath.Clean(it.path))] = true
+	}
+
+	// Merge Auto items (dedup, type-filtered)
+	for _, detected := range result.Auto {
+		if !typeSet[detected.Type] {
+			continue
+		}
+		canon := filepath.ToSlash(filepath.Clean(filepath.Join(dir, detected.Path)))
+		if patternPaths[canon] {
+			continue // pattern-detected wins
+		}
+		patternPaths[canon] = true
+		di := addDiscoveryItem{
+			name:            detected.DisplayName,
+			itemType:        detected.Type,
+			path:            filepath.Join(dir, detected.Path),
+			sourceDir:       filepath.Join(dir, filepath.Dir(detected.Path)),
+			status:          add.StatusNew,
+			detectionSource: "content-signal",
+			tier:            analyzer.TierForItem(detected),
+		}
+		items = append(items, di)
+	}
+
+	// Build Confirm items (type-filtered)
+	var confirmItems []addConfirmItem
+	for _, detected := range result.Confirm {
+		if !typeSet[detected.Type] {
+			continue
+		}
+		name := detected.DisplayName
+		if name == "" {
+			name = detected.Name
+		}
+		ci := addConfirmItem{
+			detected:    detected,
+			tier:        analyzer.TierForItem(detected),
+			displayName: name,
+			itemType:    detected.Type,
+			path:        detected.Path,
+			sourceDir:   filepath.Join(dir, filepath.Dir(detected.Path)),
+		}
+		confirmItems = append(confirmItems, ci)
+	}
+
+	return items, confirmItems, nil
 }
 
 // nativeItemsToDiscovery converts NativeScanResult provider items into addDiscoveryItems.
@@ -1702,17 +1820,17 @@ func discoverFromGitURL(
 	url string,
 	selectedTypes []catalog.ContentType,
 	contentRoot string,
-) ([]addDiscoveryItem, string, error) {
+) ([]addDiscoveryItem, []addConfirmItem, string, error) {
 	tmpDir, err := cloneGitURL(url, 60)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
-	items, err := discoverFromLocalPath(tmpDir, selectedTypes, contentRoot)
+	items, confirmItems, err := discoverFromLocalPath(tmpDir, selectedTypes, contentRoot)
 	if err != nil {
 		_ = os.RemoveAll(filepath.Dir(tmpDir))
-		return nil, "", err
+		return nil, nil, "", err
 	}
-	return items, tmpDir, nil
+	return items, confirmItems, tmpDir, nil
 }
 
 // addSingleItem adds a single item to the library.
