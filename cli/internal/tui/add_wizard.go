@@ -606,6 +606,108 @@ func (m *addWizardModel) goBackFromDiscovery() {
 	}
 }
 
+// enterTriage transitions to the Triage step.
+func (m *addWizardModel) enterTriage() {
+	m.step = addStepTriage
+	m.shell.SetActive(m.shellIndexForStep(addStepTriage))
+	m.confirmCursor = 0
+	m.confirmOffset = 0
+	m.confirmFocus = triageZoneItems
+	m.confirmPreview = newPreviewModel()
+	m.updateMaxStep()
+	m.loadTriagePreview()
+}
+
+// adjustTriageOffset ensures the triage cursor stays in the visible window.
+func (m *addWizardModel) adjustTriageOffset() {
+	vh := max(3, m.height-11)
+	if m.confirmCursor < m.confirmOffset {
+		m.confirmOffset = m.confirmCursor
+	}
+	if m.confirmCursor >= m.confirmOffset+vh {
+		m.confirmOffset = m.confirmCursor - vh + 1
+	}
+}
+
+// loadTriagePreview loads the file at the current triage cursor into the preview.
+func (m *addWizardModel) loadTriagePreview() {
+	if m.confirmCursor >= len(m.confirmItems) {
+		return
+	}
+	item := m.confirmItems[m.confirmCursor]
+	if item.sourceDir == "" || item.path == "" {
+		m.confirmPreview = newPreviewModel()
+		return
+	}
+	// Guard against path traversal from untrusted repos
+	_, err := catalog.SafeResolve(item.sourceDir, item.path)
+	if err != nil {
+		m.confirmPreview = newPreviewModel()
+		return
+	}
+	content, readErr := catalog.ReadFileContent(item.sourceDir, item.path, 200)
+	if readErr != nil {
+		m.confirmPreview = newPreviewModel()
+		return
+	}
+	m.confirmPreview = newPreviewModel()
+	m.confirmPreview.lines = strings.Split(content, "\n")
+}
+
+// mergeConfirmIntoDiscovery appends user-selected confirm items to the discovery
+// list before entering Review. Safe to call multiple times — truncates to pre-merge
+// length first (idempotency guarantee for Back→Triage→Next flows).
+func (m *addWizardModel) mergeConfirmIntoDiscovery() {
+	// Strip any previously-merged confirm items to prevent duplicates.
+	m.discoveredItems = m.discoveredItems[:m.actionableCount+m.installedCount]
+
+	for i, item := range m.confirmItems {
+		if !m.confirmSelected[i] {
+			continue
+		}
+		di := addDiscoveryItem{
+			name:            item.displayName,
+			displayName:     item.displayName,
+			itemType:        item.itemType,
+			path:            filepath.Join(item.sourceDir, item.path),
+			sourceDir:       item.sourceDir,
+			status:          add.StatusNew,
+			detectionSource: "content-signal",
+			tier:            item.tier,
+		}
+		underlying := &add.DiscoveryItem{
+			Name:      item.displayName,
+			Type:      item.itemType,
+			Path:      filepath.Join(item.sourceDir, item.path),
+			SourceDir: item.sourceDir,
+			Status:    add.StatusNew,
+		}
+		di.underlying = underlying
+		if item.detected != nil {
+			di.confidence = item.detected.Confidence
+		}
+
+		if di.sourceDir != "" {
+			ci := catalog.ContentItem{
+				Name:  item.displayName,
+				Type:  item.itemType,
+				Path:  item.sourceDir,
+				Files: []string{item.path},
+			}
+			di.catalogItem = &ci
+			di.risks = catalog.RiskIndicators(ci)
+		}
+		m.discoveredItems = append(m.discoveredItems, di)
+	}
+
+	// Rebuild discovery list and auto-select merged items.
+	m.discoveryList = m.buildDiscoveryList()
+	mergeStart := m.actionableCount + m.installedCount
+	for i := mergeStart; i < len(m.discoveredItems); i++ {
+		m.discoveryList.selected[i] = true
+	}
+}
+
 // enterReview transitions to the Review step.
 func (m *addWizardModel) enterReview() {
 	m.step = addStepReview
