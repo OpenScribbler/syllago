@@ -234,14 +234,6 @@ func openAddWizard(
 		}
 	}
 
-	// Step labels depend on preFilterType
-	var stepLabels []string
-	if preFilterType != "" {
-		stepLabels = []string{"Source", "Discovery", "Review", "Execute"}
-	} else {
-		stepLabels = []string{"Source", "Type", "Discovery", "Review", "Execute"}
-	}
-
 	// Default source cursor: Provider if any detected, else Local
 	sourceCursor := 2 // Local
 	if len(detected) > 0 {
@@ -249,7 +241,6 @@ func openAddWizard(
 	}
 
 	m := &addWizardModel{
-		shell:         newWizardShell("Add", stepLabels),
 		step:          addStepSource,
 		providers:     detected,
 		registries:    registries,
@@ -260,6 +251,8 @@ func openAddWizard(
 		sourceCursor:  sourceCursor,
 		buttonCursor:  1, // default to [Back]
 	}
+	// buildShellLabels reads preFilterType and hasTriageStep, so call after struct init
+	m.shell = newWizardShell("Add", m.buildShellLabels())
 
 	return m
 }
@@ -282,6 +275,13 @@ func (m *addWizardModel) validateStep() {
 		}
 		if !m.discovering && len(m.selectedTypes()) == 0 {
 			panic("wizard invariant: addStepDiscovery entered without selected types")
+		}
+	case addStepTriage:
+		if !m.hasTriageStep {
+			panic("wizard invariant: addStepTriage entered without hasTriageStep")
+		}
+		if len(m.confirmItems) == 0 {
+			panic("wizard invariant: addStepTriage entered with empty confirmItems")
 		}
 	case addStepReview:
 		if len(m.discoveredItems) == 0 {
@@ -335,6 +335,11 @@ func (m *addWizardModel) stepHints() []string {
 			hints = append(hints, "h show/hide installed")
 		}
 		return append(append(hints, "enter next", "esc back"), base...)
+	case addStepTriage:
+		return append([]string{
+			"↑/↓ navigate", "space toggle", "a all", "n none",
+			"tab switch panes", "enter next", "esc back",
+		}, base...)
 	case addStepReview:
 		if m.reviewDrillIn {
 			return append([]string{"tab/←/→ switch panes", "↑/↓ navigate", "pgup/pgdn scroll", "esc back to review"}, base...)
@@ -380,24 +385,134 @@ func (m *addWizardModel) selectedItems() []addDiscoveryItem {
 	return result
 }
 
-// shellIndexForStep maps an addStep to the wizard shell breadcrumb index,
-// accounting for the 4-step (pre-filtered) vs 5-step (normal) path.
-func (m *addWizardModel) shellIndexForStep(s addStep) int {
+// buildShellLabels returns the correct step label slice for the current permutation.
+func (m *addWizardModel) buildShellLabels() []string {
+	if m.preFilterType != "" && m.hasTriageStep {
+		return []string{"Source", "Discovery", "Triage", "Review", "Execute"}
+	}
 	if m.preFilterType != "" {
-		// 4-step: Source=0, Discovery=1, Review=2, Execute=3
-		switch s {
-		case addStepSource:
-			return 0
-		case addStepDiscovery:
-			return 1
-		case addStepReview:
+		return []string{"Source", "Discovery", "Review", "Execute"}
+	}
+	if m.hasTriageStep {
+		return []string{"Source", "Type", "Discovery", "Triage", "Review", "Execute"}
+	}
+	return []string{"Source", "Type", "Discovery", "Review", "Execute"}
+}
+
+// clearTriageState resets all triage step state. Call from goBackFromDiscovery()
+// and advanceFromSource() to prevent stale triage data surviving source changes.
+func (m *addWizardModel) clearTriageState() {
+	m.hasTriageStep = false
+	m.confirmItems = nil
+	m.confirmSelected = nil
+	m.confirmCursor = 0
+	m.confirmOffset = 0
+	m.confirmPreview = previewModel{}
+	m.confirmFocus = triageZoneItems
+	m.maxStep = addStepDiscovery
+	m.shell.SetSteps(m.buildShellLabels())
+	m.updateMaxStep()
+}
+
+// shellIndexForStep maps an addStep to the wizard shell breadcrumb index,
+// accounting for all 4 permutations of Type and Triage step inclusion.
+func (m *addWizardModel) shellIndexForStep(s addStep) int {
+	hasType := m.preFilterType == ""
+	has := m.hasTriageStep
+
+	switch s {
+	case addStepSource:
+		return 0
+	case addStepType:
+		if !hasType {
+			panic("shellIndexForStep: addStepType in -Type permutation")
+		}
+		return 1
+	case addStepDiscovery:
+		if hasType {
 			return 2
-		case addStepExecute:
+		}
+		return 1
+	case addStepTriage:
+		if !has {
+			panic("shellIndexForStep: addStepTriage in -Triage permutation")
+		}
+		if hasType {
 			return 3
 		}
+		return 2
+	case addStepReview:
+		if hasType && has {
+			return 4
+		}
+		if hasType || has {
+			return 3
+		}
+		return 2
+	case addStepExecute:
+		if hasType && has {
+			return 5
+		}
+		if hasType || has {
+			return 4
+		}
+		return 3
 	}
-	// 5-step: Source=0, Type=1, Discovery=2, Review=3, Execute=4
 	return int(s)
+}
+
+// stepForShellIndex is the inverse of shellIndexForStep.
+// Used by breadcrumb click handler to map shell index → step enum.
+func (m *addWizardModel) stepForShellIndex(idx int) addStep {
+	hasType := m.preFilterType == ""
+	hasTriage := m.hasTriageStep
+
+	switch {
+	case hasType && hasTriage:
+		// Source(0) Type(1) Discovery(2) Triage(3) Review(4) Execute(5)
+		return addStep(idx) // direct mapping
+	case hasType && !hasTriage:
+		// Source(0) Type(1) Discovery(2) Review(3) Execute(4)
+		switch idx {
+		case 0:
+			return addStepSource
+		case 1:
+			return addStepType
+		case 2:
+			return addStepDiscovery
+		case 3:
+			return addStepReview
+		case 4:
+			return addStepExecute
+		}
+	case !hasType && hasTriage:
+		// Source(0) Discovery(1) Triage(2) Review(3) Execute(4)
+		switch idx {
+		case 0:
+			return addStepSource
+		case 1:
+			return addStepDiscovery
+		case 2:
+			return addStepTriage
+		case 3:
+			return addStepReview
+		case 4:
+			return addStepExecute
+		}
+	default:
+		// -Type -Triage: Source(0) Discovery(1) Review(2) Execute(3)
+		switch idx {
+		case 0:
+			return addStepSource
+		case 1:
+			return addStepDiscovery
+		case 2:
+			return addStepReview
+		case 3:
+			return addStepExecute
+		}
+	}
+	return addStepSource
 }
 
 // advanceFromSource transitions from the Source step to the next step.
@@ -411,6 +526,7 @@ func (m *addWizardModel) advanceFromSource() tea.Cmd {
 	m.discoveryErr = ""
 	m.risks = nil
 	m.reviewAcknowledged = false
+	m.clearTriageState()
 	m.seq++
 
 	if m.preFilterType != "" {
@@ -470,6 +586,7 @@ func (m *addWizardModel) buildTypeCheckList() checkboxList {
 
 // goBackFromDiscovery navigates back from the Discovery step.
 func (m *addWizardModel) goBackFromDiscovery() {
+	m.clearTriageState()
 	m.discoveredItems = nil
 	m.discoveryList = checkboxList{}
 	m.discoveryErr = ""
