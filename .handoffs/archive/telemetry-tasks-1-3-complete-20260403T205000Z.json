@@ -1,0 +1,77 @@
+{
+  "$schema": "handoff-v2",
+  "name": "telemetry-tasks-1-3-complete",
+  "createdAt": "2026-04-02T22:50:00-07:00",
+  "current": {
+    "claimedBy": {
+      "sessionId": "ffee25a3-4b04-45fd-b17c-f66842fe7b39",
+      "claimedAt": "2026-04-02T15:50:30-07:00"
+    },
+    "project": "syllago",
+    "updated": "2026-04-02T22:50:00-07:00",
+    "sessionId": null,
+    "summary": "Designed and began implementing PostHog telemetry for syllago — brainstorm, panel review, plan, validation, bead creation, and Tasks 1-3 executed.",
+
+    "activeWork": {
+      "description": "PostHog telemetry integration — anonymous opt-out usage analytics",
+      "feature": "telemetry",
+      "stage": "execute",
+      "planRef": "docs/plans/2026-04-02-telemetry-implementation.md",
+      "designRef": "docs/plans/2026-04-02-telemetry-design.md",
+      "progress": "Tasks 1-3 complete (config read/write, ID generation, DO_NOT_TRACK). 6 beads closed, 21 remaining. Next up is Task 4 (core Init/Track/Shutdown) — the biggest single task.",
+      "blockers": [],
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": [
+          "syllago-pt400",
+          "syllago-xkdek",
+          "syllago-x73tb",
+          "syllago-22g1l",
+          "syllago-bh3sw",
+          "syllago-zhw8b"
+        ],
+        "readyNext": ["syllago-qyhwp"]
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": "3",
+      "lastCommit": "9fc8bc0 fix: lint issues in telemetry package (errcheck, De Morgan)",
+      "modifiedFiles": [
+        "cli/internal/telemetry/config.go",
+        "cli/internal/telemetry/config_test.go",
+        "cli/internal/telemetry/idgen.go",
+        "cli/internal/telemetry/idgen_test.go",
+        "cli/internal/telemetry/dnt.go",
+        "cli/internal/telemetry/dnt_test.go",
+        "docs/plans/2026-04-02-telemetry-design.md",
+        "docs/plans/2026-04-02-telemetry-implementation.md"
+      ]
+    },
+
+    "recentDecisions": [
+      "PostHog Cloud with configurable endpoint for self-hosted enterprise deployments",
+      "Opt-out (enabled by default) with first-run notice to stderr on any invocation",
+      "DO_NOT_TRACK accepts any truthy value (1, true, yes, on) — not just '1'",
+      "Unreadable/unwritable config defaults to telemetry DISABLED (safe default)",
+      "System-level config at /etc/syllago/telemetry.json for fleet management",
+      "Anonymous ID documented as pseudonymous, not truly anonymous",
+      "1 year data retention (PostHog Cloud free tier default)",
+      "Data deletion via email process with anonymous ID",
+      "PostHog API key: phc_s37Bs67S73aN6EM94g59aHizrFd9gaB6mVHfd2Q7eAE3"
+    ],
+
+    "nextSteps": [
+      "Execute Task 4 (syllago-qyhwp): Core Init/Track/Shutdown — the largest task, includes httptest-based Track() tests, Init() order of operations, and Shutdown() with 2s timeout",
+      "Execute Tasks 5a-5c: telemetry subcommand (status/on/off/reset) with --json support",
+      "Continue sequential execution through remaining beads (midpoint checkpoint after Task 5c, then Tasks 6, 8, 9a-9e, 10, 11)"
+    ],
+
+    "context": {
+      "notes": "Design went through a 3-persona panel review (privacy dev, enterprise platform eng, OSS maintainer) — 23 issues found and all applied. Phase B blocker analysis caught 4 real bugs in the plan before any code was written (missing import, dead export_cmd, wrong var names in add_cmd, structural mismatch in convert_cmd). Sequential execution mode chosen. The PostHog API key is in the design doc's Key Decisions table — needs to go into GitHub Actions secrets as SYLLAGO_POSTHOG_KEY for Task 10."
+    }
+  },
+
+  "previousSessions": []
+}
