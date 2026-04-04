@@ -6,7 +6,26 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+
+	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
 )
+
+// tierBadge returns a colored "● Label" string for a confidence tier.
+// Returns empty string for items that are not content-signal detected.
+func tierBadge(tier analyzer.ConfidenceTier) string {
+	dot := "●"
+	switch tier {
+	case analyzer.TierLow:
+		return lipgloss.NewStyle().Foreground(warningColor).Render(dot + " Low confidence (content-signal)")
+	case analyzer.TierMedium:
+		return lipgloss.NewStyle().Foreground(primaryColor).Render(dot + " Medium confidence (content-signal)")
+	case analyzer.TierHigh:
+		return lipgloss.NewStyle().Foreground(successColor).Render(dot + " High confidence (content-signal)")
+	case analyzer.TierUser:
+		return lipgloss.NewStyle().Foreground(accentColor).Render(dot + " User-asserted (content-signal)")
+	}
+	return ""
+}
 
 // View renders the install wizard.
 func (m *installWizardModel) View() string {
@@ -259,6 +278,15 @@ func (m *installWizardModel) viewReview() string {
 			lipgloss.NewStyle().Foreground(primaryText).Render(locLabel))
 		summaryLines = append(summaryLines, pad+mutedStyle.Render("Method:   ")+
 			lipgloss.NewStyle().Foreground(primaryText).Render(methodLabel))
+	}
+
+	// Detection line — only shown for content-signal items
+	if m.item.Meta != nil && m.item.Meta.DetectionSource != "" {
+		tier := analyzer.TierForMeta(m.item.Meta.Confidence, m.item.Meta.DetectionMethod)
+		badge := tierBadge(tier)
+		if badge != "" {
+			summaryLines = append(summaryLines, pad+mutedStyle.Render("Detection: ")+badge)
+		}
 	}
 
 	// Buttons on the last line of the summary area

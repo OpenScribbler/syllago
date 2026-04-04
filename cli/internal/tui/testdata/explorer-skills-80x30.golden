@@ -11,7 +11,7 @@
 ├───────────────────────────┬──────────────────────────────────────────────────┤
 │ > alpha-skill             │──SKILL.md────────────────────────────────────────│
 │   beta-skill              │ 1 Error reading file:                            │
-│                           │ 2 reading file SKILL.md: open SKILL.md: no such f│
+│                           │ 2 path traversal: SKILL.md escapes               │
 │                           │                                                  │
 │                           │                                                  │
 │                           │                                                  │

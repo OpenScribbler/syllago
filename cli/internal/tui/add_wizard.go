@@ -13,6 +13,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/OpenScribbler/syllago/cli/internal/add"
+	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
@@ -28,6 +29,7 @@ const (
 	addStepSource addStep = iota
 	addStepType
 	addStepDiscovery
+	addStepTriage // conditional, between Discovery and Review
 	addStepReview
 	addStepExecute
 )
@@ -54,6 +56,26 @@ const (
 	addReviewZoneButtons
 )
 
+// --- Triage step types ---
+
+type triageFocusZone int
+
+const (
+	triageZoneItems triageFocusZone = iota
+	triageZonePreview
+	triageZoneButtons
+)
+
+// addConfirmItem holds a confirm-bucket item awaiting user triage.
+type addConfirmItem struct {
+	detected    *analyzer.DetectedItem
+	tier        analyzer.ConfidenceTier
+	displayName string
+	itemType    catalog.ContentType
+	path        string // primary file path (relative to source root)
+	sourceDir   string // absolute directory containing the item
+}
+
 // --- Messages ---
 
 type addCloseMsg struct{}
@@ -62,6 +84,7 @@ type addRestartMsg struct{} // restart the wizard from Source step
 type addDiscoveryDoneMsg struct {
 	seq              int
 	items            []addDiscoveryItem
+	confirmItems     []addConfirmItem // items requiring user triage
 	err              error
 	tmpDir           string // non-empty for git URL source
 	sourceRegistry   string
@@ -92,6 +115,10 @@ type addDiscoveryItem struct {
 	overwrite   bool
 	underlying  *add.DiscoveryItem
 	catalogItem *catalog.ContentItem // original catalog item when available (has correct Files/Path)
+
+	confidence      float64
+	detectionSource string
+	tier            analyzer.ConfidenceTier
 }
 
 // --- Execute result ---
@@ -174,6 +201,15 @@ type addWizardModel struct {
 
 	// Git source
 	gitTempDir string
+
+	// Triage step
+	hasTriageStep   bool
+	confirmItems    []addConfirmItem
+	confirmSelected map[int]bool
+	confirmCursor   int
+	confirmOffset   int
+	confirmPreview  previewModel
+	confirmFocus    triageFocusZone
 
 	// Context
 	projectRoot string
