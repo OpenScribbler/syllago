@@ -47,19 +47,7 @@ func (m *addWizardModel) updateMouse(msg tea.MouseMsg) (*addWizardModel, tea.Cmd
 	// Wizard shell breadcrumb clicks — disabled during Execute step (can't undo adds)
 	if m.step != addStepExecute {
 		if step, ok := m.shell.HandleClick(msg); ok {
-			target := addStep(step)
-			if m.preFilterType != "" {
-				switch step {
-				case 0:
-					target = addStepSource
-				case 1:
-					target = addStepDiscovery
-				case 2:
-					target = addStepReview
-				case 3:
-					target = addStepExecute
-				}
-			}
+			target := m.stepForShellIndex(step)
 			// Don't allow navigating to Execute via breadcrumb
 			if target == addStepExecute {
 				return m, nil
@@ -741,7 +729,11 @@ func (m *addWizardModel) updateKeyDiscovery(msg tea.KeyMsg) (*addWizardModel, te
 
 	case msg.Type == tea.KeyRight || msg.Type == tea.KeyEnter:
 		if len(m.discoveryList.SelectedIndices()) > 0 {
-			m.enterReview()
+			if m.hasTriageStep {
+				m.enterTriage()
+			} else {
+				m.enterReview()
+			}
 			return m, nil
 		}
 
@@ -1081,26 +1073,28 @@ func (m *addWizardModel) updateKeyTriage(msg tea.KeyMsg) (*addWizardModel, tea.C
 		return m, nil
 
 	case tea.KeyUp:
-		if m.confirmFocus == triageZoneItems {
+		switch m.confirmFocus {
+		case triageZoneItems:
 			if m.confirmCursor > 0 {
 				m.confirmCursor--
 				m.adjustTriageOffset()
 				m.loadTriagePreview()
 			}
-		} else if m.confirmFocus == triageZonePreview {
+		case triageZonePreview:
 			if m.confirmPreview.offset > 0 {
 				m.confirmPreview.offset--
 			}
 		}
 
 	case tea.KeyDown:
-		if m.confirmFocus == triageZoneItems {
+		switch m.confirmFocus {
+		case triageZoneItems:
 			if m.confirmCursor < len(m.confirmItems)-1 {
 				m.confirmCursor++
 				m.adjustTriageOffset()
 				m.loadTriagePreview()
 			}
-		} else if m.confirmFocus == triageZonePreview {
+		case triageZonePreview:
 			maxOff := max(0, len(m.confirmPreview.lines)-1)
 			if m.confirmPreview.offset < maxOff {
 				m.confirmPreview.offset++
