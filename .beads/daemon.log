@@ -30419,3 +30419,11 @@ time=2026-04-03T22:44:49.191-07:00 level=INFO msg="JSONL file created: %s" !BADK
 time=2026-04-03T22:44:49.191-07:00 level=INFO msg="File change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
 time=2026-04-03T22:44:49.239-07:00 level=INFO msg="Git ref change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.git/refs/heads/main.lock
 time=2026-04-03T22:44:49.597-07:00 level=INFO msg="JSONL file created: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T22:44:50.046-07:00 level=INFO msg="JSONL file created: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T22:44:50.047-07:00 level=INFO msg="File change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T22:44:50.077-07:00 level=INFO msg="Git ref change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.git/refs/heads/main.lock
+time=2026-04-03T22:44:51.078-07:00 level=INFO msg="Import triggered by file change"
+time=2026-04-03T22:44:51.078-07:00 level=INFO msg="Starting %s..." !BADKEY=auto-import
+time=2026-04-03T22:44:51.080-07:00 level=INFO msg="Skipping %s: JSONL content unchanged" !BADKEY=auto-import
+time=2026-04-03T22:46:52.276-07:00 level=INFO msg="JSONL file created: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
+time=2026-04-03T22:46:52.276-07:00 level=INFO msg="File change detected: %s" !BADKEY=/home/hhewett/.local/src/syllago/.beads/issues.jsonl
