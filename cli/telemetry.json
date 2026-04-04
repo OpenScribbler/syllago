@@ -1,0 +1,221 @@
+{
+  "version": "1",
+  "generatedAt": "2026-04-04T06:20:26Z",
+  "syllagoVersion": "0.7.0",
+  "events": [
+    {
+      "name": "command_executed",
+      "description": "Fired when a CLI command completes successfully",
+      "firedWhen": "PersistentPostRun (every non-telemetry command)",
+      "properties": [
+        {
+          "name": "command",
+          "type": "string",
+          "description": "Command name (cobra command path)",
+          "example": "install",
+          "commands": [
+            "*"
+          ]
+        },
+        {
+          "name": "provider",
+          "type": "string",
+          "description": "Target provider slug",
+          "example": "claude-code",
+          "commands": [
+            "install",
+            "uninstall",
+            "loadout_apply",
+            "sandbox_run",
+            "sync-and-export"
+          ]
+        },
+        {
+          "name": "content_type",
+          "type": "string",
+          "description": "Content type filter or specific type",
+          "example": "rules",
+          "commands": [
+            "install",
+            "add",
+            "convert",
+            "create",
+            "uninstall",
+            "remove",
+            "list",
+            "share",
+            "sync-and-export",
+            "registry_items"
+          ]
+        },
+        {
+          "name": "content_count",
+          "type": "int",
+          "description": "Number of content items affected",
+          "example": 3,
+          "commands": [
+            "install",
+            "add"
+          ]
+        },
+        {
+          "name": "dry_run",
+          "type": "bool",
+          "description": "Whether --dry-run flag was used",
+          "example": false,
+          "commands": [
+            "install",
+            "add",
+            "uninstall",
+            "remove",
+            "sync-and-export"
+          ]
+        },
+        {
+          "name": "from",
+          "type": "string",
+          "description": "Source provider slug when adding cross-provider content",
+          "example": "cursor",
+          "commands": [
+            "add"
+          ]
+        },
+        {
+          "name": "from_provider",
+          "type": "string",
+          "description": "Source provider for conversion",
+          "example": "cursor",
+          "commands": [
+            "convert"
+          ]
+        },
+        {
+          "name": "to_provider",
+          "type": "string",
+          "description": "Target provider for conversion",
+          "example": "claude-code",
+          "commands": [
+            "convert"
+          ]
+        },
+        {
+          "name": "source_filter",
+          "type": "string",
+          "description": "Content source filter (library, shared, or registry)",
+          "example": "library",
+          "commands": [
+            "list"
+          ]
+        },
+        {
+          "name": "item_count",
+          "type": "int",
+          "description": "Number of items in the result set",
+          "example": 12,
+          "commands": [
+            "list",
+            "registry_items"
+          ]
+        },
+        {
+          "name": "mode",
+          "type": "string",
+          "description": "Loadout application mode",
+          "example": "try",
+          "commands": [
+            "loadout_apply"
+          ]
+        },
+        {
+          "name": "action_count",
+          "type": "int",
+          "description": "Number of actions performed by loadout",
+          "example": 5,
+          "commands": [
+            "loadout_apply"
+          ]
+        },
+        {
+          "name": "registry_count",
+          "type": "int",
+          "description": "Number of registries involved",
+          "example": 2,
+          "commands": [
+            "registry_sync"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "tui_session_started",
+      "description": "Fired when the TUI exits normally after a session",
+      "firedWhen": "After tea.Program.Run() completes without error (main.go root command)",
+      "properties": [
+        {
+          "name": "success",
+          "type": "bool",
+          "description": "Whether the TUI exited normally",
+          "example": true,
+          "commands": [
+            "(root)"
+          ]
+        }
+      ]
+    }
+  ],
+  "standardProperties": [
+    {
+      "name": "version",
+      "type": "string",
+      "description": "Syllago version",
+      "example": "0.7.0",
+      "commands": [
+        "*"
+      ]
+    },
+    {
+      "name": "os",
+      "type": "string",
+      "description": "Operating system (runtime.GOOS)",
+      "example": "linux",
+      "commands": [
+        "*"
+      ]
+    },
+    {
+      "name": "arch",
+      "type": "string",
+      "description": "CPU architecture (runtime.GOARCH)",
+      "example": "amd64",
+      "commands": [
+        "*"
+      ]
+    }
+  ],
+  "neverCollected": [
+    {
+      "category": "File contents",
+      "examples": "Rule text, skill prompts, hook commands, MCP configs"
+    },
+    {
+      "category": "File paths",
+      "examples": "/home/user/.claude/rules/my-secret-rule"
+    },
+    {
+      "category": "User identity",
+      "examples": "Usernames, hostnames, IP addresses, email"
+    },
+    {
+      "category": "Registry URLs",
+      "examples": "Git clone URLs, registry names"
+    },
+    {
+      "category": "Content names",
+      "examples": "Names of rules, skills, agents, hooks, or MCP servers you manage"
+    },
+    {
+      "category": "Interaction details",
+      "examples": "Keystrokes, mouse clicks, TUI navigation paths"
+    }
+  ]
+}
