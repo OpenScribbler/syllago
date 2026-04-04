@@ -264,6 +264,34 @@ func TestFormatVersion(t *testing.T) {
 	})
 }
 
+func TestMeta_ConfidenceRoundtrip(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	m := &Meta{
+		ID:              "test-id",
+		Name:            "test",
+		Confidence:      0.75,
+		DetectionSource: "content-signal",
+		DetectionMethod: "automatic",
+	}
+	if err := Save(dir, m); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	loaded, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if loaded.Confidence != 0.75 {
+		t.Errorf("Confidence: got %v, want 0.75", loaded.Confidence)
+	}
+	if loaded.DetectionSource != "content-signal" {
+		t.Errorf("DetectionSource: got %q, want content-signal", loaded.DetectionSource)
+	}
+	if loaded.DetectionMethod != "automatic" {
+		t.Errorf("DetectionMethod: got %q, want automatic", loaded.DetectionMethod)
+	}
+}
+
 func TestMetaHiddenField(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
