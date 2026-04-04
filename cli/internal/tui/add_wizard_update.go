@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -88,6 +89,8 @@ func (m *addWizardModel) updateMouse(msg tea.MouseMsg) (*addWizardModel, tea.Cmd
 		return m.updateMouseType(msg)
 	case addStepDiscovery:
 		return m.updateMouseDiscovery(msg)
+	case addStepTriage:
+		return m.updateMouseTriage(msg)
 	case addStepReview:
 		return m.updateMouseReview(msg)
 	case addStepExecute:
@@ -115,6 +118,20 @@ func (m *addWizardModel) updateMouseWheel(msg tea.MouseMsg) (*addWizardModel, te
 			if m.discoveryList.cursor < len(m.discoveryList.items)-1 {
 				m.discoveryList.cursor++
 				m.discoveryList.adjustOffset()
+			}
+		}
+	case addStepTriage:
+		if up {
+			if m.confirmCursor > 0 {
+				m.confirmCursor--
+				m.adjustTriageOffset()
+				m.loadTriagePreview()
+			}
+		} else {
+			if m.confirmCursor < len(m.confirmItems)-1 {
+				m.confirmCursor++
+				m.adjustTriageOffset()
+				m.loadTriagePreview()
 			}
 		}
 	case addStepReview:
@@ -416,6 +433,8 @@ func (m *addWizardModel) updateKey(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
 		return m.updateKeyType(msg)
 	case addStepDiscovery:
 		return m.updateKeyDiscovery(msg)
+	case addStepTriage:
+		return m.updateKeyTriage(msg)
 	case addStepReview:
 		return m.updateKeyReview(msg)
 	case addStepExecute:
@@ -1035,4 +1054,121 @@ func (m *addWizardModel) handleExecItemDone(msg addExecItemDoneMsg) (*addWizardM
 	m.executing = false
 	seq := m.seq
 	return m, func() tea.Msg { return addExecAllDoneMsg{seq: seq} }
+}
+
+// --- Triage step ---
+
+func (m *addWizardModel) updateKeyTriage(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.step = addStepDiscovery
+		m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+		return m, nil
+
+	case tea.KeyEnter:
+		m.mergeConfirmIntoDiscovery()
+		if len(m.discoveryList.SelectedIndices()) > 0 {
+			m.enterReview()
+		}
+		return m, nil
+
+	case tea.KeyTab:
+		m.confirmFocus = (m.confirmFocus + 1) % 3
+		return m, nil
+
+	case tea.KeyShiftTab:
+		m.confirmFocus = (m.confirmFocus + 2) % 3
+		return m, nil
+
+	case tea.KeyUp:
+		if m.confirmFocus == triageZoneItems {
+			if m.confirmCursor > 0 {
+				m.confirmCursor--
+				m.adjustTriageOffset()
+				m.loadTriagePreview()
+			}
+		} else if m.confirmFocus == triageZonePreview {
+			if m.confirmPreview.offset > 0 {
+				m.confirmPreview.offset--
+			}
+		}
+
+	case tea.KeyDown:
+		if m.confirmFocus == triageZoneItems {
+			if m.confirmCursor < len(m.confirmItems)-1 {
+				m.confirmCursor++
+				m.adjustTriageOffset()
+				m.loadTriagePreview()
+			}
+		} else if m.confirmFocus == triageZonePreview {
+			maxOff := max(0, len(m.confirmPreview.lines)-1)
+			if m.confirmPreview.offset < maxOff {
+				m.confirmPreview.offset++
+			}
+		}
+
+	case tea.KeySpace:
+		if m.confirmFocus == triageZoneItems && m.confirmCursor < len(m.confirmItems) {
+			if m.confirmSelected == nil {
+				m.confirmSelected = make(map[int]bool)
+			}
+			m.confirmSelected[m.confirmCursor] = !m.confirmSelected[m.confirmCursor]
+		}
+
+	case tea.KeyRunes:
+		if len(msg.Runes) == 1 {
+			switch msg.Runes[0] {
+			case 'a':
+				if m.confirmSelected == nil {
+					m.confirmSelected = make(map[int]bool)
+				}
+				for i := range m.confirmItems {
+					m.confirmSelected[i] = true
+				}
+			case 'n':
+				m.confirmSelected = make(map[int]bool)
+			}
+		}
+	}
+	return m, nil
+}
+
+func (m *addWizardModel) updateMouseTriage(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
+	// Button clicks
+	if zone.Get("triage-cancel").InBounds(msg) {
+		return m, func() tea.Msg { return addCloseMsg{} }
+	}
+	if zone.Get("triage-back").InBounds(msg) {
+		m.step = addStepDiscovery
+		m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+		return m, nil
+	}
+	if zone.Get("triage-next").InBounds(msg) {
+		m.mergeConfirmIntoDiscovery()
+		if len(m.discoveryList.SelectedIndices()) > 0 {
+			m.enterReview()
+		}
+		return m, nil
+	}
+
+	// Item row clicks
+	for i := range m.confirmItems {
+		if zone.Get(fmt.Sprintf("triage-item-%d", i)).InBounds(msg) {
+			m.confirmFocus = triageZoneItems
+			if m.confirmSelected == nil {
+				m.confirmSelected = make(map[int]bool)
+			}
+			if m.confirmCursor == i {
+				// Second click on same row — toggle selection
+				m.confirmSelected[i] = !m.confirmSelected[i]
+			} else {
+				m.confirmCursor = i
+				m.adjustTriageOffset()
+				m.loadTriagePreview()
+			}
+			return m, nil
+		}
+	}
+
+	return m, nil
 }

@@ -8,6 +8,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/add"
+	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
@@ -27,6 +28,8 @@ func (m *addWizardModel) View() string {
 		content = m.viewType()
 	case addStepDiscovery:
 		content = m.viewDiscovery()
+	case addStepTriage:
+		content = m.viewTriage()
 	case addStepReview:
 		content = m.viewReview()
 	case addStepExecute:
@@ -307,6 +310,235 @@ func (m *addWizardModel) viewDiscovery() string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+// --- Triage step view ---
+
+func (m *addWizardModel) viewTriage() string {
+	title := m.renderTitleRow("Triage: detected content", true, "Next")
+	subtitle := "  " + mutedStyle.Render("Include items to add them, or skip (skipped items reappear next time you add from this source).")
+
+	// Compute pane dimensions
+	innerW := m.width - borderSize
+	paneH := max(3, m.height-7) // shell(3) + title(1) + subtitle(1) + border(2) = 7
+
+	itemsW := max(10, innerW*30/100)
+	previewW := innerW - itemsW - 1
+
+	itemLines := m.renderTriageItems(itemsW, paneH)
+	prevLines := m.renderTriagePreview(previewW, paneH)
+
+	for len(itemLines) < paneH {
+		itemLines = append(itemLines, strings.Repeat(" ", itemsW))
+	}
+	for len(prevLines) < paneH {
+		prevLines = append(prevLines, strings.Repeat(" ", previewW))
+	}
+
+	// Border color: active pane gets primaryColor
+	mBorder := mutedStyle.Render
+	fBorder := lipgloss.NewStyle().Foreground(primaryColor).Render
+
+	leftBorder := mBorder
+	rightBorder := mBorder
+	if m.confirmFocus == triageZoneItems {
+		leftBorder = fBorder
+	} else if m.confirmFocus == triageZonePreview {
+		rightBorder = fBorder
+	}
+
+	wrapLine := func(s string, w int) string {
+		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
+		if gap := w - lipgloss.Width(s); gap > 0 {
+			s += strings.Repeat(" ", gap)
+		}
+		return s
+	}
+
+	var lines []string
+	lines = append(lines, title)
+	lines = append(lines, subtitle)
+
+	// Top border: ╭─ Items ──┬─ Preview ──╮
+	itemsHdr := " Items " + strings.Repeat("─", max(0, itemsW-8))
+	previewHdr := " Preview " + strings.Repeat("─", max(0, previewW-10))
+	lines = append(lines,
+		leftBorder("╭"+itemsHdr)+mBorder("┬")+rightBorder(previewHdr+"╮"))
+
+	// Content rows
+	for i := 0; i < paneH; i++ {
+		left := ""
+		if i < len(itemLines) {
+			left = itemLines[i]
+		}
+		right := ""
+		if i < len(prevLines) {
+			right = prevLines[i]
+		}
+		lines = append(lines,
+			leftBorder("│")+wrapLine(left, itemsW)+
+				mBorder("│")+
+				wrapLine(right, previewW)+rightBorder("│"))
+	}
+
+	// Bottom border
+	lines = append(lines,
+		leftBorder("╰")+leftBorder(strings.Repeat("─", itemsW))+
+			mBorder("┴")+
+			rightBorder(strings.Repeat("─", previewW))+rightBorder("╯"))
+
+	// Button row
+	btnFocus := -1
+	if m.confirmFocus == triageZoneButtons {
+		btnFocus = 0
+	}
+	buttons := []buttonDef{
+		{"Cancel", "triage-cancel", 0},
+		{"Back", "triage-back", 1},
+		{"Next", "triage-next", 2},
+	}
+	lines = append(lines, renderModalButtons(btnFocus, m.width-4, "  ", nil, buttons...))
+
+	return strings.Join(lines, "\n")
+}
+
+// renderTriageItems renders the list of confirm items in the left pane.
+func (m *addWizardModel) renderTriageItems(availW, maxH int) []string {
+	if len(m.confirmItems) == 0 {
+		return []string{mutedStyle.Render("  No items to triage")}
+	}
+
+	tierColor := func(tier analyzer.ConfidenceTier) lipgloss.TerminalColor {
+		switch tier {
+		case analyzer.TierHigh:
+			return successColor
+		case analyzer.TierMedium:
+			return primaryColor
+		case analyzer.TierLow:
+			return warningColor
+		case analyzer.TierUser:
+			return accentColor
+		}
+		return mutedColor
+	}
+
+	var rows []string
+	for idx := range m.confirmItems {
+		item := m.confirmItems[idx]
+		selected := m.confirmSelected[idx]
+		isCursor := idx == m.confirmCursor
+
+		var prefix string
+		if selected {
+			prefix = "✓"
+		} else if isCursor {
+			prefix = ">"
+		} else {
+			prefix = " "
+		}
+
+		name := sanitizeLine(item.displayName)
+
+		// Tier dot + label (responsive)
+		dot := lipgloss.NewStyle().Foreground(tierColor(item.tier)).Render("●")
+		var tierLabel string
+		switch {
+		case availW >= 30:
+			switch item.tier {
+			case analyzer.TierHigh:
+				tierLabel = "High"
+			case analyzer.TierMedium:
+				tierLabel = "Medium"
+			case analyzer.TierLow:
+				tierLabel = "Low"
+			case analyzer.TierUser:
+				tierLabel = "User"
+			}
+		case availW >= 24:
+			switch item.tier {
+			case analyzer.TierHigh:
+				tierLabel = "High"
+			case analyzer.TierMedium:
+				tierLabel = "Med"
+			case analyzer.TierLow:
+				tierLabel = "Low"
+			case analyzer.TierUser:
+				tierLabel = "User"
+			}
+		default:
+			switch item.tier {
+			case analyzer.TierHigh:
+				tierLabel = "H"
+			case analyzer.TierMedium:
+				tierLabel = "M"
+			case analyzer.TierLow:
+				tierLabel = "L"
+			case analyzer.TierUser:
+				tierLabel = "U"
+			}
+		}
+
+		tierStr := dot + " " + lipgloss.NewStyle().Foreground(tierColor(item.tier)).Render(tierLabel)
+		tierStrW := lipgloss.Width(tierStr)
+
+		nameW := max(4, availW-2-tierStrW-1) // prefix(1)+space(1) + space(1) + tier
+		row := prefix + " " + truncate(name, nameW) + " " + tierStr
+
+		if isCursor {
+			row = lipgloss.NewStyle().Bold(true).Foreground(accentColor).Render(
+				prefix + " " + truncate(name, nameW) + " " + tierLabel)
+			// Re-add dot with color
+			row = prefix + " " + lipgloss.NewStyle().Bold(true).Foreground(accentColor).Render(truncate(name, nameW)) + " " + tierStr
+		} else if !selected {
+			row = prefix + " " + mutedStyle.Render(truncate(name, nameW)) + " " + tierStr
+		}
+
+		rows = append(rows, zone.Mark(fmt.Sprintf("triage-item-%d", idx), row))
+	}
+
+	// Apply scroll window
+	start := m.confirmOffset
+	end := start + maxH
+	if start > len(rows) {
+		start = len(rows)
+	}
+	if end > len(rows) {
+		end = len(rows)
+	}
+	return rows[start:end]
+}
+
+// renderTriagePreview renders the file preview in the right pane.
+func (m *addWizardModel) renderTriagePreview(availW, maxH int) []string {
+	if len(m.confirmPreview.lines) == 0 {
+		empty := mutedStyle.Render("  Select an item to preview")
+		return []string{lipgloss.NewStyle().MaxWidth(availW).Render(empty)}
+	}
+
+	p := &m.confirmPreview
+	start := p.offset
+	end := start + maxH
+	if start > len(p.lines) {
+		start = len(p.lines)
+	}
+	if end > len(p.lines) {
+		end = len(p.lines)
+	}
+
+	lineNumW := len(fmt.Sprintf("%d", len(p.lines)))
+	if lineNumW < 2 {
+		lineNumW = 2
+	}
+
+	var previewLines []string
+	for i := start; i < end; i++ {
+		num := mutedStyle.Render(fmt.Sprintf("%*d ", lineNumW, i+1))
+		numW := lipgloss.Width(num)
+		lineW := availW - numW
+		text := truncateLine(p.lines[i], lineW)
+		previewLines = append(previewLines, num+text)
+	}
+	return previewLines
 }
 
 // --- Review step view ---
