@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -864,6 +866,210 @@ func TestAddWizard_View_ShellIndex5Step(t *testing.T) {
 	assertContains(t, view, "[1 Source]")
 	assertContains(t, view, "[2 Type]")
 	assertContains(t, view, "[3 Discovery]")
+}
+
+// --- discoverFromLocalPath tests ---
+
+func TestDiscoverFromLocalPath_ReturnsItems(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	// Syllago canonical rules layout: rules/{provider}/{name}/rule.md
+	if err := os.MkdirAll(filepath.Join(dir, "rules", "syllago", "test-rule"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(dir, "rules", "syllago", "test-rule", "rule.md"),
+		[]byte("# Test Rule\nSome content.\n"),
+		0644,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	items, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
+	if err != nil {
+		t.Fatalf("discoverFromLocalPath: %v", err)
+	}
+	if len(items) == 0 {
+		t.Fatal("expected at least 1 item from local path discovery")
+	}
+
+	found := false
+	for _, item := range items {
+		if item.name == "test-rule" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		names := make([]string, len(items))
+		for i, it := range items {
+			names[i] = it.name
+		}
+		t.Errorf("expected to find 'test-rule' in discovered items, got: %v", names)
+	}
+}
+
+func TestDiscoverFromLocalPath_TypeFilter(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	// Rules: rules/syllago/my-rule/rule.md
+	if err := os.MkdirAll(filepath.Join(dir, "rules", "syllago", "my-rule"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(dir, "rules", "syllago", "my-rule", "rule.md"),
+		[]byte("# My Rule\n"),
+		0644,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	// Agents: agents/my-agent/AGENT.md
+	if err := os.MkdirAll(filepath.Join(dir, "agents", "my-agent"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(dir, "agents", "my-agent", "AGENT.md"),
+		[]byte("---\nname: My Agent\ndescription: Does things\n---\nAgent body.\n"),
+		0644,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	// Request only Rules
+	items, confirm, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
+	if err != nil {
+		t.Fatalf("discoverFromLocalPath: %v", err)
+	}
+
+	for _, item := range items {
+		if item.itemType == catalog.Agents {
+			t.Errorf("found agent in items when only rules requested: %s", item.name)
+		}
+	}
+	for _, ci := range confirm {
+		if ci.itemType == catalog.Agents {
+			t.Errorf("found agent in confirm when only rules requested: %s", ci.displayName)
+		}
+	}
+}
+
+func TestDiscoverFromLocalPath_NoDuplicates(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	// Syllago canonical layout for skills — picked up by both pattern detection AND
+	// the syllago analyzer detector. Dedup must prevent double-counting.
+	if err := os.MkdirAll(filepath.Join(dir, "skills", "dedup-skill"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(dir, "skills", "dedup-skill", "SKILL.md"),
+		[]byte("---\nname: Dedup Skill\ndescription: Tests deduplication\n---\nContent.\n"),
+		0644,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	items, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Skills}, "")
+	if err != nil {
+		t.Fatalf("discoverFromLocalPath: %v", err)
+	}
+
+	// Count occurrences of each path to detect duplicates.
+	seen := make(map[string]int)
+	for _, item := range items {
+		seen[item.path]++
+	}
+	for path, count := range seen {
+		if count > 1 {
+			t.Errorf("item path %q appears %d times — dedup failed", path, count)
+		}
+	}
+}
+
+func TestDiscoverFromLocalPath_EmptyDir(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	items, confirm, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
+	if err != nil {
+		t.Fatalf("discoverFromLocalPath on empty dir: %v", err)
+	}
+	if len(items) != 0 {
+		t.Errorf("expected 0 items from empty dir, got %d", len(items))
+	}
+	if len(confirm) != 0 {
+		t.Errorf("expected 0 confirm items from empty dir, got %d", len(confirm))
+	}
+}
+
+func TestDiscoverFromLocalPath_AnalyzerConfirmItemsMerged(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	// PAI-style layout (non-standard) — only the content-signal analyzer detects this.
+	// Packs/<name>/SKILL.md is not matched by any pattern detector.
+	// Content-signal items cap at 0.70 confidence, which is below the Auto threshold
+	// (0.80), so they land in result.Confirm — not result.Auto.
+	if err := os.MkdirAll(filepath.Join(dir, "Packs", "custom-skill"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(dir, "Packs", "custom-skill", "SKILL.md"),
+		[]byte("---\nname: Custom Skill\ndescription: A custom PAI-style skill\n---\nDoes things.\n"),
+		0644,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	_, confirm, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Skills}, "")
+	if err != nil {
+		t.Fatalf("discoverFromLocalPath: %v", err)
+	}
+
+	// The analyzer should surface this in Confirm (content-signal confidence < Auto threshold).
+	if len(confirm) == 0 {
+		t.Error("expected at least 1 confirm item from PAI-style layout via analyzer content-signal fallback")
+	}
+	for _, ci := range confirm {
+		if ci.itemType != catalog.Skills {
+			t.Errorf("expected Skills confirm item, got %v (name=%s)", ci.itemType, ci.displayName)
+		}
+	}
+}
+
+func TestDiscoverFromLocalPath_ConfirmItemsReturned(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	// Hook files always land in Confirm (never Auto), per analyzer design.
+	// Syllago hook layout: hooks/{provider}/{name}/hook.json
+	if err := os.MkdirAll(filepath.Join(dir, "hooks", "claude-code", "lint"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(dir, "hooks", "claude-code", "lint", "hook.json"),
+		[]byte(`{"event": "PostToolUse"}`),
+		0644,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	_, confirm, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Hooks}, "")
+	if err != nil {
+		t.Fatalf("discoverFromLocalPath: %v", err)
+	}
+
+	if len(confirm) == 0 {
+		t.Error("expected at least 1 confirm item for hook content (hooks always land in Confirm)")
+	}
+	for _, ci := range confirm {
+		if ci.itemType != catalog.Hooks {
+			t.Errorf("expected Hooks confirm item, got %v", ci.itemType)
+		}
+	}
 }
 
 // --- Helper ---
