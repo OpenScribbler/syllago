@@ -54,7 +54,11 @@ func PrimaryFileName(files []string, ct ContentType) string {
 // at maxLines lines. If the file exceeds maxLines, the returned string is truncated and
 // a "(N more lines)" suffix is appended.
 func ReadFileContent(itemPath, relPath string, maxLines int) (string, error) {
-	absPath := filepath.Join(itemPath, relPath)
+	absPath := filepath.Clean(filepath.Join(itemPath, relPath))
+	cleanBase := filepath.Clean(itemPath) + string(filepath.Separator)
+	if !strings.HasPrefix(absPath, cleanBase) && absPath != filepath.Clean(itemPath) {
+		return "", fmt.Errorf("path traversal: %s escapes %s", relPath, itemPath)
+	}
 	data, err := os.ReadFile(absPath)
 	if err != nil {
 		return "", fmt.Errorf("reading file %s: %w", relPath, err)
