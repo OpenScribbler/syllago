@@ -1,0 +1,78 @@
+{
+  "$schema": "handoff-v2",
+  "name": "acp-trust-anchor-panel-ready",
+  "createdAt": "2026-04-03T07:46:34-07:00",
+  "current": {
+    "claimedBy": { "sessionId": "current", "claimedAt": "2026-04-03T12:11:20-07:00" },
+    "project": "syllago",
+    "updated": "2026-04-03T11:15:00-07:00",
+    "sessionId": "9da7cd25-4cbe-4e41-b16b-ea1a100bbadd",
+    "summary": "Ran 5-agent panel discussion (3 rounds) on ACP trust anchor design, resolved all 5 open questions, applied decisions to acp-trust-anchor.md.",
+
+    "activeWork": {
+      "description": "Integrating trust anchor panel consensus into the ACP spec. Design doc (acp-trust-anchor.md) is updated with all panel decisions. Next: integrate changes into the actual spec (acp-spec.md).",
+      "feature": null,
+      "stage": "execute",
+      "planRef": null,
+      "designRef": "docs/spec/acp/acp-trust-anchor.md",
+      "progress": "1) Set up 5-agent panel infrastructure (JSONL message bus, 5 personas). 2) Ran 3 rounds of panel discussion on 5 questions. 3) All 5 questions resolved with consensus (some with recorded dissents). 4) Applied all 7 changes to acp-trust-anchor.md: extraction algorithm fix (OID extension), Forgejo correction, publisher_identity field, sigstore_trust_root guidance, rollback WARNING, TOFU + repository_owner_id, sigstore-a2a reference. 5) Panel artifacts saved to docs/spec/acp/panel/ (message-bus.jsonl, consensus.md, personas.md).",
+      "blockers": [],
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": [],
+        "readyNext": []
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": "39",
+      "lastCommit": "319908b docs: regenerate commands.json",
+      "modifiedFiles": [
+        "docs/spec/acp/acp-trust-anchor.md",
+        "docs/spec/acp/panel/message-bus.jsonl",
+        "docs/spec/acp/panel/consensus.md",
+        "docs/spec/acp/panel/personas.md"
+      ]
+    },
+
+    "recentDecisions": [
+      "Q1: Add publisher_identity field — REQUIRED when signing identity differs from source_repo owner, absent for direct-publish. Verifiers MUST surface the distinction. (4-1, SPu recorded objection requiring companion verifier-behavior statement.)",
+      "Q2: Define sigstore_trust_root field in registry manifests. Public-good Sigstore as non-normative recommended default. (4-1, SPu dissent on defaults being tooling not protocol.)",
+      "Q3: Non-normative WARNING that source binding amplifies rollback risk + normative SHOULD for registries to maintain signed latest-version manifests. (4-1, SPu dissent on SHOULD without testable compliance criteria.)",
+      "Q4: Formally acknowledge TOFU for first-publish. Registries SHOULD implement first-publish policies. repository_owner_id as RECOMMENDED optional field. (5-0.)",
+      "Q5: Reference sigstore-a2a as related work, differentiate scope (agent cards vs content packages), no format coupling at v1. Coordinate on OID extension usage. (5-0.)",
+      "Extraction algorithm: Use Fulcio OID 1.3.6.1.4.1.57264.1.12 (Source Repository URI) instead of sub claim parsing. Simpler, more robust, handles subgroups.",
+      "Forgejo: Removed from provider tables — cannot sign via OIDC today (no Fulcio issuer support)."
+    ],
+
+    "nextSteps": [
+      "Read docs/spec/acp/ecosystem-landscape.md and take its context into account before modifying acp-spec.md — the ecosystem landscape may inform how trust anchor changes land in the spec.",
+      "Integrate trust anchor decisions into acp-spec.md: Section 2 (platform-first framing + trust chain narrative), Section 9.2 (add steps 5a-5b for source binding + publisher_identity verification), Section 11 (security considerations: rollback WARNING, TOFU, residual risks), new Appendix D (provider OIDC formats + sigstore-a2a reference).",
+      "Add new meta.yaml fields to the spec schema: publisher_identity, repository_owner_id, sigstore_trust_root (in registry manifests).",
+      "Write intro rewrite for acp-trust-anchor.md (deferred until after panel — panel is now complete)."
+    ],
+
+    "context": {
+      "notes": "The panel ran as 5 independent Sonnet agents with a shared JSONL message bus (docs/spec/acp/panel/message-bus.jsonl). 3 rounds, 18 total bus entries. Full consensus doc at docs/spec/acp/panel/consensus.md.\n\nThe Spec Purist had 3 recorded dissents — all were 'can live with it but want objection on record.' These are the spec-drafting pressure points to get right: (1) publisher_identity must have companion verifier-behavior normative text, (2) sigstore_trust_root default must be non-normative not normative, (3) rollback SHOULD should have testable criteria or be downgraded to non-normative.\n\nThe acp-trust-anchor.md doc is now the authoritative design record with all panel decisions applied. The acp-spec.md needs to be updated to match — that's the next session's primary task.\n\nIMPORTANT: Read docs/spec/acp/ecosystem-landscape.md before modifying the spec. Holden specifically asked for this to be taken into account — the ecosystem landscape document may contain context about how ACP relates to other specs and projects that should inform where and how the trust anchor changes land."
+    }
+  },
+
+  "previousSessions": [
+    {
+      "summary": "Deep research on ACP trust anchor design; ready to run multi-agent panel discussion on 5 open questions.",
+      "updated": "2026-04-03T08:45:00-07:00",
+      "completedWork": [
+        "Walked through 7 brainstorming questions with Holden (2 decided, 4 sent to panel, 1 deferred)",
+        "Ran 4 deep research agents (OIDC formats, SSH APIs, Sigstore federation, supply chain trust models)",
+        "Research revealed 3 critical findings: extraction algorithm must use OID not sub, Forgejo can't sign, npm already solved this",
+        "Research synthesis saved to docs/spec/acp/acp-trust-anchor-research.md"
+      ],
+      "nextSteps": [
+        "Architect 5-agent panel with shared JSONL message bus",
+        "Run panel on 5 revised questions",
+        "After panel: synthesize consensus, update docs"
+      ]
+    }
+  ]
+}
