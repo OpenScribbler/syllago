@@ -341,9 +341,10 @@ func (m *addWizardModel) viewTriage() string {
 
 	leftBorder := mBorder
 	rightBorder := mBorder
-	if m.confirmFocus == triageZoneItems {
+	switch m.confirmFocus {
+	case triageZoneItems:
 		leftBorder = fBorder
-	} else if m.confirmFocus == triageZonePreview {
+	case triageZonePreview:
 		rightBorder = fBorder
 	}
 
@@ -485,9 +486,6 @@ func (m *addWizardModel) renderTriageItems(availW, maxH int) []string {
 		row := prefix + " " + truncate(name, nameW) + " " + tierStr
 
 		if isCursor {
-			row = lipgloss.NewStyle().Bold(true).Foreground(accentColor).Render(
-				prefix + " " + truncate(name, nameW) + " " + tierLabel)
-			// Re-add dot with color
 			row = prefix + " " + lipgloss.NewStyle().Bold(true).Foreground(accentColor).Render(truncate(name, nameW)) + " " + tierStr
 		} else if !selected {
 			row = prefix + " " + mutedStyle.Render(truncate(name, nameW)) + " " + tierStr
