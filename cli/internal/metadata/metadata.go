@@ -63,6 +63,12 @@ type Meta struct {
 	AddedBy          string              `yaml:"added_by,omitempty"`          // e.g. "syllago v0.1.0"
 	SourceScope      string              `yaml:"source_scope,omitempty"`      // "global" or "project"
 	SourceProject    string              `yaml:"source_project,omitempty"`    // project directory name (only when scope is "project")
+
+	// Content-signal detection fields — scanner-computed, never read from incoming YAML.
+	// Set by add.writeItem() from the actual discovery source, not from package metadata.
+	Confidence      float64 `yaml:"confidence,omitempty"`
+	DetectionSource string  `yaml:"detection_source,omitempty"`
+	DetectionMethod string  `yaml:"detection_method,omitempty"` // "automatic" or "user-directed"
 }
 
 // validateFormatVersion checks that the format version is supported.

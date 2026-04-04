@@ -26,3 +26,20 @@ func TierForItem(item *DetectedItem) ConfidenceTier {
 		return TierHigh
 	}
 }
+
+// TierForMeta applies tier logic from persisted metadata fields.
+// Uses DetectionMethod instead of floating-point equality to identify
+// user-directed items — avoids fragile float comparison at the 0.60 boundary.
+func TierForMeta(confidence float64, method string) ConfidenceTier {
+	if method == "user-directed" {
+		return TierUser
+	}
+	switch {
+	case confidence < 0.60:
+		return TierLow
+	case confidence < 0.70:
+		return TierMedium
+	default:
+		return TierHigh
+	}
+}

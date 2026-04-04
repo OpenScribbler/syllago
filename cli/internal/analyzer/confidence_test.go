@@ -2,31 +2,28 @@ package analyzer
 
 import "testing"
 
-func TestTierForItem(t *testing.T) {
+func TestTierForMeta(t *testing.T) {
 	t.Parallel()
-	cases := []struct {
+	tests := []struct {
 		name       string
 		confidence float64
-		provider   string
-		label      string
-		wantTier   ConfidenceTier
+		method     string
+		want       ConfidenceTier
 	}{
-		{"low", 0.55, "content-signal", "content-signal", TierLow},
-		{"medium", 0.65, "content-signal", "content-signal", TierMedium},
-		{"high", 0.75, "top-level", "", TierHigh},
-		{"user-directed zero-signal", 0.60, "content-signal", "content-signal", TierUser},
-		{"high auto-detected", 0.85, "claude-code", "", TierHigh},
+		{"user-directed regardless of confidence", 0.0, "user-directed", TierUser},
+		{"user-directed high confidence", 0.95, "user-directed", TierUser},
+		{"low below 0.60", 0.55, "", TierLow},
+		{"medium exactly 0.60", 0.60, "", TierMedium},
+		{"medium at 0.65", 0.65, "", TierMedium},
+		{"high at 0.70", 0.70, "", TierHigh},
+		{"high at 0.85", 0.85, "", TierHigh},
+		{"zero confidence no method", 0.0, "", TierLow},
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			item := &DetectedItem{
-				Confidence:    tc.confidence,
-				Provider:      tc.provider,
-				InternalLabel: tc.label,
-			}
-			got := TierForItem(item)
-			if got != tc.wantTier {
-				t.Errorf("TierForItem(conf=%.2f) = %q, want %q", tc.confidence, got, tc.wantTier)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := TierForMeta(tt.confidence, tt.method)
+			if got != tt.want {
+				t.Errorf("TierForMeta(%v, %q) = %q, want %q", tt.confidence, tt.method, got, tt.want)
 			}
 		})
 	}
