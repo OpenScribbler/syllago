@@ -16,6 +16,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 	"github.com/tidwall/gjson"
@@ -94,26 +95,26 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return runAddFromShared(root, args, addAll, dryRun, force)
 	}
 
-	prov := findProviderBySlug(fromSlug)
-	if prov == nil {
-		slugs := providerSlugs()
-		slugs = append(slugs, "shared")
-		return output.NewStructuredError(
-			output.ErrProviderNotFound,
-			"unknown provider: "+fromSlug,
-			"Available: "+strings.Join(slugs, ", "),
-		)
-	}
-
 	addAll, _ := cmd.Flags().GetBool("all")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	force, _ := cmd.Flags().GetBool("force")
-	baseDir, _ := cmd.Flags().GetString("base-dir")
 
 	// --all and a positional target are mutually exclusive.
 	if addAll && len(args) > 0 {
 		return output.NewStructuredError(output.ErrInputConflict, "cannot specify both a target and --all", "Use either a positional argument or --all, not both")
 	}
+
+	prov := findProviderBySlug(fromSlug)
+	if prov == nil {
+		// Not a provider slug — try as a registry name (short or full).
+		globalDir := catalog.GlobalContentDir()
+		if globalDir == "" {
+			return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
+		}
+		return runAddFromRegistry(root, args, fromSlug, addAll, dryRun, force, globalDir)
+	}
+
+	baseDir, _ := cmd.Flags().GetString("base-dir")
 
 	// Build resolver from merged config + CLI flag.
 	globalCfg, err := config.LoadGlobal()
@@ -1036,6 +1037,154 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, proje
 	}
 	fmt.Fprintf(output.Writer, "\nAdded %d hooks from %s.\n", count, provLabel)
 	return nil
+}
+
+// findRegistryForSlug searches the provided configs for a registry whose Name
+// or short name (last path segment) matches fromSlug. Returns nil if not found.
+func findRegistryForSlug(fromSlug string, configs ...*config.Config) *config.Registry {
+	for _, cfg := range configs {
+		if cfg == nil {
+			continue
+		}
+		for i := range cfg.Registries {
+			r := &cfg.Registries[i]
+			if r.Name == fromSlug {
+				return r
+			}
+			// Allow short-name match: "my-tools" → "acme/my-tools"
+			if filepath.Base(r.Name) == fromSlug {
+				return r
+			}
+		}
+	}
+	return nil
+}
+
+// runAddFromRegistry handles "syllago add [type] --from <registry-name>".
+// It looks up the registry by short or full name, scans its clone directory,
+// applies type/name filters from args, and writes matching items to the library.
+func runAddFromRegistry(projectRoot string, args []string, fromSlug string, addAll, dryRun, force bool, globalDir string) error {
+	globalCfg, _ := config.LoadGlobal()
+	projectCfg, _ := config.Load(projectRoot)
+
+	// Registry configuration may be stored in the content root (e.g., when the
+	// project has a contentRoot setting pointing to a subdirectory). Load that
+	// config too so registries added via "syllago registry add" are found.
+	var contentCfg *config.Config
+	if contentRoot, err := findContentRepoRoot(); err == nil && contentRoot != projectRoot {
+		contentCfg, _ = config.Load(contentRoot)
+	}
+
+	reg := findRegistryForSlug(fromSlug, globalCfg, projectCfg, contentCfg)
+	if reg == nil {
+		slugs := providerSlugs()
+		slugs = append(slugs, "shared")
+		return output.NewStructuredError(
+			output.ErrProviderNotFound,
+			"unknown provider or registry: "+fromSlug,
+			"Available providers: "+strings.Join(slugs, ", ")+"\nRun 'syllago registry list' to see configured registries",
+		)
+	}
+
+	if !registry.IsCloned(reg.Name) {
+		return output.NewStructuredError(
+			output.ErrRegistryNotCloned,
+			fmt.Sprintf("registry %q is not cloned locally", reg.Name),
+			fmt.Sprintf("Run 'syllago registry sync %s' to fetch it", reg.Name),
+		)
+	}
+
+	cloneDir, err := registry.CloneDir(reg.Name)
+	if err != nil {
+		return err
+	}
+
+	// Parse type/name filter from positional args.
+	var typeStr, nameFilter string
+	if len(args) > 0 {
+		parts := strings.SplitN(args[0], "/", 2)
+		typeStr = parts[0]
+		if len(parts) == 2 {
+			nameFilter = parts[1]
+		}
+	}
+
+	items, err := add.DiscoverFromRegistry(reg.Name, cloneDir, globalDir)
+	if err != nil {
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning registry content", "Check registry clone integrity", err.Error())
+	}
+
+	// No positional arg and no --all → discovery mode.
+	if len(args) == 0 && !addAll {
+		return printDiscoveryText(reg.Name, reg.Name, items)
+	}
+
+	// Filter by content type if a positional arg was given.
+	if typeStr != "" {
+		ct := catalog.ContentType(typeStr)
+		valid := false
+		for _, known := range catalog.AllContentTypes() {
+			if ct == known {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			var typeNames []string
+			for _, t := range catalog.AllContentTypes() {
+				typeNames = append(typeNames, string(t))
+			}
+			return output.NewStructuredError(output.ErrItemTypeUnknown, fmt.Sprintf("unknown content type %q", typeStr), "Available: "+strings.Join(typeNames, ", "))
+		}
+
+		var filtered []add.DiscoveryItem
+		for _, item := range items {
+			if item.Type == ct {
+				filtered = append(filtered, item)
+			}
+		}
+		items = filtered
+
+		if nameFilter != "" {
+			var nameFiltered []add.DiscoveryItem
+			for _, item := range items {
+				if item.Name == nameFilter {
+					nameFiltered = append(nameFiltered, item)
+				}
+			}
+			if len(nameFiltered) == 0 {
+				var available []string
+				for _, item := range items {
+					available = append(available, item.Name)
+				}
+				availStr := strings.Join(available, ", ")
+				if availStr == "" {
+					availStr = "(none found)"
+				}
+				return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no %s named %q found in registry %s", typeStr, nameFilter, reg.Name), "Available "+typeStr+": "+availStr)
+			}
+			items = nameFiltered
+		}
+	}
+
+	// Determine visibility for taint tracking.
+	visibility := reg.Visibility
+	if visibility == "" {
+		visibility = "unknown"
+	}
+
+	results := add.AddItems(items, add.AddOptions{
+		Force:            force,
+		DryRun:           dryRun,
+		SourceRegistry:   reg.Name,
+		SourceVisibility: visibility,
+	}, globalDir, nil, version)
+
+	telemetry.Enrich("from", fromSlug)
+	telemetry.Enrich("content_type", typeStr)
+	telemetry.Enrich("content_count", len(results))
+	telemetry.Enrich("dry_run", dryRun)
+	return printAddResults(results, dryRun, reg.Name)
 }
 
 // uniqueItemDir returns a unique directory path by appending -2, -3, etc.

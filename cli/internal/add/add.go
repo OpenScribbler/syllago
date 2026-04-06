@@ -631,6 +631,65 @@ func findContentFile(dir string) string {
 	return ""
 }
 
+// DiscoverFromRegistry scans a registry clone directory and returns DiscoveryItems
+// annotated with their library status. Items from a manifest-indexed registry
+// (registry.yaml with items) are returned as-is from the index; otherwise the
+// clone directory is walked for recognized content types.
+func DiscoverFromRegistry(regName, cloneDir, globalDir string) ([]DiscoveryItem, error) {
+	idx, err := BuildLibraryIndex(globalDir)
+	if err != nil {
+		return nil, fmt.Errorf("building library index: %w", err)
+	}
+
+	sources := []catalog.RegistrySource{{Name: regName, Path: cloneDir}}
+	cat, err := catalog.ScanRegistriesOnly(sources)
+	if err != nil {
+		return nil, fmt.Errorf("scanning registry %q: %w", regName, err)
+	}
+
+	var items []DiscoveryItem
+	for _, ci := range cat.Items {
+		// ci.Path may be either a directory (directory-walk scan) or a file
+		// (index-based scan from registry.yaml items). Normalize to a file path
+		// so AddItems can read the primary content.
+		primaryFile := ci.Path
+		sourceDir := ""
+
+		if fi, statErr := os.Stat(ci.Path); statErr == nil {
+			if fi.IsDir() {
+				// Directory-walk case: ci.Path is the item directory.
+				// Find the primary content file within it.
+				primaryFile = findContentFile(ci.Path)
+				if primaryFile == "" {
+					continue // no readable content file — skip
+				}
+				sourceDir = ci.Path
+			} else {
+				// Index-based case: ci.Path is already the primary file.
+				parent := filepath.Dir(ci.Path)
+				// Only set SourceDir when the item lives in its own subdirectory
+				// (i.e., the parent is not the registry root itself).
+				if parent != cloneDir {
+					sourceDir = parent
+				}
+			}
+		}
+
+		// ci.Provider is set from the manifest (e.g., "content-signal").
+		// For universal types (skills, agents, etc.) the provider is ignored
+		// in the library key lookup, so it has no effect on the status check.
+		status := computeItemStatus(primaryFile, ci.Type, ci.Provider, ci.Name, idx)
+		items = append(items, DiscoveryItem{
+			Name:      ci.Name,
+			Type:      ci.Type,
+			Path:      primaryFile,
+			SourceDir: sourceDir,
+			Status:    status,
+		})
+	}
+	return items, nil
+}
+
 // computeItemStatus determines the library status for a discovered item.
 func computeItemStatus(filePath string, ct catalog.ContentType, provSlug, name string, idx LibraryIndex) ItemStatus {
 	key := libraryKey(ct, provSlug, name)
