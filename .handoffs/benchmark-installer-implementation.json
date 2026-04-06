@@ -3,7 +3,7 @@
   "name": "benchmark-installer-implementation",
   "createdAt": "2026-04-02T17:49:49Z",
   "current": {
-    "claimedBy": null,
+    "claimedBy": { "sessionId": "layer2-session", "claimedAt": "2026-04-06T13:42:33Z" },
     "project": "syllago",
     "updated": "2026-04-04T08:00:00-07:00",
     "sessionId": null,
