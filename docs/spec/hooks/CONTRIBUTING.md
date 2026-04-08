@@ -94,6 +94,21 @@ To add support for a new AI coding tool provider:
 
 ---
 
+## Cross-File Dependencies
+
+The specification is split across several documents. When making a change, consult the table below to ensure all affected files are updated together. Omitting a file from an otherwise complete change will leave the spec in an inconsistent state.
+
+| Change Type | Files to Update |
+|---|---|
+| New event (with blocking behavior) | `events.md`, `blocking-matrix.md`, `CHANGELOG.md` |
+| New event (observational only) | `events.md`, `CHANGELOG.md` |
+| New provider | `events.md`, `blocking-matrix.md`, `capabilities.md`, `tools.md`, `CHANGELOG.md` |
+| New capability | `capabilities.md`, `CHANGELOG.md` |
+| New tool name | `tools.md`, `CHANGELOG.md` |
+| Core format change | `hooks.md` (version bump), `schema/hook.schema.json`, `CHANGELOG.md` |
+
+---
+
 ## Extending the Capability Registry
 
 To propose a new capability:
@@ -129,7 +144,7 @@ Each canonical file has a corresponding file in each provider directory showing 
 
 Test vectors use the following non-normative fields (prefixed with `_` to distinguish from canonical fields):
 
-- **`_comment`**: A human-readable string explaining what the test vector exercises. Present in both canonical and provider files. Implementations MUST ignore this field (per the forward-compatibility rule in Section 3.2 of the spec).
+- **`_comment`**: A human-readable string explaining what the test vector exercises. Present in both canonical and provider files. Implementations MUST ignore this field (per the forward-compatibility rule in `hooks.md` Section 3.2).
 - **`_warnings`**: An array of strings in provider output files documenting information lost or approximated during conversion. Used to verify that adapters produce the expected degradation warnings.
 
 These conventions are informational. They are not part of the canonical format and MUST NOT appear in production hook manifests.
