@@ -543,6 +543,65 @@ func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
 	}
 }
 
+// handleInstallAllResult receives the "install to all" wizard confirmation and
+// kicks off async installs to each provider in the filtered list.
+func (a App) handleInstallAllResult(msg installAllResultMsg) (tea.Model, tea.Cmd) {
+	a.installWizard = nil
+	a.wizardMode = wizardNone
+	a.updateNavState()
+	return a, a.doInstallAllCmd(msg)
+}
+
+// doInstallAllCmd installs an item to each provider in the list, collecting results.
+func (a App) doInstallAllCmd(msg installAllResultMsg) tea.Cmd {
+	item := msg.item
+	providers := msg.providers
+	projectRoot := msg.projectRoot
+
+	return func() tea.Msg {
+		var firstErr error
+		count := 0
+		for _, prov := range providers {
+			_, err := installer.Install(item, prov, projectRoot, installer.MethodSymlink, "")
+			if err != nil {
+				if firstErr == nil {
+					firstErr = err
+				}
+			} else {
+				count++
+			}
+		}
+		name := item.DisplayName
+		if name == "" {
+			name = item.Name
+		}
+		return installAllDoneMsg{
+			itemName: name,
+			count:    count,
+			firstErr: firstErr,
+		}
+	}
+}
+
+// handleInstallAllDone processes the aggregate result of an "install to all" batch.
+func (a App) handleInstallAllDone(msg installAllDoneMsg) (tea.Model, tea.Cmd) {
+	var toastText string
+	toastKind := toastSuccess
+	if msg.firstErr != nil {
+		toastText = fmt.Sprintf("Installed to %d providers (some errors occurred)", msg.count)
+		toastKind = toastWarning
+	} else {
+		name := msg.itemName
+		if name == "" {
+			name = "item"
+		}
+		toastText = fmt.Sprintf("Installed %q to %d providers", name, msg.count)
+	}
+	cmd1 := a.toast.Push(toastText, toastKind)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
+}
+
 // handleInstallDone processes the result of an install operation.
 func (a App) handleInstallDone(msg installDoneMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {

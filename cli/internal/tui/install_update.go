@@ -2,9 +2,12 @@ package tui
 
 import (
 	"fmt"
+	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
+
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 )
 
 // Update handles messages for the install wizard.
@@ -30,6 +33,8 @@ func (m *installWizardModel) updateKey(msg tea.KeyMsg) (*installWizardModel, tea
 		return m.updateKeyMethod(msg)
 	case installStepReview:
 		return m.updateKeyReview(msg)
+	case installStepConflict:
+		return m.updateKeyConflict(msg)
 	}
 	// Fallback Esc
 	if msg.Type == tea.KeyEsc {
@@ -45,17 +50,28 @@ func (m *installWizardModel) updateKeyProvider(msg tea.KeyMsg) (*installWizardMo
 
 	case msg.Type == tea.KeyDown || msg.Type == tea.KeyTab ||
 		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'j'):
+		m.selectAll = false
 		if next := m.nextSelectableProvider(m.providerCursor, +1); next >= 0 {
 			m.providerCursor = next
 		}
 
 	case msg.Type == tea.KeyUp || msg.Type == tea.KeyShiftTab ||
 		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'k'):
+		m.selectAll = false
 		if next := m.nextSelectableProvider(m.providerCursor, -1); next >= 0 {
 			m.providerCursor = next
 		}
 
+	case msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'a':
+		// Toggle "All providers" selection (only when option is visible)
+		if m.showAllOption() {
+			m.selectAll = !m.selectAll
+		}
+
 	case msg.Type == tea.KeyEnter:
+		if m.selectAll && m.showAllOption() {
+			return m.providerEnterAll()
+		}
 		// Only advance if current provider is not installed and there's at least one selectable
 		if m.providerCursor >= 0 && m.providerCursor < len(m.providers) &&
 			!m.providerInstalled[m.providerCursor] {
@@ -69,6 +85,76 @@ func (m *installWizardModel) updateKeyProvider(msg tea.KeyMsg) (*installWizardMo
 		}
 	}
 	return m, nil
+}
+
+// providerEnterAll handles Enter when "All providers" is selected.
+// Detects conflicts and either emits installAllResultMsg (no conflicts) or
+// enters installStepConflict (conflicts found).
+func (m *installWizardModel) providerEnterAll() (*installWizardModel, tea.Cmd) {
+	home, _ := os.UserHomeDir()
+	conflicts := installer.DetectConflicts(m.providers, m.item.Type, home)
+	if len(conflicts) == 0 {
+		result := m.installAllResult(m.providers)
+		return m, func() tea.Msg { return result }
+	}
+	m.conflicts = conflicts
+	m.conflictCursor = 0
+	m.shell.SetSteps([]string{"Provider", "Conflicts"})
+	m.shell.SetActive(1)
+	m.step = installStepConflict
+	return m, nil
+}
+
+// --- Conflict step ---
+
+func (m *installWizardModel) updateKeyConflict(msg tea.KeyMsg) (*installWizardModel, tea.Cmd) {
+	switch {
+	case msg.Type == tea.KeyEsc:
+		return m.conflictGoBack()
+
+	case msg.Type == tea.KeyDown ||
+		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'j'):
+		if m.conflictCursor < 2 {
+			m.conflictCursor++
+		}
+
+	case msg.Type == tea.KeyUp ||
+		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'k'):
+		if m.conflictCursor > 0 {
+			m.conflictCursor--
+		}
+
+	case msg.Type == tea.KeyEnter:
+		return m.conflictAdvance()
+	}
+	return m, nil
+}
+
+// conflictGoBack returns from conflict step to provider step, restoring shell.
+func (m *installWizardModel) conflictGoBack() (*installWizardModel, tea.Cmd) {
+	m.conflicts = nil
+	// Restore the original shell labels
+	m.shell.SetSteps(m.originalShellLabels())
+	m.shell.SetActive(0)
+	m.step = installStepProvider
+	// Keep selectAll=true so the "All providers" row stays highlighted
+	return m, nil
+}
+
+// conflictAdvance applies the chosen resolution and emits installAllResultMsg.
+func (m *installWizardModel) conflictAdvance() (*installWizardModel, tea.Cmd) {
+	var resolution installer.ConflictResolution
+	switch m.conflictCursor {
+	case 0:
+		resolution = installer.ResolutionSharedOnly
+	case 1:
+		resolution = installer.ResolutionOwnDirsOnly
+	default:
+		resolution = installer.ResolutionAll
+	}
+	filtered := installer.ApplyConflictResolution(m.providers, m.conflicts, resolution)
+	result := m.installAllResult(filtered)
+	return m, func() tea.Msg { return result }
 }
 
 func (m *installWizardModel) updateMouse(msg tea.MouseMsg) (*installWizardModel, tea.Cmd) {
@@ -98,6 +184,8 @@ func (m *installWizardModel) updateMouse(msg tea.MouseMsg) (*installWizardModel,
 		return m.updateMouseMethod(msg)
 	case installStepReview:
 		return m.updateMouseReview(msg)
+	case installStepConflict:
+		return m.updateMouseConflict(msg)
 	}
 	return m, nil
 }
@@ -107,17 +195,26 @@ func (m *installWizardModel) updateMouseProvider(msg tea.MouseMsg) (*installWiza
 	for i := range m.providers {
 		if zone.Get(fmt.Sprintf("inst-prov-%d", i)).InBounds(msg) {
 			if !m.providerInstalled[i] {
+				m.selectAll = false
 				m.providerCursor = i
 			}
 			return m, nil
 		}
+	}
+	// "All providers" row click
+	if zone.Get("inst-all").InBounds(msg) && m.showAllOption() {
+		m.selectAll = true
+		return m, nil
 	}
 	// Button clicks
 	if zone.Get("inst-cancel").InBounds(msg) {
 		return m, func() tea.Msg { return installCloseMsg{} }
 	}
 	if zone.Get("inst-next").InBounds(msg) {
-		// Same as Enter
+		if m.selectAll && m.showAllOption() {
+			return m.providerEnterAll()
+		}
+		// Same as Enter for single-provider
 		if m.providerCursor >= 0 && m.providerCursor < len(m.providers) &&
 			!m.providerInstalled[m.providerCursor] {
 			if m.isJSONMerge {
@@ -127,6 +224,22 @@ func (m *installWizardModel) updateMouseProvider(msg tea.MouseMsg) (*installWiza
 				m.shell.SetActive(1)
 			}
 		}
+	}
+	return m, nil
+}
+
+func (m *installWizardModel) updateMouseConflict(msg tea.MouseMsg) (*installWizardModel, tea.Cmd) {
+	for i := 0; i < 3; i++ {
+		if zone.Get(fmt.Sprintf("inst-conflict-%d", i)).InBounds(msg) {
+			m.conflictCursor = i
+			return m, nil
+		}
+	}
+	if zone.Get("inst-back").InBounds(msg) {
+		return m.conflictGoBack()
+	}
+	if zone.Get("inst-conflict-install").InBounds(msg) {
+		return m.conflictAdvance()
 	}
 	return m, nil
 }

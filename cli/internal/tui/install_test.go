@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -1808,5 +1809,384 @@ func TestApp_LibraryInstallMsg(t *testing.T) {
 	}
 	if a.installWizard == nil {
 		t.Error("expected installWizard to be non-nil after libraryInstallMsg")
+	}
+}
+
+// --- Conflict provider helpers ---
+
+// testConflictInstaller creates a provider whose InstallDir for Skills points to sharedPath.
+// This simulates Gemini CLI or similar providers that write to a global shared path.
+func testConflictInstaller(slug, name, sharedPath string) provider.Provider {
+	sp := sharedPath
+	return provider.Provider{
+		Slug:     slug,
+		Name:     name,
+		Detected: true,
+		Detect:   func(string) bool { return true },
+		InstallDir: func(home string, ct catalog.ContentType) string {
+			if ct == catalog.Skills {
+				return sp // writes to shared dir
+			}
+			return filepath.Join(home, "."+slug, string(ct))
+		},
+		SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Skills },
+		SymlinkSupport: map[catalog.ContentType]bool{
+			catalog.Skills: true,
+		},
+	}
+}
+
+// testConflictReader creates a provider whose GlobalSharedReadPaths for Skills includes sharedPath.
+// This simulates OpenCode or similar providers that read from a global shared path.
+func testConflictReader(slug, name, sharedPath string) provider.Provider {
+	sp := sharedPath
+	return provider.Provider{
+		Slug:     slug,
+		Name:     name,
+		Detected: true,
+		Detect:   func(string) bool { return true },
+		InstallDir: func(home string, ct catalog.ContentType) string {
+			if ct == catalog.Skills {
+				return filepath.Join(home, "."+slug, "skills") // own dir
+			}
+			return ""
+		},
+		GlobalSharedReadPaths: func(home string, ct catalog.ContentType) []string {
+			if ct == catalog.Skills {
+				return []string{sp}
+			}
+			return nil
+		},
+		SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Skills },
+		SymlinkSupport: map[catalog.ContentType]bool{
+			catalog.Skills: true,
+		},
+	}
+}
+
+// --- "All providers" / conflict step tests ---
+
+// TestInstallWizard_ProviderView_ShowsAllOption verifies the provider view renders
+// an "All providers" option when there are 2+ providers.
+func TestInstallWizard_ProviderView_ShowsAllOption(t *testing.T) {
+	t.Parallel()
+	provA := testInstallProvider("Claude Code", "claude-code", true)
+	provB := testInstallProvider("Cursor", "cursor", true)
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(t.TempDir(), "skills", "my-skill"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, t.TempDir())
+	w.width = 80
+
+	view := w.viewProvider()
+	if !strings.Contains(view, "All providers") {
+		t.Error("provider view should show 'All providers' option when 2+ providers exist")
+	}
+}
+
+// TestInstallWizard_ProviderView_NoAllOptionSingle verifies "All providers" is not
+// shown when there's only one provider.
+func TestInstallWizard_ProviderView_NoAllOptionSingle(t *testing.T) {
+	t.Parallel()
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(t.TempDir(), "skills", "my-skill"))
+
+	w := openInstallWizard(item, []provider.Provider{prov}, t.TempDir())
+	// Single-provider auto-skips to location; manually reset to provider step for view test.
+	w.step = installStepProvider
+	w.shell.SetActive(0)
+	w.autoSkippedProvider = false
+	w.width = 80
+
+	view := w.viewProvider()
+	if strings.Contains(view, "All providers") {
+		t.Error("provider view should NOT show 'All providers' option for single provider")
+	}
+}
+
+// TestInstallWizard_AllProviders_KeyA verifies pressing 'a' selects the "all providers" option.
+func TestInstallWizard_AllProviders_KeyA(t *testing.T) {
+	t.Parallel()
+	provA := testInstallProvider("Claude Code", "claude-code", true)
+	provB := testInstallProvider("Cursor", "cursor", true)
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(t.TempDir(), "skills", "my-skill"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, t.TempDir())
+	if w.selectAll {
+		t.Error("expected selectAll=false initially")
+	}
+
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	if !w.selectAll {
+		t.Error("expected selectAll=true after pressing 'a'")
+	}
+}
+
+// TestInstallWizard_AllProviders_ArrowClearsSelectAll verifies arrow keys clear selectAll.
+func TestInstallWizard_AllProviders_ArrowClearsSelectAll(t *testing.T) {
+	t.Parallel()
+	provA := testInstallProvider("Claude Code", "claude-code", true)
+	provB := testInstallProvider("Cursor", "cursor", true)
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(t.TempDir(), "skills", "my-skill"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, t.TempDir())
+	w.selectAll = true
+
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if w.selectAll {
+		t.Error("expected selectAll=false after pressing Down")
+	}
+}
+
+// TestInstallWizard_AllProviders_NoConflict verifies that pressing Enter with
+// selectAll and no conflicts emits installAllResultMsg directly.
+func TestInstallWizard_AllProviders_NoConflict(t *testing.T) {
+	t.Parallel()
+	// Standard providers with no GlobalSharedReadPaths — no conflicts possible.
+	provA := testInstallProvider("Claude Code", "claude-code", true)
+	provB := testInstallProvider("Cursor", "cursor", true)
+	root := t.TempDir()
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(root, "skills", "my-skill"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, root)
+	w.selectAll = true
+
+	_, cmd := w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("expected cmd from Enter with all providers (no conflicts)")
+	}
+	msg := cmd()
+	result, ok := msg.(installAllResultMsg)
+	if !ok {
+		t.Fatalf("expected installAllResultMsg, got %T", msg)
+	}
+	if len(result.providers) == 0 {
+		t.Error("expected non-empty providers list in installAllResultMsg")
+	}
+}
+
+// TestInstallWizard_AllProviders_HasConflict verifies that pressing Enter with
+// selectAll and detected conflicts enters installStepConflict.
+func TestInstallWizard_AllProviders_HasConflict(t *testing.T) {
+	t.Parallel()
+	sharedPath := t.TempDir()
+	provA := testConflictInstaller("gemini-cli", "Gemini CLI", sharedPath)
+	provB := testConflictReader("opencode", "OpenCode", sharedPath)
+	root := t.TempDir()
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(root, "skills", "my-skill"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, root)
+	w.selectAll = true
+
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if w.step != installStepConflict {
+		t.Errorf("expected step=installStepConflict after Enter with conflicts, got %d", w.step)
+	}
+	if len(w.conflicts) == 0 {
+		t.Error("expected conflicts to be populated")
+	}
+	if w.shell.active != 1 {
+		t.Errorf("expected shell.active=1 (Conflicts step), got %d", w.shell.active)
+	}
+}
+
+// TestInstallWizard_ConflictNav verifies Up/Down navigation in the conflict step.
+func TestInstallWizard_ConflictNav(t *testing.T) {
+	t.Parallel()
+	sharedPath := t.TempDir()
+	provA := testConflictInstaller("gemini-cli", "Gemini CLI", sharedPath)
+	provB := testConflictReader("opencode", "OpenCode", sharedPath)
+	root := t.TempDir()
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(root, "skills", "my-skill"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, root)
+	w.selectAll = true
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // enter conflict step
+
+	if w.step != installStepConflict {
+		t.Fatalf("expected installStepConflict, got %d", w.step)
+	}
+	if w.conflictCursor != 0 {
+		t.Fatalf("expected conflictCursor=0 initially, got %d", w.conflictCursor)
+	}
+
+	// Down: 0 -> 1
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if w.conflictCursor != 1 {
+		t.Errorf("expected conflictCursor=1 after Down, got %d", w.conflictCursor)
+	}
+
+	// Down: 1 -> 2
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if w.conflictCursor != 2 {
+		t.Errorf("expected conflictCursor=2 after Down, got %d", w.conflictCursor)
+	}
+
+	// Down: clamped at 2
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if w.conflictCursor != 2 {
+		t.Errorf("expected conflictCursor=2 (clamped), got %d", w.conflictCursor)
+	}
+
+	// Up: 2 -> 1
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyUp})
+	if w.conflictCursor != 1 {
+		t.Errorf("expected conflictCursor=1 after Up, got %d", w.conflictCursor)
+	}
+
+	// Up: 1 -> 0
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyUp})
+	if w.conflictCursor != 0 {
+		t.Errorf("expected conflictCursor=0 after Up, got %d", w.conflictCursor)
+	}
+
+	// Up: clamped at 0
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyUp})
+	if w.conflictCursor != 0 {
+		t.Errorf("expected conflictCursor=0 (clamped), got %d", w.conflictCursor)
+	}
+}
+
+// TestInstallWizard_ConflictEnterSharedOnly verifies Enter on SharedOnly emits
+// installAllResultMsg with the reader provider removed.
+func TestInstallWizard_ConflictEnterSharedOnly(t *testing.T) {
+	t.Parallel()
+	sharedPath := t.TempDir()
+	provA := testConflictInstaller("gemini-cli", "Gemini CLI", sharedPath)
+	provB := testConflictReader("opencode", "OpenCode", sharedPath)
+	root := t.TempDir()
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(root, "skills", "my-skill"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, root)
+	w.selectAll = true
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // enter conflict step
+
+	if w.step != installStepConflict {
+		t.Fatalf("expected installStepConflict, got %d", w.step)
+	}
+
+	// cursor=0 = SharedOnly. Press Enter.
+	_, cmd := w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("expected cmd from Enter on conflict step")
+	}
+	msg := cmd()
+	result, ok := msg.(installAllResultMsg)
+	if !ok {
+		t.Fatalf("expected installAllResultMsg, got %T", msg)
+	}
+	// SharedOnly removes reader (opencode), keeps installer (gemini-cli)
+	if len(result.providers) != 1 {
+		t.Errorf("SharedOnly should leave 1 provider, got %d", len(result.providers))
+	}
+	if result.providers[0].Slug != "gemini-cli" {
+		t.Errorf("SharedOnly should keep installer (gemini-cli), got %s", result.providers[0].Slug)
+	}
+}
+
+// TestInstallWizard_ConflictEsc verifies Esc from conflict step returns to provider step.
+func TestInstallWizard_ConflictEsc(t *testing.T) {
+	t.Parallel()
+	sharedPath := t.TempDir()
+	provA := testConflictInstaller("gemini-cli", "Gemini CLI", sharedPath)
+	provB := testConflictReader("opencode", "OpenCode", sharedPath)
+	root := t.TempDir()
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(root, "skills", "my-skill"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, root)
+	w.selectAll = true
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // enter conflict step
+
+	if w.step != installStepConflict {
+		t.Fatalf("expected installStepConflict, got %d", w.step)
+	}
+
+	// Esc goes back to provider
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if w.step != installStepProvider {
+		t.Errorf("expected step=installStepProvider after Esc, got %d", w.step)
+	}
+	if w.shell.active != 0 {
+		t.Errorf("expected shell.active=0 (Provider), got %d", w.shell.active)
+	}
+	if !w.selectAll {
+		t.Error("expected selectAll=true preserved after Esc back to provider")
+	}
+}
+
+// TestInstallWizard_ConflictView verifies viewConflict renders expected content.
+func TestInstallWizard_ConflictView(t *testing.T) {
+	t.Parallel()
+	sharedPath := t.TempDir()
+	provA := testConflictInstaller("gemini-cli", "Gemini CLI", sharedPath)
+	provB := testConflictReader("opencode", "OpenCode", sharedPath)
+	root := t.TempDir()
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(root, "skills", "my-skill"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, root)
+	w.selectAll = true
+	w.width = 80
+	w.height = 30
+
+	// Seed conflict state directly (no Enter needed for view test)
+	w.conflicts = []installer.Conflict{{
+		SharedPath:   sharedPath,
+		InstallingTo: provA,
+		AlsoReadBy:   []provider.Provider{provB},
+	}}
+	w.step = installStepConflict
+	w.shell.SetSteps([]string{"Provider", "Conflicts"})
+	w.shell.SetActive(1)
+
+	view := w.viewConflict()
+
+	if !strings.Contains(view, "conflict") {
+		t.Error("conflict view should mention 'conflict'")
+	}
+	if !strings.Contains(view, "Shared path only") {
+		t.Error("conflict view should show 'Shared path only' option")
+	}
+	if !strings.Contains(view, "Own dirs only") {
+		t.Error("conflict view should show 'Own dirs only' option")
+	}
+	if !strings.Contains(view, "Install to all") {
+		t.Error("conflict view should show 'Install to all' option")
+	}
+	if !strings.Contains(view, "Back") {
+		t.Error("conflict view should contain Back button")
+	}
+	if !strings.Contains(view, "Install") {
+		t.Error("conflict view should contain Install button")
+	}
+}
+
+// TestApp_InstallAllResultMsg verifies the app handles installAllResultMsg correctly.
+func TestApp_InstallAllResultMsg(t *testing.T) {
+	app := testAppWithLibraryItem(t)
+
+	// Open wizard
+	m, _ := app.Update(keyRune('i'))
+	app = m.(App)
+	if app.wizardMode != wizardInstall {
+		t.Fatalf("expected wizardMode=wizardInstall")
+	}
+
+	// Send installAllResultMsg directly (simulates conflict step confirm)
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	m, cmd := app.Update(installAllResultMsg{
+		item:        app.installWizard.item,
+		providers:   []provider.Provider{prov},
+		projectRoot: app.projectRoot,
+	})
+	app = m.(App)
+
+	if app.wizardMode != wizardNone {
+		t.Errorf("expected wizardMode=wizardNone after installAllResultMsg, got %d", app.wizardMode)
+	}
+	if app.installWizard != nil {
+		t.Error("expected installWizard=nil after installAllResultMsg")
+	}
+	if cmd == nil {
+		t.Error("expected non-nil cmd (async install batch)")
 	}
 }

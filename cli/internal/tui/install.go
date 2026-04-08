@@ -22,6 +22,7 @@ const (
 	installStepLocation
 	installStepMethod
 	installStepReview
+	installStepConflict // "install to all" conflict resolution
 )
 
 // stepHints returns helpbar hints for the current install wizard step.
@@ -29,13 +30,15 @@ func (m *installWizardModel) stepHints() []string {
 	base := []string{"? help"}
 	switch m.step {
 	case installStepProvider:
-		return append([]string{"↑/↓ select", "enter next", "esc close wizard"}, base...)
+		return append([]string{"↑/↓ select", "a all providers", "enter next", "esc close wizard"}, base...)
 	case installStepLocation:
 		return append([]string{"↑/↓ select", "enter next", "esc back"}, base...)
 	case installStepMethod:
 		return append([]string{"↑/↓ select", "enter next", "esc back"}, base...)
 	case installStepReview:
 		return append([]string{"tab cycle zones", "↑/↓ navigate", "enter confirm", "esc back"}, base...)
+	case installStepConflict:
+		return append([]string{"↑/↓ select", "enter install", "esc back"}, base...)
 	}
 	return base
 }
@@ -73,6 +76,22 @@ type installDoneMsg struct {
 
 // installCloseMsg signals the wizard should close.
 type installCloseMsg struct{}
+
+// installAllResultMsg is emitted when the user confirms "install to all providers"
+// in the conflict resolution step (or directly if no conflicts were detected).
+// providers is the post-resolution filtered list.
+type installAllResultMsg struct {
+	item        catalog.ContentItem
+	providers   []provider.Provider
+	projectRoot string
+}
+
+// installAllDoneMsg carries the aggregate result of an "install to all" batch.
+type installAllDoneMsg struct {
+	itemName string
+	count    int   // number of successful installs
+	firstErr error // first error encountered, if any
+}
 
 // --- Model ---
 
@@ -117,6 +136,11 @@ type installWizardModel struct {
 	// Computed on open
 	isJSONMerge         bool
 	autoSkippedProvider bool
+
+	// "Install to all providers" path fields
+	selectAll      bool // user selected "All providers" option
+	conflicts      []installer.Conflict
+	conflictCursor int // 0=SharedOnly, 1=OwnDirsOnly, 2=All
 
 	// Context
 	projectRoot string
@@ -217,6 +241,37 @@ func (m *installWizardModel) validateStep() {
 		if !m.isJSONMerge && m.locationCursor < 0 {
 			panic("wizard invariant: installStepReview entered without location")
 		}
+	case installStepConflict:
+		if !m.selectAll {
+			panic("wizard invariant: installStepConflict entered without selectAll")
+		}
+		if len(m.conflicts) == 0 {
+			panic("wizard invariant: installStepConflict entered with no conflicts")
+		}
+	}
+}
+
+// showAllOption returns true when the "All providers" option should be shown.
+// Requires 2+ providers total (regardless of install status).
+func (m *installWizardModel) showAllOption() bool {
+	return len(m.providers) >= 2
+}
+
+// originalShellLabels returns the install wizard's default shell step labels,
+// used to restore the shell when navigating back from the conflict step.
+func (m *installWizardModel) originalShellLabels() []string {
+	if m.isJSONMerge {
+		return []string{"Provider", "Review"}
+	}
+	return []string{"Provider", "Location", "Method", "Review"}
+}
+
+// installAllResult builds an installAllResultMsg for the "install to all" path.
+func (m *installWizardModel) installAllResult(providers []provider.Provider) installAllResultMsg {
+	return installAllResultMsg{
+		item:        m.item,
+		providers:   providers,
+		projectRoot: m.projectRoot,
 	}
 }
 

@@ -373,6 +373,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case installResultMsg:
 		return a.handleInstallResult(msg)
 
+	case installAllResultMsg:
+		return a.handleInstallAllResult(msg)
+
+	case installAllDoneMsg:
+		return a.handleInstallAllDone(msg)
+
 	case installDoneMsg:
 		return a.handleInstallDone(msg)
 
