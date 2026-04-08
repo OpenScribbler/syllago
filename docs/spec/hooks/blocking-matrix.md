@@ -19,16 +19,24 @@ When a blocking hook returns exit code 2 (or `decision: "deny"`), the resulting 
 
 ## §2 Matrix
 
-| Event | claude-code | gemini-cli | cursor | windsurf | vs-code-copilot | copilot-cli | kiro | opencode |
-|-------|-------------|------------|--------|----------|-----------------|-------------|------|----------|
-| `before_tool_execute` | prevent | prevent | prevent | prevent | prevent | prevent | prevent | prevent |
-| `after_tool_execute` | observe | observe | observe | observe | observe | observe | observe | observe |
-| `session_start` | observe | observe | -- | -- | observe | observe | observe | observe |
-| `session_end` | observe | observe | -- | -- | observe | observe | observe | -- |
-| `before_prompt` | prevent | prevent | observe | observe | prevent | observe | observe | -- |
-| `agent_stop` | retry | retry | observe | observe | retry | observe | observe | observe |
+| Event | claude-code | gemini-cli | cursor | windsurf | vs-code-copilot | copilot-cli | kiro | opencode | factory-droid | codex | cline |
+|-------|-------------|------------|--------|----------|-----------------|-------------|------|----------|---------------|-------|-------|
+| `before_tool_execute` | prevent | prevent | prevent | prevent | prevent | prevent | prevent | prevent | prevent | prevent | prevent |
+| `after_tool_execute` | observe | prevent | observe | observe | observe | observe | observe | observe | observe | observe | observe |
+| `session_start` | observe | observe | prevent† | -- | observe | observe | observe | observe | observe | observe | prevent |
+| `session_end` | observe | observe | observe | -- | -- | observe | observe | -- | observe | -- | observe |
+| `before_prompt` | prevent | prevent | prevent | prevent | prevent | observe | observe | -- | prevent | prevent | prevent |
+| `agent_stop` | retry | retry | observe | observe | retry | observe | observe | observe | retry | retry | observe |
+| `permission_request` | prevent | -- | -- | -- | -- | -- | -- | prevent | -- | -- | -- |
 
 A `--` indicates the provider does not support the event (same as the Event Name Mapping table).
+
+**Footnotes:**
+
+- gemini-cli `after_tool_execute`: `decision: "deny"` hides the tool result from the agent's context (turn continues). This is not true action prevention since the tool has already run, but semantically closer to block than observe — the agent cannot act on a result it cannot see.
+- opencode `before_tool_execute`: blocking works via thrown JavaScript exceptions, not exit codes or structured output fields. The `prevent` label is functionally correct but the mechanism differs from all other providers.
+- cline `session_start` (TaskStart/TaskResume): `cancel: true` blocks task initiation or resumption.
+- †cursor `session_start` (sessionStart): `{"continue": false}` is supposed to prevent session creation but is silently ignored as of at least v2.4.21. The event is classified as `prevent` per spec but blocking is currently broken in Cursor. See also: events.md §4 sessionStart footnote.
 
 When encoding a hook with `"blocking": true` for a provider where the behavior is `observe`, adapters MUST emit a warning indicating that the blocking intent cannot be honored on the target provider. If the hook defines a `degradation` strategy for the relevant capability, that strategy applies; otherwise the hook is encoded with the blocking field preserved and the warning emitted.
 

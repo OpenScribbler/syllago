@@ -2,6 +2,74 @@
 
 All notable changes to the Hook Interchange Format Specification.
 
+## [core] 0.3.0 — 2026-04-08
+
+### Breaking Changes
+
+- Corrected gemini-cli `input_rewrite` field name from `hookSpecificOutput.updatedInput` to `hookSpecificOutput.tool_input` — hooks using this capability on gemini-cli were not functional
+
+### Fixed
+
+- [blocking-matrix] gemini-cli `after_tool_execute`: `observe` → `prevent` (supports `decision: "deny"` which hides tool result from agent context)
+- [blocking-matrix] windsurf `before_prompt`: `observe` → `prevent` (`pre_user_prompt` supports exit code 2 blocking)
+- [blocking-matrix] vs-code-copilot `session_end`: `observe` → `--` (VS Code does not support a SessionEnd event)
+- [events §4] Removed kiro `agentSpawn` mapping for `session_start` — event does not appear in Kiro's current 10-event list (`--` in its place)
+- [events §4] Fixed kiro double-mapping: both `session_end` and `agent_stop` were mapped to kiro `stop`/`Agent Stop`. Kiro has one "Agent Stop" event. Removed the `session_end` → `stop` mapping; `agent_stop` → `Agent Stop` is retained.
+- [capabilities §1.2] gemini-cli `input_rewrite` mechanism corrected from `hookSpecificOutput.updatedInput` to `hookSpecificOutput.tool_input`
+- [capabilities §1.7] gemini-cli `custom_env`: corrected from "Not supported" to Supported — `CommandHookConfig.env` field (`Record<string, string>`) present in source code
+- [capabilities §1.6] claude-code `platform_commands`: corrected from "Not supported" to Supported — `shell: "bash" | "powershell"` interpreter selection field
+- [provider-formats/opencode] Corrected "Hooks: Not supported" — OpenCode has a JavaScript plugin system with named hook events
+
+### Added
+
+- [events §2] `permission_denied` promoted note: added as Extended event in §2, mapped to claude-code `PermissionDenied`
+- [events §3] 9 claude-code provider-exclusive events: `instructions_loaded`, `permission_denied`, `task_created`, `task_completed`, `teammate_idle`, `cwd_changed`, `after_compact`, `elicitation`, `elicitation_result`
+- [events §3] kiro `manual_trigger` event (user-initiated, not tied to agent lifecycle)
+- [events §3] 2 windsurf provider-exclusive events: `windsurf_transcript_response` (post_cascade_response_with_transcript), `windsurf_worktree_setup` (post_setup_worktree)
+- [events §3] 7 opencode-exclusive events: `opencode_command_before/after`, `opencode_chat_params`, `opencode_chat_headers`, `opencode_shell_env`, `opencode_tool_definition`, `opencode_tui_events`
+- [events §4] `session_end` / opencode: added `session.deleted` mapping (previously `--`)
+- [events §4] `before_compact` / opencode: added `experimental.session.compacting` mapping (previously `--`)
+- [blocking-matrix §2] New `permission_request` row — opencode: `prevent` (plugin can set `output.status = "deny"`); claude-code: `prevent`; all others: `--`
+- Provider: **factory-droid** — events (§4), blocking matrix (§2), capabilities support, tools (§1)
+- Provider: **codex** — events (§4), blocking matrix (§2), capabilities support (`llm_evaluated`, `async_execution`, `input_rewrite`), tools (§1)
+- Provider: **cline** — events (§4), blocking matrix (§2), capabilities support, tools note; includes script-file architecture note and cline-specific footnote in §4
+
+### Changed
+
+- [capabilities §1.1] Documented opencode's exception-based blocking mechanism and added factory-droid, codex, cline structured_output entries
+- [capabilities §1.3] Added codex `llm_evaluated` support (`prompt` and `agent` handler types)
+- [capabilities §1.5] Added codex `async_execution` support with `scope` field
+- [capabilities §1.1] Added kiro `cache_ttl_seconds` note (provider-unique caching capability, no canonical equivalent)
+- [tools §1] Added factory-droid and codex columns to canonical tool name table
+- [tools §1] Added matcher field support note: VS Code Copilot ignores matcher; Copilot CLI has no matcher system
+- [tools §1] Added cline tool vocabulary note
+- [tools §2] Added factory-droid, codex, cline MCP format entries
+- [events §4] Added footnotes for kiro casing uncertainty and copilot-cli dual-mapping (`error_occurred` + `tool_use_failure` → `errorOccurred`)
+- [events §4] Added cline session mapping footnote (TaskStart/TaskResume merge, architectural note)
+
+### Deferred
+
+~~- Cursor event and blocking data — separate re-fetch in progress due to bot protection on live docs; all cursor entries left unchanged pending verification~~ (resolved in 0.3.1 below)
+
+## [core] 0.3.1 — 2026-04-08
+
+### Fixed
+
+- [events §4] Cursor `session_start` / `session_end`: `--` → `sessionStart` / `sessionEnd` (events exist as of Cursor v2.4, were missed in original spec due to bot-protection on Cursor docs at time of 0.3.0 authoring)
+- [events §4] Cursor `after_tool_execute`: `afterFileEdit` → `afterShellExecution / afterMCPExecution / afterFileEdit` (split-event model mirrors before_tool_execute; all three after-events collectively cover the canonical concept)
+- [blocking-matrix §2] Cursor `before_prompt`: `observe` → `prevent` (beforeSubmitPrompt supports `{"continue": false}`; blocking limited to continue-only — no userMessage/agentMessage/permission fields)
+- [blocking-matrix §2] Cursor `session_start`: `--` → `prevent†` (sessionStart is classified as blocking by spec; footnote added documenting that `{"continue": false}` is silently ignored as of at least v2.4.21)
+- [blocking-matrix §2] Cursor `session_end`: `--` → `observe` (sessionEnd event exists; blocking status unconfirmed, classified as observe)
+
+### Added
+
+- [events §3] 3 Cursor provider-exclusive events: `cursor_agent_thought` (afterAgentThought — observe only, requires thinking model), `cursor_tab_file_read` (beforeTabFileRead), `cursor_tab_file_edit` (afterTabFileEdit)
+- [events §4] Mapping rows for new Cursor events: `cursor_agent_thought`, `cursor_tab_file_read`, `cursor_tab_file_edit`
+- [events §4 footnotes] `cursor sessionStart blocking bug` — `{"continue": false}` silently ignored in Cursor v2.4.21; implementations should warn
+- [events §4 footnotes] `cursor after_tool_execute split model` — adapter guidance for encoding/decoding three-way split
+- [events §4 footnotes] `cursor beforeSubmitPrompt blocking limits` — continue-only response format; known bug with blocked messages persisting in LLM context history
+- [blocking-matrix §2 footnotes] `†cursor session_start` — blocking broken in Cursor as of v2.4.21; cross-reference to events.md
+
 ## [core] 0.2.0 — 2026-04-08
 
 ### Breaking Changes
