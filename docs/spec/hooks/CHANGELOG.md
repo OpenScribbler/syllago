@@ -2,6 +2,37 @@
 
 All notable changes to the Hook Interchange Format Specification.
 
+## [core] 0.2.0 — 2026-04-08
+
+### Breaking Changes
+
+- Extracted registries and matrices to separate documents:
+  - Event Registry → `events.md`
+  - Tool Vocabulary → `tools.md`
+  - Capability Registry + Degradation Strategies → `capabilities.md`
+  - Blocking Behavior Matrix → `blocking-matrix.md`
+  - Provider Strengths → `provider-strengths.md` (non-normative)
+- Removed §5.4 (Advanced Output Fields) — capability-specific output fields are now defined in `capabilities.md`
+- Renumbered core spec sections: §7 Conversion Pipeline, §8 Conformance Levels, §9 Versioning
+
+### Added
+
+- Directory README (`README.md`) as landing page for GitHub browsing
+- Test vectors README (`test-vectors/README.md`) with format contract and index
+- Reference implementations in Python and TypeScript (Core conformance)
+- Cross-file dependency table in `CONTRIBUTING.md`
+- Inline normative minimums in §8 Conformance Levels (core events, tool names, capability IDs)
+
+### Fixed
+
+- Consolidated timeout behavior documentation (§3.5 is now the single source, §4 references it)
+- Strengthened `capabilities` field language from SHOULD to MUST NOT for conformance decisions
+
+### Changed
+
+- Single `CHANGELOG.md` with section prefixes replaces per-document changelogs
+- Extracted documents carry "Last Modified" datestamps only
+
 ## [0.1.0] - 2026-03-27
 
 Version reset from `1.0.0-draft` to `0.1.0` to reflect initial development status. Per Semantic Versioning, major version zero means anything may change. Promotion to v1.0 will happen when third-party adapter implementations exist and the spec has stabilized.
