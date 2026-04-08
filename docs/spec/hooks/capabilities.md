@@ -41,7 +41,12 @@ Hook produces JSON output with fields beyond simple exit codes.
 | cursor | `permission`, `userMessage`, `agentMessage` | |
 | windsurf | Not supported | Exit codes only |
 | kiro | Undocumented | |
-| opencode | N/A (in-process) | Programmatic model |
+| opencode | N/A (in-process) | Programmatic model; blocking works via thrown JavaScript exceptions rather than exit codes or structured output fields |
+| factory-droid | Same schema as codex: `continue`, `decision`, `suppressOutput`, `systemMessage`, `hookSpecificOutput`, `permissionDecision`, `additionalContext` | Closely aligned with claude-code |
+| codex | Rich output: `continue`, `decision`, `reason`, `stopReason`, `suppressOutput`, `systemMessage`, `hookSpecificOutput` (with `permissionDecision`, `additionalContext`, `updatedInput`/`updatedMCPToolOutput`). `permissionDecision` supports three-way: `"allow"` / `"deny"` / `"ask"` | More granular than claude-code's binary allow/deny |
+| cline | `{ cancel: boolean, contextModification?: string, errorMessage?: string }` | Simpler schema; `cancel` is the blocking mechanism; `contextModification` injects text (max 50KB) |
+
+**Kiro-specific capability note:** Kiro supports a `cache_ttl_seconds` field on hook entries that caches hook execution results for the specified duration. This is a Kiro-unique capability with no canonical equivalent. Conversion tools should preserve this value in `provider_data` during decode and drop it with a warning during encode to other providers.
 
 **Default degradation:** `warn`. The hook executes; JSON output fields that cannot be mapped are silently dropped with a warning.
 
@@ -63,6 +68,8 @@ Hook modifies tool arguments before execution. **This is a safety-critical capab
 |----------|-----------|
 | claude-code | `hookSpecificOutput.updatedInput` |
 | vs-code-copilot | `hookSpecificOutput.updatedInput` |
+| gemini-cli | `hookSpecificOutput.tool_input` — note: gemini-cli uses `tool_input`, not `updatedInput`. Claude Code and gemini-cli diverge here. |
+| codex | `hookSpecificOutput.updatedInput` |
 | opencode | Mutable `output.args` in plugin |
 | All others | Not supported |
 
@@ -79,6 +86,7 @@ Hook logic is evaluated by an LLM rather than a deterministic script.
 | Provider | Mechanism |
 |----------|-----------|
 | claude-code | `type: "prompt"` (single-turn) and `type: "agent"` (multi-turn with tools) |
+| codex | `type: "prompt"` (single-turn) and `type: "agent"` (multi-turn) — same handler types as claude-code |
 | kiro | "Ask Kiro" agent prompt actions (IDE only, consumes credits) |
 | All others | Not supported |
 
@@ -110,6 +118,7 @@ Hook runs without blocking the agent (fire-and-forget).
 | Provider | Mechanism |
 |----------|-----------|
 | claude-code | `async: true` |
+| codex | `async: true` on command handlers; also supports `scope: "thread"` or `"turn"` execution scope |
 | All others | Hooks execute synchronously |
 
 **Default degradation:** `warn`. The hook executes synchronously. A warning is emitted that the hook may block the agent.
@@ -126,6 +135,8 @@ Per-operating-system command overrides.
 |----------|-----------|
 | vs-code-copilot | `windows`, `linux`, `osx` fields with `command` fallback (note: native format uses `osx`; the canonical format uses `darwin`) |
 | copilot-cli | `bash`, `powershell` fields |
+| claude-code | `shell: "bash" \| "powershell"` — selects the shell interpreter rather than providing per-OS command overrides. Not equivalent to vs-code-copilot's per-OS pattern but is a platform-related command field. |
+| cline | Windows: `{HookName}.ps1`; Unix: extensionless `{HookName}` executable scripts. Platform selection is implicit via filename extension. |
 | All others | Single `command` field only |
 
 **Default degradation:** `warn`. The default `command` is used. Platform-specific overrides are dropped with a warning.
@@ -141,6 +152,7 @@ Custom environment variables passed to the hook process.
 | Provider | Mechanism |
 |----------|-----------|
 | vs-code-copilot | `env` field (key-value object) |
+| gemini-cli | `env` field (`Record<string, string>`) in `CommandHookConfig` — present in source code type definitions; not documented in official docs but confirmed in types.ts |
 | All others | Not supported |
 
 **Default degradation:** `warn`. Environment variables are dropped with a warning.
