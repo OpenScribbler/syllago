@@ -283,10 +283,3 @@ func TestInstallConflict_FlagRegistered(t *testing.T) {
 		t.Error("expected --no-input flag to be registered on installCmd")
 	}
 }
-
-// resolveConflictPath helper for SharedOnly/OwnDirsOnly: reads a temp dir
-// for symlinks created under a content type subdir.
-func skillsIn(dir string) []os.DirEntry {
-	entries, _ := os.ReadDir(filepath.Join(dir))
-	return entries
-}
