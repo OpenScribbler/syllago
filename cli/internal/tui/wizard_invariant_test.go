@@ -7,6 +7,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -201,6 +202,125 @@ func TestInstallWizard_ValidateStep_PanicsOnJSONMergeMethod(t *testing.T) {
 		projectRoot:       root,
 	}
 	w.validateStep() // should panic
+}
+
+// TestInstallWizard_ValidateStep_ConflictForward walks through the conflict step
+// on the "install to all providers" path without triggering any panics.
+func TestInstallWizard_ValidateStep_ConflictForward(t *testing.T) {
+	t.Parallel()
+	sharedPath := t.TempDir()
+	provA := testConflictInstaller("gemini-cli", "Gemini CLI", sharedPath)
+	provB := testConflictReader("opencode", "OpenCode", sharedPath)
+	root := t.TempDir()
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(root, "skills", "my-skill"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, root)
+
+	// Provider step with selectAll: no panics
+	w.step = installStepProvider
+	w.selectAll = true
+	w.validateStep()
+
+	// Conflict step: requires selectAll + non-empty conflicts
+	w.conflicts = []installer.Conflict{{
+		SharedPath:   sharedPath,
+		InstallingTo: provA,
+		AlsoReadBy:   []provider.Provider{provB},
+	}}
+	w.step = installStepConflict
+	w.shell.SetSteps([]string{"Provider", "Conflicts"})
+	w.shell.SetActive(1)
+	w.validateStep() // should not panic
+}
+
+// TestInstallWizard_ValidateStep_ConflictEsc verifies Esc from conflict step
+// goes back to provider step without panicking.
+func TestInstallWizard_ValidateStep_ConflictEsc(t *testing.T) {
+	t.Parallel()
+	sharedPath := t.TempDir()
+	provA := testConflictInstaller("gemini-cli", "Gemini CLI", sharedPath)
+	provB := testConflictReader("opencode", "OpenCode", sharedPath)
+	root := t.TempDir()
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(root, "skills", "my-skill"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, root)
+
+	// Put wizard in conflict step
+	w.selectAll = true
+	w.conflicts = []installer.Conflict{{
+		SharedPath:   sharedPath,
+		InstallingTo: provA,
+		AlsoReadBy:   []provider.Provider{provB},
+	}}
+	w.step = installStepConflict
+	w.shell.SetSteps([]string{"Provider", "Conflicts"})
+	w.shell.SetActive(1)
+	w.validateStep()
+
+	// Esc: back to provider
+	w.conflicts = nil
+	w.step = installStepProvider
+	w.shell.SetSteps([]string{"Provider", "Location", "Method", "Review"})
+	w.shell.SetActive(0)
+	w.validateStep()
+}
+
+// TestInstallWizard_ValidateStep_ConflictPanicsOnNoConflicts verifies that
+// entering the conflict step with empty conflicts panics.
+func TestInstallWizard_ValidateStep_ConflictPanicsOnNoConflicts(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for conflict step with no conflicts")
+		}
+	}()
+	root := t.TempDir()
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(root, "skills", "my-skill"))
+	w := &installWizardModel{
+		shell:             newWizardShell("Install", []string{"Provider", "Conflicts"}),
+		step:              installStepConflict,
+		item:              item,
+		providers:         []provider.Provider{prov},
+		providerInstalled: []bool{false},
+		projectRoot:       root,
+		selectAll:         true,
+		conflicts:         nil, // empty — should panic
+	}
+	w.validateStep()
+}
+
+// TestInstallWizard_ValidateStep_ConflictPanicsOnNoSelectAll verifies that
+// entering the conflict step without selectAll panics.
+func TestInstallWizard_ValidateStep_ConflictPanicsOnNoSelectAll(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for conflict step without selectAll")
+		}
+	}()
+	sharedPath := t.TempDir()
+	provA := testConflictInstaller("gemini-cli", "Gemini CLI", sharedPath)
+	provB := testConflictReader("opencode", "OpenCode", sharedPath)
+	root := t.TempDir()
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(root, "skills", "my-skill"))
+	w := &installWizardModel{
+		shell:             newWizardShell("Install", []string{"Provider", "Conflicts"}),
+		step:              installStepConflict,
+		item:              item,
+		providers:         []provider.Provider{provA, provB},
+		providerInstalled: []bool{false, false},
+		projectRoot:       root,
+		selectAll:         false, // not set — should panic
+		conflicts: []installer.Conflict{{
+			SharedPath:   sharedPath,
+			InstallingTo: provA,
+			AlsoReadBy:   []provider.Provider{provB},
+		}},
+	}
+	w.validateStep()
 }
 
 // --- Add Wizard invariants ---

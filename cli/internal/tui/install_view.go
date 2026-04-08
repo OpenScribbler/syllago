@@ -47,6 +47,8 @@ func (m *installWizardModel) View() string {
 		content = m.viewMethod()
 	case installStepReview:
 		content = m.viewReview()
+	case installStepConflict:
+		content = m.viewConflict()
 	}
 
 	// Pad to fill content area so helpbar stays at the bottom
@@ -88,11 +90,91 @@ func (m *installWizardModel) viewProvider() string {
 		lines = append(lines, zone.Mark(fmt.Sprintf("inst-prov-%d", i), row))
 	}
 
+	// "All providers" option — shown when 2+ providers exist.
+	if m.showAllOption() {
+		// Divider
+		lines = append(lines, pad+lipgloss.NewStyle().Foreground(mutedColor).Render("─────"))
+		var allRow string
+		if m.selectAll {
+			allRow = pad + lipgloss.NewStyle().Bold(true).Foreground(accentColor).Render("> All providers")
+		} else {
+			allRow = pad + lipgloss.NewStyle().Foreground(primaryText).Render("  All providers") +
+				"  " + lipgloss.NewStyle().Foreground(mutedColor).Render("([a] to select)")
+		}
+		lines = append(lines, zone.Mark("inst-all", allRow))
+	}
+
 	// Buttons: Cancel and Next. Next is always visually focused (focusAt=1).
 	lines = append(lines, "")
 	lines = append(lines, renderModalButtons(1, usableW, pad, nil,
 		buttonDef{"Cancel", "inst-cancel", 0},
 		buttonDef{"Next", "inst-next", 1},
+	))
+
+	return strings.Join(lines, "\n")
+}
+
+// viewConflict renders the conflict resolution step for "install to all providers".
+func (m *installWizardModel) viewConflict() string {
+	pad := "  "
+	usableW := m.width - 4
+
+	title := pad + lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(
+		"Install-path conflict detected")
+
+	var lines []string
+	lines = append(lines, title, "")
+
+	// Describe each conflict
+	for _, c := range m.conflicts {
+		readers := make([]string, len(c.AlsoReadBy))
+		for i, r := range c.AlsoReadBy {
+			readers[i] = r.Name
+		}
+		desc := fmt.Sprintf("%s and %s share a read path:", c.InstallingTo.Name, strings.Join(readers, ", "))
+		lines = append(lines,
+			pad+lipgloss.NewStyle().Foreground(warningColor).Render("! ")+
+				lipgloss.NewStyle().Foreground(primaryText).Render(desc))
+		lines = append(lines,
+			pad+"  "+lipgloss.NewStyle().Foreground(mutedColor).Render(c.SharedPath))
+	}
+	lines = append(lines, "")
+	lines = append(lines, pad+lipgloss.NewStyle().Foreground(primaryText).Render("How do you want to resolve this?"))
+	lines = append(lines, "")
+
+	// 3 resolution options
+	type conflictOpt struct {
+		label string
+		desc  string
+		id    string
+	}
+	opts := []conflictOpt{
+		{"Shared path only", "Install once to the shared path — other providers pick it up automatically", "inst-conflict-0"},
+		{"Own dirs only", "Install to each provider's separate directory — skip the shared path", "inst-conflict-1"},
+		{"Install to all", "Install everywhere (may cause duplicate content warnings)", "inst-conflict-2"},
+	}
+
+	for i, opt := range opts {
+		prefix := "  "
+		if i == m.conflictCursor {
+			prefix = "> "
+		}
+		var labelRow string
+		if i == m.conflictCursor {
+			labelRow = pad + lipgloss.NewStyle().Bold(true).Foreground(accentColor).Render(prefix+opt.label)
+		} else {
+			labelRow = pad + lipgloss.NewStyle().Foreground(primaryText).Render(prefix+opt.label)
+		}
+		descRow := pad + "    " + lipgloss.NewStyle().Foreground(mutedColor).Render(opt.desc)
+		lines = append(lines, zone.Mark(opt.id, labelRow))
+		lines = append(lines, descRow)
+		lines = append(lines, "")
+	}
+
+	// Buttons: Back and Install
+	lines = append(lines, renderModalButtons(1, usableW, pad, []string{"Install"},
+		buttonDef{"Back", "inst-back", 0},
+		buttonDef{"Install", "inst-conflict-install", 1},
 	))
 
 	return strings.Join(lines, "\n")
