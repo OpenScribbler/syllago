@@ -1,0 +1,45 @@
+{
+  "name": "moat-open-questions-resolution",
+  "created_at": "2026-04-06T16:00:00Z",
+  "claimed": true,
+  "claimedBy": {
+    "claimedAt": "2026-04-07T15:59:00Z"
+  },
+  "summary": "Deep design session on content type distribution and provenance for syllago and MOAT. Resolved the skills frontmatter architecture, created a new canonical SKILL.md frontmatter spec, and updated the MOAT revised outline with OWASP AST10 findings. Three MOAT open questions remain unresolved (issues 3, 4, 6-8).",
+  "last_action": "Created /home/hhewett/.local/src/moat/docs/skill-frontmatter-spec.md (new draft spec) and updated /home/hhewett/.local/src/moat/panel/moat-revised-outline.md with OWASP coverage map, scan_status, risk_tier, revocation feed, companion spec references, and per-item manifest entry definition.",
+  "next_action": "Continue resolving open issues in /home/hhewett/.local/src/moat/panel/moat-revised-outline.md — specifically issues #3 (CRLF normalization, already resolved by linter/user but needs verification), #4 (registry manifest size and pagination), #6 (scan_status design decisions), #7 (risk_tier design decisions), and #8 (revocation/denouncement mechanism). Start by reading the full outline to get current state.",
+  "key_decisions": [
+    "Skills frontmatter stays agentskills.io-compatible base + adds permissions + requires (from OWASP USF / agent ecosystem expectations). NO provenance fields in SKILL.md.",
+    "Provenance belongs at registry level (MOAT), not individual files. Evidence: circular hash problem, corpus data (2.8% failure rate on required fields), ClawHub poisoning, every production package ecosystem uses registry-level trust.",
+    "platforms field dropped — brittle (platform names are ephemeral), undermined by syllago's conversion capability.",
+    ".syllago.yaml is syllago implementation detail (not spec concern). Needs source_uri field added.",
+    "MOAT open issues 6 (scan_status), 7 (risk_tier), 8 (revocation) added to outline — all unresolved.",
+    "New companion spec created: /home/hhewett/.local/src/moat/docs/skill-frontmatter-spec.md"
+  ],
+  "files_modified": [
+    {
+      "path": "/home/hhewett/.local/src/moat/panel/moat-revised-outline.md",
+      "changes": "Added open issues 6-8 (scan_status, risk_tier, revocation), OWASP AST10 coverage map, scope boundary companion spec references, per-item manifest entry field list, revocation feed to normative requirements, 'Not a content format spec' to What This Is Not section"
+    },
+    {
+      "path": "/home/hhewett/.local/src/moat/docs/skill-frontmatter-spec.md",
+      "changes": "Created new draft spec — canonical SKILL.md frontmatter schema, implementation-agnostic, with full rationale for all decisions and evidence base for keeping provenance out of frontmatter. Includes References section with verified OWASP and Snyk URLs."
+    }
+  ],
+  "context": {
+    "moat_repo": "/home/hhewett/.local/src/moat",
+    "moat_outline": "/home/hhewett/.local/src/moat/panel/moat-revised-outline.md",
+    "skill_frontmatter_spec": "/home/hhewett/.local/src/moat/docs/skill-frontmatter-spec.md",
+    "syllago_design_doc": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-06-content-type-distribution-design.md",
+    "owasp_ast10": "https://github.com/OWASP/www-project-agentic-skills-top-10",
+    "snyk_toxicskills": "https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/",
+    "agent_ecosystem_feedback": "/home/hhewett/.local/src/moat/panel/agent-ecosystem-feedback-gist.md"
+  },
+  "open_issues_in_moat_outline": {
+    "3": "CRLF normalization — marked RESOLVED by user/linter update but verify the resolution is complete",
+    "4": "Registry manifest size and pagination — unresolved",
+    "6": "scan_status in registry manifest entries — design questions: required vs optional, scanner name format, staleness threshold",
+    "7": "risk_tier in registry manifest entries — design questions: registry-assigned vs self-declared, normative vs advisory, tier boundary definitions per content type",
+    "8": "Revocation/denouncement mechanism — design questions: manifest section vs separate feed URL, client behavior on already-installed denounced content, cross-registry propagation"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "$schema": "handoff-v2",
+  "name": "moat-spec-issue-8-fully-resolved-with-locked",
+  "createdAt": "2026-04-08T07:10:48Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-08T07:10:48Z",
+    "sessionId": "e7aacb3d-9a10-4963-a365-7ea81074b1db",
+    "summary": "MOAT spec issue #8 fully resolved with locked design decisions; README rewritten; repo metadata updated; all changes pushed.",
+    "activeWork": {
+      "description": "MOAT specification revision - issue #8 revocation mechanisms resolution",
+      "feature": null,
+      "stage": "complete",
+      "planRef": null,
+      "designRef": null,
+      "progress": "Issue #8 fully locked: decisions 3-5 finalized (compromised hard-block no override, unreachable feed fail-open with warnings, revoked_at registry-asserted). Bug fix applied to contradiction. OWASP alignment corrected (CICD-SEC-3 removed, AST09 added). Open issues #9-#14 created with defined scope. README rewritten from scratch. Repo description and metadata updated to protocol-focused language. All changes committed and pushed.",
+      "blockers": [],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 0,
+      "lastCommit": "all changes pushed",
+      "modifiedFiles": []
+    },
+    "recentDecisions": [
+      "Decision 3: compromised remains hard block, no user override. Added incident-response reality.",
+      "Decision 4: Unreachable feed fails open with URL, staleness window, last fetch timestamp.",
+      "Decision 5: revoked_at is registry-asserted, no skew window. Grace-period risk flagged."
+    ],
+    "nextSteps": [
+      "Resolve MOAT open issues #9-#14 (identity-bound revocation, publisher auth, federation security, algorithm deprecation, offline verification, blocklist federation)",
+      "Resume syllago CLI development if MOAT work complete"
+    ],
+    "context": {
+      "notes": "MOAT spec is clean and complete for issue #8. All design decisions documented and pushed. README provides clear entry point for new readers. Open issues scoped and ready for prioritization."
+    }
+  },
+  "previousSessions": []
+}

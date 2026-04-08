@@ -1,0 +1,72 @@
+{
+  "$schema": "handoff-v2",
+  "name": "designing-intelligent-conflict-detection-for-to",
+  "createdAt": "2026-04-08T15:18:03.018Z",
+  "current": {
+    "claimedBy": "Holden",
+    "project": "syllago",
+    "updated": "2026-04-08T15:18:03.018Z",
+    "sessionId": "6b033c10-0e47-46f8-95a3-aae501239641",
+    "summary": "Designing intelligent conflict detection for --to-all flag: need to verify which supported providers use ~/.agents/ across all content types before implementing path-conflict warnings and user choice logic",
+    "activeWork": {
+      "description": "Research provider ~/.agents/ usage patterns across all content types (skills, rules, mcp, commands, prompts, hooks, agents) to establish verified baseline for conflict detection logic in --to-all installation",
+      "feature": null,
+      "stage": "research",
+      "planRef": null,
+      "designRef": null,
+      "progress": "Identified critical gap in current approach: assumed only Codex uses ~/.agents/ as primary path, but Gemini/Windsurf/Amp/RooCode all read from ~/.agents/skills/. Need to verify this pattern holds across all content types and all 5 supported providers (Codex, Amp, Gemini, Windsurf, RooCode) with official documentation before implementing conflict detection. Current syllago code verified to show skills-only cross-provider sharing; need to research whether ~/.agents/ convention extends to rules, mcp, commands, prompts, hooks, agents.",
+      "blockers": [
+        "No official documentation verified for which providers use ~/.agents/ across content types beyond skills"
+      ],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 50,
+      "lastCommit": "9278b60 bd sync: 2026-04-08 07:11:12",
+      "modifiedFiles": [
+        ".beads/beads.db",
+        ".beads/beads.db-shm",
+        ".beads/beads.db-wal",
+        ".beads/beads.left.meta.json",
+        ".handoffs/benchmark-installer-implementation.json",
+        "docs/spec/acp/CHANGELOG.md",
+        "docs/spec/acp/acp-spec.md",
+        "docs/spec/skills/provenance.md"
+      ]
+    },
+    "recentDecisions": [
+      "Avoid 'virtual provider' terminology; use standard cross-provider shared directory or generic agents directory naming",
+      "Conflict detection must apply to all content types, not just skills",
+      "Design should support three outcomes: (a) warn user upfront, (b) let user choose install path, (c) default intelligently based on what's installed",
+      "Must verify against official provider docs before implementing - don't assume current patterns"
+    ],
+    "nextSteps": [
+      "Research official Codex/Gemini/Windsurf/Amp/RooCode docs for ~/.agents/ usage across all content types",
+      "Verify Gemini/Windsurf/RooCode actually read ~/.agents/ for other content types or if it's skills-only convention",
+      "Map install paths vs discovery paths for each provider/content-type combination",
+      "Design conflict detection algorithm with verified baseline",
+      "Implement user-choice flow for conflicting install paths in --to-all",
+      "Update Provider struct with SharedReadPaths field if needed"
+    ],
+    "context": {
+      "notes": "Resumed from benchmark-installer-implementation handoff. Background: --to-all flag is implemented and tested (all 4 layers complete, 17 skills installed to 7 providers). Current issue: Codex installs skills to ~/.agents/skills/, but Gemini/Windsurf/Amp/RooCode all read from that same path, causing conflicts. Need intelligent conflict detection that: (1) detects when multiple selected providers share install/read paths, (2) verifies this across all content types via official docs, (3) warns user and lets them choose or defaults intelligently based on what's installed on their system. Research blocker: need to confirm ~/.agents/ convention is real across content types and providers before coding solution."
+    }
+  },
+  "previousSessions": [
+    {
+      "summary": "Benchmark installer implementation: all 4 layers complete, 17 skills imported to 7 providers, Gemini conflict discovered",
+      "updated": "2026-04-07T18:21:00Z",
+      "completedWork": [
+        "Layer 1: --to-all flag implementation (commit de44f8f)",
+        "Layer 2: Fixed syllabo add --from <registry-name> bug (commit 0b8c449), imported and installed 17 benchmark skills",
+        "Layer 3: Workflow documentation (docs/research/skill-behavior-checks/workflow-syllago-install.md)",
+        "Layer 4: Created roadmap bead syllago-k55bj, updated README with benchmarking workflow"
+      ],
+      "nextSteps": [
+        "Design conflict detection for --to-all when providers share install paths",
+        "Research provider ~/.agents/ usage patterns across all content types"
+      ]
+    }
+  ]
+}

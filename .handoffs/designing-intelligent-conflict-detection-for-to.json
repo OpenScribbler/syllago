@@ -1,0 +1,158 @@
+{
+  "$schema": "handoff-v2",
+  "name": "designing-intelligent-conflict-detection-for-to",
+  "createdAt": "2026-04-08T15:18:03.018Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-08T16:25:09Z",
+    "sessionId": null,
+    "summary": "Research complete: verified provider .agents/ usage across all content types, found OpenCode bug, created checks content type bead. Ready to implement general shared-path conflict detection and fix OpenCode.",
+
+    "activeWork": {
+      "description": "Implement general install-path conflict detection for syllago install (--to-all and explicit multi-provider). Fix OpenCode DiscoveryPaths bug. Add GlobalSharedReadPaths field to Provider struct.",
+      "feature": null,
+      "stage": "plan",
+      "planRef": null,
+      "designRef": "docs/research/agents-directory-cross-provider-research.md",
+      "progress": "Research phase COMPLETE. All provider .agents/ usage verified from official docs and source code. Design decisions made. Two items ready for implementation: (1) OpenCode bug fix, (2) general conflict detection feature. Checks content type captured in bead syllago-sutjm for later.",
+      "blockers": [],
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": ["syllago-sutjm"],
+        "readyNext": []
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": "3 (beads.db files only)",
+      "lastCommit": "d8d6e71 bd sync: 2026-04-08 add checks content type bead",
+      "modifiedFiles": [
+        "docs/research/agents-directory-cross-provider-research.md"
+      ]
+    },
+
+    "opencodeBug": {
+      "file": "cli/internal/provider/opencode.go",
+      "description": "OpenCode DiscoveryPaths for Skills is missing .agents/skills/",
+      "source": "Verified: sst/opencode GitHub — packages/opencode/src/skill/index.ts. EXTERNAL_DIRS = [\".claude\", \".agents\"] — OpenCode explicitly scans both globally and project-level.",
+      "fix": {
+        "case": "catalog.Skills",
+        "current": "return []string{filepath.Join(projectRoot, \".opencode\", \"skills\")}",
+        "corrected": "return []string{\n\t\t\t\tfilepath.Join(projectRoot, \".opencode\", \"skills\"),\n\t\t\t\tfilepath.Join(projectRoot, \".agents\", \"skills\"),\n\t\t\t}"
+      }
+    },
+
+    "conflictDetectionDesign": {
+      "summary": "General shared-path conflict detection for install command. Fires when multiple selected providers would result in the same skill being installed to paths that other providers also read — causing duplicate content and conflict warnings.",
+      "keyInsight": "Conflict detection must be GENERAL, not Gemini-specific. The issue applies to any provider whose GlobalSharedReadPaths overlap with another provider's InstallDir.",
+      "affectedProviders": {
+        "primaryAgentsPathOwners": [
+          "Codex: InstallDir for skills = ~/.agents/skills/ (PRIMARY)"
+        ],
+        "sharedPathReaders": [
+          "Gemini CLI: also reads ~/.agents/skills/ globally",
+          "Windsurf: also reads ~/.agents/skills/ globally",
+          "Roo Code: also reads ~/.agents/skills/ globally (lowest priority)",
+          "OpenCode: also reads ~/.agents/skills/ globally (after bug fix)"
+        ],
+        "notInConflict": [
+          "Amp: uses ~/.config/agents/skills/ — DIFFERENT PATH, no conflict with Codex",
+          "Claude Code, Cline, Copilot CLI, Cursor, Kiro, Zed: no .agents/ usage at all"
+        ]
+      },
+      "contentTypeScope": ".agents/ cross-provider convention is SKILLS ONLY. Confirmed from all provider source code — no .agents/rules/, .agents/mcp/, .agents/agents/, .agents/commands/ cross-provider paths exist. Amp has .agents/checks/ but that is Amp-exclusive, not shared.",
+      "proposedProviderStructChange": {
+        "newField": "GlobalSharedReadPaths func(homeDir string, ct ContentType) []string",
+        "purpose": "Global paths a provider reads BEYOND its own InstallDir. Distinct from DiscoveryPaths (project-scoped). Needed to detect install collisions.",
+        "populateFor": [
+          "GeminiCLI: Skills -> ~/.agents/skills/",
+          "Windsurf: Skills -> ~/.agents/skills/",
+          "RooCode: Skills -> ~/.agents/skills/",
+          "OpenCode: Skills -> ~/.agents/skills/ (after bug fix)"
+        ]
+      },
+      "algorithm": "1. Resolve InstallDir for each selected provider+contentType. 2. Build map: installPath -> provider. 3. For each provider, check GlobalSharedReadPaths. 4. If any SharedReadPath matches another provider's InstallDir -> CONFLICT. Return list of conflicts with affected providers.",
+      "conflictResolutionOptions": [
+        "Option 1: Shared path only — install once to ~/.agents/<type>/ (serves all providers that read it, no conflicts)",
+        "Option 2: Each provider's own canonical dir — Gemini gets ~/.gemini/skills/, etc. No shared path write.",
+        "Option 3: All paths — current behavior, may cause conflict warnings"
+      ],
+      "whenNoConflict": "If Codex is NOT in the install set, no provider's InstallDir resolves to ~/.agents/skills/, conflict detection returns empty -> install proceeds silently without prompt.",
+      "uxCLI": "Pre-install warning + y/n prompt with three options (shared / canonical / all)",
+      "uxTUI": "Modal dialog before install proceeds"
+    },
+
+    "verifiedProviderPaths": {
+      "note": "All verified from official docs or source code. Full details in docs/research/agents-directory-cross-provider-research.md",
+      "sources": {
+        "codex": "openai/codex — codex-rs/core-skills/src/loader.rs + https://developers.openai.com/codex/skills",
+        "gemini": "google-gemini/gemini-cli — packages/core/src/skills/skillManager.ts + https://geminicli.com/docs/cli/skills/",
+        "windsurf": "https://docs.windsurf.com/windsurf/cascade/skills",
+        "roocode": "RooVetGit/Roo-Code — src/services/skills/SkillsManager.ts",
+        "opencode": "sst/opencode — packages/opencode/src/skill/index.ts + https://opencode.ai/docs/skills",
+        "amp": "https://ampcode.com/manual"
+      }
+    },
+
+    "checksContentType": {
+      "bead": "syllago-sutjm",
+      "status": "Captured in bead, deferred. Decision needed on scope (Amp-only vs. prose analogues vs. full canonical format) before implementation.",
+      "format": "Markdown with YAML frontmatter. Fields: name (required), description, severity-default (low|medium|high|critical), tools (array). Paths: .agents/checks/ (project), ~/.config/agents/checks/ or ~/.config/amp/checks/ (global).",
+      "finding": "Amp-exclusive. No other provider has a structured checks format. Not a cross-provider shared path."
+    },
+
+    "recentDecisions": [
+      "Conflict detection must be GENERAL (not Gemini-specific) — applies to any provider whose GlobalSharedReadPaths overlap another provider's InstallDir",
+      "Scope is skills-only — confirmed .agents/ cross-provider convention does not extend to other content types",
+      "Amp is NOT in the conflict scenario — it uses ~/.config/agents/skills/ (XDG-style), not ~/.agents/skills/",
+      "New Provider struct field needed: GlobalSharedReadPaths (distinct from DiscoveryPaths which is project-scoped)",
+      "OpenCode has a confirmed bug: missing .agents/skills/ from DiscoveryPaths — fix before conflict detection work",
+      "Checks content type (Amp's .agents/checks/) captured as bead syllago-sutjm, deferred"
+    ],
+
+    "nextSteps": [
+      "Fix OpenCode bug: add .agents/skills/ to DiscoveryPaths in cli/internal/provider/opencode.go",
+      "Add GlobalSharedReadPaths field to Provider struct in cli/internal/provider/provider.go",
+      "Populate GlobalSharedReadPaths for Gemini CLI, Windsurf, Roo Code, OpenCode (Skills -> ~/.agents/skills/)",
+      "Implement conflict detection logic in cli/internal/installer/ — compare install paths against shared read paths",
+      "Add pre-install prompt in cli/cmd/syllago/install_cmd.go (3-option: shared / canonical / all)",
+      "Add TUI modal for conflict resolution in TUI install flow",
+      "Write tests for conflict detection logic and prompt behavior"
+    ],
+
+    "context": {
+      "notes": "Research doc at docs/research/agents-directory-cross-provider-research.md has full source citations, per-provider path tables, conflict scenario explanation, and action items. All provider source code verified — not just docs. Amp manual is publicly accessible at https://ampcode.com/manual (not auth-gated despite previous research agent reporting otherwise). The benchmark-installer-implementation handoff is still in .handoffs/ — the canary verification (CARDINAL-ZEBRA-7742) was run this session and confirmed negative (Claude Code does not auto-load skills from ~/.agents/skills/)."
+    }
+  },
+
+  "previousSessions": [
+    {
+      "summary": "Designing intelligent conflict detection for --to-all flag: need to verify which supported providers use ~/.agents/ across all content types before implementing path-conflict warnings and user choice logic",
+      "updated": "2026-04-08T15:18:03.018Z",
+      "completedWork": [
+        "Identified gap: conflict detection must be general, not Gemini-specific",
+        "Decided on SharedReadPaths approach vs. DiscoveryPaths",
+        "Blocked on: no verified docs for provider .agents/ usage"
+      ],
+      "nextSteps": [
+        "Research official provider docs for .agents/ usage across all content types",
+        "Implement conflict detection after research complete"
+      ]
+    },
+    {
+      "summary": "Benchmark installer implementation: all 4 layers complete, 17 skills imported to 7 providers, Gemini conflict discovered",
+      "updated": "2026-04-07T18:21:00Z",
+      "completedWork": [
+        "Layer 1: --to-all flag (commit de44f8f)",
+        "Layer 2: Fixed syllago add --from <registry-name> bug (commit 0b8c449), installed 17 benchmark skills",
+        "Layer 3: Workflow doc (docs/research/skill-behavior-checks/workflow-syllago-install.md)",
+        "Layer 4: Roadmap bead syllago-k55bj, README updated"
+      ],
+      "nextSteps": [
+        "Design and implement conflict detection for --to-all shared-path collisions"
+      ]
+    }
+  ]
+}
