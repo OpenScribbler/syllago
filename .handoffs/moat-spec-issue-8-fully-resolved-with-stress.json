@@ -1,0 +1,78 @@
+{
+  "$schema": "handoff-v2",
+  "name": "moat-spec-issue-8-fully-resolved-with-stress",
+  "createdAt": "2026-04-08T07:10:19.000Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-08T07:10:19.000Z",
+    "sessionId": "dd0e2817-f1cd-4576-8493-ae324ecdc939",
+    "summary": "MOAT spec issue #8 fully resolved with stress-tested design decisions; open issues #9–#14 queued; repo description and README updated",
+    "activeWork": {
+      "description": "MOAT spec finalization: resolved issue #8 revocation mechanism; locked decisions 3–5; fixed OWASP alignment; updated repo metadata and README",
+      "feature": null,
+      "stage": "complete",
+      "planRef": null,
+      "designRef": null,
+      "progress": "Issue #8 revocation fully designed and documented in working outline. Decisions 3–5 stress-tested and locked: (3) compromised as hard block, (4) unreachable feed fails open with requirements, (5) revoked_at registry-asserted with no skew. Bug fixed (removed contradiction). OWASP alignment cleaned (CICD-SEC-3 removed, AST09 added). Open issues #9–#14 well-scoped for future work. Repo description and README completely updated. All changes pushed.",
+      "blockers": [],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": "46",
+      "lastCommit": "9f91469 bd sync: 2026-04-07 16:22:44",
+      "modifiedFiles": [
+        ".beads/beads.db",
+        ".beads/beads.db-shm",
+        ".beads/beads.db-wal",
+        ".handoffs/benchmark-installer-implementation.json",
+        "docs/spec/acp/CHANGELOG.md",
+        "docs/spec/acp/acp-spec.md",
+        "docs/spec/skills/provenance.md"
+      ]
+    },
+    "recentDecisions": [
+      "Decision 3: compromised status is hard block with no override",
+      "Decision 4: unreachable feed fails open with URL + staleness + last-fetch timestamp",
+      "Decision 5: revoked_at is registry-asserted, no skew window",
+      "Repo one-liner: 'A protocol for publishing AI agent content through signed registries with cryptographic provenance'",
+      "Added moat-spec.md pointer to docs/mote-revised-outline.md (live working version link)"
+    ],
+    "nextSteps": [
+      "Resume syllago work OR tackle MOAT open issues #10–#14 (publisher auth, federation security, algorithm deprecation, offline verification, blocklist federation)",
+      "OR start identity-bound revocation design (issue #9)"
+    ],
+    "context": {
+      "notes": "Work was in moat repo (separate from syllago). Issue #8 design complete and documented. No in-progress context—next session can pick any new work. All changes committed and pushed. Repo description and README fully updated and accurate."
+    }
+  },
+  "previousSessions": [
+    {
+      "summary": "Stress-tested MOAT issue #8 revocation design with OWASP alignment verification. Locked decisions 3, 4, 5.",
+      "updated": "2026-04-07T18:31:08.113Z",
+      "completedWork": [
+        "OWASP alignment research (AST09 governance-driven, AST01 AST10 mapped)",
+        "Stress-tested manifest vs. separate feed tradeoff",
+        "Stress-tested submission scope (in-protocol vs. operational)",
+        "Finalized three-part design decision with incident-response reality note"
+      ],
+      "nextSteps": [
+        "Finalize and write to outline (completed this session)"
+      ]
+    },
+    {
+      "summary": "Content type distribution and provenance design for syllago and MOAT. Skills frontmatter spec finalized. MOAT outline created with OWASP alignment. Issues #1–7 resolved.",
+      "updated": "2026-04-06T16:03:40Z",
+      "completedWork": [
+        "Skills frontmatter spec with agentskills.io compatibility",
+        "MOAT outline structure with OWASP alignment table",
+        "Resolved issues #1–3 (manifest structure, entry schema, risk assessment)",
+        "Resolved issues #6–7 (scan_status naming, risk_tier OWASP mapping)"
+      ],
+      "nextSteps": [
+        "Issue #8 revocation design"
+      ]
+    }
+  ]
+}
