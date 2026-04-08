@@ -41,6 +41,7 @@ docs/*
 !docs/security/
 !docs/blogs/
 !docs/provider-sources/
+!docs/provider-formats/
 !docs/research/
 tmp/
 
