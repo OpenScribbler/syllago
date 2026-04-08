@@ -58,6 +58,13 @@ type Provider struct {
 	// Only populated for types where configuration is file-based.
 	ConfigLocations map[catalog.ContentType]string
 
+	// GlobalSharedReadPaths returns global paths (relative to homeDir) that this
+	// provider reads BEYOND its own InstallDir. Used to detect install conflicts
+	// when multiple providers would receive content at the same path.
+	// Distinct from DiscoveryPaths, which is project-scoped.
+	// Returns nil if this provider has no globally-shared read paths.
+	GlobalSharedReadPaths func(homeDir string, ct catalog.ContentType) []string
+
 	// MCPTransports lists the MCP transports this provider supports.
 	// Example: []string{"stdio", "sse", "streamable-http"}.
 	MCPTransports []string

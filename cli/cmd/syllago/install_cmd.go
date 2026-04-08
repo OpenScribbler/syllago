@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -15,6 +17,41 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
+
+// resolveConflict is called when DetectConflicts finds install-path collisions.
+// Override in tests to avoid blocking on stdin.
+var resolveConflict = resolveConflictInteractively
+
+// resolveConflictInteractively prints a conflict warning and prompts the user
+// to choose how to resolve it. Returns the chosen ConflictResolution.
+func resolveConflictInteractively(conflicts []installer.Conflict, w, errW io.Writer) (installer.ConflictResolution, error) {
+	fmt.Fprintln(errW, "\nWarning: install path conflict detected")
+	fmt.Fprintln(errW, "The following providers share a read path with another provider's install directory:")
+	for _, c := range conflicts {
+		readers := make([]string, len(c.AlsoReadBy))
+		for i, r := range c.AlsoReadBy {
+			readers[i] = r.Name
+		}
+		fmt.Fprintf(errW, "  %s installs to %s (also read by: %s)\n",
+			c.InstallingTo.Name, c.SharedPath, strings.Join(readers, ", "))
+	}
+	fmt.Fprintln(w, "\nHow would you like to resolve this?")
+	fmt.Fprintln(w, "  [1] Shared path only  — install once to shared path; other providers read it automatically")
+	fmt.Fprintln(w, "  [2] Own dirs only     — each provider gets its own directory; skip the shared path owner")
+	fmt.Fprintln(w, "  [3] All paths         — install everywhere (may cause duplicate content warnings)")
+	fmt.Fprint(w, "\nChoice [1/2/3] (default: 3): ")
+
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		switch strings.TrimSpace(scanner.Text()) {
+		case "1":
+			return installer.ResolutionSharedOnly, nil
+		case "2":
+			return installer.ResolutionOwnDirsOnly, nil
+		}
+	}
+	return installer.ResolutionAll, nil
+}
 
 // installResult is the JSON-serializable output for syllago install.
 type installResult struct {
@@ -114,7 +151,8 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	// --to-all path: detect providers and delegate.
 	if toAll {
-		return runInstallToAll(cmd, args, typeFilter, methodStr, method, dryRun, baseDir, installAll)
+		noInput, _ := cmd.Flags().GetBool("no-input")
+		return runInstallToAll(cmd, args, typeFilter, methodStr, method, dryRun, baseDir, installAll, noInput)
 	}
 
 	prov := findProviderBySlug(toSlug)
@@ -331,6 +369,7 @@ func runInstallToAll(
 	dryRun bool,
 	baseDir string,
 	installAll bool,
+	noInput bool,
 ) error {
 	globalCfg, err := config.LoadGlobal()
 	if err != nil {
@@ -358,6 +397,31 @@ func runInstallToAll(
 	if len(active) == 0 {
 		fmt.Fprintln(output.ErrWriter, "no providers detected — install an AI coding tool and retry")
 		return nil
+	}
+
+	// Detect install-path conflicts (skills only — the only cross-provider shared path).
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		conflicts := installer.DetectConflicts(active, catalog.Skills, homeDir)
+		if len(conflicts) > 0 {
+			if dryRun || noInput {
+				// Non-interactive: warn and proceed with all providers (no filtering).
+				fmt.Fprintln(output.ErrWriter, "\nWarning: install path conflict detected — use without --no-input to choose resolution")
+				for _, c := range conflicts {
+					readers := make([]string, len(c.AlsoReadBy))
+					for i, r := range c.AlsoReadBy {
+						readers[i] = r.Name
+					}
+					fmt.Fprintf(output.ErrWriter, "  %s installs to %s (also read by: %s)\n",
+						c.InstallingTo.Name, c.SharedPath, strings.Join(readers, ", "))
+				}
+			} else {
+				resolution, resolveErr := resolveConflict(conflicts, output.Writer, output.ErrWriter)
+				if resolveErr != nil {
+					return resolveErr
+				}
+				active = installer.ApplyConflictResolution(active, conflicts, resolution)
+			}
+		}
 	}
 
 	globalDir := catalog.GlobalContentDir()
