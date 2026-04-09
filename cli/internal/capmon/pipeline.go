@@ -3,6 +3,7 @@ package capmon
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -195,7 +196,13 @@ func runStage2Extract(ctx context.Context, opts PipelineOptions, manifest *RunMa
 				}
 				result, err := Extract(ctx, format, entry.Raw, src.Selector)
 				if err != nil {
-					status.Errors = append(status.Errors, fmt.Sprintf("%s extract(%s): %v", sourceID, format, err))
+					var noExt *ErrNoExtractor
+					if errors.As(err, &noExt) {
+						status.Warnings = append(status.Warnings, fmt.Sprintf("%s: format %q has no extractor (skipped)", sourceID, format))
+						status.SourcesSkipped++
+					} else {
+						status.Errors = append(status.Errors, fmt.Sprintf("%s extract(%s): %v", sourceID, format, err))
+					}
 					continue
 				}
 				// Write extracted.json into the cache entry directory
