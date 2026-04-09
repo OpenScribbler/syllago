@@ -23,6 +23,81 @@ func TestRunPipeline_InvalidStage(t *testing.T) {
 	}
 }
 
+func TestRunPipeline_AllStages_DryRun(t *testing.T) {
+	cacheDir := t.TempDir()
+	opts := capmon.PipelineOptions{
+		DryRun:             true,
+		CacheRoot:          cacheDir,
+		SourceManifestsDir: t.TempDir(),
+		CapabilitiesDir:    t.TempDir(),
+	}
+	exitClass, err := capmon.RunPipeline(context.Background(), opts)
+	if err != nil {
+		t.Fatalf("RunPipeline dry-run: %v", err)
+	}
+	if exitClass != capmon.ExitClean {
+		t.Errorf("expected ExitClean (%d), got %d", capmon.ExitClean, exitClass)
+	}
+}
+
+func TestRunPipeline_FetchExtractStage(t *testing.T) {
+	opts := capmon.PipelineOptions{
+		Stage:              "fetch-extract",
+		CacheRoot:          t.TempDir(),
+		SourceManifestsDir: t.TempDir(),
+		CapabilitiesDir:    t.TempDir(),
+	}
+	exitClass, err := capmon.RunPipeline(context.Background(), opts)
+	if err != nil {
+		t.Fatalf("RunPipeline fetch-extract: %v", err)
+	}
+	if exitClass != capmon.ExitClean {
+		t.Errorf("expected ExitClean (%d), got %d", capmon.ExitClean, exitClass)
+	}
+}
+
+func TestRunPipeline_ReportStage(t *testing.T) {
+	opts := capmon.PipelineOptions{
+		Stage:              "report",
+		DryRun:             true,
+		CacheRoot:          t.TempDir(),
+		SourceManifestsDir: t.TempDir(),
+		CapabilitiesDir:    t.TempDir(),
+	}
+	exitClass, err := capmon.RunPipeline(context.Background(), opts)
+	if err != nil {
+		t.Fatalf("RunPipeline report: %v", err)
+	}
+	if exitClass != capmon.ExitClean {
+		t.Errorf("expected ExitClean (%d), got %d", capmon.ExitClean, exitClass)
+	}
+}
+
+// TestRunPipeline_ReportNoDryRun exercises stage 4 (runStage4Review) by running
+// the report stage without dry-run mode and without a pause sentinel.
+func TestRunPipeline_ReportNoDryRun(t *testing.T) {
+	// Ensure no .capmon-pause file in the working directory
+	origDir, _ := os.Getwd()
+	workDir := t.TempDir()
+	os.Chdir(workDir)
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	opts := capmon.PipelineOptions{
+		Stage:              "report",
+		DryRun:             false, // stage 4 runs
+		CacheRoot:          t.TempDir(),
+		SourceManifestsDir: t.TempDir(),
+		CapabilitiesDir:    t.TempDir(),
+	}
+	exitClass, err := capmon.RunPipeline(context.Background(), opts)
+	if err != nil {
+		t.Fatalf("RunPipeline report (no dry-run): %v", err)
+	}
+	if exitClass != capmon.ExitClean {
+		t.Errorf("expected ExitClean (%d), got %d", capmon.ExitClean, exitClass)
+	}
+}
+
 func TestRunPipeline_PauseSentinel(t *testing.T) {
 	cacheDir := t.TempDir()
 	// Create .capmon-pause in a temp work dir

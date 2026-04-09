@@ -154,12 +154,13 @@ var capmonDiffCmd = &cobra.Command{
 
 var capmonGenerateCmd = &cobra.Command{
 	Use:   "generate",
-	Short: "Regenerate per-content-type views from provider-capabilities YAML",
+	Short: "Regenerate per-content-type views and spec tables from provider-capabilities YAML",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return capmon.GenerateContentTypeViews(
-			"docs/provider-capabilities",
-			"docs/provider-capabilities/by-content-type",
-		)
+		capsDir := "docs/provider-capabilities"
+		if err := capmon.GenerateContentTypeViews(capsDir, capsDir+"/by-content-type"); err != nil {
+			return err
+		}
+		return capmon.GenerateHooksSpecTables(capsDir, "docs/spec/hooks")
 	},
 }
 

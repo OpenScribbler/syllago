@@ -82,6 +82,73 @@ func TestRecordConsecutiveFailure_ThirdFailure(t *testing.T) {
 	}
 }
 
+func TestGHRunner_UsesOverride(t *testing.T) {
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		return []byte("stub-output"), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	out, err := capmon.GHRunner("version")
+	if err != nil {
+		t.Fatalf("GHRunner: %v", err)
+	}
+	if string(out) != "stub-output" {
+		t.Errorf("GHRunner output = %q, want stub-output", string(out))
+	}
+}
+
+func TestCreateDriftPR_Success(t *testing.T) {
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		return []byte("https://github.com/test/repo/pull/42\n"), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	diff := capmon.CapabilityDiff{Provider: "test-provider", RunID: "run-001"}
+	url, err := capmon.CreateDriftPR(context.Background(), "test-provider", "run-001", diff)
+	if err != nil {
+		t.Fatalf("CreateDriftPR: %v", err)
+	}
+	if url != "https://github.com/test/repo/pull/42" {
+		t.Errorf("url = %q, want stripped URL", url)
+	}
+}
+
+func TestCreateDriftPR_InvalidSlug(t *testing.T) {
+	diff := capmon.CapabilityDiff{}
+	_, err := capmon.CreateDriftPR(context.Background(), "INVALID SLUG", "run-001", diff)
+	if err == nil {
+		t.Error("expected error for invalid slug")
+	}
+}
+
+func TestCreateStructuralIssue_Success(t *testing.T) {
+	issueCreated := false
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		for _, a := range args {
+			if a == "issue" {
+				issueCreated = true
+			}
+		}
+		return []byte("https://github.com/test/repo/issues/7\n"), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	err := capmon.CreateStructuralIssue(context.Background(), "test-provider", "run-001", []string{"new-section"})
+	if err != nil {
+		t.Fatalf("CreateStructuralIssue: %v", err)
+	}
+	if !issueCreated {
+		t.Error("expected issue creation gh call")
+	}
+}
+
+func TestCreateStructuralIssue_InvalidSlug(t *testing.T) {
+	err := capmon.CreateStructuralIssue(context.Background(), "INVALID", "run-001", nil)
+	if err == nil {
+		t.Error("expected error for invalid slug")
+	}
+}
+
 func TestBuildPRBody_NoTemplateInjection(t *testing.T) {
 	diff := capmon.CapabilityDiff{
 		Provider: "test-provider",
