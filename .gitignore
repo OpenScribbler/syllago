@@ -43,6 +43,8 @@ docs/*
 !docs/provider-sources/
 !docs/provider-formats/
 !docs/research/
+!docs/provider-capabilities/
+.capmon-cache/
 tmp/
 
 # Development workflow state
