@@ -1,3 +1,5 @@
+//go:build cgo
+
 package extract_typescript
 
 import (
