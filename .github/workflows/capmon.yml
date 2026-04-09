@@ -1,0 +1,135 @@
+name: capmon — capability monitor pipeline
+
+on:
+  schedule:
+    # Run daily at 06:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Pipeline stage: fetch-extract, report, or all (default)'
+        required: false
+        default: ''
+
+jobs:
+  fetch-extract:
+    name: Fetch + Extract (Stage 1-2)
+    runs-on: ubuntu-latest
+    permissions: {}
+    container:
+      image: chromedp/headless-shell@sha256:6ae04e81d52e03b04e4ea4ef9827c9e23aedf4e0e2f0dbe1c4ed1218e6a3f36e # 132.0.6834.110
+      options: --shm-size=1gb
+    outputs:
+      artifact-sha256: ${{ steps.sha.outputs.sha256 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa786e1baff # v5
+        with:
+          go-version-file: cli/go.mod
+
+      - name: Build syllago
+        run: make -C cli build
+
+      - name: Run fetch-extract stage
+        run: ./cli/syllago capmon run --stage fetch-extract
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHROMEDP_URL: ""
+
+      - name: Compute artifact SHA-256
+        id: sha
+        run: |
+          tar -czf .capmon-cache.tar.gz .capmon-cache/
+          SHA=$(sha256sum .capmon-cache.tar.gz | awk '{print $1}')
+          echo "sha256=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "## capmon artifact SHA-256" >> "$GITHUB_STEP_SUMMARY"
+          printf '```\n%s  .capmon-cache.tar.gz\n```\n' "${SHA}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload cache artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: capmon-cache
+          path: .capmon-cache.tar.gz
+          retention-days: 7
+
+  report:
+    name: Diff + Report (Stage 3-4)
+    runs-on: ubuntu-latest
+    needs: fetch-extract
+    continue-on-error: false
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Download cache artifact
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f6645d931 # v4
+        with:
+          name: capmon-cache
+
+      - name: Verify artifact SHA-256
+        env:
+          EXPECTED_SHA: ${{ needs.fetch-extract.outputs.artifact-sha256 }}
+        run: |
+          ACTUAL=$(sha256sum .capmon-cache.tar.gz | awk '{print $1}')
+          if [ "$EXPECTED_SHA" != "$ACTUAL" ]; then
+            echo "SHA-256 mismatch: expected $EXPECTED_SHA, got $ACTUAL"
+            exit 1
+          fi
+          tar -xzf .capmon-cache.tar.gz
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa786e1baff # v5
+        with:
+          go-version-file: cli/go.mod
+
+      - name: Build syllago
+        run: make -C cli build
+
+      - name: Run report stage
+        run: ./cli/syllago capmon run --stage report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  staleness-check:
+    name: Staleness Check
+    runs-on: ubuntu-latest
+    needs: [fetch-extract, report]
+    if: always()
+    permissions:
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa786e1baff # v5
+        with:
+          go-version-file: cli/go.mod
+
+      - name: Build syllago
+        run: make -C cli build
+
+      - name: Download cache artifact (if available)
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f6645d931 # v4
+        with:
+          name: capmon-cache
+        continue-on-error: true
+
+      - name: Extract cache (if present)
+        run: tar -xzf .capmon-cache.tar.gz 2>/dev/null || true
+
+      - name: Check staleness
+        run: |
+          ./cli/syllago capmon verify \
+            --staleness-check \
+            --threshold-hours 36
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

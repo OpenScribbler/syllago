@@ -1,0 +1,14 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "description": "SHA-pin chromedp/headless-shell Docker image",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["chromedp/headless-shell"],
+      "pinDigests": true
+    }
+  ]
+}
