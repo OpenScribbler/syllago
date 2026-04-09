@@ -3,24 +3,34 @@ package capmon
 import (
 	"fmt"
 	"io"
+	"os/exec"
 	"regexp"
 )
 
 var slugRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*[a-z0-9]$`)
 
-// ghCommand is the gh CLI command, overridable in tests.
-var ghCommand = "gh"
-
-// GHRunner returns the current gh CLI command name.
-// Exported for use by Stage 4 PR/issue creation (Task 9.2) and tests (Task 6.2).
-func GHRunner() string {
-	return ghCommand
+// ghRunner is the function used to invoke the gh CLI. Overridable in tests.
+var ghRunner = func(args ...string) ([]byte, error) {
+	return exec.Command("gh", args...).Output()
 }
 
-// SetGHCommandForTest overrides the gh command for testing.
+// GHRunner invokes the gh CLI with the given arguments, returning combined output.
+// Exported for use by Stage 4 PR/issue creation (Task 9.2).
+func GHRunner(args ...string) ([]byte, error) {
+	return ghRunner(args...)
+}
+
+// SetGHCommandForTest replaces the gh runner with a test stub.
+// Pass nil to restore the default.
 // Must only be called from test code.
-func SetGHCommandForTest(cmd string) {
-	ghCommand = cmd
+func SetGHCommandForTest(fn func(args ...string) ([]byte, error)) {
+	if fn == nil {
+		ghRunner = func(args ...string) ([]byte, error) {
+			return exec.Command("gh", args...).Output()
+		}
+		return
+	}
+	ghRunner = fn
 }
 
 // SanitizeSlug validates a provider slug is safe for use in branch names and PR bodies.

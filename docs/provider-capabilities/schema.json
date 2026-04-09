@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/OpenScribbler/syllago/docs/provider-capabilities/schema.json",
+  "title": "ProviderCapabilities",
+  "description": "Schema for docs/provider-capabilities/<slug>.yaml capability documents",
+  "type": "object",
+  "required": ["schema_version", "slug", "content_types"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1"],
+      "description": "Schema version. Increment when the format changes incompatibly."
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+      "description": "Provider identifier slug, e.g. claude-code"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable provider name"
+    },
+    "last_verified": {
+      "type": "string",
+      "description": "Date the capabilities were last verified (YYYY-MM-DD)"
+    },
+    "provider_version": {
+      "type": "string",
+      "description": "Provider version string when last verified"
+    },
+    "source_manifest": {
+      "type": "string",
+      "description": "Path to the source manifest used for extraction"
+    },
+    "references": {
+      "type": "object",
+      "description": "Auto-maintained source reference registry. Maps reference ID to ReferenceEntry.",
+      "additionalProperties": {
+        "$ref": "#/$defs/ReferenceEntry"
+      }
+    },
+    "content_types": {
+      "type": "object",
+      "description": "Maps content type key (e.g. hooks, rules) to ContentTypeEntry",
+      "additionalProperties": {
+        "$ref": "#/$defs/ContentTypeEntry"
+      }
+    },
+    "provider_exclusive": {
+      "type": "object",
+      "description": "Provider-specific features not in the canonical model. Pass-through, not validated by schema."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ReferenceEntry": {
+      "type": "object",
+      "required": ["url", "fetch_method"],
+      "properties": {
+        "url": {"type": "string"},
+        "fetch_method": {"type": "string", "enum": ["http", "github", "chromedp"]},
+        "verified_at": {"type": "string"},
+        "last_content_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]+$"}
+      },
+      "additionalProperties": false
+    },
+    "ContentTypeEntry": {
+      "type": "object",
+      "required": ["supported"],
+      "properties": {
+        "supported": {"type": "boolean"},
+        "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+        "events": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/EventEntry"}
+        },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/CapabilityEntry"}
+        },
+        "tools": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/ToolEntry"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "EventEntry": {
+      "type": "object",
+      "required": ["native_name"],
+      "properties": {
+        "native_name": {"type": "string"},
+        "blocking": {"type": "string", "enum": ["prevent", "modify", "observe"]},
+        "refs": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "CapabilityEntry": {
+      "type": "object",
+      "required": ["supported"],
+      "properties": {
+        "supported": {"type": "boolean"},
+        "mechanism": {"type": "string"},
+        "refs": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "ToolEntry": {
+      "type": "object",
+      "required": ["native"],
+      "properties": {
+        "native": {"type": "string"},
+        "refs": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    }
+  }
+}

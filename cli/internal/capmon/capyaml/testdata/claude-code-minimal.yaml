@@ -1,0 +1,26 @@
+schema_version: "1"
+slug: claude-code
+display_name: Claude Code
+last_verified: "2026-04-08"
+
+references:
+  cc_hooks_docs:
+    url: https://code.claude.com/docs/en/hooks
+    fetch_method: http
+    verified_at: "2026-04-08"
+    last_content_hash: "sha256:abc123"
+
+content_types:
+  hooks:
+    supported: true
+    confidence: high
+    events:
+      before_tool_execute:
+        native_name: PreToolUse
+        blocking: prevent
+        refs: [cc_hooks_docs]
+
+provider_exclusive:
+  events:
+    - native_name: InstructionsLoaded
+      description: Fires when CLAUDE.md and rule files are loaded

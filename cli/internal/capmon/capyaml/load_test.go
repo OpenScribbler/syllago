@@ -1,0 +1,113 @@
+package capyaml_test
+
+import (
+	"bytes"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/OpenScribbler/syllago/cli/internal/capmon/capyaml"
+)
+
+func TestLoadCapabilityYAML_Roundtrip(t *testing.T) {
+	p := filepath.Join("testdata", "claude-code-minimal.yaml")
+	caps, err := capyaml.LoadCapabilityYAML(p)
+	if err != nil {
+		t.Fatalf("LoadCapabilityYAML: %v", err)
+	}
+	if caps.Slug != "claude-code" {
+		t.Errorf("Slug = %q", caps.Slug)
+	}
+	hooks, ok := caps.ContentTypes["hooks"]
+	if !ok {
+		t.Fatal("hooks content type missing")
+	}
+	if !hooks.Supported {
+		t.Error("hooks should be supported")
+	}
+}
+
+func TestValidateAgainstSchema_ValidDoc(t *testing.T) {
+	p := filepath.Join("testdata", "claude-code-minimal.yaml")
+	if err := capyaml.ValidateAgainstSchema(p, false); err != nil {
+		t.Fatalf("ValidateAgainstSchema: %v", err)
+	}
+}
+
+func TestValidateAgainstSchema_UnknownSchemaVersion(t *testing.T) {
+	p := filepath.Join("testdata", "schema-version-99.yaml")
+	err := capyaml.ValidateAgainstSchema(p, false)
+	if err == nil {
+		t.Error("expected error for unknown schema version")
+	}
+	if !strings.Contains(err.Error(), "schema_version") {
+		t.Errorf("error %q should mention schema_version", err.Error())
+	}
+}
+
+func TestValidateAgainstSchema_MigrationWindow_PreviousVersionAccepted(t *testing.T) {
+	// When --migration-window is set, the previous schema version is also accepted.
+	// With only version "1" in supportedSchemaVersions, the migration window does not
+	// admit version "99" — only the immediately previous known version would be admitted
+	// once a second version is added to the list. This test documents the expected behavior
+	// for when a version bump happens in the future.
+	p := filepath.Join("testdata", "claude-code-minimal.yaml")
+	// Current version "1" should validate regardless of migrationWindow
+	if err := capyaml.ValidateAgainstSchema(p, true); err != nil {
+		t.Fatalf("current version should pass with migrationWindow=true: %v", err)
+	}
+	// Unknown version "99" should still fail even with migrationWindow=true
+	p99 := filepath.Join("testdata", "schema-version-99.yaml")
+	err := capyaml.ValidateAgainstSchema(p99, true)
+	if err == nil {
+		t.Error("version 99 should not pass even with migrationWindow=true (only current-minus-one is admitted)")
+	}
+}
+
+func TestProviderExclusiveRoundtrip(t *testing.T) {
+	p := filepath.Join("testdata", "claude-code-minimal.yaml")
+	caps, err := capyaml.LoadCapabilityYAML(p)
+	if err != nil {
+		t.Fatalf("LoadCapabilityYAML: %v", err)
+	}
+	// Write to buffer and re-read
+	var buf bytes.Buffer
+	if err := capyaml.WriteCapabilityYAML(&buf, caps); err != nil {
+		t.Fatalf("WriteCapabilityYAML: %v", err)
+	}
+	// provider_exclusive section must be present in output unchanged
+	out := buf.String()
+	if !strings.Contains(out, "provider_exclusive") {
+		t.Error("provider_exclusive section missing from written YAML")
+	}
+	if !strings.Contains(out, "InstructionsLoaded") {
+		t.Error("provider_exclusive entry InstructionsLoaded missing from written YAML")
+	}
+}
+
+func TestProviderCapabilities_References(t *testing.T) {
+	p := filepath.Join("testdata", "claude-code-minimal.yaml")
+	caps, err := capyaml.LoadCapabilityYAML(p)
+	if err != nil {
+		t.Fatalf("LoadCapabilityYAML: %v", err)
+	}
+	// References table must load and round-trip
+	ref, ok := caps.References["cc_hooks_docs"]
+	if !ok {
+		t.Fatal("references.cc_hooks_docs missing")
+	}
+	if ref.URL == "" {
+		t.Error("ReferenceEntry.URL is empty")
+	}
+	if ref.FetchMethod == "" {
+		t.Error("ReferenceEntry.FetchMethod is empty")
+	}
+	// Verify round-trip through WriteCapabilityYAML
+	var buf bytes.Buffer
+	if err := capyaml.WriteCapabilityYAML(&buf, caps); err != nil {
+		t.Fatalf("WriteCapabilityYAML: %v", err)
+	}
+	if !strings.Contains(buf.String(), "cc_hooks_docs") {
+		t.Error("references.cc_hooks_docs missing from written YAML")
+	}
+}
