@@ -2,6 +2,7 @@ package capyaml_test
 
 import (
 	"bytes"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -82,6 +83,34 @@ func TestProviderExclusiveRoundtrip(t *testing.T) {
 	}
 	if !strings.Contains(out, "InstructionsLoaded") {
 		t.Error("provider_exclusive entry InstructionsLoaded missing from written YAML")
+	}
+}
+
+func TestLoadCapabilityYAML_FileNotFound(t *testing.T) {
+	_, err := capyaml.LoadCapabilityYAML("/nonexistent/path.yaml")
+	if err == nil {
+		t.Error("expected error for missing file")
+	}
+}
+
+func TestLoadCapabilityYAML_InvalidYAML(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "bad.yaml")
+	// This YAML has a tab indentation which is invalid
+	bad := "schema_version: \"1\"\n\t: invalid_tab_key"
+	if err := os.WriteFile(f, []byte(bad), 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := capyaml.LoadCapabilityYAML(f)
+	if err == nil {
+		t.Error("expected error for invalid YAML")
+	}
+}
+
+func TestValidateAgainstSchema_FileNotFound(t *testing.T) {
+	err := capyaml.ValidateAgainstSchema("/nonexistent/path.yaml", false)
+	if err == nil {
+		t.Error("expected error for missing file")
 	}
 }
 

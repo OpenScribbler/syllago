@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 // PipelineOptions controls which stages run and pipeline behavior.
@@ -296,17 +298,15 @@ func runStage4Review(ctx context.Context, opts PipelineOptions, manifest *RunMan
 }
 
 // loadCurrentFields reads a capability YAML and returns a flat field→value map.
+// Keys are dot-delimited paths (e.g. "content_types.hooks.events.before_tool_execute.native_name").
 func loadCurrentFields(capsPath string) (map[string]string, error) {
 	data, err := os.ReadFile(capsPath)
 	if err != nil {
 		return nil, err
 	}
-	// Simple: unmarshal as generic map and flatten
 	var raw map[string]interface{}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		// Try YAML via gopkg.in/yaml.v3 — import is in capyaml subpackage.
-		// For now return empty: diff against nothing.
-		return make(map[string]string), nil
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("parse YAML %s: %w", capsPath, err)
 	}
 	result := make(map[string]string)
 	flattenInterface("", raw, result)
@@ -333,6 +333,9 @@ func flattenInterface(prefix string, v interface{}, out map[string]string) {
 		}
 	case float64:
 		out[prefix] = fmt.Sprintf("%g", val)
+	case int:
+		// yaml.v3 unmarshals integers as int (not float64)
+		out[prefix] = fmt.Sprintf("%d", val)
 	}
 }
 

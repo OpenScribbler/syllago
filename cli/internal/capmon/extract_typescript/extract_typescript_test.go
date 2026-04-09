@@ -1,3 +1,5 @@
+//go:build cgo
+
 package extract_typescript_test
 
 import (
@@ -80,6 +82,41 @@ func TestTypeScriptExtractor_Landmarks(t *testing.T) {
 		if !found {
 			t.Errorf("expected landmark %q in %v", want, result.Landmarks)
 		}
+	}
+}
+
+func TestTypeScriptExtractor_BareEnumMembers(t *testing.T) {
+	// Bare enum members (no = "value") should use the member name as value
+	raw := []byte(`export enum Direction { Up, Down, Left, Right }`)
+	cfg := capmon.SelectorConfig{}
+	result, err := capmon.Extract(context.Background(), "typescript", raw, cfg)
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+	// Bare members should appear as fields with name-as-value
+	found := false
+	for k, fv := range result.Fields {
+		if (k == "Direction.Up" || k == "Up") && fv.Value == "Up" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("bare enum member 'Up' not found in fields: %v", result.Fields)
+	}
+}
+
+func TestTypeScriptExtractor_EnumWithNumbers(t *testing.T) {
+	// Enum members with numeric values
+	raw := []byte(`export enum Status { OK = 200, NotFound = 404, Error = 500 }`)
+	cfg := capmon.SelectorConfig{}
+	result, err := capmon.Extract(context.Background(), "typescript", raw, cfg)
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+	// Should have extracted something from the enum
+	if len(result.Fields) == 0 {
+		t.Error("expected fields from numeric enum, got none")
 	}
 }
 
