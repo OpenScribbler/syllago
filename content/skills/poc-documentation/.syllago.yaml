@@ -1,0 +1,9 @@
+format_version: 1
+id: a2537f70-adb7-4a1e-80da-ff944e456a4b
+name: poc-documentation
+type: skills
+source_format: md
+source_type: provider
+source_hash: sha256:7dd1a4b3875ed9668cd481f72c60e39dac95918e16ead125efdf9800b131a762
+added_at: 2026-04-03T16:25:26.868332239Z
+added_by: syllago

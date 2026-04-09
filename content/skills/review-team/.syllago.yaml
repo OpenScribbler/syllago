@@ -1,0 +1,9 @@
+format_version: 1
+id: 7223e9de-d71c-40d0-b0e9-10d9161b5442
+name: review-team
+type: skills
+source_format: md
+source_type: provider
+source_hash: sha256:723242a2f5d2eb1265b98639c153f0ae8c6d1d0325975a77834b40bcec1bc3c6
+added_at: 2026-04-03T16:25:26.885542818Z
+added_by: syllago
