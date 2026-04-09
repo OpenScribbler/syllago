@@ -1,10 +1,15 @@
 package capmon
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 var slugRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*[a-z0-9]$`)
@@ -40,6 +45,99 @@ func SanitizeSlug(slug string) (string, error) {
 		return "", fmt.Errorf("invalid slug: %q", slug)
 	}
 	return slug, nil
+}
+
+// DeduplicatePR checks if an open PR exists for capmon/drift-<provider>.
+// Returns (existingPRURL, true) if found; ("", false) if not found.
+func DeduplicatePR(_ context.Context, provider string) (string, bool, error) {
+	slug, err := SanitizeSlug(provider)
+	if err != nil {
+		return "", false, fmt.Errorf("invalid provider slug: %w", err)
+	}
+	branch := "capmon/drift-" + slug
+	out, err := ghRunner("pr", "list", "--label", "capmon", "--head", branch, "--json", "url")
+	if err != nil {
+		return "", false, fmt.Errorf("gh pr list: %w", err)
+	}
+	var prs []struct {
+		URL string `json:"url"`
+	}
+	if err := json.Unmarshal(out, &prs); err != nil {
+		return "", false, fmt.Errorf("parse gh output: %w", err)
+	}
+	if len(prs) == 0 {
+		return "", false, nil
+	}
+	return prs[0].URL, true, nil
+}
+
+// failureCountFile returns the path to the consecutive-failure counter for a provider.
+func failureCountFile(cacheRoot, provider string) string {
+	return filepath.Join(cacheRoot, provider, "consecutive-failures.json")
+}
+
+// RecordConsecutiveFailure increments the failure counter for a provider.
+// Opens a GitHub issue after the 3rd consecutive failure.
+func RecordConsecutiveFailure(_ context.Context, cacheRoot, provider string) error {
+	path := failureCountFile(cacheRoot, provider)
+	var count int
+	if data, err := os.ReadFile(path); err == nil {
+		json.Unmarshal(data, &count) //nolint:errcheck
+	}
+	count++
+	os.MkdirAll(filepath.Dir(path), 0755) //nolint:errcheck
+	data, _ := json.Marshal(count)
+	os.WriteFile(path, data, 0644) //nolint:errcheck
+
+	if count >= 3 {
+		slug, _ := SanitizeSlug(provider)
+		title := fmt.Sprintf("capmon: %d consecutive extraction failures for %s", count, slug)
+		_, err := ghRunner("issue", "create",
+			"--title", title,
+			"--label", "capmon",
+			"--body", fmt.Sprintf("Provider %s has failed extraction %d consecutive times. Manual intervention required.", slug, count),
+		)
+		return err
+	}
+	return nil
+}
+
+// CreateDriftPR creates a GitHub PR for field-level drift. Returns the PR URL.
+// SanitizeSlug must be called on provider before reaching this function.
+func CreateDriftPR(_ context.Context, provider, runID string, diff CapabilityDiff) (string, error) {
+	slug, err := SanitizeSlug(provider)
+	if err != nil {
+		return "", fmt.Errorf("invalid provider slug: %w", err)
+	}
+	branch := "capmon/drift-" + slug
+	// Full git branch creation and push logic implemented in pipeline.go Stage 4
+	out, err := ghRunner("pr", "create",
+		"--title", fmt.Sprintf("capmon: drift detected for %s (run %s)", slug, runID),
+		"--head", branch,
+		"--label", "capmon",
+	)
+	if err != nil {
+		return "", fmt.Errorf("create PR: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// CreateStructuralIssue creates a GitHub issue for structural drift (new sections).
+func CreateStructuralIssue(_ context.Context, provider, runID string, drift []string) error {
+	slug, err := SanitizeSlug(provider)
+	if err != nil {
+		return fmt.Errorf("invalid provider slug: %w", err)
+	}
+	body := fmt.Sprintf("New sections detected in %s docs (run %s):\n", slug, runID)
+	for _, d := range drift {
+		body += "- " + d + "\n"
+	}
+	_, err = ghRunner("issue", "create",
+		"--title", fmt.Sprintf("capmon: structural drift in %s", slug),
+		"--label", "capmon",
+		"--body", body,
+	)
+	return err
 }
 
 // BuildPRBody writes a PR body to w for the given CapabilityDiff.
