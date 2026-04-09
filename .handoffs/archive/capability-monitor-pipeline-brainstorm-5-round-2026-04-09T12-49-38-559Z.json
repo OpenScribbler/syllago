@@ -1,0 +1,72 @@
+{
+  "$schema": "handoff-v2",
+  "name": "capability-monitor-pipeline-brainstorm-5-round",
+  "createdAt": "2026-04-09T12:48:53.849Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-09T12:48:53.849Z",
+    "sessionId": "9b27b9c5-ee01-4027-be18-401b0603edc1",
+    "summary": "Capability monitor pipeline: brainstorm + 5-round panel review complete (5/5 consensus), design doc updated with 40 panel changes, ready for plan writing",
+    "activeWork": {
+      "description": "Plan writing phase for capability monitor pipeline feature",
+      "feature": null,
+      "stage": "plan",
+      "planRef": null,
+      "designRef": "docs/plans/2026-04-08-capability-monitor-pipeline-design.md",
+      "progress": "Design doc (910 lines) panel-reviewed with 5/5 consensus (1 agree, 4 agree_with_reservations, 0 dissents), all 40 panel changes applied. Ready to dispatch plan-writing subagent to produce task chunks in ~8-10 phases.",
+      "blockers": [],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 49,
+      "lastCommit": "c2c7223 bd sync: 2026-04-08 21:33:40",
+      "modifiedFiles": [
+        ".beads/beads.db",
+        ".beads/beads.db-shm",
+        ".beads/beads.db-wal",
+        ".handoffs/archive/moat-open-questions-resolution-20260407T160000Z.json",
+        ".handoffs/designing-intelligent-conflict-detection-for-to.json"
+      ]
+    },
+    "recentDecisions": [
+      "Architecture: syllago capmon subcommand with two-job CI split (fetch-extract with no permissions, report with write/pull-requests/issues)",
+      "Data layer: YAML with per-field source references for full traceability",
+      "Extraction: fully deterministic (gotreesitter + goquery + goldmark + go/parser)",
+      "Cursor handling: chromedp only for Cursor type, verified ~4sec performance",
+      "Sanitization: structured selector schema with expected_contains anchors",
+      "Panel consensus: 35 mandatory + 5 nice-to-have changes incorporated, zero dissents"
+    ],
+    "nextSteps": [
+      "Dispatch plan-writing subagent against docs/plans/2026-04-08-capability-monitor-pipeline-design.md to produce subagent-sized task chunks (~8-10 phases)",
+      "Run quality review subagent (10-point checklist: per-task granularity, dependencies, phase sequencing)",
+      "Run validation subagent for design-to-plan parity",
+      "Create beads: 1 epic + ~40-50 task beads with dependency wiring and Phase B blocker analysis",
+      "Execute: dispatch focused subagents per-task or per-phase cluster",
+      "Cleanup: delete two stray 0-byte files in repo root (', expected_contains: ' and ', min_results: <int | omit>, updated_at:')"
+    ],
+    "context": {
+      "notes": "Design doc evolved 535 → 910 lines post-panel. Full review record at .develop/capmon-panel-bus.jsonl (26 messages, rounds 0-5). Feature state at .develop/state.json. Pending commit: 48+ new/modified files (design doc, panel bus, round backups). Two stray 0-byte files safe to delete—subagent heredoc artifacts from design update phase. No beads created this session (none needed during design/review phase)."
+    }
+  },
+  "previousSessions": [
+    {
+      "summary": "Capability monitor pipeline: brainstorm + 5-round panel review complete (5/5 consensus), design doc updated with 40 panel changes, ready for plan writing in next session",
+      "updated": "2026-04-09T02:55:00-07:00",
+      "completedWork": [
+        "Brainstorm phase: ~9 design questions resolved (capmon subcommand, twice-daily cron, YAML data layer with per-field refs, deterministic extraction via gotreesitter/goquery/goldmark/go-parser, chromedp for Cursor only)",
+        "5-round panel review: 26 messages from 5 panelists (remy, engineer, operator, maintainer, security) across rounds 0-5",
+        "Consensus reached: 5-of-5 vote to proceed (engineer: agree, others: agree_with_reservations), zero dissents",
+        "Design doc: updated with all 35 mandatory + 5 nice-to-have panel changes, grew from 535 to 910 lines, Panel Review Record section added"
+      ],
+      "nextSteps": [
+        "Dispatch plan-writing subagent against the panel-reviewed design at docs/plans/2026-04-08-capability-monitor-pipeline-design.md",
+        "Quality review subagent on generated plan",
+        "Validation subagent for design-to-plan parity",
+        "Create beads with dependency wiring and Phase B blocker analysis",
+        "Execution phase with per-task/per-phase focused subagents"
+      ]
+    }
+  ]
+}
