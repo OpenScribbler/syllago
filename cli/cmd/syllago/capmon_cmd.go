@@ -8,6 +8,16 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/capmon"
 	"github.com/OpenScribbler/syllago/cli/internal/capmon/capyaml"
+	// Extractor packages self-register via init(). Import for side effects only.
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_go"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_html"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_json"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_json_schema"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_markdown"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_rust"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_toml"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_typescript"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_yaml"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
