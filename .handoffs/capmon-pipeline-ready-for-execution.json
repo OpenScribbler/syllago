@@ -3,7 +3,7 @@
   "name": "capmon-pipeline-ready-for-execution",
   "createdAt": "2026-04-09T08:10:00-07:00",
   "current": {
-    "claimedBy": null,
+    "claimedBy": { "sessionId": "a6dde403-2f4b-434c-bc7e-62ec51fc7d3f", "claimedAt": "2026-04-09T08:15:00-07:00" },
     "project": "syllago",
     "updated": "2026-04-09T08:10:00-07:00",
     "sessionId": "9b27b9c5-ee01-4027-be18-401b0603edc1",
