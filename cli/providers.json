@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-29T01:59:41Z",
-  "syllagoVersion": "dev",
+  "generatedAt": "2026-04-09T16:40:57Z",
+  "syllagoVersion": "0.7.0",
   "providers": [
     {
       "name": "Claude Code",
@@ -81,11 +81,6 @@
               "category": "tool"
             },
             {
-              "canonical": "after_tool_failure",
-              "nativeName": "PostToolUseFailure",
-              "category": "tool"
-            },
-            {
               "canonical": "agent_stop",
               "nativeName": "Stop",
               "category": "lifecycle"
@@ -124,6 +119,10 @@
               "canonical": "error_occurred",
               "nativeName": "ErrorOccurred",
               "category": "lifecycle"
+            },
+            {
+              "canonical": "file_changed",
+              "nativeName": "FileChanged"
             },
             {
               "canonical": "instructions_loaded",
@@ -174,6 +173,10 @@
               "canonical": "teammate_idle",
               "nativeName": "TeammateIdle",
               "category": "collaboration"
+            },
+            {
+              "canonical": "tool_use_failure",
+              "nativeName": "PostToolUseFailure"
             },
             {
               "canonical": "worktree_create",
@@ -458,6 +461,11 @@
           ],
           "hookEvents": [
             {
+              "canonical": "after_model",
+              "nativeName": "afterAgentResponse",
+              "category": "model"
+            },
+            {
               "canonical": "after_tool_execute",
               "nativeName": "PostToolUse",
               "category": "tool"
@@ -473,6 +481,11 @@
               "category": "context"
             },
             {
+              "canonical": "before_model",
+              "nativeName": "beforeAgentResponse",
+              "category": "model"
+            },
+            {
               "canonical": "before_prompt",
               "nativeName": "UserPromptSubmit",
               "category": "lifecycle"
@@ -483,6 +496,15 @@
               "category": "tool"
             },
             {
+              "canonical": "before_tool_selection",
+              "nativeName": "beforeToolSelection",
+              "category": "model"
+            },
+            {
+              "canonical": "file_changed",
+              "nativeName": "afterFileEdit"
+            },
+            {
               "canonical": "session_end",
               "nativeName": "SessionEnd",
               "category": "lifecycle"
@@ -491,6 +513,20 @@
               "canonical": "session_start",
               "nativeName": "SessionStart",
               "category": "lifecycle"
+            },
+            {
+              "canonical": "subagent_start",
+              "nativeName": "SubagentStart",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "subagent_stop",
+              "nativeName": "SubagentStop",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "tool_use_failure",
+              "nativeName": "postToolUseFailure"
             }
           ],
           "hookTypes": [
@@ -572,6 +608,37 @@
           "fileFormat": "json",
           "installMethod": "json-merge",
           "symlinkSupport": false,
+          "hookEvents": [
+            {
+              "canonical": "agent_stop",
+              "nativeName": "post_cascade_response",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "pre_user_prompt",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_end",
+              "nativeName": "session_end",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "session_start",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "transcript_export",
+              "nativeName": "post_cascade_response_with_transcript"
+            },
+            {
+              "canonical": "worktree_create",
+              "nativeName": "post_setup_worktree",
+              "category": "workspace"
+            }
+          ],
           "hookTypes": [
             "command"
           ],
@@ -797,6 +864,10 @@
               "canonical": "subagent_stop",
               "nativeName": "subagentStop",
               "category": "lifecycle"
+            },
+            {
+              "canonical": "tool_use_failure",
+              "nativeName": "errorOccurred"
             }
           ],
           "hookTypes": [
@@ -926,48 +997,6 @@
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.clinerules/hooks"
-          ],
-          "hookEvents": [
-            {
-              "canonical": "after_tool_execute",
-              "nativeName": "PostToolUse",
-              "category": "tool"
-            },
-            {
-              "canonical": "before_compact",
-              "nativeName": "PreCompact",
-              "category": "context"
-            },
-            {
-              "canonical": "before_prompt",
-              "nativeName": "UserPromptSubmit",
-              "category": "lifecycle"
-            },
-            {
-              "canonical": "before_tool_execute",
-              "nativeName": "PreToolUse",
-              "category": "tool"
-            },
-            {
-              "canonical": "session_end",
-              "nativeName": "TaskComplete",
-              "category": "lifecycle"
-            },
-            {
-              "canonical": "session_start",
-              "nativeName": "TaskStart",
-              "category": "lifecycle"
-            },
-            {
-              "canonical": "task_cancel",
-              "nativeName": "TaskCancel",
-              "category": "lifecycle"
-            },
-            {
-              "canonical": "task_resume",
-              "nativeName": "TaskResume",
-              "category": "lifecycle"
-            }
           ],
           "hookTypes": [
             "command"
@@ -1173,7 +1202,8 @@
           "installPath": "{home}/.config/opencode/skills",
           "symlinkSupport": true,
           "discoveryPaths": [
-            "{project}/.opencode/skills"
+            "{project}/.opencode/skills",
+            "{project}/.agents/skills"
           ],
           "frontmatterFields": [
             "name",
@@ -1231,6 +1261,10 @@
           ],
           "hookEvents": [
             {
+              "canonical": "after_task",
+              "nativeName": "Post Task Execution"
+            },
+            {
               "canonical": "after_tool_execute",
               "nativeName": "postToolUse",
               "category": "tool"
@@ -1246,9 +1280,25 @@
               "category": "lifecycle"
             },
             {
+              "canonical": "before_task",
+              "nativeName": "Pre Task Execution"
+            },
+            {
               "canonical": "before_tool_execute",
               "nativeName": "preToolUse",
               "category": "tool"
+            },
+            {
+              "canonical": "file_changed",
+              "nativeName": "File Save"
+            },
+            {
+              "canonical": "file_created",
+              "nativeName": "File Create"
+            },
+            {
+              "canonical": "file_deleted",
+              "nativeName": "File Delete"
             },
             {
               "canonical": "session_start",

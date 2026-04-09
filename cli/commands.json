@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-04T07:46:43Z",
-  "syllagoVersion": "dev",
+  "generatedAt": "2026-04-09T16:40:57Z",
+  "syllagoVersion": "0.7.0",
   "commands": [
     {
       "name": "add",
@@ -140,6 +140,655 @@
       "seeAlso": [],
       "examples": "  # Discover available content (read-only)\n  syllago add --from claude-code\n\n  # Add all rules from a provider\n  syllago add rules --from claude-code\n\n  # Add a specific rule by name\n  syllago add rules/security --from claude-code\n\n  # Add everything\n  syllago add --all --from claude-code\n\n  # Preview what would be written\n  syllago add --from claude-code --dry-run",
       "source": "cli/cmd/syllago/add.go"
+    },
+    {
+      "name": "capmon",
+      "displayName": "Capmon",
+      "slug": "capmon",
+      "parent": null,
+      "synopsis": "syllago capmon",
+      "description": "Capability monitor pipeline",
+      "longDescription": "Fetch, extract, diff, and report on AI provider capability drift.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [
+        "diff",
+        "extract",
+        "fetch",
+        "generate",
+        "run",
+        "seed",
+        "test-fixtures",
+        "verify"
+      ],
+      "seeAlso": [],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon diff",
+      "displayName": "Capmon Diff",
+      "slug": "capmon-diff",
+      "parent": "capmon",
+      "synopsis": "syllago capmon diff [flags]",
+      "description": "Show field-level changes in provider-capabilities since a git ref",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Limit diff to this provider slug"
+        },
+        {
+          "name": "--since",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Git ref to diff against (default: HEAD~1)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon extract",
+      "displayName": "Capmon Extract",
+      "slug": "capmon-extract",
+      "parent": "capmon",
+      "synopsis": "syllago capmon extract [flags]",
+      "description": "Run extraction on cached sources",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Extract only this provider slug"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon fetch",
+        "capmon generate",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon fetch",
+      "displayName": "Capmon Fetch",
+      "slug": "capmon-fetch",
+      "parent": "capmon",
+      "synopsis": "syllago capmon fetch [flags]",
+      "description": "Fetch source URLs and update hash cache",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Fetch only this provider slug"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon generate",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon generate",
+      "displayName": "Capmon Generate",
+      "slug": "capmon-generate",
+      "parent": "capmon",
+      "synopsis": "syllago capmon generate",
+      "description": "Regenerate per-content-type views and spec tables from provider-capabilities YAML",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon run",
+      "displayName": "Capmon Run",
+      "slug": "capmon-run",
+      "parent": "capmon",
+      "synopsis": "syllago capmon run [flags]",
+      "description": "Run the full capability monitor pipeline",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--dry-run",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Skip Stage 4 PR/issue creation; write report to stdout"
+        },
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Limit to this provider slug"
+        },
+        {
+          "name": "--stage",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Pipeline stage to run: 'fetch-extract' or 'report' (default: all stages)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon seed",
+      "displayName": "Capmon Seed",
+      "slug": "capmon-seed",
+      "parent": "capmon",
+      "synopsis": "syllago capmon seed [flags]",
+      "description": "Bootstrap or re-seed provider capability YAML from extracted data",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--force-overwrite-exclusive",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Allow overwriting provider_exclusive entries (prints warning)"
+        },
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Seed only this provider slug"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon run",
+        "capmon test-fixtures",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon test-fixtures",
+      "displayName": "Capmon Test-fixtures",
+      "slug": "capmon-test-fixtures",
+      "parent": "capmon",
+      "synopsis": "syllago capmon test-fixtures [flags]",
+      "description": "Report fixture staleness or update fixtures for a provider",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Provider slug for --update (required with --update)"
+        },
+        {
+          "name": "--update",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Re-fetch live source and update fixture files"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon run",
+        "capmon seed",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon verify",
+      "displayName": "Capmon Verify",
+      "slug": "capmon-verify",
+      "parent": "capmon",
+      "synopsis": "syllago capmon verify [flags]",
+      "description": "Validate provider-capabilities YAML against JSON Schema",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--cache-root",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Path to .capmon-cache/ (default: .capmon-cache)"
+        },
+        {
+          "name": "--migration-window",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Accept current-minus-one schema_version during schema migrations"
+        },
+        {
+          "name": "--staleness-check",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Check last-run.json age and open issue if stale"
+        },
+        {
+          "name": "--threshold-hours",
+          "shorthand": null,
+          "type": "int",
+          "default": "36",
+          "required": false,
+          "description": "Hours before a run is considered stale (used with --staleness-check)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
     },
     {
       "name": "compat",
