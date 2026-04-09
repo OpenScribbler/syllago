@@ -2,6 +2,7 @@ package capmon_test
 
 import (
 	"bytes"
+	"context"
 	"strings"
 	"testing"
 
@@ -35,6 +36,49 @@ func TestSanitizeSlug(t *testing.T) {
 				t.Errorf("SanitizeSlug(%q) = %q, want same as input", tt.input, got)
 			}
 		})
+	}
+}
+
+func TestDeduplicatePR_NoneExists(t *testing.T) {
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		return []byte("[]"), nil // empty PR list
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	url, found, err := capmon.DeduplicatePR(context.Background(), "test-provider")
+	if err != nil {
+		t.Fatalf("DeduplicatePR: %v", err)
+	}
+	if found {
+		t.Errorf("expected found=false when no open PRs, got url=%q", url)
+	}
+}
+
+func TestRecordConsecutiveFailure_ThirdFailure(t *testing.T) {
+	cacheDir := t.TempDir()
+	// First two failures — no issue
+	for i := 0; i < 2; i++ {
+		if err := capmon.RecordConsecutiveFailure(context.Background(), cacheDir, "test-provider"); err != nil {
+			t.Fatalf("failure %d: %v", i+1, err)
+		}
+	}
+	// Third failure — should trigger issue creation attempt
+	issueCreated := false
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		for _, a := range args {
+			if a == "issue" {
+				issueCreated = true
+			}
+		}
+		return []byte("https://github.com/test/repo/issues/1"), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	if err := capmon.RecordConsecutiveFailure(context.Background(), cacheDir, "test-provider"); err != nil {
+		t.Fatalf("third failure: %v", err)
+	}
+	if !issueCreated {
+		t.Error("expected GitHub issue to be created on 3rd consecutive failure")
 	}
 }
 
