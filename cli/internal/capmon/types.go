@@ -62,8 +62,10 @@ type CapabilityDiff struct {
 type ProviderStatus struct {
 	Slug             string          `json:"slug,omitempty"`
 	Errors           []string        `json:"errors,omitempty"`
+	Warnings         []string        `json:"warnings,omitempty"`
 	SourcesFetched   int             `json:"sources_fetched,omitempty"`
 	SourcesExtracted int             `json:"sources_extracted,omitempty"`
+	SourcesSkipped   int             `json:"sources_skipped,omitempty"`
 	NeedsBaseline    bool            `json:"needs_baseline,omitempty"`
 	HasDrift         bool            `json:"has_drift,omitempty"`
 	Diff             *CapabilityDiff `json:"diff,omitempty"`

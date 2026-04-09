@@ -21,11 +21,21 @@ func RegisterExtractor(format string, ext Extractor) {
 	extractors[format] = ext
 }
 
+// ErrNoExtractor is returned by Extract when no extractor is registered for the format.
+// Callers should treat this as a capability gap (skip + warn), not a failure.
+type ErrNoExtractor struct {
+	Format string
+}
+
+func (e *ErrNoExtractor) Error() string {
+	return fmt.Sprintf("no extractor for format %q", e.Format)
+}
+
 // Extract dispatches to the appropriate Extractor for the given format.
 func Extract(ctx context.Context, format string, raw []byte, cfg SelectorConfig) (*ExtractedSource, error) {
 	ext, ok := extractors[format]
 	if !ok {
-		return nil, fmt.Errorf("no extractor for format %q", format)
+		return nil, &ErrNoExtractor{Format: format}
 	}
 	return ext.Extract(ctx, raw, cfg)
 }
