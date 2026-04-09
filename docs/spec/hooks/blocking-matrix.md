@@ -45,3 +45,10 @@ When encoding a hook with `"blocking": true` for a provider where the behavior i
 For split-event providers, some canonical `before_tool_execute` matchers may map to a provider-native event that fires **after** the action rather than before it. For example, Cursor has no `beforeFileEdit` event — the closest match is `afterFileEdit`, which fires after the file is written.
 
 This timing inversion is more severe than a capability gap: a blocking safety hook intended to prevent an action will instead observe it after the fact. Adapters MUST emit a prominent warning when a before-event hook is mapped to an after-event on the target provider. The warning MUST indicate that the hook's blocking intent cannot prevent the action, only observe it.
+
+## Provider Event Support
+
+The following table is auto-generated from `docs/provider-capabilities/*.yaml`. Do not edit by hand — run `syllago capmon generate` to refresh.
+
+<!-- GENERATED FROM provider-capabilities/*.yaml -->
+<!-- END GENERATED -->

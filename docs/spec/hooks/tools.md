@@ -44,3 +44,10 @@ MCP tools use structured objects in the canonical format. The provider-specific 
 | cursor, windsurf | `<server>__<tool>` | `github__create_issue` |
 | codex | Not applicable — codex uses MCP as a tool provider, not as a hook matcher target | — |
 | cline | Not applicable — cline hook scripts receive tool names but have no MCP matcher format | — |
+
+## Provider Tool Support
+
+The following table is auto-generated from `docs/provider-capabilities/*.yaml`. Do not edit by hand — run `syllago capmon generate` to refresh.
+
+<!-- GENERATED FROM provider-capabilities/*.yaml -->
+<!-- END GENERATED -->
