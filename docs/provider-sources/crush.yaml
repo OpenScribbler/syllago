@@ -29,6 +29,12 @@ config_schema:
   draft: "" # Draft version not specified in schema
 
 content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Crush supports: rules, skills, mcp
+  # Not supported: hooks (issue #2038 open, not implemented), agents (no user-definable agent format), commands (no command system)
+  # Syllago: not yet implemented in syllago Go provider code (crush is a future/planned provider)
+  #   No hooks yet — see charmbracelet/crush#2038.
+  # ─────────────────────────────────────────────────────────────────────
 
   # --- Rules / Instructions ---
   # Crush uses AGENTS.md only. No provider-specific rules format.

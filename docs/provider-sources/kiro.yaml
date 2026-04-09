@@ -19,6 +19,14 @@ change_detection:
   # No releases API, no public repo. Content hash the docs pages.
 
 content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Kiro supports: rules (called 'steering'), skills (called 'powers'), agents,
+  #   mcp, hooks
+  # Not supported: commands (no custom command system)
+  # Syllago: rules ✓, skills ✓, agents ✓, mcp ✓, hooks ✓ | commands ✗ (not in Go code)
+  # Note: Kiro uses its own terminology: 'steering' = rules, 'powers' = skills.
+  #   commands stub is correct — Kiro has no custom command system.
+  # ─────────────────────────────────────────────────────────────────────
 
   rules:
     sources:

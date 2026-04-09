@@ -22,6 +22,12 @@ changelog:
     label: Changelog
 
 content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Cline supports: rules, hooks, mcp, skills (via cross-provider SKILL.md convention), commands (CLI-only slash commands, not user-definable files)
+  # Not supported: agents (no agent file format)
+  # Syllago: rules ✓, hooks ✓, mcp ✓ | skills ✗, commands ✗ (not yet implemented in syllago for cline)
+  #   Syllago implements rules/hooks/mcp for cline. Skills and commands are tracked in manifest for monitoring purposes — syllago install not yet supported.
+  # ─────────────────────────────────────────────────────────────────────
 
   rules:
     sources:
