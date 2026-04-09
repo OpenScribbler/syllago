@@ -1,0 +1,88 @@
+{
+  "$schema": "handoff-v2",
+  "name": "hooks-spec-modularization-design-complete-panel",
+  "createdAt": "2026-04-08T17:50:56.841Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-08T17:50:56.841Z",
+    "sessionId": "91f40b06-880c-41c7-a071-d884f8ee3fdb",
+    "summary": "Hooks spec modularization design complete; panel review complete with 4 consensus findings; ready for planning phase",
+    "activeWork": {
+      "description": "Modularizing hooks.md into separate documents with reference implementations using W3C-style structure",
+      "feature": null,
+      "stage": "design",
+      "planRef": null,
+      "designRef": "docs/plans/2026-04-08-hooks-spec-modularization-design.md",
+      "progress": "Design doc written and locked. Panel review (skeptic, early adopter, spec author) completed with synthesis. Consensus on: (1) conformance section needs inlined minimums, (2) test vectors need format documentation, (3) cross-reference scope is larger, (4) CHANGELOG ownership needs clarity. One design disagreement resolved: bundling modularization + ref impls together. Ready to move to planning phase with task breakdown and dependencies.",
+      "blockers": [],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 42,
+      "lastCommit": "928449d bd sync: 2026-04-08 conflict detection complete + handoff",
+      "modifiedFiles": [
+        ".beads/beads.db",
+        ".beads/beads.db-shm",
+        ".beads/beads.db-wal",
+        "cli/.syllago/audit.jsonl"
+      ]
+    },
+    "recentDecisions": [
+      "Keep hooks.md as core spec (don't rename to core.md; preserves existing links)",
+      "Use relative links with inline context for cross-references (modern pattern, not numbered refs)",
+      "Structure: hooks.md (core) + events.md + tools.md + capabilities.md + test-vectors/README.md + README.md (directory index)",
+      "Inline conformance minimums in core spec (don't just link to extracted docs)",
+      "Document test vector format with pairing rules in test-vectors/README.md",
+      "Bundle modularization + reference implementations (single feature, not split)",
+      "Real Python + TypeScript reference implementations (no pseudocode)",
+      "Add comprehensive CHANGELOG entry documenting all section mappings and renumbering"
+    ],
+    "nextSteps": [
+      "Planning phase: break work into 10-15 tasks with dependencies (spec restructuring, ref impls, CI setup, docs)",
+      "Address panel consensus findings during planning (conformance inlining, test vectors doc, cross-reference scope, CHANGELOG)",
+      "Execution phase: implement modularization task-by-task, starting with core spec restructuring",
+      "Validation: verify all cross-references work, test vectors are consumable by ref impls, README clarity for new contributors"
+    ],
+    "context": {
+      "notes": "Design doc in docs/plans/2026-04-08-hooks-spec-modularization-design.md covers all 10 design decisions with detailed rationale. Panel review findings: Skeptic identified gaps (test vectors format, adapter choice rationale, cross-reference scope); Early Adopter evaluated onboarding experience (README clarity, reference impl accessibility, directory structure); Spec Author checked normative boundaries and versioning coherence. Consensus on 4 major findings. One disagreement: Skeptic recommended splitting modularization from ref impls to ship faster; design author (Maive) preferred bundling for coherent onboarding experience and stronger story. Resolved in favor of bundling after discussion of tradeoffs. Develop state file updated. When resuming: start planning phase with brainstorm or plan skill to task-break the implementation work."
+    }
+  },
+  "previousSessions": [
+    {
+      "summary": "Pragmatic review of hooks.md spec complete; confirmed modular structure needed; locked in on real code reference implementations (no pseudocode), W3C-style document split",
+      "updated": "2026-04-08T16:55:00Z",
+      "completedWork": [
+        "Reviewed hooks.md spec for pragmatic improvements and maintainability",
+        "Identified monolithic 900-line structure as core problem",
+        "Confirmed W3C-style modularization (separate spec + registries/data) best pattern",
+        "Locked in on real Python + TypeScript reference implementations (rejected pseudocode)",
+        "Determined registries (§7-10) are data with independent lifecycle",
+        "Decided test vectors stay as JSON files with documentation"
+      ],
+      "nextSteps": [
+        "Create design doc with complete file plan and cross-reference strategy",
+        "Run panel review from three perspectives (skeptic, adopter, spec author)",
+        "Move to planning phase with task breakdown"
+      ]
+    },
+    {
+      "summary": "Conflict detection fully implemented (steps 1-4 + e2e tests): OpenCode bug fixed, GlobalSharedReadPaths added, DetectConflicts + ApplyConflictResolution implemented, CLI prompt wired into --to-all with --no-input fallback. 28 tests. Committed and pushed.",
+      "updated": "2026-04-08T17:45:00Z",
+      "completedWork": [
+        "Fixed OpenCode bug: added .agents/skills/ to DiscoveryPaths",
+        "Added GlobalSharedReadPaths field to Provider struct",
+        "Implemented DetectConflicts + ApplyConflictResolution in cli/internal/installer/conflict.go",
+        "Wired CLI integration into install_cmd.go runInstallToAll with --no-input fallback",
+        "28 tests covering conflict detection logic and e2e flows",
+        "Committed and pushed to main (commit b29cecd + subsequent pushes)"
+      ],
+      "nextSteps": [
+        "Step 6: Add TUI modal for conflict resolution in install wizard (cli/internal/tui/)",
+        "Step 7: Test roundup with golden files and wizard invariant tests",
+        "Step 8: Final commit and handoff"
+      ]
+    }
+  ]
+}
