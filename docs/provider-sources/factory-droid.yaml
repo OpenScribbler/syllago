@@ -22,6 +22,12 @@ changelog:
     label: llms.txt index (lists all doc pages)
 
 content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Factory Droid supports: rules, skills, agents, commands, mcp, hooks
+  # Not supported: (none)
+  # Syllago support: rules ✓, skills ✓, agents ✓, commands ✓, mcp ✓, hooks ✓
+  # Not yet implemented in syllago Go provider code (factory-droid is a future/planned provider). Hook schema matches Claude Code's format.
+  # ─────────────────────────────────────────────────────────────────────
 
   rules:
     sources:

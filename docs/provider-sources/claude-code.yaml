@@ -24,6 +24,12 @@ changelog:
     label: Official changelog (hosted HTML, no raw markdown source)
 
 content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Claude Code supports: rules, skills, agents, commands, mcp, hooks
+  # Not supported: (none)
+  # Syllago support: rules ✓, skills ✓, agents ✓, commands ✓, mcp ✓, hooks ✓ (also supports loadouts)
+  # Most complete support of any provider — all 6 content types + loadouts.
+  # ─────────────────────────────────────────────────────────────────────
 
   rules:
     sources:
