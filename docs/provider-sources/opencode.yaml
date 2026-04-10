@@ -39,6 +39,17 @@ config_schema:
   # Also available at: https://charm.land/crush.json
 
 content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # OpenCode supports: rules (via contextPaths config), agents (4 built-in, not
+  #   user-definable), commands, mcp
+  # Not supported: hooks (no hook system), skills (no native format; syllago can
+  #   install via cross-provider convention)
+  # Syllago: rules ✓, skills ✓ (cross-provider convention), agents ✓, commands ✓,
+  #   mcp ✓ | hooks ✗
+  # Note: OpenCode has no native skill format — syllago uses cross-provider SKILL.md
+  #   convention. 'agents' are 4 built-in types (coder/summarizer/task/title), not
+  #   user-definable. Crush fork adds slightly different MCP config format.
+  # ─────────────────────────────────────────────────────────────────────
 
   rules:
     sources:
@@ -76,7 +87,8 @@ content_types:
 
   skills:
     supported: false
-    # No native skill system. azat-io/ai-config adapter maps to skill/ directory but this is external.
+    # No native skill format in OpenCode or Crush. Syllago installs cross-provider
+    # SKILL.md files here, but there is no provider documentation to monitor.
 
   agents:
     sources:

@@ -1,15 +1,16 @@
 # Cline — Provider Source Manifest
-# Good sources: public VS Code extension repo with Zod schemas, hook system, and MDX docs.
+# Docs served via Mintlify; raw markdown via docs.cline.bot/page.md pattern.
+# llms.txt: https://docs.cline.bot/llms.txt
 
 schema_version: "1"
-last_verified: "2026-03-27"
+last_verified: "2026-04-09"
 provider_version: "v3.76.0"
 
 slug: cline
 display_name: Cline
 vendor: Cline (saoudrizwan)
 status: active
-fetch_tier: gh-api
+fetch_tier: llms-txt
 repo: cline/cline
 repo_branch: main
 
@@ -22,10 +23,16 @@ changelog:
     label: Changelog
 
 content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Cline supports: rules, hooks, mcp, skills (via cross-provider SKILL.md convention), commands (CLI-only slash commands, not user-definable files)
+  # Not supported: agents (no agent file format)
+  # Syllago: rules ✓, hooks ✓, mcp ✓ | skills ✗, commands ✗ (not yet implemented in syllago for cline)
+  #   Syllago implements rules/hooks/mcp for cline. Skills and commands are tracked in manifest for monitoring purposes — syllago install not yet supported.
+  # ─────────────────────────────────────────────────────────────────────
 
   rules:
     sources:
-      - url: https://raw.githubusercontent.com/cline/cline/main/docs/customization/cline-rules.mdx
+      - url: https://docs.cline.bot/customization/cline-rules.md
         type: docs
         format: markdown
         extracts: [file_format, file_locations, hierarchy, features]
@@ -35,25 +42,10 @@ content_types:
 
   hooks:
     sources:
-      - url: https://raw.githubusercontent.com/cline/cline/main/src/core/hooks/hook-factory.ts
-        type: source-code
-        format: typescript
-        extracts: [event_names, hook_config_fields]
-
-      - url: https://raw.githubusercontent.com/cline/cline/main/src/core/hooks/hook-executor.ts
-        type: source-code
-        format: typescript
-        extracts: [hook_config_fields, event_io_schemas]
-
-      - url: https://raw.githubusercontent.com/cline/cline/main/src/core/hooks/templates.ts
-        type: source-code
-        format: typescript
-        extracts: [event_io_schemas, config_examples]
-
-      - url: https://raw.githubusercontent.com/cline/cline/main/docs/customization/hooks.mdx
+      - url: https://docs.cline.bot/customization/hooks.md
         type: docs
         format: markdown
-        extracts: [event_table, config_examples, features]
+        extracts: [event_names, hook_config_fields, event_io_schemas, config_examples, features]
     # 9 events: TaskStart, TaskResume, TaskCancel, TaskComplete, PreToolUse,
     #           PostToolUse, UserPromptSubmit, Notification, PreCompact
     # Hook I/O: JSON via stdin → JSON to stdout ({cancel, contextModification?, errorMessage?}).
@@ -62,31 +54,26 @@ content_types:
 
   mcp:
     sources:
-      - url: https://raw.githubusercontent.com/cline/cline/main/src/services/mcp/schemas.ts
-        type: source-code
-        format: typescript
-        extracts: [server_config_fields, transport_types]
-
-      - url: https://raw.githubusercontent.com/cline/cline/main/src/services/mcp/McpHub.ts
-        type: source-code
-        format: typescript
-        extracts: [server_config_fields, transport_types]
-
-      - url: https://raw.githubusercontent.com/cline/cline/main/src/shared/mcp.ts
-        type: source-code
-        format: typescript
-        extracts: [server_config_fields]
-
-      - url: https://raw.githubusercontent.com/cline/cline/main/docs/mcp/adding-and-configuring-servers.mdx
+      - url: https://docs.cline.bot/mcp/adding-and-configuring-servers.md
         type: docs
         format: markdown
-        extracts: [config_examples, setup_examples]
+        extracts: [server_config_fields, config_examples]
+
+      - url: https://docs.cline.bot/mcp/mcp-transport-mechanisms.md
+        type: docs
+        format: markdown
+        extracts: [transport_types]
     # Settings file: cline_mcp_settings.json (VS Code globalStoragePath).
     # Transports: stdio, SSE, streamableHttp (camelCase).
     # Fields: autoApprove[], disabled, timeout (default 60s).
 
   skills:
     sources:
+      - url: https://docs.cline.bot/customization/skills.md
+        type: docs
+        format: markdown
+        extracts: [file_format, frontmatter_fields, file_locations, features]
+
       - url: https://raw.githubusercontent.com/cline/cline/main/.agents/skills/create-pull-request/SKILL.md
         type: example
         format: markdown
@@ -98,8 +85,8 @@ content_types:
 
   commands:
     sources:
-      - url: https://raw.githubusercontent.com/cline/cline/main/cli/src/utils/slash-commands.ts
-        type: source-code
-        format: typescript
-        extracts: [config_fields]
+      - url: https://docs.cline.bot/core-workflows/using-commands.md
+        type: docs
+        format: markdown
+        extracts: [config_fields, features]
     # CLI slash commands only — no user-definable command files.

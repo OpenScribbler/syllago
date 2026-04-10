@@ -1,9 +1,10 @@
 # Kiro — Provider Source Manifest
 # Scrape-only: closed source, no public repo, no llms.txt. All data from hosted docs.
 # Fastest-changing provider — docs structure and features are unstable. Treat all data as best-effort.
+# Docs are Next.js SPA (JS-rendered). fetch_method: chromedp required on all HTML sources.
 
 schema_version: "1"
-last_verified: "2026-03-27"
+last_verified: "2026-04-09"
 provider_version: "" # No public version tracking
 
 slug: kiro
@@ -19,12 +20,21 @@ change_detection:
   # No releases API, no public repo. Content hash the docs pages.
 
 content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Kiro supports: rules (called 'steering'), skills (called 'powers'), agents,
+  #   mcp, hooks
+  # Not supported: commands (no custom command system)
+  # Syllago: rules ✓, skills ✓, agents ✓, mcp ✓, hooks ✓ | commands ✗ (not in Go code)
+  # Note: Kiro uses its own terminology: 'steering' = rules, 'powers' = skills.
+  #   commands stub is correct — Kiro has no custom command system.
+  # ─────────────────────────────────────────────────────────────────────
 
   rules:
     sources:
       - url: https://kiro.dev/docs/steering/
         type: docs
         format: html
+        fetch_method: chromedp
         extracts: [file_format, file_locations]
     # Format: .kiro/steering/ directory.
 
@@ -33,6 +43,7 @@ content_types:
       - url: https://kiro.dev/docs/hooks/
         type: docs
         format: html
+        fetch_method: chromedp
         extracts: [event_names, hook_config_fields]
     # Events: Pre Tool Use, Post Tool Use, Prompt Submit, Agent Stop, File Save,
     #   File Create, File Delete, Manual Trigger, Pre/Post Task Execution.
@@ -42,6 +53,7 @@ content_types:
       - url: https://kiro.dev/docs/mcp/configuration/
         type: docs
         format: html
+        fetch_method: chromedp
         extracts: [server_config_fields, config_examples]
 
   skills:
@@ -49,6 +61,7 @@ content_types:
       - url: https://kiro.dev/docs/powers/create/
         type: docs
         format: html
+        fetch_method: chromedp
         extracts: [file_format, features]
     # Kiro calls skills "powers".
 
@@ -57,6 +70,7 @@ content_types:
       - url: https://kiro.dev/docs/cli/custom-agents/configuration-reference/
         type: docs
         format: html
+        fetch_method: chromedp
         extracts: [config_fields, file_format]
 
   commands:
