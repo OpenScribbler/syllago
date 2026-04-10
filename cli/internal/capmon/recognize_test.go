@@ -7,6 +7,9 @@ import (
 )
 
 func TestRecognizeContentTypeDotPaths_SkillGoStruct(t *testing.T) {
+	// NOTE: Until Phase 6 wires the crush recognizer, this call returns an empty map.
+	// The GoStruct recognizer is no longer called from dispatch — crush's init() registration
+	// will call it internally in recognize_crush.go.
 	fields := map[string]capmon.FieldValue{
 		"Skill.Name": {
 			Value:     "name",
@@ -31,43 +34,17 @@ func TestRecognizeContentTypeDotPaths_SkillGoStruct(t *testing.T) {
 		},
 	}
 
-	result := capmon.RecognizeContentTypeDotPaths(fields)
+	result := capmon.RecognizeContentTypeDotPaths("crush", fields)
 
-	// skills.supported should be set
-	if result["skills.supported"] != "true" {
-		t.Errorf("skills.supported: got %q, want %q", result["skills.supported"], "true")
-	}
-
-	// Each Skill field should generate two dot-paths
-	cases := []struct{ key, wantVal string }{
-		{"skills.capabilities.frontmatter_name.supported", "true"},
-		{"skills.capabilities.frontmatter_name.mechanism", "yaml key: name"},
-		{"skills.capabilities.frontmatter_description.supported", "true"},
-		{"skills.capabilities.frontmatter_description.mechanism", "yaml key: description"},
-		{"skills.capabilities.frontmatter_license.supported", "true"},
-		{"skills.capabilities.frontmatter_license.mechanism", "yaml key: license"},
-	}
-	for _, tc := range cases {
-		got, ok := result[tc.key]
-		if !ok {
-			t.Errorf("missing key %q in result", tc.key)
-			continue
-		}
-		if got != tc.wantVal {
-			t.Errorf("key %q: got %q, want %q", tc.key, got, tc.wantVal)
-		}
-	}
-
-	// Non-Skill keys should not appear as skills capabilities
-	for k := range result {
-		if k == "skills.capabilities.frontmatter_64.mechanism" {
-			t.Error("MaxNameLength value '64' should not generate a frontmatter capability")
-		}
+	// Until Phase 6 wires the crush recognizer, the result is empty.
+	// The GoStruct recognizer is no longer called from dispatch.
+	if len(result) != 0 {
+		t.Errorf("expected empty result (crush recognizer not yet registered), got %v", result)
 	}
 }
 
 func TestRecognizeContentTypeDotPaths_EmptyFields(t *testing.T) {
-	result := capmon.RecognizeContentTypeDotPaths(map[string]capmon.FieldValue{})
+	result := capmon.RecognizeContentTypeDotPaths("crush", map[string]capmon.FieldValue{})
 	if len(result) != 0 {
 		t.Errorf("empty fields should produce empty result, got %v", result)
 	}
@@ -79,7 +56,7 @@ func TestRecognizeContentTypeDotPaths_NoSkillStruct(t *testing.T) {
 		"MaxNameLength": {Value: "64"},
 		"SomeConst":     {Value: "value"},
 	}
-	result := capmon.RecognizeContentTypeDotPaths(fields)
+	result := capmon.RecognizeContentTypeDotPaths("crush", fields)
 	for k := range result {
 		if k == "skills.supported" {
 			t.Error("should not produce skills.supported without Skill struct fields")
