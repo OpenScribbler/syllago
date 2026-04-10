@@ -16,6 +16,7 @@ type SeedOptions struct {
 	Provider                string
 	Extracted               map[string]string // field path → value from extraction (Phase 9 wires full mapping)
 	ForceOverwriteExclusive bool
+	SeederSpecsDir          string // if non-empty, gate seeding on an approved seeder spec in this dir
 }
 
 // SeedProviderCapabilities creates or updates docs/provider-capabilities/<provider>.yaml
@@ -23,6 +24,31 @@ type SeedOptions struct {
 // are merged in. provider_exclusive entries are preserved unconditionally unless
 // ForceOverwriteExclusive is set.
 func SeedProviderCapabilities(opts SeedOptions) error {
+	// Seeder spec gate: if SeederSpecsDir is set, require an approved spec before seeding.
+	if opts.SeederSpecsDir != "" {
+		specPath := SeederSpecPath(opts.SeederSpecsDir, opts.Provider)
+		spec, err := LoadSeederSpec(specPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("no seeder spec found for %q at %s: create and approve a seeder spec before seeding", opts.Provider, specPath)
+			}
+			return fmt.Errorf("load seeder spec for %q: %w", opts.Provider, err)
+		}
+		if err := ValidateSeederSpec(spec); err != nil {
+			return err
+		}
+		// human_action: skip means this provider is intentionally not seeded.
+		if spec.HumanAction == "skip" {
+			return nil
+		}
+		// Warn about inferred-confidence mappings.
+		for _, m := range spec.ProposedMappings {
+			if m.Confidence == "inferred" {
+				fmt.Fprintf(os.Stderr, "warning: provider %q mapping %q has confidence: inferred\n", opts.Provider, m.CanonicalKey)
+			}
+		}
+	}
+
 	path := filepath.Join(opts.CapsDir, opts.Provider+".yaml")
 
 	var caps capyaml.ProviderCapabilities
