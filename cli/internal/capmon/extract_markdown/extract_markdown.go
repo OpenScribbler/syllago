@@ -40,13 +40,13 @@ func (e *markdownExtractor) Extract(ctx context.Context, raw []byte, cfg capmon.
 	tableRowIdx := 0
 	itemIdx := 0
 
-	ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+	if err := ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
 		switch node := n.(type) {
 		case *ast.Heading:
-			headingText := strings.TrimSpace(string(node.Text(raw)))
+			headingText := extractText(node, raw)
 			landmarks = append(landmarks, headingText)
 			if scopedMode {
 				if node.Level == targetLevel && headingText == targetText {
@@ -64,7 +64,7 @@ func (e *markdownExtractor) Extract(ctx context.Context, raw []byte, cfg capmon.
 			colIdx := 0
 			for child := node.FirstChild(); child != nil; child = child.NextSibling() {
 				if child.Kind() == extast.KindTableCell {
-					cellText := strings.TrimSpace(string(child.Text(raw)))
+					cellText := extractText(child, raw)
 					sanitized := capmon.SanitizeExtractedString(cellText)
 					key := fmt.Sprintf("row_%d_col_%d", tableRowIdx, colIdx)
 					fields[key] = capmon.FieldValue{
@@ -79,7 +79,7 @@ func (e *markdownExtractor) Extract(ctx context.Context, raw []byte, cfg capmon.
 			if !inTargetSection {
 				return ast.WalkContinue, nil
 			}
-			itemText := strings.TrimSpace(string(node.Text(raw)))
+			itemText := extractText(node, raw)
 			if itemText != "" {
 				sanitized := capmon.SanitizeExtractedString(itemText)
 				key := fmt.Sprintf("item_%d", itemIdx)
@@ -91,7 +91,9 @@ func (e *markdownExtractor) Extract(ctx context.Context, raw []byte, cfg capmon.
 			}
 		}
 		return ast.WalkContinue, nil
-	})
+	}); err != nil {
+		return nil, fmt.Errorf("walk doc: %w", err)
+	}
 
 	partial := cfg.MinResults > 0 && len(fields) < cfg.MinResults
 	return &capmon.ExtractedSource{
@@ -102,6 +104,26 @@ func (e *markdownExtractor) Extract(ctx context.Context, raw []byte, cfg capmon.
 		Fields:           fields,
 		Landmarks:        landmarks,
 	}, nil
+}
+
+// extractText collects all ast.Text leaf values under n by walking the child tree.
+// This replaces the deprecated ast.Node.Text(src) method.
+func extractText(n ast.Node, raw []byte) string {
+	var sb strings.Builder
+	var collect func(ast.Node)
+	collect = func(node ast.Node) {
+		if t, ok := node.(*ast.Text); ok {
+			sb.Write(t.Segment.Value(raw))
+			return
+		}
+		for c := node.FirstChild(); c != nil; c = c.NextSibling() {
+			collect(c)
+		}
+	}
+	for c := n.FirstChild(); c != nil; c = c.NextSibling() {
+		collect(c)
+	}
+	return strings.TrimSpace(sb.String())
 }
 
 // parseHeadingPath parses "## Events" → (2, "Events"), "# Title" → (1, "Title").

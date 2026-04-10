@@ -82,12 +82,12 @@ func RecordConsecutiveFailure(_ context.Context, cacheRoot, provider string) err
 	path := failureCountFile(cacheRoot, provider)
 	var count int
 	if data, err := os.ReadFile(path); err == nil {
-		json.Unmarshal(data, &count) //nolint:errcheck
+		json.Unmarshal(data, &count) //nolint:errcheck // count stays 0 on unmarshal error; still valid
 	}
 	count++
-	os.MkdirAll(filepath.Dir(path), 0755) //nolint:errcheck
+	os.MkdirAll(filepath.Dir(path), 0755) //nolint:errcheck // failure handled by subsequent WriteFile error
 	data, _ := json.Marshal(count)
-	os.WriteFile(path, data, 0644) //nolint:errcheck
+	os.WriteFile(path, data, 0644) //nolint:errcheck // failure counter is best-effort; issue creation still proceeds
 
 	if count >= 3 {
 		slug, _ := SanitizeSlug(provider)

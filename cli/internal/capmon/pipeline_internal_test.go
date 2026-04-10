@@ -166,7 +166,7 @@ func TestToFieldValues(t *testing.T) {
 		t.Error("ValueHash should not be empty")
 	}
 	// Verify hash is deterministic
-	fv2, _ := out["slug"]
+	fv2 := out["slug"]
 	if fv.ValueHash != fv2.ValueHash {
 		t.Error("ValueHash should be deterministic")
 	}
