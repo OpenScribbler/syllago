@@ -147,7 +147,13 @@ func runStage1Fetch(ctx context.Context, opts PipelineOptions, manifest *RunMani
 					continue
 				}
 				sourceID := fmt.Sprintf("%s.%d", ctName, i)
-				entry, fetchErr := FetchSource(ctx, opts.CacheRoot, m.Slug, sourceID, src.URL)
+				var entry *CacheEntry
+				var fetchErr error
+				if src.FetchMethod == "chromedp" || (src.FetchMethod == "" && m.FetchTier == "html-scrape") {
+					entry, fetchErr = FetchChromedp(ctx, opts.CacheRoot, m.Slug, sourceID, src.URL)
+				} else {
+					entry, fetchErr = FetchSource(ctx, opts.CacheRoot, m.Slug, sourceID, src.URL)
+				}
 				if fetchErr != nil {
 					status.Errors = append(status.Errors, fmt.Sprintf("%s: %v", sourceID, fetchErr))
 					continue

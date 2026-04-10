@@ -40,7 +40,7 @@ content_types:
   # Crush uses AGENTS.md only. No provider-specific rules format.
   rules:
     sources:
-      - url: https://github.com/charmbracelet/crush/blob/main/AGENTS.md
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/AGENTS.md
         type: example # schema | source-code | docs | example
         format: markdown
         extracts: [file_format, file_locations]
@@ -64,7 +64,7 @@ content_types:
         json_path: "$.properties.mcp"
         extracts: [server_config_fields, transport_types]
 
-      - url: https://github.com/charmbracelet/crush/blob/main/README.md
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/README.md
         type: docs
         format: markdown
         extracts: [config_examples, setup_examples]
@@ -75,7 +75,7 @@ content_types:
   # Supports Agent Skills standard (SKILL.md folders).
   skills:
     sources:
-      - url: https://github.com/charmbracelet/crush/blob/main/README.md
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/README.md
         type: docs
         format: markdown
         extracts: [file_locations, discovery_rules]
