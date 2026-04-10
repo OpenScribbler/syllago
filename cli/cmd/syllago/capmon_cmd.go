@@ -26,6 +26,10 @@ import (
 // to a temp directory instead of the repo's docs/provider-capabilities/.
 var capmonCapabilitiesDirOverride string
 
+// capmonSpecsDirOverride allows tests to redirect the validate-spec command
+// to a temp directory instead of the default .develop/seeder-specs/.
+var capmonSpecsDirOverride string
+
 var capmonCmd = &cobra.Command{
 	Use:   "capmon",
 	Short: "Capability monitor pipeline",
@@ -235,6 +239,38 @@ var capmonTestFixturesCmd = &cobra.Command{
 	},
 }
 
+var capmonValidateSpecCmd = &cobra.Command{
+	Use:   "validate-spec",
+	Short: "Validate a seeder spec YAML file for a provider",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		provider, _ := cmd.Flags().GetString("provider")
+		contentType, _ := cmd.Flags().GetString("content-type")
+		specsDir, _ := cmd.Flags().GetString("specs-dir")
+
+		if provider == "" {
+			return fmt.Errorf("--provider is required: specify a provider slug to validate")
+		}
+
+		if capmonSpecsDirOverride != "" {
+			specsDir = capmonSpecsDirOverride
+		}
+
+		telemetry.Enrich("provider", provider)
+		telemetry.Enrich("content_type", contentType)
+
+		path := capmon.SeederSpecPath(specsDir, provider)
+		spec, err := capmon.LoadSeederSpec(path)
+		if err != nil {
+			return fmt.Errorf("load seeder spec: %w", err)
+		}
+		if err := capmon.ValidateSeederSpec(spec); err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stdout, "seeder spec for %q is valid (human_action: %s)\n", provider, spec.HumanAction)
+		return nil
+	},
+}
+
 func reportFixtureAges(fixturesDir string) error {
 	fmt.Printf("Fixture directory: %s\n", fixturesDir)
 	fmt.Printf("Run 'git log --format=%%cr -- <fixture-file>' for per-file ages\n")
@@ -264,6 +300,10 @@ func init() {
 	capmonTestFixturesCmd.Flags().Bool("update", false, "Re-fetch live source and update fixture files")
 	capmonTestFixturesCmd.Flags().String("provider", "", "Provider slug for --update (required with --update)")
 
+	capmonValidateSpecCmd.Flags().String("provider", "", "Provider slug whose seeder spec to validate")
+	capmonValidateSpecCmd.Flags().String("content-type", "skills", "Content type for the seeder spec (default: skills)")
+	capmonValidateSpecCmd.Flags().String("specs-dir", ".develop/seeder-specs", "Directory containing seeder spec YAML files")
+
 	capmonCmd.AddCommand(capmonVerifyCmd)
 	capmonCmd.AddCommand(capmonFetchCmd)
 	capmonCmd.AddCommand(capmonExtractCmd)
@@ -272,4 +312,5 @@ func init() {
 	capmonCmd.AddCommand(capmonGenerateCmd)
 	capmonCmd.AddCommand(capmonSeedCmd)
 	capmonCmd.AddCommand(capmonTestFixturesCmd)
+	capmonCmd.AddCommand(capmonValidateSpecCmd)
 }
