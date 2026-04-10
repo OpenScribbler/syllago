@@ -9,6 +9,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -873,6 +874,11 @@ func TestRunLoadoutApply_NoArgs_NoCatalog(t *testing.T) {
 // Can't test runDoctor directly (os.Exit), but can test all individual checks.
 
 func TestDoctorCheckRegistries_WithConfig(t *testing.T) {
+	// Isolate from real global config to avoid counting user's own registries.
+	origGlobal := config.GlobalDirOverride
+	config.GlobalDirOverride = t.TempDir()
+	t.Cleanup(func() { config.GlobalDirOverride = origGlobal })
+
 	// Create a temp project with config containing registries
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, ".syllago"), 0755)

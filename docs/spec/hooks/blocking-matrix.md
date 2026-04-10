@@ -51,4 +51,7 @@ This timing inversion is more severe than a capability gap: a blocking safety ho
 The following table is auto-generated from `docs/provider-capabilities/*.yaml`. Do not edit by hand — run `syllago capmon generate` to refresh.
 
 <!-- GENERATED FROM provider-capabilities/*.yaml -->
+| Canonical Event | amp | claude-code | cline | codex | copilot-cli | crush | cursor | factory-droid | gemini-cli | kiro | opencode | pi | roo-code | windsurf | zed |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+
 <!-- END GENERATED -->

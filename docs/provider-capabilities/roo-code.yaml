@@ -1,0 +1,23 @@
+schema_version: "1"
+slug: roo-code
+display_name: ""
+last_verified: ""
+content_types:
+  skills:
+    supported: true
+    capabilities:
+      frontmatter_compatibility:
+        supported: true
+        mechanism: 'yaml key: compatibility'
+      frontmatter_description:
+        supported: true
+        mechanism: 'yaml key: description'
+      frontmatter_license:
+        supported: true
+        mechanism: 'yaml key: license'
+      frontmatter_metadata:
+        supported: true
+        mechanism: 'yaml key: metadata'
+      frontmatter_name:
+        supported: true
+        mechanism: 'yaml key: name'

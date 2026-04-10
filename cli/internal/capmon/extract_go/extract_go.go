@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"reflect"
 	"strings"
 	"time"
 
@@ -46,16 +47,24 @@ func (e *goExtractor) Extract(ctx context.Context, raw []byte, cfg capmon.Select
 						if !name.IsExported() {
 							continue
 						}
-						// For string literal consts, extract the value
+						// For literal consts, extract the actual value
 						if i < len(vs.Values) {
-							if lit, ok := vs.Values[i].(*ast.BasicLit); ok && lit.Kind == token.STRING {
-								val := strings.Trim(lit.Value, `"`)
-								sanitized := capmon.SanitizeExtractedString(val)
-								fields[name.Name] = capmon.FieldValue{
-									Value:     sanitized,
-									ValueHash: capmon.SHA256Hex([]byte(sanitized)),
+							if lit, ok := vs.Values[i].(*ast.BasicLit); ok {
+								var val string
+								switch lit.Kind {
+								case token.STRING:
+									val = strings.Trim(lit.Value, `"`)
+								case token.INT, token.FLOAT:
+									val = lit.Value
 								}
-								continue
+								if val != "" {
+									sanitized := capmon.SanitizeExtractedString(val)
+									fields[name.Name] = capmon.FieldValue{
+										Value:     sanitized,
+										ValueHash: capmon.SHA256Hex([]byte(sanitized)),
+									}
+									continue
+								}
 							}
 						}
 						// For iota/other consts, use the identifier name as value
@@ -73,6 +82,39 @@ func (e *goExtractor) Extract(ctx context.Context, raw []byte, cfg capmon.Select
 						continue
 					}
 					landmarks = append(landmarks, ts.Name.Name)
+
+					// Extract struct fields with yaml tags
+					st, ok := ts.Type.(*ast.StructType)
+					if !ok || st.Fields == nil {
+						continue
+					}
+					for _, field := range st.Fields.List {
+						if len(field.Names) == 0 {
+							continue // embedded field
+						}
+						fieldIdent := field.Names[0]
+						if !fieldIdent.IsExported() {
+							continue
+						}
+						yamlKey := strings.ToLower(fieldIdent.Name)
+						if field.Tag != nil {
+							tagStr := strings.Trim(field.Tag.Value, "`")
+							tag := reflect.StructTag(tagStr)
+							yv := tag.Get("yaml")
+							if yv == "-" {
+								continue
+							}
+							if yv != "" {
+								yamlKey = strings.SplitN(yv, ",", 2)[0]
+							}
+						}
+						key := ts.Name.Name + "." + fieldIdent.Name
+						sanitized := capmon.SanitizeExtractedString(yamlKey)
+						fields[key] = capmon.FieldValue{
+							Value:     sanitized,
+							ValueHash: capmon.SHA256Hex([]byte(sanitized)),
+						}
+					}
 				}
 			}
 		}

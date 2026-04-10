@@ -29,11 +29,14 @@ func (e *markdownExtractor) Extract(ctx context.Context, raw []byte, cfg capmon.
 	reader := text.NewReader(raw)
 	doc := md.Parser().Parse(reader)
 
+	// scopedMode: when a Primary selector is given, only extract within that heading section.
+	// When empty, extract all tables and list items from the whole document.
+	scopedMode := cfg.Primary != ""
 	targetLevel, targetText := parseHeadingPath(cfg.Primary)
 
 	fields := make(map[string]capmon.FieldValue)
 	var landmarks []string
-	inTargetSection := false
+	inTargetSection := !scopedMode // true from start when no selector
 	tableRowIdx := 0
 	itemIdx := 0
 
@@ -45,12 +48,14 @@ func (e *markdownExtractor) Extract(ctx context.Context, raw []byte, cfg capmon.
 		case *ast.Heading:
 			headingText := strings.TrimSpace(string(node.Text(raw)))
 			landmarks = append(landmarks, headingText)
-			if node.Level == targetLevel && headingText == targetText {
-				inTargetSection = true
-				tableRowIdx = 0
-				itemIdx = 0
-			} else if inTargetSection && node.Level <= targetLevel {
-				inTargetSection = false
+			if scopedMode {
+				if node.Level == targetLevel && headingText == targetText {
+					inTargetSection = true
+					tableRowIdx = 0
+					itemIdx = 0
+				} else if inTargetSection && node.Level <= targetLevel {
+					inTargetSection = false
+				}
 			}
 		case *extast.TableRow, *extast.TableHeader:
 			if !inTargetSection {
