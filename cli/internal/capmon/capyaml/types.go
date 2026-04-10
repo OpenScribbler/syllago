@@ -42,9 +42,10 @@ type EventEntry struct {
 
 // CapabilityEntry is one capability (e.g., structured_output) in a capability YAML.
 type CapabilityEntry struct {
-	Supported bool     `yaml:"supported"`
-	Mechanism string   `yaml:"mechanism,omitempty"`
-	Refs      []string `yaml:"refs,omitempty"`
+	Supported  bool     `yaml:"supported"`
+	Mechanism  string   `yaml:"mechanism,omitempty"`
+	Confidence string   `yaml:"confidence,omitempty"`
+	Refs       []string `yaml:"refs,omitempty"`
 }
 
 // ToolEntry maps a canonical tool name to its provider-native name.

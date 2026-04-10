@@ -114,6 +114,54 @@ func TestValidateAgainstSchema_FileNotFound(t *testing.T) {
 	}
 }
 
+func TestCapabilityEntry_ConfidenceField(t *testing.T) {
+	yamlContent := `schema_version: "1"
+slug: test-provider
+content_types:
+  skills:
+    supported: true
+    capabilities:
+      display_name:
+        supported: true
+        mechanism: "yaml frontmatter key: name"
+        confidence: confirmed
+      description:
+        supported: true
+        mechanism: "yaml frontmatter key: description"
+        confidence: inferred
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "test.yaml")
+	if err := os.WriteFile(path, []byte(yamlContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	caps, err := capyaml.LoadCapabilityYAML(path)
+	if err != nil {
+		t.Fatalf("LoadCapabilityYAML: %v", err)
+	}
+	skills := caps.ContentTypes["skills"]
+	dn := skills.Capabilities["display_name"]
+	if dn.Confidence != "confirmed" {
+		t.Errorf("display_name.confidence: got %q, want %q", dn.Confidence, "confirmed")
+	}
+	desc := skills.Capabilities["description"]
+	if desc.Confidence != "inferred" {
+		t.Errorf("description.confidence: got %q, want %q", desc.Confidence, "inferred")
+	}
+	// Round-trip: write and re-read
+	var buf bytes.Buffer
+	if err := capyaml.WriteCapabilityYAML(&buf, caps); err != nil {
+		t.Fatalf("WriteCapabilityYAML: %v", err)
+	}
+	written := buf.String()
+	if !strings.Contains(written, "confidence: confirmed") {
+		t.Error("written YAML missing 'confidence: confirmed'")
+	}
+	if !strings.Contains(written, "confidence: inferred") {
+		t.Error("written YAML missing 'confidence: inferred'")
+	}
+}
+
 func TestProviderCapabilities_References(t *testing.T) {
 	p := filepath.Join("testdata", "claude-code-minimal.yaml")
 	caps, err := capyaml.LoadCapabilityYAML(p)

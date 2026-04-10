@@ -70,6 +70,8 @@ func SeedProviderCapabilities(opts SeedOptions) error {
 				ce.Supported = value == "true"
 			case "mechanism":
 				ce.Mechanism = value
+			case "confidence":
+				ce.Confidence = value
 			}
 			ctEntry.Capabilities[capKey] = ce
 
