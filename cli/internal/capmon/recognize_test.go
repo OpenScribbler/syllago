@@ -7,9 +7,7 @@ import (
 )
 
 func TestRecognizeContentTypeDotPaths_SkillGoStruct(t *testing.T) {
-	// NOTE: Until Phase 6 wires the crush recognizer, this call returns an empty map.
-	// The GoStruct recognizer is no longer called from dispatch — crush's init() registration
-	// will call it internally in recognize_crush.go.
+	// Phase 6: crush recognizer is now wired and calls recognizeSkillsGoStruct internally.
 	fields := map[string]capmon.FieldValue{
 		"Skill.Name": {
 			Value:     "name",
@@ -36,10 +34,65 @@ func TestRecognizeContentTypeDotPaths_SkillGoStruct(t *testing.T) {
 
 	result := capmon.RecognizeContentTypeDotPaths("crush", fields)
 
-	// Until Phase 6 wires the crush recognizer, the result is empty.
-	// The GoStruct recognizer is no longer called from dispatch.
-	if len(result) != 0 {
-		t.Errorf("expected empty result (crush recognizer not yet registered), got %v", result)
+	// Phase 6: crush recognizer now calls recognizeSkillsGoStruct, so Skill.* fields produce paths.
+	if result["skills.capabilities.display_name.supported"] != "true" {
+		t.Errorf("expected skills.capabilities.display_name.supported=true, got %q", result["skills.capabilities.display_name.supported"])
+	}
+	if result["skills.capabilities.description.supported"] != "true" {
+		t.Errorf("expected skills.capabilities.description.supported=true, got %q", result["skills.capabilities.description.supported"])
+	}
+	if result["skills.supported"] != "true" {
+		t.Errorf("expected skills.supported=true, got %q", result["skills.supported"])
+	}
+}
+
+func TestRecognizeCrushSkills(t *testing.T) {
+	fields := map[string]capmon.FieldValue{
+		"Skill.Name":          {Value: "name"},
+		"Skill.Description":   {Value: "description"},
+		"Skill.License":       {Value: "license"},
+		"Skill.Compatibility": {Value: "compatibility"},
+		"Skill.MetadataMap":   {Value: "metadata"},
+	}
+
+	result := capmon.RecognizeContentTypeDotPaths("crush", fields)
+
+	checks := map[string]string{
+		"skills.capabilities.display_name.supported":  "true",
+		"skills.capabilities.display_name.confidence": "confirmed",
+		"skills.capabilities.description.supported":   "true",
+		"skills.capabilities.license.confidence":      "confirmed",
+		"skills.supported":                            "true",
+	}
+	for key, want := range checks {
+		if got := result[key]; got != want {
+			t.Errorf("crush: result[%q] = %q, want %q", key, got, want)
+		}
+	}
+}
+
+func TestRecognizeRooCodeSkills(t *testing.T) {
+	fields := map[string]capmon.FieldValue{
+		"Skill.Name":          {Value: "name"},
+		"Skill.Description":   {Value: "description"},
+		"Skill.License":       {Value: "license"},
+		"Skill.Compatibility": {Value: "compatibility"},
+		"Skill.MetadataMap":   {Value: "metadata"},
+	}
+
+	result := capmon.RecognizeContentTypeDotPaths("roo-code", fields)
+
+	checks := map[string]string{
+		"skills.capabilities.display_name.supported":  "true",
+		"skills.capabilities.display_name.confidence": "confirmed",
+		"skills.capabilities.description.supported":   "true",
+		"skills.capabilities.license.confidence":      "confirmed",
+		"skills.supported":                            "true",
+	}
+	for key, want := range checks {
+		if got := result[key]; got != want {
+			t.Errorf("roo-code: result[%q] = %q, want %q", key, got, want)
+		}
 	}
 }
 
