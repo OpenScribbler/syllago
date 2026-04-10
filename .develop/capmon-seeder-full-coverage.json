@@ -1,0 +1,30 @@
+{
+  "feature": "capmon-seeder-full-coverage",
+  "started": "2026-04-10T00:00:00Z",
+  "updated": "2026-04-10T09:30:00Z",
+  "currentStage": "plan",
+  "completed": ["brainstorm", "panel"],
+  "artifacts": {
+    "design": "docs/plans/2026-04-10-capmon-seeder-full-coverage-design.md",
+    "panelBus": ".develop/seeder-panel-bus.jsonl",
+    "plan": null
+  },
+  "panelResult": {
+    "rounds": 3,
+    "consensus": "5/5 agree_with_reservations",
+    "proposalsAdopted": [
+      "inspect-as-bead",
+      "key-renaming",
+      "remove-dot-paths",
+      "group-mappings-source-field",
+      "confidence-field",
+      "init-registration",
+      "human-action-validation",
+      "key-table-deferred"
+    ]
+  },
+  "validation": { "attempts": 0, "lastGaps": [], "passed": false, "skipped": false },
+  "beads": { "created": false, "prefix": null, "epicIds": [], "taskCount": 0 },
+  "nextAction": "dispatch plan-writing subagent",
+  "execution": { "mode": null, "tasksDispatched": [], "tasksCompleted": [], "currentTaskId": null, "awaitingUserAck": false }
+}
