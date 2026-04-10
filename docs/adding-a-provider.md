@@ -179,3 +179,117 @@ cd cli && go test ./internal/tui/ -update-golden
 - [ ] Verify CLI: `syllago providers`, `syllago inspect`
 - [ ] Update TUI golden files if visual changes
 - [ ] Update documentation
+
+---
+
+# Capability Monitoring (capmon) Onboarding
+
+This section covers the capmon-specific workflow for registering a provider's capabilities in the capability monitoring system. Run this after completing the Go implementation steps above.
+
+## Prerequisites
+
+- Provider slug (kebab-case, matches filesystem convention)
+- Source documentation URLs
+
+## Steps
+
+### 1. Create the provider source manifest
+
+Write `docs/provider-sources/<slug>.yaml` manually. Use `docs/provider-sources/claude-code.yaml` as a template.
+
+### 2. Create or verify the format reference doc
+
+Write `docs/provider-formats/<slug>.md` — the human-authored ground truth for this provider's skills format.
+If you don't have one yet, the inspection bead (Step 4) will generate a draft.
+
+### 3. Fetch and extract
+
+```bash
+syllago capmon run --stage=fetch-extract --provider=<slug>
+```
+
+### 4. Run the inspection bead
+
+Follow the workflow in `docs/workflows/inspect-provider-skills.md` with `--provider=<slug>`.
+This produces `.develop/seeder-specs/<slug>-skills.yaml`.
+
+### 5. Review and approve the seeder spec
+
+Open `.develop/seeder-specs/<slug>-skills.yaml`.
+Review `proposed_mappings`. Set `human_action: approve` and `reviewed_at: <ISO timestamp>`.
+Optionally run: `syllago capmon validate-spec --provider=<slug>`
+
+### 6. Implement the recognizer
+
+Implement `recognizeXxxSkills()` in `cli/internal/capmon/recognize_<slug_underscored>.go`
+using the approved seeder spec as the source of truth.
+
+### 7. Seed the provider
+
+```bash
+syllago capmon seed --provider=<slug>
+```
+
+### 8. Verify output
+
+Check `docs/provider-capabilities/<slug>.yaml` for a populated `content_types.skills` section
+with `confidence: confirmed` entries.
+
+## capmon Checklist
+
+- [ ] Create `docs/provider-sources/<slug>.yaml`
+- [ ] Create or verify `docs/provider-formats/<slug>.md`
+- [ ] `syllago capmon run --stage=fetch-extract --provider=<slug>`
+- [ ] Run inspection bead workflow (`docs/workflows/inspect-provider-skills.md`)
+- [ ] Review and approve `.develop/seeder-specs/<slug>-skills.yaml` (`human_action: approve`, `reviewed_at`)
+- [ ] `syllago capmon validate-spec --provider=<slug>` (confirm spec passes gate)
+- [ ] Implement `cli/internal/capmon/recognize_<slug_underscored>.go`
+- [ ] `syllago capmon seed --provider=<slug>`
+- [ ] Verify `docs/provider-capabilities/<slug>.yaml` has `confidence: confirmed` entries
+- [ ] Confirm `TestAllProviderSlugsRegistered` passes (auto-detects from filesystem)
+
+## Troubleshooting
+
+**Spec gate blocking (`seeder spec for <slug> has not been reviewed`):**
+The `validate-spec` command enforces that `human_action` is set to `approve` and `reviewed_at` is a non-empty ISO timestamp. Open `.develop/seeder-specs/<slug>-skills.yaml` and set both fields before re-running.
+
+**Missing cache (fetch-extract returns no output):**
+The source manifest at `docs/provider-sources/<slug>.yaml` must contain valid `documentation_urls`. Verify the URLs are reachable and re-run `--stage=fetch-extract`.
+
+**`TestAllProviderSlugsRegistered` fails after adding a new provider:**
+This test auto-detects providers from the filesystem (`docs/provider-sources/` and `docs/provider-capabilities/`). Ensure both files exist and the slug matches exactly (kebab-case). No code change is needed — the test picks up new files automatically.
+
+**Inspection bead produces empty `proposed_mappings`:**
+The format reference doc (`docs/provider-formats/<slug>.md`) may be missing or incomplete. Add field definitions and re-run the inspection bead workflow.
+
+## Smoke-Testing with a Scratch Provider
+
+To verify that the validate-spec command handles an unknown provider gracefully (no panic, clear error):
+
+```bash
+# Create a minimal scratch spec
+mkdir -p .develop/seeder-specs
+cat > .develop/seeder-specs/scratch-test-skills.yaml << 'EOF'
+provider: scratch-test
+content_type: skills
+format: markdown
+format_doc_provenance: human
+extraction_gaps: []
+source_excerpt: ""
+proposed_mappings: []
+human_action: ""
+reviewed_at: ""
+notes: ""
+EOF
+
+# Validate with empty human_action — should error
+syllago capmon validate-spec --provider=scratch-test
+
+# Set approval and re-validate — should pass
+# (edit human_action and reviewed_at in the file, then re-run)
+
+# Clean up
+rm .develop/seeder-specs/scratch-test-skills.yaml
+```
+
+Expected: first run errors with "seeder spec for scratch-test has not been reviewed"; approved run succeeds.
