@@ -1,0 +1,10 @@
+format_version: 1
+id: b4597b4b-c50d-4f83-be52-30597b3cce36
+name: go-error-handling
+type: rules
+source_provider: claude-code
+source_format: md
+source_type: provider
+source_hash: sha256:76c6529e842623390c61f55993bded948496966120b9eb1d9841b479c4c65f02
+added_at: 2026-03-29T04:25:56.635565471Z
+added_by: syllago

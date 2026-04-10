@@ -129,7 +129,7 @@ func Clone(url, name, ref string) error {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		// Clean up partial clone
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 		return fmt.Errorf("git clone failed: %s", strings.TrimSpace(string(out)))
 	}
 	return nil
@@ -161,7 +161,12 @@ func Sync(name string) error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("git", "-C", dir, "pull", "--ff-only")
+	cmd := exec.Command("git",
+		"-C", dir,
+		"-c", "core.hooksPath=/dev/null",
+		"pull", "--ff-only", "--no-recurse-submodules",
+	)
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git pull failed for %q: %s\n(Hint: delete the clone at ~/.syllago/registries/%s and re-run `syllago registry add`)", name, strings.TrimSpace(string(out)), name)
@@ -213,6 +218,14 @@ type ManifestItem struct {
 	HookEvent string   `yaml:"hookEvent,omitempty"` // for hooks: event name
 	HookIndex int      `yaml:"hookIndex,omitempty"` // for hooks: index in event array
 	Scripts   []string `yaml:"scripts,omitempty"`   // for hooks: associated script files
+
+	// Extended fields (populated by analyzer; optional in authored manifests)
+	DisplayName  string   `yaml:"displayName,omitempty"`
+	Description  string   `yaml:"description,omitempty"`
+	ContentHash  string   `yaml:"contentHash,omitempty"`
+	References   []string `yaml:"references,omitempty"`
+	ConfigSource string   `yaml:"configSource,omitempty"`
+	Providers    []string `yaml:"providers,omitempty"`
 }
 
 // Manifest holds optional metadata from registry.yaml at the registry root.
@@ -225,6 +238,7 @@ type Manifest struct {
 	Version           string         `yaml:"version,omitempty"`
 	MinSyllagoVersion string         `yaml:"min_syllago_version,omitempty"`
 	Items             []ManifestItem `yaml:"items,omitempty"`
+	Visibility        string         `yaml:"visibility,omitempty"` // "public", "private" — declared by registry owner
 }
 
 // LoadManifest reads registry.yaml from the clone directory for the named registry.

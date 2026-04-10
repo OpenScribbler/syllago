@@ -259,6 +259,50 @@ func TestResolver_BaseDir_Priority(t *testing.T) {
 	})
 }
 
+func TestResolver_PerTypePathOutsideHome_Rejected(t *testing.T) {
+	t.Parallel()
+	// A per-type path pointing outside the user's home directory should be
+	// rejected (returns empty string, falls through to default).
+	cfg := &Config{
+		ProviderPaths: map[string]ProviderPathConfig{
+			"test": {Paths: map[string]string{"skills": "/etc/evil"}},
+		},
+	}
+	r := NewResolver(cfg, "")
+	prov := stubProvider("test")
+
+	// Should fall through to default because /etc/evil is outside home
+	got := r.InstallDir(prov, catalog.Skills, "/home/user")
+	if got == "/etc/evil" {
+		t.Errorf("path outside home should be rejected, got %q", got)
+	}
+	// Should get the default path instead
+	if got != "/home/user/.provider/skills" {
+		t.Errorf("expected default path, got %q", got)
+	}
+}
+
+func TestValidateProviderPath_SafePath(t *testing.T) {
+	t.Parallel()
+	// Paths under home or tmp should be valid
+	if err := ValidateProviderPath("/home/user/some/path"); err != nil {
+		t.Errorf("path under /home should be valid: %v", err)
+	}
+	if err := ValidateProviderPath("/tmp/test-dir"); err != nil {
+		t.Errorf("path under /tmp should be valid: %v", err)
+	}
+}
+
+func TestValidateProviderPath_SensitivePath(t *testing.T) {
+	t.Parallel()
+	sensitive := []string{"/etc/passwd", "/usr/bin", "/var/lib", "/", "/bin/sh", "/sbin/init"}
+	for _, p := range sensitive {
+		if err := ValidateProviderPath(p); err == nil {
+			t.Errorf("path %q should be rejected as sensitive", p)
+		}
+	}
+}
+
 func TestResolver_UnknownProvider(t *testing.T) {
 	t.Parallel()
 	cfg := &Config{

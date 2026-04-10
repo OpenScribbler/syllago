@@ -1,0 +1,81 @@
+{
+  "$schema": "handoff-v2",
+  "name": "metadata-proposal-work",
+  "createdAt": "2026-03-30T09:39:55-07:00",
+  "current": {
+    "claimedBy": {
+      "sessionId": "816628c7-1a2f-4862-8eb5-36d3a03f86a8",
+      "claimedAt": "2026-03-31T00:20:00-07:00"
+    },
+    "project": "syllago",
+    "updated": "2026-03-31T00:30:00-07:00",
+    "sessionId": "3e4a20a6-e77a-4d4a-ad27-9a3c202520b3",
+    "summary": "Deep research on provenance/versioning + terminology + 70+ agent landscape mapping + authored Agent Skills Metadata Convention as companion to agentskills.io + 2 rounds of 5-persona review",
+
+    "activeWork": {
+      "description": "Agent Skills Metadata Convention — companion convention to agentskills.io adding provenance, triggers, expectations, tags, status, supported_agents",
+      "feature": null,
+      "stage": "execute",
+      "planRef": null,
+      "designRef": "docs/spec/skills/metadata_convention.md",
+      "progress": "Convention spec is drafted and reviewed twice by 5 personas. Must-fixes applied (RFC 2119, derived_from as array, content_hash algorithm, SKILL.md chicken-and-egg). Should-fixes applied (convention URI semantics, mode interaction matrix, license precedence, forward compat). Tags and status fields added as Draft. Discussion doc written. Remaining: discussion doc improvements (source 650-trial study, concrete graduation thresholds, signing roadmap, concrete next steps).",
+      "blockers": [],
+      "beads": {
+        "inProgress": ["syllago-lpcdm"],
+        "completedThisSession": [],
+        "readyNext": []
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 281,
+      "lastCommit": "b8ca66a bd sync: 2026-03-30 17:58:09",
+      "modifiedFiles": [
+        "docs/spec/skills/metadata_convention.md",
+        "docs/spec/skills/discussion-metadata-convention.md",
+        "docs/research/2026-03-30-provenance-versioning-research.md",
+        "docs/research/provider-agent-naming.md"
+      ]
+    },
+
+    "recentDecisions": [
+      "Terminology: 'agent' is the public-facing term everywhere; 'harness' is internal syllago docs only; 'provider' renamed to 'model provider' for LLM vendors",
+      "Spec strategy: companion convention using agentskills.io's metadata extension point (OTel + Schema.org hybrid pattern), NOT a fork or replacement",
+      "Stability levels: Provenance = Stable, Triggers/Expectations/Tags/Status/Supported Agents = Draft",
+      "derived_from is always an array (no object/array polymorphism)",
+      "content_hash hashes raw bytes (no line ending normalization), SKILL.md included with hash value emptied",
+      "convention URI is an opaque identifier, exact string comparison, agents MUST NOT dereference",
+      "Graduation path: Draft → Stable → Proposed for Core → Agent Skills Spec, based on demonstrated adoption",
+      "Renamed frontmatter_spec_proposal.md → metadata_convention.md"
+    ],
+
+    "nextSteps": [
+      "Apply discussion doc improvements: source 650-trial study link, propose '3 agents + 2 registries' graduation threshold, add signing roadmap ('v0.2 will define signatures'), state content_hash will become REQUIRED for registry-distributed content, add concrete next steps with dates",
+      "Update provenance research doc (2026-03-30-provenance-versioning-research.md) to use 'agent' terminology instead of 'provider'",
+      "Consider separate session: drill into content type support matrix data (format convergence, correlation analysis, gap analysis for syllago — use the prompt generated for this)",
+      "Begin syllago implementation: rename 'provider' to 'agent' across public-facing surfaces (CLI flags, TUI labels, docs)",
+      "Implement metadata convention parsing in syllago as reference implementation",
+      "Present to Agent Ecosystem community with concrete deliverables"
+    ],
+
+    "context": {
+      "notes": "This session was massive — ~8 hours of deep research and spec work. Key research docs created: provenance-versioning-research.md (20+ specs analyzed), provider-agent-naming.md (70+ agents mapped with content type support matrix). The convention was reviewed twice by 5 simulated personas (skill author, agent developer, registry maintainer, enterprise security, spec pedant). V2 moved from 'NOT READY FOR IMPLEMENTATION' to 'almost implementable with 4 small fixes' — those fixes are now applied. A prompt for a separate data analysis session was generated and given to Holden (format convergence, content type correlation, gap analysis). The old handoff 'pause-skill-md-spec-implementation-to-align' was the predecessor — that session identified the terminology problem, this session resolved it and went far beyond."
+    }
+  },
+
+  "previousSessions": [
+    {
+      "summary": "Pause skill.md spec implementation to align terminology (platforms vs providers vs harnesses) across specs before writing fields",
+      "updated": "2026-03-31T00:24:38.074Z",
+      "completedWork": [
+        "Identified terminology inconsistency blocking spec work: agent ecosystem says 'platforms', syllago says 'providers', others say 'harnesses'"
+      ],
+      "nextSteps": [
+        "Research terminology usage across agent ecosystem spec, syllago, and other tools",
+        "Decide on canonical term",
+        "Update skill.md spec with aligned vocabulary"
+      ]
+    }
+  ]
+}

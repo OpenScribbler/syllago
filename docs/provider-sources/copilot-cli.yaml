@@ -1,0 +1,125 @@
+# Copilot CLI — Provider Source Manifest
+# Good sources: github/docs repo has all Copilot docs as raw markdown. CLI itself is closed-source.
+# Note: docs use Liquid template variables ({% data %}) that need stripping during extraction.
+
+schema_version: "1"
+last_verified: "2026-03-27"
+provider_version: "" # No version tracking — CLI is distributed as binary, no public version tags
+
+slug: copilot-cli
+display_name: Copilot CLI
+vendor: GitHub
+status: active
+fetch_tier: gh-api
+repo: github/docs # Docs content repo (not CLI source)
+repo_branch: main
+
+change_detection:
+  method: github-commits
+  endpoint: https://api.github.com/repos/github/docs/commits?path=content/copilot/reference
+  # Track commits to the reference docs specifically. The github/docs repo is extremely active
+  # but most commits are unrelated to Copilot CLI content.
+
+changelog:
+  - url: https://raw.githubusercontent.com/github/copilot-cli/main/changelog.md
+    label: CLI Changelog
+
+content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Copilot CLI supports: rules, skills, agents, commands, mcp, hooks
+  # Not supported: (all content types supported)
+  # Syllago: all ✓
+  #   Docs use Liquid template variables ({% data %}) that need stripping during extraction. commands = 'plugins' in copilot terminology.
+  # ─────────────────────────────────────────────────────────────────────
+
+  rules:
+    sources:
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions.md
+        type: docs
+        format: markdown
+        extracts: [file_format, file_locations, features]
+
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/custom-instructions-support.md
+        type: docs
+        format: markdown
+        extracts: [file_format, features]
+
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/customization-cheat-sheet.md
+        type: docs
+        format: markdown
+        extracts: [file_format, file_locations]
+    # Format: .github/copilot-instructions.md (repo), personal instructions via settings.
+
+  hooks:
+    sources:
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/hooks-configuration.md
+        type: docs
+        format: markdown
+        extracts: [event_names, event_io_schemas, hook_config_fields, matcher_format]
+        # Primary reference — contains inline JSON schemas for every hook event type.
+
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/use-hooks.md
+        type: docs
+        format: markdown
+        extracts: [config_examples, features]
+
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/copilot-cli/about-copilot-cli.md
+        type: docs
+        format: markdown
+        extracts: [features]
+
+  mcp:
+    sources:
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers.md
+        type: docs
+        format: markdown
+        extracts: [server_config_fields, transport_types, config_examples]
+
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/context/mcp.md
+        type: docs
+        format: markdown
+        extracts: [features]
+
+  skills:
+    sources:
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/about-agent-skills.md
+        type: docs
+        format: markdown
+        extracts: [file_format, features]
+
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/create-skills.md
+        type: docs
+        format: markdown
+        extracts: [file_format, file_locations, features]
+
+  agents:
+    sources:
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/custom-agents-configuration.md
+        type: docs
+        format: markdown
+        extracts: [file_format, frontmatter_fields, config_fields]
+        # Primary reference — defines YAML frontmatter schema for .agent.md files
+        # (name, description, tools, model, mcp-servers) plus tool alias table.
+
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/create-custom-agents-for-cli.md
+        type: docs
+        format: markdown
+        extracts: [config_examples, features]
+
+  commands:
+    # No dedicated commands type. "Plugins" serve a similar role.
+    sources:
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/copilot-cli/about-cli-plugins.md
+        type: docs
+        format: markdown
+        extracts: [file_format, features]
+
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/copilot-cli-reference/cli-plugin-reference.md
+        type: docs
+        format: markdown
+        extracts: [config_fields, file_format]
+
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/plugins-creating.md
+        type: docs
+        format: markdown
+        extracts: [config_examples, file_format]

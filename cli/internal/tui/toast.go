@@ -1,247 +1,332 @@
 package tui
 
 import (
-	"regexp"
+	"encoding/base64"
+	"fmt"
+	"os"
 	"strings"
+	"time"
 
-	"github.com/atotto/clipboard"
-	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/reflow/wordwrap"
+	"github.com/charmbracelet/x/ansi"
+	zone "github.com/lrstanley/bubblezone"
 )
 
-// toastMsg is sent by any component to trigger a toast notification.
-// App.Update() catches this and sets the active toast state.
-type toastMsg struct {
-	text       string
-	isErr      bool
-	isProgress bool // in-progress indicator (no "Done:" prefix, accent border)
+// toastLevel controls the appearance and auto-dismiss behavior.
+type toastLevel int
+
+const (
+	toastSuccess toastLevel = iota
+	toastWarning
+	toastError
+)
+
+// Auto-dismiss durations by level.
+const (
+	successDismiss = 3 * time.Second
+	warningDismiss = 5 * time.Second
+)
+
+// toastEntry is a single queued notification.
+type toastEntry struct {
+	message string
+	level   toastLevel
 }
 
-// toastModel holds the state for the active toast overlay.
+// toastTickMsg fires when the current toast's auto-dismiss timer expires.
+type toastTickMsg struct {
+	seq int // sequence number to ignore stale ticks
+}
+
+const maxVisibleToasts = 3
+
+// toastModel manages a queue of toast notifications, showing up to 3 stacked.
 type toastModel struct {
-	active       bool
-	text         string
-	isErr        bool
-	isProgress   bool
-	spinner      spinner.Model
-	scrollOffset int // for long error messages
-	width        int // content pane width (updated on WindowSizeMsg)
+	queue   []toastEntry
+	seq     int // incremented on each new toast to invalidate old ticks
+	width   int
+	height  int
+	visible bool // true when any toast is actively displayed
 }
 
-// show activates the toast with the given message.
-func (t *toastModel) show(msg toastMsg) {
-	t.active = true
-	t.text = msg.text
-	t.isErr = msg.isErr
-	t.isProgress = msg.isProgress
-	t.scrollOffset = 0
-	if msg.isProgress {
-		sp := spinner.New()
-		sp.Spinner = spinner.Dot
-		sp.Style = lipgloss.NewStyle().Foreground(accentColor)
-		t.spinner = sp
+func newToastModel() toastModel {
+	return toastModel{}
+}
+
+// Push adds a toast to the queue. Shows immediately if not visible. Drops the
+// oldest non-error toast when the queue exceeds maxVisibleToasts.
+func (t *toastModel) Push(msg string, level toastLevel) tea.Cmd {
+	t.queue = append(t.queue, toastEntry{message: msg, level: level})
+	// Drop oldest non-error toasts when over the limit.
+	for len(t.queue) > maxVisibleToasts {
+		dropped := false
+		for i, e := range t.queue {
+			if e.level != toastError {
+				t.queue = append(t.queue[:i], t.queue[i+1:]...)
+				dropped = true
+				break
+			}
+		}
+		if !dropped {
+			break // all are errors, keep them all
+		}
 	}
+	if !t.visible {
+		return t.showNext()
+	}
+	return nil
 }
 
-// tickSpinner returns the tea.Cmd to start spinner animation.
-// Should be called after show() when isProgress is true.
-func (t *toastModel) tickSpinner() tea.Cmd {
-	if !t.isProgress {
+// showNext activates the next toast in the queue and returns a tick command.
+func (t *toastModel) showNext() tea.Cmd {
+	if len(t.queue) == 0 {
+		t.visible = false
 		return nil
 	}
-	return t.spinner.Tick
+	t.visible = true
+	t.seq++
+	return t.tickCmd()
 }
 
-// updateSpinner forwards a spinner tick message and returns the next tick cmd.
-func (t *toastModel) updateSpinner(msg tea.Msg) tea.Cmd {
-	if !t.active || !t.isProgress {
+// Dismiss removes the current toast and shows the next one (if any).
+func (t *toastModel) Dismiss() tea.Cmd {
+	if !t.visible || len(t.queue) == 0 {
+		t.visible = false
 		return nil
 	}
-	var cmd tea.Cmd
-	t.spinner, cmd = t.spinner.Update(msg)
-	return cmd
+	t.queue = t.queue[1:]
+	return t.showNext()
 }
 
-// dismiss clears the toast.
-func (t *toastModel) dismiss() {
-	t.active = false
-	t.text = ""
-	t.scrollOffset = 0
+// Current returns the currently displayed toast, or nil if none.
+func (t *toastModel) Current() *toastEntry {
+	if !t.visible || len(t.queue) == 0 {
+		return nil
+	}
+	return &t.queue[0]
 }
 
-// copyToClipboard copies the sanitized error text to the system clipboard.
-// Returns an error message if the copy fails.
-func (t *toastModel) copyToClipboard() string {
-	sanitized := sanitizeForClipboard(t.text)
-	if err := clipboard.WriteAll(sanitized); err != nil {
-		return "Copy failed — clipboard tool not found"
-	}
-	return ""
+// SetSize updates the available area for positioning.
+func (t *toastModel) SetSize(width, height int) {
+	t.width = width
+	t.height = height
 }
 
-// isScrollable returns true if the toast content exceeds the visible line limit.
-func (t *toastModel) isScrollable() bool {
-	if !t.active || t.text == "" {
-		return false
+// Update handles tick messages for auto-dismiss and key input for error toasts.
+func (t toastModel) Update(msg tea.Msg) (toastModel, tea.Cmd) {
+	switch msg := msg.(type) {
+	case toastTickMsg:
+		if msg.seq != t.seq {
+			return t, nil // stale tick
+		}
+		cur := t.Current()
+		if cur != nil && cur.level == toastError {
+			return t, nil // errors don't auto-dismiss
+		}
+		cmd := t.Dismiss()
+		return t, cmd
 	}
-	innerW := t.width - 8
-	if innerW < 20 {
-		innerW = 20
-	}
-	prefix := "Done: "
-	if t.isErr {
-		prefix = "Error: "
-	} else if t.isProgress {
-		prefix = ""
-	}
-	wrapped := wordwrap.String(prefix+t.text, innerW)
-	return len(strings.Split(wrapped, "\n")) > 5
+	return t, nil
 }
 
-// clampScroll ensures scrollOffset stays within valid bounds.
-func (t *toastModel) clampScroll() {
-	if t.scrollOffset < 0 {
-		t.scrollOffset = 0
+// HandleKey processes keys when a toast is visible. Returns true if it consumed the key.
+func (t *toastModel) HandleKey(msg tea.KeyMsg) (consumed bool, cmd tea.Cmd) {
+	if !t.visible || len(t.queue) == 0 {
+		return false, nil
 	}
-	innerW := t.width - 8
-	if innerW < 20 {
-		innerW = 20
+	cur := t.Current()
+	if cur == nil {
+		return false, nil
 	}
-	prefix := "Done: "
-	if t.isErr {
-		prefix = "Error: "
-	} else if t.isProgress {
-		prefix = ""
+
+	switch msg.Type {
+	case tea.KeyEsc:
+		return true, t.Dismiss()
 	}
-	wrapped := wordwrap.String(prefix+t.text, innerW)
-	lines := strings.Split(wrapped, "\n")
-	maxOffset := len(lines) - 5
-	if maxOffset < 0 {
-		maxOffset = 0
+
+	switch msg.String() {
+	case "c":
+		if cur.level == toastError {
+			// Copy message to clipboard (best-effort, no error handling needed)
+			return true, t.copyAndDismiss(cur.message)
+		}
 	}
-	if t.scrollOffset > maxOffset {
-		t.scrollOffset = maxOffset
-	}
+	return false, nil
 }
 
-// view renders the toast box.
-func (t toastModel) view() string {
-	if !t.active || t.text == "" {
+// copyAndDismiss writes OSC 52 clipboard escape sequence and dismisses.
+// OSC 52 is supported by Windows Terminal, iTerm2, kitty, and most modern terminals.
+// We write directly to stdout from a tea.Cmd goroutine because tea.Printf is
+// swallowed by BubbleTea's alt-screen renderer — the terminal never sees the escape.
+func (t *toastModel) copyAndDismiss(text string) tea.Cmd {
+	dismissCmd := t.Dismiss()
+	encoded := base64.StdEncoding.EncodeToString([]byte(text))
+	osc52 := fmt.Sprintf("\x1b]52;c;%s\x07", encoded)
+	writeClipboard := func() tea.Msg {
+		_, _ = os.Stdout.Write([]byte(osc52))
+		return nil
+	}
+	return tea.Batch(writeClipboard, dismissCmd)
+}
+
+// tickCmd returns a tea.Tick command for the current toast's auto-dismiss duration.
+func (t *toastModel) tickCmd() tea.Cmd {
+	cur := t.Current()
+	if cur == nil {
+		return nil
+	}
+	var d time.Duration
+	switch cur.level {
+	case toastSuccess:
+		d = successDismiss
+	case toastWarning:
+		d = warningDismiss
+	case toastError:
+		return nil // errors don't auto-dismiss
+	}
+	seq := t.seq
+	return tea.Tick(d, func(time.Time) tea.Msg {
+		return toastTickMsg{seq: seq}
+	})
+}
+
+// View renders up to maxVisibleToasts stacked vertically. Caller places via overlayToast.
+func (t toastModel) View() string {
+	if !t.visible || len(t.queue) == 0 {
 		return ""
 	}
 
-	// Toast inner width: content pane width minus border/padding (4) minus margin (4)
-	innerW := t.width - 8
-	if innerW < 20 {
-		innerW = 20
+	count := min(maxVisibleToasts, len(t.queue))
+	var rendered []string
+	for i := 0; i < count; i++ {
+		rendered = append(rendered, t.renderOne(t.queue[i]))
 	}
 
-	var prefix string
-	var borderColor lipgloss.AdaptiveColor
-	if t.isErr {
-		prefix = "Error: "
-		borderColor = dangerColor
-	} else if t.isProgress {
-		prefix = t.spinner.View() + " "
-		borderColor = accentColor
-	} else {
-		prefix = "Done: "
+	return strings.Join(rendered, "\n")
+}
+
+// HandleMouse processes mouse clicks on toast zones. Returns true if consumed.
+func (t *toastModel) HandleMouse(msg tea.MouseMsg) (consumed bool, cmd tea.Cmd) {
+	if !t.visible || len(t.queue) == 0 {
+		return false, nil
+	}
+	if zone.Get("toast-close").InBounds(msg) {
+		return true, t.Dismiss()
+	}
+	return false, nil
+}
+
+// renderOne renders a single toast entry as a bordered box.
+func (t toastModel) renderOne(entry toastEntry) string {
+	var borderColor lipgloss.TerminalColor
+	var icon string
+	switch entry.level {
+	case toastSuccess:
 		borderColor = successColor
+		icon = lipgloss.NewStyle().Foreground(successColor).Render("✓ ")
+	case toastWarning:
+		borderColor = warningColor
+		icon = lipgloss.NewStyle().Foreground(warningColor).Render("! ")
+	case toastError:
+		borderColor = dangerColor
+		icon = lipgloss.NewStyle().Foreground(dangerColor).Render("✗ ")
 	}
 
-	fullText := prefix + t.text
-	wrapped := wordwrap.String(fullText, innerW)
+	// Fixed width so all toasts render at the same size regardless of message length.
+	const toastFixedWidth = 60
+	// Inner width = total - 2 (border) - 2 (padding)
+	const innerWidth = toastFixedWidth - 2 - 2
 
-	var content string
-	if t.isProgress {
-		content = wrapped
-	} else if t.isErr {
-		lines := strings.Split(wrapped, "\n")
-		// Error toast: fixed 5 visible lines, scrollable
-		visibleLines := 5
-		if len(lines) <= visibleLines {
-			content = wrapped
-		} else {
-			offset := t.scrollOffset
-			maxOffset := len(lines) - visibleLines
-			if offset > maxOffset {
-				offset = maxOffset
-			}
-			if offset < 0 {
-				offset = 0
-			}
-			end := offset + visibleLines
-			if end > len(lines) {
-				end = len(lines)
-			}
-			content = strings.Join(lines[offset:end], "\n")
-			if offset > 0 {
-				content = renderScrollUp(offset, true) + "\n" + content
-			}
-			if end < len(lines) {
-				content += "\n" + renderScrollDown(len(lines)-end, true)
-			}
-		}
-		content += "\n" + helpStyle.Render("c copy • esc dismiss")
-	} else {
-		lines := strings.Split(wrapped, "\n")
-		visibleLines := 5
-		if len(lines) <= visibleLines {
-			content = wrapped
-		} else {
-			offset := t.scrollOffset
-			maxOffset := len(lines) - visibleLines
-			if offset > maxOffset {
-				offset = maxOffset
-			}
-			if offset < 0 {
-				offset = 0
-			}
-			end := offset + visibleLines
-			if end > len(lines) {
-				end = len(lines)
-			}
-			content = strings.Join(lines[offset:end], "\n")
-			if offset > 0 {
-				content = renderScrollUp(offset, true) + "\n" + content
-			}
-			if end < len(lines) {
-				content += "\n" + renderScrollDown(len(lines)-end, true)
-			}
-		}
+	maxMsgW := innerWidth - 6 // icon(2) + close btn(4 = " [×]")
+	msg := entry.message
+	if len([]rune(msg)) > maxMsgW {
+		msg = string([]rune(msg)[:maxMsgW-1]) + "…"
 	}
 
-	style := lipgloss.NewStyle().
+	// Build first line: icon + message + right-aligned close button
+	msgText := icon + lipgloss.NewStyle().Foreground(primaryText).Render(msg)
+	msgVisualW := lipgloss.Width(msgText)
+	closeBtn := zone.Mark("toast-close",
+		lipgloss.NewStyle().Foreground(mutedColor).Faint(true).Render("[×]"))
+	closeBtnW := 3 // visual width of "[×]"
+	gap := innerWidth - msgVisualW - closeBtnW
+	if gap < 1 {
+		gap = 1
+	}
+	firstLine := msgText + strings.Repeat(" ", gap) + closeBtn
+
+	content := firstLine
+
+	if entry.level == toastError {
+		hint := lipgloss.NewStyle().Foreground(mutedColor).Faint(true).Render("  [esc] dismiss · [c] copy")
+		content += "\n" + hint
+	}
+
+	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(borderColor).
 		Padding(0, 1).
-		Width(innerW + 4). // account for padding
-		MaxWidth(t.width)
-
-	return style.Render(content)
+		Width(toastFixedWidth).
+		MaxWidth(toastFixedWidth + 2). // +2 for border chars
+		Render(content)
 }
 
-// sanitizeForClipboard strips sensitive information from error text before copying.
-func sanitizeForClipboard(msg string) string {
-	// Strip absolute file paths
-	pathRe := regexp.MustCompile(`/(?:home|Users)/[^\s:]+`)
-	msg = pathRe.ReplaceAllString(msg, "<path>")
+// overlayToast places a toast in the bottom-right corner of the content area.
+func overlayToast(bg, toast string, width, height int) string {
+	bgLines := strings.Split(bg, "\n")
+	toastLines := strings.Split(toast, "\n")
+	toastH := len(toastLines)
 
-	// Strip git remote URLs (may contain tokens)
-	gitRe := regexp.MustCompile(`https?://[^\s]*\.git\b`)
-	msg = gitRe.ReplaceAllString(msg, "<url>")
+	for len(bgLines) < height {
+		bgLines = append(bgLines, strings.Repeat(" ", width))
+	}
 
-	// Strip environment variable values that look like secrets
-	secretRe := regexp.MustCompile(`(?i)(?:_KEY|_SECRET|_TOKEN|_PASSWORD)=\S+`)
-	msg = secretRe.ReplaceAllStringFunc(msg, func(match string) string {
-		idx := strings.Index(match, "=")
-		if idx >= 0 {
-			return match[:idx+1] + "<redacted>"
+	// Measure the widest toast line
+	toastW := 0
+	for _, line := range toastLines {
+		if w := lipgloss.Width(line); w > toastW {
+			toastW = w
 		}
-		return match
-	})
+	}
 
-	return msg
+	// Position: bottom-right with 1 char margin
+	startRow := max(0, height-toastH-1)
+	startCol := max(0, width-toastW-1)
+
+	for i, tLine := range toastLines {
+		row := startRow + i
+		if row >= len(bgLines) {
+			break
+		}
+		tLineW := lipgloss.Width(tLine)
+		rightStart := startCol + tLineW
+
+		left := padToWidth(bgLines[row], startCol)
+		right := ""
+		if rightStart < width {
+			right = cutFrom(bgLines[row], rightStart, width)
+		}
+		bgLines[row] = left + tLine + right
+	}
+
+	if len(bgLines) > height {
+		bgLines = bgLines[:height]
+	}
+	return strings.Join(bgLines, "\n")
+}
+
+// padToWidth returns the first `w` visual columns of s, padding with spaces if short.
+func padToWidth(s string, w int) string {
+	truncated := ansi.Truncate(s, w, "")
+	cur := lipgloss.Width(truncated)
+	if cur < w {
+		truncated += strings.Repeat(" ", w-cur)
+	}
+	return truncated
+}
+
+// cutFrom extracts columns [from, to) from an ansi string.
+func cutFrom(s string, from, to int) string {
+	return ansi.Cut(s, from, to)
 }

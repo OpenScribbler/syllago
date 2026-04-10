@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
@@ -329,6 +330,17 @@ func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string
 
 	// Remove directories (copy-installed content)
 	if info.IsDir() {
+		// Verify targetPath is within the expected install directory to prevent
+		// path traversal attacks from removing arbitrary directories.
+		home, homeErr := os.UserHomeDir()
+		if homeErr != nil {
+			return "", fmt.Errorf("getting home directory: %w", homeErr)
+		}
+		installDir := prov.InstallDir(home, item.Type)
+		rel, relErr := filepath.Rel(installDir, targetPath)
+		if relErr != nil || strings.HasPrefix(rel, "..") {
+			return "", fmt.Errorf("refusing to remove %s: outside install directory %s", targetPath, installDir)
+		}
 		return targetPath, os.RemoveAll(targetPath)
 	}
 

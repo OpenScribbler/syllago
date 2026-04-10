@@ -1,0 +1,41 @@
+╭───Add ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  [1 Source]  [2 Type]  [3 Discovery]  [4 Triage]  [5 Review]  [6 Execute]                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  Triage: detected content                                                                          Back      Next
+  Include items to add them, or skip (skipped items reappear next time you add from this source).
+╭ Items ───────────────────────────┬ Preview ────────────────────────────────────────────────────────────────────────╮
+│✓ security-scanner ● High          │  Select an item to preview                                                       │
+│  code-style-guide ● Medium        │                                                                                  │
+│  experimental-linter ● Low        │                                                                                  │
+│✓ user-custom-agent ● User         │                                                                                  │
+│  api-docs-helper ● Medium         │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+│                                   │                                                                                  │
+╰───────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────╯
+                                                                                          Cancel      Back      Next

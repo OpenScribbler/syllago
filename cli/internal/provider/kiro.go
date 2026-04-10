@@ -51,8 +51,10 @@ var Kiro = Provider{
 	},
 	FileFormat: func(ct catalog.ContentType) Format {
 		switch ct {
-		case catalog.Agents, catalog.MCP, catalog.Hooks:
+		case catalog.MCP, catalog.Hooks:
 			return FormatJSON
+		case catalog.Agents:
+			return FormatMarkdown
 		default:
 			return FormatMarkdown
 		}
@@ -75,4 +77,10 @@ var Kiro = Provider{
 		catalog.Hooks:  false, // JSON merge
 		catalog.MCP:    false, // JSON merge
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.Hooks: ".kiro/agents/",
+		catalog.MCP:   ".kiro/settings/mcp.json",
+	},
+	MCPTransports: []string{"stdio", "sse"},
+	HookTypes:     []string{"command"},
 }

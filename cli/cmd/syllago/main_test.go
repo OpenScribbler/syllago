@@ -346,8 +346,8 @@ func TestWrapTTYError(t *testing.T) {
 			wrapped := wrapTTYError(tt.err)
 			msg := wrapped.Error()
 
-			if tt.wantSubcmd && !strings.Contains(msg, "subcommand") {
-				t.Errorf("TTY error should suggest subcommands, got: %s", msg)
+			if tt.wantSubcmd && !strings.Contains(msg, "terminal") {
+				t.Errorf("TTY error should mention terminal requirement, got: %s", msg)
 			}
 			if tt.wantOriginal && msg != tt.err.Error() {
 				t.Errorf("non-TTY error should pass through unchanged, got: %s", msg)

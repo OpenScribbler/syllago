@@ -47,7 +47,10 @@ var ClaudeCode = Provider{
 		case catalog.Agents:
 			return []string{filepath.Join(projectRoot, ".claude", "agents")}
 		case catalog.MCP:
-			return []string{filepath.Join(projectRoot, ".claude.json")}
+			return []string{
+				filepath.Join(projectRoot, ".claude.json"),
+				filepath.Join(projectRoot, ".mcp.json"),
+			}
 		case catalog.Hooks:
 			return []string{filepath.Join(projectRoot, ".claude", "settings.json")}
 		default:
@@ -81,4 +84,10 @@ var ClaudeCode = Provider{
 		catalog.MCP:      false, // JSON merge
 		catalog.Hooks:    false, // JSON merge
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.Hooks: ".claude/settings.json",
+		catalog.MCP:   ".mcp.json",
+	},
+	MCPTransports: []string{"stdio", "sse", "streamable-http"},
+	HookTypes:     []string{"command", "http", "prompt", "agent"},
 }

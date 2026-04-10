@@ -1,0 +1,1 @@
+{"hooks": {"PreToolUse": [{"matcher": "Execute", "hooks": [{"type": "command", "command": "echo check", "timeout": 5000}]}]}}

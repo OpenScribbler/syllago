@@ -1,504 +1,173 @@
 package tui
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	zone "github.com/lrstanley/bubblezone"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
-func init() {
-	// Disable ANSI color output for deterministic test assertions.
-	// All charmbracelet libraries honor the NO_COLOR standard.
-	os.Setenv("NO_COLOR", "1")
-	// Initialize the bubblezone global manager so zone.Mark() calls in View()
-	// don't panic during tests (in production this is called in main.go).
-	zone.NewGlobal()
-}
+var updateGolden = flag.Bool("update-golden", false, "update golden files")
 
-// ---------------------------------------------------------------------------
-// Key press helpers
-// ---------------------------------------------------------------------------
-
-var (
-	keyUp       = tea.KeyMsg{Type: tea.KeyUp}
-	keyDown     = tea.KeyMsg{Type: tea.KeyDown}
-	keyLeft     = tea.KeyMsg{Type: tea.KeyLeft}
-	keyRight    = tea.KeyMsg{Type: tea.KeyRight}
-	keyEnter    = tea.KeyMsg{Type: tea.KeyEnter}
-	keyEsc      = tea.KeyMsg{Type: tea.KeyEsc}
-	keySpace    = tea.KeyMsg{Type: tea.KeySpace}
-	keyTab      = tea.KeyMsg{Type: tea.KeyTab}
-	keyShiftTab = tea.KeyMsg{Type: tea.KeyShiftTab}
-	keyCtrlC    = tea.KeyMsg{Type: tea.KeyCtrlC}
-)
+// --- Key helpers ---
 
 func keyRune(r rune) tea.KeyMsg {
 	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}}
 }
 
-// pressN sends a key message to the app n times and returns the updated app.
-func pressN(app App, msg tea.KeyMsg, n int) App {
-	for i := 0; i < n; i++ {
-		m, _ := app.Update(msg)
-		app = m.(App)
-	}
-	return app
+func keyPress(k tea.KeyType) tea.KeyMsg {
+	return tea.KeyMsg{Type: k}
 }
 
-// ---------------------------------------------------------------------------
-// Test catalog
-// ---------------------------------------------------------------------------
+var (
+	keyTab      = keyPress(tea.KeyTab)
+	keyShiftTab = keyPress(tea.KeyShiftTab)
+)
 
-// testCatalog creates a catalog with items covering all 8 content types plus
-// a library item. Uses t.TempDir() with real files so the file viewer works.
+// --- Test data ---
+
 func testCatalog(t *testing.T) *catalog.Catalog {
 	t.Helper()
-	tmp := t.TempDir()
+	return &catalog.Catalog{}
+}
 
-	// Create local directory for library items (simulating global content)
-	os.MkdirAll(filepath.Join(tmp, "local", "skills"), 0o755)
-
-	items := []catalog.ContentItem{
-		makeSkill(t, tmp, "alpha-skill", "A helpful skill", false),
-		makeSkill(t, tmp, "beta-skill", "Another skill", false),
-		makeAgent(t, tmp, "test-agent", "An AI agent"),
-		makeMCP(t, tmp, "test-mcp", "An MCP server"),
-		makeProviderSpecific(t, tmp, "test-rule", catalog.Rules, "claude-code", "A coding rule"),
-		makeProviderSpecific(t, tmp, "test-hook", catalog.Hooks, "claude-code", "A hook"),
-		makeProviderSpecific(t, tmp, "test-cmd", catalog.Commands, "claude-code", "A command"),
-		makeLocalSkill(t, tmp, "local-skill", "A library skill with LLM prompt"),
-		makeLoadout(t, tmp, "starter-loadout", "claude-code", "Essential tools for getting started"),
-		makeLoadout(t, tmp, "advanced-loadout", "claude-code", "Advanced workflow configuration"),
-	}
-
+// testCatalogWithItems creates a catalog with sample items for testing.
+// Items have no real files on disk, so preview will show error messages.
+func testCatalogWithItems(t *testing.T) *catalog.Catalog {
+	t.Helper()
 	return &catalog.Catalog{
-		RepoRoot: tmp,
-		Items:    items,
-	}
-}
-
-func makeSkill(t *testing.T, root, name, desc string, local bool) catalog.ContentItem {
-	t.Helper()
-	dir := filepath.Join(root, "skills", name)
-	if local {
-		dir = filepath.Join(root, "local", "skills", name)
-	}
-	os.MkdirAll(dir, 0o755)
-	os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("# "+name+"\n"+desc), 0o644)
-	os.WriteFile(filepath.Join(dir, "helpers.md"), []byte("# Helpers\nHelper content"), 0o644)
-	return catalog.ContentItem{
-		Name:        name,
-		Description: desc,
-		Type:        catalog.Skills,
-		Path:        dir,
-		Files:       []string{"SKILL.md", "helpers.md"},
-		Library:     local,
-	}
-}
-
-func makeAgent(t *testing.T, root, name, desc string) catalog.ContentItem {
-	t.Helper()
-	dir := filepath.Join(root, "agents", name)
-	os.MkdirAll(dir, 0o755)
-	os.WriteFile(filepath.Join(dir, "AGENT.md"), []byte("# "+name+"\n"+desc), 0o644)
-	return catalog.ContentItem{
-		Name:        name,
-		Description: desc,
-		Type:        catalog.Agents,
-		Path:        dir,
-		Files:       []string{"AGENT.md"},
-	}
-}
-
-func makeMCP(t *testing.T, root, name, desc string) catalog.ContentItem {
-	t.Helper()
-	dir := filepath.Join(root, "mcp", name)
-	os.MkdirAll(dir, 0o755)
-	// config.json with env vars for env setup wizard tests
-	configJSON := `{
-  "type": "stdio",
-  "command": "npx",
-  "args": ["-y", "@test/mcp-server"],
-  "env": {
-    "TEST_API_KEY": "",
-    "TEST_SECRET": ""
-  }
-}`
-	os.WriteFile(filepath.Join(dir, "config.json"), []byte(configJSON), 0o644)
-	return catalog.ContentItem{
-		Name:        name,
-		Description: desc,
-		Type:        catalog.MCP,
-		Path:        dir,
-		Files:       []string{"config.json"},
-	}
-}
-
-func makeProviderSpecific(t *testing.T, root, name string, ct catalog.ContentType, provSlug, desc string) catalog.ContentItem {
-	t.Helper()
-	dir := filepath.Join(root, string(ct), provSlug, name)
-	os.MkdirAll(dir, 0o755)
-	os.WriteFile(filepath.Join(dir, name+".md"), []byte("# "+name+"\n"+desc), 0o644)
-	return catalog.ContentItem{
-		Name:        name,
-		Description: desc,
-		Type:        ct,
-		Path:        dir,
-		Provider:    provSlug,
-		Files:       []string{name + ".md"},
-	}
-}
-
-func makeLocalSkill(t *testing.T, root, name, desc string) catalog.ContentItem {
-	t.Helper()
-	item := makeSkill(t, root, name, desc, true)
-	// Add LLM-PROMPT.md for local items
-	os.WriteFile(filepath.Join(item.Path, "LLM-PROMPT.md"),
-		[]byte("Describe this skill for an LLM."), 0o644)
-	item.Files = append(item.Files, "LLM-PROMPT.md")
-	return item
-}
-
-func makeLoadout(t *testing.T, root, name, provSlug, desc string) catalog.ContentItem {
-	t.Helper()
-	dir := filepath.Join(root, "loadouts", provSlug, name)
-	os.MkdirAll(dir, 0o755)
-	// Write a valid loadout manifest that references items from the test catalog.
-	// The "starter-loadout" references items that exist; "advanced-loadout" keeps it minimal.
-	manifest := fmt.Sprintf("kind: loadout\nversion: 1\nname: %s\nprovider: %s\n", name, provSlug)
-	if name == "starter-loadout" {
-		manifest += "skills:\n  - alpha-skill\n  - beta-skill\nrules:\n  - test-rule\n"
-	}
-	os.WriteFile(filepath.Join(dir, "loadout.yaml"), []byte(manifest), 0o644)
-	return catalog.ContentItem{
-		Name:        name,
-		Description: desc,
-		Type:        catalog.Loadouts,
-		Path:        dir,
-		Provider:    provSlug,
-		Files:       []string{"loadout.yaml"},
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Test providers
-// ---------------------------------------------------------------------------
-
-// testProviders creates 2 providers:
-//   - Claude Code: detected, supports all types
-//   - Cursor: not detected, supports Skills + Rules only
-func testProviders(t *testing.T) []provider.Provider {
-	t.Helper()
-	ccDir := t.TempDir()
-	cursorDir := t.TempDir()
-
-	return []provider.Provider{
-		{
-			Name:      "Claude Code",
-			Slug:      "claude-code",
-			Detected:  true,
-			ConfigDir: ccDir,
-			InstallDir: func(homeDir string, ct catalog.ContentType) string {
-				return filepath.Join(ccDir, string(ct))
-			},
-			SupportsType: func(ct catalog.ContentType) bool { return true },
-		},
-		{
-			Name:      "Cursor",
-			Slug:      "cursor",
-			Detected:  false,
-			ConfigDir: cursorDir,
-			InstallDir: func(homeDir string, ct catalog.ContentType) string {
-				return filepath.Join(cursorDir, string(ct))
-			},
-			SupportsType: func(ct catalog.ContentType) bool {
-				return ct == catalog.Skills || ct == catalog.Rules
-			},
+		Items: []catalog.ContentItem{
+			{Name: "alpha-skill", Type: catalog.Skills, Source: "team-rules", Files: []string{"SKILL.md"}},
+			{Name: "beta-skill", Type: catalog.Skills, Source: "team-rules", Files: []string{"SKILL.md"}},
+			{Name: "gamma-rule", Type: catalog.Rules, Source: "library", Files: []string{"rule.md"}},
+			{Name: "delta-agent", Type: catalog.Agents, Source: "my-registry", Files: []string{"agent.md"}},
+			{Name: "epsilon-hook", Type: catalog.Hooks, Source: "team-rules", Files: []string{"hook.json"}},
+			{Name: "zeta-mcp", Type: catalog.MCP, Source: "library", Files: []string{"config.json"}},
+			{Name: "eta-command", Type: catalog.Commands, Source: "team-rules", Files: []string{"cmd.md"}},
 		},
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Large test catalog (overflow/boundary testing)
-// ---------------------------------------------------------------------------
+func testProviders() []provider.Provider {
+	return nil
+}
 
-// testCatalogLarge creates a catalog with 85+ items across content types to
-// test scroll, truncation, and overflow behavior. Constructs ContentItem
-// structs directly (no filesystem I/O) since only list rendering is tested.
-func testCatalogLarge(t *testing.T) *catalog.Catalog {
+func testConfig() *config.Config {
+	return &config.Config{}
+}
+
+// testAppWithItems creates a test app with sample catalog items at 80x30.
+func testAppWithItems(t *testing.T) App {
+	return testAppWithItemsSize(t, 80, 30)
+}
+
+// testAppWithItemsSize creates a test app with sample catalog items at custom dimensions.
+func testAppWithItemsSize(t *testing.T, w, h int) App {
 	t.Helper()
-	tmp := t.TempDir()
-
-	var items []catalog.ContentItem
-
-	// 50 skills with varying name lengths
-	for i := 0; i < 50; i++ {
-		name := fmt.Sprintf("skill-%03d", i)
-		desc := fmt.Sprintf("Description for skill %d", i)
-
-		// Some very long names that need truncation
-		if i%10 == 0 {
-			name = fmt.Sprintf("extremely-long-skill-name-that-should-be-truncated-in-narrow-terminals-%03d", i)
-		}
-		// Some very long descriptions (200+ chars)
-		if i%7 == 0 {
-			desc = strings.Repeat("Long description text. ", 12)
-		}
-		// Some empty descriptions
-		if i%13 == 0 {
-			desc = ""
-		}
-		// Some with special characters in names
-		if i == 5 {
-			name = "skill-with-dashes-and-123"
-		}
-
-		items = append(items, catalog.ContentItem{
-			Name:        name,
-			Description: desc,
-			Type:        catalog.Skills,
-			Path:        filepath.Join(tmp, "skills", name),
-			Files:       []string{"SKILL.md"},
-		})
-	}
-
-	// 20 agents
-	for i := 0; i < 20; i++ {
-		name := fmt.Sprintf("agent-%03d", i)
-		items = append(items, catalog.ContentItem{
-			Name:        name,
-			Description: fmt.Sprintf("Agent number %d", i),
-			Type:        catalog.Agents,
-			Path:        filepath.Join(tmp, "agents", name),
-			Files:       []string{"AGENT.md"},
-		})
-	}
-
-	// 15 MCP configs
-	for i := 0; i < 15; i++ {
-		name := fmt.Sprintf("mcp-%03d", i)
-		items = append(items, catalog.ContentItem{
-			Name:        name,
-			Description: fmt.Sprintf("MCP server %d", i),
-			Type:        catalog.MCP,
-			Path:        filepath.Join(tmp, "mcp", name),
-			Files:       []string{"config.json"},
-		})
-	}
-
-	return &catalog.Catalog{
-		RepoRoot: tmp,
-		Items:    items,
-	}
+	app := NewApp(testCatalogWithItems(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
+	return m.(App)
 }
 
-// testAppLarge creates a fully-wired App with the large catalog at 80x30.
-func testAppLarge(t *testing.T) App {
-	t.Helper()
-	return testAppLargeSize(t, 80, 30)
-}
+// --- App construction ---
 
-// testAppLargeSize creates a fully-wired App with the large catalog
-// at the specified terminal dimensions.
-func testAppLargeSize(t *testing.T, width, height int) App {
-	t.Helper()
-	cat := testCatalogLarge(t)
-	providers := testProviders(t)
-
-	app := NewApp(cat, providers, "1.0.0", false, nil, nil, false, cat.RepoRoot)
-	app.width = width
-	app.height = height
-
-	contentW := width - sidebarWidth - 1
-	if contentW < 20 {
-		contentW = 20
-	}
-	ph := app.panelHeight()
-	app.sidebar.height = ph
-	app.items.width = contentW
-	app.items.height = ph
-	app.detail.width = contentW
-	app.detail.height = ph
-	app.detail.fileViewer.splitView.width = contentW
-	app.detail.loadoutContents.splitView.width = contentW
-	app.importer.width = contentW
-	app.importer.height = ph
-	app.updater.width = contentW
-	app.updater.height = ph
-	app.settings.width = contentW
-	app.settings.height = ph
-	app.registries.width = contentW
-	app.registries.height = ph
-	app.sandboxSettings.width = contentW
-	app.sandboxSettings.height = ph
-	app.createLoadout.width = contentW
-	app.createLoadout.height = ph
-	app.toast.width = contentW
-	return app
-}
-
-// testCatalogEmpty creates a catalog with no items (empty registry).
-func testCatalogEmpty(t *testing.T) *catalog.Catalog {
-	t.Helper()
-	return &catalog.Catalog{
-		RepoRoot: t.TempDir(),
-		Items:    nil,
-	}
-}
-
-// testAppEmpty creates a fully-wired App with an empty catalog at 80x30.
-func testAppEmpty(t *testing.T) App {
-	t.Helper()
-	return testAppEmptySize(t, 80, 30)
-}
-
-func testAppEmptySize(t *testing.T, width, height int) App {
-	t.Helper()
-	cat := testCatalogEmpty(t)
-	providers := testProviders(t)
-
-	app := NewApp(cat, providers, "1.0.0", false, nil, nil, false, cat.RepoRoot)
-	app.width = width
-	app.height = height
-
-	contentW := width - sidebarWidth - 1
-	if contentW < 20 {
-		contentW = 20
-	}
-	ph := app.panelHeight()
-	app.sidebar.height = ph
-	app.items.width = contentW
-	app.items.height = ph
-	app.detail.width = contentW
-	app.detail.height = ph
-	app.detail.fileViewer.splitView.width = contentW
-	app.detail.loadoutContents.splitView.width = contentW
-	app.importer.width = contentW
-	app.importer.height = ph
-	app.updater.width = contentW
-	app.updater.height = ph
-	app.settings.width = contentW
-	app.settings.height = ph
-	app.registries.width = contentW
-	app.registries.height = ph
-	app.sandboxSettings.width = contentW
-	app.sandboxSettings.height = ph
-	app.createLoadout.width = contentW
-	app.createLoadout.height = ph
-	app.toast.width = contentW
-	return app
-}
-
-// navigateToLibraryItems navigates to Library items via the card view.
-// Presses Enter on the first card (Skills) to get to the items list.
-func navigateToLibraryItems(t *testing.T) App {
-	t.Helper()
-	app := testApp(t)
-	nTypes := sidebarContentCount()
-	app = pressN(app, keyDown, nTypes) // Library
-	m, _ := app.Update(keyEnter)
-	app = m.(App)
-	assertScreen(t, app, screenLibraryCards)
-	// Press Enter to drill into the first card
-	m, _ = app.Update(keyEnter)
-	app = m.(App)
-	assertScreen(t, app, screenItems)
-	return app
-}
-
-// sidebarContentCount returns the number of content type rows in the sidebar.
-// Loadouts is shown in the Collections section, not with content types.
-func sidebarContentCount() int {
-	count := 0
-	for _, ct := range catalog.AllContentTypes() {
-		if ct != catalog.Loadouts {
-			count++
-		}
-	}
-	return count
-}
-
-// ---------------------------------------------------------------------------
-// Test app factory
-// ---------------------------------------------------------------------------
-
-// testApp creates a fully-wired App with test catalog, providers,
-// and a terminal size of 80x30.
 func testApp(t *testing.T) App {
-	t.Helper()
 	return testAppSize(t, 80, 30)
 }
 
-func testAppSize(t *testing.T, width, height int) App {
+func testAppSize(t *testing.T, w, h int) App {
 	t.Helper()
-	cat := testCatalog(t)
-	providers := testProviders(t)
-
-	app := NewApp(cat, providers, "1.0.0", false, nil, nil, false, cat.RepoRoot)
-	app.width = width
-	app.height = height
-
-	// Mirror WindowSizeMsg propagation so test rendering matches production.
-	contentW := width - sidebarWidth - 1
-	if contentW < 20 {
-		contentW = 20
-	}
-	ph := app.panelHeight()
-	app.sidebar.height = ph
-	app.items.width = contentW
-	app.items.height = ph
-	app.detail.width = contentW
-	app.detail.height = ph
-	app.detail.fileViewer.splitView.width = contentW
-	app.detail.loadoutContents.splitView.width = contentW
-	app.importer.width = contentW
-	app.importer.height = ph
-	app.updater.width = contentW
-	app.updater.height = ph
-	app.settings.width = contentW
-	app.settings.height = ph
-	app.registries.width = contentW
-	app.registries.height = ph
-	app.sandboxSettings.width = contentW
-	app.sandboxSettings.height = ph
-	app.createLoadout.width = contentW
-	app.createLoadout.height = ph
-	app.toast.width = contentW
-	return app
+	app := NewApp(testCatalog(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
+	return m.(App)
 }
 
-// ---------------------------------------------------------------------------
-// Assertion helpers
-// ---------------------------------------------------------------------------
+// --- Golden file helpers ---
 
-// assertScreen checks that the app is on the expected screen.
-func assertScreen(t *testing.T, app App, expected screen) {
+var tempDirRe = regexp.MustCompile(`/tmp/Test[A-Za-z0-9_]+/\d+`)
+
+func normalizeSnapshot(s string) string {
+	s = ansi.Strip(s)
+	s = tempDirRe.ReplaceAllString(s, "<TESTDIR>")
+	lines := strings.Split(s, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimRight(line, " ")
+	}
+	return strings.Join(lines, "\n")
+}
+
+func snapshotApp(t *testing.T, app App) string {
 	t.Helper()
-	if app.screen != expected {
-		t.Fatalf("expected screen %d, got %d", expected, app.screen)
+	return normalizeSnapshot(app.View())
+}
+
+func requireGolden(t *testing.T, name string, got string) {
+	t.Helper()
+	path := filepath.Join("testdata", name+".golden")
+	if *updateGolden {
+		os.MkdirAll("testdata", 0o755)
+		os.WriteFile(path, []byte(got), 0o644)
+		return
+	}
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("golden file %s not found (run with -update-golden to create)", path)
+	}
+	if string(want) != got {
+		t.Errorf("golden mismatch for %s:\n%s", name, diffStrings(string(want), got))
 	}
 }
 
-// assertContains fails if s does not contain substr.
-func assertContains(t *testing.T, s, substr string) {
+func diffStrings(want, got string) string {
+	wantLines := strings.Split(want, "\n")
+	gotLines := strings.Split(got, "\n")
+	var sb strings.Builder
+	maxLen := len(wantLines)
+	if len(gotLines) > maxLen {
+		maxLen = len(gotLines)
+	}
+	for i := 0; i < maxLen; i++ {
+		wl, gl := "", ""
+		if i < len(wantLines) {
+			wl = wantLines[i]
+		}
+		if i < len(gotLines) {
+			gl = gotLines[i]
+		}
+		if wl != gl {
+			fmt.Fprintf(&sb, "--- want line %d:\n  %s\n+++ got  line %d:\n  %s\n", i, wl, i, gl)
+		}
+	}
+	if len(wantLines) != len(gotLines) {
+		fmt.Fprintf(&sb, "line count: want %d, got %d\n", len(wantLines), len(gotLines))
+	}
+	return sb.String()
+}
+
+// --- Assertion helpers ---
+
+func assertContains(t *testing.T, view, substr string) {
 	t.Helper()
-	if !strings.Contains(s, substr) {
-		t.Fatalf("expected output to contain %q, but it didn't.\nGot:\n%s", substr, s)
+	stripped := ansi.Strip(view)
+	if !strings.Contains(stripped, substr) {
+		t.Errorf("view does not contain %q\n\nView:\n%s", substr, stripped)
 	}
 }
 
-// assertNotContains fails if s contains substr.
-func assertNotContains(t *testing.T, s, substr string) {
+func assertNotContains(t *testing.T, view, substr string) {
 	t.Helper()
-	if strings.Contains(s, substr) {
-		t.Fatalf("expected output NOT to contain %q, but it did.\nGot:\n%s", substr, s)
+	stripped := ansi.Strip(view)
+	if strings.Contains(stripped, substr) {
+		t.Errorf("view unexpectedly contains %q", substr)
 	}
 }

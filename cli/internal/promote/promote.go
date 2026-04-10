@@ -24,6 +24,11 @@ type Result struct {
 // Promote copies a library item to the shared directory, creates a git branch, commits, pushes, and opens a PR.
 // noInput suppresses interactive prompts even on a TTY (e.g. when --no-input is passed).
 func Promote(repoRoot string, item catalog.ContentItem, noInput bool) (*Result, error) {
+	// Privacy gate G2: block private content from being shared to public repos.
+	if gateErr := CheckSharePrivacyGate(item, repoRoot); gateErr != nil {
+		return nil, gateErr
+	}
+
 	// 1. Check clean tree
 	dirty, err := isTreeDirty(repoRoot)
 	if err != nil {
@@ -64,7 +69,7 @@ func Promote(repoRoot string, item catalog.ContentItem, noInput bool) (*Result, 
 
 	// On any error after branch creation, return to default branch
 	cleanup := func() {
-		gitRun(repoRoot, "checkout", defaultBranch)
+		_ = gitRun(repoRoot, "checkout", defaultBranch)
 	}
 
 	// 6. Copy content (exclude LLM-PROMPT.md)
@@ -78,6 +83,9 @@ func Promote(repoRoot string, item catalog.ContentItem, noInput bool) (*Result, 
 	sharedMeta := *item.Meta
 	sharedMeta.PromotedAt = &now
 	sharedMeta.PRBranch = branchName
+	// Sanitize bundled script paths — replace absolute OriginalPath with just the filename
+	// to prevent leaking local filesystem paths into the shared/registry branch.
+	sanitizeBundledScripts(&sharedMeta)
 	if err := metadata.Save(sharedDir, &sharedMeta); err != nil {
 		cleanup()
 		return nil, fmt.Errorf("writing metadata: %w", err)
@@ -120,7 +128,7 @@ func Promote(repoRoot string, item catalog.ContentItem, noInput bool) (*Result, 
 	result.CompareURL = buildCompareURL(repoRoot, branchName)
 
 	// 11. Return to default branch
-	gitRun(repoRoot, "checkout", defaultBranch)
+	_ = gitRun(repoRoot, "checkout", defaultBranch)
 
 	return result, nil
 }
@@ -217,4 +225,15 @@ func commandOutput(dir string, name string, args ...string) (string, error) {
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	return string(out), err
+}
+
+// sanitizeBundledScripts replaces absolute OriginalPath values with just the
+// filename. This prevents leaking local filesystem paths (e.g.
+// /home/user/.claude/hooks/lint.sh) into shared/registry content.
+func sanitizeBundledScripts(m *metadata.Meta) {
+	for i := range m.BundledScripts {
+		if m.BundledScripts[i].OriginalPath != "" {
+			m.BundledScripts[i].OriginalPath = filepath.Base(m.BundledScripts[i].OriginalPath)
+		}
+	}
 }

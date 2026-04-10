@@ -183,3 +183,118 @@ func TestHookSettingsPathForScope_ProjectNoRoot(t *testing.T) {
 		t.Fatal("expected error when project scope with empty projectRoot, got nil")
 	}
 }
+
+func TestFindSettingsLocationsWithBase_UsesBaseDir(t *testing.T) {
+	baseDir := t.TempDir()
+
+	prov := provider.Provider{
+		Name:      "Test Provider",
+		Slug:      "test",
+		ConfigDir: ".testprovider",
+	}
+
+	// Create settings.json at baseDir path
+	globalDir := filepath.Join(baseDir, prov.ConfigDir)
+	os.MkdirAll(globalDir, 0755)
+	os.WriteFile(filepath.Join(globalDir, "settings.json"), []byte("{}"), 0644)
+
+	projectRoot := t.TempDir()
+	locations, err := FindSettingsLocationsWithBase(prov, projectRoot, baseDir)
+	if err != nil {
+		t.Fatalf("FindSettingsLocationsWithBase: %v", err)
+	}
+
+	if len(locations) != 1 {
+		t.Fatalf("expected 1 location, got %d", len(locations))
+	}
+	if locations[0].Scope != ScopeGlobal {
+		t.Errorf("expected ScopeGlobal, got %v", locations[0].Scope)
+	}
+	if locations[0].Path != filepath.Join(globalDir, "settings.json") {
+		t.Errorf("unexpected path: %s", locations[0].Path)
+	}
+}
+
+func TestFindSettingsLocationsWithBase_EmptyBaseDirFallsBack(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("HOME", tmpDir)
+
+	prov := provider.Provider{
+		Name:      "Test Provider",
+		Slug:      "test",
+		ConfigDir: ".testprovider",
+	}
+
+	// Create global settings.json at HOME
+	globalDir := filepath.Join(tmpDir, prov.ConfigDir)
+	os.MkdirAll(globalDir, 0755)
+	os.WriteFile(filepath.Join(globalDir, "settings.json"), []byte("{}"), 0644)
+
+	projectRoot := t.TempDir()
+	// Empty baseDir should fall back to FindSettingsLocations (home-based)
+	locations, err := FindSettingsLocationsWithBase(prov, projectRoot, "")
+	if err != nil {
+		t.Fatalf("FindSettingsLocationsWithBase: %v", err)
+	}
+
+	if len(locations) != 1 {
+		t.Fatalf("expected 1 location with empty baseDir, got %d", len(locations))
+	}
+}
+
+func TestFindSettingsLocationsWithBase_BothScopes(t *testing.T) {
+	baseDir := t.TempDir()
+
+	prov := provider.Provider{
+		Name:      "Test Provider",
+		Slug:      "test",
+		ConfigDir: ".testprovider",
+	}
+
+	// Create global settings.json at baseDir
+	globalDir := filepath.Join(baseDir, prov.ConfigDir)
+	os.MkdirAll(globalDir, 0755)
+	os.WriteFile(filepath.Join(globalDir, "settings.json"), []byte("{}"), 0644)
+
+	// Create project settings.json
+	projectRoot := t.TempDir()
+	projectDir := filepath.Join(projectRoot, prov.ConfigDir)
+	os.MkdirAll(projectDir, 0755)
+	os.WriteFile(filepath.Join(projectDir, "settings.json"), []byte("{}"), 0644)
+
+	locations, err := FindSettingsLocationsWithBase(prov, projectRoot, baseDir)
+	if err != nil {
+		t.Fatalf("FindSettingsLocationsWithBase: %v", err)
+	}
+
+	if len(locations) != 2 {
+		t.Fatalf("expected 2 locations, got %d", len(locations))
+	}
+	if locations[0].Scope != ScopeGlobal {
+		t.Errorf("first: expected ScopeGlobal, got %v", locations[0].Scope)
+	}
+	if locations[1].Scope != ScopeProject {
+		t.Errorf("second: expected ScopeProject, got %v", locations[1].Scope)
+	}
+}
+
+func TestFindSettingsLocationsWithBase_NoneExist(t *testing.T) {
+	t.Parallel()
+	baseDir := t.TempDir()
+
+	prov := provider.Provider{
+		Name:      "Test Provider",
+		Slug:      "test",
+		ConfigDir: ".testprovider",
+	}
+
+	projectRoot := t.TempDir()
+	locations, err := FindSettingsLocationsWithBase(prov, projectRoot, baseDir)
+	if err != nil {
+		t.Fatalf("FindSettingsLocationsWithBase: %v", err)
+	}
+
+	if len(locations) != 0 {
+		t.Errorf("expected 0 locations, got %d", len(locations))
+	}
+}

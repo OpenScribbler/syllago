@@ -1,0 +1,81 @@
+{
+  "$schema": "handoff-v2",
+  "name": "add-wizard-ux-polish-and-bugfixes",
+  "createdAt": "2026-03-28T10:33:00-07:00",
+  "current": {
+    "claimedBy": {
+      "sessionId": "b3653e69-84de-4131-b8b4-6550455226d4",
+      "claimedAt": "2026-03-29T08:41:20-07:00"
+    },
+    "project": "syllago",
+    "updated": "2026-03-29T00:15:00-07:00",
+    "sessionId": "0a15f327-09bb-418d-951a-d8f3e057c86e",
+    "summary": "Massive Add Wizard UX polish session — 20+ commits fixing nav buttons, table columns, drill-in, risk indicators, scroll, hooks/MCP support, native content discovery, and preFilterType bug.",
+
+    "activeWork": {
+      "description": "Add Wizard UX Polish — fixing remaining discovery bug for content-type-specific adds",
+      "feature": null,
+      "stage": "execute",
+      "planRef": null,
+      "designRef": "docs/plans/2026-03-26-tui-wizards-design.md",
+      "progress": "All 5 original UX polish changes implemented + 20 bug fixes. One remaining bug: preFilterType discovery starts but gets stuck at 'Scanning...' — the async discovery cmd is now returned from advanceFromSource but the result message (addDiscoveryDoneMsg) may not be routing back to the wizard correctly.",
+      "blockers": [],
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": [
+          "syllago-76jtp", "syllago-645ke", "syllago-4l89y", "syllago-dm8gt",
+          "syllago-29uft", "syllago-juwvv", "syllago-5pzoh"
+        ],
+        "readyNext": []
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 134,
+      "lastCommit": "0be34fb fix: preFilterType discovery never started — advanceFromSource returns cmd",
+      "modifiedFiles": [
+        "cli/internal/tui/add_wizard.go",
+        "cli/internal/tui/add_wizard_update.go",
+        "cli/internal/tui/add_wizard_view.go",
+        "cli/internal/tui/app_update.go",
+        "cli/internal/tui/checkbox_list.go",
+        "cli/internal/tui/wizard_shell.go",
+        "cli/internal/tui/filetree.go",
+        "cli/internal/tui/install.go",
+        "cli/internal/tui/topbar.go",
+        "cli/internal/tui/gallery.go"
+      ]
+    },
+
+    "recentDecisions": [
+      "Risk box at bottom of review table with fixed 4-line height to prevent jank",
+      "Per-item risk display (not aggregated) — shows only selected item's risks, max 5",
+      "Risk box is non-interactive — removed from Tab cycle",
+      "Column order: Name → Risk → Type → Status",
+      "Dynamic name column width (capped at 50% of available space)",
+      "MCP/hook drill-in extracts relevant JSON section instead of showing full settings file",
+      "Hook/MCP risk indicators computed from actual config (command/url/env fields)",
+      "stdio-only MCP servers without env vars get no risk indicators",
+      "Native content discovery fallback for local paths without syllago structure",
+      "advanceFromSource returns tea.Cmd so preFilterType discovery actually starts",
+      "Context-aware Add button labels per tab",
+      "Breadcrumb navigation disabled during Execute step",
+      "Add More button on execute done state"
+    ],
+
+    "nextSteps": [
+      "1. FIX CRITICAL BUG: preFilterType discovery gets stuck at 'Scanning...' — advanceFromSource now returns startDiscoveryCmd() but the async result (addDiscoveryDoneMsg) may not route back. Check app_update.go routing for addDiscoveryDoneMsg when wizard is in discovery state. The Library 'Add content' flow works (goes through Type step first), but content-page flows skip Type and the discovery cmd result doesn't arrive.",
+      "2. Test all content-type add wizards (Skills, Agents, MCP, Rules, Hooks, Commands) from their respective pages",
+      "3. Remaining UX items: symlink handling for PAI system content (follow symlinks, warn about source, skip items pointing back to syllago library)",
+      "4. Library item count feature (syllago-vxp1i)",
+      "5. 134 uncommitted files are mostly deleted bundled content from content/ dir — may need to be committed or .gitignored"
+    ],
+
+    "context": {
+      "notes": "The 134 uncommitted files are mostly from Holden deleting the bundled content in content/ (example skills, rules, MCP, etc. that shipped with the repo). The actual TUI code changes are all committed and pushed. The key files for the remaining bug: add_wizard.go (advanceFromSource returns tea.Cmd), add_wizard_update.go (callers now return cmd), app_update.go (addDiscoveryDoneMsg routing). The test TestDiscoverFromLocalPath_NativeSkills passes — the discovery function finds all 12 skills. The issue is in the async message routing, not in the discovery logic. Two pre-existing test failures in cmd/syllago (TestDoctorCheckRegistries_WithConfig, TestFindProjectRootFallbackWarning) are unrelated."
+    }
+  },
+
+  "previousSessions": []
+}

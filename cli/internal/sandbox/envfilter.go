@@ -1,6 +1,7 @@
 package sandbox
 
 import (
+	"fmt"
 	"os"
 	"strings"
 )
@@ -60,4 +61,39 @@ func FilterEnv(environ []string, extra []string) ([]string, EnvReport) {
 // FilterCurrentEnv is a convenience wrapper that filters os.Environ().
 func FilterCurrentEnv(extra []string) ([]string, EnvReport) {
 	return FilterEnv(os.Environ(), extra)
+}
+
+// deniedEnvVars are environment variable names that must never be injected
+// into the sandbox, even from provider profiles. These enable arbitrary code
+// loading or shell startup injection that could escape sandbox protections.
+var deniedEnvVars = map[string]bool{
+	// Dynamic linker injection (Linux)
+	"LD_PRELOAD":      true,
+	"LD_LIBRARY_PATH": true,
+	"LD_AUDIT":        true,
+	// Dynamic linker injection (macOS)
+	"DYLD_INSERT_LIBRARIES": true,
+	"DYLD_LIBRARY_PATH":     true,
+	// Language runtime injection
+	"PYTHONPATH":    true,
+	"PYTHONSTARTUP": true,
+	"NODE_PATH":     true,
+	"NODE_OPTIONS":  true,
+	"PERL5LIB":      true,
+	"PERL5OPT":      true,
+	"RUBYLIB":       true,
+	"RUBYOPT":       true,
+	// Shell startup injection
+	"BASH_ENV": true,
+	"ENV":      true,
+}
+
+// IsDeniedEnvVar reports whether name is a denied environment variable that
+// must not be injected into the sandbox. If denied, it returns a human-readable
+// reason string; otherwise it returns an empty string.
+func IsDeniedEnvVar(name string) string {
+	if deniedEnvVars[name] {
+		return fmt.Sprintf("env var %q is blocked from sandbox injection (code loading/injection risk)", name)
+	}
+	return ""
 }

@@ -1,0 +1,5 @@
+{
+  "_comment": "MUST be rejected: hooks array is empty (spec requires non-empty array).",
+  "spec": "hooks/0.1",
+  "hooks": []
+}

@@ -1,0 +1,78 @@
+{
+  "$schema": "handoff-v2",
+  "name": "content-discovery-redesign-beads-ready",
+  "createdAt": "2026-04-01T04:50:00.000Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-02T21:12:52Z",
+    "sessionId": "b3109ea4-d949-4c1c-9da8-83998db2d4e4",
+    "summary": "Executed all 18 implementation tasks for content-based classification (phases 1-9). 6 commits, +2,248 lines. Found and fixed 2 detector bugs via integration tests. Only TUI confirm-bucket rendering remains — ready for brainstorm.",
+
+    "activeWork": {
+      "description": "TUI confirm-bucket rendering with confidence tier labels — needs brainstorm before implementation",
+      "feature": "content-based-classification",
+      "stage": "brainstorm",
+      "planRef": "docs/plans/2026-04-01-content-based-classification-implementation.md",
+      "designRef": "docs/plans/2026-04-01-content-based-classification-design.md",
+      "progress": "All 18 implementation beads from the plan are closed. 6 commits landed on main. New files: detector_content_signal.go, sanitize.go, vocabulary.go, scanconfig.go, confidence.go, integration_test.go. Modified: analyzer.go (pipeline wiring), generate_manifest.go (--scan-as, --strict, --no-config, --debug-skips, interactive fallback, confidence tier CLI output), audit.go (signal trace events), types.go (SkipEntry, DebugSkips, NoConfig, Signals, ScanAsPaths), detector_cc.go (path traversal fix), match.go (README exclusion), detector_toplevel.go (quick-win patterns). One remaining bead: syllago-6fubw (TUI confirm-bucket rendering). User chose 'full brainstorm first' for this — session ended before brainstorm started.",
+      "blockers": [],
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": [
+          "syllago-s3fh6", "syllago-6219t", "syllago-a4nur", "syllago-fuftm",
+          "syllago-1aso5", "syllago-3rp34", "syllago-s9g30", "syllago-0cn7x",
+          "syllago-dfl0b", "syllago-wajqv", "syllago-wedav", "syllago-0byne",
+          "syllago-94hvu", "syllago-ddxn2", "syllago-03cei", "syllago-sgbpg",
+          "syllago-yjbax", "syllago-a46mp", "syllago-4bjck", "syllago-2in3l"
+        ],
+        "readyNext": ["syllago-6fubw"]
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": "10",
+      "lastCommit": "70a2fce fix: content-signal detector bugs found by integration tests",
+      "modifiedFiles": [
+        "docs/plans/2026-04-01-install-safety-design.md (from other session, not ours)",
+        "cli/.syllago/audit.jsonl (auto-generated)"
+      ]
+    },
+
+    "recentDecisions": [
+      "SignalEntry exported (not private signalEntry) — stored on DetectedItem.Signals for audit logging",
+      "Interactive fallback uses existing bufio.Scanner numbered-list pattern from registry_create_native.go",
+      "syllago ignore (xjyng) deferred — needs its own design pass, not part of this feature",
+      "Task 7.2 split: CLI tier output done (ddxn2), TUI rendering is new bead (6fubw) since TUI has no confirm-bucket view",
+      "Audit wiring belongs in CLI command (not analyzer) — analyzer exposes Signals on DetectedItem, command emits audit events",
+      "Pre-filter bug fixed: include filename in keyword check (mcp-servers.json was missed)",
+      "Confidence boost bug fixed: apply user-directed +0.20 before floor check (0.40 base was dropped)"
+    ],
+
+    "nextSteps": [
+      "Run /brainstorm for TUI confirm-bucket rendering (syllago-6fubw) — user chose full brainstorm",
+      "Key question: where does confirm bucket surface? Install wizard review step? Library metadata panel? Both?",
+      "Pre-existing test failures still present: TestDoctorCheckRegistries_WithConfig, TestGenproviders_* (not related to this feature)"
+    ],
+
+    "context": {
+      "notes": "The implementation plan's 19 tasks are fully executed. The remaining work (syllago-6fubw) is genuinely new TUI feature work — the install wizard currently has no confirm-bucket rendering path, and the AnalysisResult type isn't referenced anywhere in the TUI package. This needs design work to determine UX surface, interaction model, and visual treatment. Also deferred: syllago-xjyng (ignore command, closed as out of scope). P3/P4 roadmap beads remain open (--dry-run, org-config docs, cap dynamic signals, converter manifest, user identity in audit, org-config staleness)."
+    }
+  },
+
+  "previousSessions": [
+    {
+      "summary": "Designed content-based classification feature: 3 panel reviews (4 personas × 5 rounds each), design doc with 9 components, implementation plan with 19 tasks, 19 beads created with dependency chains.",
+      "updated": "2026-04-02T00:20:49-07:00",
+      "completedWork": ["Design doc with 9 components", "Implementation plan with 19 tasks across 9 phases", "19 beads with 24 dependency links", "3 panel reviews with 4 personas"],
+      "nextSteps": ["Execute Phase 1 security foundations", "Commit design doc + implementation plan"]
+    },
+    {
+      "summary": "Executed all 44 CDR beads (phases 1-16), real-world tested against 8 repos, created 5 ADRs, discovered content-based classification gap.",
+      "updated": "2026-04-01T10:30:00-07:00",
+      "completedWork": ["All 44 CDR beads executed", "Full analyzer package (20 files, ~3000 lines, 88.6% coverage)", "11 detectors, full pipeline", "5 ADRs created", "Real-world testing against 8 repos"],
+      "nextSteps": ["Design pass for content-based classification", "Fix README.md false positives"]
+    }
+  ]
+}

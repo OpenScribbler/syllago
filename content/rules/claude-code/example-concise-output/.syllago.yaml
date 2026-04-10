@@ -1,9 +1,0 @@
-name: example-concise-output
-description: Rule for concise, focused output without unnecessary verbosity
-version: "1.0"
-hidden: true
-tags:
-  - example
-  - rule
-  - claude-code
-  - communication-style

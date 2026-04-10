@@ -19,9 +19,9 @@ func TestResolve_AllFound(t *testing.T) {
 	}
 	manifest := &Manifest{
 		Provider: "claude-code",
-		Rules:    []string{"security-conventions"},
-		Skills:   []string{"secure-deploy"},
-		MCP:      []string{"test-server"},
+		Rules:    []ItemRef{{Name: "security-conventions"}},
+		Skills:   []ItemRef{{Name: "secure-deploy"}},
+		MCP:      []ItemRef{{Name: "test-server"}},
 	}
 
 	refs, err := Resolve(manifest, cat)
@@ -43,7 +43,7 @@ func TestResolve_MissingRule(t *testing.T) {
 	}
 	manifest := &Manifest{
 		Provider: "claude-code",
-		Rules:    []string{"security-conventions"},
+		Rules:    []ItemRef{{Name: "security-conventions"}},
 	}
 
 	_, err := Resolve(manifest, cat)
@@ -63,9 +63,9 @@ func TestResolve_MultipleErrors(t *testing.T) {
 	}
 	manifest := &Manifest{
 		Provider: "claude-code",
-		Rules:    []string{"missing-rule"},
-		Skills:   []string{"missing-skill"},
-		MCP:      []string{"missing-mcp"},
+		Rules:    []ItemRef{{Name: "missing-rule"}},
+		Skills:   []ItemRef{{Name: "missing-skill"}},
+		MCP:      []ItemRef{{Name: "missing-mcp"}},
 	}
 
 	_, err := Resolve(manifest, cat)
@@ -95,7 +95,7 @@ func TestResolve_ProviderScopedLookup(t *testing.T) {
 	}
 	manifest := &Manifest{
 		Provider: "claude-code",
-		Rules:    []string{"my-rule"},
+		Rules:    []ItemRef{{Name: "my-rule"}},
 	}
 
 	_, err := Resolve(manifest, cat)
@@ -118,7 +118,7 @@ func TestResolve_UniversalIgnoresProvider(t *testing.T) {
 	}
 	manifest := &Manifest{
 		Provider: "claude-code",
-		Skills:   []string{"my-skill"},
+		Skills:   []ItemRef{{Name: "my-skill"}},
 	}
 
 	refs, err := Resolve(manifest, cat)
@@ -164,7 +164,7 @@ func TestResolve_PrecedenceFirstWins(t *testing.T) {
 	}
 	manifest := &Manifest{
 		Provider: "claude-code",
-		Skills:   []string{"my-skill"},
+		Skills:   []ItemRef{{Name: "my-skill"}},
 	}
 
 	refs, err := Resolve(manifest, cat)

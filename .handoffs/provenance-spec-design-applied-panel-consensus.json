@@ -1,0 +1,68 @@
+{
+  "$schema": "handoff-v2",
+  "name": "provenance-spec-design-applied-panel-consensus",
+  "createdAt": "2026-04-01T22:51:40.514Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-01T22:51:40.514Z",
+    "sessionId": "5988c7d8-b615-4cad-acd4-138b6f9c5ef5",
+    "summary": "Provenance spec design: applied panel consensus (JSON canonicalization, split hashes, meta.yaml), resolved D1-D3, discussion points D4-D12 pending",
+    "activeWork": {
+      "description": "Designing provenance and attestation model for syllago content types; 6-persona panel discussion completed and consensus applied",
+      "feature": "provenance-attestation-spec",
+      "stage": "execute",
+      "planRef": null,
+      "designRef": "docs/spec/provenance.md",
+      "progress": "Panel discussion completed. Applied three key decisions to spec: D1 (JSON canonicalization RFC 8785), split content_hash/meta_hash (not combined), universal meta.yaml (not type-specific). D3 (key distribution) addressed with GitHub Actions + Sigstore OIDC strategy (zero-friction signing for GitHub-hosted content). Open discussion points: D2 (file tree ordering), D4-D12 (sidecar placement, loadout provenance, agent authorship, identity binding, attack defense, fork versioning).",
+      "blockers": [],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 17,
+      "lastCommit": "3b34379 handoff: CDR execution complete, content-based classification gap identified",
+      "modifiedFiles": [
+        ".handoffs/content-discovery-redesign-beads-ready.json",
+        "cli/.syllago/audit.jsonl",
+        "docs/research/agent-skills-spec/14-adversarial-review-panel.md",
+        "docs/research/agent-skills-spec/15-provenance-deep-dive.md",
+        "docs/spec/skills/discussion-metadata-convention.md",
+        "docs/spec/skills/metadata_convention.md",
+        "docs/spec/skills/reference/behavior-data-spec-influences.md",
+        "docs/spec/skills/reference/token-efficiency-metadata-separation.md"
+      ]
+    },
+    "recentDecisions": [
+      "D1 RESOLVED: RFC 8785 (JCS) for JSON canonicalization of metadata",
+      "D2 RESOLVED: Separate content_hash and meta_hash (metadata edits won't break content integrity)",
+      "D3 RESOLVED (partial): Universal meta.yaml across all content types; GitHub Actions + Sigstore OIDC eliminates manual key distribution for published content",
+      "Panel consensus: manifest approach correct (one .syllago/manifest.yaml not per-item files); SSH signing in v0.1 not v0.2"
+    ],
+    "nextSteps": [
+      "Finalize D2: Complete file tree ordering specification for hash consistency across all tools",
+      "Resolve D4: JSON-merge sidecar placement for hooks and MCP configs (Priya flagged security risk)",
+      "Resolve D5: Loadout provenance model — manifest-only hash vs full resolved content",
+      "Resolve D6-D8: Agent authorship rules, provenance fingerprint format, denouncement records",
+      "Resolve D9-D12: Missing meta.yaml handling, sidecar stripping attacks, human identity binding, fork version semantics",
+      "Integrate Sigstore findings: update spec with two-path signing (GitHub Actions via OIDC + local manual signing)",
+      "Create implementation reference (hash test vectors, canonicalization examples, manifest schema with examples)"
+    ],
+    "context": {
+      "notes": "Panel (6 personas: Jordan/security, Marcus/implementation, Aisha/UX, Priya/attack surface, Sam/ecosystem, Casey/workflows) provided critical feedback. Unanimous on metadata canonicalization as blocker. Sigstore OIDC insight solves D3 for dominant use case (GitHub repos). Aisha's concern about metadata edits drove content/meta hash split. Spec in docs/spec/provenance.md covers 6 core decisions + 12 discussion points (D1-D12). D1-D3 have direction; D4-D12 still require design discussion. Next session should continue from D2 (file tree ordering) and work through remaining points before implementation phase."
+    }
+  },
+  "previousSessions": [
+    {
+      "summary": "Extensive provenance research and adversarial panel review: hash algorithm options, sidecar patterns, manifest vs per-item organization, prior panel recommended 8-field minimum spec",
+      "updated": "2026-04-01T10:00:00Z",
+      "completedWork": [
+        "Prior adversarial review panel (14-adversarial-review-panel.md) and provenance deep dive research (15-provenance-deep-dive.md)",
+        "Identified core tension: .syllago.yaml per-item (clutter) vs central manifest (tracking)"
+      ],
+      "nextSteps": [
+        "Panel discussion on spec design with decision framework (COMPLETED this session)"
+      ]
+    }
+  ]
+}

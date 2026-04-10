@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 
@@ -9,12 +10,12 @@ import (
 
 func TestClineSupportsTypes(t *testing.T) {
 	t.Parallel()
-	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.MCP} {
+	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Hooks, catalog.MCP} {
 		if !Cline.SupportsType(ct) {
 			t.Errorf("Cline.SupportsType(%s) = false, want true", ct)
 		}
 	}
-	for _, ct := range []catalog.ContentType{catalog.Skills, catalog.Agents, catalog.Hooks, catalog.Commands} {
+	for _, ct := range []catalog.ContentType{catalog.Skills, catalog.Agents, catalog.Commands} {
 		if Cline.SupportsType(ct) {
 			t.Errorf("Cline.SupportsType(%s) = true, want false", ct)
 		}
@@ -57,5 +58,39 @@ func TestClineFileFormat(t *testing.T) {
 	}
 	if got := Cline.FileFormat(catalog.MCP); got != FormatJSON {
 		t.Errorf("Cline.FileFormat(MCP) = %q, want %q", got, FormatJSON)
+	}
+}
+
+func TestClineMCPSettingsPath(t *testing.T) {
+	t.Parallel()
+	path := ClineMCPSettingsPath()
+
+	// The function returns a non-empty path on all platforms (it calls os.UserHomeDir
+	// which succeeds in test environments).
+	if path == "" {
+		t.Fatal("ClineMCPSettingsPath returned empty string")
+	}
+
+	// Verify the path ends with the expected suffix regardless of platform.
+	wantSuffix := "cline_mcp_settings.json"
+	if !strings.HasSuffix(path, wantSuffix) {
+		t.Errorf("ClineMCPSettingsPath: got %q, want suffix %q", path, wantSuffix)
+	}
+
+	// Verify the path contains the VS Code globalStorage segment.
+	if !strings.Contains(path, "globalStorage") {
+		t.Errorf("ClineMCPSettingsPath: expected path to contain 'globalStorage', got %q", path)
+	}
+
+	// Platform-specific path segment check.
+	switch runtime.GOOS {
+	case "darwin":
+		if !strings.Contains(path, "Application Support") {
+			t.Errorf("on darwin, expected 'Application Support' in path, got %q", path)
+		}
+	case "linux":
+		if !strings.Contains(path, ".config") {
+			t.Errorf("on linux, expected '.config' in path, got %q", path)
+		}
 	}
 }

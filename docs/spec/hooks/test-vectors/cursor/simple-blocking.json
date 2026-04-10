@@ -1,0 +1,9 @@
+{
+  "_comment": "Expected Cursor output for canonical/simple-blocking.json. Conversion: Cursor is a split-event provider — before_tool_execute + matcher 'shell' maps to the native 'beforeShellExecution' event. No matcher field needed in the output because the event itself implies the tool category. Timeout stays in seconds. Cursor hooks live in .cursor/hooks/ directory as JSON files.",
+  "hooks": {
+    "beforeShellExecution": {
+      "command": "./safety-check.sh",
+      "timeout": 10
+    }
+  }
+}

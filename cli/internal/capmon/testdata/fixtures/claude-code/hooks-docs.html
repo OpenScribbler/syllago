@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><title>Claude Code Hooks</title></head>
+<body>
+<main>
+  <h1>Hooks</h1>
+  <p>Hooks allow you to intercept and customize Claude Code's behavior.</p>
+
+  <h2 id="events">Events</h2>
+  <p>The following hook events are supported:</p>
+  <table>
+    <thead>
+      <tr><th>Event Name</th><th>Description</th><th>Blocking</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>PreToolUse</td><td>Fires before any tool is executed</td><td>Yes</td></tr>
+      <tr><td>PostToolUse</td><td>Fires after any tool completes</td><td>No</td></tr>
+      <tr><td>Stop</td><td>Fires when Claude stops generating</td><td>No</td></tr>
+      <tr><td>Notification</td><td>Fires when Claude sends a notification</td><td>No</td></tr>
+      <tr><td>SubagentStop</td><td>Fires when a subagent stops</td><td>No</td></tr>
+      <tr><td>PreCompact</td><td>Fires before context compaction</td><td>Yes</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="configuration">Configuration</h2>
+  <p>Hooks are configured in your CLAUDE.md or settings files.</p>
+  <table>
+    <thead>
+      <tr><th>Setting</th><th>Type</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>hooks</td><td>object</td><td>Map of event names to hook configurations</td></tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

@@ -1,6 +1,8 @@
 package installer
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,19 +15,33 @@ import (
 // it is removed and replaced with the new symlink.
 func CreateSymlink(source, target string) error {
 	// Ensure parent directory exists
-	parent := filepath.Dir(target)
-	if err := os.MkdirAll(parent, 0755); err != nil {
+	dir := filepath.Dir(target)
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("creating parent directory: %w", err)
 	}
 
-	// If target already exists, remove it so we can replace
-	if _, err := os.Lstat(target); err == nil {
-		if err := os.Remove(target); err != nil {
-			return fmt.Errorf("replacing existing target: %w", err)
-		}
+	// Atomic symlink replacement: create temp symlink, then rename.
+	// This avoids a TOCTOU race between Lstat/Remove/Symlink where another
+	// process could create a file at the target path between Remove and Symlink.
+	tmp := filepath.Join(dir, ".symlink-"+randomHex(8))
+	if err := os.Symlink(source, tmp); err != nil {
+		return fmt.Errorf("creating temp symlink: %w", err)
 	}
+	if err := os.Rename(tmp, target); err != nil {
+		_ = os.Remove(tmp) // clean up on failure (best-effort)
+		return fmt.Errorf("renaming symlink: %w", err)
+	}
+	return nil
+}
 
-	return os.Symlink(source, target)
+// randomHex returns n bytes of cryptographically random data as a hex string.
+func randomHex(n int) string {
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback: this should never happen with crypto/rand
+		return "fallback"
+	}
+	return hex.EncodeToString(b)
 }
 
 // IsWindowsMount returns true if the given path is on a WSL Windows mount (e.g., /mnt/c/).

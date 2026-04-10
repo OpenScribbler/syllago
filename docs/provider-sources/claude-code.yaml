@@ -1,0 +1,106 @@
+# Claude Code — Provider Source Manifest
+# Docs served via Mintlify; raw markdown available by appending .md to any doc URL.
+# llms.txt: https://code.claude.com/llms.txt
+
+schema_version: "1"
+last_verified: "2026-04-09"
+provider_version: "v2.1.86"
+
+slug: claude-code
+display_name: Claude Code
+vendor: Anthropic
+status: active
+fetch_tier: llms-txt
+repo: anthropics/claude-code
+repo_branch: main
+
+change_detection:
+  method: github-releases
+  endpoint: https://api.github.com/repos/anthropics/claude-code/releases/latest
+  # Very frequent releases (multiple per week).
+
+changelog:
+  - url: https://code.claude.com/docs/en/changelog.md
+    label: Official changelog
+
+content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Claude Code supports: rules, skills, agents, commands, mcp, hooks
+  # Not supported: (none)
+  # Syllago support: rules ✓, skills ✓, agents ✓, commands ✓, mcp ✓, hooks ✓ (also supports loadouts)
+  # Most complete support of any provider — all 6 content types + loadouts.
+  # ─────────────────────────────────────────────────────────────────────
+
+  rules:
+    sources:
+      - url: https://code.claude.com/docs/en/memory.md
+        type: docs
+        format: markdown
+        extracts: [file_format, file_locations, hierarchy, frontmatter_fields, features]
+    # Format: CLAUDE.md (root) + .claude/rules/*.md (rule files).
+    # Optional YAML frontmatter: description, alwaysApply, globs.
+    # Hierarchy: enterprise > organization > user > project > local.
+
+  hooks:
+    sources:
+      - url: https://code.claude.com/docs/en/hooks.md
+        type: docs
+        format: markdown
+        extracts: [event_names, event_io_schemas, hook_config_fields, matcher_format]
+
+      - url: https://code.claude.com/docs/en/hooks-guide.md
+        type: docs
+        format: markdown
+        extracts: [config_examples, features]
+
+      - url: https://raw.githubusercontent.com/anthropics/claude-code/main/plugins/hookify/hooks/hooks.json
+        type: example
+        format: json
+        extracts: [hook_config_fields, config_examples]
+
+      - url: https://raw.githubusercontent.com/anthropics/claude-code/main/examples/settings/settings-strict.json
+        type: example
+        format: json
+        extracts: [hook_config_fields, config_examples]
+
+      - url: https://raw.githubusercontent.com/anthropics/claude-code/main/examples/settings/settings-lax.json
+        type: example
+        format: json
+        extracts: [config_examples]
+    # 26 events including: PreToolUse, PostToolUse, SessionStart, SessionEnd,
+    #   UserPromptSubmit, Stop, PreCompact, PostCompact, Notification,
+    #   SubagentStart, SubagentStop, PermissionRequest, WorktreeCreate, WorktreeRemove,
+    #   FileChanged, plus CC-specific (TeammateIdle, TaskCreated, etc.)
+    # Hook config: JSON in .claude/settings.json. Fields: type, bash/powershell, cwd, timeoutSec.
+
+  mcp:
+    sources:
+      - url: https://code.claude.com/docs/en/mcp.md
+        type: docs
+        format: markdown
+        extracts: [server_config_fields, transport_types, auth_options, config_examples]
+    # Config file: .mcp.json. Transports: stdio, SSE, streamable-http. OAuth support.
+
+  skills:
+    sources:
+      - url: https://code.claude.com/docs/en/skills.md
+        type: docs
+        format: markdown
+        extracts: [file_format, frontmatter_fields, file_locations, features]
+    # Format: .claude/skills/{name}/SKILL.md with YAML frontmatter. Invoked via slash commands.
+
+  agents:
+    sources:
+      - url: https://code.claude.com/docs/en/sub-agents.md
+        type: docs
+        format: markdown
+        extracts: [file_format, frontmatter_fields, file_locations]
+    # Format: .claude/agents/{name}.md with YAML frontmatter.
+
+  commands:
+    sources:
+      - url: https://code.claude.com/docs/en/commands.md
+        type: docs
+        format: markdown
+        extracts: [file_format, frontmatter_fields, file_locations]
+    # Format: .claude/commands/{name}.md with YAML frontmatter. Invoked as /{name}.

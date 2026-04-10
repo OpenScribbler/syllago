@@ -1,877 +1,553 @@
 package tui
 
 import (
-	"os"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-
-	"github.com/OpenScribbler/syllago/cli/internal/catalog"
-	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/charmbracelet/x/ansi"
 )
 
-func TestConfirmModalViewContainsTitle(t *testing.T) {
-	m := newConfirmModal("Delete item?", "This cannot be undone.")
-	view := m.View()
-	if !strings.Contains(view, "Delete item?") {
-		t.Error("confirmModal.View() should contain the title text")
+func TestEditModal_OpenClose(t *testing.T) {
+	m := newEditModal()
+	if m.active {
+		t.Fatal("modal should not be active initially")
 	}
-	if !strings.Contains(view, "This cannot be undone.") {
-		t.Error("confirmModal.View() should contain the body text")
+
+	m.Open("Edit: my-skill", "My Skill", "Does cool things", "/path/to/item")
+	if !m.active {
+		t.Fatal("modal should be active after Open")
+	}
+	if m.title != "Edit: my-skill" {
+		t.Errorf("expected title 'Edit: my-skill', got %q", m.title)
+	}
+	if m.name != "My Skill" {
+		t.Errorf("expected name 'My Skill', got %q", m.name)
+	}
+	if m.description != "Does cool things" {
+		t.Errorf("expected description 'Does cool things', got %q", m.description)
+	}
+	if m.cursor != 8 {
+		t.Errorf("expected cursor at 8, got %d", m.cursor)
+	}
+
+	m.Close()
+	if m.active {
+		t.Fatal("modal should not be active after Close")
+	}
+	if m.name != "" || m.description != "" {
+		t.Errorf("expected empty fields after Close, got name=%q desc=%q", m.name, m.description)
 	}
 }
 
-func TestConfirmModalEnterConfirms(t *testing.T) {
-	m := newConfirmModal("Confirm?", "")
-	// Default btnCursor is Cancel (1); press Left to move to Confirm first
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	if !updated.confirmed {
-		t.Error("Enter on Confirm button should set confirmed=true")
-	}
-	if updated.active {
-		t.Error("Enter should set active=false")
-	}
-}
+func TestEditModal_EscCancels(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "name", "desc", "ctx")
 
-func TestConfirmModalEnterDefaultCancels(t *testing.T) {
-	m := newConfirmModal("Confirm?", "")
-	// Default btnCursor is Cancel; Enter without navigating should cancel
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	if updated.confirmed {
-		t.Error("Enter on default Cancel button should leave confirmed=false")
+	m, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if m.active {
+		t.Fatal("modal should be inactive after Esc")
 	}
-	if updated.active {
-		t.Error("Enter should set active=false")
-	}
-}
-
-func TestConfirmModalEscCancels(t *testing.T) {
-	m := newConfirmModal("Confirm?", "")
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
-	if updated.confirmed {
-		t.Error("Esc should leave confirmed=false")
-	}
-	if updated.active {
-		t.Error("Esc should set active=false")
-	}
-}
-
-func TestAppModalCapturesInput(t *testing.T) {
-	// When modal is active, key input should not reach the screen handler
-	a := App{
-		width:  80,
-		height: 24,
-		screen: screenCategory,
-		focus:  focusModal,
-		modal:  newConfirmModal("Test?", ""),
-	}
-	// Pressing 'n' (cancel) should be intercepted by the modal, not quit the app
-	qMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")}
-	result, _ := a.Update(qMsg)
-	updated := result.(App)
-	// Modal should have closed (n = cancel) but app should not have quit
-	if updated.modal.active {
-		t.Error("modal should be inactive after pressing 'n'")
-	}
-}
-
-func TestSaveModalViewContainsInput(t *testing.T) {
-	m := newSaveModal("filename.md")
-	view := m.View()
-	if !strings.Contains(view, "Save prompt as:") {
-		t.Error("saveModal.View() should contain 'Save prompt as:' label")
-	}
-}
-
-func TestSaveModalEnterWithValueConfirms(t *testing.T) {
-	m := newSaveModal("filename.md")
-	// Type a filename into the input
-	m.input.SetValue("my-prompt.md")
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	if !updated.confirmed {
-		t.Error("Enter with non-empty input should set confirmed=true")
-	}
-	if updated.value != "my-prompt.md" {
-		t.Errorf("value should be 'my-prompt.md', got %q", updated.value)
-	}
-}
-
-func TestOpenModalMsgOpensModal(t *testing.T) {
-	// Sending openModalMsg to App should open the confirmModal
-	a := App{
-		width:  80,
-		height: 24,
-		screen: screenDetail,
-	}
-	msg := openModalMsg{
-		purpose: modalInstall,
-		title:   "Install test-tool?",
-		body:    "Install using symlink or copy.",
-	}
-	result, _ := a.Update(msg)
-	updated := result.(App)
-	if !updated.modal.active {
-		t.Error("openModalMsg should set modal.active=true")
-	}
-	if updated.modal.purpose != modalInstall {
-		t.Errorf("modal purpose should be modalInstall, got %d", updated.modal.purpose)
-	}
-}
-
-func TestEnvSetupModalChooseNavigation(t *testing.T) {
-	m := newEnvSetupModal([]string{"API_KEY", "AUTH_TOKEN"})
-	if m.step != envStepChoose {
-		t.Errorf("initial step should be envStepChoose, got %d", m.step)
-	}
-	// Down arrow should move method cursor
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	if updated.methodCursor != 1 {
-		t.Errorf("Down should move methodCursor to 1, got %d", updated.methodCursor)
-	}
-}
-
-func TestEnvSetupModalChooseEnterNewValue(t *testing.T) {
-	m := newEnvSetupModal([]string{"API_KEY"})
-	// methodCursor 0 = "Set up new value" → envStepValue
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	if updated.step != envStepValue {
-		t.Errorf("Enter on 'Set up new value' should advance to envStepValue, got %d", updated.step)
-	}
-}
-
-func TestEnvSetupModalChooseEnterAlreadyConfigured(t *testing.T) {
-	m := newEnvSetupModal([]string{"API_KEY"})
-	// Move to "Already configured"
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	// Enter → envStepSource
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	if updated.step != envStepSource {
-		t.Errorf("Enter on 'Already configured' should advance to envStepSource, got %d", updated.step)
-	}
-}
-
-func TestEnvSetupModalEscSkips(t *testing.T) {
-	m := newEnvSetupModal([]string{"API_KEY", "AUTH_TOKEN"})
-	// Esc on choose step skips to next var
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
-	if updated.varIdx != 1 {
-		t.Errorf("Esc should advance to next var, got varIdx %d", updated.varIdx)
-	}
-	if updated.step != envStepChoose {
-		t.Errorf("should be back at envStepChoose for next var, got %d", updated.step)
-	}
-}
-
-func TestEnvSetupModalEscOnLastVarCloses(t *testing.T) {
-	m := newEnvSetupModal([]string{"API_KEY"})
-	// Esc on the only var should close the modal
-	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
-	if updated.active {
-		t.Error("Esc on last var should close the modal")
-	}
-}
-
-// TestInstallMethodDescriptionNoOrphanedWords verifies that the install method
-// descriptions fit within the modal width without wrapping. A wrapped description
-// produces a continuation line that starts with a lowercase word — a visual defect
-// where the text appears flush-left instead of indented under the description column.
-func TestInstallMethodDescriptionNoOrphanedWords(t *testing.T) {
-	p := provider.Provider{
-		Name:     "Claude Code",
-		Slug:     "claude-code",
-		Detected: true,
-		InstallDir: func(_ string, _ catalog.ContentType) string {
-			return "/tmp/test"
-		},
-		SupportsType: func(_ catalog.ContentType) bool { return true },
-	}
-	item := catalog.ContentItem{
-		Name: "test-skill",
-		Type: catalog.Skills,
-	}
-	m := newInstallModal(item, []provider.Provider{p}, "/tmp/repo")
-	// Advance to the method selection step
-	m.step = installStepMethod
-
-	view := m.View()
-	lines := strings.Split(view, "\n")
-	for _, line := range lines {
-		// Strip border characters and spaces to get the visible content
-		trimmed := strings.TrimLeft(line, " │")
-		if len(trimmed) == 0 {
-			continue
-		}
-		// A wrapped description continuation starts with a lowercase letter after
-		// the border and padding have been stripped. These lines indicate description
-		// text wrapped and the continuation landed flush-left, unindented.
-		if trimmed[0] >= 'a' && trimmed[0] <= 'z' {
-			t.Errorf("install method modal has an orphaned lowercase continuation line: %q", line)
-		}
-	}
-}
-
-func TestModalPurposesAreDefined(t *testing.T) {
-	// All required modal purposes must be defined and distinct
-	purposes := []modalPurpose{
-		modalNone, modalInstall, modalUninstall, modalSave, modalShare,
-	}
-	seen := map[modalPurpose]bool{}
-	for _, p := range purposes {
-		if seen[p] {
-			t.Errorf("modalPurpose %d is duplicated", p)
-		}
-		seen[p] = true
-	}
-	if len(seen) != 5 {
-		t.Errorf("expected 5 distinct modal purposes, got %d", len(seen))
-	}
-}
-
-// makeDetailModel creates a minimal detailModel for testing key handling.
-// tab is set to tabInstall so install-related keys are active.
-func makeDetailModel(itemType catalog.ContentType, local bool, installed bool) detailModel {
-	item := catalog.ContentItem{
-		Name:  "test-item",
-		Type:  itemType,
-		Path:  "/tmp/test-item",
-		Library: local,
-	}
-	var providers []provider.Provider
-	if installed {
-		p := provider.Provider{
-			Name:     "Claude",
-			Detected: true,
-			Slug:     "claude",
-			SupportsType: func(ct catalog.ContentType) bool {
-				return ct == itemType
-			},
-			InstallDir: func(_ string, _ catalog.ContentType) string {
-				return "/tmp/claude"
-			},
-		}
-		providers = []provider.Provider{p}
-	}
-	m := newDetailModel(item, providers, "/tmp/repo", nil)
-	m.activeTab = tabInstall
-	// If installed, mark the provider checkbox true
-	if installed && len(m.provCheck.checks) > 0 {
-		m.provCheck.checks[0] = true
-	}
-	return m
-}
-
-// extractCmd runs a tea.Cmd and returns the resulting tea.Msg (or nil).
-func extractCmd(cmd tea.Cmd) tea.Msg {
 	if cmd == nil {
-		return nil
+		t.Fatal("expected a command from Esc")
 	}
-	return cmd()
+	msg := cmd()
+	if _, ok := msg.(editCancelledMsg); !ok {
+		t.Fatalf("expected editCancelledMsg, got %T", msg)
+	}
 }
 
-func TestUninstallKeyEmitsOpenModalMsg(t *testing.T) {
-	// 'u' on an item with installed providers should
-	// emit openModalMsg{purpose: modalUninstall} instead of setting confirmAction.
-	//
-	// We need installedProviders() to return something. For Agents (IsUniversal=true),
-	// resolveTarget uses item.Name, so we can create a predictable target file.
-	installDir := t.TempDir()
-	itemDir := t.TempDir()
-	item := catalog.ContentItem{
-		Name: "test-agent",
-		Type: catalog.Agents,
-		Path: itemDir,
+func TestEditModal_CtrlSSaves(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "my name", "my desc", "/path")
+
+	m, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
+	if m.active {
+		t.Fatal("modal should be inactive after Ctrl+S")
 	}
-	// resolveTarget for Agents uses installDir/item.Name+".md"
-	targetFile := installDir + "/test-agent.md"
-	if f, err := os.Create(targetFile); err == nil {
-		f.Close()
+	if cmd == nil {
+		t.Fatal("expected a command from Ctrl+S")
 	}
-	p := provider.Provider{
-		Name:     "TestProvider",
-		Detected: true,
-		Slug:     "test",
-		SupportsType: func(ct catalog.ContentType) bool {
-			return ct == catalog.Agents
-		},
-		InstallDir: func(_ string, _ catalog.ContentType) string {
-			return installDir
-		},
-	}
-	m := newDetailModel(item, []provider.Provider{p}, itemDir, nil)
-	m.activeTab = tabInstall
-	uMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("u")}
-	_, cmd := m.Update(uMsg)
-	msg := extractCmd(cmd)
-	oMsg, ok := msg.(openModalMsg)
+	msg := cmd()
+	saved, ok := msg.(editSavedMsg)
 	if !ok {
-		t.Fatalf("pressing u should return openModalMsg, got %T", msg)
+		t.Fatalf("expected editSavedMsg, got %T", msg)
 	}
-	if oMsg.purpose != modalUninstall {
-		t.Errorf("openModalMsg.purpose should be modalUninstall, got %d", oMsg.purpose)
+	if saved.name != "my name" {
+		t.Errorf("expected name 'my name', got %q", saved.name)
 	}
-}
-
-func TestShareKeyEmitsOpenModalMsg(t *testing.T) {
-	// 'p' on a library item should emit openModalMsg{purpose: modalShare}
-	// instead of setting confirmAction=actionPromoteConfirm.
-	m := makeDetailModel(catalog.MCP, true, false)
-	pMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")}
-	_, cmd := m.Update(pMsg)
-	msg := extractCmd(cmd)
-	oMsg, ok := msg.(openModalMsg)
-	if !ok {
-		t.Fatalf("pressing p should return openModalMsg, got %T", msg)
+	if saved.description != "my desc" {
+		t.Errorf("expected description 'my desc', got %q", saved.description)
 	}
-	if oMsg.purpose != modalShare {
-		t.Errorf("openModalMsg.purpose should be modalShare, got %d", oMsg.purpose)
+	if saved.path != "/path" {
+		t.Errorf("expected path '/path', got %q", saved.path)
 	}
 }
 
-func TestInstallModalEscapeResetsState(t *testing.T) {
-	// Open the install modal, advance to step 2 (method selection), then cancel
-	// via Escape. The App's instModal must be fully zeroed — not just inactive —
-	// so stale location/method choices cannot influence a future install.
-	item := catalog.ContentItem{
-		Name: "test-item",
-		Type: catalog.Agents,
-		Path: t.TempDir(),
+func TestEditModal_EnterMovesToNextField(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "name", "desc", "ctx")
+
+	// Focus on name field (default), Enter should move to description
+	m, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd != nil {
+		t.Fatal("Enter in name field should not produce a command")
 	}
-	p := provider.Provider{
-		Name:     "TestProvider",
-		Detected: true,
-		Slug:     "test",
-		SupportsType: func(ct catalog.ContentType) bool { return true },
-		InstallDir:   func(_ string, _ catalog.ContentType) string { return t.TempDir() },
+	if m.focusIdx != 1 {
+		t.Errorf("expected focus on description (1), got %d", m.focusIdx)
 	}
 
-	// Start with an install modal already open (as if openInstallModalMsg was received)
-	a := App{
-		width:  80,
-		height: 24,
-		screen: screenDetail,
-		focus:  focusModal,
-		instModal: newInstallModal(item, []provider.Provider{p}, "/tmp/repo"),
+	// Enter on description should move to Save button
+	m, cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd != nil {
+		t.Fatal("Enter in description field should not produce a command")
+	}
+	if m.focusIdx != 3 {
+		t.Errorf("expected focus on Save (3), got %d", m.focusIdx)
 	}
 
-	// Advance to step 2: move cursor to "Project" then press Enter to reach method step
-	m, _ := a.Update(tea.KeyMsg{Type: tea.KeyDown}) // locationCursor → 1 (project)
-	a = m.(App)
-	m, _ = a.Update(tea.KeyMsg{Type: tea.KeyEnter}) // advance to installStepMethod
-	a = m.(App)
-
-	if a.instModal.step != installStepMethod {
-		t.Fatalf("expected installStepMethod after Enter, got step %d", a.instModal.step)
+	// Enter on Save button should save
+	m, cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if m.active {
+		t.Fatal("modal should be inactive after Enter on Save")
 	}
-	if a.instModal.locationCursor != 1 {
-		t.Fatalf("expected locationCursor=1 (project), got %d", a.instModal.locationCursor)
+	if cmd == nil {
+		t.Fatal("expected command from Save")
 	}
-
-	// Escape at method step goes back to location step (one step back, not cancel)
-	m, _ = a.Update(tea.KeyMsg{Type: tea.KeyEsc})
-	a = m.(App)
-	if a.instModal.step != installStepLocation {
-		t.Fatalf("expected back at installStepLocation, got step %d", a.instModal.step)
-	}
-
-	// Escape at location step closes and cancels the modal
-	m, _ = a.Update(tea.KeyMsg{Type: tea.KeyEsc})
-	a = m.(App)
-
-	// The modal must be fully reset — zero value, not just active=false
-	if a.instModal.active {
-		t.Error("instModal.active should be false after cancel")
-	}
-	if a.instModal.confirmed {
-		t.Error("instModal.confirmed should be false after cancel")
-	}
-	if a.instModal.locationCursor != 0 {
-		t.Errorf("instModal.locationCursor should be reset to 0, got %d", a.instModal.locationCursor)
-	}
-	if a.instModal.methodCursor != 0 {
-		t.Errorf("instModal.methodCursor should be reset to 0, got %d", a.instModal.methodCursor)
-	}
-	if a.instModal.step != installStepLocation {
-		t.Errorf("instModal.step should be reset to installStepLocation (0), got %d", a.instModal.step)
+	msg := cmd()
+	if _, ok := msg.(editSavedMsg); !ok {
+		t.Fatalf("expected editSavedMsg, got %T", msg)
 	}
 }
 
-func TestInstallModalNavigateAwayResetsState(t *testing.T) {
-	// Simulate navigating away from screenDetail while instModal is active.
-	// The resetInstallModal helper (called by mouse navigation paths) must zero
-	// out the modal so a later re-entry to the detail screen starts clean.
-	item := catalog.ContentItem{
-		Name: "test-item",
-		Type: catalog.Agents,
-		Path: t.TempDir(),
-	}
-	p := provider.Provider{
-		Name:     "TestProvider",
-		Detected: true,
-		Slug:     "test",
-		SupportsType: func(ct catalog.ContentType) bool { return true },
-		InstallDir:   func(_ string, _ catalog.ContentType) string { return t.TempDir() },
-	}
+func TestEditModal_CancelButtonEnter(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "name", "desc", "ctx")
+	m.focusIdx = 2 // Cancel button
 
-	// Build an App with a mid-flow install modal: step 2 with a non-default cursor.
-	modal := newInstallModal(item, []provider.Provider{p}, "/tmp/repo")
-	modal.step = installStepMethod
-	modal.locationCursor = 1 // project-level selected
-	modal.methodCursor = 1   // copy selected
-	a := App{
-		width:     80,
-		height:    24,
-		screen:    screenDetail,
-		focus:     focusModal,
-		instModal: modal,
+	m, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if m.active {
+		t.Fatal("modal should be inactive after Enter on Cancel")
 	}
-
-	// Call resetInstallModal directly — this is what mouse navigation paths invoke
-	a.resetInstallModal()
-
-	if a.instModal.active {
-		t.Error("instModal.active should be false after reset")
+	if cmd == nil {
+		t.Fatal("expected command")
 	}
-	if a.instModal.confirmed {
-		t.Error("instModal.confirmed should be false after reset")
-	}
-	if a.instModal.step != installStepLocation {
-		t.Errorf("instModal.step should be reset to 0 (installStepLocation), got %d", a.instModal.step)
-	}
-	if a.instModal.locationCursor != 0 {
-		t.Errorf("instModal.locationCursor should be reset to 0, got %d", a.instModal.locationCursor)
-	}
-	if a.instModal.methodCursor != 0 {
-		t.Errorf("instModal.methodCursor should be reset to 0, got %d", a.instModal.methodCursor)
+	msg := cmd()
+	if _, ok := msg.(editCancelledMsg); !ok {
+		t.Fatalf("expected editCancelledMsg, got %T", msg)
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Regression tests: modal escape behavior at the App routing level
-// ---------------------------------------------------------------------------
+func TestEditModal_TypingInNameField(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "", "desc", "ctx")
 
-// TestConfirmModalClosesOnEscape verifies that pressing Escape on the App when
-// a confirmModal is active closes the modal, returns focus to content, and does
-// not set confirmed (no action taken).
-func TestConfirmModalClosesOnEscape(t *testing.T) {
-	a := App{
-		width:  80,
-		height: 24,
-		screen: screenDetail,
-		focus:  focusModal,
-		modal:  newConfirmModal("Delete?", "This cannot be undone."),
+	for _, ch := range "abc" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
 	}
-	a.modal.purpose = modalUninstall
+	if m.name != "abc" {
+		t.Errorf("expected name 'abc', got %q", m.name)
+	}
+	if m.cursor != 3 {
+		t.Errorf("expected cursor at 3, got %d", m.cursor)
+	}
 
-	result, _ := a.Update(keyEsc)
-	updated := result.(App)
-
-	if updated.modal.active {
-		t.Error("confirmModal should be inactive after Escape")
-	}
-	if updated.modal.confirmed {
-		t.Error("Escape should not confirm the modal (confirmed must stay false)")
-	}
-	if updated.focus == focusModal {
-		t.Errorf("focus should no longer be focusModal after modal closes, got %d", updated.focus)
+	// Backspace
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	if m.name != "ab" {
+		t.Errorf("expected name 'ab' after backspace, got %q", m.name)
 	}
 }
 
-// TestSaveModalClosesOnEscape verifies that pressing Escape when the saveModal
-// is active closes it without saving: confirmed stays false and detail.savePath
-// is not set.
-func TestSaveModalClosesOnEscape(t *testing.T) {
-	a := App{
-		width:     80,
-		height:    24,
-		screen:    screenDetail,
-		focus:     focusModal,
-		saveModal: newSaveModal("filename.md"),
-	}
-	// Type some text into the save input before pressing Escape.
-	a.saveModal.input.SetValue("my-unsaved-prompt.md")
+func TestEditModal_TypingInDescField(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "name", "", "ctx")
+	m.focusIdx = 1 // Description field
+	m.cursor = 0
 
-	result, _ := a.Update(keyEsc)
-	updated := result.(App)
-
-	if updated.saveModal.active {
-		t.Error("saveModal should be inactive after Escape")
+	for _, ch := range "xyz" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
 	}
-	if updated.saveModal.confirmed {
-		t.Error("Escape should not confirm the save modal")
+	if m.description != "xyz" {
+		t.Errorf("expected description 'xyz', got %q", m.description)
 	}
-	if updated.detail.savePath != "" {
-		t.Errorf("detail.savePath should be empty after Escape, got %q", updated.detail.savePath)
-	}
-	if updated.focus == focusModal {
-		t.Errorf("focus should no longer be focusModal after saveModal closes, got %d", updated.focus)
+	// Name should be unchanged
+	if m.name != "name" {
+		t.Errorf("name should be unchanged, got %q", m.name)
 	}
 }
 
-// TestInstallModalClosesOnEscapeAtLocationStep verifies that pressing Escape
-// while the installModal is on its first step (location selection) closes the
-// modal entirely and does not trigger an install.
-func TestInstallModalClosesOnEscapeAtLocationStep(t *testing.T) {
-	item := catalog.ContentItem{
-		Name: "test-item",
-		Type: catalog.Skills,
-		Path: "/tmp/test-item",
-	}
-	p := provider.Provider{
-		Name:     "Claude Code",
-		Slug:     "claude-code",
-		Detected: true,
-		SupportsType: func(ct catalog.ContentType) bool { return true },
-		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/claude" },
-	}
-	a := App{
-		width:     80,
-		height:    24,
-		screen:    screenDetail,
-		focus:     focusModal,
-		instModal: newInstallModal(item, []provider.Provider{p}, "/tmp/repo"),
-	}
-	// Sanity check: modal starts at the location step.
-	if a.instModal.step != installStepLocation {
-		t.Fatalf("expected installStepLocation at start, got %d", a.instModal.step)
-	}
+func TestEditModal_TypingOnlyInTextFields(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "name", "desc", "ctx")
+	m.focusIdx = 2 // Cancel button
 
-	result, _ := a.Update(keyEsc)
-	updated := result.(App)
-
-	if updated.instModal.active {
-		t.Error("installModal should be inactive after Escape at location step")
-	}
-	if updated.instModal.confirmed {
-		t.Error("Escape should not confirm the install modal")
-	}
-	if updated.focus == focusModal {
-		t.Errorf("focus should no longer be focusModal after installModal closes, got %d", updated.focus)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}})
+	if m.name != "name" || m.description != "desc" {
+		t.Error("typing on button should not change any field value")
 	}
 }
 
-// TestInstallModalEscapeAtMethodStepNavigatesBack verifies that pressing Escape
-// on the method step navigates back to the location step rather than closing
-// the modal.
-func TestInstallModalEscapeAtMethodStepNavigatesBack(t *testing.T) {
-	item := catalog.ContentItem{
-		Name: "test-item",
-		Type: catalog.Skills,
-		Path: "/tmp/test-item",
-	}
-	a := App{
-		width:     80,
-		height:    24,
-		screen:    screenDetail,
-		focus:     focusModal,
-		instModal: newInstallModal(item, nil, "/tmp/repo"),
-	}
-	// Advance to method step.
-	a.instModal.step = installStepMethod
+func TestEditModal_TabCyclesFocus(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "name", "desc", "ctx")
 
-	result, _ := a.Update(keyEsc)
-	updated := result.(App)
+	if m.focusIdx != 0 {
+		t.Fatalf("expected initial focus 0, got %d", m.focusIdx)
+	}
 
-	if !updated.instModal.active {
-		t.Error("installModal should remain active after Escape at method step (navigates back)")
+	// Tab cycles: 0(name) -> 1(desc) -> 2(cancel) -> 3(save) -> 0
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if m.focusIdx != 1 {
+		t.Errorf("expected focus 1, got %d", m.focusIdx)
 	}
-	if updated.instModal.step != installStepLocation {
-		t.Errorf("Escape at method step should return to installStepLocation, got %d", updated.instModal.step)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if m.focusIdx != 2 {
+		t.Errorf("expected focus 2, got %d", m.focusIdx)
 	}
-	if updated.instModal.confirmed {
-		t.Error("Escape should not confirm the install modal")
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if m.focusIdx != 3 {
+		t.Errorf("expected focus 3, got %d", m.focusIdx)
+	}
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if m.focusIdx != 0 {
+		t.Errorf("expected focus 0, got %d", m.focusIdx)
+	}
+
+	// Shift+Tab goes backwards
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	if m.focusIdx != 3 {
+		t.Errorf("expected focus 3 after shift-tab, got %d", m.focusIdx)
 	}
 }
 
-// TestEnvSetupModalClosesOnEscapeWhenLastVar verifies that pressing Escape while
-// the envSetupModal is on its only variable (choose step) closes the modal and
-// returns focus to content — no env writes occur.
-func TestEnvSetupModalClosesOnEscapeWhenLastVar(t *testing.T) {
-	a := App{
-		width:    80,
-		height:   24,
-		screen:   screenDetail,
-		focus:    focusModal,
-		envModal: newEnvSetupModal([]string{"API_KEY"}),
-	}
-	// Sanity check: modal starts active on the choose step.
-	if !a.envModal.active {
-		t.Fatal("envModal should be active at start")
-	}
-	if a.envModal.step != envStepChoose {
-		t.Fatalf("expected envStepChoose at start, got %d", a.envModal.step)
+func TestEditModal_CursorMovement(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "hello", "desc", "ctx")
+
+	// Left arrow
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	if m.cursor != 4 {
+		t.Errorf("expected cursor at 4, got %d", m.cursor)
 	}
 
-	result, _ := a.Update(keyEsc)
-	updated := result.(App)
-
-	if updated.envModal.active {
-		t.Error("envModal should be inactive after Escape on last variable")
+	// Home goes to start
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyHome})
+	if m.cursor != 0 {
+		t.Errorf("expected cursor at 0, got %d", m.cursor)
 	}
-	if updated.focus == focusModal {
-		t.Errorf("focus should no longer be focusModal after envModal closes, got %d", updated.focus)
+
+	// End goes to end
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	if m.cursor != 5 {
+		t.Errorf("expected cursor at 5, got %d", m.cursor)
+	}
+
+	// Right at end doesn't move
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	if m.cursor != 5 {
+		t.Errorf("expected cursor at 5, got %d", m.cursor)
+	}
+
+	// Left at 0 doesn't go negative
+	m.cursor = 0
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	if m.cursor != 0 {
+		t.Errorf("expected cursor at 0, got %d", m.cursor)
 	}
 }
 
-// TestEnvSetupModalEscapeOnValueStepNavigatesBack verifies that pressing Escape
-// on the value-entry step returns to the choose step without closing the modal.
-func TestEnvSetupModalEscapeOnValueStepNavigatesBack(t *testing.T) {
-	a := App{
-		width:    80,
-		height:   24,
-		screen:   screenDetail,
-		focus:    focusModal,
-		envModal: newEnvSetupModal([]string{"API_KEY"}),
-	}
-	// Advance to value step.
-	a.envModal.step = envStepValue
+func TestEditModal_InsertInMiddle(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "hllo", "desc", "ctx")
+	m.cursor = 1
 
-	result, _ := a.Update(keyEsc)
-	updated := result.(App)
-
-	if !updated.envModal.active {
-		t.Error("envModal should remain active after Escape at value step (navigates back to choose)")
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	if m.name != "hello" {
+		t.Errorf("expected 'hello', got %q", m.name)
 	}
-	if updated.envModal.step != envStepChoose {
-		t.Errorf("Escape at value step should return to envStepChoose, got %d", updated.envModal.step)
-	}
-	// Focus should still be on modal since it's still active.
-	if updated.focus != focusModal {
-		t.Errorf("focus should remain focusModal while envModal is still active, got %d", updated.focus)
+	if m.cursor != 2 {
+		t.Errorf("expected cursor at 2, got %d", m.cursor)
 	}
 }
 
-func TestClickAway_ClosesConfirmModal(t *testing.T) {
-	a := App{
-		width:  80,
-		height: 24,
-		screen: screenDetail,
-		focus:  focusModal,
-		modal:  newConfirmModal("Test", "body"),
-	}
-	a.modal.purpose = modalInstall
+func TestEditModal_DeleteKey(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "hello", "desc", "ctx")
+	m.cursor = 0
 
-	clickMsg := tea.MouseMsg{
-		Action: tea.MouseActionRelease,
-		Button: tea.MouseButtonLeft,
-		X:      0,
-		Y:      0,
-	}
-	m, _ := a.Update(clickMsg)
-	updated := m.(App)
-	if updated.modal.active {
-		t.Error("clicking outside modal should close it")
-	}
-	if updated.modal.confirmed {
-		t.Error("click-away should not confirm modal")
-	}
-	if updated.focus != focusContent {
-		t.Errorf("focus should return to focusContent, got %d", updated.focus)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDelete})
+	if m.name != "ello" {
+		t.Errorf("expected 'ello', got %q", m.name)
 	}
 }
 
-func TestClickAway_ClosesSaveModal(t *testing.T) {
-	a := App{
-		width:     80,
-		height:    24,
-		screen:    screenDetail,
-		focus:     focusModal,
-		saveModal: newSaveModal("filename.md"),
-	}
-	a.saveModal.input.SetValue("my-file.md")
+func TestEditModal_InactiveIgnoresInput(t *testing.T) {
+	m := newEditModal()
 
-	clickMsg := tea.MouseMsg{
-		Action: tea.MouseActionRelease,
-		Button: tea.MouseButtonLeft,
-		X:      0,
-		Y:      0,
-	}
-	m, _ := a.Update(clickMsg)
-	updated := m.(App)
-	if updated.saveModal.active {
-		t.Error("clicking outside save modal should close it")
-	}
-	if updated.saveModal.confirmed {
-		t.Error("click-away should not confirm save modal")
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd != nil {
+		t.Fatal("inactive modal should not produce commands")
 	}
 }
 
-func TestClickAway_ClosesInstallModal(t *testing.T) {
-	item := catalog.ContentItem{
-		Name: "test-item",
-		Type: catalog.Skills,
-		Path: "/tmp/test",
-	}
-	a := App{
-		width:     80,
-		height:    24,
-		screen:    screenDetail,
-		focus:     focusModal,
-		instModal: newInstallModal(item, nil, ""),
-	}
+func TestEditModal_ViewContainsBothLabels(t *testing.T) {
+	m := newEditModal()
+	m.Open("Edit: my-hook", "My Hook", "Runs tests after edits", "ctx")
 
-	clickMsg := tea.MouseMsg{
-		Action: tea.MouseActionRelease,
-		Button: tea.MouseButtonLeft,
-		X:      0,
-		Y:      0,
+	view := m.View()
+	stripped := ansi.Strip(view)
+	if !contains(stripped, "Edit: my-hook") {
+		t.Errorf("view should contain title 'Edit: my-hook', got:\n%s", stripped)
 	}
-	m, _ := a.Update(clickMsg)
-	updated := m.(App)
-	if updated.instModal.active {
-		t.Error("clicking outside install modal should close it")
+	if !contains(stripped, "Display Name") {
+		t.Error("view should contain 'Display Name' label")
 	}
-	if updated.instModal.confirmed {
-		t.Error("click-away should not confirm install modal")
+	if !contains(stripped, "Description") {
+		t.Error("view should contain 'Description' label")
+	}
+	if !contains(stripped, "Cancel") {
+		t.Error("view should contain 'Cancel' button")
+	}
+	if !contains(stripped, "Save") {
+		t.Error("view should contain 'Save' button")
 	}
 }
 
-// ---------------------------------------------------------------------------
-// SymlinkSupport-driven method step tests
-// ---------------------------------------------------------------------------
+func TestEditModal_LayoutConsistency(t *testing.T) {
+	m := newEditModal()
+	m.Open("Edit: my-hook", "wizard-invariant-gate", "Runs after edits", "ctx")
 
-func TestInstallModal_SymlinkDisabled_DefaultsCopy(t *testing.T) {
-	// When a provider marks the content type as symlink-unsupported, the method
-	// step should pre-select Copy (cursor=1), not Symlink (cursor=0).
-	item := catalog.ContentItem{
-		Name: "test-item",
-		Type: catalog.Rules,
-		Path: "/tmp/test",
-	}
-	p := provider.Provider{
-		Name:     "TestProvider",
-		Slug:     "test",
-		Detected: true,
-		SupportsType: func(ct catalog.ContentType) bool { return true },
-		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
-		SymlinkSupport: map[catalog.ContentType]bool{
-			catalog.Rules: false,
-		},
-	}
-	m := newInstallModal(item, []provider.Provider{p}, "/tmp/repo")
+	view := m.View()
+	stripped := ansi.Strip(view)
+	lines := strings.Split(stripped, "\n")
 
-	// Simulate advancing from location step to method step.
-	m.step = installStepLocation
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter}) // Select
-
-	if m.step != installStepMethod {
-		t.Fatalf("expected installStepMethod after Enter, got step %d", m.step)
+	if len(lines) < 3 {
+		t.Fatalf("expected at least 3 lines, got %d", len(lines))
 	}
-	if m.methodCursor != 1 {
-		t.Errorf("expected methodCursor=1 (copy) when symlink disabled, got %d", m.methodCursor)
+	borderW := len([]rune(lines[0]))
+	for i, line := range lines {
+		runeW := len([]rune(line))
+		if runeW != borderW {
+			t.Errorf("line %d width %d differs from border width %d: %q", i, runeW, borderW, line)
+		}
+	}
+
+	// Buttons should appear on the same line
+	foundButtons := false
+	for _, line := range lines {
+		if strings.Contains(line, "Cancel") && strings.Contains(line, "Save") {
+			foundButtons = true
+		}
+	}
+	if !foundButtons {
+		t.Error("Cancel and Save buttons should be on the same line")
 	}
 }
 
-func TestInstallModal_SymlinkEnabled_DefaultsSymlink(t *testing.T) {
-	// When no provider restricts symlinks, the method step should pre-select
-	// Symlink (cursor=0).
-	item := catalog.ContentItem{
-		Name: "test-item",
-		Type: catalog.Skills,
-		Path: "/tmp/test",
-	}
-	p := provider.Provider{
-		Name:     "TestProvider",
-		Slug:     "test",
-		Detected: true,
-		SupportsType: func(ct catalog.ContentType) bool { return true },
-		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
-		SymlinkSupport: map[catalog.ContentType]bool{
-			catalog.Skills: true,
-		},
-	}
-	m := newInstallModal(item, []provider.Provider{p}, "/tmp/repo")
-	m.step = installStepLocation
-	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+func TestEditModal_UpDownNavigatesFields(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "name", "description text", "ctx")
 
-	if m.step != installStepMethod {
-		t.Fatalf("expected installStepMethod after Enter, got step %d", m.step)
+	// Start on name field (0), Down → description (1)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if m.focusIdx != 1 {
+		t.Errorf("expected focus on description (1), got %d", m.focusIdx)
 	}
-	if m.methodCursor != 0 {
-		t.Errorf("expected methodCursor=0 (symlink) when symlink enabled, got %d", m.methodCursor)
-	}
-}
+	// Cursor preserves column position: was at 4 (end of "name"), so stays at 4 in description
 
-func TestInstallModal_SymlinkDisabled_UpKeyCannotSelectSymlink(t *testing.T) {
-	// When symlink is disabled, pressing Up from Copy (1) must not move to Symlink (0).
-	item := catalog.ContentItem{
-		Name: "test-item",
-		Type: catalog.Rules,
-		Path: "/tmp/test",
-	}
-	p := provider.Provider{
-		Name:     "TestProvider",
-		Slug:     "test",
-		Detected: true,
-		SupportsType: func(ct catalog.ContentType) bool { return true },
-		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
-		SymlinkSupport: map[catalog.ContentType]bool{
-			catalog.Rules: false,
-		},
-	}
-	m := newInstallModal(item, []provider.Provider{p}, "/tmp/repo")
-	m.step = installStepMethod
-	m.methodCursor = 1 // copy
+	// Move to end of description field first
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnd})
 
+	// Type into description to verify it's editable
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'!'}})
+	if m.description != "description text!" {
+		t.Errorf("expected 'description text!', got %q", m.description)
+	}
+
+	// Backspace in description
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	if m.description != "description text" {
+		t.Errorf("expected 'description text', got %q", m.description)
+	}
+
+	// Up → back to name (0)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	if m.focusIdx != 0 {
+		t.Errorf("expected focus on name (0), got %d", m.focusIdx)
+	}
 
-	if m.methodCursor != 1 {
-		t.Errorf("Up key should not move cursor to disabled symlink option, got methodCursor=%d", m.methodCursor)
+	// Down from description → Save button
+	m.focusIdx = 1
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if m.focusIdx != 3 {
+		t.Errorf("expected focus on Save (3), got %d", m.focusIdx)
+	}
+
+	// Up from buttons → description
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	if m.focusIdx != 1 {
+		t.Errorf("expected focus on description (1), got %d", m.focusIdx)
 	}
 }
 
-func TestInstallModal_SymlinkDisabled_ViewShowsNote(t *testing.T) {
-	// The symlink option in the view must show the "(not supported for this content type)"
-	// note when symlink is disabled.
-	item := catalog.ContentItem{
-		Name: "test-item",
-		Type: catalog.Rules,
-		Path: "/tmp/test",
-	}
-	p := provider.Provider{
-		Name:     "TestProvider",
-		Slug:     "test",
-		Detected: true,
-		SupportsType: func(ct catalog.ContentType) bool { return true },
-		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
-		SymlinkSupport: map[catalog.ContentType]bool{
-			catalog.Rules: false,
-		},
-	}
-	m := newInstallModal(item, []provider.Provider{p}, "/tmp/repo")
-	m.step = installStepMethod
-	m.methodCursor = 1
+func TestEditModal_LeftRightOnButtons(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "name", "desc", "ctx")
+	m.focusIdx = 2 // Cancel button
 
-	// Strip ANSI codes and check each line for the note text — the phrase may
-	// span a line boundary due to lipgloss word-wrapping within the modal box.
-	view := StripControlChars(m.View())
-	if !strings.Contains(view, "not supported") {
-		t.Error("View should contain 'not supported' note on the symlink option when symlink is disabled")
+	// Right → Save
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	if m.focusIdx != 3 {
+		t.Errorf("expected Save (3), got %d", m.focusIdx)
+	}
+
+	// Left → Cancel
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	if m.focusIdx != 2 {
+		t.Errorf("expected Cancel (2), got %d", m.focusIdx)
 	}
 }
 
-func TestInstallModal_NilSymlinkSupport_DefaultsSymlink(t *testing.T) {
-	// A provider with nil SymlinkSupport map should not disable symlinks.
-	item := catalog.ContentItem{
-		Name: "test-item",
-		Type: catalog.Skills,
-		Path: "/tmp/test",
-	}
-	p := provider.Provider{
-		Name:           "TestProvider",
-		Slug:           "test",
-		Detected:       true,
-		SymlinkSupport: nil, // nil = assumed supported
-		SupportsType:   func(ct catalog.ContentType) bool { return true },
-		InstallDir:     func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
-	}
-	m := newInstallModal(item, []provider.Provider{p}, "/tmp/repo")
+func TestEditModal_FullEditFlow(t *testing.T) {
+	// Simulate the exact user flow: open → down to description → edit → save
+	m := newEditModal()
+	m.Open("Edit: my-skill", "My Skill", "Old description", "/path")
 
-	if m.symlinkDisabled() {
-		t.Error("symlinkDisabled() should return false when SymlinkSupport map is nil")
+	// Down arrow to description field
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if m.focusIdx != 1 {
+		t.Fatal("expected description field focus after Down")
 	}
-	if m.defaultMethodCursor() != 0 {
-		t.Errorf("defaultMethodCursor() should return 0 (symlink) with nil SymlinkSupport, got %d", m.defaultMethodCursor())
+
+	// Select all (Home then shift-delete style: go to start, delete forward)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyHome})
+	for range len("Old description") {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDelete})
 	}
+	if m.description != "" {
+		t.Errorf("expected empty description after deleting all, got %q", m.description)
+	}
+
+	// Type new description
+	for _, ch := range "New description" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+	}
+	if m.description != "New description" {
+		t.Errorf("expected 'New description', got %q", m.description)
+	}
+
+	// Ctrl+S to save
+	m, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlS})
+	if m.active {
+		t.Fatal("modal should be inactive after save")
+	}
+	msg := cmd()
+	saved, ok := msg.(editSavedMsg)
+	if !ok {
+		t.Fatalf("expected editSavedMsg, got %T", msg)
+	}
+	if saved.name != "My Skill" {
+		t.Errorf("name should be unchanged: got %q", saved.name)
+	}
+	if saved.description != "New description" {
+		t.Errorf("expected 'New description', got %q", saved.description)
+	}
+}
+
+func TestEditModal_SpacesInFields(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "", "", "ctx")
+
+	// Type "hello world" with a space in the name field
+	for _, ch := range "hello" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+	}
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeySpace})
+	for _, ch := range "world" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+	}
+	if m.name != "hello world" {
+		t.Errorf("expected 'hello world', got %q", m.name)
+	}
+
+	// Move to description field and type with spaces
+	m.focusIdx = 1
+	m.cursor = 0
+	for _, ch := range "foo" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+	}
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeySpace})
+	for _, ch := range "bar" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}})
+	}
+	if m.description != "foo bar" {
+		t.Errorf("expected 'foo bar', got %q", m.description)
+	}
+
+	// Space on button fields should NOT modify text
+	m.focusIdx = 2
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeySpace})
+	if m.name != "hello world" || m.description != "foo bar" {
+		t.Error("space on button should not modify fields")
+	}
+}
+
+func TestApp_EditDescriptionViaAllNavigationMethods(t *testing.T) {
+	app := testAppWithItems(t)
+
+	// Method 1: Tab to description
+	m, _ := app.Update(keyRune('e'))
+	a := m.(App)
+	m, _ = a.Update(keyPress(tea.KeyTab))
+	a = m.(App)
+	if a.modal.focusIdx != 1 {
+		t.Fatalf("Tab: expected focus on description (1), got %d", a.modal.focusIdx)
+	}
+	m, _ = a.Update(keyRune('x'))
+	a = m.(App)
+	if !strings.Contains(a.modal.description, "x") {
+		t.Errorf("Tab then type: expected 'x' in description, got %q", a.modal.description)
+	}
+	a.modal.Close()
+
+	// Method 2: Enter advances to description
+	a.modal.Open("Test", "name", "original", "/path")
+	m, _ = a.Update(keyPress(tea.KeyEnter))
+	a = m.(App)
+	if a.modal.focusIdx != 1 {
+		t.Fatalf("Enter: expected focus on description (1), got %d", a.modal.focusIdx)
+	}
+	m, _ = a.Update(keyRune('Z'))
+	a = m.(App)
+	if !strings.Contains(a.modal.description, "Z") {
+		t.Errorf("Enter then type: expected 'Z' in description %q", a.modal.description)
+	}
+	a.modal.Close()
+
+	// Method 3: Down arrow to description
+	a.modal.Open("Test", "name", "original", "/path")
+	m, _ = a.Update(keyPress(tea.KeyDown))
+	a = m.(App)
+	if a.modal.focusIdx != 1 {
+		t.Fatalf("Down: expected focus on description (1), got %d", a.modal.focusIdx)
+	}
+	m, _ = a.Update(keyRune('W'))
+	a = m.(App)
+	if !strings.Contains(a.modal.description, "W") {
+		t.Errorf("Down then type: expected 'W' in description %q", a.modal.description)
+	}
+}
+
+func contains(s, sub string) bool {
+	return len(s) > 0 && len(sub) > 0 && len(s) >= len(sub) && indexStr(s, sub) >= 0
+}
+
+func indexStr(s, sub string) int {
+	for i := 0; i <= len(s)-len(sub); i++ {
+		if s[i:i+len(sub)] == sub {
+			return i
+		}
+	}
+	return -1
 }

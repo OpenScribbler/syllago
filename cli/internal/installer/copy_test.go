@@ -180,6 +180,78 @@ func TestCopyContent(t *testing.T) {
 		}
 	})
 
+	t.Run("atomic rename overwrites symlink at destination", func(t *testing.T) {
+		// Simulates the TOCTOU scenario: a symlink appears at dst AFTER the
+		// Lstat check. Because copyFile uses atomic rename, the symlink entry
+		// itself is replaced (not followed), so the target file stays safe.
+		t.Parallel()
+		tmp := t.TempDir()
+
+		srcFile := filepath.Join(tmp, "source.txt")
+		if err := os.WriteFile(srcFile, []byte("safe content"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		// Important file that should NOT be overwritten.
+		targetFile := filepath.Join(tmp, "important.txt")
+		if err := os.WriteFile(targetFile, []byte("important data"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		// First, do a normal copy so the destination exists as a regular file.
+		dstFile := filepath.Join(tmp, "dest.txt")
+		if err := copyFile(srcFile, dstFile); err != nil {
+			t.Fatal(err)
+		}
+
+		// Now remove dest and replace it with a symlink (simulating an
+		// attacker swapping the file between Lstat and Rename).
+		// We can't truly race copyFile in a unit test, but we CAN verify
+		// that os.Rename replaces the symlink entry rather than following it.
+		if err := os.Remove(dstFile); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(targetFile, dstFile); err != nil {
+			t.Fatal(err)
+		}
+
+		// The Lstat defense-in-depth check will catch this and return an error.
+		// That's fine — the important thing is the target file is untouched.
+		_ = copyFile(srcFile, dstFile)
+
+		data, err := os.ReadFile(targetFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(data) != "important data" {
+			t.Errorf("target file was overwritten! got: %s", data)
+		}
+	})
+
+	t.Run("no temp file left on copy error", func(t *testing.T) {
+		// If the source file can't be read after opening, the temp file
+		// should be cleaned up automatically.
+		t.Parallel()
+		tmp := t.TempDir()
+
+		// Source that doesn't exist — will fail at os.Open
+		srcFile := filepath.Join(tmp, "nonexistent.txt")
+		dstFile := filepath.Join(tmp, "dest.txt")
+
+		_ = copyFile(srcFile, dstFile)
+
+		// Verify no temp files were left behind
+		entries, err := os.ReadDir(tmp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range entries {
+			if strings.HasPrefix(e.Name(), ".syllago-") {
+				t.Errorf("temp file left behind: %s", e.Name())
+			}
+		}
+	})
+
 	t.Run("source does not exist returns error", func(t *testing.T) {
 		t.Parallel()
 		tmp := t.TempDir()

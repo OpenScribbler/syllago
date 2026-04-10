@@ -13,6 +13,13 @@ import (
 
 func init() {
 	Register(&RulesConverter{})
+	RegisterFrontmatter(catalog.Rules, "claude-code", claudeCodePathsFrontmatter{})
+	RegisterFrontmatter(catalog.Rules, "cursor", cursorRuleFrontmatter{})
+	RegisterFrontmatter(catalog.Rules, "windsurf", windsurfOutput{})
+	RegisterFrontmatter(catalog.Rules, "kiro", kiroRuleFrontmatter{})
+	RegisterFrontmatter(catalog.Rules, "copilot-cli", copilotFrontmatter{})
+	RegisterFrontmatter(catalog.Rules, "cline", clineFrontmatter{})
+	RegisterFrontmatter(catalog.Rules, "amp", ampRuleFrontmatter{})
 }
 
 // RuleMeta is the canonical rule metadata (YAML frontmatter fields).
@@ -39,10 +46,14 @@ func (c *RulesConverter) Canonicalize(content []byte, sourceProvider string) (*R
 		return canonicalizeWindsurfRule(content)
 	case "cline":
 		return canonicalizeClineRule(content)
+	case "copilot-cli":
+		return canonicalizeCopilotRule(content)
 	case "opencode":
 		return canonicalizeMarkdownRule(content)
 	case "kiro":
-		return canonicalizeMarkdownRule(content)
+		return canonicalizeKiroRule(content)
+	case "amp":
+		return canonicalizeAmpRule(content)
 	default:
 		return canonicalizeMarkdownRule(content)
 	}
@@ -60,7 +71,11 @@ func (c *RulesConverter) Render(content []byte, target provider.Provider) (*Resu
 		return renderCursorRule(meta, body)
 	case "windsurf":
 		return renderWindsurfRule(meta, body)
-	case "claude-code", "codex", "gemini-cli", "copilot-cli":
+	case "claude-code":
+		return renderClaudeCodeRule(meta, body)
+	case "copilot-cli":
+		return renderCopilotRule(meta, body)
+	case "codex", "gemini-cli":
 		return renderSingleFileRule(meta, body)
 	case "zed":
 		return renderZedRule(meta, body)
@@ -72,6 +87,8 @@ func (c *RulesConverter) Render(content []byte, target provider.Provider) (*Resu
 		return renderOpenCodeRule(meta, body)
 	case "kiro":
 		return renderKiroRule(meta, body)
+	case "amp":
+		return renderAmpRule(meta, body)
 	default:
 		return renderMarkdownRule(meta, body)
 	}
@@ -203,6 +220,63 @@ func canonicalizeWindsurfRule(content []byte) (*Result, error) {
 		meta.AlwaysApply = false
 	}
 
+	var warnings []string
+	if wfm.Trigger == "manual" {
+		warnings = append(warnings, "Windsurf 'manual' trigger has no direct equivalent; rule will only activate when explicitly requested")
+	}
+
+	canonical, err := buildCanonical(meta, body)
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: canonical, Filename: "rule.md", Warnings: warnings}, nil
+}
+
+// copilotFrontmatter represents Copilot's .instructions.md YAML frontmatter.
+// The applyTo field specifies file glob patterns for scoped instructions.
+type copilotFrontmatter struct {
+	ApplyTo string `yaml:"applyTo,omitempty"`
+}
+
+func canonicalizeCopilotRule(content []byte) (*Result, error) {
+	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+
+	opening := []byte("---\n")
+	if !bytes.HasPrefix(normalized, opening) {
+		meta := RuleMeta{AlwaysApply: true}
+		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "rule.md"}, nil
+	}
+
+	rest := normalized[len(opening):]
+	closingIdx := bytes.Index(rest, opening)
+	if closingIdx == -1 {
+		meta := RuleMeta{AlwaysApply: true}
+		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "rule.md"}, nil
+	}
+
+	yamlBytes := rest[:closingIdx]
+	var cfm copilotFrontmatter
+	if err := yaml.Unmarshal(yamlBytes, &cfm); err != nil {
+		return nil, err
+	}
+
+	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+
+	meta := RuleMeta{}
+	if cfm.ApplyTo != "" {
+		meta.Globs = splitGlobs(cfm.ApplyTo)
+	} else {
+		meta.AlwaysApply = true
+	}
+
 	canonical, err := buildCanonical(meta, body)
 	if err != nil {
 		return nil, err
@@ -232,6 +306,14 @@ func canonicalizeMarkdownRule(content []byte) (*Result, error) {
 // clineFrontmatter represents Cline's YAML frontmatter fields.
 type clineFrontmatter struct {
 	Paths []string `yaml:"paths,omitempty"`
+}
+
+// kiroRuleFrontmatter represents Kiro's YAML frontmatter fields.
+type kiroRuleFrontmatter struct {
+	Inclusion        string `yaml:"inclusion,omitempty"`        // "always", "auto", "fileMatch"
+	FileMatchPattern string `yaml:"fileMatchPattern,omitempty"` // glob pattern when inclusion=fileMatch
+	Name             string `yaml:"name,omitempty"`
+	Description      string `yaml:"description,omitempty"`
 }
 
 func canonicalizeClineRule(content []byte) (*Result, error) {
@@ -280,11 +362,80 @@ func canonicalizeClineRule(content []byte) (*Result, error) {
 	return &Result{Content: canonical, Filename: "rule.md"}, nil
 }
 
+func canonicalizeKiroRule(content []byte) (*Result, error) {
+	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+
+	opening := []byte("---\n")
+	if !bytes.HasPrefix(normalized, opening) {
+		// No frontmatter — treat as always-apply plain markdown
+		meta := RuleMeta{AlwaysApply: true}
+		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "rule.md"}, nil
+	}
+
+	rest := normalized[len(opening):]
+	closingIdx := bytes.Index(rest, opening)
+	if closingIdx == -1 {
+		meta := RuleMeta{AlwaysApply: true}
+		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "rule.md"}, nil
+	}
+
+	yamlBytes := rest[:closingIdx]
+	var kfm kiroRuleFrontmatter
+	if err := yaml.Unmarshal(yamlBytes, &kfm); err != nil {
+		return nil, err
+	}
+
+	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+
+	meta := RuleMeta{Description: kfm.Description}
+	switch kfm.Inclusion {
+	case "fileMatch":
+		meta.AlwaysApply = false
+		if kfm.FileMatchPattern != "" {
+			meta.Globs = splitGlobs(kfm.FileMatchPattern)
+		}
+	case "always", "auto":
+		meta.AlwaysApply = true
+	default:
+		// No inclusion field or unknown value — default to always-apply
+		meta.AlwaysApply = true
+	}
+
+	canonical, err := buildCanonical(meta, body)
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: canonical, Filename: "rule.md"}, nil
+}
+
 // --- Renderers (canonical → provider) ---
 
+// cursorRuleFrontmatter is the output struct for Cursor .mdc files.
+// Cursor expects globs as a comma-separated string, not a YAML array.
+type cursorRuleFrontmatter struct {
+	Description string `yaml:"description,omitempty"`
+	AlwaysApply bool   `yaml:"alwaysApply"`
+	Globs       string `yaml:"globs,omitempty"`
+}
+
 func renderCursorRule(meta RuleMeta, body string) (*Result, error) {
-	// Cursor uses the same fields as canonical (alwaysApply, globs, description)
-	fm, err := renderFrontmatter(meta)
+	cfm := cursorRuleFrontmatter{
+		Description: meta.Description,
+		AlwaysApply: meta.AlwaysApply,
+	}
+	if len(meta.Globs) > 0 {
+		cfm.Globs = strings.Join(meta.Globs, ", ")
+	}
+
+	fm, err := renderFrontmatter(cfm)
 	if err != nil {
 		return nil, err
 	}
@@ -334,8 +485,87 @@ func renderWindsurfRule(meta RuleMeta, body string) (*Result, error) {
 	return &Result{Content: buf.Bytes(), Filename: "rule.md"}, nil
 }
 
+// claudeCodePathsFrontmatter holds the paths field for Claude Code .claude/rules/*.md files.
+type claudeCodePathsFrontmatter struct {
+	Paths []string `yaml:"paths"`
+}
+
+// renderClaudeCodeRule renders a rule for Claude Code. Glob-scoped rules use native
+// YAML frontmatter with a `paths` field (matching .claude/rules/*.md format).
+// Always-apply rules render as plain markdown (no frontmatter), suitable for CLAUDE.md.
+func renderClaudeCodeRule(meta RuleMeta, body string) (*Result, error) {
+	if len(meta.Globs) > 0 {
+		// Claude Code supports native paths frontmatter in .claude/rules/*.md files.
+		// The canonical Globs field maps directly to Claude Code's paths field.
+		fm, err := renderFrontmatter(claudeCodePathsFrontmatter{Paths: meta.Globs})
+		if err != nil {
+			return nil, err
+		}
+		var buf bytes.Buffer
+		buf.Write(fm)
+		buf.WriteString("\n")
+		buf.WriteString(body)
+		buf.WriteString("\n")
+		return &Result{Content: buf.Bytes(), Filename: "rule.md"}, nil
+	}
+
+	if meta.AlwaysApply {
+		// Always-active rules get body only — no frontmatter
+		return &Result{Content: []byte(body + "\n"), Filename: "rule.md"}, nil
+	}
+
+	// Non-glob, non-alwaysApply: embed scope as prose (description-based or manual)
+	var notes []string
+	switch {
+	case meta.Description != "":
+		notes = append(notes, fmt.Sprintf("**Scope:** Apply when: %s", meta.Description))
+	default:
+		notes = append(notes, "**Scope:** Apply only when explicitly asked.")
+	}
+
+	notesBlock := BuildConversionNotes("syllago", notes)
+	result := AppendNotes(body, notesBlock)
+	return &Result{Content: []byte(result + "\n"), Filename: "rule.md"}, nil
+}
+
+// renderCopilotRule renders a rule for Copilot CLI's .instructions.md format.
+// Glob-scoped rules use applyTo frontmatter. Always-apply rules render as
+// copilot-instructions.md (plain markdown, no frontmatter).
+func renderCopilotRule(meta RuleMeta, body string) (*Result, error) {
+	if len(meta.Globs) > 0 {
+		cfm := copilotFrontmatter{ApplyTo: strings.Join(meta.Globs, ", ")}
+		fm, err := renderFrontmatter(cfm)
+		if err != nil {
+			return nil, err
+		}
+		var buf bytes.Buffer
+		buf.Write(fm)
+		buf.WriteString("\n")
+		buf.WriteString(body)
+		buf.WriteString("\n")
+		return &Result{Content: buf.Bytes(), Filename: ".instructions.md"}, nil
+	}
+
+	if meta.AlwaysApply {
+		return &Result{Content: []byte(body + "\n"), Filename: "copilot-instructions.md"}, nil
+	}
+
+	// Non-glob, non-alwaysApply: embed scope as prose
+	var notes []string
+	switch {
+	case meta.Description != "":
+		notes = append(notes, fmt.Sprintf("**Scope:** Apply when: %s", meta.Description))
+	default:
+		notes = append(notes, "**Scope:** Apply only when explicitly asked.")
+	}
+
+	notesBlock := BuildConversionNotes("syllago", notes)
+	result := AppendNotes(body, notesBlock)
+	return &Result{Content: []byte(result + "\n"), Filename: "copilot-instructions.md"}, nil
+}
+
 // renderSingleFileRule renders for providers that use a flat markdown file
-// (Claude Code, Codex, Gemini CLI). Non-alwaysApply rules get scope embedded as prose.
+// (Codex, Gemini CLI). Non-alwaysApply rules get scope embedded as prose.
 func renderSingleFileRule(meta RuleMeta, body string) (*Result, error) {
 	if meta.AlwaysApply {
 		// Always-active rules get body only — no frontmatter
@@ -450,33 +680,38 @@ func renderRooCodeRule(meta RuleMeta, body string) (*Result, error) {
 	return &Result{Content: buf.Bytes(), Filename: filename, Warnings: warnings}, nil
 }
 
-// renderKiroRule renders a rule as a plain markdown steering file for Kiro.
-// Kiro steering files (.kiro/steering/) are plain markdown — no frontmatter.
+// renderKiroRule renders a rule with proper Kiro YAML frontmatter.
+// Kiro steering files (.kiro/steering/) use inclusion/fileMatchPattern/description fields.
 func renderKiroRule(meta RuleMeta, body string) (*Result, error) {
-	var notes []string
+	kfm := kiroRuleFrontmatter{Description: meta.Description}
 
-	if !meta.AlwaysApply {
-		switch {
-		case len(meta.Globs) > 0:
-			notes = append(notes, fmt.Sprintf("**Scope:** Apply only when working with files matching: %s", strings.Join(meta.Globs, ", ")))
-		case meta.Description != "":
-			notes = append(notes, fmt.Sprintf("**Scope:** Apply when: %s", meta.Description))
-		default:
-			notes = append(notes, "**Scope:** Apply only when explicitly asked.")
-		}
+	switch {
+	case meta.AlwaysApply:
+		kfm.Inclusion = "always"
+	case len(meta.Globs) > 0:
+		kfm.Inclusion = "fileMatch"
+		kfm.FileMatchPattern = strings.Join(meta.Globs, ",")
+	default:
+		// No globs + not always-apply → auto (description-based activation)
+		kfm.Inclusion = "auto"
 	}
 
-	content := body
-	if len(notes) > 0 {
-		notesBlock := BuildConversionNotes("syllago", notes)
-		content = AppendNotes(body, notesBlock)
+	fm, err := renderFrontmatter(kfm)
+	if err != nil {
+		return nil, err
 	}
+
+	var buf bytes.Buffer
+	buf.Write(fm)
+	buf.WriteString("\n")
+	buf.WriteString(body)
+	buf.WriteString("\n")
 
 	filename := "rule.md"
 	if meta.Description != "" {
 		filename = slugify(meta.Description) + ".md"
 	}
-	return &Result{Content: []byte(content + "\n"), Filename: filename}, nil
+	return &Result{Content: buf.Bytes(), Filename: filename}, nil
 }
 
 // renderOpenCodeRule renders a rule as plain markdown for OpenCode's AGENTS.md.
@@ -525,6 +760,110 @@ func slugify(s string) string {
 		return "rule"
 	}
 	return result
+}
+
+// ampRuleFrontmatter represents Amp's YAML frontmatter fields.
+// Amp AGENTS.md files use a globs array for file-specific activation.
+type ampRuleFrontmatter struct {
+	Globs []string `yaml:"globs,omitempty"`
+}
+
+// stripImplicitGlobPrefix removes a leading **/ from a glob pattern.
+// Amp implicitly prefixes globs with **/ at runtime unless they start
+// with ../ or ./, so storing **/ in the frontmatter would double-prefix.
+func stripImplicitGlobPrefix(g string) string {
+	if strings.HasPrefix(g, "**/") && !strings.HasPrefix(g, "../") && !strings.HasPrefix(g, "./") {
+		return g[3:]
+	}
+	return g
+}
+
+func canonicalizeAmpRule(content []byte) (*Result, error) {
+	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+
+	opening := []byte("---\n")
+	if !bytes.HasPrefix(normalized, opening) {
+		meta := RuleMeta{AlwaysApply: true}
+		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "rule.md"}, nil
+	}
+
+	rest := normalized[len(opening):]
+	closingIdx := bytes.Index(rest, opening)
+	if closingIdx == -1 {
+		meta := RuleMeta{AlwaysApply: true}
+		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Content: canonical, Filename: "rule.md"}, nil
+	}
+
+	yamlBytes := rest[:closingIdx]
+	var afm ampRuleFrontmatter
+	if err := yaml.Unmarshal(yamlBytes, &afm); err != nil {
+		return nil, err
+	}
+
+	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+
+	meta := RuleMeta{}
+	if len(afm.Globs) > 0 {
+		meta.Globs = afm.Globs
+	} else {
+		meta.AlwaysApply = true
+	}
+
+	canonical, err := buildCanonical(meta, body)
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: canonical, Filename: "rule.md"}, nil
+}
+
+// renderAmpRule renders a rule for Amp's AGENTS.md format.
+// Amp uses `globs` as a YAML array in frontmatter. Always-apply rules
+// render as plain markdown (no frontmatter).
+// Amp implicitly prefixes globs with **/ unless they start with ../ or ./,
+// so we strip that prefix when rendering to avoid double-prefixing.
+func renderAmpRule(meta RuleMeta, body string) (*Result, error) {
+	if len(meta.Globs) > 0 {
+		ampGlobs := make([]string, len(meta.Globs))
+		for i, g := range meta.Globs {
+			ampGlobs[i] = stripImplicitGlobPrefix(g)
+		}
+		afm := ampRuleFrontmatter{Globs: ampGlobs}
+		fm, err := renderFrontmatter(afm)
+		if err != nil {
+			return nil, err
+		}
+		var buf bytes.Buffer
+		buf.Write(fm)
+		buf.WriteString("\n")
+		buf.WriteString(body)
+		buf.WriteString("\n")
+		return &Result{Content: buf.Bytes(), Filename: "AGENTS.md"}, nil
+	}
+
+	if meta.AlwaysApply {
+		return &Result{Content: []byte(body + "\n"), Filename: "AGENTS.md"}, nil
+	}
+
+	// Non-glob, non-alwaysApply: embed scope as prose
+	var notes []string
+	switch {
+	case meta.Description != "":
+		notes = append(notes, fmt.Sprintf("**Scope:** Apply when: %s", meta.Description))
+	default:
+		notes = append(notes, "**Scope:** Apply only when explicitly asked.")
+	}
+
+	notesBlock := BuildConversionNotes("syllago", notes)
+	result := AppendNotes(body, notesBlock)
+	return &Result{Content: []byte(result + "\n"), Filename: "AGENTS.md"}, nil
 }
 
 // --- Helpers ---
