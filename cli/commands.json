@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-10T04:17:52Z",
-  "syllagoVersion": "dev",
+  "generatedAt": "2026-04-10T16:53:09Z",
+  "syllagoVersion": "0.7.0",
   "commands": [
     {
       "name": "add",
@@ -193,6 +193,7 @@
         "run",
         "seed",
         "test-fixtures",
+        "validate-spec",
         "verify"
       ],
       "seeAlso": [],
@@ -269,6 +270,7 @@
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
+        "capmon validate-spec",
         "capmon verify"
       ],
       "examples": null,
@@ -336,6 +338,7 @@
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
+        "capmon validate-spec",
         "capmon verify"
       ],
       "examples": null,
@@ -403,6 +406,7 @@
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
+        "capmon validate-spec",
         "capmon verify"
       ],
       "examples": null,
@@ -461,6 +465,7 @@
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
+        "capmon validate-spec",
         "capmon verify"
       ],
       "examples": null,
@@ -544,6 +549,7 @@
         "capmon generate",
         "capmon seed",
         "capmon test-fixtures",
+        "capmon validate-spec",
         "capmon verify"
       ],
       "examples": null,
@@ -627,6 +633,7 @@
         "capmon generate",
         "capmon run",
         "capmon test-fixtures",
+        "capmon validate-spec",
         "capmon verify"
       ],
       "examples": null,
@@ -702,6 +709,91 @@
         "capmon generate",
         "capmon run",
         "capmon seed",
+        "capmon validate-spec",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon validate-spec",
+      "displayName": "Capmon Validate-spec",
+      "slug": "capmon-validate-spec",
+      "parent": "capmon",
+      "synopsis": "syllago capmon validate-spec [flags]",
+      "description": "Validate a seeder spec YAML file for a provider",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--content-type",
+          "shorthand": null,
+          "type": "string",
+          "default": "skills",
+          "required": false,
+          "description": "Content type for the seeder spec (default: skills)"
+        },
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Provider slug whose seeder spec to validate"
+        },
+        {
+          "name": "--specs-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": ".develop/seeder-specs",
+          "required": false,
+          "description": "Directory containing seeder spec YAML files"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
         "capmon verify"
       ],
       "examples": null,
@@ -793,7 +885,8 @@
         "capmon generate",
         "capmon run",
         "capmon seed",
-        "capmon test-fixtures"
+        "capmon test-fixtures",
+        "capmon validate-spec"
       ],
       "examples": null,
       "source": "cli/cmd/syllago/capmon_cmd.go"
