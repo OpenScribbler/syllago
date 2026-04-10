@@ -1,13 +1,17 @@
 {
   "feature": "capmon-seeder-full-coverage",
   "started": "2026-04-10T00:00:00Z",
-  "updated": "2026-04-10T09:30:00Z",
+  "updated": "2026-04-10T16:11:08.680Z",
   "currentStage": "plan",
-  "completed": ["brainstorm", "panel"],
+  "completed": [
+    "brainstorm",
+    "panel",
+    "plan"
+  ],
   "artifacts": {
     "design": "docs/plans/2026-04-10-capmon-seeder-full-coverage-design.md",
     "panelBus": ".develop/seeder-panel-bus.jsonl",
-    "plan": null
+    "plan": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-10-capmon-seeder-full-coverage-implementation.md"
   },
   "panelResult": {
     "rounds": 3,
@@ -23,8 +27,35 @@
       "key-table-deferred"
     ]
   },
-  "validation": { "attempts": 0, "lastGaps": [], "passed": false, "skipped": false },
-  "beads": { "created": false, "prefix": null, "epicIds": [], "taskCount": 0 },
-  "nextAction": "dispatch plan-writing subagent",
-  "execution": { "mode": null, "tasksDispatched": [], "tasksCompleted": [], "currentTaskId": null, "awaitingUserAck": false }
+  "validation": {
+    "attempts": 0,
+    "lastGaps": [],
+    "passed": false,
+    "skipped": false
+  },
+  "beads": {
+    "created": false,
+    "prefix": null,
+    "epicIds": [],
+    "taskCount": 0
+  },
+  "nextAction": {
+    "action": "spawn_subagent",
+    "description": "Spawn quality review subagent to review implementation plan",
+    "tool": "Task",
+    "toolInput": {
+      "description": "Quality review for capmon-seeder-full-coverage",
+      "subagent_type": "general-purpose",
+      "model": "sonnet",
+      "prompt": "Review the implementation plan at /home/hhewett/.local/src/syllago/docs/plans/2026-04-10-capmon-seeder-full-coverage-implementation.md for quality issues. Check task granularity (2-5 min per task), verify no TBD/TODO/placeholders, confirm dependencies are explicit, ensure TDD structure. Write quality report to: /home/hhewett/.local/src/syllago/.develop/capmon-seeder-full-coverage-quality-report.md. Report must contain \"✅ PASSED\" or \"✅ All checks passed\" if quality is acceptable."
+    },
+    "promptRef": "skills/develop/workflows/validate.md"
+  },
+  "execution": {
+    "mode": null,
+    "tasksDispatched": [],
+    "tasksCompleted": [],
+    "currentTaskId": null,
+    "awaitingUserAck": false
+  }
 }
