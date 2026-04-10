@@ -18,7 +18,7 @@ require (
 	github.com/muesli/reflow v0.3.0
 	github.com/muesli/termenv v0.16.0
 	github.com/pelletier/go-toml/v2 v2.2.4
-	github.com/rmhubbert/bubbletea-overlay v0.6.5
+	github.com/rmhubbert/bubbletea-overlay v0.6.6
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/tidwall/gjson v1.18.0
