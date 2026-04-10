@@ -63,6 +63,37 @@ provider_exclusive:
 	}
 }
 
+func TestSeedProviderCapabilities_WritesConfidence(t *testing.T) {
+	capsDir := t.TempDir()
+	seedOpts := capmon.SeedOptions{
+		CapsDir:  capsDir,
+		Provider: "test-provider",
+		Extracted: map[string]string{
+			"skills.supported":                            "true",
+			"skills.capabilities.display_name.supported":  "true",
+			"skills.capabilities.display_name.mechanism":  "yaml frontmatter key: name",
+			"skills.capabilities.display_name.confidence": "confirmed",
+			"skills.capabilities.description.supported":   "true",
+			"skills.capabilities.description.mechanism":   "yaml frontmatter key: description",
+			"skills.capabilities.description.confidence":  "inferred",
+		},
+	}
+	if err := capmon.SeedProviderCapabilities(seedOpts); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(capsDir, "test-provider.yaml"))
+	if err != nil {
+		t.Fatalf("read output: %v", err)
+	}
+	out := string(data)
+	if !strings.Contains(out, "confidence: confirmed") {
+		t.Errorf("missing 'confidence: confirmed' in output:\n%s", out)
+	}
+	if !strings.Contains(out, "confidence: inferred") {
+		t.Errorf("missing 'confidence: inferred' in output:\n%s", out)
+	}
+}
+
 func TestSeedProviderCapabilities_AppliesDotPaths(t *testing.T) {
 	capsDir := t.TempDir()
 	seedOpts := capmon.SeedOptions{
