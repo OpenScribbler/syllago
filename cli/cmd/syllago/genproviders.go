@@ -256,6 +256,21 @@ var hookEventCategory = map[string]string{
 	"before_tool_selection": "model",
 	"task_resume":           "lifecycle",
 	"task_cancel":           "lifecycle",
+	// Events added for multi-provider coverage (kiro, cursor, windsurf, pi, opencode)
+	"tool_use_failure":  "tool",
+	"file_changed":      "workspace",
+	"file_created":      "workspace",
+	"file_deleted":      "workspace",
+	"before_task":       "lifecycle",
+	"after_task":        "lifecycle",
+	"transcript_export": "output",
+	"turn_start":        "model",
+	"turn_end":          "model",
+	"model_select":      "model",
+	"user_bash":         "tool",
+	"context_update":    "context",
+	"message_start":     "model",
+	"message_end":       "model",
 }
 
 // buildHookEvents derives the list of hook events a provider supports

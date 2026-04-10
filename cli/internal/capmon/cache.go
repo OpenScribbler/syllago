@@ -18,6 +18,21 @@ type CacheMeta struct {
 	FetchStatus string    `json:"fetch_status"`
 	FetchMethod string    `json:"fetch_method"`
 	Cached      bool      `json:"cached,omitempty"`
+	// Format is the extractor format to use for this entry (e.g. "html", "json", "yaml").
+	// Set by the pipeline after fetching so Stage 2 knows which extractor to call.
+	Format    string `json:"format,omitempty"`
+	SourceURL string `json:"source_url,omitempty"`
+}
+
+// WriteCacheMeta rewrites only the meta.json for an existing cache entry.
+// Used to patch fields (Format, SourceURL) after FetchSource writes the initial entry.
+func WriteCacheMeta(cacheRoot string, entry CacheEntry) error {
+	dir := cacheEntryDir(cacheRoot, entry.Provider, entry.SourceID)
+	metaData, err := json.Marshal(entry.Meta)
+	if err != nil {
+		return fmt.Errorf("marshal meta: %w", err)
+	}
+	return os.WriteFile(filepath.Join(dir, "meta.json"), metaData, 0644)
 }
 
 // CacheEntry is the full in-memory representation of a cached source.

@@ -23,6 +23,12 @@ changelog:
     label: llms.txt (stub — only 2 URLs)
 
 content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Amp supports: rules, skills, mcp
+  # Not supported: hooks (has "checks" system, no lifecycle hooks), agents (no agent file format), commands (no custom command system)
+  # Syllago support: rules ✓, skills ✓, mcp ✓; hooks ✗, agents ✗, commands ✗
+  # Amp uses AGENT.md (rules), .amp/settings.json (mcp). Skills are documented but thin.
+  # ─────────────────────────────────────────────────────────────────────
 
   rules:
     sources:

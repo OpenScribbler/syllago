@@ -37,18 +37,37 @@ func (e *htmlExtractor) Extract(ctx context.Context, raw []byte, cfg capmon.Sele
 
 	fields := make(map[string]capmon.FieldValue)
 
-	doc.Find(cfg.Primary).Each(func(i int, s *goquery.Selection) {
-		text := strings.TrimSpace(s.Text())
-		if text == "" {
-			return
-		}
-		sanitized := capmon.SanitizeExtractedString(text)
-		key := fmt.Sprintf("item_%d", i)
-		fields[key] = capmon.FieldValue{
-			Value:     sanitized,
-			ValueHash: capmon.SHA256Hex([]byte(sanitized)),
-		}
-	})
+	if cfg.Primary != "" {
+		// Scoped mode: extract only elements matching the CSS selector.
+		doc.Find(cfg.Primary).Each(func(i int, s *goquery.Selection) {
+			text := strings.TrimSpace(s.Text())
+			if text == "" {
+				return
+			}
+			sanitized := capmon.SanitizeExtractedString(text)
+			key := fmt.Sprintf("item_%d", i)
+			fields[key] = capmon.FieldValue{
+				Value:     sanitized,
+				ValueHash: capmon.SHA256Hex([]byte(sanitized)),
+			}
+		})
+	} else {
+		// Fallback mode: extract all table cells and list items from the document.
+		idx := 0
+		doc.Find("td, th, li").Each(func(_ int, s *goquery.Selection) {
+			text := strings.TrimSpace(s.Text())
+			if text == "" {
+				return
+			}
+			sanitized := capmon.SanitizeExtractedString(text)
+			key := fmt.Sprintf("item_%d", idx)
+			fields[key] = capmon.FieldValue{
+				Value:     sanitized,
+				ValueHash: capmon.SHA256Hex([]byte(sanitized)),
+			}
+			idx++
+		})
+	}
 
 	partial := cfg.MinResults > 0 && len(fields) < cfg.MinResults
 

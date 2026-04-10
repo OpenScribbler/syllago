@@ -114,6 +114,48 @@ func TestReadLastRunManifest_Missing(t *testing.T) {
 	}
 }
 
+func TestWriteCacheMeta(t *testing.T) {
+	dir := t.TempDir()
+	content := []byte("doc content")
+
+	// First write the full entry
+	entry := capmon.CacheEntry{
+		Provider: "kiro",
+		SourceID: "hooks.0",
+		Raw:      content,
+		Meta: capmon.CacheMeta{
+			ContentHash: sha256Hash(content),
+			FetchStatus: "ok",
+			FetchMethod: "http",
+		},
+	}
+	if err := capmon.WriteCacheEntry(dir, entry); err != nil {
+		t.Fatalf("WriteCacheEntry: %v", err)
+	}
+
+	// Patch meta via WriteCacheMeta
+	entry.Meta.Format = "html"
+	entry.Meta.SourceURL = "https://example.com/docs"
+	if err := capmon.WriteCacheMeta(dir, entry); err != nil {
+		t.Fatalf("WriteCacheMeta: %v", err)
+	}
+
+	got, err := capmon.ReadCacheEntry(dir, "kiro", "hooks.0")
+	if err != nil {
+		t.Fatalf("ReadCacheEntry after WriteCacheMeta: %v", err)
+	}
+	if got.Meta.Format != "html" {
+		t.Errorf("Format: got %q, want %q", got.Meta.Format, "html")
+	}
+	if got.Meta.SourceURL != "https://example.com/docs" {
+		t.Errorf("SourceURL: got %q, want %q", got.Meta.SourceURL, "https://example.com/docs")
+	}
+	// Raw should be unchanged
+	if string(got.Raw) != string(content) {
+		t.Error("Raw content should be unchanged after WriteCacheMeta")
+	}
+}
+
 func sha256Hash(data []byte) string {
 	h := sha256.Sum256(data)
 	return "sha256:" + hex.EncodeToString(h[:])

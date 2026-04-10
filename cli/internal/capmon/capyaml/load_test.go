@@ -2,6 +2,7 @@ package capyaml_test
 
 import (
 	"bytes"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -82,6 +83,82 @@ func TestProviderExclusiveRoundtrip(t *testing.T) {
 	}
 	if !strings.Contains(out, "InstructionsLoaded") {
 		t.Error("provider_exclusive entry InstructionsLoaded missing from written YAML")
+	}
+}
+
+func TestLoadCapabilityYAML_FileNotFound(t *testing.T) {
+	_, err := capyaml.LoadCapabilityYAML("/nonexistent/path.yaml")
+	if err == nil {
+		t.Error("expected error for missing file")
+	}
+}
+
+func TestLoadCapabilityYAML_InvalidYAML(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "bad.yaml")
+	// This YAML has a tab indentation which is invalid
+	bad := "schema_version: \"1\"\n\t: invalid_tab_key"
+	if err := os.WriteFile(f, []byte(bad), 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := capyaml.LoadCapabilityYAML(f)
+	if err == nil {
+		t.Error("expected error for invalid YAML")
+	}
+}
+
+func TestValidateAgainstSchema_FileNotFound(t *testing.T) {
+	err := capyaml.ValidateAgainstSchema("/nonexistent/path.yaml", false)
+	if err == nil {
+		t.Error("expected error for missing file")
+	}
+}
+
+func TestCapabilityEntry_ConfidenceField(t *testing.T) {
+	yamlContent := `schema_version: "1"
+slug: test-provider
+content_types:
+  skills:
+    supported: true
+    capabilities:
+      display_name:
+        supported: true
+        mechanism: "yaml frontmatter key: name"
+        confidence: confirmed
+      description:
+        supported: true
+        mechanism: "yaml frontmatter key: description"
+        confidence: inferred
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "test.yaml")
+	if err := os.WriteFile(path, []byte(yamlContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	caps, err := capyaml.LoadCapabilityYAML(path)
+	if err != nil {
+		t.Fatalf("LoadCapabilityYAML: %v", err)
+	}
+	skills := caps.ContentTypes["skills"]
+	dn := skills.Capabilities["display_name"]
+	if dn.Confidence != "confirmed" {
+		t.Errorf("display_name.confidence: got %q, want %q", dn.Confidence, "confirmed")
+	}
+	desc := skills.Capabilities["description"]
+	if desc.Confidence != "inferred" {
+		t.Errorf("description.confidence: got %q, want %q", desc.Confidence, "inferred")
+	}
+	// Round-trip: write and re-read
+	var buf bytes.Buffer
+	if err := capyaml.WriteCapabilityYAML(&buf, caps); err != nil {
+		t.Fatalf("WriteCapabilityYAML: %v", err)
+	}
+	written := buf.String()
+	if !strings.Contains(written, "confidence: confirmed") {
+		t.Error("written YAML missing 'confidence: confirmed'")
+	}
+	if !strings.Contains(written, "confidence: inferred") {
+		t.Error("written YAML missing 'confidence: inferred'")
 	}
 }
 

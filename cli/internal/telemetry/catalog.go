@@ -44,14 +44,14 @@ func EventCatalog() []EventDef {
 					Type:        "string",
 					Description: "Target provider slug",
 					Example:     "claude-code",
-					Commands:    []string{"install", "uninstall", "loadout_apply", "sandbox_run", "sync-and-export"},
+					Commands:    []string{"install", "uninstall", "loadout_apply", "sandbox_run", "sync-and-export", "capmon_validate_spec"},
 				},
 				{
 					Name:        "content_type",
 					Type:        "string",
 					Description: "Content type filter or specific type",
 					Example:     "rules",
-					Commands:    []string{"install", "add", "convert", "create", "uninstall", "remove", "list", "share", "sync-and-export", "registry_items"},
+					Commands:    []string{"install", "add", "convert", "create", "uninstall", "remove", "list", "share", "sync-and-export", "registry_items", "capmon_validate_spec"},
 				},
 				{
 					Name:        "content_count",

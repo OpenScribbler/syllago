@@ -32,6 +32,14 @@ config_schema:
 
 content_types:
 
+  # ── Support summary ───────────────────────────────────────────────────
+  # Zed supports: rules (.rules file), mcp, agents (builtin profiles: write/ask/minimal — not user-definable), commands (builtin slash commands only — not user-definable)
+  # Not supported: hooks, skills
+  # Syllago: rules ✓, mcp ✓ | hooks ✗, skills ✗, agents ✗, commands ✗
+  # Zed's 'agent profiles' are builtin (write/ask/minimal) — not user-definable files.
+  # Slash commands are builtin too. hooks and skills stubs are correct.
+  # ─────────────────────────────────────────────────────────────────────
+
   rules:
     sources:
       - url: https://raw.githubusercontent.com/zed-industries/zed/main/.rules
@@ -89,7 +97,7 @@ content_types:
 
   commands:
     sources:
-      - url: https://raw.githubusercontent.com/zed-industries/zed/main/crates/assistant_slash_command/src/assistant_slash_command.rs
+      - url: https://raw.githubusercontent.com/zed-industries/zed/main/crates/extension/src/types/slash_command.rs
         type: source-code
         format: rust
         extracts: [config_fields]
