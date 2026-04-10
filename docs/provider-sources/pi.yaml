@@ -23,6 +23,17 @@ changelog:
     label: "Coding Agent Changelog"
 
 content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Pi supports: rules (via AGENTS.md and .pi/skills/ instruction mechanism),
+  #   skills, hooks (programmatic TypeScript extensions — no declarative JSON
+  #   format), commands (prompt templates in .pi/prompts/)
+  # Not supported: mcp (no built-in MCP; users implement via extensions),
+  #   agents (no user-definable agent definition format)
+  # Syllago: not yet implemented in syllago Go provider code (pi is a
+  #   future/planned provider)
+  # Note: Pi hooks are programmatic TypeScript — no declarative hook JSON.
+  #   MCP stub is correct.
+  # ─────────────────────────────────────────────────────────────────────
 
   # --- Rules / Instructions ---
   # Pi uses Skills (SKILL.md) and AGENTS.md for instructions. No provider-specific rules format.

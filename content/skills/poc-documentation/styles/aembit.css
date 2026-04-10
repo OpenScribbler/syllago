@@ -1,0 +1,365 @@
+/* Aembit POC Guide — WeasyPrint PDF Stylesheet */
+
+/* ------------------------------------------------------------------ */
+/* Web Fonts                                                           */
+/* ------------------------------------------------------------------ */
+
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
+
+/* ------------------------------------------------------------------ */
+/* Brand Variables (reference only — CSS custom props not in WeasyPrint)*/
+/* ------------------------------------------------------------------ */
+/* Aembit Purple:  #29204C  (primary brand, headings, table headers)    */
+/* Aembit Orange:  #E55B2C  (accent, borders, CTA)                     */
+/* Orange Highlight:#FA640D  (secondary accent)                        */
+/* Light Orange:   #FFCA8D  (tertiary accent, blockquote borders)      */
+/* Cream:          #F6F3EF  (subtle background tint, alternating rows) */
+/* Pure White:     #FFFFFF                                              */
+
+/* ------------------------------------------------------------------ */
+/* Page Setup                                                           */
+/* ------------------------------------------------------------------ */
+
+@page {
+  size: Letter;
+  margin: 22mm 20mm 20mm 20mm;
+
+  @top-left {
+    content: url("assets/aembit-icon-small.png");
+  }
+
+  @top-right {
+    content: "Aembit Confidential";
+    font-family: "Be Vietnam Pro", Arial, sans-serif;
+    font-size: 7.5pt;
+    font-weight: 500;
+    color: #29204C;
+    letter-spacing: 0.5pt;
+  }
+
+  @bottom-center {
+    content: "Page " counter(page) " of " counter(pages);
+    font-family: "Be Vietnam Pro", Arial, sans-serif;
+    font-size: 7.5pt;
+    color: #666666;
+  }
+}
+
+@page:first {
+  @top-left { content: none; border: none; }
+  @top-right { content: none; border: none; }
+  @bottom-center { content: none; border: none; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Typography — Body                                                    */
+/* ------------------------------------------------------------------ */
+
+body {
+  font-family: "Be Vietnam Pro", system-ui, Arial, sans-serif;
+  font-size: 10pt;
+  color: #1A1A1A;
+  line-height: 1.55;
+}
+
+/* ------------------------------------------------------------------ */
+/* Headings                                                             */
+/* ------------------------------------------------------------------ */
+
+h1 {
+  color: #FFFFFF;
+  font-size: 16pt;
+  font-weight: 600;
+  page-break-before: always;
+  background-color: #29204C;
+  padding: 10px 14px;
+  margin: 0 -20mm;
+  padding-left: 20mm;
+  padding-right: 20mm;
+  margin-bottom: 16px;
+  border-bottom: 3px solid #E55B2C;
+}
+
+h1.no-break {
+  page-break-before: avoid;
+}
+
+h2 {
+  color: #29204C;
+  font-size: 13pt;
+  font-weight: 600;
+  margin-top: 22px;
+  margin-bottom: 8px;
+  padding-left: 10px;
+  border-left: 3px solid #E55B2C;
+  page-break-after: avoid;
+}
+
+h3 {
+  color: #29204C;
+  font-size: 11pt;
+  font-weight: 600;
+  margin-top: 14px;
+  margin-bottom: 6px;
+  page-break-after: avoid;
+}
+
+/* ------------------------------------------------------------------ */
+/* Tables                                                               */
+/* ------------------------------------------------------------------ */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 9.5pt;
+  page-break-inside: avoid;
+}
+
+thead th {
+  background-color: #29204C;
+  color: #FFFFFF;
+  font-weight: 600;
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 2.5px solid #E55B2C;
+}
+
+tbody td {
+  padding: 6px 10px;
+  border: 1px solid #D9D4E0;
+  vertical-align: top;
+}
+
+tbody tr:nth-child(even) {
+  background-color: #F6F3EF;
+}
+
+/* ------------------------------------------------------------------ */
+/* Code                                                                 */
+/* ------------------------------------------------------------------ */
+
+code {
+  background-color: #F6F3EF;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 8.5pt;
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: #29204C;
+}
+
+pre {
+  background-color: #F6F3EF;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 8.5pt;
+  padding: 12px;
+  border-left: 3px solid #29204C;
+  border-radius: 0 4px 4px 0;
+  margin: 10px 0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  page-break-inside: avoid;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+/* ------------------------------------------------------------------ */
+/* Placeholder & Annotation                                             */
+/* ------------------------------------------------------------------ */
+
+.placeholder {
+  font-weight: bold;
+  color: #1A1A1A;
+}
+
+.annotation {
+  color: #888888;
+  font-style: italic;
+}
+
+/* ------------------------------------------------------------------ */
+/* Checklist                                                            */
+/* ------------------------------------------------------------------ */
+
+.checklist {
+  list-style: none;
+  padding-left: 0;
+}
+
+.checklist li::before {
+  content: "\2610\00a0\00a0";
+}
+
+/* ------------------------------------------------------------------ */
+/* Page Breaks                                                          */
+/* ------------------------------------------------------------------ */
+
+.page-break {
+  page-break-after: always;
+}
+
+/* ------------------------------------------------------------------ */
+/* Lists                                                                */
+/* ------------------------------------------------------------------ */
+
+ol li {
+  margin-bottom: 5px;
+}
+
+ol li ul {
+  margin-top: 3px;
+  list-style-type: disc;
+  padding-left: 1.2em;
+}
+
+ul li {
+  margin-bottom: 4px;
+}
+
+ul li ul {
+  margin-top: 3px;
+  padding-left: 1.2em;
+}
+
+/* ------------------------------------------------------------------ */
+/* Horizontal Rule                                                      */
+/* ------------------------------------------------------------------ */
+
+hr {
+  border: none;
+  border-top: 1.5px solid #E0E0E0;
+  margin: 16px 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cover Page Elements                                                  */
+/* ------------------------------------------------------------------ */
+
+.cover-page {
+  text-align: center;
+  page-break-after: always;
+}
+
+.cover-band {
+  background-color: #29204C;
+  margin: -22mm -20mm 0 -20mm;
+  padding: 60px 40px 44px 40px;
+  text-align: center;
+}
+
+.cover-band-logo {
+  width: 240px;
+  margin-bottom: 30px;
+}
+
+.cover-title {
+  font-size: 30pt;
+  font-weight: 600;
+  color: #FFFFFF;
+  margin-bottom: 8px;
+}
+
+.cover-subtitle {
+  font-size: 18pt;
+  font-weight: 500;
+  color: #FFCA8D;
+  margin-top: 0;
+}
+
+.cover-customer-logo {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.cover-meta {
+  font-size: 10.5pt;
+  color: #555555;
+  text-align: center;
+  margin-top: 30px;
+  line-height: 1.7;
+}
+
+.cover-meta strong {
+  color: #29204C;
+}
+
+.cover-divider {
+  width: 60px;
+  height: 3px;
+  background-color: #E55B2C;
+  margin: 30px auto;
+  border: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Blockquote (annotation hints)                                        */
+/* ------------------------------------------------------------------ */
+
+blockquote {
+  border-left: 3px solid #E55B2C;
+  background-color: #FFF8F5;
+  padding: 8px 14px;
+  color: #444444;
+  font-style: italic;
+  margin: 8px 0;
+  border-radius: 0 4px 4px 0;
+}
+
+blockquote.callout-start {
+  border-left: 3px solid #29204C;
+  background-color: #F0EDF5;
+}
+
+blockquote.callout-note {
+  border-left: 3px solid #FFCA8D;
+  background-color: #FFFBF5;
+}
+
+/* ------------------------------------------------------------------ */
+/* Links                                                                */
+/* ------------------------------------------------------------------ */
+
+a {
+  color: #29204C;
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------ */
+/* Table of Contents                                                    */
+/* ------------------------------------------------------------------ */
+
+.toc {
+  margin-top: 16px;
+}
+
+a.toc-entry {
+  display: block;
+  padding: 10px 14px;
+  margin-bottom: 4px;
+  border-left: 3px solid #E55B2C;
+  background-color: #F6F3EF;
+  font-size: 11pt;
+  text-decoration: none;
+  color: inherit;
+}
+
+.toc-label {
+  font-size: 8pt;
+  font-weight: 600;
+  color: #E55B2C;
+  text-transform: uppercase;
+  letter-spacing: 0.5pt;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.toc-title {
+  font-weight: 600;
+  color: #29204C;
+}

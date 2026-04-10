@@ -1,0 +1,9 @@
+format_version: 1
+id: 379225c3-663f-4b83-b4cd-000d89750026
+name: aembit-knowledge
+type: skills
+source_format: md
+source_type: provider
+source_hash: sha256:d41f7d8158c9fab944a25912aa5daf1b2c1cc9be81f0d977c59a6097d6cfb665
+added_at: 2026-04-03T16:25:26.831143788Z
+added_by: syllago
