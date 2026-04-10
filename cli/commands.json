@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-10T16:53:09Z",
+  "generatedAt": "2026-04-10T17:07:44Z",
   "syllagoVersion": "0.7.0",
   "commands": [
     {
@@ -588,6 +588,14 @@
           "default": null,
           "required": false,
           "description": "Seed only this provider slug"
+        },
+        {
+          "name": "--skip-spec-gate",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Skip the seeder spec human_action gate (for bootstrapping new providers)"
         }
       ],
       "inheritedFlags": [
