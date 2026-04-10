@@ -207,11 +207,18 @@ var capmonSeedCmd = &cobra.Command{
 			}
 		}
 
+		skipSpecGate, _ := cmd.Flags().GetBool("skip-spec-gate")
+		seederSpecsDir := ".develop/seeder-specs"
+		if skipSpecGate {
+			seederSpecsDir = ""
+		}
+
 		opts := capmon.SeedOptions{
 			CapsDir:                 "docs/provider-capabilities",
 			Provider:                provider,
 			Extracted:               extracted,
 			ForceOverwriteExclusive: forceOverwrite,
+			SeederSpecsDir:          seederSpecsDir,
 		}
 		return capmon.SeedProviderCapabilities(opts)
 	},
@@ -296,6 +303,7 @@ func init() {
 	capmonSeedCmd.Flags().String("provider", "", "Seed only this provider slug")
 	capmonSeedCmd.Flags().Bool("force-overwrite-exclusive", false, "Allow overwriting provider_exclusive entries (prints warning)")
 	capmonSeedCmd.Flags().String("cache-root", "", "Path to .capmon-cache/ (default: .capmon-cache)")
+	capmonSeedCmd.Flags().Bool("skip-spec-gate", false, "Skip the seeder spec human_action gate (for bootstrapping new providers)")
 
 	capmonTestFixturesCmd.Flags().Bool("update", false, "Re-fetch live source and update fixture files")
 	capmonTestFixturesCmd.Flags().String("provider", "", "Provider slug for --update (required with --update)")
