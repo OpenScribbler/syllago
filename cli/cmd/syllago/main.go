@@ -17,6 +17,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/OpenScribbler/syllago/cli/internal/tui"
 	"github.com/OpenScribbler/syllago/cli/internal/updater"
 	tea "github.com/charmbracelet/bubbletea"
@@ -83,12 +84,27 @@ func init() {
 		verbose, _ := cmd.Flags().GetBool("verbose")
 		output.Verbose = verbose
 
+		// Initialize telemetry after output flags are set so the first-run
+		// notice (if any) respects --no-color via lipgloss profile above.
+		telemetry.Init()
+
 		return nil
+	}
+
+	rootCmd.PersistentPostRun = func(cmd *cobra.Command, args []string) {
+		// Build a dotted command name: "registry add" → "registry_add".
+		// Skip telemetry's own subcommands to avoid recursion/noise.
+		name := commandPath(cmd)
+		if name != "" && !strings.HasPrefix(name, "telemetry") {
+			telemetry.TrackCommand(name)
+		}
+		telemetry.Shutdown()
 	}
 
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(backfillCmd)
 	rootCmd.AddCommand(updateCmd)
+	rootCmd.AddCommand(capmonCmd)
 }
 
 var versionCmd = &cobra.Command{
@@ -184,6 +200,7 @@ func main() {
 	if buildCommit != "" {
 		ensureUpToDate()
 	}
+	telemetry.SetVersion(version)
 	if err := rootCmd.Execute(); err != nil {
 		printExecuteError(err)
 		os.Exit(output.ExitError)
@@ -318,6 +335,9 @@ func runTUI(cmd *cobra.Command, args []string) error {
 	if _, err := p.Run(); err != nil {
 		return wrapTTYError(err)
 	}
+	telemetry.Track("tui_session_started", map[string]any{
+		"success": true,
+	})
 	return nil
 }
 
@@ -367,6 +387,17 @@ func validateVersion(v string) error {
 		return output.NewStructuredError(output.ErrInputInvalid, fmt.Sprintf("invalid version format: %q (must be semver like 1.0.0)", v), "Use semantic versioning format like 1.0.0 or 1.2.3-beta")
 	}
 	return nil
+}
+
+// commandPath returns a snake_case command name from a cobra command.
+// "syllago registry add" → "registry_add", "syllago install" → "install".
+func commandPath(cmd *cobra.Command) string {
+	parts := strings.Fields(cmd.CommandPath())
+	if len(parts) <= 1 {
+		return "" // root command (TUI) — tracked separately
+	}
+	// Drop "syllago" prefix, join with underscore.
+	return strings.Join(parts[1:], "_")
 }
 
 // ensureUpToDate checks if the binary's embedded commit matches the repo HEAD.

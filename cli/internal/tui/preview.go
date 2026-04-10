@@ -11,12 +11,13 @@ import (
 
 // previewModel renders a scrollable text preview of a file's content.
 type previewModel struct {
-	lines    []string // content lines
-	fileName string   // displayed in header
-	offset   int      // scroll offset (first visible line)
-	width    int
-	height   int
-	focused  bool
+	lines          []string // content lines
+	fileName       string   // displayed in header
+	offset         int      // scroll offset (first visible line)
+	width          int
+	height         int
+	focused        bool
+	highlightLines map[int]bool // 1-based line numbers to highlight (nil = no highlights)
 }
 
 func newPreviewModel() previewModel {
@@ -27,6 +28,12 @@ func newPreviewModel() previewModel {
 func (p *previewModel) SetSize(width, height int) {
 	p.width = width
 	p.height = height
+}
+
+// SetHighlightLines sets the line numbers (1-based) to highlight with a danger tint.
+// Pass nil to clear highlights.
+func (p *previewModel) SetHighlightLines(lines map[int]bool) {
+	p.highlightLines = lines
 }
 
 // LoadItem loads the primary file content for a catalog item.
@@ -47,7 +54,7 @@ func (p *previewModel) LoadItem(item *catalog.ContentItem) {
 	}
 
 	p.fileName = primary
-	content, err := catalog.ReadFileContent(item.Path, primary, 500)
+	content, err := catalog.ReadFileContent(item.Path, primary, 10000)
 	if err != nil {
 		p.lines = []string{"Error reading file:", err.Error()}
 		return
@@ -133,11 +140,25 @@ func (p previewModel) View() string {
 	}
 
 	for i := contentStart; i < contentEnd; i++ {
-		num := mutedStyle.Render(fmt.Sprintf("%*d ", lineNumW, i+1))
-		numW := lipgloss.Width(num)
-		lineW := p.width - numW
-		line := truncateLine(p.lines[i], lineW)
-		visibleLines = append(visibleLines, num+line)
+		lineNum := i + 1
+		if p.highlightLines != nil && p.highlightLines[lineNum] {
+			// Highlighted line: danger gutter marker + tinted background (full-width)
+			num := lipgloss.NewStyle().Foreground(dangerColor).Render(fmt.Sprintf("%*d", lineNumW, lineNum))
+			gutter := lipgloss.NewStyle().Foreground(dangerColor).Render("\u258c") // ▌
+			lineW := p.width - lipgloss.Width(num) - 1
+			lineContent := truncateLine(p.lines[i], lineW)
+			// Pad to full line width so the highlight background covers the entire row
+			padded := lineContent + strings.Repeat(" ", max(0, lineW-lipgloss.Width(lineContent)))
+			styledLine := lipgloss.NewStyle().Background(highlightBG).Foreground(primaryText).Render(padded)
+			visibleLines = append(visibleLines, num+gutter+styledLine)
+		} else {
+			// Normal line
+			num := mutedStyle.Render(fmt.Sprintf("%*d ", lineNumW, lineNum))
+			numW := lipgloss.Width(num)
+			lineW := p.width - numW
+			line := truncateLine(p.lines[i], lineW)
+			visibleLines = append(visibleLines, num+line)
+		}
 	}
 
 	if showBelow {

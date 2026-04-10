@@ -1,17 +1,17 @@
 ╭──syllago────────────────────────────────────────────────────────────────[?]──╮
 │               [1] Collections      [2] Content      [3] Config               │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│   Skills     Agents     MCP     Rules     Hooks     Commands       [a] Add   │
-│                                                                              │
+│   Skills     Agents     MCP     Rules     Hooks     Commands                 │
+│                                                             [a] Add skills   │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ alpha-skill                               Type: Skill     Files: 1           │
 │ Scope: project   Registry: not in a registry                                 │
-│                                                                   [e] Edit   │
+│                                                   [d] Remove      [e] Edit   │
 ├───────────────────────────┬──────────────────────────────────────────────────┤
 │ > alpha-skill             │──SKILL.md────────────────────────────────────────│
 │   beta-skill              │ 1 Error reading file:                            │
-│                           │ 2 reading file SKILL.md: open SKILL.md: no such f│
+│                           │ 2 path traversal: SKILL.md escapes               │
 │                           │                                                  │
 │                           │                                                  │
 │                           │                                                  │
@@ -27,4 +27,4 @@
 │                           │                                                  │
 ╰───────────────────────────┴──────────────────────────────────────────────────╯
 1/2/3 groups · tab items · ↑/↓ navigate · ←/→ switch pane   syllago v0.0.0-test
-enter detail · e edit · d remove · x uninstall · R refresh · a add · ? help · q quit
+enter detail · / search · i install · e edit · d remove · x uninstall · R refresh · a add · ? help · q quit

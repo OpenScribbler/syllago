@@ -84,4 +84,10 @@ var ClaudeCode = Provider{
 		catalog.MCP:      false, // JSON merge
 		catalog.Hooks:    false, // JSON merge
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.Hooks: ".claude/settings.json",
+		catalog.MCP:   ".mcp.json",
+	},
+	MCPTransports: []string{"stdio", "sse", "streamable-http"},
+	HookTypes:     []string{"command", "http", "prompt", "agent"},
 }

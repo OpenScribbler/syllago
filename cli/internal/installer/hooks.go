@@ -263,29 +263,49 @@ func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot 
 		return StatusNotAvailable
 	}
 
-	// Check installed.json first
+	// Check installed.json for this hook
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
 		return StatusNotAvailable
 	}
-	if inst.FindHook(item.Name, event) >= 0 {
-		return StatusInstalled
+	instIdx := inst.FindHook(item.Name, event)
+	if instIdx < 0 {
+		return StatusNotInstalled
 	}
 
-	// Also check if event array exists in settings.json (installed by other means)
+	// installed.json doesn't track which provider the hook was installed to,
+	// so verify the hook actually exists in THIS provider's settings file.
 	settingsPath, err := hookSettingsPath(prov)
 	if err != nil {
-		return StatusNotAvailable
+		return StatusNotInstalled
 	}
 
 	fileData, err := readJSONFile(settingsPath)
 	if err != nil {
-		return StatusNotAvailable
+		return StatusNotInstalled
 	}
 
 	hooksArray := gjson.GetBytes(fileData, "hooks."+event)
 	if !hooksArray.Exists() || !hooksArray.IsArray() {
 		return StatusNotInstalled
+	}
+
+	// Match by hash or command to confirm presence in this provider's settings
+	storedHash := inst.Hooks[instIdx].GroupHash
+	if storedHash != "" {
+		for _, entry := range hooksArray.Array() {
+			h := sha256.Sum256([]byte(entry.Raw))
+			if hex.EncodeToString(h[:]) == storedHash {
+				return StatusInstalled
+			}
+		}
+	} else {
+		cmd := inst.Hooks[instIdx].Command
+		for _, entry := range hooksArray.Array() {
+			if entry.Get("hooks.0.command").String() == cmd {
+				return StatusInstalled
+			}
+		}
 	}
 
 	return StatusNotInstalled

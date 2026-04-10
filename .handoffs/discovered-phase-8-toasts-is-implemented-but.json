@@ -1,0 +1,76 @@
+{
+  "$schema": "handoff-v2",
+  "name": "discovered-phase-8-toasts-is-implemented-but",
+  "createdAt": "2026-03-29T17:43:04.114Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-03-29T17:43:04.114Z",
+    "sessionId": "b0a1f2f2-e924-4301-b754-8229863b8897",
+    "summary": "Discovered Phase 8 (Toasts) is implemented but needs polish: copy broken, missing close button, need minimum width",
+    "activeWork": {
+      "description": "Phase 8 Toast Notifications polish - fixing copy mechanism, adding close button, setting minimum width",
+      "feature": "toast-notifications",
+      "stage": "planning",
+      "planRef": null,
+      "designRef": null,
+      "progress": "Created comprehensive prompt identifying three issues: (1) OSC 52 copy broken because BubbleTea alt screen swallows Printf output, (2) need clickable close button in addition to [esc] hint, (3) need minimum width to prevent layout jank. Ready to implement.",
+      "blockers": [],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 152,
+      "lastCommit": "0be34fb fix: preFilterType discovery never started — advanceFromSource returns cmd",
+      "modifiedFiles": [
+        ".handoff.json",
+        ".syllago/installed.json",
+        "cli/internal/tui/actions.go",
+        "cli/internal/tui/add_wizard.go",
+        "cli/internal/tui/add_wizard_update.go",
+        "cli/internal/tui/add_wizard_view.go",
+        "cli/internal/tui/explorer.go",
+        "cli/internal/tui/install.go",
+        "cli/internal/tui/install_test.go",
+        "cli/internal/tui/library.go",
+        "cli/internal/tui/metapanel.go",
+        "cli/internal/tui/preview.go",
+        "cli/internal/tui/testdata/explorer-skills-80x30.golden",
+        "cli/internal/tui/testdata/library-table-120x40.golden",
+        "cli/internal/tui/testdata/library-table-80x30.golden"
+      ]
+    },
+    "recentDecisions": [
+      "Toast infrastructure already exists (Phase 8 listed as 'Not started' in roadmap, but implementation is complete)",
+      "Root cause analysis: tea.Printf for OSC 52 doesn't work in alt screen mode — need BubbleTea clipboard API or raw stdout approach",
+      "User confirmed copy doesn't work + identified two additional UX gaps: missing close button and layout jank from no minimum width"
+    ],
+    "nextSteps": [
+      "Research BubbleTea v1.x clipboard support in current dependencies (go.mod)",
+      "Implement copy via SetClipboard() or ExecProcess/raw stdout fallback",
+      "Add clickable close button (×) to toast View with mouse zone marking",
+      "Set minimum width on toasts to prevent layout shift",
+      "Update toast tests to cover close button interaction",
+      "Run full TUI test suite and update golden files if needed"
+    ],
+    "context": {
+      "notes": "152 uncommitted files are mostly from TUI phase work (Add Wizard polish). Previous handoff mentioned preFilterType discovery bug — unrelated to this Phase 8 work. Phase 8 prompt ready to execute. Toasts located in cli/internal/tui/toast.go with queue, auto-dismiss timers, and bottom-right positioning already in place."
+    }
+  },
+  "previousSessions": [
+    {
+      "summary": "Add Wizard UX polish + bug fixes — 20+ commits fixing navigation, table columns, risk indicators, content discovery flow",
+      "updated": "2026-03-29T00:15:00-07:00",
+      "completedWork": [
+        "All 5 original UX polish changes implemented",
+        "Fixed 20+ bugs across add wizard flows",
+        "Discovered and fixed test expectations for Remove button visibility (Library flag logic)",
+        "Confirmed golden file diffs match expected behavior"
+      ],
+      "nextSteps": [
+        "UNRESOLVED BUG: preFilterType discovery gets stuck at 'Scanning...' — advanceFromSource returns cmd but addDiscoveryDoneMsg may not route back properly",
+        "Phase 8 Toast Polish (this session): Fix copy mechanism, add close button, minimum width"
+      ]
+    }
+  ]
+}

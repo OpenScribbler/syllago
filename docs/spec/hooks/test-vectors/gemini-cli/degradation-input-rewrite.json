@@ -1,0 +1,17 @@
+{
+  "_comment": "Expected Gemini CLI output for canonical/degradation-input-rewrite.json. Gemini CLI does not support input_rewrite. The default degradation strategy is 'block', so the converted hook MUST always block (exit code 2).",
+  "_warnings": [
+    "Hook 1: input_rewrite capability not supported by Gemini CLI — degradation strategy 'block' applied. The converted hook blocks all matching actions unconditionally.",
+    "Hook 1: structured_output partially supported — Gemini CLI supports decision and systemMessage but not updated_input"
+  ],
+  "hooks": [
+    {
+      "hookName": "BeforeTool",
+      "command": "echo 'BLOCKED: input_rewrite capability required but not supported by this provider. The hook ./sanitize-input.sh sanitizes tool input, which cannot be applied without input_rewrite support.' >&2; exit 2",
+      "timeout": 10000,
+      "matcher": {
+        "toolName": "run_shell_command"
+      }
+    }
+  ]
+}

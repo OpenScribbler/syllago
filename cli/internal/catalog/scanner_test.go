@@ -1010,9 +1010,9 @@ func TestMCPServerDescription(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			value := gjsonParse(tt.json)
-			got := mcpServerDescription(value)
+			got := MCPServerDescription(value)
 			if got != tt.want {
-				t.Errorf("mcpServerDescription() = %q, want %q", got, tt.want)
+				t.Errorf("MCPServerDescription() = %q, want %q", got, tt.want)
 			}
 		})
 	}

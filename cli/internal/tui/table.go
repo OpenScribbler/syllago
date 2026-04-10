@@ -2,14 +2,12 @@ package tui
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/tidwall/gjson"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
@@ -575,11 +573,11 @@ func (t tableModel) renderRow(index int, c colLayout) string {
 	} else if isCursor {
 		style = boldStyle
 	}
-	// MaxWidth clips without wrapping. Manual pad for full-width row background.
-	rendered := style.MaxWidth(t.width).Render(row)
-	if gap := t.width - lipgloss.Width(rendered); gap > 0 {
-		rendered += strings.Repeat(" ", gap)
+	// Pad row to full width BEFORE styling so the background color fills the entire row.
+	if gap := t.width - len([]rune(row)); gap > 0 {
+		row += strings.Repeat(" ", gap)
 	}
+	rendered := style.MaxWidth(t.width).Render(row)
 	return zone.Mark("tbl-"+itoa(index), rendered)
 }
 
@@ -625,76 +623,13 @@ func (t tableModel) computeRows(items []catalog.ContentItem) []tableRow {
 func computeTypeDetail(item catalog.ContentItem) string {
 	switch item.Type {
 	case catalog.Hooks:
-		return computeHookDetail(item)
+		return catalog.HookSummary(item)
 	case catalog.MCP:
-		return computeMCPDetail(item)
+		return catalog.MCPSummary(item)
 	case catalog.Loadouts:
 		return computeLoadoutDetail(item)
 	}
 	return ""
-}
-
-// computeHookDetail extracts event, matcher, and handler type from hook.json.
-func computeHookDetail(item catalog.ContentItem) string {
-	hookPath := filepath.Join(item.Path, "hook.json")
-	data, err := os.ReadFile(hookPath)
-	if err != nil {
-		return ""
-	}
-	event := gjson.GetBytes(data, "event").String()
-	matcher := gjson.GetBytes(data, "matcher").String()
-	hookType := gjson.GetBytes(data, "hooks.0.type").String()
-	if hookType == "" {
-		hookType = "command"
-	}
-
-	var parts []string
-	if event != "" {
-		parts = append(parts, "Event: "+event)
-	}
-	if matcher != "" {
-		parts = append(parts, "Matcher: "+matcher)
-	}
-	parts = append(parts, "Handler: "+hookType)
-	return strings.Join(parts, " · ")
-}
-
-// computeMCPDetail extracts server key and command from config.json.
-func computeMCPDetail(item catalog.ContentItem) string {
-	configPath := filepath.Join(item.Path, "config.json")
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return ""
-	}
-	servers := gjson.GetBytes(data, "mcpServers")
-	if !servers.Exists() || !servers.IsObject() {
-		return ""
-	}
-
-	var parts []string
-	// Use ServerKey if set, otherwise take first key
-	key := item.ServerKey
-	if key == "" {
-		servers.ForEach(func(k, _ gjson.Result) bool {
-			key = k.String()
-			return false // stop after first
-		})
-	}
-	if key != "" {
-		parts = append(parts, "Server: "+key)
-	}
-	cmd := gjson.GetBytes(data, "mcpServers."+key+".command").String()
-	args := gjson.GetBytes(data, "mcpServers."+key+".args")
-	if cmd != "" {
-		cmdStr := cmd
-		if args.Exists() && args.IsArray() {
-			for _, a := range args.Array() {
-				cmdStr += " " + a.String()
-			}
-		}
-		parts = append(parts, "Command: "+cmdStr)
-	}
-	return strings.Join(parts, " · ")
 }
 
 // computeLoadoutDetail extracts target provider and item counts from loadout.yaml.

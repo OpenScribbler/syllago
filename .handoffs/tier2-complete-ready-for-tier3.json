@@ -1,0 +1,68 @@
+{
+  "$schema": "handoff-v2",
+  "name": "tier2-complete-ready-for-tier3",
+  "createdAt": "2026-03-30T23:45:00-07:00",
+  "current": {
+    "claimedBy": { "sessionId": "tier3-session", "claimedAt": "2026-03-30T21:08:54-07:00" },
+    "project": "syllago",
+    "updated": "2026-03-30T23:45:00-07:00",
+    "sessionId": null,
+    "summary": "Completed hook adapter Tier 2 migration — all 5 adapters off legacy bridge, shared helpers, degradation enforcement, ADR",
+
+    "activeWork": {
+      "description": "Hook spec alignment — Tier 2 complete, Tier 3 ready",
+      "feature": "hook-adapter-tier2-migration",
+      "stage": "complete",
+      "planRef": "docs/plans/2026-03-30-hook-adapter-tier2-migration-implementation.md",
+      "designRef": "docs/plans/2026-03-30-hook-adapter-tier2-migration-design.md",
+      "progress": "All 8 phases executed: pre-work (toolmap/compat gaps), hookhelpers.go (11 shared helpers), 5 adapter migrations (CC, Gemini, Copilot, Cursor, Kiro), legacy bridge removal, Verify() upgrade. Added degradation enforcement (block/exclude/warn) and ADR 0001. Committed as 21aa18f, pushed to main.",
+      "blockers": [],
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": ["syllago-0q5if", "syllago-tto3m"],
+        "readyNext": ["syllago-pg2cy", "syllago-ms77k", "syllago-h5rsk"]
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": "271",
+      "lastCommit": "21aa18f feat(converter): hook adapter Tier 2 — migrate off legacy bridge",
+      "modifiedFiles": [
+        "cli/internal/converter/hookhelpers.go (NEW — 11 shared translation helpers)",
+        "cli/internal/converter/hookhelpers_test.go (NEW — 28+ test functions)",
+        "cli/internal/converter/adapter_cc.go (migrated to direct encode/decode)",
+        "cli/internal/converter/adapter_gemini.go (migrated)",
+        "cli/internal/converter/adapter_copilot.go (migrated, cwd/env now working)",
+        "cli/internal/converter/adapter_cursor.go (migrated, provider_data for failClosed/loop_limit)",
+        "cli/internal/converter/adapter_kiro.go (migrated, agent wrapper + per-entry matchers)",
+        "cli/internal/converter/adapter.go (bridge removed, Verify upgraded)",
+        "cli/internal/converter/toolmap.go (Cline removed, VS Code Copilot added)",
+        "docs/adr/0001-hook-degradation-enforcement.md (NEW)"
+      ]
+    },
+
+    "recentDecisions": [
+      "Hybrid architecture: adapters own encode/decode, share stateless translation helpers (not a framework)",
+      "Degradation enforcement: block/exclude/warn strategies checked during encode, not deferred (ADR 0001)",
+      "status_message added to spec as first-class handler field, JSON tag fixed to snake_case",
+      "HookData/HookEntry/render*Hooks preserved — used by HooksConverter pipeline for CLI convert command",
+      "ApplyDegradation partially implemented: block+exclude enforced, warn behaves like exclude (wrapper generation deferred)",
+      "Kitchen sink test fixtures moved to testdata/ — decoupled from content library",
+      "ADR format adopted (Nygard template) at docs/adr/"
+    ],
+
+    "nextSteps": [
+      "Start Tier 3: new provider adapters. Factory Droid is the smoke test (CC-identical events). Bead: syllago-h5rsk",
+      "VS Code Copilot adapter (syllago-ms77k) — spec fully defines it, toolmap/compat entries already added in Tier 2",
+      "Windsurf split-event adapter + OpenCode JS adapter (syllago-pg2cy) — more complex, different paradigms",
+      "Consider migrating HooksConverter.Render/Canonicalize to use adapter registry internally (would let us remove render*Hooks from hooks.go)"
+    ],
+
+    "context": {
+      "notes": "271 uncommitted files in working tree are pre-existing (content library cleanup, TUI work, etc.) — not from this session. The Tier 2 commit (21aa18f) is clean and pushed. Spec file is at docs/spec/hooks/hooks.md (moved from docs/spec/hooks-v1.md by a prior session). The develop workflow state is at .develop/hook-adapter-tier2-migration.json (stage: complete). RuleSync competitive research is captured in the design doc (25 providers, 7 with hooks). New beads created for missing adapters: VS Code Copilot (P2), Factory Droid (P3), Codex (P4), deepagents-cli (P4)."
+    }
+  },
+
+  "previousSessions": []
+}

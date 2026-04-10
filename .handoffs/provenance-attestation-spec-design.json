@@ -1,0 +1,85 @@
+{
+  "$schema": "handoff-v2",
+  "name": "provenance-attestation-spec-design",
+  "createdAt": "2026-04-01T19:45:00Z",
+  "current": {
+    "claimedBy": { "sessionId": "ffee25a3-4b04-45fd-b17c-f66842fe7b39", "claimedAt": "2026-04-02T06:35:00Z" },
+    "project": "syllago",
+    "updated": "2026-04-02T05:32:45Z",
+    "sessionId": null,
+    "summary": "Generated 16 normative test vectors + 2 meta hash vectors for ACP spec. Completed 5 rounds of iterative review fixing derived_from semantics, algorithm unification (7.3 universal), source format clarity, and provenance chain coherence. Ran 5-persona adversarial discussion panel.",
+
+    "activeWork": {
+      "description": "ACP spec v0.1.0-draft is review-complete. 5 rounds of iterative fixes applied, 5-persona adversarial panel executed and documented. Two small mechanical fixes remain before tagging, plus known-limitations documentation from panel findings.",
+      "feature": null,
+      "stage": "execute",
+      "planRef": null,
+      "designRef": "docs/spec/skills/provenance.md",
+      "progress": "Spec body is architecturally sound — panel found zero structural design flaws. All test vectors use real hashes forming a coherent provenance chain (TV-MH → TV-MH2). Committed as 794b90c. Adversarial panel results documented in adversarial-discussion-panel.md (uncommitted). Panel identified YAML-to-JSON type mapping as the #1 interoperability gap across all 5 reviewers.",
+      "blockers": [],
+      "beads": null
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": "16",
+      "lastCommit": "794b90c docs: ACP specification v0.1.0-draft with normative test vectors",
+      "modifiedFiles": [
+        "docs/spec/skills/acp-spec.md",
+        "docs/spec/skills/generate_test_vectors.py",
+        "docs/spec/skills/adversarial-discussion-panel.md",
+        "docs/spec/skills/llm-feedback.md"
+      ]
+    },
+
+    "recentDecisions": [
+      "Section 7.3 (directory tree) is the universal content_hash algorithm — 7.2 demoted to sub-procedure, eliminating publisher/consumer ambiguity",
+      "compose removed from per-entry relation enum — composition implied by list length > 1",
+      "derived_from.source is a human-readable hint, source_hash is the authoritative cross-reference anchor",
+      "Empty content directories MUST be rejected as unpublishable",
+      "Symlink cycles MUST be detected and rejected",
+      "Version reset on ALL derivation types (fork, convert, adapt, composition)",
+      "TV-MH and TV-MH2 form a coherent provenance chain using real hashes from other test vectors"
+    ],
+
+    "nextSteps": [
+      "Fix TV-15 per-file hash prefix inconsistency (uses sha256: prefix but 7.2 outputs bare hex)",
+      "Fix schema example source_hash placeholder (sha256:x9y8z7w6... contains non-hex chars)",
+      "Address panel's #1 finding: add normative YAML-to-JSON type mapping table to Section 8",
+      "Constrain published_at to RFC 3339 profile (mandatory UTC Z suffix, seconds precision)",
+      "Add unknown fields handling rule (include in meta_hash or strip — must be explicit)",
+      "Add signing input test vector for Section 9.1",
+      "Document known limitations from panel findings in Security Considerations",
+      "Consider committing adversarial-discussion-panel.md and updated spec/generator",
+      "Run /spec-writing audit as final check before tagging v0.1.0-draft"
+    ],
+
+    "context": {
+      "notes": "KEY FILES:\n\n1. docs/spec/skills/acp-spec.md — THE SPEC (v0.1.0-draft, post-5-round review)\n2. docs/spec/skills/generate_test_vectors.py — Reference implementation for hash algorithms (16 TVs + 2 meta hash TVs)\n3. docs/spec/skills/provenance.md — DESIGN DOC (full decision history, D1-D12)\n4. docs/spec/skills/llm-feedback.md — External review (Claude + Gemini, 2 rounds each)\n5. docs/spec/skills/adversarial-discussion-panel.md — 5-persona adversarial review results (UNCOMMITTED)\n\nADVERSARIAL PANEL SUMMARY:\n- 5 agents: Security Researcher, Standards Expert, Implementer, Red Team, Technical Auditor\n- Consensus #1 finding: YAML-to-JSON type mapping unspecified (all 5 flagged independently)\n- 16 attack scenarios identified by Red Team — NONE require breaking a signature\n- Key insight: ACP is a provenance spec, not a trust spec. Gap between 'hashes verify' and 'content is trustworthy' must be clearly communicated.\n- Triage checklist in adversarial-discussion-panel.md with 4 priority levels\n\nPOST-REVIEW CHANGES (uncommitted in acp-spec.md):\n- Multiple iterative fixes from rounds 2-5 of review\n- These are uncommitted because the adversarial panel may prompt further changes\n- The committed version (794b90c) has the test vectors but not the final review fixes\n\nIMPORTANT: acp-spec.md has uncommitted changes from review rounds. The committed version at 794b90c is the pre-review-fix state. Run git diff docs/spec/skills/acp-spec.md to see what changed."
+    }
+  },
+
+  "previousSessions": [
+    {
+      "summary": "Designed and wrote the Agent Content Provenance (ACP) specification — portable meta.yaml sidecar format for AI coding tool content provenance with dual hashes, Sigstore/SSH signing, and lineage tracking.",
+      "updated": "2026-04-02T01:33:22Z",
+      "completedWork": [
+        "ACP spec v0.1.0 draft complete with RFC 2119 language, conformance classes, security considerations",
+        "Full design cycle: brainstorm → content type mapping → adversarial panels → external review → spec writing",
+        "All 12 discussion points (D1-D12) resolved",
+        "Two rounds of external review feedback incorporated (Claude + Gemini)"
+      ],
+      "nextSteps": [
+        "Generate inline test vectors for Appendix B",
+        "Run spec audit",
+        "Commit all spec files"
+      ]
+    },
+    {
+      "summary": "Design provenance and attestation model for syllago content types — authorship, versioning, source binding, derivation lineage, content hashing.",
+      "updated": "2026-04-01T19:45:00Z",
+      "completedWork": ["Extensive prior research and adversarial review. Prior panel recommended 8-field minimum sidecar convention."],
+      "nextSteps": ["Map content types to provenance needs", "Decide WHERE provenance lives", "Design content hash algorithm"]
+    }
+  ]
+}

@@ -9,6 +9,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -71,6 +72,10 @@ func runConvert(cmd *cobra.Command, args []string) error {
 		slugs := providerSlugs()
 		return output.NewStructuredError(output.ErrProviderNotFound, "unknown target provider: "+toSlug, "Available: "+strings.Join(slugs, ", "))
 	}
+
+	telemetry.Enrich("from_provider", fromSlug)
+	telemetry.Enrich("to_provider", toSlug)
+	telemetry.Enrich("content_type", typeStr)
 
 	// Determine mode: file path or library item name.
 	if isFilePath(input) {

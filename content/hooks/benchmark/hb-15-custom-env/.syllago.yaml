@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-15-custom-env
+type: hooks
+description: "Benchmark: validates per-hook environment variables are injected"
+hook:
+  event: before_tool_execute
+  blocking: false
+  command: ./hb-15.sh

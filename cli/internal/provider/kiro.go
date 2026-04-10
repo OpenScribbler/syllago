@@ -77,4 +77,10 @@ var Kiro = Provider{
 		catalog.Hooks:  false, // JSON merge
 		catalog.MCP:    false, // JSON merge
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.Hooks: ".kiro/agents/",
+		catalog.MCP:   ".kiro/settings/mcp.json",
+	},
+	MCPTransports: []string{"stdio", "sse"},
+	HookTypes:     []string{"command"},
 }

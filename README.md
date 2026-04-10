@@ -65,6 +65,8 @@ make setup    # configure git hooks (gofmt pre-commit check)
 make build
 ```
 
+Syllago collects anonymous usage data to help improve the tool. [Learn more and opt out.](https://syllago.dev/telemetry)
+
 ## Quick Start
 
 **Scenario:** You have Claude Code rules and skills you want to use in Cursor and Gemini CLI.
@@ -253,6 +255,7 @@ A **registry** is a git repository that distributes syllago content. Push curate
 | `syllago info` | Show capabilities, detected providers, library location |
 | `syllago doctor` | Diagnose setup problems (providers, config, integrity) |
 | `syllago completion` | Generate shell autocompletion scripts |
+| `syllago telemetry` | View and control anonymous usage data collection |
 | `syllago version` | Print version |
 
 ### Global Flags
@@ -359,6 +362,7 @@ What's done and what's next:
 - **Distribution** -- bulk install, `add --from shared`, provider-to-provider conversion, SBOM (done)
 - **Platform** -- `syllago doctor`, enhanced `syllago info`, dependency review CI (done)
 - **Security** -- trust tiers, hook signing and verification, script scanning, policy engine (next)
+- **Multi-provider loadouts** -- Define a loadout once and deploy it to your entire tool fleet. Specify `providers: all` in `loadout.yaml` to install to every detected agent, or list specific slugs for targeted distribution.
 - **Providers** -- VS Code Copilot, Qwen Code, Crush, Kimi CLI, Trae Agent, and more
 - **Specs** -- formal specs for all canonical formats (hooks spec is already drafted)
 

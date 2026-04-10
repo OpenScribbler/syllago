@@ -96,6 +96,7 @@ func (h helpOverlay) View() string {
 		section("Actions", [][2]string{
 			{"a", "Add content"},
 			{"n", "Create new (coming soon)"},
+			{"i", "Install to provider"},
 			{"e", "Edit name/description"},
 			{"d", "Remove from library"},
 			{"x", "Uninstall from provider"},

@@ -12,5 +12,5 @@
 #  - Add details after a space: -username reason
 dependabot[bot]
 holdenhewett
-OpenScribblerOwner
+Open-Scribbler
 z336

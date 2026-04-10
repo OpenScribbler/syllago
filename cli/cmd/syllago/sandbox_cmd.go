@@ -9,6 +9,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/sandbox"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -71,6 +72,7 @@ var sandboxRunCmd = &cobra.Command{
 			allowPorts = append(allowPorts, p)
 		}
 
+		telemetry.Enrich("provider", args[0])
 		return sandbox.RunSession(sandbox.RunConfig{
 			ProviderSlug:       args[0],
 			ProjectDir:         cwd,

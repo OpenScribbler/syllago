@@ -50,7 +50,10 @@ var OpenCode = Provider{
 		case catalog.Agents:
 			return []string{filepath.Join(projectRoot, ".opencode", "agents")}
 		case catalog.Skills:
-			return []string{filepath.Join(projectRoot, ".opencode", "skills")}
+			return []string{
+				filepath.Join(projectRoot, ".opencode", "skills"),
+				filepath.Join(projectRoot, ".agents", "skills"),
+			}
 		case catalog.MCP:
 			return []string{
 				filepath.Join(projectRoot, "opencode.json"),
@@ -79,6 +82,12 @@ var OpenCode = Provider{
 			return false
 		}
 	},
+	GlobalSharedReadPaths: func(homeDir string, ct catalog.ContentType) []string {
+		if ct == catalog.Skills {
+			return []string{filepath.Join(homeDir, ".agents", "skills")}
+		}
+		return nil
+	},
 	SymlinkSupport: map[catalog.ContentType]bool{
 		catalog.Rules:    true,
 		catalog.Commands: true,
@@ -86,4 +95,8 @@ var OpenCode = Provider{
 		catalog.Skills:   true,
 		catalog.MCP:      false, // JSON merge
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.MCP: "opencode.json",
+	},
+	MCPTransports: []string{"stdio"},
 }

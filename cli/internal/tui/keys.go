@@ -20,6 +20,8 @@ const (
 	keyEdit      = "e"
 	keyRemove    = "d"
 	keyUninstall = "x"
+	keyInstall   = "i"
 	keyRefresh   = "R"
+	keySync      = "S"
 	keyHelp      = "?"
 )

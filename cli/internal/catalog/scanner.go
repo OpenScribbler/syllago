@@ -136,6 +136,7 @@ func ScanRegistriesOnly(registries []RegistrySource) (*Catalog, error) {
 // package. It is intentionally unexported to avoid an import cycle: the
 // registry package already imports catalog (for IsValidRegistryName), so
 // catalog cannot import registry.
+// KEEP IN SYNC with registry.ManifestItem in registry/registry.go.
 type manifestItem struct {
 	Name      string   `yaml:"name"`
 	Type      string   `yaml:"type"`
@@ -144,6 +145,14 @@ type manifestItem struct {
 	HookEvent string   `yaml:"hookEvent,omitempty"`
 	HookIndex int      `yaml:"hookIndex,omitempty"`
 	Scripts   []string `yaml:"scripts,omitempty"`
+
+	// Extended fields (populated by analyzer; optional in authored manifests)
+	DisplayName  string   `yaml:"displayName,omitempty"`
+	Description  string   `yaml:"description,omitempty"`
+	ContentHash  string   `yaml:"contentHash,omitempty"`
+	References   []string `yaml:"references,omitempty"`
+	ConfigSource string   `yaml:"configSource,omitempty"`
+	Providers    []string `yaml:"providers,omitempty"`
 }
 
 type catalogManifest struct {
@@ -151,20 +160,23 @@ type catalogManifest struct {
 }
 
 // loadManifestItems reads registry.yaml from dir and returns its items list.
-// Returns nil, nil if the file does not exist (manifest is optional).
-func loadManifestItems(dir string) ([]manifestItem, error) {
+// The bool return indicates whether a registry.yaml file was found at all.
+// Returns (nil, false, nil) if the file does not exist (manifest is optional).
+// Only the root-level registry.yaml is read; nested manifests in subdirectories
+// are intentionally ignored (Decision #42).
+func loadManifestItems(dir string) ([]manifestItem, bool, error) {
 	data, err := os.ReadFile(filepath.Join(dir, "registry.yaml"))
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
+		return nil, false, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("reading registry.yaml in %q: %w", dir, err)
+		return nil, false, fmt.Errorf("reading registry.yaml in %q: %w", dir, err)
 	}
 	var m catalogManifest
 	if err := yaml.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("parsing registry.yaml in %q: %w", dir, err)
+		return nil, false, fmt.Errorf("parsing registry.yaml in %q: %w", dir, err)
 	}
-	return m.Items, nil
+	return m.Items, true, nil
 }
 
 // Per-registry scanning limits to prevent resource exhaustion from malicious registries.
@@ -187,8 +199,12 @@ func scanRoot(cat *Catalog, baseDir string, local bool) error {
 	beforeCount := len(cat.Items)
 
 	// Check for registry.yaml with indexed items; if present, use index-based scan.
-	items, _ := loadManifestItems(baseDir)
-	if len(items) > 0 {
+	// Decision #41: when registry.yaml has an items key (even if empty), it is
+	// authoritative — do NOT fall back to directory scanning.
+	// items == nil means no items key (or no registry.yaml) → fall through to walk.
+	// items == [] (non-nil, empty) means "no items here" → return empty catalog.
+	items, _, _ := loadManifestItems(baseDir)
+	if items != nil {
 		if len(items) > maxScanItems {
 			cat.Warnings = append(cat.Warnings, fmt.Sprintf("registry at %s has %d manifest items, exceeding limit of %d; truncating", baseDir, len(items), maxScanItems))
 			items = items[:maxScanItems]
@@ -236,24 +252,38 @@ func scanFromIndex(cat *Catalog, baseDir string, resolvedBase string, items []ma
 		itemPath := filepath.Join(baseDir, mi.Path)
 		ct := ContentType(mi.Type)
 
-		// Validate the path stays within the registry boundary.
-		if err := validateRegistryPath(itemPath, resolvedBase); err != nil {
-			cat.Warnings = append(cat.Warnings, fmt.Sprintf("index item %q: %s, skipping", mi.Name, err))
-			continue
-		}
-
-		info, err := os.Stat(itemPath)
-		if err != nil {
-			cat.Warnings = append(cat.Warnings, fmt.Sprintf("index item %q: path %q not found, skipping", mi.Name, mi.Path))
-			continue
-		}
-
 		item := ContentItem{
 			Name:     mi.Name,
 			Type:     ct,
 			Path:     itemPath,
 			Provider: mi.Provider,
 			Library:  local,
+		}
+
+		// Apply manifest-provided metadata (short-circuits disk reads).
+		if mi.DisplayName != "" {
+			item.DisplayName = mi.DisplayName
+		}
+		if mi.Description != "" {
+			item.Description = mi.Description
+		}
+
+		info, err := os.Stat(itemPath)
+		if err != nil {
+			// Path missing on disk but manifest provides metadata — keep item.
+			if mi.DisplayName != "" || mi.Description != "" {
+				cat.Items = append(cat.Items, item)
+				continue
+			}
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("index item %q: path %q not found, skipping", mi.Name, mi.Path))
+			continue
+		}
+
+		// Validate the path stays within the registry boundary (requires path to exist
+		// for symlink resolution).
+		if err := validateRegistryPath(itemPath, resolvedBase); err != nil {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("index item %q: %s, skipping", mi.Name, err))
+			continue
 		}
 
 		if info.IsDir() {
@@ -433,7 +463,7 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 							Path:        itemDir,
 							ServerKey:   serverName,
 							Library:     local,
-							Description: mcpServerDescription(value),
+							Description: MCPServerDescription(value),
 							Files:       files,
 							Meta:        meta,
 						}
@@ -534,7 +564,7 @@ func scanMCPSubdirs(cat *Catalog, groupDir string, entries []os.DirEntry, local 
 						Path:        serverDir,
 						ServerKey:   serverName,
 						Library:     local,
-						Description: mcpServerDescription(value),
+						Description: MCPServerDescription(value),
 						Files:       files,
 						Meta:        meta,
 					}
@@ -957,9 +987,9 @@ func describeHookJSON(data []byte) string {
 	return ""
 }
 
-// mcpServerDescription generates a short description from a nested MCP server entry.
+// MCPServerDescription generates a short description from a nested MCP server entry.
 // Shows the command (for stdio servers) or URL (for HTTP servers).
-func mcpServerDescription(value gjson.Result) string {
+func MCPServerDescription(value gjson.Result) string {
 	if cmd := value.Get("command").String(); cmd != "" {
 		if args := value.Get("args"); args.Exists() && args.IsArray() {
 			// Include first non-flag arg for context (e.g., package name).

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -187,6 +188,38 @@ func TestToast_ViewError(t *testing.T) {
 	}
 }
 
+func TestToast_CloseButtonInAllLevels(t *testing.T) {
+	for _, level := range []toastLevel{toastSuccess, toastWarning, toastError} {
+		tm := newToastModel()
+		tm.Push("msg", level)
+
+		view := tm.View()
+		stripped := ansi.Strip(view)
+		if !strings.Contains(stripped, "[×]") {
+			t.Errorf("level %d: toast should contain [×] close button", level)
+		}
+	}
+}
+
+func TestToast_HandleMouseClose(t *testing.T) {
+	tm := newToastModel()
+	tm.Push("msg", toastSuccess)
+
+	// Invisible toast should not consume mouse events
+	tm2 := newToastModel()
+	consumed, _ := tm2.HandleMouse(tea.MouseMsg{})
+	if consumed {
+		t.Fatal("invisible toast should not consume mouse events")
+	}
+
+	// Visible toast — we can't easily simulate zone bounds in unit tests,
+	// but verify the method exists and returns false for out-of-bounds clicks
+	consumed, _ = tm.HandleMouse(tea.MouseMsg{})
+	if consumed {
+		t.Fatal("out-of-bounds mouse click should not be consumed")
+	}
+}
+
 func TestToast_ViewEmptyWhenInvisible(t *testing.T) {
 	tm := newToastModel()
 	if tm.View() != "" {
@@ -204,6 +237,39 @@ func TestToast_MessageTruncation(t *testing.T) {
 	// Should be truncated (max 50 chars)
 	if strings.Contains(stripped, long) {
 		t.Error("long message should be truncated in view")
+	}
+}
+
+func TestToast_ConsistentWidth(t *testing.T) {
+	// All toast levels should render at the same width, regardless of message length
+	messages := []string{"OK", "Medium length message here", strings.Repeat("x", 80)}
+	levels := []toastLevel{toastSuccess, toastWarning, toastError}
+
+	var widths []int
+	for _, level := range levels {
+		for _, msg := range messages {
+			tm := newToastModel()
+			tm.Push(msg, level)
+			view := tm.View()
+			lines := strings.Split(view, "\n")
+			for _, line := range lines {
+				w := lipgloss.Width(line)
+				if w > 0 {
+					widths = append(widths, w)
+				}
+			}
+		}
+	}
+
+	// All non-zero widths should be the same (62 = 60 + 2 border chars)
+	if len(widths) == 0 {
+		t.Fatal("expected rendered toast lines")
+	}
+	expected := widths[0]
+	for i, w := range widths {
+		if w != expected {
+			t.Errorf("width[%d] = %d, expected %d (all toasts should be same width)", i, w, expected)
+		}
 	}
 }
 

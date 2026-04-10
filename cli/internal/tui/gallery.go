@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -34,6 +35,11 @@ type galleryModel struct {
 	width    int
 	height   int
 	tabLabel string // "Loadouts" or "Registries"
+
+	// Search
+	searching   bool
+	searchQuery string
+	allCards    []cardData // unfiltered cards for search reset
 }
 
 func newGalleryModel() galleryModel {
@@ -73,6 +79,9 @@ func (g *galleryModel) SetSize(width, height int) {
 // SetCards replaces the card data and updates the sidebar.
 func (g *galleryModel) SetCards(cards []cardData, tabLabel string) {
 	g.tabLabel = tabLabel
+	g.allCards = cards
+	g.searching = false
+	g.searchQuery = ""
 	g.grid = newCardGridModel(cards)
 	g.grid.focused = g.focus == paneGrid
 	g.SetSize(g.width, g.height)
@@ -110,10 +119,28 @@ func (g galleryModel) Update(msg tea.Msg) (galleryModel, tea.Cmd) {
 }
 
 func (g galleryModel) updateKeys(msg tea.KeyMsg) (galleryModel, tea.Cmd) {
+	// When actively searching, route most keys to search input
+	if g.searching {
+		return g.updateSearch(msg)
+	}
+
 	switch msg.String() {
 	case "tab":
 		g.toggleFocus()
 		return g, nil
+
+	case keySearch:
+		g.searching = true
+		g.searchQuery = ""
+		return g, nil
+
+	case "esc":
+		if g.searchQuery != "" {
+			g.searching = false
+			g.searchQuery = ""
+			g.applyCardFilter()
+			return g, nil
+		}
 
 	case "enter":
 		if g.focus == paneGrid {
@@ -132,6 +159,52 @@ func (g galleryModel) updateKeys(msg tea.KeyMsg) (galleryModel, tea.Cmd) {
 		return g.updateSidebarKeys(msg)
 	}
 	return g, nil
+}
+
+// updateSearch handles keys when the search input is active.
+func (g galleryModel) updateSearch(msg tea.KeyMsg) (galleryModel, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		g.searching = false
+		g.searchQuery = ""
+		g.applyCardFilter()
+	case tea.KeyEnter:
+		g.searching = false
+		// searchQuery stays applied
+	case tea.KeyBackspace:
+		if len(g.searchQuery) > 0 {
+			runes := []rune(g.searchQuery)
+			g.searchQuery = string(runes[:len(runes)-1])
+			g.applyCardFilter()
+		}
+	case tea.KeyRunes:
+		for _, r := range msg.Runes {
+			g.searchQuery += string(r)
+		}
+		g.applyCardFilter()
+	}
+	return g, nil
+}
+
+// applyCardFilter filters cards by name and description, or restores all if query is empty.
+func (g *galleryModel) applyCardFilter() {
+	if g.searchQuery == "" {
+		g.grid = newCardGridModel(g.allCards)
+	} else {
+		q := strings.ToLower(g.searchQuery)
+		var filtered []cardData
+		for _, c := range g.allCards {
+			if strings.Contains(strings.ToLower(c.name), q) ||
+				strings.Contains(strings.ToLower(c.desc), q) ||
+				strings.Contains(strings.ToLower(c.subtitle), q) {
+				filtered = append(filtered, c)
+			}
+		}
+		g.grid = newCardGridModel(filtered)
+	}
+	g.grid.focused = g.focus == paneGrid
+	g.SetSize(g.width, g.height)
+	g.updateSidebar()
 }
 
 func (g galleryModel) updateGridKeys(msg tea.KeyMsg) (galleryModel, tea.Cmd) {
@@ -175,9 +248,21 @@ func (g galleryModel) updateSidebarKeys(msg tea.KeyMsg) (galleryModel, tea.Cmd) 
 
 func (g galleryModel) updateMouse(msg tea.MouseMsg) (galleryModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
-		// Edit button click
+		// Metadata bar button clicks
+		if zone.Get("meta-install").InBounds(msg) {
+			return g, func() tea.Msg { return libraryInstallMsg{} }
+		}
 		if zone.Get("meta-edit").InBounds(msg) {
 			return g, func() tea.Msg { return libraryEditMsg{} }
+		}
+		if zone.Get("meta-remove").InBounds(msg) {
+			return g, func() tea.Msg { return libraryRemoveMsg{} }
+		}
+		if zone.Get("meta-add").InBounds(msg) {
+			return g, func() tea.Msg { return actionPressedMsg{action: "add"} }
+		}
+		if zone.Get("meta-sync").InBounds(msg) {
+			return g, func() tea.Msg { return actionPressedMsg{action: "sync"} }
 		}
 
 		for i := range g.grid.cards {
@@ -236,6 +321,59 @@ func (g *galleryModel) setFocus(pane galleryPane) {
 	g.sidebar.focused = pane == paneSidebar
 }
 
+// searchBarHeight returns 1 if the search bar is visible, 0 otherwise.
+func (g galleryModel) searchBarHeight() int {
+	if g.searching || g.searchQuery != "" {
+		return 1
+	}
+	return 0
+}
+
+// renderSearchBar renders the gallery search input bar.
+func (g galleryModel) renderSearchBar(width int) string {
+	prompt := "/ "
+	query := g.searchQuery
+	cursor := ""
+	if g.searching {
+		cursor = "█"
+	}
+
+	matchInfo := ""
+	if g.searchQuery != "" {
+		matchInfo = fmt.Sprintf("  (%d/%d)", len(g.grid.cards), len(g.allCards))
+	}
+
+	hints := ""
+	if g.searching {
+		hints = "  esc cancel · enter confirm"
+	} else {
+		hints = "  / edit · esc clear"
+	}
+
+	rightText := matchInfo + hints
+	rightRendered := mutedStyle.Render(rightText)
+	rightW := lipgloss.Width(rightRendered)
+
+	fieldW := max(10, width-rightW-1)
+	fieldContent := prompt + query + cursor
+
+	bg := inputActiveBG
+	if !g.searching {
+		bg = inputInactiveBG
+	}
+	fieldContent = truncateLine(fieldContent, fieldW)
+	fieldStyle := lipgloss.NewStyle().
+		Background(bg).
+		Foreground(primaryText).
+		MaxWidth(fieldW)
+	field := fieldStyle.Render(fieldContent)
+	if gap := fieldW - lipgloss.Width(field); gap > 0 {
+		field = lipgloss.NewStyle().Background(bg).Render(field + strings.Repeat(" ", gap))
+	}
+
+	return field + " " + rightRendered
+}
+
 // View renders the gallery layout: metadata + grid|sidebar inside a bordered frame.
 func (g galleryModel) View() string {
 	if g.width <= 0 || g.height <= 0 {
@@ -248,6 +386,10 @@ func (g galleryModel) View() string {
 	sidebarW := max(20, innerW*30/100)
 	gridW := max(20, innerW-sidebarW-1)
 
+	// Adjust grid height for search bar
+	searchH := g.searchBarHeight()
+	gridH := max(1, paneH-searchH)
+
 	// Metadata panel for selected card
 	metaContent := g.renderMetadata(innerW)
 
@@ -255,10 +397,16 @@ func (g galleryModel) View() string {
 	separator := sectionRuleStyle.Render("├" + strings.Repeat("─", gridW) + "┬" + strings.Repeat("─", sidebarW) + "┤")
 
 	// Render panes
-	g.grid.SetSize(gridW, paneH)
+	g.grid.SetSize(gridW, gridH)
 	g.sidebar.SetSize(sidebarW, paneH)
 
-	gridLines := strings.Split(g.grid.View(), "\n")
+	// Build grid lines — prepend search bar if active
+	var gridContentLines []string
+	if searchH > 0 {
+		gridContentLines = append(gridContentLines, g.renderSearchBar(gridW))
+	}
+	gridContentLines = append(gridContentLines, strings.Split(g.grid.View(), "\n")...)
+	gridLines := gridContentLines
 	sidebarLines := strings.Split(g.sidebar.View(), "\n")
 
 	for len(gridLines) < paneH {
@@ -338,18 +486,28 @@ func (g galleryModel) renderMetadata(width int) string {
 		line2 += gap + mutedStyle.Render(strings.Join(countParts, ", "))
 	}
 
-	// Line 3: Description + [e] Edit button right-aligned
-	editBtn := zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit"))
-	editBtnW := lipgloss.Width(editBtn)
+	// Line 3: Description + action buttons right-aligned
+	var btnParts []string
+	if g.tabLabel == "Registry" {
+		btnParts = append(btnParts,
+			zone.Mark("meta-sync", activeButtonStyle.Render("[S] Sync")),
+		)
+	}
+	btnParts = append(btnParts,
+		zone.Mark("meta-remove", activeButtonStyle.Render("[d] Remove")),
+		zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit")),
+	)
+	btnRow := strings.Join(btnParts, " ")
+	btnRowW := lipgloss.Width(btnRow)
 
 	line3 := ""
 	if card.desc != "" {
-		maxDescW := max(10, width-editBtnW-3) // -3 for padding
+		maxDescW := max(10, width-btnRowW-3) // -3 for padding
 		line3 = " " + mutedStyle.Render(truncate(sanitizeLine(card.desc), maxDescW))
 	}
 	line3W := lipgloss.Width(line3)
-	btnGap := max(1, width-line3W-editBtnW)
-	line3 += strings.Repeat(" ", btnGap) + editBtn
+	btnGap := max(1, width-line3W-btnRowW)
+	line3 += strings.Repeat(" ", btnGap) + btnRow
 
 	pad := func(s string) string {
 		s = lipgloss.NewStyle().MaxWidth(width).Render(s)

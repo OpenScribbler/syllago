@@ -1,198 +1,123 @@
 # TUI Component Rules
 
-This directory is the BubbleTea terminal UI for syllago (v3 clean-slate rewrite). All components follow strict conventions to maintain visual and behavioral consistency.
+This directory is the BubbleTea terminal UI for syllago (v3). Components follow strict conventions for visual and behavioral consistency.
 
-**Skill reference:** `.claude/skills/tui-builder/SKILL.md` — auto-loads when editing files in this directory. Contains the full design system, component patterns, and phase log.
+**Skill reference:** Run `/tui-builder` before editing TUI files to load the golden rules checklist and component message contracts.
+
+## Mouse + Keyboard Parity (MANDATORY)
+
+**Every interactive element MUST support both keyboard AND mouse.** No exceptions.
+
+If a user can navigate to it with arrow keys, they must be able to click it. If they can press Enter to activate it, they must be able to click it. This applies to:
+
+- Radio options, checkbox rows, list items
+- Buttons (Cancel, Back, Next, confirm actions)
+- Sub-list items (provider pickers, registry pickers)
+- Text input fields (click to focus)
+- Breadcrumb steps (click to navigate back)
+- Help text actions like `[r] Retry`, `[Esc] Back`
+- Tab bar groups and sub-tabs
+
+**How:** Use `zone.Mark(id, renderedContent)` in View() on every interactive element. Add `zone.Get(id).InBounds(msg)` checks in an `updateMouse(msg tea.MouseMsg)` handler. The `checkboxList` component has built-in support via the `zonePrefix` field.
+
+**When reviewing:** If a View() function renders something interactive without a `zone.Mark()` call, that's a bug. Fix it before merging.
 
 ## Before You Edit
 
-1. **Read `styles.go`** — all colors (Flexoki palette) and named styles are defined there. Logo colors are separate from theme colors.
-2. **Check `keys.go`** — all key bindings are defined. Use named bindings, not hardcoded strings.
-3. **Run golden tests after visual changes** — `go test ./internal/tui/ -update-golden`, then review the diff.
-4. **Test at multiple sizes** — verify at 60x20, 80x30, and 120x40.
+1. Read `styles.go` — all colors (Flexoki palette) and named styles defined there
+2. Check `keys.go` — all key bindings defined there
+3. Run golden tests after visual changes: `go test ./internal/tui/ -update-golden`
+4. Test at multiple sizes: 60x20, 80x30, and 120x40
 
 ## Architecture
 
-Root model is `App` (app.go). Sub-models own their state and are composed into App. Messages flow up to App, which dispatches back down.
+Root model is `App` (defined in `app.go`). Sub-models own their state and are composed into App. Messages flow up to App, which dispatches back down.
 
-**File organization:**
-- One model per file (topbar.go, helpbar.go, etc.)
-- All styles in `styles.go` — never define colors or styles inline
-- All key bindings in `keys.go`
+**Message routing priority:** global keys -> modal/wizard -> toast -> focused panel
 
-## Navigation — Two-Tier Tabs
+### Delegation Principle
 
-The topbar uses a **two-tier tab bar** inside a bordered frame (no dropdowns — those are a GUI pattern):
+The TUI is a **presentation layer only**. All business logic lives in CLI packages:
 
-```
-╭──syllago──────────────────────────────────────────╮
-│     [1] Collections  [2] Content  [3] Config      │
-├───────────────────────────────────────────────────┤
-│  Library  Registries  Loadouts   [a] Add [n] Create│
-╰───────────────────────────────────────────────────╯
-```
+| Concern | Package |
+|---------|---------|
+| Content discovery, metadata, removal | `internal/catalog` |
+| Install/uninstall operations | `internal/installer` |
+| Provider detection, config paths | `internal/provider` |
+| Loadout parsing and application | `internal/loadout` |
+| Format conversion | `internal/converter` |
+| Registry operations | `internal/registry` |
+| User configuration | `internal/config` |
 
-- **1/2/3** switch groups, **h/l** cycle sub-tabs within a group
-- **a** = Add, **n** = Create (context-sensitive to current group+tab)
-- Collections is `[1]` (default), Content is `[2]`, Library is the landing page
-- Group tabs are button-styled (backgrounds), sub-tabs are text-only (cyan active, faint inactive)
+The TUI may call these packages from `tea.Cmd` functions (async) but must never:
+- Read or parse content files directly (use `catalog.HookSummary`, `catalog.MCPSummary`, `catalog.ReadFileContent`)
+- Delete files directly (use `catalog.RemoveLibraryItem`)
+- Install/uninstall without going through the `installer` package
 
-## Color and Styling — Flexoki
+When adding features, ask: "Could a CLI command need this same logic?" If yes, it belongs in a shared package.
 
-All theme colors come from the [Flexoki](https://stephango.com/flexoki) palette. Logo uses separate syllago brand colors.
+## File Organization (post-split)
+
+| File | Contents |
+|------|----------|
+| `app.go` | `App` struct, `NewApp()`, `Init()`, nav state, helpers |
+| `app_update.go` | `Update()`, key/mouse routing, message handlers |
+| `app_view.go` | `View()`, `overlayModal()`, render helpers |
+| `install.go` | `installWizardModel` struct, step enum, constructor, `validateStep()` |
+| `install_update.go` | Install wizard `Update()`, key/mouse handlers |
+| `install_view.go` | Install wizard `View()`, per-step rendering |
+| `styles.go` | All colors, styles, theme constants |
+| `keys.go` | All key bindings as `key.Binding` |
+| Other `*.go` | One model per file (topbar, helpbar, library, explorer, gallery, etc.) |
+
+## Color Palette (Flexoki)
+
+All theme colors come from the Flexoki palette. Logo uses separate syllago brand colors.
 
 | Role | Variable | Usage |
 |------|----------|-------|
-| Primary (cyan) | `primaryColor` | Active tabs, headings, section titles |
-| Accent (purple) | `accentColor` | Focus borders, buttons, active button BG |
-| Muted | `mutedColor` | Help text, inactive elements, separators |
+| Primary (cyan) | `primaryColor` | Active tabs, headings |
+| Accent (purple) | `accentColor` | Focus borders, buttons |
+| Muted | `mutedColor` | Help text, inactive elements |
 | Success (green) | `successColor` | Installed status, success toasts |
-| Danger (red) | `dangerColor` | Error messages, error borders |
+| Danger (red) | `dangerColor` | Errors, risk indicators |
 | Warning (orange) | `warningColor` | Warnings, update badge |
 | Logo mint | `logoMint` | `syl` in logo ONLY |
 | Logo viola | `logoViola` | `lago` in logo ONLY |
 
-**Rules:**
-- Never use raw hex — define named variables in `styles.go`
-- New colors MUST come from the Flexoki extended palette
-- No emojis — use colored text symbols (checkmark, X, warning)
-
-## Hotkey Labels — Brackets Standard
-
-All keyboard shortcuts displayed in the UI use **square brackets**: `[1]`, `[a]`, `[n]`, `[esc]`. Never parentheses or other formats.
+**Rules:** No raw hex values — define named variables in `styles.go`. No emojis in UI — use colored text symbols. New colors must come from the Flexoki extended palette.
 
 ## Keyboard Handling
 
-Key bindings are defined in `keys.go`. For the topbar, key routing is handled directly in `app.go` Update via `msg.String()` comparisons (the topbar doesn't own its own key handling — the app dispatches to it).
+All bindings defined in `keys.go` as `key.Binding`. Use `key.Matches(msg, keys.Foo)` not `msg.String() == "x"`. Topbar keys are routed directly in `app_update.go` via `msg.String()` comparisons (topbar doesn't own key handling).
 
-**Global keys (always active):**
-| Key | Action |
-|-----|--------|
-| `ctrl+c` | Quit |
-| `q` | Quit |
-| `1` / `2` / `3` | Switch group |
-| `h` / `l` / left / right | Cycle sub-tabs |
-| `a` | Add action |
-| `n` | Create action |
-| `e` | Edit name/description |
-| `?` | Help overlay |
+All hotkey labels use **square brackets**: `[1]`, `[a]`, `[esc]`. Never parentheses.
 
-## Mouse Handling
+## Navigation
 
-Every interactive element supports mouse via `lrstanley/bubblezone`:
-- Zone IDs: `group-N`, `tab-G-N`, `btn-add`, `btn-create`
-- Root View wraps output in `zone.Scan()`
-- Click detection in topbar's `Update()` method
+Two-tier tab bar: groups (`[1]`/`[2]`/`[3]`) + sub-tabs (Tab/Shift+Tab).
+
+- Collections is `[1]` (default landing page = Library)
+- Content is `[2]`, Config is `[3]`
+- `q` backs out (only quits from Collections > Library browse)
+- `R` refreshes catalog from disk via `rescanCatalog()`
 
 ## Message Passing
 
-- `tabChangedMsg{group, tab, tabLabel}` — group or sub-tab changed
-- `actionPressedMsg{action, group, tab}` — action button activated
-- Sub-models return `tea.Cmd` that produce typed messages
-- App.Update() receives all messages and routes to handlers
-- Never send messages between sibling components directly
+Sub-models return `tea.Cmd` producing typed messages. `App.Update()` in `app_update.go` receives and routes all messages. Never send messages between sibling components directly.
 
-## Layout Rules
-
-- Topbar height is always 5 (bordered frame with 2 content rows)
-- Content height = terminal height - topbar height - helpbar height (1)
-- `lipgloss.Width()` for rendered strings, never `len()`
-- Set `Width()` explicitly on lipgloss styles — it won't auto-wrap
-
-## Library Table + Metadata Bar
-
-The Library tab uses a full-width sortable table (`tableModel` in `table.go`) wrapped by `libraryModel` in `library.go`. The table shows all content items with columns: Name, Type, Scope, Files, Installed, Description (wide only).
-
-See **Metadata Panel** section below for the current metadata implementation (replaced the original bottom-of-table metadata bar).
-
-**Sorting:** `s` cycles columns, `S` reverses. Click column headers (zone-marked: `col-name`, `col-type`, etc.) to sort/reverse. Active column shows ▲/▼.
-
-**Search:** `/` activates search with background-tinted input field (`inputActiveBG`/`inputInactiveBG` from styles.go). Live filters across name, display name, description, type.
-
-**Drill-in:** `Enter` → `libraryDetail` mode with file tree + preview split. `Esc` returns to browse.
-
-## Metadata Panel (Reusable Component)
-
-The metadata panel (`metapanel.go`) is a shared component used across Library and Content views. It renders 3 lines of item metadata inside a unified bordered frame.
-
-**Architecture:** `renderMetaPanel(item, data, width)` takes a `ContentItem` + pre-computed `metaPanelData` (installed status, type detail) and returns 3 padded lines. The caller wraps these in a manually-constructed border frame.
-
-**Fields (line 1):** Name (40 fixed), Type (14), Files (9), Origin (19), Installed (greedy), Registry (greedy)
-**Fields (line 2):** Scope (15 fixed), Registry (30 fixed), Path (middle-truncated, greedy)
-**Fields (line 3):** Type-specific detail + [r] Rename button (right-aligned)
-
-Type-specific details:
-- Hooks: Event, Matcher, Handler (pre-computed in `computeHookDetail`)
-- MCP: Server, Command (pre-computed in `computeMCPDetail`)
-- Loadouts: Target, item counts (pre-computed in `computeLoadoutDetail`)
-- Others: blank line
-
-**Unified frame pattern:** Both library and explorer build frames manually:
-```
-╭─────────────────────────╮   Browse mode
-│ metadata line 1          │
-│ metadata line 2          │
-│ metadata line 3  [r]     │
-├─────────────────────────┤
-│ table/items content      │
-╰─────────────────────────╯
-
-╭─────────────────────────╮   Detail/split mode
-│ metadata line 1          │
-│ metadata line 2          │
-│ metadata line 3  [r]     │
-├────────┬────────────────┤
-│ tree   │ preview         │
-╰────────┴────────────────╯
-```
-
-## Edit Modal
-
-`editModal` in `modal.go` provides a two-field overlay for editing display name and description:
-- Overlay via `overlayModal()` in app.go — background content visible above/below modal rows
-- Two fields: name (focus 0), description (focus 1), with background-tinted input styling
-- Buttons: Cancel (focus 2), Save (focus 3)
-- `Tab` cycles focus through all 4 targets, `Enter` advances between fields
-- `Ctrl+S` saves from any field, `Esc` cancels
-- `editSavedMsg{name, description, path}` / `editCancelledMsg` for message passing
-- Saves both fields to `.syllago.yaml` via the metadata package
-
-## Help Overlay
-
-`helpOverlay` in `help.go` shows all keyboard shortcuts in a two-column layout:
-- Toggle with `?` key, dismiss with `?` or `Esc`
-- Captures all input when active (like the edit modal)
-- Sections: Navigation, Actions, File Tree, Gallery
-
-## Navigation — q Backs Out
-
-`q` only quits from the landing page (Collections > Library browse). Elsewhere:
-- Library detail view → Library browse
-- Any Content/Config tab → Collections > Library
-- `Ctrl+C` always quits immediately
-
-`R` (shift+r) re-scans catalog from disk without restarting. `rescanCatalog()` in app.go.
-
-## MCP Scanner
-
-The scanner in the catalog package handles provider-specific MCP directory layouts. When scanning `mcp/<provider>/`, if a directory has no `config.json` but contains subdirectories that do, it's treated as a provider grouping directory and recurses into each subdirectory.
+Message types end in `Msg` suffix (e.g., `editSavedMsg`, `tabChangedMsg`). Model types end in `Model` suffix.
 
 ## Testing
 
-**Golden files** in `testdata/`:
-- Naming: `{component}-{variant}-{width}x{height}.golden`
-- ANSI stripped before storing (human-readable diffs)
-- Test at 60x20, 80x30, 120x40
+Golden files in `testdata/`. Naming: `{component}-{variant}-{width}x{height}.golden`.
 
-**After any visual change:**
+After any visual change:
 ```bash
 cd cli && go test ./internal/tui/ -update-golden
 git diff internal/tui/testdata/   # review every change
 ```
 
-**Test helpers** in `testhelpers_test.go`:
-- `testApp(t)` — empty catalog, 80x30
-- `testAppSize(t, w, h)` — custom dimensions
-- `keyRune(r)`, `keyPress(k)`, `pressN(m, key, n)`
-- `assertContains(t, view, substr)`, `assertNotContains(t, view, substr)`
-- `requireGolden(t, name, snapshot)`, `snapshotApp(t, app)`
+Test helpers in `testhelpers_test.go`: `testApp(t)`, `testAppSize(t, w, h)`, `keyRune(r)`, `keyPress(k)`, `pressN(m, key, n)`, `assertContains`, `assertNotContains`, `requireGolden`, `snapshotApp`.
+
+Deterministic output configured in `testmain_test.go` — do not modify without understanding the AdaptiveColor race condition fix.

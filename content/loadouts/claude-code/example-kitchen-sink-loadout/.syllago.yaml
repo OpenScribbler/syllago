@@ -1,7 +1,0 @@
-id: example-kitchen-sink-loadout
-name: example-kitchen-sink-loadout
-description: Test loadout that exercises every content type. For development validation only.
-tags:
-  - example
-  - builtin
-hidden: true

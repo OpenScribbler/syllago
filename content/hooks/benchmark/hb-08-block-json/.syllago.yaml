@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-08-block-json
+type: hooks
+description: "Benchmark: validates before_tool_execute JSON decision blocking"
+hook:
+  event: before_tool_execute
+  blocking: true
+  command: ./hb-08.sh

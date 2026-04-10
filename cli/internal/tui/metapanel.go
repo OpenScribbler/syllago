@@ -15,6 +15,7 @@ import (
 type metaPanelData struct {
 	installed  string // "CC,GC,Cu" or "--"
 	typeDetail string // type-specific detail (hooks/MCP/loadouts) or ""
+	canInstall bool   // true when item is in library and has at least one uninstalled provider
 }
 
 // computeMetaPanelData computes installed status and type-specific detail for an item.
@@ -30,9 +31,21 @@ func computeMetaPanelData(item catalog.ContentItem, providers []provider.Provide
 		installed = strings.Join(abbrevs, ",")
 	}
 
+	// Any local item (library or content root) can be installed — not registry-only items.
+	canInstall := false
+	if item.Library || item.Registry == "" {
+		for _, prov := range providers {
+			if prov.Detected && installer.CheckStatus(item, prov, repoRoot) != installer.StatusInstalled {
+				canInstall = true
+				break
+			}
+		}
+	}
+
 	return metaPanelData{
 		installed:  installed,
 		typeDetail: computeTypeDetail(item),
+		canInstall: canInstall,
 	}
 }
 
@@ -121,11 +134,31 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 		line3 = styled
 	}
 
-	editBtn := zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit"))
-	editBtnW := lipgloss.Width(editBtn)
+	// Per-item action buttons ordered: [i] Install, [x] Uninstall, [d] Remove, [e] Edit
+	// Only show buttons that are actionable for this item.
+	var btns []string
+	if data.canInstall {
+		btns = append(btns, zone.Mark("meta-install", activeButtonStyle.Render("[i] Install")))
+	}
+	if data.installed != "--" {
+		btns = append(btns, zone.Mark("meta-uninstall", activeButtonStyle.Render("[x] Uninstall")))
+	}
+	if item.Library || item.Registry == "" {
+		btns = append(btns, zone.Mark("meta-remove", activeButtonStyle.Render("[d] Remove")))
+	}
+	btns = append(btns, zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit")))
+	btnRow := strings.Join(btns, " ")
+	btnRowW := lipgloss.Width(btnRow)
+
+	// Truncate type detail to ensure buttons always fit — buttons must never be clipped.
+	maxDetailW := max(0, width-btnRowW-2) // -2 for minimum gap
 	line3W := lipgloss.Width(line3)
-	btnGap := max(1, width-line3W-editBtnW)
-	line3 += strings.Repeat(" ", btnGap) + editBtn
+	if line3W > maxDetailW {
+		line3 = lipgloss.NewStyle().MaxWidth(maxDetailW).Render(line3)
+		line3W = lipgloss.Width(line3)
+	}
+	btnGap := max(1, width-line3W-btnRowW)
+	line3 += strings.Repeat(" ", btnGap) + btnRow
 
 	pad := func(s string) string {
 		s = lipgloss.NewStyle().MaxWidth(width).Render(s)

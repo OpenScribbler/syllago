@@ -23,17 +23,18 @@ const (
 
 // displayNames maps directory-style provider slugs to full display names.
 var displayNames = map[string]string{
-	"claude-code": "Claude Code",
-	"gemini-cli":  "Gemini CLI",
-	"cursor":      "Cursor",
-	"windsurf":    "Windsurf",
-	"codex":       "Codex",
-	"copilot-cli": "Copilot CLI",
-	"zed":         "Zed",
-	"cline":       "Cline",
-	"roo-code":    "Roo Code",
-	"opencode":    "OpenCode",
-	"kiro":        "Kiro",
+	"claude-code":     "Claude Code",
+	"gemini-cli":      "Gemini CLI",
+	"cursor":          "Cursor",
+	"windsurf":        "Windsurf",
+	"codex":           "Codex",
+	"copilot-cli":     "Copilot CLI",
+	"zed":             "Zed",
+	"cline":           "Cline",
+	"roo-code":        "Roo Code",
+	"opencode":        "OpenCode",
+	"kiro":            "Kiro",
+	"vs-code-copilot": "VS Code Copilot",
 }
 
 func providerDisplayName(name string) string {
@@ -65,17 +66,17 @@ type hookMatrixCell struct {
 	styled string // with lipgloss color applied
 }
 
-// hookCompatMatrix is the precomputed 4-column matrix for one hook item.
-type hookCompatMatrix [4]hookMatrixCell
+// hookCompatMatrix is the precomputed 5-column matrix for one hook item.
+type hookCompatMatrix [5]hookMatrixCell
 
 // matrixProviders is the fixed order for the compatibility matrix columns.
 var matrixProviders = converter.HookProviders() // ["claude-code", "gemini-cli", "copilot-cli", "kiro"]
 
 // matrixHeadersFull are the full column headers (panel width >= 101).
-var matrixHeadersFull = []string{"Claude", "Gemini", "Copilot", "Kiro"}
+var matrixHeadersFull = []string{"Claude", "Gemini", "Copilot", "Kiro", "VSCo"}
 
 // matrixHeadersAbbr are the abbreviated column headers (panel width < 101).
-var matrixHeadersAbbr = []string{"CC", "GC", "Cp", "Ki"}
+var matrixHeadersAbbr = []string{"CC", "GC", "Cp", "Ki", "VC"}
 
 // compatCellStyle returns the lipgloss style for a compat level.
 func compatCellStyle(level converter.CompatLevel) lipgloss.Style {
@@ -313,7 +314,7 @@ func (m itemsModel) View() string {
 
 	// For hooks: precompute compat matrices and determine column headers/widths.
 	var hookMatrices map[int]hookCompatMatrix
-	var matrixColWidths [4]int
+	var matrixColWidths [5]int
 	var activeMatrixHeaders []string
 	if isHooks {
 		hookMatrices = make(map[int]hookCompatMatrix, len(m.items))

@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-04-session-end
+type: hooks
+description: "Benchmark: validates session_end event fires"
+hook:
+  event: session_end
+  blocking: false
+  command: ./hb-04.sh

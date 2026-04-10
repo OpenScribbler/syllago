@@ -2,14 +2,15 @@ package tui
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 // removeDoneMsg is sent when a library item remove operation completes.
@@ -56,41 +57,20 @@ func (a App) handleRemove() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 
-	// Phase A only supports library item remove.
-	if !item.Library {
+	// Only local items (library or content root) can be removed — not registry-only items.
+	if !item.Library && item.Registry != "" {
 		return a, nil
 	}
 
-	// Check which providers have this item installed.
-	var checks []confirmCheckbox
+	// Find installed providers for the multi-step flow.
+	var installed []provider.Provider
 	for _, prov := range a.providers {
-		if installer.CheckStatus(*item, prov, a.catalog.RepoRoot) == installer.StatusInstalled {
-			checks = append(checks, confirmCheckbox{
-				label:   "Uninstall from " + prov.Name,
-				checked: true,
-			})
+		if installer.CheckStatus(*item, prov, a.projectRoot) == installer.StatusInstalled {
+			installed = append(installed, prov)
 		}
 	}
-	// Always-checked "delete from library" checkbox.
-	checks = append(checks, confirmCheckbox{
-		label:    "Delete from library",
-		checked:  true,
-		readOnly: true,
-	})
 
-	body := "This cannot be undone."
-	if len(checks) > 1 {
-		body = fmt.Sprintf("This item is installed in %d provider(s).\n\n%s", len(checks)-1, body)
-	}
-
-	a.confirm.OpenForItem(
-		fmt.Sprintf("Remove %q?", item.DisplayName),
-		body,
-		"Remove",
-		true,
-		checks,
-		*item,
-	)
+	a.remove.Open(*item, installed)
 	return a, nil
 }
 
@@ -118,7 +98,21 @@ func (a App) handleGalleryCardRemove() (tea.Model, tea.Cmd) {
 		a.confirm.itemName = card.name
 		return a, nil
 	}
-	// Registry remove is Phase C — no-op for now.
+	if tabLabel == "Registries" {
+		if a.registryOpInProgress {
+			cmd := a.toast.Push("Registry operation in progress", toastWarning)
+			return a, cmd
+		}
+		a.confirm.Open(
+			fmt.Sprintf("Remove registry %q?", card.name),
+			"This will delete the local clone.\nInstalled content is not affected.",
+			"Remove",
+			true,
+			nil,
+		)
+		a.confirm.itemName = card.name
+		return a, nil
+	}
 	return a, nil
 }
 
@@ -136,7 +130,7 @@ func (a App) handleUninstall() (tea.Model, tea.Cmd) {
 
 	var installedProviders []provider.Provider
 	for _, prov := range a.providers {
-		if installer.CheckStatus(*item, prov, a.catalog.RepoRoot) == installer.StatusInstalled {
+		if installer.CheckStatus(*item, prov, a.projectRoot) == installer.StatusInstalled {
 			installedProviders = append(installedProviders, prov)
 		}
 	}
@@ -181,49 +175,42 @@ func (a App) handleUninstall() (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
-// handleConfirmResult dispatches the confirm modal result to the appropriate handler.
+// handleConfirmResult handles confirmModal results (uninstall + loadout simple removes).
 func (a App) handleConfirmResult(msg confirmResultMsg) (tea.Model, tea.Cmd) {
 	if !msg.confirmed {
 		return a, nil
 	}
 
-	// Check if this is a remove (has "Delete from library" checkbox) or uninstall.
-	isRemove := false
-	for _, c := range msg.checks {
-		if c.readOnly && c.label == "Delete from library" {
-			isRemove = true
-			break
-		}
-	}
-	// Also handle loadout remove (no checkboxes, item type is Loadouts).
-	if !isRemove && msg.item.Type == catalog.Loadouts && len(msg.checks) == 0 {
-		isRemove = true
+	// Registry remove: on Registries tab, no ContentItem path, but name is set.
+	if a.isRegistriesTab() && msg.item.Path == "" && msg.itemName != "" {
+		a.registryOpInProgress = true
+		cmd1 := a.toast.Push("Removing registry: "+msg.itemName+"...", toastSuccess)
+		cmd2 := a.doRegistryRemoveCmd(msg.itemName)
+		return a, tea.Batch(cmd1, cmd2)
 	}
 
-	if isRemove {
-		return a, a.doRemoveCmd(msg)
+	// Loadout remove (simple confirm, no providers).
+	if msg.item.Type == catalog.Loadouts && len(msg.checks) == 0 {
+		return a, a.doSimpleRemoveCmd(msg.item)
 	}
+
+	// Otherwise it's an uninstall.
 	return a, a.doUninstallCmd(msg)
 }
 
-// doRemoveCmd creates a tea.Cmd that removes an item from the library.
-func (a App) doRemoveCmd(msg confirmResultMsg) tea.Cmd {
-	item := msg.item
-	providers := a.providers
-	repoRoot := a.catalog.RepoRoot
-
-	// Build list of providers to uninstall from based on checked checkboxes.
-	var targetProviders []provider.Provider
-	for _, c := range msg.checks {
-		if !c.readOnly && c.checked {
-			provName := strings.TrimPrefix(c.label, "Uninstall from ")
-			for _, prov := range providers {
-				if prov.Name == provName {
-					targetProviders = append(targetProviders, prov)
-				}
-			}
-		}
+// handleRemoveResult handles removeModal results (multi-step library item removal).
+func (a App) handleRemoveResult(msg removeResultMsg) (tea.Model, tea.Cmd) {
+	if !msg.confirmed {
+		return a, nil
 	}
+	return a, a.doRemoveCmd(msg)
+}
+
+// doRemoveCmd creates a tea.Cmd that removes a library item, optionally uninstalling first.
+func (a App) doRemoveCmd(msg removeResultMsg) tea.Cmd {
+	item := msg.item
+	targetProviders := msg.uninstallProviders
+	repoRoot := a.projectRoot
 
 	return func() tea.Msg {
 		var uninstalledFrom []string
@@ -235,7 +222,7 @@ func (a App) doRemoveCmd(msg confirmResultMsg) tea.Cmd {
 			uninstalledFrom = append(uninstalledFrom, prov.Name)
 		}
 
-		if err := os.RemoveAll(item.Path); err != nil {
+		if err := catalog.RemoveLibraryItem(item.Path); err != nil {
 			return removeDoneMsg{itemName: item.Name, err: fmt.Errorf("removing from library: %w", err)}
 		}
 
@@ -243,11 +230,21 @@ func (a App) doRemoveCmd(msg confirmResultMsg) tea.Cmd {
 	}
 }
 
+// doSimpleRemoveCmd creates a tea.Cmd that removes an item from disk (no uninstall).
+func (a App) doSimpleRemoveCmd(item catalog.ContentItem) tea.Cmd {
+	return func() tea.Msg {
+		if err := catalog.RemoveLibraryItem(item.Path); err != nil {
+			return removeDoneMsg{itemName: item.Name, err: fmt.Errorf("removing: %w", err)}
+		}
+		return removeDoneMsg{itemName: item.Name}
+	}
+}
+
 // doUninstallCmd creates a tea.Cmd that uninstalls an item from providers.
 func (a App) doUninstallCmd(msg confirmResultMsg) tea.Cmd {
 	item := msg.item
 	providers := msg.uninstallProviders
-	repoRoot := a.catalog.RepoRoot
+	repoRoot := a.projectRoot
 
 	var targetProviders []provider.Provider
 	if len(msg.checks) == 0 {
@@ -283,13 +280,13 @@ func (a App) handleRemoveDone(msg removeDoneMsg) (tea.Model, tea.Cmd) {
 		cmd := a.toast.Push("Remove failed: "+msg.err.Error(), toastError)
 		return a, cmd
 	}
-	cmd := a.rescanCatalog()
 	toastText := fmt.Sprintf("Removed %q", msg.itemName)
 	if len(msg.uninstalledFrom) > 0 {
 		toastText += " (uninstalled from " + strings.Join(msg.uninstalledFrom, ", ") + ")"
 	}
-	cmd2 := a.toast.Push(toastText, toastSuccess)
-	return a, tea.Batch(cmd, cmd2)
+	cmd1 := a.toast.Push(toastText, toastSuccess)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
 }
 
 // handleUninstallDone processes the result of an uninstall operation.
@@ -298,8 +295,325 @@ func (a App) handleUninstallDone(msg uninstallDoneMsg) (tea.Model, tea.Cmd) {
 		cmd := a.toast.Push("Uninstall failed: "+msg.err.Error(), toastError)
 		return a, cmd
 	}
-	cmd := a.rescanCatalog()
 	toastText := fmt.Sprintf("Uninstalled %q from %s", msg.itemName, strings.Join(msg.uninstalledFrom, ", "))
-	cmd2 := a.toast.Push(toastText, toastSuccess)
-	return a, tea.Batch(cmd, cmd2)
+	cmd1 := a.toast.Push(toastText, toastSuccess)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
+}
+
+// registryAddDoneMsg is sent when a registry add operation completes.
+type registryAddDoneMsg struct {
+	name string
+	err  error
+}
+
+// registrySyncDoneMsg is sent when a registry sync operation completes.
+type registrySyncDoneMsg struct {
+	name string
+	err  error
+}
+
+// registryRemoveDoneMsg is sent when a registry remove operation completes.
+type registryRemoveDoneMsg struct {
+	name string
+	err  error
+}
+
+// handleRegistryAdd opens the registry add modal.
+func (a App) handleRegistryAdd() (tea.Model, tea.Cmd) {
+	var existingNames []string
+	for _, r := range a.cfg.Registries {
+		existingNames = append(existingNames, r.Name)
+	}
+	a.registryAdd.Open(existingNames, a.cfg)
+	return a, nil
+}
+
+// handleRegistryAddResult receives the registry add modal result.
+func (a App) handleRegistryAddResult(msg registryAddMsg) (tea.Model, tea.Cmd) {
+	a.registryOpInProgress = true
+	cmd1 := a.toast.Push("Adding registry: "+msg.name+"...", toastSuccess)
+	cmd2 := a.doRegistryAddCmd(msg)
+	return a, tea.Batch(cmd1, cmd2)
+}
+
+// doRegistryAddCmd creates a tea.Cmd that clones the registry and updates config.
+func (a App) doRegistryAddCmd(msg registryAddMsg) tea.Cmd {
+	url := msg.url
+	name := msg.name
+	ref := msg.ref
+	isLocal := msg.isLocal
+	return func() tea.Msg {
+		if !isLocal {
+			if err := registry.Clone(url, name, ref); err != nil {
+				return registryAddDoneMsg{name: name, err: err}
+			}
+		}
+		cfg, err := config.LoadGlobal()
+		if err != nil {
+			return registryAddDoneMsg{name: name, err: fmt.Errorf("loading config: %w", err)}
+		}
+		cfg.Registries = append(cfg.Registries, config.Registry{Name: name, URL: url, Ref: ref})
+		if err := config.SaveGlobal(cfg); err != nil {
+			return registryAddDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
+		}
+		return registryAddDoneMsg{name: name}
+	}
+}
+
+// handleRegistryAddDone processes the result of a registry add operation.
+func (a App) handleRegistryAddDone(msg registryAddDoneMsg) (tea.Model, tea.Cmd) {
+	a.registryOpInProgress = false
+	if msg.err != nil {
+		cmd := a.toast.Push("Add failed: "+msg.err.Error(), toastError)
+		return a, cmd
+	}
+	cmd1 := a.toast.Push("Added registry: "+msg.name, toastSuccess)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
+}
+
+// handleSync starts a registry sync operation.
+func (a App) handleSync() (tea.Model, tea.Cmd) {
+	card := a.gallery.selectedCard()
+	if card == nil {
+		return a, nil
+	}
+	name := card.name
+	a.registryOpInProgress = true
+	cmd1 := a.toast.Push("Syncing "+name+"...", toastSuccess)
+	cmd2 := func() tea.Msg {
+		err := registry.Sync(name)
+		return registrySyncDoneMsg{name: name, err: err}
+	}
+	return a, tea.Batch(cmd1, tea.Cmd(cmd2))
+}
+
+// handleSyncDone processes the result of a registry sync operation.
+func (a App) handleSyncDone(msg registrySyncDoneMsg) (tea.Model, tea.Cmd) {
+	a.registryOpInProgress = false
+	if msg.err != nil {
+		cmd := a.toast.Push("Sync failed: "+msg.err.Error(), toastError)
+		return a, cmd
+	}
+	cmd1 := a.toast.Push("Synced "+msg.name, toastSuccess)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
+}
+
+// handleRegistryRemoveDone processes the result of a registry remove operation.
+func (a App) handleRegistryRemoveDone(msg registryRemoveDoneMsg) (tea.Model, tea.Cmd) {
+	a.registryOpInProgress = false
+	if msg.err != nil {
+		cmd := a.toast.Push("Remove failed: "+msg.err.Error(), toastError)
+		return a, cmd
+	}
+	cmd1 := a.toast.Push("Removed registry: "+msg.name, toastSuccess)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
+}
+
+// doRegistryRemoveCmd creates a tea.Cmd that removes a registry clone and updates config.
+func (a App) doRegistryRemoveCmd(name string) tea.Cmd {
+	return func() tea.Msg {
+		if err := registry.Remove(name); err != nil {
+			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("removing clone: %w", err)}
+		}
+		cfg, err := config.LoadGlobal()
+		if err != nil {
+			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("loading config: %w", err)}
+		}
+		filtered := make([]config.Registry, 0, len(cfg.Registries))
+		for _, r := range cfg.Registries {
+			if r.Name != name {
+				filtered = append(filtered, r)
+			}
+		}
+		cfg.Registries = filtered
+		if err := config.SaveGlobal(cfg); err != nil {
+			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
+		}
+		return registryRemoveDoneMsg{name: name}
+	}
+}
+
+// handleAdd opens the add wizard for importing content into the library.
+func (a App) handleAdd() (tea.Model, tea.Cmd) {
+	// Determine preFilterType from the current Content tab (if any)
+	var preFilterType catalog.ContentType
+	if a.isContentTab() {
+		preFilterType = tabToContentType(a.topBar.ActiveTabLabel())
+	}
+
+	a.addWizard = openAddWizard(
+		a.providers,
+		a.registrySources,
+		a.cfg,
+		a.projectRoot,
+		a.contentRoot,
+		preFilterType,
+	)
+	a.addWizard.width = a.width
+	a.addWizard.height = a.contentHeight()
+	a.addWizard.shell.SetWidth(a.width)
+	a.wizardMode = wizardAdd
+	a.updateNavState()
+	return a, nil
+}
+
+// handleInstall opens the install wizard for the currently selected library item.
+func (a App) handleInstall() (tea.Model, tea.Cmd) {
+	// Gallery card install not supported (must drill into a card first).
+	if a.isGalleryTab() && !a.galleryDrillIn {
+		return a, nil
+	}
+
+	item := a.selectedItem()
+	if item == nil {
+		return a, nil
+	}
+
+	// Registry-only items must be added to the library first.
+	if !item.Library && item.Registry != "" {
+		cmd := a.toast.Push("Add this item to your library first", toastWarning)
+		return a, cmd
+	}
+
+	// Filter to detected providers only.
+	var detected []provider.Provider
+	for _, prov := range a.providers {
+		if prov.Detected {
+			detected = append(detected, prov)
+		}
+	}
+	if len(detected) == 0 {
+		cmd := a.toast.Push("No providers detected", toastWarning)
+		return a, cmd
+	}
+
+	a.installWizard = openInstallWizard(*item, detected, a.projectRoot)
+	a.installWizard.width = a.width
+	a.installWizard.height = a.contentHeight()
+	a.installWizard.shell.SetWidth(a.width)
+	a.wizardMode = wizardInstall
+	a.updateNavState()
+	return a, nil
+}
+
+// handleInstallResult receives the wizard's confirmation and kicks off the async install.
+func (a App) handleInstallResult(msg installResultMsg) (tea.Model, tea.Cmd) {
+	// Close wizard immediately — the install happens async.
+	a.installWizard = nil
+	a.wizardMode = wizardNone
+	a.updateNavState()
+	return a, a.doInstallCmd(msg)
+}
+
+// doInstallCmd creates a tea.Cmd that performs the install operation in the background.
+func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
+	item := msg.item
+	prov := msg.provider
+	method := msg.method
+	projectRoot := msg.projectRoot
+
+	var baseDir string
+	switch msg.location {
+	case "global":
+		baseDir = ""
+	case "project":
+		baseDir = projectRoot
+	default:
+		baseDir = msg.location
+	}
+
+	return func() tea.Msg {
+		desc, err := installer.Install(item, prov, projectRoot, method, baseDir)
+		if err != nil {
+			return installDoneMsg{
+				itemName:     item.DisplayName,
+				providerName: prov.Name,
+				err:          err,
+			}
+		}
+		return installDoneMsg{
+			itemName:     item.DisplayName,
+			providerName: prov.Name,
+			targetPath:   desc,
+		}
+	}
+}
+
+// handleInstallAllResult receives the "install to all" wizard confirmation and
+// kicks off async installs to each provider in the filtered list.
+func (a App) handleInstallAllResult(msg installAllResultMsg) (tea.Model, tea.Cmd) {
+	a.installWizard = nil
+	a.wizardMode = wizardNone
+	a.updateNavState()
+	return a, a.doInstallAllCmd(msg)
+}
+
+// doInstallAllCmd installs an item to each provider in the list, collecting results.
+func (a App) doInstallAllCmd(msg installAllResultMsg) tea.Cmd {
+	item := msg.item
+	providers := msg.providers
+	projectRoot := msg.projectRoot
+
+	return func() tea.Msg {
+		var firstErr error
+		count := 0
+		for _, prov := range providers {
+			_, err := installer.Install(item, prov, projectRoot, installer.MethodSymlink, "")
+			if err != nil {
+				if firstErr == nil {
+					firstErr = err
+				}
+			} else {
+				count++
+			}
+		}
+		name := item.DisplayName
+		if name == "" {
+			name = item.Name
+		}
+		return installAllDoneMsg{
+			itemName: name,
+			count:    count,
+			firstErr: firstErr,
+		}
+	}
+}
+
+// handleInstallAllDone processes the aggregate result of an "install to all" batch.
+func (a App) handleInstallAllDone(msg installAllDoneMsg) (tea.Model, tea.Cmd) {
+	var toastText string
+	toastKind := toastSuccess
+	if msg.firstErr != nil {
+		toastText = fmt.Sprintf("Installed to %d providers (some errors occurred)", msg.count)
+		toastKind = toastWarning
+	} else {
+		name := msg.itemName
+		if name == "" {
+			name = "item"
+		}
+		toastText = fmt.Sprintf("Installed %q to %d providers", name, msg.count)
+	}
+	cmd1 := a.toast.Push(toastText, toastKind)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
+}
+
+// handleInstallDone processes the result of an install operation.
+func (a App) handleInstallDone(msg installDoneMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		cmd := a.toast.Push("Install failed: "+msg.err.Error(), toastError)
+		return a, cmd
+	}
+	name := msg.itemName
+	if name == "" {
+		name = "item"
+	}
+	toastText := fmt.Sprintf("Installed %q to %s", name, msg.providerName)
+	cmd1 := a.toast.Push(toastText, toastSuccess)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
 }

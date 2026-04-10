@@ -7,9 +7,13 @@ REPO_ROOT := $(shell cd .. && pwd)
 COMMIT := $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 VERSION := $(shell cat ../VERSION 2>/dev/null || echo dev)
 SIGNING_KEY := $(SYLLAGO_SIGNING_KEY)
+POSTHOG_KEY := $(SYLLAGO_POSTHOG_KEY)
 LDFLAGS := -X main.repoRoot=$(REPO_ROOT) -X main.buildCommit=$(COMMIT) -X main.version=$(VERSION)
 ifneq ($(SIGNING_KEY),)
   LDFLAGS += -X github.com/OpenScribbler/syllago/cli/internal/updater.SigningPublicKey=$(SIGNING_KEY)
+endif
+ifneq ($(POSTHOG_KEY),)
+  LDFLAGS += -X github.com/OpenScribbler/syllago/cli/internal/telemetry.apiKey=$(POSTHOG_KEY)
 endif
 
 .PHONY: build clean build-all test fmt vet gendocs build-linux-amd64 build-linux-arm64 build-darwin-amd64 build-darwin-arm64 build-windows-amd64 build-windows-arm64
@@ -20,6 +24,8 @@ build:
 
 gendocs: build
 	./$(OUTPUT) _gendocs > commands.json
+	./$(OUTPUT) _genproviders > providers.json
+	./$(OUTPUT) _gentelemetry > telemetry.json
 
 clean:
 	rm -f $(BINARY) $(BINARY).exe $(BINARY)-* syl syl.exe

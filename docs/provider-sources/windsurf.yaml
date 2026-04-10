@@ -1,0 +1,81 @@
+# Windsurf — Provider Source Manifest
+# Docs-only: no public repo. Good llms.txt index with 97 raw markdown URLs via Mintlify.
+# Two parallel doc hierarchies: /plugins/ (IDE plugin) and /windsurf/ (standalone IDE).
+
+schema_version: "1"
+last_verified: "2026-03-27"
+provider_version: "" # No public version tracking
+
+slug: windsurf
+display_name: Windsurf
+vendor: Codeium
+status: active
+fetch_tier: llms-txt
+# No useful public repo (codeiumdev/windsurf is an empty POC).
+
+change_detection:
+  method: content-hash
+  endpoint: https://docs.windsurf.com/llms.txt
+  # Re-fetch llms.txt periodically and compare page list. Then hash individual pages.
+
+content_types:
+
+  # ── Support summary ───────────────────────────────────────────────────
+  # Windsurf supports: rules (.windsurfrules), skills, hooks, mcp, agents (AGENTS.md convention only), commands (windsurf CLI — not user-definable files)
+  # Not supported: user-definable agent format, user-definable command files
+  # Syllago: rules ✓, skills ✓, hooks ✓, mcp ✓ | agents ✗, commands ✗
+  # Agents tracked for AGENTS.md cross-provider convention — not a windsurf-native format.
+  # windsurf CLI commands are not user-definable files.
+  # ─────────────────────────────────────────────────────────────────────
+
+  rules:
+    sources:
+      - url: https://docs.windsurf.com/windsurf/cascade/memories.md
+        type: docs
+        format: markdown
+        extracts: [file_format, file_locations, features]
+
+      - url: https://docs.windsurf.com/windsurf/cascade/agents-md.md
+        type: docs
+        format: markdown
+        extracts: [file_format, features]
+    # Format: .windsurfrules (plain text) + Cascade memories system. Also reads AGENTS.md.
+
+  hooks:
+    sources:
+      - url: https://docs.windsurf.com/windsurf/cascade/hooks.md
+        type: docs
+        format: markdown
+        extracts: [event_names, hook_config_fields, config_examples]
+    # Uses per-tool-category split events: pre_run_command/post_run_command,
+    # pre_mcp_tool_use/post_mcp_tool_use, pre_read_code/post_read_code,
+    # session_start, session_end.
+
+  mcp:
+    sources:
+      - url: https://docs.windsurf.com/windsurf/cascade/mcp.md
+        type: docs
+        format: markdown
+        extracts: [server_config_fields, transport_types, config_examples]
+
+  skills:
+    sources:
+      - url: https://docs.windsurf.com/windsurf/cascade/skills.md
+        type: docs
+        format: markdown
+        extracts: [file_format, features]
+
+  agents:
+    # Covered by agents-md.md under rules. No separate agent system.
+    sources:
+      - url: https://docs.windsurf.com/windsurf/cascade/agents-md.md
+        type: docs
+        format: markdown
+        extracts: [file_format]
+
+  commands:
+    sources:
+      - url: https://docs.windsurf.com/command/windsurf-overview.md
+        type: docs
+        format: markdown
+        extracts: [features]

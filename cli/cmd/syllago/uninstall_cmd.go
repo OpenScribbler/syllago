@@ -9,6 +9,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -182,5 +183,8 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(output.Writer, "  Remove with: syllago remove %s\n", name)
 	}
 
+	telemetry.Enrich("provider", fromSlug)
+	telemetry.Enrich("content_type", typeFilter)
+	telemetry.Enrich("dry_run", dryRun)
 	return nil
 }

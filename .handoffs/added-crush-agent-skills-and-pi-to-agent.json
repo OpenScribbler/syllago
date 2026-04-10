@@ -1,0 +1,65 @@
+{
+  "$schema": "handoff-v2",
+  "name": "added-crush-agent-skills-and-pi-to-agent",
+  "createdAt": "2026-03-31T02:01:17.150Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-03-31T02:01:17.150Z",
+    "sessionId": "45dec22c-cff7-41e5-b827-1862014d52c3",
+    "summary": "Added Crush (Agent Skills) and Pi to agent ecosystem landscape doc; paused for research validation on newest 3-month agents",
+    "activeWork": {
+      "description": "Validating 59-tool agent ecosystem landscape against newest releases (Jan-Mar 2026). Doc in docs/research/provider-agent-naming.md covers CLI, web, autonomous, review tools. Crush (Agent Skills support) and Pi (TypeScript harness) added. Ready to validate against recent landscape.",
+      "feature": null,
+      "stage": "research",
+      "planRef": null,
+      "designRef": null,
+      "progress": "Completed: Added Crush (#23 CLI) as first Agent Skills standard supporter. Added Pi (#22 CLI) with hybrid form factor. Both included in skill support tier assessment. Total: 60 tools validated. BLOCKED: Need to check for new agents released Jan-Mar 2026 (knowledge cutoff Feb 2025, so cannot verify recent landscape from memory). Specifically looking for: (a) any new CLI/IDE agents post-Crush, (b) autonomous agent releases, (c) new integrations/standards adoption.",
+      "blockers": [
+        "Web search permission needed to validate recent releases"
+      ],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 271,
+      "lastCommit": "b8ca66a bd sync: 2026-03-30 17:58:09",
+      "modifiedFiles": [
+        ".handoff.json",
+        ".syllago/installed.json",
+        "cli/internal/tui/actions.go",
+        "cli/internal/tui/add_wizard.go",
+        "docs/research/provider-agent-naming.md"
+      ]
+    },
+    "recentDecisions": [
+      "Added Crush as #23 (Agent Skills standard + MCP + LSP, Go-based, 22K stars)",
+      "Added Pi as #22 (TypeScript harness, BYOK providers, partial skill support via AGENTS.md)",
+      "Terminology finalized: 'agent' (14 tools), 'assistant' (8), 'copilot' (6), 'editor' (4), others minor"
+    ],
+    "nextSteps": [
+      "Research newest agent tooling from past 3 months: trending repos, recent launches, Agent Ecosystem announcements",
+      "Validate landscape doc against findings; add any missing major tools",
+      "Update provenance research doc (docs/research/) to reference new terminology",
+      "Circle back to spec extension draft with validated tool landscape"
+    ],
+    "context": {
+      "notes": "Provider-agent-naming.md now has 60 validated tools (up from 57). Crush is significant because it's the first tool in the landscape explicitly supporting Agent Skills open standard (agentskills.io). This strengthens community spec approach. Doc is structured as: (1) 60-tool inventory with self-descriptions, (2) terminology analysis, (3) skill support tiers (Full/Partial/None), (4) validation against every tool, (5) proposed glossary. Ready to refresh once recent landscape is confirmed. Handoff reason: knowledge cutoff is Feb 2025, can't verify Jan-Mar 2026 releases from memory."
+    }
+  },
+  "previousSessions": [
+    {
+      "summary": "Completed hook adapter Tier 2 migration — all 5 adapters off legacy bridge, shared helpers, degradation enforcement, ADR",
+      "updated": "2026-03-30T23:45:00-07:00",
+      "completedWork": [
+        "All 8 phases executed: pre-work (toolmap/compat gaps), hookhelpers.go (11 shared helpers), 5 adapter migrations (CC, Gemini, Copilot, Cursor, Kiro), legacy bridge removal, Verify() upgrade. Added degradation enforcement (block/exclude/warn) and ADR 0001. Committed as 21aa18f, pushed to main."
+      ],
+      "nextSteps": [
+        "Start Tier 3: new provider adapters. Factory Droid is the smoke test (CC-identical events). Bead: syllago-h5rsk",
+        "VS Code Copilot adapter (syllago-ms77k) — spec fully defines it, toolmap/compat entries already added in Tier 2",
+        "Windsurf split-event adapter + OpenCode JS adapter (syllago-pg2cy) — more complex, different paradigms",
+        "Consider migrating HooksConverter.Render/Canonicalize to use adapter registry internally"
+      ]
+    }
+  ]
+}

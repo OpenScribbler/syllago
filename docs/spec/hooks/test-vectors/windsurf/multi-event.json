@@ -1,0 +1,55 @@
+{
+  "_comment": "Expected Windsurf output for canonical/multi-event.json. Windsurf split-event mapping: (1) before_tool_execute + ['shell','file_write'] splits into pre_run_command (shell) and pre_write_code (file_write); (2) after_tool_execute wildcard splits into all four post-events (post_read_code, post_write_code, post_run_command, post_mcp_tool_use); (3) before_prompt -> pre_user_prompt; (4) agent_stop -> post_cascade_response (closest equivalent). Unlike Cursor, Windsurf has pre_write_code for before-events on file writes, so the timing semantics are preserved.",
+  "_warnings": [
+    "Hook 1: array matcher split into separate Windsurf events — 'shell' maps to pre_run_command, 'file_write' maps to pre_write_code",
+    "Hook 1: timeout field dropped — Windsurf does not support configurable timeouts",
+    "Hook 2: after_tool_execute wildcard expanded to all four Windsurf post-events — hook command is duplicated across post_read_code, post_write_code, post_run_command, post_mcp_tool_use",
+    "Hook 2: timeout field dropped — Windsurf does not support configurable timeouts",
+    "Hook 3: before_prompt blocking=true mapped to pre_user_prompt — Windsurf treats pre_user_prompt as blocking-capable (blocking intent preserved)",
+    "Hook 3: timeout field dropped — Windsurf does not support configurable timeouts",
+    "Hook 4: agent_stop mapped to post_cascade_response — semantic approximation (post_cascade_response fires after each response, not only when the agent stops)",
+    "Hook 4: timeout field dropped — Windsurf does not support configurable timeouts"
+  ],
+  "hooks": {
+    "pre_run_command": [
+      {
+        "command": "./audit-dangerous-ops.sh"
+      }
+    ],
+    "pre_write_code": [
+      {
+        "command": "./audit-dangerous-ops.sh"
+      }
+    ],
+    "post_read_code": [
+      {
+        "command": "./log-tool-usage.sh"
+      }
+    ],
+    "post_write_code": [
+      {
+        "command": "./log-tool-usage.sh"
+      }
+    ],
+    "post_run_command": [
+      {
+        "command": "./log-tool-usage.sh"
+      }
+    ],
+    "post_mcp_tool_use": [
+      {
+        "command": "./log-tool-usage.sh"
+      }
+    ],
+    "pre_user_prompt": [
+      {
+        "command": "./redact-pii.sh"
+      }
+    ],
+    "post_cascade_response": [
+      {
+        "command": "./cleanup.sh"
+      }
+    ]
+  }
+}

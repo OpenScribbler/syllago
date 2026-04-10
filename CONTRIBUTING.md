@@ -59,6 +59,10 @@ make fmt      # Format code with gofmt
 make vet      # Run go vet
 ```
 
+### Telemetry
+
+Dev builds have telemetry compiled out — the PostHog API key is only embedded in release binaries via `SYLLAGO_POSTHOG_KEY` ldflags. You will never send telemetry data from a local build unless you explicitly set the environment variable.
+
 ### Code Organization
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full package map and data flow.
@@ -70,6 +74,41 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full package map and data flow.
 - No mocking library -- hand-crafted provider stubs and function overrides
 - TUI components: golden file visual regression tests
   - Regenerate baselines after visual changes: `cd cli && go test ./internal/tui/ -update-golden`
+
+### capmon (capability monitor)
+
+capmon is the pipeline that extracts and tracks AI provider capability drift. It runs automatically on CI via `.github/workflows/capmon.yml`.
+
+**Pausing the pipeline:**
+
+Create a `.capmon-pause` file in the repo root to prevent Stage 4 from opening PRs or issues:
+
+```bash
+touch .capmon-pause   # pause
+rm .capmon-pause      # resume
+```
+
+The pipeline still runs Stages 1-3 (fetch, extract, diff) when paused. Only the GitHub PR/issue step is skipped.
+
+**Updating test fixtures:**
+
+Static extraction fixtures live in `cli/internal/capmon/testdata/fixtures/`. When a provider changes its docs format, update the fixture and re-run the tests:
+
+```bash
+# Update a fixture manually, then verify:
+cd cli && go test ./internal/capmon/ -run TestFixtures
+```
+
+Live network tests are gated behind `SYLLAGO_TEST_NETWORK=1` and require external access.
+
+**Manual audit workflow:**
+
+To review capability drift without CI:
+
+1. Run `syllago capmon run --dry-run` to see what would change
+2. Review `docs/provider-capabilities/<slug>.yaml` for the affected provider
+3. Apply updates manually if the change is correct
+4. Run `syllago capmon generate` to regenerate derived views and spec tables
 
 ## Getting started
 

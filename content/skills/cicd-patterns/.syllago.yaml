@@ -1,0 +1,9 @@
+format_version: 1
+id: 8086eefd-a985-43e7-8fb4-58f240e789d9
+name: cicd-patterns
+type: skills
+source_format: md
+source_type: provider
+source_hash: sha256:13702b597a7416e557b1d0595e67af9082a08d4fce66edb45c2465c4e9389606
+added_at: 2026-04-03T16:25:26.84320032Z
+added_by: syllago

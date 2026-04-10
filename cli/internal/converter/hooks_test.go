@@ -458,7 +458,6 @@ func TestHooklessProviderWarning(t *testing.T) {
 		name string
 		prov provider.Provider
 	}{
-		{"opencode", provider.OpenCode},
 		{"zed", provider.Zed},
 		{"roo-code", provider.RooCode},
 	}
@@ -1326,13 +1325,14 @@ func TestStructuredOutputWarnings_ClaudeToGemini(t *testing.T) {
 	for _, w := range result.Warnings {
 		if containsStr(w, "structured hook output") && containsStr(w, "claude-code") && containsStr(w, "gemini-cli") {
 			foundOutputWarning = true
-			// Should mention specific fields
-			assertContains(t, w, "updatedInput")
-			assertContains(t, w, "suppressOutput")
-			assertContains(t, w, "systemMessage")
-			assertContains(t, w, "additionalContext")
+			// Should mention lost fields (4 of 6 — Gemini now supports decision + system_message)
+			assertContains(t, w, "updated_input")
+			assertContains(t, w, "suppress_output")
+			assertContains(t, w, "context")
 			assertContains(t, w, "continue")
-			assertContains(t, w, "permissionDecision")
+			// Gemini now supports these — should NOT be in warning
+			assertNotContains(t, w, "decision")
+			assertNotContains(t, w, "system_message")
 			break
 		}
 	}
@@ -1343,7 +1343,7 @@ func TestStructuredOutputWarnings_ClaudeToGemini(t *testing.T) {
 
 func TestStructuredOutputWarnings_ClaudeToCopilot(t *testing.T) {
 	t.Parallel()
-	// Copilot supports permissionDecision, so only 5 fields should be lost
+	// Copilot supports decision, so only 5 fields should be lost
 	input := []byte(`{
 		"hooks": {
 			"PreToolUse": [
@@ -1371,10 +1371,10 @@ func TestStructuredOutputWarnings_ClaudeToCopilot(t *testing.T) {
 	for _, w := range result.Warnings {
 		if containsStr(w, "structured hook output") {
 			foundOutputWarning = true
-			// Should mention lost fields but NOT permissionDecision (Copilot supports it)
-			assertContains(t, w, "updatedInput")
-			assertContains(t, w, "suppressOutput")
-			assertNotContains(t, w, "permissionDecision")
+			// Should mention lost fields but NOT decision (Copilot supports it)
+			assertContains(t, w, "updated_input")
+			assertContains(t, w, "suppress_output")
+			assertNotContains(t, w, "decision")
 			break
 		}
 	}
@@ -1482,8 +1482,8 @@ func TestStructuredOutputWarnings_ClaudeToKiro(t *testing.T) {
 		if containsStr(w, "structured hook output") && containsStr(w, "kiro") {
 			foundOutputWarning = true
 			// All 6 fields should be listed as lost
-			assertContains(t, w, "updatedInput")
-			assertContains(t, w, "permissionDecision")
+			assertContains(t, w, "updated_input")
+			assertContains(t, w, "decision")
 			break
 		}
 	}
@@ -1500,11 +1500,12 @@ func TestOutputFieldsLostWarnings(t *testing.T) {
 		target string
 		want   int // expected number of lost fields
 	}{
-		{"claude->gemini: all 6 lost", "claude-code", "gemini-cli", 6},
-		{"claude->copilot: 5 lost (permissionDecision kept)", "claude-code", "copilot-cli", 5},
+		{"claude->gemini: 4 lost (decision+system_message kept)", "claude-code", "gemini-cli", 4},
+		{"claude->copilot: 5 lost (decision kept)", "claude-code", "copilot-cli", 5},
+		{"claude->cursor: 5 lost (decision kept)", "claude-code", "cursor", 5},
 		{"claude->claude: none lost", "claude-code", "claude-code", 0},
 		{"gemini->claude: none lost", "gemini-cli", "claude-code", 0},
-		{"copilot->gemini: 1 lost (permissionDecision)", "copilot-cli", "gemini-cli", 1},
+		{"copilot->gemini: none lost", "copilot-cli", "gemini-cli", 0},
 		{"copilot->claude: none lost", "copilot-cli", "claude-code", 0},
 		{"gemini->gemini: none lost", "gemini-cli", "gemini-cli", 0},
 	}

@@ -1,0 +1,10 @@
+format_version: 1
+id: 7b61ed0f-edbe-444f-9853-e8dcc21f1827
+name: tui-modals
+type: rules
+source_provider: claude-code
+source_format: md
+source_type: provider
+source_hash: sha256:df9b9b9713e3ba39e6c98eebc7488a577a4b4f1f3f09aecd752b654e9c9c37b4
+added_at: 2026-03-29T04:25:56.637663889Z
+added_by: syllago
