@@ -1,0 +1,18 @@
+schema_version: "1"
+slug: claude-code
+display_name: Claude Code
+last_verified: "2026-04-08"
+
+content_types:
+  hooks:
+    sources:
+      - url: https://code.claude.com/docs/en/hooks
+        type: docs
+        format: html
+        selector:
+          primary: "main h2#events ~ table"
+          fallback: "main table"
+          expected_contains: "Event Name"
+          min_results: 6
+          updated_at: "2026-04-08"
+        extracts: [event_names, hook_config_fields]

@@ -1,0 +1,9 @@
+format_version: 1
+id: 97fa9d93-ddb2-48c3-9d94-6a4835d59939
+name: poc-scoper-web
+type: skills
+source_format: md
+source_type: provider
+source_hash: sha256:e677c7ac469123a6daf3d770dad79330dbcb4dd09981b5a4144a2ad2fb0a50b4
+added_at: 2026-04-03T16:25:26.877630087Z
+added_by: syllago

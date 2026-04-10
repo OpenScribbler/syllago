@@ -23,13 +23,12 @@ else
     echo "Lint clean."
 fi
 
-# --- commands.json freshness ---
+# --- commands.json and providers.json freshness ---
 echo "Checking commands.json freshness..."
 cd "$REPO_ROOT/cli" || exit 1
 TMPBIN=$(mktemp)
 if go build -o "$TMPBIN" ./cmd/syllago 2>/dev/null; then
     "$TMPBIN" _gendocs > commands.json.tmp 2>/dev/null
-    rm -f "$TMPBIN"
 
     # Strip volatile fields before comparing
     grep -v '"generatedAt"' commands.json | grep -v '"syllagoVersion"' > commands.json.stable
@@ -38,15 +37,33 @@ if go build -o "$TMPBIN" ./cmd/syllago 2>/dev/null; then
     if ! diff -q commands.json.stable commands.json.tmp.stable >/dev/null 2>&1; then
         echo "" >&2
         echo "Error: commands.json is stale. Regenerate it:" >&2
-        echo "  cd cli && go build -o syllago-tmp ./cmd/syllago && ./syllago-tmp _gendocs > commands.json && rm syllago-tmp" >&2
-        rm -f commands.json.tmp commands.json.stable commands.json.tmp.stable
+        echo "  cd cli && make gendocs" >&2
+        rm -f commands.json.tmp commands.json.stable commands.json.tmp.stable "$TMPBIN"
         exit 1
     fi
     rm -f commands.json.tmp commands.json.stable commands.json.tmp.stable
     echo "commands.json up to date."
+
+    echo "Checking providers.json freshness..."
+    "$TMPBIN" _genproviders > providers.json.tmp 2>/dev/null
+
+    grep -v '"generatedAt"' providers.json | grep -v '"syllagoVersion"' > providers.json.stable
+    grep -v '"generatedAt"' providers.json.tmp | grep -v '"syllagoVersion"' > providers.json.tmp.stable
+
+    if ! diff -q providers.json.stable providers.json.tmp.stable >/dev/null 2>&1; then
+        echo "" >&2
+        echo "Error: providers.json is stale. Regenerate it:" >&2
+        echo "  cd cli && make gendocs" >&2
+        rm -f providers.json.tmp providers.json.stable providers.json.tmp.stable "$TMPBIN"
+        exit 1
+    fi
+    rm -f providers.json.tmp providers.json.stable providers.json.tmp.stable
+    echo "providers.json up to date."
+
+    rm -f "$TMPBIN"
 else
     rm -f "$TMPBIN"
-    echo "Warning: could not build for commands.json check, skipping" >&2
+    echo "Warning: could not build for freshness check, skipping" >&2
 fi
 
 exit 0

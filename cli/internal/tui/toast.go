@@ -1,12 +1,16 @@
 package tui
 
 import (
+	"encoding/base64"
+	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 // toastLevel controls the appearance and auto-dismiss behavior.
@@ -35,23 +39,39 @@ type toastTickMsg struct {
 	seq int // sequence number to ignore stale ticks
 }
 
-// toastModel manages a queue of toast notifications shown one at a time.
+const maxVisibleToasts = 3
+
+// toastModel manages a queue of toast notifications, showing up to 3 stacked.
 type toastModel struct {
 	queue   []toastEntry
 	seq     int // incremented on each new toast to invalidate old ticks
 	width   int
 	height  int
-	visible bool // true when a toast is actively displayed
+	visible bool // true when any toast is actively displayed
 }
 
 func newToastModel() toastModel {
 	return toastModel{}
 }
 
-// Push adds a toast to the queue. If nothing is currently showing, it
-// becomes visible immediately and returns a tick command for auto-dismiss.
+// Push adds a toast to the queue. Shows immediately if not visible. Drops the
+// oldest non-error toast when the queue exceeds maxVisibleToasts.
 func (t *toastModel) Push(msg string, level toastLevel) tea.Cmd {
 	t.queue = append(t.queue, toastEntry{message: msg, level: level})
+	// Drop oldest non-error toasts when over the limit.
+	for len(t.queue) > maxVisibleToasts {
+		dropped := false
+		for i, e := range t.queue {
+			if e.level != toastError {
+				t.queue = append(t.queue[:i], t.queue[i+1:]...)
+				dropped = true
+				break
+			}
+		}
+		if !dropped {
+			break // all are errors, keep them all
+		}
+	}
 	if !t.visible {
 		return t.showNext()
 	}
@@ -136,10 +156,18 @@ func (t *toastModel) HandleKey(msg tea.KeyMsg) (consumed bool, cmd tea.Cmd) {
 }
 
 // copyAndDismiss writes OSC 52 clipboard escape sequence and dismisses.
+// OSC 52 is supported by Windows Terminal, iTerm2, kitty, and most modern terminals.
+// We write directly to stdout from a tea.Cmd goroutine because tea.Printf is
+// swallowed by BubbleTea's alt-screen renderer — the terminal never sees the escape.
 func (t *toastModel) copyAndDismiss(text string) tea.Cmd {
 	dismissCmd := t.Dismiss()
-	// OSC 52 clipboard: \x1b]52;c;<base64>\x07
-	return dismissCmd
+	encoded := base64.StdEncoding.EncodeToString([]byte(text))
+	osc52 := fmt.Sprintf("\x1b]52;c;%s\x07", encoded)
+	writeClipboard := func() tea.Msg {
+		_, _ = os.Stdout.Write([]byte(osc52))
+		return nil
+	}
+	return tea.Batch(writeClipboard, dismissCmd)
 }
 
 // tickCmd returns a tea.Tick command for the current toast's auto-dismiss duration.
@@ -163,16 +191,37 @@ func (t *toastModel) tickCmd() tea.Cmd {
 	})
 }
 
-// View renders the toast as a small bordered box. Caller places it via overlayToast.
+// View renders up to maxVisibleToasts stacked vertically. Caller places via overlayToast.
 func (t toastModel) View() string {
-	cur := t.Current()
-	if cur == nil {
+	if !t.visible || len(t.queue) == 0 {
 		return ""
 	}
 
+	count := min(maxVisibleToasts, len(t.queue))
+	var rendered []string
+	for i := 0; i < count; i++ {
+		rendered = append(rendered, t.renderOne(t.queue[i]))
+	}
+
+	return strings.Join(rendered, "\n")
+}
+
+// HandleMouse processes mouse clicks on toast zones. Returns true if consumed.
+func (t *toastModel) HandleMouse(msg tea.MouseMsg) (consumed bool, cmd tea.Cmd) {
+	if !t.visible || len(t.queue) == 0 {
+		return false, nil
+	}
+	if zone.Get("toast-close").InBounds(msg) {
+		return true, t.Dismiss()
+	}
+	return false, nil
+}
+
+// renderOne renders a single toast entry as a bordered box.
+func (t toastModel) renderOne(entry toastEntry) string {
 	var borderColor lipgloss.TerminalColor
 	var icon string
-	switch cur.level {
+	switch entry.level {
 	case toastSuccess:
 		borderColor = successColor
 		icon = lipgloss.NewStyle().Foreground(successColor).Render("✓ ")
@@ -184,16 +233,32 @@ func (t toastModel) View() string {
 		icon = lipgloss.NewStyle().Foreground(dangerColor).Render("✗ ")
 	}
 
-	maxMsgW := 50
-	msg := cur.message
+	// Fixed width so all toasts render at the same size regardless of message length.
+	const toastFixedWidth = 60
+	// Inner width = total - 2 (border) - 2 (padding)
+	const innerWidth = toastFixedWidth - 2 - 2
+
+	maxMsgW := innerWidth - 6 // icon(2) + close btn(4 = " [×]")
+	msg := entry.message
 	if len([]rune(msg)) > maxMsgW {
 		msg = string([]rune(msg)[:maxMsgW-1]) + "…"
 	}
 
-	content := icon + lipgloss.NewStyle().Foreground(primaryText).Render(msg)
+	// Build first line: icon + message + right-aligned close button
+	msgText := icon + lipgloss.NewStyle().Foreground(primaryText).Render(msg)
+	msgVisualW := lipgloss.Width(msgText)
+	closeBtn := zone.Mark("toast-close",
+		lipgloss.NewStyle().Foreground(mutedColor).Faint(true).Render("[×]"))
+	closeBtnW := 3 // visual width of "[×]"
+	gap := innerWidth - msgVisualW - closeBtnW
+	if gap < 1 {
+		gap = 1
+	}
+	firstLine := msgText + strings.Repeat(" ", gap) + closeBtn
 
-	// For errors, show dismiss hint
-	if cur.level == toastError {
+	content := firstLine
+
+	if entry.level == toastError {
 		hint := lipgloss.NewStyle().Foreground(mutedColor).Faint(true).Render("  [esc] dismiss · [c] copy")
 		content += "\n" + hint
 	}
@@ -202,6 +267,8 @@ func (t toastModel) View() string {
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(borderColor).
 		Padding(0, 1).
+		Width(toastFixedWidth).
+		MaxWidth(toastFixedWidth + 2). // +2 for border chars
 		Render(content)
 }
 

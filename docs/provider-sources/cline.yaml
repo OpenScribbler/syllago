@@ -1,0 +1,92 @@
+# Cline — Provider Source Manifest
+# Docs served via Mintlify; raw markdown via docs.cline.bot/page.md pattern.
+# llms.txt: https://docs.cline.bot/llms.txt
+
+schema_version: "1"
+last_verified: "2026-04-09"
+provider_version: "v3.76.0"
+
+slug: cline
+display_name: Cline
+vendor: Cline (saoudrizwan)
+status: active
+fetch_tier: llms-txt
+repo: cline/cline
+repo_branch: main
+
+change_detection:
+  method: github-releases
+  endpoint: https://api.github.com/repos/cline/cline/releases/latest
+
+changelog:
+  - url: https://raw.githubusercontent.com/cline/cline/main/CHANGELOG.md
+    label: Changelog
+
+content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Cline supports: rules, hooks, mcp, skills (via cross-provider SKILL.md convention), commands (CLI-only slash commands, not user-definable files)
+  # Not supported: agents (no agent file format)
+  # Syllago: rules ✓, hooks ✓, mcp ✓ | skills ✗, commands ✗ (not yet implemented in syllago for cline)
+  #   Syllago implements rules/hooks/mcp for cline. Skills and commands are tracked in manifest for monitoring purposes — syllago install not yet supported.
+  # ─────────────────────────────────────────────────────────────────────
+
+  rules:
+    sources:
+      - url: https://docs.cline.bot/customization/cline-rules.md
+        type: docs
+        format: markdown
+        extracts: [file_format, file_locations, hierarchy, features]
+    # Format: .clinerules/ directory with .md and .txt files (concatenated).
+    # Global: ~/Documents/Cline/Rules/. Numeric prefixes for ordering.
+    # Cross-tool compat: also reads .cursorrules, .windsurfrules, AGENTS.md.
+
+  hooks:
+    sources:
+      - url: https://docs.cline.bot/customization/hooks.md
+        type: docs
+        format: markdown
+        extracts: [event_names, hook_config_fields, event_io_schemas, config_examples, features]
+    # 9 events: TaskStart, TaskResume, TaskCancel, TaskComplete, PreToolUse,
+    #           PostToolUse, UserPromptSubmit, Notification, PreCompact
+    # Hook I/O: JSON via stdin → JSON to stdout ({cancel, contextModification?, errorMessage?}).
+    # Shell scripts (bash/PowerShell). 30s timeout. 50KB max context modification.
+    # Stored in .clinerules/hooks/ (project) or ~/Documents/Cline/Hooks/ (global).
+
+  mcp:
+    sources:
+      - url: https://docs.cline.bot/mcp/adding-and-configuring-servers.md
+        type: docs
+        format: markdown
+        extracts: [server_config_fields, config_examples]
+
+      - url: https://docs.cline.bot/mcp/mcp-transport-mechanisms.md
+        type: docs
+        format: markdown
+        extracts: [transport_types]
+    # Settings file: cline_mcp_settings.json (VS Code globalStoragePath).
+    # Transports: stdio, SSE, streamableHttp (camelCase).
+    # Fields: autoApprove[], disabled, timeout (default 60s).
+
+  skills:
+    sources:
+      - url: https://docs.cline.bot/customization/skills.md
+        type: docs
+        format: markdown
+        extracts: [file_format, frontmatter_fields, file_locations, features]
+
+      - url: https://raw.githubusercontent.com/cline/cline/main/.agents/skills/create-pull-request/SKILL.md
+        type: example
+        format: markdown
+        extracts: [file_format, frontmatter_fields]
+    # Format: .agents/skills/*/SKILL.md. No formal schema — follows cross-tool SKILL.md convention.
+
+  agents:
+    supported: false
+
+  commands:
+    sources:
+      - url: https://docs.cline.bot/core-workflows/using-commands.md
+        type: docs
+        format: markdown
+        extracts: [config_fields, features]
+    # CLI slash commands only — no user-definable command files.

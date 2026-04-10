@@ -10,6 +10,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -28,6 +29,15 @@ type libraryDrillMsg struct {
 
 // libraryEditMsg is sent when the edit button is clicked in the metadata bar.
 type libraryEditMsg struct{}
+
+// libraryInstallMsg is sent when the install button is clicked in the metadata bar.
+type libraryInstallMsg struct{}
+
+// libraryRemoveMsg is sent when the remove button is clicked in the metadata bar.
+type libraryRemoveMsg struct{}
+
+// libraryUninstallMsg is sent when the uninstall button is clicked in the metadata bar.
+type libraryUninstallMsg struct{}
 
 // libraryCloseMsg is sent when the user closes the detail view.
 type libraryCloseMsg struct{}
@@ -227,9 +237,18 @@ func (l libraryModel) updateMouse(msg tea.MouseMsg) (libraryModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 		switch l.mode {
 		case libraryBrowse:
-			// Edit button click
+			// Metadata bar button clicks
+			if zone.Get("meta-install").InBounds(msg) {
+				return l, func() tea.Msg { return libraryInstallMsg{} }
+			}
 			if zone.Get("meta-edit").InBounds(msg) {
 				return l, func() tea.Msg { return libraryEditMsg{} }
+			}
+			if zone.Get("meta-remove").InBounds(msg) {
+				return l, func() tea.Msg { return libraryRemoveMsg{} }
+			}
+			if zone.Get("meta-uninstall").InBounds(msg) {
+				return l, func() tea.Msg { return libraryUninstallMsg{} }
 			}
 
 			// Column header clicks for sorting
@@ -266,9 +285,18 @@ func (l libraryModel) updateMouse(msg tea.MouseMsg) (libraryModel, tea.Cmd) {
 				}
 			}
 		case libraryDetail:
-			// Edit button click (in detail view too)
+			// Metadata bar button clicks
+			if zone.Get("meta-install").InBounds(msg) {
+				return l, func() tea.Msg { return libraryInstallMsg{} }
+			}
 			if zone.Get("meta-edit").InBounds(msg) {
 				return l, func() tea.Msg { return libraryEditMsg{} }
+			}
+			if zone.Get("meta-remove").InBounds(msg) {
+				return l, func() tea.Msg { return libraryRemoveMsg{} }
+			}
+			if zone.Get("meta-uninstall").InBounds(msg) {
+				return l, func() tea.Msg { return libraryUninstallMsg{} }
 			}
 			// Click on file tree nodes
 			for i := range l.tree.nodes {
@@ -354,7 +382,7 @@ func (l *libraryModel) loadSelectedFile() {
 	}
 	l.preview.fileName = path
 	l.preview.offset = 0
-	content, err := catalog.ReadFileContent(l.detailItem.Path, path, 500)
+	content, err := catalog.ReadFileContent(l.detailItem.Path, path, 10000)
 	if err != nil {
 		l.preview.lines = []string{"Error reading file:", err.Error()}
 		return
@@ -557,9 +585,19 @@ func (l libraryModel) renderMetadataContent(width int) string {
 		return renderMetaPanel(nil, metaPanelData{}, width)
 	}
 	row := l.table.rows[l.table.cursor]
+	canInstall := false
+	if item.Library || item.Registry == "" {
+		for _, prov := range l.table.providers {
+			if prov.Detected && installer.CheckStatus(*item, prov, l.table.repoRoot) != installer.StatusInstalled {
+				canInstall = true
+				break
+			}
+		}
+	}
 	return renderMetaPanel(item, metaPanelData{
 		installed:  row.installed,
 		typeDetail: row.typeDetail,
+		canInstall: canInstall,
 	}, width)
 }
 

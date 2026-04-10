@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-01-before-tool-execute
+type: hooks
+description: "Benchmark: validates before_tool_execute event fires"
+hook:
+  event: before_tool_execute
+  blocking: false
+  command: ./hb-01.sh

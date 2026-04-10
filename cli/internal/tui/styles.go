@@ -94,6 +94,10 @@ var (
 	// Text input fields — dim background tint
 	inputActiveBG   = lipgloss.AdaptiveColor{Light: "#D5EFED", Dark: "#1A3836"} // dim cyan tint
 	inputInactiveBG = lipgloss.AdaptiveColor{Light: "#E6E4D9", Dark: "#282726"} // dim grey tint
+
+	// Risk highlight — warm red tint for flagged lines in file preview.
+	// Slightly darker than initial values for better contrast against primaryText.
+	highlightBG = lipgloss.AdaptiveColor{Light: "#F5D5D2", Dark: "#4A2320"}
 )
 
 // itoa converts int to string without importing strconv.

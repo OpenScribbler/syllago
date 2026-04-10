@@ -9,142 +9,166 @@ import "strings"
 // round-trips through these providers lose the file_write/file_edit distinction.
 var ToolNames = map[string]map[string]string{
 	"file_read": {
-		"claude-code": "Read",
-		"gemini-cli":  "read_file",
-		"copilot-cli": "view",
-		"kiro":        "read",
-		"opencode":    "read",
-		"zed":         "read_file",
-		"cline":       "read_file",
-		"roo-code":    "read_file",
-		"cursor":      "read_file",
-		"windsurf":    "view_line_range",
-		"codex":       "read_file",
+		"claude-code":     "Read",
+		"gemini-cli":      "read_file",
+		"copilot-cli":     "view",
+		"kiro":            "read",
+		"opencode":        "read",
+		"vs-code-copilot": "Read",
+		"zed":             "read_file",
+		"roo-code":        "read_file",
+		"cursor":          "read_file",
+		"windsurf":        "view_line_range",
+		"codex":           "read_file",
+		"factory-droid":   "Read",
+		"pi":              "read",
 	},
 	"file_write": {
-		"claude-code": "Write",
-		"gemini-cli":  "write_file",
-		"copilot-cli": "create",
-		"kiro":        "fs_write",
-		"opencode":    "write",
-		"zed":         "edit_file",
-		"cline":       "write_to_file",
-		"roo-code":    "write_to_file",
-		"cursor":      "edit_file",
-		"windsurf":    "write_to_file",
-		"codex":       "apply_patch",
+		"claude-code":     "Write",
+		"gemini-cli":      "write_file",
+		"copilot-cli":     "create",
+		"kiro":            "fs_write",
+		"opencode":        "write",
+		"vs-code-copilot": "Write",
+		"zed":             "edit_file",
+		"roo-code":        "write_to_file",
+		"cursor":          "edit_file",
+		"windsurf":        "write_to_file",
+		"codex":           "apply_patch",
+		"factory-droid":   "Create",
+		"pi":              "write",
 	},
 	"file_edit": {
-		"claude-code": "Edit",
-		"gemini-cli":  "replace",
-		"copilot-cli": "edit",
-		"kiro":        "fs_write",
-		"opencode":    "edit",
-		"zed":         "edit_file",
-		"cline":       "replace_in_file",
-		"roo-code":    "replace_in_file",
-		"cursor":      "edit_file",
-		"windsurf":    "edit_file",
-		"codex":       "apply_patch",
+		"claude-code":     "Edit",
+		"gemini-cli":      "replace",
+		"copilot-cli":     "edit",
+		"kiro":            "fs_write",
+		"opencode":        "edit",
+		"vs-code-copilot": "Edit",
+		"zed":             "edit_file",
+		"roo-code":        "replace_in_file",
+		"cursor":          "edit_file",
+		"windsurf":        "edit_file",
+		"codex":           "apply_patch",
+		"factory-droid":   "Edit",
+		"pi":              "edit",
 	},
 	"shell": {
-		"claude-code": "Bash",
-		"gemini-cli":  "run_shell_command",
-		"copilot-cli": "bash",
-		"kiro":        "shell",
-		"opencode":    "bash",
-		"zed":         "terminal",
-		"cline":       "execute_command",
-		"roo-code":    "execute_command",
-		"cursor":      "run_terminal_cmd",
-		"windsurf":    "run_command",
-		"codex":       "shell",
+		"claude-code":     "Bash",
+		"gemini-cli":      "run_shell_command",
+		"copilot-cli":     "bash",
+		"kiro":            "shell",
+		"opencode":        "bash",
+		"vs-code-copilot": "Bash",
+		"zed":             "terminal",
+		"roo-code":        "execute_command",
+		"cursor":          "run_terminal_cmd",
+		"windsurf":        "run_command",
+		"codex":           "shell",
+		"factory-droid":   "Execute",
+		"pi":              "bash",
 	},
 	"find": {
-		"claude-code": "Glob",
-		"gemini-cli":  "glob",
-		"copilot-cli": "glob",
-		"kiro":        "glob",
-		"opencode":    "glob",
-		"zed":         "find_path",
-		"cline":       "list_files",
-		"roo-code":    "list_files",
-		"cursor":      "file_search",
-		"windsurf":    "find_by_name",
-		"codex":       "list_dir",
+		"claude-code":     "Glob",
+		"gemini-cli":      "glob",
+		"copilot-cli":     "glob",
+		"kiro":            "glob",
+		"opencode":        "glob",
+		"vs-code-copilot": "Glob",
+		"zed":             "find_path",
+		"roo-code":        "list_files",
+		"cursor":          "file_search",
+		"windsurf":        "find_by_name",
+		"codex":           "list_dir",
+		"factory-droid":   "Glob",
+		"pi":              "find",
 	},
 	"search": {
-		"claude-code": "Grep",
-		"gemini-cli":  "grep_search",
-		"copilot-cli": "grep",
-		"kiro":        "grep",
-		"opencode":    "grep",
-		"zed":         "grep",
-		"cline":       "search_files",
-		"roo-code":    "search_files",
-		"cursor":      "grep_search",
-		"windsurf":    "grep_search",
-		"codex":       "grep_files",
+		"claude-code":     "Grep",
+		"gemini-cli":      "grep_search",
+		"copilot-cli":     "grep",
+		"kiro":            "grep",
+		"opencode":        "grep",
+		"vs-code-copilot": "Grep",
+		"zed":             "grep",
+		"roo-code":        "search_files",
+		"cursor":          "grep_search",
+		"windsurf":        "grep_search",
+		"codex":           "grep_files",
+		"factory-droid":   "Grep",
+		"pi":              "grep",
 	},
 	"web_search": {
-		"claude-code": "WebSearch",
-		"gemini-cli":  "google_web_search",
-		"opencode":    "websearch",
-		"zed":         "web_search",
-		"cursor":      "web_search",
-		"windsurf":    "search_web",
-		"codex":       "web_search",
-		"kiro":        "web_search",
+		"claude-code":     "WebSearch",
+		"gemini-cli":      "google_web_search",
+		"opencode":        "websearch",
+		"vs-code-copilot": "WebSearch",
+		"zed":             "web_search",
+		"cursor":          "web_search",
+		"windsurf":        "search_web",
+		"codex":           "web_search",
+		"kiro":            "web_search",
+		"factory-droid":   "WebSearch",
 	},
 	"agent": {
-		"claude-code": "Agent",
-		"copilot-cli": "task",
-		"opencode":    "task",
-		"zed":         "spawn_agent",
-		"codex":       "spawn_agent",
-		"kiro":        "use_subagent",
+		"claude-code":     "Agent",
+		"copilot-cli":     "task",
+		"opencode":        "task",
+		"vs-code-copilot": "Agent",
+		"zed":             "spawn_agent",
+		"codex":           "spawn_agent",
+		"kiro":            "use_subagent",
+		"factory-droid":   "Task",
 	},
 	"web_fetch": {
-		"claude-code": "WebFetch",
-		"gemini-cli":  "web_fetch",
-		"copilot-cli": "web_fetch",
-		"kiro":        "web_fetch",
-		"opencode":    "webfetch",
-		"zed":         "fetch",
-		"windsurf":    "read_url_content",
+		"claude-code":     "WebFetch",
+		"gemini-cli":      "web_fetch",
+		"copilot-cli":     "web_fetch",
+		"kiro":            "web_fetch",
+		"opencode":        "webfetch",
+		"vs-code-copilot": "WebFetch",
+		"zed":             "fetch",
+		"windsurf":        "read_url_content",
+		"factory-droid":   "FetchUrl",
 	},
-	// CC-only tools with no cross-provider equivalents
-	"notebook_edit": {"claude-code": "NotebookEdit"},
-	"multi_edit":    {"claude-code": "MultiEdit"},
-	"list_dir":      {"claude-code": "LS"},
-	"notebook_read": {"claude-code": "NotebookRead"},
-	"kill_shell":    {"claude-code": "KillBash"},
-	"skill":         {"claude-code": "Skill"},
-	"ask_user":      {"claude-code": "AskUserQuestion"},
+	// Pi exposes an `ls` directory-listing tool distinct from `find`
+	"list": {"pi": "ls"},
+	// CC-only tools with no cross-provider equivalents (vs-code-copilot shares these)
+	"notebook_edit": {"claude-code": "NotebookEdit", "vs-code-copilot": "NotebookEdit"},
+	"multi_edit":    {"claude-code": "MultiEdit", "vs-code-copilot": "MultiEdit"},
+	"list_dir":      {"claude-code": "LS", "vs-code-copilot": "LS"},
+	"notebook_read": {"claude-code": "NotebookRead", "vs-code-copilot": "NotebookRead"},
+	"kill_shell":    {"claude-code": "KillBash", "vs-code-copilot": "KillBash"},
+	"skill":         {"claude-code": "Skill", "vs-code-copilot": "Skill"},
+	"ask_user":      {"claude-code": "AskUserQuestion", "vs-code-copilot": "AskUserQuestion"},
 }
 
 // HookEvents maps canonical (provider-neutral) event names to provider-specific equivalents.
 // Keys are snake_case neutral names; every provider including claude-code has an explicit entry.
 var HookEvents = map[string]map[string]string{
-	"before_tool_execute": {"claude-code": "PreToolUse", "gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse", "cline": "PreToolUse", "cursor": "PreToolUse"},
-	"after_tool_execute":  {"claude-code": "PostToolUse", "gemini-cli": "AfterTool", "copilot-cli": "postToolUse", "kiro": "postToolUse", "cline": "PostToolUse", "cursor": "PostToolUse"},
-	"before_prompt":       {"claude-code": "UserPromptSubmit", "gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted", "kiro": "userPromptSubmit", "cline": "UserPromptSubmit", "cursor": "UserPromptSubmit"},
-	"agent_stop":          {"claude-code": "Stop", "gemini-cli": "AfterAgent", "kiro": "stop", "copilot-cli": "agentStop", "cursor": "Stop"},
-	"session_start":       {"claude-code": "SessionStart", "gemini-cli": "SessionStart", "copilot-cli": "sessionStart", "kiro": "agentSpawn", "cline": "TaskStart", "cursor": "SessionStart"},
-	"session_end":         {"claude-code": "SessionEnd", "gemini-cli": "SessionEnd", "copilot-cli": "sessionEnd", "cline": "TaskComplete", "cursor": "SessionEnd"},
-	"before_compact":      {"claude-code": "PreCompact", "gemini-cli": "PreCompress", "cline": "PreCompact", "cursor": "PreCompact"},
+	"before_tool_execute": {"claude-code": "PreToolUse", "gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse", "cursor": "PreToolUse", "opencode": "tool.execute.before", "vs-code-copilot": "PreToolUse", "factory-droid": "PreToolUse", "pi": "tool_call"},
+	"after_tool_execute":  {"claude-code": "PostToolUse", "gemini-cli": "AfterTool", "copilot-cli": "postToolUse", "kiro": "postToolUse", "cursor": "PostToolUse", "opencode": "tool.execute.after", "vs-code-copilot": "PostToolUse", "factory-droid": "PostToolUse", "pi": "tool_result"},
+	"before_prompt":       {"claude-code": "UserPromptSubmit", "gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted", "kiro": "userPromptSubmit", "cursor": "UserPromptSubmit", "windsurf": "pre_user_prompt", "vs-code-copilot": "UserPromptSubmit", "factory-droid": "UserPromptSubmit", "pi": "input"},
+	"agent_stop":          {"claude-code": "Stop", "gemini-cli": "AfterAgent", "kiro": "stop", "copilot-cli": "agentStop", "cursor": "Stop", "windsurf": "post_cascade_response", "opencode": "session.idle", "vs-code-copilot": "Stop", "factory-droid": "Stop", "pi": "agent_end"},
+	"session_start":       {"claude-code": "SessionStart", "gemini-cli": "SessionStart", "copilot-cli": "sessionStart", "kiro": "agentSpawn", "cursor": "SessionStart", "windsurf": "session_start", "opencode": "session.created", "vs-code-copilot": "SessionStart", "factory-droid": "SessionStart", "pi": "session_start"},
+	"session_end":         {"claude-code": "SessionEnd", "gemini-cli": "SessionEnd", "copilot-cli": "sessionEnd", "cursor": "SessionEnd", "windsurf": "session_end", "factory-droid": "SessionEnd", "pi": "session_shutdown"},
+	"before_compact":      {"claude-code": "PreCompact", "gemini-cli": "PreCompress", "cursor": "PreCompact", "vs-code-copilot": "PreCompact", "factory-droid": "PreCompact", "pi": "session_before_compact"},
 	"notification":        {"claude-code": "Notification", "gemini-cli": "Notification"},
-	"subagent_start":      {"claude-code": "SubagentStart"},
-	"subagent_stop":       {"claude-code": "SubagentStop", "copilot-cli": "subagentStop"},
-	"error_occurred":      {"claude-code": "ErrorOccurred", "copilot-cli": "errorOccurred"},
+	"subagent_start":      {"claude-code": "SubagentStart", "cursor": "SubagentStart", "vs-code-copilot": "SubagentStart", "factory-droid": "SubagentStart", "pi": "before_agent_start"},
+	"subagent_stop":       {"claude-code": "SubagentStop", "copilot-cli": "subagentStop", "cursor": "SubagentStop", "vs-code-copilot": "SubagentStop", "factory-droid": "SubagentStop"},
+	"error_occurred":      {"claude-code": "ErrorOccurred", "copilot-cli": "errorOccurred", "opencode": "session.error"},
+
+	// tool_use_failure: distinct from error_occurred — fires on tool invocation failure.
+	// Note: Copilot maps both error_occurred and tool_use_failure to "errorOccurred";
+	// ReverseTranslateHookEvent will return whichever it finds first (Go map iteration order).
+	"tool_use_failure": {"claude-code": "PostToolUseFailure", "cursor": "postToolUseFailure", "copilot-cli": "errorOccurred"},
 
 	// CC-only events (no cross-provider equivalents)
-	"after_tool_failure":  {"claude-code": "PostToolUseFailure"},
-	"permission_request":  {"claude-code": "PermissionRequest"},
+	"permission_request":  {"claude-code": "PermissionRequest", "opencode": "permission.asked"},
 	"after_compact":       {"claude-code": "PostCompact"},
 	"instructions_loaded": {"claude-code": "InstructionsLoaded"},
 	"config_change":       {"claude-code": "ConfigChange"},
-	"worktree_create":     {"claude-code": "WorktreeCreate"},
+	"worktree_create":     {"claude-code": "WorktreeCreate", "windsurf": "post_setup_worktree"},
 	"worktree_remove":     {"claude-code": "WorktreeRemove"},
 	"elicitation":         {"claude-code": "Elicitation"},
 	"elicitation_result":  {"claude-code": "ElicitationResult"},
@@ -152,14 +176,30 @@ var HookEvents = map[string]map[string]string{
 	"task_completed":      {"claude-code": "TaskCompleted"},
 	"stop_failure":        {"claude-code": "StopFailure"},
 
-	// Gemini-only events
-	"before_model":          {"gemini-cli": "BeforeModel"},
-	"after_model":           {"gemini-cli": "AfterModel"},
-	"before_tool_selection": {"gemini-cli": "BeforeToolSelection"},
+	// Extended events with multiple-provider support
+	"before_model":          {"gemini-cli": "BeforeModel", "cursor": "beforeAgentResponse"},
+	"after_model":           {"gemini-cli": "AfterModel", "cursor": "afterAgentResponse"},
+	"before_tool_selection": {"gemini-cli": "BeforeToolSelection", "cursor": "beforeToolSelection"},
 
-	// Cline-only events
-	"task_resume": {"cline": "TaskResume"},
-	"task_cancel": {"cline": "TaskCancel"},
+	"file_changed": {"claude-code": "FileChanged", "cursor": "afterFileEdit", "kiro": "File Save", "opencode": "file.edited"},
+
+	// Kiro-exclusive events
+	"file_created": {"kiro": "File Create"},
+	"file_deleted": {"kiro": "File Delete"},
+	"before_task":  {"kiro": "Pre Task Execution"},
+	"after_task":   {"kiro": "Post Task Execution"},
+
+	// Windsurf-exclusive events
+	"transcript_export": {"windsurf": "post_cascade_response_with_transcript"},
+
+	// Pi-exclusive events (no other provider maps to these)
+	"turn_start":     {"pi": "turn_start"},
+	"turn_end":       {"pi": "turn_end"},
+	"model_select":   {"pi": "model_select"},
+	"user_bash":      {"pi": "user_bash"},
+	"context_update": {"pi": "context"},
+	"message_start":  {"pi": "message_start"},
+	"message_end":    {"pi": "message_end"},
 }
 
 // TranslateTool translates a single canonical tool name to the target provider.
@@ -216,11 +256,33 @@ func IsValidHookEvent(event string) bool {
 }
 
 // ReverseTranslateHookEvent finds the canonical event name from a provider-specific one.
+// When multiple canonical events map to the same provider-native name (e.g., Copilot's
+// "errorOccurred" maps to both error_occurred and tool_use_failure), applies a
+// deterministic tiebreaker: prefers "error_occurred" over "tool_use_failure".
 func ReverseTranslateHookEvent(event, sourceSlug string) string {
+	var first string
 	for canonical, m := range HookEvents {
 		if provName, ok := m[sourceSlug]; ok && provName == event {
-			return canonical
+			if first == "" {
+				first = canonical
+				continue
+			}
+			// Multiple matches — apply tiebreaker: prefer error_occurred
+			if canonical == "error_occurred" {
+				return canonical
+			}
+			if first == "error_occurred" {
+				return first
+			}
+			// Generic tiebreaker: pick lexicographically smaller for determinism
+			if canonical < first {
+				return canonical
+			}
+			return first
 		}
+	}
+	if first != "" {
+		return first
 	}
 	return event
 }
@@ -338,7 +400,7 @@ func TranslateMCPToolName(name, sourceSlug, targetSlug string) string {
 	}
 
 	switch targetSlug {
-	case "claude-code", "kiro":
+	case "claude-code", "kiro", "factory-droid":
 		return "mcp__" + server + "__" + tool
 	case "gemini-cli":
 		return "mcp_" + server + "_" + tool
@@ -357,7 +419,7 @@ func TranslateMCPToolName(name, sourceSlug, targetSlug string) string {
 // Providers group into four parsing patterns by separator format.
 func parseMCPToolName(name, sourceSlug string) (server, tool string) {
 	switch sourceSlug {
-	case "claude-code", "kiro":
+	case "claude-code", "kiro", "factory-droid":
 		// mcp__server__tool
 		if !strings.HasPrefix(name, "mcp__") {
 			return "", ""

@@ -190,3 +190,35 @@ func TestDefaultLogPath(t *testing.T) {
 		t.Errorf("DefaultLogPath: got %q, want %q", got, want)
 	}
 }
+
+func TestLogger_SignalTrace(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	l := NewLoggerWriter(&buf)
+	err := l.Log(Event{
+		EventType:               EventContentSignalClassify,
+		ItemName:                "redteam",
+		ItemType:                "skills",
+		ContentSignalFile:       "Packs/redteam/SKILL.md",
+		ContentSignalConfidence: 0.65,
+		ContentSignalBucket:     "confirm",
+		ContentSignalSource:     "content-signal",
+		ContentSignalStaticSignals: []SignalTrace{
+			{Signal: "filename_SKILL.md", Weight: 0.25},
+			{Signal: "directory_keyword_pack", Weight: 0.10},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Log error: %v", err)
+	}
+	line := buf.String()
+	if !strings.Contains(line, `"event_type":"content-signal.classify"`) {
+		t.Errorf("missing event_type in: %s", line)
+	}
+	if !strings.Contains(line, `"filename_SKILL.md"`) {
+		t.Errorf("missing signal name in: %s", line)
+	}
+	if !strings.Contains(line, `"confidence":0.65`) {
+		t.Errorf("missing confidence in: %s", line)
+	}
+}

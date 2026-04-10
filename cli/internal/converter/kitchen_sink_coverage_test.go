@@ -4,21 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"testing"
 )
-
-// repoRoot returns the syllago repo root relative to this test file.
-// The test lives at cli/internal/converter/, so the repo root is three
-// directories up: converter -> internal -> cli -> syllago.
-func repoRoot(t *testing.T) string {
-	t.Helper()
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller failed")
-	}
-	return filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
-}
 
 // assertAllFieldsPopulated uses reflection to verify that every exported
 // field of v is non-zero. Fields listed in skipFields are excluded —
@@ -44,8 +31,7 @@ func assertAllFieldsPopulated(t *testing.T, v any, skipFields ...string) {
 }
 
 func TestKitchenSinkSkillCoverage(t *testing.T) {
-	root := repoRoot(t)
-	path := filepath.Join(root, "content", "skills", "example-kitchen-sink-skill", "SKILL.md")
+	path := filepath.Join("testdata", "kitchen-sink-skill.md")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading kitchen-sink skill: %v", err)
@@ -66,8 +52,7 @@ func TestKitchenSinkSkillCoverage(t *testing.T) {
 }
 
 func TestKitchenSinkAgentCoverage(t *testing.T) {
-	root := repoRoot(t)
-	path := filepath.Join(root, "content", "agents", "example-kitchen-sink-agent", "AGENT.md")
+	path := filepath.Join("testdata", "kitchen-sink-agent.md")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading kitchen-sink agent: %v", err)
@@ -86,8 +71,7 @@ func TestKitchenSinkAgentCoverage(t *testing.T) {
 }
 
 func TestKitchenSinkRuleCoverage(t *testing.T) {
-	root := repoRoot(t)
-	path := filepath.Join(root, "content", "rules", "cursor", "example-kitchen-sink-rules", "rule.mdc")
+	path := filepath.Join("testdata", "kitchen-sink-rule.mdc")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading kitchen-sink rule: %v", err)
@@ -106,8 +90,7 @@ func TestKitchenSinkRuleCoverage(t *testing.T) {
 }
 
 func TestKitchenSinkCommandCoverage(t *testing.T) {
-	root := repoRoot(t)
-	path := filepath.Join(root, "content", "commands", "claude-code", "example-kitchen-sink-commands", "command.md")
+	path := filepath.Join("testdata", "kitchen-sink-command.md")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading kitchen-sink command: %v", err)

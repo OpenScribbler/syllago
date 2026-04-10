@@ -36,15 +36,6 @@ func TestTranslateTool(t *testing.T) {
 		{"search to Zed", "search", "zed", "grep"},
 		{"web_search to Zed", "web_search", "zed", "web_search"},
 		{"agent to Zed", "agent", "zed", "spawn_agent"},
-		// Cline
-		{"file_read to Cline", "file_read", "cline", "read_file"},
-		{"file_write to Cline", "file_write", "cline", "write_to_file"},
-		{"file_edit to Cline", "file_edit", "cline", "replace_in_file"},
-		{"shell to Cline", "shell", "cline", "execute_command"},
-		{"find to Cline", "find", "cline", "list_files"},
-		{"search to Cline", "search", "cline", "search_files"},
-		{"web_search to Cline (no mapping)", "web_search", "cline", "web_search"},
-		{"agent to Cline (no mapping)", "agent", "cline", "agent"},
 		// Roo Code
 		{"file_read to RooCode", "file_read", "roo-code", "read_file"},
 		{"file_write to RooCode", "file_write", "roo-code", "write_to_file"},
@@ -96,7 +87,6 @@ func TestTranslateTool(t *testing.T) {
 		{"web_fetch to Kiro", "web_fetch", "kiro", "web_fetch"},
 		{"web_fetch to OpenCode", "web_fetch", "opencode", "webfetch"},
 		{"web_fetch to Zed", "web_fetch", "zed", "fetch"},
-		{"web_fetch to Cline (no mapping)", "web_fetch", "cline", "web_fetch"},
 		{"web_fetch to RooCode (no mapping)", "web_fetch", "roo-code", "web_fetch"},
 		{"web_fetch to Cursor (no mapping)", "web_fetch", "cursor", "web_fetch"},
 		{"web_fetch to Codex (no mapping)", "web_fetch", "codex", "web_fetch"},
@@ -106,7 +96,6 @@ func TestTranslateTool(t *testing.T) {
 		{"list_dir to Gemini (no mapping)", "list_dir", "gemini-cli", "list_dir"},
 		{"notebook_read to Gemini (no mapping)", "notebook_read", "gemini-cli", "notebook_read"},
 		{"kill_shell to Gemini (no mapping)", "kill_shell", "gemini-cli", "kill_shell"},
-		{"multi_edit to Cline (no mapping)", "multi_edit", "cline", "multi_edit"},
 		{"list_dir to Cursor (no mapping)", "list_dir", "cursor", "list_dir"},
 		{"notebook_read to Windsurf (no mapping)", "notebook_read", "windsurf", "notebook_read"},
 		{"kill_shell to Codex (no mapping)", "kill_shell", "codex", "kill_shell"},
@@ -156,15 +145,6 @@ func TestTranslateHookEvent(t *testing.T) {
 		{"agent_stop to Gemini", "agent_stop", "gemini-cli", "AfterAgent", true},
 		{"subagent_start (no targets except CC)", "subagent_start", "gemini-cli", "subagent_start", false},
 		{"Unknown event", "FakeEvent", "gemini-cli", "FakeEvent", false},
-		// Cline hook events
-		{"before_tool_execute to Cline", "before_tool_execute", "cline", "PreToolUse", true},
-		{"after_tool_execute to Cline", "after_tool_execute", "cline", "PostToolUse", true},
-		{"session_start to Cline", "session_start", "cline", "TaskStart", true},
-		{"session_end to Cline", "session_end", "cline", "TaskComplete", true},
-		{"before_compact to Cline", "before_compact", "cline", "PreCompact", true},
-		// Cline-only events
-		{"task_resume to Cline", "task_resume", "cline", "TaskResume", true},
-		{"task_cancel to Cline", "task_cancel", "cline", "TaskCancel", true},
 		// Copilot new events
 		{"subagent_stop to Copilot", "subagent_stop", "copilot-cli", "subagentStop", true},
 		{"error_occurred to Copilot", "error_occurred", "copilot-cli", "errorOccurred", true},
@@ -177,13 +157,41 @@ func TestTranslateHookEvent(t *testing.T) {
 		{"after_model to Copilot (unsupported)", "after_model", "copilot-cli", "after_model", false},
 		{"before_tool_selection to Copilot (unsupported)", "before_tool_selection", "copilot-cli", "before_tool_selection", false},
 		{"before_model to Kiro (unsupported)", "before_model", "kiro", "before_model", false},
-		{"after_model to Cline (unsupported)", "after_model", "cline", "after_model", false},
 		// CC-only events have no targets except CC
-		{"after_tool_failure (CC-only) to Gemini", "after_tool_failure", "gemini-cli", "after_tool_failure", false},
-		{"elicitation (CC-only) to Cline", "elicitation", "cline", "elicitation", false},
 		// CC-only events translate to CC
-		{"after_tool_failure to CC", "after_tool_failure", "claude-code", "PostToolUseFailure", true},
 		{"elicitation to CC", "elicitation", "claude-code", "Elicitation", true},
+		// tool_use_failure (renamed from after_tool_failure)
+		{"tool_use_failure to CC", "tool_use_failure", "claude-code", "PostToolUseFailure", true},
+		{"tool_use_failure to Cursor", "tool_use_failure", "cursor", "postToolUseFailure", true},
+		{"tool_use_failure to Copilot", "tool_use_failure", "copilot-cli", "errorOccurred", true},
+		{"tool_use_failure to Gemini (unsupported)", "tool_use_failure", "gemini-cli", "tool_use_failure", false},
+		// Windsurf events
+		{"session_start to Windsurf", "session_start", "windsurf", "session_start", true},
+		{"session_end to Windsurf", "session_end", "windsurf", "session_end", true},
+		{"before_prompt to Windsurf", "before_prompt", "windsurf", "pre_user_prompt", true},
+		{"agent_stop to Windsurf", "agent_stop", "windsurf", "post_cascade_response", true},
+		// Opencode events
+		{"before_tool_execute to Opencode", "before_tool_execute", "opencode", "tool.execute.before", true},
+		{"after_tool_execute to Opencode", "after_tool_execute", "opencode", "tool.execute.after", true},
+		{"session_start to Opencode", "session_start", "opencode", "session.created", true},
+		{"agent_stop to Opencode", "agent_stop", "opencode", "session.idle", true},
+		{"error_occurred to Opencode", "error_occurred", "opencode", "session.error", true},
+		{"permission_request to Opencode", "permission_request", "opencode", "permission.asked", true},
+		// Cursor extended events
+		{"subagent_start to Cursor", "subagent_start", "cursor", "SubagentStart", true},
+		{"subagent_stop to Cursor", "subagent_stop", "cursor", "SubagentStop", true},
+		{"before_model to Cursor", "before_model", "cursor", "beforeAgentResponse", true},
+		{"after_model to Cursor", "after_model", "cursor", "afterAgentResponse", true},
+		{"before_tool_selection to Cursor", "before_tool_selection", "cursor", "beforeToolSelection", true},
+		// New events
+		{"file_changed to CC", "file_changed", "claude-code", "FileChanged", true},
+		{"file_changed to Cursor", "file_changed", "cursor", "afterFileEdit", true},
+		{"file_changed to Kiro", "file_changed", "kiro", "File Save", true},
+		{"file_changed to Opencode", "file_changed", "opencode", "file.edited", true},
+		{"file_created to Kiro", "file_created", "kiro", "File Create", true},
+		{"file_deleted to Kiro", "file_deleted", "kiro", "File Delete", true},
+		{"before_task to Kiro", "before_task", "kiro", "Pre Task Execution", true},
+		{"after_task to Kiro", "after_task", "kiro", "Post Task Execution", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -208,18 +216,27 @@ func TestReverseTranslateHookEvent(t *testing.T) {
 		{"CC PreToolUse", "PreToolUse", "claude-code", "before_tool_execute"},
 		{"CC Stop", "Stop", "claude-code", "agent_stop"},
 		{"Unknown event", "FakeEvent", "gemini-cli", "FakeEvent"},
-		// Cline events
-		{"Cline TaskStart", "TaskStart", "cline", "session_start"},
-		{"Cline TaskComplete", "TaskComplete", "cline", "session_end"},
-		{"Cline TaskResume", "TaskResume", "cline", "task_resume"},
 		// Copilot new events
 		{"Copilot subagentStop", "subagentStop", "copilot-cli", "subagent_stop"},
 		{"Copilot agentStop", "agentStop", "copilot-cli", "agent_stop"},
-		{"Copilot errorOccurred", "errorOccurred", "copilot-cli", "error_occurred"},
+		// Note: errorOccurred maps to both error_occurred and tool_use_failure;
+		// test moved to TestReverseTranslateHookEvent_CopilotAmbiguous below.
 		// Gemini-only events
 		{"Gemini BeforeModel", "BeforeModel", "gemini-cli", "before_model"},
 		{"Gemini AfterModel", "AfterModel", "gemini-cli", "after_model"},
 		{"Gemini BeforeToolSelection", "BeforeToolSelection", "gemini-cli", "before_tool_selection"},
+		// Opencode reverse
+		{"Opencode tool.execute.before", "tool.execute.before", "opencode", "before_tool_execute"},
+		{"Opencode session.created", "session.created", "opencode", "session_start"},
+		// Windsurf reverse
+		{"Windsurf pre_user_prompt", "pre_user_prompt", "windsurf", "before_prompt"},
+		{"Windsurf post_cascade_response", "post_cascade_response", "windsurf", "agent_stop"},
+		// Cursor extended reverse
+		{"Cursor beforeAgentResponse", "beforeAgentResponse", "cursor", "before_model"},
+		{"Cursor afterAgentResponse", "afterAgentResponse", "cursor", "after_model"},
+		// Kiro new events reverse
+		{"Kiro File Save", "File Save", "kiro", "file_changed"},
+		{"Kiro File Create", "File Create", "kiro", "file_created"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -227,6 +244,13 @@ func TestReverseTranslateHookEvent(t *testing.T) {
 			assertEqual(t, tt.want, got)
 		})
 	}
+}
+
+func TestReverseTranslateHookEvent_CopilotAmbiguous(t *testing.T) {
+	// Copilot's "errorOccurred" maps to both error_occurred and tool_use_failure.
+	// Deterministic tiebreaker: prefer error_occurred.
+	got := ReverseTranslateHookEvent("errorOccurred", "copilot-cli")
+	assertEqual(t, "error_occurred", got)
 }
 
 func TestReverseTranslateTool(t *testing.T) {
@@ -341,13 +365,6 @@ func TestReverseTranslateTool_NewProviders(t *testing.T) {
 		{"OpenCode grep", "grep", "opencode", "search"},
 		{"OpenCode websearch", "websearch", "opencode", "web_search"},
 		{"OpenCode task", "task", "opencode", "agent"},
-		// Cline
-		{"Cline read_file", "read_file", "cline", "file_read"},
-		{"Cline write_to_file", "write_to_file", "cline", "file_write"},
-		{"Cline replace_in_file", "replace_in_file", "cline", "file_edit"},
-		{"Cline execute_command", "execute_command", "cline", "shell"},
-		{"Cline list_files", "list_files", "cline", "find"},
-		{"Cline search_files", "search_files", "cline", "search"},
 		// Roo Code
 		{"RooCode read_file", "read_file", "roo-code", "file_read"},
 		{"RooCode write_to_file", "write_to_file", "roo-code", "file_write"},
@@ -399,7 +416,6 @@ func TestReverseTranslateTool_NewProviders(t *testing.T) {
 		{"Kiro use_subagent", "use_subagent", "kiro", "agent"},
 		// Unknown tools pass through
 		{"Unknown OpenCode", "unknown_tool", "opencode", "unknown_tool"},
-		{"Unknown Cline", "unknown_tool", "cline", "unknown_tool"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -502,8 +518,13 @@ func TestIsValidHookEvent(t *testing.T) {
 		{"UserPromptSubmit", true},
 		{"Stop", true},
 		{"SessionStart", true},
-		{"TaskStart", true},  // Cline
-		{"TaskResume", true}, // Cline
+		// New events and provider-native names
+		{"file_changed", true},
+		{"file_created", true},
+		{"tool_use_failure", true},
+		{"tool.execute.before", true}, // Opencode
+		{"pre_user_prompt", true},     // Windsurf
+		{"File Save", true},           // Kiro
 		// Invalid names
 		{"", false},
 		{"FakeEvent", false},
@@ -567,6 +588,211 @@ func TestTranslateMCPToolName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := TranslateMCPToolName(tt.tool, tt.source, tt.target)
+			assertEqual(t, tt.want, got)
+		})
+	}
+}
+
+func TestTranslateHookEvent_VSCodeCopilot(t *testing.T) {
+	tests := []struct {
+		canonical     string
+		wantNative    string
+		wantSupported bool
+	}{
+		{"before_tool_execute", "PreToolUse", true},
+		{"after_tool_execute", "PostToolUse", true},
+		{"session_start", "SessionStart", true},
+		{"before_prompt", "UserPromptSubmit", true},
+		{"agent_stop", "Stop", true},
+		{"before_compact", "PreCompact", true},
+		{"subagent_start", "SubagentStart", true},
+		{"subagent_stop", "SubagentStop", true},
+		{"before_model", "before_model", false}, // not supported
+	}
+	for _, tt := range tests {
+		t.Run(tt.canonical, func(t *testing.T) {
+			got, supported := TranslateHookEvent(tt.canonical, "vs-code-copilot")
+			assertEqual(t, tt.wantNative, got)
+			if supported != tt.wantSupported {
+				t.Errorf("supported: got %v, want %v", supported, tt.wantSupported)
+			}
+		})
+	}
+}
+
+func TestToolmap_FactoryDroidEntries(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ canonical, native string }{
+		{"shell", "Execute"},
+		{"file_write", "Create"},
+		{"file_edit", "Edit"},
+		{"file_read", "Read"},
+		{"agent", "Task"},
+		{"find", "Glob"},
+		{"search", "Grep"},
+		{"web_search", "WebSearch"},
+		{"web_fetch", "FetchUrl"},
+	}
+	for _, c := range cases {
+		t.Run(c.canonical, func(t *testing.T) {
+			got := TranslateTool(c.canonical, "factory-droid")
+			if got != c.native {
+				t.Errorf("TranslateTool(%q, factory-droid) = %q, want %q", c.canonical, got, c.native)
+			}
+			back := ReverseTranslateTool(c.native, "factory-droid")
+			if back != c.canonical {
+				t.Errorf("ReverseTranslateTool(%q, factory-droid) = %q, want %q", c.native, back, c.canonical)
+			}
+		})
+	}
+}
+
+func TestToolmap_PiEntries(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ canonical, native string }{
+		{"shell", "bash"},
+		{"file_read", "read"},
+		{"file_write", "write"},
+		{"file_edit", "edit"},
+		{"search", "grep"},
+		{"find", "find"},
+	}
+	for _, c := range cases {
+		t.Run(c.canonical, func(t *testing.T) {
+			got := TranslateTool(c.canonical, "pi")
+			if got != c.native {
+				t.Errorf("TranslateTool(%q, pi) = %q, want %q", c.canonical, got, c.native)
+			}
+			back := ReverseTranslateTool(c.native, "pi")
+			if back != c.canonical {
+				t.Errorf("ReverseTranslateTool(%q, pi) = %q, want %q", c.native, back, c.canonical)
+			}
+		})
+	}
+}
+
+func TestToolmap_PiListTool(t *testing.T) {
+	t.Parallel()
+	// Pi has a unique "list" canonical tool that maps to "ls"
+	got := TranslateTool("list", "pi")
+	if got != "ls" {
+		t.Errorf("TranslateTool(list, pi) = %q, want ls", got)
+	}
+	back := ReverseTranslateTool("ls", "pi")
+	if back != "list" {
+		t.Errorf("ReverseTranslateTool(ls, pi) = %q, want list", back)
+	}
+}
+
+func TestToolmap_FactoryDroidEvents(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ canonical, native string }{
+		{"before_tool_execute", "PreToolUse"},
+		{"after_tool_execute", "PostToolUse"},
+		{"before_prompt", "UserPromptSubmit"},
+		{"agent_stop", "Stop"},
+		{"session_start", "SessionStart"},
+		{"session_end", "SessionEnd"},
+		{"before_compact", "PreCompact"},
+		{"subagent_start", "SubagentStart"},
+		{"subagent_stop", "SubagentStop"},
+	}
+	for _, c := range cases {
+		t.Run(c.canonical, func(t *testing.T) {
+			got, ok := TranslateHookEvent(c.canonical, "factory-droid")
+			if !ok || got != c.native {
+				t.Errorf("TranslateHookEvent(%q, factory-droid) = %q/%v, want %q/true", c.canonical, got, ok, c.native)
+			}
+		})
+	}
+}
+
+func TestToolmap_PiEvents(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ canonical, native string }{
+		{"before_tool_execute", "tool_call"},
+		{"after_tool_execute", "tool_result"},
+		{"session_start", "session_start"},
+		{"session_end", "session_shutdown"},
+		{"before_prompt", "input"},
+		{"agent_stop", "agent_end"},
+		{"before_compact", "session_before_compact"},
+		{"subagent_start", "before_agent_start"},
+		// Pi-specific canonical events
+		{"turn_start", "turn_start"},
+		{"turn_end", "turn_end"},
+		{"model_select", "model_select"},
+		{"user_bash", "user_bash"},
+		{"context_update", "context"},
+		{"message_start", "message_start"},
+		{"message_end", "message_end"},
+	}
+	for _, c := range cases {
+		t.Run(c.canonical, func(t *testing.T) {
+			got, ok := TranslateHookEvent(c.canonical, "pi")
+			if !ok || got != c.native {
+				t.Errorf("TranslateHookEvent(%q, pi) = %q/%v, want %q/true", c.canonical, got, ok, c.native)
+			}
+		})
+	}
+}
+
+func TestToolmap_WindsurfSplitEventsAbsent(t *testing.T) {
+	// before_tool_execute and after_tool_execute must NOT have windsurf entries
+	// (Windsurf uses split-event logic in its adapter, not direct toolmap entries)
+	t.Parallel()
+	for _, canonical := range []string{"before_tool_execute", "after_tool_execute"} {
+		_, ok := TranslateHookEvent(canonical, "windsurf")
+		if ok {
+			t.Errorf("windsurf must not have a toolmap entry for %q (uses split-event logic)", canonical)
+		}
+	}
+}
+
+func TestToolmap_WindsurfSpecificEvents(t *testing.T) {
+	t.Parallel()
+	// Windsurf-specific events
+	got, ok := TranslateHookEvent("worktree_create", "windsurf")
+	if !ok || got != "post_setup_worktree" {
+		t.Errorf("TranslateHookEvent(worktree_create, windsurf) = %q/%v, want post_setup_worktree/true", got, ok)
+	}
+	got, ok = TranslateHookEvent("transcript_export", "windsurf")
+	if !ok || got != "post_cascade_response_with_transcript" {
+		t.Errorf("TranslateHookEvent(transcript_export, windsurf) = %q/%v, want post_cascade_response_with_transcript/true", got, ok)
+	}
+}
+
+func TestToolmap_FactoryDroidMCP(t *testing.T) {
+	t.Parallel()
+	// Factory Droid uses the same mcp__server__tool format as CC
+	got := TranslateMCPToolName("mcp__github__search_repos", "factory-droid", "claude-code")
+	if got != "mcp__github__search_repos" {
+		t.Errorf("Factory Droid to CC: got %q, want mcp__github__search_repos", got)
+	}
+	got = TranslateMCPToolName("mcp__github__search_repos", "claude-code", "factory-droid")
+	if got != "mcp__github__search_repos" {
+		t.Errorf("CC to Factory Droid: got %q, want mcp__github__search_repos", got)
+	}
+}
+
+func TestTranslateTool_VSCodeCopilot(t *testing.T) {
+	tests := []struct {
+		canonical string
+		want      string
+	}{
+		{"file_read", "Read"},
+		{"file_write", "Write"},
+		{"file_edit", "Edit"},
+		{"shell", "Bash"},
+		{"find", "Glob"},
+		{"search", "Grep"},
+		{"web_search", "WebSearch"},
+		{"web_fetch", "WebFetch"},
+		{"agent", "Agent"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.canonical, func(t *testing.T) {
+			got := TranslateTool(tt.canonical, "vs-code-copilot")
 			assertEqual(t, tt.want, got)
 		})
 	}

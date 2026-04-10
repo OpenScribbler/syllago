@@ -60,6 +60,9 @@ func (m confirmModal) confirmIdx() int { return len(m.checks) + 1 }
 // focusCount returns the total number of focusable elements.
 func (m confirmModal) focusCount() int { return len(m.checks) + 2 }
 
+// isButtonFocus returns true if the current focus is on a button (not a checkbox).
+func (m confirmModal) isButtonFocus() bool { return m.focusIdx >= m.cancelIdx() }
+
 // Open activates the modal with the given parameters. Default focus on Cancel (safe default).
 func (m *confirmModal) Open(title, body, confirmLabel string, danger bool, checks []confirmCheckbox) {
 	m.active = true
@@ -161,6 +164,23 @@ func (m confirmModal) updateKey(msg tea.KeyMsg) (confirmModal, tea.Cmd) {
 		if m.focusIdx > 0 {
 			m.focusIdx--
 		}
+
+	case msg.Type == tea.KeyLeft || (msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'h'):
+		if m.isButtonFocus() {
+			if m.focusIdx == m.cancelIdx() {
+				m.focusIdx = m.confirmIdx() // wrap to last button
+			} else {
+				m.focusIdx--
+			}
+		}
+	case msg.Type == tea.KeyRight || (msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'l'):
+		if m.isButtonFocus() {
+			if m.focusIdx == m.confirmIdx() {
+				m.focusIdx = m.cancelIdx() // wrap to first button
+			} else {
+				m.focusIdx++
+			}
+		}
 	}
 	return m, nil
 }
@@ -194,16 +214,16 @@ func (m confirmModal) View() string {
 		return ""
 	}
 
-	modalW := min(50, m.width-10)
-	if modalW < 30 {
-		modalW = 30
+	modalW := min(54, m.width-10)
+	if modalW < 34 {
+		modalW = 34
 	}
 	contentW := modalW - borderSize
 	usableW := contentW - 2
 	pad := " "
 
-	// Title
-	titleText := lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(m.title)
+	// Title — constrained to prevent wrapping past modal border
+	titleText := lipgloss.NewStyle().Bold(true).Foreground(primaryText).MaxWidth(usableW).Render(m.title)
 	title := pad + titleText
 
 	// Body

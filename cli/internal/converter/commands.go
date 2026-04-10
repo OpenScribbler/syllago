@@ -13,6 +13,11 @@ import (
 
 func init() {
 	Register(&CommandsConverter{})
+	RegisterFrontmatter(catalog.Commands, "claude-code", CommandMeta{})
+	RegisterFrontmatter(catalog.Commands, "copilot-cli", vscodeCopilotCommandMeta{})
+	RegisterFrontmatter(catalog.Commands, "codex", codexCommandMeta{})
+	RegisterFrontmatter(catalog.Commands, "opencode", opencodeCommandMeta{})
+	RegisterFrontmatter(catalog.Commands, "gemini-cli", geminiCommand{})
 }
 
 // CommandMeta is the canonical command metadata (YAML frontmatter fields).

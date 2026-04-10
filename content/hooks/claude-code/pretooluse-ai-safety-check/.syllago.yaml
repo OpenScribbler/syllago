@@ -1,6 +1,0 @@
-name: pretooluse-ai-safety-check
-description: Example LLM hook that evaluates tool invocations for safety
-hidden: true
-tags:
-  - builtin
-  - example

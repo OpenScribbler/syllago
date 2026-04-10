@@ -1,0 +1,99 @@
+# Crush — Provider Source Manifest
+# Good source: public Go repo with JSON Schema. No hooks, no commands. Skills via Agent Skills standard.
+
+schema_version: "1" # Manifest format version — bump when the schema changes
+last_verified: "2026-03-30" # When URLs and data were last confirmed accurate
+provider_version: "" # Provider version at time of last verification (not pinned)
+
+slug: crush
+display_name: Crush
+vendor: Charmbracelet
+status: active # active | archived | beta
+fetch_tier: gh-api # gh-api | llms-txt | html-scrape
+repo: charmbracelet/crush
+repo_branch: main
+
+# How to detect when this provider's content has changed
+change_detection:
+  method: github-releases # github-releases | github-commits | content-hash
+  endpoint: https://api.github.com/repos/charmbracelet/crush/releases/latest
+
+changelog:
+  - url: https://github.com/charmbracelet/crush/releases
+    label: GitHub releases
+
+# Primary config schema — covers MCP, tools, permissions, models in one file
+config_schema:
+  url: https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json
+  format: json-schema # json-schema | zod | rust-schemars | go-struct | none
+  draft: "" # Draft version not specified in schema
+
+content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Crush supports: rules, skills, mcp
+  # Not supported: hooks (issue #2038 open, not implemented), agents (no user-definable agent format), commands (no command system)
+  # Syllago: not yet implemented in syllago Go provider code (crush is a future/planned provider)
+  #   No hooks yet — see charmbracelet/crush#2038.
+  # ─────────────────────────────────────────────────────────────────────
+
+  # --- Rules / Instructions ---
+  # Crush uses AGENTS.md only. No provider-specific rules format.
+  rules:
+    sources:
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/AGENTS.md
+        type: example # schema | source-code | docs | example
+        format: markdown
+        extracts: [file_format, file_locations]
+    # Format: standard AGENTS.md (cross-provider markdown, no frontmatter).
+    # Location: project root only. No global user rules file.
+    # No .crushrules or .crush/rules/ equivalent.
+
+  # --- Hooks ---
+  # Not supported. internal/event/ is PostHog telemetry only.
+  hooks:
+    supported: false
+    # Plugin proposal: https://github.com/charmbracelet/crush/issues/2038 (open, not implemented)
+
+  # --- MCP ---
+  # Configured via crush.json "mcp" key. Supports stdio, http, sse transports.
+  mcp:
+    sources:
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json
+        type: schema
+        format: json-schema
+        json_path: "$.properties.mcp"
+        extracts: [server_config_fields, transport_types]
+
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/README.md
+        type: docs
+        format: markdown
+        extracts: [config_examples, setup_examples]
+    # Transports: stdio, http, sse
+    # Config file: crush.json "mcp" key (project or global)
+
+  # --- Skills ---
+  # Implements Agent Skills open standard (https://agentskills.io).
+  skills:
+    sources:
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/skills.go
+        type: source-code
+        format: go
+        extracts: [frontmatter_fields, file_format, constraints]
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/builtin/crush-config/SKILL.md
+        type: example
+        format: markdown
+        extracts: [frontmatter_fields, config_examples]
+    # Format: SKILL.md with YAML frontmatter (name required, description required,
+    #   license optional, compatibility optional, metadata map optional).
+    # Dirs: .crush/skills/, .agents/skills/ (project), ~/.config/crush/skills/ (user).
+    # Also discovers .claude/skills/ and .cursor/skills/ for cross-provider compat.
+
+  # --- Agents ---
+  # No user-definable agent format. Two-model (large/small) architecture is fixed.
+  agents:
+    supported: false
+
+  # --- Commands ---
+  # No slash-command or custom command system.
+  commands:
+    supported: false

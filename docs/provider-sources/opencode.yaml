@@ -1,0 +1,109 @@
+# OpenCode / Crush — Provider Source Manifest
+# Good sources: both repos have root-level JSON Schema. OpenCode is archived, Crush is the active successor.
+
+schema_version: "1"
+last_verified: "2026-03-27"
+provider_version: "v0.53.0" # Crush version. OpenCode final: v0.0.55
+
+slug: opencode
+display_name: OpenCode
+vendor: Charm (originally opencode-ai)
+status: archived
+fetch_tier: gh-api
+repo: opencode-ai/opencode
+repo_branch: main
+
+successor:
+  slug: crush
+  display_name: Crush
+  repo: charmbracelet/crush
+  repo_branch: main
+  status: active
+  # Crush has auto-updated schema.json via CI workflow (.github/workflows/schema-update.yml)
+  # Schema also hosted at https://charm.land/crush.json
+
+change_detection:
+  method: github-releases
+  endpoint: https://api.github.com/repos/charmbracelet/crush/releases/latest
+  # Track the successor for active changes. OpenCode is frozen.
+
+changelog:
+  - url: https://github.com/charmbracelet/crush/releases
+    label: Crush GitHub Releases
+
+config_schema:
+  url: https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json
+  format: json-schema
+  draft: "2020-12"
+  # Config file: crush.json (no leading dot). OpenCode used .opencode.json.
+  # Also available at: https://charm.land/crush.json
+
+content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # OpenCode supports: rules (via contextPaths config), agents (4 built-in, not
+  #   user-definable), commands, mcp
+  # Not supported: hooks (no hook system), skills (no native format; syllago can
+  #   install via cross-provider convention)
+  # Syllago: rules ✓, skills ✓ (cross-provider convention), agents ✓, commands ✓,
+  #   mcp ✓ | hooks ✗
+  # Note: OpenCode has no native skill format — syllago uses cross-provider SKILL.md
+  #   convention. 'agents' are 4 built-in types (coder/summarizer/task/title), not
+  #   user-definable. Crush fork adds slightly different MCP config format.
+  # ─────────────────────────────────────────────────────────────────────
+
+  rules:
+    sources:
+      - url: https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/prompt/prompt.go
+        type: source-code
+        format: go
+        extracts: [file_locations, hierarchy, discovery_rules]
+
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/internal/config/config.go
+        type: source-code
+        format: go
+        extracts: [file_locations, hierarchy]
+    # No dedicated rules system. Uses contextPaths config — list of files auto-loaded into prompt.
+    # OpenCode defaults: .github/copilot-instructions.md, .cursorrules, CLAUDE.md, opencode.md, etc.
+    # Crush expands to add: GEMINI.md, crush.md, AGENTS.md.
+
+  hooks:
+    supported: false
+    # No hook system in either OpenCode or Crush.
+
+  mcp:
+    sources:
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json
+        type: schema
+        format: json-schema
+        json_path: "$.properties.mcp"
+        extracts: [server_config_fields, transport_types]
+
+      - url: https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/agent/mcp-tools.go
+        type: source-code
+        format: go
+        extracts: [server_config_fields]
+    # OpenCode: command, args[], env[] (string array), type (stdio/sse), url, headers.
+    # Crush adds: http type, disabled, disabled_tools[], timeout, env changed to map[string]string.
+
+  skills:
+    supported: false
+    # No native skill format in OpenCode or Crush. Syllago installs cross-provider
+    # SKILL.md files here, but there is no provider documentation to monitor.
+
+  agents:
+    sources:
+      - url: https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/agent/agent.go
+        type: source-code
+        format: go
+        extracts: [config_fields]
+    # 4 built-in agents (not user-definable): coder, summarizer, task, title.
+    # Configured via config.Agent struct (model, maxTokens, reasoningEffort).
+
+  commands:
+    sources:
+      - url: https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/tui/components/dialog/custom_commands.go
+        type: source-code
+        format: go
+        extracts: [file_format, file_locations, features]
+    # Markdown files in $XDG_CONFIG_HOME/opencode/commands/ (user:) or .opencode/commands/ (project:).
+    # Supports named arguments ($ISSUE_NUMBER, $AUTHOR_NAME).

@@ -689,6 +689,121 @@ func TestDiscoverItemsAtPath_SingleFile_EmptySourceDir(t *testing.T) {
 	}
 }
 
+func TestWriteItem_StripsMaliciousAnalyzerFields(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	// Create source dir with a malicious .syllago.yaml
+	srcDir := filepath.Join(dir, "src", "rules", "evil-rule")
+	os.MkdirAll(srcDir, 0755)
+	os.WriteFile(filepath.Join(srcDir, "rule.md"), []byte("# Rule"), 0644)
+	// Malicious metadata with attacker-set confidence
+	os.WriteFile(filepath.Join(srcDir, metadata.FileName), []byte(
+		"id: evil\nname: evil-rule\nconfidence: 0.99\ndetection_method: user-directed\n"), 0644)
+
+	destDir := filepath.Join(dir, "content")
+	item := DiscoveryItem{
+		Name:      "evil-rule",
+		Type:      catalog.Rules,
+		Path:      filepath.Join(srcDir, "rule.md"),
+		SourceDir: srcDir,
+		Status:    StatusNew,
+		// No Confidence set on the item itself — no legitimate detection
+	}
+	result := writeItem(item, AddOptions{}, destDir, nil, "syllago-test")
+	if result.Status == AddStatusError {
+		t.Fatalf("writeItem error: %v", result.Error)
+	}
+
+	destItemDir := filepath.Join(destDir, "rules", "evil-rule")
+	m, err := metadata.Load(destItemDir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if m.Confidence != 0 {
+		t.Errorf("Confidence should be stripped, got %v", m.Confidence)
+	}
+	if m.DetectionMethod != "" {
+		t.Errorf("DetectionMethod should be stripped, got %q", m.DetectionMethod)
+	}
+}
+
+func TestAddItems_PersistsConfidenceMetadata(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	contentDir := filepath.Join(dir, "content")
+	srcDir := filepath.Join(dir, "src", "rules", "my-rule")
+	os.MkdirAll(srcDir, 0755)
+	os.WriteFile(filepath.Join(srcDir, "rule.md"), []byte("# My Rule\nContent here."), 0644)
+
+	item := DiscoveryItem{
+		Name:            "my-rule",
+		Type:            catalog.Rules,
+		Path:            filepath.Join(srcDir, "rule.md"),
+		SourceDir:       srcDir,
+		Status:          StatusNew,
+		Confidence:      0.75,
+		DetectionSource: "content-signal",
+		DetectionMethod: "automatic",
+	}
+
+	results := AddItems([]DiscoveryItem{item}, AddOptions{}, contentDir, nil, "syllago-test")
+	if results[0].Status == AddStatusError {
+		t.Fatalf("AddItems error: %v", results[0].Error)
+	}
+
+	destDir := filepath.Join(contentDir, "rules", "my-rule")
+	m, err := metadata.Load(destDir)
+	if err != nil {
+		t.Fatalf("Load metadata: %v", err)
+	}
+	if m.Confidence != 0.75 {
+		t.Errorf("Confidence: got %v, want 0.75", m.Confidence)
+	}
+	if m.DetectionSource != "content-signal" {
+		t.Errorf("DetectionSource: got %q, want content-signal", m.DetectionSource)
+	}
+	if m.DetectionMethod != "automatic" {
+		t.Errorf("DetectionMethod: got %q, want automatic", m.DetectionMethod)
+	}
+}
+
+func TestWriteItem_StripsAllAnalyzerFields(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "src", "rules", "evil")
+	os.MkdirAll(srcDir, 0755)
+	os.WriteFile(filepath.Join(srcDir, "rule.md"), []byte("# Evil"), 0644)
+	os.WriteFile(filepath.Join(srcDir, metadata.FileName), []byte(
+		"id: evil\nname: evil\nconfidence: 0.99\ndetection_source: content-signal\ndetection_method: user-directed\n"), 0644)
+
+	destDir := filepath.Join(dir, "content")
+	item := DiscoveryItem{
+		Name:      "evil",
+		Type:      catalog.Rules,
+		Path:      filepath.Join(srcDir, "rule.md"),
+		SourceDir: srcDir,
+		Status:    StatusNew,
+	}
+	result := writeItem(item, AddOptions{}, destDir, nil, "syllago-test")
+	if result.Status == AddStatusError {
+		t.Fatalf("writeItem error: %v", result.Error)
+	}
+
+	m, err := metadata.Load(filepath.Join(destDir, "rules", "evil"))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if m.Confidence != 0 {
+		t.Errorf("Confidence should be 0, got %v", m.Confidence)
+	}
+	if m.DetectionSource != "" {
+		t.Errorf("DetectionSource should be empty, got %q", m.DetectionSource)
+	}
+	if m.DetectionMethod != "" {
+		t.Errorf("DetectionMethod should be empty, got %q", m.DetectionMethod)
+	}
+}
+
 // helpers
 
 func nowPtr() *time.Time {

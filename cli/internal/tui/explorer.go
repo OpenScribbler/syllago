@@ -58,6 +58,10 @@ type explorerModel struct {
 	// The item currently being viewed in detail
 	detailItem *catalog.ContentItem
 
+	// Search
+	searching   bool
+	searchQuery string
+
 	// Responsive: at narrow widths, show stacked layout
 	stacked bool // true when width < 80
 }
@@ -136,6 +140,8 @@ func (e explorerModel) detailTreeWidth() int {
 // SetItems replaces the item list, reloads preview, and returns to browse mode.
 func (e *explorerModel) SetItems(items []catalog.ContentItem, mixed bool) {
 	e.items.SetItems(items, mixed)
+	e.searching = false
+	e.searchQuery = ""
 	e.mode = explorerBrowse
 	e.detailItem = nil
 	e.setFocus(paneItems)
@@ -166,6 +172,11 @@ func (e explorerModel) Update(msg tea.Msg) (explorerModel, tea.Cmd) {
 
 // updateBrowseKeys handles keys in browse mode (items + preview).
 func (e explorerModel) updateBrowseKeys(msg tea.KeyMsg) (explorerModel, tea.Cmd) {
+	// When actively searching, route most keys to the search input
+	if e.searching {
+		return e.updateSearch(msg)
+	}
+
 	switch msg.String() {
 	// h/l and arrow keys switch pane focus
 	case keyLeft, "left":
@@ -180,8 +191,18 @@ func (e explorerModel) updateBrowseKeys(msg tea.KeyMsg) (explorerModel, tea.Cmd)
 		return e, nil
 
 	case keySearch:
-		// TODO: Phase 3.5 — open search input overlay
+		e.searching = true
+		e.searchQuery = ""
 		return e, nil
+
+	case "esc":
+		if e.searchQuery != "" {
+			e.searching = false
+			e.searchQuery = ""
+			e.items.ClearSearch()
+			e.preview.LoadItem(e.items.Selected())
+			return e, e.itemSelectedCmd()
+		}
 	}
 
 	switch e.focus {
@@ -189,6 +210,38 @@ func (e explorerModel) updateBrowseKeys(msg tea.KeyMsg) (explorerModel, tea.Cmd)
 		return e.updateItems(msg)
 	case panePreview:
 		return e.updatePreview(msg)
+	}
+	return e, nil
+}
+
+// updateSearch handles keys when the search input is active.
+func (e explorerModel) updateSearch(msg tea.KeyMsg) (explorerModel, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		e.searching = false
+		e.searchQuery = ""
+		e.items.ClearSearch()
+		e.preview.LoadItem(e.items.Selected())
+		return e, e.itemSelectedCmd()
+	case tea.KeyEnter:
+		e.searching = false
+		// searchQuery stays applied
+		return e, nil
+	case tea.KeyBackspace:
+		if len(e.searchQuery) > 0 {
+			runes := []rune(e.searchQuery)
+			e.searchQuery = string(runes[:len(runes)-1])
+			e.items.ApplySearch(e.searchQuery)
+			e.preview.LoadItem(e.items.Selected())
+		}
+		return e, nil
+	case tea.KeyRunes:
+		for _, r := range msg.Runes {
+			e.searchQuery += string(r)
+		}
+		e.items.ApplySearch(e.searchQuery)
+		e.preview.LoadItem(e.items.Selected())
+		return e, nil
 	}
 	return e, nil
 }
@@ -274,9 +327,18 @@ func (e explorerModel) updateMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 // updateBrowseMouse handles mouse events in browse mode.
 func (e explorerModel) updateBrowseMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
-		// Edit button click
+		// Metadata bar button clicks
+		if zone.Get("meta-install").InBounds(msg) {
+			return e, func() tea.Msg { return libraryInstallMsg{} }
+		}
 		if zone.Get("meta-edit").InBounds(msg) {
 			return e, func() tea.Msg { return libraryEditMsg{} }
+		}
+		if zone.Get("meta-remove").InBounds(msg) {
+			return e, func() tea.Msg { return libraryRemoveMsg{} }
+		}
+		if zone.Get("meta-uninstall").InBounds(msg) {
+			return e, func() tea.Msg { return libraryUninstallMsg{} }
 		}
 
 		// Click on a specific item row — select it
@@ -344,9 +406,18 @@ func (e explorerModel) updateBrowseMouse(msg tea.MouseMsg) (explorerModel, tea.C
 // updateDetailMouse handles mouse events in detail mode.
 func (e explorerModel) updateDetailMouse(msg tea.MouseMsg) (explorerModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
-		// Edit button click
+		// Metadata bar button clicks
+		if zone.Get("meta-install").InBounds(msg) {
+			return e, func() tea.Msg { return libraryInstallMsg{} }
+		}
 		if zone.Get("meta-edit").InBounds(msg) {
 			return e, func() tea.Msg { return libraryEditMsg{} }
+		}
+		if zone.Get("meta-remove").InBounds(msg) {
+			return e, func() tea.Msg { return libraryRemoveMsg{} }
+		}
+		if zone.Get("meta-uninstall").InBounds(msg) {
+			return e, func() tea.Msg { return libraryUninstallMsg{} }
 		}
 
 		// Close button click
@@ -491,7 +562,7 @@ func (e *explorerModel) loadSelectedFile() {
 	}
 	e.preview.fileName = path
 	e.preview.offset = 0
-	content, err := catalog.ReadFileContent(e.detailItem.Path, path, 500)
+	content, err := catalog.ReadFileContent(e.detailItem.Path, path, 10000)
 	if err != nil {
 		e.preview.lines = []string{"Error reading file:", err.Error()}
 		return
@@ -530,6 +601,59 @@ func (e explorerModel) View() string {
 	}
 }
 
+// searchBarHeight returns 1 if the search bar is visible, 0 otherwise.
+func (e explorerModel) searchBarHeight() int {
+	if e.searching || e.searchQuery != "" {
+		return 1
+	}
+	return 0
+}
+
+// renderSearchBar renders the explorer search input bar (same style as library).
+func (e explorerModel) renderSearchBar(width int) string {
+	prompt := "/ "
+	query := e.searchQuery
+	cursor := ""
+	if e.searching {
+		cursor = "█"
+	}
+
+	matchInfo := ""
+	if e.searchQuery != "" {
+		matchInfo = fmt.Sprintf("  (%d/%d)", len(e.items.items), len(e.items.allItems))
+	}
+
+	hints := ""
+	if e.searching {
+		hints = "  esc cancel · enter confirm"
+	} else {
+		hints = "  / edit · esc clear"
+	}
+
+	rightText := matchInfo + hints
+	rightRendered := mutedStyle.Render(rightText)
+	rightW := lipgloss.Width(rightRendered)
+
+	fieldW := max(10, width-rightW-1)
+	fieldContent := prompt + query + cursor
+
+	bg := inputActiveBG
+	if !e.searching {
+		bg = inputInactiveBG
+	}
+	fieldContent = truncateLine(fieldContent, fieldW)
+	fieldStyle := lipgloss.NewStyle().
+		Background(bg).
+		Foreground(primaryText).
+		MaxWidth(fieldW)
+	field := fieldStyle.Render(fieldContent)
+	if gap := fieldW - lipgloss.Width(field); gap > 0 {
+		field = lipgloss.NewStyle().Background(bg).Render(field + strings.Repeat(" ", gap))
+	}
+
+	return field + " " + rightRendered
+}
+
 // viewSideBySide renders a unified frame: metadata + ├──┬──┤ + items│preview.
 func (e explorerModel) viewSideBySide() string {
 	innerW := e.width - borderSize
@@ -538,14 +662,24 @@ func (e explorerModel) viewSideBySide() string {
 	previewInnerW := max(0, innerW-itemsInnerW-1)
 	paneH := max(3, e.height-borderSize-metaBarLines-1)
 
+	// Adjust items height for search bar
+	searchH := e.searchBarHeight()
+	itemsH := max(1, paneH-searchH)
+	e.items.SetSize(itemsInnerW, itemsH)
+
 	// Compute metadata for selected item
 	metaContent := e.renderMetadataContent(innerW)
 
 	// Build separator with T-junction
 	separator := sectionRuleStyle.Render("├" + strings.Repeat("─", itemsInnerW) + "┬" + strings.Repeat("─", previewInnerW) + "┤")
 
-	// Get pane content
-	itemsLines := strings.Split(e.items.View(), "\n")
+	// Get pane content — prepend search bar to items if active
+	var itemsContentLines []string
+	if searchH > 0 {
+		itemsContentLines = append(itemsContentLines, e.renderSearchBar(itemsInnerW))
+	}
+	itemsContentLines = append(itemsContentLines, strings.Split(e.items.View(), "\n")...)
+	itemsLines := itemsContentLines
 	previewLines := strings.Split(e.preview.View(), "\n")
 	for len(itemsLines) < paneH {
 		itemsLines = append(itemsLines, strings.Repeat(" ", itemsInnerW))
@@ -754,9 +888,19 @@ func (e explorerModel) viewStacked() string {
 
 	metaContent := e.renderMetadataContent(innerW)
 
-	paneContent := e.items.View()
+	var paneContent string
 	if e.focus == panePreview {
 		paneContent = e.preview.View()
+	} else {
+		searchH := e.searchBarHeight()
+		itemsH := max(1, paneH-searchH)
+		e.items.SetSize(innerW, itemsH)
+		var lines []string
+		if searchH > 0 {
+			lines = append(lines, e.renderSearchBar(innerW))
+		}
+		lines = append(lines, strings.Split(e.items.View(), "\n")...)
+		paneContent = strings.Join(lines, "\n")
 	}
 	paneLines := strings.Split(paneContent, "\n")
 	for len(paneLines) < paneH {

@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-06-agent-stop
+type: hooks
+description: "Benchmark: validates agent_stop event fires"
+hook:
+  event: agent_stop
+  blocking: false
+  command: ./hb-06.sh

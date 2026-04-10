@@ -1,0 +1,44 @@
+{
+  "$schema": "handoff-v2",
+  "name": "moat-spec-issues-6-7-analysis-in-progress-owasp",
+  "createdAt": "2026-04-07T15:00:00.000Z",
+  "current": {
+    "claimedBy": null,
+    "project": "moat",
+    "updated": "2026-04-07T15:00:00.000Z",
+    "sessionId": null,
+    "summary": "MOAT spec issues 6-7 analysis in progress; OWASP alignment cross-check initiated",
+    "activeWork": {
+      "description": "Analyzing tradeoffs for MOAT spec open questions: Q1 (scan_status naming: unknown vs not_scanned), Q2 (risk_tier classification structure). Cross-validating against OWASP standards (AST, ASI, LLM, Web App, API, CI/CD guidelines).",
+      "feature": null,
+      "stage": "planning",
+      "planRef": null,
+      "designRef": "/home/hhewett/.local/src/moat/panel/6-7-tradeoffs.md",
+      "progress": "Reviewed 6-7-tradeoffs.md for naming and classification guidance. Began structured analysis of Q1 (scan_status internal consistency) with table-driven comparison. OWASP alignment cross-check framework established. Need to finalize both questions and update moat-revised-outline.md.",
+      "blockers": [],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 0,
+      "lastCommit": "bd sync: 2026-04-06 16:17:37",
+      "modifiedFiles": []
+    },
+    "recentDecisions": [
+      "scan_status and risk_tier require internal consistency analysis across field definitions",
+      "OWASP alignment needed for 7 standards frameworks",
+      "Issue #8 (revocation mechanisms) queued as next priority"
+    ],
+    "nextSteps": [
+      "Complete Q1 analysis: validate scan_status naming consistency (not_scanned vs clean vs finding)",
+      "Complete Q2 analysis: finalize risk_tier classification structure against OWASP",
+      "Document OWASP coverage gaps identified (e.g., CIDC-SEC-8 ungoverned federation trust)",
+      "Update moat-revised-outline.md with resolved decisions",
+      "Queue issue #8 (revocation mechanisms) for execution"
+    ],
+    "context": {
+      "notes": "Reference document: /home/hhewett/.local/src/moat/panel/6-7-tradeoffs.md contains detailed tradeoff analysis. MOAT spec active refinement. Issue #6 and #7 decisions in progress. Revocation (issue #8) identified as next blocker to resolve."
+    }
+  },
+  "previousSessions": []
+}

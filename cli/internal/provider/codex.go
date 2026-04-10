@@ -59,8 +59,8 @@ var Codex = Provider{
 		switch ct {
 		case catalog.Agents:
 			return FormatTOML
-		case catalog.Skills:
-			return FormatMarkdown
+		case catalog.MCP:
+			return FormatTOML // Codex MCP config lives in .codex/config.toml
 		case catalog.Hooks:
 			return FormatJSON
 		default:
@@ -84,4 +84,10 @@ var Codex = Provider{
 		catalog.Agents:   true,
 		catalog.Skills:   true,
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.Hooks: ".codex/hooks.json",
+		catalog.MCP:   ".codex/config.toml",
+	},
+	MCPTransports: []string{"stdio"},
+	HookTypes:     []string{"command"},
 }

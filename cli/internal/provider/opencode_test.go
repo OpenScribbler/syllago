@@ -58,6 +58,17 @@ func TestOpenCodeDiscoveryPaths(t *testing.T) {
 		t.Errorf("expected second path /project/CLAUDE.md, got %v", paths[1])
 	}
 
+	paths = OpenCode.DiscoveryPaths("/project", catalog.Skills)
+	if len(paths) != 2 {
+		t.Fatalf("expected 2 Skills discovery paths, got %d: %v", len(paths), paths)
+	}
+	if paths[0] != filepath.Join("/project", ".opencode", "skills") {
+		t.Errorf("expected first Skills path .opencode/skills, got %v", paths[0])
+	}
+	if paths[1] != filepath.Join("/project", ".agents", "skills") {
+		t.Errorf("expected second Skills path .agents/skills, got %v", paths[1])
+	}
+
 	paths = OpenCode.DiscoveryPaths("/project", catalog.MCP)
 	if len(paths) != 2 {
 		t.Fatalf("expected 2 MCP discovery paths, got %d", len(paths))

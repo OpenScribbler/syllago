@@ -465,10 +465,85 @@ func TestConfirmModal_DownUpNavigation(t *testing.T) {
 		t.Errorf("expected 3, got %d", m.focusIdx)
 	}
 
-	// Up to first checkbox (0)
+	// Up to first checkbox (0), clamped
 	m.focusIdx = 0
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
 	if m.focusIdx != 0 {
 		t.Errorf("expected 0 (clamped), got %d", m.focusIdx)
+	}
+}
+
+func TestConfirmModal_TitleTruncated(t *testing.T) {
+	m := newConfirmModal()
+	longName := "this-is-a-very-long-item-name-that-should-get-truncated-by-the-modal"
+	m.Open("Remove \""+longName+"\"?", "body", "Remove", true, nil)
+	m.width = 60
+	m.height = 20
+
+	view := m.View()
+	stripped := ansi.Strip(view)
+	lines := strings.Split(stripped, "\n")
+
+	if len(lines) < 3 {
+		t.Fatalf("expected at least 3 lines, got %d", len(lines))
+	}
+	borderW := len([]rune(lines[0]))
+	for i, line := range lines {
+		runeW := len([]rune(line))
+		if runeW != borderW {
+			t.Errorf("line %d width %d differs from border width %d (title may be wrapping): %q", i, runeW, borderW, line)
+		}
+	}
+}
+
+func TestConfirmModal_LeftRightBetweenButtons(t *testing.T) {
+	m := newConfirmModal()
+	m.Open("Test", "body", "OK", false, testChecks())
+
+	// Focus on Cancel (3), Right → Confirm (4)
+	m.focusIdx = m.cancelIdx() // 3
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	if m.focusIdx != m.confirmIdx() {
+		t.Errorf("Right from Cancel: expected %d, got %d", m.confirmIdx(), m.focusIdx)
+	}
+
+	// Left from Confirm → Cancel
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	if m.focusIdx != m.cancelIdx() {
+		t.Errorf("Left from Confirm: expected %d, got %d", m.cancelIdx(), m.focusIdx)
+	}
+}
+
+func TestConfirmModal_LeftRightWraps(t *testing.T) {
+	m := newConfirmModal()
+	m.Open("Test", "body", "OK", false, testChecks())
+
+	// Right from Confirm (last button) → wraps to Cancel (first button)
+	m.focusIdx = m.confirmIdx()
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	if m.focusIdx != m.cancelIdx() {
+		t.Errorf("Right wrap: expected %d, got %d", m.cancelIdx(), m.focusIdx)
+	}
+
+	// Left from Cancel (first button) → wraps to Confirm (last button)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	if m.focusIdx != m.confirmIdx() {
+		t.Errorf("Left wrap: expected %d, got %d", m.confirmIdx(), m.focusIdx)
+	}
+}
+
+func TestConfirmModal_LeftRightNoOpOnCheckbox(t *testing.T) {
+	m := newConfirmModal()
+	m.Open("Test", "body", "OK", false, testChecks())
+
+	// Focus on first checkbox (0), Left/Right should do nothing
+	m.focusIdx = 0
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	if m.focusIdx != 0 {
+		t.Errorf("Left on checkbox: expected 0, got %d", m.focusIdx)
+	}
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
+	if m.focusIdx != 0 {
+		t.Errorf("Right on checkbox: expected 0, got %d", m.focusIdx)
 	}
 }

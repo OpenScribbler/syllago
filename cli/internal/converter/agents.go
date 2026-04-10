@@ -12,6 +12,13 @@ import (
 
 func init() {
 	Register(&AgentsConverter{})
+	RegisterFrontmatter(catalog.Agents, "claude-code", AgentMeta{})
+	RegisterFrontmatter(catalog.Agents, "cursor", cursorAgentMeta{})
+	RegisterFrontmatter(catalog.Agents, "gemini-cli", geminiAgentMeta{})
+	RegisterFrontmatter(catalog.Agents, "copilot-cli", copilotAgentMeta{})
+	RegisterFrontmatter(catalog.Agents, "opencode", opencodeAgentMeta{})
+	RegisterFrontmatter(catalog.Agents, "kiro", kiroAgentMeta{})
+	RegisterFrontmatter(catalog.Agents, "roo-code", rooCodeMode{})
 }
 
 // AgentMeta is the canonical agent metadata (YAML frontmatter, superset of all providers).

@@ -1,0 +1,1 @@
+{"hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": "echo init", "env": {"AUDIT_LOG": "/tmp/audit.log"}}]}]}}

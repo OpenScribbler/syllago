@@ -1,0 +1,181 @@
+# Security Considerations
+
+This document describes the threat model, attack surface, and security recommendations for implementations of the [Hook Interchange Format Specification](hooks.md).
+
+---
+
+## 1. Threat Model
+
+Hooks execute arbitrary code on a developer's machine with the privileges of the AI coding tool. The primary threat is **remote code execution (RCE) via malicious hooks** distributed through registries, repositories, or shared configurations.
+
+### 1.1 Threat Actors
+
+| Actor | Capability | Goal |
+|-------|-----------|------|
+| Malicious hook author | Publishes hooks to public registries | Execute arbitrary code on victim machines |
+| Compromised registry | Serves modified hook packages | Supply chain attack against downstream users |
+| Repository contributor | Commits hooks to shared repositories | Lateral movement within a team or organization |
+| Man-in-the-middle | Intercepts hook distribution | Tamper with hook scripts during transit |
+
+### 1.2 Historical Context
+
+In February 2026, hooks in AI coding tools were identified as an RCE vector (CVE details vary by provider). This demonstrated that hook distribution without provenance controls is an active, exploited attack surface.
+
+### 1.3 Cross-Provider Amplification
+
+The hub-and-spoke conversion model is a force multiplier for supply chain attacks. A single malicious hook, once converted to canonical format, can be deployed to all supported providers simultaneously. A compromised hook in a community registry could propagate across Claude Code, Gemini CLI, Cursor, Windsurf, and other providers in a single conversion operation. Distribution mechanisms (registries, package managers) MUST account for this amplification when designing integrity and review controls.
+
+---
+
+## 2. Attack Surface
+
+### 2.1 Scripts Are the Attack Surface, Not Manifests
+
+The canonical hook manifest (`hook.json`) is a JSON document that declares event bindings, matchers, and handler configuration. **The manifest itself is not dangerous.** The danger lies in the scripts and commands that the manifest references.
+
+A manifest that declares `"command": "./check.sh"` is metadata. The file `check.sh` is the executable payload. Security analysis MUST focus on script content, not manifest structure.
+
+### 2.2 Provider Data Validation
+
+The `provider_data` field is opaque to the canonical format. Each provider adapter MUST validate its own section during encode. Specifically:
+
+- Adapters MUST NOT blindly copy `provider_data` values into provider-native fields that have security implications (e.g., permission overrides, URL endpoints, file paths outside the project directory).
+- Adapters SHOULD validate that `provider_data` values conform to the expected schema for the target provider.
+- Adapters MUST NOT execute or evaluate values from `provider_data` without validation.
+
+A malicious manifest could include `provider_data` designed to exploit a specific adapter's parsing logic. Adapters MUST treat `provider_data` as untrusted input.
+
+### 2.3 Input Rewrite as a Privileged Capability
+
+The `input_rewrite` capability allows a hook to modify tool arguments before execution. This is a **safety-critical** operation:
+
+- A hook that sanitizes shell commands (removing `rm -rf /`, for example) provides security value **only if** the rewrite is actually applied.
+- If the target provider does not support input rewriting and the adapter silently drops the rewrite, the tool executes with the original (unsanitized) arguments. The user believes they are protected when they are not.
+
+For this reason, the specification mandates `block` as the default degradation strategy for `input_rewrite`. Implementations MUST NOT silently degrade input rewriting to a no-op.
+
+### 2.4 HTTP Handlers
+
+Hooks with `type: "http"` send request data to external endpoints. This creates additional attack vectors:
+
+- **Data exfiltration:** A malicious hook can POST session data, file contents, or conversation transcripts to an attacker-controlled server.
+- **SSRF (Server-Side Request Forgery):** If the hook runs in an environment with access to internal networks, the URL endpoint could target internal services.
+- **Credential leakage:** HTTP handlers that interpolate environment variables into headers (e.g., `Authorization: Bearer $TOKEN`) may leak secrets if the URL is attacker-controlled.
+
+Implementations MUST:
+- Restrict HTTP handler URLs to HTTPS. There is no legitimate reason for a hook to send data over plaintext HTTP.
+- Display the target URL to the user before executing HTTP hooks for the first time.
+
+Implementations SHOULD:
+- Warn when environment variables are interpolated into HTTP headers.
+
+### 2.5 LLM-Evaluated Hooks
+
+Hooks with `type: "prompt"` or `type: "agent"` delegate logic to an LLM. These hooks:
+
+- Consume API credits or tokens, creating a denial-of-wallet attack vector.
+- May produce non-deterministic results, making security auditing difficult.
+- Can be influenced by prompt injection if the hook's prompt incorporates untrusted input (e.g., file contents, tool arguments).
+
+Implementations SHOULD clearly indicate when a hook uses LLM evaluation and the associated cost implications.
+
+### 2.6 Generated Bridge Plugins
+
+When converting hooks to providers that use a programmatic plugin model (e.g., OpenCode), the adapter generates code (typically TypeScript). Generated code inherits the trust level of the source hook but adds a new attack surface:
+
+- **Code injection:** If the source hook's command string or arguments are interpolated into generated code without escaping, an attacker can inject arbitrary code.
+- **Dependency confusion:** Generated plugins that import packages could be targeted by dependency confusion attacks.
+
+Adapters that generate code MUST:
+- Escape all interpolated values.
+- Not import external dependencies unless explicitly required.
+- Clearly mark generated code as machine-generated.
+
+---
+
+## 3. Content Integrity
+
+### 3.1 Per-File Hashes
+
+Hook distribution packages SHOULD include SHA-256 hashes for every file in the hook directory. This enables integrity verification before execution:
+
+```json
+{
+  "content_hashes": {
+    "check.sh": "sha256:a1b2c3d4e5f6...",
+    "check.ps1": "sha256:f6e5d4c3b2a1...",
+    "lib/helpers.sh": "sha256:1a2b3c4d5e6f..."
+  }
+}
+```
+
+Implementations SHOULD verify file hashes before hook execution when hashes are available.
+
+### 3.2 Signatures (Future)
+
+The canonical format does not currently define a `signatures` field. A future version of the specification or a companion signing specification may add cryptographic signature support. Implementations MAY support signing mechanisms outside the scope of this spec, such as:
+
+- Sigstore/cosign for keyless signing with identity verification
+- GPG/PGP signatures for traditional key-based signing
+- Other mechanisms appropriate to their ecosystem
+
+### 3.3 Author Metadata (Future)
+
+The canonical format does not currently define author identity fields. A future version may add optional author metadata. Until then, implementations that track authorship SHOULD do so outside the hook manifest (e.g., in registry metadata or package manifests).
+
+Author metadata, when present in any form, is self-reported and MUST NOT be treated as verified identity without independent verification (e.g., Sigstore identity binding, GPG key verification).
+
+---
+
+## 4. Additional Threat Vectors
+
+### 4.1 Prompt Injection via Hook Output
+
+Hooks that return `context` or `system_message` fields inject text into the AI agent's conversation or system prompt. A malicious hook bound to `session_start` could inject adversarial instructions that influence agent behavior for the entire session. Implementations SHOULD treat hook-injected context with the same caution as any untrusted input to the agent's prompt.
+
+### 4.2 Transitive Prompt Injection via LLM-Evaluated Hooks
+
+Hooks with `type: "prompt"` or `type: "agent"` process event data that may include content from untrusted sources. For example, an `after_tool_execute` hook evaluating the output of a file read may encounter attacker-controlled content (e.g., a malicious README in a cloned repository). This creates a transitive prompt injection vector where the attacker influences the hook's LLM evaluation indirectly. Hook authors using LLM evaluation SHOULD sanitize or constrain the input data passed to the LLM.
+
+### 4.3 Async Execution and Observability
+
+Hooks with `async: true` run fire-and-forget: the calling tool does not wait for completion or check exit codes. This makes async hooks suitable for background exfiltration, persistent processes, or operations that leave no visible trace in the tool's output. Implementations SHOULD log async hook launches with the same detail as synchronous hooks, and SHOULD enforce timeouts on async hooks to prevent indefinite background processes.
+
+### 4.4 Policy File Integrity
+
+Policy files (when implemented per the [policy interface](policy-interface.md)) are read from the filesystem at multiple scopes (system, organization, user, project). A malicious contributor could commit a project-level policy file that weakens protections. Higher-scope policies take precedence, which mitigates this when they exist, but organizations that rely solely on project-level policies are vulnerable. Implementations SHOULD warn when project-level policy files are detected in repositories and SHOULD NOT allow project-level policies to weaken restrictions set at higher scopes.
+
+---
+
+## 5. Recommendations for Implementations
+
+### 5.1 Installation Prompts
+
+Implementations SHOULD prompt the user before installing hooks, displaying:
+- The hook's event bindings and blocking behavior
+- The commands or scripts that will be executed
+- Any capabilities that grant elevated privileges (especially `input_rewrite`)
+- The source of the hook (registry, repository, local file)
+
+### 5.2 Script Scanning
+
+Implementations SHOULD provide a mechanism for integrating external security scanning tools. A pluggable scanner interface allows organizations to apply their own SAST/DAST tools to hook scripts before installation.
+
+The specification does not mandate specific scanning tools or rules. Pattern-based scanning of manifest `command` fields catches trivial threats; scanning actual script file contents is necessary for meaningful security analysis.
+
+### 5.3 Execution Sandboxing
+
+Implementations SHOULD consider executing hooks with reduced privileges where the operating system supports it. Hooks generally need read access to the project directory and network access for HTTP handlers, but rarely need write access outside the project or access to sensitive system paths.
+
+### 5.4 Audit Logging
+
+Implementations SHOULD log hook executions with sufficient detail for security auditing:
+- Timestamp
+- Hook identity (name, source)
+- Event that triggered the hook
+- Exit code
+- Whether the hook blocked an action
+
+### 5.5 Timeout Enforcement
+
+Implementations MUST enforce timeouts on hook execution. A hook that hangs indefinitely blocks the AI coding tool's operation. The recommended default timeout is 30 seconds. Implementations SHOULD terminate hook processes that exceed their timeout and treat the result as a non-blocking error (exit code 1).

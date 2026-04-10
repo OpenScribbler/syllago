@@ -1,0 +1,20 @@
+hooks:
+  PreToolUse:
+    description: Fires before any tool use
+    blocking: true
+  PostToolUse:
+    description: Fires after any tool use
+    blocking: false
+  Stop:
+    description: Fires when generation stops
+    blocking: false
+
+tools:
+  shell:
+    native: BashTool
+  file_read:
+    native: ReadTool
+  file_write:
+    native: WriteTool
+  file_edit:
+    native: EditTool

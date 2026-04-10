@@ -9,11 +9,13 @@ import (
 
 	"time"
 
+	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/gitutil"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -117,6 +119,19 @@ var registryAddCmd = &cobra.Command{
 
 		// Smart detection: check if this is a proper syllago registry.
 		dir, _ := registry.CloneDir(name)
+
+		// Decision #3: When no registry.yaml exists, run the content analyzer
+		// to generate one in the cache directory. This enables the scanner to
+		// discover content regardless of how the repo is organized.
+		if manifest, _ := registry.LoadManifestFromDir(dir); manifest == nil {
+			cfg := analyzer.DefaultConfig()
+			a := analyzer.New(cfg)
+			result, analyzeErr := a.Analyze(dir)
+			if analyzeErr == nil && len(result.AllItems()) > 0 {
+				_ = analyzer.WriteGeneratedManifest(name, result.AllItems())
+			}
+		}
+
 		scanResult := catalog.ScanNativeContent(dir)
 
 		if !scanResult.HasSyllagoStructure && len(scanResult.Providers) > 0 {
@@ -350,6 +365,8 @@ and "syllago install" to activate updated content.`,
 			return err
 		}
 
+		telemetry.Enrich("registry_count", len(cfg.Registries))
+
 		if len(cfg.Registries) == 0 {
 			fmt.Println("No registries configured.")
 			return nil
@@ -470,6 +487,9 @@ Use --type to filter by content type. To install registry content, use
 		} else {
 			items = cat.Items
 		}
+
+		telemetry.Enrich("content_type", typeFilter)
+		telemetry.Enrich("item_count", len(items))
 
 		if output.JSON {
 			output.Print(items)

@@ -64,4 +64,8 @@ var Zed = Provider{
 		catalog.Rules: true,
 		catalog.MCP:   false, // JSON merge
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.MCP: "~/.config/zed/settings.json",
+	},
+	MCPTransports: []string{"stdio"},
 }

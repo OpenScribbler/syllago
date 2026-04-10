@@ -10,6 +10,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -174,5 +175,6 @@ func runCreate(cmd *cobra.Command, args []string) error {
 	}
 
 	cmd.Printf("Created %s/%s at %s\n", ct, name, dest)
+	telemetry.Enrich("content_type", string(ct))
 	return nil
 }

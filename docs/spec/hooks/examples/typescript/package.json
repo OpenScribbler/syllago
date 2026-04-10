@@ -1,0 +1,20 @@
+{
+  "name": "hooks-interchange",
+  "version": "0.1.0",
+  "description": "Reference implementation for the Hook Interchange Format Specification (Core conformance)",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^4.1.3",
+    "@types/js-yaml": "^4.0.9"
+  }
+}

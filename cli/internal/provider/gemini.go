@@ -81,4 +81,16 @@ var GeminiCLI = Provider{
 		catalog.MCP:      false, // JSON merge
 		catalog.Hooks:    false, // JSON merge
 	},
+	GlobalSharedReadPaths: func(homeDir string, ct catalog.ContentType) []string {
+		if ct == catalog.Skills {
+			return []string{filepath.Join(homeDir, ".agents", "skills")}
+		}
+		return nil
+	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.Hooks: ".gemini/settings.json",
+		catalog.MCP:   ".gemini/settings.json",
+	},
+	MCPTransports: []string{"stdio", "sse"},
+	HookTypes:     []string{"command"},
 }

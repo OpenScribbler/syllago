@@ -70,4 +70,16 @@ var Windsurf = Provider{
 		catalog.Hooks:  false, // JSON merge
 		catalog.MCP:    false, // JSON merge
 	},
+	GlobalSharedReadPaths: func(homeDir string, ct catalog.ContentType) []string {
+		if ct == catalog.Skills {
+			return []string{filepath.Join(homeDir, ".agents", "skills")}
+		}
+		return nil
+	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.Hooks: ".windsurf/hooks.json",
+		catalog.MCP:   ".windsurf/mcp_config.json",
+	},
+	MCPTransports: []string{"stdio", "sse"},
+	HookTypes:     []string{"command"},
 }

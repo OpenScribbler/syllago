@@ -11,13 +11,14 @@ import (
 
 // fileTreeModel renders a navigable file tree for a content item's files.
 type fileTreeModel struct {
-	nodes    []fileNode // flat list of visible nodes
-	allNodes []fileNode // all nodes (including collapsed children)
-	cursor   int
-	offset   int
-	width    int
-	height   int
-	focused  bool
+	nodes      []fileNode // flat list of visible nodes
+	allNodes   []fileNode // all nodes (including collapsed children)
+	cursor     int
+	offset     int
+	width      int
+	height     int
+	focused    bool
+	nodeBadges map[string]string // optional: path -> badge text (e.g., "!!" for risk)
 }
 
 // fileNode represents a file or directory in the tree.
@@ -52,6 +53,24 @@ func (m fileTreeModel) SelectedPath() string {
 		return ""
 	}
 	return n.path
+}
+
+// SelectPath moves the cursor to the node matching the given relative path.
+// If not found, the cursor stays where it is.
+func (m *fileTreeModel) SelectPath(path string) {
+	for i, n := range m.nodes {
+		if n.path == path {
+			m.cursor = i
+			// Ensure visible
+			if m.cursor < m.offset {
+				m.offset = m.cursor
+			}
+			if m.height > 0 && m.cursor >= m.offset+m.height {
+				m.offset = m.cursor - m.height + 1
+			}
+			return
+		}
+	}
 }
 
 // CursorUp moves cursor up.
@@ -181,19 +200,50 @@ func (m fileTreeModel) renderNode(index int) string {
 		}
 	}
 
+	// Append risk badge if configured for this node's path
+	badge := ""
+	if m.nodeBadges != nil {
+		badge = m.nodeBadges[n.path]
+	}
+
 	text := indent + icon + n.name
 	maxW := m.width
-	if len(text) > maxW {
+	if badge != "" {
+		// Reserve space for the badge
+		badgeW := len(badge) + 1 // 1 for space separator
+		if len(text) > maxW-badgeW {
+			text = text[:max(0, maxW-badgeW)]
+		}
+	} else if len(text) > maxW {
 		text = text[:maxW]
 	}
 
 	var row string
 	if isCursor && m.focused {
-		row = selectedRowStyle.Width(m.width).Render(text)
+		if badge != "" {
+			// Render text and badge separately so badge gets danger color
+			textPart := selectedRowStyle.Render(text + " ")
+			badgePart := lipgloss.NewStyle().Bold(true).Background(selectedBG).Foreground(dangerColor).Render(badge)
+			combined := textPart + badgePart
+			// Pad to full width
+			combinedW := lipgloss.Width(combined)
+			if combinedW < m.width {
+				combined += selectedRowStyle.Render(strings.Repeat(" ", m.width-combinedW))
+			}
+			row = combined
+		} else {
+			row = selectedRowStyle.Width(m.width).Render(text)
+		}
 	} else if isCursor {
-		row = boldStyle.Width(m.width).Render(text)
+		if badge != "" {
+			row = boldStyle.Render(text+" ") + lipgloss.NewStyle().Bold(true).Foreground(dangerColor).Render(badge)
+		} else {
+			row = boldStyle.Width(m.width).Render(text)
+		}
 	} else if n.isDir {
 		row = lipgloss.NewStyle().Width(m.width).Foreground(primaryColor).Render(text)
+	} else if badge != "" {
+		row = lipgloss.NewStyle().Render(text+" ") + lipgloss.NewStyle().Foreground(dangerColor).Render(badge)
 	} else {
 		row = lipgloss.NewStyle().Width(m.width).Render(text)
 	}

@@ -1,0 +1,82 @@
+{
+  "$schema": "handoff-v2",
+  "name": "hooks-empirical-testing-framework-plan-validated",
+  "createdAt": "2026-03-31T16:12:55.323Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-03-31T16:12:55.323Z",
+    "sessionId": "e12675b4-9751-488c-b121-b1962216b1dd",
+    "summary": "Hooks empirical testing framework plan validated clean — all 28 checks, 27 canary phrases, 12 agents, 17 skills. Ready for implementation.",
+    "activeWork": {
+      "description": "Multi-pass validation of hooks behavior checklist plan. Session: fixed check count error (28 vs 36), recalculated automability math (22/4/1/1), verified all 27 canary phrases against actual files, confirmed template conformance. Final validation passed with zero blocking issues.",
+      "feature": null,
+      "stage": "complete",
+      "planRef": null,
+      "designRef": null,
+      "progress": "Plan COMPLETE and VALIDATED. Blocking issues: check count corrected (28), automability math fixed, all canary phrases verified. Non-blocking issues: Japanese prompt string noted, reactivation-deduplication intermediate step documented. Zero issues on final pass. Plan is production-ready.",
+      "blockers": [],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 299,
+      "lastCommit": "93e71fd bd sync: 2026-03-31 09:05:28",
+      "modifiedFiles": [
+        ".handoff.json",
+        ".syllago/installed.json",
+        "cli/go.mod",
+        "cli/go.sum",
+        "cli/internal/converter/adapter.go",
+        "cli/internal/converter/adapter_test.go",
+        "cli/internal/converter/toolmap.go",
+        "cli/internal/converter/toolmap_test.go",
+        "cli/internal/tui/actions.go",
+        "cli/internal/tui/add_wizard.go",
+        "cli/internal/tui/add_wizard_update.go",
+        "cli/internal/tui/add_wizard_view.go",
+        "cli/internal/tui/install.go",
+        "cli/internal/tui/install_test.go",
+        "cli/internal/tui/library.go",
+        "cli/internal/tui/metapanel.go",
+        "cli/internal/tui/preview.go"
+      ]
+    },
+    "recentDecisions": [
+      "Plan check count: 28 total (Categories 1-9), not 36 as initially stated",
+      "Automability: 22 fully automatable + 4 semi-automatable + 1 slow + 1 manual = 28 total",
+      "All 27 canary phrases verified against actual loading-behavior.md file content",
+      "Template conformance: status taxonomy (Observed/Inconclusive/Not tested), platform-vs-model per-check, platform details fields required",
+      "Dogfooding: running 17 skills across 12 agents validates syllabo's cross-provider install flow simultaneously",
+      "Contribution template requirements: all captured and integrated into plan"
+    ],
+    "nextSteps": [
+      "DECISION: Execute testing framework now (install 17 skills × 12 agents, run 28 checks with logging), OR commit artifacts and defer to next session",
+      "If executing: configure test logging for machine-readable pass/fail per check across all agents",
+      "If deferring: commit plan document(s) to version control and reference in next handoff",
+      "Optional: run abbreviated validation on subset of agents first (4-5 free tier) before full run"
+    ],
+    "context": {
+      "notes": "This plan is final and validated. The hooks empirical testing framework specification is complete and production-ready with zero outstanding issues. Validation included: check count verification against actual spec file, automability recalculation with corrected math, canary phrase verification (27/27 matched), and template conformance audit. The framework integrates syllabo dogfooding — running the benchmarks itself validates syllabo's core value prop (cross-provider content installation). Next session should either execute the framework or document the plan for later execution. If executing, ensure test environment has: (1) 12 target agents installed, (2) logging framework for 28 check results, (3) syllabo CLI + content libraries staged for import testing."
+    }
+  },
+  "previousSessions": [
+    {
+      "summary": "Designed hooks empirical testing framework: community checklist (modeled on agentskillimplementation.com/checks/), benchmark test scripts, and syllabo dogfood plan. Researched agent pricing — 8-10 agents testable for free.",
+      "updated": "2026-03-31T08:15:00-07:00",
+      "completedWork": [
+        "Research phase COMPLETE — all hooks behavior data validated against benchmark repo",
+        "Pricing research COMPLETE — 12 agents identified, 8-10 confirmed free tier testable",
+        "Framework structure finalized: 28 checks, 27 canary phrases, 12 agents, 17 skills",
+        "Plan document validated through 6 validation passes"
+      ],
+      "nextSteps": [
+        "✓ Draft hooks behavior checklist (28 checks across 9 categories)",
+        "✓ Design benchmark test hook scripts",
+        "✓ Design syllabo dogfood plan",
+        "✓ Multi-pass validation against benchmark repo + contribution template",
+        "→ Execute testing framework OR commit plan and defer execution"
+      ]
+    }
+  ]
+}

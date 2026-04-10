@@ -84,4 +84,14 @@ var RooCode = Provider{
 		catalog.Agents: true,
 		catalog.MCP:    false, // JSON merge
 	},
+	GlobalSharedReadPaths: func(homeDir string, ct catalog.ContentType) []string {
+		if ct == catalog.Skills {
+			return []string{filepath.Join(homeDir, ".agents", "skills")}
+		}
+		return nil
+	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.MCP: ".roo/mcp.json",
+	},
+	MCPTransports: []string{"stdio", "sse", "streamable-http"},
 }
