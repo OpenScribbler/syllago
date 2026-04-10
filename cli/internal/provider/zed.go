@@ -32,7 +32,11 @@ var Zed = Provider{
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {
 		case catalog.Rules:
-			return []string{filepath.Join(projectRoot, ".rules")}
+			return []string{
+				filepath.Join(projectRoot, ".rules"),
+				filepath.Join(projectRoot, ".cursorrules"),
+				filepath.Join(projectRoot, "CLAUDE.md"),
+			}
 		default:
 			return nil
 		}
@@ -60,4 +64,8 @@ var Zed = Provider{
 		catalog.Rules: true,
 		catalog.MCP:   false, // JSON merge
 	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.MCP: "~/.config/zed/settings.json",
+	},
+	MCPTransports: []string{"stdio"},
 }

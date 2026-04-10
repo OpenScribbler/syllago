@@ -15,7 +15,11 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
+	"github.com/tidwall/gjson"
 )
 
 var addCmd = &cobra.Command{
@@ -56,13 +60,19 @@ func init() {
 	addCmd.Flags().Bool("dry-run", false, "Show what would be written without actually writing")
 	// Hooks-specific flags — hidden from default help but still functional.
 	addCmd.Flags().StringArray("exclude", nil, "Skip hooks by auto-derived name (hooks only)")
-	addCmd.Flags().String("scope", "global", "Settings scope to read from: global, project, or all (hooks only)")
+	addCmd.Flags().String("scope", "all", "Settings scope to read from: global, project, or all (hooks/mcp only)")
 	if err := addCmd.Flags().MarkHidden("exclude"); err == nil {
 		_ = addCmd.Flags().MarkHidden("scope")
 	}
 	addCmd.Flags().BoolP("force", "f", false, "Overwrite existing item without prompting")
 	addCmd.Flags().String("base-dir", "", "Override base directory for content discovery")
 	addCmd.Flags().Bool("no-input", false, "Disable interactive prompts, use defaults")
+	addCmd.Flags().String("name", "", "Display name for hooks/MCP (stored in .syllago.yaml metadata)")
+	// Registry taint propagation — used by internal callers (TUI import, registry add).
+	addCmd.Flags().String("source-registry", "", "Registry name for taint tracking")
+	addCmd.Flags().String("source-visibility", "", "Source registry visibility (public, private, unknown)")
+	_ = addCmd.Flags().MarkHidden("source-registry")
+	_ = addCmd.Flags().MarkHidden("source-visibility")
 	rootCmd.AddCommand(addCmd)
 }
 
@@ -74,43 +84,69 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	fromSlug, _ := cmd.Flags().GetString("from")
 	if fromSlug == "" {
-		return fmt.Errorf("missing --from flag. Usage: syllago add [type] --from <provider>")
+		return output.NewStructuredError(output.ErrInputMissing, "missing --from flag", "Usage: syllago add [type] --from <provider>")
 	}
-	prov := findProviderBySlug(fromSlug)
-	if prov == nil {
-		slugs := providerSlugs()
-		output.PrintError(1, "unknown provider: "+fromSlug, "Available: "+strings.Join(slugs, ", "))
-		return fmt.Errorf("unknown provider: %s", fromSlug)
+
+	// Handle --from shared: add content from the project's shared content directory.
+	if fromSlug == "shared" {
+		addAll, _ := cmd.Flags().GetBool("all")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		force, _ := cmd.Flags().GetBool("force")
+		return runAddFromShared(root, args, addAll, dryRun, force)
 	}
 
 	addAll, _ := cmd.Flags().GetBool("all")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	force, _ := cmd.Flags().GetBool("force")
-	baseDir, _ := cmd.Flags().GetString("base-dir")
 
 	// --all and a positional target are mutually exclusive.
 	if addAll && len(args) > 0 {
-		return fmt.Errorf("cannot specify both a target and --all")
+		return output.NewStructuredError(output.ErrInputConflict, "cannot specify both a target and --all", "Use either a positional argument or --all, not both")
 	}
+
+	prov := findProviderBySlug(fromSlug)
+	if prov == nil {
+		// Not a provider slug — try as a registry name (short or full).
+		globalDir := catalog.GlobalContentDir()
+		if globalDir == "" {
+			return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
+		}
+		return runAddFromRegistry(root, args, fromSlug, addAll, dryRun, force, globalDir)
+	}
+
+	baseDir, _ := cmd.Flags().GetString("base-dir")
 
 	// Build resolver from merged config + CLI flag.
 	globalCfg, err := config.LoadGlobal()
 	if err != nil {
-		return fmt.Errorf("loading global config: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConfigInvalid, "loading global config", "Check ~/.syllago/config.json syntax", err.Error())
 	}
 	projectCfg, err := config.Load(root)
 	if err != nil {
-		return fmt.Errorf("loading project config: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConfigNotFound, "loading project config", "Run 'syllago init' to create project config", err.Error())
 	}
 	mergedCfg := config.Merge(globalCfg, projectCfg)
 	resolver := config.NewResolver(mergedCfg, baseDir)
 	if err := resolver.ExpandPaths(); err != nil {
-		return fmt.Errorf("expanding paths: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrConfigPath, "expanding paths", "Check path overrides in config", err.Error())
+	}
+
+	// Warn if the source provider is not detected on disk.
+	if !output.JSON && !output.Quiet {
+		detected := provider.DetectProvidersWithResolver(resolver)
+		for _, dp := range detected {
+			if dp.Slug == prov.Slug && !dp.Detected {
+				fmt.Fprintf(output.ErrWriter, "Warning: %s not detected at default locations.\n", prov.Name)
+				fmt.Fprintf(output.ErrWriter, "If installed at a custom path, configure it:\n")
+				fmt.Fprintf(output.ErrWriter, "  syllago config paths --provider %s --path /your/path\n", prov.Slug)
+				break
+			}
+		}
 	}
 
 	globalDir := catalog.GlobalContentDir()
 	if globalDir == "" {
-		return fmt.Errorf("cannot determine home directory")
+		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
 	}
 
 	// No positional arg and no --all → discovery mode.
@@ -128,19 +164,46 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Hooks have a separate path because they are split from settings.json.
-	if typeStr == string(catalog.Hooks) || (addAll) {
-		if typeStr == string(catalog.Hooks) {
-			exclude, _ := cmd.Flags().GetStringArray("exclude")
-			scope, _ := cmd.Flags().GetString("scope")
-			return runAddHooks(root, fromSlug, dryRun, exclude, force, scope, resolver)
+	// Hooks and MCP have separate paths because they live in JSON config files.
+	displayName, _ := cmd.Flags().GetString("name")
+	if typeStr == string(catalog.Hooks) {
+		exclude, _ := cmd.Flags().GetStringArray("exclude")
+		scope, _ := cmd.Flags().GetString("scope")
+		srcReg, _ := cmd.Flags().GetString("source-registry")
+		srcVis, _ := cmd.Flags().GetString("source-visibility")
+		telemetry.Enrich("from", fromSlug)
+		telemetry.Enrich("content_type", "hooks")
+		telemetry.Enrich("dry_run", dryRun)
+		return runAddHooks(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis, displayName)
+	}
+	if typeStr == string(catalog.MCP) {
+		exclude, _ := cmd.Flags().GetStringArray("exclude")
+		scope, _ := cmd.Flags().GetString("scope")
+		srcReg, _ := cmd.Flags().GetString("source-registry")
+		srcVis, _ := cmd.Flags().GetString("source-visibility")
+		telemetry.Enrich("from", fromSlug)
+		telemetry.Enrich("content_type", "mcp")
+		telemetry.Enrich("dry_run", dryRun)
+		return runAddMcp(root, fromSlug, dryRun, exclude, force, scope, resolver, srcReg, srcVis, displayName)
+	}
+
+	// For --all, also add hooks and MCP alongside file-based content.
+	if addAll {
+		scope, _ := cmd.Flags().GetString("scope")
+		srcReg, _ := cmd.Flags().GetString("source-registry")
+		srcVis, _ := cmd.Flags().GetString("source-visibility")
+		if err := runAddHooks(root, fromSlug, dryRun, nil, force, scope, resolver, srcReg, srcVis, ""); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to add hooks: %v\n", err)
+		}
+		if err := runAddMcp(root, fromSlug, dryRun, nil, force, scope, resolver, srcReg, srcVis, ""); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to add MCP configs: %v\n", err)
 		}
 	}
 
 	// File-based content: discover and add.
 	items, err := add.DiscoverFromProvider(*prov, root, resolver, globalDir)
 	if err != nil {
-		return fmt.Errorf("discovering content: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "discovering content", "Check provider installation and permissions", err.Error())
 	}
 
 	// Filter by type when a positional arg is provided (and it's not --all).
@@ -159,7 +222,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 			for _, t := range catalog.AllContentTypes() {
 				typeNames = append(typeNames, string(t))
 			}
-			return fmt.Errorf("unknown content type %q. Available: %s", typeStr, strings.Join(typeNames, ", "))
+			return output.NewStructuredError(output.ErrItemTypeUnknown, fmt.Sprintf("unknown content type %q", typeStr), "Available: "+strings.Join(typeNames, ", "))
 		}
 
 		var filtered []add.DiscoveryItem
@@ -188,8 +251,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 				if availStr == "" {
 					availStr = "(none found)"
 				}
-				return fmt.Errorf("no %s named %q found in %s. Available %s: %s",
-					typeStr, nameFilter, prov.Name, typeStr, availStr)
+				return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no %s named %q found in %s", typeStr, nameFilter, prov.Name), "Available "+typeStr+": "+availStr)
 			}
 			items = nameFiltered
 		}
@@ -203,13 +265,22 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	srcRegistry, _ := cmd.Flags().GetString("source-registry")
+	srcVisibility, _ := cmd.Flags().GetString("source-visibility")
+
 	results := add.AddItems(items, add.AddOptions{
-		Force:    force,
-		DryRun:   dryRun,
-		Provider: fromSlug,
+		Force:            force,
+		DryRun:           dryRun,
+		Provider:         fromSlug,
+		SourceRegistry:   srcRegistry,
+		SourceVisibility: srcVisibility,
 	}, globalDir, canon, version)
 
-	return printAddResults(results, dryRun)
+	telemetry.Enrich("from", fromSlug)
+	telemetry.Enrich("content_type", typeStr)
+	telemetry.Enrich("content_count", len(results))
+	telemetry.Enrich("dry_run", dryRun)
+	return printAddResults(results, dryRun, prov.Name)
 }
 
 // converterAdapter adapts converter.Converter to the add.Canonicalizer interface.
@@ -230,7 +301,7 @@ func (a *converterAdapter) Canonicalize(raw []byte, sourceProvider string) ([]by
 }
 
 // printAddResults writes per-item output and the summary line.
-func printAddResults(results []add.AddResult, dryRun bool) error {
+func printAddResults(results []add.AddResult, dryRun bool, providerName string) error {
 	if output.Quiet {
 		return nil
 	}
@@ -266,18 +337,24 @@ func printAddResults(results []add.AddResult, dryRun bool) error {
 
 	fmt.Fprintln(output.Writer)
 
-	// Summary line.
+	// Summary line with type and provider context.
+	typeLabel := summaryTypeLabel(results)
+	source := ""
+	if providerName != "" {
+		source = " from " + providerName
+	}
+
 	var parts []string
 	if dryRun {
 		if added > 0 {
-			parts = append(parts, fmt.Sprintf("[dry-run] would add %d", added))
+			parts = append(parts, fmt.Sprintf("[dry-run] would add %d %s%s", added, typeLabel, source))
 		}
 		if updated > 0 {
 			parts = append(parts, fmt.Sprintf("would update %d", updated))
 		}
 	} else {
 		if added > 0 {
-			parts = append(parts, fmt.Sprintf("Added %d", added))
+			parts = append(parts, fmt.Sprintf("Added %d %s%s", added, typeLabel, source))
 		}
 		if updated > 0 {
 			parts = append(parts, fmt.Sprintf("updated %d", updated))
@@ -296,6 +373,22 @@ func printAddResults(results []add.AddResult, dryRun bool) error {
 	return nil
 }
 
+// summaryTypeLabel returns a human-readable label for the content types in a
+// set of add results. If all items share the same type, it returns that type
+// name (e.g., "rules"); otherwise it returns "items".
+func summaryTypeLabel(results []add.AddResult) string {
+	if len(results) == 0 {
+		return "items"
+	}
+	first := results[0].Type
+	for _, r := range results[1:] {
+		if r.Type != first {
+			return "items"
+		}
+	}
+	return strings.ToLower(string(first))
+}
+
 // discoveryGroup is the JSON structure for one content type's discovered items.
 type discoveryGroup struct {
 	Type  string              `json:"type"`
@@ -308,6 +401,7 @@ type discoveryJSONItem struct {
 	Name   string `json:"name"`
 	Path   string `json:"path"`
 	Status string `json:"status"`
+	Scope  string `json:"scope,omitempty"`
 }
 
 // discoveryJSON is the top-level JSON output for discovery mode.
@@ -321,20 +415,22 @@ type discoveryJSON struct {
 func runAddDiscovery(root, fromSlug string, resolver *config.PathResolver, globalDir string) error {
 	prov := findProviderBySlug(fromSlug)
 	if prov == nil {
-		return fmt.Errorf("unknown provider: %s", fromSlug)
+		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Run 'syllago info providers' to see available providers")
 	}
 
 	// Discover file-based content.
 	items, err := add.DiscoverFromProvider(*prov, root, resolver, globalDir)
 	if err != nil {
-		return fmt.Errorf("discovering content: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "discovering content", "Check provider installation and permissions", err.Error())
 	}
 
 	// Discover hooks separately (they live in settings.json, not as files).
 	hookItems := discoverHooksForDisplay(root, fromSlug, resolver, globalDir)
-
-	// Merge hooks into items list.
 	items = append(items, hookItems...)
+
+	// Discover MCP configs separately (they live in JSON config files, not as files).
+	mcpItems := discoverMcpForDisplay(root, fromSlug, resolver, globalDir)
+	items = append(items, mcpItems...)
 
 	if output.JSON {
 		return printDiscoveryJSON(fromSlug, items)
@@ -367,7 +463,6 @@ func discoverHooksForDisplay(root, fromSlug string, resolver *config.PathResolve
 	}
 
 	var result []add.DiscoveryItem
-	seen := make(map[string]bool)
 	for _, loc := range locations {
 		data, err := os.ReadFile(loc.Path)
 		if err != nil {
@@ -379,10 +474,6 @@ func discoverHooksForDisplay(root, fromSlug string, resolver *config.PathResolve
 		}
 		for _, hook := range hooks {
 			name := converter.DeriveHookName(hook)
-			if seen[name] {
-				continue
-			}
-			seen[name] = true
 
 			key := string(catalog.Hooks) + "/" + fromSlug + "/" + name
 			_, inLib := idx[key]
@@ -394,11 +485,228 @@ func discoverHooksForDisplay(root, fromSlug string, resolver *config.PathResolve
 				Name:   name,
 				Type:   catalog.Hooks,
 				Path:   loc.Path,
+				Scope:  loc.Scope.String(),
 				Status: status,
 			})
 		}
 	}
 	return result
+}
+
+// discoverMcpForDisplay reads MCP config locations for the provider and returns
+// DiscoveryItems for each server, annotated with library status and scope.
+func discoverMcpForDisplay(root, fromSlug string, resolver *config.PathResolver, globalDir string) []add.DiscoveryItem {
+	prov := findProviderBySlug(fromSlug)
+	if prov == nil {
+		return nil
+	}
+
+	baseDir := ""
+	if resolver != nil {
+		baseDir = resolver.BaseDir(fromSlug)
+	}
+	locations := installer.FindMCPLocations(*prov, root, baseDir)
+
+	idx, err := add.BuildLibraryIndex(globalDir)
+	if err != nil {
+		return nil
+	}
+
+	var result []add.DiscoveryItem
+	for _, loc := range locations {
+		data, err := os.ReadFile(loc.Path)
+		if err != nil {
+			continue
+		}
+		if prov.Slug == "opencode" {
+			data = converter.StripJSONCComments(data)
+		}
+
+		servers := gjson.GetBytes(data, loc.JSONKey)
+		if !servers.Exists() || servers.Type != gjson.JSON {
+			continue
+		}
+		servers.ForEach(func(key, _ gjson.Result) bool {
+			name := key.String()
+			libKey := string(catalog.MCP) + "/" + fromSlug + "/" + name
+			_, inLib := idx[libKey]
+			status := add.StatusNew
+			if inLib {
+				status = add.StatusInLibrary
+			}
+			result = append(result, add.DiscoveryItem{
+				Name:   name,
+				Type:   catalog.MCP,
+				Path:   loc.Path,
+				Scope:  loc.Scope.String(),
+				Status: status,
+			})
+			return true
+		})
+	}
+	return result
+}
+
+// runAddMcp handles "syllago add mcp --from <provider>". It reads MCP config
+// locations, extracts individual server entries, and writes each to the library.
+func runAddMcp(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string, resolver *config.PathResolver, srcRegistry, srcVisibility, displayName string) error {
+	prov := findProviderBySlug(fromSlug)
+	if prov == nil {
+		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Run 'syllago info providers' to see available providers")
+	}
+
+	baseDir := ""
+	if resolver != nil {
+		baseDir = resolver.BaseDir(prov.Slug)
+	}
+	locations := installer.FindMCPLocations(*prov, root, baseDir)
+
+	// Filter by --scope.
+	var targets []installer.MCPLocation
+	for _, loc := range locations {
+		if scope == "all" || loc.Scope.String() == scope {
+			targets = append(targets, loc)
+		}
+	}
+
+	if len(targets) == 0 {
+		fmt.Fprintf(output.Writer, "No MCP configs found for %s (scope: %s).\n", fromSlug, scope)
+		return nil
+	}
+
+	excludeSet := make(map[string]bool, len(exclude))
+	for _, ex := range exclude {
+		excludeSet[ex] = true
+	}
+
+	globalDir := catalog.GlobalContentDir()
+	if globalDir == "" {
+		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
+	}
+
+	count := 0
+	for _, loc := range targets {
+		n, err := addMcpFromLocation(fromSlug, loc, root, previewOnly, excludeSet, force, globalDir, srcRegistry, srcVisibility, displayName)
+		if err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to add MCP configs from %s: %v\n", loc.Path, err)
+		}
+		count += n
+	}
+	if !previewOnly {
+		provLabel := fromSlug
+		if prov != nil {
+			provLabel = prov.Name
+		}
+		fmt.Fprintf(output.Writer, "\nAdded %d MCP servers from %s.\n", count, provLabel)
+	}
+	return nil
+}
+
+// addMcpFromLocation reads a single config file, extracts MCP server entries,
+// and either previews or writes them to the library.
+func addMcpFromLocation(fromSlug string, loc installer.MCPLocation, projectRoot string, previewOnly bool, excludeSet map[string]bool, force bool, globalDir, srcRegistry, srcVisibility, displayName string) (int, error) {
+	prov := findProviderBySlug(fromSlug)
+
+	data, err := os.ReadFile(loc.Path)
+	if err != nil {
+		return 0, output.NewStructuredErrorDetail(output.ErrSystemIO, "reading "+loc.Path, "Check file permissions", err.Error())
+	}
+	if prov != nil && prov.Slug == "opencode" {
+		data = converter.StripJSONCComments(data)
+	}
+
+	servers := gjson.GetBytes(data, loc.JSONKey)
+	if !servers.Exists() || servers.Type != gjson.JSON {
+		return 0, nil
+	}
+
+	// Collect server entries.
+	type serverEntry struct {
+		name string
+		raw  string
+	}
+	var entries []serverEntry
+	servers.ForEach(func(key, value gjson.Result) bool {
+		name := key.String()
+		if !excludeSet[name] {
+			entries = append(entries, serverEntry{name: name, raw: value.Raw})
+		}
+		return true
+	})
+
+	if previewOnly {
+		fmt.Fprintf(output.Writer, "MCP servers in %s (%s):\n", loc.Path, loc.Scope)
+		for _, e := range entries {
+			fmt.Fprintf(output.Writer, "  %s\n", e.name)
+		}
+		fmt.Fprintf(output.Writer, "\n%d MCP servers would be added.\n", len(entries))
+		return 0, nil
+	}
+
+	scope := loc.Scope.String()
+	projectName := ""
+	if scope == "project" && projectRoot != "" {
+		projectName = filepath.Base(projectRoot)
+	}
+
+	count := 0
+	for _, e := range entries {
+		itemDir := filepath.Join(globalDir, string(catalog.MCP), fromSlug, e.name)
+
+		if !force {
+			if info, err := os.Stat(itemDir); err == nil && info.IsDir() {
+				existingMeta, _ := metadata.Load(itemDir)
+				if existingMeta != nil && existingMeta.SourceScope != scope {
+					itemDir = uniqueItemDir(itemDir)
+				} else {
+					fmt.Fprintf(output.Writer, "  SKIP %s (already exists, use --force to overwrite)\n", e.name)
+					continue
+				}
+			}
+		}
+
+		if err := os.MkdirAll(itemDir, 0755); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to create %s: %v\n", itemDir, err)
+			continue
+		}
+
+		// Write config.json in the nested format expected by the installer.
+		configJSON := fmt.Sprintf("{\n  %q: {\n    %q: %s\n  }\n}", loc.JSONKey, e.name, e.raw)
+		if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(configJSON), 0644); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to write config.json for %s: %v\n", e.name, err)
+			continue
+		}
+
+		now := time.Now().UTC()
+		mcpMetaName := e.name
+		if displayName != "" {
+			mcpMetaName = displayName
+		}
+		meta := &metadata.Meta{
+			ID:               metadata.NewID(),
+			Name:             mcpMetaName,
+			Type:             string(catalog.MCP),
+			AddedAt:          &now,
+			SourceProvider:   fromSlug,
+			SourceFormat:     "json",
+			SourceType:       "provider",
+			SourceRegistry:   srcRegistry,
+			SourceVisibility: srcVisibility,
+			SourceScope:      scope,
+			SourceProject:    projectName,
+		}
+		if srcRegistry != "" {
+			meta.SourceType = "registry"
+		}
+		if err := metadata.Save(itemDir, meta); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to write metadata for %s: %v\n", e.name, err)
+			continue
+		}
+
+		fmt.Fprintf(output.Writer, "  %-22s added (%s)\n", e.name, scope)
+		count++
+	}
+	return count, nil
 }
 
 // printDiscoveryJSON outputs structured JSON for discovery mode.
@@ -421,6 +729,7 @@ func printDiscoveryJSON(provSlug string, items []add.DiscoveryItem) error {
 				Name:   item.Name,
 				Path:   item.Path,
 				Status: statusJSONLabel(item.Status),
+				Scope:  item.Scope,
 			})
 		}
 		groups = append(groups, discoveryGroup{
@@ -436,7 +745,7 @@ func printDiscoveryJSON(provSlug string, items []add.DiscoveryItem) error {
 	}
 	data, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
-		return fmt.Errorf("marshaling discovery JSON: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "marshaling discovery JSON", "", err.Error())
 	}
 	fmt.Fprintln(output.Writer, string(data))
 	return nil
@@ -475,7 +784,11 @@ func printDiscoveryText(provSlug, provName string, items []add.DiscoveryItem) er
 		}
 		fmt.Fprintf(output.Writer, "  %s (%d):\n", ct.Label(), len(typeItems))
 		for _, item := range typeItems {
-			fmt.Fprintf(output.Writer, "    %-20s (%s)\n", item.Name, item.Status.String())
+			if item.Scope != "" {
+				fmt.Fprintf(output.Writer, "    %-20s (%s, %s)\n", item.Name, item.Status.String(), item.Scope)
+			} else {
+				fmt.Fprintf(output.Writer, "    %-20s (%s)\n", item.Name, item.Status.String())
+			}
 		}
 	}
 
@@ -535,10 +848,10 @@ func printDiscoveryText(provSlug, provName string, items []add.DiscoveryItem) er
 // runAddHooks handles "syllago add hooks --from <provider>". It reads settings.json
 // for the given provider, splits it into individual hook groups, filters by
 // --exclude, and either prints a preview or writes each hook to library.
-func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string, resolver *config.PathResolver) error {
+func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string, resolver *config.PathResolver, srcRegistry, srcVisibility, displayName string) error {
 	prov := findProviderBySlug(fromSlug)
 	if prov == nil {
-		return fmt.Errorf("unknown provider: %s", fromSlug)
+		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Run 'syllago info providers' to see available providers")
 	}
 
 	// Use resolver's effective base dir for settings discovery.
@@ -549,7 +862,7 @@ func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, forc
 	}
 	locations, err := installer.FindSettingsLocationsWithBase(*prov, root, baseDir)
 	if err != nil {
-		return fmt.Errorf("finding settings locations: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "finding settings locations", "Check provider config directory exists", err.Error())
 	}
 
 	// Filter by --scope.
@@ -571,7 +884,7 @@ func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, forc
 	}
 
 	for _, loc := range targets {
-		if err := addHooksFromLocation(fromSlug, loc, previewOnly, excludeSet, force); err != nil {
+		if err := addHooksFromLocation(fromSlug, loc, root, previewOnly, excludeSet, force, srcRegistry, srcVisibility, displayName); err != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: failed to add hooks from %s: %v\n", loc.Path, err)
 		}
 	}
@@ -580,15 +893,15 @@ func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, forc
 
 // addHooksFromLocation reads a single settings.json, splits it into hooks,
 // and either previews or writes them.
-func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previewOnly bool, excludeSet map[string]bool, force bool) error {
+func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, projectRoot string, previewOnly bool, excludeSet map[string]bool, force bool, srcRegistry, srcVisibility, displayName string) error {
 	data, err := os.ReadFile(loc.Path)
 	if err != nil {
-		return fmt.Errorf("reading %s: %w", loc.Path, err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "reading "+loc.Path, "Check file permissions", err.Error())
 	}
 
 	candidates, err := converter.SplitSettingsHooks(data, fromSlug)
 	if err != nil {
-		return fmt.Errorf("splitting hooks from %s: %w", loc.Path, err)
+		return output.NewStructuredErrorDetail(output.ErrConvertParseFailed, "splitting hooks from "+loc.Path, "Check settings.json format", err.Error())
 	}
 
 	// Apply --exclude filter.
@@ -616,7 +929,13 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previ
 
 	globalDir := catalog.GlobalContentDir()
 	if globalDir == "" {
-		return fmt.Errorf("cannot determine home directory")
+		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
+	}
+
+	scope := loc.Scope.String()
+	projectName := ""
+	if scope == "project" && projectRoot != "" {
+		projectName = filepath.Base(projectRoot)
 	}
 
 	count := 0
@@ -624,16 +943,37 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previ
 		name := converter.DeriveHookName(hook)
 		itemDir := filepath.Join(globalDir, string(catalog.Hooks), fromSlug, name)
 
+		// Handle name collisions: if directory exists and belongs to a different scope,
+		// find a unique name by appending -2, -3, etc.
 		if !force {
-			if _, err := os.Stat(itemDir); err == nil {
-				fmt.Fprintf(output.Writer, "  SKIP %s (already exists, use --force to overwrite)\n", name)
-				continue
+			if info, err := os.Stat(itemDir); err == nil && info.IsDir() {
+				existingMeta, _ := metadata.Load(itemDir)
+				if existingMeta != nil && existingMeta.SourceScope != scope {
+					// Different scope — find unique suffix.
+					itemDir = uniqueItemDir(itemDir)
+					name = filepath.Base(itemDir)
+				} else {
+					fmt.Fprintf(output.Writer, "  SKIP %s (already exists, use --force to overwrite)\n", name)
+					continue
+				}
 			}
 		}
 
 		if err := os.MkdirAll(itemDir, 0755); err != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: failed to create %s: %v\n", itemDir, err)
 			continue
+		}
+
+		// Bundle any scripts referenced by hook commands.
+		// sourceDir is the directory of the settings.json we're reading from,
+		// used to resolve relative script paths.
+		sourceDir := filepath.Dir(loc.Path)
+		bundled, bundleErr := converter.BundleHookScripts(&hook, sourceDir, itemDir)
+		if bundleErr != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to bundle scripts for %s: %v\n", name, bundleErr)
+		}
+		if len(bundled) > 0 {
+			fmt.Fprintf(output.Writer, "    bundled %d script(s)\n", len(bundled))
 		}
 
 		hookJSON, err := json.MarshalIndent(hook, "", "  ")
@@ -647,14 +987,36 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previ
 		}
 
 		now := time.Now().UTC()
+		metaName := name
+		if displayName != "" {
+			metaName = displayName
+		}
+
+		// Convert bundled script info to metadata format.
+		var bundledMeta []metadata.BundledScriptMeta
+		for _, b := range bundled {
+			bundledMeta = append(bundledMeta, metadata.BundledScriptMeta{
+				OriginalPath: b.OriginalPath,
+				Filename:     b.Filename,
+			})
+		}
+
 		meta := &metadata.Meta{
-			ID:             metadata.NewID(),
-			Name:           name,
-			Type:           string(catalog.Hooks),
-			AddedAt:        &now,
-			SourceProvider: fromSlug,
-			SourceFormat:   "json",
-			SourceType:     "provider",
+			ID:               metadata.NewID(),
+			Name:             metaName,
+			Type:             string(catalog.Hooks),
+			BundledScripts:   bundledMeta,
+			AddedAt:          &now,
+			SourceProvider:   fromSlug,
+			SourceFormat:     "json",
+			SourceType:       "provider",
+			SourceRegistry:   srcRegistry,
+			SourceVisibility: srcVisibility,
+			SourceScope:      scope,
+			SourceProject:    projectName,
+		}
+		if srcRegistry != "" {
+			meta.SourceType = "registry"
 		}
 		if err := metadata.Save(itemDir, meta); err != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: failed to write metadata for %s: %v\n", name, err)
@@ -665,9 +1027,262 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, previ
 		if matcher == "" {
 			matcher = "*"
 		}
-		fmt.Fprintf(output.Writer, "  %s   (%s/%s)\n", name, hook.Event, matcher)
+		fmt.Fprintf(output.Writer, "  %s   (%s/%s, %s)\n", name, hook.Event, matcher, scope)
 		count++
 	}
-	fmt.Fprintf(output.Writer, "\nAdded %d hooks to library.\n", count)
+	prov := findProviderBySlug(fromSlug)
+	provLabel := fromSlug
+	if prov != nil {
+		provLabel = prov.Name
+	}
+	fmt.Fprintf(output.Writer, "\nAdded %d hooks from %s.\n", count, provLabel)
 	return nil
+}
+
+// findRegistryForSlug searches the provided configs for a registry whose Name
+// or short name (last path segment) matches fromSlug. Returns nil if not found.
+func findRegistryForSlug(fromSlug string, configs ...*config.Config) *config.Registry {
+	for _, cfg := range configs {
+		if cfg == nil {
+			continue
+		}
+		for i := range cfg.Registries {
+			r := &cfg.Registries[i]
+			if r.Name == fromSlug {
+				return r
+			}
+			// Allow short-name match: "my-tools" → "acme/my-tools"
+			if filepath.Base(r.Name) == fromSlug {
+				return r
+			}
+		}
+	}
+	return nil
+}
+
+// runAddFromRegistry handles "syllago add [type] --from <registry-name>".
+// It looks up the registry by short or full name, scans its clone directory,
+// applies type/name filters from args, and writes matching items to the library.
+func runAddFromRegistry(projectRoot string, args []string, fromSlug string, addAll, dryRun, force bool, globalDir string) error {
+	globalCfg, _ := config.LoadGlobal()
+	projectCfg, _ := config.Load(projectRoot)
+
+	// Registry configuration may be stored in the content root (e.g., when the
+	// project has a contentRoot setting pointing to a subdirectory). Load that
+	// config too so registries added via "syllago registry add" are found.
+	var contentCfg *config.Config
+	if contentRoot, err := findContentRepoRoot(); err == nil && contentRoot != projectRoot {
+		contentCfg, _ = config.Load(contentRoot)
+	}
+
+	reg := findRegistryForSlug(fromSlug, globalCfg, projectCfg, contentCfg)
+	if reg == nil {
+		slugs := providerSlugs()
+		slugs = append(slugs, "shared")
+		return output.NewStructuredError(
+			output.ErrProviderNotFound,
+			"unknown provider or registry: "+fromSlug,
+			"Available providers: "+strings.Join(slugs, ", ")+"\nRun 'syllago registry list' to see configured registries",
+		)
+	}
+
+	if !registry.IsCloned(reg.Name) {
+		return output.NewStructuredError(
+			output.ErrRegistryNotCloned,
+			fmt.Sprintf("registry %q is not cloned locally", reg.Name),
+			fmt.Sprintf("Run 'syllago registry sync %s' to fetch it", reg.Name),
+		)
+	}
+
+	cloneDir, err := registry.CloneDir(reg.Name)
+	if err != nil {
+		return err
+	}
+
+	// Parse type/name filter from positional args.
+	var typeStr, nameFilter string
+	if len(args) > 0 {
+		parts := strings.SplitN(args[0], "/", 2)
+		typeStr = parts[0]
+		if len(parts) == 2 {
+			nameFilter = parts[1]
+		}
+	}
+
+	items, err := add.DiscoverFromRegistry(reg.Name, cloneDir, globalDir)
+	if err != nil {
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning registry content", "Check registry clone integrity", err.Error())
+	}
+
+	// No positional arg and no --all → discovery mode.
+	if len(args) == 0 && !addAll {
+		return printDiscoveryText(reg.Name, reg.Name, items)
+	}
+
+	// Filter by content type if a positional arg was given.
+	if typeStr != "" {
+		ct := catalog.ContentType(typeStr)
+		valid := false
+		for _, known := range catalog.AllContentTypes() {
+			if ct == known {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			var typeNames []string
+			for _, t := range catalog.AllContentTypes() {
+				typeNames = append(typeNames, string(t))
+			}
+			return output.NewStructuredError(output.ErrItemTypeUnknown, fmt.Sprintf("unknown content type %q", typeStr), "Available: "+strings.Join(typeNames, ", "))
+		}
+
+		var filtered []add.DiscoveryItem
+		for _, item := range items {
+			if item.Type == ct {
+				filtered = append(filtered, item)
+			}
+		}
+		items = filtered
+
+		if nameFilter != "" {
+			var nameFiltered []add.DiscoveryItem
+			for _, item := range items {
+				if item.Name == nameFilter {
+					nameFiltered = append(nameFiltered, item)
+				}
+			}
+			if len(nameFiltered) == 0 {
+				var available []string
+				for _, item := range items {
+					available = append(available, item.Name)
+				}
+				availStr := strings.Join(available, ", ")
+				if availStr == "" {
+					availStr = "(none found)"
+				}
+				return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no %s named %q found in registry %s", typeStr, nameFilter, reg.Name), "Available "+typeStr+": "+availStr)
+			}
+			items = nameFiltered
+		}
+	}
+
+	// Determine visibility for taint tracking.
+	visibility := reg.Visibility
+	if visibility == "" {
+		visibility = "unknown"
+	}
+
+	results := add.AddItems(items, add.AddOptions{
+		Force:            force,
+		DryRun:           dryRun,
+		SourceRegistry:   reg.Name,
+		SourceVisibility: visibility,
+	}, globalDir, nil, version)
+
+	telemetry.Enrich("from", fromSlug)
+	telemetry.Enrich("content_type", typeStr)
+	telemetry.Enrich("content_count", len(results))
+	telemetry.Enrich("dry_run", dryRun)
+	return printAddResults(results, dryRun, reg.Name)
+}
+
+// uniqueItemDir returns a unique directory path by appending -2, -3, etc.
+// runAddFromShared copies items from the project's shared content directory to the user's library.
+func runAddFromShared(projectRoot string, args []string, addAll, dryRun, force bool) error {
+	globalDir := catalog.GlobalContentDir()
+	if globalDir == "" {
+		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
+	}
+
+	// Scan the project root to find shared content.
+	cat, err := catalog.Scan(projectRoot, projectRoot)
+	if err != nil {
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning project content failed", "Check that the content directories exist", err.Error())
+	}
+
+	// Filter to shared items (non-library, non-builtin).
+	var items []catalog.ContentItem
+	for _, item := range cat.Items {
+		if item.Library || item.IsBuiltin() {
+			continue
+		}
+		if len(args) > 0 && item.Name != args[0] {
+			continue
+		}
+		items = append(items, item)
+	}
+
+	if len(items) == 0 {
+		if len(args) > 0 {
+			return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no shared item named %q found", args[0]), "Run 'syllago list --source shared' to see available items")
+		}
+		fmt.Fprintln(output.ErrWriter, "No shared content found in this project.")
+		return nil
+	}
+
+	if !addAll && len(args) == 0 {
+		// Discovery mode: show what's available.
+		fmt.Fprintf(output.Writer, "Shared content in %s:\n", filepath.Base(projectRoot))
+		for _, item := range items {
+			fmt.Fprintf(output.Writer, "  %s (%s)\n", item.Name, item.Type.Label())
+		}
+		fmt.Fprintf(output.Writer, "\n%d item(s). Use --all to add everything, or specify a name.\n", len(items))
+		return nil
+	}
+
+	if dryRun {
+		fmt.Fprintf(output.Writer, "[dry-run] would add %d item(s) from shared content:\n", len(items))
+		for _, item := range items {
+			fmt.Fprintf(output.Writer, "  %s (%s)\n", item.Name, item.Type.Label())
+		}
+		return nil
+	}
+
+	count := 0
+	for _, item := range items {
+		destDir := filepath.Join(globalDir, string(item.Type), item.Name)
+
+		if !force {
+			if _, err := os.Stat(destDir); err == nil {
+				fmt.Fprintf(output.Writer, "  SKIP %s (already in library, use --force to overwrite)\n", item.Name)
+				continue
+			}
+		}
+
+		if err := installer.CopyContent(item.Path, destDir); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to copy %s: %v\n", item.Name, err)
+			continue
+		}
+
+		// Write metadata.
+		now := time.Now().UTC()
+		meta := &metadata.Meta{
+			ID:           metadata.NewID(),
+			Name:         item.Name,
+			Type:         string(item.Type),
+			AddedAt:      &now,
+			SourceType:   "shared",
+			SourceFormat: "md",
+		}
+		if err := metadata.Save(destDir, meta); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to write metadata for %s: %v\n", item.Name, err)
+		}
+
+		fmt.Fprintf(output.Writer, "  Added %s (%s)\n", item.Name, item.Type.Label())
+		count++
+	}
+
+	fmt.Fprintf(output.Writer, "\nAdded %d item(s) from shared content.\n", count)
+	return nil
+}
+
+func uniqueItemDir(base string) string {
+	for i := 2; i < 100; i++ {
+		candidate := fmt.Sprintf("%s-%d", base, i)
+		if _, err := os.Stat(candidate); os.IsNotExist(err) {
+			return candidate
+		}
+	}
+	return base + "-overflow"
 }

@@ -1,0 +1,40 @@
+╭──syllago────────────────────────────────────────────────────────────────────────────────────────────────────────[?]──╮
+│                                   [1] Collections      [2] Content      [3] Config                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│   Library     Registries     Loadouts                                                                                │
+│                                                                                                    [a] Add content   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ alpha-skill                               Type: Skill     Files: 1   Origin: syllago      Installed: --              │
+│ Scope: project   Registry: not in a registry                                                                         │
+│                                                                                           [d] Remove      [e] Edit   │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│   Name ▲                 Type      Scope        Files Installed      Description                                     │
+│ > alpha-skill            Skill     team-rules   1     --                                                             │
+│   beta-skill             Skill     team-rules   1     --                                                             │
+│   delta-agent            Agent     my-registry  1     --                                                             │
+│   epsilon-hook           Hook      team-rules   1     --                                                             │
+│   eta-command            Command   team-rules   1     --                                                             │
+│   gamma-rule             Rule      library      1     --                                                             │
+│   zeta-mcp               MCP       library      1     --                                                             │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+1/2/3 groups · tab items · ↑/↓ navigate · enter preview · / search · s sort · i install · e edit    syllago v0.0.0-test
+d remove · x uninstall · R refresh · a add · ? help · q quit

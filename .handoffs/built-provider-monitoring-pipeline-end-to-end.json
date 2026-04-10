@@ -1,0 +1,81 @@
+{
+  "$schema": "handoff-v2",
+  "name": "built-provider-monitoring-pipeline-end-to-end",
+  "createdAt": "2026-03-28T17:55:00-07:00",
+  "current": {
+    "claimedBy": {
+      "sessionId": "41432bdb-8270-4831-bd04-3e4374d60084",
+      "claimedAt": "2026-03-28T23:08:47.968Z"
+    },
+    "project": "syllago",
+    "updated": "2026-03-28T17:55:00-07:00",
+    "sessionId": "dede094e-3a09-471b-bdbf-789940ebd5bf",
+    "summary": "Built provider monitoring pipeline end-to-end: source manifests (12 providers, 147 URLs), provider-monitor Go tool, _genproviders CLI command, and sync-providers.ts for docs site. All verified and tested.",
+    "activeWork": {
+      "description": "Provider capability data pipeline — source manifests → monitor tool → providers.json → docs site sync",
+      "feature": null,
+      "stage": "execute",
+      "planRef": "docs/design/provider-matrix-docs-site.md",
+      "designRef": "docs/design/capability-schema-draft.yaml",
+      "progress": "Core pipeline complete and shipping. Source manifests verified (147/147 URLs). Go monitor tool built and tested. _genproviders command exports provider capabilities as JSON. sync-providers.ts generates MDX pages for docs site. All committed and pushed. Capability schema draft written but needs expansion (hook events, frontmatter fields, tool name mappings). Change classification pipeline not started.",
+      "blockers": [],
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": [],
+        "readyNext": []
+      }
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 22,
+      "lastCommit": "ca7bc6f add tests for _genproviders command",
+      "modifiedFiles": [
+        "docs/provider-sources/gemini-cli.yaml"
+      ]
+    },
+    "recentDecisions": [
+      "YAML + JSON Schema for source manifests (human-readable with validation)",
+      "One file per provider for source manifests (not monolithic)",
+      "Codegen-only (option A) for capability data — no runtime loader. Provider data baked into binary via go generate.",
+      "Provider capability export follows same pattern as commands.json: _genproviders command → providers.json → sync-providers.ts → MDX pages",
+      "Change classification taxonomy: additive (auto-PR), modify (review PR), removal (issue), behavioral (issue)"
+    ],
+    "nextSteps": [
+      "Write the plan for docs site provider pages — what needs to happen in syllago-docs to fully surface the provider data (matrix page, provider detail pages, hook event matrix, comparison component)",
+      "Expand capability schema draft to include hook events, frontmatter fields, tool name mappings (the Layer 2 data haiku validated as incomplete)",
+      "Build change classification pipeline (detect additive vs breaking changes when provider data updates)",
+      "Wire provider-monitor into CI as daily cron job"
+    ],
+    "context": {
+      "notes": "The docs site repo is at ../syllago-docs/. sync-providers.ts is already written and tested — it generates all 12 provider pages from providers.json. The sidebar.ts was updated (Copilot slug fixed, Amp added). The site builds clean. The capability-schema-draft.yaml has 6 open design questions at the bottom — platform-specific paths, hook detail level, and tool name mappings are the biggest. Haiku validation found significant gaps in the draft: hook types (4 not 1), frontmatter fields (12+ per type not 2), MCP transports (4 not 3). These need to be addressed before the schema is finalized."
+    }
+  },
+  "previousSessions": [
+    {
+      "summary": "Phase D Add Wizard complete + bug fixes (mouse support, hook/MCP discovery) + mouse parity rule added to 4 doc files + UX Polish bead chain created (11 beads).",
+      "updated": "2026-03-28T17:45:00.000Z",
+      "completedWork": [
+        "Add Wizard Phase D complete",
+        "Mouse support bug fixes",
+        "Hook/MCP discovery fixes",
+        "UX Polish bead chain created"
+      ],
+      "nextSteps": [
+        "Add Wizard UX Polish plan bead (syllago-76jtp)",
+        "Nav buttons, proper tables, button reorder, helpbar override, installed-item filtering"
+      ]
+    },
+    {
+      "summary": "Hooks specification v0.1 finalized: all 17 v0.1 items completed, changelog updated, file renamed from hooks-v1.md to hooks.md",
+      "updated": "2026-03-27T23:06:20.224Z",
+      "completedWork": [
+        "All 17 hooks spec v0.1 items completed",
+        "Changelog updated",
+        "File renamed hooks-v1.md → hooks.md"
+      ],
+      "nextSteps": [
+        "Provider matrix docs site feature"
+      ]
+    }
+  ]
+}

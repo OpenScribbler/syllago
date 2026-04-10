@@ -1,0 +1,41 @@
+{
+  "$schema": "handoff-v2",
+  "name": "moat-spec-issues-6-7-resolved-with-owasp",
+  "createdAt": "2026-04-07T15:00:00.000Z",
+  "current": {
+    "claimedBy": null,
+    "project": "moat",
+    "updated": "2026-04-07T15:00:00.000Z",
+    "sessionId": null,
+    "summary": "MOAT spec issues 6-7 resolved with OWASP alignment verification; issue 8 (revocation) queued",
+    "activeWork": {
+      "description": "Resolving open questions in MOAT specification outline: issue #6 (scan_status structure), issue #7 (risk_tier classification), OWASP compliance cross-check",
+      "feature": null,
+      "stage": "execute",
+      "planRef": null,
+      "designRef": null,
+      "progress": "Issues #6 and #7 fully resolved with decisions documented in moat-revised-outline.md. Cross-checked against 7 OWASP standards (AST, ASI, LLM, Web App, API, CI/CD) — all 4 relevant lists aligned with decisions. Updated OWASP coverage tables. Identified one gap (CIDC-SEC-8 ungoverned federation trust) for future spec work. Committed and pushed.",
+      "blockers": [],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 0,
+      "lastCommit": "moat-revised-outline.md: Issues 6-7 resolved, OWASP coverage updated",
+      "modifiedFiles": []
+    },
+    "recentDecisions": [
+      "Issue #6: scan_status={not_scanned, clean, findings}, risk_tier={not_analyzed, indeterminate, L0-L3}",
+      "Issue #7: Registry assigns capability-based risk classification; behavioral specs require registry-level analysis",
+      "Verified alignment with AST08/09, ASI04, LLM03/04, CICD-SEC-9"
+    ],
+    "nextSteps": [
+      "Resolve issue #8 (revocation mechanisms)",
+      "Future: Address CICD-SEC-8 gap (ungoverned 3rd-party services federation trust)"
+    ],
+    "context": {
+      "notes": "OWASP research surfaced distinction: OWASP Agentic Skills Top 10 (AST, GitHub-hosted) vs OWASP Agentic Applications 2026 (ASI, genai.owasp.org). Both cited separately in outline. File location: /home/hhewett/.local/src/moat/docs/moat-revised-outline.md. Ready to continue with issue #8."
+    }
+  },
+  "previousSessions": []
+}

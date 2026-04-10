@@ -2,6 +2,7 @@ package sandbox
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -68,7 +69,7 @@ func RunSession(cfg RunConfig, w *os.File) error {
 	if err != nil {
 		return err
 	}
-	defer staging.Cleanup()
+	defer func() { _ = staging.Cleanup() }()
 
 	// Signal handler: clean up on Ctrl-C.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -78,6 +79,13 @@ func RunSession(cfg RunConfig, w *os.File) error {
 	snapshots, err := StageConfigs(staging.Path, profile.GlobalConfigPaths)
 	if err != nil {
 		return fmt.Errorf("staging configs: %w", err)
+	}
+
+	// Step 6b: Protect credential files from deletion inside the sandbox.
+	// Some providers (e.g. Gemini CLI) delete credential files after migrating
+	// to a keychain. Making them read-only prevents deletion while still allowing reads.
+	if profile != nil && len(profile.ProtectFiles) > 0 {
+		protectStagedFiles(snapshots, profile.ProtectFiles)
 	}
 
 	// Step 7: Write sandbox gitconfig.
@@ -102,11 +110,18 @@ func RunSession(cfg RunConfig, w *os.File) error {
 	allPorts := append(cfg.SandboxConfig.AllowedPorts, cfg.AdditionalPorts...)
 
 	// Step 9: Build env allowlist.
-	allExtraEnv := append(profile.ProviderEnvVars, cfg.SandboxConfig.AllowedEnv...)
+	var providerEnv []string
+	if profile != nil {
+		providerEnv = profile.ProviderEnvVars
+	}
+	allExtraEnv := append(providerEnv, cfg.SandboxConfig.AllowedEnv...)
 	allExtraEnv = append(allExtraEnv, cfg.AdditionalEnv...)
 	envPairs, envReport := FilterEnv(os.Environ(), allExtraEnv)
 
-	// Step 10: Print sandbox summary.
+	// Step 10: Print auth hint and sandbox summary.
+	if profile != nil && profile.AuthHint != "" {
+		fmt.Fprintf(w, "\nNote: %s\n", profile.AuthHint)
+	}
 	fmt.Fprintf(w, "\nSandbox environment:\n")
 	fmt.Fprintf(w, "  Forwarded: %s\n", strings.Join(envReport.Forwarded, ", "))
 	fmt.Fprintf(w, "  Stripped: %d env vars (%s)\n",
@@ -138,8 +153,14 @@ func RunSession(cfg RunConfig, w *os.File) error {
 	}
 
 	// Step 14: Build bwrap arguments.
+	// Git wrapper bin dir goes first on PATH so it shadows the real git.
+	gitBinDir := GitWrapperBinDir(gitWrapperPath)
+	sandboxPATH := gitBinDir + ":/usr/local/bin:/usr/bin:/bin"
+	if profile != nil && len(profile.ExtraPATH) > 0 {
+		sandboxPATH = gitBinDir + ":" + strings.Join(profile.ExtraPATH, ":") + ":/usr/local/bin:/usr/bin:/bin"
+	}
 	sandboxEnv := map[string]string{
-		"PATH":                "/usr/local/bin:/usr/bin:/bin",
+		"PATH":                sandboxPATH,
 		"HTTP_PROXY":          "http://127.0.0.1:3128",
 		"HTTPS_PROXY":         "http://127.0.0.1:3128",
 		"NO_PROXY":            "",
@@ -147,6 +168,16 @@ func RunSession(cfg RunConfig, w *os.File) error {
 		"GIT_CONFIG_GLOBAL":   staging.GitconfigPath(),
 		"GIT_TERMINAL_PROMPT": "0",
 		"HOME":                cfg.HomeDir,
+	}
+	// Provider-specific env vars — skip any that are on the denylist.
+	if profile != nil {
+		for k, v := range profile.SandboxEnvVars {
+			if reason := IsDeniedEnvVar(k); reason != "" {
+				fmt.Fprintf(os.Stderr, "[sandbox] warning: skipping profile env var: %s\n", reason)
+				continue
+			}
+			sandboxEnv[k] = v
+		}
 	}
 
 	bwrapCfg := BwrapConfig{
@@ -170,7 +201,8 @@ func RunSession(cfg RunConfig, w *os.File) error {
 	if err := bwrapRunner(ctx, bwrapArgs); err != nil && ctx.Err() == nil {
 		// Non-zero exit from the provider is expected (e.g. user typed "exit").
 		// Only surface errors that aren't from the provider itself exiting.
-		if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() == -1 {
+		var exitErr *exec.ExitError
+		if !errors.As(err, &exitErr) || exitErr.ExitCode() == -1 {
 			return fmt.Errorf("sandbox exited with error: %w", err)
 		}
 	}
@@ -184,11 +216,18 @@ func RunSession(cfg RunConfig, w *os.File) error {
 	}
 
 	// Step 17: Show diffs and handle approval.
+	// State files (counters, metrics, OAuth): silently discarded.
 	// High-risk changes (MCP servers, hooks, commands): require explicit approval.
 	// Low-risk changes (settings, preferences): auto-approve with notification.
-	approved, rejected := 0, 0
+	approved, rejected, skipped := 0, 0, 0
 	for _, d := range diffs {
 		if !d.Changed {
+			continue
+		}
+
+		// Skip state files that change every session.
+		if profile != nil && shouldSkipDiff(d.Snapshot.OriginalPath, profile.SkipDiffFiles) {
+			skipped++
 			continue
 		}
 
@@ -223,7 +262,11 @@ func RunSession(cfg RunConfig, w *os.File) error {
 		fmt.Fprintf(w, "  Blocked domains: %s\n", strings.Join(blocked, ", "))
 	}
 	if len(diffs) > 0 {
-		fmt.Fprintf(w, "  Config changes: %d approved, %d rejected\n", approved, rejected)
+		summary := fmt.Sprintf("  Config changes: %d approved, %d rejected", approved, rejected)
+		if skipped > 0 {
+			summary += fmt.Sprintf(", %d state files discarded", skipped)
+		}
+		fmt.Fprintln(w, summary)
 	}
 
 	return nil

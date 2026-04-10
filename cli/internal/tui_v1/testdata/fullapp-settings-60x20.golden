@@ -1,0 +1,20 @@
+syllago           │Home > Settings
+                  │
+  Content         │  > Update check  on
+  Skills        3 │    Auto-update  off
+  Agents        1 │    Registry auto-sync  off
+  MCP Servers   1 │
+  Rules         1 │ ─────────────────────────────────────────────
+  Hooks         1 │ Check for new versions on launch. Requires network access to the git remote.
+  Commands      1 │ Disable for air-gapped or offline environments.
+  ─────────────   │
+  Collections     │ ─────────────────────────────────────────────
+  Library       1 │
+  Loadouts      1 │
+  Registries      │
+  ─────────────   │
+  Configuration   │
+  Add             │
+────────────────────────────────────────────────────────────
+up/down navigate • enter/space toggle             Settings
+esc back

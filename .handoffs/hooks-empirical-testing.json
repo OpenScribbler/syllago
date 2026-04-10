@@ -1,0 +1,73 @@
+{
+  "$schema": "handoff-v2",
+  "name": "hooks-empirical-testing",
+  "createdAt": "2026-03-31T08:15:00-07:00",
+  "current": {
+    "claimedBy": {
+      "sessionId": "session-current",
+      "claimedAt": "2026-03-31T09:14:00-07:00"
+    },
+    "project": "syllago",
+    "updated": "2026-03-31T08:15:00-07:00",
+    "sessionId": null,
+    "summary": "Designed hooks empirical testing framework: community checklist (modeled on agentskillimplementation.com/checks/), benchmark test scripts, and syllago dogfood plan. Researched agent pricing — 8-10 agents testable for free.",
+
+    "activeWork": {
+      "description": "Create 3 artifacts: hooks behavior checklist (repo + community site proposal), benchmark test script design, and syllago dogfood plan for deploying test hooks across agents",
+      "feature": null,
+      "stage": "plan",
+      "planRef": "docs/research/hook-behavior-checks/README.md",
+      "designRef": null,
+      "progress": "Research phase COMPLETE — all hooks behavior data validated. Pricing research COMPLETE — know which agents are free/paid. Dachary's skill checks format analyzed. Three artifacts scoped but not yet drafted.",
+      "blockers": [],
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": [],
+        "readyNext": []
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": "300",
+      "lastCommit": "ac403a1 bd sync: 2026-03-31 06:28:55",
+      "modifiedFiles": [
+        "docs/research/hook-behavior-checks/00-hook-behavior-matrix.md",
+        "docs/research/hook-behavior-checks/spec-validation-report.md",
+        "docs/research/hook-behavior-checks/spec-influences.md",
+        "docs/research/hook-behavior-checks/panel-review.md",
+        "docs/research/hook-behavior-checks/group-1-cc-copilot-cli.md",
+        "docs/research/hook-behavior-checks/group-2-gemini-kiro.md",
+        "docs/research/hook-behavior-checks/group-3-cursor-windsurf.md",
+        "docs/research/hook-behavior-checks/group-4-vscode-copilot-opencode.md",
+        "docs/research/hook-behavior-checks/phase2-runtime-cc-copilot-gemini-kiro.md",
+        "docs/research/hook-behavior-checks/phase2-runtime-cursor-windsurf-vscode-opencode.md",
+        "docs/research/hook-behavior-checks/phase3-security-audit.md",
+        "docs/research/hook-behavior-checks/phase4-non-spec-agents.md"
+      ]
+    },
+
+    "recentDecisions": [
+      "Checklist format follows Dachary's agentskillimplementation.com/checks/ pattern: ID + category + 'what it checks' + 'why it matters'",
+      "Three artifacts: (1) checklist doc + community site proposal, (2) benchmark test script design with multi-persona review, (3) syllago dogfood plan",
+      "Test scripts should be canonical hooks that syllago installs on each agent — dogfooding the converter",
+      "8-10 agents can be tested for free: Gemini CLI, Cursor, Windsurf, Kiro, Cline, OpenCode, gptme, Pi, possibly Amazon Q and Augment",
+      "Claude Code and GitHub Copilot products require payment ($10-20/mo)",
+      "Roo Code has no hook system yet — skip"
+    ],
+
+    "nextSteps": [
+      "Draft the hooks behavior checklist (~30 checks across 6 categories: event binding, blocking, capabilities, runtime, security, edge cases)",
+      "Design benchmark test hook scripts — one canonical hook per check that produces machine-readable pass/fail output",
+      "Design syllago dogfood plan — how syllago converts and installs the benchmark hooks on each target agent",
+      "Run all 3 artifacts through multi-persona panel review (Spec Author, Hook Author, Agent Developer, syllago User, QA Engineer)",
+      "Commit hooks behavior research (15 files from this session) + the 3 new artifacts"
+    ],
+
+    "context": {
+      "notes": "This is a follow-on from the hooks-behavior-research handoff which completed all 6 phases of the research plan. The research produced 2,388 lines of validated findings across 15 files covering 8 spec agents + 6 non-spec agents. The empirical testing framework will use those findings as the expected behavior baseline — the checklist checks are derived directly from the research. The syllago dogfood angle is particularly valuable: writing canonical test hooks in syllago format and using syllago's converter to deploy them to each agent validates both the hooks spec AND the converter implementation simultaneously. Key reference: Dachary's skill checks at agentskillimplementation.com/checks/ uses a diagnostic checklist format with check IDs, categories, and 'why it matters' explanations — we're adapting this for hooks."
+    }
+  },
+
+  "previousSessions": []
+}

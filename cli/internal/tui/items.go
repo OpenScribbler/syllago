@@ -2,602 +2,346 @@ package tui
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/lipgloss"
-	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
-	"github.com/OpenScribbler/syllago/cli/internal/converter"
-	"github.com/OpenScribbler/syllago/cli/internal/installer"
-	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
-const (
-	cursorWidth = 4 // "  " + "  " or "  " + "> "
-	colGap      = 2 // spaces between columns
-)
-
-// displayNames maps directory-style provider slugs to full display names.
-var displayNames = map[string]string{
-	"claude-code": "Claude Code",
-	"gemini-cli":  "Gemini CLI",
-	"cursor":      "Cursor",
-	"windsurf":    "Windsurf",
-	"codex":       "Codex",
-	"copilot-cli": "Copilot CLI",
-	"zed":         "Zed",
-	"cline":       "Cline",
-	"roo-code":    "Roo Code",
-	"opencode":    "OpenCode",
-	"kiro":        "Kiro",
-}
-
-func providerDisplayName(name string) string {
-	if d, ok := displayNames[name]; ok {
-		return d
-	}
-	return name
-}
-
-// displayName returns the display name for a content item.
-// If the item has a DisplayName field set (e.g., from SKILL.md frontmatter),
-// use that; otherwise fall back to the directory-based Name.
-func displayName(item catalog.ContentItem) string {
-	if item.DisplayName != "" {
-		return item.DisplayName
-	}
-	return item.Name
-}
-
-// provCell holds both the plain-text (for width measurement) and styled version.
-type provCell struct {
-	plain  string
-	styled string
-}
-
-// hookMatrixCell holds the symbol and styled version for one cell of the compat matrix.
-type hookMatrixCell struct {
-	plain  string // single char: ✓ ~ ! ✗
-	styled string // with lipgloss color applied
-}
-
-// hookCompatMatrix is the precomputed 4-column matrix for one hook item.
-type hookCompatMatrix [4]hookMatrixCell
-
-// matrixProviders is the fixed order for the compatibility matrix columns.
-var matrixProviders = converter.HookProviders() // ["claude-code", "gemini-cli", "copilot-cli", "kiro"]
-
-// matrixHeadersFull are the full column headers (panel width >= 101).
-var matrixHeadersFull = []string{"Claude", "Gemini", "Copilot", "Kiro"}
-
-// matrixHeadersAbbr are the abbreviated column headers (panel width < 101).
-var matrixHeadersAbbr = []string{"CC", "GC", "Cp", "Ki"}
-
-// compatCellStyle returns the lipgloss style for a compat level.
-func compatCellStyle(level converter.CompatLevel) lipgloss.Style {
-	switch level {
-	case converter.CompatFull:
-		return compatFullStyle
-	case converter.CompatDegraded:
-		return compatDegradedStyle
-	case converter.CompatBroken:
-		return compatBrokenStyle
-	case converter.CompatNone:
-		return compatNoneStyle
-	}
-	return lipgloss.NewStyle()
-}
-
-// buildHookMatrix computes the compatibility matrix for a hook item.
-func buildHookMatrix(item catalog.ContentItem) hookCompatMatrix {
-	var m hookCompatMatrix
-	hd, err := converter.LoadHookData(item)
-	if err != nil {
-		for i := range m {
-			m[i] = hookMatrixCell{plain: "?", styled: "?"}
-		}
-		return m
-	}
-	for i, slug := range matrixProviders {
-		result := converter.AnalyzeHookCompat(hd, slug)
-		sym := result.Level.Symbol()
-		m[i] = hookMatrixCell{
-			plain:  sym,
-			styled: compatCellStyle(result.Level).Render(sym),
-		}
-	}
-	return m
-}
-
-// itemsContext holds navigation context that must survive data refreshes.
-// When items are rebuilt (e.g., after install, remove, toggle-hidden, search cancel),
-// this context must be preserved — it controls breadcrumbs, provider filtering,
-// and display flags. See .claude/rules/tui-items-rebuild.md.
-type itemsContext struct {
-	sourceRegistry   string // set when browsing items from a specific registry
-	sourceProvider   string // provider slug when drilled in from loadout cards
-	parentLabel      string // intermediate breadcrumb (e.g. "Library", "Loadouts")
-	hiddenCount      int    // number of hidden items filtered out
-	hideLibraryBadge bool   // suppress [LIBRARY] badge (when already in Library view)
-}
-
+// itemsModel renders a scrollable list of catalog items with cursor navigation.
 type itemsModel struct {
-	contentType catalog.ContentType
-	items       []catalog.ContentItem
-	providers   []provider.Provider
-	repoRoot    string
-	ctx         itemsContext
-	cursor      int
-	width       int
-	height      int
+	items    []catalog.ContentItem
+	cursor   int // selected index
+	offset   int // scroll offset (first visible index)
+	width    int
+	height   int
+	focused  bool
+	mixed    bool                  // true when showing mixed content types (Library view)
+	search   string                // active search query (empty = no filter)
+	allItems []catalog.ContentItem // unfiltered items (for search reset)
 }
 
-func newItemsModel(ct catalog.ContentType, items []catalog.ContentItem, providers []provider.Provider, repoRoot string) itemsModel {
-	// Sort My Tools by type (in display order) so grouped rendering shows contiguous sections
-	if ct == catalog.Library && len(items) > 1 {
-		typeOrder := make(map[catalog.ContentType]int)
-		for idx, t := range catalog.AllContentTypes() {
-			typeOrder[t] = idx
-		}
-		sort.SliceStable(items, func(i, j int) bool {
-			return typeOrder[items[i].Type] < typeOrder[items[j].Type]
-		})
-	}
+func newItemsModel(items []catalog.ContentItem, mixed bool) itemsModel {
 	return itemsModel{
-		contentType: ct,
-		items:       items,
-		providers:   providers,
-		repoRoot:    repoRoot,
+		items:    items,
+		allItems: items,
+		mixed:    mixed,
 	}
 }
 
-func (m itemsModel) Update(msg tea.Msg) (itemsModel, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, keys.Up):
-			if m.cursor > 0 {
-				m.cursor--
-			}
-		case key.Matches(msg, keys.Down):
-			if m.cursor < len(m.items)-1 {
-				m.cursor++
-			}
-		case key.Matches(msg, keys.Home):
-			m.cursor = 0
-		case key.Matches(msg, keys.End):
-			if len(m.items) > 0 {
-				m.cursor = len(m.items) - 1
+// SetSize updates the items list dimensions.
+func (m *itemsModel) SetSize(width, height int) {
+	m.width = width
+	m.height = height
+}
+
+// SetItems replaces the item list and resets cursor.
+func (m *itemsModel) SetItems(items []catalog.ContentItem, mixed bool) {
+	m.items = items
+	m.allItems = items
+	m.mixed = mixed
+	m.cursor = 0
+	m.offset = 0
+	m.search = ""
+}
+
+// Selected returns the currently selected item, or nil if the list is empty.
+func (m itemsModel) Selected() *catalog.ContentItem {
+	if len(m.items) == 0 {
+		return nil
+	}
+	if m.cursor >= 0 && m.cursor < len(m.items) {
+		return &m.items[m.cursor]
+	}
+	return nil
+}
+
+// Len returns the number of visible items.
+func (m itemsModel) Len() int {
+	return len(m.items)
+}
+
+// CursorUp moves the cursor up one item.
+func (m *itemsModel) CursorUp() {
+	if len(m.items) == 0 {
+		return
+	}
+	m.cursor--
+	if m.cursor < 0 {
+		m.cursor = len(m.items) - 1 // wrap
+		m.offset = max(0, len(m.items)-m.height)
+	}
+	if m.cursor < m.offset {
+		m.offset = m.cursor
+	}
+}
+
+// CursorDown moves the cursor down one item.
+func (m *itemsModel) CursorDown() {
+	if len(m.items) == 0 {
+		return
+	}
+	m.cursor++
+	if m.cursor >= len(m.items) {
+		m.cursor = 0 // wrap
+		m.offset = 0
+	}
+	if m.cursor >= m.offset+m.height {
+		m.offset = m.cursor - m.height + 1
+	}
+}
+
+// PageUp moves cursor up by one page.
+func (m *itemsModel) PageUp() {
+	m.cursor = max(0, m.cursor-m.height)
+	m.offset = max(0, m.offset-m.height)
+}
+
+// PageDown moves cursor down by one page.
+func (m *itemsModel) PageDown() {
+	m.cursor = min(len(m.items)-1, m.cursor+m.height)
+	maxOffset := max(0, len(m.items)-m.height)
+	m.offset = min(maxOffset, m.offset+m.height)
+}
+
+// ApplySearch filters items across name, display name, description, type, and source.
+func (m *itemsModel) ApplySearch(query string) {
+	m.search = query
+	if query == "" {
+		m.items = m.allItems
+	} else {
+		q := strings.ToLower(query)
+		filtered := make([]catalog.ContentItem, 0)
+		for _, item := range m.allItems {
+			if strings.Contains(strings.ToLower(item.Name), q) ||
+				strings.Contains(strings.ToLower(item.DisplayName), q) ||
+				strings.Contains(strings.ToLower(item.Description), q) ||
+				strings.Contains(strings.ToLower(string(item.Type)), q) ||
+				strings.Contains(strings.ToLower(item.Source), q) {
+				filtered = append(filtered, item)
 			}
 		}
+		m.items = filtered
 	}
-	return m, nil
+	m.cursor = 0
+	m.offset = 0
 }
 
-// relevantProviders returns detected providers that support the given content type.
-func (m itemsModel) relevantProviders() []provider.Provider {
-	var relevant []provider.Provider
-	for _, p := range m.providers {
-		if p.Detected && p.SupportsType(m.contentType) {
-			relevant = append(relevant, p)
-		}
-	}
-	return relevant
+// ClearSearch removes the search filter and restores all items.
+func (m *itemsModel) ClearSearch() {
+	m.ApplySearch("")
 }
 
-// maxNameLen returns the length of the longest item name (minimum 4 for "Name" header).
-func (m itemsModel) maxNameLen() int {
-	max := 4
-	for _, item := range m.items {
-		name := displayName(item)
-		if len(name) > max {
-			max = len(name)
-		}
-	}
-	return max
-}
-
-// termWidth returns the usable terminal width, defaulting to 80.
-func (m itemsModel) termWidth() int {
-	if m.width > 0 {
-		return m.width
-	}
-	return 80
-}
-
-// truncate cuts a string to max length with "..." suffix.
-func truncate(s string, max int) string {
-	if max <= 0 {
+// View renders the items list.
+func (m itemsModel) View() string {
+	if m.height <= 0 || m.width <= 0 {
 		return ""
 	}
-	if len(s) <= max {
-		return s
-	}
-	if max <= 3 {
-		return s[:max]
-	}
-	return s[:max-3] + "..."
-}
-
-// buildProvCell creates the provider column content for a single item.
-func (m itemsModel) buildProvCell(item catalog.ContentItem, relevant []provider.Provider) provCell {
-	if !m.contentType.IsUniversal() {
-		// Provider-specific: show full provider name
-		name := providerDisplayName(item.Provider)
-		return provCell{plain: name, styled: name}
-	}
-	// Universal: only show providers where the item IS installed
-	var plainParts, styledParts []string
-	for _, p := range relevant {
-		status := installer.CheckStatus(item, p, m.repoRoot)
-		if status == installer.StatusInstalled {
-			plainParts = append(plainParts, "[ok] "+p.Name)
-			styledParts = append(styledParts, installedStyle.Render("[ok]")+" "+p.Name)
-		}
-	}
-	return provCell{
-		plain:  strings.Join(plainParts, "  "),
-		styled: strings.Join(styledParts, "  "),
-	}
-}
-
-func (m itemsModel) View() string {
-	// Breadcrumb: Home > Category
-	home := BreadcrumbSegment{"Home", "crumb-home"}
-
-	var s string
-	switch {
-	case m.ctx.sourceRegistry != "":
-		s = renderBreadcrumb(home, BreadcrumbSegment{"Registries", "crumb-registries"}, BreadcrumbSegment{m.ctx.sourceRegistry, ""}) + "\n"
-	case m.contentType == catalog.SearchResults:
-		s = renderBreadcrumb(home, BreadcrumbSegment{fmt.Sprintf("Search Results (%d)", len(m.items)), ""}) + "\n"
-	case m.contentType == catalog.Library:
-		s = renderBreadcrumb(home, BreadcrumbSegment{fmt.Sprintf("Library (%d)", len(m.items)), ""}) + "\n"
-	case m.ctx.parentLabel != "":
-		catLabel := m.contentType.Label()
-		if m.ctx.sourceProvider != "" {
-			catLabel = providerDisplayName(m.ctx.sourceProvider)
-		}
-		s = renderBreadcrumb(home, BreadcrumbSegment{m.ctx.parentLabel, "crumb-parent"}, BreadcrumbSegment{catLabel, ""}) + "\n"
-	default:
-		s = renderBreadcrumb(home, BreadcrumbSegment{m.contentType.Label(), ""}) + "\n"
-	}
-
-	// Action buttons below breadcrumb — context-dependent
-	if m.contentType == catalog.Loadouts {
-		// Task 1.4: loadout items list — Phase 2 (Task 2.7) will update to new createLoadoutScreen.
-		s += renderActionButtons(
-			ActionButton{"a", "Create Loadout", "action-a", actionBtnAddStyle},
-		) + "\n"
-	} else if m.ctx.hideLibraryBadge {
-		// Task 1.6: library items list — show Add {Type} and Remove
-		typeLabel := m.contentType.Label()
-		s += renderActionButtons(
-			ActionButton{"a", "Add " + typeLabel, "action-a", actionBtnAddStyle},
-			ActionButton{"r", "Remove", "action-r", actionBtnRemoveStyle},
-		) + "\n"
-	} else if m.contentType != catalog.SearchResults && m.contentType != catalog.Library && m.ctx.sourceRegistry == "" {
-		// Task 1.6: non-library, non-loadout, non-search, non-registry items — show Add {Type}
-		typeLabel := m.contentType.Label()
-		s += renderActionButtons(
-			ActionButton{"a", "Add " + typeLabel, "action-a", actionBtnAddStyle},
-		) + "\n"
-	} else {
-		s += "\n"
-	}
 
 	if len(m.items) == 0 {
-		s += helpStyle.Render("  No items found") + "\n"
-		if m.contentType == catalog.Library {
-			s += "\n" + helpStyle.Render("  Use Add to add content, or run 'syllago add' from the command line.") + "\n"
-		}
-		return s
+		return m.renderEmpty()
 	}
 
-	relevant := m.relevantProviders()
-	isProvSpecific := !m.contentType.IsUniversal()
-	showProvCol := isProvSpecific || len(relevant) > 0
-	if m.contentType == catalog.Library {
-		showProvCol = false // grouped headers replace provider column
-	}
-	isHooks := m.contentType == catalog.Hooks
-	if isHooks {
-		showProvCol = false // matrix columns replace provider column
-	}
-	nameW := m.maxNameLen()
-	tw := m.termWidth()
-
-	// For hooks: precompute compat matrices and determine column headers/widths.
-	var hookMatrices map[int]hookCompatMatrix
-	var matrixColWidths [4]int
-	var activeMatrixHeaders []string
-	if isHooks {
-		hookMatrices = make(map[int]hookCompatMatrix, len(m.items))
-		for i, item := range m.items {
-			hookMatrices[i] = buildHookMatrix(item)
-		}
-		// Choose full vs abbreviated headers based on panel width.
-		if tw >= 101 {
-			activeMatrixHeaders = matrixHeadersFull
-		} else {
-			activeMatrixHeaders = matrixHeadersAbbr
-		}
-		for i, hdr := range activeMatrixHeaders {
-			matrixColWidths[i] = len(hdr)
-		}
-	}
-
-	// Precompute provider column for each item and measure max width
-	provCells := make([]provCell, len(m.items))
-	maxProvW := 0
-	if showProvCol {
-		for i, item := range m.items {
-			provCells[i] = m.buildProvCell(item, relevant)
-			if len(provCells[i].plain) > maxProvW {
-				maxProvW = len(provCells[i].plain)
-			}
-		}
-		if maxProvW < 8 { // minimum width for "Provider" header
-			maxProvW = 8
-		}
-	}
-
-	// Description fills remaining terminal width
-	descW := tw - cursorWidth - nameW - colGap
-	if showProvCol {
-		descW -= colGap + maxProvW
-	}
-	if isHooks {
-		// Subtract the 4 matrix columns (each colW + colGap)
-		for _, colW := range matrixColWidths {
-			descW -= colGap + colW
-		}
-	}
-	if descW < 10 {
-		descW = 10
-	}
-
-	// Table header (skip for Library — group headers replace it)
-	if m.contentType != catalog.Library {
-		hdr := strings.Repeat(" ", cursorWidth)
-		if isHooks {
-			hdr += fmt.Sprintf("%-*s  %-*s", nameW, "Name", descW, "Description")
-			for i, colHdr := range activeMatrixHeaders {
-				hdr += fmt.Sprintf("  %-*s", matrixColWidths[i], colHdr)
-			}
-		} else if showProvCol {
-			hdr += fmt.Sprintf("%-*s  %-*s  %s", nameW, "Name", descW, "Description", "Provider")
-		} else {
-			hdr += fmt.Sprintf("%-*s  %s", nameW, "Name", "Description")
-		}
-		s += tableHeaderStyle.Render(hdr) + "\n"
-
-		// Separator
-		sep := strings.Repeat(" ", cursorWidth)
-		sep += strings.Repeat("─", nameW) + "  " + strings.Repeat("─", descW)
-		if showProvCol {
-			sep += "  " + strings.Repeat("─", maxProvW)
-		}
-		if isHooks {
-			for _, colW := range matrixColWidths {
-				sep += "  " + strings.Repeat("─", colW)
-			}
-		}
-		s += helpStyle.Render(sep) + "\n"
-	}
-
-	// Calculate viewport: count actual header lines rendered above, then fill remaining
-	// height with items. Reserve 1 line for each potential scroll indicator.
-	headerLines := strings.Count(s, "\n")
-	visibleRows := m.height - headerLines
-	if visibleRows < 1 {
-		visibleRows = len(m.items) // fallback: show all if height unknown
-	}
-
-	// Calculate scroll offset based on cursor position
-	offset := 0
-	if m.cursor >= visibleRows {
-		offset = m.cursor - visibleRows + 1
-	}
-	end := offset + visibleRows
-	if end > len(m.items) {
-		end = len(m.items)
-	}
-
-	// Reserve lines for scroll indicators so total output stays within m.height
-	if offset > 0 {
-		visibleRows--
-	}
-	if end < len(m.items) {
-		visibleRows--
-	}
-	if visibleRows < 1 {
-		visibleRows = 1
-	}
-	// Recompute end after adjusting visibleRows
-	end = offset + visibleRows
-	if end > len(m.items) {
-		end = len(m.items)
-	}
+	visibleCount := min(m.height, len(m.items))
+	lastVisible := min(m.offset+visibleCount, len(m.items))
 
 	// Scroll indicators
-	if offset > 0 {
-		s += "  " + renderScrollUp(offset, false) + "\n"
+	itemsAbove := m.offset
+	itemsBelow := max(0, len(m.items)-lastVisible)
+	showAbove := itemsAbove > 0
+	showBelow := itemsBelow > 0
+
+	// Adjust visible range to make room for indicators
+	contentStart := m.offset
+	contentEnd := lastVisible
+	if showAbove {
+		contentStart++
+	}
+	if showBelow && contentEnd > contentStart {
+		contentEnd--
 	}
 
-	// Whether to show a type tag per item (for mixed-type views)
-	showTypeTag := m.contentType == catalog.SearchResults
+	lines := make([]string, 0, m.height)
 
-	// Rows (only render visible items)
-	var prevGroupType catalog.ContentType
-	for i := offset; i < end; i++ {
-		item := m.items[i]
+	if showAbove {
+		indicator := fmt.Sprintf("(%d more above)", itemsAbove)
+		lines = append(lines, mutedStyle.Render(indicator))
+	}
 
-		// Group headers for Library — insert section label when type changes
-		if m.contentType == catalog.Library && item.Type != prevGroupType {
-			if prevGroupType != "" {
-				s += "\n"
+	for i := contentStart; i < contentEnd; i++ {
+		lines = append(lines, m.renderItem(i))
+	}
+
+	if showBelow {
+		indicator := fmt.Sprintf("(%d more below)", itemsBelow)
+		lines = append(lines, mutedStyle.Render(indicator))
+	}
+
+	// Pad remaining height
+	for len(lines) < m.height {
+		lines = append(lines, strings.Repeat(" ", m.width))
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// renderItem renders a single list row.
+func (m itemsModel) renderItem(index int) string {
+	item := m.items[index]
+	isCursor := index == m.cursor
+
+	// Build the display text
+	var text string
+	if isCursor {
+		text = " > "
+	} else {
+		text = "   "
+	}
+
+	name := item.Name
+	if item.DisplayName != "" {
+		name = item.DisplayName
+	}
+
+	// Source column
+	source := item.Source
+	if source == "" && item.Registry != "" {
+		source = item.Registry
+	}
+
+	// Type badge for mixed views
+	typeBadge := ""
+	if m.mixed {
+		typeBadge = " " + mutedStyle.Render("["+string(item.Type)+"]")
+	}
+
+	// Calculate available width for name and source
+	prefixW := 3 // " > " or "   "
+	badgeW := 0
+	if m.mixed {
+		badgeW = lipgloss.Width(typeBadge)
+	}
+
+	if source != "" && m.width >= 30 {
+		// Two-column: name + source
+		sourceMaxW := min(14, m.width/3)
+		nameMaxW := m.width - prefixW - sourceMaxW - badgeW - 2 // 2 for gap
+
+		name = truncate(name, nameMaxW)
+		source = truncate(source, sourceMaxW)
+
+		gap := max(1, m.width-prefixW-lipgloss.Width(name)-lipgloss.Width(source)-badgeW)
+		text += name + strings.Repeat(" ", gap) + mutedStyle.Render(source) + typeBadge
+	} else {
+		// Single column: name only
+		nameMaxW := m.width - prefixW - badgeW
+		name = truncate(name, nameMaxW)
+		text += name + typeBadge
+		// Pad to full width
+		textW := lipgloss.Width(text)
+		if textW < m.width {
+			text += strings.Repeat(" ", m.width-textW)
+		}
+	}
+
+	var row string
+	if isCursor && m.focused {
+		row = selectedRowStyle.Width(m.width).Render(text)
+	} else if isCursor {
+		row = boldStyle.Width(m.width).Render(text)
+	} else {
+		row = lipgloss.NewStyle().Width(m.width).Render(text)
+	}
+	return zone.Mark("item-"+itoa(index), row)
+}
+
+// renderEmpty shows guidance when no items exist.
+func (m itemsModel) renderEmpty() string {
+	msg := "No items found."
+	if m.search != "" {
+		msg = "No matches for \"" + m.search + "\"."
+	}
+	return lipgloss.NewStyle().
+		Width(m.width).
+		Height(m.height).
+		Align(lipgloss.Center, lipgloss.Center).
+		Foreground(mutedColor).
+		Render(msg)
+}
+
+// truncate shortens a string to fit within maxWidth, adding "..." if needed.
+func truncate(s string, maxWidth int) string {
+	if maxWidth <= 0 {
+		return ""
+	}
+	if len(s) <= maxWidth {
+		return s
+	}
+	if maxWidth <= 3 {
+		return s[:maxWidth]
+	}
+	return s[:maxWidth-3] + "..."
+}
+
+// wordWrap breaks text into lines at word boundaries. Words longer than maxW
+// are force-broken. Returns at least one line (empty string → [""])
+func wordWrap(s string, maxW int) []string {
+	if maxW <= 0 {
+		return []string{s}
+	}
+	words := strings.Fields(s)
+	if len(words) == 0 {
+		return []string{""}
+	}
+
+	var lines []string
+	line := ""
+	for _, word := range words {
+		// Force-break words longer than maxW
+		for len(word) > maxW {
+			if line != "" {
+				lines = append(lines, line)
+				line = ""
 			}
-			s += labelStyle.Render("  "+item.Type.Label()) + "\n"
-			prevGroupType = item.Type
+			lines = append(lines, word[:maxW])
+			word = word[maxW:]
 		}
-		prefix := "  "
-		style := itemStyle
-		if i == m.cursor {
-			prefix = "> "
-			style = selectedItemStyle
+		if word == "" {
+			continue
 		}
-
-		name := displayName(item)
-		paddedName := fmt.Sprintf("%-*s", nameW, truncate(name, nameW))
-		styledName := style.Render(paddedName)
-
-		// Add type tag for mixed-type views
-		typeTag := ""
-		if showTypeTag {
-			typeTag = " " + countStyle.Render("("+item.Type.Label()+")")
-		}
-
-		// Build description prefix: [EXAMPLE] for examples, [BUILT-IN] for meta-tools, [LOCAL] for local items, [registry-name] for registry items, [G] for global items
-		localPrefix := ""
-		localPrefixLen := 0
-		if item.IsExample() {
-			localPrefix = exampleStyle.Render("[EXAMPLE]") + " "
-			localPrefixLen = 10 // "[EXAMPLE] "
-		} else if item.IsBuiltin() {
-			localPrefix = builtinStyle.Render("[BUILT-IN]") + " "
-			localPrefixLen = 11 // "[BUILT-IN] "
-		} else if item.Library && !m.ctx.hideLibraryBadge {
-			localPrefix = warningStyle.Render("[LIBRARY]") + " "
-			localPrefixLen = 10 // "[LIBRARY] "
-		} else if item.Registry != "" {
-			tag := "[" + item.Registry + "]"
-			localPrefix = countStyle.Render(tag) + " "
-			localPrefixLen = len(tag) + 1 // tag + space
-		} else if item.Source == "global" {
-			localPrefix = globalStyle.Render("[GLOBAL]") + " "
-			localPrefixLen = 9 // "[GLOBAL] "
-		}
-
-		if isHooks {
-			paddedDesc := fmt.Sprintf("%-*s", descW, truncate(item.Description, descW-localPrefixLen))
-			rowStr := fmt.Sprintf("  %s%s%s  %s%s",
-				prefix,
-				styledName,
-				typeTag,
-				localPrefix,
-				helpStyle.Render(paddedDesc),
-			)
-			mat := hookMatrices[i]
-			for j, cell := range mat {
-				rowStr += fmt.Sprintf("  %-*s", matrixColWidths[j], cell.styled)
-			}
-			s += zone.Mark(fmt.Sprintf("item-%d", i), rowStr) + "\n"
-		} else if showProvCol {
-			paddedDesc := fmt.Sprintf("%-*s", descW, truncate(item.Description, descW-localPrefixLen))
-			rowStr := fmt.Sprintf("  %s%s%s  %s%s  %s",
-				prefix,
-				styledName,
-				typeTag,
-				localPrefix,
-				helpStyle.Render(paddedDesc),
-				provCells[i].styled,
-			)
-			s += zone.Mark(fmt.Sprintf("item-%d", i), rowStr) + "\n"
+		if line == "" {
+			line = word
+		} else if len(line)+1+len(word) <= maxW {
+			line += " " + word
 		} else {
-			desc := truncate(item.Description, descW-localPrefixLen)
-			paddedDesc := fmt.Sprintf("%-*s", descW-localPrefixLen, desc)
-			rowStr := fmt.Sprintf("  %s%s%s  %s%s",
-				prefix,
-				styledName,
-				typeTag,
-				localPrefix,
-				helpStyle.Render(paddedDesc),
-			)
-			s += zone.Mark(fmt.Sprintf("item-%d", i), rowStr) + "\n"
+			lines = append(lines, line)
+			line = word
 		}
 	}
-
-	// Scroll indicator for items below
-	if end < len(m.items) {
-		s += "  " + renderScrollDown(len(m.items)-end, false) + "\n"
+	if line != "" {
+		lines = append(lines, line)
 	}
-
-	return s
+	if len(lines) == 0 {
+		return []string{""}
+	}
+	return lines
 }
 
-func (m itemsModel) helpText() string {
-	parts := []string{"/ search", "enter detail"}
-
-	switch {
-	case m.ctx.sourceRegistry != "":
-		// Browsing a registry's items
-		parts = append(parts, "a add", "l create loadout")
-	case m.contentType == catalog.Library:
-		// Browsing library items
-		parts = append(parts, "a add", "r remove")
-	default:
-		// Browsing a content type (from homepage or library card)
-		typeLabel := contentTypeSingular(m.contentType)
-		parts = append(parts, "a add "+typeLabel)
-		if m.hasRemovableItems() {
-			parts = append(parts, "r remove "+typeLabel)
-		}
+// truncateLine hard-clips a line to maxWidth characters. Handles tabs by
+// expanding them to spaces first. No ellipsis — just clip for preview content.
+func truncateLine(s string, maxWidth int) string {
+	if maxWidth <= 0 {
+		return ""
 	}
-
-	parts = append(parts, "esc back", "? help")
-
-	if m.ctx.hiddenCount > 0 {
-		parts = append(parts, fmt.Sprintf("H show %d hidden", m.ctx.hiddenCount))
+	// Expand tabs to 4 spaces for consistent width
+	s = strings.ReplaceAll(s, "\t", "    ")
+	// Strip any carriage returns
+	s = strings.ReplaceAll(s, "\r", "")
+	runes := []rune(s)
+	if len(runes) <= maxWidth {
+		return string(runes)
 	}
-	return strings.Join(parts, " • ")
-}
-
-// hasRemovableItems returns true if any item in the list is removable.
-func (m itemsModel) hasRemovableItems() bool {
-	for _, item := range m.items {
-		if isRemovable(item) {
-			return true
-		}
-	}
-	return false
-}
-
-// isRemovable returns true if the item can be removed from the library.
-// Only library items (Source == "global") are removable — registry items are not.
-func isRemovable(item catalog.ContentItem) bool {
-	return item.Source == "global" && item.Library
-}
-
-// contentTypeSingular returns the lowercase singular form of a content type for help text.
-func contentTypeSingular(ct catalog.ContentType) string {
-	switch ct {
-	case catalog.Skills:
-		return "skill"
-	case catalog.Agents:
-		return "agent"
-	case catalog.Rules:
-		return "rule"
-	case catalog.Hooks:
-		return "hook"
-	case catalog.Commands:
-		return "command"
-	case catalog.MCP:
-		return "mcp config"
-	case catalog.Loadouts:
-		return "loadout"
-	default:
-		return "content"
-	}
-}
-
-func (m itemsModel) selectedItem() catalog.ContentItem {
-	if len(m.items) == 0 {
-		return catalog.ContentItem{}
-	}
-	return m.items[m.cursor]
+	return string(runes[:maxWidth])
 }

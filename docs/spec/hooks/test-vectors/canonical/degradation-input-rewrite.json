@@ -1,0 +1,20 @@
+{
+  "_comment": "Tests the safety-critical input_rewrite degradation. This hook sanitizes shell command arguments via updated_input in its JSON output. When converted to a provider that does not support input_rewrite, the default degradation strategy is 'block' — the converted hook MUST block the action entirely (exit code 2) rather than allowing unmodified input through. This prevents a false sense of security where the user believes input is being sanitized when it is not.",
+  "spec": "hooks/0.1",
+  "hooks": [
+    {
+      "event": "before_tool_execute",
+      "matcher": "shell",
+      "handler": {
+        "type": "command",
+        "command": "./sanitize-input.sh",
+        "timeout": 10
+      },
+      "blocking": true,
+      "degradation": {
+        "input_rewrite": "block"
+      },
+      "capabilities": ["input_rewrite", "structured_output"]
+    }
+  ]
+}

@@ -1,0 +1,1443 @@
+{
+  "version": "1",
+  "generatedAt": "2026-04-09T16:40:57Z",
+  "syllagoVersion": "0.7.0",
+  "providers": [
+    {
+      "name": "Claude Code",
+      "slug": "claude-code",
+      "configDir": ".claude",
+      "emitPath": "{project}/CLAUDE.md",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.claude/agents",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.claude/agents"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "tools",
+            "disallowedTools",
+            "model",
+            "maxTurns",
+            "permissionMode",
+            "skills",
+            "mcpServers",
+            "memory",
+            "background",
+            "isolation",
+            "effort",
+            "hooks",
+            "color",
+            "temperature",
+            "timeout_mins",
+            "kind"
+          ]
+        },
+        "commands": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.claude/commands",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.claude/commands"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "allowed-tools",
+            "context",
+            "agent",
+            "model",
+            "disable-model-invocation",
+            "user-invocable",
+            "argument-hint",
+            "effort"
+          ]
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.claude/settings.json"
+          ],
+          "hookEvents": [
+            {
+              "canonical": "after_compact",
+              "nativeName": "PostCompact",
+              "category": "context"
+            },
+            {
+              "canonical": "after_tool_execute",
+              "nativeName": "PostToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "agent_stop",
+              "nativeName": "Stop",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_compact",
+              "nativeName": "PreCompact",
+              "category": "context"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "UserPromptSubmit",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_tool_execute",
+              "nativeName": "PreToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "config_change",
+              "nativeName": "ConfigChange",
+              "category": "config"
+            },
+            {
+              "canonical": "elicitation",
+              "nativeName": "Elicitation",
+              "category": "interaction"
+            },
+            {
+              "canonical": "elicitation_result",
+              "nativeName": "ElicitationResult",
+              "category": "interaction"
+            },
+            {
+              "canonical": "error_occurred",
+              "nativeName": "ErrorOccurred",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "file_changed",
+              "nativeName": "FileChanged"
+            },
+            {
+              "canonical": "instructions_loaded",
+              "nativeName": "InstructionsLoaded",
+              "category": "context"
+            },
+            {
+              "canonical": "notification",
+              "nativeName": "Notification",
+              "category": "output"
+            },
+            {
+              "canonical": "permission_request",
+              "nativeName": "PermissionRequest",
+              "category": "security"
+            },
+            {
+              "canonical": "session_end",
+              "nativeName": "SessionEnd",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "SessionStart",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "stop_failure",
+              "nativeName": "StopFailure",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "subagent_start",
+              "nativeName": "SubagentStart",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "subagent_stop",
+              "nativeName": "SubagentStop",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "task_completed",
+              "nativeName": "TaskCompleted",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "teammate_idle",
+              "nativeName": "TeammateIdle",
+              "category": "collaboration"
+            },
+            {
+              "canonical": "tool_use_failure",
+              "nativeName": "PostToolUseFailure"
+            },
+            {
+              "canonical": "worktree_create",
+              "nativeName": "WorktreeCreate",
+              "category": "workspace"
+            },
+            {
+              "canonical": "worktree_remove",
+              "nativeName": "WorktreeRemove",
+              "category": "workspace"
+            }
+          ],
+          "hookTypes": [
+            "command",
+            "http",
+            "prompt",
+            "agent"
+          ],
+          "configLocation": ".claude/settings.json"
+        },
+        "loadouts": {
+          "supported": true,
+          "fileFormat": "md",
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.claude.json",
+            "{project}/.mcp.json"
+          ],
+          "configLocation": ".mcp.json",
+          "mcpTransports": [
+            "stdio",
+            "sse",
+            "streamable-http"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.claude/rules",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/CLAUDE.md",
+            "{project}/.claude/rules"
+          ],
+          "frontmatterFields": [
+            "paths"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.claude/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.claude/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "license",
+            "compatibility",
+            "metadata",
+            "allowed-tools",
+            "disallowed-tools",
+            "context",
+            "agent",
+            "model",
+            "effort",
+            "disable-model-invocation",
+            "user-invocable",
+            "argument-hint",
+            "hooks"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Gemini CLI",
+      "slug": "gemini-cli",
+      "configDir": ".gemini",
+      "emitPath": "{project}/GEMINI.md",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.gemini/agents",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.gemini/agents"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "tools",
+            "model",
+            "max_turns",
+            "temperature",
+            "timeout_mins",
+            "kind"
+          ]
+        },
+        "commands": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.gemini/commands",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.gemini/commands"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "prompt"
+          ]
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.gemini/settings.json"
+          ],
+          "hookEvents": [
+            {
+              "canonical": "after_model",
+              "nativeName": "AfterModel",
+              "category": "model"
+            },
+            {
+              "canonical": "after_tool_execute",
+              "nativeName": "AfterTool",
+              "category": "tool"
+            },
+            {
+              "canonical": "agent_stop",
+              "nativeName": "AfterAgent",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_compact",
+              "nativeName": "PreCompress",
+              "category": "context"
+            },
+            {
+              "canonical": "before_model",
+              "nativeName": "BeforeModel",
+              "category": "model"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "BeforeAgent",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_tool_execute",
+              "nativeName": "BeforeTool",
+              "category": "tool"
+            },
+            {
+              "canonical": "before_tool_selection",
+              "nativeName": "BeforeToolSelection",
+              "category": "model"
+            },
+            {
+              "canonical": "notification",
+              "nativeName": "Notification",
+              "category": "output"
+            },
+            {
+              "canonical": "session_end",
+              "nativeName": "SessionEnd",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "SessionStart",
+              "category": "lifecycle"
+            }
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".gemini/settings.json"
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.gemini/settings.json"
+          ],
+          "configLocation": ".gemini/settings.json",
+          "mcpTransports": [
+            "stdio",
+            "sse"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.gemini",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/GEMINI.md"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.gemini/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.gemini/skills",
+            "{project}/.agents/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Cursor",
+      "slug": "cursor",
+      "configDir": ".cursor",
+      "emitPath": "{project}/.cursor/rules/syllago-context.mdc",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.cursor/agents",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.cursor/agents",
+            "{project}/AGENTS.md"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "model",
+            "readonly",
+            "is_background"
+          ]
+        },
+        "commands": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.cursor/commands",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.cursor/commands"
+          ]
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.cursor/settings.json"
+          ],
+          "hookEvents": [
+            {
+              "canonical": "after_model",
+              "nativeName": "afterAgentResponse",
+              "category": "model"
+            },
+            {
+              "canonical": "after_tool_execute",
+              "nativeName": "PostToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "agent_stop",
+              "nativeName": "Stop",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_compact",
+              "nativeName": "PreCompact",
+              "category": "context"
+            },
+            {
+              "canonical": "before_model",
+              "nativeName": "beforeAgentResponse",
+              "category": "model"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "UserPromptSubmit",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_tool_execute",
+              "nativeName": "PreToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "before_tool_selection",
+              "nativeName": "beforeToolSelection",
+              "category": "model"
+            },
+            {
+              "canonical": "file_changed",
+              "nativeName": "afterFileEdit"
+            },
+            {
+              "canonical": "session_end",
+              "nativeName": "SessionEnd",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "SessionStart",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "subagent_start",
+              "nativeName": "SubagentStart",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "subagent_stop",
+              "nativeName": "SubagentStop",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "tool_use_failure",
+              "nativeName": "postToolUseFailure"
+            }
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".cursor/settings.json"
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.cursor/mcp.json"
+          ],
+          "configLocation": ".cursor/mcp.json",
+          "mcpTransports": [
+            "stdio",
+            "sse",
+            "streamable-http"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "mdc",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.cursor",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.cursor/rules",
+            "{project}/.cursorrules"
+          ],
+          "frontmatterFields": [
+            "description",
+            "alwaysApply",
+            "globs"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.cursor/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.cursor/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "license",
+            "compatibility",
+            "metadata",
+            "disable-model-invocation"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Windsurf",
+      "slug": "windsurf",
+      "configDir": ".codeium/windsurf",
+      "emitPath": "{project}/.windsurf/rules",
+      "content": {
+        "agents": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "commands": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "hookEvents": [
+            {
+              "canonical": "agent_stop",
+              "nativeName": "post_cascade_response",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "pre_user_prompt",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_end",
+              "nativeName": "session_end",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "session_start",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "transcript_export",
+              "nativeName": "post_cascade_response_with_transcript"
+            },
+            {
+              "canonical": "worktree_create",
+              "nativeName": "post_setup_worktree",
+              "category": "workspace"
+            }
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".windsurf/hooks.json"
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "configLocation": ".windsurf/mcp_config.json",
+          "mcpTransports": [
+            "stdio",
+            "sse"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.codeium/windsurf",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.windsurfrules",
+            "{project}/.windsurf/rules"
+          ],
+          "frontmatterFields": [
+            "trigger",
+            "description",
+            "globs"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.codeium/windsurf/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.windsurf/skills",
+            "{project}/.agents/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Codex",
+      "slug": "codex",
+      "configDir": ".codex",
+      "emitPath": "{project}/AGENTS.md",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "toml",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.codex",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.codex/agents"
+          ]
+        },
+        "commands": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.codex",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.codex/commands"
+          ],
+          "frontmatterFields": [
+            "description",
+            "argument-hint"
+          ]
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.codex",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.codex/hooks.json"
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".codex/hooks.json"
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "toml",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "configLocation": ".codex/config.toml",
+          "mcpTransports": [
+            "stdio"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.codex",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/AGENTS.md"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.agents/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.agents/skills"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Copilot CLI",
+      "slug": "copilot-cli",
+      "configDir": ".copilot",
+      "emitPath": "{project}/.github/copilot-instructions.md",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.github/agents",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.copilot/agents",
+            "{project}/.github/agents",
+            "{project}/.claude/agents"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "tools",
+            "model",
+            "target",
+            "mcp-servers"
+          ]
+        },
+        "commands": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.copilot/commands",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.copilot/commands"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "agent",
+            "model",
+            "tools",
+            "argument-hint"
+          ]
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.github/hooks"
+          ],
+          "hookEvents": [
+            {
+              "canonical": "after_tool_execute",
+              "nativeName": "postToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "agent_stop",
+              "nativeName": "agentStop",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "userPromptSubmitted",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_tool_execute",
+              "nativeName": "preToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "error_occurred",
+              "nativeName": "errorOccurred",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_end",
+              "nativeName": "sessionEnd",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "sessionStart",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "subagent_stop",
+              "nativeName": "subagentStop",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "tool_use_failure",
+              "nativeName": "errorOccurred"
+            }
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".github/hooks/"
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.copilot/mcp-config.json"
+          ],
+          "configLocation": ".copilot/mcp-config.json",
+          "mcpTransports": [
+            "stdio",
+            "sse"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.copilot",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.github/copilot-instructions.md",
+            "{project}/AGENTS.md"
+          ],
+          "frontmatterFields": [
+            "applyTo"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.github/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.github/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "license",
+            "argument-hint",
+            "user-invocable",
+            "disable-model-invocation"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Zed",
+      "slug": "zed",
+      "configDir": ".config/zed",
+      "emitPath": "{project}/.rules",
+      "content": {
+        "agents": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "commands": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "hooks": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "configLocation": "~/.config/zed/settings.json",
+          "mcpTransports": [
+            "stdio"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.rules",
+            "{project}/.cursorrules",
+            "{project}/CLAUDE.md"
+          ]
+        },
+        "skills": {
+          "supported": false,
+          "symlinkSupport": false
+        }
+      }
+    },
+    {
+      "name": "Cline",
+      "slug": "cline",
+      "configDir": ".clinerules",
+      "emitPath": "{project}/.clinerules",
+      "content": {
+        "agents": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "commands": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.clinerules/hooks"
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".clinerules/hooks"
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{home}/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json"
+          ],
+          "configLocation": "cline_mcp_settings.json",
+          "mcpTransports": [
+            "stdio",
+            "sse",
+            "streamable-http"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.clinerules",
+            "{home}/Documents/Cline/Rules"
+          ],
+          "frontmatterFields": [
+            "paths"
+          ]
+        },
+        "skills": {
+          "supported": false,
+          "symlinkSupport": false
+        }
+      }
+    },
+    {
+      "name": "Roo Code",
+      "slug": "roo-code",
+      "configDir": ".roo",
+      "emitPath": "{project}/.roo/rules",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "yaml",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "frontmatterFields": [
+            "slug",
+            "name",
+            "roleDefinition",
+            "whenToUse",
+            "customInstructions",
+            "groups"
+          ]
+        },
+        "commands": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "hooks": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.roo/mcp.json"
+          ],
+          "configLocation": ".roo/mcp.json",
+          "mcpTransports": [
+            "stdio",
+            "sse",
+            "streamable-http"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.roo/rules",
+            "{project}/.roo/rules-code",
+            "{project}/.roo/rules-architect",
+            "{project}/.roo/rules-ask",
+            "{project}/.roo/rules-debug",
+            "{project}/.roo/rules-orchestrator",
+            "{project}/.roorules",
+            "{home}/.roo/rules"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.roo/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.roo/skills",
+            "{project}/.agents/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description"
+          ]
+        }
+      }
+    },
+    {
+      "name": "OpenCode",
+      "slug": "opencode",
+      "configDir": ".config/opencode",
+      "emitPath": "{project}/AGENTS.md",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.config/opencode/agents",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.opencode/agents"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "tools",
+            "model",
+            "steps",
+            "color",
+            "temperature"
+          ]
+        },
+        "commands": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.config/opencode/commands",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.opencode/commands"
+          ],
+          "frontmatterFields": [
+            "description",
+            "agent",
+            "model",
+            "subtask"
+          ]
+        },
+        "hooks": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "jsonc",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/opencode.json",
+            "{project}/opencode.jsonc"
+          ],
+          "configLocation": "opencode.json",
+          "mcpTransports": [
+            "stdio"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.config/opencode",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/AGENTS.md",
+            "{project}/CLAUDE.md"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.config/opencode/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.opencode/skills",
+            "{project}/.agents/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "license",
+            "compatibility",
+            "metadata"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Kiro",
+      "slug": "kiro",
+      "configDir": ".kiro",
+      "emitPath": "{project}/.kiro/steering",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.kiro/agents",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.kiro/agents"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "model",
+            "tools",
+            "allowedTools",
+            "toolAliases",
+            "toolsSettings",
+            "mcpServers",
+            "resources",
+            "includeMcpJson",
+            "includePowers",
+            "keyboardShortcut",
+            "welcomeMessage",
+            "hooks"
+          ]
+        },
+        "commands": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.kiro/agents"
+          ],
+          "hookEvents": [
+            {
+              "canonical": "after_task",
+              "nativeName": "Post Task Execution"
+            },
+            {
+              "canonical": "after_tool_execute",
+              "nativeName": "postToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "agent_stop",
+              "nativeName": "stop",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "userPromptSubmit",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_task",
+              "nativeName": "Pre Task Execution"
+            },
+            {
+              "canonical": "before_tool_execute",
+              "nativeName": "preToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "file_changed",
+              "nativeName": "File Save"
+            },
+            {
+              "canonical": "file_created",
+              "nativeName": "File Create"
+            },
+            {
+              "canonical": "file_deleted",
+              "nativeName": "File Delete"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "agentSpawn",
+              "category": "lifecycle"
+            }
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".kiro/agents/"
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.kiro/settings/mcp.json"
+          ],
+          "configLocation": ".kiro/settings/mcp.json",
+          "mcpTransports": [
+            "stdio",
+            "sse"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.kiro/steering"
+          ],
+          "frontmatterFields": [
+            "inclusion",
+            "fileMatchPattern",
+            "name",
+            "description"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.kiro/steering"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "license",
+            "compatibility",
+            "metadata"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Amp",
+      "slug": "amp",
+      "configDir": ".config/amp",
+      "emitPath": "{project}/AGENTS.md",
+      "content": {
+        "agents": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "commands": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "hooks": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.amp/settings.json"
+          ],
+          "configLocation": ".amp/settings.json",
+          "mcpTransports": [
+            "stdio",
+            "sse"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.config/amp",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/AGENTS.md",
+            "{project}/AGENT.md",
+            "{project}/CLAUDE.md"
+          ],
+          "frontmatterFields": [
+            "globs"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.config/agents/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.agents/skills",
+            "{project}/.claude/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description"
+          ]
+        }
+      }
+    }
+  ],
+  "contentTypes": [
+    "skills",
+    "agents",
+    "mcp",
+    "rules",
+    "hooks",
+    "commands",
+    "loadouts"
+  ]
+}

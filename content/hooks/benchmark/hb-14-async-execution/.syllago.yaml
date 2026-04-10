@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-14-async-execution
+type: hooks
+description: "Benchmark: validates hook runs asynchronously without blocking tool execution"
+hook:
+  event: before_tool_execute
+  blocking: false
+  command: ./hb-14.sh

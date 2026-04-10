@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-18-timeout
+type: hooks
+description: "Benchmark: validates agent kills long-running hooks (timeout enforcement)"
+hook:
+  event: before_tool_execute
+  blocking: false
+  command: ./hb-18.sh

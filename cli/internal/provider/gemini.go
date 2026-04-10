@@ -21,7 +21,7 @@ var GeminiCLI = Provider{
 		case catalog.Hooks:
 			return JSONMergeSentinel
 		case catalog.Commands:
-			return base
+			return filepath.Join(base, "commands")
 		case catalog.Agents:
 			return filepath.Join(base, "agents")
 		case catalog.MCP:
@@ -40,7 +40,10 @@ var GeminiCLI = Provider{
 		case catalog.Commands:
 			return []string{filepath.Join(projectRoot, ".gemini", "commands")}
 		case catalog.Skills:
-			return []string{filepath.Join(projectRoot, ".gemini", "skills")}
+			return []string{
+				filepath.Join(projectRoot, ".gemini", "skills"),
+				filepath.Join(projectRoot, ".agents", "skills"),
+			}
 		case catalog.Agents:
 			return []string{filepath.Join(projectRoot, ".gemini", "agents")}
 		case catalog.MCP:
@@ -78,4 +81,16 @@ var GeminiCLI = Provider{
 		catalog.MCP:      false, // JSON merge
 		catalog.Hooks:    false, // JSON merge
 	},
+	GlobalSharedReadPaths: func(homeDir string, ct catalog.ContentType) []string {
+		if ct == catalog.Skills {
+			return []string{filepath.Join(homeDir, ".agents", "skills")}
+		}
+		return nil
+	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.Hooks: ".gemini/settings.json",
+		catalog.MCP:   ".gemini/settings.json",
+	},
+	MCPTransports: []string{"stdio", "sse"},
+	HookTypes:     []string{"command"},
 }

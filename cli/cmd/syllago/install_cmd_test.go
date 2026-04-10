@@ -9,6 +9,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // setupGlobalLibrary creates a temp dir structured as a ~/.syllago/content
@@ -40,6 +41,8 @@ func TestInstallUnknownProvider(t *testing.T) {
 
 	installCmd.Flags().Set("to", "nonexistent-provider")
 	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
 
 	err := installCmd.RunE(installCmd, []string{})
 	if err == nil {
@@ -77,6 +80,8 @@ func TestInstallDryRunDoesNotWrite(t *testing.T) {
 	defer installCmd.Flags().Set("to", "")
 	installCmd.Flags().Set("dry-run", "true")
 	defer installCmd.Flags().Set("dry-run", "false")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
 
 	err := installCmd.RunE(installCmd, []string{})
 	if err != nil {
@@ -114,7 +119,7 @@ func TestInstallTypeFilter(t *testing.T) {
 }
 
 func TestInstallFlagsRegistered(t *testing.T) {
-	flags := []string{"to", "type", "method", "dry-run", "base-dir", "no-input"}
+	flags := []string{"to", "type", "method", "dry-run", "base-dir", "no-input", "all"}
 	for _, name := range flags {
 		if installCmd.Flags().Lookup(name) == nil {
 			t.Errorf("expected --%s flag to be registered on installCmd", name)
@@ -134,6 +139,8 @@ func TestInstallJSONOutputOnSuccess(t *testing.T) {
 
 	installCmd.Flags().Set("to", "test-provider-json")
 	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
 
 	err := installCmd.RunE(installCmd, []string{})
 	if err != nil {
@@ -157,6 +164,87 @@ func TestInstallJSONOutputOnSuccess(t *testing.T) {
 	}
 	if item.Method == "" {
 		t.Error("expected non-empty method in installed item")
+	}
+}
+
+func TestInstallWarnsWhenProviderNotDetected(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+	// Provider with Detected=false triggers warning.
+	addTestProviderOpts(t, "undetected-prov", "Undetected Provider", installBase, false)
+
+	_, stderr := output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "undetected-prov")
+	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+
+	errOut := stderr.String()
+	if !strings.Contains(errOut, "Warning: Undetected Provider not detected") {
+		t.Errorf("expected provider-not-detected warning on stderr, got: %s", errOut)
+	}
+	if !strings.Contains(errOut, "syllago config paths --provider undetected-prov") {
+		t.Errorf("expected config paths hint in warning, got: %s", errOut)
+	}
+}
+
+func TestInstallNoWarningWhenProviderDetected(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+	// Provider with Detected=true should NOT trigger warning.
+	addTestProviderOpts(t, "detected-prov", "Detected Provider", installBase, true)
+
+	_, stderr := output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "detected-prov")
+	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+
+	errOut := stderr.String()
+	if strings.Contains(errOut, "Warning") {
+		t.Errorf("expected no warning for detected provider, got: %s", errOut)
+	}
+}
+
+func TestInstallNoWarningInJSONMode(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+	addTestProviderOpts(t, "undetected-json", "Undetected JSON", installBase, false)
+
+	_, stderr := output.SetForTest(t)
+	output.JSON = true
+
+	installCmd.Flags().Set("to", "undetected-json")
+	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+
+	errOut := stderr.String()
+	if strings.Contains(errOut, "Warning") {
+		t.Errorf("expected no warning in JSON mode, got: %s", errOut)
 	}
 }
 
@@ -190,5 +278,273 @@ func TestInstallJSONOutputOnSkip(t *testing.T) {
 	var result installResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("output is not valid JSON: %v\noutput: %s", err, out)
+	}
+}
+
+func TestInstallRequiresExplicitIntent(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+	_, _ = output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "claude-code")
+	defer installCmd.Flags().Set("to", "")
+
+	// No name, no --all, no --type → should error.
+	err := installCmd.RunE(installCmd, []string{})
+	if err == nil {
+		t.Fatal("expected error when no name, --all, or --type is specified")
+	}
+	if !strings.Contains(err.Error(), "--all") {
+		t.Errorf("expected hint about --all in error, got: %v", err)
+	}
+}
+
+func TestInstallAllConflictsWithName(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+	_, _ = output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "claude-code")
+	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
+
+	// --all + name → should error.
+	err := installCmd.RunE(installCmd, []string{"my-skill"})
+	if err == nil {
+		t.Fatal("expected error when both --all and a name are specified")
+	}
+	if !strings.Contains(err.Error(), "cannot specify both") {
+		t.Errorf("expected conflict message, got: %v", err)
+	}
+}
+
+func TestInstallAllInstallsEverything(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+	addTestProvider(t, "test-prov-all", "Test Provider All", installBase)
+
+	stdout, _ := output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "test-prov-all")
+	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("install --all failed: %v", err)
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "my-skill") {
+		t.Errorf("expected 'my-skill' in output, got: %s", out)
+	}
+}
+
+func TestInstallToAllConflictsWithTo(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+	_, _ = output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "claude-code")
+	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("to-all", "true")
+	defer installCmd.Flags().Set("to-all", "false")
+	installCmd.Flags().Set("all", "true")
+	defer installCmd.Flags().Set("all", "false")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err == nil {
+		t.Fatal("expected error when both --to and --to-all are specified")
+	}
+	if !strings.Contains(err.Error(), "--to-all") {
+		t.Errorf("expected '--to-all' in error message, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "--to") {
+		t.Errorf("expected '--to' in error message, got: %v", err)
+	}
+}
+
+func TestInstallToAllNoProvidersDetected(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+	_, stderr := output.SetForTest(t)
+
+	orig := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name:     "No One",
+			Slug:     "no-one",
+			Detected: false,
+			Detect:   func(string) bool { return false },
+			InstallDir: func(_ string, ct catalog.ContentType) string {
+				if ct == catalog.Skills {
+					return "/tmp/no-one/skills"
+				}
+				return ""
+			},
+			SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Skills },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = orig })
+
+	installCmd.Flags().Set("to-all", "true")
+	defer installCmd.Flags().Set("to-all", "false")
+	installCmd.Flags().Set("type", "skills")
+	defer installCmd.Flags().Set("type", "")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("--to-all with no detected providers should not error: %v", err)
+	}
+
+	errOut := stderr.String()
+	if !strings.Contains(errOut, "no providers detected") {
+		t.Errorf("expected 'no providers detected' message, got: %s", errOut)
+	}
+}
+
+func TestInstallToAllPartialSuccess(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+
+	okBase := filepath.Join(installBase, "ok")
+	os.MkdirAll(okBase, 0755)
+
+	orig := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name:     "Good Provider",
+			Slug:     "good-provider",
+			Detected: true,
+			Detect:   func(string) bool { return true },
+			InstallDir: func(_ string, ct catalog.ContentType) string {
+				if ct == catalog.Skills {
+					return filepath.Join(okBase, "skills")
+				}
+				return ""
+			},
+			SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Skills },
+		},
+		{
+			Name:     "Bad Provider",
+			Slug:     "bad-provider",
+			Detected: true,
+			Detect:   func(string) bool { return true },
+			InstallDir: func(_ string, ct catalog.ContentType) string {
+				if ct == catalog.Skills {
+					return "/proc/syllago-test/skills"
+				}
+				return ""
+			},
+			SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Skills },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = orig })
+
+	stdout, _ := output.SetForTest(t)
+
+	installCmd.Flags().Set("to-all", "true")
+	defer installCmd.Flags().Set("to-all", "false")
+	installCmd.Flags().Set("type", "skills")
+	defer installCmd.Flags().Set("type", "")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err == nil {
+		t.Fatal("expected non-nil error when at least one provider fails")
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "Good Provider") {
+		t.Errorf("expected 'Good Provider' in output, got: %s", out)
+	}
+	if !strings.Contains(out, "Bad Provider") {
+		t.Errorf("expected 'Bad Provider' in output, got: %s", out)
+	}
+}
+
+func TestInstallToAllAllSkipped(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	orig := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name:         "No Skills A",
+			Slug:         "no-skills-a",
+			Detected:     true,
+			Detect:       func(string) bool { return true },
+			InstallDir:   func(_ string, _ catalog.ContentType) string { return "" },
+			SupportsType: func(_ catalog.ContentType) bool { return false },
+		},
+		{
+			Name:         "No Skills B",
+			Slug:         "no-skills-b",
+			Detected:     true,
+			Detect:       func(string) bool { return true },
+			InstallDir:   func(_ string, _ catalog.ContentType) string { return "" },
+			SupportsType: func(_ catalog.ContentType) bool { return false },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = orig })
+
+	stdout, _ := output.SetForTest(t)
+
+	installCmd.Flags().Set("to-all", "true")
+	defer installCmd.Flags().Set("to-all", "false")
+	installCmd.Flags().Set("type", "skills")
+	defer installCmd.Flags().Set("type", "")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("all-skipped --to-all should not error: %v", err)
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "skipped") {
+		t.Errorf("expected 'skipped' summary in output, got: %s", out)
+	}
+}
+
+func TestInstallToAllDryRun(t *testing.T) {
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+	addTestProviderOpts(t, "dryrun-prov-a", "DryRun A", installBase, true)
+	addTestProviderOpts(t, "dryrun-prov-b", "DryRun B", installBase, true)
+
+	stdout, _ := output.SetForTest(t)
+
+	installCmd.Flags().Set("to-all", "true")
+	defer installCmd.Flags().Set("to-all", "false")
+	installCmd.Flags().Set("type", "skills")
+	defer installCmd.Flags().Set("type", "")
+	installCmd.Flags().Set("dry-run", "true")
+	defer installCmd.Flags().Set("dry-run", "false")
+
+	err := installCmd.RunE(installCmd, []string{})
+	if err != nil {
+		t.Fatalf("--to-all --dry-run failed: %v", err)
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "dry-run") {
+		t.Errorf("expected 'dry-run' in output, got: %s", out)
+	}
+	entries, _ := os.ReadDir(installBase)
+	if len(entries) > 0 {
+		t.Errorf("dry-run should not write files")
+	}
+}
+
+func TestInstallFlagsRegisteredToAll(t *testing.T) {
+	if installCmd.Flags().Lookup("to-all") == nil {
+		t.Error("expected --to-all flag to be registered on installCmd")
 	}
 }

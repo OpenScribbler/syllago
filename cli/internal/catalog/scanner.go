@@ -136,6 +136,7 @@ func ScanRegistriesOnly(registries []RegistrySource) (*Catalog, error) {
 // package. It is intentionally unexported to avoid an import cycle: the
 // registry package already imports catalog (for IsValidRegistryName), so
 // catalog cannot import registry.
+// KEEP IN SYNC with registry.ManifestItem in registry/registry.go.
 type manifestItem struct {
 	Name      string   `yaml:"name"`
 	Type      string   `yaml:"type"`
@@ -144,6 +145,14 @@ type manifestItem struct {
 	HookEvent string   `yaml:"hookEvent,omitempty"`
 	HookIndex int      `yaml:"hookIndex,omitempty"`
 	Scripts   []string `yaml:"scripts,omitempty"`
+
+	// Extended fields (populated by analyzer; optional in authored manifests)
+	DisplayName  string   `yaml:"displayName,omitempty"`
+	Description  string   `yaml:"description,omitempty"`
+	ContentHash  string   `yaml:"contentHash,omitempty"`
+	References   []string `yaml:"references,omitempty"`
+	ConfigSource string   `yaml:"configSource,omitempty"`
+	Providers    []string `yaml:"providers,omitempty"`
 }
 
 type catalogManifest struct {
@@ -151,20 +160,23 @@ type catalogManifest struct {
 }
 
 // loadManifestItems reads registry.yaml from dir and returns its items list.
-// Returns nil, nil if the file does not exist (manifest is optional).
-func loadManifestItems(dir string) ([]manifestItem, error) {
+// The bool return indicates whether a registry.yaml file was found at all.
+// Returns (nil, false, nil) if the file does not exist (manifest is optional).
+// Only the root-level registry.yaml is read; nested manifests in subdirectories
+// are intentionally ignored (Decision #42).
+func loadManifestItems(dir string) ([]manifestItem, bool, error) {
 	data, err := os.ReadFile(filepath.Join(dir, "registry.yaml"))
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
+		return nil, false, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("reading registry.yaml in %q: %w", dir, err)
+		return nil, false, fmt.Errorf("reading registry.yaml in %q: %w", dir, err)
 	}
 	var m catalogManifest
 	if err := yaml.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("parsing registry.yaml in %q: %w", dir, err)
+		return nil, false, fmt.Errorf("parsing registry.yaml in %q: %w", dir, err)
 	}
-	return m.Items, nil
+	return m.Items, true, nil
 }
 
 // Per-registry scanning limits to prevent resource exhaustion from malicious registries.
@@ -187,8 +199,12 @@ func scanRoot(cat *Catalog, baseDir string, local bool) error {
 	beforeCount := len(cat.Items)
 
 	// Check for registry.yaml with indexed items; if present, use index-based scan.
-	items, _ := loadManifestItems(baseDir)
-	if len(items) > 0 {
+	// Decision #41: when registry.yaml has an items key (even if empty), it is
+	// authoritative — do NOT fall back to directory scanning.
+	// items == nil means no items key (or no registry.yaml) → fall through to walk.
+	// items == [] (non-nil, empty) means "no items here" → return empty catalog.
+	items, _, _ := loadManifestItems(baseDir)
+	if items != nil {
 		if len(items) > maxScanItems {
 			cat.Warnings = append(cat.Warnings, fmt.Sprintf("registry at %s has %d manifest items, exceeding limit of %d; truncating", baseDir, len(items), maxScanItems))
 			items = items[:maxScanItems]
@@ -236,24 +252,38 @@ func scanFromIndex(cat *Catalog, baseDir string, resolvedBase string, items []ma
 		itemPath := filepath.Join(baseDir, mi.Path)
 		ct := ContentType(mi.Type)
 
-		// Validate the path stays within the registry boundary.
-		if err := validateRegistryPath(itemPath, resolvedBase); err != nil {
-			cat.Warnings = append(cat.Warnings, fmt.Sprintf("index item %q: %s, skipping", mi.Name, err))
-			continue
-		}
-
-		info, err := os.Stat(itemPath)
-		if err != nil {
-			cat.Warnings = append(cat.Warnings, fmt.Sprintf("index item %q: path %q not found, skipping", mi.Name, mi.Path))
-			continue
-		}
-
 		item := ContentItem{
 			Name:     mi.Name,
 			Type:     ct,
 			Path:     itemPath,
 			Provider: mi.Provider,
 			Library:  local,
+		}
+
+		// Apply manifest-provided metadata (short-circuits disk reads).
+		if mi.DisplayName != "" {
+			item.DisplayName = mi.DisplayName
+		}
+		if mi.Description != "" {
+			item.Description = mi.Description
+		}
+
+		info, err := os.Stat(itemPath)
+		if err != nil {
+			// Path missing on disk but manifest provides metadata — keep item.
+			if mi.DisplayName != "" || mi.Description != "" {
+				cat.Items = append(cat.Items, item)
+				continue
+			}
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("index item %q: path %q not found, skipping", mi.Name, mi.Path))
+			continue
+		}
+
+		// Validate the path stays within the registry boundary (requires path to exist
+		// for symlink resolution).
+		if err := validateRegistryPath(itemPath, resolvedBase); err != nil {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("index item %q: %s, skipping", mi.Name, err))
+			continue
 		}
 
 		if info.IsDir() {
@@ -317,6 +347,7 @@ func scanFromIndex(cat *Catalog, baseDir string, resolvedBase string, items []ma
 			if metaErr == nil {
 				item.Meta = meta
 			}
+			applyMetaOverrides(&item, item.Meta)
 		} else {
 			// Single file items.
 			switch ct {
@@ -367,11 +398,20 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 			cat.Warnings = append(cat.Warnings, fmt.Sprintf("skipping item %q: %s", entry.Name(), err))
 			continue
 		}
+		// Collect file listing and metadata upfront (shared by exploded MCP items).
+		files := collectFiles(itemDir, itemDir)
+		meta, err := metadata.Load(itemDir)
+		if err != nil {
+			return err
+		}
+
 		item := ContentItem{
 			Name:    entry.Name(),
 			Type:    ct,
 			Path:    itemDir,
 			Library: local,
+			Files:   files,
+			Meta:    meta,
 		}
 
 		switch ct {
@@ -401,20 +441,145 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 					item.Description = fm.Description
 				}
 			}
+		case MCP:
+			// Read config.json and check for nested multi-server format.
+			configPath := filepath.Join(itemDir, "config.json")
+			data, readErr := os.ReadFile(configPath)
+			if readErr == nil {
+				servers := gjson.GetBytes(data, "mcpServers")
+				if servers.Exists() && servers.IsObject() {
+					// Nested format — explode into one item per server entry.
+					servers.ForEach(func(key, value gjson.Result) bool {
+						serverName := key.String()
+						if !IsValidItemName(serverName) {
+							cat.Warnings = append(cat.Warnings, fmt.Sprintf(
+								"skipping MCP server %q in %s — name unsafe for JSON keys",
+								serverName, entry.Name()))
+							return true
+						}
+						mcpItem := ContentItem{
+							Name:        serverName,
+							Type:        MCP,
+							Path:        itemDir,
+							ServerKey:   serverName,
+							Library:     local,
+							Description: MCPServerDescription(value),
+							Files:       files,
+							Meta:        meta,
+						}
+						applyMetaOverrides(&mcpItem, meta)
+						cat.Items = append(cat.Items, mcpItem)
+						return true
+					})
+					continue // skip appending the parent directory item
+				}
+			}
+
+			// No config.json at this level — check if this is a provider
+			// grouping directory (e.g., mcp/claude-code/) with individual
+			// server subdirectories beneath it.
+			if readErr != nil {
+				subEntries, subErr := os.ReadDir(itemDir)
+				if subErr == nil && hasMCPSubdirs(itemDir, subEntries) {
+					if err := scanMCPSubdirs(cat, itemDir, subEntries, local, resolvedBase); err != nil {
+						return err
+					}
+					continue // skip appending the grouping directory itself
+				}
+			}
+
+			// Flat format — single server item.
+			item.ServerKey = entry.Name()
+			item.Description = mcpFlatDescription(data)
 		default:
 			// For other universal types, no additional description extraction.
 		}
 
-		// Collect file listing
-		item.Files = collectFiles(itemDir, itemDir)
+		applyMetaOverrides(&item, item.Meta)
+		cat.Items = append(cat.Items, item)
+	}
+	return nil
+}
 
-		// Load metadata if present
-		meta, err := metadata.Load(itemDir)
+// hasMCPSubdirs checks if any subdirectory contains a config.json file,
+// indicating this is a provider grouping directory (e.g., mcp/claude-code/).
+func hasMCPSubdirs(parentDir string, entries []os.DirEntry) bool {
+	for _, e := range entries {
+		if !e.IsDir() || shouldSkip(e.Name()) {
+			continue
+		}
+		configPath := filepath.Join(parentDir, e.Name(), "config.json")
+		if _, err := os.Stat(configPath); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// scanMCPSubdirs scans individual MCP server directories within a provider
+// grouping directory (e.g., mcp/claude-code/Astro-docs/, mcp/claude-code/github/).
+func scanMCPSubdirs(cat *Catalog, groupDir string, entries []os.DirEntry, local bool, resolvedBase string) error {
+	for _, entry := range entries {
+		if !entry.IsDir() || shouldSkip(entry.Name()) {
+			continue
+		}
+		if !IsValidItemName(entry.Name()) {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("skipping MCP server %q — name contains characters unsafe for JSON key paths", entry.Name()))
+			continue
+		}
+
+		serverDir := filepath.Join(groupDir, entry.Name())
+		if err := validateRegistryPath(serverDir, resolvedBase); err != nil {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("skipping MCP server %q: %s", entry.Name(), err))
+			continue
+		}
+
+		files := collectFiles(serverDir, serverDir)
+		meta, err := metadata.Load(serverDir)
 		if err != nil {
 			return err
 		}
-		item.Meta = meta
 
+		item := ContentItem{
+			Name:    entry.Name(),
+			Type:    MCP,
+			Path:    serverDir,
+			Library: local,
+			Files:   files,
+			Meta:    meta,
+		}
+
+		// Read config.json for description and nested server explosion.
+		configPath := filepath.Join(serverDir, "config.json")
+		data, readErr := os.ReadFile(configPath)
+		if readErr == nil {
+			servers := gjson.GetBytes(data, "mcpServers")
+			if servers.Exists() && servers.IsObject() {
+				// Nested format — explode into one item per server entry.
+				servers.ForEach(func(key, value gjson.Result) bool {
+					serverName := key.String()
+					mcpItem := ContentItem{
+						Name:        serverName,
+						Type:        MCP,
+						Path:        serverDir,
+						ServerKey:   serverName,
+						Library:     local,
+						Description: MCPServerDescription(value),
+						Files:       files,
+						Meta:        meta,
+					}
+					applyMetaOverrides(&mcpItem, meta)
+					cat.Items = append(cat.Items, mcpItem)
+					return true
+				})
+				continue
+			}
+		}
+
+		// Flat format or single server.
+		item.ServerKey = entry.Name()
+		item.Description = mcpFlatDescription(data)
+		applyMetaOverrides(&item, meta)
 		cat.Items = append(cat.Items, item)
 	}
 	return nil
@@ -495,9 +660,7 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 					return metaErr
 				}
 				item.Meta = meta
-				if meta != nil && meta.Description != "" {
-					item.Description = meta.Description
-				}
+				applyMetaOverrides(&item, meta)
 				cat.Items = append(cat.Items, item)
 			}
 		}
@@ -586,20 +749,181 @@ func scanProviderDir(itemDir string, ct ContentType, providerName string, local 
 	}
 	item.Meta = meta
 
-	// Use metadata description as primary source (overrides content-file parsing)
-	if meta != nil && meta.Description != "" {
-		item.Description = meta.Description
-	}
+	// Use metadata as primary source for display name and description
+	applyMetaOverrides(&item, meta)
 
 	return &item, nil
 }
 
+// applyMetaOverrides sets DisplayName and Description from .syllago.yaml metadata.
+// For hooks/MCP without a metadata name, it attempts to derive a display name from
+// the hook's script filename or event information.
+func applyMetaOverrides(item *ContentItem, meta *metadata.Meta) {
+	if meta == nil {
+		// No metadata — try heuristic display name for hooks/MCP
+		if item.DisplayName == "" {
+			item.DisplayName = deriveDisplayName(item)
+		}
+		return
+	}
+
+	if meta.Name != "" && item.DisplayName == "" {
+		item.DisplayName = meta.Name
+	}
+	if meta.Description != "" {
+		item.Description = meta.Description
+	}
+
+	// If metadata exists but has no name, try heuristic
+	if item.DisplayName == "" {
+		item.DisplayName = deriveDisplayName(item)
+	}
+}
+
+// deriveDisplayName attempts to build a human-readable display name for items
+// that lack one (primarily hooks and MCP). For hooks, it tries the referenced
+// script filename, then event+matcher. Returns empty string if no heuristic applies.
+func deriveDisplayName(item *ContentItem) string {
+	if item.Type != Hooks && item.Type != MCP {
+		return ""
+	}
+
+	if item.Type == Hooks {
+		return deriveHookDisplayName(item)
+	}
+
+	// MCP: use the server key if available (it's often the best name)
+	if item.ServerKey != "" {
+		return item.ServerKey
+	}
+	return ""
+}
+
+// deriveHookDisplayName extracts a display name from hook JSON content.
+// Priority: script filename > event+matcher > empty.
+func deriveHookDisplayName(item *ContentItem) string {
+	hookFile := PrimaryFileName(item.Files, Hooks)
+	if hookFile == "" {
+		return ""
+	}
+
+	data, err := os.ReadFile(filepath.Join(item.Path, hookFile))
+	if err != nil {
+		return ""
+	}
+
+	// Try to find a script/command reference
+	if name := hookScriptName(data); name != "" {
+		return name
+	}
+
+	// Fall back to event+matcher
+	return hookEventName(data)
+}
+
+// hookScriptName extracts the script filename from a hook's command field.
+// Returns the basename without extension (e.g., "./scripts/lint-check.sh" → "lint-check").
+func hookScriptName(data []byte) string {
+	// Try nested format: hooks.Event[0].command
+	hooksObj := gjson.GetBytes(data, "hooks")
+	if hooksObj.Exists() && hooksObj.IsObject() {
+		var cmd string
+		hooksObj.ForEach(func(_, value gjson.Result) bool {
+			if value.IsArray() {
+				for _, entry := range value.Array() {
+					c := entry.Get("command").String()
+					if c != "" && looksLikeScript(c) {
+						cmd = c
+						return false
+					}
+				}
+			}
+			return cmd == ""
+		})
+		if cmd != "" {
+			return scriptBaseName(cmd)
+		}
+	}
+
+	// Try flat format
+	cmd := gjson.GetBytes(data, "command").String()
+	if cmd != "" && looksLikeScript(cmd) {
+		return scriptBaseName(cmd)
+	}
+
+	return ""
+}
+
+// hookEventName builds a display name from event+matcher fields.
+func hookEventName(data []byte) string {
+	// Nested format
+	hooksObj := gjson.GetBytes(data, "hooks")
+	if hooksObj.Exists() && hooksObj.IsObject() {
+		var parts []string
+		hooksObj.ForEach(func(key, value gjson.Result) bool {
+			event := key.String()
+			if value.IsArray() && len(value.Array()) > 0 {
+				matcher := value.Array()[0].Get("matcher").String()
+				if matcher != "" {
+					parts = append(parts, event+" · "+matcher)
+				} else {
+					parts = append(parts, event)
+				}
+			} else {
+				parts = append(parts, event)
+			}
+			return true
+		})
+		if len(parts) > 0 {
+			return strings.Join(parts, ", ")
+		}
+	}
+
+	// Flat format
+	event := gjson.GetBytes(data, "event").String()
+	matcher := gjson.GetBytes(data, "matcher").String()
+	if event != "" {
+		if matcher != "" {
+			return event + " · " + matcher
+		}
+		return event
+	}
+	return ""
+}
+
+// looksLikeScript returns true if a command string references a script file
+// (contains a path separator or common script extension).
+func looksLikeScript(cmd string) bool {
+	return strings.Contains(cmd, "/") ||
+		strings.Contains(cmd, "\\") ||
+		strings.HasSuffix(cmd, ".sh") ||
+		strings.HasSuffix(cmd, ".py") ||
+		strings.HasSuffix(cmd, ".js") ||
+		strings.HasSuffix(cmd, ".ts") ||
+		strings.HasSuffix(cmd, ".rb") ||
+		strings.HasSuffix(cmd, ".bash")
+}
+
+// scriptBaseName extracts a clean display name from a script path.
+// "./scripts/lint-check.sh" → "lint-check"
+func scriptBaseName(path string) string {
+	base := filepath.Base(path)
+	ext := filepath.Ext(base)
+	if ext != "" {
+		base = strings.TrimSuffix(base, ext)
+	}
+	return base
+}
+
 // shouldSkip returns true for files/dirs that should always be ignored.
 func shouldSkip(name string) bool {
-	if name == ".gitkeep" || name == "LLM-PROMPT.md" {
+	if strings.HasPrefix(name, ".") {
 		return true
 	}
-	if name == metadata.FileName || strings.HasPrefix(name, ".syllago.") {
+	if name == "LLM-PROMPT.md" {
+		return true
+	}
+	if name == metadata.FileName {
 		return true
 	}
 	return false
@@ -609,7 +933,7 @@ func shouldSkip(name string) bool {
 // Walks recursively to match the behavior of installer.CopyContent.
 func collectFiles(itemDir string, baseDir string) []string {
 	var files []string
-	filepath.WalkDir(itemDir, func(path string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(itemDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -659,6 +983,49 @@ func describeHookJSON(data []byte) string {
 			return fmt.Sprintf("%s hook for %s", event, matcher)
 		}
 		return fmt.Sprintf("%s hook", event)
+	}
+	return ""
+}
+
+// MCPServerDescription generates a short description from a nested MCP server entry.
+// Shows the command (for stdio servers) or URL (for HTTP servers).
+func MCPServerDescription(value gjson.Result) string {
+	if cmd := value.Get("command").String(); cmd != "" {
+		if args := value.Get("args"); args.Exists() && args.IsArray() {
+			// Include first non-flag arg for context (e.g., package name).
+			for _, a := range args.Array() {
+				s := a.String()
+				if s != "" && s[0] != '-' {
+					return cmd + " " + s
+				}
+			}
+		}
+		return cmd
+	}
+	if url := value.Get("url").String(); url != "" {
+		return url
+	}
+	return ""
+}
+
+// mcpFlatDescription generates a short description from a flat MCP config.json.
+func mcpFlatDescription(data []byte) string {
+	if len(data) == 0 {
+		return ""
+	}
+	if cmd := gjson.GetBytes(data, "command").String(); cmd != "" {
+		if args := gjson.GetBytes(data, "args"); args.Exists() && args.IsArray() {
+			for _, a := range args.Array() {
+				s := a.String()
+				if s != "" && s[0] != '-' {
+					return cmd + " " + s
+				}
+			}
+		}
+		return cmd
+	}
+	if url := gjson.GetBytes(data, "url").String(); url != "" {
+		return url
 	}
 	return ""
 }
@@ -768,7 +1135,25 @@ func ScanWithGlobalAndRegistries(contentRoot string, projectRoot string, registr
 			cat.Overridden = append(cat.Overridden, globalCat.Items[i])
 		}
 	}
+	cat.checkNamingWarnings()
 	return cat, nil
+}
+
+// checkNamingWarnings flags hooks and MCP items that lack a meaningful display name.
+// Items are considered unnamed if DisplayName is empty or equals the raw Name
+// (meaning no override was set via .syllago.yaml or heuristics).
+func (c *Catalog) checkNamingWarnings() {
+	for _, item := range c.Items {
+		if item.Type != Hooks && item.Type != MCP {
+			continue
+		}
+		if item.DisplayName == "" || item.DisplayName == item.Name {
+			c.Warnings = append(c.Warnings, fmt.Sprintf(
+				"%s %q has no display name — add a name field to .syllago.yaml",
+				item.Type, item.Name,
+			))
+		}
+	}
 }
 
 // PrintWarnings writes any collected scan warnings to stderr.

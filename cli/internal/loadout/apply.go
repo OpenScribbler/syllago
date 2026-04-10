@@ -20,12 +20,12 @@ import (
 
 // ApplyOptions configures a loadout apply operation.
 type ApplyOptions struct {
-	Mode        string                // "preview", "try", or "keep"
+	Mode        string                  // "preview", "try", or "keep"
 	Method      installer.InstallMethod // "symlink" (default) or "copy"
 	ProjectRoot string
-	HomeDir     string                // defaults to os.UserHomeDir() if empty
-	RepoRoot    string                // catalog repo root for symlink source resolution
-	Resolver    *config.PathResolver  // optional path resolver for custom locations
+	HomeDir     string               // defaults to os.UserHomeDir() if empty
+	RepoRoot    string               // catalog repo root for symlink source resolution
+	Resolver    *config.PathResolver // optional path resolver for custom locations
 }
 
 // ApplyResult describes what happened during apply.
@@ -123,13 +123,13 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		// Rollback: restore snapshot and clean up
 		sm, _, loadErr := snapshot.Load(opts.ProjectRoot)
 		if loadErr == nil {
-			snapshot.Restore(snapshotDir, sm)
+			_ = snapshot.Restore(snapshotDir, sm)
 			// Remove any symlinks we may have partially created
 			for _, sr := range symlinkRecords {
-				os.Remove(sr.Path)
+				_ = os.Remove(sr.Path)
 			}
 		}
-		snapshot.Delete(snapshotDir)
+		_ = snapshot.Delete(snapshotDir)
 		return nil, fmt.Errorf("applying loadout (rolled back): %w", applyErr)
 	}
 
@@ -393,9 +393,9 @@ func collectBackupFiles(actions []PlannedAction, prov provider.Provider, opts Ap
 		files = append(files, settingsPathFor(prov, opts.HomeDir, opts.Resolver))
 	}
 	if needsMCPConfig {
-		home, err := os.UserHomeDir()
+		mcpPath, err := installer.MCPConfigPathFor(prov, opts.ProjectRoot)
 		if err == nil {
-			files = append(files, filepath.Join(home, ".claude.json"))
+			files = append(files, mcpPath)
 		}
 	}
 
@@ -491,7 +491,7 @@ func writeJSONFileAtomic(path string, data []byte) error {
 		return err
 	}
 	if err := os.Rename(tmpPath, path); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return err
 	}
 	return nil

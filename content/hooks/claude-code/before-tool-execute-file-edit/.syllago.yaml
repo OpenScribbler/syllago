@@ -1,0 +1,11 @@
+format_version: 1
+id: bafbec20-0316-48f6-b03b-fb28f0bccc48
+name: before-tool-execute-file-edit
+type: hooks
+source_provider: claude-code
+source_format: json
+source_type: provider
+has_source: true
+source_hash: sha256:c0ec09c05deb8dfb3a613b8e9734eb441fd8d025722b9902e3b9fcba3867ec80
+added_at: 2026-03-29T04:25:56.643065922Z
+added_by: syllago

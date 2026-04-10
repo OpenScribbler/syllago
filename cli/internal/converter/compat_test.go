@@ -62,8 +62,8 @@ func TestCompatLevel_Label(t *testing.T) {
 func TestAnalyzeHookCompat_FullCompat(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event:   "PreToolUse",
-		Matcher: "Bash",
+		Event:   "before_tool_execute",
+		Matcher: "shell",
 		Hooks:   []HookEntry{{Type: "command", Command: "go vet ./..."}},
 	}
 
@@ -81,8 +81,8 @@ func TestAnalyzeHookCompat_FullCompat(t *testing.T) {
 func TestAnalyzeHookCompat_BrokenMatcher_Copilot(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event:   "PreToolUse",
-		Matcher: "Bash",
+		Event:   "before_tool_execute",
+		Matcher: "shell",
 		Hooks:   []HookEntry{{Type: "command", Command: "go vet ./..."}},
 	}
 	r := AnalyzeHookCompat(hook, "copilot-cli")
@@ -104,7 +104,7 @@ func TestAnalyzeHookCompat_BrokenMatcher_Copilot(t *testing.T) {
 func TestAnalyzeHookCompat_NoneEvent(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event: "SubagentStart",
+		Event: "subagent_start",
 		Hooks: []HookEntry{{Type: "command", Command: "echo hi"}},
 	}
 	for _, target := range []string{"gemini-cli", "copilot-cli", "kiro"} {
@@ -120,7 +120,7 @@ func TestAnalyzeHookCompat_NoneEvent(t *testing.T) {
 func TestAnalyzeHookCompat_LLMHook_NoneForNonClaude(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event: "PreToolUse",
+		Event: "before_tool_execute",
 		Hooks: []HookEntry{{Type: "prompt", Command: "Is this safe?"}},
 	}
 	for _, target := range []string{"gemini-cli", "copilot-cli", "kiro"} {
@@ -136,7 +136,7 @@ func TestAnalyzeHookCompat_LLMHook_NoneForNonClaude(t *testing.T) {
 func TestAnalyzeHookCompat_StatusMessage_Kiro_Degraded(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event: "PreToolUse",
+		Event: "before_tool_execute",
 		Hooks: []HookEntry{{Type: "command", Command: "echo hi", StatusMessage: "Working..."}},
 	}
 	r := AnalyzeHookCompat(hook, "kiro")
@@ -148,7 +148,7 @@ func TestAnalyzeHookCompat_StatusMessage_Kiro_Degraded(t *testing.T) {
 func TestAnalyzeHookCompat_Async_Kiro_Broken(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event: "PostToolUse",
+		Event: "after_tool_execute",
 		Hooks: []HookEntry{{Type: "command", Command: "echo done", Async: true}},
 	}
 	r := AnalyzeHookCompat(hook, "kiro")
@@ -160,7 +160,7 @@ func TestAnalyzeHookCompat_Async_Kiro_Broken(t *testing.T) {
 func TestAnalyzeHookCompat_Async_Copilot_Broken(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event: "PreToolUse",
+		Event: "before_tool_execute",
 		Hooks: []HookEntry{{Type: "command", Command: "echo check", Async: true}},
 	}
 	r := AnalyzeHookCompat(hook, "copilot-cli")
@@ -173,7 +173,7 @@ func TestAnalyzeHookCompat_NoMatcher_FullEverywhere(t *testing.T) {
 	t.Parallel()
 	// Hook with no matcher, no async, no statusMessage — should be Full everywhere
 	hook := HookData{
-		Event: "SessionStart",
+		Event: "session_start",
 		Hooks: []HookEntry{{Type: "command", Command: "echo start"}},
 	}
 	for _, target := range HookProviders() {
@@ -189,11 +189,52 @@ func TestAnalyzeHookCompat_NoMatcher_FullEverywhere(t *testing.T) {
 func TestAnalyzeHookCompat_UnknownProvider(t *testing.T) {
 	t.Parallel()
 	hook := HookData{
-		Event: "PreToolUse",
+		Event: "before_tool_execute",
 		Hooks: []HookEntry{{Type: "command", Command: "echo"}},
 	}
 	r := AnalyzeHookCompat(hook, "nonexistent-provider")
 	if r.Level != CompatNone {
 		t.Errorf("expected None for unknown provider, got %v", r.Level)
+	}
+}
+
+func TestHookOutputCapabilities_VSCodeCopilot(t *testing.T) {
+	t.Parallel()
+	caps, ok := HookOutputCapabilities["vs-code-copilot"]
+	if !ok {
+		t.Fatal("expected vs-code-copilot in HookOutputCapabilities")
+	}
+	for _, field := range AllOutputFields {
+		if !caps[field] {
+			t.Errorf("expected vs-code-copilot to support output field %q", field)
+		}
+	}
+}
+
+func TestHookCapabilities_VSCodeCopilot(t *testing.T) {
+	t.Parallel()
+	cap, ok := HookCapabilities["vs-code-copilot"]
+	if !ok {
+		t.Fatal("expected vs-code-copilot in HookCapabilities")
+	}
+	// VS Code Copilot should support all features like Claude Code
+	for _, feat := range []HookFeature{FeatureMatcher, FeatureAsync, FeatureStatusMessage, FeatureLLMHook, FeatureTimeout} {
+		fs := cap.Features[feat]
+		if !fs.Supported {
+			t.Errorf("expected vs-code-copilot to support feature %d", feat)
+		}
+	}
+}
+
+func TestAnalyzeHookCompat_VSCodeCopilotFull(t *testing.T) {
+	t.Parallel()
+	hook := HookData{
+		Event:   "before_tool_execute",
+		Matcher: "shell",
+		Hooks:   []HookEntry{{Type: "command", Command: "echo check", StatusMessage: "Checking...", Timeout: 5}},
+	}
+	r := AnalyzeHookCompat(hook, "vs-code-copilot")
+	if r.Level != CompatFull {
+		t.Errorf("expected Full compat for vs-code-copilot, got %v", r.Level)
 	}
 }

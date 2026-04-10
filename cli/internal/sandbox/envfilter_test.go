@@ -69,6 +69,32 @@ func TestFilterEnv_EmptyEnviron(t *testing.T) {
 	}
 }
 
+func TestIsDeniedEnvVar(t *testing.T) {
+	t.Parallel()
+
+	denied := []string{
+		"LD_PRELOAD", "LD_LIBRARY_PATH", "LD_AUDIT",
+		"DYLD_INSERT_LIBRARIES", "DYLD_LIBRARY_PATH",
+		"PYTHONPATH", "PYTHONSTARTUP",
+		"NODE_PATH", "NODE_OPTIONS",
+		"PERL5LIB", "PERL5OPT",
+		"RUBYLIB", "RUBYOPT",
+		"BASH_ENV", "ENV",
+	}
+	for _, name := range denied {
+		if reason := IsDeniedEnvVar(name); reason == "" {
+			t.Errorf("expected %q to be denied, got empty reason", name)
+		}
+	}
+
+	safe := []string{"HOME", "PATH", "EDITOR", "MY_APP_TOKEN", "DATABASE_URL"}
+	for _, name := range safe {
+		if reason := IsDeniedEnvVar(name); reason != "" {
+			t.Errorf("expected %q to be allowed, got: %s", name, reason)
+		}
+	}
+}
+
 func TestFilterEnv_ReportAccuracy(t *testing.T) {
 	env := []string{
 		"HOME=/home/user",

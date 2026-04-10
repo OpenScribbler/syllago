@@ -12,7 +12,7 @@ import (
 type SettingsScope int
 
 const (
-	ScopeGlobal  SettingsScope = iota
+	ScopeGlobal SettingsScope = iota
 	ScopeProject
 )
 

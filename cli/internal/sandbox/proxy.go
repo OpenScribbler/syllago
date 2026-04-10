@@ -54,7 +54,7 @@ func (p *Proxy) Start() error {
 // Shutdown closes the listener, causing the accept loop to exit.
 func (p *Proxy) Shutdown() {
 	if p.listener != nil {
-		p.listener.Close()
+		_ = p.listener.Close()
 	}
 }
 
@@ -78,7 +78,7 @@ func (p *Proxy) accept(ln net.Listener) {
 }
 
 func (p *Proxy) handleConn(client net.Conn) {
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 	br := bufio.NewReader(client)
 	req, err := http.ReadRequest(br)
 	if err != nil {
@@ -103,20 +103,57 @@ func (p *Proxy) handleConn(client net.Conn) {
 		return
 	}
 
+	// Port filtering: if allowedPorts is configured and the target is localhost,
+	// verify the port is in the allowlist. This prevents sandboxed processes
+	// from connecting to arbitrary local services (databases, dev servers, etc.).
+	if !p.isPortAllowed(host, req.Host) {
+		p.mu.Lock()
+		p.blockedLog = append(p.blockedLog, req.Host)
+		p.mu.Unlock()
+		log.Printf("[sandbox] Blocked connection to %s (port not in allowlist)", req.Host)
+		fmt.Fprintf(client, "HTTP/1.1 403 Forbidden\r\n\r\n")
+		return
+	}
+
 	upstream, err := net.Dial("tcp", req.Host)
 	if err != nil {
 		fmt.Fprintf(client, "HTTP/1.1 502 Bad Gateway\r\n\r\n")
 		return
 	}
-	defer upstream.Close()
+	defer func() { _ = upstream.Close() }()
 
 	fmt.Fprintf(client, "HTTP/1.1 200 Connection Established\r\n\r\n")
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go func() { defer wg.Done(); io.Copy(upstream, br) }()
-	go func() { defer wg.Done(); io.Copy(client, upstream) }()
+	go func() { defer wg.Done(); _, _ = io.Copy(upstream, br) }()
+	go func() { defer wg.Done(); _, _ = io.Copy(client, upstream) }()
 	wg.Wait()
+}
+
+// isPortAllowed checks if a localhost connection is allowed based on the port allowlist.
+// Non-localhost targets are always allowed (domain check handles those).
+// If allowedPorts is empty, all ports are allowed (no port filtering configured).
+func (p *Proxy) isPortAllowed(host, hostPort string) bool {
+	if len(p.allowedPorts) == 0 {
+		return true // no port filtering configured
+	}
+	host = strings.ToLower(host)
+	if host != "localhost" && host != "127.0.0.1" && host != "::1" {
+		return true // port filtering only applies to localhost
+	}
+	_, portStr, err := net.SplitHostPort(hostPort)
+	if err != nil {
+		return false // can't parse port — deny
+	}
+	port := 0
+	for _, c := range portStr {
+		if c < '0' || c > '9' {
+			return false
+		}
+		port = port*10 + int(c-'0')
+	}
+	return p.allowedPorts[port]
 }
 
 // isAllowed returns true if the host is on the allowlist.

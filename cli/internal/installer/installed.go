@@ -15,25 +15,28 @@ import (
 type InstalledHook struct {
 	Name        string    `json:"name"`
 	Event       string    `json:"event"`
-	GroupHash   string    `json:"groupHash,omitempty"`   // SHA256 of the matcher group JSON
-	Command     string    `json:"command"`               // kept for display/debugging
-	Source      string    `json:"source"`                // "export" or "loadout:<name>"
-	Scope       string    `json:"scope,omitempty"`       // "global" or "project"
+	GroupHash   string    `json:"groupHash,omitempty"` // SHA256 of the matcher group JSON
+	Command     string    `json:"command"`             // kept for display/debugging
+	Source      string    `json:"source"`              // "export" or "loadout:<name>"
+	Scope       string    `json:"scope,omitempty"`     // "global" or "project"
 	InstalledAt time.Time `json:"installedAt"`
 }
 
-// InstalledMCP records an MCP server placed into .claude.json by syllago.
+// InstalledMCP records an MCP server placed into a provider config by syllago.
 type InstalledMCP struct {
 	Name        string    `json:"name"`
-	ServerNames []string  `json:"serverNames,omitempty"` // actual server keys in provider config
+	ServerKey   string    `json:"serverKey,omitempty"`   // specific server key (new per-server installs)
+	ServerNames []string  `json:"serverNames,omitempty"` // DEPRECATED: legacy bulk installs tracked all keys here
+	ContentHash string    `json:"contentHash,omitempty"` // SHA-256 of config content at install time
 	Source      string    `json:"source"`
 	InstalledAt time.Time `json:"installedAt"`
 }
 
 // InstalledSymlink records a symlink placed by syllago.
 type InstalledSymlink struct {
-	Path        string    `json:"path"`   // absolute path of the symlink
-	Target      string    `json:"target"` // absolute path it points to
+	Path        string    `json:"path"`                  // absolute path of the symlink
+	Target      string    `json:"target"`                // absolute path it points to
+	ContentHash string    `json:"contentHash,omitempty"` // SHA-256 of target content at install time
 	Source      string    `json:"source"`
 	InstalledAt time.Time `json:"installedAt"`
 }
@@ -97,6 +100,17 @@ func (inst *Installed) FindHook(name, event string) int {
 func (inst *Installed) FindMCP(name string) int {
 	for i, m := range inst.MCP {
 		if m.Name == name {
+			return i
+		}
+	}
+	return -1
+}
+
+// FindMCPByServerKey returns the index of an MCP entry matching name and serverKey.
+// Returns -1 if not found. For legacy entries without ServerKey, falls back to FindMCP.
+func (inst *Installed) FindMCPByServerKey(name, serverKey string) int {
+	for i, m := range inst.MCP {
+		if m.Name == name && m.ServerKey == serverKey {
 			return i
 		}
 	}

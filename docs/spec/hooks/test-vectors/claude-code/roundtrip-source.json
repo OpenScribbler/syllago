@@ -1,0 +1,27 @@
+{
+  "_comment": "Round-trip test: Claude Code native format (starting point). Decode this to canonical (expected result: roundtrip-canonical.json), then encode back to Claude Code. The re-encoded output MUST be structurally equivalent to this file. Tests lossless round-tripping for a unified-event provider with two hooks: a blocking PreToolUse with Bash matcher and a non-blocking SessionStart.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./audit-shell.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./init.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -5,12 +5,13 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List content items in the catalog",
+	Short: "List content items in the library",
 	Long: `Show a quick inventory of all content without launching the TUI.
 
 By default, lists all content grouped by type. Use flags to filter.`,
@@ -54,7 +55,7 @@ type listItem struct {
 func runList(cmd *cobra.Command, args []string) error {
 	root, err := findContentRepoRoot()
 	if err != nil {
-		return fmt.Errorf("could not find syllago repo: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogNotFound, "could not find syllago repo", "Run 'syllago init' to set up a content repository", err.Error())
 	}
 
 	sourceFilter, _ := cmd.Flags().GetString("source")
@@ -66,7 +67,7 @@ func runList(cmd *cobra.Command, args []string) error {
 	}
 	cat, err := catalog.ScanWithGlobalAndRegistries(root, projectRoot, nil)
 	if err != nil {
-		return fmt.Errorf("scanning catalog: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
 	}
 	cat.PrintWarnings()
 
@@ -98,6 +99,14 @@ func runList(cmd *cobra.Command, args []string) error {
 			Items: items,
 		})
 	}
+
+	totalItems := 0
+	for _, g := range result.Groups {
+		totalItems += g.Count
+	}
+	telemetry.Enrich("source_filter", sourceFilter)
+	telemetry.Enrich("content_type", typeFilter)
+	telemetry.Enrich("item_count", totalItems)
 
 	if output.JSON {
 		output.Print(result)

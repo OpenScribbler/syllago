@@ -1,0 +1,10 @@
+format_version: 1
+id: b8a0848b-afef-4ba7-ab7e-7a17e2648e33
+name: superpowers-executing-plans
+description: Use when you have a written implementation plan to execute in a separate session with review checkpoints
+type: skills
+source_format: md
+source_type: provider
+source_hash: sha256:a711f83fb762e2ea0fa151f598893da9911a408895c91cc7a7e0770dd59a27b3
+added_at: 2026-03-29T16:25:31.42483227Z
+added_by: syllago

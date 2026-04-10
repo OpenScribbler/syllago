@@ -1,9 +1,0 @@
-name: example-write-tests
-description: Prompt template for generating comprehensive test cases for existing code
-version: "1.0"
-hidden: true
-tags:
-  - example
-  - prompt
-  - testing
-  - tdd

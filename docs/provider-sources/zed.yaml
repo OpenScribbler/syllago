@@ -1,0 +1,104 @@
+# Zed — Provider Source Manifest
+# Excellent source: fully open-source Rust codebase. Config types derive JsonSchema via schemars.
+# No standalone schema file, but assets/settings/default.json (101KB) serves as de facto reference.
+
+schema_version: "1"
+last_verified: "2026-03-27"
+provider_version: "v0.229.0"
+
+slug: zed
+display_name: Zed
+vendor: Zed Industries
+status: active
+fetch_tier: gh-api
+repo: zed-industries/zed
+repo_branch: main
+
+change_detection:
+  method: github-releases
+  endpoint: https://api.github.com/repos/zed-industries/zed/releases/latest
+  # Very frequent releases.
+
+changelog:
+  - url: https://zed.dev/releases
+    label: Release notes (hosted)
+
+config_schema:
+  url: https://raw.githubusercontent.com/zed-industries/zed/main/assets/settings/default.json
+  format: json
+  # Not a JSON Schema — this is the default settings file (101KB) that serves as
+  # a de facto reference for all config keys. Actual schemas derived at compile time
+  # from Rust structs via #[derive(JsonSchema)] (schemars crate).
+
+content_types:
+
+  # ── Support summary ───────────────────────────────────────────────────
+  # Zed supports: rules (.rules file), mcp, agents (builtin profiles: write/ask/minimal — not user-definable), commands (builtin slash commands only — not user-definable)
+  # Not supported: hooks, skills
+  # Syllago: rules ✓, mcp ✓ | hooks ✗, skills ✗, agents ✗, commands ✗
+  # Zed's 'agent profiles' are builtin (write/ask/minimal) — not user-definable files.
+  # Slash commands are builtin too. hooks and skills stubs are correct.
+  # ─────────────────────────────────────────────────────────────────────
+
+  rules:
+    sources:
+      - url: https://raw.githubusercontent.com/zed-industries/zed/main/.rules
+        type: example
+        format: markdown
+        extracts: [file_format]
+
+      - url: https://zed.dev/docs/ai/rules
+        type: docs
+        format: html
+        extracts: [file_format, file_locations, features]
+    # Format: .rules file (plain markdown, no frontmatter). Single file, no directory structure.
+
+  hooks:
+    supported: false
+
+  mcp:
+    sources:
+      - url: https://raw.githubusercontent.com/zed-industries/zed/main/crates/context_server/src/context_server.rs
+        type: source-code
+        format: rust
+        extracts: [server_config_fields, transport_types]
+
+      - url: https://zed.dev/docs/ai/mcp
+        type: docs
+        format: html
+        extracts: [config_examples, transport_types]
+    # MCP configured in Zed settings JSON under agent profiles.
+
+  skills:
+    supported: false
+
+  agents:
+    sources:
+      - url: https://raw.githubusercontent.com/zed-industries/zed/main/crates/agent_settings/src/agent_settings.rs
+        type: source-code
+        format: rust
+        extracts: [config_fields, file_format]
+
+      - url: https://raw.githubusercontent.com/zed-industries/zed/main/crates/agent_settings/src/agent_profile.rs
+        type: source-code
+        format: rust
+        extracts: [config_fields]
+
+      - url: https://zed.dev/docs/ai/agent-settings
+        type: docs
+        format: html
+        extracts: [config_fields, config_examples]
+
+      - url: https://zed.dev/docs/ai/configuration
+        type: docs
+        format: html
+        extracts: [config_fields, config_examples]
+    # Builtin profiles: write, ask, minimal. Profiles define: tools, context servers, model selection.
+
+  commands:
+    sources:
+      - url: https://raw.githubusercontent.com/zed-industries/zed/main/crates/extension/src/types/slash_command.rs
+        type: source-code
+        format: rust
+        extracts: [config_fields]
+    # Slash commands are built into the binary — no user-definable command files.

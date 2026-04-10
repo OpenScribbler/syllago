@@ -1,0 +1,79 @@
+# Cursor — Provider Source Manifest
+# Most opaque provider: closed source, no public repos, no llms.txt, no schema.
+# All data from hosted docs at cursor.com/docs. Minimal official documentation.
+
+schema_version: "1"
+last_verified: "2026-03-27"
+provider_version: "" # No public version tracking
+
+slug: cursor
+display_name: Cursor
+vendor: Anysphere
+status: active
+fetch_tier: html-scrape
+# No public repos under getcursor or anysphere orgs.
+
+change_detection:
+  method: content-hash
+  endpoint: https://cursor.com/changelog
+  # No releases API, no public repo. Watch changelog page + content hash docs pages.
+
+changelog:
+  - url: https://cursor.com/changelog
+    label: Changelog (hosted)
+
+content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Cursor supports: rules, skills, hooks, mcp; agents and commands via AGENTS.md
+  #   cross-provider convention (no cursor-native file format documented)
+  # Not supported: agents (no cursor-native format), commands (no cursor-native format)
+  # Syllago: rules ✓, skills ✓, hooks ✓, mcp ✓, agents ✓ (via AGENTS.md convention),
+  #   commands ✓ (via .cursor/commands/)
+  # Note: cursor.com docs rate-limit automated fetching (429). All sources use
+  #   cursor.com/docs URLs — may need user-agent rotation or cached fetches.
+  #   Agents and commands stubs reflect lack of cursor-native docs; syllago uses
+  #   cross-provider conventions.
+  # ─────────────────────────────────────────────────────────────────────
+
+  rules:
+    sources:
+      - url: https://cursor.com/docs/rules
+        type: docs
+        format: html
+        extracts: [file_format, file_locations, frontmatter_fields, features]
+    # Format: .cursorrules (legacy, plain text) and .cursor/rules/*.mdc
+    # (MDC = markdown with frontmatter: description, alwaysApply, globs).
+
+  hooks:
+    sources:
+      - url: https://cursor.com/docs/hooks
+        type: docs
+        format: html
+        extracts: [event_names, hook_config_fields, config_examples]
+    # Events (camelCase): preToolUse, postToolUse, sessionStart, sessionEnd,
+    #   beforeSubmitPrompt, preCompact, subagentStart, subagentStop,
+    #   worktreeCreate, worktreeRemove, beforeShellExecution, afterShellExecution,
+    #   beforeMCPExecution, afterMCPExecution, beforeReadFile, afterFileEdit,
+    #   beforeTabFileRead, afterTabFileEdit, beforeAgentResponse, afterAgentResponse,
+    #   afterAgentThought, beforeToolSelection, postToolUseFailure (~23 events).
+
+  mcp:
+    sources:
+      - url: https://cursor.com/docs/mcp
+        type: docs
+        format: html
+        extracts: [server_config_fields, transport_types, config_examples]
+
+  skills:
+    sources:
+      - url: https://cursor.com/docs/skills
+        type: docs
+        format: html
+        extracts: [features]
+    # Cursor skills support exists but documentation is limited.
+
+  agents:
+    supported: false
+
+  commands:
+    supported: false

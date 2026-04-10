@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-25-input-rewrite-no-downgrade
+type: hooks
+description: "Benchmark: validates converter does not downgrade input_rewrite to blocking for Gemini CLI or Cursor"
+hook:
+  event: before_tool_execute
+  blocking: false
+  command: ./hb-25.sh

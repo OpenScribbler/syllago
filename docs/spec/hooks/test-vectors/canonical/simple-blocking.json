@@ -1,0 +1,16 @@
+{
+  "_comment": "Minimal blocking hook. Tests the simplest conversion path: before_tool_execute + shell matcher + command handler with blocking=true. Core layer only — no capabilities, no degradation, no provider_data.",
+  "spec": "hooks/0.1",
+  "hooks": [
+    {
+      "event": "before_tool_execute",
+      "matcher": "shell",
+      "handler": {
+        "type": "command",
+        "command": "./safety-check.sh",
+        "timeout": 10
+      },
+      "blocking": true
+    }
+  ]
+}

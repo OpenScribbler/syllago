@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "pre_run_command":  [{"command": "echo guard"}],
+    "pre_read_code":    [{"command": "echo guard"}],
+    "pre_write_code":   [{"command": "echo guard"}],
+    "pre_mcp_tool_use": [{"command": "echo guard"}]
+  }
+}

@@ -9,6 +9,8 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -50,17 +52,17 @@ func validateCreateArgs(typeName, name, providerSlug string) (catalog.ContentTyp
 		for i, t := range catalog.AllContentTypes() {
 			valid[i] = string(t)
 		}
-		return "", fmt.Errorf("unknown content type %q (valid: %s)", typeName, strings.Join(valid, ", "))
+		return "", output.NewStructuredError(output.ErrItemTypeUnknown, fmt.Sprintf("unknown content type %q (valid: %s)", typeName, strings.Join(valid, ", ")), "Use one of the valid content type names listed above")
 	}
 
 	// Validate name
 	if errMsg := catalog.ValidateUserName(name); errMsg != "" {
-		return "", fmt.Errorf("invalid name %q: %s", name, errMsg)
+		return "", output.NewStructuredError(output.ErrInputInvalid, fmt.Sprintf("invalid name %q: %s", name, errMsg), "Use lowercase letters, numbers, and hyphens only")
 	}
 
 	// Provider-specific types require --provider
 	if !ct.IsUniversal() && providerSlug == "" {
-		return "", fmt.Errorf("%s is provider-specific; use --provider <slug>", ct)
+		return "", output.NewStructuredError(output.ErrInputMissing, fmt.Sprintf("%s is provider-specific; use --provider <slug>", ct), "Example: syllago create "+string(ct)+" my-item --provider claude-code")
 	}
 
 	return ct, nil
@@ -145,19 +147,19 @@ func runCreate(cmd *cobra.Command, args []string) error {
 
 	globalDir := catalog.GlobalContentDir()
 	if globalDir == "" {
-		return fmt.Errorf("cannot determine home directory")
+		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Ensure $HOME is set in your environment")
 	}
 
 	dest := destDirForCreate(globalDir, ct, name, providerSlug)
 
 	// Check if item already exists
 	if _, err := os.Stat(dest); err == nil {
-		return fmt.Errorf("item already exists at %s", dest)
+		return output.NewStructuredError(output.ErrInitExists, fmt.Sprintf("item already exists at %s", dest), "Choose a different name or remove the existing item first")
 	}
 
 	// Create the item directory (with optional template scaffold)
 	if err := scaffoldFromTemplate(globalDir, dest, name, ct); err != nil {
-		return fmt.Errorf("scaffolding template: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "scaffolding template failed", "Check filesystem permissions", err.Error())
 	}
 
 	// Write .syllago.yaml metadata
@@ -169,9 +171,10 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		CreatedAt: &now,
 	}
 	if err := metadata.Save(dest, meta); err != nil {
-		return fmt.Errorf("writing metadata: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "writing metadata failed", "Check filesystem permissions", err.Error())
 	}
 
 	cmd.Printf("Created %s/%s at %s\n", ct, name, dest)
+	telemetry.Enrich("content_type", string(ct))
 	return nil
 }

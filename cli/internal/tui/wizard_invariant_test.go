@@ -1,921 +1,798 @@
 package tui
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
-
 	"github.com/OpenScribbler/syllago/cli/internal/add"
+	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
-// navigateToImportFiltered creates an import model pre-filtered for a content type.
-// The importer is patched directly after normal navigation.
-func navigateToImportFiltered(t *testing.T, ct catalog.ContentType) App {
-	t.Helper()
-	app := navigateToImport(t)
-	app.importer.preFilterType = ct
-	app.importer.contentType = ct
-	return app
+// --- Install Wizard invariants ---
+//
+// These tests verify the step machine's validateStep() assertions.
+// Each test walks through steps manually, setting the required state
+// at each transition. A panic means the invariant was violated.
+
+func TestInstallWizard_ValidateStep_Forward(t *testing.T) {
+	t.Parallel()
+	// Walk through all 4 steps for a filesystem (non-JSON-merge) item.
+	// No panics should occur.
+	provA := testInstallProvider("Claude Code", "claude-code", true)
+	provB := testInstallProvider("Cursor", "cursor", true)
+	root := t.TempDir()
+	item := testInstallItem("my-rule", catalog.Rules, filepath.Join(root, "rules", "my-rule"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, root)
+
+	// Step 0: Provider
+	w.step = installStepProvider
+	w.validateStep() // should not panic
+
+	// Step 1: Location (requires valid provider cursor, not installed)
+	w.providerCursor = 0
+	w.step = installStepLocation
+	w.shell.SetActive(1)
+	w.validateStep() // should not panic
+
+	// Step 2: Method (requires valid location cursor, not JSON merge)
+	w.locationCursor = 0 // "global"
+	w.step = installStepMethod
+	w.shell.SetActive(2)
+	w.validateStep() // should not panic
+
+	// Step 3: Review (requires valid provider, valid location for filesystem)
+	w.step = installStepReview
+	w.shell.SetActive(3)
+	w.validateStep() // should not panic
 }
 
-// ---------------------------------------------------------------------------
-// Task 5: Import wizard — forward paths
-// ---------------------------------------------------------------------------
+func TestInstallWizard_ValidateStep_Esc(t *testing.T) {
+	t.Parallel()
+	// Start at review, walk backwards. No panics.
+	provA := testInstallProvider("Claude Code", "claude-code", true)
+	provB := testInstallProvider("Cursor", "cursor", true)
+	root := t.TempDir()
+	item := testInstallItem("my-rule", catalog.Rules, filepath.Join(root, "rules", "my-rule"))
 
-func TestWizardInvariantImportFromProvider(t *testing.T) {
-	t.Run("NoPreFilter_SourceToProviderPick", func(t *testing.T) {
-		app := navigateToImport(t)
-		// sourceCursor 0 = From Provider
-		m, _ := app.Update(keyEnter)
-		app = m.(App)
-		if app.importer.step != stepProviderPick {
-			t.Fatalf("expected stepProviderPick, got %d", app.importer.step)
-		}
-	})
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, root)
 
-	t.Run("WithPreFilter_SourceToProviderPick", func(t *testing.T) {
-		app := navigateToImportFiltered(t, catalog.Rules)
-		// From Provider still goes to stepProviderPick regardless of pre-filter
-		m, _ := app.Update(keyEnter)
-		app = m.(App)
-		if app.importer.step != stepProviderPick {
-			t.Fatalf("expected stepProviderPick with pre-filter, got %d", app.importer.step)
-		}
-	})
+	// Set up to review step
+	w.providerCursor = 1
+	w.locationCursor = 1
+	w.step = installStepReview
+	w.shell.SetActive(3)
+	w.validateStep() // should not panic
+
+	// Back to method
+	w.step = installStepMethod
+	w.shell.SetActive(2)
+	w.validateStep() // should not panic
+
+	// Back to location
+	w.step = installStepLocation
+	w.shell.SetActive(1)
+	w.validateStep() // should not panic
+
+	// Back to provider
+	w.step = installStepProvider
+	w.shell.SetActive(0)
+	w.validateStep() // should not panic
 }
 
-func TestWizardInvariantImportLocalPath(t *testing.T) {
-	// Table: type × pre-filter → expected intermediate step after type selection
-	// Universal (Skills, Agents, MCP): → stepBrowseStart (skips provider)
-	// Provider-specific (Rules, Hooks, Commands): → stepProvider
+func TestInstallWizard_ValidateStep_AutoSkip(t *testing.T) {
+	t.Parallel()
+	// Single provider auto-skip: wizard opens at location step.
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	root := t.TempDir()
+	item := testInstallItem("my-rule", catalog.Rules, filepath.Join(root, "rules", "my-rule"))
+
+	w := openInstallWizard(item, []provider.Provider{prov}, root)
+
+	// openInstallWizard auto-skipped to location
+	if w.step != installStepLocation {
+		t.Fatalf("expected auto-skip to location, got step %d", w.step)
+	}
+	w.validateStep() // should not panic at location with auto-skipped provider
+}
+
+func TestInstallWizard_ValidateStep_JSONMerge(t *testing.T) {
+	t.Parallel()
+	// JSON merge path: provider -> review (skip location+method).
+	provA := testInstallProvider("Claude Code", "claude-code", true)
+	provB := testInstallProvider("Cursor", "cursor", true)
+	root := t.TempDir()
+	item := testInstallItem("my-hook", catalog.Hooks, filepath.Join(root, "hooks", "my-hook"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, root)
+
+	// Step 0: Provider
+	w.step = installStepProvider
+	w.shell.SetActive(0)
+	w.validateStep() // should not panic
+
+	// Step 3 (review): JSON merge skips location+method, but the step enum value
+	// is still installStepReview. Shell active is 1 (second of 2 steps).
+	w.providerCursor = 0
+	w.step = installStepReview
+	w.shell.SetActive(1)
+	w.validateStep() // should not panic — isJSONMerge means locationCursor < 0 is OK
+}
+
+func TestInstallWizard_ValidateStep_PanicsOnEmpty(t *testing.T) {
+	t.Parallel()
+	// Verify that entering provider step with empty item panics.
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for empty item at provider step")
+		}
+		msg, ok := r.(string)
+		if !ok || msg != "wizard invariant: installStepProvider entered with empty item" {
+			t.Errorf("unexpected panic message: %v", r)
+		}
+	}()
+
+	root := t.TempDir()
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	// Item with empty Path
+	item := catalog.ContentItem{Name: "bad", Type: catalog.Rules}
+	w := &installWizardModel{
+		shell:             newWizardShell("Install", []string{"Provider", "Location", "Method", "Review"}),
+		step:              installStepProvider,
+		item:              item,
+		providers:         []provider.Provider{prov},
+		providerInstalled: []bool{false},
+		projectRoot:       root,
+	}
+	w.validateStep() // should panic
+}
+
+func TestInstallWizard_ValidateStep_PanicsOnInstalledLocation(t *testing.T) {
+	t.Parallel()
+	// Verify that entering location step with installed provider panics.
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for installed provider at location step")
+		}
+	}()
+
+	root := t.TempDir()
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	item := testInstallItem("my-rule", catalog.Rules, filepath.Join(root, "rules", "my-rule"))
+
+	w := &installWizardModel{
+		shell:             newWizardShell("Install", []string{"Provider", "Location", "Method", "Review"}),
+		step:              installStepLocation,
+		item:              item,
+		providers:         []provider.Provider{prov},
+		providerInstalled: []bool{true}, // installed!
+		providerCursor:    0,
+		projectRoot:       root,
+	}
+	w.validateStep() // should panic
+}
+
+func TestInstallWizard_ValidateStep_PanicsOnJSONMergeMethod(t *testing.T) {
+	t.Parallel()
+	// Verify that entering method step for JSON merge type panics.
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for JSON merge at method step")
+		}
+	}()
+
+	root := t.TempDir()
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	item := testInstallItem("my-hook", catalog.Hooks, filepath.Join(root, "hooks", "my-hook"))
+
+	w := &installWizardModel{
+		shell:             newWizardShell("Install", []string{"Provider", "Review"}),
+		step:              installStepMethod,
+		item:              item,
+		providers:         []provider.Provider{prov},
+		providerInstalled: []bool{false},
+		providerCursor:    0,
+		isJSONMerge:       true,
+		projectRoot:       root,
+	}
+	w.validateStep() // should panic
+}
+
+// TestInstallWizard_ValidateStep_ConflictForward walks through the conflict step
+// on the "install to all providers" path without triggering any panics.
+func TestInstallWizard_ValidateStep_ConflictForward(t *testing.T) {
+	t.Parallel()
+	sharedPath := t.TempDir()
+	provA := testConflictInstaller("gemini-cli", "Gemini CLI", sharedPath)
+	provB := testConflictReader("opencode", "OpenCode", sharedPath)
+	root := t.TempDir()
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(root, "skills", "my-skill"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, root)
+
+	// Provider step with selectAll: no panics
+	w.step = installStepProvider
+	w.selectAll = true
+	w.validateStep()
+
+	// Conflict step: requires selectAll + non-empty conflicts
+	w.conflicts = []installer.Conflict{{
+		SharedPath:   sharedPath,
+		InstallingTo: provA,
+		AlsoReadBy:   []provider.Provider{provB},
+	}}
+	w.step = installStepConflict
+	w.shell.SetSteps([]string{"Provider", "Conflicts"})
+	w.shell.SetActive(1)
+	w.validateStep() // should not panic
+}
+
+// TestInstallWizard_ValidateStep_ConflictEsc verifies Esc from conflict step
+// goes back to provider step without panicking.
+func TestInstallWizard_ValidateStep_ConflictEsc(t *testing.T) {
+	t.Parallel()
+	sharedPath := t.TempDir()
+	provA := testConflictInstaller("gemini-cli", "Gemini CLI", sharedPath)
+	provB := testConflictReader("opencode", "OpenCode", sharedPath)
+	root := t.TempDir()
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(root, "skills", "my-skill"))
+
+	w := openInstallWizard(item, []provider.Provider{provA, provB}, root)
+
+	// Put wizard in conflict step
+	w.selectAll = true
+	w.conflicts = []installer.Conflict{{
+		SharedPath:   sharedPath,
+		InstallingTo: provA,
+		AlsoReadBy:   []provider.Provider{provB},
+	}}
+	w.step = installStepConflict
+	w.shell.SetSteps([]string{"Provider", "Conflicts"})
+	w.shell.SetActive(1)
+	w.validateStep()
+
+	// Esc: back to provider
+	w.conflicts = nil
+	w.step = installStepProvider
+	w.shell.SetSteps([]string{"Provider", "Location", "Method", "Review"})
+	w.shell.SetActive(0)
+	w.validateStep()
+}
+
+// TestInstallWizard_ValidateStep_ConflictPanicsOnNoConflicts verifies that
+// entering the conflict step with empty conflicts panics.
+func TestInstallWizard_ValidateStep_ConflictPanicsOnNoConflicts(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for conflict step with no conflicts")
+		}
+	}()
+	root := t.TempDir()
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(root, "skills", "my-skill"))
+	w := &installWizardModel{
+		shell:             newWizardShell("Install", []string{"Provider", "Conflicts"}),
+		step:              installStepConflict,
+		item:              item,
+		providers:         []provider.Provider{prov},
+		providerInstalled: []bool{false},
+		projectRoot:       root,
+		selectAll:         true,
+		conflicts:         nil, // empty — should panic
+	}
+	w.validateStep()
+}
+
+// TestInstallWizard_ValidateStep_ConflictPanicsOnNoSelectAll verifies that
+// entering the conflict step without selectAll panics.
+func TestInstallWizard_ValidateStep_ConflictPanicsOnNoSelectAll(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for conflict step without selectAll")
+		}
+	}()
+	sharedPath := t.TempDir()
+	provA := testConflictInstaller("gemini-cli", "Gemini CLI", sharedPath)
+	provB := testConflictReader("opencode", "OpenCode", sharedPath)
+	root := t.TempDir()
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(root, "skills", "my-skill"))
+	w := &installWizardModel{
+		shell:             newWizardShell("Install", []string{"Provider", "Conflicts"}),
+		step:              installStepConflict,
+		item:              item,
+		providers:         []provider.Provider{provA, provB},
+		providerInstalled: []bool{false, false},
+		projectRoot:       root,
+		selectAll:         false, // not set — should panic
+		conflicts: []installer.Conflict{{
+			SharedPath:   sharedPath,
+			InstallingTo: provA,
+			AlsoReadBy:   []provider.Provider{provB},
+		}},
+	}
+	w.validateStep()
+}
+
+// --- Add Wizard invariants ---
+
+func TestAddWizard_ValidateStep_Forward(t *testing.T) {
+	t.Parallel()
+	m := openAddWizard(
+		[]provider.Provider{testInstallProvider("Claude Code", "claude-code", true)},
+		nil, nil, "/tmp", "/tmp", "",
+	)
+
+	// Step 0: Source — no prerequisites
+	m.step = addStepSource
+	m.validateStep()
+
+	// Step 1: Type — requires source set
+	m.source = addSourceProvider
+	m.step = addStepType
+	m.shell.SetActive(1)
+	m.validateStep()
+
+	// Step 2: Discovery — requires source + types
+	m.typeChecks = m.buildTypeCheckList()
+	m.step = addStepDiscovery
+	m.discovering = true // during scan, types not checked
+	m.shell.SetActive(2)
+	m.validateStep()
+
+	// Step 3: Review — requires discovered + selected items
+	m.discovering = false
+	m.discoveredItems = []addDiscoveryItem{
+		{name: "test", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "test", Type: catalog.Rules}},
+	}
+	m.discoveryList = m.buildDiscoveryList()
+	m.step = addStepReview
+	m.shell.SetActive(m.shellIndexForStep(addStepReview))
+	m.validateStep()
+
+	// Step 4: Execute — requires selected + acknowledged
+	m.reviewAcknowledged = true
+	m.step = addStepExecute
+	m.shell.SetActive(m.shellIndexForStep(addStepExecute))
+	m.validateStep()
+}
+
+func TestAddWizard_ValidateStep_Esc(t *testing.T) {
+	t.Parallel()
+	m := openAddWizard(
+		[]provider.Provider{testInstallProvider("Claude Code", "claude-code", true)},
+		nil, nil, "/tmp", "/tmp", "",
+	)
+
+	// Set up to Execute step
+	m.source = addSourceProvider
+	m.typeChecks = m.buildTypeCheckList()
+	m.discoveredItems = []addDiscoveryItem{
+		{name: "test", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "test", Type: catalog.Rules}},
+	}
+	m.discoveryList = m.buildDiscoveryList()
+	m.reviewAcknowledged = true
+
+	// Walk backwards
+	m.step = addStepExecute
+	m.shell.SetActive(m.shellIndexForStep(addStepExecute))
+	m.validateStep()
+
+	m.step = addStepReview
+	m.shell.SetActive(m.shellIndexForStep(addStepReview))
+	m.validateStep()
+
+	m.discovering = false
+	m.step = addStepDiscovery
+	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+	m.validateStep()
+
+	m.step = addStepType
+	m.shell.SetActive(m.shellIndexForStep(addStepType))
+	m.validateStep()
+
+	m.step = addStepSource
+	m.shell.SetActive(m.shellIndexForStep(addStepSource))
+	m.validateStep()
+}
+
+func TestAddWizard_ValidateStep_PanicsOnTypeWithoutSource(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for Type without source")
+		}
+	}()
+
+	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
+	m.source = addSourceNone
+	m.step = addStepType
+	m.validateStep()
+}
+
+func TestAddWizard_ValidateStep_PanicsOnReviewWithoutItems(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for Review without items")
+		}
+	}()
+
+	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
+	m.source = addSourceLocal
+	m.discoveredItems = nil
+	m.step = addStepReview
+	m.validateStep()
+}
+
+func TestAddWizard_ValidateStep_PanicsOnExecuteWithoutAck(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for Execute without acknowledgment")
+		}
+	}()
+
+	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
+	m.source = addSourceLocal
+	m.discoveredItems = []addDiscoveryItem{
+		{name: "test", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "test", Type: catalog.Rules}},
+	}
+	m.discoveryList = m.buildDiscoveryList()
+	m.reviewAcknowledged = false
+	m.step = addStepExecute
+	m.validateStep()
+}
+
+// --- Triage-path invariant tests (Task 9.1) ---
+
+// makeTriageItems returns a small set of addConfirmItems for use in triage tests.
+// Two items: one Medium confidence (unchecked by default), one High (pre-checked).
+func makeTriageItems() []addConfirmItem {
+	return []addConfirmItem{
+		{
+			detected:    &analyzer.DetectedItem{Confidence: 0.75, Provider: "content-signal"},
+			tier:        analyzer.TierHigh,
+			displayName: "high-confidence-rule",
+			itemType:    catalog.Rules,
+			path:        "rules/high.md",
+			sourceDir:   "/tmp",
+		},
+		{
+			detected:    &analyzer.DetectedItem{Confidence: 0.65, Provider: "content-signal"},
+			tier:        analyzer.TierMedium,
+			displayName: "medium-confidence-skill",
+			itemType:    catalog.Skills,
+			path:        "skills/medium.md",
+			sourceDir:   "/tmp",
+		},
+	}
+}
+
+// TestAddWizard_ValidateStep_TriageForward walks through all 6 steps (+Type +Triage)
+// without triggering any validateStep panics.
+func TestAddWizard_ValidateStep_TriageForward(t *testing.T) {
+	t.Parallel()
+
+	m := openAddWizard(
+		[]provider.Provider{testInstallProvider("Claude Code", "claude-code", true)},
+		nil, nil, "/tmp", "/tmp", "",
+	)
+
+	// Step 0: Source
+	m.step = addStepSource
+	m.shell.SetActive(m.shellIndexForStep(addStepSource))
+	m.validateStep()
+
+	// Step 1: Type — requires source set
+	m.source = addSourceLocal
+	m.step = addStepType
+	m.shell.SetActive(m.shellIndexForStep(addStepType))
+	m.validateStep()
+
+	// Step 2: Discovery — types checked, scanning in progress
+	m.typeChecks = m.buildTypeCheckList()
+	m.step = addStepDiscovery
+	m.discovering = true
+	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+	m.validateStep()
+
+	// Activate triage so shellIndexForStep and validateStep reflect the 6-step path
+	m.discovering = false
+	m.hasTriageStep = true
+	m.confirmItems = makeTriageItems()
+	m.confirmSelected = map[int]bool{0: true} // pre-check high-confidence item
+	m.shell.SetSteps(m.buildShellLabels())
+
+	// Step 3: Triage — hasTriageStep=true, confirmItems non-empty
+	m.step = addStepTriage
+	m.shell.SetActive(m.shellIndexForStep(addStepTriage))
+	m.validateStep()
+
+	// Merge selected confirm items into discovery before Review
+	m.discoveredItems = []addDiscoveryItem{
+		{name: "existing-rule", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "existing-rule", Type: catalog.Rules}},
+	}
+	m.actionableCount = 1
+	m.installedCount = 0
+	m.mergeConfirmIntoDiscovery()
+
+	// Step 4: Review — discoveredItems + selectedItems non-empty
+	m.step = addStepReview
+	m.shell.SetActive(m.shellIndexForStep(addStepReview))
+	m.validateStep()
+
+	// Step 5: Execute — selected items + acknowledged
+	m.reviewAcknowledged = true
+	m.step = addStepExecute
+	m.shell.SetActive(m.shellIndexForStep(addStepExecute))
+	m.validateStep()
+}
+
+// TestAddWizard_ValidateStep_TriageEsc verifies that Esc from triage goes back to
+// Discovery without panicking.
+func TestAddWizard_ValidateStep_TriageEsc(t *testing.T) {
+	t.Parallel()
+
+	m := openAddWizard(
+		[]provider.Provider{testInstallProvider("Claude Code", "claude-code", true)},
+		nil, nil, "/tmp", "/tmp", "",
+	)
+
+	// Put wizard in triage step with required state
+	m.source = addSourceLocal
+	m.typeChecks = m.buildTypeCheckList()
+	m.hasTriageStep = true
+	m.confirmItems = makeTriageItems()
+	m.confirmSelected = map[int]bool{}
+	m.shell.SetSteps(m.buildShellLabels())
+
+	m.step = addStepTriage
+	m.shell.SetActive(m.shellIndexForStep(addStepTriage))
+	m.validateStep() // should not panic at triage
+
+	// Simulate Esc: go back to Discovery
+	m.step = addStepDiscovery
+	m.discovering = false
+	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+	m.validateStep() // should not panic at discovery
+}
+
+// TestAddWizard_ValidateStep_SkipTriageWhenEmpty verifies that if discovery returns
+// no confirm items, the triage step is not activated and Review is reachable directly.
+func TestAddWizard_ValidateStep_SkipTriageWhenEmpty(t *testing.T) {
+	t.Parallel()
+
+	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
+
+	// Set up through Discovery with no confirm items
+	m.source = addSourceLocal
+	m.typeChecks = m.buildTypeCheckList()
+	m.discoveredItems = []addDiscoveryItem{
+		{name: "rule-a", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "rule-a", Type: catalog.Rules}},
+	}
+	m.discoveryList = m.buildDiscoveryList()
+
+	// No triage step — hasTriageStep stays false, confirmItems stays nil
+	if m.hasTriageStep {
+		t.Fatal("expected hasTriageStep=false after open")
+	}
+	if len(m.confirmItems) != 0 {
+		t.Fatalf("expected empty confirmItems, got %d", len(m.confirmItems))
+	}
+
+	// Review must be reachable without going through Triage
+	m.step = addStepReview
+	m.shell.SetActive(m.shellIndexForStep(addStepReview))
+	m.validateStep() // should not panic
+}
+
+// TestAddWizard_ConfirmItemsParallelArray verifies that confirmItems and
+// confirmSelected stay in sync: every index in confirmItems has a corresponding
+// key in confirmSelected (possibly false), and no extra keys exist.
+func TestAddWizard_ConfirmItemsParallelArray(t *testing.T) {
+	t.Parallel()
+
+	items := makeTriageItems()
+	sel := map[int]bool{}
+	// Simulate pre-check logic: High/User → checked, Medium/Low → unchecked
+	for i, item := range items {
+		switch item.tier {
+		case analyzer.TierHigh, analyzer.TierUser:
+			sel[i] = true
+		default:
+			sel[i] = false
+		}
+	}
+
+	// Verify sync: every item index has an entry
+	for i := range items {
+		if _, ok := sel[i]; !ok {
+			t.Errorf("confirmSelected missing key %d for item %q", i, items[i].displayName)
+		}
+	}
+	// Verify no out-of-range keys
+	for k := range sel {
+		if k < 0 || k >= len(items) {
+			t.Errorf("confirmSelected has out-of-range key %d (len=%d)", k, len(items))
+		}
+	}
+
+	// Verify pre-check correctness: high is checked, medium is not
+	if !sel[0] {
+		t.Errorf("expected item 0 (High) to be pre-checked")
+	}
+	if sel[1] {
+		t.Errorf("expected item 1 (Medium) to be unchecked")
+	}
+}
+
+// TestAddWizard_MergeIdempotency verifies that mergeConfirmIntoDiscovery can be
+// called twice without duplicating items in discoveredItems.
+func TestAddWizard_MergeIdempotency(t *testing.T) {
+	t.Parallel()
+
+	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
+	m.source = addSourceLocal
+	m.hasTriageStep = true
+	m.confirmItems = makeTriageItems()
+	// Select both confirm items
+	m.confirmSelected = map[int]bool{0: true, 1: true}
+	m.shell.SetSteps(m.buildShellLabels())
+
+	// Seed with two actionable items
+	m.discoveredItems = []addDiscoveryItem{
+		{name: "a", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "a", Type: catalog.Rules}},
+		{name: "b", itemType: catalog.Skills, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "b", Type: catalog.Skills}},
+	}
+	m.actionableCount = 2
+	m.installedCount = 0
+	m.discoveryList = m.buildDiscoveryList()
+
+	// First merge
+	m.mergeConfirmIntoDiscovery()
+	countAfterFirst := len(m.discoveredItems)
+
+	// Second merge — should produce the same count (idempotent)
+	m.mergeConfirmIntoDiscovery()
+	countAfterSecond := len(m.discoveredItems)
+
+	if countAfterFirst != countAfterSecond {
+		t.Errorf("mergeConfirmIntoDiscovery not idempotent: first=%d second=%d",
+			countAfterFirst, countAfterSecond)
+	}
+
+	// Sanity: 2 actionable + 2 selected confirm items = 4 total
+	expected := 2 + 2
+	if countAfterFirst != expected {
+		t.Errorf("expected %d items after merge, got %d", expected, countAfterFirst)
+	}
+}
+
+// TestAddWizard_ClearTriageState verifies that clearTriageState resets all
+// triage-related fields and collapses the shell back to 5 steps.
+func TestAddWizard_ClearTriageState(t *testing.T) {
+	t.Parallel()
+
+	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
+	m.source = addSourceLocal
+
+	// Activate triage
+	m.hasTriageStep = true
+	m.confirmItems = makeTriageItems()
+	m.confirmSelected = map[int]bool{0: true}
+	m.confirmCursor = 1
+	m.confirmOffset = 1
+	m.confirmFocus = triageZonePreview
+	m.shell.SetSteps(m.buildShellLabels())
+	m.maxStep = addStepTriage
+
+	// Clear
+	m.clearTriageState()
+
+	// Verify all triage fields are reset
+	if m.hasTriageStep {
+		t.Error("expected hasTriageStep=false after clear")
+	}
+	if m.confirmItems != nil {
+		t.Errorf("expected confirmItems=nil after clear, got %v", m.confirmItems)
+	}
+	if m.confirmSelected != nil {
+		t.Errorf("expected confirmSelected=nil after clear, got %v", m.confirmSelected)
+	}
+	if m.confirmCursor != 0 {
+		t.Errorf("expected confirmCursor=0 after clear, got %d", m.confirmCursor)
+	}
+	if m.confirmOffset != 0 {
+		t.Errorf("expected confirmOffset=0 after clear, got %d", m.confirmOffset)
+	}
+	if m.confirmFocus != triageZoneItems {
+		t.Errorf("expected confirmFocus=triageZoneItems after clear, got %d", m.confirmFocus)
+	}
+	if m.maxStep != addStepDiscovery {
+		t.Errorf("expected maxStep=addStepDiscovery after clear, got %d", m.maxStep)
+	}
+
+	// Shell should now have 5 labels (no Triage): Source/Type/Discovery/Review/Execute
+	wantLabels := []string{"Source", "Type", "Discovery", "Review", "Execute"}
+	gotLabels := m.buildShellLabels()
+	if len(gotLabels) != len(wantLabels) {
+		t.Errorf("expected %d shell labels after clear, got %d: %v", len(wantLabels), len(gotLabels), gotLabels)
+	}
+}
+
+// --- stepForShellIndex table-driven tests (Task 9.2) ---
+
+// TestAddWizard_StepForShellIndex covers all 4 permutations (±Type × ±Triage)
+// across all valid shell indices.
+func TestAddWizard_StepForShellIndex(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name          string
-		ct            catalog.ContentType
-		preFilter     bool
-		wantAfterType importStep // step reached after type selection (or after source if pre-filtered)
+		preFilterType catalog.ContentType // non-empty = -Type (Type step skipped)
+		hasTriageStep bool
+		idx           int
+		want          addStep
 	}{
-		{"Skills_NoFilter", catalog.Skills, false, stepBrowseStart},
-		{"Skills_WithFilter", catalog.Skills, true, stepBrowseStart},
-		{"Agents_NoFilter", catalog.Agents, false, stepBrowseStart},
-		{"Agents_WithFilter", catalog.Agents, true, stepBrowseStart},
-		{"MCP_NoFilter", catalog.MCP, false, stepBrowseStart},
-		{"MCP_WithFilter", catalog.MCP, true, stepBrowseStart},
-		{"Rules_NoFilter", catalog.Rules, false, stepProvider},
-		{"Rules_WithFilter", catalog.Rules, true, stepProvider},
-		{"Hooks_NoFilter", catalog.Hooks, false, stepProvider},
-		{"Hooks_WithFilter", catalog.Hooks, true, stepProvider},
-		{"Commands_NoFilter", catalog.Commands, false, stepProvider},
-		{"Commands_WithFilter", catalog.Commands, true, stepProvider},
+		// +Type +Triage: Source(0) Type(1) Discovery(2) Triage(3) Review(4) Execute(5)
+		{"+Type+Triage idx=0", "", true, 0, addStepSource},
+		{"+Type+Triage idx=1", "", true, 1, addStepType},
+		{"+Type+Triage idx=2", "", true, 2, addStepDiscovery},
+		{"+Type+Triage idx=3", "", true, 3, addStepTriage},
+		{"+Type+Triage idx=4", "", true, 4, addStepReview},
+		{"+Type+Triage idx=5", "", true, 5, addStepExecute},
+
+		// +Type -Triage: Source(0) Type(1) Discovery(2) Review(3) Execute(4)
+		{"+Type-Triage idx=0", "", false, 0, addStepSource},
+		{"+Type-Triage idx=1", "", false, 1, addStepType},
+		{"+Type-Triage idx=2", "", false, 2, addStepDiscovery},
+		{"+Type-Triage idx=3", "", false, 3, addStepReview},
+		{"+Type-Triage idx=4", "", false, 4, addStepExecute},
+
+		// -Type +Triage: Source(0) Discovery(1) Triage(2) Review(3) Execute(4)
+		{"-Type+Triage idx=0", catalog.Rules, true, 0, addStepSource},
+		{"-Type+Triage idx=1", catalog.Rules, true, 1, addStepDiscovery},
+		{"-Type+Triage idx=2", catalog.Rules, true, 2, addStepTriage},
+		{"-Type+Triage idx=3", catalog.Rules, true, 3, addStepReview},
+		{"-Type+Triage idx=4", catalog.Rules, true, 4, addStepExecute},
+
+		// -Type -Triage: Source(0) Discovery(1) Review(2) Execute(3)
+		{"-Type-Triage idx=0", catalog.Rules, false, 0, addStepSource},
+		{"-Type-Triage idx=1", catalog.Rules, false, 1, addStepDiscovery},
+		{"-Type-Triage idx=2", catalog.Rules, false, 2, addStepReview},
+		{"-Type-Triage idx=3", catalog.Rules, false, 3, addStepExecute},
 	}
+
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			var app App
-			if tc.preFilter {
-				// Pre-filter skips stepType; entering Local Path goes directly
-				// to the provider step (provider-specific) or browseStart (universal)
-				app = navigateToImportFiltered(t, tc.ct)
-				app = pressN(app, keyDown, 1) // cursor 1 = Local Path
-				m, _ := app.Update(keyEnter)
-				app = m.(App)
-				if app.importer.step != tc.wantAfterType {
-					t.Fatalf("expected %d after local path with pre-filter, got %d",
-						tc.wantAfterType, app.importer.step)
-				}
-			} else {
-				// No pre-filter: source → stepType → select type → wantAfterType
-				app = navigateToImport(t)
-				app = pressN(app, keyDown, 1) // cursor 1 = Local Path
-				m, _ := app.Update(keyEnter)
-				app = m.(App)
-				if app.importer.step != stepType {
-					t.Fatalf("expected stepType, got %d", app.importer.step)
-				}
-				// Navigate to the right type and select
-				for i, tp := range app.importer.types {
-					if tp == tc.ct {
-						app = pressN(app, keyDown, i)
-						break
-					}
-				}
-				m, _ = app.Update(keyEnter)
-				app = m.(App)
-				if app.importer.step != tc.wantAfterType && app.importer.message == "" {
-					t.Fatalf("expected step %d or error message, got step %d",
-						tc.wantAfterType, app.importer.step)
-				}
+			t.Parallel()
+			m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", tc.preFilterType)
+			m.hasTriageStep = tc.hasTriageStep
+			got := m.stepForShellIndex(tc.idx)
+			if got != tc.want {
+				t.Errorf("stepForShellIndex(%d) = %d, want %d", tc.idx, got, tc.want)
 			}
 		})
 	}
-}
-
-func TestWizardInvariantImportGitURL(t *testing.T) {
-	app := navigateToImport(t)
-	// cursor 2 = Git URL — bypasses stepType entirely
-	app = pressN(app, keyDown, 2)
-	m, _ := app.Update(keyEnter)
-	app = m.(App)
-	if app.importer.step != stepGitURL {
-		t.Fatalf("expected stepGitURL, got %d", app.importer.step)
-	}
-}
-
-func TestWizardInvariantImportCreateNew(t *testing.T) {
-	// Table: type × pre-filter → expected step after type selection
-	// Universal: → stepName (skips provider)
-	// Provider-specific: → stepProvider → stepName
-	tests := []struct {
-		name      string
-		ct        catalog.ContentType
-		preFilter bool
-		wantStep  importStep // step reached after type selection (or after source if pre-filtered)
-	}{
-		{"Skills_NoFilter", catalog.Skills, false, stepName},
-		{"Skills_WithFilter", catalog.Skills, true, stepName},
-		{"Agents_NoFilter", catalog.Agents, false, stepName},
-		{"Agents_WithFilter", catalog.Agents, true, stepName},
-		{"MCP_NoFilter", catalog.MCP, false, stepName},
-		{"MCP_WithFilter", catalog.MCP, true, stepName},
-		{"Rules_NoFilter", catalog.Rules, false, stepProvider},
-		{"Rules_WithFilter", catalog.Rules, true, stepProvider},
-		{"Hooks_NoFilter", catalog.Hooks, false, stepProvider},
-		{"Hooks_WithFilter", catalog.Hooks, true, stepProvider},
-		{"Commands_NoFilter", catalog.Commands, false, stepProvider},
-		{"Commands_WithFilter", catalog.Commands, true, stepProvider},
-	}
-	for _, tc := range tests {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			var app App
-			if tc.preFilter {
-				app = navigateToImportFiltered(t, tc.ct)
-				app.importer.isCreate = true
-				// cursor 3 = Create New; with pre-filter source Enter goes to
-				// stepProvider (prov-specific) or stepName (universal)
-				app = pressN(app, keyDown, 3)
-				m, _ := app.Update(keyEnter)
-				app = m.(App)
-				if app.importer.step != tc.wantStep && app.importer.message == "" {
-					t.Fatalf("expected step %d or error, got step %d",
-						tc.wantStep, app.importer.step)
-				}
-			} else {
-				// No pre-filter: source → stepType → select type → wantStep
-				app = navigateToImport(t)
-				app = pressN(app, keyDown, 3) // cursor 3 = Create New
-				m, _ := app.Update(keyEnter)
-				app = m.(App)
-				if app.importer.step != stepType {
-					t.Fatalf("expected stepType, got %d", app.importer.step)
-				}
-				for i, tp := range app.importer.types {
-					if tp == tc.ct {
-						app = pressN(app, keyDown, i)
-						break
-					}
-				}
-				m, _ = app.Update(keyEnter)
-				app = m.(App)
-				if app.importer.step != tc.wantStep && app.importer.message == "" {
-					t.Fatalf("expected step %d or error, got step %d",
-						tc.wantStep, app.importer.step)
-				}
-			}
-		})
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Task 6: Import wizard — Esc/back paths
-// ---------------------------------------------------------------------------
-
-func TestWizardInvariantImportEscPaths(t *testing.T) {
-	tests := []struct {
-		name       string
-		fromStep   importStep
-		preFilter  catalog.ContentType
-		ct         catalog.ContentType
-		isCreate   bool
-		expectStep importStep
-	}{
-		{"stepType→stepSource", stepType, "", "", false, stepSource},
-		{"stepProvider+filter→stepSource", stepProvider, catalog.Rules, catalog.Rules, false, stepSource},
-		{"stepProvider+noFilter→stepType", stepProvider, "", catalog.Rules, false, stepType},
-		{"stepBrowseStart+filter→stepSource", stepBrowseStart, catalog.Skills, catalog.Skills, false, stepSource},
-		{"stepBrowseStart+universal→stepType", stepBrowseStart, "", catalog.Skills, false, stepType},
-		{"stepBrowseStart+provSpecific→stepProvider", stepBrowseStart, "", catalog.Rules, false, stepProvider},
-		{"stepName+filter→stepSource", stepName, catalog.Skills, catalog.Skills, true, stepSource},
-		{"stepName+create+provSpecific→stepProvider", stepName, "", catalog.Rules, true, stepProvider},
-		{"stepName+create+universal→stepType", stepName, "", catalog.Skills, true, stepType},
-		{"stepConfirm+create→stepName", stepConfirm, "", catalog.Skills, true, stepName},
-	}
-	for _, tc := range tests {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			app := navigateToImport(t)
-
-			// Set up state that satisfies validateStep() for fromStep
-			app.importer.step = tc.fromStep
-			app.importer.preFilterType = tc.preFilter
-			app.importer.contentType = tc.ct
-			app.importer.isCreate = tc.isCreate
-
-			// Ensure required fields are populated for each step's validateStep() check
-			switch tc.fromStep {
-			case stepType:
-				// types already populated by constructor
-			case stepProvider:
-				app.importer.providerNames = []string{"claude-code"}
-				app.importer.provCursor = 0
-			case stepBrowseStart:
-				// contentType already set above
-			case stepName:
-				// nameInput already initialized by constructor
-				// For provider-specific types, providerNames must be set
-				if !tc.ct.IsUniversal() {
-					app.importer.providerNames = []string{"claude-code"}
-				}
-			case stepConfirm:
-				app.importer.sourcePath = "/tmp/src"
-				app.importer.itemName = "my-skill"
-				// For provider-specific types at stepConfirm, providerName must be set
-				if !tc.ct.IsUniversal() {
-					app.importer.providerName = "claude-code"
-				}
-			}
-
-			m, _ := app.Update(keyEsc)
-			app = m.(App)
-			if app.importer.step != tc.expectStep {
-				t.Fatalf("Esc from %d: expected step %d, got %d",
-					tc.fromStep, tc.expectStep, app.importer.step)
-			}
-		})
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Task 7: Import wizard — special cases + parallel arrays
-// ---------------------------------------------------------------------------
-
-func TestWizardInvariantImportSpecialCases(t *testing.T) {
-	// HooksJsonDetection: selecting a single .json file for Hooks type goes to
-	// stepHookSelect (split into individual hooks) rather than stepValidate.
-	// Tested via fileBrowserDoneMsg with a real .json file.
-	t.Run("HooksJsonDetection", func(t *testing.T) {
-		app := navigateToImport(t)
-		app.importer.contentType = catalog.Hooks
-		app.importer.providerName = "claude-code"
-		// Write a minimal hooks JSON to a temp file
-		dir := t.TempDir()
-		hookJSON := `{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"echo hi"}]}]}}`
-		hookFile := filepath.Join(dir, "settings.json")
-		if err := os.WriteFile(hookFile, []byte(hookJSON), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		msg := fileBrowserDoneMsg{paths: []string{hookFile}}
-		m, _ := app.Update(msg)
-		app = m.(App)
-		if app.importer.step != stepHookSelect {
-			t.Fatalf("single .json hooks file: expected stepHookSelect, got %d", app.importer.step)
-		}
-		if len(app.importer.hookCandidates) == 0 {
-			t.Fatal("expected hookCandidates to be populated")
-		}
-		if len(app.importer.hookCandidates) != len(app.importer.hookSelected) ||
-			len(app.importer.hookCandidates) != len(app.importer.hookNames) {
-			t.Fatalf("parallel arrays mismatched: candidates=%d selected=%d names=%d",
-				len(app.importer.hookCandidates), len(app.importer.hookSelected), len(app.importer.hookNames))
-		}
-	})
-
-	// EmptyProviders: From Provider with no providers stays on stepSource with error.
-	t.Run("EmptyProviders", func(t *testing.T) {
-		app := navigateToImport(t)
-		app.importer.providers = nil
-		// cursor 0 = From Provider
-		m, _ := app.Update(keyEnter)
-		app = m.(App)
-		if app.importer.step != stepSource {
-			t.Fatalf("expected to stay on stepSource with no providers, got %d", app.importer.step)
-		}
-		if app.importer.message == "" || !app.importer.messageIsErr {
-			t.Fatal("expected error message about no providers")
-		}
-	})
-
-	// FromRegistryRedirectEsc: Esc at stepGitPick when fromRegistryRedirect=true
-	// sends importBackToRegistriesMsg instead of returning to stepGitURL.
-	t.Run("FromRegistryRedirectEsc", func(t *testing.T) {
-		app := navigateToImport(t)
-		app.importer.step = stepGitPick
-		app.importer.fromRegistryRedirect = true
-		app.importer.clonedItems = []catalog.ContentItem{
-			{Name: "test-item", Type: catalog.Skills},
-		}
-		app.importer.clonedPath = "/tmp/cloned"
-		_, cmd := app.Update(keyEsc)
-		if cmd == nil {
-			t.Fatal("expected importBackToRegistriesMsg cmd on esc from registry redirect")
-		}
-		msg := cmd()
-		if _, ok := msg.(importBackToRegistriesMsg); !ok {
-			t.Fatalf("expected importBackToRegistriesMsg, got %T", msg)
-		}
-	})
-
-	// SearchResultsEntryClearsFilter: opening the import wizard from the Add
-	// sidebar entry should have preFilterType="" (no type filter).
-	t.Run("SearchResultsEntryClearsFilter", func(t *testing.T) {
-		app := navigateToImport(t)
-		if app.importer.preFilterType != "" {
-			t.Fatalf("expected empty preFilterType from Add entry, got %q", app.importer.preFilterType)
-		}
-	})
-}
-
-func TestWizardInvariantImportParallelArrays(t *testing.T) {
-	// DiscoveryFilteredArrayMatch: after discoveryDoneMsg with pre-filter,
-	// discoveryItems and discoverySelected must have the same length.
-	t.Run("DiscoveryFilteredArrayMatch", func(t *testing.T) {
-		app := navigateToImport(t)
-		app.importer.step = stepProviderPick
-		app.importer.preFilterType = catalog.Skills
-		msg := discoveryDoneMsg{
-			items: []add.DiscoveryItem{
-				{Name: "rule-one", Type: catalog.Rules, Status: add.StatusNew},
-				{Name: "skill-two", Type: catalog.Skills, Status: add.StatusNew},
-				{Name: "skill-three", Type: catalog.Skills, Status: add.StatusOutdated},
-			},
-		}
-		m, _ := app.Update(msg)
-		app = m.(App)
-		if app.importer.step != stepDiscoverySelect {
-			t.Fatalf("expected stepDiscoverySelect, got %d", app.importer.step)
-		}
-		if len(app.importer.discoveryItems) != len(app.importer.discoverySelected) {
-			t.Fatalf("array mismatch: discoveryItems=%d discoverySelected=%d",
-				len(app.importer.discoveryItems), len(app.importer.discoverySelected))
-		}
-		// Only Skills items should survive the pre-filter (2 out of 3)
-		if len(app.importer.discoveryItems) != 2 {
-			t.Fatalf("expected 2 filtered items, got %d", len(app.importer.discoveryItems))
-		}
-	})
-
-	// DiscoveryUnfilteredArrayMatch: without pre-filter, all items are shown.
-	t.Run("DiscoveryUnfilteredArrayMatch", func(t *testing.T) {
-		app := navigateToImport(t)
-		app.importer.step = stepProviderPick
-		msg := discoveryDoneMsg{
-			items: []add.DiscoveryItem{
-				{Name: "rule-one", Type: catalog.Rules, Status: add.StatusNew},
-				{Name: "skill-two", Type: catalog.Skills, Status: add.StatusInLibrary},
-				{Name: "agent-three", Type: catalog.Agents, Status: add.StatusOutdated},
-			},
-		}
-		m, _ := app.Update(msg)
-		app = m.(App)
-		if app.importer.step != stepDiscoverySelect {
-			t.Fatalf("expected stepDiscoverySelect, got %d", app.importer.step)
-		}
-		if len(app.importer.discoveryItems) != len(app.importer.discoverySelected) {
-			t.Fatalf("array mismatch: discoveryItems=%d discoverySelected=%d",
-				len(app.importer.discoveryItems), len(app.importer.discoverySelected))
-		}
-		if len(app.importer.discoveryItems) != 3 {
-			t.Fatalf("expected 3 items, got %d", len(app.importer.discoveryItems))
-		}
-	})
-
-	// HookCandidateArrayMatch: after fileBrowserDoneMsg that triggers hook splitting,
-	// hookCandidates, hookSelected, and hookNames must all have the same length.
-	t.Run("HookCandidateArrayMatch", func(t *testing.T) {
-		app := navigateToImport(t)
-		app.importer.contentType = catalog.Hooks
-		app.importer.providerName = "claude-code"
-		dir := t.TempDir()
-		// Two hooks in the JSON
-		hookJSON := `{"hooks":{"PreToolUse":[` +
-			`{"matcher":"Bash","hooks":[{"type":"command","command":"echo a"}]},` +
-			`{"matcher":"Edit","hooks":[{"type":"command","command":"echo b"}]}` +
-			`]}}`
-		hookFile := filepath.Join(dir, "settings.json")
-		if err := os.WriteFile(hookFile, []byte(hookJSON), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		msg := fileBrowserDoneMsg{paths: []string{hookFile}}
-		m, _ := app.Update(msg)
-		app = m.(App)
-		if app.importer.step != stepHookSelect {
-			t.Fatalf("expected stepHookSelect, got %d", app.importer.step)
-		}
-		nc := len(app.importer.hookCandidates)
-		ns := len(app.importer.hookSelected)
-		nn := len(app.importer.hookNames)
-		if nc != ns || nc != nn {
-			t.Fatalf("hookCandidates=%d hookSelected=%d hookNames=%d — arrays mismatched", nc, ns, nn)
-		}
-	})
-}
-
-// ---------------------------------------------------------------------------
-// Task 7b: Import wizard — conflict/batch sub-matrix
-// ---------------------------------------------------------------------------
-
-func TestWizardInvariantImportConflictBatch(t *testing.T) {
-	// Note: destinationPath() and batchDestForSource() both use catalog.GlobalContentDir().
-	// We redirect GlobalContentDir to a temp dir for deterministic conflict detection.
-
-	t.Run("Single_NoConflict_ValidateToConfirmToCmd", func(t *testing.T) {
-		// stepValidate → Enter (single item, no conflict) → stepConfirm
-		// At stepConfirm, the dest does not exist → Enter fires importDoneMsg cmd
-		dir := t.TempDir()
-		// Use a separate content dir — no items pre-created so no conflict
-		globalDir := filepath.Join(dir, "global")
-		orig := catalog.GlobalContentDirOverride
-		catalog.GlobalContentDirOverride = globalDir
-		t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
-
-		app := navigateToImport(t)
-		srcDir := filepath.Join(dir, "src", "my-skill")
-		if err := os.MkdirAll(srcDir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		app.importer.step = stepValidate
-		app.importer.contentType = catalog.Skills
-		app.importer.selectedPaths = []string{srcDir}
-		app.importer.validationItems = []validationItem{
-			{path: srcDir, name: "my-skill", included: true},
-		}
-		app.importer.validateCursor = 0
-		m, _ := app.Update(keyEnter) // → stepConfirm (single item)
-		app = m.(App)
-		if app.importer.step != stepConfirm {
-			t.Fatalf("expected stepConfirm, got %d", app.importer.step)
-		}
-		// At stepConfirm: set sourcePath/itemName and confirm
-		app.importer.sourcePath = srcDir
-		app.importer.itemName = "my-skill"
-		_, cmd := app.Update(keyEnter) // → importDoneMsg cmd (no conflict since dest doesn't exist)
-		if cmd == nil {
-			t.Fatal("expected importDoneMsg cmd from stepConfirm (no conflict)")
-		}
-	})
-
-	t.Run("Single_Conflict_ConfirmToConflict", func(t *testing.T) {
-		// stepConfirm → Enter when dest already exists → stepConflict
-		dir := t.TempDir()
-		// destinationPath() for Skills returns: globalDir/skills/itemName
-		globalDir := filepath.Join(dir, "global")
-		orig := catalog.GlobalContentDirOverride
-		catalog.GlobalContentDirOverride = globalDir
-		t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
-
-		srcDir := filepath.Join(dir, "src", "my-skill")
-		destDir := filepath.Join(globalDir, "skills", "my-skill")
-		if err := os.MkdirAll(srcDir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.MkdirAll(destDir, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		app := navigateToImport(t)
-		app.importer.step = stepConfirm
-		app.importer.contentType = catalog.Skills
-		app.importer.sourcePath = srcDir
-		app.importer.itemName = "my-skill"
-		app.importer.providerName = ""
-		m, _ := app.Update(keyEnter)
-		app = m.(App)
-		if app.importer.step != stepConflict {
-			t.Fatalf("expected stepConflict when dest exists, got %d", app.importer.step)
-		}
-		if app.importer.conflict.itemName == "" {
-			t.Fatal("expected conflict.itemName to be populated at stepConflict")
-		}
-	})
-
-	t.Run("Batch_NoConflicts_ValidateToCmd", func(t *testing.T) {
-		// stepValidate → Enter (multiple items, no conflicts) → importDoneMsg cmd
-		dir := t.TempDir()
-		globalDir := filepath.Join(dir, "global") // doesn't exist → no conflicts
-		orig := catalog.GlobalContentDirOverride
-		catalog.GlobalContentDirOverride = globalDir
-		t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
-
-		app := navigateToImport(t)
-		src1 := filepath.Join(dir, "src", "skill-one")
-		src2 := filepath.Join(dir, "src", "skill-two")
-		if err := os.MkdirAll(src1, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.MkdirAll(src2, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		app.importer.step = stepValidate
-		app.importer.contentType = catalog.Skills
-		app.importer.selectedPaths = []string{src1, src2}
-		app.importer.validationItems = []validationItem{
-			{path: src1, name: "skill-one", included: true},
-			{path: src2, name: "skill-two", included: true},
-		}
-		_, cmd := app.Update(keyEnter) // batch, no conflicts → importDoneMsg cmd
-		if cmd == nil {
-			t.Fatal("expected importDoneMsg cmd for batch with no conflicts")
-		}
-	})
-
-	t.Run("Batch_SomeConflicts_ValidateToConflict", func(t *testing.T) {
-		// stepValidate → Enter (multiple items, one conflict) → stepConflict
-		// After stepConflict → y (overwrite) → advanceConflict fires importDoneMsg cmd
-		dir := t.TempDir()
-		globalDir := filepath.Join(dir, "global")
-		orig := catalog.GlobalContentDirOverride
-		catalog.GlobalContentDirOverride = globalDir
-		t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
-
-		src1 := filepath.Join(dir, "src", "skill-one")
-		src2 := filepath.Join(dir, "src", "skill-two")
-		if err := os.MkdirAll(src1, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.MkdirAll(src2, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		// Create dest for skill-one only (conflict)
-		dest1 := filepath.Join(globalDir, "skills", "skill-one")
-		if err := os.MkdirAll(dest1, 0o755); err != nil {
-			t.Fatal(err)
-		}
-		app := navigateToImport(t)
-		app.importer.step = stepValidate
-		app.importer.contentType = catalog.Skills
-		app.importer.selectedPaths = []string{src1, src2}
-		app.importer.validationItems = []validationItem{
-			{path: src1, name: "skill-one", included: true},
-			{path: src2, name: "skill-two", included: true},
-		}
-		m, _ := app.Update(keyEnter) // batch with conflict → stepConflict
-		app = m.(App)
-		if app.importer.step != stepConflict {
-			t.Fatalf("expected stepConflict for batch with conflict, got %d", app.importer.step)
-		}
-		if len(app.importer.batchConflicts) == 0 {
-			t.Fatal("expected batchConflicts to be populated")
-		}
-		// Press 'y' to overwrite → advanceConflict → all conflicts resolved → importDoneMsg cmd
-		_, cmd := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
-		if cmd == nil {
-			t.Fatal("expected importDoneMsg cmd after overwrite resolves last batch conflict")
-		}
-	})
-}
-
-// ---------------------------------------------------------------------------
-// Task 8: Loadout Create wizard
-// ---------------------------------------------------------------------------
-
-func TestWizardInvariantCreateLoadoutForward(t *testing.T) {
-	cat := testCatalog(t)
-	providers := testProviders(t)
-
-	t.Run("NoPrefill", func(t *testing.T) {
-		// clStepProvider → Enter → clStepTypes → Enter → clStepItems → Enter → clStepName
-		s := newCreateLoadoutScreen("", "", providers, cat, 80, 30)
-		if s.step != clStepProvider {
-			t.Fatalf("expected clStepProvider at start, got %d", s.step)
-		}
-		s, _ = s.Update(keyEnter) // provider → types
-		if s.step != clStepTypes {
-			t.Fatalf("expected clStepTypes after provider Enter, got %d", s.step)
-		}
-		s, _ = s.Update(keyEnter) // types → items (first type auto-selected)
-		if s.step != clStepItems {
-			t.Fatalf("expected clStepItems after types Enter, got %d", s.step)
-		}
-		s, _ = s.Update(keyEnter) // items → name (or next type if multi-type)
-		// Walk through all types until we reach clStepName
-		for s.step == clStepItems {
-			s, _ = s.Update(keyEnter)
-		}
-		if s.step != clStepName {
-			t.Fatalf("expected clStepName after all items, got %d", s.step)
-		}
-		s.nameInput.SetValue("my-loadout")
-		s, _ = s.Update(keyEnter) // name → dest
-		if s.step != clStepDest {
-			t.Fatalf("expected clStepDest after name Enter, got %d", s.step)
-		}
-		s, _ = s.Update(keyEnter) // dest → review
-		if s.step != clStepReview {
-			t.Fatalf("expected clStepReview after dest Enter, got %d", s.step)
-		}
-	})
-
-	t.Run("PrefilledProvider", func(t *testing.T) {
-		// Pre-filled: starts at clStepTypes, skips provider
-		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
-		if s.step != clStepTypes {
-			t.Fatalf("expected clStepTypes at start with prefilled provider, got %d", s.step)
-		}
-		s, _ = s.Update(keyEnter) // types → items
-		if s.step != clStepItems {
-			t.Fatalf("expected clStepItems, got %d", s.step)
-		}
-		for s.step == clStepItems {
-			s, _ = s.Update(keyEnter)
-		}
-		if s.step != clStepName {
-			t.Fatalf("expected clStepName, got %d", s.step)
-		}
-	})
-
-	t.Run("WithScopeRegistry", func(t *testing.T) {
-		// With registry scope: destOptions has 3 entries (project, global, registry)
-		s := newCreateLoadoutScreen("claude-code", "my-registry", providers, cat, 80, 30)
-		if len(s.destOptions) != 3 {
-			t.Fatalf("expected 3 destOptions with registry scope, got %d", len(s.destOptions))
-		}
-		// Walk to dest step and verify all 3 options are navigable
-		s.step = clStepDest
-		s, _ = s.Update(keyDown)
-		s, _ = s.Update(keyDown)
-		if s.destCursor != 2 {
-			t.Fatalf("expected destCursor 2, got %d", s.destCursor)
-		}
-	})
-}
-
-func TestWizardInvariantCreateLoadoutEsc(t *testing.T) {
-	cat := testCatalog(t)
-	providers := testProviders(t)
-
-	t.Run("TypesEsc_Prefilled_ExitsWizard", func(t *testing.T) {
-		// When pre-filled, Esc at clStepTypes exits (no provider step to go back to)
-		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
-		if s.step != clStepTypes {
-			t.Fatalf("expected clStepTypes, got %d", s.step)
-		}
-		s, _ = s.Update(keyEsc)
-		// confirmed=false is the exit signal; step stays or wizard exits
-		// Esc at first step when pre-filled should not crash and should not confirm
-		if s.confirmed {
-			t.Error("Esc should not confirm the wizard")
-		}
-	})
-
-	t.Run("TypesEsc_NoPrefill_GoesBackToProvider", func(t *testing.T) {
-		// When no provider is pre-filled, selecting a provider from the picker sets
-		// prefilledProvider, then advances to clStepTypes. Esc at types goes back to provider.
-		// Navigate naturally: start with no prefill → Enter to pick first provider → reach types → Esc
-		s := newCreateLoadoutScreen("", "", providers, cat, 80, 30)
-		if s.step != clStepProvider {
-			t.Fatalf("expected clStepProvider at start, got %d", s.step)
-		}
-		// Select the first provider (Enter) — sets prefilledProvider and advances to types
-		s, _ = s.Update(keyEnter)
-		if s.step != clStepTypes {
-			t.Fatalf("expected clStepTypes after provider Enter, got %d", s.step)
-		}
-		// prefilledProvider is now set (from the selected provider)
-		// Esc should go back — but since prefilledProvider != "", Esc signals exit (confirmed=false)
-		// This is correct behavior: once a provider is picked, Esc exits rather than cycling back.
-		// The "no prefill" back path is via the Back button in the review step, not Esc from types.
-		// So we just verify Esc doesn't panic and doesn't confirm.
-		s, _ = s.Update(keyEsc)
-		if s.confirmed {
-			t.Error("Esc at types should not confirm the wizard")
-		}
-	})
-
-	t.Run("NameEsc_GoesBackToItems", func(t *testing.T) {
-		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
-		// Set the step directly so we don't need full navigation
-		s.step = clStepName
-		s, _ = s.Update(keyEsc)
-		if s.step != clStepItems {
-			t.Fatalf("expected clStepItems after Esc on name, got %d", s.step)
-		}
-	})
-
-	t.Run("DestEsc_GoesBackToName", func(t *testing.T) {
-		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
-		s.step = clStepDest
-		s, _ = s.Update(keyEsc)
-		if s.step != clStepName {
-			t.Fatalf("expected clStepName after Esc on dest, got %d", s.step)
-		}
-	})
-
-	t.Run("ReviewEsc_GoesBackToDest", func(t *testing.T) {
-		s := newCreateLoadoutScreen("claude-code", "", providers, cat, 80, 30)
-		s.step = clStepReview
-		s.reviewBtnCursor = 0 // Back button
-		s, _ = s.Update(keyEnter) // Review Back → dest
-		if s.step != clStepDest {
-			t.Fatalf("expected clStepDest after Review Back, got %d", s.step)
-		}
-	})
-}
-
-// ---------------------------------------------------------------------------
-// Task 9: Install modal, EnvSetup modal, Update wizard
-// ---------------------------------------------------------------------------
-
-func TestWizardInvariantInstallModal(t *testing.T) {
-	cat := testCatalog(t)
-	providers := testProviders(t)
-	item := cat.Items[0] // alpha-skill
-
-	t.Run("NormalFlow_LocationToMethod", func(t *testing.T) {
-		// installStepLocation → Enter (cursor 0 = global) → installStepMethod
-		m := newInstallModal(item, providers, cat.RepoRoot)
-		if m.step != installStepLocation {
-			t.Fatalf("expected installStepLocation, got %d", m.step)
-		}
-		// locationCursor 0 = global — Enter goes directly to installStepMethod
-		m, _ = m.Update(keyEnter)
-		if m.step != installStepMethod {
-			t.Fatalf("expected installStepMethod after Enter on global, got %d", m.step)
-		}
-	})
-
-	t.Run("CustomPath_LocationToCustomToMethod", func(t *testing.T) {
-		// installStepLocation → cursor 2 (Custom) → Enter → installStepCustomPath
-		// → type path → Enter → installStepMethod
-		m := newInstallModal(item, providers, cat.RepoRoot)
-		// Navigate to Custom (cursor 2)
-		m, _ = m.Update(keyDown)
-		m, _ = m.Update(keyDown)
-		if m.locationCursor != 2 {
-			t.Fatalf("expected locationCursor 2, got %d", m.locationCursor)
-		}
-		m, _ = m.Update(keyEnter) // → installStepCustomPath
-		if m.step != installStepCustomPath {
-			t.Fatalf("expected installStepCustomPath, got %d", m.step)
-		}
-		// Type a path and confirm
-		m.customPathInput.SetValue("/tmp/test-install")
-		m, _ = m.Update(keyEnter) // → installStepMethod
-		if m.step != installStepMethod {
-			t.Fatalf("expected installStepMethod after custom path Enter, got %d", m.step)
-		}
-	})
-
-	t.Run("SymlinkDisabled_MethodCursorDefaultsToCopy", func(t *testing.T) {
-		// When symlink is disabled for the content type, methodCursor defaults to 1 (copy)
-		disableSymlinkProviders := []provider.Provider{
-			{
-				Name:     "Claude Code",
-				Slug:     "claude-code",
-				Detected: true,
-				SupportsType: func(ct catalog.ContentType) bool { return true },
-				InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/test" },
-				SymlinkSupport: map[catalog.ContentType]bool{
-					item.Type: false,
-				},
-			},
-		}
-		m := newInstallModal(item, disableSymlinkProviders, cat.RepoRoot)
-		m, _ = m.Update(keyEnter) // location → method
-		if m.step != installStepMethod {
-			t.Fatalf("expected installStepMethod, got %d", m.step)
-		}
-		if m.methodCursor != 1 {
-			t.Fatalf("expected methodCursor 1 (copy) when symlink disabled, got %d", m.methodCursor)
-		}
-	})
-
-	t.Run("MethodEsc_GoesBackToLocation", func(t *testing.T) {
-		m := newInstallModal(item, providers, cat.RepoRoot)
-		m.step = installStepMethod
-		m, _ = m.Update(keyEsc)
-		if m.step != installStepLocation {
-			t.Fatalf("expected installStepLocation after Esc on method, got %d", m.step)
-		}
-	})
-
-	t.Run("LocationEsc_ClosesModal", func(t *testing.T) {
-		m := newInstallModal(item, providers, cat.RepoRoot)
-		m, _ = m.Update(keyEsc)
-		if m.active {
-			t.Fatal("Esc at location step should deactivate modal")
-		}
-	})
-}
-
-func TestWizardInvariantEnvSetupModal(t *testing.T) {
-	t.Run("NewValuePath_ChooseToValueToLocation", func(t *testing.T) {
-		// envStepChoose (methodCursor=0 = set up new) → Enter → envStepValue
-		// → Enter with value → envStepLocation
-		m := newEnvSetupModal([]string{"TEST_API_KEY"})
-		if m.step != envStepChoose {
-			t.Fatalf("expected envStepChoose, got %d", m.step)
-		}
-		// methodCursor=0 = "Set up new value" — press Enter
-		m, _ = m.Update(keyEnter)
-		if m.step != envStepValue {
-			t.Fatalf("expected envStepValue after Choose Enter (new value), got %d", m.step)
-		}
-		// Enter a value and confirm
-		m.input.SetValue("my-secret-key")
-		m, _ = m.Update(keyEnter)
-		if m.step != envStepLocation {
-			t.Fatalf("expected envStepLocation after value Enter, got %d", m.step)
-		}
-		if m.value != "my-secret-key" {
-			t.Fatalf("expected value %q, got %q", "my-secret-key", m.value)
-		}
-	})
-
-	t.Run("ExistingFilePath_ChooseToSource", func(t *testing.T) {
-		// envStepChoose (methodCursor=1 = already configured) → Enter → envStepSource
-		m := newEnvSetupModal([]string{"TEST_SECRET"})
-		// Navigate to "Already configured" (cursor 1)
-		m, _ = m.Update(keyDown)
-		if m.methodCursor != 1 {
-			t.Fatalf("expected methodCursor 1, got %d", m.methodCursor)
-		}
-		m, _ = m.Update(keyEnter)
-		if m.step != envStepSource {
-			t.Fatalf("expected envStepSource after Choose Enter (already configured), got %d", m.step)
-		}
-	})
-
-	t.Run("MultipleVars_IteratesEachVar", func(t *testing.T) {
-		// With 2 vars, completing the first should advance varIdx and reset to envStepChoose
-		m := newEnvSetupModal([]string{"VAR_ONE", "VAR_TWO"})
-		if m.varIdx != 0 {
-			t.Fatalf("expected varIdx=0, got %d", m.varIdx)
-		}
-		if len(m.varNames) != 2 {
-			t.Fatalf("expected 2 varNames, got %d", len(m.varNames))
-		}
-		// Advance through VAR_ONE: choose → value → location → Enter (saves, advances to next var)
-		m, _ = m.Update(keyEnter) // choose → value
-		m.input.SetValue("val1")
-		m, _ = m.Update(keyEnter) // value → location
-		if m.step != envStepLocation {
-			t.Fatalf("expected envStepLocation after value Enter, got %d", m.step)
-		}
-		// Set a save path and Enter to complete the var (advance() is called on success)
-		dir := t.TempDir()
-		savePath := filepath.Join(dir, ".env")
-		m.input.SetValue(savePath)
-		m, _ = m.Update(keyEnter) // location → advance to next var
-		if !m.active {
-			t.Fatal("modal should still be active after first var (has second var)")
-		}
-		if m.varIdx != 1 {
-			t.Fatalf("expected varIdx=1 after first var, got %d", m.varIdx)
-		}
-		if m.step != envStepChoose {
-			t.Fatalf("expected envStepChoose for second var, got %d", m.step)
-		}
-	})
-}
-
-func TestWizardInvariantUpdateWizard(t *testing.T) {
-	t.Run("PreviewFlow_MenuToPreview", func(t *testing.T) {
-		// stepUpdateMenu → async → stepUpdatePreview
-		// We test the transition by injecting updatePreviewMsg directly.
-		m := newUpdateModel("", "v0.1.0", "v0.2.0", 5, false)
-		if m.step != stepUpdateMenu {
-			t.Fatalf("expected stepUpdateMenu, got %d", m.step)
-		}
-		// Simulate the async result arriving
-		m, _ = m.Update(updatePreviewMsg{
-			releaseNotes: "## v0.2.0\n\n- Feature X\n",
-			versionRange: "v0.1.0 → v0.2.0",
-		})
-		if m.step != stepUpdatePreview {
-			t.Fatalf("expected stepUpdatePreview after updatePreviewMsg, got %d", m.step)
-		}
-		if m.releaseNotes == "" && m.fallbackLog == "" {
-			t.Fatal("expected releaseNotes or fallbackLog to be set at stepUpdatePreview")
-		}
-	})
-
-	t.Run("DirectUpdate_MenuToPull", func(t *testing.T) {
-		// stepUpdateMenu → cursor 1 ("Update now") → dispatches async → stepUpdatePull
-		m := newUpdateModel("", "v0.1.0", "v0.2.0", 5, false)
-		m, _ = m.Update(keyDown) // cursor 1 = Update now
-		if m.cursor != 1 {
-			t.Fatalf("expected cursor 1, got %d", m.cursor)
-		}
-		_, cmd := m.Update(keyEnter)
-		if cmd == nil {
-			t.Fatal("expected async cmd for Update now")
-		}
-		// Simulate the pull completing
-		m, _ = m.Update(updatePullMsg{output: "Already up to date."})
-		if m.step != stepUpdateDone {
-			t.Fatalf("expected stepUpdateDone after updatePullMsg, got %d", m.step)
-		}
-	})
 }

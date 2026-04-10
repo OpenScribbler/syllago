@@ -1,0 +1,28 @@
+{
+  "_comment": "Expected Gemini CLI output for canonical/full-featured.json. Conversions: (1) before_tool_execute+shell -> BeforeTool with toolMatcher 'run_shell_command'; (2) before_tool_execute+mcp -> BeforeTool with toolMatcher 'mcp_github_create_issue' (single underscore format); (3) session_start -> SessionStart with no toolMatcher. Timeout seconds -> milliseconds. platform/cwd/env fields dropped (Gemini doesn't support). provider_data.windsurf dropped (not target provider).",
+  "_warnings": [
+    "Hook 1: 'platform' field dropped — Gemini CLI does not support per-OS command overrides (platform_commands capability, degradation: warn)",
+    "Hook 1: 'cwd' field dropped — Gemini CLI does not support configurable working directory (configurable_cwd capability, degradation: warn)",
+    "Hook 1: 'env' field dropped — Gemini CLI does not support custom environment variables (custom_env capability, degradation: warn)",
+    "Hook 1: provider_data.windsurf ignored — not target provider"
+  ],
+  "hooks": [
+    {
+      "trigger": "BeforeTool",
+      "toolMatcher": "run_shell_command",
+      "command": "./safety-check.sh",
+      "timeoutMs": 10000
+    },
+    {
+      "trigger": "BeforeTool",
+      "toolMatcher": "mcp_github_create_issue",
+      "command": "./validate-issue.sh",
+      "timeoutMs": 5000
+    },
+    {
+      "trigger": "SessionStart",
+      "command": "./init-session.sh",
+      "timeoutMs": 30000
+    }
+  ]
+}

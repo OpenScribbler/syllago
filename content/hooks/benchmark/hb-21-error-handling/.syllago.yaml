@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-21-error-handling
+type: hooks
+description: "Benchmark: validates agent continues normally when hook exits 1 (fail-open)"
+hook:
+  event: before_tool_execute
+  blocking: false
+  command: ./hb-21.sh

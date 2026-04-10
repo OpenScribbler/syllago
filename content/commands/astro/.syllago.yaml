@@ -1,0 +1,9 @@
+format_version: 1
+id: 27d09166-c87a-47fe-ba34-d45916b48794
+name: astro
+type: commands
+source_format: md
+source_type: provider
+source_hash: sha256:9aec5f0eadba603b11ec3ece6e6c68a9a1f177c3f9e0b02b6c72fb105f94dd95
+added_at: 2026-03-29T15:49:41.152762934Z
+added_by: syllago
