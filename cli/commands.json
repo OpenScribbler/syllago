@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-09T16:40:57Z",
-  "syllagoVersion": "0.7.0",
+  "generatedAt": "2026-04-10T04:17:52Z",
+  "syllagoVersion": "dev",
   "commands": [
     {
       "name": "add",
@@ -559,6 +559,14 @@
       "longDescription": null,
       "aliases": [],
       "flags": [
+        {
+          "name": "--cache-root",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Path to .capmon-cache/ (default: .capmon-cache)"
+        },
         {
           "name": "--force-overwrite-exclusive",
           "shorthand": null,
