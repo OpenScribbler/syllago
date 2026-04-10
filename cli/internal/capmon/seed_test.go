@@ -172,6 +172,65 @@ reviewed_at: "2026-04-10T00:00:00Z"
 	}
 }
 
+func TestSeedCrushAndRooCodeE2E(t *testing.T) {
+	// This test exercises the full pipeline:
+	// cache extraction → recognition → capability YAML writing
+	// It uses the real .capmon-cache directory relative to the project root.
+	cacheRoot := filepath.Join("..", "..", "..", ".capmon-cache")
+	if _, err := os.Stat(cacheRoot); os.IsNotExist(err) {
+		t.Skip("no .capmon-cache directory — run capmon fetch first")
+	}
+
+	for _, provider := range []string{"crush", "roo-code"} {
+		provider := provider
+		t.Run(provider, func(t *testing.T) {
+			dotPaths, err := capmon.LoadAndRecognizeCache(cacheRoot, provider)
+			if err != nil {
+				t.Fatalf("LoadAndRecognizeCache(%q): %v", provider, err)
+			}
+			if len(dotPaths) == 0 {
+				t.Fatalf("LoadAndRecognizeCache(%q): returned empty map — real recognizer should produce output", provider)
+			}
+			// Verify key canonical fields are present
+			if dotPaths["skills.supported"] != "true" {
+				t.Errorf("%s: skills.supported missing or not 'true'", provider)
+			}
+			if dotPaths["skills.capabilities.display_name.confidence"] != "confirmed" {
+				t.Errorf("%s: display_name.confidence not 'confirmed', got %q", provider, dotPaths["skills.capabilities.display_name.confidence"])
+			}
+			if dotPaths["skills.capabilities.project_scope.supported"] != "true" {
+				t.Errorf("%s: project_scope.supported missing", provider)
+			}
+			if dotPaths["skills.capabilities.canonical_filename.supported"] != "true" {
+				t.Errorf("%s: canonical_filename.supported missing", provider)
+			}
+
+			// Write to temp output dir — verify YAML is produced with confidence fields
+			capsDir := t.TempDir()
+			opts := capmon.SeedOptions{
+				CapsDir:        capsDir,
+				Provider:       provider,
+				Extracted:      dotPaths,
+				SeederSpecsDir: "", // skip gate in this test
+			}
+			if err := capmon.SeedProviderCapabilities(opts); err != nil {
+				t.Fatalf("SeedProviderCapabilities(%q): %v", provider, err)
+			}
+			data, err := os.ReadFile(filepath.Join(capsDir, provider+".yaml"))
+			if err != nil {
+				t.Fatalf("read output YAML: %v", err)
+			}
+			out := string(data)
+			if !strings.Contains(out, "confidence: confirmed") {
+				t.Errorf("%s: output YAML missing 'confidence: confirmed'\n%s", provider, out)
+			}
+			if !strings.Contains(out, "canonical_filename") {
+				t.Errorf("%s: output YAML missing 'canonical_filename'\n%s", provider, out)
+			}
+		})
+	}
+}
+
 func TestSeedProviderCapabilities_AppliesDotPaths(t *testing.T) {
 	capsDir := t.TempDir()
 	seedOpts := capmon.SeedOptions{
