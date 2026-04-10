@@ -1,1095 +1,344 @@
 package tui
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	overlay "github.com/rmhubbert/bubbletea-overlay"
-
-	"github.com/OpenScribbler/syllago/cli/internal/catalog"
-	"github.com/OpenScribbler/syllago/cli/internal/installer"
-	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
-// Mouse handling note: Modal View() methods use zone.Mark() for semantic
-// labeling, but these inner zones don't survive overlay.Composite(). All modal
-// mouse click handling uses coordinate-based hit testing in app.go's
-// tea.MouseMsg handler — NOT in the modal's own Update() method.
-
-type envSetupStep int
-
-const (
-	envStepChoose   envSetupStep = iota // "Set up new value" or "Already configured"
-	envStepValue                        // enter the value
-	envStepLocation                     // enter save location (.env file path)
-	envStepSource                       // enter path to existing .env file
-)
-
-// envSetupModal is a multi-step wizard for configuring environment variables.
-// It walks through each unset env var, letting the user either enter a new value
-// (and choose where to save it) or point to an existing .env file.
-type envSetupModal struct {
-	active       bool
-	varNames     []string // ordered list of unset env var names
-	varIdx       int      // current var being prompted
-	step         envSetupStep
-	methodCursor int             // 0=set up new, 1=already configured
-	btnCursor    int             // 0=left (confirm), 1=right (back/skip)
-	input        textinput.Model // shared text input for value/location/source
-	value        string          // temporarily holds entered value between steps
-	message      string          // feedback message after each operation
-	messageIsErr bool
+// editSavedMsg is emitted when the user confirms the edit modal.
+type editSavedMsg struct {
+	name        string
+	description string
+	path        string // item directory path (context for saving)
 }
 
-func newEnvSetupModal(envTypes []string) envSetupModal {
-	ti := textinput.New()
-	ti.CharLimit = 500
-	ti.Width = 44
-	return envSetupModal{
-		active:   true,
-		step:     envStepChoose,
-		varNames: envTypes,
-		input:    ti,
+// editCancelledMsg is emitted when the user cancels the edit modal.
+type editCancelledMsg struct{}
+
+// editModal is a centered overlay with name and description fields plus Cancel/Save buttons.
+// Focus indices: 0 = name field, 1 = description field, 2 = Cancel button, 3 = Save button.
+type editModal struct {
+	active      bool
+	title       string
+	name        string
+	description string
+	path        string // item directory path
+	cursor      int    // cursor position within the focused text field
+	focusIdx    int    // 0=name, 1=description, 2=Cancel, 3=Save
+
+	width  int
+	height int
+}
+
+func newEditModal() editModal {
+	return editModal{
+		width:  56,
+		height: 14,
 	}
 }
 
-// advance moves to the next unset env var, or closes the modal if done.
-func (m *envSetupModal) advance() {
-	m.varIdx++
-	m.input.Blur()
-	if m.varIdx >= len(m.varNames) {
-		m.active = false
-		return
-	}
-	m.step = envStepChoose
-	m.methodCursor = 0
-	m.btnCursor = 0
+// Open activates the modal with pre-filled values.
+func (m *editModal) Open(title, name, description, path string) {
+	m.active = true
+	m.title = title
+	m.name = name
+	m.description = description
+	m.path = path
+	m.cursor = len([]rune(name))
+	m.focusIdx = 0
 }
 
-// validateStep checks entry-prerequisites for the current step.
-func (m envSetupModal) validateStep() {
-	switch m.step {
-	case envStepChoose:
-		if len(m.varNames) == 0 {
-			panic("wizard invariant: envStepChoose entered with empty varNames")
-		}
-		if m.varIdx >= len(m.varNames) {
-			panic("wizard invariant: envStepChoose entered with varIdx out of range")
-		}
-	case envStepValue:
-		if len(m.varNames) == 0 || m.varIdx >= len(m.varNames) {
-			panic("wizard invariant: envStepValue entered with invalid var state")
-		}
-	case envStepLocation:
-		if m.value == "" {
-			panic("wizard invariant: envStepLocation entered with empty value")
-		}
-	case envStepSource:
-		// Text input for existing file path — no prerequisite beyond constructor.
-	}
+// Close deactivates the modal and clears state.
+func (m *editModal) Close() {
+	m.active = false
+	m.title = ""
+	m.name = ""
+	m.description = ""
+	m.path = ""
+	m.cursor = 0
+	m.focusIdx = 0
 }
 
-func (m envSetupModal) Update(msg tea.Msg) (envSetupModal, tea.Cmd) {
+// focusedValue returns a pointer to the text value for the currently focused field.
+func (m *editModal) focusedValue() *string {
+	if m.focusIdx == 1 {
+		return &m.description
+	}
+	return &m.name
+}
+
+// isTextField returns true if the current focus is on a text input field.
+func (m *editModal) isTextField() bool {
+	return m.focusIdx == 0 || m.focusIdx == 1
+}
+
+// Update handles input when the modal is active.
+func (m editModal) Update(msg tea.Msg) (editModal, tea.Cmd) {
 	if !m.active {
 		return m, nil
 	}
-	m.validateStep()
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		// Clear message on any keypress
-		if m.message != "" {
-			m.message = ""
-			m.messageIsErr = false
+		return m.updateKey(msg)
+	case tea.MouseMsg:
+		return m.updateMouse(msg)
+	}
+	return m, nil
+}
+
+func (m editModal) save() (editModal, tea.Cmd) {
+	name := m.name
+	desc := m.description
+	path := m.path
+	m.Close()
+	return m, func() tea.Msg { return editSavedMsg{name: name, description: desc, path: path} }
+}
+
+func (m editModal) cancel() (editModal, tea.Cmd) {
+	m.Close()
+	return m, func() tea.Msg { return editCancelledMsg{} }
+}
+
+func (m editModal) updateKey(msg tea.KeyMsg) (editModal, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		return m.cancel()
+
+	case tea.KeyCtrlS:
+		return m.save()
+
+	case tea.KeyEnter:
+		switch m.focusIdx {
+		case 0:
+			// Name field: move to description field
+			m.focusIdx = 1
+			m.cursor = len([]rune(m.description))
+		case 1:
+			// Description field: move to Save button
+			m.focusIdx = 3
+		case 2:
+			return m.cancel()
+		case 3:
+			return m.save()
 		}
 
-		switch m.step {
-		case envStepChoose:
-			switch {
-			case msg.Type == tea.KeyEsc:
-				m.advance() // skip this var
-			case key.Matches(msg, keys.Left):
-				m.btnCursor = 0
-			case key.Matches(msg, keys.Right):
-				m.btnCursor = 1
-			case key.Matches(msg, keys.Up) || msg.Type == tea.KeyUp:
-				if m.methodCursor > 0 {
-					m.methodCursor--
-				}
-			case key.Matches(msg, keys.Down) || msg.Type == tea.KeyDown:
-				if m.methodCursor < 1 {
-					m.methodCursor++
-				}
-			case msg.Type == tea.KeyEnter:
-				if m.btnCursor == 1 {
-					m.advance() // skip this var
-					return m, nil
-				}
-				varName := m.varNames[m.varIdx]
-				if m.methodCursor == 0 {
-					// "Set up new value"
-					m.step = envStepValue
-					m.input.Prompt = labelStyle.Render(varName+": ") + " "
-					m.input.Placeholder = "enter value"
-					m.input.SetValue("")
-					m.input.Focus()
-				} else {
-					// "Already configured"
-					m.step = envStepSource
-					m.input.Prompt = labelStyle.Render("Path to .env file: ") + " "
-					m.input.Placeholder = "e.g. ~/.env or /path/to/.env"
-					m.input.SetValue("")
-					m.input.Focus()
-				}
-			}
+	case tea.KeyTab:
+		m.focusIdx = (m.focusIdx + 1) % 4
+		if m.isTextField() {
+			m.cursor = len([]rune(*m.focusedValue()))
+		}
+	case tea.KeyShiftTab:
+		m.focusIdx = (m.focusIdx + 3) % 4
+		if m.isTextField() {
+			m.cursor = len([]rune(*m.focusedValue()))
+		}
 
-		case envStepValue:
-			switch msg.Type {
-			case tea.KeyEsc:
-				m.input.Blur()
-				m.step = envStepChoose
-				return m, nil
-			case tea.KeyEnter:
-				if m.input.Value() == "" {
-					return m, nil
-				}
-				m.value = m.input.Value()
-				m.step = envStepLocation
-				home, err := os.UserHomeDir()
-				if err != nil {
-					m.message = "Cannot determine home directory"
-					m.messageIsErr = true
-					return m, nil
-				}
-				defaultPath := filepath.Join(home, ".config", "syllago", ".env")
-				m.input.Prompt = labelStyle.Render("Save to: ") + " "
-				m.input.Placeholder = defaultPath
-				m.input.SetValue(defaultPath)
-				m.input.Focus()
-				return m, nil
-			default:
-				var cmd tea.Cmd
-				m.input, cmd = m.input.Update(msg)
-				return m, cmd
-			}
+	case tea.KeyBackspace:
+		if m.isTextField() && m.cursor > 0 {
+			val := m.focusedValue()
+			runes := []rune(*val)
+			*val = string(runes[:m.cursor-1]) + string(runes[m.cursor:])
+			m.cursor--
+		}
 
-		case envStepLocation:
-			switch msg.Type {
-			case tea.KeyEsc:
-				// Back to value input
-				m.step = envStepValue
-				varName := m.varNames[m.varIdx]
-				m.input.Prompt = labelStyle.Render(varName+": ") + " "
-				m.input.Placeholder = "enter value"
-				m.input.SetValue(m.value)
-				m.input.Focus()
-				return m, nil
-			case tea.KeyEnter:
-				savePath := m.input.Value()
-				if savePath == "" {
-					return m, nil
-				}
-				name := m.varNames[m.varIdx]
-				if err := saveEnvToFile(name, m.value, savePath); err != nil {
-					m.message = fmt.Sprintf("Failed to save %s: %s", name, err)
-					m.messageIsErr = true
-				} else {
-					os.Setenv(name, m.value)
-					m.message = fmt.Sprintf("Saved %s to %s", name, savePath)
-					m.messageIsErr = false
-				}
-				m.value = ""
-				m.advance()
-				return m, nil
-			default:
-				var cmd tea.Cmd
-				m.input, cmd = m.input.Update(msg)
-				return m, cmd
+	case tea.KeyDelete:
+		if m.isTextField() {
+			val := m.focusedValue()
+			runes := []rune(*val)
+			if m.cursor < len(runes) {
+				*val = string(runes[:m.cursor]) + string(runes[m.cursor+1:])
 			}
+		}
 
-		case envStepSource:
-			switch msg.Type {
-			case tea.KeyEsc:
-				m.input.Blur()
-				m.step = envStepChoose
-				return m, nil
-			case tea.KeyEnter:
-				filePath := m.input.Value()
-				if filePath == "" {
-					return m, nil
-				}
-				name := m.varNames[m.varIdx]
-				if err := loadEnvFromFile(name, filePath); err != nil {
-					m.message = fmt.Sprintf("Could not load %s from %s: %s", name, filePath, err)
-					m.messageIsErr = true
-				} else {
-					m.message = fmt.Sprintf("Loaded %s from %s", name, filePath)
-					m.messageIsErr = false
-				}
-				m.advance()
-				return m, nil
-			default:
-				var cmd tea.Cmd
-				m.input, cmd = m.input.Update(msg)
-				return m, cmd
-			}
+	case tea.KeyUp:
+		// Move between fields: description → name, or buttons → description
+		if m.focusIdx == 1 {
+			m.focusIdx = 0
+			m.cursor = min(m.cursor, len([]rune(m.name)))
+		} else if m.focusIdx >= 2 {
+			m.focusIdx = 1
+			m.cursor = len([]rune(m.description))
+		}
+	case tea.KeyDown:
+		// Move between fields: name → description, or description → buttons
+		switch m.focusIdx {
+		case 0:
+			m.focusIdx = 1
+			m.cursor = min(m.cursor, len([]rune(m.description)))
+		case 1:
+			m.focusIdx = 3 // Jump to Save button
+		}
+
+	case tea.KeyLeft:
+		if m.isTextField() && m.cursor > 0 {
+			m.cursor--
+		} else if m.focusIdx == 3 {
+			m.focusIdx = 2 // Save → Cancel
+		}
+	case tea.KeyRight:
+		if m.isTextField() && m.cursor < len([]rune(*m.focusedValue())) {
+			m.cursor++
+		} else if m.focusIdx == 2 {
+			m.focusIdx = 3 // Cancel → Save
+		}
+
+	case tea.KeyHome, tea.KeyCtrlA:
+		if m.isTextField() {
+			m.cursor = 0
+		}
+	case tea.KeyEnd, tea.KeyCtrlE:
+		if m.isTextField() {
+			m.cursor = len([]rune(*m.focusedValue()))
+		}
+
+	case tea.KeySpace:
+		if m.isTextField() {
+			val := m.focusedValue()
+			runes := []rune(*val)
+			newRunes := make([]rune, 0, len(runes)+1)
+			newRunes = append(newRunes, runes[:m.cursor]...)
+			newRunes = append(newRunes, ' ')
+			newRunes = append(newRunes, runes[m.cursor:]...)
+			*val = string(newRunes)
+			m.cursor++
+		}
+
+	case tea.KeyRunes:
+		if m.isTextField() {
+			val := m.focusedValue()
+			runes := []rune(*val)
+			newRunes := make([]rune, 0, len(runes)+len(msg.Runes))
+			newRunes = append(newRunes, runes[:m.cursor]...)
+			newRunes = append(newRunes, msg.Runes...)
+			newRunes = append(newRunes, runes[m.cursor:]...)
+			*val = string(newRunes)
+			m.cursor += len(msg.Runes)
 		}
 	}
 	return m, nil
 }
 
-func (m envSetupModal) View() string {
-	if !m.active {
-		return ""
-	}
-
-	const modalWidth = 56
-	const modalHeight = 14
-
-	modalStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(modalBorderColor).
-		Background(modalBgColor).
-		Padding(1, 2).
-		Width(modalWidth).
-		Height(modalHeight)
-
-	varName := m.varNames[m.varIdx]
-	progress := fmt.Sprintf("(%d of %d)", m.varIdx+1, len(m.varNames))
-
-	var content string
-
-	switch m.step {
-	case envStepChoose:
-		content = labelStyle.Render("Environment Variable Setup") + "\n"
-		content += helpStyle.Render(fmt.Sprintf("  %s %s", varName, progress)) + "\n\n"
-
-		options := []string{"Set up new value", "I already have it configured"}
-		for i, opt := range options {
-			prefix := "  "
-			style := itemStyle
-			if i == m.methodCursor {
-				prefix = "> "
-				style = selectedItemStyle
-			}
-			row := fmt.Sprintf("  %s%s", prefix, style.Render(opt))
-			content += zone.Mark(fmt.Sprintf("modal-opt-%d", i), row) + "\n"
-		}
-		content += "\n" + renderButtons("Select", "Skip", m.btnCursor, 52)
-
-	case envStepValue:
-		content = labelStyle.Render("Environment Variable Setup") + "\n"
-		content += helpStyle.Render(fmt.Sprintf("  %s %s", varName, progress)) + "\n\n"
-		content += "  " + zone.Mark("modal-field-input", m.input.View()) + "\n\n"
-		content += renderButtons("Next", "Back", 0, 52)
-
-	case envStepLocation:
-		content = labelStyle.Render("Environment Variable Setup") + "\n"
-		content += helpStyle.Render(fmt.Sprintf("  Save %s to:", varName)) + "\n\n"
-		content += "  " + zone.Mark("modal-field-input", m.input.View()) + "\n\n"
-		content += renderButtons("Save", "Back", 0, 52)
-
-	case envStepSource:
-		content = labelStyle.Render("Environment Variable Setup") + "\n"
-		content += helpStyle.Render(fmt.Sprintf("  Load %s from an existing file:", varName)) + "\n\n"
-		content += "  " + zone.Mark("modal-field-input", m.input.View()) + "\n\n"
-		content += renderButtons("Load", "Back", 0, 52)
-	}
-
-	if m.message != "" {
-		if m.messageIsErr {
-			content += "\n" + errorMsgStyle.Render(m.message)
-		} else {
-			content += "\n" + successMsgStyle.Render(m.message)
-		}
-	}
-
-	return modalStyle.Render(content)
-}
-
-func (m envSetupModal) overlayView(background string) string {
-	if !m.active {
-		return background
-	}
-	return overlay.Composite(zone.Mark("modal-zone", m.View()), background, overlay.Center, overlay.Center, 0, 0)
-}
-
-// renderButtons renders a pair of centered action buttons with a cursor indicator.
-// cursor 0 = left button active, cursor 1 = right button active.
-// contentWidth is the available width for centering (0 = no centering).
-func renderButtons(left, right string, cursor, contentWidth int) string {
-	var l, r string
-	if cursor == 0 {
-		l = "▸ " + buttonStyle.Render(left)
-		r = "  " + buttonDisabledStyle.Render(right)
-	} else {
-		l = "  " + buttonDisabledStyle.Render(left)
-		r = "▸ " + buttonStyle.Render(right)
-	}
-	l = zone.Mark("modal-btn-left", l)
-	r = zone.Mark("modal-btn-right", r)
-	bar := l + "   " + r
-	if contentWidth > 0 {
-		bar = lipgloss.PlaceHorizontal(contentWidth, lipgloss.Center, bar)
-	}
-	return bar
-}
-
-// renderButtonsInactive renders a pair of buttons with neither highlighted.
-// Used when focus is on a text field rather than the button area.
-func renderButtonsInactive(left, right string, contentWidth int) string {
-	l := zone.Mark("modal-btn-left", "  "+buttonDisabledStyle.Render(left))
-	r := zone.Mark("modal-btn-right", "  "+buttonDisabledStyle.Render(right))
-	bar := l + "   " + r
-	if contentWidth > 0 {
-		bar = lipgloss.PlaceHorizontal(contentWidth, lipgloss.Center, bar)
-	}
-	return bar
-}
-
-// modalPurpose identifies what action the confirmModal is confirming.
-type modalPurpose int
-
-const (
-	modalNone modalPurpose = iota
-	modalInstall
-	modalUninstall
-	modalSave
-	modalShare
-	modalLoadoutApply
-	modalHookBrokenWarning
-	modalRegistryRemove
-	modalItemRemove
-	modalNonSyllagoRedirect
-)
-
-// openModalMsg is sent by sub-models (e.g. detailModel) to ask App to open a modal.
-type openModalMsg struct {
-	purpose modalPurpose
-	title   string
-	body    string
-}
-
-// confirmModal is a centered confirmation dialog.
-// It wraps bubbletea-overlay for positioning.
-type confirmModal struct {
-	title     string
-	body      string // multi-line body text
-	active    bool
-	confirmed bool
-	purpose   modalPurpose
-	btnCursor int // 0=Confirm, 1=Cancel (default 1)
-}
-
-func newConfirmModal(title, body string) confirmModal {
-	return confirmModal{title: title, body: body, active: true, btnCursor: 1}
-}
-
-func (m confirmModal) Update(msg tea.Msg) (confirmModal, tea.Cmd) {
-	if !m.active {
+func (m editModal) updateMouse(msg tea.MouseMsg) (editModal, tea.Cmd) {
+	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
 		return m, nil
 	}
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyEnter:
-			m.confirmed = m.btnCursor == 0
-			m.active = false
-		case tea.KeyEsc:
-			m.confirmed = false
-			m.active = false
-		case tea.KeyLeft:
-			if m.btnCursor > 0 {
-				m.btnCursor--
-			}
-		case tea.KeyRight:
-			if m.btnCursor < 1 {
-				m.btnCursor++
-			}
-		}
-		switch {
-		case key.Matches(msg, keys.ConfirmYes):
-			m.confirmed = true
-			m.active = false
-		case key.Matches(msg, keys.ConfirmNo):
-			m.confirmed = false
-			m.active = false
-		}
+
+	if zone.Get("modal-cancel").InBounds(msg) {
+		return m.cancel()
 	}
+	if zone.Get("modal-save").InBounds(msg) {
+		return m.save()
+	}
+	if zone.Get("modal-name").InBounds(msg) {
+		m.focusIdx = 0
+		m.cursor = len([]rune(m.name))
+	}
+	if zone.Get("modal-desc").InBounds(msg) {
+		m.focusIdx = 1
+		m.cursor = len([]rune(m.description))
+	}
+
 	return m, nil
 }
 
-func (m confirmModal) View() string {
+// View renders the modal overlay content (without placement — the app handles centering).
+func (m editModal) View() string {
 	if !m.active {
 		return ""
 	}
 
-	const modalWidth = 56
-	const modalHeight = 10
-	const innerHeight = modalHeight - 2
-
-	modalStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(modalBorderColor).
-		Background(modalBgColor).
-		Padding(1, 2).
-		Width(modalWidth).
-		Height(modalHeight)
-
-	content := labelStyle.Render(m.title) + "\n\n"
-	if m.body != "" {
-		content += valueStyle.Render(m.body) + "\n\n"
-	}
-
-	buttons := renderButtons("Confirm", "Cancel", m.btnCursor, 52)
-
-	// Pin buttons to bottom
-	contentLines := strings.Count(content, "\n")
-	spacer := innerHeight - contentLines - 1
-	if spacer < 0 {
-		spacer = 0
-	}
-	content += strings.Repeat("\n", spacer) + buttons
-
-	return modalStyle.Render(content)
-}
-
-// overlayView returns the modal centered over the given background content,
-// using bubbletea-overlay for positioning.
-func (m confirmModal) overlayView(background string) string {
-	if !m.active {
-		return background
-	}
-	return overlay.Composite(zone.Mark("modal-zone", m.View()), background, overlay.Center, overlay.Center, 0, 0)
-}
-
-// saveModal is a modal dialog with a text input for entering a filename.
-type saveModal struct {
-	active       bool
-	input        textinput.Model
-	confirmed    bool
-	value        string // set on confirm
-	btnCursor    int    // 0=Save, 1=Cancel
-	focusedField int    // 0=input, 1=buttons
-}
-
-func newSaveModal(placeholder string) saveModal {
-	ti := textinput.New()
-	ti.Placeholder = placeholder
-	ti.Focus()
-	ti.CharLimit = 100
-	ti.Width = 50
-	return saveModal{active: true, input: ti}
-}
-
-func (m saveModal) Update(msg tea.Msg) (saveModal, tea.Cmd) {
-	if !m.active {
-		return m, nil
-	}
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		if msg.Type == tea.KeyEsc {
-			m.active = false
-			return m, nil
-		}
-
-		// Tab toggles: input(0) → buttons(1) → input(0)
-		if msg.Type == tea.KeyTab || msg.Type == tea.KeyShiftTab {
-			m.focusedField = 1 - m.focusedField
-			if m.focusedField == 0 {
-				m.input.Focus()
-			} else {
-				m.input.Blur()
-			}
-			return m, nil
-		}
-
-		if msg.Type == tea.KeyEnter {
-			if m.btnCursor == 1 {
-				m.active = false
-				return m, nil
-			}
-			if strings.TrimSpace(m.input.Value()) != "" {
-				m.value = strings.TrimSpace(m.input.Value())
-				m.confirmed = true
-				m.active = false
-				return m, nil
-			}
-			return m, nil
-		}
-
-		// Buttons focused: Left/Right switch buttons
-		if m.focusedField == 1 {
-			switch {
-			case key.Matches(msg, keys.Left):
-				if m.btnCursor > 0 {
-					m.btnCursor--
-				}
-			case key.Matches(msg, keys.Right):
-				if m.btnCursor < 1 {
-					m.btnCursor++
-				}
-			}
-			return m, nil
-		}
-
-		// Input focused: pass all keys to text input
-		var cmd tea.Cmd
-		m.input, cmd = m.input.Update(msg)
-		return m, cmd
-	}
-	return m, nil
-}
-
-func (m saveModal) View() string {
-	if !m.active {
-		return ""
-	}
-	modalStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(modalBorderColor).
-		Background(modalBgColor).
-		Padding(1, 2).
-		Width(56)
-	content := labelStyle.Render("Save prompt as:") + "\n\n"
-	content += zone.Mark("modal-field-input", m.input.View()) + "\n\n"
-	var buttons string
-	if m.focusedField == 1 {
-		buttons = renderButtons("Save", "Cancel", m.btnCursor, 52)
-	} else {
-		buttons = renderButtonsInactive("Save", "Cancel", 52)
-	}
-	content += buttons
-	return modalStyle.Render(content)
-}
-
-func (m saveModal) overlayView(background string) string {
-	if !m.active {
-		return background
-	}
-	return overlay.Composite(zone.Mark("modal-zone", m.View()), background, overlay.Center, overlay.Center, 0, 0)
-}
-
-// ---------------------------------------------------------------------------
-// Install modal — multi-step wizard for location → method → install
-// ---------------------------------------------------------------------------
-
-type installStep int
-
-const (
-	installStepLocation   installStep = iota // pick global/project/custom
-	installStepCustomPath                    // text input for custom path
-	installStepMethod                        // pick symlink/copy
-)
-
-// openInstallModalMsg is sent by detailModel to ask App to open the install modal.
-type openInstallModalMsg struct {
-	item      catalog.ContentItem
-	providers []provider.Provider // checked (detected) providers to install to
-	repoRoot  string
-}
-
-// installModal is a multi-step wizard for choosing install location and method.
-type installModal struct {
-	active    bool
-	confirmed bool
-	step      installStep
-	btnCursor int // 0=Select/Install, 1=Cancel (default 0)
-
-	// Context for rendering
-	item      catalog.ContentItem
-	providers []provider.Provider
-	repoRoot  string
-
-	// Location step (0=global, 1=project, 2=custom)
-	locationCursor int
-
-	// Custom path step
-	customPathInput textinput.Model
-
-	// Method step (0=symlink, 1=copy)
-	methodCursor int
-}
-
-// symlinkDisabled returns true if any checked provider explicitly marks the
-// item's content type as not supporting symlinks. A nil map or absent key
-// means "assumed supported" (per Provider.SymlinkSupport docs).
-func (m installModal) symlinkDisabled() bool {
-	for _, p := range m.providers {
-		if supported, ok := p.SymlinkSupport[m.item.Type]; ok && !supported {
-			return true
-		}
-	}
-	return false
-}
-
-// defaultMethodCursor returns the cursor position to use when entering the
-// method step: 0 (symlink) normally, 1 (copy) when symlink is disabled.
-func (m installModal) defaultMethodCursor() int {
-	if m.symlinkDisabled() {
-		return 1
-	}
-	return 0
-}
-
-func newInstallModal(item catalog.ContentItem, providers []provider.Provider, repoRoot string) installModal {
-	return installModal{
-		active:    true,
-		step:      installStepLocation,
-		item:      item,
-		providers: providers,
-		repoRoot:  repoRoot,
-	}
-}
-
-// LocationCursor returns the location choice (0=global, 1=project, 2=custom).
-func (m installModal) LocationCursor() int { return m.locationCursor }
-
-// MethodCursor returns the method choice (0=symlink, 1=copy).
-func (m installModal) MethodCursor() int { return m.methodCursor }
-
-// CustomPath returns the user-entered custom path (only relevant when locationCursor==2).
-func (m installModal) CustomPath() string {
-	return strings.TrimSpace(m.customPathInput.Value())
-}
-
-// validateStep checks entry-prerequisites for the current step.
-func (m installModal) validateStep() {
-	switch m.step {
-	case installStepLocation:
-		// Entry step — no prerequisites beyond constructor state (item, providers set).
-	case installStepCustomPath:
-		if m.locationCursor != 2 {
-			panic("wizard invariant: installStepCustomPath entered without Custom location selected")
-		}
-	case installStepMethod:
-		// Method selection — location already chosen.
-	}
-}
-
-func (m installModal) Update(msg tea.Msg) (installModal, tea.Cmd) {
-	if !m.active {
-		return m, nil
-	}
-	m.validateStep()
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		// Custom path text input captures all keys
-		if m.step == installStepCustomPath {
-			switch msg.Type {
-			case tea.KeyEsc:
-				m.step = installStepLocation
-				m.customPathInput.Blur()
-				return m, nil
-			case tea.KeyEnter:
-				if strings.TrimSpace(m.customPathInput.Value()) != "" {
-					m.step = installStepMethod
-					m.methodCursor = m.defaultMethodCursor()
-					m.customPathInput.Blur()
-				}
-				return m, nil
-			}
-			var cmd tea.Cmd
-			m.customPathInput, cmd = m.customPathInput.Update(msg)
-			return m, cmd
-		}
-
-		switch m.step {
-		case installStepLocation:
-			switch {
-			case msg.Type == tea.KeyEsc:
-				m.active = false
-			case msg.Type == tea.KeyLeft:
-				if m.btnCursor > 0 {
-					m.btnCursor--
-				}
-			case msg.Type == tea.KeyRight:
-				if m.btnCursor < 1 {
-					m.btnCursor++
-				}
-			case key.Matches(msg, keys.Up) || msg.Type == tea.KeyUp:
-				if m.locationCursor > 0 {
-					m.locationCursor--
-				}
-			case key.Matches(msg, keys.Down) || msg.Type == tea.KeyDown:
-				if m.locationCursor < 2 {
-					m.locationCursor++
-				}
-			case msg.Type == tea.KeyEnter:
-				if m.btnCursor == 1 { // Cancel
-					m.active = false
-					return m, nil
-				}
-				if m.locationCursor == 2 { // Custom
-					m.customPathInput = textinput.New()
-					m.customPathInput.Placeholder = "/path/to/install/dir"
-					m.customPathInput.CharLimit = 200
-					m.customPathInput.Width = 40
-					m.customPathInput.Focus()
-					m.step = installStepCustomPath
-				} else {
-					m.step = installStepMethod
-					m.methodCursor = m.defaultMethodCursor()
-					m.btnCursor = 0
-				}
-			}
-
-		case installStepMethod:
-			switch {
-			case msg.Type == tea.KeyEsc:
-				m.step = installStepLocation
-				m.btnCursor = 0
-			case msg.Type == tea.KeyLeft:
-				if m.btnCursor > 0 {
-					m.btnCursor--
-				}
-			case msg.Type == tea.KeyRight:
-				if m.btnCursor < 1 {
-					m.btnCursor++
-				}
-			case key.Matches(msg, keys.Up) || msg.Type == tea.KeyUp:
-				// Don't navigate to symlink (0) when it's disabled for this content type
-				if m.methodCursor > 0 && !m.symlinkDisabled() {
-					m.methodCursor--
-				}
-			case key.Matches(msg, keys.Down) || msg.Type == tea.KeyDown:
-				if m.methodCursor < 1 {
-					m.methodCursor++
-				}
-			case msg.Type == tea.KeyEnter:
-				if m.btnCursor == 1 { // Cancel/Back
-					m.step = installStepLocation
-					m.btnCursor = 0
-					return m, nil
-				}
-				m.confirmed = true
-				m.active = false
-			}
-		}
-	}
-	return m, nil
-}
-
-func (m installModal) View() string {
-	if !m.active {
-		return ""
-	}
-
-	// Fixed dimensions — every step uses the same box size to prevent jitter.
-	const modalWidth = 56
-	const modalHeight = 18
-	// Inner height = modalHeight - 2 (1 top + 1 bottom padding)
-	const innerHeight = modalHeight - 2
-
-	modalStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(modalBorderColor).
-		Background(modalBgColor).
-		Padding(1, 2).
-		Width(modalWidth).
-		Height(modalHeight)
-
-	var content string
-	var buttons string
-
-	switch m.step {
-	case installStepLocation:
-		content = labelStyle.Render("Install Location") + "\n\n"
-
-		type opt struct{ name, desc string }
-		options := []opt{
-			{"Global (home directory)", "~/.<provider>/ — available to all projects"},
-			{"Project (current directory)", "./<provider>/ — only this project"},
-			{"Custom path", "Enter a custom installation path"},
-		}
-
-		for i, o := range options {
-			prefix := "  "
-			nameStyle := itemStyle
-			if i == m.locationCursor {
-				prefix = "> "
-				nameStyle = selectedItemStyle
-			}
-			row := fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(o.name))
-			row += fmt.Sprintf("      %s\n", helpStyle.Render(o.desc))
-			content += zone.Mark(fmt.Sprintf("modal-opt-%d", i), row)
-		}
-
-		content += m.destinationPreview()
-
-		buttons = renderButtons("Select", "Cancel", m.btnCursor, 52)
-
-	case installStepCustomPath:
-		content = labelStyle.Render("Custom Install Path") + "\n\n"
-		content += zone.Mark("modal-field-input", m.customPathInput.View()) + "\n\n"
-		buttons = renderButtons("Confirm", "Back", m.btnCursor, 52)
-
-	case installStepMethod:
-		content = labelStyle.Render("Install Method") + "\n\n"
-
-		symlinkOff := m.symlinkDisabled()
-		type opt struct{ name, desc string }
-		options := []opt{
-			{"Symlink (recommended)", "Stays in sync with repo, auto-updates on pull"},
-			{"Copy", "Independent copy, won't change"},
-		}
-
-		for i, o := range options {
-			if i == 0 && symlinkOff {
-				// Symlink disabled — render as muted, non-selectable
-				row := fmt.Sprintf("    %s\n", helpStyle.Render(o.name+" (not supported for this content type)"))
-				row += fmt.Sprintf("      %s\n", helpStyle.Render(o.desc))
-				content += row
-				continue
-			}
-			prefix := "  "
-			nameStyle := itemStyle
-			if i == m.methodCursor {
-				prefix = "> "
-				nameStyle = selectedItemStyle
-			}
-			row := fmt.Sprintf("  %s%s\n", prefix, nameStyle.Render(o.name))
-			row += fmt.Sprintf("      %s\n", helpStyle.Render(o.desc))
-			content += zone.Mark(fmt.Sprintf("modal-opt-%d", i), row)
-		}
-
-		content += m.destinationPreview()
-
-		buttons = renderButtons("Install", "Back", m.btnCursor, 52)
-	}
-
-	// Pin buttons to bottom: fill remaining space with blank lines
-	contentLines := strings.Count(content, "\n")
-	spacer := innerHeight - contentLines - 1
-	if spacer < 0 {
-		spacer = 0
-	}
-	content += strings.Repeat("\n", spacer) + buttons
-
-	return modalStyle.Render(content)
-}
-
-// destinationPreview renders the destination paths for checked providers.
-func (m installModal) destinationPreview() string {
-	var baseDir string
-	switch m.locationCursor {
-	case 0:
-		if home, err := os.UserHomeDir(); err == nil {
-			baseDir = home
-		}
-	case 1:
-		if cwd, err := os.Getwd(); err == nil {
-			baseDir = cwd
-		}
-	case 2:
-		baseDir = strings.TrimSpace(m.customPathInput.Value())
-	}
-	if baseDir == "" {
-		return ""
-	}
-
-	// Content area is modalWidth(56) - 4(padding) = 52 chars.
-	// Truncate paths to prevent terminal wrapping which breaks layout.
-	const maxLineWidth = 52
-
-	s := "\n" + helpStyle.Render("Destination:") + "\n"
-	for _, p := range m.providers {
-		prefix := "  " + p.Name + ": "
-		if installer.IsJSONMerge(p, m.item.Type) {
-			s += helpStyle.Render(prefix) + valueStyle.Render("(merged into config)") + "\n"
-		} else {
-			destDir := p.InstallDir(baseDir, m.item.Type)
-			dest := filepath.Join(destDir, m.item.Name)
-			// Truncate path if it would cause the line to wrap
-			maxPath := maxLineWidth - len(prefix)
-			if maxPath < 10 {
-				maxPath = 10
-			}
-			if len(dest) > maxPath {
-				dest = "…" + dest[len(dest)-maxPath+1:]
-			}
-			s += helpStyle.Render(prefix) + valueStyle.Render(dest) + "\n"
-		}
-	}
-	return s
-}
-
-func (m installModal) overlayView(background string) string {
-	if !m.active {
-		return background
-	}
-	return overlay.Composite(zone.Mark("modal-zone", m.View()), background, overlay.Center, overlay.Center, 0, 0)
-}
-
-// ──────────────────────────────────────────────────────────
-// Registry Add Modal
-// ──────────────────────────────────────────────────────────
-
-// registryAddModal is a single-step modal for entering a git URL to add as a registry.
-type registryAddModal struct {
-	active       bool
-	confirmed    bool
-	urlInput     textinput.Model
-	nameInput    textinput.Model
-	focusedField int // 0 = url, 1 = name, 2 = buttons
-	btnCursor    int // 0 = Add, 1 = Cancel
-	message      string
-	messageIsErr bool
-}
-
-const (
-	registryAddModalWidth  = 56
-	registryAddModalHeight = 14
-	registryAddInnerHeight = registryAddModalHeight - 2
-)
-
-func newRegistryAddModal() registryAddModal {
-	ui := textinput.New()
-	ui.Prompt = labelStyle.Render("URL: ")
-	ui.Placeholder = "https://github.com/owner/repo"
-	ui.CharLimit = 500
-	ui.Width = 40
-	ui.Focus()
-
-	ni := textinput.New()
-	ni.Prompt = labelStyle.Render("Name: ")
-	ni.Placeholder = "optional — auto-derived from URL"
-	ni.CharLimit = 100
-	ni.Width = 40
-
-	return registryAddModal{
-		active:   true,
-		urlInput: ui,
-		nameInput: ni,
-	}
-}
-
-func (m registryAddModal) Update(msg tea.Msg) (registryAddModal, tea.Cmd) {
-	if !m.active {
-		return m, nil
-	}
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		m.message = ""
-
-		// Esc always dismisses
-		if msg.Type == tea.KeyEsc {
-			m.active = false
-			return m, nil
-		}
-
-		// Tab cycles: url(0) → name(1) → buttons(2) → url(0)
-		// Shift+Tab goes backwards
-		if msg.Type == tea.KeyTab || msg.Type == tea.KeyShiftTab {
-			if msg.Type == tea.KeyShiftTab {
-				m.focusedField = (m.focusedField + 2) % 3 // backwards
-			} else {
-				m.focusedField = (m.focusedField + 1) % 3
-			}
-			m.urlInput.Blur()
-			m.nameInput.Blur()
-			switch m.focusedField {
-			case 0:
-				m.urlInput.Focus()
-			case 1:
-				m.nameInput.Focus()
-			}
-			return m, nil
-		}
-
-		// Enter always submits (regardless of focus)
-		if msg.Type == tea.KeyEnter {
-			if m.btnCursor == 1 { // Cancel
-				m.active = false
-				return m, nil
-			}
-			url := strings.TrimSpace(m.urlInput.Value())
-			if url == "" {
-				m.message = "URL is required"
-				m.messageIsErr = true
-				return m, nil
-			}
-			m.confirmed = true
-			m.active = false
-			return m, nil
-		}
-
-		// When buttons are focused, Left/Right switch buttons
-		if m.focusedField == 2 {
-			switch {
-			case msg.Type == tea.KeyLeft:
-				if m.btnCursor > 0 {
-					m.btnCursor--
-				}
-				return m, nil
-			case msg.Type == tea.KeyRight:
-				if m.btnCursor < 1 {
-					m.btnCursor++
-				}
-				return m, nil
-			}
-			return m, nil
-		}
-
-		// When a text field is focused, pass all keys to it (including arrows)
-		var cmd tea.Cmd
-		if m.focusedField == 0 {
-			m.urlInput, cmd = m.urlInput.Update(msg)
-		} else {
-			m.nameInput, cmd = m.nameInput.Update(msg)
-		}
-		return m, cmd
-	}
-	return m, nil
-}
-
-func (m registryAddModal) View() string {
-	if !m.active {
-		return ""
-	}
-
-	content := labelStyle.Render("Add Registry") + "\n\n"
-	content += zone.Mark("modal-field-url", m.urlInput.View()) + "\n"
-	content += zone.Mark("modal-field-name", m.nameInput.View())
-	if m.message != "" && m.messageIsErr {
-		content += "\n" + errorMsgStyle.Render(m.message)
-	}
-	content += "\n" + helpStyle.Render("tab switch field")
-
-	var buttons string
-	if m.focusedField == 2 {
-		buttons = renderButtons("Add", "Cancel", m.btnCursor, 52)
-	} else {
-		// Both buttons appear inactive when a text field is focused
-		buttons = renderButtonsInactive("Add", "Cancel", 52)
-	}
-
-	contentLines := strings.Count(content, "\n")
-	spacer := registryAddInnerHeight - contentLines - 1
-	if spacer < 0 {
-		spacer = 0
-	}
-	content += strings.Repeat("\n", spacer) + buttons
+	contentW := m.width - borderSize
+	usableW := contentW - 2
+	pad := " "
+
+	// Title
+	titleText := lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(m.title)
+	title := pad + titleText
+
+	// Name label + field
+	nameLabel := pad + mutedStyle.Render("Display Name")
+	nameInput := m.renderField(m.name, 0, usableW, "modal-name")
+
+	// Description label + field
+	descLabel := pad + mutedStyle.Render("Description")
+	descInput := m.renderField(m.description, 1, usableW, "modal-desc")
+
+	// Buttons
+	cancelBtn := m.renderButton("Cancel", 2, "modal-cancel")
+	saveBtn := m.renderButton("Save", 3, "modal-save")
+	buttons := lipgloss.JoinHorizontal(lipgloss.Top, cancelBtn, " ", saveBtn)
+	buttonsW := lipgloss.Width(buttons)
+	buttonPad := max(0, usableW-buttonsW)
+	buttonRow := pad + strings.Repeat(" ", buttonPad) + buttons
+
+	content := lipgloss.JoinVertical(lipgloss.Left,
+		title,
+		"",
+		nameLabel,
+		nameInput,
+		"",
+		descLabel,
+		descInput,
+		"",
+		buttonRow,
+	)
 
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(modalBorderColor).
-		Background(modalBgColor).
-		Padding(1, 2).
-		Width(registryAddModalWidth).
-		Height(registryAddModalHeight).
+		BorderForeground(accentColor).
+		Width(contentW).
+		MaxWidth(m.width).
 		Render(content)
 }
 
-func (m registryAddModal) overlayView(background string) string {
-	if !m.active {
-		return background
+// renderField renders a text input field with background tinting and cursor.
+func (m editModal) renderField(value string, fieldIdx, usableW int, zoneID string) string {
+	bg := inputInactiveBG
+	if m.focusIdx == fieldIdx {
+		bg = inputActiveBG
 	}
-	return overlay.Composite(zone.Mark("modal-zone", m.View()), background, overlay.Center, overlay.Center, 0, 0)
+	displayVal := m.renderValueWithCursor(value, fieldIdx, usableW-2)
+	style := lipgloss.NewStyle().
+		Background(bg).
+		Foreground(primaryText).
+		Width(usableW).
+		Padding(0, 1)
+	return zone.Mark(zoneID, " "+style.Render(displayVal)+" ")
+}
+
+// renderValueWithCursor renders text with a block cursor when the field is focused.
+func (m editModal) renderValueWithCursor(value string, fieldIdx, maxW int) string {
+	if m.focusIdx != fieldIdx {
+		return truncate(value, maxW)
+	}
+
+	runes := []rune(value)
+	if m.cursor >= len(runes) {
+		return truncate(value+"\u2588", maxW)
+	}
+	before := string(runes[:m.cursor])
+	under := string(runes[m.cursor : m.cursor+1])
+	after := string(runes[m.cursor+1:])
+	cursorChar := lipgloss.NewStyle().Reverse(true).Render(under)
+	return truncate(before+cursorChar+after, maxW)
+}
+
+// renderButton renders a button label with focus styling.
+func (m editModal) renderButton(label string, idx int, zoneID string) string {
+	style := lipgloss.NewStyle().Padding(0, 2)
+	if m.focusIdx == idx {
+		style = style.
+			Bold(true).
+			Foreground(lipgloss.AdaptiveColor{Light: "#FFFCF0", Dark: "#100F0F"}).
+			Background(accentColor)
+	} else {
+		style = style.
+			Foreground(primaryText).
+			Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"})
+	}
+	return zone.Mark(zoneID, style.Render(label))
 }

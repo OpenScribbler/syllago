@@ -47,11 +47,12 @@ func BuildArgs(cfg BwrapConfig) []string {
 	args = append(args, "--symlink", "usr/bin", "/bin")
 	args = append(args, "--symlink", "usr/sbin", "/sbin")
 
-	// Essential /etc files for DNS and TLS
+	// Essential /etc files for DNS, TLS, and user info
 	for _, f := range []string{
 		"/etc/resolv.conf",
 		"/etc/hosts",
 		"/etc/nsswitch.conf",
+		"/etc/passwd",
 	} {
 		args = append(args, "--ro-bind-try", f, f)
 	}
@@ -68,16 +69,22 @@ func BuildArgs(cfg BwrapConfig) []string {
 	// Proxy socket: bind into sandbox
 	args = append(args, "--bind", cfg.SocketPath, cfg.SocketPath)
 
-	// Git wrapper: mounted RO at higher PATH priority
-	args = append(args, "--ro-bind", cfg.GitWrapperPath, "/usr/local/bin/git")
+	// Git wrapper: mount the bin/ subdirectory containing the wrapper.
+	// PATH is set to include this directory first, so the wrapper shadows real git.
+	gitBinDir := GitWrapperBinDir(cfg.GitWrapperPath)
+	args = append(args, "--ro-bind", gitBinDir, gitBinDir)
 
 	// Wrapper script: mounted RO
 	args = append(args, "--ro-bind", cfg.WrapperScript, cfg.WrapperScript)
 
-	// Provider binary
+	// Provider binary and runtime paths
 	if cfg.Profile != nil {
 		for _, bp := range cfg.Profile.BinaryPaths {
 			args = append(args, "--ro-bind-try", bp, bp)
+		}
+		// Extra PATH directories (e.g. node bin dir for Node.js tools)
+		for _, pd := range cfg.Profile.ExtraPATH {
+			args = append(args, "--ro-bind-try", pd, pd)
 		}
 	}
 

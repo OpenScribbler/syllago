@@ -1,0 +1,39 @@
+{
+  "$schema": "handoff-v2",
+  "name": "fixed-tui-help-bar-layout-bug-phase-10-polish",
+  "createdAt": "2026-03-30T14:36:50.099Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-03-30T14:36:50.099Z",
+    "sessionId": "12122fda-94cf-4784-ad5d-79e38af0cdd5",
+    "summary": "Fixed TUI help bar layout bug; Phase 10 Polish underway",
+    "activeWork": {
+      "description": "Phase 10 Polish: Fixed critical layout bug where help bar wrapping causes top bar disappearance. Help bar height changes (tab switches Config→Content) now trigger content model resizing via resizeContent() helper.",
+      "feature": "phase-10-polish",
+      "stage": "execute",
+      "planRef": null,
+      "designRef": null,
+      "progress": "Bug fixed: Extracted resizeContent() helper, called from updateNavState(). When tab switches change help bar height, content models now resize. Tests added and passing. Code committed and pushed.",
+      "blockers": [],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 0,
+      "lastCommit": "773f3cd docs: add hook spec alignment design & status doc",
+      "modifiedFiles": []
+    },
+    "recentDecisions": [
+      "Help bar layout bug fixed by triggering content model resize on tab/hints changes, not truncating top of TUI",
+      "resizeContent() extracted as reusable helper for all tab transitions"
+    ],
+    "nextSteps": [
+      "Select Phase 10 Polish focus area: responsive layout edge cases, mouse parity audit, accessibility review, or golden test expansion"
+    ],
+    "context": {
+      "notes": "Phase 10 is polish/refinement. Previous discovered work: Phase 8 Toasts needs polish (copy broken, missing close button, minimum width) — research BubbleTea v1.x clipboard support in go.mod. Two handoffs available; this one is most recent."
+    }
+  },
+  "previousSessions": []
+}

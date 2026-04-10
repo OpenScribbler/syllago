@@ -3,9 +3,11 @@ package output
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 )
 
 // Exit codes for consistent scripting behavior.
@@ -97,8 +99,8 @@ func IsSilentError(err error) bool {
 	if err == nil {
 		return false
 	}
-	_, ok := err.(silentError)
-	return ok
+	var silent silentError
+	return errors.As(err, &silent)
 }
 
 type ErrorResponse struct {
@@ -118,5 +120,45 @@ func PrintError(code int, message, suggestion string) {
 		if suggestion != "" {
 			fmt.Fprintf(ErrWriter, "  Suggestion: %s\n", suggestion)
 		}
+	}
+}
+
+// StructuredError is a machine-readable error with a namespaced code.
+type StructuredError struct {
+	Code       string `json:"code"`
+	Message    string `json:"message"`
+	Suggestion string `json:"suggestion,omitempty"`
+	DocsURL    string `json:"docs_url,omitempty"`
+	Details    string `json:"details,omitempty"`
+}
+
+// Error implements the error interface so StructuredError works with errors.As().
+func (e StructuredError) Error() string {
+	return fmt.Sprintf("[%s] %s", e.Code, e.Message)
+}
+
+// PrintStructuredError prints a StructuredError to ErrWriter.
+// In JSON mode, prints structured JSON. In plain mode, prints human-readable format.
+func PrintStructuredError(e StructuredError) {
+	if JSON {
+		data, _ := json.MarshalIndent(e, "", "  ")
+		fmt.Fprintln(ErrWriter, string(data))
+		return
+	}
+	fmt.Fprintf(ErrWriter, "Error [%s]: %s\n", e.Code, e.Message)
+	if e.Suggestion != "" {
+		fmt.Fprintf(ErrWriter, "  Suggestion: %s\n", e.Suggestion)
+	}
+	if e.DocsURL != "" {
+		fmt.Fprintf(ErrWriter, "  Docs: %s\n", e.DocsURL)
+	}
+	if e.Details != "" {
+		// Indent each detail line for readability.
+		for _, line := range strings.Split(e.Details, "\n") {
+			fmt.Fprintf(ErrWriter, "  %s\n", line)
+		}
+	}
+	if e.Code != "" {
+		fmt.Fprintf(ErrWriter, "  Run 'syllago explain %s' for details\n", e.Code)
 	}
 }

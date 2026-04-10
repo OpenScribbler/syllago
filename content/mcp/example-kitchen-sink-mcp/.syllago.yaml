@@ -1,7 +1,0 @@
-id: example-kitchen-sink-mcp
-name: example-kitchen-sink-mcp
-description: Example MCP config with stdio and HTTP servers populating every available field for testing and reference
-tags:
-  - builtin
-  - example
-hidden: true

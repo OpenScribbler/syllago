@@ -95,8 +95,8 @@ func TestParse_EmptySections(t *testing.T) {
 func TestItemCount(t *testing.T) {
 	t.Parallel()
 	m := &Manifest{
-		Rules: []string{"a", "b", "c"},
-		Hooks: []string{"d", "e"},
+		Rules: []ItemRef{{Name: "a"}, {Name: "b"}, {Name: "c"}},
+		Hooks: []ItemRef{{Name: "d"}, {Name: "e"}},
 	}
 	if m.ItemCount() != 5 {
 		t.Errorf("expected 5, got %d", m.ItemCount())
@@ -211,8 +211,8 @@ func TestParse_InvalidName(t *testing.T) {
 func TestRefsByType(t *testing.T) {
 	t.Parallel()
 	m := &Manifest{
-		Rules:  []string{"rule-a"},
-		Skills: []string{"skill-a", "skill-b"},
+		Rules:  []ItemRef{{Name: "rule-a"}},
+		Skills: []ItemRef{{Name: "skill-a"}, {Name: "skill-b"}},
 	}
 	refs := m.RefsByType()
 	if len(refs) != 2 {

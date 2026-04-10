@@ -1,0 +1,1 @@
+{"hooks": {"PreToolUse": [{"hooks": [{"type": "command", "command": "echo default", "platform": {"darwin": "echo mac", "linux": "echo linux"}}]}]}}

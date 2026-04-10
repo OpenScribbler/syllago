@@ -1,0 +1,85 @@
+{
+  "$schema": "handoff-v2",
+  "name": "designing-moat-issue-8-revocation-mechanism-with",
+  "createdAt": "2026-04-07T18:31:08.113Z",
+  "current": {
+    "claimedBy": "holden",
+    "project": "syllago",
+    "updated": "2026-04-07T18:31:08.113Z",
+    "sessionId": "aa9ff33c-f587-4505-8c04-603ab5dcc52b",
+    "summary": "Designing MOAT issue #8 (revocation mechanism) with OWASP alignment stress-testing",
+    "activeWork": {
+      "description": "Resolve MOAT issue #8: revocation/denouncement mechanism for compromised skills. Mid-discussion on design approach—stress-testing against OWASP AST09 (governance), AST01 (artifact integrity), AST10 (threat intelligence). Paused before implementation to verify OWASP findings and finalize design rationale.",
+      "feature": "MOAT spec issue #8 — revocation mechanism",
+      "stage": "explore",
+      "planRef": null,
+      "designRef": "moat-revised-outline.md",
+      "progress": "Researched initial OWASP mapping (AST09 most relevant as governance-driven revocation). Identified design questions: (1) manifest section vs. separate feed, (2) submission scope (in-protocol or operational). Stress-testing paused mid-discussion—user requested detailed OWASP alignment verification before finalizing design.",
+      "blockers": [
+        "OWASP AST09 text needs review to confirm revocation is governance-level, not protocol-level requirement",
+        "Design question 1 tradeoff (manifest vs. feed) needs pressure-testing against deployment scenarios",
+        "Design question 2 (submission scope) needs clarification: is incident reporting part of spec, or left to registry implementations?"
+      ],
+      "beads": null
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 42,
+      "lastCommit": "e5be21b bd sync: 2026-04-07 18:22:23 — benchmark-installer handoff updated with Gemini conflict analysis",
+      "modifiedFiles": [
+        ".beads/beads.db",
+        ".beads/beads.db-shm",
+        ".beads/beads.db-wal",
+        "docs/spec/acp/CHANGELOG.md",
+        "docs/spec/acp/acp-spec.md",
+        "docs/spec/skills/provenance.md"
+      ]
+    },
+    "recentDecisions": [
+      "MOAT issues #1–3, #6–7 already resolved (previous sessions)",
+      "Issue #4 (pagination): unblocked but intentionally deferred",
+      "Issue #5 (prose/intro): deferred until protocol design finalized",
+      "This session: issue #8 design in progress—not yet finalized, awaiting OWASP alignment stress-test"
+    ],
+    "nextSteps": [
+      "Verify OWASP AST09, AST01, AST10 texts to confirm alignment with governance-driven revocation design",
+      "Stress-test design question 1: manifest embedded array + optional feed URL (vs. separate document). Document full tradeoff analysis.",
+      "Stress-test design question 2: submission scope—is incident reporting part of the MOAT spec, or a registry implementation detail?",
+      "Finalize three-part design decision: (A) manifest structure, (B) client behavior on denounced content, (C) submission process for incidents",
+      "Write issue #8 resolution to moat-revised-outline.md with updated OWASP alignment table",
+      "Commit changes to moat repo"
+    ],
+    "context": {
+      "notes": "MOAT spec design is stress-tested against OWASP before implementation. This session paused mid-execution to properly verify alignment. Do not skip OWASP verification—revocation touches governance (AST09), artifact integrity (AST01), threat intelligence (AST10), and post-install defense (inverse of CICD-SEC-3). Previous session found that CICD-SEC-3 is pre-install only; revocation is post-install, different threat model. Moat repo: /home/hhewett/.local/src/moat. Current outline state: moat-revised-outline.md with issues 1–3, 6–7 resolved, #8 in progress.",
+      "design_pressure_points": [
+        "Manifest section vs. separate feed: tradeoff between unified trust anchor and low-latency incident response",
+        "Submission scope: if we mandate an API, every registry must implement it (kills simple GitHub-based registries). If we don't define it, incident responders have no standard path.",
+        "Client behavior: when already-installed skill is revoked, should we block execution, warn, or just log?"
+      ],
+      "owasp_alignment_needed": [
+        "AST09 (governance + revocation process)",
+        "AST01 (artifact integrity)",
+        "AST10 (threat intelligence sharing)",
+        "CICD-SEC-3 (dependency chain abuse—confirm this is pre-install only)"
+      ]
+    }
+  },
+  "previousSessions": [
+    {
+      "summary": "Deep design session on content type distribution and provenance for syllago and MOAT. Resolved skills frontmatter architecture, created canonical SKILL.md spec, updated MOAT outline with OWASP AST10 findings. Identified and partially resolved MOAT issues #1–7.",
+      "updated": "2026-04-06T16:03:40Z",
+      "completedWork": [
+        "Skills frontmatter spec finalized (agentskills.io-compatible base + permissions + requires fields)",
+        "Provenance architecture decision: registry-level (MOAT), not individual skill-level",
+        "MOAT outline structure with OWASP alignment table created",
+        "MOAT issues #1–3 resolved: manifest structure, entry schema, risk assessment",
+        "MOAT issues #6–7 resolved: scan_status naming, risk_tier enum with OWASP mapping",
+        "MOAT issue #4 unblocked (pagination—deferred)",
+        "MOAT issue #5 deferred (prose, pending design finalization)"
+      ],
+      "nextSteps": [
+        "Resolve MOAT issue #8: revocation/denouncement mechanism with OWASP alignment"
+      ]
+    }
+  ]
+}

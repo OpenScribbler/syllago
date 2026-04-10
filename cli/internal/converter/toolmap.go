@@ -2,88 +2,204 @@ package converter
 
 import "strings"
 
-// ToolNames maps canonical tool names (Claude Code) to provider-specific equivalents.
-// Note: Zed uses "edit_file" for both Write and Edit. Reverse translation is ambiguous
-// and may return either canonical name; round-trips through Zed lose the distinction.
+// ToolNames maps canonical (provider-neutral) tool names to provider-specific equivalents.
+// Keys are snake_case neutral names; every provider including claude-code has an explicit entry.
+// Note: Zed and Cursor use "edit_file" for both file_write and file_edit; Codex uses "apply_patch"
+// for both. Reverse translation is ambiguous and may return either canonical name;
+// round-trips through these providers lose the file_write/file_edit distinction.
 var ToolNames = map[string]map[string]string{
-	"Read": {
-		"gemini-cli":  "read_file",
-		"copilot-cli": "view",
-		"kiro":        "read",
-		"opencode":    "view",
-		"zed":         "read_file",
-		"cline":       "read_file",
-		"roo-code":    "ReadFileTool",
+	"file_read": {
+		"claude-code":     "Read",
+		"gemini-cli":      "read_file",
+		"copilot-cli":     "view",
+		"kiro":            "read",
+		"opencode":        "read",
+		"vs-code-copilot": "Read",
+		"zed":             "read_file",
+		"roo-code":        "read_file",
+		"cursor":          "read_file",
+		"windsurf":        "view_line_range",
+		"codex":           "read_file",
+		"factory-droid":   "Read",
+		"pi":              "read",
 	},
-	"Write": {
-		"gemini-cli":  "write_file",
-		"copilot-cli": "apply_patch",
-		"kiro":        "fs_write",
-		"opencode":    "write",
-		"zed":         "edit_file",
-		"cline":       "write_to_file",
-		"roo-code":    "WriteToFileTool",
+	"file_write": {
+		"claude-code":     "Write",
+		"gemini-cli":      "write_file",
+		"copilot-cli":     "create",
+		"kiro":            "fs_write",
+		"opencode":        "write",
+		"vs-code-copilot": "Write",
+		"zed":             "edit_file",
+		"roo-code":        "write_to_file",
+		"cursor":          "edit_file",
+		"windsurf":        "write_to_file",
+		"codex":           "apply_patch",
+		"factory-droid":   "Create",
+		"pi":              "write",
 	},
-	"Edit": {
-		"gemini-cli":  "replace",
-		"copilot-cli": "apply_patch",
-		"kiro":        "fs_write",
-		"opencode":    "edit",
-		"zed":         "edit_file",
-		"cline":       "apply_diff",
-		"roo-code":    "EditFileTool",
+	"file_edit": {
+		"claude-code":     "Edit",
+		"gemini-cli":      "replace",
+		"copilot-cli":     "edit",
+		"kiro":            "fs_write",
+		"opencode":        "edit",
+		"vs-code-copilot": "Edit",
+		"zed":             "edit_file",
+		"roo-code":        "replace_in_file",
+		"cursor":          "edit_file",
+		"windsurf":        "edit_file",
+		"codex":           "apply_patch",
+		"factory-droid":   "Edit",
+		"pi":              "edit",
 	},
-	"Bash": {
-		"gemini-cli":  "run_shell_command",
-		"copilot-cli": "shell",
-		"kiro":        "shell",
-		"opencode":    "bash",
-		"zed":         "terminal",
-		"cline":       "execute_command",
-		"roo-code":    "ExecuteCommandTool",
+	"shell": {
+		"claude-code":     "Bash",
+		"gemini-cli":      "run_shell_command",
+		"copilot-cli":     "bash",
+		"kiro":            "shell",
+		"opencode":        "bash",
+		"vs-code-copilot": "Bash",
+		"zed":             "terminal",
+		"roo-code":        "execute_command",
+		"cursor":          "run_terminal_cmd",
+		"windsurf":        "run_command",
+		"codex":           "shell",
+		"factory-droid":   "Execute",
+		"pi":              "bash",
 	},
-	"Glob": {
-		"gemini-cli":  "list_directory",
-		"copilot-cli": "glob",
-		"kiro":        "read",
-		"opencode":    "glob",
-		"zed":         "find_path",
-		"cline":       "list_files",
-		"roo-code":    "ListFilesTool",
+	"find": {
+		"claude-code":     "Glob",
+		"gemini-cli":      "glob",
+		"copilot-cli":     "glob",
+		"kiro":            "glob",
+		"opencode":        "glob",
+		"vs-code-copilot": "Glob",
+		"zed":             "find_path",
+		"roo-code":        "list_files",
+		"cursor":          "file_search",
+		"windsurf":        "find_by_name",
+		"codex":           "list_dir",
+		"factory-droid":   "Glob",
+		"pi":              "find",
 	},
-	"Grep": {
-		"gemini-cli":  "grep_search",
-		"copilot-cli": "rg",
-		"kiro":        "read",
-		"opencode":    "grep",
-		"zed":         "grep",
-		"cline":       "search_files",
-		"roo-code":    "SearchFilesTool",
+	"search": {
+		"claude-code":     "Grep",
+		"gemini-cli":      "grep_search",
+		"copilot-cli":     "grep",
+		"kiro":            "grep",
+		"opencode":        "grep",
+		"vs-code-copilot": "Grep",
+		"zed":             "grep",
+		"roo-code":        "search_files",
+		"cursor":          "grep_search",
+		"windsurf":        "grep_search",
+		"codex":           "grep_files",
+		"factory-droid":   "Grep",
+		"pi":              "grep",
 	},
-	"WebSearch": {
-		"gemini-cli": "google_search",
-		"opencode":   "fetch",
-		"zed":        "web_search",
+	"web_search": {
+		"claude-code":     "WebSearch",
+		"gemini-cli":      "google_web_search",
+		"opencode":        "websearch",
+		"vs-code-copilot": "WebSearch",
+		"zed":             "web_search",
+		"cursor":          "web_search",
+		"windsurf":        "search_web",
+		"codex":           "web_search",
+		"kiro":            "web_search",
+		"factory-droid":   "WebSearch",
 	},
-	"Task": {
-		"copilot-cli": "task",
-		"opencode":    "agent",
-		"zed":         "subagent",
+	"agent": {
+		"claude-code":     "Agent",
+		"copilot-cli":     "task",
+		"opencode":        "task",
+		"vs-code-copilot": "Agent",
+		"zed":             "spawn_agent",
+		"codex":           "spawn_agent",
+		"kiro":            "use_subagent",
+		"factory-droid":   "Task",
 	},
+	"web_fetch": {
+		"claude-code":     "WebFetch",
+		"gemini-cli":      "web_fetch",
+		"copilot-cli":     "web_fetch",
+		"kiro":            "web_fetch",
+		"opencode":        "webfetch",
+		"vs-code-copilot": "WebFetch",
+		"zed":             "fetch",
+		"windsurf":        "read_url_content",
+		"factory-droid":   "FetchUrl",
+	},
+	// Pi exposes an `ls` directory-listing tool distinct from `find`
+	"list": {"pi": "ls"},
+	// CC-only tools with no cross-provider equivalents (vs-code-copilot shares these)
+	"notebook_edit": {"claude-code": "NotebookEdit", "vs-code-copilot": "NotebookEdit"},
+	"multi_edit":    {"claude-code": "MultiEdit", "vs-code-copilot": "MultiEdit"},
+	"list_dir":      {"claude-code": "LS", "vs-code-copilot": "LS"},
+	"notebook_read": {"claude-code": "NotebookRead", "vs-code-copilot": "NotebookRead"},
+	"kill_shell":    {"claude-code": "KillBash", "vs-code-copilot": "KillBash"},
+	"skill":         {"claude-code": "Skill", "vs-code-copilot": "Skill"},
+	"ask_user":      {"claude-code": "AskUserQuestion", "vs-code-copilot": "AskUserQuestion"},
 }
 
-// HookEvents maps canonical event names (Claude Code) to provider-specific equivalents.
+// HookEvents maps canonical (provider-neutral) event names to provider-specific equivalents.
+// Keys are snake_case neutral names; every provider including claude-code has an explicit entry.
 var HookEvents = map[string]map[string]string{
-	"PreToolUse":        {"gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse"},
-	"PostToolUse":       {"gemini-cli": "AfterTool", "copilot-cli": "postToolUse", "kiro": "postToolUse"},
-	"UserPromptSubmit":  {"gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted", "kiro": "userPromptSubmit"},
-	"Stop":              {"gemini-cli": "AfterAgent", "kiro": "stop"},
-	"SessionStart":      {"gemini-cli": "SessionStart", "copilot-cli": "sessionStart", "kiro": "agentSpawn"},
-	"SessionEnd":        {"gemini-cli": "SessionEnd", "copilot-cli": "sessionEnd"},
-	"PreCompact":        {"gemini-cli": "PreCompress"},
-	"Notification":      {"gemini-cli": "Notification"},
-	"SubagentStart":     {},
-	"SubagentCompleted": {},
+	"before_tool_execute": {"claude-code": "PreToolUse", "gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse", "cursor": "PreToolUse", "opencode": "tool.execute.before", "vs-code-copilot": "PreToolUse", "factory-droid": "PreToolUse", "pi": "tool_call"},
+	"after_tool_execute":  {"claude-code": "PostToolUse", "gemini-cli": "AfterTool", "copilot-cli": "postToolUse", "kiro": "postToolUse", "cursor": "PostToolUse", "opencode": "tool.execute.after", "vs-code-copilot": "PostToolUse", "factory-droid": "PostToolUse", "pi": "tool_result"},
+	"before_prompt":       {"claude-code": "UserPromptSubmit", "gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted", "kiro": "userPromptSubmit", "cursor": "UserPromptSubmit", "windsurf": "pre_user_prompt", "vs-code-copilot": "UserPromptSubmit", "factory-droid": "UserPromptSubmit", "pi": "input"},
+	"agent_stop":          {"claude-code": "Stop", "gemini-cli": "AfterAgent", "kiro": "stop", "copilot-cli": "agentStop", "cursor": "Stop", "windsurf": "post_cascade_response", "opencode": "session.idle", "vs-code-copilot": "Stop", "factory-droid": "Stop", "pi": "agent_end"},
+	"session_start":       {"claude-code": "SessionStart", "gemini-cli": "SessionStart", "copilot-cli": "sessionStart", "kiro": "agentSpawn", "cursor": "SessionStart", "windsurf": "session_start", "opencode": "session.created", "vs-code-copilot": "SessionStart", "factory-droid": "SessionStart", "pi": "session_start"},
+	"session_end":         {"claude-code": "SessionEnd", "gemini-cli": "SessionEnd", "copilot-cli": "sessionEnd", "cursor": "SessionEnd", "windsurf": "session_end", "factory-droid": "SessionEnd", "pi": "session_shutdown"},
+	"before_compact":      {"claude-code": "PreCompact", "gemini-cli": "PreCompress", "cursor": "PreCompact", "vs-code-copilot": "PreCompact", "factory-droid": "PreCompact", "pi": "session_before_compact"},
+	"notification":        {"claude-code": "Notification", "gemini-cli": "Notification"},
+	"subagent_start":      {"claude-code": "SubagentStart", "cursor": "SubagentStart", "vs-code-copilot": "SubagentStart", "factory-droid": "SubagentStart", "pi": "before_agent_start"},
+	"subagent_stop":       {"claude-code": "SubagentStop", "copilot-cli": "subagentStop", "cursor": "SubagentStop", "vs-code-copilot": "SubagentStop", "factory-droid": "SubagentStop"},
+	"error_occurred":      {"claude-code": "ErrorOccurred", "copilot-cli": "errorOccurred", "opencode": "session.error"},
+
+	// tool_use_failure: distinct from error_occurred — fires on tool invocation failure.
+	// Note: Copilot maps both error_occurred and tool_use_failure to "errorOccurred";
+	// ReverseTranslateHookEvent will return whichever it finds first (Go map iteration order).
+	"tool_use_failure": {"claude-code": "PostToolUseFailure", "cursor": "postToolUseFailure", "copilot-cli": "errorOccurred"},
+
+	// CC-only events (no cross-provider equivalents)
+	"permission_request":  {"claude-code": "PermissionRequest", "opencode": "permission.asked"},
+	"after_compact":       {"claude-code": "PostCompact"},
+	"instructions_loaded": {"claude-code": "InstructionsLoaded"},
+	"config_change":       {"claude-code": "ConfigChange"},
+	"worktree_create":     {"claude-code": "WorktreeCreate", "windsurf": "post_setup_worktree"},
+	"worktree_remove":     {"claude-code": "WorktreeRemove"},
+	"elicitation":         {"claude-code": "Elicitation"},
+	"elicitation_result":  {"claude-code": "ElicitationResult"},
+	"teammate_idle":       {"claude-code": "TeammateIdle"},
+	"task_completed":      {"claude-code": "TaskCompleted"},
+	"stop_failure":        {"claude-code": "StopFailure"},
+
+	// Extended events with multiple-provider support
+	"before_model":          {"gemini-cli": "BeforeModel", "cursor": "beforeAgentResponse"},
+	"after_model":           {"gemini-cli": "AfterModel", "cursor": "afterAgentResponse"},
+	"before_tool_selection": {"gemini-cli": "BeforeToolSelection", "cursor": "beforeToolSelection"},
+
+	"file_changed": {"claude-code": "FileChanged", "cursor": "afterFileEdit", "kiro": "File Save", "opencode": "file.edited"},
+
+	// Kiro-exclusive events
+	"file_created": {"kiro": "File Create"},
+	"file_deleted": {"kiro": "File Delete"},
+	"before_task":  {"kiro": "Pre Task Execution"},
+	"after_task":   {"kiro": "Post Task Execution"},
+
+	// Windsurf-exclusive events
+	"transcript_export": {"windsurf": "post_cascade_response_with_transcript"},
+
+	// Pi-exclusive events (no other provider maps to these)
+	"turn_start":     {"pi": "turn_start"},
+	"turn_end":       {"pi": "turn_end"},
+	"model_select":   {"pi": "model_select"},
+	"user_bash":      {"pi": "user_bash"},
+	"context_update": {"pi": "context"},
+	"message_start":  {"pi": "message_start"},
+	"message_end":    {"pi": "message_end"},
 }
 
 // TranslateTool translates a single canonical tool name to the target provider.
@@ -120,31 +236,163 @@ func TranslateHookEvent(event, targetSlug string) (string, bool) {
 	return translated, true
 }
 
+// IsValidHookEvent reports whether the event name is a known canonical or
+// provider-native hook event. This prevents sjson key injection via dots or
+// other special characters in crafted event names.
+func IsValidHookEvent(event string) bool {
+	// Check canonical names (map keys)
+	if _, ok := HookEvents[event]; ok {
+		return true
+	}
+	// Check all provider-native names (map values)
+	for _, provMap := range HookEvents {
+		for _, native := range provMap {
+			if native == event {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // ReverseTranslateHookEvent finds the canonical event name from a provider-specific one.
+// When multiple canonical events map to the same provider-native name (e.g., Copilot's
+// "errorOccurred" maps to both error_occurred and tool_use_failure), applies a
+// deterministic tiebreaker: prefers "error_occurred" over "tool_use_failure".
 func ReverseTranslateHookEvent(event, sourceSlug string) string {
+	var first string
 	for canonical, m := range HookEvents {
 		if provName, ok := m[sourceSlug]; ok && provName == event {
-			return canonical
+			if first == "" {
+				first = canonical
+				continue
+			}
+			// Multiple matches — apply tiebreaker: prefer error_occurred
+			if canonical == "error_occurred" {
+				return canonical
+			}
+			if first == "error_occurred" {
+				return first
+			}
+			// Generic tiebreaker: pick lexicographically smaller for determinism
+			if canonical < first {
+				return canonical
+			}
+			return first
 		}
+	}
+	if first != "" {
+		return first
 	}
 	return event
 }
 
 // ReverseTranslateTool finds the canonical tool name from a provider-specific one.
+// When multiple canonical names map to the same provider tool (e.g., Cursor/Zed use
+// "edit_file" for both file_write and file_edit, Codex uses "apply_patch" for both),
+// prefers file_edit over file_write since edit is the more specific operation.
+// Also handles backwards compatibility: "Task" was renamed to "Agent" in Claude Code v2.1.63.
 func ReverseTranslateTool(name, sourceSlug string) string {
+	var match string
 	for canonical, m := range ToolNames {
 		if provName, ok := m[sourceSlug]; ok && provName == name {
-			return canonical
+			if canonical == "file_edit" {
+				return "file_edit" // prefer file_edit over file_write for ambiguous mappings
+			}
+			match = canonical
 		}
+	}
+	if match != "" {
+		return match
+	}
+	// Backwards compat: CC's legacy "Task" tool name maps to "agent".
+	if sourceSlug == "claude-code" && strings.EqualFold(name, "task") {
+		return "agent"
 	}
 	return name
 }
 
+// TranslateMatcher translates a hook matcher string to the target provider.
+// Matchers can be:
+//   - Simple tool names: "shell" → translate directly
+//   - Regex alternations: "file_edit|file_write" → split, translate each, rejoin
+//   - Wildcard patterns: "mcp__github__.*" → strip .*, translate, reattach
+//   - MCP prefix patterns: "mcp__.*" → pass through unchanged
+func TranslateMatcher(matcher, targetSlug string) string {
+	parts := strings.Split(matcher, "|")
+	for i, part := range parts {
+		parts[i] = translateMatcherComponent(part, targetSlug)
+	}
+	return strings.Join(parts, "|")
+}
+
+// ReverseTranslateMatcher translates a provider-specific hook matcher to canonical.
+// Handles the same patterns as TranslateMatcher but in reverse.
+func ReverseTranslateMatcher(matcher, sourceSlug string) string {
+	parts := strings.Split(matcher, "|")
+	for i, part := range parts {
+		parts[i] = reverseTranslateMatcherComponent(part, sourceSlug)
+	}
+	return strings.Join(parts, "|")
+}
+
+// translateMatcherComponent translates a single matcher component (no |) to the target.
+func translateMatcherComponent(comp, targetSlug string) string {
+	// Bare wildcard patterns like ".*" — pass through unchanged
+	if comp == ".*" || comp == "*" {
+		return comp
+	}
+
+	// Strip .* suffix if present, translate the base, reattach
+	hasSuffix := strings.HasSuffix(comp, ".*")
+	base := comp
+	if hasSuffix {
+		base = strings.TrimSuffix(comp, ".*")
+	}
+
+	// MCP-style prefixes (e.g., "mcp__github__create_issue") — pass through unchanged.
+	// These are server-specific tool names that don't map through ToolNames.
+	if strings.Contains(base, "__") || strings.Contains(base, "/") || strings.Contains(base, ":") {
+		return comp
+	}
+
+	translated := TranslateTool(base, targetSlug)
+	if hasSuffix {
+		return translated + ".*"
+	}
+	return translated
+}
+
+// reverseTranslateMatcherComponent reverse-translates a single matcher component.
+func reverseTranslateMatcherComponent(comp, sourceSlug string) string {
+	if comp == ".*" || comp == "*" {
+		return comp
+	}
+
+	hasSuffix := strings.HasSuffix(comp, ".*")
+	base := comp
+	if hasSuffix {
+		base = strings.TrimSuffix(comp, ".*")
+	}
+
+	if strings.Contains(base, "__") || strings.Contains(base, "/") || strings.Contains(base, ":") {
+		return comp
+	}
+
+	translated := ReverseTranslateTool(base, sourceSlug)
+	if hasSuffix {
+		return translated + ".*"
+	}
+	return translated
+}
+
 // TranslateMCPToolName translates MCP tool name format between providers.
-// Providers group into three patterns:
+// Providers group into four patterns:
 //   - Prefixed double-underscore: claude-code, kiro → mcp__server__tool
-//   - Bare double-underscore: gemini-cli, opencode, cline, roo-code → server__tool
-//   - Slash-separated: copilot-cli, zed → server/tool
+//   - Bare double-underscore: opencode, cline, roo-code, cursor, windsurf → server__tool
+//   - Slash-separated: copilot-cli, codex → server/tool
+//   - Colon-separated: zed → mcp:server:tool
+//   - mcp_ prefix single-underscore: gemini-cli → mcp_server_tool
 func TranslateMCPToolName(name, sourceSlug, targetSlug string) string {
 	server, tool := parseMCPToolName(name, sourceSlug)
 	if server == "" {
@@ -152,22 +400,26 @@ func TranslateMCPToolName(name, sourceSlug, targetSlug string) string {
 	}
 
 	switch targetSlug {
-	case "claude-code", "kiro":
+	case "claude-code", "kiro", "factory-droid":
 		return "mcp__" + server + "__" + tool
-	case "gemini-cli", "opencode", "cline", "roo-code":
+	case "gemini-cli":
+		return "mcp_" + server + "_" + tool
+	case "opencode", "cline", "roo-code", "cursor", "windsurf":
 		return server + "__" + tool
-	case "copilot-cli", "zed":
+	case "copilot-cli", "codex":
 		return server + "/" + tool
+	case "zed":
+		return "mcp:" + server + ":" + tool
 	default:
 		return name
 	}
 }
 
 // parseMCPToolName extracts server and tool from a provider-specific MCP tool name.
-// Providers group into three parsing patterns by separator format.
+// Providers group into four parsing patterns by separator format.
 func parseMCPToolName(name, sourceSlug string) (server, tool string) {
 	switch sourceSlug {
-	case "claude-code", "kiro":
+	case "claude-code", "kiro", "factory-droid":
 		// mcp__server__tool
 		if !strings.HasPrefix(name, "mcp__") {
 			return "", ""
@@ -178,16 +430,38 @@ func parseMCPToolName(name, sourceSlug string) (server, tool string) {
 			return "", ""
 		}
 		return parts[0], parts[1]
-	case "gemini-cli", "opencode", "cline", "roo-code":
+	case "gemini-cli":
+		// mcp_server_tool — prefix "mcp_", then split on first "_"
+		if !strings.HasPrefix(name, "mcp_") {
+			return "", ""
+		}
+		rest := strings.TrimPrefix(name, "mcp_")
+		parts := strings.SplitN(rest, "_", 2)
+		if len(parts) != 2 {
+			return "", ""
+		}
+		return parts[0], parts[1]
+	case "opencode", "cline", "roo-code", "cursor", "windsurf":
 		// server__tool
 		parts := strings.SplitN(name, "__", 2)
 		if len(parts) != 2 {
 			return "", ""
 		}
 		return parts[0], parts[1]
-	case "copilot-cli", "zed":
+	case "copilot-cli", "codex":
 		// server/tool
 		parts := strings.SplitN(name, "/", 2)
+		if len(parts) != 2 {
+			return "", ""
+		}
+		return parts[0], parts[1]
+	case "zed":
+		// mcp:server:tool
+		if !strings.HasPrefix(name, "mcp:") {
+			return "", ""
+		}
+		rest := strings.TrimPrefix(name, "mcp:")
+		parts := strings.SplitN(rest, ":", 2)
 		if len(parts) != 2 {
 			return "", ""
 		}

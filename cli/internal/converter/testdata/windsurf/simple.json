@@ -1,0 +1,1 @@
+{"hooks": {"pre_run_command": [{"command": "echo pre-run"}], "post_run_command": [{"command": "echo post-run"}]}}

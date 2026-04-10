@@ -1,0 +1,20 @@
+syllago           │Home > Library
+                  │
+  Content         │ [a] Add Content
+  Skills        3 │
+  Agents        1 │╭───────────────────────────────────────╮
+  MCP Servers   1 ││ Skills (1)                            │
+  Rules         1 ││ Reusable skill definitions that       │
+  Hooks         1 ││ extend AI tool capabilities           │
+  Commands      1 │╰───────────────────────────────────────╯
+  ─────────────   │
+  Collections     │
+> Library       1 │
+  Loadouts      1 │
+  Registries      │
+  ─────────────   │
+  Configuration   │
+  Add             │
+────────────────────────────────────────────────────────────
+arrows navigate • enter browse • a add content   Library
+esc back

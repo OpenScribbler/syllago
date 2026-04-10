@@ -1,0 +1,29 @@
+syllago           │  Content
+                  │  Skills      3 - Reusable skill definitions that extend AI t
+  Content         │  Agents      1 - Agent configurations with specialized roles
+> Skills        3 │  MCP Servers  1 - Model Context Protocol server configuratio
+  Agents        1 │  Rules       1 - Rule files that guide AI coding tool behavi
+  MCP Servers   1 │  Hooks       1 - Event-driven hooks for automation and valid
+  Rules         1 │  Commands    1 - Custom slash commands for AI coding tools
+  Hooks         1 │
+  Commands      1 │  Collections
+  ─────────────   │  Library      (1)
+  Collections     │  Loadouts     (1)
+  Library       1 │  Registries   (0)
+  Loadouts      1 │
+  Registries      │  Configuration
+  ─────────────   │  Add          - Add content from providers, local files, or
+  Configuration   │  Update       - Check for updates and pull latest changes
+  Add             │  Settings     - Configure paths and providers
+  Update          │  Sandbox      - Isolated environment for testing content
+  Settings        │
+  Sandbox         │
+                  │
+                  │
+                  │
+                  │
+                  │
+                  │
+           v1.0.0 │
+────────────────────────────────────────────────────────────────────────────────
+tab switch panel • / search • ? help • q quit                      syllago

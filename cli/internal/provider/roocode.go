@@ -15,6 +15,8 @@ var RooCode = Provider{
 		switch ct {
 		case catalog.Rules:
 			return ProjectScopeSentinel // Rules go in project root as .roo/rules/
+		case catalog.Skills:
+			return filepath.Join(homeDir, ".roo", "skills")
 		case catalog.MCP:
 			return JSONMergeSentinel // Merges into .roo/mcp.json
 		case catalog.Agents:
@@ -30,7 +32,8 @@ var RooCode = Provider{
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {
 		case catalog.Rules:
-			return []string{
+			homeDir, _ := os.UserHomeDir()
+			paths := []string{
 				filepath.Join(projectRoot, ".roo", "rules"),
 				filepath.Join(projectRoot, ".roo", "rules-code"),
 				filepath.Join(projectRoot, ".roo", "rules-architect"),
@@ -38,6 +41,15 @@ var RooCode = Provider{
 				filepath.Join(projectRoot, ".roo", "rules-debug"),
 				filepath.Join(projectRoot, ".roo", "rules-orchestrator"),
 				filepath.Join(projectRoot, ".roorules"),
+			}
+			if homeDir != "" {
+				paths = append(paths, filepath.Join(homeDir, ".roo", "rules"))
+			}
+			return paths
+		case catalog.Skills:
+			return []string{
+				filepath.Join(projectRoot, ".roo", "skills"),
+				filepath.Join(projectRoot, ".agents", "skills"),
 			}
 		case catalog.MCP:
 			return []string{filepath.Join(projectRoot, ".roo", "mcp.json")}
@@ -60,7 +72,7 @@ var RooCode = Provider{
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {
-		case catalog.Rules, catalog.MCP, catalog.Agents:
+		case catalog.Rules, catalog.Skills, catalog.MCP, catalog.Agents:
 			return true
 		default:
 			return false
@@ -68,7 +80,18 @@ var RooCode = Provider{
 	},
 	SymlinkSupport: map[catalog.ContentType]bool{
 		catalog.Rules:  true,
+		catalog.Skills: true,
 		catalog.Agents: true,
 		catalog.MCP:    false, // JSON merge
 	},
+	GlobalSharedReadPaths: func(homeDir string, ct catalog.ContentType) []string {
+		if ct == catalog.Skills {
+			return []string{filepath.Join(homeDir, ".agents", "skills")}
+		}
+		return nil
+	},
+	ConfigLocations: map[catalog.ContentType]string{
+		catalog.MCP: ".roo/mcp.json",
+	},
+	MCPTransports: []string{"stdio", "sse", "streamable-http"},
 }

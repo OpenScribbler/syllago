@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-02-after-tool-execute
+type: hooks
+description: "Benchmark: validates after_tool_execute event fires"
+hook:
+  event: after_tool_execute
+  blocking: false
+  command: ./hb-02.sh

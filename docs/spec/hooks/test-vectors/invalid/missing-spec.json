@@ -1,0 +1,9 @@
+{
+  "_comment": "MUST be rejected: missing required 'spec' field.",
+  "hooks": [
+    {
+      "event": "before_tool_execute",
+      "handler": { "type": "command", "command": "./check.sh" }
+    }
+  ]
+}

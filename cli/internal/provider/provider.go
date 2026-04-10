@@ -52,6 +52,26 @@ type Provider struct {
 	// If nil, symlinks are assumed supported for filesystem types.
 	// Hooks and MCP are always false (JSON merge, not filesystem).
 	SymlinkSupport map[catalog.ContentType]bool
+
+	// ConfigLocations maps content types to the config file path where that type
+	// is configured for this provider (e.g. hooks config, MCP config).
+	// Only populated for types where configuration is file-based.
+	ConfigLocations map[catalog.ContentType]string
+
+	// GlobalSharedReadPaths returns global paths (relative to homeDir) that this
+	// provider reads BEYOND its own InstallDir. Used to detect install conflicts
+	// when multiple providers would receive content at the same path.
+	// Distinct from DiscoveryPaths, which is project-scoped.
+	// Returns nil if this provider has no globally-shared read paths.
+	GlobalSharedReadPaths func(homeDir string, ct catalog.ContentType) []string
+
+	// MCPTransports lists the MCP transports this provider supports.
+	// Example: []string{"stdio", "sse", "streamable-http"}.
+	MCPTransports []string
+
+	// HookTypes lists the hook handler types this provider supports.
+	// Example: []string{"command", "http", "prompt", "agent"}.
+	HookTypes []string
 }
 
 // AllProviders returns the full list of known providers (detected or not).
@@ -67,6 +87,7 @@ var AllProviders = []Provider{
 	RooCode,
 	OpenCode,
 	Kiro,
+	Amp,
 }
 
 // DetectedOnly returns the subset of AllProviders that are detected

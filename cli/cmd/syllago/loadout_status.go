@@ -45,7 +45,7 @@ func runLoadoutStatus(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("reading snapshot: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "reading snapshot failed", "The snapshot file may be corrupted; try removing it manually", err.Error())
 	}
 
 	if output.JSON {

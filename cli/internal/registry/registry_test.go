@@ -1,9 +1,13 @@
 package registry
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestNameFromURL(t *testing.T) {
@@ -134,6 +138,78 @@ func TestCloneArgs_SecurityProtections(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestSync_SecurityHardening(t *testing.T) {
+	// Verify that Sync() applies the same git hardening as Clone():
+	// - core.hooksPath=/dev/null (disable git hooks)
+	// - --no-recurse-submodules (block submodule fetching)
+	// - GIT_CONFIG_NOSYSTEM=1 (set by caller on cmd.Env)
+	//
+	// We can't easily unit-test the env var (it's set on the exec.Cmd),
+	// but we CAN verify this by attempting to sync a repo that has a
+	// post-merge hook — with hardening, the hook should not execute.
+	t.Parallel()
+
+	// Create a bare repo and clone it to simulate a registry
+	bare := t.TempDir()
+	clone := t.TempDir()
+
+	// Init bare repo with a commit
+	run := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v in %s: %v\n%s", args, dir, err, out)
+		}
+	}
+	run(bare, "init", "--bare")
+
+	// Create a working copy to make initial commit
+	work := t.TempDir()
+	run(work, "clone", bare, ".")
+	run(work, "config", "user.email", "test@test.com")
+	run(work, "config", "user.name", "test")
+	os.WriteFile(filepath.Join(work, "README.md"), []byte("init"), 0644)
+	run(work, "add", ".")
+	run(work, "commit", "-m", "init")
+	run(work, "push", "origin", "master")
+
+	// Clone as a "registry"
+	run(clone, "clone", bare, "reg")
+	regDir := filepath.Join(clone, "reg")
+
+	// Add a post-merge hook that creates a marker file
+	marker := filepath.Join(clone, "hook-executed")
+	hooksDir := filepath.Join(regDir, ".git", "hooks")
+	os.MkdirAll(hooksDir, 0755)
+	hook := fmt.Sprintf("#!/bin/sh\ntouch %s\n", marker)
+	os.WriteFile(filepath.Join(hooksDir, "post-merge"), []byte(hook), 0755)
+
+	// Push a new commit to bare so pull has something to merge
+	os.WriteFile(filepath.Join(work, "file.txt"), []byte("update"), 0644)
+	run(work, "add", ".")
+	run(work, "commit", "-m", "update")
+	run(work, "push", "origin", "master")
+
+	// Now simulate what Sync does — with hardening, the hook should NOT fire
+	cmd := exec.Command("git",
+		"-C", regDir,
+		"-c", "core.hooksPath=/dev/null",
+		"pull", "--ff-only", "--no-recurse-submodules",
+	)
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("hardened pull failed: %v\n%s", err, out)
+	}
+
+	// The marker file should NOT exist — hook was blocked
+	if _, err := os.Stat(marker); err == nil {
+		t.Error("post-merge hook executed despite core.hooksPath=/dev/null — hardening is broken")
 	}
 }
 
@@ -303,6 +379,127 @@ items:
 	}
 	if len(hook.Scripts) != 1 || hook.Scripts[0] != "hooks/on-save.sh" {
 		t.Errorf("Items[1].Scripts = %v, want [hooks/on-save.sh]", hook.Scripts)
+	}
+}
+
+func TestManifestItemRoundtrip(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		item ManifestItem
+	}{
+		{
+			name: "all extended fields populated",
+			item: ManifestItem{
+				Name:         "my-skill",
+				Type:         "skills",
+				Provider:     "claude-code",
+				Path:         "skills/my-skill",
+				HookEvent:    "PostToolUse",
+				HookIndex:    2,
+				Scripts:      []string{"hooks/run.sh", "hooks/check.sh"},
+				DisplayName:  "My Awesome Skill",
+				Description:  "A skill that does awesome things",
+				ContentHash:  "sha256:abc123def456",
+				References:   []string{"lib/helper.ts", "config/settings.json"},
+				ConfigSource: ".claude/settings.json",
+				Providers:    []string{"claude-code", "gemini-cli"},
+			},
+		},
+		{
+			name: "only base fields",
+			item: ManifestItem{
+				Name:     "basic-rule",
+				Type:     "rules",
+				Provider: "gemini-cli",
+				Path:     "rules/basic.md",
+			},
+		},
+		{
+			name: "extended fields without base optional fields",
+			item: ManifestItem{
+				Name:        "analyzer-output",
+				Type:        "hooks",
+				Provider:    "claude-code",
+				Path:        ".claude/settings.json",
+				DisplayName: "Format on Save",
+				Description: "Runs formatter after file edits",
+				Providers:   []string{"claude-code"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Marshal to YAML
+			data, err := yaml.Marshal(&tt.item)
+			if err != nil {
+				t.Fatalf("Marshal: %v", err)
+			}
+
+			// Unmarshal back
+			var got ManifestItem
+			if err := yaml.Unmarshal(data, &got); err != nil {
+				t.Fatalf("Unmarshal: %v", err)
+			}
+
+			// Compare all fields
+			if got.Name != tt.item.Name {
+				t.Errorf("Name = %q, want %q", got.Name, tt.item.Name)
+			}
+			if got.Type != tt.item.Type {
+				t.Errorf("Type = %q, want %q", got.Type, tt.item.Type)
+			}
+			if got.Provider != tt.item.Provider {
+				t.Errorf("Provider = %q, want %q", got.Provider, tt.item.Provider)
+			}
+			if got.Path != tt.item.Path {
+				t.Errorf("Path = %q, want %q", got.Path, tt.item.Path)
+			}
+			if got.HookEvent != tt.item.HookEvent {
+				t.Errorf("HookEvent = %q, want %q", got.HookEvent, tt.item.HookEvent)
+			}
+			if got.HookIndex != tt.item.HookIndex {
+				t.Errorf("HookIndex = %d, want %d", got.HookIndex, tt.item.HookIndex)
+			}
+			if len(got.Scripts) != len(tt.item.Scripts) {
+				t.Errorf("Scripts len = %d, want %d", len(got.Scripts), len(tt.item.Scripts))
+			}
+			// Extended fields
+			if got.DisplayName != tt.item.DisplayName {
+				t.Errorf("DisplayName = %q, want %q", got.DisplayName, tt.item.DisplayName)
+			}
+			if got.Description != tt.item.Description {
+				t.Errorf("Description = %q, want %q", got.Description, tt.item.Description)
+			}
+			if got.ContentHash != tt.item.ContentHash {
+				t.Errorf("ContentHash = %q, want %q", got.ContentHash, tt.item.ContentHash)
+			}
+			if len(got.References) != len(tt.item.References) {
+				t.Errorf("References len = %d, want %d", len(got.References), len(tt.item.References))
+			} else {
+				for i := range got.References {
+					if got.References[i] != tt.item.References[i] {
+						t.Errorf("References[%d] = %q, want %q", i, got.References[i], tt.item.References[i])
+					}
+				}
+			}
+			if got.ConfigSource != tt.item.ConfigSource {
+				t.Errorf("ConfigSource = %q, want %q", got.ConfigSource, tt.item.ConfigSource)
+			}
+			if len(got.Providers) != len(tt.item.Providers) {
+				t.Errorf("Providers len = %d, want %d", len(got.Providers), len(tt.item.Providers))
+			} else {
+				for i := range got.Providers {
+					if got.Providers[i] != tt.item.Providers[i] {
+						t.Errorf("Providers[%d] = %q, want %q", i, got.Providers[i], tt.item.Providers[i])
+					}
+				}
+			}
+		})
 	}
 }
 

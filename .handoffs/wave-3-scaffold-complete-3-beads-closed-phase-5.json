@@ -1,0 +1,82 @@
+{
+  "$schema": "handoff-v2",
+  "name": "wave-3-scaffold-complete-3-beads-closed-phase-5",
+  "createdAt": "2026-04-04T06:10:16.521Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-04T06:10:16.521Z",
+    "sessionId": "86ac75c4-afbf-4d63-ab03-c169f44ce44d",
+    "summary": "Wave 3 scaffold complete (3 beads closed). Phase 5 discovery backend wiring complete (5 tasks: all discovery function signatures updated, analyzer integration added, confirm items wired through startDiscoveryCmd and handleDiscoveryDone, triage back-nav fixed). Tests passing. Ready to commit.",
+    "activeWork": {
+      "description": "TUI confirm-bucket feature execution (Phase 4-5): Wave 3 wizard scaffolding complete; Phase 5 discovery backend wiring finished — implemented analyzer pass for local/git/registry discovery, updated function signatures to return confirm items, wired propagation through startDiscoveryCmd, updated handleDiscoveryDone to call back-navigation handlers, added Review step triage support (Task 7.2). All tests passing.",
+      "feature": "tui-confirm-bucket",
+      "stage": "execute",
+      "planRef": ".develop/tui-confirm-bucket-plan.md",
+      "designRef": ".develop/tui-confirm-bucket-design.md",
+      "progress": "Wave 3: 3 beads closed (4.2 buildShellLabels, 4.3 validateStep, 4.4 clearTriageState). Phase 5: 5 tasks complete (5.1 discoverFromLocalPath, 5.2 discoverFromGitURL, 5.3 discoverFromRegistry, 5.4 discoverFromProvider, 5.5 handleDiscoveryDone). Bonus: Task 7.2 (Review back-nav triage support) completed in same edit pass. Tests passing. Code ready to commit and close beads.",
+      "blockers": [],
+      "beads": "tui-confirm-bucket 48-bead chain executing sequentially. Phase 5 tasks (5.1-5.5) implemented; Phase 6 next ready (Triage backend: backend integration logic)."
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 66,
+      "lastCommit": "9b2744f feat: wizard step scaffolding — buildShellLabels, 4-permutation index, validateStep (Wave 3)",
+      "modifiedFiles": [
+        ".beads/beads.db",
+        ".beads/beads.db-shm",
+        ".beads/beads.db-wal",
+        ".beads/daemon.log",
+        ".handoffs/archive/* (deleted: brainstorming-vouch, content-discovery, install-safety, provenance, tier-3-hook)",
+        ".handoffs/content-discovery-redesign-beads-ready.json",
+        "cli/.syllago/audit.jsonl",
+        "cli/internal/tui/add_wizard.go",
+        "cli/internal/tui/add_wizard_update.go"
+      ]
+    },
+    "recentDecisions": [
+      "Phase 5 discovery backends return []addConfirmItem for conflict detection (local/git/registry add analyzer pass)",
+      "Provider discovery returns nil confirm items (no conflicts at provider level)",
+      "startDiscoveryCmd propagates confirm items from backends to triage step",
+      "handleDiscoveryDone routes based on whether triage items exist",
+      "Back-navigation from Review respects hasTriageStep to skip triage if no conflicts found",
+      "Done in single session (Phase 5 tasks 5.1-5.5 + bonus 7.2) due to single-file scope efficiency"
+    ],
+    "nextSteps": [
+      "Commit Phase 5 backend wiring: 'git add cli/internal/tui/add_wizard*.go && git commit -m \"...(Phase 5 complete)\"'",
+      "Sync beads: 'bd sync' to record Phase 5 completions",
+      "Close Phase 5 beads: 'bd close syllago-xxxx syllago-yyyy ... (all 5.1-5.5 IDs)' or use 'bd close --by-task 5.*'",
+      "Check Phase 6 readiness: 'bd ready' to identify next unblocked tasks",
+      "Continue Phase 6 execution (Triage backend logic: 6.1-6.4 tasks)"
+    ],
+    "context": {
+      "notes": "Phase 5 complete. Modified: add_wizard.go (updated discoverFromLocalPath, discoverFromGitURL, discoverFromRegistry, discoverFromProvider signatures + startDiscoveryCmd propagation) and add_wizard_update.go (updated handleDiscoveryDone, added analyzer import, fixed Review back-nav for triage). All changes tested and passing. Ready to commit and close beads 5.1-5.5. Note: Task 7.2 (Review triage back-nav) was completed opportunistically in this session — verify whether a corresponding bead exists or if it was handled inline."
+    }
+  },
+  "previousSessions": [
+    {
+      "summary": "Session cleared and exited with no work performed",
+      "updated": "2026-04-04T05:49:35.501Z",
+      "completedWork": [
+        "Session ended without work. 61 uncommitted files remain (beads DB, handoff files, archived configs, content diffs)."
+      ],
+      "nextSteps": [
+        "Resume TUI confirm-bucket execution: 48 beads with dependency chains ready (2/48 complete)",
+        "Next bead: syllabo-60z9l (1.2a: RED — SafeResolve symlink escape test)",
+        "Or select another handoff: 18 available (ACP trust anchor, provenance spec, install safety design, hooks framework, etc.)"
+      ]
+    },
+    {
+      "summary": "Designed TUI confirm-bucket feature (6 panel reviews, 7 blocking + 23 important resolved), wrote implementation plan (10 phases, 30 tasks), created 48 beads with dependency chains, completed Phase B analysis, started sequential execution — 2 of 48 beads done (1.1a RED + 1.1b GREEN: ReadFileContent path containment).",
+      "updated": "2026-04-03T21:15:00-07:00",
+      "completedWork": [
+        "2/48 beads complete. Phase 1 (Security): Task 1.1 done (ReadFileContent path containment — test + fix). Task 1.2 (SafeResolve utility) is next ready bead."
+      ],
+      "nextSteps": [
+        "Continue sequential bead execution: next is syllabo-60z9l (1.2a: RED — SafeResolve symlink escape test)",
+        "Commit the 2 uncommitted files (fileinfo.go + fileinfo_test.go) before continuing",
+        "Use /develop --resume or /develop tui-confirm-bucket to continue the workflow"
+      ]
+    }
+  ]
+}

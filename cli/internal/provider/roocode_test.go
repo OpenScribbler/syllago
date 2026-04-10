@@ -9,12 +9,12 @@ import (
 
 func TestRooCodeSupportsTypes(t *testing.T) {
 	t.Parallel()
-	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.MCP, catalog.Agents} {
+	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.MCP, catalog.Agents} {
 		if !RooCode.SupportsType(ct) {
 			t.Errorf("RooCode.SupportsType(%s) = false, want true", ct)
 		}
 	}
-	for _, ct := range []catalog.ContentType{catalog.Skills, catalog.Hooks, catalog.Commands} {
+	for _, ct := range []catalog.ContentType{catalog.Hooks, catalog.Commands} {
 		if RooCode.SupportsType(ct) {
 			t.Errorf("RooCode.SupportsType(%s) = true, want false", ct)
 		}

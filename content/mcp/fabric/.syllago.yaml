@@ -1,0 +1,11 @@
+format_version: 1
+id: d0e66718-7d49-47e3-8d4d-8a9415a51715
+name: fabric
+type: mcp
+source_provider: claude-code
+source_format: json
+source_type: provider
+has_source: true
+source_hash: sha256:78a82ca53edcceda2d124b75dd4e1b57e0708b1e4d40584af9a628ca645c1844
+added_at: 2026-03-29T05:16:50.827847588Z
+added_by: syllago

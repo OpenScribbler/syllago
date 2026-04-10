@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-03-session-start
+type: hooks
+description: "Benchmark: validates session_start event fires"
+hook:
+  event: session_start
+  blocking: false
+  command: ./hb-03.sh

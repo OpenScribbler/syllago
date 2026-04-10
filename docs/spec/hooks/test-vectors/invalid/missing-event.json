@@ -1,0 +1,9 @@
+{
+  "_comment": "MUST be rejected: hook definition missing required 'event' field.",
+  "spec": "hooks/0.1",
+  "hooks": [
+    {
+      "handler": { "type": "command", "command": "./check.sh" }
+    }
+  ]
+}

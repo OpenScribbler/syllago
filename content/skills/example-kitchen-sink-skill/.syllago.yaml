@@ -1,7 +1,0 @@
-id: example-kitchen-sink-skill
-name: example-kitchen-sink-skill
-description: Example skill populating every available metadata field for testing and reference
-tags:
-  - builtin
-  - example
-hidden: true

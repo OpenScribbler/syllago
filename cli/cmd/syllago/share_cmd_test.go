@@ -21,6 +21,16 @@ func TestShareCmdRegisters(t *testing.T) {
 	}
 }
 
+func TestShareCmdHasToFlag(t *testing.T) {
+	flag := shareCmd.Flags().Lookup("to")
+	if flag == nil {
+		t.Fatal("expected --to flag on share command")
+	}
+	if flag.DefValue != "" {
+		t.Errorf("expected empty default for --to, got %q", flag.DefValue)
+	}
+}
+
 func TestShareCmdValidatesArgs(t *testing.T) {
 	shareCmd.SilenceUsage = true
 	shareCmd.SilenceErrors = true
@@ -115,8 +125,8 @@ func TestFindLibraryItem_AmbiguousWithoutTypeFilter(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for ambiguous name")
 	}
-	if !strings.Contains(err.Error(), "Use --type") {
-		t.Errorf("expected '--type' hint in error, got: %v", err)
+	if !strings.Contains(err.Error(), "multiple types") {
+		t.Errorf("expected 'multiple types' in error, got: %v", err)
 	}
 }
 

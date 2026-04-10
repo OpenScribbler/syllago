@@ -21,12 +21,15 @@ func CopyContent(src, dst string) error {
 }
 
 func copyFile(src, dst string) (err error) {
-	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+	dstDir := filepath.Dir(dst)
+	if err := os.MkdirAll(dstDir, 0755); err != nil {
 		return err
 	}
 
-	// Refuse to write through a symlink at the destination (prevents arbitrary
-	// file overwrite when processing content from untrusted repositories).
+	// Defense-in-depth: refuse to write through a symlink at the destination
+	// (prevents arbitrary file overwrite when processing untrusted content).
+	// The atomic rename below is the real TOCTOU fix — this check is an
+	// early-exit for a clear error message.
 	if info, err := os.Lstat(dst); err == nil {
 		if info.Mode()&os.ModeSymlink != 0 {
 			return fmt.Errorf("destination is a symlink: %s (refusing to follow for security)", dst)
@@ -37,22 +40,33 @@ func copyFile(src, dst string) (err error) {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
-	out, err := os.Create(dst)
+	// Write to a temp file in the same directory as dst, then atomically
+	// rename. This eliminates the TOCTOU window between the symlink check
+	// and file creation — os.Rename replaces the name (including symlinks)
+	// rather than following them.
+	tmp, err := os.CreateTemp(dstDir, ".syllago-*")
 	if err != nil {
-		return err
+		return fmt.Errorf("create temp file: %w", err)
 	}
+	tmpPath := tmp.Name()
 	defer func() {
-		if closeErr := out.Close(); closeErr != nil && err == nil {
-			err = closeErr
+		// Clean up the temp file on any error path.
+		if err != nil {
+			_ = tmp.Close()
+			_ = os.Remove(tmpPath)
 		}
 	}()
 
-	if _, err = io.Copy(out, in); err != nil {
+	if _, err = io.Copy(tmp, in); err != nil {
 		return err
 	}
-	return nil
+	if err = tmp.Close(); err != nil {
+		return err
+	}
+
+	return os.Rename(tmpPath, dst)
 }
 
 func copyDir(src, dst string) error {

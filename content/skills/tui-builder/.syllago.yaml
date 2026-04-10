@@ -1,0 +1,10 @@
+format_version: 1
+id: ebcdc637-89c3-404c-8fe8-e7bd1bf6576a
+name: tui-builder
+type: skills
+source_provider: claude-code
+source_format: md
+source_type: provider
+source_hash: sha256:fdaa6b24732e56334593996d430d1e975d835ef73093bb033b208e7341c2e9e1
+added_at: 2026-03-29T04:25:56.633524479Z
+added_by: syllago

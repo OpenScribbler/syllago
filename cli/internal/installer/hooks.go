@@ -3,6 +3,7 @@ package installer
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
@@ -69,6 +71,25 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	event, matcherGroup, err := parseHookFile(item.Path)
 	if err != nil {
 		return "", fmt.Errorf("parsing hook file: %w", err)
+	}
+
+	// M3: Validate event name to prevent sjson key injection via dots
+	if !converter.IsValidHookEvent(event) {
+		return "", fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", event)
+	}
+
+	// M4: Whitelist-filter the matcher group through a typed struct to strip
+	// unknown JSON fields before merging into settings.json.
+	matcherGroup, err = whitelistMatcherGroup(matcherGroup)
+	if err != nil {
+		return "", fmt.Errorf("filtering matcher group: %w", err)
+	}
+
+	// M2: Run security scanner on the hook before installing
+	warnings := converter.ScanHookSecurityFromRaw(matcherGroup)
+	for _, w := range warnings {
+		fmt.Fprintf(output.ErrWriter, "  %s WARNING [%s]: %s\n    command: %s\n",
+			strings.ToUpper(w.Severity), w.HookName, w.Description, w.Command)
 	}
 
 	// Copy script files referenced by hook commands to a stable location.
@@ -242,29 +263,49 @@ func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot 
 		return StatusNotAvailable
 	}
 
-	// Check installed.json first
+	// Check installed.json for this hook
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
 		return StatusNotAvailable
 	}
-	if inst.FindHook(item.Name, event) >= 0 {
-		return StatusInstalled
+	instIdx := inst.FindHook(item.Name, event)
+	if instIdx < 0 {
+		return StatusNotInstalled
 	}
 
-	// Also check if event array exists in settings.json (installed by other means)
+	// installed.json doesn't track which provider the hook was installed to,
+	// so verify the hook actually exists in THIS provider's settings file.
 	settingsPath, err := hookSettingsPath(prov)
 	if err != nil {
-		return StatusNotAvailable
+		return StatusNotInstalled
 	}
 
 	fileData, err := readJSONFile(settingsPath)
 	if err != nil {
-		return StatusNotAvailable
+		return StatusNotInstalled
 	}
 
 	hooksArray := gjson.GetBytes(fileData, "hooks."+event)
 	if !hooksArray.Exists() || !hooksArray.IsArray() {
 		return StatusNotInstalled
+	}
+
+	// Match by hash or command to confirm presence in this provider's settings
+	storedHash := inst.Hooks[instIdx].GroupHash
+	if storedHash != "" {
+		for _, entry := range hooksArray.Array() {
+			h := sha256.Sum256([]byte(entry.Raw))
+			if hex.EncodeToString(h[:]) == storedHash {
+				return StatusInstalled
+			}
+		}
+	} else {
+		cmd := inst.Hooks[instIdx].Command
+		for _, entry := range hooksArray.Array() {
+			if entry.Get("hooks.0.command").String() == cmd {
+				return StatusInstalled
+			}
+		}
 	}
 
 	return StatusNotInstalled
@@ -306,22 +347,32 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 			continue
 		}
 
-		// Determine if command references a script file
-		var scriptPath string
-		firstToken := cmd
-		if idx := strings.IndexByte(cmd, ' '); idx > 0 {
-			firstToken = cmd[:idx]
+		// Use ExtractScriptRef to detect script references, including
+		// those behind interpreter prefixes (e.g. "bash ./lint.sh").
+		ref := converter.ExtractScriptRef(cmd)
+		if ref == "" {
+			continue // inline command like "echo lint"
 		}
 
-		if strings.HasPrefix(firstToken, "./") || strings.HasPrefix(firstToken, "../") {
-			// Relative to item directory
-			scriptPath = filepath.Join(itemDir, firstToken)
-		} else if filepath.IsAbs(firstToken) {
-			scriptPath = firstToken
+		// Only handle relative paths at install time — these are scripts
+		// bundled into the library dir at add-time.
+		var scriptPath string
+		if strings.HasPrefix(ref, "./") || strings.HasPrefix(ref, "../") {
+			scriptPath = filepath.Clean(filepath.Join(itemDir, ref))
+			// Resolve symlinks before containment check to prevent symlink-based
+			// path traversal (e.g., ./scripts -> /etc via a crafted symlink).
+			if resolved, evalErr := filepath.EvalSymlinks(scriptPath); evalErr == nil {
+				scriptPath = resolved
+			}
+			// Verify the resolved path stays within the item directory
+			rel, relErr := filepath.Rel(itemDir, scriptPath)
+			if relErr != nil || strings.HasPrefix(rel, "..") {
+				return nil, fmt.Errorf("hook %q command references path outside item directory: %s", item.Name, ref)
+			}
 		}
 
 		if scriptPath == "" {
-			continue // inline command like "echo lint"
+			continue // absolute path — not a bundled script
 		}
 
 		// Check if the script exists
@@ -353,16 +404,12 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 		if readErr != nil {
 			return nil, fmt.Errorf("reading script %s: %w", scriptPath, readErr)
 		}
-		if writeErr := os.WriteFile(destPath, scriptData, 0755); writeErr != nil {
+		if writeErr := os.WriteFile(destPath, scriptData, 0700); writeErr != nil {
 			return nil, fmt.Errorf("copying script to %s: %w", destPath, writeErr)
 		}
 
-		// Rewrite command in the matcher group JSON
-		newCmd := destPath
-		if len(cmd) > len(firstToken) {
-			// Preserve arguments after the script path
-			newCmd = destPath + cmd[len(firstToken):]
-		}
+		// Rewrite command: replace the script ref with the stable absolute path
+		newCmd := strings.Replace(cmd, ref, destPath, 1)
 		key := fmt.Sprintf("hooks.%d.command", i)
 		result, err = sjson.SetBytes(result, key, newCmd)
 		if err != nil {
@@ -371,4 +418,23 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 	}
 
 	return result, nil
+}
+
+// hookMatcherGroup is a typed struct for whitelist-filtering hook matcher groups.
+// Only known fields are preserved when merging into settings.json, matching
+// the approach used by ExtractServerEntries for MCP configs.
+type hookMatcherGroup struct {
+	Matcher string          `json:"matcher,omitempty"`
+	Hooks   json.RawMessage `json:"hooks,omitempty"`
+	Timeout int             `json:"timeout,omitempty"`
+}
+
+// whitelistMatcherGroup parses a raw matcher group through a typed struct to
+// strip unknown JSON fields before merging into provider settings.
+func whitelistMatcherGroup(raw []byte) ([]byte, error) {
+	var mg hookMatcherGroup
+	if err := json.Unmarshal(raw, &mg); err != nil {
+		return nil, fmt.Errorf("parsing matcher group: %w", err)
+	}
+	return json.Marshal(mg)
 }

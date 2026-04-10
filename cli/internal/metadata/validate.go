@@ -101,15 +101,6 @@ func validateJSONFile(itemDir, filename string) []ValidationError {
 	return errs
 }
 
-// validateFileExists checks that a file exists.
-func validateFileExists(itemDir, filename string) []ValidationError {
-	filePath := filepath.Join(itemDir, filename)
-	if _, err := os.Stat(filePath); err != nil {
-		return []ValidationError{{filename, fmt.Sprintf("Missing %s file.", filename)}}
-	}
-	return nil
-}
-
 // parseFrontmatterFields extracts frontmatter as a simple string map.
 func parseFrontmatterFields(data []byte) map[string]string {
 	content := string(data)

@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-03-19T16:57:38Z",
-  "syllagoVersion": "0.6.1",
+  "generatedAt": "2026-04-10T17:07:44Z",
+  "syllagoVersion": "0.7.0",
   "commands": [
     {
       "name": "add",
@@ -62,6 +62,14 @@
           "description": "Provider to add from (required)"
         },
         {
+          "name": "--name",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Display name for hooks/MCP (stored in .syllago.yaml metadata)"
+        },
+        {
           "name": "--no-input",
           "shorthand": null,
           "type": "bool",
@@ -73,9 +81,25 @@
           "name": "--scope",
           "shorthand": null,
           "type": "string",
-          "default": "global",
+          "default": "all",
           "required": false,
-          "description": "Settings scope to read from: global, project, or all (hooks only)"
+          "description": "Settings scope to read from: global, project, or all (hooks/mcp only)"
+        },
+        {
+          "name": "--source-registry",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Registry name for taint tracking"
+        },
+        {
+          "name": "--source-visibility",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Source registry visibility (public, private, unknown)"
         }
       ],
       "inheritedFlags": [
@@ -116,6 +140,813 @@
       "seeAlso": [],
       "examples": "  # Discover available content (read-only)\n  syllago add --from claude-code\n\n  # Add all rules from a provider\n  syllago add rules --from claude-code\n\n  # Add a specific rule by name\n  syllago add rules/security --from claude-code\n\n  # Add everything\n  syllago add --all --from claude-code\n\n  # Preview what would be written\n  syllago add --from claude-code --dry-run",
       "source": "cli/cmd/syllago/add.go"
+    },
+    {
+      "name": "capmon",
+      "displayName": "Capmon",
+      "slug": "capmon",
+      "parent": null,
+      "synopsis": "syllago capmon",
+      "description": "Capability monitor pipeline",
+      "longDescription": "Fetch, extract, diff, and report on AI provider capability drift.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [
+        "diff",
+        "extract",
+        "fetch",
+        "generate",
+        "run",
+        "seed",
+        "test-fixtures",
+        "validate-spec",
+        "verify"
+      ],
+      "seeAlso": [],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon diff",
+      "displayName": "Capmon Diff",
+      "slug": "capmon-diff",
+      "parent": "capmon",
+      "synopsis": "syllago capmon diff [flags]",
+      "description": "Show field-level changes in provider-capabilities since a git ref",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Limit diff to this provider slug"
+        },
+        {
+          "name": "--since",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Git ref to diff against (default: HEAD~1)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon validate-spec",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon extract",
+      "displayName": "Capmon Extract",
+      "slug": "capmon-extract",
+      "parent": "capmon",
+      "synopsis": "syllago capmon extract [flags]",
+      "description": "Run extraction on cached sources",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Extract only this provider slug"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon fetch",
+        "capmon generate",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon validate-spec",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon fetch",
+      "displayName": "Capmon Fetch",
+      "slug": "capmon-fetch",
+      "parent": "capmon",
+      "synopsis": "syllago capmon fetch [flags]",
+      "description": "Fetch source URLs and update hash cache",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Fetch only this provider slug"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon generate",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon validate-spec",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon generate",
+      "displayName": "Capmon Generate",
+      "slug": "capmon-generate",
+      "parent": "capmon",
+      "synopsis": "syllago capmon generate",
+      "description": "Regenerate per-content-type views and spec tables from provider-capabilities YAML",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon validate-spec",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon run",
+      "displayName": "Capmon Run",
+      "slug": "capmon-run",
+      "parent": "capmon",
+      "synopsis": "syllago capmon run [flags]",
+      "description": "Run the full capability monitor pipeline",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--dry-run",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Skip Stage 4 PR/issue creation; write report to stdout"
+        },
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Limit to this provider slug"
+        },
+        {
+          "name": "--stage",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Pipeline stage to run: 'fetch-extract' or 'report' (default: all stages)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon validate-spec",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon seed",
+      "displayName": "Capmon Seed",
+      "slug": "capmon-seed",
+      "parent": "capmon",
+      "synopsis": "syllago capmon seed [flags]",
+      "description": "Bootstrap or re-seed provider capability YAML from extracted data",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--cache-root",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Path to .capmon-cache/ (default: .capmon-cache)"
+        },
+        {
+          "name": "--force-overwrite-exclusive",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Allow overwriting provider_exclusive entries (prints warning)"
+        },
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Seed only this provider slug"
+        },
+        {
+          "name": "--skip-spec-gate",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Skip the seeder spec human_action gate (for bootstrapping new providers)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon run",
+        "capmon test-fixtures",
+        "capmon validate-spec",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon test-fixtures",
+      "displayName": "Capmon Test-fixtures",
+      "slug": "capmon-test-fixtures",
+      "parent": "capmon",
+      "synopsis": "syllago capmon test-fixtures [flags]",
+      "description": "Report fixture staleness or update fixtures for a provider",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Provider slug for --update (required with --update)"
+        },
+        {
+          "name": "--update",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Re-fetch live source and update fixture files"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon run",
+        "capmon seed",
+        "capmon validate-spec",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon validate-spec",
+      "displayName": "Capmon Validate-spec",
+      "slug": "capmon-validate-spec",
+      "parent": "capmon",
+      "synopsis": "syllago capmon validate-spec [flags]",
+      "description": "Validate a seeder spec YAML file for a provider",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--content-type",
+          "shorthand": null,
+          "type": "string",
+          "default": "skills",
+          "required": false,
+          "description": "Content type for the seeder spec (default: skills)"
+        },
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Provider slug whose seeder spec to validate"
+        },
+        {
+          "name": "--specs-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": ".develop/seeder-specs",
+          "required": false,
+          "description": "Directory containing seeder spec YAML files"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon verify",
+      "displayName": "Capmon Verify",
+      "slug": "capmon-verify",
+      "parent": "capmon",
+      "synopsis": "syllago capmon verify [flags]",
+      "description": "Validate provider-capabilities YAML against JSON Schema",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--cache-root",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Path to .capmon-cache/ (default: .capmon-cache)"
+        },
+        {
+          "name": "--migration-window",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Accept current-minus-one schema_version during schema migrations"
+        },
+        {
+          "name": "--staleness-check",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Check last-run.json age and open issue if stale"
+        },
+        {
+          "name": "--threshold-hours",
+          "shorthand": null,
+          "type": "int",
+          "default": "36",
+          "required": false,
+          "description": "Hours before a run is considered stale (used with --staleness-check)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon validate-spec"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "compat",
+      "displayName": "Compat",
+      "slug": "compat",
+      "parent": null,
+      "synopsis": "syllago compat \u003cname\u003e",
+      "description": "Show provider compatibility matrix for a content item",
+      "longDescription": "Analyzes a library item and shows which providers support it,\nwhat warnings arise during conversion, and which providers cannot\nhandle the content type at all.\n\nFor each provider, syllago attempts the full canonicalize-then-render\npipeline and reports the result.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Show compatibility for a skill\n  syllago compat my-skill\n\n  # JSON output for scripting\n  syllago compat my-skill --json",
+      "source": "cli/cmd/syllago/compat.go"
     },
     {
       "name": "completion",
@@ -904,11 +1735,27 @@
       "displayName": "Convert",
       "slug": "convert",
       "parent": null,
-      "synopsis": "syllago convert \u003cname\u003e [flags]",
-      "description": "Convert library content to a provider format",
-      "longDescription": "Renders a library item to a target provider's format without installing it.\nOutput goes to stdout by default, or to a file with --output.\n\nNo state changes are made — this is purely for ad-hoc sharing.",
+      "synopsis": "syllago convert \u003cfile-or-name\u003e [flags]",
+      "description": "Convert content between provider formats",
+      "longDescription": "Transform content between provider formats using syllago's hub-and-spoke\nconversion model (source -\u003e canonical -\u003e target).\n\nAccepts either a file path or a library item name:\n  - File path: reads the file directly (requires --from and --to)\n  - Library name: looks up the item in your library (--from is optional)\n\nOutput goes to stdout by default, or to a file with --output.",
       "aliases": [],
       "flags": [
+        {
+          "name": "--diff",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show unified diff between source and converted output"
+        },
+        {
+          "name": "--from",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Source provider (required for file input, optional for library items)"
+        },
         {
           "name": "--output",
           "shorthand": "-o",
@@ -924,6 +1771,14 @@
           "default": null,
           "required": true,
           "description": "Target provider (required)"
+        },
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": "rules",
+          "required": false,
+          "description": "Content type for file input (rules, hooks, skills, agents, commands, mcp)"
         }
       ],
       "inheritedFlags": [
@@ -962,7 +1817,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": "  # Convert a skill to Cursor format (stdout)\n  syllago convert my-skill --to cursor\n\n  # Convert and save to a file\n  syllago convert my-rule --to windsurf --output ./windsurf-rule.md\n\n  # Convert to JSON output\n  syllago convert my-skill --to cursor --json",
+      "examples": "  # Convert a Cursor rule to Claude Code format\n  syllago convert ./my-rule.mdc --from cursor --to claude-code\n\n  # Convert a library item to Windsurf format\n  syllago convert my-rule --to windsurf\n\n  # Convert and save to a file\n  syllago convert my-rule --to cursor --output ./cursor-rule.mdc\n\n  # Convert a Copilot instructions file to Cursor\n  syllago convert ./.github/copilot-instructions.md --from copilot-cli --to cursor --type rules",
       "source": "cli/cmd/syllago/convert.go"
     },
     {
@@ -1024,86 +1879,71 @@
       "source": "cli/cmd/syllago/create.go"
     },
     {
-      "name": "import",
-      "displayName": "Import",
-      "slug": "import",
+      "name": "doctor",
+      "displayName": "Doctor",
+      "slug": "doctor",
       "parent": null,
-      "synopsis": "syllago import [flags]",
-      "description": "Bring content into syllago from a provider, path, or git URL",
-      "longDescription": "Discovers content from a provider and imports it into local/.\n\nSyllago handles format conversion automatically. Once imported, content can be\nexported to any supported provider with \"syllago export --to \u003cprovider\u003e\".\n\nAfter import, use \"syllago export\" to install content into other providers,\nor browse in the TUI with \"syllago\".",
+      "synopsis": "syllago doctor",
+      "description": "Check your syllago setup for problems",
+      "longDescription": "Validates your syllago installation: library, config, providers,\ninstalled content integrity, and registry configuration.\n\nEach check reports [ok], [warn], or [err]. Exit code is 0 if all checks\npass, 1 if there are warnings, 2 if there are errors.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  syllago doctor\n  syllago doctor --json",
+      "source": "cli/cmd/syllago/doctor.go"
+    },
+    {
+      "name": "explain",
+      "displayName": "Explain",
+      "slug": "explain",
+      "parent": null,
+      "synopsis": "syllago explain CODE [flags]",
+      "description": "Show detailed documentation for an error code",
+      "longDescription": "Display documentation for a syllago error code.\n\nEach error code has a detailed explanation including what it means,\ncommon causes, and how to fix it.",
       "aliases": [],
       "flags": [
         {
-          "name": "--base-dir",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Override base directory for content discovery"
-        },
-        {
-          "name": "--dry-run",
+          "name": "--list",
           "shorthand": null,
           "type": "bool",
           "default": null,
           "required": false,
-          "description": "Show what would be written without actually writing"
-        },
-        {
-          "name": "--exclude",
-          "shorthand": null,
-          "type": "stringArray",
-          "default": null,
-          "required": false,
-          "description": "Skip hooks by auto-derived name (hooks only)"
-        },
-        {
-          "name": "--force",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Overwrite existing items with the same name (hooks only)"
-        },
-        {
-          "name": "--from",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": true,
-          "description": "Provider to import from (required)"
-        },
-        {
-          "name": "--name",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Filter to items whose path contains this substring (case-insensitive)"
-        },
-        {
-          "name": "--preview",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Show discovery report without parsing"
-        },
-        {
-          "name": "--scope",
-          "shorthand": null,
-          "type": "string",
-          "default": "global",
-          "required": false,
-          "description": "Settings scope to read from: global, project, or all (hooks only)"
-        },
-        {
-          "name": "--type",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Limit to a single content type (e.g., rules, hooks, mcp)"
+          "description": "list all available error codes"
         }
       ],
       "inheritedFlags": [
@@ -1142,8 +1982,8 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": "  # Import all content from Claude Code\n  syllago import --from claude-code\n\n  # Import only skills\n  syllago import --from claude-code --type skills\n\n  # Import a specific rule by name\n  syllago import --from cursor --name my-rule\n\n  # Preview what would be imported\n  syllago import --from claude-code --preview\n\n  # Show what would be written without writing\n  syllago import --from claude-code --dry-run",
-      "source": "cli/cmd/syllago/import.go"
+      "examples": "  syllago explain CATALOG_001\n  syllago explain --list",
+      "source": "cli/cmd/syllago/explain.go"
     },
     {
       "name": "info",
@@ -1372,11 +2212,44 @@
       "displayName": "Inspect",
       "slug": "inspect",
       "parent": null,
-      "synopsis": "syllago inspect \u003ctype\u003e/\u003cname\u003e",
+      "synopsis": "syllago inspect \u003ctype\u003e/\u003cname\u003e [flags]",
       "description": "Show details about a content item",
-      "longDescription": "Display full details about a content item for pre-install auditing.\n\nPath formats:\n  skills/my-skill                   Universal content (type/name)\n  rules/claude-code/my-rule         Provider-specific (type/provider/name)",
+      "longDescription": "Display full details about a content item for pre-install auditing.\n\nBy default, shows metadata and the primary content file. Use --as to preview\nwhat the content would look like converted to a specific provider's format.\n\nPath formats:\n  skills/my-skill                   Universal content (type/name)\n  rules/claude-code/my-rule         Provider-specific (type/provider/name)",
       "aliases": [],
-      "flags": [],
+      "flags": [
+        {
+          "name": "--as",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Preview content converted to a provider's format"
+        },
+        {
+          "name": "--compatibility",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show per-provider compatibility matrix (hooks only)"
+        },
+        {
+          "name": "--files",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show file contents"
+        },
+        {
+          "name": "--risk",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show detailed risk analysis"
+        }
+      ],
       "inheritedFlags": [
         {
           "name": "--json",
@@ -1413,7 +2286,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": "  # Inspect a universal skill\n  syllago inspect skills/my-skill\n\n  # Inspect a provider-specific rule\n  syllago inspect rules/claude-code/my-rule\n\n  # JSON output for scripting\n  syllago inspect --json skills/my-skill",
+      "examples": "  # Inspect a skill (shows metadata + content)\n  syllago inspect skills/my-skill\n\n  # Preview what a rule looks like in Cursor format\n  syllago inspect rules/coding-standards --as cursor\n\n  # Compare formats side by side\n  syllago inspect rules/coding-standards --as claude-code\n  syllago inspect rules/coding-standards --as cursor\n\n  # JSON output for scripting\n  syllago inspect --json skills/my-skill",
       "source": "cli/cmd/syllago/inspect.go"
     },
     {
@@ -1426,6 +2299,14 @@
       "longDescription": "Install content from your library into a provider's location.\n\nBy default uses a symlink so edits in your library are reflected immediately.\nUse --method copy to place a standalone copy instead.",
       "aliases": [],
       "flags": [
+        {
+          "name": "--all",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Install all library content (cannot combine with a positional name)"
+        },
         {
           "name": "--base-dir",
           "shorthand": null,
@@ -1463,8 +2344,16 @@
           "shorthand": null,
           "type": "string",
           "default": null,
-          "required": true,
-          "description": "Provider to install into (required)"
+          "required": false,
+          "description": "Provider to install into"
+        },
+        {
+          "name": "--to-all",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Install to all detected providers"
         },
         {
           "name": "--type",
@@ -1511,7 +2400,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": "  # Install a skill to Claude Code\n  syllago install my-skill --to claude-code\n\n  # Install with a standalone copy instead of symlink\n  syllago install my-skill --to cursor --method copy\n\n  # Install all skills to a provider\n  syllago install --to claude-code --type skills\n\n  # Preview what would happen\n  syllago install my-skill --to claude-code --dry-run",
+      "examples": "  # Install a skill to Claude Code\n  syllago install my-skill --to claude-code\n\n  # Install with a standalone copy instead of symlink\n  syllago install my-skill --to cursor --method copy\n\n  # Install all skills to a provider\n  syllago install --to claude-code --type skills\n\n  # Install to every detected provider at once\n  syllago install --type skills --to-all\n\n  # Install everything from your library\n  syllago install --all --to claude-code\n\n  # Preview what would happen\n  syllago install my-skill --to claude-code --dry-run",
       "source": "cli/cmd/syllago/install.go"
     },
     {
@@ -1520,7 +2409,7 @@
       "slug": "list",
       "parent": null,
       "synopsis": "syllago list [flags]",
-      "description": "List content items in the catalog",
+      "description": "List content items in the library",
       "longDescription": "Show a quick inventory of all content without launching the TUI.\n\nBy default, lists all content grouped by type. Use flags to filter.",
       "aliases": [],
       "flags": [
@@ -1969,38 +2858,105 @@
       "source": "cli/cmd/syllago/loadout_status.go"
     },
     {
-      "name": "publish",
-      "displayName": "Publish",
-      "slug": "publish",
+      "name": "manifest",
+      "displayName": "Manifest",
+      "slug": "manifest",
       "parent": null,
-      "synopsis": "syllago publish \u003cname\u003e [flags]",
-      "description": "Contribute library content to a registry",
-      "longDescription": "Copies a library item to a registry clone, stages the change, and\noptionally creates a branch and PR.",
+      "synopsis": "syllago manifest",
+      "description": "Manage registry manifests",
+      "longDescription": null,
       "aliases": [],
-      "flags": [
+      "flags": [],
+      "inheritedFlags": [
         {
-          "name": "--no-input",
+          "name": "--json",
           "shorthand": null,
           "type": "bool",
           "default": null,
           "required": false,
-          "description": "Skip interactive git prompts, stage only"
+          "description": "Output in JSON format"
         },
         {
-          "name": "--registry",
+          "name": "--no-color",
           "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": true,
-          "description": "Registry name to publish to (required)"
-        },
-        {
-          "name": "--type",
-          "shorthand": null,
-          "type": "string",
+          "type": "bool",
           "default": null,
           "required": false,
-          "description": "Disambiguate when name exists in multiple types"
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [
+        "generate"
+      ],
+      "seeAlso": [],
+      "examples": null,
+      "source": "cli/cmd/syllago/manifest_cmd.go"
+    },
+    {
+      "name": "manifest generate",
+      "displayName": "Manifest Generate",
+      "slug": "manifest-generate",
+      "parent": "manifest",
+      "synopsis": "syllago manifest generate [dir] [flags]",
+      "description": "Generate a registry.yaml for this repository",
+      "longDescription": "Analyze the current repository and generate a registry.yaml manifest.\nRun with --force to overwrite an existing registry.yaml. When overwriting,\na diff of added/removed/changed items is displayed before writing.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--debug-skips",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "show per-file skip reasons for content-signal classification"
+        },
+        {
+          "name": "--force",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "overwrite existing registry.yaml"
+        },
+        {
+          "name": "--no-config",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "suppress .syllago.yaml loading (use with --strict for fully explicit CI control)"
+        },
+        {
+          "name": "--scan-as",
+          "shorthand": null,
+          "type": "stringArray",
+          "default": null,
+          "required": false,
+          "description": "scan path as content type: type:path (e.g. skills:Packs/)"
+        },
+        {
+          "name": "--strict",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "disable content-signal fallback; fatal on missing scan-as paths"
         }
       ],
       "inheritedFlags": [
@@ -2038,9 +2994,11 @@
         }
       ],
       "subcommands": [],
-      "seeAlso": [],
-      "examples": "  # Publish a skill to a registry\n  syllago publish my-skill --registry my-registry\n\n  # Publish a specific rule type\n  syllago publish my-rule --registry team-rules --type rules\n\n  # Non-interactive mode\n  syllago publish my-skill --registry my-registry --no-input",
-      "source": "cli/cmd/syllago/publish.go"
+      "seeAlso": [
+        "manifest"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/manifest_cmd.go"
     },
     {
       "name": "registry",
@@ -2049,7 +3007,7 @@
       "parent": null,
       "synopsis": "syllago registry",
       "description": "Manage git-based content registries",
-      "longDescription": "Add, remove, list, and sync git repositories as content registries.\n\nRegistries are read-only git repos containing shared content (skills, rules,\nhooks, MCP configs, etc.). Use \"registry sync\" to pull updates, and\n\"registry items\" to browse what's available.\n\nTo use registry content, browse it in the TUI (\"syllago\") or export it\ndirectly with \"syllago install --to \u003cprovider\u003e\".",
+      "longDescription": "Add, remove, list, and sync git repositories as content registries.\n\nRegistries are read-only git repos containing shared content (skills, rules,\nhooks, MCP configs, etc.). Use \"registry sync\" to pull updates, and\n\"registry items\" to browse what's available.\n\nTo use registry content, browse it in the TUI (\"syllago\") or install it\ndirectly with \"syllago install --to \u003cprovider\u003e\".",
       "aliases": [],
       "flags": [],
       "inheritedFlags": [
@@ -2444,7 +3402,7 @@
       "parent": "registry",
       "synopsis": "syllago registry sync [name]",
       "description": "Pull latest content from one or all registries",
-      "longDescription": "Runs git pull on registry clones to fetch the latest content.\n\nSync updates the local clone only — it does not modify your local/ or\ninstalled provider content. Use \"syllago registry items\" to see what changed,\nand \"syllago install\" to apply updated content.",
+      "longDescription": "Runs git pull on registry clones to fetch the latest content.\n\nSync updates the local clone only — it does not modify your library or\ninstalled provider content. Use \"syllago registry items\" to see what changed,\nand \"syllago install\" to activate updated content.",
       "aliases": [],
       "flags": [],
       "inheritedFlags": [
@@ -2574,6 +3532,72 @@
       "seeAlso": [],
       "examples": "  # Remove a skill from library and all providers\n  syllago remove my-skill\n\n  # Disambiguate by type when name exists in multiple types\n  syllago remove my-rule --type rules\n\n  # Skip confirmation prompt\n  syllago remove my-skill --force\n\n  # Preview what would happen\n  syllago remove my-skill --dry-run",
       "source": "cli/cmd/syllago/remove.go"
+    },
+    {
+      "name": "rename",
+      "displayName": "Rename",
+      "slug": "rename",
+      "parent": null,
+      "synopsis": "syllago rename \u003cname\u003e [flags]",
+      "description": "Set a human-readable display name for a content item",
+      "longDescription": "Updates the display name stored in the item's .syllago.yaml metadata.\nThis is especially useful for hooks and MCP servers where the directory\nname alone isn't descriptive enough.\n\nThe display name is shown in the TUI, list output, and anywhere items\nare presented to users. The directory name (used for install paths and\nreferences) is not changed.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--name",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": true,
+          "description": "The new display name (required)"
+        },
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Content type to disambiguate (skills, hooks, mcp, etc.)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Name a hook\n  syllago rename my-hook --name \"Pre-commit Linter\"\n\n  # Name an MCP server\n  syllago rename postgres --name \"Local Postgres Dev\" --type mcp\n\n  # Disambiguate by type when name exists in multiple types\n  syllago rename my-item --name \"Better Name\" --type hooks",
+      "source": "cli/cmd/syllago/rename.go"
     },
     {
       "name": "sandbox",
@@ -3436,8 +4460,8 @@
       "slug": "share",
       "parent": null,
       "synopsis": "syllago share \u003cname\u003e [flags]",
-      "description": "Contribute library content to a team repo",
-      "longDescription": "Copies a library item to your team repo, stages the change, and\noptionally creates a branch and PR.",
+      "description": "Contribute library content to a team repo or registry",
+      "longDescription": "Copies a library item to a target repo, stages the change, and\noptionally creates a branch and PR.\n\nBy default, shares to the current team repo (the syllago repo you're in).\nUse --to to share to a named registry instead.",
       "aliases": [],
       "flags": [
         {
@@ -3447,6 +4471,14 @@
           "default": null,
           "required": false,
           "description": "Skip interactive git prompts, stage only"
+        },
+        {
+          "name": "--to",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Target registry name (omit for current team repo)"
         },
         {
           "name": "--type",
@@ -3493,7 +4525,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": "  # Share a skill to the team repo\n  syllago share my-skill\n\n  # Disambiguate by type\n  syllago share my-rule --type rules\n\n  # Non-interactive mode (stage only, no git prompts)\n  syllago share my-skill --no-input",
+      "examples": "  # Share a skill to the current team repo\n  syllago share my-skill\n\n  # Share to a named registry\n  syllago share my-skill --to my-registry\n\n  # Disambiguate by type\n  syllago share my-rule --type rules\n\n  # Non-interactive mode (stage only, no git prompts)\n  syllago share my-skill --no-input",
       "source": "cli/cmd/syllago/share.go"
     },
     {
@@ -3503,9 +4535,17 @@
       "parent": null,
       "synopsis": "syllago sync-and-export [flags]",
       "description": "Sync registries then export content to a provider",
-      "longDescription": "Convenience command that syncs all registries then exports.\n\nEquivalent to running:\n  syllago registry sync \u0026\u0026 syllago export --to \u003cprovider\u003e\n\nThis is useful in CI/CD or automation where you want a single command\nto ensure registries are up-to-date before exporting.",
+      "longDescription": "Convenience command that syncs all registries then installs.\n\nEquivalent to running:\n  syllago registry sync \u0026\u0026 syllago install --to \u003cprovider\u003e\n\nThis is useful in CI/CD or automation where you want a single command\nto ensure registries are up-to-date before installing.",
       "aliases": [],
       "flags": [
+        {
+          "name": "--dry-run",
+          "shorthand": "-n",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show what would be exported without making changes"
+        },
         {
           "name": "--llm-hooks",
           "shorthand": null,
@@ -3585,6 +4625,276 @@
       "seeAlso": [],
       "examples": "  # Sync registries and export to Cursor\n  syllago sync-and-export --to cursor\n\n  # Export to all providers\n  syllago sync-and-export --to all --type skills\n\n  # Export only registry content to Kiro\n  syllago sync-and-export --to kiro --source registry",
       "source": "cli/cmd/syllago/sync-and-export.go"
+    },
+    {
+      "name": "telemetry",
+      "displayName": "Telemetry",
+      "slug": "telemetry",
+      "parent": null,
+      "synopsis": "syllago telemetry",
+      "description": "Manage usage analytics settings",
+      "longDescription": "View and control anonymous usage data collection. Run 'syllago telemetry status' for details.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [
+        "off",
+        "on",
+        "reset",
+        "status"
+      ],
+      "seeAlso": [],
+      "examples": "  syllago telemetry status\n  syllago telemetry off\n  syllago telemetry on\n  syllago telemetry reset",
+      "source": "cli/cmd/syllago/telemetry_cmd.go"
+    },
+    {
+      "name": "telemetry off",
+      "displayName": "Telemetry Off",
+      "slug": "telemetry-off",
+      "parent": "telemetry",
+      "synopsis": "syllago telemetry off",
+      "description": "Disable telemetry",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "telemetry",
+        "telemetry on",
+        "telemetry reset",
+        "telemetry status"
+      ],
+      "examples": "  syllago telemetry off",
+      "source": "cli/cmd/syllago/telemetry_cmd.go"
+    },
+    {
+      "name": "telemetry on",
+      "displayName": "Telemetry On",
+      "slug": "telemetry-on",
+      "parent": "telemetry",
+      "synopsis": "syllago telemetry on",
+      "description": "Enable telemetry",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "telemetry",
+        "telemetry off",
+        "telemetry reset",
+        "telemetry status"
+      ],
+      "examples": "  syllago telemetry on",
+      "source": "cli/cmd/syllago/telemetry_cmd.go"
+    },
+    {
+      "name": "telemetry reset",
+      "displayName": "Telemetry Reset",
+      "slug": "telemetry-reset",
+      "parent": "telemetry",
+      "synopsis": "syllago telemetry reset",
+      "description": "Generate a new anonymous ID",
+      "longDescription": "Generates a new anonymous ID. Previously collected data under your old ID\nis not deleted from PostHog. To request deletion, email privacy@syllago.dev\nwith your old ID.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "telemetry",
+        "telemetry off",
+        "telemetry on",
+        "telemetry status"
+      ],
+      "examples": "  syllago telemetry reset",
+      "source": "cli/cmd/syllago/telemetry_cmd.go"
+    },
+    {
+      "name": "telemetry status",
+      "displayName": "Telemetry Status",
+      "slug": "telemetry-status",
+      "parent": "telemetry",
+      "synopsis": "syllago telemetry status",
+      "description": "Show telemetry state and anonymous ID",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "telemetry",
+        "telemetry off",
+        "telemetry on",
+        "telemetry reset"
+      ],
+      "examples": "  syllago telemetry status",
+      "source": "cli/cmd/syllago/telemetry_cmd.go"
     },
     {
       "name": "uninstall",
@@ -3675,6 +4985,80 @@
       "seeAlso": [],
       "examples": "  # Uninstall from a specific provider\n  syllago uninstall my-skill --from claude-code\n\n  # Uninstall from all providers\n  syllago uninstall my-agent\n\n  # Skip confirmation prompt\n  syllago uninstall my-rule --from cursor --force\n\n  # Preview what would happen\n  syllago uninstall my-skill --dry-run",
       "source": "cli/cmd/syllago/uninstall.go"
+    },
+    {
+      "name": "update",
+      "displayName": "Update",
+      "slug": "update",
+      "parent": null,
+      "synopsis": "syllago update [name] [flags]",
+      "description": "Check for and apply content updates from registries",
+      "longDescription": "Compares installed content versions against their source registries\nand updates items where a newer version is available.\n\nVersion comparison uses semver from .syllago.yaml metadata.\nItems installed from local projects (not registries) are skipped.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--all",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Update all installed items"
+        },
+        {
+          "name": "--dry-run",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show what would be updated without changing anything"
+        },
+        {
+          "name": "--registry",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Only update items from this registry"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Update a specific item\n  syllago update my-skill\n\n  # Check and update all installed items\n  syllago update --all\n\n  # Dry-run: show what would be updated\n  syllago update --all --dry-run\n\n  # Only update items from a specific registry\n  syllago update --all --registry team-rules",
+      "source": "cli/cmd/syllago/update.go"
     },
     {
       "name": "update",

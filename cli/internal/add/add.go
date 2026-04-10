@@ -15,6 +15,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 // ItemStatus describes the relationship between a discovered provider item
@@ -46,11 +47,15 @@ func (s ItemStatus) String() string {
 
 // DiscoveryItem is a discovered provider file annotated with its library status.
 type DiscoveryItem struct {
-	Name   string
-	Type   catalog.ContentType
-	Path   string // absolute path to source file
-	Status ItemStatus
-	Scope  string // "project" or "global" (set by caller)
+	Name            string
+	Type            catalog.ContentType
+	Path            string // absolute path to primary content file
+	SourceDir       string // absolute path to the item's root directory (empty for single-file items)
+	Status          ItemStatus
+	Scope           string // "project" or "global" (set by caller)
+	Confidence      float64
+	DetectionSource string
+	DetectionMethod string
 }
 
 // AddStatus tracks the outcome of a single write operation.
@@ -74,9 +79,11 @@ type AddResult struct {
 
 // AddOptions controls the behavior of AddItems.
 type AddOptions struct {
-	Force    bool
-	DryRun   bool
-	Provider string // provider slug, used for directory layout
+	Force            bool
+	DryRun           bool
+	Provider         string // provider slug, used for directory layout
+	SourceRegistry   string // registry name for taint propagation (e.g., "acme/internal-rules")
+	SourceVisibility string // visibility at import time: "public", "private", "unknown"
 }
 
 // LibraryIndex is a pre-built map from "type/provider/name" (or "type/name"
@@ -261,6 +268,22 @@ func writeItem(item DiscoveryItem, opts AddOptions, globalDir string, canon Cano
 		return r
 	}
 
+	// Copy supporting files (subdirectories, non-primary files) for directory-based items.
+	if item.SourceDir != "" {
+		if err := copySupportingFiles(item.SourceDir, destDir, filepath.Base(item.Path)); err != nil {
+			r.Status = AddStatusError
+			r.Error = fmt.Errorf("copying supporting files: %w", err)
+			return r
+		}
+	}
+
+	// Strip scanner-computed fields from any .syllago.yaml copied from source.
+	// These fields are set below from the actual discovery source, not from
+	// attacker-controlled package metadata.
+	if item.SourceDir != "" {
+		stripAnalyzerMetadata(destDir)
+	}
+
 	// Preserve original in .source/ if source format differs from canonical (.md).
 	hasSource := false
 	sourceExt := filepath.Ext(item.Path)
@@ -293,6 +316,32 @@ func writeItem(item DiscoveryItem, opts AddOptions, globalDir string, canon Cano
 		AddedAt:        &now,
 		AddedBy:        ver,
 	}
+
+	// Taint propagation: if registry source is explicitly provided, use it.
+	if opts.SourceRegistry != "" {
+		meta.SourceRegistry = opts.SourceRegistry
+		meta.SourceVisibility = opts.SourceVisibility
+		meta.SourceType = "registry"
+	} else {
+		// Laundering defense: check if this file is a symlink back into the library.
+		taintReg, taintVis := traceSymlinkTaint(item.Path, globalDir)
+		if taintReg == "" {
+			// Fallback: hash-match against private library content.
+			taintReg, taintVis = hashMatchTaint(hash, globalDir)
+		}
+		if taintReg != "" {
+			meta.SourceRegistry = taintReg
+			meta.SourceVisibility = taintVis
+		}
+	}
+
+	// Set analyzer fields from actual discovery source (never from source package YAML).
+	if item.Confidence > 0 {
+		meta.Confidence = item.Confidence
+		meta.DetectionSource = item.DetectionSource
+		meta.DetectionMethod = item.DetectionMethod
+	}
+
 	// Non-fatal: metadata write failure does not fail the add operation.
 	_ = metadata.Save(destDir, meta)
 
@@ -302,6 +351,22 @@ func writeItem(item DiscoveryItem, opts AddOptions, globalDir string, canon Cano
 		r.Status = AddStatusUpdated
 	}
 	return r
+}
+
+// stripAnalyzerMetadata zeros out scanner-computed fields on any .syllago.yaml
+// that was copied from a source package. Prevents a malicious package from
+// pre-setting confidence/detection_source/detection_method to influence
+// tier badges, pre-check behavior, or display.
+// Non-fatal: load/save errors are silently ignored (metadata.Save overwrites anyway).
+func stripAnalyzerMetadata(destDir string) {
+	m, err := metadata.Load(destDir)
+	if err != nil || m == nil {
+		return
+	}
+	m.Confidence = 0
+	m.DetectionSource = ""
+	m.DetectionMethod = ""
+	_ = metadata.Save(destDir, m)
 }
 
 // contentFilename returns the canonical content filename for a content type.
@@ -327,8 +392,106 @@ func contentFilename(ct catalog.ContentType, name, ext string) string {
 	}
 }
 
+// copySupportingFiles copies all files from srcDir to destDir, skipping
+// the primary content file (already written and possibly canonicalized)
+// and hidden entries. Directory structure is preserved.
+func copySupportingFiles(srcDir, destDir, primaryFilename string) error {
+	return filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(srcDir, path)
+		if err != nil {
+			return err
+		}
+		// Skip the root itself.
+		if rel == "." {
+			return nil
+		}
+		// Skip hidden entries (and their subtrees).
+		if strings.HasPrefix(filepath.Base(rel), ".") {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		// Skip the primary content file (already handled with canonicalization).
+		if rel == primaryFilename {
+			return nil
+		}
+		// Skip metadata file — metadata.Save writes the authoritative version.
+		if filepath.Base(rel) == metadata.FileName {
+			return nil
+		}
+		dest := filepath.Join(destDir, rel)
+		if d.IsDir() {
+			return os.MkdirAll(dest, 0755)
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("reading %s: %w", path, err)
+		}
+		return os.WriteFile(dest, data, 0644)
+	})
+}
+
 // timeNow is a var so tests can override it for deterministic timestamps.
 var timeNow = func() time.Time { return time.Now().UTC() }
+
+// traceSymlinkTaint checks if filePath is a symlink (or inside a symlink dir)
+// pointing back into the library at globalDir. If so, reads the target item's
+// .syllago.yaml and returns its SourceRegistry and SourceVisibility.
+func traceSymlinkTaint(filePath, globalDir string) (srcRegistry, srcVisibility string) {
+	if globalDir == "" {
+		return "", ""
+	}
+
+	// Check if the file itself or its parent directory is a symlink
+	// into the library. Provider installs typically symlink at the
+	// item directory level (e.g., ~/.claude/rules/my-rule -> ~/.syllago/content/rules/my-rule).
+	dir := filepath.Dir(filePath)
+	target, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return "", ""
+	}
+
+	// Check if the resolved target is inside the library
+	absGlobal, err := filepath.Abs(globalDir)
+	if err != nil {
+		return "", ""
+	}
+	if !strings.HasPrefix(target, absGlobal+string(filepath.Separator)) && target != absGlobal {
+		return "", ""
+	}
+
+	// It's a symlink into the library — load the metadata
+	meta, err := metadata.Load(target)
+	if err != nil || meta == nil {
+		return "", ""
+	}
+	return meta.SourceRegistry, meta.SourceVisibility
+}
+
+// hashMatchTaint scans all library items with private taint and checks if
+// any of them have the same source hash. Returns the taint if found.
+func hashMatchTaint(hash, globalDir string) (srcRegistry, srcVisibility string) {
+	if globalDir == "" || hash == "" {
+		return "", ""
+	}
+	idx, err := BuildLibraryIndex(globalDir)
+	if err != nil {
+		return "", ""
+	}
+	for _, meta := range idx {
+		if meta == nil {
+			continue
+		}
+		if registry.IsPrivate(meta.SourceVisibility) && meta.SourceRegistry != "" && meta.SourceHash == hash {
+			return meta.SourceRegistry, meta.SourceVisibility
+		}
+	}
+	return "", ""
+}
 
 // DiscoverFromProvider discovers all content from prov, annotates each item
 // with its library status against globalDir, and returns the list.
@@ -371,10 +534,11 @@ func DiscoverFromProvider(prov provider.Provider, projectRoot string, resolver *
 
 				status := computeItemStatus(raw.path, ct, prov.Slug, raw.name, idx)
 				items = append(items, DiscoveryItem{
-					Name:   raw.name,
-					Type:   ct,
-					Path:   raw.path,
-					Status: status,
+					Name:      raw.name,
+					Type:      ct,
+					Path:      raw.path,
+					SourceDir: raw.sourceDir,
+					Status:    status,
 				})
 			}
 		}
@@ -385,8 +549,9 @@ func DiscoverFromProvider(prov provider.Provider, projectRoot string, resolver *
 
 // rawDiscoveredItem is an intermediate result from scanning a discovery path.
 type rawDiscoveredItem struct {
-	name string // logical item name (directory name or filename sans extension)
-	path string // path to the main content file
+	name      string // logical item name (directory name or filename sans extension)
+	path      string // path to the main content file
+	sourceDir string // item's root directory (empty for single-file items)
 }
 
 // discoverItemsAtPath scans a discovery path and returns logical items.
@@ -434,8 +599,9 @@ func discoverItemsAtPath(path string) []rawDiscoveredItem {
 				continue
 			}
 			items = append(items, rawDiscoveredItem{
-				name: e.Name(),
-				path: contentFile,
+				name:      e.Name(),
+				path:      contentFile,
+				sourceDir: full,
 			})
 		} else {
 			// Single-file item (e.g., rules/my-rule.md).
@@ -463,6 +629,65 @@ func findContentFile(dir string) string {
 		return filepath.Join(dir, e.Name())
 	}
 	return ""
+}
+
+// DiscoverFromRegistry scans a registry clone directory and returns DiscoveryItems
+// annotated with their library status. Items from a manifest-indexed registry
+// (registry.yaml with items) are returned as-is from the index; otherwise the
+// clone directory is walked for recognized content types.
+func DiscoverFromRegistry(regName, cloneDir, globalDir string) ([]DiscoveryItem, error) {
+	idx, err := BuildLibraryIndex(globalDir)
+	if err != nil {
+		return nil, fmt.Errorf("building library index: %w", err)
+	}
+
+	sources := []catalog.RegistrySource{{Name: regName, Path: cloneDir}}
+	cat, err := catalog.ScanRegistriesOnly(sources)
+	if err != nil {
+		return nil, fmt.Errorf("scanning registry %q: %w", regName, err)
+	}
+
+	var items []DiscoveryItem
+	for _, ci := range cat.Items {
+		// ci.Path may be either a directory (directory-walk scan) or a file
+		// (index-based scan from registry.yaml items). Normalize to a file path
+		// so AddItems can read the primary content.
+		primaryFile := ci.Path
+		sourceDir := ""
+
+		if fi, statErr := os.Stat(ci.Path); statErr == nil {
+			if fi.IsDir() {
+				// Directory-walk case: ci.Path is the item directory.
+				// Find the primary content file within it.
+				primaryFile = findContentFile(ci.Path)
+				if primaryFile == "" {
+					continue // no readable content file — skip
+				}
+				sourceDir = ci.Path
+			} else {
+				// Index-based case: ci.Path is already the primary file.
+				parent := filepath.Dir(ci.Path)
+				// Only set SourceDir when the item lives in its own subdirectory
+				// (i.e., the parent is not the registry root itself).
+				if parent != cloneDir {
+					sourceDir = parent
+				}
+			}
+		}
+
+		// ci.Provider is set from the manifest (e.g., "content-signal").
+		// For universal types (skills, agents, etc.) the provider is ignored
+		// in the library key lookup, so it has no effect on the status check.
+		status := computeItemStatus(primaryFile, ci.Type, ci.Provider, ci.Name, idx)
+		items = append(items, DiscoveryItem{
+			Name:      ci.Name,
+			Type:      ci.Type,
+			Path:      primaryFile,
+			SourceDir: sourceDir,
+			Status:    status,
+		})
+	}
+	return items, nil
 }
 
 // computeItemStatus determines the library status for a discovered item.

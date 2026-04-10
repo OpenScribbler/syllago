@@ -40,7 +40,7 @@ func (ct ContentType) Label() string {
 	case Agents:
 		return "Agents"
 	case MCP:
-		return "MCP Configs"
+		return "MCP Servers"
 	case Rules:
 		return "Rules"
 	case Hooks:
@@ -61,21 +61,22 @@ type RegistrySource struct {
 
 // ContentItem represents a single discoverable piece of content in the repo.
 type ContentItem struct {
-	Name               string
-	DisplayName        string // human-readable name from frontmatter (skills only), falls back to Name
-	Description        string
-	Type               ContentType
-	Path               string         // absolute path to the item directory or file
-	Provider           string         // for provider-specific content (rules, hooks, commands), which provider
-	Files              []string       // relative paths of all files in item directory
-	Meta               *metadata.Meta // loaded from .syllago.yaml if present
-	Library            bool           // true if item lives in the global content library (~/.syllago/content/)
-	Registry           string         // non-empty if item came from a git registry (value is the registry name)
-	Source             string         // "project", "global", "library", or registry name
+	Name        string
+	DisplayName string // human-readable name from frontmatter (skills only), falls back to Name
+	Description string
+	Type        ContentType
+	Path        string         // absolute path to the item directory or file
+	Provider    string         // for provider-specific content (rules, hooks, commands), which provider
+	Files       []string       // relative paths of all files in item directory
+	ServerKey   string         // for MCP: which server entry in config.json this item represents
+	Meta        *metadata.Meta // loaded from .syllago.yaml if present
+	Library     bool           // true if item lives in the global content library (~/.syllago/content/)
+	Registry    string         // non-empty if item came from a git registry (value is the registry name)
+	Source      string         // "project", "global", "library", or registry name
 }
 
 // IsExample returns true if this item is tagged as example content.
-func (ci ContentItem) IsExample() bool {
+func (ci *ContentItem) IsExample() bool {
 	if ci.Meta == nil {
 		return false
 	}
@@ -88,7 +89,7 @@ func (ci ContentItem) IsExample() bool {
 }
 
 // IsBuiltin returns true if this item is tagged as built-in meta-content.
-func (ci ContentItem) IsBuiltin() bool {
+func (ci *ContentItem) IsBuiltin() bool {
 	if ci.Meta == nil {
 		return false
 	}
@@ -110,7 +111,7 @@ type Catalog struct {
 
 // ByType returns all items of a given type.
 func (c *Catalog) ByType(ct ContentType) []ContentItem {
-	var result []ContentItem
+	result := make([]ContentItem, 0, len(c.Items)/4)
 	for _, item := range c.Items {
 		if item.Type == ct {
 			result = append(result, item)
@@ -130,7 +131,7 @@ func (c *Catalog) CountByType() map[ContentType]int {
 
 // ByTypeShared returns shared-only items of a given type (from the main repo, not registries).
 func (c *Catalog) ByTypeShared(ct ContentType) []ContentItem {
-	var result []ContentItem
+	result := make([]ContentItem, 0, len(c.Items)/4)
 	for _, item := range c.Items {
 		if item.Type == ct && !item.Library && item.Registry == "" {
 			result = append(result, item)
@@ -141,7 +142,7 @@ func (c *Catalog) ByTypeShared(ct ContentType) []ContentItem {
 
 // ByRegistry returns all items from a specific named registry.
 func (c *Catalog) ByRegistry(name string) []ContentItem {
-	var result []ContentItem
+	result := make([]ContentItem, 0, len(c.Items)/4)
 	for _, item := range c.Items {
 		if item.Registry == name {
 			result = append(result, item)
@@ -163,7 +164,7 @@ func (c *Catalog) CountLibrary() int {
 
 // ByTypeLibrary returns items of the given type that came from the global library.
 func (c *Catalog) ByTypeLibrary(ct ContentType) []ContentItem {
-	var result []ContentItem
+	result := make([]ContentItem, 0, len(c.Items)/4)
 	for _, item := range c.Items {
 		if item.Type == ct && item.Library {
 			result = append(result, item)

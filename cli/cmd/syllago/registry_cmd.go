@@ -7,11 +7,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"time"
+
+	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/gitutil"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -64,7 +68,7 @@ var registryAddCmd = &cobra.Command{
 			name = registry.NameFromURL(gitURL)
 		}
 		if !catalog.IsValidRegistryName(name) {
-			return fmt.Errorf("registry name %q is invalid (use letters, numbers, - and _ with optional owner/repo format)", name)
+			return output.NewStructuredError(output.ErrRegistryInvalid, fmt.Sprintf("registry name %q is invalid", name), "Use letters, numbers, - and _ with optional owner/repo format")
 		}
 
 		cfg, err := config.Load(root)
@@ -75,15 +79,13 @@ var registryAddCmd = &cobra.Command{
 		// Check for duplicate name
 		for _, r := range cfg.Registries {
 			if r.Name == name {
-				return fmt.Errorf("registry %q already exists (use a different --name or remove it first)", name)
+				return output.NewStructuredError(output.ErrRegistryDuplicate, fmt.Sprintf("registry %q already exists", name), "Use a different --name or remove it first")
 			}
 		}
 
 		// Enforce allowedRegistries policy
 		if !cfg.IsRegistryAllowed(gitURL) {
-			return fmt.Errorf("registry URL %q is not in the allowedRegistries list.\n"+
-				"Your project config restricts which registries can be added.\n"+
-				"Contact your team lead to add it to .syllago/config.json", gitURL)
+			return output.NewStructuredError(output.ErrRegistryNotAllowed, fmt.Sprintf("registry URL %q is not in the allowedRegistries list", gitURL), "Contact your team lead to add it to .syllago/config.json")
 		}
 
 		// Security warning: prominent box on first registry, brief reminder otherwise
@@ -117,6 +119,19 @@ var registryAddCmd = &cobra.Command{
 
 		// Smart detection: check if this is a proper syllago registry.
 		dir, _ := registry.CloneDir(name)
+
+		// Decision #3: When no registry.yaml exists, run the content analyzer
+		// to generate one in the cache directory. This enables the scanner to
+		// discover content regardless of how the repo is organized.
+		if manifest, _ := registry.LoadManifestFromDir(dir); manifest == nil {
+			cfg := analyzer.DefaultConfig()
+			a := analyzer.New(cfg)
+			result, analyzeErr := a.Analyze(dir)
+			if analyzeErr == nil && len(result.AllItems()) > 0 {
+				_ = analyzer.WriteGeneratedManifest(name, result.AllItems())
+			}
+		}
+
 		scanResult := catalog.ScanNativeContent(dir)
 
 		if !scanResult.HasSyllagoStructure && len(scanResult.Providers) > 0 {
@@ -134,24 +149,43 @@ var registryAddCmd = &cobra.Command{
 				}
 				fmt.Fprintf(output.ErrWriter, "\nThis content cannot be added as a registry (registries require syllago format).\n")
 				fmt.Fprintf(output.ErrWriter, "To add this content to your library, use: syllago add <path> (coming soon)\n")
-				os.RemoveAll(dir)
-				return fmt.Errorf("not a syllago registry -- clone removed")
+				_ = os.RemoveAll(dir)
+				return output.NewStructuredError(output.ErrRegistryInvalid, "not a syllago registry -- clone removed", "This content cannot be added as a registry (registries require syllago format)")
 			}
 		} else if !scanResult.HasSyllagoStructure && len(scanResult.Providers) == 0 {
 			fmt.Fprintf(output.ErrWriter, "Warning: registry %q doesn't appear to contain any recognized content. Added anyway.\n", name)
 		}
 
+		// Probe visibility from hosting platform API
+		probeResult, _ := registry.ProbeVisibility(gitURL)
+
+		// Check manifest declaration and resolve (stricter wins)
+		manifestDecl := ""
+		if manifest, _ := registry.LoadManifestFromDir(dir); manifest != nil {
+			manifestDecl = manifest.Visibility
+		}
+		visibility := registry.ResolveVisibility(probeResult, manifestDecl)
+		now := time.Now().UTC()
+
+		if registry.IsPrivate(visibility) {
+			fmt.Fprintf(output.Writer, "Visibility: private (content from this registry will be tainted)\n")
+		} else {
+			fmt.Fprintf(output.Writer, "Visibility: public\n")
+		}
+
 		// Save to config
 		cfg.Registries = append(cfg.Registries, config.Registry{
-			Name: name,
-			URL:  gitURL,
-			Ref:  refFlag,
+			Name:                name,
+			URL:                 gitURL,
+			Ref:                 refFlag,
+			Visibility:          visibility,
+			VisibilityCheckedAt: &now,
 		})
 		if err := config.Save(root, cfg); err != nil {
 			// Config save failed — clean up the clone so it doesn't become orphaned.
 			dir, _ := registry.CloneDir(name)
-			os.RemoveAll(dir)
-			return fmt.Errorf("saving config: %w", err)
+			_ = os.RemoveAll(dir)
+			return output.NewStructuredErrorDetail(output.ErrRegistrySaveFailed, "saving registry config", "Check write permissions on .syllago/config.json", err.Error())
 		}
 
 		fmt.Fprintf(output.Writer, "Added registry: %s\n", name)
@@ -215,12 +249,12 @@ var registryRemoveCmd = &cobra.Command{
 			filtered = append(filtered, r)
 		}
 		if !found {
-			return fmt.Errorf("registry %q not found in config", name)
+			return output.NewStructuredError(output.ErrRegistryNotFound, fmt.Sprintf("registry %q not found in config", name), "Run 'syllago registry list' to see configured registries")
 		}
 
 		cfg.Registries = filtered
 		if err := config.Save(root, cfg); err != nil {
-			return fmt.Errorf("saving config: %w", err)
+			return output.NewStructuredErrorDetail(output.ErrConfigSave, "saving config after registry removal", "Check write permissions on .syllago/config.json", err.Error())
 		}
 
 		if err := registry.Remove(name); err != nil {
@@ -331,6 +365,8 @@ and "syllago install" to activate updated content.`,
 			return err
 		}
 
+		telemetry.Enrich("registry_count", len(cfg.Registries))
+
 		if len(cfg.Registries) == 0 {
 			fmt.Println("No registries configured.")
 			return nil
@@ -340,12 +376,14 @@ and "syllago install" to activate updated content.`,
 		if len(args) == 1 {
 			name := args[0]
 			if !registry.IsCloned(name) {
-				return fmt.Errorf("registry %q is not cloned locally — run `syllago registry add` first", name)
+				return output.NewStructuredError(output.ErrRegistryNotCloned, fmt.Sprintf("registry %q is not cloned locally", name), "Run 'syllago registry add' first")
 			}
 			fmt.Fprintf(output.Writer, "Syncing %s...\n", name)
 			if err := registry.Sync(name); err != nil {
 				return err
 			}
+			// Re-probe visibility on sync
+			reprobeRegistryVisibility(cfg, name, root)
 			fmt.Fprintf(output.Writer, "Synced: %s\n", name)
 			return nil
 		}
@@ -363,11 +401,12 @@ and "syllago install" to activate updated content.`,
 				fmt.Fprintf(output.ErrWriter, "Error syncing %s: %s\n", res.Name, res.Err)
 				hasErrors = true
 			} else {
+				reprobeRegistryVisibility(cfg, res.Name, root)
 				fmt.Fprintf(output.Writer, "Synced: %s\n", res.Name)
 			}
 		}
 		if hasErrors {
-			return fmt.Errorf("one or more registry syncs failed")
+			return output.NewStructuredError(output.ErrRegistrySyncFailed, "one or more registry syncs failed", "Check error messages above and retry")
 		}
 		return nil
 	},
@@ -418,10 +457,10 @@ Use --type to filter by content type. To install registry content, use
 				}
 			}
 			if !found {
-				return fmt.Errorf("registry %q not found in config", name)
+				return output.NewStructuredError(output.ErrRegistryNotFound, fmt.Sprintf("registry %q not found in config", name), "Run 'syllago registry list' to see configured registries")
 			}
 			if !registry.IsCloned(name) {
-				return fmt.Errorf("registry %q not cloned — run `syllago registry sync %s` first", name, name)
+				return output.NewStructuredError(output.ErrRegistryNotCloned, fmt.Sprintf("registry %q not cloned", name), fmt.Sprintf("Run 'syllago registry sync %s' first", name))
 			}
 			dir, _ := registry.CloneDir(name)
 			sources = append(sources, catalog.RegistrySource{Name: name, Path: dir})
@@ -448,6 +487,9 @@ Use --type to filter by content type. To install registry content, use
 		} else {
 			items = cat.Items
 		}
+
+		telemetry.Enrich("content_type", typeFilter)
+		telemetry.Enrich("item_count", len(items))
 
 		if output.JSON {
 			output.Print(items)
@@ -513,7 +555,7 @@ func runRegistryCreateNew(cmd *cobra.Command, name string) error {
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("getting working directory: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "getting working directory", "", err.Error())
 	}
 
 	// Check if already inside a git repo before creating anything.
@@ -578,6 +620,34 @@ func truncateStr(s string, max int) string {
 		return s[:max]
 	}
 	return s[:max-3] + "..."
+}
+
+// reprobeRegistryVisibility re-probes the visibility for a named registry
+// and saves the updated config if the visibility changed or the cache is stale.
+func reprobeRegistryVisibility(cfg *config.Config, name, root string) {
+	for i := range cfg.Registries {
+		if cfg.Registries[i].Name != name {
+			continue
+		}
+		r := &cfg.Registries[i]
+		if !registry.NeedsReprobe(r.VisibilityCheckedAt) {
+			return
+		}
+		probeResult, err := registry.ProbeVisibility(r.URL)
+		if err != nil {
+			return // don't update on error
+		}
+		manifestDecl := ""
+		if manifest, _ := registry.LoadManifest(name); manifest != nil {
+			manifestDecl = manifest.Visibility
+		}
+		newVis := registry.ResolveVisibility(probeResult, manifestDecl)
+		now := time.Now().UTC()
+		r.Visibility = newVis
+		r.VisibilityCheckedAt = &now
+		_ = config.Save(root, cfg) // best-effort save
+		return
+	}
 }
 
 func init() {

@@ -10,6 +10,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -58,20 +59,20 @@ func runRemove(cmd *cobra.Command, args []string) error {
 
 	globalDir := catalog.GlobalContentDir()
 	if globalDir == "" {
-		return fmt.Errorf("cannot determine home directory")
+		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Ensure $HOME is set in your environment")
 	}
 
 	// Use an empty temp dir as the project root so the project scan finds
 	// nothing, leaving only global items in the catalog.
 	emptyProjectRoot, err := os.MkdirTemp("", "syllago-remove-*")
 	if err != nil {
-		return fmt.Errorf("creating temp dir: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "creating temp dir failed", "Check filesystem permissions and disk space", err.Error())
 	}
-	defer os.RemoveAll(emptyProjectRoot)
+	defer func() { _ = os.RemoveAll(emptyProjectRoot) }()
 
 	cat, err := catalog.ScanWithGlobalAndRegistries(emptyProjectRoot, emptyProjectRoot, nil)
 	if err != nil {
-		return fmt.Errorf("scanning library: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning library failed", "Check that ~/.syllago/content/ exists and is readable", err.Error())
 	}
 
 	var matches []catalog.ContentItem
@@ -86,7 +87,7 @@ func runRemove(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(matches) == 0 {
-		return fmt.Errorf("No item named %q found in your library.\n  Hint: syllago list    (show all library items)", name)
+		return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no item named %q found in your library", name), "Run 'syllago list' to show all library items")
 	}
 
 	if len(matches) > 1 {
@@ -94,8 +95,7 @@ func runRemove(cmd *cobra.Command, args []string) error {
 		for _, m := range matches {
 			types = append(types, string(m.Type))
 		}
-		return fmt.Errorf("%q exists in multiple types: %s\n  Use --type to disambiguate: syllago remove %s --type <type>",
-			name, strings.Join(types, ", "), name)
+		return output.NewStructuredError(output.ErrItemAmbiguous, fmt.Sprintf("%q exists in multiple types: %s", name, strings.Join(types, ", ")), fmt.Sprintf("Use --type to disambiguate: syllago remove %s --type <type>", name))
 	}
 
 	item := matches[0]
@@ -127,7 +127,7 @@ func runRemove(cmd *cobra.Command, args []string) error {
 
 		scanner := bufio.NewScanner(os.Stdin)
 		if !scanner.Scan() {
-			return fmt.Errorf("no input received")
+			return output.NewStructuredError(output.ErrInputTerminal, "no input received", "Run with --force to skip confirmation")
 		}
 		answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
 		if answer != "y" && answer != "yes" {
@@ -149,8 +149,8 @@ func runRemove(cmd *cobra.Command, args []string) error {
 	}
 
 	removedPath := item.Path
-	if err := os.RemoveAll(item.Path); err != nil {
-		return fmt.Errorf("removing from library: %w", err)
+	if err := catalog.RemoveLibraryItem(item.Path); err != nil {
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "removing from library failed", "Check filesystem permissions", err.Error())
 	}
 
 	if output.JSON {
@@ -168,8 +168,10 @@ func runRemove(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(output.Writer, "Uninstalled from: %s\n", strings.Join(uninstalledFrom, ", "))
 		}
 		fmt.Fprintf(output.Writer, "Removed %q from library (%s).\n", name, item.Type.Label())
-		fmt.Fprintf(output.Writer, "\n  Next: syllago import <name>    (re-import to library)\n")
+		fmt.Fprintf(output.Writer, "\n  Next: syllago add <type>/<name> --from <provider>    (re-add to library)\n")
 	}
 
+	telemetry.Enrich("content_type", typeFilter)
+	telemetry.Enrich("dry_run", dryRun)
 	return nil
 }

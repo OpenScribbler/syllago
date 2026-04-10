@@ -243,8 +243,8 @@ func TestRemoveAmbiguousTypeRequiresFlag(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for ambiguous name, got nil")
 	}
-	if !strings.Contains(err.Error(), "--type") {
-		t.Errorf("expected error to mention --type flag, got: %s", err)
+	if !strings.Contains(err.Error(), "multiple types") {
+		t.Errorf("expected error to mention 'multiple types', got: %s", err)
 	}
 }
 

@@ -189,7 +189,7 @@ func copyFile(src, dest string) error {
 	if err != nil {
 		return err
 	}
-	defer srcFile.Close()
+	defer func() { _ = srcFile.Close() }()
 
 	info, err := srcFile.Stat()
 	if err != nil {
@@ -204,7 +204,7 @@ func copyFile(src, dest string) error {
 	if err != nil {
 		return err
 	}
-	defer destFile.Close()
+	defer func() { _ = destFile.Close() }()
 
 	_, err = io.Copy(destFile, srcFile)
 	return err

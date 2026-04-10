@@ -1,0 +1,261 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://syllago.dev/schemas/provider-source-manifest.json",
+  "title": "Provider Source Manifest",
+  "description": "Defines fetchable sources for a single AI coding tool provider's content type definitions. Used by the automated provider monitoring pipeline.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "last_verified",
+    "slug",
+    "display_name",
+    "vendor",
+    "status",
+    "fetch_tier",
+    "change_detection",
+    "content_types"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Manifest format version. Bump when the schema changes.",
+      "enum": ["1"]
+    },
+    "last_verified": {
+      "type": "string",
+      "description": "ISO date when URLs and data were last confirmed accurate.",
+      "format": "date"
+    },
+    "provider_version": {
+      "type": "string",
+      "description": "Provider version at time of last verification. Empty string if no public versioning."
+    },
+    "slug": {
+      "type": "string",
+      "description": "Lowercase kebab-case identifier matching syllago's provider ID.",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable provider name."
+    },
+    "vendor": {
+      "type": "string",
+      "description": "Company or individual behind the provider."
+    },
+    "status": {
+      "type": "string",
+      "description": "Provider lifecycle status.",
+      "enum": ["active", "archived", "beta"]
+    },
+    "fetch_tier": {
+      "type": "string",
+      "description": "Primary fetch strategy for this provider's sources.",
+      "enum": ["gh-api", "llms-txt", "html-scrape"]
+    },
+    "repo": {
+      "type": "string",
+      "description": "GitHub owner/repo. Omit if closed-source.",
+      "pattern": "^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$"
+    },
+    "repo_branch": {
+      "type": "string",
+      "description": "Default branch name.",
+      "default": "main"
+    },
+    "successor": {
+      "type": "object",
+      "description": "For archived providers: the active successor.",
+      "required": ["slug", "repo"],
+      "additionalProperties": false,
+      "properties": {
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$"
+        },
+        "repo_branch": {
+          "type": "string",
+          "default": "main"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "archived", "beta"]
+        }
+      }
+    },
+    "change_detection": {
+      "type": "object",
+      "description": "How to detect when this provider's content has changed.",
+      "required": ["method", "endpoint"],
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "type": "string",
+          "description": "Detection strategy.",
+          "enum": ["github-releases", "github-commits", "content-hash"]
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "URL to check for changes (releases API, commits API, or page URL for hashing).",
+          "format": "uri"
+        }
+      }
+    },
+    "changelog": {
+      "type": "array",
+      "description": "Changelog sources for human review and release tracking.",
+      "items": {
+        "$ref": "#/$defs/labeled_url"
+      }
+    },
+    "config_schema": {
+      "type": "object",
+      "description": "Primary machine-readable config schema covering multiple content types. Omit if provider has no schema.",
+      "required": ["url", "format"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["json-schema", "json", "zod", "rust-schemars", "go-struct", "none"]
+        },
+        "draft": {
+          "type": "string",
+          "description": "JSON Schema draft version if applicable.",
+          "examples": ["2020-12", "draft-07"]
+        }
+      }
+    },
+    "content_types": {
+      "type": "object",
+      "description": "Per content type source definitions.",
+      "required": ["rules", "hooks", "mcp", "skills", "agents", "commands"],
+      "additionalProperties": false,
+      "properties": {
+        "rules": { "$ref": "#/$defs/content_type" },
+        "hooks": { "$ref": "#/$defs/content_type" },
+        "mcp": { "$ref": "#/$defs/content_type" },
+        "skills": { "$ref": "#/$defs/content_type" },
+        "agents": { "$ref": "#/$defs/content_type" },
+        "commands": { "$ref": "#/$defs/content_type" }
+      }
+    }
+  },
+  "$defs": {
+    "content_type": {
+      "type": "object",
+      "description": "A content type's source definitions. Either has sources (supported) or supported: false.",
+      "properties": {
+        "sources": {
+          "type": "array",
+          "description": "Ordered list of sources. Pipeline tries schema/source-code first, falls back to docs.",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/source_entry" }
+        },
+        "supported": {
+          "type": "boolean",
+          "const": false,
+          "description": "Set to false when the provider does not support this content type."
+        }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        { "required": ["sources"] },
+        { "required": ["supported"] }
+      ]
+    },
+    "source_entry": {
+      "type": "object",
+      "description": "A single fetchable source URL with metadata about what it contains and how to parse it.",
+      "required": ["url", "type", "format", "extracts"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Full URL to fetch.",
+          "format": "uri"
+        },
+        "type": {
+          "type": "string",
+          "description": "What kind of source this is.",
+          "enum": ["schema", "source-code", "docs", "example"]
+        },
+        "format": {
+          "type": "string",
+          "description": "File format of the source.",
+          "enum": [
+            "json-schema",
+            "json",
+            "typescript",
+            "rust",
+            "go",
+            "python",
+            "markdown",
+            "toml",
+            "yaml",
+            "html"
+          ]
+        },
+        "extracts": {
+          "type": "array",
+          "description": "What data types this URL provides. Guides the pipeline on what to parse for.",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "event_names",
+              "event_io_schemas",
+              "event_table",
+              "hook_config_fields",
+              "hook_decisions",
+              "matcher_format",
+              "server_config_fields",
+              "transport_types",
+              "auth_options",
+              "file_format",
+              "file_locations",
+              "hierarchy",
+              "discovery_rules",
+              "frontmatter_fields",
+              "config_fields",
+              "config_examples",
+              "setup_examples",
+              "env_vars",
+              "exit_codes",
+              "features"
+            ]
+          }
+        },
+        "json_path": {
+          "type": "string",
+          "description": "JSONPath to the relevant section within a larger file. Only for schema/json sources."
+        }
+      }
+    },
+    "labeled_url": {
+      "type": "object",
+      "required": ["url", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

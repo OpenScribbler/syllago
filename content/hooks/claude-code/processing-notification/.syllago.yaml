@@ -1,6 +1,0 @@
-name: processing-notification
-description: Example hook that processes notifications
-hidden: true
-tags:
-  - builtin
-  - example

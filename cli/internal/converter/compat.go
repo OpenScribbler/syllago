@@ -45,7 +45,7 @@ func (l CompatLevel) Label() string {
 type HookFeature int
 
 const (
-	FeatureMatcher       HookFeature = iota
+	FeatureMatcher HookFeature = iota
 	FeatureAsync
 	FeatureStatusMessage
 	FeatureLLMHook
@@ -103,11 +103,101 @@ var HookCapabilities = map[string]ProviderCapability{
 			FeatureTimeout:       {Supported: true, Notes: "milliseconds"},
 		},
 	},
+	"vs-code-copilot": {
+		Features: map[HookFeature]FeatureSupport{
+			FeatureMatcher:       {Supported: true},
+			FeatureAsync:         {Supported: true},
+			FeatureStatusMessage: {Supported: true},
+			FeatureLLMHook:       {Supported: true},
+			FeatureTimeout:       {Supported: true, Notes: "milliseconds"},
+		},
+	},
 }
 
 // HookProviders returns the slugs of providers that support hooks, in display order.
 func HookProviders() []string {
-	return []string{"claude-code", "gemini-cli", "copilot-cli", "kiro"}
+	return []string{"claude-code", "gemini-cli", "copilot-cli", "kiro", "vs-code-copilot"}
+}
+
+// --- Structured output capabilities ---
+//
+// Hooks can return structured JSON on stdout to influence behavior.
+// Field names use the spec's canonical snake_case vocabulary.
+// Provider-native field names (e.g., CC's camelCase "updatedInput") are
+// handled by the provider's adapter, not by these canonical constants.
+
+// HookOutputField identifies a structured output field that a hook can return.
+type HookOutputField string
+
+const (
+	OutputUpdatedInput   HookOutputField = "updated_input"
+	OutputSuppressOutput HookOutputField = "suppress_output"
+	OutputSystemMessage  HookOutputField = "system_message"
+	OutputContext        HookOutputField = "context"
+	OutputContinue       HookOutputField = "continue"
+	OutputDecision       HookOutputField = "decision"
+)
+
+// AllOutputFields lists every structured output field, in documentation order.
+var AllOutputFields = []HookOutputField{
+	OutputUpdatedInput,
+	OutputSuppressOutput,
+	OutputSystemMessage,
+	OutputContext,
+	OutputContinue,
+	OutputDecision,
+}
+
+// HookOutputCapabilities maps provider slugs to the set of structured output
+// fields they support. A missing provider means no structured output support.
+var HookOutputCapabilities = map[string]map[HookOutputField]bool{
+	"claude-code": {
+		OutputUpdatedInput:   true,
+		OutputSuppressOutput: true,
+		OutputSystemMessage:  true,
+		OutputContext:        true,
+		OutputContinue:       true,
+		OutputDecision:       true,
+	},
+	"copilot-cli": {
+		// Copilot CLI supports decision in preToolUse hooks
+		OutputDecision: true,
+	},
+	"vs-code-copilot": {
+		OutputUpdatedInput:   true,
+		OutputSuppressOutput: true,
+		OutputSystemMessage:  true,
+		OutputContext:        true,
+		OutputContinue:       true,
+		OutputDecision:       true,
+	},
+	"gemini-cli": {
+		// Gemini CLI supports decision and system_message (partial structured output)
+		OutputDecision:      true,
+		OutputSystemMessage: true,
+	},
+	"cursor": {
+		// Cursor supports decision field (partial structured output)
+		OutputDecision: true,
+	},
+	"kiro":     {}, // No structured output support
+	"windsurf": {}, // No structured output support
+}
+
+// OutputFieldsLostWarnings compares source and target provider structured output
+// capabilities and returns warnings for fields the source supports but the target
+// does not. Returns nil if no capabilities are lost (or if source has none).
+func OutputFieldsLostWarnings(sourceProvider, targetSlug string) []string {
+	sourceCaps := HookOutputCapabilities[sourceProvider]
+	targetCaps := HookOutputCapabilities[targetSlug]
+
+	var warnings []string
+	for _, field := range AllOutputFields {
+		if sourceCaps[field] && !targetCaps[field] {
+			warnings = append(warnings, string(field))
+		}
+	}
+	return warnings
 }
 
 // FeatureResult describes what happens to one feature when targeting a provider.

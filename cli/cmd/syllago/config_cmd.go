@@ -75,7 +75,7 @@ var configAddCmd = &cobra.Command{
 		slug := args[0]
 		for _, p := range cfg.Providers {
 			if p == slug {
-				return fmt.Errorf("provider %q already configured", slug)
+				return output.NewStructuredError(output.ErrInputInvalid, fmt.Sprintf("provider %q already configured", slug), "Use 'syllago config list' to see current configuration")
 			}
 		}
 		// Warn about unknown provider slugs (but still allow them)
@@ -123,7 +123,7 @@ var configRemoveCmd = &cobra.Command{
 			filtered = append(filtered, p)
 		}
 		if !found {
-			return fmt.Errorf("provider %q not found in config", slug)
+			return output.NewStructuredError(output.ErrConfigNotFound, fmt.Sprintf("provider %q not found in config", slug), "Run 'syllago config list' to see configured providers")
 		}
 		cfg.Providers = filtered
 		if err := config.Save(root, cfg); err != nil {
