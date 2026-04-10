@@ -20,7 +20,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/rmhubbert/bubbletea-overlay v0.6.5
 	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.9
+	github.com/spf13/pflag v1.0.10
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/yuin/goldmark v1.7.13
