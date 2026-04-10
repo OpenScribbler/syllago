@@ -180,15 +180,33 @@ var capmonSeedCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		provider, _ := cmd.Flags().GetString("provider")
 		forceOverwrite, _ := cmd.Flags().GetBool("force-overwrite-exclusive")
-		if provider != "" {
-			if _, err := capmon.SanitizeSlug(provider); err != nil {
-				return fmt.Errorf("invalid --provider: %w", err)
-			}
+		cacheRoot, _ := cmd.Flags().GetString("cache-root")
+		if cacheRoot == "" {
+			cacheRoot = ".capmon-cache"
+		}
+		if provider == "" {
+			return fmt.Errorf("--provider is required: specify a provider slug to seed")
+		}
+		if _, err := capmon.SanitizeSlug(provider); err != nil {
+			return fmt.Errorf("invalid --provider: %w", err)
 		}
 		telemetry.Enrich("provider", provider)
+
+		// Load extracted fields from cache and run recognizers.
+		var extracted map[string]string
+		if provider != "" {
+			var err error
+			extracted, err = capmon.LoadAndRecognizeCache(cacheRoot, provider)
+			if err != nil {
+				// Cache may not exist yet — seed with empty extracted (creates bare stub)
+				extracted = make(map[string]string)
+			}
+		}
+
 		opts := capmon.SeedOptions{
 			CapsDir:                 "docs/provider-capabilities",
 			Provider:                provider,
+			Extracted:               extracted,
 			ForceOverwriteExclusive: forceOverwrite,
 		}
 		return capmon.SeedProviderCapabilities(opts)
@@ -241,6 +259,7 @@ func init() {
 
 	capmonSeedCmd.Flags().String("provider", "", "Seed only this provider slug")
 	capmonSeedCmd.Flags().Bool("force-overwrite-exclusive", false, "Allow overwriting provider_exclusive entries (prints warning)")
+	capmonSeedCmd.Flags().String("cache-root", "", "Path to .capmon-cache/ (default: .capmon-cache)")
 
 	capmonTestFixturesCmd.Flags().Bool("update", false, "Re-fetch live source and update fixture files")
 	capmonTestFixturesCmd.Flags().String("provider", "", "Provider slug for --update (required with --update)")

@@ -72,14 +72,19 @@ content_types:
     # Config file: crush.json "mcp" key (project or global)
 
   # --- Skills ---
-  # Supports Agent Skills standard (SKILL.md folders).
+  # Implements Agent Skills open standard (https://agentskills.io).
   skills:
     sources:
-      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/README.md
-        type: docs
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/skills.go
+        type: source-code
+        format: go
+        extracts: [frontmatter_fields, file_format, constraints]
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/builtin/crush-config/SKILL.md
+        type: example
         format: markdown
-        extracts: [file_locations, discovery_rules]
-    # Format: SKILL.md with YAML frontmatter (name, description).
+        extracts: [frontmatter_fields, config_examples]
+    # Format: SKILL.md with YAML frontmatter (name required, description required,
+    #   license optional, compatibility optional, metadata map optional).
     # Dirs: .crush/skills/, .agents/skills/ (project), ~/.config/crush/skills/ (user).
     # Also discovers .claude/skills/ and .cursor/skills/ for cross-provider compat.
 
