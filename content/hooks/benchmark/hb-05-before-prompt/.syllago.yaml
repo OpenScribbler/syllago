@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-05-before-prompt
+type: hooks
+description: "Benchmark: validates before_prompt event fires"
+hook:
+  event: before_prompt
+  blocking: false
+  command: ./hb-05.sh

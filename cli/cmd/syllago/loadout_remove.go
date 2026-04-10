@@ -42,7 +42,7 @@ func runLoadoutRemove(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("reading snapshot: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "reading snapshot failed", "The snapshot file may be corrupted; try removing it manually", err.Error())
 	}
 
 	// Without --auto, show what will happen and ask for confirmation
@@ -71,7 +71,7 @@ func runLoadoutRemove(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(output.Writer, "\nRemove loadout? [y/N]: ")
 			scanner := bufio.NewScanner(os.Stdin)
 			if !scanner.Scan() {
-				return fmt.Errorf("no input received")
+				return output.NewStructuredError(output.ErrInputTerminal, "no input received", "Run with --auto to skip confirmation")
 			}
 			answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
 			if answer != "y" && answer != "yes" {
@@ -94,7 +94,7 @@ func runLoadoutRemove(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("removing loadout: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "removing loadout failed", "Check filesystem permissions and try again", err.Error())
 	}
 
 	if !autoMode {

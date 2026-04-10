@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/loadout"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 var loadoutCreateCmd = &cobra.Command{
@@ -24,35 +24,17 @@ func init() {
 	loadoutCmd.AddCommand(loadoutCreateCmd)
 }
 
-// loadoutCreateManifest mirrors loadout.Manifest for YAML output during creation.
-// We define it here rather than importing it to avoid coupling the CLI wizard
-// to internal parsing validation (which requires kind/version/provider to already
-// be valid). This struct is write-only — we marshal it, never unmarshal.
-type loadoutCreateManifest struct {
-	Kind        string   `yaml:"kind"`
-	Version     int      `yaml:"version"`
-	Provider    string   `yaml:"provider"`
-	Name        string   `yaml:"name"`
-	Description string   `yaml:"description"`
-	Rules       []string `yaml:"rules,omitempty"`
-	Hooks       []string `yaml:"hooks,omitempty"`
-	Skills      []string `yaml:"skills,omitempty"`
-	Agents      []string `yaml:"agents,omitempty"`
-	MCP         []string `yaml:"mcp,omitempty"`
-	Commands    []string `yaml:"commands,omitempty"`
-}
-
 func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 	projectRoot, _ := findProjectRoot()
 	checkAndWarnStaleSnapshot(projectRoot)
 
 	if !isInteractive() {
-		return fmt.Errorf("loadout create requires an interactive terminal")
+		return output.NewStructuredError(output.ErrInputTerminal, "loadout create requires an interactive terminal", "Run this command in an interactive terminal session")
 	}
 
 	root, err := findContentRepoRoot()
 	if err != nil {
-		return fmt.Errorf("could not find syllago repo: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogNotFound, "could not find syllago repo", "Run 'syllago init' to set up a content repository", err.Error())
 	}
 	if projectRoot == "" {
 		projectRoot = root
@@ -60,7 +42,7 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 
 	cat, err := catalog.Scan(root, projectRoot)
 	if err != nil {
-		return fmt.Errorf("scanning catalog: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -68,17 +50,17 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 	// Step 1: Name
 	fmt.Fprint(output.Writer, "Loadout name: ")
 	if !scanner.Scan() {
-		return fmt.Errorf("no input")
+		return output.NewStructuredError(output.ErrInputTerminal, "no input received", "Provide a loadout name when prompted")
 	}
 	name := strings.TrimSpace(scanner.Text())
 	if errMsg := catalog.ValidateUserName(name); errMsg != "" {
-		return fmt.Errorf("invalid loadout name: %s", errMsg)
+		return output.NewStructuredError(output.ErrInputInvalid, fmt.Sprintf("invalid loadout name: %s", errMsg), "Use lowercase letters, numbers, and hyphens only")
 	}
 
 	// Step 2: Description
 	fmt.Fprint(output.Writer, "Description: ")
 	if !scanner.Scan() {
-		return fmt.Errorf("no input")
+		return output.NewStructuredError(output.ErrInputTerminal, "no input received", "Provide a description when prompted")
 	}
 	description := strings.TrimSpace(scanner.Text())
 
@@ -91,13 +73,7 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	manifest := loadoutCreateManifest{
-		Kind:        "loadout",
-		Version:     1,
-		Provider:    providerSlug,
-		Name:        name,
-		Description: description,
-	}
+	itemsByType := map[catalog.ContentType][]string{}
 
 	// Step 4: For each content type, let user select items
 	selectableTypes := []catalog.ContentType{
@@ -155,20 +131,27 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 			selected = append(selected, available[idx-1].Name)
 		}
 
-		switch ct {
-		case catalog.Rules:
-			manifest.Rules = selected
-		case catalog.Hooks:
-			manifest.Hooks = selected
-		case catalog.Skills:
-			manifest.Skills = selected
-		case catalog.Agents:
-			manifest.Agents = selected
-		case catalog.MCP:
-			manifest.MCP = selected
-		case catalog.Commands:
-			manifest.Commands = selected
+		itemsByType[ct] = selected
+	}
+
+	globalDir := catalog.GlobalContentDir()
+	manifest := loadout.BuildManifestFromNames(providerSlug, name, description, itemsByType, globalDir)
+
+	// G3 privacy gate: warn about private items in the loadout.
+	var selectedItems []catalog.ContentItem
+	for ct, names := range itemsByType {
+		for _, n := range names {
+			for _, item := range cat.Items {
+				if item.Type == ct && item.Name == n {
+					selectedItems = append(selectedItems, item)
+					break
+				}
+			}
 		}
+	}
+	if warnings := loadout.CheckPrivateItems(selectedItems); len(warnings) > 0 {
+		fmt.Fprintln(output.ErrWriter)
+		fmt.Fprintln(output.ErrWriter, loadout.FormatPrivateWarnings(warnings))
 	}
 
 	// Step 5: Review
@@ -196,19 +179,10 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Step 6: Write loadout.yaml
-	outDir := filepath.Join(root, "content", "loadouts", providerSlug, name)
-	if err := os.MkdirAll(outDir, 0755); err != nil {
-		return fmt.Errorf("creating directory: %w", err)
-	}
-
-	data, err := yaml.Marshal(manifest)
+	parentDir := filepath.Join(root, "content", "loadouts", providerSlug)
+	outPath, err := loadout.WriteManifest(manifest, parentDir)
 	if err != nil {
-		return fmt.Errorf("marshaling YAML: %w", err)
-	}
-
-	outPath := filepath.Join(outDir, "loadout.yaml")
-	if err := os.WriteFile(outPath, data, 0644); err != nil {
-		return fmt.Errorf("writing loadout.yaml: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "writing loadout failed", "Check filesystem permissions", err.Error())
 	}
 
 	fmt.Fprintf(output.Writer, "\nCreated loadout at: %s\n", outPath)

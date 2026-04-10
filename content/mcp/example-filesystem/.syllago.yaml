@@ -1,9 +1,0 @@
-name: example-filesystem
-description: Basic MCP server configuration for filesystem access
-version: "1.0"
-hidden: true
-tags:
-  - example
-  - mcp
-  - filesystem
-  - server-config

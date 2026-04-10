@@ -1,0 +1,24 @@
+name: "Vouch: Check PR"
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: mitchellh/vouch/action/check-pr@c6d80ead49839655b61b422700b7a3bc9d0804a9 # v1.4.2
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+          auto-close: true
+          vouched-repo: ghostty-org/ghostty
+          template-file: .github/vouch-pr-response.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

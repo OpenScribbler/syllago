@@ -1,0 +1,82 @@
+package promote
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
+)
+
+// CheckPrivacyGate implements Gate G1: blocks publishing private content to a public registry.
+// It checks both the content's taint (belt) and the target registry's current visibility (suspenders).
+func CheckPrivacyGate(item catalog.ContentItem, targetRegistry, repoRoot string) error {
+	// Belt: check content taint
+	if item.Meta == nil || item.Meta.SourceRegistry == "" || !registry.IsPrivate(item.Meta.SourceVisibility) {
+		return nil // public or untainted content can go anywhere
+	}
+
+	// Suspenders: check target registry visibility (live probe if stale)
+	targetVisibility := registry.VisibilityUnknown
+	cfg, err := config.Load(repoRoot)
+	if err == nil {
+		for _, r := range cfg.Registries {
+			if r.Name == targetRegistry {
+				targetVisibility = r.Visibility
+				// Re-probe if stale, resolving against manifest (stricter wins)
+				if registry.NeedsReprobe(r.VisibilityCheckedAt) {
+					if vis, probeErr := registry.ProbeVisibility(r.URL); probeErr == nil {
+						manifestDecl := ""
+						if manifest, _ := registry.LoadManifest(targetRegistry); manifest != nil {
+							manifestDecl = manifest.Visibility
+						}
+						targetVisibility = registry.ResolveVisibility(vis, manifestDecl)
+					}
+				}
+				break
+			}
+		}
+	}
+
+	if !registry.IsPrivate(targetVisibility) {
+		// Target is public, content is private → BLOCK
+		return output.NewStructuredErrorDetail(output.ErrPrivacyPublishBlocked,
+			fmt.Sprintf("cannot publish %q to registry %q", item.Name, targetRegistry),
+			"Remove the private taint by recreating the content in your library without the private registry association",
+			fmt.Sprintf("Content origin: %s (private)\nTarget registry: %s (public)", item.Meta.SourceRegistry, targetRegistry))
+	}
+
+	return nil // private→private is fine
+}
+
+// CheckSharePrivacyGate implements Gate G2: blocks sharing private content to a public repo.
+// Probes the current repo's remote URL to determine visibility.
+func CheckSharePrivacyGate(item catalog.ContentItem, repoRoot string) error {
+	// Check content taint
+	if item.Meta == nil || item.Meta.SourceRegistry == "" || !registry.IsPrivate(item.Meta.SourceVisibility) {
+		return nil // not tainted
+	}
+
+	// Probe the current repo's visibility via its remote URL
+	remoteURL, err := commandOutput(repoRoot, "git", "remote", "get-url", "origin")
+	if err != nil {
+		// Fail-closed: can't determine remote visibility → block to prevent leaking private content.
+		return output.NewStructuredError(output.ErrPrivacyShareBlocked,
+			fmt.Sprintf("cannot share %q: unable to determine repository visibility", item.Name),
+			"Ensure the repo has a git remote configured, or remove the private taint from the content")
+	}
+	remoteURL = strings.TrimSpace(remoteURL)
+
+	repoVis, _ := registry.ProbeVisibility(remoteURL)
+	if !registry.IsPrivate(repoVis) {
+		// Repo is public, content is private → BLOCK
+		return output.NewStructuredErrorDetail(output.ErrPrivacyShareBlocked,
+			fmt.Sprintf("cannot share %q to this repository", item.Name),
+			"Remove the private taint by recreating the content in your library without the private registry association",
+			fmt.Sprintf("Content origin: %s (private)\nTarget repo: %s (public)", item.Meta.SourceRegistry, remoteURL))
+	}
+
+	return nil
+}

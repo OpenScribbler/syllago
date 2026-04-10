@@ -9,6 +9,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -63,20 +64,20 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 
 	globalDir := catalog.GlobalContentDir()
 	if globalDir == "" {
-		return fmt.Errorf("cannot determine home directory")
+		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
 	}
 
 	// Use an empty temp dir as contentRoot to avoid scan shadowing.
 	// When contentRoot == globalDir, items get tagged "project" instead of "global".
 	emptyRoot, err := os.MkdirTemp("", "syllago-uninstall-*")
 	if err != nil {
-		return fmt.Errorf("creating temp dir: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "creating temp dir", "Check filesystem permissions", err.Error())
 	}
-	defer os.RemoveAll(emptyRoot)
+	defer func() { _ = os.RemoveAll(emptyRoot) }()
 
 	cat, err := catalog.ScanWithGlobalAndRegistries(emptyRoot, emptyRoot, nil)
 	if err != nil {
-		return fmt.Errorf("scanning library: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning library", "Check file permissions in ~/.syllago/content/", err.Error())
 	}
 
 	// Find the item in the global library
@@ -92,7 +93,9 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		break
 	}
 	if item == nil {
-		return fmt.Errorf("No item named %q found in your library.\n  Hint: syllago list    (show all library items)", name)
+		return output.NewStructuredError(output.ErrInstallItemNotFound,
+			fmt.Sprintf("no item named %q found in your library", name),
+			"Hint: syllago list    (show all library items)")
 	}
 
 	// Determine which providers to uninstall from
@@ -101,14 +104,14 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		prov := findProviderBySlug(fromSlug)
 		if prov == nil {
 			slugs := providerSlugs()
-			output.PrintError(1, "unknown provider: "+fromSlug,
-				"Available: "+strings.Join(slugs, ", "))
-			return output.SilentError(fmt.Errorf("unknown provider: %s", fromSlug))
+			return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Available: "+strings.Join(slugs, ", "))
 		}
 		// Verify it is actually installed there
 		status := installer.CheckStatus(*item, *prov, globalDir)
 		if status != installer.StatusInstalled {
-			return fmt.Errorf("%q is not installed in %s", name, prov.Name)
+			return output.NewStructuredError(output.ErrInstallNotInstalled,
+				fmt.Sprintf("%q is not installed in %s", name, prov.Name),
+				"Run 'syllago list --installed' to see installed items")
 		}
 		targets = []provider.Provider{*prov}
 	} else {
@@ -120,7 +123,9 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 			}
 		}
 		if len(targets) == 0 {
-			return fmt.Errorf("%q is not installed in any provider", name)
+			return output.NewStructuredError(output.ErrInstallNotInstalled,
+				fmt.Sprintf("%q is not installed in any provider", name),
+				"Run 'syllago list --installed' to see installed items")
 		}
 	}
 
@@ -160,8 +165,6 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		}
 		removedFrom = append(removedFrom, prov.Name)
 		if !output.JSON && !output.Quiet {
-			// desc contains the path/detail of what was removed (e.g. the target file path).
-			// Using it directly communicates what state changed, per CLI Design Standards.
 			if desc != "" {
 				fmt.Fprintf(output.Writer, "Removed %s\n", desc)
 			} else {
@@ -180,5 +183,8 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(output.Writer, "  Remove with: syllago remove %s\n", name)
 	}
 
+	telemetry.Enrich("provider", fromSlug)
+	telemetry.Enrich("content_type", typeFilter)
+	telemetry.Enrich("dry_run", dryRun)
 	return nil
 }

@@ -1,0 +1,29 @@
+╭───Install ───────────────────────────────────────────────────────────────────╮
+│  [1 Provider]  [2 Conflicts]                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  Install-path conflict detected
+
+  ! Gemini CLI and OpenCode share a read path:
+    <TESTDIR>
+
+  How do you want to resolve this?
+
+  > Shared path only
+      Install once to the shared path — other providers pick it up automatically
+
+    Own dirs only
+      Install to each provider's separate directory — skip the shared path
+
+    Install to all
+      Install everywhere (may cause duplicate content warnings)
+
+                                                           Back      Install
+
+
+
+
+
+
+
+
+

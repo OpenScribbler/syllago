@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,6 +64,42 @@ func StageConfigs(stagingDir string, globalConfigPaths []string) ([]ConfigSnapsh
 	return snapshots, nil
 }
 
+// protectStagedFiles makes specific files read-only in staged config directories.
+// This prevents providers from deleting credential files during keychain migration
+// while still allowing reads. Patterns are matched against file basenames.
+func protectStagedFiles(snapshots []ConfigSnapshot, patterns []string) {
+	for _, snap := range snapshots {
+		info, err := os.Stat(snap.StagedPath)
+		if err != nil || !info.IsDir() {
+			continue
+		}
+		_ = filepath.WalkDir(snap.StagedPath, func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return nil
+			}
+			base := filepath.Base(path)
+			for _, pattern := range patterns {
+				if matched, _ := filepath.Match(pattern, base); matched {
+					_ = os.Chmod(path, 0444)
+				}
+			}
+			return nil
+		})
+	}
+}
+
+// shouldSkipDiff checks if a config path matches any of the skip patterns.
+// Patterns are matched against the file's base name.
+func shouldSkipDiff(originalPath string, patterns []string) bool {
+	base := filepath.Base(originalPath)
+	for _, pattern := range patterns {
+		if matched, _ := filepath.Match(pattern, base); matched {
+			return true
+		}
+	}
+	return false
+}
+
 // DiffResult describes changes to one config path after the sandbox session.
 type DiffResult struct {
 	Snapshot   ConfigSnapshot
@@ -104,11 +141,16 @@ func ComputeDiffs(snapshots []ConfigSnapshot) ([]DiffResult, error) {
 }
 
 // ApplyDiff copies the staged version back to the original path.
+// If the staged copy no longer exists, the change is skipped — we never delete
+// the user's original config based on a missing staged file.
 // Call this only after user approval.
 func ApplyDiff(result DiffResult) error {
 	info, err := os.Stat(result.Snapshot.StagedPath)
 	if err != nil {
-		return fmt.Errorf("staged path gone: %w", err)
+		if errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("staged copy no longer exists — skipping to protect original at %s", result.Snapshot.OriginalPath)
+		}
+		return fmt.Errorf("staged path error: %w", err)
 	}
 	if info.IsDir() {
 		return copyDir(result.Snapshot.StagedPath, result.Snapshot.OriginalPath)
@@ -128,6 +170,10 @@ func hashPath(path string) ([]byte, error) {
 			if err != nil {
 				return err
 			}
+			// Skip symlinks — they may be broken and can't be hashed by content.
+			if d.Type()&os.ModeSymlink != 0 {
+				return nil
+			}
 			rel, _ := filepath.Rel(path, p)
 			fmt.Fprintf(h, "%s\x00", rel)
 			if !d.IsDir() {
@@ -135,7 +181,7 @@ func hashPath(path string) ([]byte, error) {
 				if err != nil {
 					return err
 				}
-				defer f.Close()
+				defer func() { _ = f.Close() }()
 				if _, err := io.Copy(h, f); err != nil {
 					return err
 				}
@@ -150,7 +196,7 @@ func hashPath(path string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		if _, err := io.Copy(h, f); err != nil {
 			return nil, err
 		}
@@ -225,18 +271,79 @@ func buildDiff(orig, staged string) (string, bool) {
 	return diff, highRisk
 }
 
-// hasHighRiskKeys checks if data contains MCP server, hooks, or commands definitions.
-func hasHighRiskKeys(data []byte) bool {
+// safeKeys is the allowlist of JSON keys whose changes are considered low-risk
+// and can be auto-approved. Everything not in this list requires explicit user
+// approval. This is an allowlist (not a denylist) so that unknown/new keys
+// default to high-risk — the safe choice when we don't know what a key does.
+var safeKeys = map[string]bool{
+	// User preferences and display settings
+	"model": true, "theme": true, "locale": true, "editor": true,
+	"fontSize": true, "fontFamily": true, "tabSize": true,
+	"lineNumbers": true, "wordWrap": true, "minimap": true,
+	"colorScheme": true, "autoSave": true, "formatOnSave": true,
+	// Provider-specific settings
+	"temperature": true, "maxTokens": true, "apiVersion": true,
+	"systemPrompt": true, "contextWindow": true,
+	// Telemetry / analytics
+	"telemetry": true, "analytics": true, "crashReporting": true,
+}
+
+// hasOnlySafeKeys checks if all JSON keys in the data are in the safe allowlist.
+// Returns false (meaning high-risk) if any key is not explicitly listed as safe,
+// or if the data is not valid JSON. This ensures unknown keys require user approval.
+func hasOnlySafeKeys(data []byte) bool {
 	s := string(data)
-	return strings.Contains(s, `"mcpServers"`) ||
+	// Check for known dangerous keys explicitly — even if somehow added to
+	// safeKeys by mistake, these are always high-risk.
+	if strings.Contains(s, `"mcpServers"`) ||
+		strings.Contains(s, `"context_servers"`) ||
 		strings.Contains(s, `"hooks"`) ||
-		strings.Contains(s, `"commands"`)
+		strings.Contains(s, `"commands"`) {
+		return false
+	}
+	// Parse top-level keys. If any key is not in the allowlist, treat as high-risk.
+	// Simple approach: scan for `"key":` patterns at the top level.
+	// We look for quoted strings followed by colons in the JSON.
+	for i := 0; i < len(s); i++ {
+		if s[i] == '"' {
+			j := i + 1
+			for j < len(s) && s[j] != '"' {
+				if s[j] == '\\' {
+					j++ // skip escaped char
+				}
+				j++
+			}
+			if j >= len(s) {
+				break
+			}
+			key := s[i+1 : j]
+			// Check if the next non-whitespace char is ':' (this is a key, not a value)
+			k := j + 1
+			for k < len(s) && (s[k] == ' ' || s[k] == '\t' || s[k] == '\n' || s[k] == '\r') {
+				k++
+			}
+			if k < len(s) && s[k] == ':' {
+				if !safeKeys[key] {
+					return false
+				}
+			}
+			i = j // skip past the closing quote
+		}
+	}
+	return true
+}
+
+// hasHighRiskKeys checks if data contains keys not in the safe allowlist.
+// Returns true if any key is unknown/unsafe. This is the inverse of the old
+// denylist approach — unknown keys are treated as high-risk by default.
+func hasHighRiskKeys(data []byte) bool {
+	return !hasOnlySafeKeys(data)
 }
 
 // isHighRiskDiff returns true if either the original or staged content contains
-// high-risk keys (MCP servers, hooks, commands). Conservative: any change to a
-// file containing these keys requires explicit approval, even if the change
-// doesn't touch the high-risk sections directly.
+// keys not in the safe allowlist. Conservative: any change to a file containing
+// unknown keys requires explicit approval, even if the change doesn't touch
+// those keys directly.
 func isHighRiskDiff(origData, stagedData []byte) bool {
 	return hasHighRiskKeys(origData) || hasHighRiskKeys(stagedData)
 }
@@ -269,12 +376,12 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 	_, err = io.Copy(out, in)
 	return err
 }
@@ -286,6 +393,40 @@ func copyDir(src, dst string) error {
 		}
 		rel, _ := filepath.Rel(src, path)
 		target := filepath.Join(dst, rel)
+
+		// Handle symlinks: preserve valid ones that stay within the source tree.
+		// Symlinks pointing outside the source directory are a security risk —
+		// a malicious project could use them to overwrite arbitrary files when
+		// ApplyDiff copies staged content back.
+		if d.Type()&os.ModeSymlink != 0 {
+			linkTarget, err := os.Readlink(path)
+			if err != nil {
+				return nil // skip unreadable symlinks
+			}
+			// Resolve the symlink target to an absolute, clean path.
+			absTarget := linkTarget
+			if !filepath.IsAbs(linkTarget) {
+				absTarget = filepath.Join(filepath.Dir(path), linkTarget)
+			}
+			absTarget, err = filepath.EvalSymlinks(absTarget)
+			if err != nil {
+				return nil // skip broken/unresolvable symlinks
+			}
+			// Verify the resolved target is within the source directory.
+			absSrc, err := filepath.EvalSymlinks(src)
+			if err != nil {
+				return nil
+			}
+			if !strings.HasPrefix(absTarget, absSrc+string(filepath.Separator)) && absTarget != absSrc {
+				log.Printf("sandbox: skipping symlink %s → %s (escapes source dir %s)", path, absTarget, absSrc)
+				return nil
+			}
+			if _, err := os.Stat(absTarget); err != nil {
+				return nil // skip broken symlinks
+			}
+			return os.Symlink(linkTarget, target)
+		}
+
 		if d.IsDir() {
 			return os.MkdirAll(target, 0700)
 		}

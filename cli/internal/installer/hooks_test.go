@@ -1,11 +1,16 @@
 package installer
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/tidwall/gjson"
 )
@@ -155,17 +160,23 @@ func TestCheckHookStatus_UsesInstalledJSON(t *testing.T) {
 	}
 
 	// Add to installed.json
+	matcherGroup := []byte(`{"matcher":".*","hooks":[{"type":"command","command":"echo status"}]}`)
+	groupHash := sha256.Sum256(matcherGroup)
 	inst := &Installed{
 		Hooks: []InstalledHook{
-			{Name: "status-hook", Event: "PostToolUse", Command: "echo status", Source: "export"},
+			{Name: "status-hook", Event: "PostToolUse", Command: "echo status", Source: "export", GroupHash: hex.EncodeToString(groupHash[:])},
 		},
 	}
 	SaveInstalled(projectRoot, inst)
 
-	// With installed.json entry: should be Installed
+	// Also add the hook to the provider's settings.json so the hash matches.
+	settingsJSON := fmt.Sprintf(`{"hooks":{"PostToolUse":[%s]}}`, matcherGroup)
+	os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(settingsJSON), 0644)
+
+	// With installed.json entry + matching settings: should be Installed
 	status = checkHookStatus(item, prov, projectRoot)
 	if status != StatusInstalled {
-		t.Errorf("expected Installed with installed.json entry, got %v", status)
+		t.Errorf("expected Installed with installed.json entry + matching settings, got %v", status)
 	}
 }
 
@@ -358,5 +369,230 @@ func TestUninstallHook_HashMatching(t *testing.T) {
 	differentHash := computeGroupHash([]byte(differentEntry))
 	if storedHash == differentHash {
 		t.Error("different entry should produce a different hash")
+	}
+}
+
+func TestInstallHook_RejectsDuplicate(t *testing.T) {
+	projectRoot := t.TempDir()
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
+
+	hookDir := filepath.Join(projectRoot, "hooks", "dup-hook")
+	os.MkdirAll(hookDir, 0755)
+	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo dup"}]}`
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
+
+	item := catalog.ContentItem{
+		Name: "dup-hook",
+		Type: catalog.Hooks,
+		Path: hookDir,
+	}
+
+	// Pre-populate installed.json with this hook
+	inst := &Installed{
+		Hooks: []InstalledHook{
+			{Name: "dup-hook", Event: "PreToolUse", Command: "echo dup", Source: "export"},
+		},
+	}
+	SaveInstalled(projectRoot, inst)
+
+	// Create a settings.json for the provider
+	home, _ := os.UserHomeDir()
+	configDir := filepath.Join(home, ".syllago-test-dup-"+filepath.Base(projectRoot))
+	os.MkdirAll(configDir, 0755)
+	t.Cleanup(func() { os.RemoveAll(configDir) })
+	os.WriteFile(filepath.Join(configDir, "settings.json"), []byte("{}"), 0644)
+
+	prov := provider.Provider{
+		Name:      "test-provider",
+		Slug:      "test",
+		ConfigDir: filepath.Base(configDir),
+	}
+
+	_, err := installHook(item, prov, projectRoot)
+	if err == nil {
+		t.Fatal("expected error for duplicate hook")
+	}
+	if !strings.Contains(err.Error(), "already installed") {
+		t.Errorf("expected 'already installed' error, got: %v", err)
+	}
+}
+
+func TestResolveHookScripts_AbsolutePathRejected(t *testing.T) {
+	t.Parallel()
+	// A hook command referencing an absolute path should be silently ignored
+	// (scriptPath stays empty, command left as-is).
+	itemDir := t.TempDir()
+
+	matcherGroup := []byte(`{"hooks":[{"command":"/etc/passwd --flag"}]}`)
+
+	item := catalog.ContentItem{
+		Name: "evil-hook",
+		Path: itemDir,
+	}
+
+	result, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// The command should be unchanged — absolute path is not resolved
+	if string(result) != string(matcherGroup) {
+		t.Errorf("expected matcher group unchanged, got %s", string(result))
+	}
+}
+
+func TestResolveHookScripts_RelativePathEscape(t *testing.T) {
+	t.Parallel()
+	// A hook command using ../ to escape the item directory must be rejected.
+	itemDir := t.TempDir()
+
+	// Create a real file outside itemDir so it would be found if not blocked
+	outsideDir := t.TempDir()
+	outsideScript := filepath.Join(outsideDir, "evil.sh")
+	os.WriteFile(outsideScript, []byte("#!/bin/sh\necho pwned"), 0755)
+
+	// Compute the relative escape path from itemDir to outsideDir
+	rel, err := filepath.Rel(itemDir, outsideScript)
+	if err != nil {
+		t.Fatalf("computing rel path: %v", err)
+	}
+	if !strings.HasPrefix(rel, "..") {
+		t.Fatalf("test setup: expected relative path with .., got %s", rel)
+	}
+
+	matcherGroup := []byte(`{"hooks":[{"command":"` + rel + `"}]}`)
+
+	item := catalog.ContentItem{
+		Name: "escape-hook",
+		Path: itemDir,
+	}
+
+	_, err = resolveHookScripts(matcherGroup, item, t.TempDir())
+	if err == nil {
+		t.Fatal("expected error for path traversal, got nil")
+	}
+	if !strings.Contains(err.Error(), "outside item directory") {
+		t.Errorf("expected 'outside item directory' error, got: %v", err)
+	}
+}
+
+func TestResolveHookScripts_ValidRelativePath(t *testing.T) {
+	// Mutates output.ErrWriter — cannot be parallel.
+	origErr := output.ErrWriter
+	output.ErrWriter = &strings.Builder{}
+	t.Cleanup(func() { output.ErrWriter = origErr })
+
+	itemDir := t.TempDir()
+	scriptPath := filepath.Join(itemDir, "lint.sh")
+	os.WriteFile(scriptPath, []byte("#!/bin/sh\necho lint"), 0755)
+
+	matcherGroup := []byte(`{"hooks":[{"command":"./lint.sh --fix"}]}`)
+
+	item := catalog.ContentItem{
+		Name: "good-hook",
+		Path: itemDir,
+	}
+
+	result, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// The command should have been rewritten to the stable location
+	if string(result) == string(matcherGroup) {
+		t.Error("expected command to be rewritten, but it was unchanged")
+	}
+
+	// Verify the destination script has 0700 permissions
+	home, _ := os.UserHomeDir()
+	destScript := filepath.Join(home, ".syllago", "hooks", "good-hook", "lint.sh")
+	t.Cleanup(func() { os.RemoveAll(filepath.Join(home, ".syllago", "hooks", "good-hook")) })
+
+	info, statErr := os.Stat(destScript)
+	if statErr != nil {
+		t.Fatalf("destination script not found: %v", statErr)
+	}
+	perm := info.Mode().Perm()
+	if perm != 0700 {
+		t.Errorf("expected permissions 0700, got %04o", perm)
+	}
+}
+
+func TestResolveHookScripts_SymlinkTraversal(t *testing.T) {
+	// A hook command referencing a symlink that points outside the item directory
+	// must be rejected even though the relative path looks safe (e.g., ./scripts/run.sh
+	// where scripts -> /etc).
+	t.Parallel()
+	itemDir := t.TempDir()
+	outsideDir := t.TempDir()
+
+	// Create a real script outside the item directory
+	outsideScript := filepath.Join(outsideDir, "evil.sh")
+	os.WriteFile(outsideScript, []byte("#!/bin/sh\necho pwned"), 0755)
+
+	// Create a symlink inside itemDir that points outside
+	scriptsLink := filepath.Join(itemDir, "scripts")
+	os.Symlink(outsideDir, scriptsLink)
+
+	matcherGroup := []byte(`{"hooks":[{"command":"./scripts/evil.sh"}]}`)
+
+	item := catalog.ContentItem{
+		Name: "symlink-escape-hook",
+		Path: itemDir,
+	}
+
+	_, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	if err == nil {
+		t.Fatal("expected error for symlink traversal, got nil")
+	}
+	if !strings.Contains(err.Error(), "outside item directory") {
+		t.Errorf("expected 'outside item directory' error, got: %v", err)
+	}
+}
+
+func TestResolveHookScripts_InterpreterPrefix(t *testing.T) {
+	// Mutates output.ErrWriter — cannot be parallel.
+	origErr := output.ErrWriter
+	output.ErrWriter = &strings.Builder{}
+	t.Cleanup(func() { output.ErrWriter = origErr })
+
+	itemDir := t.TempDir()
+	scriptPath := filepath.Join(itemDir, "check.sh")
+	os.WriteFile(scriptPath, []byte("#!/bin/sh\necho check"), 0755)
+
+	// Command uses "bash ./check.sh" — interpreter prefix before relative path
+	matcherGroup := []byte(`{"hooks":[{"command":"bash ./check.sh --strict"}]}`)
+
+	item := catalog.ContentItem{
+		Name: "interp-hook",
+		Path: itemDir,
+	}
+
+	result, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// The command should be rewritten: "bash ./check.sh" → "bash /abs/path/check.sh"
+	if string(result) == string(matcherGroup) {
+		t.Error("expected command to be rewritten, but it was unchanged")
+	}
+
+	home, _ := os.UserHomeDir()
+	destDir := filepath.Join(home, ".syllago", "hooks", "interp-hook")
+	t.Cleanup(func() { os.RemoveAll(destDir) })
+
+	destScript := filepath.Join(destDir, "check.sh")
+	if _, statErr := os.Stat(destScript); statErr != nil {
+		t.Fatalf("destination script not found: %v", statErr)
+	}
+
+	// Verify the rewritten command preserves "bash" prefix and "--strict" args
+	cmd := gjson.GetBytes(result, "hooks.0.command").String()
+	if !strings.HasPrefix(cmd, "bash "+destScript) {
+		t.Errorf("command = %q, want prefix 'bash %s'", cmd, destScript)
+	}
+	if !strings.HasSuffix(cmd, " --strict") {
+		t.Errorf("command = %q, want suffix ' --strict'", cmd)
 	}
 }

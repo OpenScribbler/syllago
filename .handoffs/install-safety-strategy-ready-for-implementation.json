@@ -1,0 +1,67 @@
+{
+  "$schema": "handoff-v2",
+  "name": "install-safety-strategy-ready-for-implementation",
+  "createdAt": "2026-04-01T19:30:00Z",
+  "current": {
+    "claimedBy": {
+      "sessionId": "current",
+      "claimedAt": "2026-04-01T22:36:00Z"
+    },
+    "project": "syllago",
+    "updated": "2026-04-01T19:30:00Z",
+    "sessionId": "c32d8d52-e827-4749-a7f9-5cefb0abaf77",
+    "summary": "Install safety strategy complete — quarantine fetch, behavioral scanner, health signals with caching, dependency auto-install. Ready for implementation planning.",
+
+    "activeWork": {
+      "description": "Install safety system for syllago — facts-only, zero-governance approach to content verification at install time",
+      "feature": null,
+      "stage": "plan",
+      "planRef": null,
+      "designRef": "docs/research/agent-skills-spec/18-install-safety-strategy.md",
+      "progress": "Strategy doc is comprehensive and final. Covers: quarantine fetch (using existing StagingDir), content hashing, native Go behavioral scanner + optional YARA via CLI, git+platform health signals with per-content granularity, cached signal store, dependency auto-install. Signal design includes gaming resistance tiers, two-tier display (registry vs content), content-type risk tiers, and anti-pattern flags. Needs implementation plan → beads → execute.",
+      "blockers": [
+        "Needs implementation plan broken into tasks before execution can begin",
+        "Open question: exact content hash algorithm (normalization rules, blanking regex)",
+        "Open question: platform API rate limiting strategy (GitHub token support)"
+      ],
+      "beads": null
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": "14",
+      "lastCommit": "3b34379 handoff: CDR execution complete, content-based classification gap identified",
+      "modifiedFiles": [
+        "docs/research/agent-skills-spec/16-social-trust-strategy.md",
+        "docs/research/agent-skills-spec/17-community-signals-strategy.md",
+        "docs/research/agent-skills-spec/18-install-safety-strategy.md"
+      ]
+    },
+
+    "recentDecisions": [
+      "Facts-only system: no social trust, no vouches, no denouncement network, no governance layer",
+      "Behavioral scanner is native Go pattern matching (no CGO), YARA via CLI as optional enhancement",
+      "Two-tier signal display: registry-level context + per-content-item primary signals",
+      "Content-type risk tiers: executable (hooks/scripts) > external-pointing (MCP) > instructional (skills/agents) > passive (rules)",
+      "Signal cache at ~/.local/share/syllago/signals/, refreshes with existing registryAutoSync preference",
+      "Dependency auto-install at first run (bwrap, socat required; yara optional)",
+      "UX language: 'no known issues detected' never 'clean' or 'safe'; publish scan categories not exact patterns",
+      "Quarantine fetch using existing StagingDir infrastructure — files never in agent-visible dirs until user approves"
+    ],
+
+    "nextSteps": [
+      "Create implementation plan from strategy doc (break into phases/tasks)",
+      "Phase 1 likely: native Go behavioral scanner (highest standalone value, zero deps)",
+      "Phase 2 likely: quarantine fetch integration into install flow",
+      "Phase 3 likely: health signals collection + caching",
+      "Phase 4 likely: dependency auto-install UX",
+      "Commit the 3 new research files (16, 17, 18) before starting implementation"
+    ],
+
+    "context": {
+      "notes": "This handoff is for the IMPLEMENTATION of the install safety strategy. The parent session is continuing to work on provenance/attestation spec design (separate concern). The strategy doc (file 18) is the definitive reference — it went through 2 adversarial panels, vouch/web-of-trust research, security scanning landscape research, and multiple rounds of simplification. Key files: 16 (social trust — killed), 17 (community signals — superseded), 18 (final strategy). Files 01-15 are research background. The existing sandbox package (cli/internal/sandbox/) has bwrap, staging dir, egress proxy already built — the quarantine fetch reuses this infrastructure."
+    }
+  },
+
+  "previousSessions": []
+}

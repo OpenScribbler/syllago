@@ -1,0 +1,103 @@
+# Pi (Mario Zechner) — Provider Source Manifest
+# Strong official source coverage via open-source monorepo. All content types documented.
+
+schema_version: "1"
+last_verified: "2026-03-30"
+provider_version: "0.64.0"
+
+slug: pi
+display_name: Pi
+vendor: Mario Zechner
+status: active
+fetch_tier: gh-api
+
+repo: badlogic/pi-mono
+repo_branch: main
+
+change_detection:
+  method: github-releases
+  endpoint: "https://api.github.com/repos/badlogic/pi-mono/releases"
+
+changelog:
+  - url: "https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/CHANGELOG.md"
+    label: "Coding Agent Changelog"
+
+content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Pi supports: rules (via AGENTS.md and .pi/skills/ instruction mechanism),
+  #   skills, hooks (programmatic TypeScript extensions — no declarative JSON
+  #   format), commands (prompt templates in .pi/prompts/)
+  # Not supported: mcp (no built-in MCP; users implement via extensions),
+  #   agents (no user-definable agent definition format)
+  # Syllago: not yet implemented in syllago Go provider code (pi is a
+  #   future/planned provider)
+  # Note: Pi hooks are programmatic TypeScript — no declarative hook JSON.
+  #   MCP stub is correct.
+  # ─────────────────────────────────────────────────────────────────────
+
+  # --- Rules / Instructions ---
+  # Pi uses Skills (SKILL.md) and AGENTS.md for instructions. No provider-specific rules format.
+  rules:
+    sources:
+      - url: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
+        type: docs
+        format: markdown
+        extracts: [file_format, file_locations, frontmatter_fields, discovery_rules]
+    # Format notes: Skills serve as Pi's primary instruction mechanism.
+    # SKILL.md files with YAML frontmatter in .pi/skills/<name>/ directories.
+    # Also supports AGENTS.md (cross-provider standard).
+
+  # --- Hooks ---
+  # Pi uses programmatic TypeScript extensions, not declarative hook config.
+  hooks:
+    sources:
+      - url: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/core/extensions/types.ts"
+        type: source-code
+        format: typescript
+        extracts: [event_names, event_io_schemas, hook_config_fields]
+      - url: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/extensions.md"
+        type: docs
+        format: markdown
+        extracts: [event_names, hook_config_fields, setup_examples]
+      - url: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/core/extensions/runner.ts"
+        type: source-code
+        format: typescript
+        extracts: [event_names, hook_decisions]
+    # Events: session_start, session_shutdown, session_before_switch, session_before_fork,
+    #   session_before_compact, session_compact, session_before_tree, session_tree,
+    #   session_directory, before_agent_start, agent_start, agent_end, turn_start, turn_end,
+    #   context, before_provider_request, message_start, message_update, message_end,
+    #   tool_call, tool_result, tool_execution_start, tool_execution_update, tool_execution_end,
+    #   input, user_bash, resources_discover, model_select
+    # Hook types: programmatic TypeScript (no declarative format)
+
+  # --- MCP ---
+  # Pi does not have built-in MCP support. Users implement via extensions.
+  mcp:
+    supported: false
+
+  # --- Skills ---
+  skills:
+    sources:
+      - url: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
+        type: docs
+        format: markdown
+        extracts: [file_format, frontmatter_fields, file_locations, discovery_rules]
+      - url: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/core/skills.ts"
+        type: source-code
+        format: typescript
+        extracts: [file_format, frontmatter_fields, discovery_rules]
+
+  # --- Agents ---
+  # Pi does not have a built-in agent definition format. Sub-agents built via extensions.
+  agents:
+    supported: false
+
+  # --- Commands ---
+  # Pi uses prompt templates (.pi/prompts/*.md) as its command equivalent.
+  commands:
+    sources:
+      - url: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/prompt-templates.md"
+        type: docs
+        format: markdown
+        extracts: [file_format, file_locations, config_fields]

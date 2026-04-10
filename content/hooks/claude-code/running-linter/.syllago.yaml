@@ -1,6 +1,0 @@
-name: running-linter
-description: Example hook that runs a linter after file edits
-hidden: true
-tags:
-  - builtin
-  - example

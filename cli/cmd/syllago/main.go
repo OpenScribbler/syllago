@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,6 +17,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/OpenScribbler/syllago/cli/internal/tui"
 	"github.com/OpenScribbler/syllago/cli/internal/updater"
 	tea "github.com/charmbracelet/bubbletea"
@@ -82,12 +84,27 @@ func init() {
 		verbose, _ := cmd.Flags().GetBool("verbose")
 		output.Verbose = verbose
 
+		// Initialize telemetry after output flags are set so the first-run
+		// notice (if any) respects --no-color via lipgloss profile above.
+		telemetry.Init()
+
 		return nil
+	}
+
+	rootCmd.PersistentPostRun = func(cmd *cobra.Command, args []string) {
+		// Build a dotted command name: "registry add" → "registry_add".
+		// Skip telemetry's own subcommands to avoid recursion/noise.
+		name := commandPath(cmd)
+		if name != "" && !strings.HasPrefix(name, "telemetry") {
+			telemetry.TrackCommand(name)
+		}
+		telemetry.Shutdown()
 	}
 
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(backfillCmd)
 	rootCmd.AddCommand(updateCmd)
+	rootCmd.AddCommand(capmonCmd)
 }
 
 var versionCmd = &cobra.Command{
@@ -119,7 +136,7 @@ var backfillCmd = &cobra.Command{
 		}
 		cat, err := catalog.Scan(root, projectRoot)
 		if err != nil {
-			return fmt.Errorf("scanning catalog: %w", err)
+			return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
 		}
 
 		// Get git author
@@ -183,6 +200,7 @@ func main() {
 	if buildCommit != "" {
 		ensureUpToDate()
 	}
+	telemetry.SetVersion(version)
 	if err := rootCmd.Execute(); err != nil {
 		printExecuteError(err)
 		os.Exit(output.ExitError)
@@ -191,10 +209,27 @@ func main() {
 
 // printExecuteError prints err to the error writer unless it's a SilentError
 // (meaning the command already printed its own error message).
+// In JSON mode, non-silent errors are wrapped in a structured JSON envelope.
 func printExecuteError(err error) {
-	if !output.IsSilentError(err) {
-		fmt.Fprintln(output.ErrWriter, err)
+	if output.IsSilentError(err) {
+		return
 	}
+	// If the error is a StructuredError returned directly (not via SilentError),
+	// print it using the structured formatter.
+	var se output.StructuredError
+	if errors.As(err, &se) {
+		output.PrintStructuredError(se)
+		return
+	}
+	// In JSON mode, wrap unstructured errors in a JSON envelope for consistency.
+	if output.JSON {
+		output.PrintStructuredError(output.StructuredError{
+			Code:    "UNKNOWN_001",
+			Message: err.Error(),
+		})
+		return
+	}
+	fmt.Fprintln(output.ErrWriter, err)
 }
 
 // wrapTTYError wraps bubbletea TTY errors with user-facing guidance.
@@ -204,7 +239,7 @@ func wrapTTYError(err error) error {
 	}
 	errMsg := err.Error()
 	if strings.Contains(errMsg, "TTY") || strings.Contains(errMsg, "tty") {
-		return fmt.Errorf("syllago requires a terminal for interactive mode. Use a subcommand for non-interactive usage")
+		return output.NewStructuredError(output.ErrInputTerminal, "syllago requires a terminal for interactive mode", "Use a subcommand for non-interactive usage (e.g., syllago list --json)")
 	}
 	return err
 }
@@ -212,7 +247,7 @@ func wrapTTYError(err error) error {
 func runTUI(cmd *cobra.Command, args []string) error {
 	root, err := findContentRepoRoot()
 	if err != nil {
-		return fmt.Errorf("could not find syllago content repository.\n\nTo get started:\n  syllago init    Create a new content repo in the current directory\n\nFor more info: syllago --help")
+		return output.NewStructuredError(output.ErrCatalogNotFound, "could not find syllago content repository", "Run 'syllago init' to create a new content repo in the current directory")
 	}
 
 	// Load project config to get registry list and preferences
@@ -265,7 +300,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 
 	cat, err := catalog.ScanWithGlobalAndRegistries(root, projectRoot, regSources)
 	if err != nil {
-		return fmt.Errorf("catalog scan failed: %w", err)
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "catalog scan failed", "Check that the content directory exists and is readable", err.Error())
 	}
 
 	// Auto-cleanup: remove local items whose ID matches a shared item
@@ -277,20 +312,21 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		// Rescan after cleanup
 		cat, err = catalog.ScanWithGlobalAndRegistries(root, projectRoot, regSources)
 		if err != nil {
-			return fmt.Errorf("error rescanning catalog: %w", err)
+			return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "error rescanning catalog", "Check that the content directory exists and is readable", err.Error())
 		}
 	}
 
-	providers := provider.DetectProviders()
+	resolver := config.NewResolver(cfg, "")
+	if err := resolver.ExpandPaths(); err != nil {
+		resolver = nil // non-fatal, fall back to standard detection
+	}
+	providers := provider.DetectProvidersWithResolver(resolver)
 
 	// Check if auto-update is enabled in project config
-	autoUpdate := false
-	if cfgErr == nil && cfg.Preferences["autoUpdate"] == "true" {
-		autoUpdate = true
-	}
+	autoUpdate := cfgErr == nil && cfg.Preferences["autoUpdate"] == "true"
 
 	isReleaseBuild := buildCommit == "" && version != ""
-	app := tui.NewApp(cat, providers, version, autoUpdate, regSources, cfg, isReleaseBuild, projectRoot)
+	app := tui.NewApp(cat, providers, version, autoUpdate, regSources, cfg, isReleaseBuild, root, projectRoot)
 	zone.NewGlobal()
 	p := tea.NewProgram(app,
 		tea.WithAltScreen(),
@@ -299,6 +335,9 @@ func runTUI(cmd *cobra.Command, args []string) error {
 	if _, err := p.Run(); err != nil {
 		return wrapTTYError(err)
 	}
+	telemetry.Track("tui_session_started", map[string]any{
+		"success": true,
+	})
 	return nil
 }
 
@@ -314,7 +353,7 @@ func findContentRepoRoot() (string, error) {
 
 	projectRoot, err := findProjectRoot()
 	if err != nil {
-		return "", fmt.Errorf("could not find syllago content repository")
+		return "", output.NewStructuredError(output.ErrCatalogNotFound, "could not find syllago content repository", "Run 'syllago init' to set up a content repository")
 	}
 
 	return resolveContentRoot(projectRoot)
@@ -345,9 +384,20 @@ var semverRegex = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(
 // validateVersion checks if a string is a valid semver version.
 func validateVersion(v string) error {
 	if !semverRegex.MatchString(v) {
-		return fmt.Errorf("invalid version format: %q (must be semver like 1.0.0)", v)
+		return output.NewStructuredError(output.ErrInputInvalid, fmt.Sprintf("invalid version format: %q (must be semver like 1.0.0)", v), "Use semantic versioning format like 1.0.0 or 1.2.3-beta")
 	}
 	return nil
+}
+
+// commandPath returns a snake_case command name from a cobra command.
+// "syllago registry add" → "registry_add", "syllago install" → "install".
+func commandPath(cmd *cobra.Command) string {
+	parts := strings.Fields(cmd.CommandPath())
+	if len(parts) <= 1 {
+		return "" // root command (TUI) — tracked separately
+	}
+	// Drop "syllago" prefix, join with underscore.
+	return strings.Join(parts[1:], "_")
 }
 
 // ensureUpToDate checks if the binary's embedded commit matches the repo HEAD.

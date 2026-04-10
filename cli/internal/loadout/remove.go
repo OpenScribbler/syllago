@@ -86,7 +86,7 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	if err == nil {
 		source := "loadout:" + manifest.LoadoutName
 		inst = cleanInstalledEntries(inst, source)
-		installer.SaveInstalled(opts.ProjectRoot, inst)
+		_ = installer.SaveInstalled(opts.ProjectRoot, inst)
 	}
 
 	// Step 4: Delete snapshot

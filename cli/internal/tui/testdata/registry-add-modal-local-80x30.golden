@@ -1,0 +1,30 @@
+╭──syllago────────────────────────────────────────────────────────────────[?]──╮
+│               [1] Collections      [2] Content      [3] Config               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│   Library     Registries     Loadouts                                        │
+│                                                           [a] Add registry   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ my-registry                               Registry  1 items  Source: /tmp/...│
+│ Status: 1 items  0 Agents, 0 Commands, 0 Hooks, 0 MCP Servers, 0 Rules, 1 Ski│
+│       ╭──────────────────────────────────────────────────────────────╮Edit   │
+├───────│ Add Registry                                                 │───────┤
+│╭──────│                                                              │y      │
+││my-reg│ Source                                                       │       │
+││  0 Ag│ ( ) Git URL                                                  │       │
+││  0 Co│ (•) Local directory                                          │       │
+││  0 Ho│                                                              │       │
+││  0 MC│ Path                                                         │       │
+││  0 Ru│                                                              │       │
+││  1 Sk│                                                              │       │
+││Source│ Name (derived from URL)                                      │       │
+│╰──────│                                                              │       │
+│       │                                                              │       │
+│       │                                             Cancel     Add   │       │
+│       ╰──────────────────────────────────────────────────────────────╯       │
+│                                                      │                       │
+│                                                      │                       │
+│                                                      │                       │
+╰──────────────────────────────────────────────────────┴───────────────────────╯
+1/2/3 groups · tab items · arrows grid · enter select       syllago v0.0.0-test
+tab grid/contents · / search · a add · S sync · d remove · e edit · R refresh · ? help · q back

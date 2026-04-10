@@ -1,0 +1,8 @@
+format_version: 1
+name: hb-26-vscode-copilot-prompt-observe
+type: hooks
+description: "Benchmark: validates vscode-copilot UserPromptSubmit is observe-only (exit 2 does not block prompts)"
+hook:
+  event: before_prompt
+  blocking: false
+  command: ./hb-26.sh

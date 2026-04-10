@@ -14,22 +14,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
-          go-version: '1.25.x'
+          go-version: '1.26.x'
 
       - name: Extract version from tag
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
 
       - name: Build all targets
         working-directory: cli
+        env:
+          SYLLAGO_POSTHOG_KEY: ${{ secrets.SYLLAGO_POSTHOG_KEY }}
         run: |
           LDFLAGS="-X main.version=${VERSION}"
+          if [ -n "$SYLLAGO_POSTHOG_KEY" ]; then
+            LDFLAGS="$LDFLAGS -X github.com/OpenScribbler/syllago/cli/internal/telemetry.apiKey=$SYLLAGO_POSTHOG_KEY"
+          fi
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o syllago-linux-amd64 ./cmd/syllago
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" -o syllago-linux-arm64 ./cmd/syllago
           CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o syllago-darwin-amd64 ./cmd/syllago
@@ -37,13 +42,22 @@ jobs:
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o syllago-windows-amd64.exe ./cmd/syllago
           CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -ldflags "$LDFLAGS" -o syllago-windows-arm64.exe ./cmd/syllago
 
-      - name: Generate commands.json
+      - name: Generate commands.json, providers.json, and telemetry.json
         working-directory: cli
         run: |
           LDFLAGS="-X main.version=${VERSION}"
           go build -ldflags "$LDFLAGS" -o syllago-gendocs ./cmd/syllago
           ./syllago-gendocs _gendocs > commands.json
+          ./syllago-gendocs _genproviders > providers.json
+          ./syllago-gendocs _gentelemetry > telemetry.json
           rm -f syllago-gendocs
+
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+
+      - name: Generate SBOM
+        working-directory: cli
+        run: syft scan dir:. --output spdx-json=sbom.spdx.json --source-name syllago --source-version "${VERSION}"
 
       - name: Generate checksums
         working-directory: cli
@@ -51,11 +65,11 @@ jobs:
           sha256sum syllago-linux-amd64 syllago-linux-arm64 \
             syllago-darwin-amd64 syllago-darwin-arm64 \
             syllago-windows-amd64.exe syllago-windows-arm64.exe \
-            commands.json \
+            commands.json providers.json telemetry.json sbom.spdx.json \
             > checksums.txt
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+        uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # v4.1.0
 
       - name: Sign checksums
         working-directory: cli
@@ -82,7 +96,7 @@ jobs:
             syllago-linux-amd64 syllago-linux-arm64 \
             syllago-darwin-amd64 syllago-darwin-arm64 \
             syllago-windows-amd64.exe syllago-windows-arm64.exe \
-            commands.json \
+            commands.json providers.json telemetry.json sbom.spdx.json \
             checksums.txt checksums.txt.bundle
 
       - name: Create GitHub Release (auto-generated notes)
@@ -97,19 +111,28 @@ jobs:
             syllago-linux-amd64 syllago-linux-arm64 \
             syllago-darwin-amd64 syllago-darwin-arm64 \
             syllago-windows-amd64.exe syllago-windows-arm64.exe \
-            commands.json \
+            commands.json providers.json telemetry.json sbom.spdx.json \
             checksums.txt checksums.txt.bundle
+
+      - name: Get Homebrew tap credentials from Aembit
+        id: aembit-homebrew
+        continue-on-error: true
+        uses: Aembit/get-credentials@3de1076cbb219a12107a6f3f92b2ae8bc018e618 # v1.1.1
+        with:
+          client-id: aembit:useast2:c7053f:identity:github_idtoken:2bbc8270-85a4-4c27-8c49-19e5590dfa87
+          credential-type: ApiKey
+          server-host: github.com
 
       - name: Update Homebrew formula
         continue-on-error: true
         env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ steps.aembit-homebrew.outputs.api-key }}
           VERSION: ${{ env.VERSION }}
           TAG_NAME: ${{ github.ref_name }}
         working-directory: cli
         run: |
           if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
-            echo "HOMEBREW_TAP_TOKEN not set, skipping Homebrew update"
+            echo "Homebrew tap token not available, skipping Homebrew update"
             exit 0
           fi
 

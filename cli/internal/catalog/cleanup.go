@@ -1,9 +1,5 @@
 package catalog
 
-import (
-	"os"
-)
-
 // CleanupResult describes a local item that was cleaned up.
 type CleanupResult struct {
 	Name string
@@ -43,7 +39,7 @@ func CleanupPromotedItems(cat *Catalog) ([]CleanupResult, error) {
 			if shared.Name != item.Name || shared.Type != item.Type {
 				continue
 			}
-			if err := os.RemoveAll(item.Path); err != nil {
+			if err := RemoveLibraryItem(item.Path); err != nil {
 				return cleaned, err
 			}
 			cleaned = append(cleaned, CleanupResult{

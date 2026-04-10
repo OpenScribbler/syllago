@@ -1,7 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -29,7 +31,12 @@ func (r *PathResolver) InstallDir(prov provider.Provider, ct catalog.ContentType
 	if r != nil {
 		// Per-type path: bypass provider logic entirely
 		if path, ok := r.perTypePath(prov.Slug, ct); ok {
-			return filepath.Clean(path)
+			cleaned := filepath.Clean(path)
+			// Validate that user-configured path is not a sensitive system path.
+			// If sensitive, skip the override and fall through to defaults.
+			if !isSensitivePath(cleaned) {
+				return cleaned
+			}
 		}
 		// CLI --base-dir
 		if r.CLIBaseDir != "" {
@@ -107,6 +114,32 @@ func (r *PathResolver) configBaseDir(slug string) string {
 		return ""
 	}
 	return r.ProviderPaths[slug].BaseDir
+}
+
+// sensitiveRoots are system directories that should never be install targets.
+var sensitiveRoots = []string{"/etc", "/usr", "/var", "/bin", "/sbin", "/lib", "/boot", "/sys", "/proc", "/dev"}
+
+// isSensitivePath checks if a path points to a known sensitive system directory.
+func isSensitivePath(path string) bool {
+	if path == "/" {
+		return true
+	}
+	for _, root := range sensitiveRoots {
+		if path == root || strings.HasPrefix(path, root+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+// ValidateProviderPath checks whether a path is a safe install target.
+// Exported for use by the doctor command and config validation.
+func ValidateProviderPath(path string) error {
+	cleaned := filepath.Clean(path)
+	if isSensitivePath(cleaned) {
+		return fmt.Errorf("provider path %s points to a sensitive system directory", cleaned)
+	}
+	return nil
 }
 
 // ExpandPaths resolves tilde prefixes in all stored paths.
