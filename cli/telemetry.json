@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-09T16:40:58Z",
+  "generatedAt": "2026-04-10T16:53:09Z",
   "syllagoVersion": "0.7.0",
   "events": [
     {
@@ -27,7 +27,8 @@
             "uninstall",
             "loadout_apply",
             "sandbox_run",
-            "sync-and-export"
+            "sync-and-export",
+            "capmon_validate_spec"
           ]
         },
         {
@@ -45,7 +46,8 @@
             "list",
             "share",
             "sync-and-export",
-            "registry_items"
+            "registry_items",
+            "capmon_validate_spec"
           ]
         },
         {

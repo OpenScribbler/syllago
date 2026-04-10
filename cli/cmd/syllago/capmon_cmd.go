@@ -8,6 +8,16 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/capmon"
 	"github.com/OpenScribbler/syllago/cli/internal/capmon/capyaml"
+	// Extractor packages self-register via init(). Import for side effects only.
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_go"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_html"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_json"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_json_schema"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_markdown"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_rust"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_toml"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_typescript"
+	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_yaml"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
@@ -15,6 +25,10 @@ import (
 // capmonCapabilitiesDirOverride allows tests to redirect the verify command
 // to a temp directory instead of the repo's docs/provider-capabilities/.
 var capmonCapabilitiesDirOverride string
+
+// capmonSpecsDirOverride allows tests to redirect the validate-spec command
+// to a temp directory instead of the default .develop/seeder-specs/.
+var capmonSpecsDirOverride string
 
 var capmonCmd = &cobra.Command{
 	Use:   "capmon",
@@ -170,16 +184,41 @@ var capmonSeedCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		provider, _ := cmd.Flags().GetString("provider")
 		forceOverwrite, _ := cmd.Flags().GetBool("force-overwrite-exclusive")
-		if provider != "" {
-			if _, err := capmon.SanitizeSlug(provider); err != nil {
-				return fmt.Errorf("invalid --provider: %w", err)
-			}
+		cacheRoot, _ := cmd.Flags().GetString("cache-root")
+		if cacheRoot == "" {
+			cacheRoot = ".capmon-cache"
+		}
+		if provider == "" {
+			return fmt.Errorf("--provider is required: specify a provider slug to seed")
+		}
+		if _, err := capmon.SanitizeSlug(provider); err != nil {
+			return fmt.Errorf("invalid --provider: %w", err)
 		}
 		telemetry.Enrich("provider", provider)
+
+		// Load extracted fields from cache and run recognizers.
+		var extracted map[string]string
+		if provider != "" {
+			var err error
+			extracted, err = capmon.LoadAndRecognizeCache(cacheRoot, provider)
+			if err != nil {
+				// Cache may not exist yet — seed with empty extracted (creates bare stub)
+				extracted = make(map[string]string)
+			}
+		}
+
+		skipSpecGate, _ := cmd.Flags().GetBool("skip-spec-gate")
+		seederSpecsDir := ".develop/seeder-specs"
+		if skipSpecGate {
+			seederSpecsDir = ""
+		}
+
 		opts := capmon.SeedOptions{
 			CapsDir:                 "docs/provider-capabilities",
 			Provider:                provider,
+			Extracted:               extracted,
 			ForceOverwriteExclusive: forceOverwrite,
+			SeederSpecsDir:          seederSpecsDir,
 		}
 		return capmon.SeedProviderCapabilities(opts)
 	},
@@ -207,6 +246,38 @@ var capmonTestFixturesCmd = &cobra.Command{
 	},
 }
 
+var capmonValidateSpecCmd = &cobra.Command{
+	Use:   "validate-spec",
+	Short: "Validate a seeder spec YAML file for a provider",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		provider, _ := cmd.Flags().GetString("provider")
+		contentType, _ := cmd.Flags().GetString("content-type")
+		specsDir, _ := cmd.Flags().GetString("specs-dir")
+
+		if provider == "" {
+			return fmt.Errorf("--provider is required: specify a provider slug to validate")
+		}
+
+		if capmonSpecsDirOverride != "" {
+			specsDir = capmonSpecsDirOverride
+		}
+
+		telemetry.Enrich("provider", provider)
+		telemetry.Enrich("content_type", contentType)
+
+		path := capmon.SeederSpecPath(specsDir, provider)
+		spec, err := capmon.LoadSeederSpec(path)
+		if err != nil {
+			return fmt.Errorf("load seeder spec: %w", err)
+		}
+		if err := capmon.ValidateSeederSpec(spec); err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stdout, "seeder spec for %q is valid (human_action: %s)\n", provider, spec.HumanAction)
+		return nil
+	},
+}
+
 func reportFixtureAges(fixturesDir string) error {
 	fmt.Printf("Fixture directory: %s\n", fixturesDir)
 	fmt.Printf("Run 'git log --format=%%cr -- <fixture-file>' for per-file ages\n")
@@ -231,9 +302,15 @@ func init() {
 
 	capmonSeedCmd.Flags().String("provider", "", "Seed only this provider slug")
 	capmonSeedCmd.Flags().Bool("force-overwrite-exclusive", false, "Allow overwriting provider_exclusive entries (prints warning)")
+	capmonSeedCmd.Flags().String("cache-root", "", "Path to .capmon-cache/ (default: .capmon-cache)")
+	capmonSeedCmd.Flags().Bool("skip-spec-gate", false, "Skip the seeder spec human_action gate (for bootstrapping new providers)")
 
 	capmonTestFixturesCmd.Flags().Bool("update", false, "Re-fetch live source and update fixture files")
 	capmonTestFixturesCmd.Flags().String("provider", "", "Provider slug for --update (required with --update)")
+
+	capmonValidateSpecCmd.Flags().String("provider", "", "Provider slug whose seeder spec to validate")
+	capmonValidateSpecCmd.Flags().String("content-type", "skills", "Content type for the seeder spec (default: skills)")
+	capmonValidateSpecCmd.Flags().String("specs-dir", ".develop/seeder-specs", "Directory containing seeder spec YAML files")
 
 	capmonCmd.AddCommand(capmonVerifyCmd)
 	capmonCmd.AddCommand(capmonFetchCmd)
@@ -243,4 +320,5 @@ func init() {
 	capmonCmd.AddCommand(capmonGenerateCmd)
 	capmonCmd.AddCommand(capmonSeedCmd)
 	capmonCmd.AddCommand(capmonTestFixturesCmd)
+	capmonCmd.AddCommand(capmonValidateSpecCmd)
 }

@@ -14,6 +14,7 @@ type SourceManifest struct {
 	Slug          string                       `yaml:"slug"`
 	DisplayName   string                       `yaml:"display_name"`
 	LastVerified  string                       `yaml:"last_verified"`
+	FetchTier     string                       `yaml:"fetch_tier,omitempty"`
 	FetchMethod   string                       `yaml:"fetch_method,omitempty"`
 	ContentTypes  map[string]ContentTypeSource `yaml:"content_types"`
 }

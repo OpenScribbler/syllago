@@ -34,6 +34,12 @@ config_schema:
   # Most content type details can be extracted from this schema alone.
 
 content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Gemini CLI supports: rules, skills, commands, mcp, hooks
+  # Not supported: agents (no user-definable agent file format; internal subagent support only)
+  # Syllago: rules ✓, skills ✓, agents ✓ (via cross-provider AGENTS.md convention at .gemini/agents/), commands ✓, mcp ✓, hooks ✓
+  #   Gemini CLI has no native agent format — syllago uses cross-provider AGENTS.md convention for .gemini/agents/. No documentation URL to monitor for agents.
+  # ─────────────────────────────────────────────────────────────────────
 
   rules:
     # Settings file: ~/.gemini/GEMINI.md (user), .gemini/GEMINI.md (project)

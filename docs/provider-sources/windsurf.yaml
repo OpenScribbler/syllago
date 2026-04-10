@@ -20,6 +20,14 @@ change_detection:
 
 content_types:
 
+  # ── Support summary ───────────────────────────────────────────────────
+  # Windsurf supports: rules (.windsurfrules), skills, hooks, mcp, agents (AGENTS.md convention only), commands (windsurf CLI — not user-definable files)
+  # Not supported: user-definable agent format, user-definable command files
+  # Syllago: rules ✓, skills ✓, hooks ✓, mcp ✓ | agents ✗, commands ✗
+  # Agents tracked for AGENTS.md cross-provider convention — not a windsurf-native format.
+  # windsurf CLI commands are not user-definable files.
+  # ─────────────────────────────────────────────────────────────────────
+
   rules:
     sources:
       - url: https://docs.windsurf.com/windsurf/cascade/memories.md

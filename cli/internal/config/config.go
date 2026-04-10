@@ -123,8 +123,15 @@ func Exists(projectRoot string) bool {
 	return err == nil
 }
 
+// GlobalDirOverride redirects global config to a test-controlled directory.
+// Set in tests to prevent reading the real ~/.syllago/config.json.
+var GlobalDirOverride string
+
 // GlobalDirPath returns the global syllago config directory (~/.syllago/).
 func GlobalDirPath() (string, error) {
+	if GlobalDirOverride != "" {
+		return GlobalDirOverride, nil
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("getting home directory: %w", err)

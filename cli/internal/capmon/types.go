@@ -60,11 +60,20 @@ type CapabilityDiff struct {
 
 // ProviderStatus tracks per-provider pipeline state for the RunManifest.
 type ProviderStatus struct {
-	FetchStatus    string `json:"fetch_status"`
-	ExtractStatus  string `json:"extract_status"`
-	DiffStatus     string `json:"diff_status"`
-	ActionTaken    string `json:"action_taken"`
-	FixtureAgeDays *int   `json:"fixture_age_days"`
+	Slug             string          `json:"slug,omitempty"`
+	Errors           []string        `json:"errors,omitempty"`
+	Warnings         []string        `json:"warnings,omitempty"`
+	SourcesFetched   int             `json:"sources_fetched,omitempty"`
+	SourcesExtracted int             `json:"sources_extracted,omitempty"`
+	SourcesSkipped   int             `json:"sources_skipped,omitempty"`
+	NeedsBaseline    bool            `json:"needs_baseline,omitempty"`
+	HasDrift         bool            `json:"has_drift,omitempty"`
+	Diff             *CapabilityDiff `json:"diff,omitempty"`
+	FetchStatus      string          `json:"fetch_status"`
+	ExtractStatus    string          `json:"extract_status"`
+	DiffStatus       string          `json:"diff_status"`
+	ActionTaken      string          `json:"action_taken"`
+	FixtureAgeDays   *int            `json:"fixture_age_days"`
 }
 
 // RunManifest is write-only observability output — never a pipeline input.
