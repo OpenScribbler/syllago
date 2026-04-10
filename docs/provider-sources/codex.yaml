@@ -30,6 +30,12 @@ config_schema:
   # Covers hooks, MCP, skills, agents, and general settings.
 
 content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Codex supports: rules, skills, agents, commands, mcp, hooks
+  # Not supported: (none)
+  # Syllago support: rules ✓, skills ✓, agents ✓, commands ✓, mcp ✓, hooks ✓
+  # commands source is a stub doc (mostly redirects to external site). 5 hook events via JSON Schema.
+  # ─────────────────────────────────────────────────────────────────────
 
   rules:
     sources:

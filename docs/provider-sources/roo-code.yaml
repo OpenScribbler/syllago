@@ -24,6 +24,14 @@ changelog:
 
 content_types:
 
+  # ── Support summary ───────────────────────────────────────────────────
+  # Roo Code supports: rules (global + per-mode .roo/rules-{mode}/), skills, agents (Custom Modes), commands, mcp
+  # Not supported: hooks (major divergence from Cline — no lifecycle hook system)
+  # Syllago: rules ✓, skills ✓, agents ✓, mcp ✓ | hooks ✗, commands ✗
+  # Roo Code's 'Custom Modes' are stored in .roomodes — these are syllago's 'agents'.
+  # Commands are .roo/commands/*.md files. hooks stub is correct — Roo Code deliberately removed hooks.
+  # ─────────────────────────────────────────────────────────────────────
+
   rules:
     sources:
       - url: https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/rules/rules.md
@@ -68,7 +76,13 @@ content_types:
         type: example
         format: markdown
         extracts: [file_format, frontmatter_fields]
-    # Format: .roo/skills/*/SKILL.md.
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/skills.go
+        type: source-code
+        format: go
+        extracts: [frontmatter_fields, constraints]
+    # Format: .roo/skills/*/SKILL.md. Implements Agent Skills open standard.
+    # Roo Code has only one example SKILL.md in-repo; frontmatter spec sourced from
+    # crush/skills.go (both implement the same Agent Skills standard — same struct).
 
   agents:
     # Roo Code's unique "Custom Modes" system — not present in Cline.

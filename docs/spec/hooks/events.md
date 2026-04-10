@@ -141,3 +141,13 @@ A `--` indicates the provider does not support that event. When encoding a hook 
 - **cursor `sessionStart` blocking bug:** `{"continue": false}` is silently ignored as of at least v2.4.21 — the session creation proceeds regardless. The event is classified as blocking per spec (see blocking-matrix.md) but blocking is currently broken in Cursor. Implementations targeting Cursor SHOULD warn when encoding a blocking `session_start` hook that the blocking intent may not be honored.
 - **cursor `after_tool_execute` split model:** Cursor maps `after_tool_execute` to three native events: `afterShellExecution` (shell commands), `afterMCPExecution` (MCP tool calls), and `afterFileEdit` (file edits). This mirrors the split model used for `before_tool_execute`. Adapters MUST inspect the matcher field when encoding, and MUST merge all three when decoding.
 - **cursor `beforeSubmitPrompt` blocking limits:** `beforeSubmitPrompt` supports only `{"continue": true/false}` — the `userMessage`, `agentMessage`, and `permission` response fields are not supported. A known bug causes blocked messages (when `continue: false`) to remain in conversation history sent to the LLM.
+
+## Provider Support Matrix
+
+The following table is auto-generated from `docs/provider-capabilities/*.yaml`. Do not edit by hand — run `syllago capmon generate` to refresh.
+
+<!-- GENERATED FROM provider-capabilities/*.yaml -->
+| Canonical Event | amp | claude-code | cline | codex | copilot-cli | crush | cursor | factory-droid | gemini-cli | kiro | opencode | pi | roo-code | windsurf | zed |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+
+<!-- END GENERATED -->

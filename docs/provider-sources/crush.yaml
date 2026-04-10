@@ -29,12 +29,18 @@ config_schema:
   draft: "" # Draft version not specified in schema
 
 content_types:
+  # ── Support summary ───────────────────────────────────────────────────
+  # Crush supports: rules, skills, mcp
+  # Not supported: hooks (issue #2038 open, not implemented), agents (no user-definable agent format), commands (no command system)
+  # Syllago: not yet implemented in syllago Go provider code (crush is a future/planned provider)
+  #   No hooks yet — see charmbracelet/crush#2038.
+  # ─────────────────────────────────────────────────────────────────────
 
   # --- Rules / Instructions ---
   # Crush uses AGENTS.md only. No provider-specific rules format.
   rules:
     sources:
-      - url: https://github.com/charmbracelet/crush/blob/main/AGENTS.md
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/AGENTS.md
         type: example # schema | source-code | docs | example
         format: markdown
         extracts: [file_format, file_locations]
@@ -58,7 +64,7 @@ content_types:
         json_path: "$.properties.mcp"
         extracts: [server_config_fields, transport_types]
 
-      - url: https://github.com/charmbracelet/crush/blob/main/README.md
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/README.md
         type: docs
         format: markdown
         extracts: [config_examples, setup_examples]
@@ -66,14 +72,19 @@ content_types:
     # Config file: crush.json "mcp" key (project or global)
 
   # --- Skills ---
-  # Supports Agent Skills standard (SKILL.md folders).
+  # Implements Agent Skills open standard (https://agentskills.io).
   skills:
     sources:
-      - url: https://github.com/charmbracelet/crush/blob/main/README.md
-        type: docs
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/skills.go
+        type: source-code
+        format: go
+        extracts: [frontmatter_fields, file_format, constraints]
+      - url: https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/builtin/crush-config/SKILL.md
+        type: example
         format: markdown
-        extracts: [file_locations, discovery_rules]
-    # Format: SKILL.md with YAML frontmatter (name, description).
+        extracts: [frontmatter_fields, config_examples]
+    # Format: SKILL.md with YAML frontmatter (name required, description required,
+    #   license optional, compatibility optional, metadata map optional).
     # Dirs: .crush/skills/, .agents/skills/ (project), ~/.config/crush/skills/ (user).
     # Also discovers .claude/skills/ and .cursor/skills/ for cross-provider compat.
 
