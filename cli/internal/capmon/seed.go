@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/capmon/capyaml"
 	"gopkg.in/yaml.v3"
@@ -41,9 +42,54 @@ func SeedProviderCapabilities(opts SeedOptions) error {
 		}
 	}
 
-	// Merge extracted fields — full field path → YAML mapping implemented in Phase 9.
-	// For now the extracted data is stored but not yet applied to the typed struct.
-	_ = opts.Extracted
+	// Apply extracted dot-path mappings to the capability struct.
+	// Dot-path format: "<content_type>.<section>.<key>.<field>" → value.
+	if caps.ContentTypes == nil {
+		caps.ContentTypes = make(map[string]capyaml.ContentTypeEntry)
+	}
+	for path, value := range opts.Extracted {
+		parts := strings.SplitN(path, ".", 4)
+		if len(parts) < 2 {
+			continue
+		}
+		ct := parts[0]
+		ctEntry := caps.ContentTypes[ct]
+
+		switch {
+		case len(parts) == 2 && parts[1] == "supported":
+			ctEntry.Supported = value == "true"
+
+		case len(parts) == 4 && parts[1] == "capabilities":
+			capKey, field := parts[2], parts[3]
+			if ctEntry.Capabilities == nil {
+				ctEntry.Capabilities = make(map[string]capyaml.CapabilityEntry)
+			}
+			ce := ctEntry.Capabilities[capKey]
+			switch field {
+			case "supported":
+				ce.Supported = value == "true"
+			case "mechanism":
+				ce.Mechanism = value
+			}
+			ctEntry.Capabilities[capKey] = ce
+
+		case len(parts) == 4 && parts[1] == "events":
+			eventKey, field := parts[2], parts[3]
+			if ctEntry.Events == nil {
+				ctEntry.Events = make(map[string]capyaml.EventEntry)
+			}
+			ev := ctEntry.Events[eventKey]
+			switch field {
+			case "native_name":
+				ev.NativeName = value
+			case "blocking":
+				ev.Blocking = value
+			}
+			ctEntry.Events[eventKey] = ev
+		}
+
+		caps.ContentTypes[ct] = ctEntry
+	}
 
 	f, err := os.Create(path)
 	if err != nil {

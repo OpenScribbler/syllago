@@ -62,3 +62,43 @@ provider_exclusive:
 		t.Error("provider_exclusive entry CustomEvent was removed without --force-overwrite-exclusive")
 	}
 }
+
+func TestSeedProviderCapabilities_AppliesDotPaths(t *testing.T) {
+	capsDir := t.TempDir()
+	seedOpts := capmon.SeedOptions{
+		CapsDir:  capsDir,
+		Provider: "test-provider",
+		Extracted: map[string]string{
+			"skills.supported": "true",
+			"skills.capabilities.frontmatter_name.supported": "true",
+			"skills.capabilities.frontmatter_name.mechanism": "yaml key: name",
+			"hooks.events.before_tool_execute.native_name":   "PreToolUse",
+			"hooks.events.before_tool_execute.blocking":      "prevent",
+		},
+	}
+	if err := capmon.SeedProviderCapabilities(seedOpts); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(capsDir, "test-provider.yaml"))
+	if err != nil {
+		t.Fatalf("read output: %v", err)
+	}
+	out := string(data)
+	checks := []struct {
+		want string
+		desc string
+	}{
+		{"skills:", "skills content type entry"},
+		{"supported: true", "skills supported flag"},
+		{"frontmatter_name:", "frontmatter_name capability"},
+		{"yaml key: name", "frontmatter_name mechanism"},
+		{"before_tool_execute:", "hook event entry"},
+		{"native_name: PreToolUse", "hook native_name"},
+		{"blocking: prevent", "hook blocking"},
+	}
+	for _, c := range checks {
+		if !strings.Contains(out, c.want) {
+			t.Errorf("output missing %s: %q\nFull output:\n%s", c.desc, c.want, out)
+		}
+	}
+}
