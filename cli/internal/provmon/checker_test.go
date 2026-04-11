@@ -9,7 +9,7 @@ import (
 )
 
 func TestCheckURLs(t *testing.T) {
-	t.Parallel()
+	// not t.Parallel() — mutates global httpClient
 
 	// Set up test server with some endpoints.
 	mux := http.NewServeMux()
@@ -69,7 +69,7 @@ func TestCheckURLs(t *testing.T) {
 }
 
 func TestCheckVersion_GitHubReleases(t *testing.T) {
-	t.Parallel()
+	// not t.Parallel() — mutates global httpClient
 
 	// Mock GitHub Releases API.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +109,7 @@ func TestCheckVersion_GitHubReleases(t *testing.T) {
 }
 
 func TestCheckVersion_NoDrift(t *testing.T) {
-	t.Parallel()
+	// not t.Parallel() — mutates global httpClient
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -164,7 +164,7 @@ func TestCheckVersion_ContentHash(t *testing.T) {
 }
 
 func TestRunCheck(t *testing.T) {
-	t.Parallel()
+	// not t.Parallel() — mutates global httpClient
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
