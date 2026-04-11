@@ -1,0 +1,76 @@
+provider: pi
+content_type: skills
+format: ""
+proposed_mappings:
+    - canonical_key: canonical_filename
+      supported: true
+      mechanism: SKILL.md (required, fixed filename for directory-form skills)
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: compatibility
+      supported: true
+      mechanism: 'yaml frontmatter key: compatibility (optional, max 500 chars)'
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: custom_filename
+      supported: true
+      mechanism: Any .md filename at root of ~/.pi/agent/skills/ or .pi/skills/ (shorthand single-file form)
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: description
+      supported: true
+      mechanism: 'yaml frontmatter key: description (required, max 1024 chars)'
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: disable_model_invocation
+      supported: true
+      mechanism: 'yaml frontmatter key: disable-model-invocation (optional bool); confirmed in SkillFrontmatter TypeScript interface as disable-model-invocation?: boolean'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: display_name
+      supported: true
+      mechanism: 'yaml frontmatter key: name (required, max 64 chars, lowercase a-z/0-9/hyphens, must match parent directory name)'
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: global_scope
+      supported: true
+      mechanism: ~/.pi/agent/skills/<name>/SKILL.md or ~/.agents/skills/<name>/SKILL.md
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: license
+      supported: true
+      mechanism: 'yaml frontmatter key: license (optional)'
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: metadata_map
+      supported: true
+      mechanism: 'yaml frontmatter key: metadata (optional, arbitrary key-value mapping)'
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: project_scope
+      supported: true
+      mechanism: .pi/skills/<name>/SKILL.md or .agents/skills/<name>/SKILL.md
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: shared_scope
+      supported: false
+      mechanism: ""
+      source_field: ""
+      source_value: ""
+      confidence: unknown
+    - canonical_key: user_invocable
+      supported: false
+      mechanism: ""
+      source_field: ""
+      source_value: ""
+      confidence: unknown

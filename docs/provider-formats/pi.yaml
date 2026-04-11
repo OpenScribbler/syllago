@@ -1,7 +1,7 @@
 provider: pi
-last_fetched_at: "2026-04-11T00:00:00Z"
+last_fetched_at: "2026-04-11T21:46:24Z"
 last_changed_at: "2026-04-11T00:00:00Z"
-generation_method: human-edited
+generation_method: subagent
 
 content_types:
   skills:
@@ -10,8 +10,13 @@ content_types:
       - uri: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
         type: documentation
         fetch_method: gh_raw
-        content_hash: ""
-        fetched_at: "2026-04-11T00:00:00Z"
+        content_hash: "sha256:f00e73cdd84b357bd6f7833d593baea43fab7e0688a3947ac36098e05427f92b"
+        fetched_at: "2026-04-11T21:46:24Z"
+      - uri: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/core/skills.ts"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: "sha256:ba3a8fb8580502f5f352e8651ff0acd1e3c83b8ba252f4619663cd42fdc305e4"
+        fetched_at: "2026-04-11T21:46:24Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -35,8 +40,8 @@ content_types:
         confidence: inferred
       disable_model_invocation:
         supported: true
-        mechanism: "yaml frontmatter key: disable-model-invocation (optional bool)"
-        confidence: inferred
+        mechanism: "yaml frontmatter key: disable-model-invocation (optional bool); confirmed in SkillFrontmatter TypeScript interface as disable-model-invocation?: boolean"
+        confidence: confirmed
       project_scope:
         supported: true
         mechanism: ".pi/skills/<name>/SKILL.md or .agents/skills/<name>/SKILL.md"
@@ -51,6 +56,9 @@ content_types:
           - "~/.pi/agent/skills/<name>/SKILL.md"
           - "~/.agents/skills/<name>/SKILL.md"
         confidence: inferred
+      shared_scope:
+        supported: false
+        confidence: unknown
       canonical_filename:
         supported: true
         mechanism: "SKILL.md (required, fixed filename for directory-form skills)"
@@ -59,11 +67,44 @@ content_types:
         supported: true
         mechanism: "Any .md filename at root of ~/.pi/agent/skills/ or .pi/skills/ (shorthand single-file form)"
         confidence: inferred
+      user_invocable:
+        supported: false
+        confidence: unknown
     provider_extensions:
       - id: pi_allowed_tools
         name: "allowed-tools frontmatter field"
         description: "Space-delimited list of pre-approved tools (experimental). Pre-approves tool access for the skill without user confirmation prompt."
         source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
         graduation_candidate: false
-    loading_model: ""
-    notes: "Pi implements the agentskills.io open standard. All confidence levels are inferred — the TypeScript source extractor produced no field data. Pi supports rich location semantics: .agents/ cross-provider paths, package.json integration, settings-array config, and CLI --skill flags."
+      - id: supporting_files
+        name: "Supporting files in skill directory"
+        description: "Skill directories may include arbitrary supporting files organized by convention into scripts/ (helper scripts), references/ (detailed docs loaded on-demand), and assets/ (templates, data files). The agent resolves relative paths in SKILL.md against the skill directory and uses them in tool commands."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
+        graduation_candidate: true
+      - id: auto_invocation
+        name: "Description-based auto-invocation"
+        description: "At startup pi scans skill locations and injects names and descriptions into the system prompt in XML format. When a task matches a skill description, the agent uses the read tool to load the full SKILL.md on-demand (progressive disclosure). Users can force invocation via /skill:name commands."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
+        graduation_candidate: true
+      - id: cross_harness_skill_loading
+        name: "Cross-harness skill loading via settings array"
+        description: "Pi's settings skills array accepts paths to other providers' skill directories (e.g., ~/.claude/skills, ~/.codex/skills). This allows a pi session to load and use skills authored for Claude Code or OpenAI Codex without any conversion. No other known provider loads other providers' skill directories."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
+        graduation_candidate: false
+      - id: package_json_skills
+        name: "Package.json and monorepo skill discovery"
+        description: "Skills can be declared via pi.skills entries in package.json or placed in skills/ subdirectories within npm packages. This enables monorepo skill discovery: each package can ship its own skills, discovered automatically when pi runs in that package's directory."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
+        graduation_candidate: false
+      - id: cli_skill_flags
+        name: "CLI flags for runtime skill management"
+        description: "--skill <path> (repeatable) loads additional skill files or directories at runtime; additive even when --no-skills is set. --no-skills disables discovery of all default skill locations, leaving only paths provided via --skill."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
+        graduation_candidate: false
+      - id: gitignore_respect
+        name: "Ignore-file respect during skill scanning"
+        description: "Pi respects .gitignore, .ignore, and .fdignore files when scanning skill directories. Patterns are read from each subdirectory and prefixed with the relative path so they apply correctly to nested content. Implemented in the TypeScript scanner via the ignore npm package."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/core/skills.ts"
+        graduation_candidate: false
+    loading_model: "Pi uses progressive disclosure for skill loading. At startup, the scanner traverses all configured skill locations (global ~/.pi/agent/skills/, project .pi/skills/, .agents/ cross-provider paths, settings-array paths, CLI --skill paths, and package.json/skills/ entries) and extracts only names and descriptions. These are injected into the system prompt as XML. When the agent determines a task matches a skill, it uses the read tool to load the full SKILL.md on-demand. Skills with disable-model-invocation: true are excluded from the system prompt entirely and can only be loaded via explicit /skill:name commands. The scanner skips node_modules, honors symlinks (with cycle-safe realpath deduplication), and respects .gitignore/.ignore/.fdignore files. Name collisions warn and retain the first skill found."
+    notes: "Pi implements the agentskills.io open standard. The TypeScript SkillFrontmatter interface defines only name, description, and disable-model-invocation — license, compatibility, and metadata are documented in the spec table and passed through at parse time (unknown frontmatter fields are ignored per docs). Skills with missing description are silently dropped; all other validation issues produce warnings but still load. Pi supports the richest skill location model of any known provider: five distinct source types (global dir, project dir, .agents/ cross-provider dir, package.json/monorepo, settings array, CLI flags)."
