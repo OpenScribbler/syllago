@@ -1,0 +1,58 @@
+provider: claude-code
+content_type: skills
+format: ""
+proposed_mappings:
+    - canonical_key: canonical_filename
+      supported: true
+      mechanism: Fixed filename SKILL.md required inside skill directory
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: custom_filename
+      supported: true
+      mechanism: 'Variable directory name: .claude/skills/<name>/SKILL.md — directory name is the skill identifier'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: description
+      supported: true
+      mechanism: 'yaml frontmatter key: description (recommended)'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: disable_model_invocation
+      supported: true
+      mechanism: 'yaml frontmatter key: disable-model-invocation (optional bool, default false)'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: display_name
+      supported: true
+      mechanism: 'yaml frontmatter key: name (optional, falls back to directory name)'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: global_scope
+      supported: true
+      mechanism: ~/.claude/skills/<skill-name>/SKILL.md in user home directory
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: project_scope
+      supported: true
+      mechanism: .claude/skills/<skill-name>/SKILL.md committed to version control
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: shared_scope
+      supported: true
+      mechanism: Managed settings deployment for organization-wide distribution
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: user_invocable
+      supported: true
+      mechanism: 'yaml frontmatter key: user-invocable (optional bool, default true)'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
