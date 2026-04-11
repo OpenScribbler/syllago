@@ -2,10 +2,11 @@ package capmon
 
 import (
 	"fmt"
+	"os"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
-	"os"
 )
 
 // canonicalKeysFile is the minimal structure we need from canonical-keys.yaml.
@@ -35,6 +36,23 @@ func loadCanonicalKeys(path string) (map[string]map[string]bool, error) {
 	return result, nil
 }
 
+// supportedUnknownRE matches lines where the supported field is set to the
+// string "unknown" instead of a boolean. YAML unmarshal rejects this with an
+// unhelpful type error; we catch it here before parsing to give a clear fix.
+var supportedUnknownRE = regexp.MustCompile(`(?m)^\s+supported:\s+unknown\s*$`)
+
+// preScanFormatDoc checks raw YAML bytes for known-bad patterns that would
+// cause confusing parse errors. Returns a descriptive, actionable error.
+func preScanFormatDoc(data []byte) error {
+	if supportedUnknownRE.Match(data) {
+		return fmt.Errorf("✗ supported: unknown — the supported field must be a boolean (true or false)\n" +
+			"  For capabilities absent from source material use:\n" +
+			"    supported: false\n" +
+			"    confidence: unknown")
+	}
+	return nil
+}
+
 // validConfidenceValues is the controlled vocabulary for the confidence field.
 var validConfidenceValues = map[string]bool{
 	"confirmed": true,
@@ -59,6 +77,17 @@ func ValidateFormatDoc(formatsDir, canonicalKeysPath, provider string) error {
 	}
 
 	docPath := FormatDocPath(formatsDir, provider)
+
+	// Pre-scan raw bytes before YAML parse. Patterns like "supported: unknown"
+	// cause opaque Go unmarshal errors; catching them here gives a clear fix.
+	rawBytes, err := os.ReadFile(docPath)
+	if err != nil {
+		return fmt.Errorf("read format doc %s: %w", docPath, err)
+	}
+	if err := preScanFormatDoc(rawBytes); err != nil {
+		return err
+	}
+
 	doc, err := LoadFormatDoc(docPath)
 	if err != nil {
 		return err
