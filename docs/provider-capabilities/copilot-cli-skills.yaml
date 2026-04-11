@@ -1,0 +1,58 @@
+provider: copilot-cli
+content_type: skills
+format: ""
+proposed_mappings:
+    - canonical_key: canonical_filename
+      supported: true
+      mechanism: SKILL.md (fixed filename per Agent Skills open standard)
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: custom_filename
+      supported: false
+      mechanism: not observed — Agent Skills standard uses fixed SKILL.md filename
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: description
+      supported: true
+      mechanism: 'yaml frontmatter key: description (required per Agent Skills open standard)'
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: disable_model_invocation
+      supported: false
+      mechanism: ""
+      source_field: ""
+      source_value: ""
+      confidence: unknown
+    - canonical_key: display_name
+      supported: true
+      mechanism: 'yaml frontmatter key: name (required per Agent Skills open standard)'
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: global_scope
+      supported: true
+      mechanism: skill directory under ~/.copilot/skills/<name>/, ~/.claude/skills/<name>/, or ~/.agents/skills/<name>/
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: project_scope
+      supported: true
+      mechanism: skill directory under .github/skills/<name>/, .claude/skills/<name>/, or .agents/skills/<name>/ in project repository
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: shared_scope
+      supported: false
+      mechanism: organization-level and enterprise-level skills explicitly stated as 'coming soon' in source
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: user_invocable
+      supported: true
+      mechanism: slash-prefixed skill name in user prompt (e.g. /frontend-design)
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

@@ -1,7 +1,7 @@
 provider: copilot-cli
-last_fetched_at: "2026-04-11T00:00:00Z"
+last_fetched_at: "2026-04-11T21:50:18Z"
 last_changed_at: "2026-04-11T00:00:00Z"
-generation_method: human-edited
+generation_method: subagent
 
 content_types:
   skills:
@@ -10,8 +10,13 @@ content_types:
       - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/about-agent-skills.md"
         type: documentation
         fetch_method: gh_raw
-        content_hash: ""
-        fetched_at: "2026-04-11T00:00:00Z"
+        content_hash: "sha256:943dce04d029217c96a4863f66be9652ad374109fe2180a28ea0e43ddb252718"
+        fetched_at: "2026-04-11T21:50:18Z"
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/create-skills.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: "sha256:4108d891d8299a78a24cb30fbf7a975560c3f58ae1c61a9bd34d92ecb13a091a"
+        fetched_at: "2026-04-11T21:50:18Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -41,6 +46,10 @@ content_types:
           - "~/.claude/skills/<name>/SKILL.md"
           - "~/.agents/skills/<name>/SKILL.md"
         confidence: confirmed
+      shared_scope:
+        supported: false
+        mechanism: "organization-level and enterprise-level skills explicitly stated as 'coming soon' in source"
+        confidence: confirmed
       canonical_filename:
         supported: true
         mechanism: "SKILL.md (fixed filename per Agent Skills open standard)"
@@ -49,6 +58,76 @@ content_types:
         supported: false
         mechanism: "not observed — Agent Skills standard uses fixed SKILL.md filename"
         confidence: inferred
-    provider_extensions: []
-    loading_model: ""
-    notes: "Copilot CLI implements the Agent Skills open standard (agentskills.io). The format doc lacked a Skills section despite the source manifest listing skills as supported. Organization-level (shared_scope) was mentioned as 'coming soon' in raw source — current availability unconfirmed."
+      disable_model_invocation:
+        supported: false
+        mechanism: ""
+        confidence: unknown
+    provider_extensions:
+      - id: supporting_files
+        name: Supporting Files
+        description: >
+          Skills are described as "folders of instructions, scripts, and resources" — the skill
+          directory contains more than just SKILL.md. Additional files (scripts, resources,
+          instructions) can be bundled alongside the main SKILL.md entrypoint. Copilot loads the
+          skill "when relevant," implying the directory is a unit of loading, not just the single
+          markdown file.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/about-agent-skills.md"
+        graduation_candidate: true
+
+      - id: auto_invocation
+        name: Description-Based Auto-Invocation
+        description: >
+          Copilot loads skills "when relevant to improve its performance in specialized tasks."
+          This implies description-driven automatic invocation — the model reads skill descriptions
+          and activates relevant skills without an explicit user slash-command. This is distinct
+          from the user_invocable slash-command syntax (/skill-name) which is explicit; the
+          auto-invocation path is model-driven based on task relevance.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/about-agent-skills.md"
+        graduation_candidate: true
+
+      - id: plugin_scope
+        name: Plugin Scope
+        description: >
+          Skills can be bundled with and added via plugins. The `/skills remove` command
+          explicitly distinguishes between skills added directly and skills added as part of a
+          plugin — plugin skills must be managed through the plugin itself, not via
+          `/skills remove`. The `/skills info` subcommand can identify which plugin a skill came
+          from. Plugin-scoped skills occupy their own management namespace separate from
+          directly-installed personal and project skills.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/create-skills.md"
+        graduation_candidate: false
+
+      - id: cli_management_commands
+        name: CLI Skill Management Commands
+        description: >
+          Copilot CLI exposes a dedicated `/skills` command with subcommands for managing the
+          full skill lifecycle within a CLI session: `/skills list` lists currently available
+          skills (also triggered by the natural language prompt "What skills do you have?");
+          `/skills` (bare) opens an interactive toggle UI using arrow keys and spacebar to
+          enable/disable individual skills; `/skills info` shows details about a skill including
+          its disk location and which plugin it came from; `/skills add` adds an alternative
+          directory location for storing skills; `/skills reload` loads a newly added skill
+          without restarting the CLI session; `/skills remove SKILL-DIRECTORY` removes a
+          directly-added skill (not plugin skills). This CLI management surface is unique to
+          Copilot CLI and has no equivalent in other providers' skills implementations.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/create-skills.md"
+        graduation_candidate: false
+    loading_model: >
+      Copilot loads skills "when relevant" to the current task — the loading trigger is
+      model-driven relevance, not explicit user invocation (though explicit /skill-name
+      invocation is also supported). Skills are directories; the full directory (instructions,
+      scripts, resources) is the unit of loading. No lazy-loading or on-demand file loading
+      semantics are described in the source material. Skill locations are scanned from project
+      paths (.github/skills/, .claude/skills/, .agents/skills/) and personal paths
+      (~/.copilot/skills/, ~/.claude/skills/, ~/.agents/skills/) at session start; additional
+      locations can be registered via `/skills add` and loaded into a running session via
+      `/skills reload`.
+    notes: >
+      Copilot CLI implements the Agent Skills open standard (agentskills.io). Skills are folders
+      of instructions, scripts, and resources — not single markdown files. The standard uses a
+      fixed SKILL.md entrypoint but the skill directory can contain additional supporting files.
+      Organization-level and enterprise-level skills (shared_scope) are explicitly listed as
+      "coming soon" in the source. Skills can be sourced from public collections such as
+      anthropics/skills and github/awesome-copilot. The CLI-specific /skills management surface
+      (list, info, add, reload, remove) is unique among providers and provides runtime skill
+      management without session restart.
