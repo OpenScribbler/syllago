@@ -1,0 +1,48 @@
+{
+  "$schema": "handoff-v2",
+  "name": "fixed-seederspec-source-uri-field-type-from",
+  "createdAt": "2026-04-10T20:32:11.936Z",
+  "current": {
+    "claimedBy": null,
+    "project": "cli",
+    "updated": "2026-04-10T20:32:11.936Z",
+    "sessionId": "fa03e6d5-87c1-436a-a7d0-1160b0dc81be",
+    "summary": "Fixed SeederSpec.source_uri field type from string to []string; regenerated provider specs",
+    "activeWork": {
+      "description": "capmon-seeder-full-coverage: executing all 8 phases and 13 parallel provider spec generation; mid-phase correcting source_uri field type and updating all spec files",
+      "feature": "capmon-seeder-full-coverage",
+      "stage": "execute",
+      "planRef": "docs/plans/2026-04-02-capmon-seeder-full-coverage-plan.md",
+      "designRef": null,
+      "progress": "Completed phases 0-8 execution; ran 13 parallel provider spec agents; reviewed 4 spec files; discovered and fixed source_uri type (string → []string); need to regenerate remaining 9 provider specs and verify all spec files have correct array values",
+      "blockers": [],
+      "beads": "42 beads created (phases 0-8 tasks + 13 provider spec agents); all phases 0-8 completed; 4 provider specs reviewed and updated"
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 11,
+      "lastCommit": "bd sync: 2026-04-10 post-execution",
+      "modifiedFiles": [
+        "internal/capmon/seederspec.go",
+        ".syllago/audit.jsonl",
+        "providers.json",
+        "docs/provider-sources/amp.yaml"
+      ]
+    },
+    "recentDecisions": [
+      "source_uri field changed from string to []string to support multiple documentation sources",
+      "All 13 provider spec agents ran in parallel successfully",
+      "Spec files need regeneration after type change"
+    ],
+    "nextSteps": [
+      "Regenerate spec files for remaining 9 providers (amp, claude-code, cline, codex, copilot-cli, cursor, factory-droid, gemini-cli, kiro, opencode, pi, windsurf, zed) with source_uri as array",
+      "Verify all existing spec files have correct source_uri array type",
+      "Commit seederspec.go changes and updated spec files",
+      "Run pipeline stress tests with provider counts: 5, 10, 50"
+    ],
+    "context": {
+      "notes": "Session continued from previous conversation context window exhaustion. Full capmon-seeder-full-coverage feature execution already planned and partially executed. Source_uri backtrack correction needed across all provider specs. Previous handoff: capmon-pipeline-stage-wiring-complete-ready-for (ready for stress testing after seeder spec completion)"
+    }
+  },
+  "previousSessions": []
+}
