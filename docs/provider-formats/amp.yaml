@@ -1,6 +1,6 @@
 provider: amp
-last_fetched_at: "2026-04-11T21:49:36Z"
-last_changed_at: "2026-04-11T21:49:40Z"
+last_fetched_at: "2026-04-11T21:49:38Z"
+last_changed_at: "2026-04-11T21:49:38Z"
 generation_method: subagent
 
 content_types:
@@ -207,3 +207,87 @@ content_types:
       example payloads appear partially redacted in the fetched source), but the event names,
       action names, input.contains behavior, and settings file location are all explicitly stated
       in the surrounding prose.
+  mcp:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/mcp/amp-mcp-setup-guide.md"
+        type: documentation
+        fetch_method: http
+        content_hash: "sha256:fa609068c31f12cf7bd25a11f8ae5467eb18dfaf4ef5fd06c6ecae24f7d805e4"
+        fetched_at: "2026-04-11T21:49:38Z"
+      - uri: "https://ampcode.com/manual/mcp.md"
+        type: documentation
+        fetch_method: http
+        content_hash: "sha256:3a2e6eeb629a5d7ecfc46063d0eb7cbaadadd9bfed13bc1df17f34f38c0aab0d"
+        fetched_at: "2026-04-11T21:49:38Z"
+      - uri: "https://ampcode.com/manual/appendix/mcp-registry-allowlist.md"
+        type: documentation
+        fetch_method: http
+        content_hash: "sha256:00f04e9f04fc1632ae80aabb07017474bb26c96fc3698f3ce158cdc52fb470e3"
+        fetched_at: "2026-04-11T21:49:38Z"
+    canonical_mappings: {}
+    provider_extensions:
+      - id: config_key_and_fields
+        name: "MCP server configuration: amp.mcpServers"
+        description: "MCP servers are configured under the 'amp.mcpServers' key in the Amp settings file. Each server entry is keyed by a name and supports two transport modes: local servers use 'command', 'args', and 'env' fields; remote servers use 'url' and 'headers' fields. Environment variable values support '$' syntax for referencing shell env vars. An optional 'disabled' boolean field can be set to temporarily disable a server without removing its config."
+        source_ref: "https://ampcode.com/manual/mcp.md"
+        graduation_candidate: false
+      - id: config_file_locations
+        name: "Settings file locations by platform"
+        description: "The Amp settings file containing 'amp.mcpServers' lives at: Windows: '%APPDATA%\\amp\\settings.json'; macOS and Linux: '~/.config/amp/settings.json'. The project-scoped workspace settings file is '.amp/settings.json' at the project root."
+        source_ref: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/mcp/amp-mcp-setup-guide.md"
+        graduation_candidate: false
+      - id: cli_add_command
+        name: "CLI: amp mcp add"
+        description: "MCP servers can be added via the CLI: 'amp mcp add <name> -- <command> [args...]' for local command-based servers, or 'amp mcp add <name> <url>' for remote HTTP servers. The double-dash separator is required before the command and its arguments for local servers. This writes the server entry into the user-level settings file."
+        source_ref: "https://ampcode.com/manual/mcp.md"
+        graduation_candidate: false
+      - id: server_loading_precedence
+        name: "MCP server loading precedence"
+        description: "When the same MCP server name appears in multiple configuration sources, Amp uses this precedence (highest to lowest): (1) CLI flags ('--mcp-config'), (2) user/workspace config ('amp.mcpServers'), (3) skills (only loaded if not already configured above). This means user or CLI config can override skill-provided MCP servers."
+        source_ref: "https://ampcode.com/manual/mcp.md"
+        graduation_candidate: false
+      - id: workspace_server_trust
+        name: "Workspace MCP server trust approval"
+        description: "MCP servers defined in workspace settings ('.amp/settings.json') require explicit approval before they can run, preventing untrusted code from executing automatically when a project is opened. A server awaiting approval appears as 'awaiting approval' in 'amp mcp doctor' output. To approve: 'amp mcp approve <server-name>'. MCP servers in global user settings ('~/.config/amp/settings.json') or passed via '--mcp-config' do not require approval."
+        source_ref: "https://ampcode.com/manual/mcp.md"
+        graduation_candidate: false
+      - id: oauth_support
+        name: "OAuth authentication for remote MCP servers"
+        description: "Amp supports OAuth for remote MCP servers. For servers that implement automatic OAuth client registration (e.g., Linear), Amp starts the OAuth browser flow automatically at startup. For servers requiring manual OAuth setup: (1) create an OAuth client in the server's admin interface with redirect URI 'http://localhost:8976/oauth/callback'; (2) add the server via 'amp mcp add'; (3) register credentials via 'amp mcp oauth login <server> --server-url <url> --client-id <id> --client-secret <secret> --scopes <scopes>'. OAuth tokens are stored in '~/.amp/oauth/' and auto-refreshed. To clear stored tokens: 'amp mcp oauth logout <server>'."
+        source_ref: "https://ampcode.com/manual/mcp.md"
+        graduation_candidate: false
+      - id: per_tool_enable_disable
+        name: "Per-tool enable/disable"
+        description: "Within a configured MCP server, individual tools can be disabled without removing the server. In VS Code, tools are listed after adding a server and individual tools can be unchecked. The mcp-1 source also describes using the 'amp mcp doctor' command to inspect server and tool status. The setup guide explicitly shows unchecking specific tools (e.g., disabling 'create_issue' on the Linear server) as a context-management best practice."
+        source_ref: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/mcp/amp-mcp-setup-guide.md"
+        graduation_candidate: false
+      - id: vscode_ui_configuration
+        name: "VS Code extension UI for MCP setup"
+        description: "In VS Code with the Amp extension, MCP servers can be configured via the settings UI: Settings → Extensions → Amp → MCP Servers → 'Add MCP Server'. This UI accepts server name, command or URL, and arguments, and displays the list of available tools after the server is added. Individual tools can be enabled or disabled from this UI."
+        source_ref: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/mcp/amp-mcp-setup-guide.md"
+        graduation_candidate: false
+      - id: skills_bundling_preferred
+        name: "Skill-bundled MCP servers as preferred approach"
+        description: "The official recommendation is to bundle MCP servers in skills via 'mcp.json' rather than adding them to global settings. Bundled servers keep tools hidden until the skill loads, preventing tool-list bloat that can reduce model performance. Global configuration is reserved for servers that must always be available in the context window. The mcp.md source states this recommendation explicitly and links to the agent-skills documentation for the bundling mechanism."
+        source_ref: "https://ampcode.com/manual/mcp.md"
+        graduation_candidate: false
+      - id: enterprise_registry_allowlist
+        name: "Enterprise MCP registry allowlist"
+        description: "Enterprise workspace admins can enforce an MCP registry so that only approved MCP servers are available to workspace members. If the registry is unreachable, all MCP servers are blocked. The registry protocol and schema follow the standard at 'registry.modelcontextprotocol.io' (the 'v0.1/servers' endpoint). The registry URL is set in workspace settings under 'MCP Registry'. The restriction can be scoped to specific workspace member email addresses ('Apply To: Specific users only'); users not on the list are unaffected. Clearing the registry URL removes the restriction and allows all servers."
+        source_ref: "https://ampcode.com/manual/appendix/mcp-registry-allowlist.md"
+        graduation_candidate: false
+    loading_model: "MCP servers are loaded at Amp startup. Loading order follows the precedence chain: CLI flags → user/workspace config → skills. Workspace-scoped servers (in .amp/settings.json) require explicit operator approval before they run; global and CLI-provided servers start without approval. Skill-bundled MCP tools remain hidden until the skill is loaded, keeping the tool list clean during normal operation. OAuth flows for remote servers are initiated at startup when credentials are not yet stored."
+    notes: >
+      Three sources cover different facets of Amp MCP support. mcp-0
+      (amp-mcp-setup-guide.md) is a community guide focused on VS Code setup with
+      concrete examples of popular servers (Playwright, Lighthouse, Atlassian, Linear).
+      mcp-1 (ampcode.com/manual/mcp.md) is the authoritative Amp manual section covering
+      CLI commands, config schema, loading precedence, workspace trust, and OAuth. mcp-2
+      (mcp-registry-allowlist.md) covers the enterprise-only MCP registry enforcement
+      feature. The mcp-1 raw.bin contains some truncated JSON config examples (the
+      amp.mcpServers block appears partially redacted in the fetched content), but the
+      config key names, field semantics, CLI syntax, and all behavioral descriptions are
+      stated clearly in surrounding prose. The skill-bundled MCP approach described here
+      is the same mechanism documented in the skills section under the mcp_bundling
+      provider_extension — the two sections are complementary.
