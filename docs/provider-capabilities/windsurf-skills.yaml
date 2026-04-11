@@ -1,0 +1,46 @@
+provider: windsurf
+content_type: skills
+format: ""
+proposed_mappings:
+    - canonical_key: canonical_filename
+      supported: true
+      mechanism: Fixed filename SKILL.md required in each skill directory. All scopes (workspace, global, system) use this same convention.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: description
+      supported: true
+      mechanism: 'yaml frontmatter key: description (required). Brief explanation shown to the model to help it decide when to auto-invoke the skill. Key field for automatic invocation matching.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: display_name
+      supported: true
+      mechanism: 'yaml frontmatter key: name (required). Must be lowercase letters, numbers, and hyphens only (e.g., deploy-to-staging, code-review). Used in UI listings and for @-mentions.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: global_scope
+      supported: true
+      mechanism: Skill directory at ~/.codeium/windsurf/skills/<skill-name>/. Available in all workspaces on the user's machine; not committed to version control. Also discovered at ~/.agents/skills/<skill-name>/ and (if Claude Code config reading is enabled) ~/.claude/skills/<skill-name>/.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: project_scope
+      supported: true
+      mechanism: Skill directory at .windsurf/skills/<skill-name>/. Committed with the repo; current workspace only. For cross-agent compatibility, also discovered at .agents/skills/<skill-name>/ and (if Claude Code config reading is enabled) .claude/skills/<skill-name>/.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: shared_scope
+      supported: true
+      mechanism: 'OS-specific system path deployed by enterprise IT; read-only for end users. macOS: /Library/Application Support/Windsurf/skills/<skill-name>/; Linux/WSL: /etc/windsurf/skills/<skill-name>/; Windows: C:\ProgramData\Windsurf\skills\<skill-name>\.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: user_invocable
+      supported: true
+      mechanism: Explicit @mention by skill name in Cascade input (e.g., @deploy-to-production). Always available regardless of auto-invocation eligibility. Skills can also be created via Cascade UI (three dots → Skills → + Workspace / + Global).
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
