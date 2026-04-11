@@ -1,5 +1,5 @@
 provider: amp
-last_fetched_at: "2026-04-11T21:49:40Z"
+last_fetched_at: "2026-04-11T21:46:11Z"
 last_changed_at: "2026-04-11T21:49:40Z"
 generation_method: subagent
 
@@ -91,3 +91,42 @@ content_types:
       Project skills in .agents/skills/ can be committed to git so the whole team gets them
       automatically. Cross-agent compat paths (.claude/skills/, ~/.claude/skills/) are discovered
       but at lower precedence than amp-native paths.
+  rules:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/AGENT.md"
+        type: example
+        fetch_method: http
+        content_hash: "sha256:ede3c3c842adbd5fd0543d9a5bcedfb0e56edec05d41ba76519c7024570d533a"
+        fetched_at: "2026-04-11T21:46:10Z"
+      - uri: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/agent-file/AGENT.md"
+        type: example
+        fetch_method: http
+        content_hash: "sha256:b5106eece797ac7545cb02da2144737aac76e04fda8fa88f7c1f1e3052cb1efb"
+        fetched_at: "2026-04-11T21:46:11Z"
+    canonical_mappings: {}
+    provider_extensions:
+      - id: canonical_filename
+        name: "Canonical filename: AGENT.md"
+        description: "Amp rules files are named AGENT.md. The filename is fixed — no frontmatter, no directory wrapper. The file contains plain Markdown with behavioral instructions, coding conventions, workflow guidelines, and any other context the agent should follow when working in the project."
+        source_ref: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/agent-file/AGENT.md"
+        graduation_candidate: false
+      - id: project_scope
+        name: "Project-scope placement at repository root"
+        description: "AGENT.md is placed at the root of the project repository. It is project-scoped: the instructions apply when Amp operates within that project. The file can be committed to version control so the whole team benefits from the same guidelines."
+        source_ref: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/agent-file/AGENT.md"
+        graduation_candidate: false
+      - id: plain_markdown_content
+        name: "Plain Markdown, no frontmatter"
+        description: "AGENT.md contains plain Markdown only — no YAML frontmatter, no structured metadata fields. Sections are organized with Markdown headings. Typical content observed includes: build commands and scripts, architecture and directory layout, code style and conventions, testing methodology (e.g., TDD requirements), PR workflow rules, tool and dependency notes, and any team-specific behavioral instructions for the AI."
+        source_ref: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/agent-file/AGENT.md"
+        graduation_candidate: false
+    loading_model: "AGENT.md is loaded when Amp operates within the project directory. The full file content is provided as context to the agent. No lazy loading or frontmatter-first strategy is described — the entire file is treated as behavioral instructions."
+    notes: >
+      The two sources are example AGENT.md files, not formal Amp documentation for the rules format.
+      rules-0 is the amp-examples-and-guides repository's own AGENT.md (repo build/architecture/style
+      guidance). rules-1 is a guide demonstrating TDD, TypeScript, and PR conventions for an
+      application project. Both confirm the AGENT.md filename and plain-Markdown-at-project-root
+      pattern. A third source (https://ampcode.com/manual/AGENTS.md) returned 404 at fetch time
+      and was skipped. Formal Amp documentation for the rules/AGENT.md format has not been
+      confirmed from official docs; all entries here are inferred from example content.
