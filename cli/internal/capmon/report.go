@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -194,19 +195,22 @@ func CreateCapmonChangeIssue(_ context.Context, provider, contentType, title, bo
 		"--label", "capmon-change",
 		"--label", "provider:"+slug,
 		"--body", fullBody,
-		"--json", "number",
 	)
 	if err != nil {
 		return 0, fmt.Errorf("gh issue create: %w", err)
 	}
 
-	var result struct {
-		Number int `json:"number"`
+	// gh issue create prints the URL: https://github.com/owner/repo/issues/123
+	issueURL := strings.TrimSpace(string(out))
+	parts := strings.Split(issueURL, "/")
+	if len(parts) == 0 {
+		return 0, fmt.Errorf("unexpected gh issue create output: %q", issueURL)
 	}
-	if err := json.Unmarshal(out, &result); err != nil {
-		return 0, fmt.Errorf("parse issue create output: %w", err)
+	num, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		return 0, fmt.Errorf("parse issue number from %q: %w", issueURL, err)
 	}
-	return result.Number, nil
+	return num, nil
 }
 
 // AppendCapmonChangeEvent appends a comment to an existing capmon issue.
