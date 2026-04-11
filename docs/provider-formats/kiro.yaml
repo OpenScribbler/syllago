@@ -1,0 +1,61 @@
+provider: kiro
+last_fetched_at: "2026-04-11T00:00:00Z"
+last_changed_at: "2026-04-11T00:00:00Z"
+generation_method: human-edited
+
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://kiro.dev/docs/powers/create/"
+        type: documentation
+        fetch_method: html_url
+        content_hash: ""
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "yaml frontmatter key: name (required, slug-style identifier)"
+        confidence: confirmed
+      description:
+        supported: true
+        mechanism: "yaml frontmatter key: description (required)"
+        confidence: confirmed
+      license:
+        supported: true
+        mechanism: "yaml frontmatter key: license (optional)"
+        confidence: confirmed
+      compatibility:
+        supported: true
+        mechanism: "yaml frontmatter key: compatibility (optional)"
+        confidence: confirmed
+      metadata_map:
+        supported: true
+        mechanism: "yaml frontmatter key: metadata (optional map)"
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: "Self-contained directory installed via Kiro Powers panel (UI installation, no fixed filesystem path)"
+        confidence: confirmed
+      canonical_filename:
+        supported: true
+        mechanism: "Fixed filename POWER.md (required, all caps)"
+        confidence: confirmed
+      custom_filename:
+        supported: false
+        mechanism: "Not observed — POWER.md is fixed"
+        confidence: confirmed
+    provider_extensions:
+      - id: kiro_displayname
+        name: "displayName frontmatter field"
+        description: "A human-readable label separate from the slug-style 'name' field. Kiro uses both: 'name' as the slug identifier and 'displayName' for UI display."
+        source_ref: "https://kiro.dev/docs/powers/create/"
+        graduation_candidate: true
+        graduation_notes: "May warrant a separate canonical key if other providers adopt a similar name/displayName split."
+      - id: kiro_keywords
+        name: "keywords frontmatter field"
+        description: "An array of activation trigger words used by Kiro's automatic power-loading system (e.g. [\"database\", \"postgres\", \"auth\"])."
+        source_ref: "https://kiro.dev/docs/powers/create/"
+        graduation_candidate: false
+    loading_model: ""
+    notes: "Kiro calls this content type 'powers' (not 'skills'). The canonical filename is POWER.md, not SKILL.md. Installation is via IDE UI (Powers panel → Add power from Local Path), not a filesystem path convention. Activation is keyword-driven rather than description-matching."

@@ -1,0 +1,48 @@
+provider: cline
+last_fetched_at: "2026-04-11T00:00:00Z"
+last_changed_at: "2026-04-11T00:00:00Z"
+generation_method: human-edited
+
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://docs.cline.bot/customization/skills.md"
+        type: documentation
+        fetch_method: md_url
+        content_hash: ""
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "yaml frontmatter key: name (required) — must exactly match the directory name"
+        confidence: confirmed
+      description:
+        supported: true
+        mechanism: "yaml frontmatter key: description (required) — tells Cline when to use this skill, max 1024 characters"
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: "Skills stored in .cline/skills/<name>/SKILL.md (recommended path)"
+        paths:
+          - ".cline/skills/<name>/SKILL.md"
+          - ".clinerules/skills/<name>/SKILL.md"
+          - ".claude/skills/<name>/SKILL.md"
+        confidence: confirmed
+      global_scope:
+        supported: true
+        mechanism: "Skills stored in ~/.cline/skills/<name>/SKILL.md (macOS/Linux)"
+        paths:
+          - "~/.cline/skills/<name>/SKILL.md"
+        confidence: confirmed
+      canonical_filename:
+        supported: true
+        mechanism: "Fixed filename SKILL.md required inside a named skill directory"
+        confidence: confirmed
+      custom_filename:
+        supported: false
+        mechanism: "Not applicable — Cline uses fixed SKILL.md canonical filename only"
+        confidence: confirmed
+    provider_extensions: []
+    loading_model: "Two-tier progressive loading: name+description at startup (~100 tokens per skill); SKILL.md body on-demand (under 5k tokens)."
+    notes: "Skills is an experimental feature as of 2026-04. Must be enabled in Settings → Features → Enable Skills. The format doc predating this feature listed Skills as Not supported."

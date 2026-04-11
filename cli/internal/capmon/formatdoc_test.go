@@ -3,6 +3,7 @@ package capmon
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -139,5 +140,43 @@ func TestLoadFormatDoc_FileNotFound(t *testing.T) {
 	_, err := LoadFormatDoc("/nonexistent/path/file.yaml")
 	if err == nil {
 		t.Error("expected error for missing file")
+	}
+}
+
+// TestValidateAllFormatDocs validates every .yaml file in docs/provider-formats/
+// against the canonical-keys.yaml vocabulary. This test acts as a gatekeeper:
+// all real format docs must pass ValidateFormatDoc before merging.
+func TestValidateAllFormatDocs(t *testing.T) {
+	repoRoot := filepath.Join("..", "..", "..")
+	formatsDir := filepath.Join(repoRoot, "docs", "provider-formats")
+	canonicalKeysPath := filepath.Join(repoRoot, "docs", "spec", "canonical-keys.yaml")
+
+	if _, err := os.Stat(formatsDir); os.IsNotExist(err) {
+		t.Skip("docs/provider-formats dir not found")
+	}
+
+	entries, err := os.ReadDir(formatsDir)
+	if err != nil {
+		t.Fatalf("read formats dir: %v", err)
+	}
+
+	var providers []string
+	for _, e := range entries {
+		if !e.IsDir() && filepath.Ext(e.Name()) == ".yaml" {
+			providers = append(providers, strings.TrimSuffix(e.Name(), ".yaml"))
+		}
+	}
+	if len(providers) == 0 {
+		t.Skip("no .yaml format docs found")
+	}
+
+	for _, provider := range providers {
+		provider := provider
+		t.Run(provider, func(t *testing.T) {
+			t.Parallel()
+			if err := ValidateFormatDoc(formatsDir, canonicalKeysPath, provider); err != nil {
+				t.Errorf("ValidateFormatDoc(%q): %v", provider, err)
+			}
+		})
 	}
 }

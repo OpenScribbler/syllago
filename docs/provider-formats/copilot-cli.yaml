@@ -1,0 +1,54 @@
+provider: copilot-cli
+last_fetched_at: "2026-04-11T00:00:00Z"
+last_changed_at: "2026-04-11T00:00:00Z"
+generation_method: human-edited
+
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/about-agent-skills.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: ""
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "yaml frontmatter key: name (required per Agent Skills open standard)"
+        confidence: inferred
+      description:
+        supported: true
+        mechanism: "yaml frontmatter key: description (required per Agent Skills open standard)"
+        confidence: inferred
+      user_invocable:
+        supported: true
+        mechanism: "slash-prefixed skill name in user prompt (e.g. /frontend-design)"
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: "skill directory under .github/skills/<name>/, .claude/skills/<name>/, or .agents/skills/<name>/ in project repository"
+        paths:
+          - ".github/skills/<name>/SKILL.md"
+          - ".claude/skills/<name>/SKILL.md"
+          - ".agents/skills/<name>/SKILL.md"
+        confidence: confirmed
+      global_scope:
+        supported: true
+        mechanism: "skill directory under ~/.copilot/skills/<name>/, ~/.claude/skills/<name>/, or ~/.agents/skills/<name>/"
+        paths:
+          - "~/.copilot/skills/<name>/SKILL.md"
+          - "~/.claude/skills/<name>/SKILL.md"
+          - "~/.agents/skills/<name>/SKILL.md"
+        confidence: confirmed
+      canonical_filename:
+        supported: true
+        mechanism: "SKILL.md (fixed filename per Agent Skills open standard)"
+        confidence: inferred
+      custom_filename:
+        supported: false
+        mechanism: "not observed — Agent Skills standard uses fixed SKILL.md filename"
+        confidence: inferred
+    provider_extensions: []
+    loading_model: ""
+    notes: "Copilot CLI implements the Agent Skills open standard (agentskills.io). The format doc lacked a Skills section despite the source manifest listing skills as supported. Organization-level (shared_scope) was mentioned as 'coming soon' in raw source — current availability unconfirmed."

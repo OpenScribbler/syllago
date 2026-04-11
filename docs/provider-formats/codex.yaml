@@ -1,0 +1,46 @@
+provider: codex
+last_fetched_at: "2026-04-11T00:00:00Z"
+last_changed_at: "2026-04-11T00:00:00Z"
+generation_method: human-edited
+
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/openai/codex/main/codex-rs/core-skills/src/model.rs"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: ""
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "YAML frontmatter key: name (optional per struct, but MissingField error raised if absent — effectively required)"
+        confidence: confirmed
+      description:
+        supported: true
+        mechanism: "YAML frontmatter key: description (effectively required, max 1024 chars)"
+        confidence: confirmed
+      disable_model_invocation:
+        supported: true
+        mechanism: "YAML frontmatter key (via openai.yaml metadata file): policy.allow_implicit_invocation (optional bool, inverse polarity)"
+        confidence: inferred
+      project_scope:
+        supported: true
+        mechanism: "Skills directory at <project_config_folder>/skills/ or <project_root>/.agents/skills/ (SkillScope::Repo)"
+        paths:
+          - ".agents/skills/<name>/SKILL.md"
+        confidence: confirmed
+      global_scope:
+        supported: true
+        mechanism: "Skills directory at $HOME/.agents/skills/ or user config layer's skills/ subdir (SkillScope::User)"
+        paths:
+          - "~/.agents/skills/<name>/SKILL.md"
+        confidence: confirmed
+      canonical_filename:
+        supported: true
+        mechanism: "Fixed filename SKILL.md required within each named skill directory (SKILLS_FILENAME constant)"
+        confidence: confirmed
+    provider_extensions: []
+    loading_model: ""
+    notes: "The codex.md format doc listed Skills as unsupported, but Rust source code reveals a fully-implemented skills system (SkillMetadata, SkillPolicy, SKILL.md, repo/user/system/admin scope hierarchy). A companion openai.yaml file in an agents/ subdirectory of the skill dir provides UI/policy metadata. disable_model_invocation maps to allow_implicit_invocation=false (inverse polarity)."

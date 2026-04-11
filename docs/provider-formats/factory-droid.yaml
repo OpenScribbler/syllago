@@ -1,0 +1,51 @@
+provider: factory-droid
+last_fetched_at: "2026-04-11T00:00:00Z"
+last_changed_at: "2026-04-11T00:00:00Z"
+generation_method: human-edited
+
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://docs.factory.ai/cli/configuration/skills"
+        type: documentation
+        fetch_method: html_url
+        content_hash: ""
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "yaml frontmatter key: name (optional, defaults to directory name)"
+        confidence: confirmed
+      description:
+        supported: true
+        mechanism: "yaml frontmatter key: description (recommended, not required)"
+        confidence: confirmed
+      user_invocable:
+        supported: true
+        mechanism: "yaml frontmatter key: user-invocable (optional bool, default: true)"
+        confidence: confirmed
+      disable_model_invocation:
+        supported: true
+        mechanism: "yaml frontmatter key: disable-model-invocation (optional bool, default: false)"
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: "<repo>/.factory/skills/<skill-name>/SKILL.md"
+        paths:
+          - ".factory/skills/<skill-name>/SKILL.md"
+          - ".agent/skills/<skill-name>/SKILL.md"
+        confidence: confirmed
+      global_scope:
+        supported: true
+        mechanism: "~/.factory/skills/<skill-name>/SKILL.md"
+        paths:
+          - "~/.factory/skills/<skill-name>/SKILL.md"
+        confidence: confirmed
+      canonical_filename:
+        supported: true
+        mechanism: "SKILL.md (fixed, required filename within the skill directory)"
+        confidence: confirmed
+    provider_extensions: []
+    loading_model: ""
+    notes: "A compatibility discovery path at <repo>/.agent/skills/ is also supported (not in original format doc). The docs additionally show skill.mdx accepted alongside SKILL.md."

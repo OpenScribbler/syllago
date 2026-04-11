@@ -1,0 +1,49 @@
+provider: opencode
+last_fetched_at: "2026-04-11T00:00:00Z"
+last_changed_at: "2026-04-11T00:00:00Z"
+generation_method: human-edited
+
+content_types:
+  skills:
+    status: supported
+    sources: []
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "yaml frontmatter key: name (required)"
+        confidence: inferred
+      description:
+        supported: true
+        mechanism: "yaml frontmatter key: description (required)"
+        confidence: inferred
+      license:
+        supported: true
+        mechanism: "yaml frontmatter key: license (optional)"
+        confidence: inferred
+      compatibility:
+        supported: true
+        mechanism: "yaml frontmatter key: compatibility (optional)"
+        confidence: inferred
+      metadata_map:
+        supported: true
+        mechanism: "yaml frontmatter key: metadata (optional map)"
+        confidence: inferred
+      project_scope:
+        supported: true
+        mechanism: "cross-provider SKILL.md convention at .opencode/skill/<name>/SKILL.md"
+        paths:
+          - ".opencode/skill/<name>/SKILL.md"
+        confidence: inferred
+      global_scope:
+        supported: true
+        mechanism: "cross-provider convention at ~/.config/opencode/skills/<name>/SKILL.md"
+        paths:
+          - "~/.config/opencode/skills/<name>/SKILL.md"
+        confidence: inferred
+      canonical_filename:
+        supported: true
+        mechanism: "Fixed filename SKILL.md inside skill directory (Agent Skills spec)"
+        confidence: inferred
+    provider_extensions: []
+    loading_model: ""
+    notes: "OpenCode is archived (final version v0.0.55; succeeded by Crush). It has no native skill implementation — syllago uses the cross-provider SKILL.md convention. All mappings are inferred from community convention and the human format doc, not from OpenCode's own source."

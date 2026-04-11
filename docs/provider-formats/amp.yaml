@@ -1,0 +1,54 @@
+provider: amp
+last_fetched_at: "2026-04-11T00:00:00Z"
+last_changed_at: "2026-04-11T00:00:00Z"
+generation_method: human-edited
+
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://ampcode.com/manual/agent-skills.md"
+        type: documentation
+        fetch_method: md_url
+        content_hash: ""
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "yaml frontmatter key: name (required)"
+        confidence: confirmed
+      description:
+        supported: true
+        mechanism: "yaml frontmatter key: description (required)"
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: ".agents/skills/<name>/SKILL.md"
+        paths:
+          - ".agents/skills/<name>/SKILL.md"
+          - ".claude/skills/<name>/SKILL.md"
+        confidence: confirmed
+      global_scope:
+        supported: true
+        mechanism: "~/.config/agents/skills/<name>/SKILL.md"
+        paths:
+          - "~/.config/agents/skills/<name>/SKILL.md"
+          - "~/.config/amp/skills/<name>/SKILL.md"
+          - "~/.claude/skills/<name>/SKILL.md"
+        confidence: confirmed
+      canonical_filename:
+        supported: true
+        mechanism: "SKILL.md (required, fixed name)"
+        confidence: confirmed
+      custom_filename:
+        supported: false
+        mechanism: "not observed — amp requires SKILL.md as the fixed canonical filename"
+        confidence: confirmed
+    provider_extensions:
+      - id: mcp_bundling
+        name: "MCP server bundling"
+        description: "Skills can include an mcp.json file to bundle an MCP server that starts when Amp launches but remains hidden until the skill is loaded."
+        source_ref: "https://ampcode.com/manual/agent-skills.md"
+        graduation_candidate: false
+    loading_model: "Lazy — name and description loaded at startup; SKILL.md body loaded on demand."
+    notes: ""

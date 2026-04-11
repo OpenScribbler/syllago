@@ -1,0 +1,58 @@
+provider: claude-code
+last_fetched_at: "2026-04-11T00:00:00Z"
+last_changed_at: "2026-04-11T00:00:00Z"
+generation_method: human-edited
+
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://code.claude.com/docs/en/skills.md"
+        type: documentation
+        fetch_method: md_url
+        content_hash: ""
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "yaml frontmatter key: name (optional, falls back to directory name)"
+        confidence: confirmed
+      description:
+        supported: true
+        mechanism: "yaml frontmatter key: description (recommended)"
+        confidence: confirmed
+      disable_model_invocation:
+        supported: true
+        mechanism: "yaml frontmatter key: disable-model-invocation (optional bool, default false)"
+        confidence: confirmed
+      user_invocable:
+        supported: true
+        mechanism: "yaml frontmatter key: user-invocable (optional bool, default true)"
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: ".claude/skills/<skill-name>/SKILL.md committed to version control"
+        paths:
+          - ".claude/skills/<skill-name>/SKILL.md"
+        confidence: confirmed
+      global_scope:
+        supported: true
+        mechanism: "~/.claude/skills/<skill-name>/SKILL.md in user home directory"
+        paths:
+          - "~/.claude/skills/<skill-name>/SKILL.md"
+        confidence: confirmed
+      shared_scope:
+        supported: true
+        mechanism: "Managed settings deployment for organization-wide distribution"
+        confidence: confirmed
+      canonical_filename:
+        supported: true
+        mechanism: "Fixed filename SKILL.md required inside skill directory"
+        confidence: confirmed
+      custom_filename:
+        supported: true
+        mechanism: "Variable directory name: .claude/skills/<name>/SKILL.md — directory name is the skill identifier"
+        confidence: confirmed
+    provider_extensions: []
+    loading_model: "Lazy — name and description visible to Claude at all times; SKILL.md body loaded on demand when invoked."
+    notes: "Claude Code also supports a Plugin scope (<plugin>/skills/<skill-name>/SKILL.md) with no direct canonical equivalent."

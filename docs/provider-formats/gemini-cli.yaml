@@ -1,0 +1,46 @@
+provider: gemini-cli
+last_fetched_at: "2026-04-11T00:00:00Z"
+last_changed_at: "2026-04-11T00:00:00Z"
+generation_method: human-edited
+
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/creating-skills.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: ""
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "yaml frontmatter key: name (required)"
+        confidence: confirmed
+      description:
+        supported: true
+        mechanism: "yaml frontmatter key: description (required)"
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: ".gemini/skills/<name>/SKILL.md"
+        paths:
+          - ".gemini/skills/<name>/SKILL.md"
+        confidence: confirmed
+      global_scope:
+        supported: true
+        mechanism: "~/.gemini/skills/<name>/SKILL.md"
+        paths:
+          - "~/.gemini/skills/<name>/SKILL.md"
+        confidence: confirmed
+      canonical_filename:
+        supported: true
+        mechanism: "SKILL.md (required, fixed name)"
+        confidence: confirmed
+      custom_filename:
+        supported: false
+        mechanism: "not observed — filename is fixed as SKILL.md"
+        confidence: confirmed
+    provider_extensions: []
+    loading_model: ""
+    notes: "Only name and description are documented frontmatter fields. No license, version, compatibility, metadata_map, disable_model_invocation, or user_invocable fields appear in the docs."
