@@ -1,7 +1,7 @@
 provider: codex
-last_fetched_at: "2026-04-11T00:00:00Z"
+last_fetched_at: "2026-04-11T21:50:06Z"
 last_changed_at: "2026-04-11T00:00:00Z"
-generation_method: human-edited
+generation_method: subagent
 
 content_types:
   skills:
@@ -10,37 +10,181 @@ content_types:
       - uri: "https://raw.githubusercontent.com/openai/codex/main/codex-rs/core-skills/src/model.rs"
         type: source_code
         fetch_method: gh_raw
-        content_hash: ""
-        fetched_at: "2026-04-11T00:00:00Z"
+        content_hash: "sha256:51185b6cebeeffc0200639fbf126d93727db912d72433d59da628d7225c56ac8"
+        fetched_at: "2026-04-11T21:50:06Z"
+      - uri: "https://raw.githubusercontent.com/openai/codex/main/codex-rs/core-skills/src/loader.rs"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: "sha256:6f333860574248d9615556e8f65c0c654272ec54f6d95de262763d7d5e94daa8"
+        fetched_at: "2026-04-11T21:50:06Z"
+      - uri: "https://raw.githubusercontent.com/openai/codex/main/codex-rs/core-skills/docs/skills.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: "sha256:e59789d09692310bbf94e2ef8db0aaf00d97f2226982c8c5330d2d260583a97d"
+        fetched_at: "2026-04-11T21:50:06Z"
     canonical_mappings:
       display_name:
         supported: true
-        mechanism: "YAML frontmatter key: name (optional per struct, but MissingField error raised if absent — effectively required)"
+        mechanism: "YAML frontmatter key: name (optional — falls back to parent directory name if absent or empty; max 64 chars enforced after whitespace normalization)"
         confidence: confirmed
       description:
         supported: true
-        mechanism: "YAML frontmatter key: description (effectively required, max 1024 chars)"
+        mechanism: "YAML frontmatter key: description (required — empty string triggers MissingField error; max 1024 chars enforced after whitespace normalization)"
         confidence: confirmed
       disable_model_invocation:
         supported: true
-        mechanism: "YAML frontmatter key (via openai.yaml metadata file): policy.allow_implicit_invocation (optional bool, inverse polarity)"
-        confidence: inferred
+        mechanism: "openai.yaml companion file key: policy.allow_implicit_invocation (optional bool; false disables implicit/auto invocation; defaults to true when absent)"
+        confidence: confirmed
       project_scope:
         supported: true
-        mechanism: "Skills directory at <project_config_folder>/skills/ or <project_root>/.agents/skills/ (SkillScope::Repo)"
+        mechanism: "Skills directory at <project_config_folder>/skills/ (SkillScope::Repo) or any .agents/skills/ directory between project root and cwd (monorepo traversal)"
         paths:
           - ".agents/skills/<name>/SKILL.md"
         confidence: confirmed
       global_scope:
         supported: true
-        mechanism: "Skills directory at $HOME/.agents/skills/ or user config layer's skills/ subdir (SkillScope::User)"
+        mechanism: "Skills directory at $HOME/.agents/skills/ or the user config layer's skills/ subdir ($CODEX_HOME/skills, deprecated but kept for backward compatibility) (SkillScope::User)"
         paths:
           - "~/.agents/skills/<name>/SKILL.md"
+        confidence: confirmed
+      shared_scope:
+        supported: true
+        mechanism: "Admin scope at /etc/codex/skills on Unix (SkillScope::Admin) — machine-level shared skills readable by all local users; injected via System config layer"
+        paths:
+          - "/etc/codex/skills/<name>/SKILL.md"
         confidence: confirmed
       canonical_filename:
         supported: true
         mechanism: "Fixed filename SKILL.md required within each named skill directory (SKILLS_FILENAME constant)"
         confidence: confirmed
-    provider_extensions: []
-    loading_model: ""
-    notes: "The codex.md format doc listed Skills as unsupported, but Rust source code reveals a fully-implemented skills system (SkillMetadata, SkillPolicy, SKILL.md, repo/user/system/admin scope hierarchy). A companion openai.yaml file in an agents/ subdirectory of the skill dir provides UI/policy metadata. disable_model_invocation maps to allow_implicit_invocation=false (inverse polarity)."
+      user_invocable:
+        supported: false
+        confidence: unknown
+    provider_extensions:
+      - id: short_description
+        name: Short Description
+        description: >
+          A condensed version of the skill description. Declared in SKILL.md frontmatter under
+          metadata.short-description (YAML key, hyphenated). Also available as
+          interface.short_description in the openai.yaml companion file. Truncated to 1024 chars.
+          Used for compact display contexts where the full description is too long.
+        source_ref: "loader.rs (SkillFrontmatterMetadata.short_description, resolve_interface)"
+        graduation_candidate: false
+      - id: openai_yaml_companion_file
+        name: openai.yaml Companion Metadata File
+        description: >
+          An optional companion file at <skill_dir>/agents/openai.yaml that provides UI and policy
+          metadata separate from SKILL.md frontmatter. Contains three top-level sections:
+          interface (display_name, short_description, icon_small, icon_large, brand_color,
+          default_prompt), dependencies (tools list with type, value, description, transport,
+          command, url fields), and policy (allow_implicit_invocation, products). The file is
+          optional — missing it is not an error. Path resolution for icon assets enforces that
+          paths must be relative and under an assets/ subdirectory of the skill dir.
+        source_ref: "loader.rs (SKILLS_METADATA_DIR, SKILLS_METADATA_FILENAME, load_skill_metadata)"
+        graduation_candidate: true
+      - id: skill_interface_icons
+        name: Skill Interface Icons
+        description: >
+          Skills may declare small and large icons via openai.yaml interface.icon_small and
+          interface.icon_large. Values must be relative paths under the skill's assets/ directory
+          (absolute paths and path traversal via .. are rejected). Used for UI display.
+        source_ref: "loader.rs (resolve_asset_path), model.rs (SkillInterface.icon_small, icon_large)"
+        graduation_candidate: false
+      - id: skill_interface_brand_color
+        name: Skill Brand Color
+        description: >
+          A brand color for the skill declared as interface.brand_color in openai.yaml. Must be
+          a valid #RRGGBB hex string (exactly 7 chars). Used for UI theming of the skill card.
+        source_ref: "loader.rs (resolve_color_str), model.rs (SkillInterface.brand_color)"
+        graduation_candidate: false
+      - id: skill_interface_default_prompt
+        name: Default Prompt
+        description: >
+          A default prompt for the skill declared as interface.default_prompt in openai.yaml.
+          Max 1024 chars. Provides a pre-filled starting prompt when a user invokes the skill
+          from a UI that supports it.
+        source_ref: "loader.rs (resolve_interface), model.rs (SkillInterface.default_prompt)"
+        graduation_candidate: false
+      - id: tool_dependencies
+        name: Tool Dependencies
+        description: >
+          Skills can declare tool dependencies via openai.yaml dependencies.tools (a list).
+          Each dependency has: type (required, max 64 chars), value (required, max 1024 chars),
+          description (optional, max 1024 chars), transport (optional, max 64 chars),
+          command (optional, max 1024 chars), url (optional, max 1024 chars). Used to declare
+          what external tools or MCP servers the skill requires.
+        source_ref: "loader.rs (resolve_dependency_tool, DependencyTool), model.rs (SkillDependencies, SkillToolDependency)"
+        graduation_candidate: false
+      - id: product_gating
+        name: Product Gating
+        description: >
+          Skills can be restricted to specific OpenAI products via openai.yaml policy.products
+          (a list of Product values). When products is non-empty, the skill is only shown/used
+          when the active product matches the restriction list. When products is empty, the skill
+          is available for all products. Filtering is applied at load time via
+          filter_skill_load_outcome_for_product().
+        source_ref: "model.rs (SkillPolicy.products, matches_product_restriction_for_product), loader.rs (resolve_policy)"
+        graduation_candidate: false
+      - id: system_scope
+        name: System Scope (Embedded Skills Cache)
+        description: >
+          A fourth scope beyond Repo/User/Admin. System-scoped skills are embedded by Codex itself
+          and cached under $CODEX_HOME/skills/.system (SkillScope::System). This scope does NOT
+          follow symlinks (unlike Repo, User, and Admin scopes). Parse errors for system-scoped
+          skills are silently suppressed (not added to SkillLoadOutcome.errors). Skills are
+          sorted Repo > User > System > Admin by priority.
+        source_ref: "loader.rs (skill_roots_from_layer_stack_inner, discover_skills_under_root follow_symlinks logic)"
+        graduation_candidate: false
+      - id: plugin_scope
+        name: Plugin Scope
+        description: >
+          A plugin extension mechanism where additional skill roots are injected externally via
+          plugin_skill_roots (Vec<PathBuf> from codex_utils_plugins). Plugin skills are assigned
+          SkillScope::User scope and receive a namespaced name prefix (plugin_namespace_for_skill_path).
+          This allows third-party plugins to contribute skills without modifying config files.
+        source_ref: "loader.rs (skill_roots_with_home_dir, namespaced_skill_name, plugin_namespace_for_skill_path)"
+        graduation_candidate: false
+      - id: monorepo_traversal
+        name: Monorepo Skill Discovery
+        description: >
+          For Repo-scoped skills, codex walks all directories between the detected project root
+          and the current working directory, collecting any .agents/skills/ subdirectory found
+          along the path. Project root is determined by scanning ancestors for project_root_markers
+          (configurable, defaults to standard VCS/build markers). MAX_SCAN_DEPTH=6 limits
+          traversal depth within each skills root; MAX_SKILLS_DIRS_PER_ROOT=2000 caps total dirs
+          scanned per root.
+        source_ref: "loader.rs (repo_agents_skill_roots, dirs_between_project_root_and_cwd, MAX_SCAN_DEPTH, MAX_SKILLS_DIRS_PER_ROOT)"
+        graduation_candidate: false
+      - id: skill_deduplication
+        name: Skill Deduplication
+        description: >
+          After loading all roots, skills with duplicate SKILL.md paths are deduplicated —
+          only the first occurrence (highest-priority scope) is kept. Skills are then sorted
+          by scope priority (Repo > User > System > Admin), then by name, then by path.
+        source_ref: "loader.rs (load_skills_from_roots dedup and sort logic)"
+        graduation_candidate: false
+    loading_model: >
+      Skills are loaded by scanning a priority-ordered list of roots: Repo (project config folder
+      skills/ and monorepo .agents/skills/ dirs), User ($HOME/.agents/skills/ and deprecated
+      $CODEX_HOME/skills/), System ($CODEX_HOME/skills/.system, embedded/cached), and Admin
+      (/etc/codex/skills on Unix). Each root is BFS-scanned up to MAX_SCAN_DEPTH=6 directories
+      deep, capped at MAX_SKILLS_DIRS_PER_ROOT=2000 dirs per root. Symlinks are followed for
+      Repo, User, and Admin scopes; not for System. A SKILL.md file within any subdirectory
+      is parsed: YAML frontmatter (--- delimited) is extracted and deserialized into
+      SkillFrontmatter (name, description, metadata.short-description). The name falls back to
+      the parent directory name if absent. Description is required (empty triggers MissingField
+      error). An optional agents/openai.yaml companion file in the skill directory provides
+      interface, dependencies, and policy metadata. After loading all roots, duplicate paths are
+      removed (highest-priority scope wins) and skills are sorted by scope then name then path.
+      Plugin-injected roots receive User scope and a namespaced name prefix.
+    notes: >
+      The existing format doc had three sources listed only as model.rs with an empty content_hash.
+      Updated to include all three sources (model.rs, loader.rs, docs/skills.md) with correct
+      hashes. The shared_scope canonical mapping is added for Admin scope (/etc/codex/skills) —
+      this is machine-level shared scope (all local users), not org/cloud shared scope.
+      The user_invocable key has no evidence in the source (no concept of hiding skills from
+      user-facing menus in the Rust implementation) — set to supported: false, confidence: unknown.
+      The display_name mechanism was corrected: name is optional and falls back to directory name
+      (not a MissingField error). openai_yaml_companion_file is flagged graduation_candidate: true
+      because other providers (windsurf, amp, cline, claude-code) support additional supporting
+      files in the skill directory beyond the primary content file.
