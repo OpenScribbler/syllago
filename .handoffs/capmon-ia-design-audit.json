@@ -1,0 +1,64 @@
+{
+  "$schema": "handoff-v2",
+  "name": "capmon-ia-design-audit",
+  "createdAt": "2026-04-10T21:00:00-07:00",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-10T21:00:00-07:00",
+    "sessionId": null,
+    "summary": "Auditing and resolving gaps in the capmon information architecture design doc — worked through 5 of 14 identified items",
+
+    "activeWork": {
+      "description": "Completing the capmon IA design doc audit before implementation begins. 14 gaps were identified; 5 resolved this session, 9 remain.",
+      "feature": "capmon",
+      "stage": "validate",
+      "planRef": null,
+      "designRef": "docs/plans/2026-04-10-capmon-information-architecture.md",
+      "progress": "Resolved items 1-5. Remaining items are 6-14 (listed in nextSteps). Design doc is significantly more complete. syllago-capmon-process skill also created as a side effect of item 4.",
+      "blockers": [],
+      "beads": {
+        "inProgress": ["syllago-jtafb"],
+        "completedThisSession": [],
+        "readyNext": []
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 12,
+      "lastCommit": "83f3cb9 bd sync: 2026-04-10 19:45:03",
+      "modifiedFiles": [
+        "docs/plans/2026-04-10-capmon-information-architecture.md"
+      ]
+    },
+
+    "recentDecisions": [
+      "canonical-keys.yaml: per-content-type structure; initial skills vocabulary derived from recognize.go + seeder specs (14 keys); capmon derive hard-rejects unknown keys",
+      "Graduation = adding a new canonical key, triggered when 2+ providers have the same concept in provider_extensions under different names",
+      "Workflow docs (update-format-doc.md, graduation-comparison.md) fully specified inline in design doc — extract verbatim to target files during implementation",
+      "capmon-process is a personal Claude Code skill (syllago-capmon-process), not part of the binary — created at $PAI_DIR/skills/syllago-capmon-process/",
+      "Loop invocation: cron job using claude -p, scheduled ~15min after CI action run; /loop 12h also valid but session-scoped",
+      "--local flag on capmon onboard: dropped. Use two commands instead: capmon onboard then claude -p /syllago-capmon-process"
+    ],
+
+    "nextSteps": [
+      "Item 6: Define .capmon-cache/<slug>/meta.json schema (fields: provider, content_type, source_uri, content_hash, fetched_at — but exact schema undefined)",
+      "Item 7: Clarify notes field in source manifests — machine-parsed trigger values (e.g. 'SPA' -> use Readability) or human-readable annotation for LLM?",
+      "Item 8: Define downstream effect of generation_method field (subagent | human-edited) — purely informational, or does pipeline behave differently?",
+      "Item 9: Structural diff in CI for source code — requires AST parsing (go/ast, ts-morph, etc). Is this proper AST diff or text diff acceptable for v1?",
+      "Item 10: Two .md URL patterns — what if both return 200? Take first, take longer, or always try both and merge?",
+      "Item 11: Provider removal — what happens to cache, open issues, format doc orphans when provider removed from providers.json?",
+      "Item 12: Loop failure / partial state — what is the recovery procedure if syllago-capmon-process fails mid-run?",
+      "Item 13: Migration period — does capmon check handle both *.md and *.yaml format docs during incremental migration?",
+      "Item 14: Diff preview size cap — GitHub issue body limit ~65536 chars; large source diffs could exceed this",
+      "Bonus: graduation_candidate: false backwards incentive — LLM sets own extensions to false by default; no re-evaluation path for existing extensions"
+    ],
+
+    "context": {
+      "notes": "The design doc status header still says 'Design complete — panel-reviewed, ready for plan/implementation' — this should stay as-is until all 14 audit items are resolved and Holden decides the doc is truly ready. The syllago-capmon-process skill at $PAI_DIR/skills/syllago-capmon-process/ was created this session and is symlinked to ~/.claude/skills/. The skill's process-issues.md workflow references docs/workflows/update-format-doc.md and docs/workflows/graduation-comparison.md which are fully specified in the design doc but not yet extracted to their target files — that happens during implementation. Open Questions section of the design doc still has 3 items: Q1 (migration path, low stakes), Q2 (cache storage, lean stated), Q3 (loop polling, eliminated by cron decision). These should be resolved or explicitly closed as part of this audit."
+    }
+  },
+
+  "previousSessions": []
+}

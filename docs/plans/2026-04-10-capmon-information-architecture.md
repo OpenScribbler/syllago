@@ -114,8 +114,22 @@ capmon check --all
 
 ### Local /loop (Remediation)
 
+The local remediation loop is Holden's personal operation of the pipeline — it is not part of the syllago binary and is not available to other syllago users. It runs as the `syllago-capmon-process` Claude Code skill, stored in `$PAI_DIR/skills/syllago-capmon-process/` and symlinked to `~/.claude/skills/`. The detailed processing steps are in that skill's `workflows/process-issues.md`.
+
+The skill references `docs/workflows/update-format-doc.md` and `docs/workflows/graduation-comparison.md` from this repo as the LLM agent instructions for Steps 2c and 2d.
+
+The skill is invoked via a cron job using Claude Code's programmatic mode (`-p` flag), which runs the skill headlessly and exits when complete. The cron schedule is set to run ~15 minutes after each CI action run, so the loop only fires when there is likely new work to do.
+
 ```
-/loop 30m capmon-process
+# Example cron entry (adjust times to match your CI schedule + 15m offset)
+# CI: Mon-Fri 06:00 and 18:00 UTC → loop: 06:15 and 18:15
+15 6,18 * * 1-5 claude -p "/syllago-capmon-process"
+15 6   * * 0,6  claude -p "/syllago-capmon-process"
+```
+
+```
+# Original /loop reference (replaced by cron):
+# /loop 30m syllago-capmon-process
 
 for each open capmon-change issue:
 
@@ -237,7 +251,57 @@ When the source material is ambiguous, prefer `inferred` over `confirmed`. `conf
 
 ### Canonical Key Vocabulary
 
-Canonical keys are defined in `docs/spec/canonical-keys.yaml`. The `canonical_mappings` block in each format doc uses only keys from that list. New canonical keys are added via the graduation process.
+Canonical keys are defined in `docs/spec/canonical-keys.yaml`. The `canonical_mappings` block in each format doc MUST only use keys from that list. `capmon derive` exits non-zero if it encounters an unknown key — unknown keys are never silently passed through. If a capability has no canonical key, it belongs in `provider_extensions`, not `canonical_mappings`.
+
+New canonical keys are added only via the graduation process (see below).
+
+The file is structured per content type:
+
+```yaml
+content_types:
+  skills:
+    display_name:
+      description: "Human-readable skill name. Maps from frontmatter 'name' key."
+      type: string
+    description:
+      description: "What the skill does. Used by the provider for auto-invocation routing."
+      type: string
+    project_scope:
+      description: "Installation path for project-scoped skills."
+      type: string
+    global_scope:
+      description: "Installation path for user-global skills."
+      type: string
+    shared_scope:
+      description: "Installation path for org-wide or enterprise-distributed skills."
+      type: string
+    canonical_filename:
+      description: "Fixed filename required inside the skill directory (e.g. SKILL.md)."
+      type: string
+    custom_filename:
+      description: "Variable directory name pattern where the directory name is the skill identifier."
+      type: string
+    disable_model_invocation:
+      description: "When true, prevents the provider from auto-invoking the skill."
+      type: bool
+    user_invocable:
+      description: "When false, hides the skill from the user-facing slash menu."
+      type: bool
+    license:
+      description: "License declaration for the skill."
+      type: string
+    compatibility:
+      description: "Tool compatibility constraints declared in frontmatter."
+      type: string
+    metadata_map:
+      description: "Generic metadata container for provider-specific key-value pairs."
+      type: object
+    version:
+      description: "Skill version string declared in frontmatter."
+      type: string
+```
+
+The initial skills vocabulary is derived from the existing `canonicalKeyFromYAMLKey()` function in `cli/internal/capmon/recognize.go` and the 13 seeder specs in `.develop/seeder-specs/`. Other content types (rules, hooks, MCP, agents, commands) will have their vocabulary sections added as each type is worked on — the file grows through use, not by declaration in advance.
 
 ### Provider Extensions
 
@@ -253,22 +317,24 @@ When a concept appears in two or more provider extensions across different provi
 
 ## Graduation Process
 
-**Trigger:** Format doc update introduces a new `provider_extensions` entry OR a new `canonical_mappings` key. Pure edits to existing content do not trigger graduation.
+Graduation means **adding a new canonical key to `docs/spec/canonical-keys.yaml`**. This happens when two or more providers implement the same concept in their `provider_extensions` under different names. Once a canonical key exists, providers use it in `canonical_mappings` instead of extensions.
 
-**Detection:** Graduation comparison agent reads all provider format docs and identifies semantic overlaps across `provider_extensions`. This is LLM judgment — "Amp's `mcp_bundling` and Cline's `tool_bundling` describe the same concept."
+**Trigger:** A new `provider_extensions` entry is added to a format doc. Pure edits to existing content do not trigger graduation. Adding a new extension is the signal that something potentially cross-provider has been discovered.
+
+**Detection:** Graduation comparison agent reads all format docs and identifies semantic overlaps across `provider_extensions`. This is LLM judgment — "Amp's `mcp_bundling` and Cline's `tool_bundling` describe the same concept."
 
 **Output:** Separate GitHub issue labeled `capmon-graduation`:
 - Which concept(s) overlap
 - Which providers have it, under what names
-- Suggested canonical key name
+- Suggested canonical key name and definition
 - Relevant source refs from each provider
 
 **Resolution:** Human reviews. If promoting:
-1. Add new key to `docs/spec/canonical-keys.yaml`
-2. Update relevant `docs/provider-formats/*.yaml` — move extension to `canonical_mappings`, remove from `provider_extensions`
+1. Add new key to `docs/spec/canonical-keys.yaml` with description and type
+2. Update relevant `docs/provider-formats/*.yaml` — move the extension to `canonical_mappings` using the new key, remove from `provider_extensions`
 3. Seeder specs auto-rederive on next `capmon derive` run
 
-Graduation PRs are always human-initiated. No automated graduation.
+Graduation PRs are always human-initiated. No automated graduation. A concept that only one provider has stays in `provider_extensions` indefinitely — extensions are not second-class citizens, they are the correct home for provider-specific behavior that has no cross-provider equivalent.
 
 ---
 
@@ -350,11 +416,181 @@ Rather than waiting for the next CI schedule, `capmon onboard --provider=<slug>`
 capmon onboard --provider=newprovider
   1. Runs capmon validate-sources — exits if any content type has no source URIs
   2. Fetches all sources (same priority order as normal pipeline)
-  3. Creates capmon-change issue (or runs locally without issue if --local flag)
-  4. Local loop processes immediately rather than waiting for next poll
+  3. Creates capmon-change issue
 ```
 
-This is useful when manually adding a provider and wanting to see the format doc generated now rather than in up to 12 hours.
+To process the issue immediately rather than waiting for the next cron run:
+
+```bash
+capmon onboard --provider=newprovider
+claude -p "/syllago-capmon-process"
+```
+
+This is useful when manually adding a provider and wanting to see the format doc generated now rather than waiting for the next scheduled run.
+
+---
+
+## Workflow Doc Specifications
+
+The two LLM workflows below are defined here as specs. During implementation, extract each section verbatim to its target file.
+
+---
+
+### `docs/workflows/update-format-doc.md` (target file)
+
+```markdown
+# Format Doc Update
+
+**Invoked by:** capmon-process (Step 2 of the local remediation loop)
+
+**Purpose:** Given new or changed source content for a provider, update the
+provider's format doc YAML to reflect what the sources actually say.
+
+## Inputs
+
+- PROVIDER_SLUG — the provider identifier (e.g., amp, claude-code)
+- FORMAT_DOC — path to existing docs/provider-formats/<slug>.yaml (absent for new providers)
+- CHANGED_SOURCES — one or more raw.bin files under .capmon-cache/<slug>/, each
+  containing the full fetched content for one source URI
+- CANONICAL_KEYS — docs/spec/canonical-keys.yaml, the authoritative vocabulary
+
+## Your job
+
+Read each changed source in full. Do not summarize or excerpt — the format doc
+must capture the full picture from the source material. Compare against the
+existing format doc. Update it to reflect what you learned.
+
+For each content type the provider supports:
+
+**1. Map known capabilities to canonical keys.**
+Use only keys defined in docs/spec/canonical-keys.yaml under the matching
+content type. If the source material confirms a capability that matches a
+canonical key, record it in canonical_mappings with mechanism and confidence.
+
+**2. Capture unknown capabilities in provider_extensions.**
+If a provider supports something real and documented that has no canonical key,
+add it to provider_extensions. Give it:
+- A stable id (snake_case, unique within this provider+content_type)
+- A clear name
+- A description of what it does and why it matters
+- A source_ref pointing to the specific page or file where you found it
+- graduation_candidate: false (default — set true only if you have positive
+  evidence another provider already has the same concept)
+
+**3. Assign confidence using the defined predicates.**
+- confirmed: Stated explicitly in source code (struct field, type annotation)
+  OR by an unambiguous official documentation statement that directly names and
+  describes the field or behavior
+- inferred: Appears in examples or is implied by documentation that does not
+  formally define it
+- unknown: You believe the capability exists but no source material clearly
+  confirms or denies it
+
+When in doubt, prefer inferred over confirmed. confirmed must be traceable to
+a specific passage you can cite.
+
+**4. Preserve existing content unless contradicted.**
+Do not remove or downgrade existing canonical_mappings or provider_extensions
+entries unless new source material explicitly contradicts them. If ambiguous,
+keep the entry and lower confidence if appropriate.
+
+**5. Capture behavioral nuance in prose fields.**
+The loading_model and notes fields are for prose detail: loading semantics,
+scope inheritance rules, truncation behavior, edge cases. This is where
+provider-specific context lives when it does not map to a structured field.
+
+## Output
+
+A valid YAML file at docs/provider-formats/<slug>.yaml conforming to the format
+doc schema. Update last_fetched_at and content_hash on each changed source
+entry. Set generation_method to subagent.
+
+## Do not
+
+- Invent canonical keys. If no canonical key exists for a capability, use
+  provider_extensions. Never add to canonical_mappings a key that is not in
+  docs/spec/canonical-keys.yaml.
+- Set graduation_candidate: true without evidence that another provider has the
+  same concept.
+- Summarize source content. Full detail is required.
+- Modify any file other than docs/provider-formats/<slug>.yaml.
+```
+
+---
+
+### `docs/workflows/graduation-comparison.md` (target file)
+
+```markdown
+# Graduation Comparison
+
+**Invoked by:** capmon-process (Step 3 of the local remediation loop, conditional)
+
+**Purpose:** Given that a new provider_extensions entry was just added to a
+format doc, check whether any other provider already has a semantically
+equivalent extension. If two or more providers have the same concept under
+different names, that concept is a graduation candidate.
+
+## Inputs
+
+- CHANGED_PROVIDER — slug of the provider whose format doc was just updated
+- NEW_EXTENSIONS — the list of new provider_extensions entries added in this run
+- All docs/provider-formats/*.yaml files
+
+## Your job
+
+For each extension in NEW_EXTENSIONS:
+
+1. Read its id, name, and description.
+2. Read the provider_extensions sections of all other providers' format docs.
+3. Determine: does any other provider have an extension describing the same
+   underlying concept? Same concept means the same provider behavior or
+   capability, even if named completely differently.
+
+   Example of a match: "Amp bundles an MCP server with a skill" and "Cline
+   packages tools inside a skill directory" both describe a mechanism for
+   co-locating server-side tooling with skill content. Different names, same
+   concept.
+
+   Example of a non-match: one provider has a caching behavior and another
+   has a lazy-loading behavior. Superficially related but solving different
+   problems — not a graduation candidate.
+
+4. If you find a match across two or more providers: record the details.
+
+## Output
+
+For each graduation candidate found, produce one section in this format:
+
+---
+## Graduation Candidate: <suggested_canonical_key>
+
+**Concept:** One sentence describing the capability.
+
+**Providers:**
+- `<slug>`: extension `<id>` — "<name>" — <source_ref>
+- `<slug>`: extension `<id>` — "<name>" — <source_ref>
+
+**Suggested canonical key:** `<snake_case_key>`
+**Suggested definition:** One sentence suitable for canonical-keys.yaml.
+**Suggested type:** string | bool | object
+
+**Notes:** Any ambiguity, differences in how providers implement this, or
+open questions the human reviewer should consider.
+---
+
+This output becomes the body of a capmon-graduation GitHub issue.
+
+If no matches are found, produce no output. No issue is created.
+
+## Do not
+
+- Flag tenuous connections. Only flag clear semantic equivalents where two
+  providers are clearly solving the same problem with different naming.
+- Suggest graduation for concepts only one provider has.
+- Modify any file. Your output is a report only.
+- Create graduation candidates across different content types (a skills
+  extension and a hooks extension cannot graduate to the same key).
+```
 
 ---
 
