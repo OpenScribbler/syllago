@@ -1,7 +1,7 @@
 provider: cline
-last_fetched_at: "2026-04-11T00:00:00Z"
+last_fetched_at: "2026-04-11T21:49:46Z"
 last_changed_at: "2026-04-11T00:00:00Z"
-generation_method: human-edited
+generation_method: subagent
 
 content_types:
   skills:
@@ -10,8 +10,13 @@ content_types:
       - uri: "https://docs.cline.bot/customization/skills.md"
         type: documentation
         fetch_method: md_url
-        content_hash: ""
-        fetched_at: "2026-04-11T00:00:00Z"
+        content_hash: "sha256:79a90e7008bdfd9a08dda36bcfb124af167232a6a11db42c96863c549fe54ec5"
+        fetched_at: "2026-04-11T21:49:46Z"
+      - uri: "https://raw.githubusercontent.com/cline/cline/main/assets/skills/create-pull-request/SKILL.md"
+        type: example
+        fetch_method: md_url
+        content_hash: "sha256:1d49400f76874ca05a277397e510a77c7cad68ac7477638b1c39d4e3e17d99f9"
+        fetched_at: "2026-04-11T21:49:46Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -35,6 +40,9 @@ content_types:
         paths:
           - "~/.cline/skills/<name>/SKILL.md"
         confidence: confirmed
+      shared_scope:
+        supported: false
+        confidence: unknown
       canonical_filename:
         supported: true
         mechanism: "Fixed filename SKILL.md required inside a named skill directory"
@@ -43,6 +51,62 @@ content_types:
         supported: false
         mechanism: "Not applicable — Cline uses fixed SKILL.md canonical filename only"
         confidence: confirmed
-    provider_extensions: []
-    loading_model: "Two-tier progressive loading: name+description at startup (~100 tokens per skill); SKILL.md body on-demand (under 5k tokens)."
-    notes: "Skills is an experimental feature as of 2026-04. Must be enabled in Settings → Features → Enable Skills. The format doc predating this feature listed Skills as Not supported."
+      disable_model_invocation:
+        supported: false
+        confidence: unknown
+      user_invocable:
+        supported: false
+        confidence: unknown
+    provider_extensions:
+      - id: supporting_files
+        name: Supporting Files in Skill Directory
+        description: >
+          A skill directory may contain optional subdirectories alongside SKILL.md:
+          docs/ for additional documentation (advanced config, troubleshooting guides,
+          platform-specific instructions), templates/ for config files or code scaffolding,
+          and scripts/ for deterministic operations like validation or data processing.
+          Cline loads these files on demand via read_file or direct execution; only their
+          output enters the context window, not the source code itself. This allows skills
+          to reference large reference material without loading it at startup.
+        source_ref: "https://docs.cline.bot/customization/skills.md#bundling-supporting-files"
+        graduation_candidate: true
+      - id: description_based_auto_invocation
+        name: Description-Based Auto-Invocation via use_skill Tool
+        description: >
+          When the user sends a message, Cline sees all available skills with their
+          name and description (~100 tokens per skill). If the request matches a skill's
+          description, Cline activates it by calling the use_skill tool, which loads the
+          full SKILL.md body. The description field is therefore a trigger specification:
+          it should start with action verbs, include trigger phrases, and mention specific
+          file types, tools, or domains. Cline's invocation decision is made by the model
+          based solely on the description text — there is no explicit user @-mention syntax.
+        source_ref: "https://docs.cline.bot/customization/skills.md#how-skills-work"
+        graduation_candidate: true
+      - id: skill_toggle
+        name: Per-Skill Enable/Disable Toggle
+        description: >
+          Each skill has a toggle to enable or disable it without deleting the skill
+          directory. Skills are enabled by default when discovered. This allows users to
+          deactivate skills (e.g., disable a CI/CD skill during local development) without
+          losing the skill definition.
+        source_ref: "https://docs.cline.bot/customization/skills.md#toggling-skills"
+        graduation_candidate: false
+      - id: global_precedence_over_project
+        name: Global Skill Takes Precedence Over Project Skill
+        description: >
+          When a global skill and a project skill share the same name, the global skill
+          takes precedence. This is the inverse of typical scope-override behavior (where
+          project overrides global) and is notable for syllago import/export conflict
+          resolution. Documented as intentional: global skills are general-purpose while
+          project skills are team-specific.
+        source_ref: "https://docs.cline.bot/customization/skills.md#where-skills-live"
+        graduation_candidate: false
+    loading_model: >
+      Three-tier progressive loading: (1) Metadata — name and description from YAML
+      frontmatter loaded at startup (~100 tokens per skill, always active); (2) Instructions
+      — SKILL.md body loaded on demand when the use_skill tool is triggered (under 5k tokens
+      recommended); (3) Resources — bundled files in docs/, templates/, scripts/ subdirectories
+      accessed via read_file or script execution as needed (effectively unlimited, only output
+      enters context). Cline reads SKILL.md sequentially, so important information should be
+      front-loaded.
+    notes: "Skills is an experimental feature as of 2026-04. Must be enabled in Settings → Features → Enable Skills. The format doc predating this feature listed Skills as Not supported. Windows global path is C:\\Users\\USERNAME\\.cline\\skills\\."
