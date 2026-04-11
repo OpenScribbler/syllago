@@ -129,7 +129,7 @@ func (e *checkTestEnv) captureGHCalls(t *testing.T) *[][]string {
 			return []byte(`[]`), nil
 		}
 		if len(args) >= 2 && args[0] == "issue" && args[1] == "create" {
-			return []byte(`{"number":1}`), nil
+			return []byte("https://github.com/test/repo/issues/1\n"), nil
 		}
 		return []byte(""), nil
 	})

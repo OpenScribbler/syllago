@@ -206,7 +206,8 @@ func TestCreateCapmonChangeIssue_Success(t *testing.T) {
 				capturedBody = args[i+1]
 			}
 		}
-		return []byte(`{"number":99}`), nil
+		// gh issue create prints the issue URL (no --json flag).
+		return []byte("https://github.com/test/repo/issues/99\n"), nil
 	})
 	defer capmon.SetGHCommandForTest(nil)
 
