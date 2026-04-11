@@ -66,7 +66,7 @@ func RunPipeline(ctx context.Context, opts PipelineOptions) (exitClass int, err 
 	if runFetchExtract {
 		if err := runStage1Fetch(ctx, opts, &manifest); err != nil {
 			manifest.ExitClass = ExitInfrastructureFailure
-			WriteRunManifest(opts.CacheRoot, manifest) //nolint:errcheck
+			WriteRunManifest(opts.CacheRoot, manifest) //nolint:errcheck // best-effort write at exit point; error cannot be surfaced
 			return ExitInfrastructureFailure, err
 		}
 	}
@@ -75,7 +75,7 @@ func RunPipeline(ctx context.Context, opts PipelineOptions) (exitClass int, err 
 	if runFetchExtract {
 		if err := runStage2Extract(ctx, opts, &manifest); err != nil {
 			manifest.ExitClass = ExitPartialFailure
-			WriteRunManifest(opts.CacheRoot, manifest) //nolint:errcheck
+			WriteRunManifest(opts.CacheRoot, manifest) //nolint:errcheck // best-effort write at exit point; error cannot be surfaced
 			return ExitPartialFailure, err
 		}
 	}
@@ -84,7 +84,7 @@ func RunPipeline(ctx context.Context, opts PipelineOptions) (exitClass int, err 
 	if runReport {
 		if err := runStage3Diff(ctx, opts, &manifest); err != nil {
 			manifest.ExitClass = ExitPartialFailure
-			WriteRunManifest(opts.CacheRoot, manifest) //nolint:errcheck
+			WriteRunManifest(opts.CacheRoot, manifest) //nolint:errcheck // best-effort write at exit point; error cannot be surfaced
 			return ExitPartialFailure, err
 		}
 	}
@@ -98,7 +98,7 @@ func RunPipeline(ctx context.Context, opts PipelineOptions) (exitClass int, err 
 		if !paused && !opts.DryRun {
 			if err := runStage4Review(ctx, opts, &manifest); err != nil {
 				manifest.ExitClass = ExitPartialFailure
-				WriteRunManifest(opts.CacheRoot, manifest) //nolint:errcheck
+				WriteRunManifest(opts.CacheRoot, manifest) //nolint:errcheck // best-effort write at exit point; error cannot be surfaced
 				return ExitPartialFailure, err
 			}
 			if manifest.ExitClass == ExitClean {
@@ -110,7 +110,7 @@ func RunPipeline(ctx context.Context, opts PipelineOptions) (exitClass int, err 
 	}
 
 	manifest.FinishedAt = time.Now().UTC()
-	WriteRunManifest(opts.CacheRoot, manifest) //nolint:errcheck
+	WriteRunManifest(opts.CacheRoot, manifest) //nolint:errcheck // best-effort write at pipeline end; error cannot be surfaced to caller
 	return manifest.ExitClass, nil
 }
 
@@ -119,7 +119,7 @@ func generateRunID() string {
 	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
 	b := make([]byte, 8)
 	for i := range b {
-		b[i] = charset[rand.Intn(len(charset))]
+		b[i] = charset[rand.Intn(len(charset))] //nolint:gosec // run IDs are not security-sensitive; math/rand is sufficient
 	}
 	return string(b)
 }

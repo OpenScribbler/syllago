@@ -14,9 +14,7 @@ func TestExtractedSource_ZeroValue(t *testing.T) {
 	if es.Partial != false {
 		t.Error("zero value Partial should be false")
 	}
-	if es.Fields == nil {
-		// Fields being nil is acceptable at zero value, just document it
-	}
+
 }
 
 func TestRunManifest_ExitClasses(t *testing.T) {

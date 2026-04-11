@@ -47,7 +47,7 @@ func FetchGitHubFile(ctx context.Context, cacheRoot, provider, sourceID, owner, 
 	if err != nil {
 		return nil, fmt.Errorf("github API request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // closing HTTP response body in defer; error not actionable
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)

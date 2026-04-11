@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 const (
@@ -18,9 +19,10 @@ const (
 )
 
 const (
-	registryOptAdd    = 0
-	registryOptCreate = 1
-	registryOptSkip   = 2
+	registryOptOfficial = 0
+	registryOptAdd      = 1
+	registryOptCreate   = 2
+	registryOptSkip     = 3
 )
 
 // initWizard is a bubbletea model for interactive init provider selection.
@@ -118,11 +120,15 @@ func (w initWizard) Update(msg tea.Msg) (initWizard, tea.Cmd) {
 					w.registryCursor--
 				}
 			case tea.KeyDown:
-				if w.registryCursor < 2 {
+				if w.registryCursor < 3 {
 					w.registryCursor++
 				}
 			case tea.KeyEnter:
 				switch w.registryCursor {
+				case registryOptOfficial:
+					w.registryAction = "add"
+					w.registryURL = registry.OfficialRegistryURL
+					w.done = true
 				case registryOptAdd:
 					ti := textinput.New()
 					ti.Placeholder = "https://github.com/you/your-registry.git"
@@ -219,7 +225,12 @@ func (w initWizard) View() string {
 		sb.WriteString(primary.Render("Set up a registry?") + "\n")
 		sb.WriteString(muted.Render("Registries are git repos with shared AI content.") + "\n\n")
 
-		options := []string{"Add a registry URL", "Create a new registry", "Skip for now"}
+		options := []string{
+			"Add the official syllago meta-registry (Recommended)",
+			"Add a custom registry URL",
+			"Create a new registry",
+			"Skip for now",
+		}
 		for i, opt := range options {
 			prefix := "  "
 			nameStyle := lipgloss.NewStyle()

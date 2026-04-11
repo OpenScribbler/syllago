@@ -251,10 +251,13 @@ func LoadManifest(name string) (*Manifest, error) {
 	return LoadManifestFromDir(dir)
 }
 
+// OfficialRegistryURL is the default syllago meta-registry.
+const OfficialRegistryURL = "https://github.com/OpenScribbler/syllago-meta-registry.git"
+
 // KnownAliases maps short names to full git URLs.
-// Empty by default — syllago is a platform, not a content source.
-// Users bring their own registries.
-var KnownAliases = map[string]string{}
+var KnownAliases = map[string]string{
+	"syllago": OfficialRegistryURL,
+}
 
 // ExpandAlias returns the full URL for a known alias, or the input unchanged if not an alias.
 // An alias is identified by not containing "/" or ":" — these characters appear in all valid git URLs.

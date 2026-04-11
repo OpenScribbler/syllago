@@ -120,7 +120,7 @@ func doHTTPFetch(ctx context.Context, rawURL string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // closing HTTP response body in defer; error not actionable
 	if resp.StatusCode >= 500 {
 		return nil, fmt.Errorf("server error %d", resp.StatusCode)
 	}
