@@ -1,0 +1,52 @@
+provider: codex
+content_type: skills
+format: ""
+proposed_mappings:
+    - canonical_key: canonical_filename
+      supported: true
+      mechanism: Fixed filename SKILL.md required within each named skill directory (SKILLS_FILENAME constant)
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: description
+      supported: true
+      mechanism: 'YAML frontmatter key: description (required — empty string triggers MissingField error; max 1024 chars enforced after whitespace normalization)'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: disable_model_invocation
+      supported: true
+      mechanism: 'openai.yaml companion file key: policy.allow_implicit_invocation (optional bool; false disables implicit/auto invocation; defaults to true when absent)'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: display_name
+      supported: true
+      mechanism: 'YAML frontmatter key: name (optional — falls back to parent directory name if absent or empty; max 64 chars enforced after whitespace normalization)'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: global_scope
+      supported: true
+      mechanism: Skills directory at $HOME/.agents/skills/ or the user config layer's skills/ subdir ($CODEX_HOME/skills, deprecated but kept for backward compatibility) (SkillScope::User)
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: project_scope
+      supported: true
+      mechanism: Skills directory at <project_config_folder>/skills/ (SkillScope::Repo) or any .agents/skills/ directory between project root and cwd (monorepo traversal)
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: shared_scope
+      supported: true
+      mechanism: Admin scope at /etc/codex/skills on Unix (SkillScope::Admin) — machine-level shared skills readable by all local users; injected via System config layer
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: user_invocable
+      supported: false
+      mechanism: ""
+      source_field: ""
+      source_value: ""
+      confidence: unknown
