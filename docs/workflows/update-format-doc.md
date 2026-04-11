@@ -26,6 +26,11 @@ Use only keys defined in docs/spec/canonical-keys.yaml under the matching
 content type. If the source material confirms a capability that matches a
 canonical key, record it in canonical_mappings with mechanism and confidence.
 
+The `supported` field is always a boolean. For capabilities that are absent
+from or not documented in the source material, use `supported: false` with
+`confidence: unknown`. Never write `supported: unknown` — the schema will
+reject it.
+
 Write `mechanism` fields narrowly. A mechanism describes only how THIS specific
 canonical key is implemented — not adjacent features, not creation flows, not
 invocation behaviors that belong to a different key. If information is relevant
@@ -84,4 +89,6 @@ entry. Set generation_method to subagent.
 - Bleed adjacent concepts into a mechanism field. Each mechanism describes one
   thing. If a feature spans multiple canonical keys or belongs in a
   provider_extension, split it — do not concatenate it into a single mechanism.
+- Write `supported: unknown` — `supported` is always a bool. Use `supported: false` +
+  `confidence: unknown` when a capability is absent from source material.
 - Modify any file other than docs/provider-formats/<slug>.yaml.
