@@ -1,0 +1,82 @@
+{
+  "$schema": "handoff-v2",
+  "name": "specified-canonical-keys-vocabulary-workflow",
+  "createdAt": "2026-04-11T02:44:33.000Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-11T02:44:33.000Z",
+    "sessionId": "4f70b38e-9bca-43c8-a470-62a8a0929d8b",
+    "summary": "Specified canonical keys vocabulary, workflow agent instructions, and created syllago-capmon-process skill for pipeline orchestration",
+    "activeWork": {
+      "description": "Capability monitor pipeline design — defined canonical keys schema, workflow docs, and process orchestration",
+      "feature": "syllago-jtafb",
+      "stage": "execute",
+      "planRef": "docs/plans/2026-04-10-capmon-information-architecture.md",
+      "designRef": "docs/plans/2026-04-10-capmon-information-architecture.md",
+      "progress": "Completed: (1) Formalized canonical-keys.yaml schema with 14-key skills vocabulary derived from recognize.go + seeder specs; (2) Specified update-format-doc.md and graduation-comparison.md as agent-facing workflow docs with full vocabulary constraints and confidence predicates; (3) Created syllago-capmon-process skill as hybrid orchestrator (procedural outer loop + contextual sub-agent invocation). Next: Implement canonical-keys.yaml file, commit design doc updates, implement workflow docs.",
+      "blockers": [],
+      "beads": "syllago-jtafb"
+    },
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 10,
+      "lastCommit": "b9b2109 bd sync: 2026-04-10 18:32:39",
+      "modifiedFiles": [
+        ".beads/beads.left.meta.json",
+        "docs/plans/2026-04-10-capmon-information-architecture.md",
+        "docs/spec/acp/CHANGELOG.md",
+        "docs/spec/acp/LICENSE",
+        "docs/spec/acp/acp-spec.md",
+        "docs/spec/acp/generate_test_vectors.py",
+        "docs/spec/moat/README.md"
+      ]
+    },
+    "recentDecisions": [
+      "Canonical keys vocabulary is source-of-truth driven: Go code (recognize.go) defines the canonical keys, canonical-keys.yaml externalizes them for LLM agents and capmon derive validation",
+      "Graduation trigger clarified: add a new canonical key when two or more providers use the same concept under different names in provider_extensions",
+      "Workflow docs (update-format-doc.md, graduation-comparison.md) are agent-facing instructions with explicit vocabulary constraints and do-not lists, not distributed CLI commands",
+      "syllago-capmon-process is a hybrid skill: outer procedural loop orchestrates, inner steps invoke LLM sub-agents for format doc updates and graduation comparisons",
+      "Process invocation: /loop 30m syllago-capmon-process runs locally, chains sub-skills update-format-doc and graduation-comparison via Agent tool"
+    ],
+    "nextSteps": [
+      "Create docs/canonical-keys.yaml with 14-key initial skills vocabulary from design doc spec",
+      "Create docs/workflows/update-format-doc.md from design doc specification",
+      "Create docs/workflows/graduation-comparison.md from design doc specification",
+      "Commit all design doc updates and new workflow docs",
+      "Implement capmon check, capmon derive, capmon onboard CLI sub-commands (spec ready)",
+      "Test syllago-capmon-process skill with dry-run flag before full loop integration"
+    ],
+    "context": {
+      "notes": "The canonical keys vocabulary is now fully specified in the design doc with explicit source attribution (recognize.go line 78-98 + 13 seeder specs). The 14-key initial vocabulary (display_name, description, project_scope, global_scope, shared_scope, canonical_filename, custom_filename, disable_model_invocation, user_invocable, license, and 4 others) is ready for externalizing to canonical-keys.yaml. Workflow docs are fully specified as agent instructions with confidence predicates and vocabulary constraints. syllago-capmon-process skill created at ~/.claude/skills/syllago-capmon-process/ (hybrid architecture, disable-model-invocation: true, argument-hint: --dry-run). All uncommitted changes are in the design doc and beads metadata. Ready for file creation and implementation.",
+      "canvasState": "Design doc fully updated with canonical-keys.yaml schema, workflow doc specifications (update-format-doc.md, graduation-comparison.md), and capmon-process skill architecture. No breaking changes needed — all specs are incremental additions to the design.",
+      "skillsCreated": [
+        "~/.claude/skills/syllago-capmon-process/SKILL.md"
+      ]
+    }
+  },
+  "previousSessions": [
+    {
+      "summary": "Capability monitor pipeline design — identified new provider bootstrap as architecturally distinct from change detection",
+      "updated": "2026-04-11T00:43:23.743Z",
+      "completedWork": [
+        "Identified architectural gap: new provider bootstrap (no cached hash, no format doc, no seeder spec baseline) is distinct from change detection flow",
+        "Design doc updated with Bootstrap Flow section and state machine transitions"
+      ],
+      "nextSteps": [
+        "Formalize canonical keys vocabulary and graduation process"
+      ]
+    },
+    {
+      "summary": "Completed skills seeder spec generation for all 13 AI tool providers via parallel background agent inspection",
+      "updated": "2026-04-10T10:32:00.000Z",
+      "completedWork": [
+        "All 13 provider seeder specs generated in .develop/seeder-specs/",
+        "Capability mappings approved for all providers"
+      ],
+      "nextSteps": [
+        "Define canonical keys vocabulary from seeder specs"
+      ]
+    }
+  ]
+}
