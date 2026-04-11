@@ -62,7 +62,7 @@ content_types:
           deployment-checklist.md, rollback-procedure.md, config-template.yaml, pre-deploy-checks.sh,
           security-checklist.md, review-template.md, test-template.py, coverage-config.json.
         source_ref: "https://docs.windsurf.com/windsurf/cascade/skills.md#adding-supporting-resources"
-        graduation_candidate: false
+        graduation_candidate: true
       - id: name_format_constraint
         name: Skill name format constraint
         description: >

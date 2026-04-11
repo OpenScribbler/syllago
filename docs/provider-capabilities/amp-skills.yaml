@@ -1,0 +1,58 @@
+provider: amp
+content_type: skills
+format: ""
+proposed_mappings:
+    - canonical_key: canonical_filename
+      supported: true
+      mechanism: SKILL.md (required, fixed name)
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: custom_filename
+      supported: false
+      mechanism: not observed — amp requires SKILL.md as the fixed canonical filename
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: description
+      supported: true
+      mechanism: 'yaml frontmatter key: description (required)'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: disable_model_invocation
+      supported: false
+      mechanism: not documented — no mechanism to prevent the model from auto-invoking a skill; the model always selects based on name and description match
+      source_field: ""
+      source_value: ""
+      confidence: unknown
+    - canonical_key: display_name
+      supported: true
+      mechanism: 'yaml frontmatter key: name (required)'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: global_scope
+      supported: true
+      mechanism: skill directory placed under ~/.config/agents/skills/<name>/, ~/.config/amp/skills/<name>/, or ~/.claude/skills/<name>/
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: project_scope
+      supported: true
+      mechanism: skill directory placed under .agents/skills/<name>/ or .claude/skills/<name>/ within the project root
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: shared_scope
+      supported: false
+      mechanism: not documented — only project-scope (.agents/skills/) and user-wide (~/.config/agents/skills/) are described; no enterprise or shared scope exists
+      source_field: ""
+      source_value: ""
+      confidence: unknown
+    - canonical_key: user_invocable
+      supported: false
+      mechanism: not documented — no mechanism to hide skills from user-facing menus is described; skills are managed via 'amp skill' CLI and command palette, not a slash-command invocation menu
+      source_field: ""
+      source_value: ""
+      confidence: unknown
