@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-11T17:46:21Z",
-  "syllagoVersion": "0.7.0",
+  "generatedAt": "2026-04-11T18:11:32Z",
+  "syllagoVersion": "dev",
   "commands": [
     {
       "name": "add",
@@ -186,11 +186,13 @@
         }
       ],
       "subcommands": [
+        "check",
         "derive",
         "diff",
         "extract",
         "fetch",
         "generate",
+        "onboard",
         "run",
         "seed",
         "test-fixtures",
@@ -199,6 +201,134 @@
         "verify"
       ],
       "seeAlso": [],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon check",
+      "displayName": "Capmon Check",
+      "slug": "capmon-check",
+      "parent": "capmon",
+      "synopsis": "syllago capmon check [flags]",
+      "description": "Check for content drift in provider format docs",
+      "longDescription": "Fetch each source URI in provider format docs, compare content hashes, and create or append GitHub issues when content has changed.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--all",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Check all providers"
+        },
+        {
+          "name": "--cache-root",
+          "shorthand": null,
+          "type": "string",
+          "default": ".capmon-cache",
+          "required": false,
+          "description": "Root directory for capmon cache"
+        },
+        {
+          "name": "--canonical-keys",
+          "shorthand": null,
+          "type": "string",
+          "default": "docs/spec/canonical-keys.yaml",
+          "required": false,
+          "description": "Path to canonical-keys.yaml"
+        },
+        {
+          "name": "--dry-run",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Log actions without creating GitHub issues"
+        },
+        {
+          "name": "--formats-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": "docs/provider-formats",
+          "required": false,
+          "description": "Directory containing provider format docs"
+        },
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Check only this provider slug"
+        },
+        {
+          "name": "--providers-json",
+          "shorthand": null,
+          "type": "string",
+          "default": "providers.json",
+          "required": false,
+          "description": "Path to providers.json"
+        },
+        {
+          "name": "--sources-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": "docs/provider-sources",
+          "required": false,
+          "description": "Directory containing provider source manifests"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon derive",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon onboard",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon validate-format-doc",
+        "capmon validate-sources",
+        "capmon verify"
+      ],
       "examples": null,
       "source": "cli/cmd/syllago/capmon_cmd.go"
     },
@@ -282,10 +412,12 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon check",
         "capmon diff",
         "capmon extract",
         "capmon fetch",
         "capmon generate",
+        "capmon onboard",
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
@@ -360,10 +492,12 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon check",
         "capmon derive",
         "capmon extract",
         "capmon fetch",
         "capmon generate",
+        "capmon onboard",
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
@@ -430,10 +564,12 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon check",
         "capmon derive",
         "capmon diff",
         "capmon fetch",
         "capmon generate",
+        "capmon onboard",
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
@@ -500,10 +636,12 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon check",
         "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon generate",
+        "capmon onboard",
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
@@ -561,10 +699,116 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon check",
         "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon fetch",
+        "capmon onboard",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon validate-format-doc",
+        "capmon validate-sources",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon onboard",
+      "displayName": "Capmon Onboard",
+      "slug": "capmon-onboard",
+      "parent": "capmon",
+      "synopsis": "syllago capmon onboard [flags]",
+      "description": "Bootstrap a new provider into the capmon pipeline",
+      "longDescription": "Validates source manifests, fetches all sources, and creates GitHub issues for the new provider. Use this when adding a provider for the first time — there is no prior content_hash baseline, so all sources are treated as changed.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--cache-root",
+          "shorthand": null,
+          "type": "string",
+          "default": ".capmon-cache",
+          "required": false,
+          "description": "Root directory for capmon cache"
+        },
+        {
+          "name": "--dry-run",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Log actions without creating GitHub issues"
+        },
+        {
+          "name": "--formats-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": "docs/provider-formats",
+          "required": false,
+          "description": "Directory containing provider format docs"
+        },
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Provider slug to onboard (required)"
+        },
+        {
+          "name": "--sources-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": "docs/provider-sources",
+          "required": false,
+          "description": "Directory containing provider source manifests"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon check",
+        "capmon derive",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
@@ -647,11 +891,13 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon check",
         "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon fetch",
         "capmon generate",
+        "capmon onboard",
         "capmon seed",
         "capmon test-fixtures",
         "capmon validate-format-doc",
@@ -733,11 +979,13 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon check",
         "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon fetch",
         "capmon generate",
+        "capmon onboard",
         "capmon run",
         "capmon test-fixtures",
         "capmon validate-format-doc",
@@ -811,11 +1059,13 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon check",
         "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon fetch",
         "capmon generate",
+        "capmon onboard",
         "capmon run",
         "capmon seed",
         "capmon validate-format-doc",
@@ -897,11 +1147,13 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon check",
         "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon fetch",
         "capmon generate",
+        "capmon onboard",
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
@@ -975,11 +1227,13 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon check",
         "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon fetch",
         "capmon generate",
+        "capmon onboard",
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
@@ -1069,11 +1323,13 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon check",
         "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon fetch",
         "capmon generate",
+        "capmon onboard",
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
