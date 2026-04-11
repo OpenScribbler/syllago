@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-09T16:40:57Z",
+  "generatedAt": "2026-04-11T17:46:22Z",
   "syllagoVersion": "0.7.0",
   "providers": [
     {
@@ -122,7 +122,8 @@
             },
             {
               "canonical": "file_changed",
-              "nativeName": "FileChanged"
+              "nativeName": "FileChanged",
+              "category": "workspace"
             },
             {
               "canonical": "instructions_loaded",
@@ -176,7 +177,8 @@
             },
             {
               "canonical": "tool_use_failure",
-              "nativeName": "PostToolUseFailure"
+              "nativeName": "PostToolUseFailure",
+              "category": "tool"
             },
             {
               "canonical": "worktree_create",
@@ -502,7 +504,8 @@
             },
             {
               "canonical": "file_changed",
-              "nativeName": "afterFileEdit"
+              "nativeName": "afterFileEdit",
+              "category": "workspace"
             },
             {
               "canonical": "session_end",
@@ -526,7 +529,8 @@
             },
             {
               "canonical": "tool_use_failure",
-              "nativeName": "postToolUseFailure"
+              "nativeName": "postToolUseFailure",
+              "category": "tool"
             }
           ],
           "hookTypes": [
@@ -631,7 +635,8 @@
             },
             {
               "canonical": "transcript_export",
-              "nativeName": "post_cascade_response_with_transcript"
+              "nativeName": "post_cascade_response_with_transcript",
+              "category": "output"
             },
             {
               "canonical": "worktree_create",
@@ -867,7 +872,8 @@
             },
             {
               "canonical": "tool_use_failure",
-              "nativeName": "errorOccurred"
+              "nativeName": "errorOccurred",
+              "category": "tool"
             }
           ],
           "hookTypes": [
@@ -1262,7 +1268,8 @@
           "hookEvents": [
             {
               "canonical": "after_task",
-              "nativeName": "Post Task Execution"
+              "nativeName": "Post Task Execution",
+              "category": "lifecycle"
             },
             {
               "canonical": "after_tool_execute",
@@ -1281,7 +1288,8 @@
             },
             {
               "canonical": "before_task",
-              "nativeName": "Pre Task Execution"
+              "nativeName": "Pre Task Execution",
+              "category": "lifecycle"
             },
             {
               "canonical": "before_tool_execute",
@@ -1290,15 +1298,18 @@
             },
             {
               "canonical": "file_changed",
-              "nativeName": "File Save"
+              "nativeName": "File Save",
+              "category": "workspace"
             },
             {
               "canonical": "file_created",
-              "nativeName": "File Create"
+              "nativeName": "File Create",
+              "category": "workspace"
             },
             {
               "canonical": "file_deleted",
-              "nativeName": "File Delete"
+              "nativeName": "File Delete",
+              "category": "workspace"
             },
             {
               "canonical": "session_start",

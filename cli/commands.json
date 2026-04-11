@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-10T17:07:44Z",
+  "generatedAt": "2026-04-11T17:46:21Z",
   "syllagoVersion": "0.7.0",
   "commands": [
     {
@@ -186,6 +186,7 @@
         }
       ],
       "subcommands": [
+        "derive",
         "diff",
         "extract",
         "fetch",
@@ -193,10 +194,105 @@
         "run",
         "seed",
         "test-fixtures",
-        "validate-spec",
+        "validate-format-doc",
+        "validate-sources",
         "verify"
       ],
       "seeAlso": [],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon derive",
+      "displayName": "Capmon Derive",
+      "slug": "capmon-derive",
+      "parent": "capmon",
+      "synopsis": "syllago capmon derive [flags]",
+      "description": "Derive a seeder spec from a provider format doc",
+      "longDescription": "Deterministically derive a seeder spec YAML from a provider format doc.\n\nThe derived spec is written to --output-dir/\u003cprovider\u003e-skills.yaml.\nAll canonical_mappings keys are validated against --canonical-keys.\nContent types with status=unsupported are omitted from output.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--canonical-keys",
+          "shorthand": null,
+          "type": "string",
+          "default": "docs/spec/canonical-keys.yaml",
+          "required": false,
+          "description": "Path to canonical-keys.yaml"
+        },
+        {
+          "name": "--formats-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": "docs/provider-formats",
+          "required": false,
+          "description": "Directory containing provider format docs"
+        },
+        {
+          "name": "--output-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": ".develop/seeder-specs",
+          "required": false,
+          "description": "Directory to write the derived seeder spec"
+        },
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Provider slug to derive spec for (required)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon validate-format-doc",
+        "capmon validate-sources",
+        "capmon verify"
+      ],
       "examples": null,
       "source": "cli/cmd/syllago/capmon_cmd.go"
     },
@@ -264,13 +360,15 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon derive",
         "capmon extract",
         "capmon fetch",
         "capmon generate",
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
-        "capmon validate-spec",
+        "capmon validate-format-doc",
+        "capmon validate-sources",
         "capmon verify"
       ],
       "examples": null,
@@ -332,13 +430,15 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon derive",
         "capmon diff",
         "capmon fetch",
         "capmon generate",
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
-        "capmon validate-spec",
+        "capmon validate-format-doc",
+        "capmon validate-sources",
         "capmon verify"
       ],
       "examples": null,
@@ -400,13 +500,15 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon generate",
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
-        "capmon validate-spec",
+        "capmon validate-format-doc",
+        "capmon validate-sources",
         "capmon verify"
       ],
       "examples": null,
@@ -459,13 +561,15 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon fetch",
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
-        "capmon validate-spec",
+        "capmon validate-format-doc",
+        "capmon validate-sources",
         "capmon verify"
       ],
       "examples": null,
@@ -543,13 +647,15 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon fetch",
         "capmon generate",
         "capmon seed",
         "capmon test-fixtures",
-        "capmon validate-spec",
+        "capmon validate-format-doc",
+        "capmon validate-sources",
         "capmon verify"
       ],
       "examples": null,
@@ -588,14 +694,6 @@
           "default": null,
           "required": false,
           "description": "Seed only this provider slug"
-        },
-        {
-          "name": "--skip-spec-gate",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Skip the seeder spec human_action gate (for bootstrapping new providers)"
         }
       ],
       "inheritedFlags": [
@@ -635,13 +733,15 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon fetch",
         "capmon generate",
         "capmon run",
         "capmon test-fixtures",
-        "capmon validate-spec",
+        "capmon validate-format-doc",
+        "capmon validate-sources",
         "capmon verify"
       ],
       "examples": null,
@@ -711,35 +811,45 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon fetch",
         "capmon generate",
         "capmon run",
         "capmon seed",
-        "capmon validate-spec",
+        "capmon validate-format-doc",
+        "capmon validate-sources",
         "capmon verify"
       ],
       "examples": null,
       "source": "cli/cmd/syllago/capmon_cmd.go"
     },
     {
-      "name": "capmon validate-spec",
-      "displayName": "Capmon Validate-spec",
-      "slug": "capmon-validate-spec",
+      "name": "capmon validate-format-doc",
+      "displayName": "Capmon Validate-format-doc",
+      "slug": "capmon-validate-format-doc",
       "parent": "capmon",
-      "synopsis": "syllago capmon validate-spec [flags]",
-      "description": "Validate a seeder spec YAML file for a provider",
-      "longDescription": null,
+      "synopsis": "syllago capmon validate-format-doc [flags]",
+      "description": "Validate a provider format doc against the canonical keys vocabulary",
+      "longDescription": "Validate a provider's docs/provider-formats/\u003cslug\u003e.yaml file.\n\nChecks:\n  - Required top-level fields (provider, last_fetched_at, content_types)\n  - All canonical_mappings keys exist in canonical-keys.yaml\n  - All provider_extensions entries have required fields (id, name, description, source_ref)\n  - confidence values are valid (confirmed | inferred | unknown)\n\nInformational fields (generation_method, notes) are not validated.",
       "aliases": [],
       "flags": [
         {
-          "name": "--content-type",
+          "name": "--canonical-keys",
           "shorthand": null,
           "type": "string",
-          "default": "skills",
+          "default": "docs/spec/canonical-keys.yaml",
           "required": false,
-          "description": "Content type for the seeder spec (default: skills)"
+          "description": "Path to canonical-keys.yaml"
+        },
+        {
+          "name": "--formats-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": "docs/provider-formats",
+          "required": false,
+          "description": "Directory containing provider format docs"
         },
         {
           "name": "--provider",
@@ -747,15 +857,7 @@
           "type": "string",
           "default": null,
           "required": false,
-          "description": "Provider slug whose seeder spec to validate"
-        },
-        {
-          "name": "--specs-dir",
-          "shorthand": null,
-          "type": "string",
-          "default": ".develop/seeder-specs",
-          "required": false,
-          "description": "Directory containing seeder spec YAML files"
+          "description": "Provider slug whose format doc to validate (required)"
         }
       ],
       "inheritedFlags": [
@@ -795,6 +897,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon fetch",
@@ -802,6 +905,85 @@
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
+        "capmon validate-sources",
+        "capmon verify"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon validate-sources",
+      "displayName": "Capmon Validate-sources",
+      "slug": "capmon-validate-sources",
+      "parent": "capmon",
+      "synopsis": "syllago capmon validate-sources [flags]",
+      "description": "Validate a provider's source manifest has URIs for all supported content types",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Provider slug whose source manifest to validate (required)"
+        },
+        {
+          "name": "--sources-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": "docs/provider-sources",
+          "required": false,
+          "description": "Directory containing provider source manifests"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon derive",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon validate-format-doc",
         "capmon verify"
       ],
       "examples": null,
@@ -887,6 +1069,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon derive",
         "capmon diff",
         "capmon extract",
         "capmon fetch",
@@ -894,7 +1077,8 @@
         "capmon run",
         "capmon seed",
         "capmon test-fixtures",
-        "capmon validate-spec"
+        "capmon validate-format-doc",
+        "capmon validate-sources"
       ],
       "examples": null,
       "source": "cli/cmd/syllago/capmon_cmd.go"
