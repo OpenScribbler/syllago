@@ -123,7 +123,7 @@ func SeedProviderCapabilities(opts SeedOptions) error {
 	if err != nil {
 		return fmt.Errorf("create %s: %w", path, err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // enc.Close() handles flush; defer is a safety net
 
 	enc := yaml.NewEncoder(f)
 	enc.SetIndent(2)
