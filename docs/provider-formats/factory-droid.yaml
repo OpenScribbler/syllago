@@ -1,7 +1,7 @@
 provider: factory-droid
-last_fetched_at: "2026-04-11T00:00:00Z"
+last_fetched_at: "2026-04-11T21:50:31Z"
 last_changed_at: "2026-04-11T00:00:00Z"
-generation_method: human-edited
+generation_method: subagent
 
 content_types:
   skills:
@@ -10,8 +10,8 @@ content_types:
       - uri: "https://docs.factory.ai/cli/configuration/skills"
         type: documentation
         fetch_method: html_url
-        content_hash: ""
-        fetched_at: "2026-04-11T00:00:00Z"
+        content_hash: "sha256:0995e07daf155010f3c75a71607b43c8392da192a57803b89d710bcefabc38a4"
+        fetched_at: "2026-04-11T21:50:31Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -42,10 +42,62 @@ content_types:
         paths:
           - "~/.factory/skills/<skill-name>/SKILL.md"
         confidence: confirmed
+      shared_scope:
+        supported: false
+        confidence: unknown
       canonical_filename:
         supported: true
         mechanism: "SKILL.md (fixed, required filename within the skill directory)"
         confidence: confirmed
-    provider_extensions: []
+      custom_filename:
+        supported: true
+        mechanism: "skill.mdx is accepted as an alternative to SKILL.md within the skill directory"
+        confidence: confirmed
+    provider_extensions:
+      - id: supporting_files
+        name: Supporting Files
+        description: >
+          Optional supporting files (scripts, schemas, checklists, etc.) can be co-located
+          in the skill directory alongside SKILL.md. The Droid can reference these files
+          when executing the skill. This enables self-contained skill packages that bundle
+          their own tooling assets.
+        source_ref: "https://docs.factory.ai/cli/configuration/skills"
+        graduation_candidate: true
+      - id: auto_invocation
+        name: Auto-Invocation
+        description: >
+          The Droid automatically invokes matching skills when they apply to the current
+          task, without explicit user prompting. The skill description is the primary
+          trigger signal — the model uses it to determine whether a skill is relevant to
+          the current context. The user-invocable and disable-model-invocation frontmatter
+          keys control whether auto-invocation is permitted.
+        source_ref: "https://docs.factory.ai/cli/configuration/skills"
+        graduation_candidate: true
+      - id: monorepo_skill_paths
+        name: Monorepo Skill Paths
+        description: >
+          Skills can be organized per-project within a monorepo using per-project
+          .factory/skills/ directories, or shared across projects via a root-level
+          .factory/skills/ directory. This allows monorepos to maintain project-specific
+          skills alongside shared skills without path conflicts.
+        source_ref: "https://docs.factory.ai/cli/configuration/skills"
+        graduation_candidate: false
+      - id: skill_composability
+        name: Skill Composability
+        description: >
+          The Droid can chain multiple skills inside a single plan, invoking them in
+          sequence as the plan progresses. This enables composite workflows composed
+          of reusable skill primitives without requiring a single monolithic skill.
+        source_ref: "https://docs.factory.ai/cli/configuration/skills"
+        graduation_candidate: false
+      - id: legacy_commands_compatibility
+        name: Legacy Commands Compatibility
+        description: >
+          Files under .factory/commands/ continue to work and are recognized by the
+          Droid. Skills (under .factory/skills/) supersede commands as the preferred
+          mechanism, but the commands directory is still loaded for backwards
+          compatibility with pre-skills configurations.
+        source_ref: "https://docs.factory.ai/cli/configuration/skills"
+        graduation_candidate: false
     loading_model: ""
-    notes: "A compatibility discovery path at <repo>/.agent/skills/ is also supported (not in original format doc). The docs additionally show skill.mdx accepted alongside SKILL.md."
+    notes: "A compatibility discovery path at <repo>/.agent/skills/ is also supported (not in original format doc). The docs additionally show skill.mdx accepted alongside SKILL.md. Skill descriptions serve double duty as both user-facing documentation and auto-invocation trigger signals — the model reads the description to decide whether the skill applies to the current task."
