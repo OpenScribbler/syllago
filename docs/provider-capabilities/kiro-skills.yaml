@@ -1,0 +1,76 @@
+provider: kiro
+content_type: skills
+format: ""
+proposed_mappings:
+    - canonical_key: canonical_filename
+      supported: true
+      mechanism: Fixed filename POWER.md (required, all caps)
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: compatibility
+      supported: true
+      mechanism: 'yaml frontmatter key: compatibility (optional)'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: custom_filename
+      supported: false
+      mechanism: Not observed — POWER.md is fixed
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: description
+      supported: true
+      mechanism: 'yaml frontmatter key: description (required)'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: disable_model_invocation
+      supported: false
+      mechanism: ""
+      source_field: ""
+      source_value: ""
+      confidence: unknown
+    - canonical_key: display_name
+      supported: true
+      mechanism: 'yaml frontmatter key: name (required, slug-style identifier)'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: global_scope
+      supported: false
+      mechanism: ""
+      source_field: ""
+      source_value: ""
+      confidence: unknown
+    - canonical_key: license
+      supported: true
+      mechanism: 'yaml frontmatter key: license (optional)'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: metadata_map
+      supported: true
+      mechanism: 'yaml frontmatter key: metadata (optional map)'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: project_scope
+      supported: true
+      mechanism: Self-contained directory installed via Kiro Powers panel (UI installation, no fixed filesystem path)
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: shared_scope
+      supported: false
+      mechanism: ""
+      source_field: ""
+      source_value: ""
+      confidence: unknown
+    - canonical_key: user_invocable
+      supported: false
+      mechanism: ""
+      source_field: ""
+      source_value: ""
+      confidence: unknown
