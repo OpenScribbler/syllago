@@ -149,6 +149,120 @@ func TestCreateStructuralIssue_InvalidSlug(t *testing.T) {
 	}
 }
 
+func TestFindOpenCapmonIssue_Found(t *testing.T) {
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		return []byte(`[{"number":42,"body":"<!-- capmon-check: test-provider/skills -->\nsome issue body"}]`), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	num, found, err := capmon.FindOpenCapmonIssue("test-provider", "skills")
+	if err != nil {
+		t.Fatalf("FindOpenCapmonIssue: %v", err)
+	}
+	if !found {
+		t.Fatal("expected found=true")
+	}
+	if num != 42 {
+		t.Errorf("issue number = %d, want 42", num)
+	}
+}
+
+func TestFindOpenCapmonIssue_NotFound(t *testing.T) {
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		return []byte(`[]`), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	num, found, err := capmon.FindOpenCapmonIssue("test-provider", "skills")
+	if err != nil {
+		t.Fatalf("FindOpenCapmonIssue: %v", err)
+	}
+	if found {
+		t.Errorf("expected found=false, got issue number %d", num)
+	}
+}
+
+func TestFindOpenCapmonIssue_WrongAnchor(t *testing.T) {
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		// Issue exists but has a different anchor (different content type).
+		return []byte(`[{"number":7,"body":"<!-- capmon-check: test-provider/hooks -->\nbody"}]`), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	_, found, err := capmon.FindOpenCapmonIssue("test-provider", "skills")
+	if err != nil {
+		t.Fatalf("FindOpenCapmonIssue: %v", err)
+	}
+	if found {
+		t.Error("expected found=false when anchor does not match content type")
+	}
+}
+
+func TestCreateCapmonChangeIssue_Success(t *testing.T) {
+	var capturedBody string
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		for i, a := range args {
+			if a == "--body" && i+1 < len(args) {
+				capturedBody = args[i+1]
+			}
+		}
+		return []byte(`{"number":99}`), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	num, err := capmon.CreateCapmonChangeIssue(context.Background(), "test-provider", "skills", "Change detected", "diff content here")
+	if err != nil {
+		t.Fatalf("CreateCapmonChangeIssue: %v", err)
+	}
+	if num != 99 {
+		t.Errorf("issue number = %d, want 99", num)
+	}
+	anchor := "<!-- capmon-check: test-provider/skills -->"
+	if !strings.Contains(capturedBody, anchor) {
+		t.Errorf("body should contain anchor comment %q, got: %q", anchor, capturedBody)
+	}
+	if !strings.Contains(capturedBody, "diff content here") {
+		t.Errorf("body should contain issue body text, got: %q", capturedBody)
+	}
+}
+
+func TestCreateCapmonChangeIssue_InvalidSlug(t *testing.T) {
+	_, err := capmon.CreateCapmonChangeIssue(context.Background(), "INVALID SLUG", "skills", "title", "body")
+	if err == nil {
+		t.Error("expected error for invalid slug")
+	}
+}
+
+func TestAppendCapmonChangeEvent_Success(t *testing.T) {
+	var capturedArgs []string
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		capturedArgs = args
+		return []byte(""), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	err := capmon.AppendCapmonChangeEvent(context.Background(), 42, "event body text")
+	if err != nil {
+		t.Fatalf("AppendCapmonChangeEvent: %v", err)
+	}
+	// Verify gh was called with "issue comment 42"
+	if len(capturedArgs) < 3 {
+		t.Fatalf("expected at least 3 args, got %v", capturedArgs)
+	}
+	if capturedArgs[0] != "issue" || capturedArgs[1] != "comment" || capturedArgs[2] != "42" {
+		t.Errorf("expected 'issue comment 42', got %v", capturedArgs[:3])
+	}
+	found := false
+	for i, a := range capturedArgs {
+		if a == "--body" && i+1 < len(capturedArgs) && capturedArgs[i+1] == "event body text" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected --body 'event body text' in args: %v", capturedArgs)
+	}
+}
+
 func TestBuildPRBody_NoTemplateInjection(t *testing.T) {
 	diff := capmon.CapabilityDiff{
 		Provider: "test-provider",

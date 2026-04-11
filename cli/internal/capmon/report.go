@@ -140,6 +140,88 @@ func CreateStructuralIssue(_ context.Context, provider, runID string, drift []st
 	return err
 }
 
+// FindOpenCapmonIssue searches for an open GitHub issue with the capmon-change label
+// and the provider:slug label, then filters by the hidden anchor comment
+// <!-- capmon-check: <provider>/<contentType> -->. Returns (issueNumber, true, nil)
+// when found, or (0, false, nil) when no matching issue exists.
+func FindOpenCapmonIssue(provider, contentType string) (int, bool, error) {
+	slug, err := SanitizeSlug(provider)
+	if err != nil {
+		return 0, false, err
+	}
+	anchor := fmt.Sprintf("<!-- capmon-check: %s/%s -->", slug, contentType)
+
+	out, err := ghRunner("issue", "list",
+		"--label", "capmon-change",
+		"--label", "provider:"+slug,
+		"--state", "open",
+		"--json", "number,body",
+	)
+	if err != nil {
+		return 0, false, fmt.Errorf("gh issue list: %w", err)
+	}
+
+	var issues []struct {
+		Number int    `json:"number"`
+		Body   string `json:"body"`
+	}
+	if err := json.Unmarshal(out, &issues); err != nil {
+		return 0, false, fmt.Errorf("parse issue list: %w", err)
+	}
+
+	for _, iss := range issues {
+		if strings.Contains(iss.Body, anchor) {
+			return iss.Number, true, nil
+		}
+	}
+	return 0, false, nil
+}
+
+// CreateCapmonChangeIssue creates a GitHub issue for a content-change event.
+// The issue body is prefixed with a hidden anchor comment
+// <!-- capmon-check: <provider>/<contentType> --> for deduplication by
+// FindOpenCapmonIssue. Returns the new issue number.
+func CreateCapmonChangeIssue(_ context.Context, provider, contentType, title, body string) (int, error) {
+	slug, err := SanitizeSlug(provider)
+	if err != nil {
+		return 0, err
+	}
+	anchor := fmt.Sprintf("<!-- capmon-check: %s/%s -->", slug, contentType)
+	fullBody := anchor + "\n" + body
+
+	out, err := ghRunner("issue", "create",
+		"--title", title,
+		"--label", "capmon-change",
+		"--label", "provider:"+slug,
+		"--body", fullBody,
+		"--json", "number",
+	)
+	if err != nil {
+		return 0, fmt.Errorf("gh issue create: %w", err)
+	}
+
+	var result struct {
+		Number int `json:"number"`
+	}
+	if err := json.Unmarshal(out, &result); err != nil {
+		return 0, fmt.Errorf("parse issue create output: %w", err)
+	}
+	return result.Number, nil
+}
+
+// AppendCapmonChangeEvent appends a comment to an existing capmon issue.
+// Used to record subsequent change detections on the same issue thread.
+func AppendCapmonChangeEvent(_ context.Context, issueNumber int, body string) error {
+	_, err := ghRunner("issue", "comment",
+		fmt.Sprintf("%d", issueNumber),
+		"--body", body,
+	)
+	if err != nil {
+		return fmt.Errorf("gh issue comment: %w", err)
+	}
+	return nil
+}
+
 // BuildPRBody writes a PR body to w for the given CapabilityDiff.
 // Extracted values are NEVER passed through a template engine — they are written
 // directly to the io.Writer inside triple-backtick fences.

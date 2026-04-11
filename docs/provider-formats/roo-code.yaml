@@ -1,0 +1,12 @@
+provider: roo-code
+last_fetched_at: "2026-04-11T00:00:00Z"
+last_changed_at: "2026-04-11T00:00:00Z"
+generation_method: human-edited
+
+content_types:
+  skills:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "Roo Code does not support Skills as a content type. Skills are not in scope for Roo Code (Cline fork, no native skills runtime). The human format doc confirms this."

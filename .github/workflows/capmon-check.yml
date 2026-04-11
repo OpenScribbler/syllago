@@ -1,0 +1,56 @@
+name: capmon — content hash check
+
+on:
+  schedule:
+    # Run daily at 07:00 UTC (offset from capmon.yml at 06:00 to avoid resource contention)
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: 'Provider slug to check (leave empty to check all providers)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Log actions without creating GitHub issues'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  check:
+    name: Hash Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Go
+        uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version: '1.26.x'
+
+      - name: Build syllago
+        run: make -C cli build
+
+      - name: Run capmon check (all providers)
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.provider == '' }}
+        run: ./cli/syllago capmon check --all
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run capmon check (single provider)
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.provider != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CAPMON_PROVIDER: ${{ github.event.inputs.provider }}
+          CAPMON_DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: |
+          FLAGS=""
+          if [ "$CAPMON_DRY_RUN" = "true" ]; then
+            FLAGS="--dry-run"
+          fi
+          ./cli/syllago capmon check --provider="$CAPMON_PROVIDER" $FLAGS

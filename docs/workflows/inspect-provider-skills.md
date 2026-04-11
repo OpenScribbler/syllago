@@ -1,3 +1,9 @@
+> **DEPRECATED** — This workflow has been replaced by
+> [`docs/workflows/update-format-doc.md`](./update-format-doc.md).
+> The seeder spec bead model is no longer used. Format docs are now populated
+> directly by the update-format-doc agent and SeederSpecs are auto-derived.
+> This file is retained for historical reference only.
+
 # Inspect Provider Skills — Bead Workflow
 
 **Scope:** Skills content type only. One inspection per provider × content type.

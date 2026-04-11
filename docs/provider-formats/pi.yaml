@@ -1,0 +1,69 @@
+provider: pi
+last_fetched_at: "2026-04-11T00:00:00Z"
+last_changed_at: "2026-04-11T00:00:00Z"
+generation_method: human-edited
+
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: ""
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "yaml frontmatter key: name (required, max 64 chars, lowercase a-z/0-9/hyphens, must match parent directory name)"
+        confidence: inferred
+      description:
+        supported: true
+        mechanism: "yaml frontmatter key: description (required, max 1024 chars)"
+        confidence: inferred
+      license:
+        supported: true
+        mechanism: "yaml frontmatter key: license (optional)"
+        confidence: inferred
+      compatibility:
+        supported: true
+        mechanism: "yaml frontmatter key: compatibility (optional, max 500 chars)"
+        confidence: inferred
+      metadata_map:
+        supported: true
+        mechanism: "yaml frontmatter key: metadata (optional, arbitrary key-value mapping)"
+        confidence: inferred
+      disable_model_invocation:
+        supported: true
+        mechanism: "yaml frontmatter key: disable-model-invocation (optional bool)"
+        confidence: inferred
+      project_scope:
+        supported: true
+        mechanism: ".pi/skills/<name>/SKILL.md or .agents/skills/<name>/SKILL.md"
+        paths:
+          - ".pi/skills/<name>/SKILL.md"
+          - ".agents/skills/<name>/SKILL.md"
+        confidence: inferred
+      global_scope:
+        supported: true
+        mechanism: "~/.pi/agent/skills/<name>/SKILL.md or ~/.agents/skills/<name>/SKILL.md"
+        paths:
+          - "~/.pi/agent/skills/<name>/SKILL.md"
+          - "~/.agents/skills/<name>/SKILL.md"
+        confidence: inferred
+      canonical_filename:
+        supported: true
+        mechanism: "SKILL.md (required, fixed filename for directory-form skills)"
+        confidence: inferred
+      custom_filename:
+        supported: true
+        mechanism: "Any .md filename at root of ~/.pi/agent/skills/ or .pi/skills/ (shorthand single-file form)"
+        confidence: inferred
+    provider_extensions:
+      - id: pi_allowed_tools
+        name: "allowed-tools frontmatter field"
+        description: "Space-delimited list of pre-approved tools (experimental). Pre-approves tool access for the skill without user confirmation prompt."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
+        graduation_candidate: false
+    loading_model: ""
+    notes: "Pi implements the agentskills.io open standard. All confidence levels are inferred — the TypeScript source extractor produced no field data. Pi supports rich location semantics: .agents/ cross-provider paths, package.json integration, settings-array config, and CLI --skill flags."
