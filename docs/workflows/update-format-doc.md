@@ -26,6 +26,15 @@ Use only keys defined in docs/spec/canonical-keys.yaml under the matching
 content type. If the source material confirms a capability that matches a
 canonical key, record it in canonical_mappings with mechanism and confidence.
 
+Write `mechanism` fields narrowly. A mechanism describes only how THIS specific
+canonical key is implemented — not adjacent features, not creation flows, not
+invocation behaviors that belong to a different key. If information is relevant
+to more than one key or to a provider_extension, put it in the most specific
+place and keep the other fields clean. For example: if a provider supports both
+user-triggered invocation (@mention) and UI-based skill creation, the
+`user_invocable` mechanism covers only the invocation syntax, not the UI
+creation path (which goes in a provider_extension).
+
 **2. Capture unknown capabilities in provider_extensions.**
 If a provider supports something real and documented that has no canonical key,
 add it to provider_extensions. Give it:
@@ -72,4 +81,7 @@ entry. Set generation_method to subagent.
 - Set graduation_candidate: true without evidence that another provider has the
   same concept.
 - Summarize source content. Full detail is required.
+- Bleed adjacent concepts into a mechanism field. Each mechanism describes one
+  thing. If a feature spans multiple canonical keys or belongs in a
+  provider_extension, split it — do not concatenate it into a single mechanism.
 - Modify any file other than docs/provider-formats/<slug>.yaml.
