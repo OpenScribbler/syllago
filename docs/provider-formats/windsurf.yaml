@@ -1,7 +1,7 @@
 provider: windsurf
-last_fetched_at: "2026-04-11T00:00:00Z"
+last_fetched_at: "2026-04-11T21:50:59Z"
 last_changed_at: "2026-04-11T00:00:00Z"
-generation_method: human-edited
+generation_method: subagent
 
 content_types:
   skills:
@@ -10,24 +10,24 @@ content_types:
       - uri: "https://docs.windsurf.com/windsurf/cascade/skills.md"
         type: documentation
         fetch_method: md_url
-        content_hash: ""
-        fetched_at: "2026-04-11T00:00:00Z"
+        content_hash: "sha256:804b833cc490fa2dbf6ab6fe53c92b9b29f452c57d828e03235089bc4a7499cd"
+        fetched_at: "2026-04-11T21:50:59Z"
     canonical_mappings:
       display_name:
         supported: true
-        mechanism: "yaml frontmatter key: name (required)"
+        mechanism: "yaml frontmatter key: name (required). Must be lowercase letters, numbers, and hyphens only (e.g., deploy-to-staging, code-review). Used in UI listings and for @-mentions."
         confidence: confirmed
       description:
         supported: true
-        mechanism: "yaml frontmatter key: description (required)"
+        mechanism: "yaml frontmatter key: description (required). Brief explanation shown to the model to help it decide when to auto-invoke the skill. Key field for automatic invocation matching."
         confidence: confirmed
       user_invocable:
         supported: true
-        mechanism: "@mention by skill name in Cascade input (e.g., @deploy-to-production)"
+        mechanism: "Explicit @mention by skill name in Cascade input (e.g., @deploy-to-production). Always available regardless of auto-invocation eligibility. Skills can also be created via Cascade UI (three dots → Skills → + Workspace / + Global)."
         confidence: confirmed
       project_scope:
         supported: true
-        mechanism: "directory: .windsurf/skills/<skill-name>/SKILL.md"
+        mechanism: "Skill directory at .windsurf/skills/<skill-name>/. Committed with the repo; current workspace only. For cross-agent compatibility, also discovered at .agents/skills/<skill-name>/ and (if Claude Code config reading is enabled) .claude/skills/<skill-name>/."
         paths:
           - ".windsurf/skills/<skill-name>/SKILL.md"
           - ".agents/skills/<skill-name>/SKILL.md"
@@ -35,19 +35,78 @@ content_types:
         confidence: confirmed
       global_scope:
         supported: true
-        mechanism: "directory: ~/.codeium/windsurf/skills/<skill-name>/SKILL.md"
+        mechanism: "Skill directory at ~/.codeium/windsurf/skills/<skill-name>/. Available in all workspaces on the user's machine; not committed to version control. Also discovered at ~/.agents/skills/<skill-name>/ and (if Claude Code config reading is enabled) ~/.claude/skills/<skill-name>/."
         paths:
           - "~/.codeium/windsurf/skills/<skill-name>/SKILL.md"
           - "~/.agents/skills/<skill-name>/SKILL.md"
+          - "~/.claude/skills/<skill-name>/SKILL.md"
         confidence: confirmed
       shared_scope:
         supported: true
-        mechanism: "OS-specific system path (Enterprise IT-deployed, read-only)"
+        mechanism: "OS-specific system path deployed by enterprise IT; read-only for end users. macOS: /Library/Application Support/Windsurf/skills/<skill-name>/; Linux/WSL: /etc/windsurf/skills/<skill-name>/; Windows: C:\\ProgramData\\Windsurf\\skills\\<skill-name>\\."
         confidence: confirmed
       canonical_filename:
         supported: true
-        mechanism: "fixed filename SKILL.md required in each skill directory"
+        mechanism: "Fixed filename SKILL.md required in each skill directory. All scopes (workspace, global, system) use this same convention."
         confidence: confirmed
-    provider_extensions: []
-    loading_model: "Progressive disclosure: only name+description shown to model by default; full SKILL.md content loaded when Cascade invokes the skill or user @mentions it."
-    notes: "The windsurf.md format doc incorrectly listed Skills as unsupported — Windsurf has a full file-based skills system. Windsurf implements the agentskills.io open standard. Also discovers skills in .agents/skills/ and .claude/skills/ for cross-agent compatibility."
+    provider_extensions:
+      - id: supporting_resource_files
+        name: Supporting resource files
+        description: >
+          A skill directory may contain arbitrary additional files alongside SKILL.md (e.g., shell
+          scripts, markdown checklists, config templates, test templates, environment files). These
+          files become available to Cascade when the skill is invoked. There is no restriction on
+          file type or count. The skill directory is effectively a mini-bundle of everything needed
+          to execute a multi-step workflow. This is the primary structural differentiator between
+          Skills (folder-based bundles) and Rules/Workflows (single-file). Examples from docs:
+          deployment-checklist.md, rollback-procedure.md, config-template.yaml, pre-deploy-checks.sh,
+          security-checklist.md, review-template.md, test-template.py, coverage-config.json.
+        source_ref: "https://docs.windsurf.com/windsurf/cascade/skills.md#adding-supporting-resources"
+        graduation_candidate: false
+      - id: name_format_constraint
+        name: Skill name format constraint
+        description: >
+          Skill names (the `name` frontmatter field) must use only lowercase letters, numbers, and
+          hyphens. This constraint is enforced by the UI wizard and documented as a requirement.
+          Invalid names are not accepted. Examples of valid names: deploy-to-staging, code-review,
+          setup-dev-environment.
+        source_ref: "https://docs.windsurf.com/windsurf/cascade/skills.md#required-frontmatter-fields"
+        graduation_candidate: false
+      - id: auto_invocation
+        name: Automatic model-driven invocation
+        description: >
+          Beyond explicit @mention, Cascade automatically invokes skills when the user's request
+          semantically matches a skill's description. This is described as the most common invocation
+          path. The description frontmatter field is the key signal: it tells Cascade when to invoke
+          the skill. This is distinct from user_invocable (@mention) and is driven entirely by
+          model inference against the description field. Users simply describe what they want and
+          Cascade selects relevant skills without any explicit invocation syntax.
+        source_ref: "https://docs.windsurf.com/windsurf/cascade/skills.md#automatic-invocation"
+        graduation_candidate: false
+      - id: ui_creation
+        name: UI-based skill creation
+        description: >
+          Skills can be created through the Cascade panel UI without manual file creation. Flow:
+          open Cascade panel → three dots (top right) → customizations menu → Skills section →
+          click "+ Workspace" (project-specific) or "+ Global" (all workspaces) → enter name.
+          The UI enforces the name format constraint (lowercase, numbers, hyphens).
+        source_ref: "https://docs.windsurf.com/windsurf/cascade/skills.md#using-the-ui-easiest"
+        graduation_candidate: false
+    loading_model: >
+      Progressive disclosure (agentskills.io standard): only the skill's name and description are
+      shown to the model by default. The full SKILL.md content and all supporting resource files
+      are loaded only when Cascade decides to invoke the skill (based on description matching) or
+      when the user explicitly @mentions it. This keeps the context window lean even with many
+      skills defined. Automatic invocation (model decides from description match) is the most
+      common path; manual @mention is the fallback for explicit control.
+    notes: >
+      Windsurf implements the agentskills.io open standard (https://agentskills.io). Skills are
+      structurally differentiated from Rules (single .md file, behavioral guidelines, always_on/glob/
+      model_decision/manual activation) and Workflows (single .md file, manual-only via slash command).
+      The key advantage of Skills over Rules is the supporting resource files bundle: scripts,
+      templates, checklists, and config files can all be co-located in the skill directory.
+      Cross-agent compatibility: Windsurf discovers skills in .agents/skills/ and ~/.agents/skills/
+      for interoperability with other agents. If Claude Code config reading is enabled, .claude/skills/
+      and ~/.claude/skills/ are also scanned. Enterprise system-level paths: macOS
+      /Library/Application Support/Windsurf/skills/, Linux/WSL /etc/windsurf/skills/,
+      Windows C:\ProgramData\Windsurf\skills\.
