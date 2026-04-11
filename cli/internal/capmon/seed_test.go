@@ -94,84 +94,6 @@ func TestSeedProviderCapabilities_WritesConfidence(t *testing.T) {
 	}
 }
 
-func TestSeedProviderCapabilities_UnapprovedSpec(t *testing.T) {
-	capsDir := t.TempDir()
-	specsDir := t.TempDir()
-
-	// Write a spec with no human_action (unapproved)
-	specContent := `provider: test-provider
-content_type: skills
-format: markdown
-proposed_mappings: []
-human_action: ""
-`
-	specPath := filepath.Join(specsDir, "test-provider-skills.yaml")
-	if err := os.WriteFile(specPath, []byte(specContent), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	opts := capmon.SeedOptions{
-		CapsDir:        capsDir,
-		Provider:       "test-provider",
-		SeederSpecsDir: specsDir,
-		Extracted: map[string]string{
-			"skills.supported": "true",
-		},
-	}
-	err := capmon.SeedProviderCapabilities(opts)
-	if err == nil {
-		t.Fatal("expected error for unapproved spec, got nil")
-	}
-	if !strings.Contains(err.Error(), "human_action") {
-		t.Errorf("error %q should mention human_action", err.Error())
-	}
-}
-
-func TestSeedProviderCapabilities_NoSpecFile_SkipsGate(t *testing.T) {
-	// When SeederSpecsDir is empty string, the gate is skipped entirely
-	capsDir := t.TempDir()
-	opts := capmon.SeedOptions{
-		CapsDir:        capsDir,
-		Provider:       "test-provider",
-		SeederSpecsDir: "", // gate disabled
-		Extracted: map[string]string{
-			"skills.supported": "true",
-		},
-	}
-	if err := capmon.SeedProviderCapabilities(opts); err != nil {
-		t.Fatalf("expected no error with no SeederSpecsDir, got: %v", err)
-	}
-}
-
-func TestSeedProviderCapabilities_ApprovedSpec_Proceeds(t *testing.T) {
-	capsDir := t.TempDir()
-	specsDir := t.TempDir()
-
-	specContent := `provider: test-provider
-content_type: skills
-format: markdown
-proposed_mappings: []
-human_action: approve
-reviewed_at: "2026-04-10T00:00:00Z"
-`
-	specPath := filepath.Join(specsDir, "test-provider-skills.yaml")
-	if err := os.WriteFile(specPath, []byte(specContent), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	opts := capmon.SeedOptions{
-		CapsDir:        capsDir,
-		Provider:       "test-provider",
-		SeederSpecsDir: specsDir,
-		Extracted: map[string]string{
-			"skills.supported": "true",
-		},
-	}
-	if err := capmon.SeedProviderCapabilities(opts); err != nil {
-		t.Fatalf("unexpected error with approved spec: %v", err)
-	}
-}
-
 func TestSeedCrushAndRooCodeE2E(t *testing.T) {
 	// This test exercises the full pipeline:
 	// cache extraction → recognition → capability YAML writing
@@ -208,10 +130,9 @@ func TestSeedCrushAndRooCodeE2E(t *testing.T) {
 			// Write to temp output dir — verify YAML is produced with confidence fields
 			capsDir := t.TempDir()
 			opts := capmon.SeedOptions{
-				CapsDir:        capsDir,
-				Provider:       provider,
-				Extracted:      dotPaths,
-				SeederSpecsDir: "", // skip gate in this test
+				CapsDir:   capsDir,
+				Provider:  provider,
+				Extracted: dotPaths,
 			}
 			if err := capmon.SeedProviderCapabilities(opts); err != nil {
 				t.Fatalf("SeedProviderCapabilities(%q): %v", provider, err)

@@ -20,8 +20,12 @@ type SourceManifest struct {
 }
 
 // ContentTypeSource groups all source entries for one content type.
+// Supported is a pointer to distinguish "not specified" from explicitly false.
+// When Supported is explicitly false, the content type is not supported by this provider
+// and source URI checks are skipped.
 type ContentTypeSource struct {
-	Sources []SourceEntry `yaml:"sources"`
+	Supported *bool         `yaml:"supported,omitempty"`
+	Sources   []SourceEntry `yaml:"sources"`
 }
 
 // SourceEntry is one source URL with its selector and extraction hints.

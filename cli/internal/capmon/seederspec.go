@@ -31,8 +31,6 @@ type SeederSpec struct {
 	ExtractionGaps      []string          `yaml:"extraction_gaps,omitempty"`
 	SourceExcerpt       string            `yaml:"source_excerpt,omitempty"`
 	ProposedMappings    []ProposedMapping `yaml:"proposed_mappings"`
-	HumanAction         string            `yaml:"human_action"` // approve | adjust | skip
-	ReviewedAt          string            `yaml:"reviewed_at,omitempty"`
 	Notes               string            `yaml:"notes,omitempty"`
 }
 
@@ -53,34 +51,4 @@ func LoadSeederSpec(path string) (*SeederSpec, error) {
 		return nil, fmt.Errorf("parse seeder spec %s: %w", path, err)
 	}
 	return &spec, nil
-}
-
-// ValidateSeederSpec checks that the spec has a valid human_action and that
-// all proposed mappings have valid confidence values.
-func ValidateSeederSpec(spec *SeederSpec) error {
-	switch spec.HumanAction {
-	case "":
-		return fmt.Errorf("seeder spec for %q has no human_action set; set to approve, adjust, or skip after review", spec.Provider)
-	case "approve", "adjust":
-		if spec.ReviewedAt == "" {
-			return fmt.Errorf("seeder spec for %q has human_action %q but no reviewed_at timestamp", spec.Provider, spec.HumanAction)
-		}
-	case "skip":
-		// valid without reviewed_at
-	default:
-		return fmt.Errorf("seeder spec for %q has invalid human_action %q; must be approve, adjust, or skip", spec.Provider, spec.HumanAction)
-	}
-
-	validConfidence := map[string]bool{
-		"confirmed": true,
-		"inferred":  true,
-		"unknown":   true,
-		"":          true,
-	}
-	for _, m := range spec.ProposedMappings {
-		if !validConfidence[m.Confidence] {
-			return fmt.Errorf("seeder spec for %q: proposed mapping %q has invalid confidence %q; must be confirmed, inferred, unknown, or empty", spec.Provider, m.CanonicalKey, m.Confidence)
-		}
-	}
-	return nil
 }

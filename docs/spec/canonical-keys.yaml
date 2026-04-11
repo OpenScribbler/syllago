@@ -1,0 +1,91 @@
+---
+# Canonical key vocabulary for syllago capability tracking.
+#
+# This file is the machine-readable source of truth used by:
+#   - capmon validate-format-doc (checks canonical_mappings keys)
+#   - capmon derive (validates keys when generating seeder specs)
+#
+# Schema:
+#   content_types.<type>.<key>:
+#     description: Human-readable description of the capability
+#     type: string | bool | object
+
+content_types:
+  skills:
+    display_name:
+      description: >
+        Human-readable display name for the skill. If omitted, the directory name is used.
+        Shown in skill listings and menus.
+      type: string
+
+    description:
+      description: >
+        What the skill does. Used by the AI to decide when to auto-invoke it.
+        Also shown in skill listings and help text.
+      type: string
+
+    license:
+      description: >
+        SPDX license identifier for the skill content.
+        Typically "MIT", "Apache-2.0", etc.
+      type: string
+
+    compatibility:
+      description: >
+        Provider compatibility constraints — which AI tool versions or providers
+        this skill is compatible with.
+      type: object
+
+    metadata_map:
+      description: >
+        Arbitrary key-value metadata attached to the skill. Provider-specific
+        semantics; often used for tooling or automation metadata.
+      type: object
+
+    disable_model_invocation:
+      description: >
+        When true, the AI cannot auto-invoke this skill; only the user can
+        invoke it explicitly. Default: false.
+      type: bool
+
+    user_invocable:
+      description: >
+        When false, the skill is hidden from user-facing menus (e.g., the /
+        command menu). The AI can still invoke it. Default: true.
+      type: bool
+
+    version:
+      description: >
+        Semantic version string for the skill. Used for update detection
+        and compatibility checks.
+      type: string
+
+    project_scope:
+      description: >
+        Whether the skill can be installed at project scope (applies to current
+        project only, typically committed to version control).
+      type: bool
+
+    global_scope:
+      description: >
+        Whether the skill can be installed at global/personal scope (applies
+        across all projects for the current user).
+      type: bool
+
+    shared_scope:
+      description: >
+        Whether the skill can be installed at shared/enterprise scope (applies
+        to all users in an organization or shared environment).
+      type: bool
+
+    canonical_filename:
+      description: >
+        The required or conventional filename for this skill type. For example,
+        "SKILL.md" for Claude Code skills.
+      type: string
+
+    custom_filename:
+      description: >
+        Whether the provider supports custom filenames (beyond the canonical
+        filename convention).
+      type: bool

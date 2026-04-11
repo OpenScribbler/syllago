@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-10T16:53:09Z",
+  "generatedAt": "2026-04-11T17:46:22Z",
   "syllagoVersion": "0.7.0",
   "events": [
     {
@@ -28,7 +28,12 @@
             "loadout_apply",
             "sandbox_run",
             "sync-and-export",
-            "capmon_validate_spec"
+            "capmon_validate_spec",
+            "capmon_validate_format_doc",
+            "capmon_validate_sources",
+            "capmon_derive",
+            "capmon_check",
+            "capmon_onboard"
           ]
         },
         {
