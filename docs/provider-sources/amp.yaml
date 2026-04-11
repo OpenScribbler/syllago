@@ -24,10 +24,11 @@ changelog:
 
 content_types:
   # ── Support summary ───────────────────────────────────────────────────
-  # Amp supports: rules, skills, mcp
-  # Not supported: hooks (has "checks" system, no lifecycle hooks), agents (no agent file format), commands (no custom command system)
-  # Syllago support: rules ✓, skills ✓, mcp ✓; hooks ✗, agents ✗, commands ✗
-  # Amp uses AGENT.md (rules), .amp/settings.json (mcp). Skills are documented but thin.
+  # Amp supports: rules, skills, mcp, hooks
+  # Not supported: agents (no agent file format), commands (no custom command system)
+  # Syllago support: rules ✓, skills ✓, mcp ✓, hooks ✓; agents ✗, commands ✗
+  # Amp uses AGENT.md (rules), .amp/settings.json (mcp/hooks). Skills follow Agent Skills open standard.
+  # Hooks are config-based (amp.hooks JSON array), not file-based — managed via JSON merge.
   # ─────────────────────────────────────────────────────────────────────
 
   rules:
@@ -42,15 +43,25 @@ content_types:
         format: markdown
         extracts: [file_format, features]
 
-      - url: https://ampcode.com/manual
+      - url: https://ampcode.com/manual/AGENTS.md
         type: docs
-        format: html
+        format: markdown
         extracts: [file_format, features]
     # Format: AGENT.md (plain markdown). Amp's equivalent of CLAUDE.md/.cursorrules.
 
   hooks:
-    supported: false
-    # Amp has "checks" but no traditional lifecycle hook system.
+    sources:
+      - url: https://ampcode.com/manual/hooks.md
+        type: docs
+        format: markdown
+        extracts: [config_schema, event_names, match_conditions]
+
+      - url: https://ampcode.com/manual/appendix/permissions-reference.md
+        type: docs
+        format: markdown
+        extracts: [permissions_schema, match_conditions]
+    # Amp supports hooks via amp.hooks array in settings JSON (tool:pre-execute / tool:post-execute).
+    # NOT file-based — stored as JSON config entries. Syllago manages via JSON merge into settings.
 
   mcp:
     sources:
@@ -59,13 +70,23 @@ content_types:
         format: markdown
         extracts: [config_examples, setup_examples]
 
+      - url: https://ampcode.com/manual/mcp.md
+        type: docs
+        format: markdown
+        extracts: [config_schema, features]
+
+      - url: https://ampcode.com/manual/appendix/mcp-registry-allowlist.md
+        type: docs
+        format: markdown
+        extracts: [allowlist_schema, registry_config]
+
   skills:
     sources:
-      - url: https://ampcode.com/news/agent-skills
+      - url: https://ampcode.com/manual/agent-skills.md
         type: docs
-        format: html
-        extracts: [features]
-    # Amp has skills but documentation is thin (announcement blog post, not a reference page).
+        format: markdown
+        extracts: [file_format, frontmatter_fields, file_locations, discovery_rules]
+    # Format: SKILL.md with YAML frontmatter (name + description required). Follows Agent Skills open standard.
 
   agents:
     supported: false

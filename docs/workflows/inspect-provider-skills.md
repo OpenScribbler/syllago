@@ -87,6 +87,9 @@ provider: <slug>
 content_type: skills
 format: <markdown | go | typescript | html | yaml>
 format_doc_provenance: <human | subagent>
+source_uris:
+  - "<primary URL — not a homepage, the exact page (e.g. /manual/agent-skills.md)>"
+  - "<additional source URL if multiple pages were used — omit if only one>"
 extraction_gaps:
   - "<description of what was missing or unclear in the extraction>"
 source_excerpt: |
