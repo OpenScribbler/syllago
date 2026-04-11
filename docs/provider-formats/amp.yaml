@@ -1,7 +1,7 @@
 provider: amp
-last_fetched_at: "2026-04-11T00:00:00Z"
-last_changed_at: "2026-04-11T00:00:00Z"
-generation_method: human-edited
+last_fetched_at: "2026-04-11T21:49:40Z"
+last_changed_at: "2026-04-11T21:49:40Z"
+generation_method: subagent
 
 content_types:
   skills:
@@ -10,8 +10,8 @@ content_types:
       - uri: "https://ampcode.com/manual/agent-skills.md"
         type: documentation
         fetch_method: md_url
-        content_hash: ""
-        fetched_at: "2026-04-11T00:00:00Z"
+        content_hash: "sha256:f4fca62a6b5a7d94d4995cbb0be4fbadc11a4166fd9faf345139bc0b4c6a5e90"
+        fetched_at: "2026-04-11T21:49:40Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -23,14 +23,14 @@ content_types:
         confidence: confirmed
       project_scope:
         supported: true
-        mechanism: ".agents/skills/<name>/SKILL.md"
+        mechanism: "skill directory placed under .agents/skills/<name>/ or .claude/skills/<name>/ within the project root"
         paths:
           - ".agents/skills/<name>/SKILL.md"
           - ".claude/skills/<name>/SKILL.md"
         confidence: confirmed
       global_scope:
         supported: true
-        mechanism: "~/.config/agents/skills/<name>/SKILL.md"
+        mechanism: "skill directory placed under ~/.config/agents/skills/<name>/, ~/.config/amp/skills/<name>/, or ~/.claude/skills/<name>/"
         paths:
           - "~/.config/agents/skills/<name>/SKILL.md"
           - "~/.config/amp/skills/<name>/SKILL.md"
@@ -44,11 +44,50 @@ content_types:
         supported: false
         mechanism: "not observed — amp requires SKILL.md as the fixed canonical filename"
         confidence: confirmed
+      user_invocable:
+        supported: false
+        mechanism: "not documented — no mechanism to hide skills from user-facing menus is described; skills are managed via 'amp skill' CLI and command palette, not a slash-command invocation menu"
+        confidence: unknown
+      disable_model_invocation:
+        supported: false
+        mechanism: "not documented — no mechanism to prevent the model from auto-invoking a skill; the model always selects based on name and description match"
+        confidence: unknown
+      shared_scope:
+        supported: false
+        mechanism: "not documented — only project-scope (.agents/skills/) and user-wide (~/.config/agents/skills/) are described; no enterprise or shared scope exists"
+        confidence: unknown
     provider_extensions:
       - id: mcp_bundling
         name: "MCP server bundling"
-        description: "Skills can include an mcp.json file to bundle an MCP server that starts when Amp launches but remains hidden until the skill is loaded."
+        description: "Skills can include an mcp.json file to bundle an MCP server. The server starts when Amp launches but its tools remain hidden until the skill is loaded, keeping the tool list clean. Supports local command-based servers (command, args, env fields) and remote HTTP servers (url, headers fields). The optional includeTools field filters which tools are exposed."
         source_ref: "https://ampcode.com/manual/agent-skills.md"
         graduation_candidate: false
-    loading_model: "Lazy — name and description loaded at startup; SKILL.md body loaded on demand."
-    notes: ""
+      - id: toolbox_bundling
+        name: "Executable tool bundling via toolbox/"
+        description: "Skills can bundle executable tools by placing them in a toolbox/ subdirectory within the skill directory. These executables are auto-discovered and registered as tools when the skill is loaded. They follow the same stdin/stdout JSON contract as standalone toolbox tools. Tools from skills are hidden until the skill is loaded."
+        source_ref: "https://ampcode.com/manual/agent-skills.md"
+        graduation_candidate: false
+      - id: bundled_resources
+        name: "Bundled passive resources"
+        description: "Skills can include arbitrary files (scripts, templates, config files, etc.) in the same directory as SKILL.md. The agent can access these files at paths relative to the skill file. This is distinct from toolbox/ executables — bundled resources are passive files read by the agent, not registered tools."
+        source_ref: "https://ampcode.com/manual/agent-skills.md"
+        graduation_candidate: true
+      - id: skill_cli
+        name: "CLI and command palette skill management"
+        description: "Skills are managed via the 'amp skill' CLI command and the command palette (Ctrl+O in CLI, Cmd+Shift+P in VS Code). Supported operations: 'skill: add' (install from GitHub URL, git URL, or local path), 'skill: list' (view installed skills), 'skill: remove' (remove a skill). The add command accepts shorthand GitHub paths (e.g., ampcode/amp-contrib/tmux)."
+        source_ref: "https://ampcode.com/manual/agent-skills.md"
+        graduation_candidate: false
+      - id: auto_invocation
+        name: "Automatic model-driven invocation"
+        description: "The model automatically invokes a skill when the user's request matches the skill's name and description. Both frontmatter fields are always visible to the model at startup and determine when it selects the skill — the full SKILL.md body is only loaded once invoked. This is the primary invocation path; users describe what they want and the model selects the matching skill without explicit syntax."
+        source_ref: "https://ampcode.com/manual/agent-skills.md"
+        graduation_candidate: true
+    loading_model: "Lazy — name and description (frontmatter) are always visible to the model and loaded at startup; SKILL.md body is loaded on demand when the skill is invoked. MCP tools and toolbox executables bundled in a skill remain hidden until the skill is loaded. Skill precedence order (first wins): ~/.config/agents/skills/, ~/.config/amp/skills/, .agents/skills/, .claude/skills/, ~/.claude/skills/, then plugins, toolbox directories, and built-in skills."
+    notes: >
+      Skill names must be unique per scope. Per the documented precedence list, user-wide
+      (~/.config/agents/skills/) skills have higher priority than project-specific (.agents/skills/)
+      skills — note: the source prose says "project-specific takes priority over user-wide" but
+      the explicit precedence list contradicts this; the list is treated as authoritative.
+      Project skills in .agents/skills/ can be committed to git so the whole team gets them
+      automatically. Cross-agent compat paths (.claude/skills/, ~/.claude/skills/) are discovered
+      but at lower precedence than amp-native paths.
