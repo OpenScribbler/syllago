@@ -3,7 +3,7 @@
   "name": "capmon-ia-design-audit",
   "createdAt": "2026-04-10T21:00:00-07:00",
   "current": {
-    "claimedBy": null,
+    "claimedBy": { "sessionId": "2b66c28c-dc4d-4891-8c43-9064cecfb463", "claimedAt": "2026-04-10T21:38:49-07:00" },
     "project": "syllago",
     "updated": "2026-04-10T21:00:00-07:00",
     "sessionId": null,

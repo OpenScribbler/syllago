@@ -56,17 +56,27 @@ For each (provider, content_type), sources are probed in priority order:
 |----------|-------------|---------|
 | 1 | **Source code** | Go structs, TypeScript interfaces, Rust types — highest confidence, explicit field definitions |
 | 2 | **llms.txt / llms-full.txt** | Check `docs.provider.com/llms.txt` and `docs.provider.com/llms-full.txt` — curated LLM-friendly index of all docs |
-| 3 | **.md URL variants** | Two patterns: append `.md` directly (`page.md`), and child path (`section/page-name.md`). Try both. |
+| 3 | **.md URL variants** | Two patterns: (1) append `.md` directly (`/path/page` → `/path/page.md`), (2) child path variant (`/path/page` → `/path/page/page.md`). Try pattern 1 first — use it if it returns 200 with valid content. Fall back to pattern 2 only if pattern 1 fails or fails the content validity predicate. If both return valid content, use pattern 1. |
 | 4 | **Readability MCP** | HTML via Mozilla Readability — strips nav/ads, leaves prose. Fallback for SPAs and non-markdown sites. |
 | 5 | **Changelog / release notes** | Lowest confidence. Used for delta detection and identifying what changed between versions. |
 
 **Full content required.** No partial extraction. Previous iterations missed behavioral details, edge cases, and nuance by capturing only excerpts. The format doc agent reads the full page or full source file. Partial content is not acceptable.
 
+### Content Validity Predicate
+
+A fetched response is **valid content** if and only if all three conditions hold:
+
+1. **Size** — response body is ≥ 512 bytes
+2. **Content-Type** — not a binary type (no `image/`, `application/octet-stream`, `application/zip`, or other non-text MIME types)
+3. **Domain integrity** — the final URL after all redirects shares the same registered domain as the originally requested URL (prevents false "valid content" from CDN error pages or unrelated domain redirects)
+
+A response that fails any condition is treated as a **fetch error**, not as valid content or as a change event. The `expected_token` field is reserved in the schema as an optional string that must appear in the response body — this is a v1.1 enhancement for sources known to return 200 with empty or generic error pages.
+
 ### Source Code Diffing
 
-For source code sources, use structural diffing rather than text diff:
-- New/removed functions, methods, types, struct fields
-- This is more meaningful than line-level text diff and avoids noise from reformatting
+For source code sources, use **text diff** (unified diff) for v1. Text diff is sufficient for detecting changes and simpler to implement. The LLM workflow instructions direct the agent to evaluate behavioral significance — reformatting noise is handled at the prompt level, not in the pipeline.
+
+Structural diffing (new/removed functions, types, struct fields via `go/ast`, `ts-morph`, etc.) is a v2 enhancement if text diff proves too noisy in practice.
 
 ### Doc Page Diffing
 
@@ -87,30 +97,52 @@ LLM API calls cost money. The pipeline is split to keep CI costs at zero:
 
 ```
 capmon check --all
+  # Step 0 — orphan detection
+  for each docs/provider-formats/<slug>.yaml on disk:
+    if <slug> not in providers.json:
+      report orphan as warning (non-blocking — manual cleanup required)
+
+  # Step 1 — validate all source manifests before touching any provider
+  for each provider in providers.json:
+    run capmon validate-sources — exit 1 if any content type has zero URIs
+
+  # Step 2 — validate all format docs before comparing hashes
+  for each docs/provider-formats/<slug>.yaml on disk:
+    run capmon validate-format-doc — exit 1 if schema invalid or unknown canonical keys
+
+  # Step 3 — change detection
   for each provider × content_type × source URI:
     fetch full content
+    validate against content validity predicate (size ≥ 512B, non-binary Content-Type, domain integrity)
+    if validity failure: treat as fetch_error — see below
     compute SHA-256 hash
-    compare against .capmon-cache/<slug>/meta.json cached hash
-    if fetch_error (4xx, 5xx, timeout, DNS failure):
-      DO NOT update cached hash
+    compare against content_hash in docs/provider-formats/<slug>.yaml
+    if no format doc exists (new provider): treat all sources as changed
+    if fetch_error (4xx, 5xx, timeout, DNS failure, or content validity failure):
+      DO NOT update any cached hash
       DO NOT treat as "no change"
       create or update GitHub issue:
         - label: capmon-change, capmon-fetch-error, provider:<slug>, content-type:<type>
-        - body includes: URI, error code, timestamp
+        - body includes: URI, error code/reason, timestamp
     if unchanged:
-      update fetched_at timestamp, continue
+      update fetched_at in local cache, continue
     if changed:
-      store new content as raw.bin in cache
-      compute diff (text diff for docs, structural diff for source code)
+      store new content as raw.bin in .capmon-cache/<slug>/
+      compute text diff (unified diff) against previously cached content
+      truncate diff for issue body:
+        - source_code sources: first 500 lines
+        - all other source types: first 200 lines
+        - if truncated: append indicator line:
+            [truncated after N lines (~X bytes shown) — full diff at .capmon-cache/<slug>/]
       create or update GitHub issue:
         - label: capmon-change, provider:<slug>, content-type:<type>
         - if issue already open for this provider+type: append change event
-        - body includes: changed URIs, old/new hash, diff preview
+        - body includes: changed URIs, old/new hash, truncated diff preview
 ```
 
 **Issue deduplication:** Never create a second issue for the same provider+content_type while one is already open. Append new change events to the existing issue. Dedup lookup: `gh issue list --label=capmon-change --label=provider:<slug>` filtered by content type. Each issue body includes a hidden HTML comment `<!-- capmon-check: <slug>/<content_type> -->` as the stable machine-readable anchor for lookup — this survives issue title edits.
 
-**Hash advancement:** The cached hash in `.capmon-cache/<slug>/meta.json` advances only when the format doc PR is merged — not when an issue is opened. This ensures CI that detects a change while an existing PR is still open will append to the open issue rather than treating the change as already handled.
+**Hash advancement:** The `content_hash` in `docs/provider-formats/<slug>.yaml` advances only when the format doc PR is merged — not when an issue is opened. CI reads the committed format doc at HEAD to get the baseline hash. This ensures CI that detects a change while an existing PR is still open will append to the open issue rather than treating the change as already handled. The `.capmon-cache/` directory is local-only and gitignored — CI does not read from or write to it.
 
 ### Local /loop (Remediation)
 
@@ -118,13 +150,13 @@ The local remediation loop is Holden's personal operation of the pipeline — it
 
 The skill references `docs/workflows/update-format-doc.md` and `docs/workflows/graduation-comparison.md` from this repo as the LLM agent instructions for Steps 2c and 2d.
 
-The skill is invoked via a cron job using Claude Code's programmatic mode (`-p` flag), which runs the skill headlessly and exits when complete. The cron schedule is set to run ~15 minutes after each CI action run, so the loop only fires when there is likely new work to do.
+The skill is invoked via a cron job using Claude Code's programmatic mode (`-p` flag), which runs the skill headlessly and exits when complete. The skill uses a **polling model with a lockfile**: it checks `gh issue list --label=capmon-change` on startup, acquires `~/.capmon-process.lock`, processes open issues, and exits immediately (exit 0) if there is nothing to do or the lockfile is already held. Stale lockfiles older than 4 hours are broken automatically with a warning.
+
+The cron runs every 60 minutes unconditionally. The skill's own polling logic determines whether there is work — there is no need to offset the schedule relative to CI run times.
 
 ```
-# Example cron entry (adjust times to match your CI schedule + 15m offset)
-# CI: Mon-Fri 06:00 and 18:00 UTC → loop: 06:15 and 18:15
-15 6,18 * * 1-5 claude -p "/syllago-capmon-process"
-15 6   * * 0,6  claude -p "/syllago-capmon-process"
+# Run every 60 minutes — skill exits immediately if no open capmon-change issues
+0 * * * * claude -p "/syllago-capmon-process"
 ```
 
 ```
@@ -169,6 +201,22 @@ for each open capmon-change issue:
     gh pr create referencing the capmon-change issue
     comment on issue with PR link → close issue
 ```
+
+### Loop Idempotency Guarantees
+
+The local loop is safe to re-run at any time. These invariants hold across all steps:
+
+1. **Content hash pre-check** — before invoking the format doc LLM agent, compare the cached `raw.bin` hash against the hash recorded in the open issue. If they match, the source has not changed since CI ran — skip the LLM step entirely.
+
+2. **Atomic write** — the format doc is written via temp file + atomic rename on the same filesystem. A crashed or killed process never leaves a partially-written format doc.
+
+3. **Branch naming** (normative) — the PR branch MUST be named `capmon/<issue-number>` (e.g., `capmon/42`). This is the stable handle for deduplication and crash recovery.
+
+4. **Crash recovery** — on startup, the skill checks for `capmon/*` branches that have no open PR. These are signals of a partial prior run. The skill resumes from the last completed step for those branches rather than starting over.
+
+5. **Lockfile** — acquires `~/.capmon-process.lock` before processing any issue. Releases on exit. Breaks stale lockfiles (>4 hours old) with a logged warning.
+
+6. **Failure signal** — if the loop exits with a partial state it cannot automatically recover from, it MUST create a GitHub issue labeled `capmon-loop-failure` with: branch name, last successfully completed step, and error details. Human intervention required to resolve.
 
 ---
 
@@ -236,6 +284,14 @@ content_types:
     loading_model: "Lazy — skill instructions loaded on demand when description matches user request"
     notes: ""
 ```
+
+### Informational Fields
+
+Two fields in the format doc schema are **informational only** — they exist for auditability and human readability, not pipeline control:
+
+- **`generation_method`** (`subagent | human-edited`) — records how the format doc was produced. `capmon derive` MUST NOT gate behavior on this field. A human-edited format doc derives identically to a subagent-produced one.
+
+- **`notes`** (string, per content type) — a scratchpad for prose context that does not fit any structured field. Pipeline tools MUST NOT parse or alter behavior based on `notes` content. It is a human annotation field only.
 
 ### Confidence Value Definitions
 
@@ -321,7 +377,11 @@ Graduation means **adding a new canonical key to `docs/spec/canonical-keys.yaml`
 
 **Trigger:** A new `provider_extensions` entry is added to a format doc. Pure edits to existing content do not trigger graduation. Adding a new extension is the signal that something potentially cross-provider has been discovered.
 
+**`graduation_candidate` semantics:** The flag is a **write-time annotation**, not a pipeline gate. `graduation_candidate: false` means "not yet evaluated by the graduation agent" — it is not a permanent declaration that the concept cannot graduate. The graduation comparison agent reads **all** `provider_extensions` entries regardless of this flag value. `graduation_notes` is a human scratchpad field; it is not normative and MUST NOT affect agent behavior.
+
 **Detection:** Graduation comparison agent reads all format docs and identifies semantic overlaps across `provider_extensions`. This is LLM judgment — "Amp's `mcp_bundling` and Cline's `tool_bundling` describe the same concept."
+
+**Anti-recurrence:** Before creating a `capmon-graduation` issue, the agent MUST query closed graduation issues in GitHub. If a closed issue already covers this concept pairing, the agent MUST NOT re-flag it. Recurrence signals either a regression (the concept was graduated then removed) or a false positive — both require human judgment, not automatic re-flagging.
 
 **Output:** Separate GitHub issue labeled `capmon-graduation`:
 - Which concept(s) overlap
@@ -371,7 +431,7 @@ sources:
 
 ### Automated first-run
 
-CI detects a new provider on its next scheduled run: provider present in `providers.json` but no entry in `.capmon-cache/<slug>/meta.json`. This is treated as "all sources changed" — the full pipeline runs.
+CI detects a new provider on its next scheduled run: provider present in `providers.json` but no `docs/provider-formats/<slug>.yaml` exists. This is treated as "all sources changed" — the full pipeline runs.
 
 **No special `capmon-new-provider` label needed.** CI creates a standard `capmon-change` issue. The absence of a cached baseline is handled transparently: the format doc agent receives no existing format doc to compare against and produces one from scratch.
 
@@ -408,6 +468,23 @@ This runs automatically as the first step of `capmon onboard` and `capmon check`
 
 The validation is also useful as a standalone check when adding a new provider manually, before the first CI run picks it up.
 
+### `capmon validate-format-doc` command
+
+`capmon validate-format-doc --provider=<slug>` validates a format doc against the schema and canonical key vocabulary:
+
+```
+capmon validate-format-doc --provider=amp
+
+  ✓ Schema valid
+  ✓ All canonical_mappings keys exist in docs/spec/canonical-keys.yaml
+  ✓ All provider_extensions have required fields (id, name, description, source_ref)
+  ✗ content_types.skills.canonical_mappings.unknown_key: not in canonical-keys.yaml
+
+Exit code 1 if any violation found.
+```
+
+This runs automatically as Step 2 of `capmon check --all` (before hash comparison). It also runs as part of the local loop's pre-commit gate — the loop MUST NOT commit a format doc that fails this check. Use it standalone when writing or editing format docs manually.
+
 ### `capmon onboard` command (optional, for immediate bootstrap)
 
 Rather than waiting for the next CI schedule, `capmon onboard --provider=<slug>` triggers an immediate first run:
@@ -427,6 +504,24 @@ claude -p "/syllago-capmon-process"
 ```
 
 This is useful when manually adding a provider and wanting to see the format doc generated now rather than waiting for the next scheduled run.
+
+---
+
+## Provider Removal
+
+Removing a provider from `providers.json` is a manual operation for v1. There is no automated cleanup command.
+
+**Manual cleanup checklist:**
+1. Remove `providers.json` entry
+2. Delete `docs/provider-sources/<slug>.yaml`
+3. Delete `docs/provider-formats/<slug>.yaml` (or archive it — the graduation agent reads all format docs, so leaving it produces orphan output)
+4. Delete `.capmon-cache/<slug>/` (local only, gitignored)
+5. Close any open `capmon-change` issues for this provider
+6. Close any open `capmon-graduation` issues that referenced this provider's extensions
+
+**Orphan detection:** `capmon check` reports any `docs/provider-formats/<slug>.yaml` whose slug is not in `providers.json` as a warning. This is non-blocking (orphans do not fail the check run) but signals incomplete cleanup. The graduation agent reads orphaned format docs — an orphaned provider's extensions can still trigger graduation candidates, which is incorrect.
+
+**Known limitation:** Provider rename (slug change) is not handled by the pipeline — it appears as a removal + new provider. Rename requires manual cleanup of the old slug plus a new bootstrap run.
 
 ---
 
@@ -538,6 +633,10 @@ different names, that concept is a graduation candidate.
 
 ## Your job
 
+Read ALL provider_extensions entries across ALL format docs, regardless of the
+graduation_candidate flag value. graduation_candidate: false means "not yet
+evaluated" — it is not a gate. Do not skip any entry based on this flag.
+
 For each extension in NEW_EXTENSIONS:
 
 1. Read its id, name, and description.
@@ -555,7 +654,11 @@ For each extension in NEW_EXTENSIONS:
    has a lazy-loading behavior. Superficially related but solving different
    problems — not a graduation candidate.
 
-4. If you find a match across two or more providers: record the details.
+4. If you find a match across two or more providers: check whether a closed
+   capmon-graduation issue already covers this concept pairing before recording
+   it. If a closed issue exists, do NOT re-flag — note the prior issue instead.
+
+5. If a match is new (no prior closed issue): record the details.
 
 ## Output
 
@@ -623,6 +726,7 @@ If no matches are found, produce no output. No issue is created.
 | `cli/cmd/syllago/capmon_derive_cmd.go` | `capmon derive` command |
 | `cli/cmd/syllago/capmon_onboard_cmd.go` | `capmon onboard` command (immediate first-run for new providers) |
 | `cli/cmd/syllago/capmon_validate_sources_cmd.go` | `capmon validate-sources` command (pre-flight check: every content type has ≥1 source URI) |
+| `cli/cmd/syllago/capmon_validate_format_doc_cmd.go` | `capmon validate-format-doc` command (pre-commit validation: schema conformance, canonical key refs, required fields; exit 1 on violation) |
 | `docs/workflows/update-format-doc.md` | Workflow doc for the format doc update agent |
 | `docs/workflows/graduation-comparison.md` | Workflow doc for the graduation comparison agent |
 | `.github/workflows/capmon-check.yml` | CI job for scheduled change detection |
@@ -633,7 +737,7 @@ If no matches are found, produce no output. No issue is created.
 |------|--------|
 | `cli/internal/capmon/seederspec.go` | SeederSpec becomes a derived type, not a reviewed artifact |
 | `docs/workflows/inspect-provider-skills.md` | Replaced by `update-format-doc.md` |
-| `docs/provider-formats/*.md` | Migrated to `*.yaml` format over time |
+| `docs/provider-formats/*.md` | Migrated to `*.yaml` all-at-once in the same PR as `capmon derive` implementation |
 
 ### Deprecated
 
@@ -644,10 +748,12 @@ If no matches are found, produce no output. No issue is created.
 
 ---
 
-## Open Questions (Low Stakes — Implementation Choices)
+## Resolved Design Decisions (Formerly Open Questions)
 
-1. **Migration path for existing `.md` format docs** — migrate all 14 at once during implementation, or incrementally as each provider is touched? Incrementally is lower risk.
+These were identified as open questions during initial design and resolved in the audit pass.
 
-2. **Cache storage for CI** — CI fetches full content but the canonical cache lives locally. Does CI commit the updated hashes to a `capmon-cache` branch, or does it store only hashes (not full content) and the local loop re-fetches? Lean: CI stores only hashes in the issue; local loop re-fetches full content when it processes the issue.
+1. **Migration path** — Migrate all existing `.md` format docs to `.yaml` in the **same PR as the first `capmon derive` implementation**. All-at-once migration enables a single migration validation test that confirms the new pipeline works end-to-end before anything ships. Incremental migration would require the pipeline to handle both formats simultaneously — unnecessary complexity.
 
-3. **Loop polling target** — poll `gh issue list --label=capmon-change` directly, or use a dedicated `capmon pending` command that wraps it? Either works.
+2. **Cache storage for CI** — CI reads `content_hash` from the committed `docs/provider-formats/<slug>.yaml` at HEAD. CI does **not** write hash state anywhere (no `capmon-cache` branch, no separate hash store). `.capmon-cache/<slug>/` is a local-only directory (gitignored) used only by the local remediation loop for full raw content storage.
+
+3. **Loop polling target** — Poll `gh issue list --label=capmon-change` directly in the skill. A dedicated `capmon pending` command is not worth the indirection for v1 — add it only if the polling logic grows complex enough to warrant its own test coverage.
