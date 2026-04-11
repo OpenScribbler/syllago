@@ -23,7 +23,7 @@ content_types:
         confidence: confirmed
       user_invocable:
         supported: true
-        mechanism: "Explicit @mention by skill name in Cascade input (e.g., @deploy-to-production). Always available regardless of auto-invocation eligibility. Skills can also be created via Cascade UI (three dots → Skills → + Workspace / + Global)."
+        mechanism: "Explicit @mention by skill name in Cascade input (e.g., @deploy-to-production). Always available regardless of auto-invocation eligibility."
         confidence: confirmed
       project_scope:
         supported: true
@@ -66,10 +66,10 @@ content_types:
       - id: name_format_constraint
         name: Skill name format constraint
         description: >
-          Skill names (the `name` frontmatter field) must use only lowercase letters, numbers, and
-          hyphens. This constraint is enforced by the UI wizard and documented as a requirement.
-          Invalid names are not accepted. Examples of valid names: deploy-to-staging, code-review,
-          setup-dev-environment.
+          Skill names (the `name` frontmatter field) must be unique per scope and use only lowercase
+          letters, numbers, and hyphens. This constraint is enforced by the UI wizard and documented
+          as a requirement. Invalid names are not accepted. Examples of valid names: deploy-to-staging,
+          code-review, setup-dev-environment.
         source_ref: "https://docs.windsurf.com/windsurf/cascade/skills.md#required-frontmatter-fields"
         graduation_candidate: false
       - id: auto_invocation
