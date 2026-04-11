@@ -27,6 +27,7 @@ type SeederSpec struct {
 	ContentType         string            `yaml:"content_type"`
 	Format              string            `yaml:"format"`
 	FormatDocProvenance string            `yaml:"format_doc_provenance,omitempty"`
+	SourceURIs          []string          `yaml:"source_uris,omitempty"`
 	ExtractionGaps      []string          `yaml:"extraction_gaps,omitempty"`
 	SourceExcerpt       string            `yaml:"source_excerpt,omitempty"`
 	ProposedMappings    []ProposedMapping `yaml:"proposed_mappings"`
