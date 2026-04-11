@@ -1,7 +1,7 @@
 provider: kiro
-last_fetched_at: "2026-04-11T00:00:00Z"
+last_fetched_at: "2026-04-11T21:50:49Z"
 last_changed_at: "2026-04-11T00:00:00Z"
-generation_method: human-edited
+generation_method: subagent
 
 content_types:
   skills:
@@ -10,8 +10,8 @@ content_types:
       - uri: "https://kiro.dev/docs/powers/create/"
         type: documentation
         fetch_method: html_url
-        content_hash: ""
-        fetched_at: "2026-04-11T00:00:00Z"
+        content_hash: "sha256:07cf27f162f14e6bcf93033b43e2b76229b400e981ee35c904a666f43ed27467"
+        fetched_at: "2026-04-11T21:50:49Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -45,6 +45,22 @@ content_types:
         supported: false
         mechanism: "Not observed — POWER.md is fixed"
         confidence: confirmed
+      global_scope:
+        supported: false
+        mechanism: ""
+        confidence: unknown
+      shared_scope:
+        supported: false
+        mechanism: ""
+        confidence: unknown
+      disable_model_invocation:
+        supported: false
+        mechanism: ""
+        confidence: unknown
+      user_invocable:
+        supported: false
+        mechanism: ""
+        confidence: unknown
     provider_extensions:
       - id: kiro_displayname
         name: "displayName frontmatter field"
@@ -56,6 +72,25 @@ content_types:
         name: "keywords frontmatter field"
         description: "An array of activation trigger words used by Kiro's automatic power-loading system (e.g. [\"database\", \"postgres\", \"auth\"])."
         source_ref: "https://kiro.dev/docs/powers/create/"
+        graduation_candidate: true
+        graduation_notes: "Confirmed cross-provider concept — listed in graduation issue #73 as auto_invocation_signal."
+      - id: steering_files
+        name: "steering/ directory"
+        description: "An optional steering/ subdirectory inside the power directory containing workflow-specific guidance files (.md). For complex powers, the POWER.md maps each workflow to a specific steering file (e.g., 'Setting up a database → database-setup-workflow.md'). Kiro loads only the relevant steering file on-demand based on what the user is working on, preventing context overload. Simple powers include all guidance directly in POWER.md instead."
+        source_ref: "https://kiro.dev/docs/powers/create/"
+        graduation_candidate: true
+        graduation_notes: "Cross-provider supporting-files concept — windsurf, amp, cline, claude-code, codex, copilot-cli, factory-droid, and gemini-cli all have analogous supporting files loaded alongside a primary skill file."
+      - id: bundled_mcp_config
+        name: "mcp.json bundled in power directory"
+        description: "An optional mcp.json file inside the power directory that declares MCP server configurations for tool integrations (mcpServers map with command, args, and env). Server names in POWER.md must match the mcpServers keys in mcp.json. During installation, Kiro automatically namespaces server names to avoid conflicts (e.g., supabase-local becomes power-supabase-supabase-local). Environment variables are used for API keys and secrets."
+        source_ref: "https://kiro.dev/docs/powers/create/"
         graduation_candidate: false
-    loading_model: ""
-    notes: "Kiro calls this content type 'powers' (not 'skills'). The canonical filename is POWER.md, not SKILL.md. Installation is via IDE UI (Powers panel → Add power from Local Path), not a filesystem path convention. Activation is keyword-driven rather than description-matching."
+        graduation_notes: "Unique to Kiro — no other provider bundles an MCP config file inside a skill/power directory."
+      - id: onboarding_section
+        name: "Onboarding section in POWER.md"
+        description: "A dedicated # Onboarding section in POWER.md whose instructions run when a power is first activated. Used to validate dependencies (e.g., check Docker is installed and running), explain setup steps, or create workspace hooks. Kiro executes these instructions automatically — for example, checking if Docker is running, validating CLI installation, and creating hook files in .kiro/hooks/."
+        source_ref: "https://kiro.dev/docs/powers/create/"
+        graduation_candidate: false
+        graduation_notes: "No evidence other providers have an equivalent first-activation onboarding section distinct from normal skill instructions."
+    loading_model: "Powers are loaded on-demand based on keyword matching. When a user mentions a word from the power's keywords array in conversation, Kiro activates the power: loading its POWER.md content, any referenced steering files, and its MCP tools into context. For complex powers, only the steering file relevant to the current workflow is loaded rather than all steering files at once. Kiro follows onboarding instructions automatically when a power is first activated."
+    notes: "Kiro calls this content type 'powers' (not 'skills'). The canonical filename is POWER.md, not SKILL.md. Installation is via IDE UI (Powers panel → Add power from Local Path or Add power from GitHub), not a filesystem path convention. Activation is keyword-driven rather than description-matching. Global or shared scope installation is not described in source material — only project-local installation via the IDE UI is documented."
