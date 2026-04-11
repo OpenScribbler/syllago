@@ -211,6 +211,47 @@ content_types:
 	}
 }
 
+func TestValidateFormatDoc_SupportedUnknown(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	canonicalKeysPath := writeTestCanonicalKeys(t, dir)
+	formatsDir := filepath.Join(dir, "formats")
+	if err := os.MkdirAll(formatsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// supported: unknown is invalid YAML for a bool field — validate should
+	// catch it before the YAML parser produces an opaque type error.
+	content := `provider: test-provider
+last_fetched_at: "2026-04-11T00:00:00Z"
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://example.com"
+        type: documentation
+        fetch_method: md_url
+        content_hash: ""
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: unknown
+        mechanism: "yaml key: name"
+        confidence: unknown
+`
+	writeTestFormatDoc(t, formatsDir, "test-provider", content)
+
+	err := ValidateFormatDoc(formatsDir, canonicalKeysPath, "test-provider")
+	if err == nil {
+		t.Fatal("expected error for supported: unknown")
+	}
+	if !strings.Contains(err.Error(), "supported: unknown") {
+		t.Errorf("error should mention the bad pattern, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "supported: false") {
+		t.Errorf("error should suggest the fix (supported: false), got: %v", err)
+	}
+}
+
 func TestValidateFormatDoc_InformationalFieldsNotValidated(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
