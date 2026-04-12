@@ -71,3 +71,341 @@ content_types:
         graduation_candidate: false
     loading_model: "A skill is a directory under .gemini/skills/ (project scope) or ~/.gemini/skills/ (global scope). The directory name is used as the skill identifier. SKILL.md is the required entry point: YAML frontmatter supplies name and description; the Markdown body contains the instructions that guide agent behavior when the skill is active."
     notes: "Only name and description are documented frontmatter fields. No license, version, compatibility, metadata_map, disable_model_invocation, or user_invocable fields appear in the source. The name frontmatter value is documented as a unique identifier that should match the directory name."
+
+  rules:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/gemini-md.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: "sha256:9bbf3d0b66e840b7a6dccdade5212828e15246765f9cb00f23e8949b98eb0496"
+        fetched_at: "2026-04-11T21:48:27Z"
+    canonical_mappings: {}
+    provider_extensions:
+      - id: hierarchical_context_loading
+        name: Hierarchical GEMINI.md loading
+        description: >
+          Gemini CLI loads GEMINI.md files from three tiers in order: (1) global
+          (~/.gemini/GEMINI.md), (2) workspace/environment context files found
+          by searching configured workspace directories and their parent
+          directories, and (3) just-in-time (JIT) context files discovered
+          automatically when a tool accesses a file or directory — scanning that
+          directory and its ancestors up to a trusted root. All found files are
+          concatenated and sent to the model with every prompt. The CLI footer
+          displays the number of loaded context files.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/gemini-md.md"
+        graduation_candidate: false
+      - id: configurable_filename
+        name: Configurable context file name
+        description: >
+          The default context filename is GEMINI.md, but users can configure
+          alternative names or a list of names via the context.fileName property
+          in settings.json. For example: {"context": {"fileName": ["AGENTS.md",
+          "CONTEXT.md", "GEMINI.md"]}}. The CLI checks each name in order.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/gemini-md.md"
+        graduation_candidate: true
+      - id: file_imports
+        name: File import directives
+        description: >
+          GEMINI.md files can import content from other files using the @file.md
+          syntax (e.g., @./components/instructions.md or @../shared/style-guide.md).
+          Both relative and absolute paths are supported. Imported content is
+          inlined before being sent to the model, allowing large rule sets to be
+          modularized across multiple files.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/gemini-md.md"
+        graduation_candidate: true
+      - id: memory_command
+        name: /memory management command
+        description: >
+          The /memory command provides runtime management of loaded context files:
+          /memory show displays the full concatenated active context; /memory reload
+          forces a re-scan of all GEMINI.md files without restarting; /memory add
+          <text> appends text directly to ~/.gemini/GEMINI.md for persistent
+          in-session memory capture.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/gemini-md.md"
+        graduation_candidate: false
+    loading_model: "Rules are Markdown files named GEMINI.md (or a configured alternative). Global rules live at ~/.gemini/GEMINI.md; project-level rules live at <project-root>/GEMINI.md (and in subdirectories for JIT loading). Multiple files are discovered across all tiers and concatenated in load order before being sent as system context with every prompt. File imports (@file.md) allow modular composition within a single GEMINI.md."
+    notes: "The context file name is configurable via settings.json context.fileName. JIT loading means rules in subdirectories are injected only when a tool accesses a file in that directory, enabling fine-grained scoping without manual inclusion."
+
+  hooks:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/hooks/types.ts"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: "sha256:3d0dce53a6f36e6ca90761d6769c3431e109e12aaa31e9e29ae169faf955bf70"
+        fetched_at: "2026-04-11T21:50:37Z"
+      - uri: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: "sha256:5d820c76b376d190e95b8312ab906794ee4f3a831a5494a0529c150ebc84040c"
+        fetched_at: "2026-04-11T21:50:38Z"
+      - uri: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/hooks/index.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: "sha256:a7ca94b0d83a53d35ceb4d4495381f564bad6acdb2b898c9f103eb871a406b1f"
+        fetched_at: "2026-04-11T21:50:38Z"
+      - uri: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/hooks/reference.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: "sha256:103bab9f0f8fd7251b97d06c6b7c4e52752427bf23cbacd1379f2aecaaf26e4c"
+        fetched_at: "2026-04-11T21:50:38Z"
+    canonical_mappings: {}
+    provider_extensions:
+      - id: hook_events
+        name: Hook event system
+        description: >
+          Gemini CLI supports 11 hook events covering the full agent lifecycle:
+          BeforeTool, AfterTool, BeforeAgent, AfterAgent, BeforeModel, AfterModel,
+          BeforeToolSelection, SessionStart, SessionEnd, PreCompress, and Notification.
+          Hooks are shell commands configured per-event in settings.json under the
+          hooks key. Each event entry is an array of hook definition objects with
+          optional matcher, optional sequential flag, and a hooks array of command
+          configs.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/hooks/reference.md"
+        graduation_candidate: true
+      - id: hook_io_protocol
+        name: stdin/stdout JSON I/O protocol
+        description: >
+          Hooks communicate via stdin (JSON input) and stdout (JSON output). All hooks
+          receive a common base input with session_id, transcript_path, cwd,
+          hook_event_name, and timestamp. Output fields include decision (allow/deny/block),
+          reason, systemMessage, suppressOutput, continue, and stopReason. Stdout must
+          contain only the JSON object — any plain text pollutes the parse. Stderr is
+          safe for debug logging and is never parsed.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/hooks/reference.md"
+        graduation_candidate: false
+      - id: exit_code_semantics
+        name: Exit code semantics
+        description: >
+          Exit code 0 means success — stdout is parsed as JSON. Exit code 2 means
+          system block — the target action is aborted and stderr is used as the
+          rejection reason. Any other exit code is a non-fatal warning — the
+          interaction continues with original parameters. This three-tier exit code
+          contract is specific to Gemini CLI's hook system.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/hooks/reference.md"
+        graduation_candidate: false
+      - id: hook_matchers
+        name: Matcher-based hook filtering
+        description: >
+          Hook definitions support a matcher field to filter which tools or triggers
+          fire the hook. For BeforeTool and AfterTool, matchers are regular expressions
+          matched against the tool name (e.g., "write_.*"). For lifecycle events,
+          matchers are exact strings (e.g., "startup"). An empty string or "*" matches
+          all occurrences.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/hooks/index.md"
+        graduation_candidate: true
+      - id: hook_fingerprinting
+        name: Project hook fingerprinting
+        description: >
+          Project-level hooks (.gemini/settings.json) are fingerprinted by Gemini CLI.
+          If a hook's name or command changes (e.g., via git pull), it is treated as a
+          new untrusted hook and the user is warned before execution. This is a
+          security measure for untrusted project contexts.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/hooks/index.md"
+        graduation_candidate: false
+      - id: hook_sequential_flag
+        name: Sequential execution flag
+        description: >
+          Hook definition groups support a sequential boolean field. When true, hooks
+          in the group run one after another in order. When false (or omitted), hooks
+          run in parallel. This allows dependency ordering within a hook event group.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json"
+        graduation_candidate: true
+      - id: hook_event_specific_outputs
+        name: Event-specific hook output fields
+        description: >
+          Several events support hookSpecificOutput fields beyond the common output
+          schema: BeforeTool supports tool_input (merges with and overrides model
+          arguments); AfterTool supports additionalContext (appended to tool result)
+          and tailToolCallRequest (routes execution to another tool, replacing the
+          original response); AfterAgent supports clearContext (clears LLM conversation
+          history while preserving UI display); BeforeModel supports llm_request
+          (overrides outgoing request) and llm_response (provides synthetic response,
+          skipping the LLM call entirely); BeforeToolSelection supports toolConfig
+          with mode (AUTO/ANY/NONE) and allowedFunctionNames.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/hooks/reference.md"
+        graduation_candidate: false
+      - id: hook_management_commands
+        name: In-session hook management commands
+        description: >
+          Hooks can be managed interactively without editing JSON: /hooks panel
+          displays all configured hooks; /hooks enable-all and /hooks disable-all
+          toggle the entire hook system; /hooks enable <name> and /hooks disable <name>
+          toggle individual hooks by name. Changes take effect immediately within the
+          session.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/hooks/index.md"
+        graduation_candidate: false
+    loading_model: "Hooks are defined in settings.json under the hooks key, with entries per event name (e.g., BeforeTool, AfterTool). Each event maps to an array of hook definition objects, each containing an optional matcher, optional sequential flag, and a hooks array of command configurations (type, command, name, timeout, description). Settings are merged from four layers in precedence order: project (.gemini/settings.json), user (~/.gemini/settings.json), system (/etc/gemini-cli/settings.json), and extensions."
+    notes: "Only the 'command' hook type is supported — runtime hooks exist as an internal TypeScript interface but are not user-configurable via settings.json. The BeforeToolSelection event does not support decision, continue, or systemMessage fields. The SessionEnd hook is best-effort: the CLI will not wait for it to complete."
+
+  mcp:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: "sha256:5d820c76b376d190e95b8312ab906794ee4f3a831a5494a0529c150ebc84040c"
+        fetched_at: "2026-04-11T21:46:22Z"
+      - uri: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/tools/mcp-server.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: "sha256:8ebbf5bed540eec84d06494ad90b41ecd1b095e33527f7465f4122ee870f6586"
+        fetched_at: "2026-04-11T21:46:22Z"
+      - uri: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/tutorials/mcp-setup.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: "sha256:9a4633c905689c79d06e1e3fe59236ccc76010bce5ef6da38b0ff41e5f14a4b0"
+        fetched_at: "2026-04-11T21:46:23Z"
+    canonical_mappings: {}
+    provider_extensions:
+      - id: transport_types
+        name: Three transport mechanisms
+        description: >
+          Gemini CLI supports three MCP transport types: stdio (spawns a subprocess,
+          communicates via stdin/stdout, configured via command + optional args/cwd),
+          SSE (Server-Sent Events, configured via url), and Streamable HTTP (configured
+          via httpUrl). The transport type can be set explicitly via the type field
+          (stdio/sse/http) or inferred from which connection property is present.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/tools/mcp-server.md"
+        graduation_candidate: true
+      - id: tool_filtering
+        name: Per-server tool allowlist and blocklist
+        description: >
+          Each MCP server config supports includeTools (string[]) to allowlist specific
+          tools from that server, and excludeTools (string[]) to blocklist tools.
+          excludeTools takes precedence over includeTools — if a tool appears in both,
+          it is excluded. When includeTools is omitted, all tools from the server are
+          available.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json"
+        graduation_candidate: true
+      - id: server_trust
+        name: Per-server trust flag
+        description: >
+          The trust boolean on an MCP server configuration bypasses all tool call
+          confirmations for that server when set to true (default: false). Trusted
+          servers execute tools without prompting the user for approval.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/tools/mcp-server.md"
+        graduation_candidate: false
+      - id: global_mcp_settings
+        name: Global MCP allowed/excluded lists
+        description: >
+          The top-level mcp object in settings.json provides global rules across all
+          servers: mcp.allowed (string[]) allowlists server names so only listed servers
+          connect; mcp.excluded (string[]) blocklists server names to prevent connection.
+          These are global filters applied before per-server configuration.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/tools/mcp-server.md"
+        graduation_candidate: false
+      - id: env_variable_expansion
+        name: Environment variable expansion in env blocks
+        description: >
+          Gemini CLI automatically expands environment variables in the env block of
+          MCP server configs. Supports POSIX/Bash syntax ($VAR or ${VAR}) on all
+          platforms and Windows syntax (%VAR%) on Windows. This allows referencing
+          secrets from the shell environment without hardcoding them in settings.json.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/tools/mcp-server.md"
+        graduation_candidate: true
+      - id: server_management_commands
+        name: CLI commands for MCP server management
+        description: >
+          MCP servers can be managed via gemini mcp subcommands: mcp add (add a server),
+          mcp remove (delete from config), mcp list (view status of all servers), mcp
+          enable/disable (toggle without removing, with optional --session flag for
+          session-only changes). Enable/disable state is persisted to
+          ~/.gemini/mcp-server-enablement.json. In-session equivalents: /mcp list,
+          /mcp enable <name>, /mcp disable <name>, /mcp reload.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/tools/mcp-server.md"
+        graduation_candidate: false
+      - id: resource_referencing
+        name: MCP resource referencing via @ syntax
+        description: >
+          Gemini CLI discovers MCP server resources (via resources/list) at connection
+          time and exposes them alongside filesystem paths in the @ completion menu.
+          Resources are referenced with @server://resource/path syntax in conversation.
+          The CLI calls resources/read and injects the content into the conversation
+          when referenced.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/tools/mcp-server.md"
+        graduation_candidate: false
+    loading_model: "MCP servers are configured in settings.json under the mcpServers key as a map of server-name to MCPServerConfig objects. On startup, Gemini CLI iterates all configured servers, establishes transport connections, fetches tool definitions, sanitizes schemas, and registers tools in the global tool registry. MCP tools are named with the pattern mcp_<server_name>_<tool_name>. Settings are loaded from project (.gemini/settings.json), user (~/.gemini/settings.json), and system (/etc/gemini-cli/settings.json) layers."
+    notes: "Stdio MCP servers are only connected (and shown as Connected in mcp list) when the current directory is trusted. Untrusted directories show stdio servers as Disconnected. Connection errors are silent by default on startup — a hint is shown if issues are detected, and full diagnostics appear when /mcp list is run interactively or when a tool from that server is invoked."
+
+  commands:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/custom-commands.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: "sha256:7c721469ae498676be363efdd60e84a539fb5cf2c36d0bffd655efbdb9d53e32"
+        fetched_at: "2026-04-11T21:50:35Z"
+    canonical_mappings: {}
+    provider_extensions:
+      - id: toml_format
+        name: TOML command file format
+        description: >
+          Commands are defined as TOML files with a .toml extension. The required field
+          is prompt (string, single or multi-line). The optional field is description
+          (string, one-line); if omitted, a generic description is generated from the
+          filename. No other fields are documented in the v1 format.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/custom-commands.md"
+        graduation_candidate: false
+      - id: namespace_via_subdirectory
+        name: Namespace via subdirectory path
+        description: >
+          Commands are namespaced by their file path relative to the commands/ directory.
+          Path separators (/ or \) are converted to colons in the command name. For
+          example, commands/git/commit.toml becomes /git:commit. This allows hierarchical
+          organization of commands without any explicit namespace syntax in the TOML file.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/custom-commands.md"
+        graduation_candidate: true
+      - id: args_placeholder
+        name: "{{args}} argument injection placeholder"
+        description: >
+          The {{args}} placeholder in the prompt is replaced with text the user typed
+          after the command name. When used in the main prompt body, args are injected
+          raw. When used inside a shell injection block (!{...}), args are automatically
+          shell-escaped before substitution to prevent command injection. If the prompt
+          does not contain {{args}}, the user's full command input is appended after two
+          newlines (default argument handling).
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/custom-commands.md"
+        graduation_candidate: true
+      - id: shell_injection
+        name: Shell command injection with !{...}
+        description: >
+          The !{...} syntax in a prompt executes a shell command and injects its stdout
+          into the prompt before sending to the model. The parser handles nested braces
+          and balanced-brace content. Before execution, Gemini CLI displays the resolved
+          command and asks the user to confirm. If the command fails, the injected text
+          includes stderr and an exit code status line. {{args}} inside !{...} is
+          automatically shell-escaped.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/custom-commands.md"
+        graduation_candidate: false
+      - id: file_content_injection
+        name: File content injection with @{...}
+        description: >
+          The @{...} syntax in a prompt injects file content or a directory listing
+          directly into the prompt. Supports text files, images (PNG, JPEG), PDFs,
+          audio, and video (as multimodal input). Directory paths inject a listing of
+          all files recursively, respecting .gitignore and .geminiignore. File injection
+          is processed before shell commands (!{...}) and argument substitution ({{args}}).
+          Paths are workspace-aware; absolute paths within the workspace are allowed.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/custom-commands.md"
+        graduation_candidate: true
+      - id: project_overrides_user
+        name: Project commands override user commands
+        description: >
+          When a command name exists in both the project commands directory
+          (<project>/.gemini/commands/) and the user commands directory
+          (~/.gemini/commands/), the project command always takes precedence. This
+          allows projects to override global commands with project-specific versions.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/custom-commands.md"
+        graduation_candidate: false
+      - id: commands_reload
+        name: /commands reload for live updates
+        description: >
+          Running /commands reload picks up newly created or modified .toml command
+          files without restarting the CLI. This allows iterative command development
+          within an active session.
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/custom-commands.md"
+        graduation_candidate: false
+    loading_model: "Commands are TOML files in ~/.gemini/commands/ (user/global scope) or <project>/.gemini/commands/ (project scope). The command name is derived from the file path relative to the commands/ directory, with path separators converted to colons. Project commands override user commands of the same name. Commands are invoked in the CLI with a leading slash (e.g., /git:commit). Use /commands reload to pick up changes without restarting."
+    notes: "Command files must use the .toml extension. The description field is optional but recommended — if omitted, a generic description is auto-generated from the filename and shown in the /help menu. Shell injection (!{...}) requires balanced braces inside the block; unbalanced-brace commands should be wrapped in an external script."
