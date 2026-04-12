@@ -1,0 +1,94 @@
+{
+  "$schema": "handoff-v2",
+  "name": "gencapabilities-pipeline-execute",
+  "createdAt": "2026-04-12T21:00:00Z",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-12T21:15:00-07:00",
+    "sessionId": "f2ab7360-cd98-40d5-bf7d-e74bf931a15e",
+    "summary": "Completed full develop workflow for _gencapabilities pipeline: design doc, implementation plan, validation (3 attempts), 5 beads created, Phase B analysis done — ready to execute",
+
+    "activeWork": {
+      "description": "Execute the 5 beads for the _gencapabilities Go command: T1 types, T2 tests (RED), T3 implementation (GREEN), T4 release.yml integration, Final validation",
+      "feature": "syllago-docs-capabilities-pipeline",
+      "stage": "execute",
+      "planRef": "docs/plans/2026-04-12-syllago-docs-capabilities-pipeline-implementation.md",
+      "designRef": "docs/plans/2026-04-12-syllago-docs-capabilities-pipeline-design.md",
+      "progress": "Brainstorm (design doc created from handoff context), plan written (4 tasks), quality review passed, validation passed in 3 attempts (fixed: canonical-keys.yaml scope clarified in design doc, missing strings import, wrong default path, T2 RED state misleading wording, T4 diff count, missing make fmt in final bead). 5 beads created with dependencies wired. Phase B analysis complete (5 issues caught + fixed pre-execution). .develop/syllago-docs-capabilities-pipeline.json is at execute stage.",
+      "blockers": [],
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": [],
+        "readyNext": ["syllago-h7zg0"]
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 11,
+      "lastCommit": "23e5499 bd sync: 2026-04-12 13:52:04",
+      "modifiedFiles": [
+        ".beads/beads.db",
+        ".beads/issues.jsonl",
+        "docs/plans/2026-04-12-syllago-docs-capabilities-pipeline-design.md",
+        "docs/plans/2026-04-12-syllago-docs-capabilities-pipeline-implementation.md",
+        ".develop/syllago-docs-capabilities-pipeline.json"
+      ]
+    },
+
+    "recentDecisions": [
+      "Phase 1 scope: _gencapabilities reads only docs/provider-formats/*.yaml — canonical-keys.yaml is Phase 2 scope (used by sync-capabilities.ts in syllago-docs for per-key data files)",
+      "Field filtering: separate Go input structs (includes confidence, graduation_candidate, etc.) from output structs (excludes them) — makes filtering automatic and impossible to bypass",
+      "Default path: filepath.Join(\"..\", \"docs\", \"provider-formats\") — 1 level up from cli/, which is where the binary runs in release.yml",
+      "T2 RED failure mode: compile error (undefined: capabilitiesProviderFormatsDir) not runtime test failure — go build passes, go test fails to compile",
+      "Empty slices: use make([]T, 0) not nil to ensure [] not null in JSON output",
+      "Phases 2-5 (syllago-docs sync + Astro collections + components + pages) are a separate /develop feature in the syllago-docs repo"
+    ],
+
+    "nextSteps": [
+      "Run /develop to enter execute mode: `bd update syllago-h7zg0 --status=in_progress` then work through T1→T2→T3→T4→Final",
+      "T1 (syllago-h7zg0): Create cli/cmd/syllago/gencapabilities.go with all Go types and empty runGencapabilities stub — see plan Task T1 for complete code",
+      "T2 (syllago-2y8wt): Write 22 failing tests in cli/cmd/syllago/gencapabilities_test.go — tests fail with compile error (capabilitiesProviderFormatsDir undefined), not runtime failure",
+      "T3 (syllago-eqftp): Implement runGencapabilities, loadProviderFormatsDir, buildCapEntry to make all 22 tests pass — default path is filepath.Join(\"..\", \"docs\", \"provider-formats\")",
+      "T4 (syllago-16gau): Add _gencapabilities to .github/workflows/release.yml — exactly +5/-4 net diff, run make fmt after",
+      "Final (syllago-0ulkj): make build + go test + make fmt + json.tool validation + forbidden field check",
+      "After Phase 1 complete: create /develop feature in syllago-docs repo for Phases 2-5 (sync-capabilities.ts, Astro collections, components, pages)"
+    ],
+
+    "context": {
+      "notes": "Bead chain: syllago-h7zg0 → syllago-2y8wt → syllago-eqftp → syllago-16gau → syllago-0ulkj. All 5 beads are in .beads/issues.jsonl. Phase B analysis at .develop/syllago-docs-capabilities-pipeline-phase-b.md. Develop state at .develop/syllago-docs-capabilities-pipeline.json (currentStage: execute). The syllago-jtafb epic (capmon pipeline) is still in_progress — this is a separate epic from the gencapabilities work. The 11 uncommitted files are primarily beads DB changes from this session; run bd sync + git commit after executing the first bead."
+    }
+  },
+
+  "previousSessions": [
+    {
+      "summary": "Designed capabilities.json pipeline for syllago-docs with field inventory, transparency model, and component architecture",
+      "updated": "2026-04-12T20:51:34Z",
+      "completedWork": [
+        "Finalized confidence policy (internal only, absence = unsupported+confirmed)",
+        "Defined public field inventory: status, sources, canonical_mappings, provider_extensions, last_changed_at",
+        "Designed MetaBox component (last_changed_at, source links, provider count, report-issue)",
+        "Designed sync-capabilities.ts → Astro data collections pipeline architecture"
+      ],
+      "nextSteps": [
+        "Use /develop to plan and execute syllago-docs capabilities pipeline",
+        "Phase 1: _gencapabilities Go command",
+        "Phases 2-5: syllago-docs sync + Astro components"
+      ]
+    },
+    {
+      "summary": "Processed all 50 initial capmon-change issues, resolved all confidence levels to confirmed, designed capabilities.json pipeline for docs site",
+      "updated": "2026-04-12T00:00:00-07:00",
+      "completedWork": [
+        "All 50 capmon-change GitHub issues processed and closed across 10 providers",
+        "All confidence: inferred and confidence: unknown values resolved to confirmed",
+        "Designed the full capabilities.json pipeline architecture"
+      ],
+      "nextSteps": [
+        "Use /develop to plan and execute syllago-docs capabilities pipeline",
+        "Close syllago-jtafb after docs pipeline complete"
+      ]
+    }
+  ]
+}
