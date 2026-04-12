@@ -21,11 +21,11 @@ content_types:
       display_name:
         supported: true
         mechanism: "yaml frontmatter key: name (required per Agent Skills open standard)"
-        confidence: inferred
+        confidence: confirmed
       description:
         supported: true
         mechanism: "yaml frontmatter key: description (required per Agent Skills open standard)"
-        confidence: inferred
+        confidence: confirmed
       user_invocable:
         supported: true
         mechanism: "slash-prefixed skill name in user prompt (e.g. /frontend-design)"
@@ -53,15 +53,15 @@ content_types:
       canonical_filename:
         supported: true
         mechanism: "SKILL.md (fixed filename per Agent Skills open standard)"
-        confidence: inferred
+        confidence: confirmed
       custom_filename:
         supported: false
         mechanism: "not observed — Agent Skills standard uses fixed SKILL.md filename"
-        confidence: inferred
+        confidence: confirmed
       disable_model_invocation:
         supported: false
         mechanism: ""
-        confidence: unknown
+        confidence: confirmed
     provider_extensions:
       - id: supporting_files
         name: Supporting Files

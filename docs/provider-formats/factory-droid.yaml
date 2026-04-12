@@ -44,7 +44,7 @@ content_types:
         confidence: confirmed
       shared_scope:
         supported: false
-        confidence: unknown
+        confidence: confirmed
       canonical_filename:
         supported: true
         mechanism: "SKILL.md (fixed, required filename within the skill directory)"

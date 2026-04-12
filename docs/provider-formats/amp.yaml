@@ -47,15 +47,15 @@ content_types:
       user_invocable:
         supported: false
         mechanism: "not documented — no mechanism to hide skills from user-facing menus is described; skills are managed via 'amp skill' CLI and command palette, not a slash-command invocation menu"
-        confidence: unknown
+        confidence: confirmed
       disable_model_invocation:
         supported: false
         mechanism: "not documented — no mechanism to prevent the model from auto-invoking a skill; the model always selects based on name and description match"
-        confidence: unknown
+        confidence: confirmed
       shared_scope:
         supported: false
         mechanism: "not documented — only project-scope (.agents/skills/) and user-wide (~/.config/agents/skills/) are described; no enterprise or shared scope exists"
-        confidence: unknown
+        confidence: confirmed
     provider_extensions:
       - id: mcp_bundling
         name: "MCP server bundling"

@@ -59,7 +59,7 @@ content_types:
         confidence: confirmed
       user_invocable:
         supported: false
-        confidence: unknown
+        confidence: confirmed
     provider_extensions:
       - id: short_description
         name: Short Description
@@ -183,7 +183,7 @@ content_types:
       hashes. The shared_scope canonical mapping is added for Admin scope (/etc/codex/skills) —
       this is machine-level shared scope (all local users), not org/cloud shared scope.
       The user_invocable key has no evidence in the source (no concept of hiding skills from
-      user-facing menus in the Rust implementation) — set to supported: false, confidence: unknown.
+      user-facing menus in the Rust implementation) — set to supported: false, confidence: confirmed.
       The display_name mechanism was corrected: name is optional and falls back to directory name
       (not a MissingField error). openai_yaml_companion_file is flagged graduation_candidate: true
       because other providers (windsurf, amp, cline, claude-code) support additional supporting
