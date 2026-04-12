@@ -108,3 +108,122 @@ content_types:
         graduation_candidate: false
     loading_model: "Pi uses progressive disclosure for skill loading. At startup, the scanner traverses all configured skill locations (global ~/.pi/agent/skills/, project .pi/skills/, .agents/ cross-provider paths, settings-array paths, CLI --skill paths, and package.json/skills/ entries) and extracts only names and descriptions. These are injected into the system prompt as XML. When the agent determines a task matches a skill, it uses the read tool to load the full SKILL.md on-demand. Skills with disable-model-invocation: true are excluded from the system prompt entirely and can only be loaded via explicit /skill:name commands. The scanner skips node_modules, honors symlinks (with cycle-safe realpath deduplication), and respects .gitignore/.ignore/.fdignore files. Name collisions warn and retain the first skill found."
     notes: "Pi implements the agentskills.io open standard. The TypeScript SkillFrontmatter interface defines only name, description, and disable-model-invocation — license, compatibility, and metadata are documented in the spec table and passed through at parse time (unknown frontmatter fields are ignored per docs). Skills with missing description are silently dropped; all other validation issues produce warnings but still load. Pi supports the richest skill location model of any known provider: five distinct source types (global dir, project dir, .agents/ cross-provider dir, package.json/monorepo, settings array, CLI flags)."
+
+  rules:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: "sha256:f00e73cdd84b357bd6f7833d593baea43fab7e0688a3947ac36098e05427f92b"
+        fetched_at: "2026-04-11T21:48:30Z"
+    canonical_mappings: {}
+    provider_extensions:
+      - id: pi_rules_via_skill_md
+        name: "Rules delivered via SKILL.md"
+        description: "Pi has no dedicated rules format. Standing instructions are delivered by placing a SKILL.md file in a skill directory and relying on the skills discovery mechanism. Pi reads skills.md as 'instructions' — the same progressive-disclosure system that loads capability skills also loads any SKILL.md that contains standing instructions. Rules can be scoped globally (~/.pi/agent/skills/) or per-project (.pi/skills/) using the same paths as skills."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
+        graduation_candidate: false
+      - id: pi_rules_cross_harness
+        name: "Cross-harness rules loading via settings array"
+        description: "Because pi's settings skills array accepts paths to other providers' skill directories, rules authored as SKILL.md files for other providers can be loaded directly into a pi session without conversion. This is a side-effect of cross-harness skill loading rather than a dedicated rules feature."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
+        graduation_candidate: false
+    loading_model: "Rules in pi are a subset of skills: any SKILL.md that carries standing instructions rather than a specific capability is functionally a rule. Discovery, progressive disclosure, and loading mechanics are identical to skills. There is no separate rules scanner, path, or frontmatter schema — the distinction is purely by convention in the file's content."
+    notes: "Pi does not distinguish rules from skills at the format or tooling level. The 'rules' content type maps to pi's SKILL.md format and shares all discovery locations with skills. Unlike providers that have a dedicated memory/rules file (e.g., CLAUDE.md, .windsurfrules), pi uses the same skill machinery for standing instructions. This means rules inherit all skills features: progressive disclosure, disable-model-invocation, cross-harness loading, CLI flags, etc."
+
+  hooks:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/extensions/types.ts"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: "sha256:c96bc5a29e8b56c7eacb8e6af81ef0f3e1b7667ba42352323d1f7660886fafcd"
+        fetched_at: "2026-04-11T21:50:57Z"
+      - uri: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/extensions.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: "sha256:f9d3a8b4795d066da774c568aa0a2ba283bf993ad7df7311c202b4da8e4f4464"
+        fetched_at: "2026-04-11T21:50:57Z"
+      - uri: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/extensions/runner.ts"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: "sha256:ca793fbc3b97a6c512d8e8bef238300fb324c52f51c2d48e8374d7d1da246444"
+        fetched_at: "2026-04-11T21:50:57Z"
+    canonical_mappings: {}
+    provider_extensions:
+      - id: pi_extension_typescript_native
+        name: "TypeScript-native extensions loaded via jiti"
+        description: "Pi extensions are TypeScript modules that export a default factory function receiving ExtensionAPI. They are loaded at runtime via jiti — no compilation step required. Extensions can import from @mariozechner/pi-coding-agent, @sinclair/typebox, @mariozechner/pi-ai, @mariozechner/pi-tui, Node.js built-ins, and any npm packages installed in a co-located package.json."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/extensions.md"
+        graduation_candidate: false
+      - id: pi_extension_event_model
+        name: "Rich lifecycle event model with 21 event types"
+        description: "Extensions subscribe to events via pi.on(). Available events: resources_discover, session_start, session_before_switch, session_before_fork, session_before_compact, session_compact, session_shutdown, session_before_tree, session_tree, context (inject messages into LLM context), before_provider_request (inspect or replace API payload), before_agent_start (inject messages, modify system prompt), agent_start, agent_end, turn_start, turn_end, message_start, message_update, message_end, tool_execution_start, tool_execution_update, tool_execution_end, model_select, tool_call (can block execution), tool_result (can modify result), user_bash (can intercept ! commands), input (can intercept user input before expansion)."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/extensions/types.ts"
+        graduation_candidate: false
+      - id: pi_extension_tool_call_blocking
+        name: "tool_call event can block or mutate tool execution"
+        description: "The tool_call handler fires before execution and can return { block: true, reason?: string } to prevent the tool from running. event.input is mutable — handlers can patch tool arguments in place. Later handlers see mutations from earlier handlers. No re-validation is performed after mutation. In parallel tool execution mode (default), sibling tool calls from the same assistant message are preflighted sequentially, then executed concurrently."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/extensions.md"
+        graduation_candidate: true
+      - id: pi_extension_tool_result_middleware
+        name: "tool_result handlers chain as middleware"
+        description: "The tool_result handler fires after tool execution, before tool_execution_end. Handlers run in extension load order and chain like middleware — each sees the latest result after previous handler changes. Handlers can return partial patches (content, details, or isError); omitted fields keep their current values."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/extensions.md"
+        graduation_candidate: true
+      - id: pi_extension_register_tool
+        name: "registerTool() adds LLM-callable tools"
+        description: "Extensions can register tools callable by the LLM via pi.registerTool(). Tool definitions include name, label, description, a TypeBox parameter schema, and an async execute() function. Registered tools appear alongside pi's built-in tools (bash, read, write, edit, grep, find, ls). Extensions can also override built-in tools by registering with the same name."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/extensions.md"
+        graduation_candidate: true
+      - id: pi_extension_register_command
+        name: "registerCommand() adds slash commands"
+        description: "Extensions can register custom slash commands (e.g., /mycommand) via pi.registerCommand(). Commands are checked before the agent processes user input — if matched, the command handler runs and the turn is bypassed. This enables extension-owned operations that don't involve the LLM."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/extensions.md"
+        graduation_candidate: true
+      - id: pi_extension_custom_ui
+        name: "Full TUI component access and UI primitives"
+        description: "Extensions can interact with the user via ctx.ui: select(), confirm(), input(), notify() for dialogs; setStatus() for footer status text; setWidget() for text or full TUI components above/below the editor; setFooter() and setHeader() for complete replacement of footer/header components; custom() for arbitrary TUI overlays with keyboard focus. ctx.ui.custom() accepts a factory receiving TUI, Theme, KeybindingsManager, and a done callback."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/extensions.md"
+        graduation_candidate: false
+      - id: pi_extension_register_provider
+        name: "registerProvider() and unregisterProvider() for dynamic model provider management"
+        description: "Extensions can register or override model providers at runtime via pi.registerProvider(), specifying baseUrl, apiKey, API type, models, and optional OAuth support. Providers can also be unregistered. Registration during the initial load phase is queued and applied after the runner binds; after that, it takes effect immediately without requiring /reload."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/extensions.md"
+        graduation_candidate: false
+      - id: pi_extension_hot_reload
+        name: "Hot reload with /reload command"
+        description: "Extensions in auto-discovered locations (~/.pi/agent/extensions/, .pi/extensions/) support hot reload via /reload. The --extension/-e CLI flag loads extensions for quick testing but these do not participate in hot reload. Extensions are also reloaded when resources_discover fires with reason: 'reload'."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/extensions.md"
+        graduation_candidate: false
+    loading_model: "Pi discovers extensions from: global ~/.pi/agent/extensions/*.ts and ~/.pi/agent/extensions/*/index.ts; project-local .pi/extensions/*.ts and .pi/extensions/*/index.ts; settings.json extensions array (file paths or directories); settings.json packages array (npm: or git: URIs); and the --extension/-e CLI flag (ad-hoc, not hot-reloadable). Extensions are loaded via jiti at startup — no compilation required. Each extension exports a default factory function that receives ExtensionAPI and registers handlers. The ExtensionRunner initializes all extensions, flushes queued provider registrations, then binds live action callbacks to the shared ExtensionRuntime."
+    notes: "Pi calls these 'extensions' not 'hooks'. The extension system is the most capable hook model of any known coding agent provider: 21+ event types, full TypeScript with no build step, bidirectional tool interception (block + mutate), custom LLM-callable tools, slash commands, keyboard shortcuts, CLI flags, full TUI component access, and dynamic provider registration. The tool_call and tool_result events in particular provide middleware-grade capability that goes well beyond simple before/after hooks."
+
+  commands:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/prompt-templates.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: "sha256:1711381eedba5141903b8cc5e9b6a6d36a417953e26dfd12fe1359b8a168fb4c"
+        fetched_at: "2026-04-11T21:50:54Z"
+    canonical_mappings: {}
+    provider_extensions:
+      - id: pi_prompt_template_arguments
+        name: "Positional argument expansion in templates"
+        description: "Prompt templates support positional argument substitution: $1, $2, ... for specific positions; $@ or $ARGUMENTS for all arguments joined; ${@:N} for args from position N (1-indexed); ${@:N:L} for L args starting at N. Arguments are passed after the command name (e.g., /component Button 'click handler'). This enables parameterized prompts that expand with user-supplied values."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/prompt-templates.md"
+        graduation_candidate: true
+      - id: pi_prompt_template_description_frontmatter
+        name: "Optional description frontmatter for autocomplete"
+        description: "Templates accept an optional YAML frontmatter block with a description field. The description is shown in autocomplete when the user types /. If the description is omitted, the first non-empty line of the template body is used as the description. The filename (without .md) becomes the command name."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/prompt-templates.md"
+        graduation_candidate: true
+      - id: pi_prompt_template_discovery
+        name: "Multi-source template discovery matching skills pattern"
+        description: "Pi discovers prompt templates from: global ~/.pi/agent/prompts/*.md; project-local .pi/prompts/*.md; package.json pi.prompts entries or prompts/ directories in npm packages; settings.json prompts array (files or directories); --prompt-template CLI flag (repeatable). Discovery in prompts/ directories is non-recursive — subdirectories must be added explicitly. --no-prompt-templates disables all default discovery."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/prompt-templates.md"
+        graduation_candidate: false
+    loading_model: "At startup pi scans all configured prompt template locations and collects *.md files non-recursively. Each file's name (without .md) becomes the command name. The description is read from frontmatter if present, otherwise from the first non-empty content line. All templates are registered as slash commands and appear in / autocomplete. When the user invokes /name [args], the template body is expanded with argument substitution and sent as the user's message to the agent."
+    notes: "Pi calls these 'prompt templates' not 'commands'. The format is simpler than most providers' command systems: plain Markdown with optional frontmatter, no scripting or tool access. The argument substitution syntax ($1, $@, ${@:N}) is richer than typical slash command implementations and makes templates genuinely parameterizable. Discovery sources mirror the skills pattern exactly (global, project, packages, settings, CLI), making the mental model consistent across content types."
