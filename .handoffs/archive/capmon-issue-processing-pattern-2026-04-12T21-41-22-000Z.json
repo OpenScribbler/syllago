@@ -1,0 +1,93 @@
+{
+  "$schema": "handoff-v2",
+  "name": "capmon-issue-processing-pattern",
+  "createdAt": "2026-04-11T22:30:00-07:00",
+  "current": {
+    "claimedBy": { "sessionId": "f2ab7360-cd98-40d5-bf7d-e74bf931a15e", "claimedAt": "2026-04-12T13:51:33-07:00" },
+    "project": "syllago",
+    "updated": "2026-04-12T00:00:00-07:00",
+    "sessionId": null,
+    "summary": "Processed all 50 initial capmon-change issues, resolved all confidence levels to confirmed, designed capabilities.json pipeline for docs site",
+
+    "activeWork": {
+      "description": "Design and implement the syllago-docs capabilities pipeline — capabilities.json artifact, Astro data collections, sync script, and components for filterable canonical mapping tables",
+      "feature": "syllago-docs-capabilities",
+      "stage": "plan",
+      "planRef": null,
+      "designRef": null,
+      "progress": "All 50 initial capmon-change GitHub issues processed and closed across 10 providers (skills + rules/hooks/mcp/agents/commands). All format docs validated clean. Resolved all confidence: inferred and confidence: unknown values to confirmed per new policy (if not in provider source/docs, it's not supported). Designed the docs pipeline architecture: _gencapabilities Go command → capabilities.json release artifact → sync-capabilities.ts → Astro data collections → programmatic table components. Field inventory agreed: status, sources (uri/type/fetched_at), canonical_mappings (supported/mechanism/paths), provider_extensions (id/name/description/source_ref), loading_model, notes, last_changed_at — all public. confidence and graduation_candidate stay internal. Next session should use /develop to plan and execute this as a feature.",
+      "blockers": [],
+      "beads": {
+        "inProgress": ["syllago-jtafb"],
+        "completedThisSession": [],
+        "readyNext": []
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 1,
+      "lastCommit": "a9aac76 capmon: resolve all inferred/unknown confidence values to confirmed",
+      "modifiedFiles": [
+        ".beads/beads.db"
+      ]
+    },
+
+    "recentDecisions": [
+      "confidence field is internal only — if a feature isn't in provider source/docs, it's supported: false, confidence: confirmed. No hedging.",
+      "sources array is PUBLIC in capabilities.json — transparency so readers can verify and report stale data.",
+      "graduation_candidate stays internal — it's a pipeline signal for promoting extensions to canonical keys, not a docs concept.",
+      "last_changed_at is PUBLIC — freshness indicator for readers.",
+      "capabilities.json published as a release artifact alongside providers.json, fetched by sync-capabilities.ts in the docs site build.",
+      "Astro data collections (type: data) for capabilities and canonical-keys, defined in src/content/config.ts (new file).",
+      "Canonical key pages get a MetaBox component top-right inline with title — shows type, last updated, provider support count, report-issue link.",
+      "Supported providers table at bottom of each canonical key page — cross-reference across all providers for that key.",
+      "Issue reporting via Starlight component override (pre-filled GitHub issue link), not edit-page."
+    ],
+
+    "nextSteps": [
+      "Use /develop to plan and execute the syllago-docs capabilities pipeline as a new feature. Start with brainstorm to confirm scope.",
+      "Phase 1: _gencapabilities Go command in syllago CLI — reads docs/provider-formats/*.yaml + docs/spec/canonical-keys.yaml, outputs capabilities.json. Add to release.yml alongside _genproviders.",
+      "Phase 2: sync-capabilities.ts in syllago-docs — fetches capabilities.json from latest GitHub release, writes src/content/capabilities/*.json and src/content/canonical-keys/*.json data files.",
+      "Phase 3: src/content/config.ts — define Astro data collections for capabilities and canonical-keys with Zod schemas.",
+      "Phase 4: Components — MetaBox.astro (top-right info box), CanonicalSupportTable.astro (providers × mechanism table), ProviderExtensions.astro.",
+      "Phase 5: Page generation — canonical key pages, enriched provider pages, updated matrix pages.",
+      "Close syllago-jtafb after the docs pipeline is wired up to the release workflow."
+    ],
+
+    "context": {
+      "notes": "The capabilities.json public field inventory is finalized (see recentDecisions). The two repos involved: syllago (source data + Go command) and syllago-docs (sync script + Astro site). The docs site already has src/data/providers/*.json files from the existing _genproviders pipeline — the new capabilities pipeline is additive, not a replacement. Starlight version is 5.6. No src/content/config.ts exists yet in syllago-docs — it needs to be created. The existing sync-providers.ts pattern is the model for sync-capabilities.ts. All 14 provider format docs are in docs/provider-formats/*.yaml. Canonical keys spec is in docs/spec/canonical-keys.yaml. 14 providers total: amp, claude-code, cline, codex, copilot-cli, cursor, factory-droid, gemini-cli, kiro, opencode, pi, roo-code, windsurf, zed."
+    }
+  },
+
+  "previousSessions": [
+    {
+      "summary": "Processed all 50 initial capmon-change issues across 10 providers (skills + non-skills content types). Validated every format doc. Fixed gemini-cli YAML parse error (unquoted {{args}}). All commits pushed to main.",
+      "updated": "2026-04-12T00:00:00-07:00",
+      "completedWork": [
+        "All 50 capmon-change GitHub issues processed and closed",
+        "10 providers × skills: format docs enriched, derive run, seeder specs generated",
+        "10 providers × rules/hooks/mcp/agents/commands: content type sections added to format docs",
+        "validate-format-doc run on every provider before commit — 14/14 clean",
+        "All confidence: inferred and confidence: unknown values resolved to confirmed"
+      ],
+      "nextSteps": [
+        "Design and implement capabilities.json pipeline for syllago-docs",
+        "Close syllago-jtafb after docs pipeline is complete"
+      ]
+    },
+    {
+      "summary": "Validated capmon issue processing pattern on windsurf/skills; fixed format doc accuracy issues and tightened agent instructions",
+      "updated": "2026-04-11T22:30:00-07:00",
+      "completedWork": [
+        "Full syllago-capmon-process workflow validated end-to-end on windsurf/skills",
+        "Fixed user_invocable mechanism contamination in windsurf.yaml",
+        "Tightened update-format-doc.md with explicit narrow mechanism rule"
+      ],
+      "nextSteps": [
+        "Process remaining 49 open capmon-change issues",
+        "Handle non-skills content types (rules/hooks/mcp/agents/commands) with canonical_mappings: {}"
+      ]
+    }
+  ]
+}
