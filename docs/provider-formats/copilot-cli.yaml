@@ -131,3 +131,430 @@ content_types:
       anthropics/skills and github/awesome-copilot. The CLI-specific /skills management surface
       (list, info, add, reload, remove) is unique among providers and provides runtime skill
       management without session restart.
+
+  rules:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions.md"
+        type: documentation
+        fetch_method: http
+        content_hash: "sha256:496ddc97996270007797c61f2bb453ca9b2f33d6a454f110603012a5b4e46422"
+        fetched_at: "2026-04-11T21:50:12.485985022Z"
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/custom-instructions-support.md"
+        type: reference
+        fetch_method: http
+        content_hash: "sha256:62580e8ce5de70023d65177985e670c003b23e0a86761e8296ca1b0d6a700b4c"
+        fetched_at: "2026-04-11T21:50:12.640526694Z"
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/customization-cheat-sheet.md"
+        type: reference
+        fetch_method: http
+        content_hash: "sha256:9a507ae83650172dcaebf94cf885b7272ffff33973eac9cb5440d93e68a7e0e2"
+        fetched_at: "2026-04-11T21:50:12.792866253Z"
+    canonical_mappings: {}
+    provider_extensions:
+      - id: repository_wide_instructions
+        name: Repository-Wide Custom Instructions
+        description: >
+          A `.github/copilot-instructions.md` file at the repository root applies to all
+          requests made in the context of that repository. This is a distinct named file
+          (not a generic "rules" filename) scoped to the repo root. The file is always-on
+          and automatically included in every interaction within its scope without any
+          explicit user invocation.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions.md"
+        graduation_candidate: true
+
+      - id: path_specific_instructions
+        name: Path-Specific Custom Instructions
+        description: >
+          One or more `NAME.instructions.md` files placed within or below
+          `.github/instructions/` at the repository root (or in the current working
+          directory) apply only to requests involving files that match a specified path
+          glob. This allows different instructions to govern different parts of a
+          codebase — for example, separate instructions for frontend vs. backend code.
+          When a path-specific file matches and a repository-wide file also exists, both
+          sets of instructions are combined.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions.md"
+        graduation_candidate: true
+
+      - id: agents_md_instructions
+        name: AGENTS.md Instructions
+        description: >
+          Copilot CLI recognizes `AGENTS.md` files following the community-owned
+          agentsmd/agents.md standard. An `AGENTS.md` at the repository root is treated
+          as primary instructions; `AGENTS.md` files found elsewhere (or in directories
+          listed in the `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` environment variable) are
+          treated as additional instructions. Copilot also accepts `CLAUDE.md` and
+          `GEMINI.md` at the repository root as equivalent instruction files. All
+          recognized custom instruction files are combined (not priority-based fallbacks)
+          per the source.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions.md"
+        graduation_candidate: false
+
+      - id: personal_instructions
+        name: Personal (Home Directory) Custom Instructions
+        description: >
+          A file at `$HOME/.copilot/copilot-instructions.md` provides personal
+          instructions scoped to the local user environment rather than any specific
+          project. The `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` environment variable can also
+          point to additional directories where Copilot will look for `AGENTS.md` and
+          path-specific `.github/instructions/**/*.instructions.md` files.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions.md"
+        graduation_candidate: false
+    loading_model: >
+      Custom instructions are always-on within their defined scope — no explicit user
+      invocation is required. Repository-wide instructions (.github/copilot-instructions.md)
+      apply to every interaction in the repository context. Path-specific instructions
+      (.github/instructions/*.instructions.md) apply when the file being worked on matches
+      the declared path glob. AGENTS.md files are loaded from the repository root (primary)
+      and any additional configured directories (supplementary). All applicable instruction
+      files are combined rather than selecting one by priority. Changes to instruction files
+      take effect on the next prompt submission within the current or a future session.
+    notes: >
+      Copilot CLI supports four distinct rules mechanisms: repository-wide
+      (.github/copilot-instructions.md), path-specific
+      (.github/instructions/*.instructions.md), agent-oriented (AGENTS.md following the
+      agentsmd/agents.md community standard), and personal ($HOME/.copilot/copilot-instructions.md).
+      CLAUDE.md and GEMINI.md at the repository root are also accepted as instruction files,
+      making Copilot CLI compatible with content authored for Claude Code and Gemini without
+      conversion. Organization-level instructions are not supported in Copilot CLI (those are
+      a github.com surface feature only).
+
+  hooks:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/hooks-configuration.md"
+        type: reference
+        fetch_method: http
+        content_hash: "sha256:fc2451cc885d9fd02c31719ee58f9f0df03c9ae99ff2940b046cddd9c104fb66"
+        fetched_at: "2026-04-11T21:50:14.393054682Z"
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/use-hooks.md"
+        type: documentation
+        fetch_method: http
+        content_hash: "sha256:6e7c3936f8e65dbb64ff04cf4e24b840b7aca6b8ac7f42f3249d962f8bac5303"
+        fetched_at: "2026-04-11T21:50:14.529583981Z"
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/copilot-cli/about-copilot-cli.md"
+        type: documentation
+        fetch_method: http
+        content_hash: "sha256:6ab7b781d9585adeb4e7214afdd5c730f6328805b6fb6ca2cbc376a89371b941"
+        fetched_at: "2026-04-11T21:50:14.951733729Z"
+    canonical_mappings: {}
+    provider_extensions:
+      - id: hook_event_types
+        name: Six Hook Event Types
+        description: >
+          Copilot CLI exposes six named hook events: `sessionStart` (on new or resumed
+          session), `sessionEnd` (on session complete or terminate), `userPromptSubmitted`
+          (when user submits a prompt), `preToolUse` (before any tool executes — can deny
+          execution), `postToolUse` (after tool completes — result modification not
+          supported), and `errorOccurred` (on agent execution error). Each event receives
+          a JSON payload over stdin with a `timestamp`, `cwd`, and event-specific fields.
+          Only `preToolUse` produces meaningful output: a `permissionDecision` field
+          (`"allow"`, `"deny"`, or `"ask"`) with an optional `permissionDecisionReason`.
+          Output from all other hooks is ignored.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/hooks-configuration.md"
+        graduation_candidate: true
+
+      - id: hook_config_format
+        name: JSON Hook Configuration File
+        description: >
+          Hooks are defined in a `.github/hooks/*.json` file (or inline in a plugin's
+          `hooks.json`). The top-level structure is `{"version": 1, "hooks": { EVENT_NAME:
+          [HOOK_OBJECT, ...] }}`. Each hook object has a `type` field (currently only
+          `"command"` is documented), `bash` (Bash script path or inline), `powershell`
+          (PowerShell script path or inline), optional `cwd` (working directory), optional
+          `timeoutSec` (default 30), and optional `comment`. Multiple hooks of the same
+          event type execute in array order.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/hooks-configuration.md"
+        graduation_candidate: false
+
+      - id: pre_tool_use_deny
+        name: Pre-Tool-Use Deny Gate
+        description: >
+          The `preToolUse` hook is the only hook type that can block agent execution.
+          Returning `{"permissionDecision":"deny","permissionDecisionReason":"..."}` from
+          the hook script causes the tool call to be rejected. The `"allow"` decision is
+          the default (returning nothing or `"allow"` both allow). The `"ask"` value is
+          documented in the schema but only `"deny"` is stated as currently processed.
+          The hook receives `toolName` (e.g., `"bash"`, `"edit"`, `"view"`, `"create"`)
+          and `toolArgs` (a JSON string of the tool's arguments).
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/hooks-configuration.md"
+        graduation_candidate: true
+    loading_model: >
+      Hooks are loaded from `.github/hooks/*.json` in the repository at session start.
+      Plugins can also contribute hooks via a `hooks.json` file in the plugin root or
+      `hooks/` subdirectory. Hook scripts receive JSON on stdin and write JSON to stdout;
+      only `preToolUse` output is acted upon. Scripts must exit 0 for success. Default
+      timeout is 30 seconds per hook; this is overridable per hook via `timeoutSec`.
+      Multiple hooks for the same event execute in declaration order.
+    notes: >
+      Copilot CLI hooks are structurally similar to Claude Code hooks but use different
+      event names and JSON schema. The canonical syllago event names (before_tool_execute,
+      after_tool_execute, etc.) do not have a direct 1:1 mapping to Copilot's camelCase
+      event names (preToolUse, postToolUse, sessionStart, sessionEnd,
+      userPromptSubmitted, errorOccurred). Only preToolUse supports permission gating;
+      all other hook outputs are ignored. PowerShell is a first-class script target
+      alongside Bash, making hooks functional on Windows without WSL.
+
+  mcp:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers.md"
+        type: documentation
+        fetch_method: http
+        content_hash: "sha256:d89fead76fe8acf51eaeae57b630614b3921d20fbc3da3b04e8d24e3c7b9de22"
+        fetched_at: "2026-04-11T21:48:25.178526678Z"
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/context/mcp.md"
+        type: documentation
+        fetch_method: http
+        content_hash: "sha256:c74b8a05e0f0632da57344fa58141156da9df5f952c42786d965bf4e74f754f3"
+        fetched_at: "2026-04-11T21:48:25.329663064Z"
+    canonical_mappings: {}
+    provider_extensions:
+      - id: builtin_github_mcp_server
+        name: Built-In GitHub MCP Server
+        description: >
+          The GitHub MCP server is built into Copilot CLI and available without any
+          configuration. It provides tools for GitHub API operations (issues, PRs,
+          repositories, etc.) and is always present in the tool set. This is unique
+          among providers — no other provider ships an MCP server as part of the core
+          CLI binary. The built-in server cannot be overridden by user-defined MCP
+          configurations.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers.md"
+        graduation_candidate: false
+
+      - id: interactive_mcp_management
+        name: Interactive /mcp Slash Commands
+        description: >
+          Copilot CLI exposes a `/mcp` slash command suite for managing MCP servers
+          within an interactive session: `/mcp add` (interactive form with Tab navigation
+          to configure server name, type, command/URL, env vars, and tool filter);
+          `/mcp show` (list all configured servers and status); `/mcp show SERVER-NAME`
+          (server details and tool list); `/mcp edit SERVER-NAME`; `/mcp delete
+          SERVER-NAME`; `/mcp disable SERVER-NAME` (disable for current session);
+          `/mcp enable SERVER-NAME`. Changes via `/mcp add` take effect immediately
+          without restarting the CLI.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers.md"
+        graduation_candidate: false
+
+      - id: mcp_config_file
+        name: Personal MCP Configuration File
+        description: >
+          MCP servers can be configured by editing `~/.copilot/mcp-config.json` directly.
+          The file uses a `{"mcpServers": { NAME: CONFIG }}` structure. Each server config
+          has a `type` field (`"local"` or `"http"`; also `"stdio"` and `"sse"` are
+          accepted for compatibility), a `command`+`args`+`env`+`tools` object for local
+          servers, or a `url`+`headers`+`tools` object for HTTP servers. Tool filtering
+          per server is supported via a `tools` array (`["*"]` for all tools, or a list
+          of tool names).
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers.md"
+        graduation_candidate: false
+
+      - id: mcp_tool_allow_deny_flags
+        name: Per-Tool Allow/Deny CLI Flags
+        description: >
+          The `--allow-tool='MCP_SERVER_NAME(tool_name)'` and
+          `--deny-tool='MCP_SERVER_NAME(tool_name)'` command-line flags control which
+          MCP server tools Copilot may use without manual approval. Using just the server
+          name without parentheses allows/denies all tools from that server.
+          `--allow-all-tools` grants blanket approval for all tools including MCP. These
+          flags also control built-in tools (shell, write), not just MCP servers.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/copilot-cli/about-copilot-cli.md"
+        graduation_candidate: false
+    loading_model: >
+      MCP servers are loaded from `~/.copilot/mcp-config.json` (personal) and from
+      `.vscode/mcp.json` in the workspace. Plugins can also contribute MCP configurations
+      via `.mcp.json` in the plugin root or `.github/mcp.json`. MCP servers from multiple
+      sources are merged with last-writer-wins semantics on server name conflicts (plugins
+      override personal config; `--additional-mcp-config` flag overrides plugins). The
+      built-in GitHub MCP server is always present and cannot be overridden. New servers
+      added via `/mcp add` are available immediately in the running session.
+    notes: >
+      Copilot CLI has broad MCP support: local (stdio) and remote (HTTP/SSE) server types,
+      per-server tool filtering, a built-in GitHub MCP server, interactive management via
+      /mcp slash commands, and org-level policy enforcement (with known limitations —
+      the "MCP servers in Copilot" and "MCP Registry URL" org policies are not enforced
+      in the CLI as of source date). The stdio type is accepted as an alias for local for
+      compatibility with VS Code and Claude Code MCP configurations, enabling direct reuse
+      of mcp.json files across providers.
+
+  agents:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/custom-agents-configuration.md"
+        type: reference
+        fetch_method: http
+        content_hash: "sha256:8ba9063c2cb4603aa74587f2e2ebe273c7ac22f3fa75ff1365399f79037ffca7"
+        fetched_at: "2026-04-11T21:46:21.226684129Z"
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/create-custom-agents-for-cli.md"
+        type: documentation
+        fetch_method: http
+        content_hash: "sha256:3d60d2d600ab321f7e053b7ff8cdd2b69f02f3d23ee64f7411204556e9a24c5e"
+        fetched_at: "2026-04-11T21:46:21.364812422Z"
+    canonical_mappings: {}
+    provider_extensions:
+      - id: agent_profile_format
+        name: Agent Profile File Format
+        description: >
+          Custom agents are defined as Markdown files with a `.agent.md` extension
+          (e.g., `security-expert.agent.md`). The file has a YAML frontmatter block
+          followed by free-form Markdown instructions (max 30,000 characters). Required
+          frontmatter field: `description`. Optional fields include: `name` (display name),
+          `target` (environment restriction: `vscode` or `github-copilot`), `tools` (list
+          of allowed tools or `["*"]` for all), `model` (override default model),
+          `disable-model-invocation` (boolean, prevents auto-selection by the agent),
+          `user-invocable` (boolean, controls manual selectability), `mcp-servers` (inline
+          MCP server config, cloud agent only), and `metadata` (annotation key-value pairs,
+          cloud agent only).
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/custom-agents-configuration.md"
+        graduation_candidate: true
+
+      - id: agent_scopes
+        name: Project and Personal Agent Scopes
+        description: >
+          Agents can be placed at project scope (`.github/agents/` or `.claude/agents/`
+          in the repository) or personal scope (`~/.copilot/agents/`). When naming
+          conflicts exist between scopes, the personal scope (`~/.copilot/agents/`)
+          takes precedence over project scope. Agent identity for deduplication is the
+          filename without the `.agent.md` extension. Plugins can also provide agents via
+          their `agents/` directory, but project and personal agents take precedence over
+          plugin agents (first-found-wins).
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/create-custom-agents-for-cli.md"
+        graduation_candidate: true
+
+      - id: agent_invocation_modes
+        name: Multiple Agent Invocation Modes
+        description: >
+          Custom agents can be invoked four ways: (1) `/agent` slash command in
+          interactive mode to select from a list; (2) explicit natural language instruction
+          ("Use the security-auditor agent on..."); (3) inference — Copilot auto-selects
+          an agent based on task context and the agent's description; (4) programmatic
+          invocation via `--agent AGENT-NAME` command-line option. Auto-inference can be
+          suppressed per agent with `disable-model-invocation: true` in the agent profile.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/create-custom-agents-for-cli.md"
+        graduation_candidate: false
+
+      - id: tool_aliases
+        name: Cross-Provider Tool Aliases
+        description: >
+          The `tools` property in agent profiles uses a normalized alias system to
+          abstract tool names across providers. Aliases include: `execute`/`shell`/`Bash`
+          (shell execution), `read`/`Read`/`NotebookRead` (file reading), `edit`/`Edit`/
+          `Write`/`MultiEdit`/`NotebookEdit` (file editing), `search`/`Grep`/`Glob`
+          (file search), `agent`/`custom-agent`/`Task` (subagent delegation), `web`/
+          `WebSearch`/`WebFetch` (web access), `todo`/`TodoWrite` (task lists). All
+          aliases are case-insensitive. Unrecognized tool names are silently ignored to
+          allow cross-provider profile sharing without errors.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/custom-agents-configuration.md"
+        graduation_candidate: true
+
+      - id: subagent_execution
+        name: Subagent Execution Model
+        description: >
+          When Copilot delegates work to a custom agent, the agent runs as a subagent
+          with its own isolated context window. This allows large or specialized tasks
+          to be offloaded without polluting the main agent's context. The main agent
+          handles high-level planning and coordination while subagents handle execution.
+          Versioning is Git-SHA-based: the agent profile in use when a task is assigned
+          remains the active version for the lifetime of that task (pull request
+          interactions use the same version for consistency).
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/create-custom-agents-for-cli.md"
+        graduation_candidate: false
+    loading_model: >
+      Agents are loaded at session start using first-found-wins precedence by agent ID
+      (filename without .agent.md). Load order: personal (~/.copilot/agents/,
+      ~/.claude/agents/), project (.github/agents/, .claude/agents/), inherited parent
+      directories (monorepo support), plugin agents/ directories, then remote
+      org/enterprise agents via API. Built-in agents (explore, task, code-review,
+      general-purpose, research) are always present and cannot be overridden. The CLI
+      must be restarted to pick up newly created agent files (or use `/agent` interactive
+      creation which handles reload).
+    notes: >
+      Copilot CLI custom agents use a YAML-frontmatter Markdown format (.agent.md)
+      shared with other Copilot surfaces (VS Code, github.com), though some properties
+      are surface-specific (mcp-servers and metadata are cloud-agent-only; argument-hint
+      and handoffs are VS Code-only and ignored by cloud agent). The tool alias system
+      enables cross-provider agent profile portability — the same tools list works across
+      Claude Code, VS Code, and Copilot CLI without modification. The stdio→local type
+      mapping in MCP server configs within agent profiles similarly enables sharing with
+      Claude Code.
+
+  commands:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/copilot-cli/about-cli-plugins.md"
+        type: documentation
+        fetch_method: http
+        content_hash: "sha256:8c01ef1983e4c225ac3e88255b72bf00252baa7c9a69e3fa1b08353243fbe77e"
+        fetched_at: "2026-04-11T21:50:21.135764955Z"
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/copilot-cli-reference/cli-plugin-reference.md"
+        type: reference
+        fetch_method: http
+        content_hash: "sha256:88c16e48e1f8c3c714ec110fb1d8b467a218fce6b04cb17f77d78e7a6ec2fe78"
+        fetched_at: "2026-04-11T21:50:21.389196848Z"
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/plugins-creating.md"
+        type: documentation
+        fetch_method: http
+        content_hash: "sha256:cc5ffef7b6e12ac8a91049779c9bc99ff690ae25d86a34b4394db972a697cbbf"
+        fetched_at: "2026-04-11T21:50:21.588936107Z"
+    canonical_mappings: {}
+    provider_extensions:
+      - id: plugin_system
+        name: Plugin System as Commands Distribution Mechanism
+        description: >
+          Copilot CLI does not have a standalone "commands" content type equivalent to
+          Claude Code's `/commands` or Cursor's slash commands. Instead, CLI extensibility
+          is delivered via the plugin system: installable packages that bundle agents,
+          skills, hooks, MCP server configs, and (optionally) command directories.
+          Plugins are installed via `copilot plugin install SPECIFICATION` where
+          SPECIFICATION can be a marketplace reference (`plugin@marketplace`), GitHub
+          repo (`OWNER/REPO` or `OWNER/REPO:PATH`), Git URL, or local path. Installed
+          plugins are cached and persist across sessions.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/copilot-cli/about-cli-plugins.md"
+        graduation_candidate: false
+
+      - id: plugin_manifest
+        name: Plugin Manifest (plugin.json)
+        description: >
+          Every plugin requires a `plugin.json` manifest at the plugin root (also
+          checked at `.plugin/plugin.json`, `.github/plugin/plugin.json`,
+          `.claude-plugin/plugin.json`). The manifest declares the plugin's name
+          (required, kebab-case, max 64 chars), optional metadata (description, version,
+          author, homepage, repository, license, keywords, category, tags), and optional
+          component path overrides (`agents`, `skills`, `commands`, `hooks`, `mcpServers`,
+          `lspServers`). Default conventions are used when path fields are omitted.
+          The `commands` path field in `plugin.json` is explicitly listed in the schema
+          but no documentation exists for the command file format itself.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/copilot-cli-reference/cli-plugin-reference.md"
+        graduation_candidate: false
+
+      - id: marketplace_system
+        name: Plugin Marketplace System
+        description: >
+          Plugins are discoverable and installable through marketplaces. Two marketplaces
+          are registered by default: `copilot-plugins` (github/copilot-plugins) and
+          `awesome-copilot` (github/awesome-copilot). Custom marketplaces can be added
+          via `copilot plugin marketplace add SPECIFICATION` using the same specification
+          formats as plugin install. A marketplace is defined by a `marketplace.json`
+          file in `.github/plugin/` of a repository or local filesystem. This enables
+          private enterprise plugin distribution without requiring public GitHub repos.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/copilot-cli/about-cli-plugins.md"
+        graduation_candidate: false
+    loading_model: >
+      Plugins are installed to `~/.copilot/installed-plugins/MARKETPLACE/PLUGIN-NAME`
+      (marketplace installs) or `~/.copilot/installed-plugins/_direct/SOURCE-ID/`
+      (direct installs). Plugin components are cached; reinstalling is required to pick
+      up changes to a locally-developed plugin. Component precedence: agents and skills
+      use first-found-wins (project/personal configs beat plugins); MCP servers use
+      last-wins (plugins override personal, `--additional-mcp-config` flag overrides
+      plugins). Built-in tools and agents cannot be overridden. The `commands/` path
+      referenced in plugin.json schema does not have documented file format semantics
+      in the source material.
+    notes: >
+      Copilot CLI's "commands" content type maps loosely to its plugin system rather than
+      a standalone slash-command mechanism. The plugin.json schema includes a `commands`
+      path field, and the loading order diagram shows skills override commands (commands
+      sit below skills in precedence), but no documentation exists for what command files
+      look like or how they are invoked. This suggests the commands mechanism is either
+      nascent, undocumented, or subsumed by the skills system. Syllago should treat plugin
+      install/management as the primary unit of commands-equivalent distribution for
+      Copilot CLI until further documentation emerges.
