@@ -3,7 +3,7 @@
   "name": "gencapabilities-pipeline-execute",
   "createdAt": "2026-04-12T21:00:00Z",
   "current": {
-    "claimedBy": null,
+    "claimedBy": { "sessionId": "4f52ca66-eab4-46ac-8b12-38615b63e6a9", "claimedAt": "2026-04-12T21:43:14-07:00" },
     "project": "syllago",
     "updated": "2026-04-12T21:15:00-07:00",
     "sessionId": "f2ab7360-cd98-40d5-bf7d-e74bf931a15e",
