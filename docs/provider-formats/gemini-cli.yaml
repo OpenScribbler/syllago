@@ -35,7 +35,7 @@ content_types:
         confidence: confirmed
       shared_scope:
         supported: false
-        confidence: unknown
+        confidence: confirmed
       canonical_filename:
         supported: true
         mechanism: "SKILL.md (required, fixed name)"
@@ -46,10 +46,10 @@ content_types:
         confidence: confirmed
       disable_model_invocation:
         supported: false
-        confidence: unknown
+        confidence: confirmed
       user_invocable:
         supported: false
-        confidence: unknown
+        confidence: confirmed
     provider_extensions:
       - id: supporting_files
         name: Supporting file directories
