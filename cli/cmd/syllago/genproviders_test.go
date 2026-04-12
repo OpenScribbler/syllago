@@ -14,6 +14,7 @@ import (
 )
 
 // captureStdout runs fn and returns whatever it wrote to os.Stdout.
+// Reading happens in a goroutine to avoid pipe buffer deadlock on large outputs.
 func captureStdout(t *testing.T, fn func()) []byte {
 	t.Helper()
 
@@ -26,11 +27,16 @@ func captureStdout(t *testing.T, fn func()) []byte {
 	os.Stdout = w
 	t.Cleanup(func() { os.Stdout = origStdout })
 
-	fn()
-
-	w.Close()
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	done := make(chan struct{})
+	go func() {
+		io.Copy(&buf, r) //nolint:errcheck
+		close(done)
+	}()
+
+	fn()
+	w.Close()
+	<-done
 	r.Close()
 
 	return buf.Bytes()
