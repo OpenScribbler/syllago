@@ -1,0 +1,93 @@
+{
+  "$schema": "handoff-v2",
+  "name": "syllago-docs-capabilities-phase-2",
+  "createdAt": "2026-04-12T22:15:00-07:00",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-12T22:15:00-07:00",
+    "sessionId": "4f52ca66-eab4-46ac-8b12-38615b63e6a9",
+    "summary": "Phase 1 (_gencapabilities Go command) complete and pushed. Explored syllago-docs repo — ready to brainstorm Phase 2 (sync-capabilities.ts + Astro collections + components + pages).",
+
+    "activeWork": {
+      "description": "Plan and execute Phase 2 of the capabilities pipeline in the syllago-docs repo: fetch capabilities.json from GitHub release, write Astro data collection files, add Zod schemas, build components, enrich doc pages.",
+      "feature": "syllago-docs-capabilities-pipeline",
+      "stage": "brainstorm",
+      "planRef": null,
+      "designRef": "docs/plans/2026-04-12-syllago-docs-capabilities-pipeline-design.md",
+      "progress": "Phase 1 complete: _gencapabilities Go command ships capabilities.json in release.yml alongside providers.json. Phase 2 is a /develop feature in the syllago-docs repo — no plan or beads yet. Codebase explored; all key files read this session.",
+      "blockers": [
+        "No tagged syllago release with capabilities.json exists yet — Phase 2 fetch will need a local file fallback for development (same --local flag pattern as sync-providers.ts)"
+      ],
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": ["syllago-h7zg0", "syllago-2y8wt", "syllago-eqftp", "syllago-16gau", "syllaby-0ulkj"],
+        "readyNext": ["syllago-7v9jq", "syllago-kocda", "syllago-0b4r"]
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 1,
+      "lastCommit": "b7fef9e bd sync: 2026-04-12 post-gencap-execute",
+      "modifiedFiles": [
+        ".beads/beads.db"
+      ]
+    },
+
+    "recentDecisions": [
+      "Phase 2 lives in the syllago-docs repo (../syllago-docs/), not syllago. Run /develop there.",
+      "sync-capabilities.ts is the reference: follow sync-providers.ts pattern (--local flag, CAPABILITIES_JSON_PATH env, GitHub release fetch via API, 15s timeout, gh auth token)",
+      "Data output: src/content/capabilities/<provider>-<content_type>.json AND src/content/canonical-keys/<key>.json (two separate collections)",
+      "content.config.ts (NOT config.ts) already exists at src/content.config.ts — add two new collections to it",
+      "No tagged release with capabilities.json yet — dev workflow requires --local flag pointing at ../syllago/cli/syllago _gencapabilities output",
+      "captureStdout pipe buffer deadlock fixed in genproviders_test.go — goroutine drain required for outputs >64KB"
+    ],
+
+    "nextSteps": [
+      "cd ../syllago-docs and run /develop to brainstorm Phase 2. Feature name: syllago-docs-capabilities-pipeline (same as Phase 1 for continuity)",
+      "Key brainstorm questions: (1) what does each data file look like? (2) how do canonical-keys/*.json flatten the cross-provider view? (3) do we generate MDX pages or use Astro [slug] dynamic routing? (4) MetaBox component placement and fields. (5) CanonicalSupportTable layout.",
+      "After brainstorm, plan tasks: sync-capabilities.ts, content.config.ts additions, three components, page generation/enrichment, package.json script updates",
+      "For local dev: run `cd ../syllago/cli && ./syllago _gencapabilities > /tmp/capabilities.json` then pass `--local /tmp/capabilities.json` to sync-capabilities.ts",
+      "After Phase 2 ships: tag a syllago release so capabilities.json is available from GitHub API for production fetch"
+    ],
+
+    "context": {
+      "notes": "SYLLAGO-DOCS CODEBASE STATE (read this session):\n\n1. REFERENCE SCRIPT: /home/hhewett/.local/src/syllago-docs/scripts/sync-providers.ts (933 lines)\n   - Shebang: #!/usr/bin/env bun\n   - GitHub fetch pattern: GET /repos/OpenScribbler/syllago/releases/latest → find asset by name → fetch with Accept: application/octet-stream\n   - Auth: process.env.GITHUB_TOKEN || execFileSync('gh', ['auth', 'token'])\n   - Local fallback: --local <path> arg OR PROVIDERS_JSON_PATH env var\n   - Timeout: AbortController at 15_000ms\n   - Data output: rmSync + mkdirSync on output dir, then writeFileSync per-item\n   - Data format: { id: prov.slug, ...prov } (Astro glob loader needs id field)\n   - MDX generation: template literals, writes to src/content/docs/using-syllago/providers/\n   - Also generates cross-provider reference pages (hook events matrix, content types)\n\n2. CONTENT CONFIG: /home/hhewett/.local/src/syllago-docs/src/content.config.ts (54 lines)\n   - Existing collections: docs (docsLoader), providers (glob *.json from src/data/providers), glossary (glob **/*.yaml from src/content/glossary)\n   - providers collection uses src/data/providers/*.json (NOT src/content/providers/)\n   - IMPORTANT: providers data is in src/data/ not src/content/ — capabilities should also use src/data/ for consistency, OR use src/content/ for the new Astro content collections pattern\n   - Zod schemas defined inline in the file\n\n3. EXISTING COMPONENTS: /home/hhewett/.local/src/syllago-docs/src/components/\n   - ProviderCompare.astro (510 lines): interactive comparison table, vanilla JS, queries providers collection\n   - PageActions.astro: page-level CTAs\n   - Pattern: vanilla JS (no framework), Astro.props typed, queries collections via getCollection()\n\n4. PACKAGE.JSON SCRIPTS:\n   sync: bun scripts/sync-commands.ts && bun scripts/sync-errors.ts && bun scripts/sync-providers.ts && bun scripts/sync-telemetry.ts\n   prebuild: same as sync\n   sync:providers: bun scripts/sync-providers.ts\n   → Add sync:capabilities + include in sync and prebuild\n\n5. CANONICAL KEYS (docs/spec/canonical-keys.yaml — 13 skills keys):\n   display_name, description, license, compatibility, metadata_map, disable_model_invocation,\n   user_invocable, version, project_scope, global_scope, shared_scope, canonical_filename, custom_filename\n   Each has: description (human-readable), type (string|bool|object)\n\n6. CAPABILITIES.JSON SCHEMA (output of Phase 1 _gencapabilities):\n   { version: '1', generated_at: ISO8601, providers: { '<slug>': { '<content_type>': {\n     status: 'supported'|'unsupported',\n     last_changed_at: ISO8601,\n     sources: [{ uri, type, fetched_at }],\n     canonical_mappings: { '<key>': { supported: bool, mechanism: string, paths?: string[] } },\n     provider_extensions: [{ id, name, description, source_ref?: string }]\n   } } } }\n\n7. DATA FILE CANDIDATES FOR PHASE 2:\n   Option A — Per provider+content_type (flat):\n     src/data/capabilities/<provider>-<content_type>.json\n     e.g. claude-code-skills.json = { id: 'claude-code-skills', provider: 'claude-code', contentType: 'skills', status, last_changed_at, sources, canonical_mappings, provider_extensions }\n   Option B — Per canonical key (cross-provider):\n     src/data/canonical-keys/<key>.json\n     e.g. display_name.json = { id: 'display_name', description, type, providers: { 'claude-code': { supported, mechanism, paths }, 'cursor': {...} ... } }\n   Both are needed. Option A feeds provider detail pages. Option B feeds canonical key reference pages.\n\n8. OPEN DESIGN QUESTIONS for brainstorm:\n   a. Where do capabilities data files live? src/data/ (consistent with providers) vs src/content/ (Astro collections API)?\n   b. Do canonical key pages auto-generate via script (like sync-providers.ts generates MDX) or via Astro [slug].astro dynamic routing?\n   c. MetaBox: standalone component on every canonical key page, or a slot in the layout?\n   d. CanonicalSupportTable: generated as MDX table in sync script, or an Astro component that queries the collection at build time?\n   e. Do provider extensions get their own pages or just subsections?\n   f. How does the issue-report link work? Pre-filled GitHub issue URL with title/body.\n   g. Should sync-capabilities.ts also enrich existing provider MDX pages, or create new MDX pages?\n\n9. CURRENT PROVIDER PAGES: /home/hhewett/.local/src/syllago-docs/src/content/docs/using-syllago/providers/\n   These are generated by sync-providers.ts. Phase 2 could enrich them with a capabilities section OR leave them untouched and create separate canonical key pages.\n\n10. SYLLAGO-DOCS PATH: /home/hhewett/.local/src/syllago-docs/ — this is where /develop should run for Phase 2."
+    }
+  },
+
+  "previousSessions": [
+    {
+      "summary": "Executed full 5-bead chain for _gencapabilities Phase 1: T1 types, T2 tests (RED), T3 implementation (GREEN), T4 release.yml, Final validation",
+      "updated": "2026-04-12T22:00:00-07:00",
+      "completedWork": [
+        "Created cli/cmd/syllago/gencapabilities.go with 10 Go types + cobra command",
+        "Created cli/cmd/syllago/gencapabilities_test.go with 22 tests (unit + integration)",
+        "Implemented runGencapabilities, loadProviderFormatsDir, buildCapEntry",
+        "Fixed captureStdout pipe buffer deadlock (goroutine drain) — 259KB output blocked 64KB pipe",
+        "Added _gencapabilities to release.yml: generate step, checksums, both release artifact lists",
+        "All 35 test packages pass, make build passes, make fmt passes, pushed to main"
+      ],
+      "nextSteps": [
+        "Run /develop in ../syllago-docs/ to plan Phase 2",
+        "Create sync-capabilities.ts following sync-providers.ts pattern",
+        "Add capabilities and canonical-keys collections to src/content.config.ts"
+      ]
+    },
+    {
+      "summary": "Completed full develop workflow for _gencapabilities pipeline: design doc, implementation plan, validation (3 attempts), 5 beads created, Phase B analysis done",
+      "updated": "2026-04-12T21:15:00-07:00",
+      "completedWork": [
+        "Created design doc: docs/plans/2026-04-12-syllago-docs-capabilities-pipeline-design.md",
+        "Created implementation plan: docs/plans/2026-04-12-syllago-docs-capabilities-pipeline-implementation.md",
+        "Validation passed in 3 attempts (fixed canonical-keys.yaml scope, missing imports, wrong default path)",
+        "Created 5 beads (syllago-h7zg0 → 2y8wt → eqftp → 16gau → 0ulkj) with Phase B analysis"
+      ],
+      "nextSteps": [
+        "Execute the 5-bead chain via /develop",
+        "After Phase 1: /develop in syllago-docs for Phases 2-5"
+      ]
+    }
+  ]
+}
