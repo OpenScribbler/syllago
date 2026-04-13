@@ -1,0 +1,75 @@
+{
+  "$schema": "handoff-v2",
+  "name": "canonical-keys-expansion",
+  "createdAt": "2026-04-13T14:30:00-07:00",
+  "current": {
+    "claimedBy": null,
+    "project": "syllago",
+    "updated": "2026-04-13T14:30:00-07:00",
+    "sessionId": "4f52ca66-eab4-46ac-8b12-38615b63e6a9",
+    "summary": "Derived from syllago-docs session: canonical-keys.yaml only covers skills (13 keys). Holden flagged expanding to all content types as core scope, not optional. Work lives in syllago repo.",
+
+    "activeWork": {
+      "description": "Expand docs/spec/canonical-keys.yaml from skills-only to all content types: rules, hooks, mcp, agents, commands. Then populate provider-format YAMLs with canonical_mappings for each new content type.",
+      "feature": "canonical-keys-expansion",
+      "stage": "brainstorm",
+      "planRef": null,
+      "designRef": "docs/plans/2026-04-12-syllago-docs-capabilities-pipeline-design.md",
+      "progress": "Nothing started. canonical-keys.yaml defines 13 skills keys. All 14 provider-format YAMLs have 6 content types each (skills, rules, hooks, mcp, agents, commands), but canonical_mappings is empty ({}) for everything except skills.",
+      "blockers": [],
+      "beads": {
+        "inProgress": [],
+        "completedThisSession": [],
+        "readyNext": []
+      }
+    },
+
+    "git": {
+      "branch": "main",
+      "uncommittedFiles": 9,
+      "lastCommit": "47f7665 handoff: syllago-docs-capabilities-phase-2",
+      "modifiedFiles": [
+        "docs/spec/canonical-keys.yaml",
+        "docs/provider-formats/*.yaml"
+      ]
+    },
+
+    "recentDecisions": [
+      "Canonical keys spec must cover all content types — rules, hooks, mcp, agents, commands — not just skills. Holden explicitly said this is core scope, not optional (correcting an earlier dismissive take).",
+      "Provider-format YAMLs for all 14 providers already have the 6 content type sections (skills, rules, hooks, mcp, agents, commands), but canonical_mappings: {} is empty for all non-skills types.",
+      "Loadouts do NOT appear in provider-format YAMLs — they are syllago-internal only. No cleanup needed here.",
+      "Drop 'extensions' framing — provider_extensions are provider-specific format details that haven't been mapped to canonical keys yet. This is a conceptual rename, not a schema change.",
+      "The syllago-docs site (capabilities pipeline Phase 2) already renders canonical_mappings from the YAML data. Once new keys are defined here and populated in provider YAMLs, the docs site auto-picks them up via _gencapabilities + sync-capabilities.ts."
+    ],
+
+    "nextSteps": [
+      "Run /develop brainstorm in syllago repo: define what canonical keys exist for rules, hooks, mcp, agents, commands. Use existing provider_extensions in provider-format YAMLs as a source of candidates — they represent provider-specific things that may warrant canonical keys.",
+      "For each content type, enumerate candidate canonical keys from the provider_extensions data across all 14 providers (e.g., rules: file_format, frontmatter_support, scope; hooks: event_model, execution_context; mcp: transport_types, config_location).",
+      "Update docs/spec/canonical-keys.yaml with new content type sections (matching skills section format: description + type per key).",
+      "Populate canonical_mappings in all 14 provider-format YAMLs for each new content type key — run capmon validate-format-doc after to check compliance.",
+      "Run _gencapabilities locally to verify capabilities.json includes the new mappings, then push so syllago-docs can consume them."
+    ],
+
+    "context": {
+      "notes": "CURRENT CANONICAL-KEYS.YAML STATE:\n  File: docs/spec/canonical-keys.yaml\n  Covers: content_types.skills only\n  13 keys defined:\n    display_name (string), description (string), license (string),\n    compatibility (object), metadata_map (object),\n    disable_model_invocation (bool), user_invocable (bool),\n    version (string), project_scope (bool), global_scope (bool),\n    shared_scope (bool), canonical_filename (string), custom_filename (bool)\n  Missing: content_types.rules, content_types.hooks, content_types.mcp,\n    content_types.agents, content_types.commands\n\nPROVIDER-FORMAT YAML STATE:\n  14 files in docs/provider-formats/\n  Each has 6 content type sections: skills, rules, hooks, mcp, agents, commands\n  Only skills has non-empty canonical_mappings (e.g., claude-code has display_name: supported)\n  All other content types have canonical_mappings: {} (completely empty)\n  Provider extensions per content type in claude-code.yaml:\n    skills: (empty extensions — all mapped to canonical)\n    rules: id=claude_md_files (CLAUDE.md convention)\n    hooks: id=hook_events (list of events)\n    mcp: id=mcp_transport_types\n    agents: id=agent_file_format\n    commands: id=command_file_format\n\nCANONICAL KEY CANDIDATES (from provider_extensions across providers — brainstorm fodder):\n  rules:\n    - file_format (md, mdc, yaml, etc.)\n    - frontmatter_support (bool — does provider read frontmatter?)\n    - project_scope (bool — rules can be project-scoped)\n    - global_scope (bool — rules can be global)\n    - include_patterns (glob patterns for which files apply the rule)\n    - enforce_mode (how the provider enforces rules: always/on-demand)\n  hooks:\n    - event_model (trigger-based, callback, lifecycle, etc.)\n    - execution_context (before_tool/after_tool, session lifecycle, etc.)\n    - shell_command (bool — runs shell commands)\n    - timeout_support (bool)\n    - parallel_execution (bool)\n  mcp:\n    - transport_types (stdio, sse, http)\n    - config_location (where mcp config lives)\n    - dynamic_registration (bool — hot-add servers without restart)\n  agents:\n    - agent_model_control (bool — can specify model per agent)\n    - tool_restriction (bool — can restrict tool access per agent)\n    - persistent_context (bool — maintains context across calls)\n    - invocation_model (spawned/orchestrated/autonomous)\n  commands:\n    - slash_prefix (bool — uses /command syntax)\n    - argument_support (bool — commands accept arguments)\n    - output_format (plain text, structured, etc.)\n\nCAPMON TOOLING NOTE:\n  capmon validate-format-doc checks canonical_mappings keys against canonical-keys.yaml.\n  Adding new content types to canonical-keys.yaml does NOT auto-fail existing YAMLs\n  (capmon only validates keys present in the YAML against the spec, not absence of keys).\n  This means: we can add canonical keys to the spec and populate provider YAMLs incrementally\n  without breaking existing validation.\n\nSYLLAGO-DOCS PIPELINE NOTE:\n  _gencapabilities reads canonical_mappings from provider-format YAMLs and emits them as-is.\n  Once canonical_mappings is populated for rules/hooks/etc., the docs site\n  (CanonicalSupportTable.astro on canonical key pages) automatically renders the data\n  — no code change needed in syllago-docs if the key names match.\n  sync-capabilities.ts also reads canonical-keys.yaml from a relative path\n  (../syllago/docs/spec/canonical-keys.yaml) to generate canonical-keys/*.json files.\n\nRELATED OPEN EPIC:\n  syllago-jtafb (in_progress): Capability monitor pipeline (capmon)\n  Expanding canonical keys will generate new capmon work — new keys mean new\n  monitoring targets for each provider. Coordinate with capmon epic after keys are defined."
+    }
+  },
+
+  "previousSessions": [
+    {
+      "summary": "syllago-docs Phase 2 complete. Provider page redesign scoped. Holden flagged canonical-keys expansion to all content types as core scope.",
+      "updated": "2026-04-13T14:00:00-07:00",
+      "completedWork": [
+        "Capabilities pipeline Phase 2 deployed: sync-capabilities.ts, MetaBox, CanonicalSupportTable, ProviderExtensions components",
+        "13 canonical key pages live on syllago.dev",
+        "Provider page redesign scoped: per-content-type sections with Native Format / Mappings to Canonical / Provider-specific subsections",
+        "Identified that canonical-keys.yaml must expand beyond skills — this is the syllago-repo followup"
+      ],
+      "nextSteps": [
+        "Expand docs/spec/canonical-keys.yaml to rules, hooks, mcp, agents, commands",
+        "Populate canonical_mappings in all 14 provider-format YAMLs for new content types",
+        "Coordinate with capmon epic (syllago-jtafb) — new keys = new monitoring targets"
+      ]
+    }
+  ]
+}
