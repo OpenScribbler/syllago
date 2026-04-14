@@ -173,7 +173,43 @@ content_types:
         fetch_method: http
         content_hash: "sha256:32313a7e5191527eb7b581717c3eb2731674bfdaacad31ba011892a7955454a1"
         fetched_at: "2026-04-11T21:46:22.150307964Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      handler_types:
+        supported: false
+        mechanism: "Factory Droid hooks execute shell commands only; no other handler types documented"
+        confidence: inferred
+      matcher_patterns:
+        supported: false
+        mechanism: "Factory Droid hooks fire on configured lifecycle events; no per-tool pattern matching documented"
+        confidence: inferred
+      decision_control:
+        supported: true
+        mechanism: "hook_exit_code_behavior: Factory Droid hooks use exit codes to signal block (non-zero) or allow (zero) decisions on the triggering action"
+        confidence: confirmed
+      input_modification:
+        supported: false
+        mechanism: "Factory Droid hooks cannot modify tool input before execution"
+        confidence: inferred
+      async_execution:
+        supported: false
+        mechanism: "Factory Droid hooks run synchronously; no async execution documented"
+        confidence: inferred
+      hook_scopes:
+        supported: false
+        mechanism: "Factory Droid hooks are project-scoped; no multi-scope configuration documented"
+        confidence: inferred
+      json_io_protocol:
+        supported: false
+        mechanism: "Factory Droid hooks communicate via exit codes; no JSON stdin/stdout protocol documented"
+        confidence: inferred
+      context_injection:
+        supported: false
+        mechanism: "Factory Droid hooks cannot inject context into the agent session"
+        confidence: inferred
+      permission_control:
+        supported: false
+        mechanism: "Factory Droid hooks cannot make permission decisions about tool availability"
+        confidence: inferred
     provider_extensions:
       - id: hook_events
         name: Hook Events
@@ -231,7 +267,39 @@ content_types:
         fetch_method: http
         content_hash: "sha256:ff0d835edd7e77e1253a53976aaabc0b4c1eb7dfec570f02810b1648a7f68855"
         fetched_at: "2026-04-11T21:50:30.239613273Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      transport_types:
+        supported: false
+        mechanism: "Factory Droid MCP transport types not documented beyond basic MCP support"
+        confidence: inferred
+      oauth_support:
+        supported: false
+        mechanism: "Factory Droid MCP does not document OAuth 2.0 authentication"
+        confidence: inferred
+      env_var_expansion:
+        supported: false
+        mechanism: "Factory Droid MCP configuration does not document environment variable expansion"
+        confidence: inferred
+      tool_filtering:
+        supported: false
+        mechanism: "Factory Droid does not document per-server MCP tool filtering"
+        confidence: inferred
+      auto_approve:
+        supported: false
+        mechanism: "Factory Droid does not document pre-configured auto-approval for MCP tools"
+        confidence: inferred
+      marketplace:
+        supported: false
+        mechanism: "Factory Droid does not have an in-IDE MCP marketplace"
+        confidence: inferred
+      resource_referencing:
+        supported: false
+        mechanism: "Factory Droid does not document MCP resource referencing"
+        confidence: inferred
+      enterprise_management:
+        supported: false
+        mechanism: "Factory Droid does not document organization-level MCP management"
+        confidence: inferred
     provider_extensions:
       - id: mcp_manager_ui
         name: MCP Manager UI
@@ -260,7 +328,35 @@ content_types:
         fetch_method: http
         content_hash: "sha256:2e109957800e1d85e89f2adcfee98c130b23017b516c8378437a48e50ab4bb08"
         fetched_at: "2026-04-11T21:50:33.339259873Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      definition_format:
+        supported: true
+        mechanism: ".md files in .factory/droids/ (project) or ~/.factory/droids/ (personal); single-file with system prompt, model preference, and tooling policy"
+        confidence: confirmed
+      tool_restrictions:
+        supported: true
+        mechanism: "categorical tool policy using named categories (filesystem, shell, search, browser, web_fetch); differs from per-tool allowlists used by other providers"
+        confidence: confirmed
+      invocation_patterns:
+        supported: true
+        mechanism: "exposed as subagent_type targets for the Task tool; droids enabled by default with live progress reporting in UI"
+        confidence: inferred
+      agent_scopes:
+        supported: true
+        mechanism: "project (.factory/droids/) overrides personal (~/.factory/droids/) on name collision — reverse of skills precedence"
+        confidence: confirmed
+      model_selection:
+        supported: true
+        mechanism: "per-droid model preference field independent of global model setting; enables mixed-model agent compositions"
+        confidence: confirmed
+      per_agent_mcp:
+        supported: false
+        mechanism: "no per-droid MCP configuration documented; MCP is workspace-wide"
+        confidence: inferred
+      subagent_spawning:
+        supported: true
+        mechanism: "droids exposed as subagent_type targets for Task tool delegation; /import-subagent converts Claude Code .claude/agents/*.md to droid format"
+        confidence: inferred
     provider_extensions:
       - id: droid_format
         name: Custom Droid Format
@@ -314,7 +410,15 @@ content_types:
         fetch_method: http
         content_hash: "sha256:fefc0ec7c7fceff7308a330ad6bdb1aa6e19adb113a802871bf2e110a0177260"
         fetched_at: "2026-04-11T21:50:24.284728649Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      argument_substitution:
+        supported: true
+        mechanism: "$ARGUMENTS substitution in Markdown-type commands; equivalent to Claude Code's $ARGUMENTS pattern; Executable commands receive args via shell process stdin/args"
+        confidence: confirmed
+      builtin_commands:
+        supported: false
+        mechanism: "no built-in slash commands documented; Factory commands are user-defined Markdown templates or executables"
+        confidence: inferred
     provider_extensions:
       - id: two_command_types
         name: Two Command Types

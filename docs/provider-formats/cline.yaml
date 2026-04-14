@@ -200,7 +200,43 @@ content_types:
         fetch_method: http
         content_hash: "sha256:96e776a4ac4742a14a2704194094a27bac10a1fda50781772efd11f826cf021f"
         fetched_at: "2026-04-11T21:49:54.580789106Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      handler_types:
+        supported: false
+        mechanism: "Cline hooks execute shell commands only; no HTTP, LLM prompt, or agent handler types documented"
+        confidence: inferred
+      matcher_patterns:
+        supported: false
+        mechanism: "Cline hooks fire on configured lifecycle events; no per-tool pattern matching documented"
+        confidence: inferred
+      decision_control:
+        supported: true
+        mechanism: "pre_tool_use_cancellation: PreToolUse hooks can cancel (block) the tool invocation; no allow or modify sub-capabilities documented"
+        confidence: confirmed
+      input_modification:
+        supported: true
+        mechanism: "context_modification_output: Cline PreToolUse hooks can return modified context/input before tool execution"
+        confidence: confirmed
+      async_execution:
+        supported: false
+        mechanism: "Cline hooks run synchronously before/after tool events; no async execution documented"
+        confidence: inferred
+      hook_scopes:
+        supported: true
+        mechanism: "global_and_project_hooks: Cline supports global (user-wide) and project-level hook configuration"
+        confidence: confirmed
+      json_io_protocol:
+        supported: false
+        mechanism: "Cline hooks communicate via exit codes and output text; no structured JSON stdin/stdout protocol documented"
+        confidence: inferred
+      context_injection:
+        supported: true
+        mechanism: "context_modification_output: Cline hooks can inject additional context into the agent's session via hook output"
+        confidence: confirmed
+      permission_control:
+        supported: false
+        mechanism: "Cline hooks can cancel tool invocations (decision_control) but cannot grant/deny tool availability"
+        confidence: inferred
     provider_extensions:
       - id: eight_hook_types
         name: Eight Named Hook Types
@@ -290,7 +326,39 @@ content_types:
         fetch_method: http
         content_hash: "sha256:20086c5b7211f04f93ca72f61a84b1c23f895a3760121b57a2e0b74c9c967668"
         fetched_at: "2026-04-11T21:49:56.739049379Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      transport_types:
+        supported: true
+        mechanism: "sse_transport_support: Cline supports SSE transport alongside stdio; HTTP transport support follows MCP protocol adoption"
+        confidence: confirmed
+      oauth_support:
+        supported: false
+        mechanism: "Cline MCP does not document OAuth 2.0 authentication for remote servers"
+        confidence: inferred
+      env_var_expansion:
+        supported: false
+        mechanism: "Cline MCP configuration does not document environment variable expansion syntax"
+        confidence: inferred
+      tool_filtering:
+        supported: true
+        mechanism: "always_allow_tools (visibility scope): Cline's always_allow list controls which MCP tools are exposed in the agent's available tool set without per-invocation prompts"
+        confidence: confirmed
+      auto_approve:
+        supported: true
+        mechanism: "always_allow_tools (execution-gating scope): Cline's always_allow list suppresses per-invocation confirmation prompts for listed tools that are already visible"
+        confidence: confirmed
+      marketplace:
+        supported: true
+        mechanism: "mcp_marketplace: Cline has an in-IDE MCP server discovery and installation experience"
+        confidence: confirmed
+      resource_referencing:
+        supported: false
+        mechanism: "Cline does not document @-mention or equivalent access to MCP resources"
+        confidence: inferred
+      enterprise_management:
+        supported: false
+        mechanism: "Cline does not document organization-level MCP configuration management"
+        confidence: inferred
     provider_extensions:
       - id: mcp_marketplace
         name: Built-In MCP Marketplace for Server Discovery and Installation
@@ -358,7 +426,15 @@ content_types:
         fetch_method: http
         content_hash: "sha256:5d4dc3d72dd355242f60f7944fdd36a83ecd5bf084df44ebd9cce60756c2c8c1"
         fetched_at: "2026-04-11T21:46:20.322921534Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      argument_substitution:
+        supported: false
+        mechanism: "custom workflow commands (.clinerules/workflows/*.md) are plain prompt templates with no documented argument substitution mechanism"
+        confidence: inferred
+      builtin_commands:
+        supported: true
+        mechanism: "6 built-in slash commands: /newtask, /smol (/compact), /newrule, /deep-planning, /explain-changes (VS Code only), /reportbug; hardcoded, not user-modifiable"
+        confidence: confirmed
     provider_extensions:
       - id: builtin_slash_commands
         name: Six Built-In Slash Commands

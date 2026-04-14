@@ -170,7 +170,43 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:ca793fbc3b97a6c512d8e8bef238300fb324c52f51c2d48e8374d7d1da246444"
         fetched_at: "2026-04-11T21:50:57Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      handler_types:
+        supported: true
+        mechanism: "pi_extension_typescript_native: Pi hooks support TypeScript/native extension handler type beyond shell commands"
+        confidence: confirmed
+      matcher_patterns:
+        supported: false
+        mechanism: "Pi hooks fire on configured lifecycle events; no per-tool filtering documented"
+        confidence: inferred
+      decision_control:
+        supported: false
+        mechanism: "Pi hooks are observational; no mechanism to block, allow, or modify tool invocations documented"
+        confidence: inferred
+      input_modification:
+        supported: true
+        mechanism: "pi_extension_tool_call_blocking: Pi extensions can intercept and modify tool call inputs before execution"
+        confidence: confirmed
+      async_execution:
+        supported: false
+        mechanism: "Pi hooks run synchronously; no async execution documented"
+        confidence: inferred
+      hook_scopes:
+        supported: false
+        mechanism: "Pi hooks are project-scoped; no multi-scope configuration documented"
+        confidence: inferred
+      json_io_protocol:
+        supported: false
+        mechanism: "Pi hooks communicate via TypeScript extension API; no JSON stdin/stdout protocol for shell hooks"
+        confidence: inferred
+      context_injection:
+        supported: false
+        mechanism: "Pi hooks cannot inject context into the agent session via hook output"
+        confidence: inferred
+      permission_control:
+        supported: false
+        mechanism: "Pi hooks cannot make permission decisions about tool availability"
+        confidence: inferred
     provider_extensions:
       - id: pi_extension_typescript_native
         name: "TypeScript-native extensions loaded via jiti"
@@ -228,7 +264,15 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:1711381eedba5141903b8cc5e9b6a6d36a417953e26dfd12fe1359b8a168fb4c"
         fetched_at: "2026-04-11T21:50:54Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      argument_substitution:
+        supported: true
+        mechanism: "positional expansion: $1, $2 (specific positions), $@ or $ARGUMENTS (all args joined), ${@:N} (args from position N), ${@:N:L} (L args starting at N); richer syntax than most providers"
+        confidence: confirmed
+      builtin_commands:
+        supported: false
+        mechanism: "pi prompt templates are entirely user-defined; no built-in slash commands documented"
+        confidence: inferred
     provider_extensions:
       - id: pi_prompt_template_arguments
         name: "Positional argument expansion in templates"

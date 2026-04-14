@@ -470,7 +470,43 @@ content_types:
         fetch_method: local_file
         content_hash: "sha256:668345c00b5622f2d632670e90d681c7fc408f55997f9ad0707bf2b79de54b4a"
         fetched_at: "2026-04-11T21:48:17Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      handler_types:
+        supported: true
+        mechanism: "Four types: command (shell), http (POST to URL), prompt (LLM evaluation), agent (subagent with tools); prompt/agent restricted to subset of events"
+        confidence: confirmed
+      matcher_patterns:
+        supported: true
+        mechanism: "hook_matcher_patterns: exact string, pipe-separated list, or JavaScript regex; matches on tool_name or event-specific fields"
+        confidence: confirmed
+      decision_control:
+        supported: true
+        mechanism: "block: exit code 2 or decision=block; allow: permissionDecision=allow in hookSpecificOutput; modify: updatedInput replaces tool input before execution"
+        confidence: confirmed
+      input_modification:
+        supported: true
+        mechanism: "hook_input_modification: PreToolUse returns updatedInput in hookSpecificOutput; entire input object replaced; compatible with all permissionDecision values except defer"
+        confidence: confirmed
+      async_execution:
+        supported: true
+        mechanism: "hook_async_execution: async: true on command handlers runs hook in background without blocking; decisions ignored; systemMessage delivered on next turn"
+        confidence: confirmed
+      hook_scopes:
+        supported: true
+        mechanism: "Six scopes: user (~/.claude/settings.json), project (.claude/settings.json), local (.claude/settings.local.json), managed policy, plugin (hooks/hooks.json), component frontmatter"
+        confidence: confirmed
+      json_io_protocol:
+        supported: true
+        mechanism: "Command hooks receive event JSON on stdin; respond with JSON on stdout (exit 0); structured fields: continue, stopReason, suppressOutput, systemMessage, hookSpecificOutput"
+        confidence: confirmed
+      context_injection:
+        supported: true
+        mechanism: "Hooks return systemMessage field in JSON output to inject context into agent's active session"
+        confidence: confirmed
+      permission_control:
+        supported: true
+        mechanism: "hook_permission_update_entries: PermissionRequest hooks return updatedPermissions with addRules/replaceRules/removeRules/setMode entries"
+        confidence: confirmed
     provider_extensions:
       - id: hook_events
         name: Hook Event Set
@@ -686,7 +722,39 @@ content_types:
         fetch_method: md_url
         content_hash: "sha256:6f044532aa9bbec0170cbc708b6624755dc495d996eb6452721f7dcdef6bc76f"
         fetched_at: "2026-04-11T21:49:45Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      transport_types:
+        supported: true
+        mechanism: "mcp_transport_types: stdio (local process), SSE (deprecated, still supported), HTTP/streamable-HTTP (recommended for remote)"
+        confidence: confirmed
+      oauth_support:
+        supported: true
+        mechanism: "mcp_oauth_authentication: OAuth 2.0 for HTTP MCP servers; dynamic client registration; token storage in macOS keychain or credentials file; auto-refresh"
+        confidence: confirmed
+      env_var_expansion:
+        supported: true
+        mechanism: "mcp_env_var_expansion: ${VAR} and ${VAR:-default} syntax in command, args, env, url, and headers fields of .mcp.json"
+        confidence: confirmed
+      tool_filtering:
+        supported: false
+        mechanism: "Claude Code exposes all tools from connected MCP servers; no per-server tool allowlist or blocklist for individual tool visibility"
+        confidence: confirmed
+      auto_approve:
+        supported: false
+        mechanism: "Claude Code does not support pre-configured auto-approval for specific MCP tools; all tool calls require user confirmation unless covered by session permission rules"
+        confidence: confirmed
+      marketplace:
+        supported: false
+        mechanism: "Claude Code does not have an in-IDE MCP marketplace for discovery and installation"
+        confidence: confirmed
+      resource_referencing:
+        supported: true
+        mechanism: "mcp_resources: MCP resources accessible via @server:protocol://path syntax; appear in @ autocomplete; auto-fetched when referenced"
+        confidence: confirmed
+      enterprise_management:
+        supported: true
+        mechanism: "mcp_managed_config: managed-mcp.json for exclusive control, or allowedMcpServers/deniedMcpServers in managed settings for policy-based control"
+        confidence: confirmed
     provider_extensions:
       - id: mcp_transport_types
         name: Three Transport Types (stdio, SSE, HTTP)
@@ -897,7 +965,35 @@ content_types:
         fetch_method: md_url
         content_hash: "sha256:44684e384346ac311a26928caebc047e33ae5506b1fb91286f0e5a83a7c0b67b"
         fetched_at: "2026-04-11T21:49:47Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      definition_format:
+        supported: true
+        mechanism: "Markdown files with YAML frontmatter in .claude/agents/ (project) or ~/.claude/agents/ (user); file body becomes system prompt"
+        confidence: confirmed
+      tool_restrictions:
+        supported: true
+        mechanism: "tools allowlist and disallowedTools denylist in frontmatter; Agent(type) syntax restricts which subagent types a main-thread agent can spawn"
+        confidence: confirmed
+      invocation_patterns:
+        supported: true
+        mechanism: "natural language (Claude auto-delegates), @agent-<name> @-mention, or --agent flag at startup for session-wide agent; 3 patterns"
+        confidence: confirmed
+      agent_scopes:
+        supported: true
+        mechanism: "5 scopes (highest-first): managed settings (org-wide), CLI --agents flag (session), project (.claude/agents/), user (~/.claude/agents/), plugin; highest-priority wins on name collision"
+        confidence: confirmed
+      model_selection:
+        supported: true
+        mechanism: "model frontmatter field accepts sonnet/opus/haiku alias, full model ID, or inherit (default); per-agent override"
+        confidence: confirmed
+      per_agent_mcp:
+        supported: true
+        mechanism: "mcpServers frontmatter field: list of server names referencing already-configured workspace servers or inline server definitions"
+        confidence: confirmed
+      subagent_spawning:
+        supported: true
+        mechanism: "main-thread agents spawn subagents via Agent tool; subagents cannot spawn further subagents; Agent(type) in tools allowlist restricts which subagent types are allowed"
+        confidence: confirmed
     provider_extensions:
       - id: agent_file_format
         name: Markdown + YAML Frontmatter Agent Files
@@ -1072,7 +1168,15 @@ content_types:
         fetch_method: md_url
         content_hash: "sha256:32f6065be9911db2db4845f5b367f5127acdc6441d69beba99c695116d90b8d8"
         fetched_at: "2026-04-11T21:49:49Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      argument_substitution:
+        supported: true
+        mechanism: "$ARGUMENTS (all args), $ARGUMENTS[N] (Nth arg), $N (positional), ${CLAUDE_SESSION_ID} and other env vars; shared with skills argument substitution"
+        confidence: confirmed
+      builtin_commands:
+        supported: true
+        mechanism: "extensive set of built-in slash commands (/help, /clear, /compact, /config, /model, /mcp, /memory, /plan, etc.) plus bundled-skill commands (/batch, /debug, /loop); not user-modifiable"
+        confidence: confirmed
     provider_extensions:
       - id: command_file_format
         name: Command File Format (.md in .claude/commands/)
