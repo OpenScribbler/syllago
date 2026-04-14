@@ -63,13 +63,25 @@ type capExtensionYAML struct {
 	GraduationCandidate *bool  `yaml:"graduation_candidate"` // internal only
 }
 
+// canonicalKeysYAML is the top-level structure of docs/spec/canonical-keys.yaml.
+type canonicalKeysYAML struct {
+	ContentTypes map[string]map[string]canonicalKeyEntryYAML `yaml:"content_types"`
+}
+
+// canonicalKeyEntryYAML is a single key entry under content_types.<type>.
+type canonicalKeyEntryYAML struct {
+	Description string `yaml:"description"`
+	Type        string `yaml:"type"`
+}
+
 // --- JSON output types ---
 
 // CapabilitiesManifest is the top-level structure of capabilities.json.
 type CapabilitiesManifest struct {
-	Version     string                               `json:"version"`
-	GeneratedAt string                               `json:"generated_at"`
-	Providers   map[string]map[string]CapContentType `json:"providers"`
+	Version       string                                 `json:"version"`
+	GeneratedAt   string                                 `json:"generated_at"`
+	CanonicalKeys map[string]map[string]CanonicalKeyMeta `json:"canonical_keys"`
+	Providers     map[string]map[string]CapContentType   `json:"providers"`
 }
 
 // CapContentType describes a single provider+content_type combination in the output.
@@ -104,6 +116,12 @@ type CapExtension struct {
 	SourceRef   string `json:"source_ref,omitempty"`
 }
 
+// CanonicalKeyMeta is a single canonical key's metadata in the JSON output.
+type CanonicalKeyMeta struct {
+	Description string `json:"description"`
+	Type        string `json:"type"`
+}
+
 // --- Cobra command ---
 
 var gencapabilitiesCmd = &cobra.Command{
@@ -121,16 +139,48 @@ func init() {
 // docs/provider-formats/*.yaml files. Overridable in tests.
 var capabilitiesProviderFormatsDir = filepath.Join("..", "docs", "provider-formats")
 
+var canonicalKeysSpecPath = filepath.Join("..", "docs", "spec", "canonical-keys.yaml")
+
+func loadCanonicalKeys(specPath string) (map[string]map[string]CanonicalKeyMeta, error) {
+	raw, err := os.ReadFile(specPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading canonical-keys.yaml: %w", err)
+	}
+
+	var doc canonicalKeysYAML
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		return nil, fmt.Errorf("parsing canonical-keys.yaml: %w", err)
+	}
+
+	result := make(map[string]map[string]CanonicalKeyMeta, len(doc.ContentTypes))
+	for ct, keys := range doc.ContentTypes {
+		result[ct] = make(map[string]CanonicalKeyMeta, len(keys))
+		for keyName, entry := range keys {
+			result[ct][keyName] = CanonicalKeyMeta{
+				Description: strings.TrimSpace(entry.Description),
+				Type:        entry.Type,
+			}
+		}
+	}
+	return result, nil
+}
+
 func runGencapabilities(_ *cobra.Command, _ []string) error {
 	entries, err := loadProviderFormatsDir(capabilitiesProviderFormatsDir)
 	if err != nil {
 		return fmt.Errorf("loading provider formats: %w", err)
 	}
 
+	canonicalKeys, err := loadCanonicalKeys(canonicalKeysSpecPath)
+	if err != nil {
+		return fmt.Errorf("loading canonical keys: %w", err)
+	}
+
 	manifest := CapabilitiesManifest{
-		Version:     "1",
-		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
-		Providers:   entries,
+		Version:       "1",
+		GeneratedAt:   time.Now().UTC().Format(time.RFC3339),
+		CanonicalKeys: canonicalKeys,
+		Providers:     entries,
 	}
 
 	enc := json.NewEncoder(os.Stdout)
