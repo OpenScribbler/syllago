@@ -8,14 +8,26 @@ import (
 	"testing"
 )
 
-// capFixtureDir creates a temp directory with the given YAML files under
-// a provider-formats/ subdirectory. Returns the path to provider-formats/.
+// minimalCanonicalKeysYAML is a minimal valid canonical-keys.yaml fixture for
+// unit tests that need loadCanonicalKeys to succeed without a real spec file.
+const minimalCanonicalKeysYAML = `
+content_types:
+  skills:
+    display_name:
+      description: "Human-readable display name for the skill."
+      type: string
+`
+
+// capFixtureDir creates a temp directory with the given YAML files under a
+// provider-formats/ subdirectory, and also writes a minimal
+// spec/canonical-keys.yaml so unit tests don't require the real spec file.
+// Returns the path to provider-formats/.
 func capFixtureDir(t *testing.T, files map[string]string) string {
 	t.Helper()
 	base := t.TempDir()
 	dir := filepath.Join(base, "provider-formats")
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		t.Fatalf("mkdir: %v", err)
+		t.Fatalf("mkdir provider-formats: %v", err)
 	}
 	for name, content := range files {
 		path := filepath.Join(dir, name)
@@ -23,16 +35,32 @@ func capFixtureDir(t *testing.T, files map[string]string) string {
 			t.Fatalf("write fixture %s: %v", name, err)
 		}
 	}
+	specDir := filepath.Join(base, "spec")
+	if err := os.MkdirAll(specDir, 0755); err != nil {
+		t.Fatalf("mkdir spec: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(specDir, "canonical-keys.yaml"), []byte(minimalCanonicalKeysYAML), 0644); err != nil {
+		t.Fatalf("write canonical-keys.yaml: %v", err)
+	}
 	return dir
 }
 
 // loadCapManifest runs _gencapabilities with the given provider-formats dir and
 // returns the parsed CapabilitiesManifest.
+// It derives the canonical-keys spec path from the parent of providerFormatsDir
+// (e.g. <base>/spec/canonical-keys.yaml), which works for both temp unit-test
+// trees created by capFixtureDir and real repo trees (docs/provider-formats →
+// docs/spec/canonical-keys.yaml).
 func loadCapManifest(t *testing.T, providerFormatsDir string) CapabilitiesManifest {
 	t.Helper()
-	orig := capabilitiesProviderFormatsDir
+
+	origDir := capabilitiesProviderFormatsDir
 	capabilitiesProviderFormatsDir = providerFormatsDir
-	t.Cleanup(func() { capabilitiesProviderFormatsDir = orig })
+	t.Cleanup(func() { capabilitiesProviderFormatsDir = origDir })
+
+	origSpec := canonicalKeysSpecPath
+	canonicalKeysSpecPath = filepath.Join(filepath.Dir(providerFormatsDir), "spec", "canonical-keys.yaml")
+	t.Cleanup(func() { canonicalKeysSpecPath = origSpec })
 
 	raw := captureStdout(t, func() {
 		if err := gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil); err != nil {
@@ -257,9 +285,12 @@ func TestGencapabilities_ConfidenceNotEmitted(t *testing.T) {
 		"test-provider.yaml": minimalSupportedYAML,
 	})
 	raw := captureStdout(t, func() {
-		orig := capabilitiesProviderFormatsDir
+		origDir := capabilitiesProviderFormatsDir
 		capabilitiesProviderFormatsDir = dir
-		defer func() { capabilitiesProviderFormatsDir = orig }()
+		defer func() { capabilitiesProviderFormatsDir = origDir }()
+		origSpec := canonicalKeysSpecPath
+		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
+		defer func() { canonicalKeysSpecPath = origSpec }()
 		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
 	})
 
@@ -273,9 +304,12 @@ func TestGencapabilities_GraduationCandidateNotEmitted(t *testing.T) {
 		"test-provider.yaml": minimalSupportedYAML,
 	})
 	raw := captureStdout(t, func() {
-		orig := capabilitiesProviderFormatsDir
+		origDir := capabilitiesProviderFormatsDir
 		capabilitiesProviderFormatsDir = dir
-		defer func() { capabilitiesProviderFormatsDir = orig }()
+		defer func() { capabilitiesProviderFormatsDir = origDir }()
+		origSpec := canonicalKeysSpecPath
+		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
+		defer func() { canonicalKeysSpecPath = origSpec }()
 		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
 	})
 
@@ -289,9 +323,12 @@ func TestGencapabilities_GenerationMethodNotEmitted(t *testing.T) {
 		"test-provider.yaml": minimalSupportedYAML,
 	})
 	raw := captureStdout(t, func() {
-		orig := capabilitiesProviderFormatsDir
+		origDir := capabilitiesProviderFormatsDir
 		capabilitiesProviderFormatsDir = dir
-		defer func() { capabilitiesProviderFormatsDir = orig }()
+		defer func() { capabilitiesProviderFormatsDir = origDir }()
+		origSpec := canonicalKeysSpecPath
+		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
+		defer func() { canonicalKeysSpecPath = origSpec }()
 		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
 	})
 
@@ -305,9 +342,12 @@ func TestGencapabilities_ContentHashNotEmitted(t *testing.T) {
 		"test-provider.yaml": minimalSupportedYAML,
 	})
 	raw := captureStdout(t, func() {
-		orig := capabilitiesProviderFormatsDir
+		origDir := capabilitiesProviderFormatsDir
 		capabilitiesProviderFormatsDir = dir
-		defer func() { capabilitiesProviderFormatsDir = orig }()
+		defer func() { capabilitiesProviderFormatsDir = origDir }()
+		origSpec := canonicalKeysSpecPath
+		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
+		defer func() { canonicalKeysSpecPath = origSpec }()
 		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
 	})
 
@@ -321,9 +361,12 @@ func TestGencapabilities_FetchMethodNotEmitted(t *testing.T) {
 		"test-provider.yaml": minimalSupportedYAML,
 	})
 	raw := captureStdout(t, func() {
-		orig := capabilitiesProviderFormatsDir
+		origDir := capabilitiesProviderFormatsDir
 		capabilitiesProviderFormatsDir = dir
-		defer func() { capabilitiesProviderFormatsDir = orig }()
+		defer func() { capabilitiesProviderFormatsDir = origDir }()
+		origSpec := canonicalKeysSpecPath
+		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
+		defer func() { canonicalKeysSpecPath = origSpec }()
 		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
 	})
 
@@ -390,9 +433,12 @@ func TestGencapabilities_CanonicalMappingPathsOmittedWhenEmpty(t *testing.T) {
 		"test-provider.yaml": minimalSupportedYAML,
 	})
 	raw := captureStdout(t, func() {
-		orig := capabilitiesProviderFormatsDir
+		origDir := capabilitiesProviderFormatsDir
 		capabilitiesProviderFormatsDir = dir
-		defer func() { capabilitiesProviderFormatsDir = orig }()
+		defer func() { capabilitiesProviderFormatsDir = origDir }()
+		origSpec := canonicalKeysSpecPath
+		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
+		defer func() { canonicalKeysSpecPath = origSpec }()
 		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
 	})
 
@@ -543,9 +589,12 @@ func TestGencapabilities_AllRealProviders(t *testing.T) {
 
 	// No internal fields in raw JSON.
 	raw := captureStdout(t, func() {
-		orig := capabilitiesProviderFormatsDir
+		origDir := capabilitiesProviderFormatsDir
 		capabilitiesProviderFormatsDir = providerFormatsDir
-		defer func() { capabilitiesProviderFormatsDir = orig }()
+		defer func() { capabilitiesProviderFormatsDir = origDir }()
+		origSpec := canonicalKeysSpecPath
+		canonicalKeysSpecPath = filepath.Join(filepath.Dir(providerFormatsDir), "spec", "canonical-keys.yaml")
+		defer func() { canonicalKeysSpecPath = origSpec }()
 		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
 	})
 	for _, forbidden := range []string{"confidence", "graduation_candidate", "generation_method", "content_hash", "fetch_method"} {
