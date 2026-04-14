@@ -20,6 +20,10 @@ last-touched
 db.sqlite
 bd.db
 
+# Embedded Dolt storage (bd 1.0+) — local DB, not portable across machines
+embeddeddolt/
+backup/
+
 # Worktree redirect file (contains relative path to main repo's .beads/)
 # Must not be committed as paths would be wrong in other clones
 redirect
