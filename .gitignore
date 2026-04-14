@@ -51,11 +51,6 @@ tmp/
 # Development workflow state
 .develop/
 
-# Session handoff (ephemeral, not for sharing)
-.handoff.json
-.handoffs/
-cli/.handoffs/
-
 # Scratch working directory (ephemeral review artifacts, panel transcripts, etc.)
 .scratch/
 
