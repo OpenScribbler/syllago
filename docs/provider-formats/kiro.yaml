@@ -103,7 +103,27 @@ content_types:
         fetch_method: http
         content_hash: "sha256:08f403e3c94772a011e9032b775c06280e5bc4da0a6c155763caf8ed11a6fe64"
         fetched_at: "2026-04-11T21:46:23Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      activation_mode:
+        supported: true
+        mechanism: "kiro_steering_inclusion_mode: Kiro steering files support always, conditional, and manual inclusion modes"
+        confidence: confirmed
+      file_imports:
+        supported: true
+        mechanism: "kiro_steering_file_references: Kiro steering files can reference other files using @file syntax"
+        confidence: confirmed
+      cross_provider_recognition:
+        supported: true
+        mechanism: "kiro_agents_md_recognition: Kiro reads AGENTS.md files from other providers in addition to its own steering files"
+        confidence: confirmed
+      auto_memory:
+        supported: false
+        mechanism: "Kiro does not have an AI-generated auto-memory system separate from user-authored steering files"
+        confidence: confirmed
+      hierarchical_loading:
+        supported: false
+        mechanism: "Kiro steering files are project-scoped; no multi-level subdirectory hierarchy documented"
+        confidence: inferred
     provider_extensions:
       - id: kiro_steering_inclusion_mode
         name: "Inclusion mode frontmatter field"

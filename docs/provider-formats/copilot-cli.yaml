@@ -150,7 +150,27 @@ content_types:
         fetch_method: http
         content_hash: "sha256:9a507ae83650172dcaebf94cf885b7272ffff33973eac9cb5440d93e68a7e0e2"
         fetched_at: "2026-04-11T21:50:12.792866253Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      activation_mode:
+        supported: false
+        mechanism: "Copilot CLI rules load unconditionally at session start; no conditional or manual activation modes documented"
+        confidence: inferred
+      file_imports:
+        supported: false
+        mechanism: "No @-import or file inclusion syntax documented for Copilot CLI rule files"
+        confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        mechanism: "agents_md_instructions: Copilot CLI reads AGENTS.md files following the multi-provider shared format"
+        confidence: confirmed
+      auto_memory:
+        supported: false
+        mechanism: "Copilot CLI does not have an AI-generated persistent memory system for rules"
+        confidence: confirmed
+      hierarchical_loading:
+        supported: true
+        mechanism: "Copilot CLI supports repo-wide instructions plus path-specific and personal instruction layers with defined precedence"
+        confidence: confirmed
     provider_extensions:
       - id: repository_wide_instructions
         name: Repository-Wide Custom Instructions

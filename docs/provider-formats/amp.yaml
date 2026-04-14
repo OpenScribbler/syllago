@@ -104,7 +104,27 @@ content_types:
         fetch_method: http
         content_hash: "sha256:b5106eece797ac7545cb02da2144737aac76e04fda8fa88f7c1f1e3052cb1efb"
         fetched_at: "2026-04-11T21:46:11Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      activation_mode:
+        supported: false
+        mechanism: "Amp rule files load unconditionally; no conditional or model-decision activation documented"
+        confidence: inferred
+      file_imports:
+        supported: false
+        mechanism: "No file import syntax documented for Amp rule files"
+        confidence: inferred
+      cross_provider_recognition:
+        supported: false
+        mechanism: "Amp reads its own rule format; no cross-provider rule file recognition documented"
+        confidence: inferred
+      auto_memory:
+        supported: false
+        mechanism: "Amp does not have an AI-generated auto-memory system"
+        confidence: confirmed
+      hierarchical_loading:
+        supported: false
+        mechanism: "Amp rule files are project-scoped; no subdirectory hierarchy documented"
+        confidence: inferred
     provider_extensions:
       - id: canonical_filename
         name: "Canonical filename: AGENT.md"

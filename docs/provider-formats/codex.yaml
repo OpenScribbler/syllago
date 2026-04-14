@@ -202,7 +202,27 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:a1587634c3f841865fdc16f1feb5622459dd5c65c6a6e4f4d08d57519c5f9b49"
         fetched_at: "2026-04-11T21:50:01.867399674Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      activation_mode:
+        supported: false
+        mechanism: "Codex AGENTS.md files load unconditionally; no conditional or model-decision activation documented"
+        confidence: inferred
+      file_imports:
+        supported: false
+        mechanism: "No file import syntax documented for Codex AGENTS.md files"
+        confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        mechanism: "agents_md_filename: Codex reads AGENTS.md files using the standard filename used by multiple providers"
+        confidence: confirmed
+      auto_memory:
+        supported: false
+        mechanism: "Codex does not have an AI-generated auto-memory system"
+        confidence: confirmed
+      hierarchical_loading:
+        supported: true
+        mechanism: "hierarchical_agents_md: Codex loads AGENTS.md from subdirectories with defined precedence (deeper overrides higher)"
+        confidence: confirmed
     provider_extensions:
       - id: agents_md_filename
         name: AGENTS.md Filename

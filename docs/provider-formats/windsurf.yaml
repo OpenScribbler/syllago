@@ -124,7 +124,27 @@ content_types:
         fetch_method: http
         content_hash: "sha256:f548a8f1eb667020edd37631daa1f858325459135b39ef3bc347c9d6891a2c10"
         fetched_at: "2026-04-11T21:51:03.792139198Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      activation_mode:
+        supported: true
+        mechanism: "activation_modes extension: always (unconditional), conditional (glob patterns), model (AI decides), manual (explicit toggle)"
+        confidence: confirmed
+      file_imports:
+        supported: false
+        mechanism: "No @-import or file inclusion syntax documented for Windsurf rule files"
+        confidence: confirmed
+      cross_provider_recognition:
+        supported: true
+        mechanism: "agents_md_auto_scoping: Windsurf reads AGENTS.md files from other providers and applies them with workspace-aware scoping"
+        confidence: confirmed
+      auto_memory:
+        supported: true
+        mechanism: "auto_generated_memories: Windsurf AI generates persistent memories stored in .windsurf/memories/ as rule-like files"
+        confidence: confirmed
+      hierarchical_loading:
+        supported: false
+        mechanism: "Windsurf rule files are global or workspace-scoped; no subdirectory precedence model documented"
+        confidence: inferred
     provider_extensions:
       - id: activation_modes
         name: Four activation modes via trigger frontmatter

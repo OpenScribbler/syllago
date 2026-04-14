@@ -306,7 +306,27 @@ content_types:
         fetch_method: md_url
         content_hash: "sha256:695238a6bc917a949ebe5853cd6c5990d584f5bd04106b271fc444af468d8a63"
         fetched_at: "2026-04-11T21:46:19Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      activation_mode:
+        supported: true
+        mechanism: "Always-on (CLAUDE.md loads at every session start); conditional via paths frontmatter in .claude/rules/*.md files (glob-based, triggers on file access)"
+        confidence: confirmed
+      file_imports:
+        supported: true
+        mechanism: "@path/to/file syntax in CLAUDE.md files; relative and absolute paths; recursive up to 5 hops; requires per-project approval"
+        confidence: confirmed
+      cross_provider_recognition:
+        supported: false
+        mechanism: "Claude Code does not natively read rule files defined by other providers"
+        confidence: confirmed
+      auto_memory:
+        supported: true
+        mechanism: "Auto memory saves Claude's accumulated notes to ~/.claude/projects/<project>/memory/MEMORY.md; requires CC v2.1.59+; enabled by default"
+        confidence: confirmed
+      hierarchical_loading:
+        supported: true
+        mechanism: "CLAUDE.md files load from all ancestor directories up to repo root; .claude/rules/ files discovered recursively; user-level rules load before project rules"
+        confidence: confirmed
     provider_extensions:
       - id: claude_md_files
         name: CLAUDE.md Files
