@@ -257,7 +257,43 @@ content_types:
         fetch_method: http
         content_hash: "sha256:6ab7b781d9585adeb4e7214afdd5c730f6328805b6fb6ca2cbc376a89371b941"
         fetched_at: "2026-04-11T21:50:14.951733729Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      handler_types:
+        supported: false
+        mechanism: "Copilot CLI hooks execute shell commands only; no HTTP, LLM prompt, or agent handler types documented"
+        confidence: inferred
+      matcher_patterns:
+        supported: false
+        mechanism: "Copilot CLI hooks fire on all events of their configured type; no per-tool filtering documented"
+        confidence: inferred
+      decision_control:
+        supported: true
+        mechanism: "pre_tool_use_deny: Copilot CLI PreToolUse hooks can deny (block) the tool invocation; no allow or modify documented"
+        confidence: confirmed
+      input_modification:
+        supported: false
+        mechanism: "Copilot CLI hooks cannot modify tool input before execution"
+        confidence: inferred
+      async_execution:
+        supported: false
+        mechanism: "Copilot CLI hooks run synchronously; no async execution documented"
+        confidence: inferred
+      hook_scopes:
+        supported: false
+        mechanism: "Copilot CLI hooks are configured at a single scope level; no multi-scope configuration documented"
+        confidence: inferred
+      json_io_protocol:
+        supported: false
+        mechanism: "Copilot CLI hooks communicate via exit codes; no JSON stdin/stdout protocol documented"
+        confidence: inferred
+      context_injection:
+        supported: false
+        mechanism: "Copilot CLI hooks cannot inject context into the agent session"
+        confidence: inferred
+      permission_control:
+        supported: false
+        mechanism: "Copilot CLI hooks can deny tool invocations (decision_control) but do not govern tool availability"
+        confidence: inferred
     provider_extensions:
       - id: hook_event_types
         name: Six Hook Event Types
@@ -328,7 +364,39 @@ content_types:
         fetch_method: http
         content_hash: "sha256:c74b8a05e0f0632da57344fa58141156da9df5f952c42786d965bf4e74f754f3"
         fetched_at: "2026-04-11T21:48:25.329663064Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      transport_types:
+        supported: false
+        mechanism: "Copilot CLI MCP transport types not documented"
+        confidence: inferred
+      oauth_support:
+        supported: false
+        mechanism: "Copilot CLI MCP does not document OAuth 2.0 authentication"
+        confidence: inferred
+      env_var_expansion:
+        supported: false
+        mechanism: "Copilot CLI MCP configuration does not document environment variable expansion"
+        confidence: inferred
+      tool_filtering:
+        supported: true
+        mechanism: "mcp_tool_allow_deny_flags: Copilot CLI supports per-tool allow and deny flags to control which MCP tools are exposed"
+        confidence: confirmed
+      auto_approve:
+        supported: false
+        mechanism: "Copilot CLI does not document pre-configured auto-approval for MCP tools"
+        confidence: inferred
+      marketplace:
+        supported: false
+        mechanism: "Copilot CLI does not have an in-IDE MCP marketplace"
+        confidence: inferred
+      resource_referencing:
+        supported: false
+        mechanism: "Copilot CLI does not document MCP resource referencing"
+        confidence: inferred
+      enterprise_management:
+        supported: false
+        mechanism: "Copilot CLI does not document organization-level MCP management"
+        confidence: inferred
     provider_extensions:
       - id: builtin_github_mcp_server
         name: Built-In GitHub MCP Server
@@ -410,7 +478,35 @@ content_types:
         fetch_method: http
         content_hash: "sha256:3d60d2d600ab321f7e053b7ff8cdd2b69f02f3d23ee64f7411204556e9a24c5e"
         fetched_at: "2026-04-11T21:46:21.364812422Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      definition_format:
+        supported: true
+        mechanism: ".agent.md files with YAML frontmatter (description required); up to 30,000 chars of Markdown instructions as agent system prompt"
+        confidence: confirmed
+      tool_restrictions:
+        supported: true
+        mechanism: "tools field with cross-provider alias system (execute/shell/Bash, read/Read, edit/Edit, etc.); [\"*\"] grants all tools; unrecognized names silently ignored"
+        confidence: confirmed
+      invocation_patterns:
+        supported: true
+        mechanism: "/agent slash command, natural language instruction, auto-inference (suppressible with disable-model-invocation), or --agent flag; 4 patterns"
+        confidence: confirmed
+      agent_scopes:
+        supported: true
+        mechanism: "project scope (.github/agents/ or .claude/agents/), personal (~/.copilot/agents/), plugin (agents/); personal takes precedence over project"
+        confidence: confirmed
+      model_selection:
+        supported: true
+        mechanism: "model field in frontmatter overrides default model for that agent"
+        confidence: confirmed
+      per_agent_mcp:
+        supported: true
+        mechanism: "mcp-servers inline config in frontmatter; available for cloud agent only; workspace MCP config shared by default"
+        confidence: inferred
+      subagent_spawning:
+        supported: true
+        mechanism: "agents run as subagents with isolated context windows; Git-SHA-based versioning ensures consistency across PR interactions"
+        confidence: confirmed
     provider_extensions:
       - id: agent_profile_format
         name: Agent Profile File Format
@@ -516,7 +612,15 @@ content_types:
         fetch_method: http
         content_hash: "sha256:cc5ffef7b6e12ac8a91049779c9bc99ff690ae25d86a34b4394db972a697cbbf"
         fetched_at: "2026-04-11T21:50:21.588936107Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      argument_substitution:
+        supported: false
+        mechanism: "command file format undocumented; no evidence of argument substitution in plugin.json schema or available sources"
+        confidence: unknown
+      builtin_commands:
+        supported: false
+        mechanism: "Copilot CLI has no standalone slash-command mechanism; extensibility is via plugins that bundle agents/skills/hooks; command format within plugins is undocumented"
+        confidence: inferred
     provider_extensions:
       - id: plugin_system
         name: Plugin System as Commands Distribution Mechanism

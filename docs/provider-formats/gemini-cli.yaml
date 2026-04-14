@@ -170,7 +170,43 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:103bab9f0f8fd7251b97d06c6b7c4e52752427bf23cbacd1379f2aecaaf26e4c"
         fetched_at: "2026-04-11T21:50:38Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      handler_types:
+        supported: false
+        mechanism: "Gemini CLI hooks execute shell commands only; no HTTP, LLM prompt, or agent handler types documented"
+        confidence: inferred
+      matcher_patterns:
+        supported: true
+        mechanism: "hook_matchers: Gemini CLI hooks support event and tool name matching to filter when hooks fire"
+        confidence: confirmed
+      decision_control:
+        supported: true
+        mechanism: "exit_code_semantics: Gemini CLI uses exit codes to signal block (non-zero) or allow (zero) decisions; no modify sub-capability documented"
+        confidence: confirmed
+      input_modification:
+        supported: false
+        mechanism: "Gemini CLI hooks cannot modify tool input before execution"
+        confidence: inferred
+      async_execution:
+        supported: false
+        mechanism: "Gemini CLI hooks run synchronously; no async execution documented"
+        confidence: inferred
+      hook_scopes:
+        supported: false
+        mechanism: "Gemini CLI hooks are project-scoped; no multi-scope configuration documented"
+        confidence: inferred
+      json_io_protocol:
+        supported: true
+        mechanism: "hook_io_protocol: Gemini CLI hooks receive event data as JSON on stdin and return structured JSON responses on stdout"
+        confidence: confirmed
+      context_injection:
+        supported: false
+        mechanism: "Gemini CLI hooks cannot inject context into the agent session"
+        confidence: inferred
+      permission_control:
+        supported: false
+        mechanism: "Gemini CLI hooks control invocation flow via exit codes but do not govern tool availability"
+        confidence: inferred
     provider_extensions:
       - id: hook_events
         name: Hook event system
@@ -277,7 +313,39 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:9a4633c905689c79d06e1e3fe59236ccc76010bce5ef6da38b0ff41e5f14a4b0"
         fetched_at: "2026-04-11T21:46:23Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      transport_types:
+        supported: true
+        mechanism: "transport_types: Gemini CLI documents supported MCP transport protocols including stdio and HTTP"
+        confidence: confirmed
+      oauth_support:
+        supported: false
+        mechanism: "Gemini CLI MCP does not document OAuth 2.0 authentication for remote servers"
+        confidence: inferred
+      env_var_expansion:
+        supported: true
+        mechanism: "env_variable_expansion: Gemini CLI MCP configuration supports environment variable expansion for secrets and paths"
+        confidence: confirmed
+      tool_filtering:
+        supported: true
+        mechanism: "tool_filtering: Gemini CLI supports per-server tool filtering to control which MCP tools are exposed to the agent"
+        confidence: confirmed
+      auto_approve:
+        supported: false
+        mechanism: "Gemini CLI does not document pre-configured auto-approval for specific MCP tools"
+        confidence: inferred
+      marketplace:
+        supported: false
+        mechanism: "Gemini CLI does not have an in-IDE MCP marketplace"
+        confidence: confirmed
+      resource_referencing:
+        supported: true
+        mechanism: "resource_referencing: Gemini CLI supports accessing MCP resources in addition to tools"
+        confidence: confirmed
+      enterprise_management:
+        supported: false
+        mechanism: "Gemini CLI does not document organization-level MCP management"
+        confidence: inferred
     provider_extensions:
       - id: transport_types
         name: Three transport mechanisms
@@ -357,7 +425,15 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:7c721469ae498676be363efdd60e84a539fb5cf2c36d0bffd655efbdb9d53e32"
         fetched_at: "2026-04-11T21:50:35Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      argument_substitution:
+        supported: true
+        mechanism: "{{args}} placeholder injects all user-provided arguments; processed before shell injection (!{...}) and other substitutions; default argument handling collapses newlines"
+        confidence: confirmed
+      builtin_commands:
+        supported: true
+        mechanism: "built-in slash commands include /commands reload (reload command files without restart) and /help; user-defined commands supplement but do not replace built-ins"
+        confidence: confirmed
     provider_extensions:
       - id: toml_format
         name: TOML command file format

@@ -354,7 +354,43 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:4c4412b8cc6eaecbd0f7b39f98a5eba36940983fee0907374aade173d2abc0f5"
         fetched_at: "2026-04-11T21:48:23.78180342Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      handler_types:
+        supported: true
+        mechanism: "hook_handler_types: Codex supports shell command and LLM prompt handler types; TypeScript extension type also documented"
+        confidence: confirmed
+      matcher_patterns:
+        supported: true
+        mechanism: "hook_matcher: Codex hooks support pattern matching to filter which tools or events trigger the hook"
+        confidence: confirmed
+      decision_control:
+        supported: true
+        mechanism: "hook_result_abort: Codex hooks can abort (block) the triggering action; allow and modify sub-capabilities documented via hook result schema"
+        confidence: confirmed
+      input_modification:
+        supported: true
+        mechanism: "hook_updated_input: Codex PreToolUse hooks return modified input arguments that replace the original tool input"
+        confidence: confirmed
+      async_execution:
+        supported: true
+        mechanism: "hook_execution_mode: Codex supports async hook execution mode for fire-and-forget background hook runs"
+        confidence: confirmed
+      hook_scopes:
+        supported: true
+        mechanism: "hook_scope: Codex hooks can be scoped to global/user or project configuration"
+        confidence: confirmed
+      json_io_protocol:
+        supported: false
+        mechanism: "Codex hooks communicate via exit codes and stdout text; no structured JSON stdin/stdout protocol documented"
+        confidence: inferred
+      context_injection:
+        supported: true
+        mechanism: "hook_system_message: Codex hooks can inject a system message into the agent's active session context"
+        confidence: confirmed
+      permission_control:
+        supported: true
+        mechanism: "hook_permission_decision: Codex hooks can return permission decisions that grant or deny tool availability"
+        confidence: confirmed
     provider_extensions:
       - id: hook_events
         name: Hook Events
@@ -487,7 +523,39 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:a5d4e2d40c6ef2de6879ed92bb77a617726455baae31c9d022e09583c9c02592"
         fetched_at: "2026-04-11T21:50:05.188896769Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      transport_types:
+        supported: false
+        mechanism: "Codex MCP transport types not documented beyond basic MCP support; likely stdio only"
+        confidence: inferred
+      oauth_support:
+        supported: true
+        mechanism: "mcp_oauth_support: Codex supports OAuth 2.0 authentication for remote MCP servers"
+        confidence: confirmed
+      env_var_expansion:
+        supported: false
+        mechanism: "Codex MCP configuration does not document environment variable expansion"
+        confidence: inferred
+      tool_filtering:
+        supported: true
+        mechanism: "mcp_enabled_disabled_tools: Codex supports per-server tool enable/disable configuration controlling which tools are exposed to the agent"
+        confidence: confirmed
+      auto_approve:
+        supported: true
+        mechanism: "mcp_per_tool_approval: Codex supports per-tool approval configuration to suppress confirmation prompts for trusted tools"
+        confidence: confirmed
+      marketplace:
+        supported: false
+        mechanism: "Codex does not have an in-IDE MCP marketplace"
+        confidence: confirmed
+      resource_referencing:
+        supported: false
+        mechanism: "Codex does not document MCP resource referencing"
+        confidence: inferred
+      enterprise_management:
+        supported: false
+        mechanism: "Codex does not document organization-level MCP management"
+        confidence: inferred
     provider_extensions:
       - id: mcp_servers_config
         name: MCP Servers Config (config.toml mcp_servers)
@@ -587,7 +655,35 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         fetched_at: "2026-04-11T21:50:09.020830589Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      definition_format:
+        supported: true
+        mechanism: "TOML role config files referenced from config.toml [agents] section; built-in roles (default/explorer/worker) always available without user config"
+        confidence: confirmed
+      tool_restrictions:
+        supported: false
+        mechanism: "role config layers override model/settings but no explicit tool allowlist or denylist in role definitions"
+        confidence: inferred
+      invocation_patterns:
+        supported: true
+        mechanism: "spawn-agent tool at LLM discretion; LLM selects role from dynamically-built role descriptions combining built-in and user-defined roles"
+        confidence: confirmed
+      agent_scopes:
+        supported: true
+        mechanism: "built-in roles always available; user-defined roles in config.toml [agents] section; user-defined roles override built-in roles of same name"
+        confidence: confirmed
+      model_selection:
+        supported: true
+        mechanism: "role config_file can override model and model_reasoning_effort; caller's current profile and model_provider preserved unless explicitly overridden"
+        confidence: confirmed
+      per_agent_mcp:
+        supported: false
+        mechanism: "MCP configuration is workspace-wide; no per-role MCP scoping mechanism"
+        confidence: inferred
+      subagent_spawning:
+        supported: true
+        mechanism: "multi-agent V2 feature flag; max_threads controls concurrent agent count, max_depth controls nesting depth; spawn-agent tool initiates delegation"
+        confidence: confirmed
     provider_extensions:
       - id: agent_roles
         name: Agent Roles (config.toml [agents] section)
@@ -677,7 +773,15 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:0c063e80ca817a88bc7cd81c11669f73dad1941296142153bdac4dc08a733e69"
         fetched_at: "2026-04-11T21:46:20.726110295Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      argument_substitution:
+        supported: false
+        mechanism: "no implementation details captured; only source is a redirect stub to external docs — cannot confirm argument substitution support"
+        confidence: unknown
+      builtin_commands:
+        supported: false
+        mechanism: "no implementation details captured; slash commands feature exists but format and capabilities are undocumented in cached sources"
+        confidence: unknown
     provider_extensions: []
     loading_model: >
       The slash_commands.md source is a redirect stub pointing to the external Codex CLI docs

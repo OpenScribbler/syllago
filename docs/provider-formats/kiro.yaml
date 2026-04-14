@@ -160,7 +160,43 @@ content_types:
         fetch_method: http
         content_hash: "sha256:e43282f9ce63323728328634673447c54bd975962a94a459fa3e91afc0868c22"
         fetched_at: "2026-04-11T21:50:46Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      handler_types:
+        supported: false
+        mechanism: "Kiro hooks execute shell commands only; no HTTP, LLM prompt, or agent handler types documented"
+        confidence: inferred
+      matcher_patterns:
+        supported: false
+        mechanism: "Kiro hooks fire on configured lifecycle events; no per-tool filtering documented"
+        confidence: inferred
+      decision_control:
+        supported: false
+        mechanism: "Kiro hooks are observational; no mechanism to block, allow, or modify tool invocations documented"
+        confidence: inferred
+      input_modification:
+        supported: false
+        mechanism: "Kiro hooks cannot modify tool input before execution"
+        confidence: inferred
+      async_execution:
+        supported: false
+        mechanism: "Kiro hooks run synchronously; no async execution documented"
+        confidence: inferred
+      hook_scopes:
+        supported: false
+        mechanism: "Kiro hooks are project-scoped; no multi-scope configuration documented"
+        confidence: inferred
+      json_io_protocol:
+        supported: false
+        mechanism: "Kiro hooks communicate via exit codes; no JSON stdin/stdout protocol documented"
+        confidence: inferred
+      context_injection:
+        supported: false
+        mechanism: "Kiro hooks cannot inject context into the agent session"
+        confidence: inferred
+      permission_control:
+        supported: false
+        mechanism: "Kiro hooks do not participate in permission decisions"
+        confidence: inferred
     provider_extensions:
       - id: kiro_hook_agent_prompt_action
         name: "Predefined agent prompt as hook action"
@@ -197,7 +233,39 @@ content_types:
         fetch_method: http
         content_hash: "sha256:3b03ca5a338f5ca6f22e3e24cf631fc20ca5b3ab47c20eba3cc209d44f15196a"
         fetched_at: "2026-04-11T21:48:29Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      transport_types:
+        supported: false
+        mechanism: "Kiro MCP transport types not documented beyond basic MCP support"
+        confidence: inferred
+      oauth_support:
+        supported: false
+        mechanism: "Kiro MCP does not document OAuth 2.0 authentication"
+        confidence: inferred
+      env_var_expansion:
+        supported: false
+        mechanism: "Kiro MCP configuration does not document environment variable expansion"
+        confidence: inferred
+      tool_filtering:
+        supported: true
+        mechanism: "kiro_mcp_disabled_tools: Kiro supports per-server tool disable configuration to control which MCP tools are available to the agent"
+        confidence: confirmed
+      auto_approve:
+        supported: true
+        mechanism: "kiro_mcp_auto_approve: Kiro supports per-server or per-tool auto-approval configuration to suppress confirmation prompts"
+        confidence: confirmed
+      marketplace:
+        supported: false
+        mechanism: "Kiro does not have an in-IDE MCP marketplace"
+        confidence: inferred
+      resource_referencing:
+        supported: false
+        mechanism: "Kiro does not document MCP resource referencing"
+        confidence: inferred
+      enterprise_management:
+        supported: false
+        mechanism: "Kiro does not document organization-level MCP management"
+        confidence: inferred
     provider_extensions:
       - id: kiro_mcp_auto_approve
         name: "autoApprove per-server tool list (or wildcard)"
@@ -234,7 +302,35 @@ content_types:
         fetch_method: http
         content_hash: "sha256:a7867da30f7dba23d5e1cc7e9972643fb90937e5dfb18460f4b982d6d1a7906d"
         fetched_at: "2026-04-11T21:50:51Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      definition_format:
+        supported: true
+        mechanism: "JSON config files in .kiro/agents/ (project) or ~/.kiro/agents/ (global); prompt field accepts inline string or file:// URI to external .md file"
+        confidence: confirmed
+      tool_restrictions:
+        supported: true
+        mechanism: "tools array with exact names, wildcards (computer_*), or MCP-namespaced refs (mcp:serverName:toolName); toolsSettings for per-tool config objects"
+        confidence: confirmed
+      invocation_patterns:
+        supported: true
+        mechanism: "keyboard shortcut binding for IDE invocation; welcomeMessage shown on agent start; manual selection via agent picker"
+        confidence: inferred
+      agent_scopes:
+        supported: true
+        mechanism: "project (.kiro/agents/) + global (~/.kiro/agents/); global overrides local on name collision — reverse of most Kiro content types"
+        confidence: confirmed
+      model_selection:
+        supported: true
+        mechanism: "model field in agent JSON config overrides workspace default for that agent"
+        confidence: confirmed
+      per_agent_mcp:
+        supported: true
+        mechanism: "inline mcpServers map per agent config; includeMcpJson boolean controls whether workspace .kiro/mcp.json is merged into agent's server set"
+        confidence: confirmed
+      subagent_spawning:
+        supported: false
+        mechanism: "no subagent spawning mechanism documented for Kiro custom agents"
+        confidence: inferred
     provider_extensions:
       - id: kiro_agent_file_uri_prompt
         name: "File URI for externalizing agent prompt"
