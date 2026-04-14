@@ -1,4 +1,49 @@
 ---
+# Normative Definitions
+#
+# Confidence Enum
+#   confirmed  — Verified directly against provider documentation, first-party test, or
+#                authoritative source code. The mapping author can cite a specific primary source.
+#   inferred   — Extrapolated from related behavior, secondary sources, partial evidence, or
+#                behavioral observation. No primary citation available, but reasoning is
+#                documented in the mechanism field.
+#   unknown    — Default when a capmon sweep cannot establish either of the above. Indicates
+#                the mapping has not been actively verified and should be treated as a research
+#                lead, not ground truth.
+#
+#   Two contributors applying the same evidence to the same provider capability must reach the
+#   same confidence tier. Capmon sweeps may downgrade confidence to unknown when a sweep cannot
+#   verify current provider behavior.
+#
+# Key Lifecycle Policy
+#   Add:        A new key may be introduced when 2+ providers demonstrate the same semantic
+#               concept (graduation threshold: same semantic meaning, not just same name).
+#   Rename:     The old name remains as an alias for at least one capmon cycle, recorded in an
+#               aliases field on the new key entry.
+#   Deprecate:  A key may be deprecated when the underlying concept no longer reflects current
+#               provider reality. Deprecated keys are marked deprecated: true with a replacement
+#               pointer for at least one capmon cycle before removal.
+#   Split:      The original name is retained as an alias to the most common interpretation,
+#               with deprecation applied to the alias after one cycle.
+#   Remove:     Only after the alias/deprecation period. Recorded in a changelog comment here.
+#
+#   Post-publication: Once a key is published in a community-owned spec capability registry,
+#   changes are governed by that spec's change process. Syllago canonical-keys.yaml becomes a
+#   derived reference synchronized from upstream. Syllago-specific lifecycle rules apply only
+#   to keys that remain internal.
+#
+# Staleness and Maintenance
+#   Canonical mappings are a point-in-time snapshot. Capmon (syllago-jtafb) runs scheduled
+#   sweeps that re-verify provider documentation and detect changes. When a sweep cannot verify
+#   a mapping, confidence is downgraded to unknown and the entry is flagged for human review.
+#
+# Public-Spec Inheritance
+#   When canonical keys feed into public interchange specs, those keys inherit the normative
+#   precision requirements of the destination spec. Ambiguity tolerated in internal vocabulary
+#   must be resolved before publication in a community-owned spec capability registry. The
+#   minimum-qualification statements and boundary predicates in this file are written with that
+#   future migration in mind.
+
 # Canonical key vocabulary for syllago capability tracking.
 #
 # This file is the machine-readable source of truth used by:
@@ -88,4 +133,217 @@ content_types:
       description: >
         Whether the provider supports custom filenames (beyond the canonical
         filename convention).
+      type: bool
+
+  rules:
+    activation_mode:
+      description: >
+        How rules decide when to load into context. Providers implement varying modes:
+        always-on, conditional/glob-based, model-decision, and manual activation.
+        Tracks which modes the provider supports and how they are configured.
+      type: object
+
+    file_imports:
+      description: >
+        Whether rules can reference or include content from other files. Mechanisms vary:
+        @-import syntax, @file.md directives, @path/to/file references.
+      type: bool
+
+    cross_provider_recognition:
+      description: >
+        Which rule file formats from other providers this provider recognizes.
+        Contents: recognized_formats (list of filenames like AGENTS.md, .cursorrules,
+        .windsurfrules). Minimum qualification: supported when the provider reads at least
+        one rule-file format defined by a different provider.
+      type: object
+
+    auto_memory:
+      description: >
+        Whether the provider auto-generates persistent rules from conversation context.
+        Distinct from user-authored rules — these are AI-created and stored separately.
+      type: bool
+
+    hierarchical_loading:
+      description: >
+        Whether rules load from multiple directory levels with defined precedence.
+        Enables project-root rules plus subdirectory-scoped overrides.
+      type: bool
+
+  hooks:
+    handler_types:
+      description: >
+        What kinds of executors hooks support beyond shell commands. May include HTTP
+        endpoints, LLM prompt evaluation, multi-turn agent handlers, or TypeScript
+        extensions.
+      type: object
+
+    matcher_patterns:
+      description: >
+        Whether hooks can filter which tools or events they respond to using name
+        matching, regex patterns, or structured criteria.
+      type: bool
+
+    decision_control:
+      description: >
+        Which decision actions hooks can take on the triggering action. Contents:
+        {block: bool, allow: bool, modify: bool}. Mechanisms include exit code
+        contracts, JSON decision fields, or cancel flags. Boundary: decision_control
+        governs whether a tool invocation proceeds; see permission_control for whether
+        a tool is available at all.
+      type: object
+
+    input_modification:
+      description: >
+        Whether hooks can modify tool input arguments before the tool executes.
+        Safety-critical capability — silent degradation creates false security.
+        Minimum qualification: supported when the provider provides any mechanism to
+        modify tool input arguments before execution (e.g., hookSpecificOutput.updatedInput,
+        plugin-mutable args, or equivalent).
+      type: bool
+
+    async_execution:
+      description: >
+        Whether hooks can run asynchronously without blocking the agent's execution
+        loop. Fire-and-forget semantics.
+      type: bool
+
+    hook_scopes:
+      description: >
+        Where hooks can be configured and the precedence model when multiple scopes
+        define hooks for the same event. Common scopes: global/user, project, workspace,
+        managed/enterprise.
+      type: object
+
+    json_io_protocol:
+      description: >
+        Whether hooks communicate with the host via structured JSON on stdin/stdout
+        rather than plain text or exit codes alone.
+      type: bool
+
+    context_injection:
+      description: >
+        Whether hooks can inject messages, system prompts, or conversation context
+        into the agent's active session.
+      type: bool
+
+    permission_control:
+      description: >
+        Whether hooks can make or influence permission decisions determining whether
+        a tool is available for invocation. Minimum qualification: supported when the
+        provider allows hooks to return permission decisions of any kind (grant, deny,
+        or ask). Boundary: permission_control governs whether a tool is available;
+        see decision_control for invocation-flow control.
+      type: bool
+
+  mcp:
+    transport_types:
+      description: >
+        Which MCP transport protocols the provider supports. Common transports: stdio
+        (local process), SSE (Server-Sent Events), HTTP/streamable-HTTP (stateless or
+        streaming).
+      type: object
+
+    oauth_support:
+      description: >
+        Whether the provider supports OAuth 2.0 authentication for remote MCP servers,
+        including token storage and automatic refresh.
+      type: bool
+
+    env_var_expansion:
+      description: >
+        Whether MCP server configuration supports environment variable expansion.
+        Reduces the need for hardcoded secrets in config files.
+      type: bool
+
+    tool_filtering:
+      description: >
+        Which per-server tool filtering mechanisms the provider supports. Contents:
+        {allowlist: bool, blocklist: bool, disable_flag: bool}. Controls which server
+        tools are exposed to the agent. Boundary: tool_filtering governs tool visibility
+        (what appears in the agent's available tool set); see auto_approve for execution
+        gating of visible tools.
+      type: object
+
+    auto_approve:
+      description: >
+        Whether specific MCP tools or entire servers can be configured for automatic
+        approval without per-invocation user confirmation. Boundary: auto_approve governs
+        execution gating (user prompt suppression) for tools that are already visible;
+        see tool_filtering for tool visibility control.
+      type: bool
+
+    marketplace:
+      description: >
+        Whether the provider offers an in-IDE MCP server discovery and installation
+        experience.
+      type: bool
+
+    resource_referencing:
+      description: >
+        Whether MCP resources (not just tools) can be accessed, typically via @-mention
+        syntax or similar referencing mechanisms.
+      type: bool
+
+    enterprise_management:
+      description: >
+        Whether the provider supports organization-level MCP configuration management,
+        including managed server lists, allowlists, and enterprise registries.
+      type: bool
+
+  agents:
+    definition_format:
+      description: >
+        What format agent definitions use. Varies widely: Markdown with YAML frontmatter,
+        JSON config files, TOML sections, or AGENTS.md plain markdown.
+      type: string
+
+    tool_restrictions:
+      description: >
+        Whether agents can be restricted to specific tools via allowlists, denylists,
+        tool categories, or per-tool configuration maps.
+      type: bool
+
+    invocation_patterns:
+      description: >
+        How agents are triggered. Mechanisms include natural language detection,
+        @-mention syntax, slash commands, CLI flags, or automatic delegation.
+      type: object
+
+    agent_scopes:
+      description: >
+        Where agent definitions can live and the priority ordering when definitions
+        exist at multiple levels. Common scopes: project, user/personal,
+        managed/enterprise, CLI-defined.
+      type: object
+
+    model_selection:
+      description: >
+        Whether per-agent model overrides are supported, allowing different agents
+        to use different AI models.
+      type: bool
+
+    per_agent_mcp:
+      description: >
+        Whether agents can have their own MCP server configuration, scoping which
+        external tools each agent can access.
+      type: bool
+
+    subagent_spawning:
+      description: >
+        Whether agents can spawn, delegate to, or resume other agents. Enables
+        multi-agent coordination patterns.
+      type: bool
+
+  commands:
+    argument_substitution:
+      description: >
+        How user-provided arguments are injected into command templates. Mechanisms
+        vary: $ARGUMENTS, {{args}}, positional $1/$2/${@:N}, and other interpolation
+        syntaxes.
+      type: object
+
+    builtin_commands:
+      description: >
+        Whether the provider ships default/built-in commands alongside user-defined
+        custom commands.
       type: bool
