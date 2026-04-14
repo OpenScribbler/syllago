@@ -110,7 +110,27 @@ content_types:
         fetch_method: http
         content_hash: "sha256:ece84e852c185734366ebbb7a1a2936fb6f14bfbadf44cf6749869267f6bcf53"
         fetched_at: "2026-04-11T21:50:26.856210369Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      activation_mode:
+        supported: false
+        mechanism: "Factory Droid rule files load unconditionally; no conditional or model-decision activation documented"
+        confidence: inferred
+      file_imports:
+        supported: false
+        mechanism: "No file import syntax documented for Factory Droid rule files"
+        confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        mechanism: "agents_md_format: Factory Droid reads AGENTS.md files in the shared multi-provider format"
+        confidence: confirmed
+      auto_memory:
+        supported: false
+        mechanism: "Factory Droid does not have an AI-generated auto-memory system"
+        confidence: confirmed
+      hierarchical_loading:
+        supported: true
+        mechanism: "Factory Droid loads global and project rule layers; innermost (most specific) layer takes precedence"
+        confidence: confirmed
     provider_extensions:
       - id: agents_md_format
         name: AGENTS.md Format

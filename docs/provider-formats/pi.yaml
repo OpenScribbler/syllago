@@ -117,7 +117,27 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:f00e73cdd84b357bd6f7833d593baea43fab7e0688a3947ac36098e05427f92b"
         fetched_at: "2026-04-11T21:48:30Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      activation_mode:
+        supported: false
+        mechanism: "Pi rule files load unconditionally; no conditional or model-decision activation documented"
+        confidence: inferred
+      file_imports:
+        supported: false
+        mechanism: "No file import syntax documented for Pi rule files"
+        confidence: inferred
+      cross_provider_recognition:
+        supported: false
+        mechanism: "Pi reads its own rule format; no cross-provider rule file recognition documented"
+        confidence: inferred
+      auto_memory:
+        supported: false
+        mechanism: "Pi does not have an AI-generated auto-memory system"
+        confidence: confirmed
+      hierarchical_loading:
+        supported: false
+        mechanism: "Pi rule files are not documented as supporting multi-level directory loading"
+        confidence: inferred
     provider_extensions:
       - id: pi_rules_via_skill_md
         name: "Rules delivered via SKILL.md"

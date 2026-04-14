@@ -119,7 +119,27 @@ content_types:
         fetch_method: http
         content_hash: "sha256:a5d75547c59146960fdd0ae67218b640e4d011a5a1f854b70a63f93ac8b822a0"
         fetched_at: "2026-04-11T21:49:51.899572822Z"
-    canonical_mappings: {}
+    canonical_mappings:
+      activation_mode:
+        supported: true
+        mechanism: "conditional_rules_paths: Cline supports path-conditional rules alongside always-on rules; conditions use glob patterns"
+        confidence: confirmed
+      file_imports:
+        supported: false
+        mechanism: "No file import/include syntax documented for Cline rule files"
+        confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        mechanism: "multi_source_rule_detection: Cline reads .clinerules/, .cursorrules, CLAUDE.md, and other provider rule files automatically"
+        confidence: confirmed
+      auto_memory:
+        supported: false
+        mechanism: "Cline does not have an AI-generated auto-memory system distinct from user-authored rules"
+        confidence: confirmed
+      hierarchical_loading:
+        supported: false
+        mechanism: "Cline rules are project-scoped or global; no per-subdirectory loading hierarchy documented"
+        confidence: inferred
     provider_extensions:
       - id: multi_source_rule_detection
         name: Multi-Source Rule Detection
