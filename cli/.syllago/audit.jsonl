@@ -954,3 +954,15 @@
 {"ts":"2026-04-12T22:20:31.308668056Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"undetected-json"}
 {"ts":"2026-04-12T22:20:31.331491568Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"test-prov-all"}
 {"ts":"2026-04-12T22:20:31.333275395Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"good-provider"}
+{"ts":"2026-04-14T02:49:45.970511631Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"test-provider-json"}
+{"ts":"2026-04-14T02:49:45.988143248Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"undetected-prov"}
+{"ts":"2026-04-14T02:49:46.005148162Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"detected-prov"}
+{"ts":"2026-04-14T02:49:46.006006409Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"undetected-json"}
+{"ts":"2026-04-14T02:49:46.02308376Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"test-prov-all"}
+{"ts":"2026-04-14T02:49:46.024627732Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"good-provider"}
+{"ts":"2026-04-14T02:50:56.09445448Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"test-provider-json"}
+{"ts":"2026-04-14T02:50:56.111088503Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"undetected-prov"}
+{"ts":"2026-04-14T02:50:56.126081597Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"detected-prov"}
+{"ts":"2026-04-14T02:50:56.126906044Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"undetected-json"}
+{"ts":"2026-04-14T02:50:56.143109936Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"test-prov-all"}
+{"ts":"2026-04-14T02:50:56.144627401Z","version":1,"event_type":"content.install","item_name":"my-skill","item_type":"skills","target":"good-provider"}
