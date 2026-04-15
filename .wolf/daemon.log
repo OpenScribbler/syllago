@@ -1,0 +1,18 @@
+[2026-04-14T17:23:01.186Z] [INFO] Scheduled task: Full anatomy rescan (0 */6 * * *)
+[2026-04-14T17:23:01.188Z] [INFO] Scheduled task: Consolidate old memory (0 2 * * *)
+[2026-04-14T17:23:01.188Z] [INFO] Scheduled task: Token audit report (0 0 * * 1)
+[2026-04-14T17:23:01.188Z] [INFO] Scheduled task: Cerebrum reflection (0 3 * * 0)
+[2026-04-14T17:23:01.189Z] [INFO] Scheduled task: AI suggestions (0 4 * * 1)
+[2026-04-14T17:23:01.190Z] [INFO] File watcher started on .wolf/
+[2026-04-14T17:23:01.190Z] [INFO] OpenWolf daemon started
+[2026-04-14T17:23:01.191Z] [INFO] Dashboard server listening on port 18791
+[2026-04-14T19:00:00.973Z] [INFO] Executing task: Full anatomy rescan
+[2026-04-14T19:00:01.355Z] [INFO] Task Full anatomy rescan completed in 382ms
+[2026-04-15T01:00:00.572Z] [INFO] Executing task: Full anatomy rescan
+[2026-04-15T01:00:00.886Z] [INFO] Task Full anatomy rescan completed in 315ms
+[2026-04-15T04:26:25.252Z] [INFO] WebSocket client connected
+[2026-04-15T04:26:34.265Z] [INFO] WebSocket client connected
+[2026-04-15T07:00:00.476Z] [INFO] Executing task: Full anatomy rescan
+[2026-04-15T07:00:00.742Z] [INFO] Task Full anatomy rescan completed in 266ms
+[2026-04-15T13:00:00.520Z] [INFO] Executing task: Full anatomy rescan
+[2026-04-15T13:00:00.559Z] [INFO] Task Full anatomy rescan completed in 39ms

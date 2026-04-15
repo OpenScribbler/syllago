@@ -1,0 +1,1439 @@
+{
+  "version": 1,
+  "created_at": "2026-04-14T17:20:26.414Z",
+  "lifetime": {
+    "total_tokens_estimated": 197774,
+    "total_reads": 124,
+    "total_writes": 71,
+    "total_sessions": 16,
+    "anatomy_hits": 18,
+    "anatomy_misses": 75,
+    "repeated_reads_blocked": 5,
+    "estimated_savings_vs_bare_cli": 47841
+  },
+  "sessions": [
+    {
+      "id": "session-2026-04-14-1334",
+      "started": "2026-04-14T20:34:45.720Z",
+      "ended": "2026-04-14T20:36:32.252Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/resume-handoff.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 1,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-14-1334",
+      "started": "2026-04-14T20:34:45.720Z",
+      "ended": "2026-04-14T21:21:06.846Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/resume-handoff.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/SKILL.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/write-handoff.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.config/pai/hooks/session-handoff-read.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.config/pai/hooks/lib/handoff-utils.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 5,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-14-1438",
+      "started": "2026-04-14T21:38:27.018Z",
+      "ended": "2026-04-14T21:53:35.228Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.beads/.gitignore",
+          "tokens_estimated": 308,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/.beads/.gitignore",
+          "tokens_estimated": 308,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/.beads/config.yaml",
+          "tokens_estimated": 644,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.git/hooks/pre-commit",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/.beads/config.yaml",
+          "tokens_estimated": 600,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.beads/.gitignore",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/.beads/.gitignore",
+          "tokens_estimated": 40,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1260,
+        "output_tokens_estimated": 680,
+        "reads_count": 4,
+        "writes_count": 3,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-14-1453",
+      "started": "2026-04-14T21:53:35.674Z",
+      "ended": "2026-04-14T21:59:48.390Z",
+      "reads": [
+        {
+          "file": "/tmp/handoff_triage_data.txt",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/handoff-triage.md",
+          "tokens_estimated": 2632,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 2632,
+        "reads_count": 1,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-14-1453",
+      "started": "2026-04-14T21:53:35.674Z",
+      "ended": "2026-04-14T22:04:37.579Z",
+      "reads": [
+        {
+          "file": "/tmp/handoff_triage_data.txt",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/handoff-triage.md",
+          "tokens_estimated": 2632,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 2632,
+        "reads_count": 1,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-14-1511",
+      "started": "2026-04-14T22:11:22.799Z",
+      "ended": "2026-04-14T22:23:41.939Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/handoff-triage.md",
+          "tokens_estimated": 5719,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/handoff-triage.md",
+          "tokens_estimated": 8681,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 5719,
+        "output_tokens_estimated": 8681,
+        "reads_count": 1,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-14-1511",
+      "started": "2026-04-14T22:11:22.799Z",
+      "ended": "2026-04-14T22:33:00.856Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/handoff-triage.md",
+          "tokens_estimated": 5719,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/handoff-triage.md",
+          "tokens_estimated": 8681,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 5719,
+        "output_tokens_estimated": 8681,
+        "reads_count": 1,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-14-1540",
+      "started": "2026-04-14T22:40:25.767Z",
+      "ended": "2026-04-14T22:49:40.869Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 308,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/write-handoff.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/resume-handoff.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/SKILL.md",
+          "tokens_estimated": 1434,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/write-handoff.md",
+          "tokens_estimated": 1374,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/resume-handoff.md",
+          "tokens_estimated": 1746,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 308,
+        "output_tokens_estimated": 4578,
+        "reads_count": 3,
+        "writes_count": 4,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-14-1540",
+      "started": "2026-04-14T22:40:25.767Z",
+      "ended": "2026-04-14T22:58:09.079Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 308,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/write-handoff.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/resume-handoff.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/SKILL.md",
+          "tokens_estimated": 1434,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/write-handoff.md",
+          "tokens_estimated": 1374,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/resume-handoff.md",
+          "tokens_estimated": 1746,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/write-handoff.md",
+          "tokens_estimated": 711,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/SKILL.md",
+          "tokens_estimated": 668,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_handoff_titles.md",
+          "tokens_estimated": 502,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 140,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 308,
+        "output_tokens_estimated": 6599,
+        "reads_count": 4,
+        "writes_count": 8,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-14-1540",
+      "started": "2026-04-14T22:40:25.767Z",
+      "ended": "2026-04-14T23:00:14.330Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 308,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/write-handoff.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/resume-handoff.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff-resume/SKILL.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/SKILL.md",
+          "tokens_estimated": 1434,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/write-handoff.md",
+          "tokens_estimated": 1374,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/resume-handoff.md",
+          "tokens_estimated": 1746,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/workflows/write-handoff.md",
+          "tokens_estimated": 711,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/SKILL.md",
+          "tokens_estimated": 668,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_handoff_titles.md",
+          "tokens_estimated": 502,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 140,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff-resume/SKILL.md",
+          "tokens_estimated": 236,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 308,
+        "output_tokens_estimated": 6835,
+        "reads_count": 5,
+        "writes_count": 9,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-15-1739",
+      "started": "2026-04-15T00:39:22.130Z",
+      "ended": "2026-04-15T01:04:03.740Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/docs/plans/2026-04-14-provider-pages-redesign-implementation.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 1,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-15-1820",
+      "started": "2026-04-15T01:20:56.045Z",
+      "ended": "2026-04-15T01:24:55.591Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.claude/skills/develop/workflows/create-beads.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/lib/wolf-client.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/App.tsx",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/README.md",
+          "tokens_estimated": 4257,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/hooks/useWolfData.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/hooks/useLiveUpdates.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/daemon/wolf-daemon.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/cli/dashboard.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 483,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/daemon/file-watcher.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups-validation-report.md",
+          "tokens_estimated": 1714,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 375,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 4740,
+        "output_tokens_estimated": 2089,
+        "reads_count": 10,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-15-1820",
+      "started": "2026-04-15T01:20:56.045Z",
+      "ended": "2026-04-15T01:30:06.390Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.claude/skills/develop/workflows/create-beads.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/lib/wolf-client.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/App.tsx",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/README.md",
+          "tokens_estimated": 4257,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/hooks/useWolfData.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/hooks/useLiveUpdates.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/daemon/wolf-daemon.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/cli/dashboard.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 483,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/daemon/file-watcher.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-14-cli-provider-extension-followups-implementation.md",
+          "tokens_estimated": 14425,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups-validation-report.md",
+          "tokens_estimated": 1714,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 375,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 19165,
+        "output_tokens_estimated": 2089,
+        "reads_count": 11,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-15-1820",
+      "started": "2026-04-15T01:20:56.045Z",
+      "ended": "2026-04-15T01:33:29.889Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.claude/skills/develop/workflows/create-beads.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/lib/wolf-client.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/App.tsx",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/README.md",
+          "tokens_estimated": 4257,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/hooks/useWolfData.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/hooks/useLiveUpdates.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/daemon/wolf-daemon.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/cli/dashboard.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 483,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/daemon/file-watcher.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-14-cli-provider-extension-followups-implementation.md",
+          "tokens_estimated": 14425,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/docs/plans/2026-04-14-provider-pages-redesign-design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/info.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_validate_format_doc_cmd_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_validate_format_doc_cmd.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/info_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups-validation-report.md",
+          "tokens_estimated": 1714,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 375,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.config/pai/.research-workflow-state-747aff0c-8dde-40cb-b1ba-09c8fce7781c.json",
+          "tokens_estimated": 28,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 19165,
+        "output_tokens_estimated": 2117,
+        "reads_count": 22,
+        "writes_count": 3,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-15-1820",
+      "started": "2026-04-15T01:20:56.045Z",
+      "ended": "2026-04-15T04:10:01.064Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.claude/skills/develop/workflows/create-beads.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/lib/wolf-client.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/App.tsx",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/README.md",
+          "tokens_estimated": 4257,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/hooks/useWolfData.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/hooks/useLiveUpdates.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/daemon/wolf-daemon.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/cli/dashboard.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 483,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/daemon/file-watcher.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-14-cli-provider-extension-followups-implementation.md",
+          "tokens_estimated": 14425,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/docs/plans/2026-04-14-provider-pages-redesign-design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/info.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_validate_format_doc_cmd_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_validate_format_doc_cmd.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/info_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/develop/workflows/execute.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups-validation-report.md",
+          "tokens_estimated": 1714,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 375,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.config/pai/.research-workflow-state-747aff0c-8dde-40cb-b1ba-09c8fce7781c.json",
+          "tokens_estimated": 28,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups-phase-b.md",
+          "tokens_estimated": 8233,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 48,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 19165,
+        "output_tokens_estimated": 10398,
+        "reads_count": 23,
+        "writes_count": 5,
+        "repeated_reads_blocked": 2,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-15-1820",
+      "started": "2026-04-15T01:20:56.045Z",
+      "ended": "2026-04-15T04:10:10.663Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.claude/skills/develop/workflows/create-beads.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/lib/wolf-client.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/App.tsx",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/README.md",
+          "tokens_estimated": 4257,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/hooks/useWolfData.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/dashboard/app/hooks/useLiveUpdates.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/daemon/wolf-daemon.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/cli/dashboard.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 483,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/research/openwolf/src/daemon/file-watcher.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-14-cli-provider-extension-followups-implementation.md",
+          "tokens_estimated": 14425,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/docs/plans/2026-04-14-provider-pages-redesign-design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/info.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_validate_format_doc_cmd_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_validate_format_doc_cmd.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/info_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/develop/workflows/execute.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups-validation-report.md",
+          "tokens_estimated": 1714,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 375,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.config/pai/.research-workflow-state-747aff0c-8dde-40cb-b1ba-09c8fce7781c.json",
+          "tokens_estimated": 28,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups-phase-b.md",
+          "tokens_estimated": 8233,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 48,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 19165,
+        "output_tokens_estimated": 10398,
+        "reads_count": 23,
+        "writes_count": 5,
+        "repeated_reads_blocked": 2,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-15-0734",
+      "started": "2026-04-15T14:34:17.143Z",
+      "ended": "2026-04-15T15:48:40.786Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_validate_format_doc_cmd_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/output.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_check_cmd.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 283,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_validate_format_doc_cmd.go",
+          "tokens_estimated": 62,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_validate_format_doc_cmd.go",
+          "tokens_estimated": 145,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_validate_format_doc_cmd_test.go",
+          "tokens_estimated": 36,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_validate_format_doc_cmd_test.go",
+          "tokens_estimated": 959,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check.go",
+          "tokens_estimated": 226,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go",
+          "tokens_estimated": 697,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities.go",
+          "tokens_estimated": 1249,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/info.go",
+          "tokens_estimated": 61,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 53,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities_test.go",
+          "tokens_estimated": 1016,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 283,
+        "output_tokens_estimated": 4504,
+        "reads_count": 8,
+        "writes_count": 10,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-15-0853",
+      "started": "2026-04-15T15:53:39.332Z",
+      "ended": "2026-04-15T15:55:08.461Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-15-local-dashboard-design.md",
+          "tokens_estimated": 2692,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 2692,
+        "reads_count": 0,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-15-0853",
+      "started": "2026-04-15T15:53:39.332Z",
+      "ended": "2026-04-15T16:03:36.554Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-15-local-dashboard-design.md",
+          "tokens_estimated": 2692,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/tokens.css",
+          "tokens_estimated": 2039,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/data.js",
+          "tokens_estimated": 1085,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/render.js",
+          "tokens_estimated": 245,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/01-terminal.html",
+          "tokens_estimated": 2122,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/02-notebook.html",
+          "tokens_estimated": 1578,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/03-brutalist.html",
+          "tokens_estimated": 1415,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/04-bauhaus.html",
+          "tokens_estimated": 1731,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/05-cyberpunk.html",
+          "tokens_estimated": 2050,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/06-editorial.html",
+          "tokens_estimated": 1451,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/07-material.html",
+          "tokens_estimated": 2168,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/08-neobrutal.html",
+          "tokens_estimated": 1760,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/09-swiss.html",
+          "tokens_estimated": 1535,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/10-techdoc.html",
+          "tokens_estimated": 2983,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 2010,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 26864,
+        "reads_count": 0,
+        "writes_count": 15,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    }
+  ],
+  "daemon_usage": [],
+  "waste_flags": [],
+  "optimization_report": {
+    "last_generated": null,
+    "patterns": []
+  }
+}
