@@ -128,6 +128,38 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-15T14:39:58.332Z"
+    },
+    {
+      "id": "bug-009",
+      "timestamp": "2026-04-15T16:39:29.909Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/plans/local-dashboard-mockups/index.html",
+      "root_cause": "10 lines replaced/restructured",
+      "fix": "Rewrote 12→6 lines (10 removed) | Also: All mockups share <code>shared/tokens.css</code> (; (mock catalog + providers). Each mockup is self-co",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "html"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-15T16:39:40.367Z"
+    },
+    {
+      "id": "bug-010",
+      "timestamp": "2026-04-15T16:54:31.544Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/plans/local-dashboard-mockups/05-cyberpunk.html",
+      "root_cause": "Had \"slash\"",
+      "fix": "Changed to \"lago\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "html"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-15T16:54:31.544Z"
     }
   ]
 }

@@ -365,6 +365,146 @@ content_types:
 	}
 }
 
+// TestRunCapmonCheck_CIModeCreatesWarningIssues verifies that when GITHUB_TOKEN
+// is set, validation warnings are routed to GitHub issues (not just stderr).
+func TestRunCapmonCheck_CIModeCreatesWarningIssues(t *testing.T) {
+	env := newCheckTestEnv(t)
+
+	testContent := []byte(strings.Repeat("a", 1000))
+	expectedHash := capmon.SHA256Hex(testContent)
+
+	env.writeProviders(t, []string{"test-provider"})
+	env.writeSourceManifest(t, "test-provider")
+
+	// Format doc with a non-allow-listed value_type to trigger a warning.
+	docWithWarning := `provider: test-provider
+last_fetched_at: "2026-04-15T00:00:00Z"
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://example.com/skills.md"
+        type: documentation
+        fetch_method: md_url
+        content_hash: "` + expectedHash + `"
+        fetched_at: "2026-04-15T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "yaml key: name"
+        confidence: confirmed
+    provider_extensions:
+      - id: bad_ext
+        name: "Bad Ext"
+        description: "extension with invalid value_type"
+        source_ref: "https://example.com"
+        value_type: "not-in-allow-list"
+`
+	os.WriteFile(filepath.Join(env.opts.FormatsDir, "test-provider.yaml"), []byte(docWithWarning), 0644)
+	env.setHTTPResponse(t, testContent, "text/html")
+
+	// Set GITHUB_TOKEN to activate CI mode.
+	t.Setenv("GITHUB_TOKEN", "ghp_test_token")
+
+	var issueCreateCalled bool
+	var issueListForWarnCalled bool
+	var closeListCalled bool
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "list" {
+			for _, a := range args {
+				if a == "capmon-warn" {
+					issueListForWarnCalled = true
+				}
+			}
+			return []byte(`[]`), nil
+		}
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "create" {
+			for _, a := range args {
+				if a == "capmon-warn" {
+					issueCreateCalled = true
+				}
+			}
+			return []byte("https://github.com/test/repo/issues/88\n"), nil
+		}
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "close" {
+			closeListCalled = true
+			return []byte(""), nil
+		}
+		return []byte(""), nil
+	})
+	t.Cleanup(func() { capmon.SetGHCommandForTest(nil) })
+
+	err := capmon.RunCapmonCheck(context.Background(), env.opts)
+	if err != nil {
+		t.Fatalf("RunCapmonCheck: %v", err)
+	}
+	if !issueListForWarnCalled {
+		t.Error("expected gh issue list call with capmon-warn label")
+	}
+	if !issueCreateCalled {
+		t.Error("expected gh issue create call with capmon-warn label (new warning)")
+	}
+	// Close list is called even though nothing needs closing — it queries then skips.
+	_ = closeListCalled
+}
+
+// TestRunCapmonCheck_CIModeDryRunSkipsIssues verifies that dry-run mode does NOT
+// create warning issues even when GITHUB_TOKEN is set.
+func TestRunCapmonCheck_CIModeDryRunSkipsIssues(t *testing.T) {
+	env := newCheckTestEnv(t)
+
+	testContent := []byte(strings.Repeat("b", 1000))
+	expectedHash := capmon.SHA256Hex(testContent)
+
+	env.writeProviders(t, []string{"test-provider"})
+	env.writeSourceManifest(t, "test-provider")
+
+	docWithWarning := `provider: test-provider
+last_fetched_at: "2026-04-15T00:00:00Z"
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://example.com/skills.md"
+        type: documentation
+        fetch_method: md_url
+        content_hash: "` + expectedHash + `"
+        fetched_at: "2026-04-15T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "yaml key: name"
+        confidence: confirmed
+    provider_extensions:
+      - id: bad_ext
+        name: "Bad Ext"
+        description: "extension with invalid value_type"
+        source_ref: "https://example.com"
+        value_type: "not-in-allow-list"
+`
+	os.WriteFile(filepath.Join(env.opts.FormatsDir, "test-provider.yaml"), []byte(docWithWarning), 0644)
+	env.setHTTPResponse(t, testContent, "text/html")
+
+	t.Setenv("GITHUB_TOKEN", "ghp_test_token")
+
+	ghCalled := false
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		ghCalled = true
+		return nil, nil
+	})
+	t.Cleanup(func() { capmon.SetGHCommandForTest(nil) })
+
+	opts := env.opts
+	opts.DryRun = true
+	err := capmon.RunCapmonCheck(context.Background(), opts)
+	if err != nil {
+		t.Fatalf("RunCapmonCheck dry-run: %v", err)
+	}
+	if ghCalled {
+		t.Error("dry-run + CI mode: expected no gh calls for warnings")
+	}
+}
+
 func TestRunCapmonCheck_DryRun(t *testing.T) {
 	env := newCheckTestEnv(t)
 
