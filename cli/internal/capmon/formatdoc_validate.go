@@ -1,13 +1,79 @@
 package capmon
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
+
+// allowedValueTypes is the controlled vocabulary for provider_extensions[i].value_type.
+// Values outside this list produce a warning (not an error).
+var allowedValueTypes = map[string]bool{
+	"string":            true,
+	"string[]":          true,
+	"string | string[]": true,
+	"bool":              true,
+	"int":               true,
+	"object":            true,
+	"object[]":          true,
+	"path":              true,
+}
+
+// allowedExampleLangs is the controlled vocabulary for provider_extensions[i].examples[j].lang.
+var allowedExampleLangs = map[string]bool{
+	"yaml":       true,
+	"json":       true,
+	"toml":       true,
+	"bash":       true,
+	"javascript": true,
+	"typescript": true,
+	"python":     true,
+	"markdown":   true,
+	"mdx":        true,
+	"ini":        true,
+	"dotenv":     true,
+}
+
+// allowedSourceSections is the controlled vocabulary for sources[i].section.
+// Extension-specific values like "Extension: <field-name>" are component-generated,
+// not authored in YAML, so they do not appear here.
+var allowedSourceSections = map[string]bool{
+	"All":                true,
+	"Native Format":      true,
+	"Canonical Mappings": true,
+	"Extensions":         true,
+}
+
+// ValidationWarning is a non-fatal allow-list violation found in a format doc.
+type ValidationWarning struct {
+	File    string // absolute path to the YAML file
+	Field   string // dotted field path, e.g., "content_types.skills.provider_extensions[model].value_type"
+	Value   string // the offending value
+	Message string // human-readable explanation
+}
+
+// DeduplicationKey returns the SHA-256-based key used to deduplicate GitHub issues for this warning.
+// Key format: sha256(<file> + "\x00" + <field> + "\x00" + <value>), first 16 hex chars.
+func (w ValidationWarning) DeduplicationKey() string {
+	h := sha256.Sum256([]byte(w.File + "\x00" + w.Field + "\x00" + w.Value))
+	return fmt.Sprintf("%x", h[:8])
+}
+
+// sortedKeys returns a sorted slice of the keys of a string→bool map.
+// Used for deterministic error messages.
+func sortedKeys(m map[string]bool) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
 
 // canonicalKeysFile is the minimal structure we need from canonical-keys.yaml.
 type canonicalKeysFile struct {
@@ -151,4 +217,79 @@ func ValidateFormatDoc(formatsDir, canonicalKeysPath, provider string) error {
 		return fmt.Errorf("%s", strings.Join(errs, "\n"))
 	}
 	return nil
+}
+
+// ValidateFormatDocWithWarnings validates a format doc and returns both
+// blocking errors and non-blocking allow-list warnings.
+// The caller decides what to do with warnings (log, open GH issue, etc.).
+func ValidateFormatDocWithWarnings(formatsDir, canonicalKeysPath, provider string) ([]ValidationWarning, error) {
+	if err := ValidateFormatDoc(formatsDir, canonicalKeysPath, provider); err != nil {
+		return nil, err
+	}
+
+	docPath := FormatDocPath(formatsDir, provider)
+	doc, err := LoadFormatDoc(docPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var warnings []ValidationWarning
+
+	for ct, ctDoc := range doc.ContentTypes {
+		for i, src := range ctDoc.Sources {
+			if src.Section != "" && !allowedSourceSections[src.Section] {
+				field := fmt.Sprintf("content_types.%s.sources[%d].section", ct, i)
+				warnings = append(warnings, ValidationWarning{
+					File:    docPath,
+					Field:   field,
+					Value:   src.Section,
+					Message: fmt.Sprintf("section %q not in allow-list %v", src.Section, sortedKeys(allowedSourceSections)),
+				})
+			}
+		}
+
+		for _, ext := range ctDoc.ProviderExtensions {
+			if ext.ValueType != "" && !allowedValueTypes[ext.ValueType] {
+				field := fmt.Sprintf("content_types.%s.provider_extensions[%s].value_type", ct, ext.ID)
+				warnings = append(warnings, ValidationWarning{
+					File:    docPath,
+					Field:   field,
+					Value:   ext.ValueType,
+					Message: fmt.Sprintf("value_type %q not in allow-list %v", ext.ValueType, sortedKeys(allowedValueTypes)),
+				})
+			}
+			for j, ex := range ext.Examples {
+				if ex.Lang == "" {
+					field := fmt.Sprintf("content_types.%s.provider_extensions[%s].examples[%d].lang", ct, ext.ID, j)
+					warnings = append(warnings, ValidationWarning{
+						File:    docPath,
+						Field:   field,
+						Value:   "",
+						Message: "examples[].lang is required and must be non-empty",
+					})
+					continue
+				}
+				if !allowedExampleLangs[ex.Lang] {
+					field := fmt.Sprintf("content_types.%s.provider_extensions[%s].examples[%d].lang", ct, ext.ID, j)
+					warnings = append(warnings, ValidationWarning{
+						File:    docPath,
+						Field:   field,
+						Value:   ex.Lang,
+						Message: fmt.Sprintf("lang %q not in allow-list %v", ex.Lang, sortedKeys(allowedExampleLangs)),
+					})
+				}
+				if ex.Code == "" {
+					field := fmt.Sprintf("content_types.%s.provider_extensions[%s].examples[%d].code", ct, ext.ID, j)
+					warnings = append(warnings, ValidationWarning{
+						File:    docPath,
+						Field:   field,
+						Value:   "",
+						Message: "examples[].code is required and must be non-empty",
+					})
+				}
+			}
+		}
+	}
+
+	return warnings, nil
 }

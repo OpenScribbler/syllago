@@ -40,6 +40,8 @@ type SourceRef struct {
 	FetchMethod string `yaml:"fetch_method"`
 	ContentHash string `yaml:"content_hash"`
 	FetchedAt   string `yaml:"fetched_at"`
+	Name        string `yaml:"name,omitempty"`
+	Section     string `yaml:"section,omitempty"`
 }
 
 // CanonicalMapping records how a provider implements a canonical capability key.
@@ -51,18 +53,31 @@ type CanonicalMapping struct {
 	Confidence string   `yaml:"confidence"`
 }
 
+// ExtensionExample is a runnable snippet attached to a provider extension. Examples
+// let the provider pages render copyable code blocks beside each capability so
+// readers can see the syntax in context.
+type ExtensionExample struct {
+	Title string `yaml:"title,omitempty"`
+	Lang  string `yaml:"lang"`
+	Code  string `yaml:"code"`
+	Note  string `yaml:"note,omitempty"`
+}
+
 // ProviderExtension captures a provider-specific capability that has no canonical key yet.
 // Each extension has a stable ID for structural diff (detecting new additions across runs),
 // a source reference pointing to where the capability was found, and a graduation candidate
 // flag indicating whether the capability may be common enough across providers to warrant
 // a canonical key.
 type ProviderExtension struct {
-	ID                  string `yaml:"id"`
-	Name                string `yaml:"name"`
-	Description         string `yaml:"description"`
-	SourceRef           string `yaml:"source_ref"`
-	GraduationCandidate bool   `yaml:"graduation_candidate"`
-	GraduationNotes     string `yaml:"graduation_notes,omitempty"`
+	ID                  string             `yaml:"id"`
+	Name                string             `yaml:"name"`
+	Description         string             `yaml:"description"`
+	SourceRef           string             `yaml:"source_ref"`
+	GraduationCandidate bool               `yaml:"graduation_candidate"`
+	GraduationNotes     string             `yaml:"graduation_notes,omitempty"`
+	Required            *bool              `yaml:"required"`
+	ValueType           string             `yaml:"value_type,omitempty"`
+	Examples            []ExtensionExample `yaml:"examples,omitempty"`
 }
 
 // LoadFormatDoc reads and unmarshals a format doc YAML file.

@@ -150,14 +150,22 @@ func fileStatus(path string) string {
 }
 
 var infoProvidersCmd = &cobra.Command{
-	Use:   "providers",
-	Short: "List all known providers",
+	Use:   "providers [slug]",
+	Short: "List providers or show data quality for a specific slug",
 	Example: `  # List providers and their supported types
   syllago info providers
 
   # JSON output
-  syllago info providers --json`,
+  syllago info providers --json
+
+  # Data quality summary for one provider
+  syllago info providers claude-code
+  syllago info providers claude-code --json`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 1 {
+			return runInfoProvidersSlug(cmd, args)
+		}
 		type provInfo struct {
 			Name  string   `json:"name"`
 			Slug  string   `json:"slug"`
@@ -187,6 +195,46 @@ var infoProvidersCmd = &cobra.Command{
 		}
 		return nil
 	},
+}
+
+// infoProviderFormatsDir is the path to docs/provider-formats/. Overridable in tests.
+var infoProviderFormatsDir = filepath.Join("..", "docs", "provider-formats")
+
+func runInfoProvidersSlug(cmd *cobra.Command, args []string) error {
+	slug := args[0]
+
+	providers, trackingIssues, err := loadProviderFormatsDir(infoProviderFormatsDir)
+	if err != nil {
+		return fmt.Errorf("loading provider formats: %w", err)
+	}
+	dq := computeDataQuality(providers, trackingIssues)
+
+	entry, ok := dq.Providers[slug]
+	if !ok {
+		return fmt.Errorf("provider %q not found in %s", slug, infoProviderFormatsDir)
+	}
+
+	if output.JSON {
+		output.Print(map[string]any{
+			"slug":                         slug,
+			"unspecified_required_count":   entry.UnspecifiedRequiredCount,
+			"unspecified_value_type_count": entry.UnspecifiedValueTypeCount,
+			"unspecified_examples_count":   entry.UnspecifiedExamplesCount,
+			"tracking_issue":               entry.TrackingIssue,
+		})
+		return nil
+	}
+
+	fmt.Fprintf(output.Writer, "Data quality for %s:\n", slug)
+	fmt.Fprintf(output.Writer, "  Extensions missing required field:    %d\n", entry.UnspecifiedRequiredCount)
+	fmt.Fprintf(output.Writer, "  Extensions missing value_type field:  %d\n", entry.UnspecifiedValueTypeCount)
+	fmt.Fprintf(output.Writer, "  Extensions missing examples:          %d\n", entry.UnspecifiedExamplesCount)
+	if entry.TrackingIssue != "" {
+		fmt.Fprintf(output.Writer, "\n  Tracking issue: %s\n", entry.TrackingIssue)
+	} else {
+		fmt.Fprintf(output.Writer, "\n  Tracking issue: (not yet filed)\n")
+	}
+	return nil
 }
 
 var infoFormatsCmd = &cobra.Command{

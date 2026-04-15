@@ -121,9 +121,19 @@ func RunCapmonCheck(ctx context.Context, opts CapmonCheckOptions) error {
 			return fmt.Errorf("capmon check: %w", err)
 		}
 
-		// Step 2: Validate format doc (blocking).
-		if err := ValidateFormatDoc(opts.FormatsDir, opts.CanonicalKeysPath, provider); err != nil {
+		// Step 2: Validate format doc (blocking errors + non-blocking warnings).
+		// Warnings cover allow-list violations (e.g., unknown value_type) that should
+		// surface to operators but not fail the pipeline. A full capmon check run
+		// in CI will additionally route these through a GitHub issue manager
+		// (owned by the jtafb epic) using the per-warning DeduplicationKey; the
+		// stderr path is the local fallback.
+		warnings, err := ValidateFormatDocWithWarnings(opts.FormatsDir, opts.CanonicalKeysPath, provider)
+		if err != nil {
 			return fmt.Errorf("capmon check: validate format doc for %s: %w", provider, err)
+		}
+		for _, w := range warnings {
+			fmt.Fprintf(os.Stderr, "warning: format doc for %q: [%s] %s: %s\n",
+				provider, w.DeduplicationKey(), w.Field, w.Message)
 		}
 
 		// Step 3: Fetch and compare each source URI.

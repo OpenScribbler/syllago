@@ -53,6 +53,10 @@ content_types:
         supported: true
         mechanism: "Variable directory name: .claude/skills/<name>/SKILL.md — directory name is the skill identifier"
         confidence: confirmed
+    # Optional extension depth fields (populated by capmon subagent):
+    # - required: true | false | null (null = source doesn't say)
+    # - value_type: see allow-list in formatdoc_validate.go
+    # - examples: [{title?, lang, code, note?}]
     provider_extensions:
       - id: supporting_files
         name: Supporting Files
@@ -65,6 +69,12 @@ content_types:
           be referenced portably regardless of the current working directory.
         source_ref: "https://code.claude.com/docs/en/skills.md#add-supporting-files"
         graduation_candidate: true
+        required: false
+        value_type: "path"
+        examples:
+          - lang: yaml
+            code: "# No YAML field; this is a filesystem convention"
+            note: "Supporting files live in the skill directory alongside SKILL.md."
 
       - id: auto_invocation
         name: Description-Based Auto-Invocation
