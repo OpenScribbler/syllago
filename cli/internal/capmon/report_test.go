@@ -3,6 +3,7 @@ package capmon_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -261,6 +262,149 @@ func TestAppendCapmonChangeEvent_Success(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("expected --body 'event body text' in args: %v", capturedArgs)
+	}
+}
+
+func TestFindOpenCapmonWarningIssue_Found(t *testing.T) {
+	w := capmon.ValidationWarning{
+		File:  "/tmp/test.yaml",
+		Field: "content_types.skills.provider_extensions[model].value_type",
+		Value: "badtype",
+	}
+	anchor := fmt.Sprintf("<!-- capmon-warn: %s -->", w.DeduplicationKey())
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		return []byte(fmt.Sprintf(`[{"number":55,"body":"%s\nsome body"}]`, anchor)), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	num, found, err := capmon.FindOpenCapmonWarningIssue("test-provider", w)
+	if err != nil {
+		t.Fatalf("FindOpenCapmonWarningIssue: %v", err)
+	}
+	if !found {
+		t.Fatal("expected found=true")
+	}
+	if num != 55 {
+		t.Errorf("issue number = %d, want 55", num)
+	}
+}
+
+func TestFindOpenCapmonWarningIssue_NotFound(t *testing.T) {
+	w := capmon.ValidationWarning{
+		File:  "/tmp/test.yaml",
+		Field: "value_type",
+		Value: "badtype",
+	}
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		return []byte(`[]`), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	_, found, err := capmon.FindOpenCapmonWarningIssue("test-provider", w)
+	if err != nil {
+		t.Fatalf("FindOpenCapmonWarningIssue: %v", err)
+	}
+	if found {
+		t.Error("expected found=false")
+	}
+}
+
+func TestCreateCapmonWarningIssue_Success(t *testing.T) {
+	w := capmon.ValidationWarning{
+		File:    "/tmp/test.yaml",
+		Field:   "value_type",
+		Value:   "badtype",
+		Message: "not in allow-list",
+	}
+	var capturedTitle, capturedBody string
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		for i, a := range args {
+			if a == "--title" && i+1 < len(args) {
+				capturedTitle = args[i+1]
+			}
+			if a == "--body" && i+1 < len(args) {
+				capturedBody = args[i+1]
+			}
+		}
+		return []byte("https://github.com/test/repo/issues/77\n"), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	num, err := capmon.CreateCapmonWarningIssue(context.Background(), "test-provider", w)
+	if err != nil {
+		t.Fatalf("CreateCapmonWarningIssue: %v", err)
+	}
+	if num != 77 {
+		t.Errorf("issue number = %d, want 77", num)
+	}
+	if !strings.Contains(capturedTitle, "capmon-warn-") {
+		t.Errorf("title should contain dedup key prefix, got: %q", capturedTitle)
+	}
+	if !strings.Contains(capturedBody, "capmon-warn:") {
+		t.Errorf("body should contain anchor comment, got: %q", capturedBody)
+	}
+	if !strings.Contains(capturedBody, "badtype") {
+		t.Errorf("body should contain offending value, got: %q", capturedBody)
+	}
+}
+
+func TestCreateCapmonWarningIssue_InvalidSlug(t *testing.T) {
+	w := capmon.ValidationWarning{Field: "x", Value: "y"}
+	_, err := capmon.CreateCapmonWarningIssue(context.Background(), "INVALID SLUG", w)
+	if err == nil {
+		t.Error("expected error for invalid slug")
+	}
+}
+
+func TestCloseResolvedWarningIssues_ClosesStale(t *testing.T) {
+	var closedNumbers []string
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "list" {
+			return []byte(`[
+				{"number":10,"body":"<!-- capmon-warn: aaaa1111bbbb2222 -->\nstale warning"},
+				{"number":20,"body":"<!-- capmon-warn: cccc3333dddd4444 -->\nstill active"}
+			]`), nil
+		}
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "close" {
+			closedNumbers = append(closedNumbers, args[2])
+			return []byte(""), nil
+		}
+		return []byte(""), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	// Only cccc3333dddd4444 is seen — aaaa1111bbbb2222 should be closed.
+	seenKeys := map[string]bool{"cccc3333dddd4444": true}
+	err := capmon.CloseResolvedWarningIssues(context.Background(), "test-provider", seenKeys)
+	if err != nil {
+		t.Fatalf("CloseResolvedWarningIssues: %v", err)
+	}
+	if len(closedNumbers) != 1 || closedNumbers[0] != "10" {
+		t.Errorf("expected to close issue 10, closed: %v", closedNumbers)
+	}
+}
+
+func TestCloseResolvedWarningIssues_NoneToClose(t *testing.T) {
+	var closeCalled bool
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "close" {
+			closeCalled = true
+		}
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "list" {
+			return []byte(`[{"number":10,"body":"<!-- capmon-warn: aaaa1111bbbb2222 -->\nwarning"}]`), nil
+		}
+		return []byte(""), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	// Key is still seen — nothing to close.
+	seenKeys := map[string]bool{"aaaa1111bbbb2222": true}
+	err := capmon.CloseResolvedWarningIssues(context.Background(), "test-provider", seenKeys)
+	if err != nil {
+		t.Fatalf("CloseResolvedWarningIssues: %v", err)
+	}
+	if closeCalled {
+		t.Error("should not close any issues when all keys are still seen")
 	}
 }
 

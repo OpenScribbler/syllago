@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-04-14T17:20:26.414Z",
   "lifetime": {
-    "total_tokens_estimated": 197774,
-    "total_reads": 124,
-    "total_writes": 71,
-    "total_sessions": 16,
-    "anatomy_hits": 18,
+    "total_tokens_estimated": 369644,
+    "total_reads": 128,
+    "total_writes": 168,
+    "total_sessions": 17,
+    "anatomy_hits": 22,
     "anatomy_misses": 75,
     "repeated_reads_blocked": 5,
-    "estimated_savings_vs_bare_cli": 47841
+    "estimated_savings_vs_bare_cli": 48641
   },
   "sessions": [
     {
@@ -1427,6 +1427,583 @@
         "writes_count": 15,
         "repeated_reads_blocked": 0,
         "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-15-0853",
+      "started": "2026-04-15T15:53:39.332Z",
+      "ended": "2026-04-15T16:39:43.530Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 314,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-15-local-dashboard-design.md",
+          "tokens_estimated": 2692,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/tokens.css",
+          "tokens_estimated": 2039,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/data.js",
+          "tokens_estimated": 1085,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/render.js",
+          "tokens_estimated": 245,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/01-terminal.html",
+          "tokens_estimated": 2122,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/02-notebook.html",
+          "tokens_estimated": 1578,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/03-brutalist.html",
+          "tokens_estimated": 1415,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/04-bauhaus.html",
+          "tokens_estimated": 1731,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/05-cyberpunk.html",
+          "tokens_estimated": 2050,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/06-editorial.html",
+          "tokens_estimated": 1451,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/07-material.html",
+          "tokens_estimated": 2168,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/08-neobrutal.html",
+          "tokens_estimated": 1760,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/09-swiss.html",
+          "tokens_estimated": 1535,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/10-techdoc.html",
+          "tokens_estimated": 2983,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 2010,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 11,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/filter.js",
+          "tokens_estimated": 288,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/01-terminal.html",
+          "tokens_estimated": 3336,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/05-cyberpunk.html",
+          "tokens_estimated": 3371,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/07-material.html",
+          "tokens_estimated": 3754,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/10-techdoc.html",
+          "tokens_estimated": 4451,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 103,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 228,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 241,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 314,
+        "output_tokens_estimated": 42647,
+        "reads_count": 1,
+        "writes_count": 24,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-15-0853",
+      "started": "2026-04-15T15:53:39.332Z",
+      "ended": "2026-04-15T16:40:00.164Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 314,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-15-local-dashboard-design.md",
+          "tokens_estimated": 2692,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/tokens.css",
+          "tokens_estimated": 2039,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/data.js",
+          "tokens_estimated": 1085,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/render.js",
+          "tokens_estimated": 245,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/01-terminal.html",
+          "tokens_estimated": 2122,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/02-notebook.html",
+          "tokens_estimated": 1578,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/03-brutalist.html",
+          "tokens_estimated": 1415,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/04-bauhaus.html",
+          "tokens_estimated": 1731,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/05-cyberpunk.html",
+          "tokens_estimated": 2050,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/06-editorial.html",
+          "tokens_estimated": 1451,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/07-material.html",
+          "tokens_estimated": 2168,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/08-neobrutal.html",
+          "tokens_estimated": 1760,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/09-swiss.html",
+          "tokens_estimated": 1535,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/10-techdoc.html",
+          "tokens_estimated": 2983,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 2010,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 11,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/filter.js",
+          "tokens_estimated": 288,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/01-terminal.html",
+          "tokens_estimated": 3336,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/05-cyberpunk.html",
+          "tokens_estimated": 3371,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/07-material.html",
+          "tokens_estimated": 3754,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/10-techdoc.html",
+          "tokens_estimated": 4451,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 103,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 228,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 241,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 314,
+        "output_tokens_estimated": 42647,
+        "reads_count": 1,
+        "writes_count": 24,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-15-0853",
+      "started": "2026-04-15T15:53:39.332Z",
+      "ended": "2026-04-15T16:47:25.915Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 314,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-15-local-dashboard-design.md",
+          "tokens_estimated": 2692,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/tokens.css",
+          "tokens_estimated": 2039,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/data.js",
+          "tokens_estimated": 1085,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/render.js",
+          "tokens_estimated": 245,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/01-terminal.html",
+          "tokens_estimated": 2122,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/02-notebook.html",
+          "tokens_estimated": 1578,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/03-brutalist.html",
+          "tokens_estimated": 1415,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/04-bauhaus.html",
+          "tokens_estimated": 1731,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/05-cyberpunk.html",
+          "tokens_estimated": 2050,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/06-editorial.html",
+          "tokens_estimated": 1451,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/07-material.html",
+          "tokens_estimated": 2168,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/08-neobrutal.html",
+          "tokens_estimated": 1760,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/09-swiss.html",
+          "tokens_estimated": 1535,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/10-techdoc.html",
+          "tokens_estimated": 2983,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 2010,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 11,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/filter.js",
+          "tokens_estimated": 288,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/01-terminal.html",
+          "tokens_estimated": 3336,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/05-cyberpunk.html",
+          "tokens_estimated": 3371,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/07-material.html",
+          "tokens_estimated": 3754,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/10-techdoc.html",
+          "tokens_estimated": 4451,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 103,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 228,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 241,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 314,
+        "output_tokens_estimated": 42647,
+        "reads_count": 1,
+        "writes_count": 24,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-15-0853",
+      "started": "2026-04-15T15:53:39.332Z",
+      "ended": "2026-04-15T16:54:36.580Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 314,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-15-local-dashboard-design.md",
+          "tokens_estimated": 2692,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/tokens.css",
+          "tokens_estimated": 2039,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/data.js",
+          "tokens_estimated": 1085,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/render.js",
+          "tokens_estimated": 245,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/01-terminal.html",
+          "tokens_estimated": 2122,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/02-notebook.html",
+          "tokens_estimated": 1578,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/03-brutalist.html",
+          "tokens_estimated": 1415,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/04-bauhaus.html",
+          "tokens_estimated": 1731,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/05-cyberpunk.html",
+          "tokens_estimated": 2050,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/06-editorial.html",
+          "tokens_estimated": 1451,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/07-material.html",
+          "tokens_estimated": 2168,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/08-neobrutal.html",
+          "tokens_estimated": 1760,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/09-swiss.html",
+          "tokens_estimated": 1535,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/10-techdoc.html",
+          "tokens_estimated": 2983,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 2010,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 11,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/filter.js",
+          "tokens_estimated": 288,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/01-terminal.html",
+          "tokens_estimated": 3336,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/05-cyberpunk.html",
+          "tokens_estimated": 3371,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/07-material.html",
+          "tokens_estimated": 3754,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/10-techdoc.html",
+          "tokens_estimated": 4451,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 103,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 228,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 241,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/05-cyberpunk.html",
+          "tokens_estimated": 26,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 314,
+        "output_tokens_estimated": 42673,
+        "reads_count": 1,
+        "writes_count": 25,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
       }
     }
   ],
