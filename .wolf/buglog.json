@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "bugs": [
+    {
+      "id": "bug-001",
+      "timestamp": "2026-04-14T21:33:58.348Z",
+      "error_message": "Significant refactor of ",
+      "file": ".beads/config.yaml",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 7→3 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-14T21:33:58.348Z"
+    },
+    {
+      "id": "bug-002",
+      "timestamp": "2026-04-14T22:57:03.003Z",
+      "error_message": "Significant refactor of ",
+      "file": "../../../.claude/skills/handoff/workflows/write-handoff.md",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 12→40 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-14T22:57:03.003Z"
+    },
+    {
+      "id": "bug-003",
+      "timestamp": "2026-04-14T22:57:25.874Z",
+      "error_message": "Significant refactor of ",
+      "file": "../../../.claude/skills/handoff/SKILL.md",
+      "root_cause": "12 lines replaced/restructured",
+      "fix": "Rewrote 39→56 lines (12 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-14T22:57:25.874Z"
+    },
+    {
+      "id": "bug-004",
+      "timestamp": "2026-04-15T04:27:42.600Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/formatdoc.go",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 13→26 lines (6 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-15T04:27:42.600Z"
+    },
+    {
+      "id": "bug-005",
+      "timestamp": "2026-04-15T04:29:46.662Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/gencapabilities.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 9→20 lines (5 removed) | Also: ID          string `json:\"id\"`; Name        string `json:\"name\"`",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-15T04:29:53.451Z"
+    },
+    {
+      "id": "bug-006",
+      "timestamp": "2026-04-15T04:31:59.102Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/gencapabilities_test.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→6 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-15T04:31:59.102Z"
+    },
+    {
+      "id": "bug-007",
+      "timestamp": "2026-04-15T14:38:02.852Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/check.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→14 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-15T14:38:02.852Z"
+    },
+    {
+      "id": "bug-008",
+      "timestamp": "2026-04-15T14:39:58.332Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/gencapabilities.go",
+      "root_cause": "13 lines replaced/restructured",
+      "fix": "Rewrote 101→132 lines (13 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-15T14:39:58.332Z"
+    }
+  ]
+}
