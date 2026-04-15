@@ -57,6 +57,7 @@ If the user provides a custom version via "Other", validate it's greater than cu
    - **Improvements**, **Security**, **Bug Fixes**: Only include sections with content
    - **Stats**: Files changed, insertions, deletions
    - Omit empty sections entirely
+   - **Never include internal labels.** Release notes are user-facing. Before showing the draft, scrub all internal tokens: beads issue codes (`D1`, `D13`, `D14-delta`, `D16`), task IDs (`T7-T16`, `T27`, `V4`, `V5`), beads slugs (`syllago-jtafb`, `beads-xxx`), epic names, and delta/phase markers that only make sense internally (`D14-delta`, `Phase 2-b`, etc.). If you find yourself copying a label from a commit message or an issue tracker, describe what changed for the user instead of naming the work item. `Phase 1` or `Phase 2` is acceptable only when the user-facing feature genuinely ships in phases and the numbering aids understanding.
 4. Show the draft to the user
 
 ### Step 4: Approve Notes
