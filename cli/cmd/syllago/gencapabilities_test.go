@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // minimalCanonicalKeysYAML is a minimal valid canonical-keys.yaml fixture for
@@ -632,5 +633,364 @@ func TestGencapabilities_ClaudeCodeSkillsHasMappings(t *testing.T) {
 	}
 	if len(skills.Sources) == 0 {
 		t.Error("claude-code skills sources is empty")
+	}
+}
+
+// --- Provider extension new fields (required, value_type, examples) ---
+
+const extensionWithNewFieldsYAML = `
+provider: rich-extension
+last_fetched_at: "2026-04-14T00:00:00Z"
+last_changed_at: "2026-04-14T00:00:00Z"
+generation_method: subagent
+
+content_types:
+  skills:
+    status: supported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions:
+      - id: model_field
+        name: Model Field
+        description: "Which model to use."
+        source_ref: "https://example.com"
+        required: true
+        value_type: "string"
+        examples:
+          - lang: yaml
+            code: "model: claude-haiku"
+            note: "Fast tier."
+      - id: opt_field
+        name: Optional Field
+        description: "An optional thing."
+        source_ref: "https://example.com"
+        required: false
+      - id: unspec_field
+        name: Unspecified Field
+        description: "Unknown required status."
+        source_ref: "https://example.com"
+        graduation_candidate: false
+`
+
+func TestGencapabilities_ExtensionRequiredFieldTrue(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"rich-extension.yaml": extensionWithNewFieldsYAML,
+	})
+	m := loadCapManifest(t, dir)
+	exts := m.Providers["rich-extension"]["skills"].ProviderExtensions
+	if len(exts) < 1 {
+		t.Fatalf("expected >=1 extensions, got %d", len(exts))
+	}
+	if exts[0].Required == nil || *exts[0].Required != true {
+		t.Errorf("exts[0].Required: want *true, got %v", exts[0].Required)
+	}
+	if exts[0].ValueType != "string" {
+		t.Errorf("exts[0].ValueType = %q, want %q", exts[0].ValueType, "string")
+	}
+}
+
+func TestGencapabilities_ExtensionRequiredFieldFalse(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"rich-extension.yaml": extensionWithNewFieldsYAML,
+	})
+	m := loadCapManifest(t, dir)
+	exts := m.Providers["rich-extension"]["skills"].ProviderExtensions
+	if len(exts) < 2 {
+		t.Fatalf("expected >=2 extensions, got %d", len(exts))
+	}
+	if exts[1].Required == nil || *exts[1].Required != false {
+		t.Errorf("exts[1].Required: want *false, got %v", exts[1].Required)
+	}
+}
+
+func TestGencapabilities_ExtensionRequiredFieldNull(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"rich-extension.yaml": extensionWithNewFieldsYAML,
+	})
+	raw := captureStdout(t, func() {
+		origDir := capabilitiesProviderFormatsDir
+		capabilitiesProviderFormatsDir = dir
+		defer func() { capabilitiesProviderFormatsDir = origDir }()
+		origSpec := canonicalKeysSpecPath
+		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
+		defer func() { canonicalKeysSpecPath = origSpec }()
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+	})
+	// Encoder uses SetIndent("  ","  "), so "required": null with a space. Accept either form for robustness.
+	s := string(raw)
+	if !strings.Contains(s, `"required": null`) && !strings.Contains(s, `"required":null`) {
+		t.Error("extension with absent required must emit \"required\": null in JSON")
+	}
+}
+
+func TestGencapabilities_ExtensionExamplesPassthrough(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"rich-extension.yaml": extensionWithNewFieldsYAML,
+	})
+	m := loadCapManifest(t, dir)
+	exts := m.Providers["rich-extension"]["skills"].ProviderExtensions
+	if len(exts) < 1 {
+		t.Fatalf("expected >=1 extensions, got %d", len(exts))
+	}
+	if len(exts[0].Examples) != 1 {
+		t.Fatalf("exts[0].Examples: want 1, got %d", len(exts[0].Examples))
+	}
+	ex := exts[0].Examples[0]
+	if ex.Lang != "yaml" {
+		t.Errorf("example.lang = %q, want %q", ex.Lang, "yaml")
+	}
+	if ex.Code != "model: claude-haiku" {
+		t.Errorf("example.code = %q, want %q", ex.Code, "model: claude-haiku")
+	}
+	if ex.Note != "Fast tier." {
+		t.Errorf("example.note = %q, want %q", ex.Note, "Fast tier.")
+	}
+}
+
+const extensionWithMixedQualityYAML = `
+provider: quality-test
+last_fetched_at: "2026-04-14T00:00:00Z"
+last_changed_at: "2026-04-14T00:00:00Z"
+generation_method: subagent
+
+content_types:
+  skills:
+    status: supported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions:
+      - id: full_ext
+        name: Full Extension
+        description: "Has all depth fields."
+        source_ref: "https://example.com"
+        required: true
+        value_type: "string"
+        examples:
+          - lang: yaml
+            code: "model: x"
+      - id: bare_ext
+        name: Bare Extension
+        description: "Has no depth fields."
+        source_ref: "https://example.com"
+`
+
+const extensionAllFullYAML = `
+provider: all-full
+last_fetched_at: "2026-04-14T00:00:00Z"
+last_changed_at: "2026-04-14T00:00:00Z"
+generation_method: subagent
+
+content_types:
+  skills:
+    status: supported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions:
+      - id: first
+        name: First
+        description: "Fully populated."
+        source_ref: "https://example.com"
+        required: false
+        value_type: "bool"
+        examples:
+          - lang: yaml
+            code: "enabled: true"
+      - id: second
+        name: Second
+        description: "Also fully populated."
+        source_ref: "https://example.com"
+        required: true
+        value_type: "string"
+        examples:
+          - lang: yaml
+            code: "name: foo"
+`
+
+func TestGencapabilities_DataQualityBlockPresent(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"quality-test.yaml": extensionWithMixedQualityYAML,
+	})
+	raw := captureStdout(t, func() {
+		orig := capabilitiesProviderFormatsDir
+		capabilitiesProviderFormatsDir = dir
+		defer func() { capabilitiesProviderFormatsDir = orig }()
+		origSpec := canonicalKeysSpecPath
+		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
+		defer func() { canonicalKeysSpecPath = origSpec }()
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+	})
+	if !strings.Contains(string(raw), `"data_quality"`) {
+		t.Error("manifest must contain \"data_quality\" key")
+	}
+}
+
+func TestGencapabilities_DataQualityCountsAccurate(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"quality-test.yaml": extensionWithMixedQualityYAML,
+	})
+	m := loadCapManifest(t, dir)
+	entry, ok := m.DataQuality.Providers["quality-test"]
+	if !ok {
+		t.Fatal("data_quality.providers.quality-test missing")
+	}
+	if entry.UnspecifiedRequiredCount != 1 {
+		t.Errorf("UnspecifiedRequiredCount = %d, want 1", entry.UnspecifiedRequiredCount)
+	}
+	if entry.UnspecifiedValueTypeCount != 1 {
+		t.Errorf("UnspecifiedValueTypeCount = %d, want 1", entry.UnspecifiedValueTypeCount)
+	}
+	if entry.UnspecifiedExamplesCount != 1 {
+		t.Errorf("UnspecifiedExamplesCount = %d, want 1", entry.UnspecifiedExamplesCount)
+	}
+}
+
+func TestGencapabilities_DataQualityAllZero(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"all-full.yaml": extensionAllFullYAML,
+	})
+	m := loadCapManifest(t, dir)
+	entry, ok := m.DataQuality.Providers["all-full"]
+	if !ok {
+		t.Fatal("data_quality.providers.all-full missing")
+	}
+	if entry.UnspecifiedRequiredCount != 0 || entry.UnspecifiedValueTypeCount != 0 || entry.UnspecifiedExamplesCount != 0 {
+		t.Errorf("all counts must be zero when every extension is fully populated, got %+v", entry)
+	}
+}
+
+func TestGencapabilities_DataQualityGeneratedAtIsRFC3339UTC(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"quality-test.yaml": extensionWithMixedQualityYAML,
+	})
+	m := loadCapManifest(t, dir)
+	if _, err := time.Parse(time.RFC3339, m.GeneratedAt); err != nil {
+		t.Errorf("generated_at %q is not RFC3339: %v", m.GeneratedAt, err)
+	}
+	if !strings.HasSuffix(m.GeneratedAt, "Z") {
+		t.Errorf("generated_at %q must end with Z (UTC)", m.GeneratedAt)
+	}
+}
+
+const sourceWithNameSectionYAML = `
+provider: named-source
+last_fetched_at: "2026-04-14T00:00:00Z"
+last_changed_at: "2026-04-14T00:00:00Z"
+generation_method: subagent
+
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://example.com/docs"
+        type: documentation
+        fetch_method: md_url
+        content_hash: "sha256:zzz"
+        fetched_at: "2026-04-14T00:00:00Z"
+        name: "Skills Handbook"
+        section: "Authoring Skills"
+    canonical_mappings: {}
+    provider_extensions: []
+`
+
+func TestGencapabilities_SourceNameAndSectionPassthrough(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"named-source.yaml": sourceWithNameSectionYAML,
+	})
+	m := loadCapManifest(t, dir)
+	srcs := m.Providers["named-source"]["skills"].Sources
+	if len(srcs) != 1 {
+		t.Fatalf("sources len = %d, want 1", len(srcs))
+	}
+	if srcs[0].Name != "Skills Handbook" {
+		t.Errorf("source.name = %q, want %q", srcs[0].Name, "Skills Handbook")
+	}
+	if srcs[0].Section != "Authoring Skills" {
+		t.Errorf("source.section = %q, want %q", srcs[0].Section, "Authoring Skills")
+	}
+}
+
+func TestGencapabilities_GraduationCandidateStillNotEmitted(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"rich-extension.yaml": extensionWithNewFieldsYAML,
+	})
+	raw := captureStdout(t, func() {
+		origDir := capabilitiesProviderFormatsDir
+		capabilitiesProviderFormatsDir = dir
+		defer func() { capabilitiesProviderFormatsDir = origDir }()
+		origSpec := canonicalKeysSpecPath
+		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
+		defer func() { canonicalKeysSpecPath = origSpec }()
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+	})
+	if strings.Contains(string(raw), "graduation_candidate") {
+		t.Error("regression: new extension fields must not re-emit 'graduation_candidate'")
+	}
+}
+
+// TestGencapabilities_TrackingIssueFromSidecar verifies that a <slug>.quality.json
+// sidecar populates DataQuality.Providers[slug].TrackingIssue in the generated
+// manifest. The sidecar is the back-channel by which the capmon pipeline surfaces
+// open GitHub issues per provider.
+func TestGencapabilities_TrackingIssueFromSidecar(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"quality-test.yaml": extensionWithMixedQualityYAML,
+	})
+	// Write a sidecar alongside the YAML.
+	const issueURL = "https://github.com/example/syllago/issues/42"
+	sidecar := []byte(`{"tracking_issue":"` + issueURL + `"}`)
+	if err := os.WriteFile(filepath.Join(dir, "quality-test.quality.json"), sidecar, 0644); err != nil {
+		t.Fatalf("write sidecar: %v", err)
+	}
+
+	manifest := loadCapManifest(t, dir)
+	entry, ok := manifest.DataQuality.Providers["quality-test"]
+	if !ok {
+		t.Fatal("expected quality-test in DataQuality.Providers")
+	}
+	if entry.TrackingIssue != issueURL {
+		t.Errorf("TrackingIssue = %q, want %q", entry.TrackingIssue, issueURL)
+	}
+}
+
+// TestGencapabilities_TrackingIssueMissingSidecarIsFine verifies that absence of
+// a <slug>.quality.json sidecar does not error and leaves TrackingIssue empty.
+func TestGencapabilities_TrackingIssueMissingSidecarIsFine(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"quality-test.yaml": extensionWithMixedQualityYAML,
+	})
+
+	manifest := loadCapManifest(t, dir)
+	entry, ok := manifest.DataQuality.Providers["quality-test"]
+	if !ok {
+		t.Fatal("expected quality-test in DataQuality.Providers")
+	}
+	if entry.TrackingIssue != "" {
+		t.Errorf("TrackingIssue should be empty without sidecar, got %q", entry.TrackingIssue)
+	}
+}
+
+// TestGencapabilities_TrackingIssueInvalidSidecarFails verifies that a malformed
+// sidecar JSON produces a clear error rather than silently dropping the issue URL.
+func TestGencapabilities_TrackingIssueInvalidSidecarFails(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"quality-test.yaml": extensionWithMixedQualityYAML,
+	})
+	if err := os.WriteFile(filepath.Join(dir, "quality-test.quality.json"), []byte("{not valid json"), 0644); err != nil {
+		t.Fatalf("write sidecar: %v", err)
+	}
+
+	origDir := capabilitiesProviderFormatsDir
+	capabilitiesProviderFormatsDir = dir
+	t.Cleanup(func() { capabilitiesProviderFormatsDir = origDir })
+	origSpec := canonicalKeysSpecPath
+	canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
+	t.Cleanup(func() { canonicalKeysSpecPath = origSpec })
+
+	err := gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
+	if err == nil {
+		t.Fatal("expected error for malformed sidecar JSON")
+	}
+	if !strings.Contains(err.Error(), "quality-test.quality.json") {
+		t.Errorf("error should mention the offending sidecar path, got: %v", err)
 	}
 }

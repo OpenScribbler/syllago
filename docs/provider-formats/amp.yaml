@@ -56,6 +56,10 @@ content_types:
         supported: false
         mechanism: "not documented — only project-scope (.agents/skills/) and user-wide (~/.config/agents/skills/) are described; no enterprise or shared scope exists"
         confidence: confirmed
+    # Optional extension depth fields (populated by capmon subagent):
+    # - required: true | false | null (null = source doesn't say)
+    # - value_type: see allow-list in formatdoc_validate.go
+    # - examples: [{title?, lang, code, note?}]
     provider_extensions:
       - id: mcp_bundling
         name: "MCP server bundling"

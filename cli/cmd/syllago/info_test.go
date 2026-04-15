@@ -143,6 +143,73 @@ func TestInfoTextShowsAllSections(t *testing.T) {
 	}
 }
 
+func TestInfoProvidersSlug_TextOutput(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"quality-test.yaml": extensionWithMixedQualityYAML,
+	})
+	origDir := infoProviderFormatsDir
+	infoProviderFormatsDir = dir
+	t.Cleanup(func() { infoProviderFormatsDir = origDir })
+
+	stdout, _ := output.SetForTest(t)
+	err := infoProvidersCmd.RunE(infoProvidersCmd, []string{"quality-test"})
+	if err != nil {
+		t.Fatalf("info providers quality-test failed: %v", err)
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "quality-test") {
+		t.Errorf("output missing slug name, got:\n%s", out)
+	}
+	if !strings.Contains(out, "1") {
+		t.Errorf("output missing count of 1 for unspecified fields, got:\n%s", out)
+	}
+}
+
+func TestInfoProvidersSlug_JSONOutput(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"quality-test.yaml": extensionWithMixedQualityYAML,
+	})
+	origDir := infoProviderFormatsDir
+	infoProviderFormatsDir = dir
+	t.Cleanup(func() { infoProviderFormatsDir = origDir })
+
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+
+	err := infoProvidersCmd.RunE(infoProvidersCmd, []string{"quality-test"})
+	if err != nil {
+		t.Fatalf("info providers quality-test --json failed: %v", err)
+	}
+	var result map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatalf("invalid JSON: %v\nraw: %s", err, stdout.String())
+	}
+	if result["slug"] != "quality-test" {
+		t.Errorf("slug = %v, want quality-test", result["slug"])
+	}
+	if result["unspecified_required_count"].(float64) != 1 {
+		t.Errorf("unspecified_required_count = %v, want 1", result["unspecified_required_count"])
+	}
+}
+
+func TestInfoProvidersSlug_UnknownSlugError(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"quality-test.yaml": extensionWithMixedQualityYAML,
+	})
+	origDir := infoProviderFormatsDir
+	infoProviderFormatsDir = dir
+	t.Cleanup(func() { infoProviderFormatsDir = origDir })
+
+	_, _ = output.SetForTest(t)
+	err := infoProvidersCmd.RunE(infoProvidersCmd, []string{"nonexistent-provider"})
+	if err == nil {
+		t.Fatal("expected error for unknown provider slug")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("error should mention 'not found', got: %v", err)
+	}
+}
+
 func TestInfoDevBuild(t *testing.T) {
 	oldVersion := version
 	version = ""

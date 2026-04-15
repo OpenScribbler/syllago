@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/OpenScribbler/syllago/cli/internal/capmon"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
@@ -44,10 +45,17 @@ Informational fields (generation_method, notes) are not validated.`,
 			canonicalKeys = capmonCanonicalKeysDirOverride
 		}
 
-		if err := capmon.ValidateFormatDoc(formatsDir, canonicalKeys, provider); err != nil {
+		warnings, err := capmon.ValidateFormatDocWithWarnings(formatsDir, canonicalKeys, provider)
+		if err != nil {
 			return err
 		}
-		fmt.Printf("✓ Schema valid\n✓ All checks passed for provider %q\n", provider)
+		fmt.Fprintf(output.Writer, "✓ Schema valid\n✓ All checks passed for provider %q\n", provider)
+		if len(warnings) > 0 {
+			fmt.Fprintf(output.ErrWriter, "\n%d validation warning(s) for provider %q:\n", len(warnings), provider)
+			for _, w := range warnings {
+				fmt.Fprintf(output.ErrWriter, "  ⚠ [%s] %s: %s\n", w.DeduplicationKey(), w.Field, w.Message)
+			}
+		}
 		return nil
 	},
 }

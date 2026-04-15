@@ -42,6 +42,8 @@ type capSourceYAML struct {
 	FetchMethod string `yaml:"fetch_method"` // internal only
 	ContentHash string `yaml:"content_hash"` // internal only
 	FetchedAt   string `yaml:"fetched_at"`
+	Name        string `yaml:"name,omitempty"`
+	Section     string `yaml:"section,omitempty"`
 }
 
 // capMappingYAML is a single canonical key entry under canonical_mappings.
@@ -53,14 +55,25 @@ type capMappingYAML struct {
 	Confidence string   `yaml:"confidence"` // internal only
 }
 
+// capExtensionExampleYAML is one entry in provider_extensions[i].examples.
+type capExtensionExampleYAML struct {
+	Title string `yaml:"title,omitempty"`
+	Lang  string `yaml:"lang"`
+	Code  string `yaml:"code"`
+	Note  string `yaml:"note,omitempty"`
+}
+
 // capExtensionYAML is a single provider_extensions entry.
 // graduation_candidate is present in YAML but must never be emitted.
 type capExtensionYAML struct {
-	ID                  string `yaml:"id"`
-	Name                string `yaml:"name"`
-	Description         string `yaml:"description"`
-	SourceRef           string `yaml:"source_ref"`
-	GraduationCandidate *bool  `yaml:"graduation_candidate"` // internal only
+	ID                  string                    `yaml:"id"`
+	Name                string                    `yaml:"name"`
+	Description         string                    `yaml:"description"`
+	SourceRef           string                    `yaml:"source_ref"`
+	GraduationCandidate *bool                     `yaml:"graduation_candidate"` // internal only
+	Required            *bool                     `yaml:"required"`
+	ValueType           string                    `yaml:"value_type,omitempty"`
+	Examples            []capExtensionExampleYAML `yaml:"examples,omitempty"`
 }
 
 // canonicalKeysYAML is the top-level structure of docs/spec/canonical-keys.yaml.
@@ -80,8 +93,22 @@ type canonicalKeyEntryYAML struct {
 type CapabilitiesManifest struct {
 	Version       string                                 `json:"version"`
 	GeneratedAt   string                                 `json:"generated_at"`
+	DataQuality   DataQuality                            `json:"data_quality"`
 	CanonicalKeys map[string]map[string]CanonicalKeyMeta `json:"canonical_keys"`
 	Providers     map[string]map[string]CapContentType   `json:"providers"`
+}
+
+// DataQualityEntry holds unspecified-field counts for one provider.
+type DataQualityEntry struct {
+	UnspecifiedRequiredCount  int    `json:"unspecified_required_count"`
+	UnspecifiedValueTypeCount int    `json:"unspecified_value_type_count"`
+	UnspecifiedExamplesCount  int    `json:"unspecified_examples_count"`
+	TrackingIssue             string `json:"tracking_issue,omitempty"`
+}
+
+// DataQuality is the top-level data_quality block in capabilities.json.
+type DataQuality struct {
+	Providers map[string]DataQualityEntry `json:"providers"`
 }
 
 // CapContentType describes a single provider+content_type combination in the output.
@@ -98,6 +125,8 @@ type CapSource struct {
 	URI       string `json:"uri"`
 	Type      string `json:"type"`
 	FetchedAt string `json:"fetched_at"`
+	Name      string `json:"name,omitempty"`
+	Section   string `json:"section,omitempty"`
 }
 
 // CapMapping is the public-facing canonical key entry (confidence stripped).
@@ -107,13 +136,26 @@ type CapMapping struct {
 	Paths     []string `json:"paths,omitempty"`
 }
 
+// CapExampleEntry is the public-facing example entry in provider_extensions.
+type CapExampleEntry struct {
+	Title string `json:"title,omitempty"`
+	Lang  string `json:"lang"`
+	Code  string `json:"code"`
+	Note  string `json:"note,omitempty"`
+}
+
 // CapExtension is the public-facing provider extension (graduation_candidate stripped).
 // source_ref is omitempty because some extensions in the YAML omit it.
+// required has no omitempty: null must be emitted explicitly so downstream
+// consumers can render a three-state badge (required / optional / unknown).
 type CapExtension struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	SourceRef   string `json:"source_ref,omitempty"`
+	ID          string            `json:"id"`
+	Name        string            `json:"name"`
+	Description string            `json:"description"`
+	SourceRef   string            `json:"source_ref,omitempty"`
+	Required    *bool             `json:"required"`
+	ValueType   string            `json:"value_type,omitempty"`
+	Examples    []CapExampleEntry `json:"examples,omitempty"`
 }
 
 // CanonicalKeyMeta is a single canonical key's metadata in the JSON output.
@@ -166,7 +208,7 @@ func loadCanonicalKeys(specPath string) (map[string]map[string]CanonicalKeyMeta,
 }
 
 func runGencapabilities(_ *cobra.Command, _ []string) error {
-	entries, err := loadProviderFormatsDir(capabilitiesProviderFormatsDir)
+	entries, trackingIssues, err := loadProviderFormatsDir(capabilitiesProviderFormatsDir)
 	if err != nil {
 		return fmt.Errorf("loading provider formats: %w", err)
 	}
@@ -179,6 +221,7 @@ func runGencapabilities(_ *cobra.Command, _ []string) error {
 	manifest := CapabilitiesManifest{
 		Version:       "1",
 		GeneratedAt:   time.Now().UTC().Format(time.RFC3339),
+		DataQuality:   computeDataQuality(entries, trackingIssues),
 		CanonicalKeys: canonicalKeys,
 		Providers:     entries,
 	}
@@ -188,16 +231,29 @@ func runGencapabilities(_ *cobra.Command, _ []string) error {
 	return enc.Encode(manifest)
 }
 
-// loadProviderFormatsDir reads all *.yaml files in dir and returns the
-// providers map. The provider slug is derived from the filename stem
-// (e.g., "claude-code.yaml" → "claude-code").
-func loadProviderFormatsDir(dir string) (map[string]map[string]CapContentType, error) {
+// qualitySidecar is the minimal shape of docs/provider-formats/<slug>.quality.json.
+// These sidecars are written by the capmon check pipeline (jtafb) when it opens a
+// GitHub issue for an allow-list warning; they carry the issue URL back into
+// generated capability manifests so operators can link from a data-quality row
+// to the active tracking issue.
+type qualitySidecar struct {
+	TrackingIssue string `json:"tracking_issue"`
+}
+
+// loadProviderFormatsDir reads all *.yaml files in dir and returns the providers
+// map plus a parallel map of slug → tracking issue URL, populated from optional
+// <slug>.quality.json sidecars. The sidecars are gitignored and written by the
+// capmon pipeline; missing sidecars yield an empty entry (not an error). The
+// provider slug is derived from the filename stem (e.g., "claude-code.yaml" →
+// "claude-code").
+func loadProviderFormatsDir(dir string) (map[string]map[string]CapContentType, map[string]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, fmt.Errorf("readdir %q: %w", dir, err)
+		return nil, nil, fmt.Errorf("readdir %q: %w", dir, err)
 	}
 
 	providers := make(map[string]map[string]CapContentType)
+	trackingIssues := make(map[string]string)
 
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -213,12 +269,12 @@ func loadProviderFormatsDir(dir string) (map[string]map[string]CapContentType, e
 
 		raw, err := os.ReadFile(path)
 		if err != nil {
-			return nil, fmt.Errorf("reading %q: %w", path, err)
+			return nil, nil, fmt.Errorf("reading %q: %w", path, err)
 		}
 
 		var doc capYAML
 		if err := yaml.Unmarshal(raw, &doc); err != nil {
-			return nil, fmt.Errorf("parsing %q: %w", path, err)
+			return nil, nil, fmt.Errorf("parsing %q: %w", path, err)
 		}
 
 		contentTypes := make(map[string]CapContentType)
@@ -235,9 +291,53 @@ func loadProviderFormatsDir(dir string) (map[string]map[string]CapContentType, e
 		}
 
 		providers[slug] = contentTypes
+
+		// Optional sidecar: <slug>.quality.json. Missing is normal.
+		sidecarPath := filepath.Join(dir, slug+".quality.json")
+		sidecarBytes, err := os.ReadFile(sidecarPath)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				return nil, nil, fmt.Errorf("reading %q: %w", sidecarPath, err)
+			}
+			continue
+		}
+		var sc qualitySidecar
+		if err := json.Unmarshal(sidecarBytes, &sc); err != nil {
+			return nil, nil, fmt.Errorf("parsing %q: %w", sidecarPath, err)
+		}
+		if sc.TrackingIssue != "" {
+			trackingIssues[slug] = sc.TrackingIssue
+		}
 	}
 
-	return providers, nil
+	return providers, trackingIssues, nil
+}
+
+// computeDataQuality builds the data_quality block from the already-built providers map.
+// For each provider, counts extensions across all content types that have unspecified
+// required / value_type / examples. trackingIssues[slug] populates the per-provider
+// TrackingIssue URL when a <slug>.quality.json sidecar was read by loadProviderFormatsDir.
+func computeDataQuality(providers map[string]map[string]CapContentType, trackingIssues map[string]string) DataQuality {
+	dq := DataQuality{Providers: make(map[string]DataQualityEntry)}
+	for slug, contentTypes := range providers {
+		var entry DataQualityEntry
+		for _, ct := range contentTypes {
+			for _, ext := range ct.ProviderExtensions {
+				if ext.Required == nil {
+					entry.UnspecifiedRequiredCount++
+				}
+				if ext.ValueType == "" {
+					entry.UnspecifiedValueTypeCount++
+				}
+				if len(ext.Examples) == 0 {
+					entry.UnspecifiedExamplesCount++
+				}
+			}
+		}
+		entry.TrackingIssue = trackingIssues[slug]
+		dq.Providers[slug] = entry
+	}
+	return dq
 }
 
 // buildCapEntry converts a YAML content type entry to the public JSON output
@@ -250,6 +350,8 @@ func buildCapEntry(lastChangedAt string, ct capContentTypeYAML) CapContentType {
 			URI:       s.URI,
 			Type:      s.Type,
 			FetchedAt: s.FetchedAt,
+			Name:      s.Name,
+			Section:   s.Section,
 		})
 	}
 
@@ -267,14 +369,26 @@ func buildCapEntry(lastChangedAt string, ct capContentTypeYAML) CapContentType {
 		}
 	}
 
-	// Build provider extensions — strip graduation_candidate.
+	// Build provider extensions — strip graduation_candidate, propagate new fields.
 	extensions := make([]CapExtension, 0, len(ct.ProviderExtensions))
 	for _, ext := range ct.ProviderExtensions {
+		examples := make([]CapExampleEntry, 0, len(ext.Examples))
+		for _, ex := range ext.Examples {
+			examples = append(examples, CapExampleEntry{
+				Title: ex.Title,
+				Lang:  ex.Lang,
+				Code:  ex.Code,
+				Note:  ex.Note,
+			})
+		}
 		extensions = append(extensions, CapExtension{
 			ID:          ext.ID,
 			Name:        ext.Name,
 			Description: strings.TrimSpace(ext.Description),
 			SourceRef:   ext.SourceRef,
+			Required:    ext.Required,
+			ValueType:   ext.ValueType,
+			Examples:    examples,
 		})
 	}
 

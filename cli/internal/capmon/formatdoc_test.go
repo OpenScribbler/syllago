@@ -180,3 +180,80 @@ func TestValidateAllFormatDocs(t *testing.T) {
 		})
 	}
 }
+
+func TestProviderExtension_NewFieldRoundTrip(t *testing.T) {
+	t.Parallel()
+	yamlContent := `
+provider: test-provider
+last_fetched_at: "2026-04-14T00:00:00Z"
+generation_method: human-edited
+content_types:
+  skills:
+    status: supported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions:
+      - id: model_field
+        name: Model Field
+        description: "Controls which model is used."
+        source_ref: "https://example.com"
+        required: true
+        value_type: "string"
+        examples:
+          - title: "Fast model"
+            lang: yaml
+            code: |
+              model: claude-haiku
+            note: "Default if absent."
+      - id: optional_field
+        name: Optional Field
+        description: "An optional capability."
+        source_ref: "https://example.com"
+        required: false
+      - id: unspecified_field
+        name: Unspecified Field
+        description: "We do not know if this is required."
+        source_ref: "https://example.com"
+`
+	dir := t.TempDir()
+	path := filepath.Join(dir, "test-provider.yaml")
+	if err := os.WriteFile(path, []byte(yamlContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	doc, err := LoadFormatDoc(path)
+	if err != nil {
+		t.Fatalf("LoadFormatDoc: %v", err)
+	}
+	exts := doc.ContentTypes["skills"].ProviderExtensions
+	if len(exts) != 3 {
+		t.Fatalf("expected 3 extensions, got %d", len(exts))
+	}
+
+	// required: true
+	if exts[0].Required == nil || *exts[0].Required != true {
+		t.Errorf("exts[0].Required: want *true, got %v", exts[0].Required)
+	}
+	if exts[0].ValueType != "string" {
+		t.Errorf("exts[0].ValueType = %q, want %q", exts[0].ValueType, "string")
+	}
+	if len(exts[0].Examples) != 1 {
+		t.Fatalf("exts[0].Examples: want 1, got %d", len(exts[0].Examples))
+	}
+	ex := exts[0].Examples[0]
+	if ex.Title != "Fast model" || ex.Lang != "yaml" || ex.Note != "Default if absent." {
+		t.Errorf("example fields wrong: %+v", ex)
+	}
+	if ex.Code == "" {
+		t.Error("example.code must be non-empty")
+	}
+
+	// required: false
+	if exts[1].Required == nil || *exts[1].Required != false {
+		t.Errorf("exts[1].Required: want *false, got %v", exts[1].Required)
+	}
+
+	// required absent → nil
+	if exts[2].Required != nil {
+		t.Errorf("exts[2].Required: want nil, got %v", exts[2].Required)
+	}
+}

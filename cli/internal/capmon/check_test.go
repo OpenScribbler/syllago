@@ -297,6 +297,74 @@ func TestRunCapmonCheck_OrphanDetection(t *testing.T) {
 	}
 }
 
+// TestRunCapmonCheck_FormatDocWarningLoggedToStderr verifies that non-blocking
+// allow-list warnings from ValidateFormatDocWithWarnings surface on stderr with
+// the DeduplicationKey and field path, and that the pipeline continues normally.
+func TestRunCapmonCheck_FormatDocWarningLoggedToStderr(t *testing.T) {
+	env := newCheckTestEnv(t)
+
+	// Benign content so Step 3 finds matching hash and skips issue creation.
+	testContent := []byte(strings.Repeat("a", 1000))
+	expectedHash := capmon.SHA256Hex(testContent)
+
+	env.writeProviders(t, []string{"test-provider"})
+	env.writeSourceManifest(t, "test-provider")
+
+	// Format doc passes blocking validation but carries a non-allow-listed
+	// value_type, which ValidateFormatDocWithWarnings returns as a warning.
+	docWithWarning := `provider: test-provider
+last_fetched_at: "2026-04-15T00:00:00Z"
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://example.com/skills.md"
+        type: documentation
+        fetch_method: md_url
+        content_hash: "` + expectedHash + `"
+        fetched_at: "2026-04-15T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "yaml key: name"
+        confidence: confirmed
+    provider_extensions:
+      - id: bad_type_ext
+        name: "Bad Type Ext"
+        description: "test extension with non-allow-listed value_type"
+        source_ref: "https://example.com"
+        value_type: "not-in-allow-list"
+`
+	if err := os.WriteFile(filepath.Join(env.opts.FormatsDir, "test-provider.yaml"), []byte(docWithWarning), 0644); err != nil {
+		t.Fatal(err)
+	}
+	env.setHTTPResponse(t, testContent, "text/html")
+	env.captureGHCalls(t)
+
+	oldStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+	defer func() { os.Stderr = oldStderr }()
+
+	err := capmon.RunCapmonCheck(context.Background(), env.opts)
+	w.Close()
+	stderrOut, _ := io.ReadAll(r)
+
+	if err != nil {
+		t.Fatalf("RunCapmonCheck: %v (allow-list warnings must be non-blocking)", err)
+	}
+	s := string(stderrOut)
+	if !strings.Contains(s, "value_type") {
+		t.Errorf("expected stderr warning to mention field path 'value_type', got: %q", s)
+	}
+	if !strings.Contains(s, "not-in-allow-list") {
+		t.Errorf("expected stderr warning to quote the offending value, got: %q", s)
+	}
+	if !strings.Contains(s, "test-provider") {
+		t.Errorf("expected stderr warning to name the provider, got: %q", s)
+	}
+}
+
 func TestRunCapmonCheck_DryRun(t *testing.T) {
 	env := newCheckTestEnv(t)
 
