@@ -29,6 +29,7 @@ cli/.syllago/audit.jsonl
 
 # Backups
 *.bak
+.beads.bak.20260414/
 
 # Working docs — ignore all except design specs and the hook spec
 docs/*
