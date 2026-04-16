@@ -1,11 +1,11 @@
 package capmon
 
 func init() {
-	RegisterRecognizer("cline", recognizeClineSkills)
+	RegisterRecognizer("cline", recognizeCline)
 }
 
-// recognizeClineSkills recognizes skills capabilities for the Cline provider.
+// recognizeCline recognizes skills capabilities for the Cline provider.
 // TODO(Phase 6): implement real recognition after seeder spec is approved.
-func recognizeClineSkills(fields map[string]FieldValue) map[string]string {
+func recognizeCline(fields map[string]FieldValue) map[string]string {
 	return make(map[string]string)
 }

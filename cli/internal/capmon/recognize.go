@@ -48,7 +48,7 @@ func RecognizeContentTypeDotPaths(provider string, fields map[string]FieldValue)
 
 // recognizeSkillsGoStruct recognizes the Agent Skills standard struct pattern.
 // Keys of the form "Skill.<FieldName>" with yaml key values map to skills frontmatter capabilities.
-// This utility is called by individual recognizer functions (e.g., recognizeCrushSkills)
+// This utility is called by individual recognizer functions (e.g., recognizeCrush)
 // that implement the Agent Skills open standard.
 //
 // IMPORTANT: This function is NOT called from RecognizeContentTypeDotPaths directly.

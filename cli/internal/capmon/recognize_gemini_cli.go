@@ -1,11 +1,11 @@
 package capmon
 
 func init() {
-	RegisterRecognizer("gemini-cli", recognizeGeminiCliSkills)
+	RegisterRecognizer("gemini-cli", recognizeGeminiCli)
 }
 
-// recognizeGeminiCliSkills recognizes skills capabilities for the Gemini CLI provider.
+// recognizeGeminiCli recognizes skills capabilities for the Gemini CLI provider.
 // TODO(Phase 6): implement real recognition after seeder spec is approved.
-func recognizeGeminiCliSkills(fields map[string]FieldValue) map[string]string {
+func recognizeGeminiCli(fields map[string]FieldValue) map[string]string {
 	return make(map[string]string)
 }

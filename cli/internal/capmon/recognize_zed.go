@@ -1,11 +1,11 @@
 package capmon
 
 func init() {
-	RegisterRecognizer("zed", recognizeZedSkills)
+	RegisterRecognizer("zed", recognizeZed)
 }
 
-// recognizeZedSkills recognizes skills capabilities for the Zed provider.
+// recognizeZed recognizes skills capabilities for the Zed provider.
 // TODO(Phase 6): implement real recognition after seeder spec is approved.
-func recognizeZedSkills(fields map[string]FieldValue) map[string]string {
+func recognizeZed(fields map[string]FieldValue) map[string]string {
 	return make(map[string]string)
 }

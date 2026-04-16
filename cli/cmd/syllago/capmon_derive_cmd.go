@@ -20,7 +20,7 @@ var capmonDeriveCmd = &cobra.Command{
 	Short: "Derive a seeder spec from a provider format doc",
 	Long: `Deterministically derive a seeder spec YAML from a provider format doc.
 
-The derived spec is written to --output-dir/<provider>-skills.yaml.
+The derived spec is written to --output-dir/<provider>-<content_type>.yaml.
 All canonical_mappings keys are validated against --canonical-keys.
 Content types with status=unsupported are omitted from output.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -55,7 +55,7 @@ Content types with status=unsupported are omitted from output.`,
 			return err
 		}
 
-		outPath := capmon.SeederSpecPath(outputDir, provider)
+		outPath := capmon.SeederSpecPath(outputDir, provider, spec.ContentType)
 		if err := capmon.WriteSeederSpec(spec, outPath); err != nil {
 			return fmt.Errorf("write seeder spec: %w", err)
 		}
