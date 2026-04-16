@@ -110,16 +110,14 @@ func TestRecognizeContentTypeDotPaths_EmptyFields(t *testing.T) {
 // sources) will emit empty output in production; this test proves the plumbing
 // so those providers light up automatically when upstream extractors improve.
 //
-// codex and claude-code are excluded from this batch — codex uses a multi-struct
-// allow-list (SkillMetadata./SkillPolicy./...) and has its own dedicated test;
-// claude-code uses landmark (doc-heading) recognition with no Skill.* field input
-// and has its own dedicated test in recognize_claude_code_test.go.
+// codex, claude-code, and amp are excluded from this batch. codex uses a
+// multi-struct allow-list; claude-code and amp use landmark (doc-heading)
+// recognition with no Skill.* field input. Each has its own dedicated test file.
 func TestRecognizeGoStructBatch_WithSkillFields(t *testing.T) {
 	providers := []struct {
 		slug     string
 		filename string // substring expected in canonical_filename.mechanism
 	}{
-		{"amp", "SKILL.md"},
 		{"cline", "SKILL.md"},
 		{"copilot-cli", "SKILL.md"},
 		{"factory-droid", "SKILL.md"},
@@ -158,10 +156,10 @@ func TestRecognizeGoStructBatch_WithSkillFields(t *testing.T) {
 
 // TestRecognizeGoStructBatch_EmptyFields verifies the GoStruct providers
 // return an empty map when no Skill.* fields are present (same guard as crush).
-// codex excluded — see TestRecognizeCodex_OnlyExcludedStructs.
-// claude-code excluded — see TestRecognizeClaudeCode_NoLandmarks (different mechanism).
+// codex, claude-code, amp excluded — they use a different mechanism and have
+// dedicated NoLandmarks tests in their own files.
 func TestRecognizeGoStructBatch_EmptyFields(t *testing.T) {
-	for _, slug := range []string{"amp", "cline", "copilot-cli", "factory-droid", "kiro", "pi"} {
+	for _, slug := range []string{"cline", "copilot-cli", "factory-droid", "kiro", "pi"} {
 		result := capmon.RecognizeContentTypeDotPaths(slug, map[string]capmon.FieldValue{})
 		if len(result) != 0 {
 			t.Errorf("%s: expected empty result, got %v", slug, result)
