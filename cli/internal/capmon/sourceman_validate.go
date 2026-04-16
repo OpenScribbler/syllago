@@ -38,9 +38,9 @@ func ValidateSources(sourcesDir, provider string) error {
 			if src.Healing == nil {
 				continue
 			}
-			for _, strat := range src.Healing.Strategies {
-				if !KnownHealingStrategies[strat] {
-					errs = append(errs, fmt.Sprintf("content_types.%s.sources[%d].healing.strategies: unknown strategy %q (valid: redirect, github-rename, variant)", ct, i, strat))
+			for _, strategy := range src.Healing.Strategies {
+				if !KnownHealingStrategies[strategy] {
+					errs = append(errs, fmt.Sprintf("content_types.%s.sources[%d].healing.strategies: unknown strategy %q (valid: redirect, github-rename, variant)", ct, i, strategy))
 				}
 			}
 		}
