@@ -201,3 +201,148 @@
 | 09:36 | Created docs/plans/local-dashboard-mockups/01-terminal.html | — | ~3114 |
 | 09:36 | Created docs/plans/local-dashboard-mockups/05-cyberpunk.html | — | ~3147 |
 | 09:37 | Created docs/plans/local-dashboard-mockups/07-material.html | — | ~3504 |
+| 11:42 | Created releases/v0.7.0-beta.1.md | — | ~2629 |
+| 11:46 | Edited releases/v0.7.0-beta.1.md | 1→2 lines | ~114 |
+| 11:47 | Edited .claude/skills/release/workflows/create-release.md | 7→8 lines | ~278 |
+| 11:47 | Created ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_release_notes_no_internal_labels.md | — | ~348 |
+| 11:48 | Edited ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md | 5→6 lines | ~194 |
+| 11:48 | Edited releases/v0.7.0-beta.1.md | inline fix | ~35 |
+| 11:48 | Created VERSION | — | ~4 |
+| 11:49 | Created .release-pending.yml | — | ~42 |
+| 11:58 | Created cli/internal/sandbox/ownership_unix.go | — | ~62 |
+| 11:58 | Created cli/internal/sandbox/ownership_windows.go | — | ~31 |
+| 11:58 | Edited cli/internal/sandbox/staging.go | 9→8 lines | ~22 |
+| 11:58 | Edited cli/internal/sandbox/staging.go | modified isOwnedByCurrentUser() | ~51 |
+| 12:05 | Session end: cut v0.7.0-beta.1 release | VERSION, releases/v0.7.0-beta.1.md, sandbox/ownership_{unix,windows}.go, .claude/skills/release/workflows/create-release.md | shipped as pre-release: https://github.com/OpenScribbler/syllago/releases/tag/v0.7.0-beta.1 | ~40000 |
+
+## Session Summary: 2026-04-15 — Cut v0.7.0-beta.1 release
+
+**Goal:** Ship a pre-release off main so the Syllago Docs site has a real tag to test against, without "using up" 0.7.0 (reserved for public).
+
+**Shipped:**
+- Tag `v0.7.0-beta.1` pushed, GitHub Release created as pre-release, Homebrew formula updated.
+- URL: https://github.com/OpenScribbler/syllago/releases/tag/v0.7.0-beta.1
+- 650 meaningful commits / 1,852 files / +560K/-16K since v0.6.1.
+
+**Commits added this session (`main`):**
+1. `d08b44a` skill: prohibit internal labels in release notes (`.claude/skills/release/workflows/create-release.md`)
+2. `b3a2279` release: prepare v0.7.0-beta.1 (`VERSION`, `releases/v0.7.0-beta.1.md`)
+3. `8ff8172` fix(sandbox): cross-platform ownership check (`cli/internal/sandbox/ownership_unix.go`, `ownership_windows.go`, `staging.go`)
+
+**Corrections captured (see cerebrum.md):**
+- User: "never add follow-ups like D1, D13, D14-delta... all of that is garbage." — internal labels banned from release notes.
+- Self: local `go build` hid a Windows cross-compile failure (`syscall.Stat_t` undefined). Added to Do-Not-Repeat.
+
+**Follow-ups (not in this release):**
+- Teach `.github/workflows/release.yml` to auto-detect pre-release suffixes (`-alpha`/`-beta`/`-rc`/`-pre`) and pass `--prerelease` to `gh release create`. Manually edited this time with `gh release edit --prerelease`.
+- Update release skill Step 8 — it still instructs manual `gh release create` but the repo's CI owns that step.
+| 12:37 | Session end: 32 writes across 26 files (2026-04-15-local-dashboard-design.md, tokens.css, data.js, render.js, 01-terminal.html) | 8 reads | ~42016 tok |
+
+## Session: 2026-04-15 12:41
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-15 13:22
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-15 15:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:21 | Edited cli/internal/capmon/report.go | modified FindOpenCapmonWarningIssue() | ~949 |
+| 16:22 | Edited cli/internal/capmon/check.go | modified CI() | ~520 |
+| 16:22 | Edited cli/internal/capmon/report_test.go | modified TestFindOpenCapmonWarningIssue_Found() | ~1244 |
+| 16:22 | Edited cli/internal/capmon/report_test.go | 8→9 lines | ~31 |
+| 16:23 | Edited cli/internal/capmon/check_test.go | modified TestRunCapmonCheck_CIModeCreatesWarningIssues() | ~1185 |
+| 16:24 | Edited VERSION | inline fix | ~2 |
+| 16:25 | Created releases/v0.7.0.md | — | ~2706 |
+| 15:25 | Investigated syllago-jtafb (capmon pipeline) — confirmed all phases 0-10 complete via 96 git commits | .wolf/memory.md | closed syllago-jtafb | ~3000 |
+| 15:30 | Implemented D14: GitHub issue automation for validation warnings (report.go + check.go + tests) | cli/internal/capmon/{check,report}.go + tests | all tests pass, cross-compile clean | ~8000 |
+| 15:35 | Committed D14, prepared v0.7.0 release (VERSION, release notes, gendocs), pushed tag | VERSION, releases/v0.7.0.md | CI release pipeline running | ~4000 |
+| 16:32 | Session end: 7 writes across 6 files (report.go, check.go, report_test.go, check_test.go, VERSION) | 12 reads | ~7116 tok |
+
+## Session: 2026-04-16 21:30
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-16 06:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-16 06:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 06:31 | Edited cli/internal/capmon/fetch_chromedp.go | modified ChromedpRemoteURL() | ~836 |
+| 06:31 | Edited cli/internal/capmon/pipeline.go | modified Done() | ~199 |
+| 06:32 | Edited cli/internal/capmon/fetch_chromedp_test.go | modified TestChromedpURLWiring() | ~305 |
+| 06:32 | Edited cli/internal/capmon/fetch_chromedp.go | 3→3 lines | ~78 |
+| 06:32 | Edited cli/internal/capmon/fetch_chromedp.go | inline fix | ~3 |
+| 06:34 | Session end: 5 writes across 3 files (fetch_chromedp.go, pipeline.go, fetch_chromedp_test.go) | 17 reads | ~2575 tok |
+| 06:38 | Session end: 5 writes across 3 files (fetch_chromedp.go, pipeline.go, fetch_chromedp_test.go) | 17 reads | ~2575 tok |
+| 06:42 | Session end: 5 writes across 3 files (fetch_chromedp.go, pipeline.go, fetch_chromedp_test.go) | 17 reads | ~2575 tok |
+| 06:55 | Session end: 5 writes across 3 files (fetch_chromedp.go, pipeline.go, fetch_chromedp_test.go) | 18 reads | ~2575 tok |
+
+## Session: 2026-04-16 06:56
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:03 | Created .claude/projects/continue-capmon-audit.md | — | ~666 |
+| 07:03 | Created .claude/projects/.current | — | ~6 |
+| 07:03 | Session end: 2 writes across 2 files (continue-capmon-audit.md, .current) | 4 reads | ~3893 tok |
+| 07:05 | Edited ../../../.claude/hooks/stop-phrase-guard.sh | expanded (+9 lines) | ~139 |
+| 07:05 | Edited ../../../.claude/hooks/stop-phrase-guard.sh | expanded (+27 lines) | ~1480 |
+| 07:06 | Session end: 4 writes across 3 files (continue-capmon-audit.md, .current, stop-phrase-guard.sh) | 5 reads | ~5627 tok |
+| 07:06 | Session end: 4 writes across 3 files (continue-capmon-audit.md, .current, stop-phrase-guard.sh) | 5 reads | ~5627 tok |
+
+## Session: 2026-04-16 07:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:18 | Created docs/plans/2026-04-16-capmon-phase6-recognition-plan.md | — | ~1821 |
+| 08:18 | Session end: 1 writes across 1 files (2026-04-16-capmon-phase6-recognition-plan.md) | 12 reads | ~5893 tok |
+| 08:22 | Session end: 1 writes across 1 files (2026-04-16-capmon-phase6-recognition-plan.md) | 12 reads | ~5893 tok |
+| 08:39 | Session end: 1 writes across 1 files (2026-04-16-capmon-phase6-recognition-plan.md) | 12 reads | ~5893 tok |
+| 08:40 | Session end: 1 writes across 1 files (2026-04-16-capmon-phase6-recognition-plan.md) | 13 reads | ~5893 tok |
+| 08:41 | Session end: 1 writes across 1 files (2026-04-16-capmon-phase6-recognition-plan.md) | 14 reads | ~5893 tok |
+| 08:59 | Edited docs/plans/2026-04-16-capmon-phase6-recognition-plan.md | modified will() | ~729 |
+| 09:00 | Edited docs/plans/2026-04-16-capmon-phase6-recognition-plan.md | 4→4 lines | ~118 |
+| 09:00 | Edited docs/plans/2026-04-16-capmon-phase6-recognition-plan.md | expanded (+13 lines) | ~197 |
+| 09:00 | Session end: 4 writes across 1 files (2026-04-16-capmon-phase6-recognition-plan.md) | 15 reads | ~8192 tok |
+
+## Session: 2026-04-16 09:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:03 | Edited docs/provider-sources/amp.yaml | 4→8 lines | ~117 |
+| 09:04 | Edited docs/provider-sources/copilot-cli.yaml | inline fix | ~38 |
+| 09:04 | Edited docs/provider-sources/amp.yaml | "2026-03-27" → "2026-04-16" | ~8 |
+| 09:04 | Edited docs/provider-sources/copilot-cli.yaml | "2026-03-27" → "2026-04-16" | ~8 |
+| 09:05 | Session end: 4 writes across 2 files (amp.yaml, copilot-cli.yaml) | 5 reads | ~1496 tok |
+| 09:05 | Created docs/plans/2026-04-16-capmon-self-healing-prompt.md | — | ~2214 |
+| 09:05 | Created ../../../personal/stealth-fetch/package.json | — | ~113 |
+| 09:05 | Created ../../../personal/stealth-fetch/stealth-fetch.ts | — | ~939 |
+| 09:05 | created prompt for self-healing capmon source URLs | docs/plans/2026-04-16-capmon-self-healing-prompt.md | file written, anatomy auto-updated | ~2100 |
+| 09:05 | Session end: 7 writes across 5 files (amp.yaml, copilot-cli.yaml, 2026-04-16-capmon-self-healing-prompt.md, package.json, stealth-fetch.ts) | 5 reads | ~4920 tok |
+| 09:07 | Edited ../../../personal/stealth-fetch/stealth-fetch.ts | added error handling | ~280 |
+| 09:08 | Session end: 8 writes across 5 files (amp.yaml, copilot-cli.yaml, 2026-04-16-capmon-self-healing-prompt.md, package.json, stealth-fetch.ts) | 6 reads | ~5200 tok |
+| 09:08 | Edited .claude/projects/continue-capmon-audit.md | inline fix | ~3 |
+| 09:09 | Created .claude/projects/finish-phase0-capmon-refactor.md | — | ~1068 |
+
+## Session: 2026-04-16 09:10
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:15 | Edited ../../../personal/stealth-fetch/stealth-fetch.ts | expanded (+15 lines) | ~415 |
+| 09:16 | Edited ../../../.config/pai/skills/research/SKILL.md | expanded (+22 lines) | ~312 |
+| 09:16 | Created ../../../personal/stealth-fetch/.gitignore | — | ~11 |
+| 09:16 | Created ../../../personal/stealth-fetch/README.md | — | ~675 |
+| 09:17 | Created ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/reference_stealth_fetch.md | — | ~314 |
+| 09:17 | Edited ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md | 3→7 lines | ~99 |
+| 09:17 | Session end: 6 writes across 6 files (stealth-fetch.ts, SKILL.md, .gitignore, README.md, reference_stealth_fetch.md) | 9 reads | ~4737 tok |
+| 09:18 | Session end: 6 writes across 6 files (stealth-fetch.ts, SKILL.md, .gitignore, README.md, reference_stealth_fetch.md) | 9 reads | ~4737 tok |
