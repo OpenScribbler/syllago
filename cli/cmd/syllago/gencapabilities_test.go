@@ -292,7 +292,7 @@ func TestGencapabilities_ConfidenceNotEmitted(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 
 	if strings.Contains(string(raw), "confidence") {
@@ -311,7 +311,7 @@ func TestGencapabilities_GraduationCandidateNotEmitted(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 
 	if strings.Contains(string(raw), "graduation_candidate") {
@@ -330,7 +330,7 @@ func TestGencapabilities_GenerationMethodNotEmitted(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 
 	if strings.Contains(string(raw), "generation_method") {
@@ -349,7 +349,7 @@ func TestGencapabilities_ContentHashNotEmitted(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 
 	if strings.Contains(string(raw), "content_hash") {
@@ -368,7 +368,7 @@ func TestGencapabilities_FetchMethodNotEmitted(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 
 	if strings.Contains(string(raw), "fetch_method") {
@@ -440,7 +440,7 @@ func TestGencapabilities_CanonicalMappingPathsOmittedWhenEmpty(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 
 	// global_scope in the fixture has paths: [] — should be omitted via omitempty
@@ -596,7 +596,7 @@ func TestGencapabilities_AllRealProviders(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(providerFormatsDir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 	for _, forbidden := range []string{"confidence", "graduation_candidate", "generation_method", "content_hash", "fetch_method"} {
 		if strings.Contains(string(raw), forbidden) {
@@ -714,7 +714,7 @@ func TestGencapabilities_ExtensionRequiredFieldNull(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 	// Encoder uses SetIndent("  ","  "), so "required": null with a space. Accept either form for robustness.
 	s := string(raw)
@@ -817,7 +817,7 @@ func TestGencapabilities_DataQualityBlockPresent(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 	if !strings.Contains(string(raw), `"data_quality"`) {
 		t.Error("manifest must contain \"data_quality\" key")
@@ -920,7 +920,7 @@ func TestGencapabilities_GraduationCandidateStillNotEmitted(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 	if strings.Contains(string(raw), "graduation_candidate") {
 		t.Error("regression: new extension fields must not re-emit 'graduation_candidate'")

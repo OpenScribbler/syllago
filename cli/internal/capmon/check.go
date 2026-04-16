@@ -261,7 +261,7 @@ func fetchForCheck(ctx context.Context, rawURL string) (body []byte, contentType
 	if err != nil {
 		return nil, "", "", err
 	}
-	defer resp.Body.Close() //nolint:errcheck
+	defer resp.Body.Close() //nolint:errcheck // best-effort close on response body
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, "", "", fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}

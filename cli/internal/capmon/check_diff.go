@@ -45,8 +45,8 @@ func GenerateUnifiedDiff(oldContent, newContent []byte, path, sourceType string)
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("--- a/%s\n", path))
-	sb.WriteString(fmt.Sprintf("+++ b/%s\n", path))
+	fmt.Fprintf(&sb, "--- a/%s\n", path)
+	fmt.Fprintf(&sb, "+++ b/%s\n", path)
 	lineCount := 2
 
 	truncated := false
@@ -73,8 +73,8 @@ func GenerateUnifiedDiff(oldContent, newContent []byte, path, sourceType string)
 	}
 
 	if truncated {
-		sb.WriteString(fmt.Sprintf("[truncated after %d lines (~%d bytes shown) — full diff at .capmon-cache/<slug>/]\n",
-			maxLines, sb.Len()))
+		fmt.Fprintf(&sb, "[truncated after %d lines (~%d bytes shown) — full diff at .capmon-cache/<slug>/]\n",
+			maxLines, sb.Len())
 	}
 
 	return sb.String(), nil
