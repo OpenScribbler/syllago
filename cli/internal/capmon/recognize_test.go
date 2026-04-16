@@ -109,6 +109,10 @@ func TestRecognizeContentTypeDotPaths_EmptyFields(t *testing.T) {
 // Providers whose real-world extraction does not surface Skill.* fields (non-Go
 // sources) will emit empty output in production; this test proves the plumbing
 // so those providers light up automatically when upstream extractors improve.
+//
+// codex is excluded from this batch — it uses a multi-struct allow-list
+// (SkillMetadata./SkillPolicy./...) and has its own dedicated test in
+// recognize_codex_test.go.
 func TestRecognizeGoStructBatch_WithSkillFields(t *testing.T) {
 	providers := []struct {
 		slug     string
@@ -117,7 +121,6 @@ func TestRecognizeGoStructBatch_WithSkillFields(t *testing.T) {
 		{"amp", "SKILL.md"},
 		{"claude-code", "SKILL.md"},
 		{"cline", "SKILL.md"},
-		{"codex", "SKILL.md"},
 		{"copilot-cli", "SKILL.md"},
 		{"factory-droid", "SKILL.md"},
 		{"kiro", "POWER.md"},
@@ -153,10 +156,11 @@ func TestRecognizeGoStructBatch_WithSkillFields(t *testing.T) {
 	}
 }
 
-// TestRecognizeGoStructBatch_EmptyFields verifies the 8 GoStruct providers
+// TestRecognizeGoStructBatch_EmptyFields verifies the GoStruct providers
 // return an empty map when no Skill.* fields are present (same guard as crush).
+// codex excluded — see TestRecognizeCodex_OnlyExcludedStructs for the codex case.
 func TestRecognizeGoStructBatch_EmptyFields(t *testing.T) {
-	for _, slug := range []string{"amp", "claude-code", "cline", "codex", "copilot-cli", "factory-droid", "kiro", "pi"} {
+	for _, slug := range []string{"amp", "claude-code", "cline", "copilot-cli", "factory-droid", "kiro", "pi"} {
 		result := capmon.RecognizeContentTypeDotPaths(slug, map[string]capmon.FieldValue{})
 		if len(result) != 0 {
 			t.Errorf("%s: expected empty result, got %v", slug, result)
