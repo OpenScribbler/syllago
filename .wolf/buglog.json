@@ -160,6 +160,233 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-15T16:54:31.544Z"
+    },
+    {
+      "id": "bug-011",
+      "timestamp": "2026-04-15T19:28:00.000Z",
+      "error_message": "internal/sandbox/staging.go:83:41: undefined: syscall.Stat_t",
+      "file": "cli/internal/sandbox/staging.go",
+      "root_cause": "CleanStale used syscall.Stat_t and os.Getuid inline. syscall.Stat_t is not defined on Windows, so cross-compilation for GOOS=windows fails at the build step. Local `go build` on Linux compiled fine and hid the problem; the release workflow cross-compiles for six targets and caught it.",
+      "fix": "Extracted the ownership check into a platform-specific helper isOwnedByCurrentUser(info). Added cli/internal/sandbox/ownership_unix.go (build tag !windows) with the real syscall.Stat_t/os.Getuid check, and cli/internal/sandbox/ownership_windows.go (build tag windows) that returns true (Windows uses per-user temp paths by default). Removed syscall import from staging.go.",
+      "tags": [
+        "cross-platform",
+        "windows",
+        "sandbox",
+        "build-tags",
+        "syscall",
+        "release-blocker"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-15T19:28:00.000Z"
+    },
+    {
+      "id": "bug-012",
+      "timestamp": "2026-04-15T23:22:12.171Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/check.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 25→51 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-15T23:22:12.171Z"
+    },
+    {
+      "id": "bug-013",
+      "timestamp": "2026-04-16T13:31:34.174Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/fetch_chromedp.go",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 61→98 lines (6 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T13:31:34.174Z"
+    },
+    {
+      "id": "bug-014",
+      "timestamp": "2026-04-16T13:32:27.215Z",
+      "error_message": "Incorrect value in code",
+      "file": "cli/internal/capmon/fetch_chromedp.go",
+      "root_cause": "Had \" which triggers bot detection on many sites.\ncons",
+      "fix": "Changed to \" which triggers bot detection on many sites.\ncons",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T13:32:27.215Z"
+    },
+    {
+      "id": "bug-015",
+      "timestamp": "2026-04-16T13:32:30.976Z",
+      "error_message": "Wrong reference: realisticUA should be RealisticUA",
+      "file": "cli/internal/capmon/fetch_chromedp.go",
+      "root_cause": "Used \"realisticUA\" instead of \"RealisticUA\"",
+      "fix": "Changed realisticUA → RealisticUA",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T13:32:30.976Z"
+    },
+    {
+      "id": "bug-016",
+      "timestamp": "2026-04-16T15:59:58.937Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 16→41 lines (9 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T15:59:58.937Z"
+    },
+    {
+      "id": "bug-017",
+      "timestamp": "2026-04-16T16:03:54.049Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-sources/amp.yaml",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 4→8 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T16:03:54.049Z"
+    },
+    {
+      "id": "bug-018",
+      "timestamp": "2026-04-16T16:04:03.324Z",
+      "error_message": "Wrong reference: create should be add",
+      "file": "docs/provider-sources/copilot-cli.yaml",
+      "root_cause": "Used \"create\" instead of \"add\"",
+      "fix": "Changed create → add",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T16:04:03.324Z"
+    },
+    {
+      "id": "bug-019",
+      "timestamp": "2026-04-16T16:04:07.865Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/provider-sources/amp.yaml",
+      "root_cause": "Had \"2026-03-27\"",
+      "fix": "Changed to \"2026-04-16\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T16:04:07.865Z"
+    },
+    {
+      "id": "bug-020",
+      "timestamp": "2026-04-16T16:04:11.579Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/provider-sources/copilot-cli.yaml",
+      "root_cause": "Had \"2026-03-27\"",
+      "fix": "Changed to \"2026-04-16\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T16:04:11.579Z"
+    },
+    {
+      "id": "bug-021",
+      "timestamp": "2026-04-16T16:07:25.520Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "../../../personal/stealth-fetch/stealth-fetch.ts",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T16:07:25.520Z"
+    },
+    {
+      "id": "bug-022",
+      "timestamp": "2026-04-16T16:08:26.205Z",
+      "error_message": "Wrong reference: false should be true",
+      "file": ".claude/projects/continue-capmon-audit.md",
+      "root_cause": "Used \"false\" instead of \"true\"",
+      "fix": "Changed false → true",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T16:08:26.205Z"
+    },
+    {
+      "id": "bug-023",
+      "timestamp": "2026-04-16T16:15:32.018Z",
+      "error_message": "Type error",
+      "file": "../../../personal/stealth-fetch/stealth-fetch.ts",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T16:15:32.018Z"
+    },
+    {
+      "id": "bug-024",
+      "timestamp": "2026-04-16T16:16:25.675Z",
+      "error_message": "Wrong return value",
+      "file": "../../../.config/pai/skills/research/SKILL.md",
+      "root_cause": "Was returning: empty or garbage content. Use WebFetch for these.",
+      "fix": "Now returns: empty or garbage content",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T16:16:25.675Z"
     }
   ]
 }

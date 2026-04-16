@@ -1,18 +1,39 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-15T16:37:55.614Z
-> Files: 567 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-16T16:17:23.803Z
+> Files: 565 tracked | Anatomy hits: 0 | Misses: 0
+
+## ../../../.claude/hooks/
+
+- `stop-phrase-guard.sh` — stop-phrase-guard.sh — Stop hook that catches ownership-dodging and (~1930 tok)
+
+## ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/
+
+- `MEMORY.md` — Syllago Project Memory (~1730 tok)
+- `reference_stealth_fetch.md` — stealth-fetch (~308 tok)
+
+## ../../../.config/pai/skills/research/
+
+- `SKILL.md` — Research Skill (~1745 tok)
+
+## ../../../personal/stealth-fetch/
+
+- `.gitignore` — Git ignore rules (~11 tok)
+- `package.json` — Node.js package manifest (~113 tok)
+- `README.md` — Project documentation (~633 tok)
+- `stealth-fetch.ts` — Output raw HTML instead of markdown (~1257 tok)
 
 ## ./
 
 - `.gitattributes` — Git attributes (~50 tok)
 - `.gitignore` — Git ignore rules (~320 tok)
+- `.release-pending.yml` (~42 tok)
 - `AGENTS.md` — Agent Instructions (~332 tok)
 - `ARCHITECTURE.md` — Syllago Architecture (~1663 tok)
 - `CHANGELOG.md` — Change log (~1326 tok)
 - `CLAUDE.md` — OpenWolf (~1035 tok)
 - `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct (~1370 tok)
-- `commands.json` (~16 tok)
+- `commands.json` — Declares or (~48402 tok)
 - `CONTRIBUTING.md` — Contributing to syllago (~1285 tok)
 - `GEMINI.md` — Syllago (~697 tok)
 - `install.sh` — Install syllago — AI coding tool content manager (~880 tok)
@@ -50,7 +71,7 @@
 - `beads.left.meta.json` (~26 tok)
 - `config.yaml` — Beads Configuration File (~668 tok)
 - `daemon.pid` (~2 tok)
-- `interactions.jsonl` — Declares added (~2046 tok)
+- `interactions.jsonl` — Declares added (~2835 tok)
 - `last-touched` (~4 tok)
 - `metadata.json` (~18 tok)
 - `README.md` — Project documentation (~561 tok)
@@ -60,12 +81,16 @@
 
 - `9hhh14uigmffvldnkv3di25k410uqr33.darc` (~7868 tok)
 - `backup_state.json` (~32 tok)
+- `iu2e9hgv37ucaueonjbt00fn8gguik65.darc` (~106106 tok)
+- `jd3gkrb67gqa3mlg1suamtakavugvcoc.darc` (~8583 tok)
 - `lhmgjp98sb58ockgoe867d6u7c6l0r1n.darc` (~14586 tok)
 - `LOCK` (~0 tok)
-- `manifest` (~108 tok)
+- `manifest` (~147 tok)
 - `nas7fporh3ooura63gcouptjisfnpinm.darc` (~15921 tok)
 - `ok70ojhua6tuq35c3ut2qd3k1u8ch63n.darc` (~195405 tok)
 - `pljjkd0dcpqhtd312fva2socqng6a6nn.darc` (~7937 tok)
+- `pq7eco0l7pldn88pu34va4treat1k9b3.darc` (~36541 tok)
+- `vbfbtlo0d8f9fkogguncccn5fdufgddp.darc` (~11048 tok)
 
 ## .beads/embeddeddolt/
 
@@ -1204,6 +1229,12 @@
 - `tui-pattern-nudge.sh` — TUI Pattern Nudge Hook (~433 tok)
 - `wizard-invariant-gate.sh` — PostToolUse hook: Run wizard invariant tests after any TUI file edit. (~207 tok)
 
+## .claude/projects/
+
+- `.current` (~6 tok)
+- `continue-capmon-audit.md` — Continue auditing capmon (~624 tok)
+- `finish-phase0-capmon-refactor.md` — Finish Phase 0: Capmon Recognition Refactor (~1001 tok)
+
 ## .claude/rules/
 
 - `cli-test-patterns.md` — CLI Test Patterns (Non-TUI) (~1140 tok)
@@ -1227,7 +1258,7 @@
 
 ## .claude/skills/release/workflows/
 
-- `create-release.md` — Create Release Workflow (~1286 tok)
+- `create-release.md` — Create Release Workflow (~1447 tok)
 
 ## .claude/skills/tui-builder/
 
@@ -1359,50 +1390,26 @@
 - `smoke-test-providers.yml` — CI: Provider Smoke Tests (~869 tok)
 - `vouch-manage.yml` — CI: "Vouch: Manage by Issue" (~214 tok)
 
-## .claude/worktrees/agent-a0114795/.handoffs/
-
-- `add-wizard-ux-polish-and-bugfixes.json` — Declares add (~1366 tok)
-- `added-crush-agent-skills-and-pi-to-agent.json` (~1206 tok)
-- `agent-skills-spec-research-and-convention-strategy.json` (~1640 tok)
-- `architectural-rethink-of-agent-skills-spec-moving.json` (~1175 tok)
-
-## cli/cmd/syllago/
-
-- `capmon_validate_format_doc_cmd_test.go` — TestCapmonValidateFormatDocCmd_Registered, TestCapmonValidateFormatDocCmd_MissingProvider, TestCapmo (~1963 tok)
-- `capmon_validate_format_doc_cmd.go` (~661 tok)
-- `gencapabilities_test.go` — TestGencapabilities_RootStructure, TestGencapabilities_ProviderSlugFromFilename, TestGencapabilities (~8675 tok)
-- `gencapabilities.go` — Struct: capYAML (~3743 tok)
-- `info_test.go` — TestInfoJSON, TestInfoProvidersUsesDisplayNames, TestInfoFormatsShowsProviders, TestInfoTextShowsAll (~1778 tok)
-- `info.go` — Struct: detectedProvider (~2093 tok)
-
 ## cli/internal/capmon/
 
-- `check_test.go` — Struct: checkTestEnv (~3148 tok)
-- `check.go` — Struct: CapmonCheckOptions (~2304 tok)
-- `formatdoc_validate_test.go` — TestValidateFormatDoc_Valid, TestValidateFormatDoc_UnknownKey, TestValidateFormatDoc_MissingExtensio (~3639 tok)
-- `formatdoc_validate.go` — Struct: ValidationWarning (~2620 tok)
+- `check_test.go` — Struct: checkTestEnv (~4320 tok)
+- `check.go` — Struct: CapmonCheckOptions (~2505 tok)
+- `fetch_chromedp_test.go` — TestChromedpURLWiring, TestRealisticUA_NotHeadless (~306 tok)
+- `fetch_chromedp.go` — ChromedpRemoteURL, FetchChromedp (~836 tok)
+- `pipeline.go` — Struct: PipelineOptions (~3172 tok)
+- `report_test.go` — TestSanitizeSlug, TestDeduplicatePR_NoneExists, TestRecordConsecutiveFailure_ThirdFailure, TestGHRun (~3592 tok)
+- `report.go` — GHRunner, SetGHCommandForTest, SanitizeSlug, DeduplicatePR, RecordConsecutiveFailure (~3221 tok)
 
 ## docs/plans/
 
-- `2026-04-15-local-dashboard-design.md` — Local Dashboard Design (~2355 tok)
+- `2026-04-16-capmon-phase6-recognition-plan.md` — Capmon Phase 6: Full Recognition Pipeline (~2343 tok)
+- `2026-04-16-capmon-self-healing-prompt.md` — Prompt: Self-Healing Source URLs for capmon (~2076 tok)
 
-## docs/plans/local-dashboard-mockups/
+## docs/provider-sources/
 
-- `01-terminal.html` — Syllago · Terminal (~3114 tok)
-- `02-notebook.html` — Syllago · Notebook (~1473 tok)
-- `03-brutalist.html` — Syllago · Brutalist (~1321 tok)
-- `04-bauhaus.html` — Syllago · Bauhaus (~1616 tok)
-- `05-cyberpunk.html` — Syllago · Cyberpunk (~3147 tok)
-- `06-editorial.html` — Syllago · Editorial (~1354 tok)
-- `07-material.html` — Syllago · Material (~3504 tok)
-- `08-neobrutal.html` — Syllago · Neo-brutal (~1643 tok)
-- `09-swiss.html` — Syllago · Swiss (~1433 tok)
-- `10-techdoc.html` — Syllago · Tech Docs (~2784 tok)
-- `index.html` — Syllago Dashboard Mockups · Index (~1876 tok)
+- `amp.yaml` — Amp — Provider Source Manifest (~1090 tok)
+- `copilot-cli.yaml` — Copilot CLI — Provider Source Manifest (~1514 tok)
 
-## docs/plans/local-dashboard-mockups/shared/
+## releases/
 
-- `data.js` — Declares btn (~1085 tok)
-- `filter.js` — Declares q (~288 tok)
-- `render.js` — Declares node (~245 tok)
-- `tokens.css` — Styles: 1 rules, 142 vars (~2039 tok)
+- `v0.7.0.md` — v0.7.0 (~2536 tok)

@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-04-14T17:20:26.414Z",
   "lifetime": {
-    "total_tokens_estimated": 369644,
-    "total_reads": 128,
-    "total_writes": 168,
-    "total_sessions": 17,
-    "anatomy_hits": 22,
-    "anatomy_misses": 75,
-    "repeated_reads_blocked": 5,
-    "estimated_savings_vs_bare_cli": 48641
+    "total_tokens_estimated": 545486,
+    "total_reads": 505,
+    "total_writes": 277,
+    "total_sessions": 27,
+    "anatomy_hits": 103,
+    "anatomy_misses": 321,
+    "repeated_reads_blocked": 73,
+    "estimated_savings_vs_bare_cli": 85687
   },
   "sessions": [
     {
@@ -2004,6 +2004,3489 @@
         "writes_count": 25,
         "repeated_reads_blocked": 0,
         "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-15-0853",
+      "started": "2026-04-15T15:53:39.332Z",
+      "ended": "2026-04-15T19:37:54.411Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 314,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.6.0.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/template.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/deprecated_cmds.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/sandbox/staging.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-15-local-dashboard-design.md",
+          "tokens_estimated": 2692,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/tokens.css",
+          "tokens_estimated": 2039,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/data.js",
+          "tokens_estimated": 1085,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/render.js",
+          "tokens_estimated": 245,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/01-terminal.html",
+          "tokens_estimated": 2122,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/02-notebook.html",
+          "tokens_estimated": 1578,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/03-brutalist.html",
+          "tokens_estimated": 1415,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/04-bauhaus.html",
+          "tokens_estimated": 1731,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/05-cyberpunk.html",
+          "tokens_estimated": 2050,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/06-editorial.html",
+          "tokens_estimated": 1451,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/07-material.html",
+          "tokens_estimated": 2168,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/08-neobrutal.html",
+          "tokens_estimated": 1760,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/09-swiss.html",
+          "tokens_estimated": 1535,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/10-techdoc.html",
+          "tokens_estimated": 2983,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
+          "tokens_estimated": 2010,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 11,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/filter.js",
+          "tokens_estimated": 288,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/01-terminal.html",
+          "tokens_estimated": 3336,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/05-cyberpunk.html",
+          "tokens_estimated": 3371,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/07-material.html",
+          "tokens_estimated": 3754,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.7.0-beta.1.md",
+          "tokens_estimated": 2817,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.7.0-beta.1.md",
+          "tokens_estimated": 122,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/skills/release/workflows/create-release.md",
+          "tokens_estimated": 298,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_release_notes_no_internal_labels.md",
+          "tokens_estimated": 373,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 208,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.7.0-beta.1.md",
+          "tokens_estimated": 37,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/VERSION",
+          "tokens_estimated": 4,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.release-pending.yml",
+          "tokens_estimated": 42,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/sandbox/ownership_unix.go",
+          "tokens_estimated": 66,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/sandbox/ownership_windows.go",
+          "tokens_estimated": 33,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/sandbox/staging.go",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/sandbox/staging.go",
+          "tokens_estimated": 54,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 314,
+        "output_tokens_estimated": 41702,
+        "reads_count": 8,
+        "writes_count": 32,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-15-1525",
+      "started": "2026-04-15T22:25:03.990Z",
+      "ended": "2026-04-15T22:40:53.866Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.handoffs/migrated-handoff-skill-system-from-handoffs-json.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 1,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-15-1525",
+      "started": "2026-04-15T22:25:03.990Z",
+      "ended": "2026-04-15T22:59:44.694Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.handoffs/migrated-handoff-skill-system-from-handoffs-json.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-14-cli-provider-extension-followups-implementation.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 3,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-15-1525",
+      "started": "2026-04-15T22:25:03.990Z",
+      "ended": "2026-04-15T23:04:17.536Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.handoffs/migrated-handoff-skill-system-from-handoffs-json.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-14-cli-provider-extension-followups-implementation.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 3,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-15-1525",
+      "started": "2026-04-15T22:25:03.990Z",
+      "ended": "2026-04-15T23:08:45.887Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.handoffs/migrated-handoff-skill-system-from-handoffs-json.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-14-cli-provider-extension-followups-implementation.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 3,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-15-1525",
+      "started": "2026-04-15T22:25:03.990Z",
+      "ended": "2026-04-15T23:10:06.920Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.handoffs/migrated-handoff-skill-system-from-handoffs-json.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-14-cli-provider-extension-followups-implementation.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 4,
+        "writes_count": 0,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-15-1525",
+      "started": "2026-04-15T22:25:03.990Z",
+      "ended": "2026-04-15T23:17:20.340Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.handoffs/migrated-handoff-skill-system-from-handoffs-json.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-14-cli-provider-extension-followups-implementation.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/report.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 5,
+        "writes_count": 0,
+        "repeated_reads_blocked": 2,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-15-1525",
+      "started": "2026-04-15T22:25:03.990Z",
+      "ended": "2026-04-15T23:32:26.371Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.handoffs/migrated-handoff-skill-system-from-handoffs-json.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/cli-provider-extension-followups.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-14-cli-provider-extension-followups-implementation.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/report.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/VERSION",
+          "tokens_estimated": 4,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/report_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.7.0-beta.1.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.7.0.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.release-pending.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/claude-1000/-home-hhewett--local-src-syllago/4dc42081-8c16-4e11-a41f-b5ba07676069/tasks/b4ufcknp1.output",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/report.go",
+          "tokens_estimated": 1017,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check.go",
+          "tokens_estimated": 557,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/report_test.go",
+          "tokens_estimated": 1333,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/report_test.go",
+          "tokens_estimated": 34,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go",
+          "tokens_estimated": 1270,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/VERSION",
+          "tokens_estimated": 2,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.7.0.md",
+          "tokens_estimated": 2899,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 4,
+        "output_tokens_estimated": 7112,
+        "reads_count": 12,
+        "writes_count": 7,
+        "repeated_reads_blocked": 3,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-16-0612",
+      "started": "2026-04-16T13:12:56.741Z",
+      "ended": "2026-04-16T13:22:38.675Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/capyaml/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 6,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-16-0612",
+      "started": "2026-04-16T13:12:56.741Z",
+      "ended": "2026-04-16T13:25:33.312Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/capyaml/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_windsurf.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/kiro/hooks.0/meta.json",
+          "tokens_estimated": 70,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 215,
+        "output_tokens_estimated": 0,
+        "reads_count": 14,
+        "writes_count": 0,
+        "repeated_reads_blocked": 6,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-16-0612",
+      "started": "2026-04-16T13:12:56.741Z",
+      "ended": "2026-04-16T13:28:39.757Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/capyaml/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_windsurf.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/kiro/hooks.0/meta.json",
+          "tokens_estimated": 70,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 215,
+        "output_tokens_estimated": 0,
+        "reads_count": 14,
+        "writes_count": 0,
+        "repeated_reads_blocked": 6,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-16-0612",
+      "started": "2026-04-16T13:12:56.741Z",
+      "ended": "2026-04-16T13:34:43.110Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/capyaml/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 836,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_windsurf.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/kiro/hooks.0/meta.json",
+          "tokens_estimated": 70,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/go.mod",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 896,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 214,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp_test.go",
+          "tokens_estimated": 327,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 83,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1051,
+        "output_tokens_estimated": 1524,
+        "reads_count": 17,
+        "writes_count": 5,
+        "repeated_reads_blocked": 10,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-16-0612",
+      "started": "2026-04-16T13:12:56.741Z",
+      "ended": "2026-04-16T13:38:21.975Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/capyaml/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 836,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_windsurf.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/kiro/hooks.0/meta.json",
+          "tokens_estimated": 70,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/go.mod",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 896,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 214,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp_test.go",
+          "tokens_estimated": 327,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 83,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1051,
+        "output_tokens_estimated": 1524,
+        "reads_count": 17,
+        "writes_count": 5,
+        "repeated_reads_blocked": 10,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-16-0612",
+      "started": "2026-04-16T13:12:56.741Z",
+      "ended": "2026-04-16T13:42:38.096Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/capyaml/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 836,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_windsurf.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/kiro/hooks.0/meta.json",
+          "tokens_estimated": 70,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/go.mod",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 896,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 214,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp_test.go",
+          "tokens_estimated": 327,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 83,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1051,
+        "output_tokens_estimated": 1524,
+        "reads_count": 17,
+        "writes_count": 5,
+        "repeated_reads_blocked": 10,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-16-0612",
+      "started": "2026-04-16T13:12:56.741Z",
+      "ended": "2026-04-16T13:55:20.267Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/capyaml/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 836,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_windsurf.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/kiro/hooks.0/meta.json",
+          "tokens_estimated": 70,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/go.mod",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/chromedp-stealth-fetching-for-ai-tool-monitors.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 896,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 214,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp_test.go",
+          "tokens_estimated": 327,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 83,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_chromedp.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1051,
+        "output_tokens_estimated": 1524,
+        "reads_count": 18,
+        "writes_count": 5,
+        "repeated_reads_blocked": 10,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-16-0656",
+      "started": "2026-04-16T13:56:43.162Z",
+      "ended": "2026-04-16T13:59:02.280Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 3172,
+        "output_tokens_estimated": 0,
+        "reads_count": 2,
+        "writes_count": 0,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-0656",
+      "started": "2026-04-16T13:56:43.162Z",
+      "ended": "2026-04-16T14:03:10.046Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/templates/obsidian-project.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/templates/repo-project.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 714,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 7,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 3172,
+        "output_tokens_estimated": 721,
+        "reads_count": 4,
+        "writes_count": 2,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-0656",
+      "started": "2026-04-16T13:56:43.162Z",
+      "ended": "2026-04-16T14:06:12.561Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/templates/obsidian-project.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/templates/repo-project.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/hooks/stop-phrase-guard.sh",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 714,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 7,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/hooks/stop-phrase-guard.sh",
+          "tokens_estimated": 148,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/hooks/stop-phrase-guard.sh",
+          "tokens_estimated": 1586,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 3172,
+        "output_tokens_estimated": 2455,
+        "reads_count": 5,
+        "writes_count": 4,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-0656",
+      "started": "2026-04-16T13:56:43.162Z",
+      "ended": "2026-04-16T14:06:28.956Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/templates/obsidian-project.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/templates/repo-project.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/hooks/stop-phrase-guard.sh",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 714,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 7,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/hooks/stop-phrase-guard.sh",
+          "tokens_estimated": 148,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/hooks/stop-phrase-guard.sh",
+          "tokens_estimated": 1586,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 3172,
+        "output_tokens_estimated": 2455,
+        "reads_count": 5,
+        "writes_count": 4,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T14:08:14.909Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 625,
+        "output_tokens_estimated": 0,
+        "reads_count": 1,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T14:12:51.236Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 3942,
+        "output_tokens_estimated": 0,
+        "reads_count": 11,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T14:24:18.466Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 3942,
+        "output_tokens_estimated": 0,
+        "reads_count": 11,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T14:27:07.733Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 3942,
+        "output_tokens_estimated": 0,
+        "reads_count": 11,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T14:47:59.801Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 3942,
+        "output_tokens_estimated": 0,
+        "reads_count": 11,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T14:52:06.574Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 3942,
+        "output_tokens_estimated": 0,
+        "reads_count": 11,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T15:01:08.880Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 3942,
+        "output_tokens_estimated": 0,
+        "reads_count": 11,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T15:08:06.712Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 3942,
+        "output_tokens_estimated": 0,
+        "reads_count": 11,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T15:09:09.537Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 3942,
+        "output_tokens_estimated": 0,
+        "reads_count": 11,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T15:14:02.627Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/cache.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 3942,
+        "output_tokens_estimated": 0,
+        "reads_count": 12,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T15:18:29.581Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/cache.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1951,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 3942,
+        "output_tokens_estimated": 1951,
+        "reads_count": 12,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T15:22:58.610Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/cache.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1951,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 3942,
+        "output_tokens_estimated": 1951,
+        "reads_count": 12,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T15:39:34.486Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/cache.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1951,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 3942,
+        "output_tokens_estimated": 1951,
+        "reads_count": 12,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T15:40:48.237Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/cache.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/docs/plans/2026-04-16-provider-convention-pages-redesign.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1951,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 3942,
+        "output_tokens_estimated": 1951,
+        "reads_count": 13,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T15:41:11.417Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/cache.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/docs/plans/2026-04-16-provider-convention-pages-redesign.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/claude-1000/-home-hhewett--local-src-syllago/a3606c1d-d80f-48ea-a4ac-28387b9d2e74/tasks/bc09wjhg0.output",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1951,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 3942,
+        "output_tokens_estimated": 1951,
+        "reads_count": 14,
+        "writes_count": 1,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0707",
+      "started": "2026-04-16T14:07:48.100Z",
+      "ended": "2026-04-16T16:00:28.613Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 625,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/cache.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/docs/plans/2026-04-16-provider-convention-pages-redesign.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/claude-1000/-home-hhewett--local-src-syllago/a3606c1d-d80f-48ea-a4ac-28387b9d2e74/tasks/bc09wjhg0.output",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1951,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 781,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 127,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 211,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 5122,
+        "output_tokens_estimated": 3070,
+        "reads_count": 15,
+        "writes_count": 4,
+        "repeated_reads_blocked": 2,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-16-0902",
+      "started": "2026-04-16T16:02:54.129Z",
+      "ended": "2026-04-16T16:05:00.318Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.handoffs/migrated-handoff-skill-system-from-handoffs-json.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/copilot-cli.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/amp.yaml",
+          "tokens_estimated": 117,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/copilot-cli.yaml",
+          "tokens_estimated": 38,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/amp.yaml",
+          "tokens_estimated": 8,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/copilot-cli.yaml",
+          "tokens_estimated": 8,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1325,
+        "output_tokens_estimated": 171,
+        "reads_count": 5,
+        "writes_count": 4,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-16-0902",
+      "started": "2026-04-16T16:02:54.129Z",
+      "ended": "2026-04-16T16:05:38.741Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.handoffs/migrated-handoff-skill-system-from-handoffs-json.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/copilot-cli.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/amp.yaml",
+          "tokens_estimated": 117,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/copilot-cli.yaml",
+          "tokens_estimated": 38,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/amp.yaml",
+          "tokens_estimated": 8,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/copilot-cli.yaml",
+          "tokens_estimated": 8,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-self-healing-prompt.md",
+          "tokens_estimated": 2372,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/package.json",
+          "tokens_estimated": 113,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/stealth-fetch.ts",
+          "tokens_estimated": 939,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1325,
+        "output_tokens_estimated": 3595,
+        "reads_count": 5,
+        "writes_count": 7,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-16-0902",
+      "started": "2026-04-16T16:02:54.129Z",
+      "ended": "2026-04-16T16:08:06.316Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.handoffs/migrated-handoff-skill-system-from-handoffs-json.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/copilot-cli.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/stealth-fetch.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/amp.yaml",
+          "tokens_estimated": 117,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/copilot-cli.yaml",
+          "tokens_estimated": 38,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/amp.yaml",
+          "tokens_estimated": 8,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/copilot-cli.yaml",
+          "tokens_estimated": 8,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-self-healing-prompt.md",
+          "tokens_estimated": 2372,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/package.json",
+          "tokens_estimated": 113,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/stealth-fetch.ts",
+          "tokens_estimated": 939,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/stealth-fetch.ts",
+          "tokens_estimated": 280,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1325,
+        "output_tokens_estimated": 3875,
+        "reads_count": 6,
+        "writes_count": 8,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-16-0910",
+      "started": "2026-04-16T16:10:55.222Z",
+      "ended": "2026-04-16T16:15:06.348Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 6,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-self-healing-prompt.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 624,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 1001,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 2811,
+        "output_tokens_estimated": 0,
+        "reads_count": 6,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0910",
+      "started": "2026-04-16T16:10:55.222Z",
+      "ended": "2026-04-16T16:17:40.850Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 6,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-self-healing-prompt.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 624,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 1001,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/stealth-fetch.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.config/pai/skills/research/SKILL.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/stealth-fetch.ts",
+          "tokens_estimated": 415,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.config/pai/skills/research/SKILL.md",
+          "tokens_estimated": 334,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/.gitignore",
+          "tokens_estimated": 12,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/README.md",
+          "tokens_estimated": 723,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/reference_stealth_fetch.md",
+          "tokens_estimated": 336,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 106,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 2811,
+        "output_tokens_estimated": 1926,
+        "reads_count": 9,
+        "writes_count": 6,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0910",
+      "started": "2026-04-16T16:10:55.222Z",
+      "ended": "2026-04-16T16:18:40.875Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 6,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-self-healing-prompt.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 624,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 1001,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/stealth-fetch.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.config/pai/skills/research/SKILL.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/stealth-fetch.ts",
+          "tokens_estimated": 415,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.config/pai/skills/research/SKILL.md",
+          "tokens_estimated": 334,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/.gitignore",
+          "tokens_estimated": 12,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/README.md",
+          "tokens_estimated": 723,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/reference_stealth_fetch.md",
+          "tokens_estimated": 336,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 106,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 2811,
+        "output_tokens_estimated": 1926,
+        "reads_count": 9,
+        "writes_count": 6,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 3
       }
     }
   ],
