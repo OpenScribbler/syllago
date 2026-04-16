@@ -1,6 +1,7 @@
 package capmon_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/capmon"
@@ -100,6 +101,113 @@ func TestRecognizeContentTypeDotPaths_EmptyFields(t *testing.T) {
 	result := capmon.RecognizeContentTypeDotPaths("crush", map[string]capmon.FieldValue{})
 	if len(result) != 0 {
 		t.Errorf("empty fields should produce empty result, got %v", result)
+	}
+}
+
+// TestRecognizeGoStructBatch_WithSkillFields verifies each Agent Skills GoStruct
+// provider produces the standard capability set when Skill.* fields are present.
+// Providers whose real-world extraction does not surface Skill.* fields (non-Go
+// sources) will emit empty output in production; this test proves the plumbing
+// so those providers light up automatically when upstream extractors improve.
+func TestRecognizeGoStructBatch_WithSkillFields(t *testing.T) {
+	providers := []struct {
+		slug     string
+		filename string // substring expected in canonical_filename.mechanism
+	}{
+		{"amp", "SKILL.md"},
+		{"claude-code", "SKILL.md"},
+		{"cline", "SKILL.md"},
+		{"codex", "SKILL.md"},
+		{"copilot-cli", "SKILL.md"},
+		{"factory-droid", "SKILL.md"},
+		{"kiro", "POWER.md"},
+		{"pi", "SKILL.md"},
+	}
+	fields := map[string]capmon.FieldValue{
+		"Skill.Name":          {Value: "name"},
+		"Skill.Description":   {Value: "description"},
+		"Skill.License":       {Value: "license"},
+		"Skill.Compatibility": {Value: "compatibility"},
+		"Skill.MetadataMap":   {Value: "metadata"},
+	}
+	for _, p := range providers {
+		t.Run(p.slug, func(t *testing.T) {
+			result := capmon.RecognizeContentTypeDotPaths(p.slug, fields)
+			if result["skills.supported"] != "true" {
+				t.Errorf("%s: skills.supported = %q, want true", p.slug, result["skills.supported"])
+			}
+			if result["skills.capabilities.display_name.supported"] != "true" {
+				t.Errorf("%s: display_name.supported missing", p.slug)
+			}
+			if result["skills.capabilities.canonical_filename.supported"] != "true" {
+				t.Errorf("%s: canonical_filename.supported missing", p.slug)
+			}
+			mech := result["skills.capabilities.canonical_filename.mechanism"]
+			if !strings.Contains(mech, p.filename) {
+				t.Errorf("%s: canonical_filename.mechanism = %q, want containing %q", p.slug, mech, p.filename)
+			}
+			if result["skills.capabilities.project_scope.supported"] != "true" {
+				t.Errorf("%s: project_scope.supported missing", p.slug)
+			}
+		})
+	}
+}
+
+// TestRecognizeGoStructBatch_EmptyFields verifies the 8 GoStruct providers
+// return an empty map when no Skill.* fields are present (same guard as crush).
+func TestRecognizeGoStructBatch_EmptyFields(t *testing.T) {
+	for _, slug := range []string{"amp", "claude-code", "cline", "codex", "copilot-cli", "factory-droid", "kiro", "pi"} {
+		result := capmon.RecognizeContentTypeDotPaths(slug, map[string]capmon.FieldValue{})
+		if len(result) != 0 {
+			t.Errorf("%s: expected empty result, got %v", slug, result)
+		}
+	}
+}
+
+// TestRecognizeCustomBatch_Supported covers windsurf, gemini-cli, opencode.
+// Each uses the GoStruct pattern under the hood plus provider-specific scope.
+func TestRecognizeCustomBatch_Supported(t *testing.T) {
+	providers := []struct {
+		slug               string
+		projectScopeSubstr string
+	}{
+		{"windsurf", ".windsurf/skills"},
+		{"gemini-cli", ".gemini/skills"},
+		{"opencode", ".opencode/skill"},
+	}
+	fields := map[string]capmon.FieldValue{
+		"Skill.Name":        {Value: "name"},
+		"Skill.Description": {Value: "description"},
+	}
+	for _, p := range providers {
+		t.Run(p.slug, func(t *testing.T) {
+			result := capmon.RecognizeContentTypeDotPaths(p.slug, fields)
+			if result["skills.supported"] != "true" {
+				t.Errorf("%s: skills.supported = %q, want true", p.slug, result["skills.supported"])
+			}
+			mech := result["skills.capabilities.project_scope.mechanism"]
+			if !strings.Contains(mech, p.projectScopeSubstr) {
+				t.Errorf("%s: project_scope.mechanism = %q, want containing %q", p.slug, mech, p.projectScopeSubstr)
+			}
+			if result["skills.capabilities.canonical_filename.supported"] != "true" {
+				t.Errorf("%s: canonical_filename.supported missing", p.slug)
+			}
+		})
+	}
+}
+
+// TestRecognizeCustomBatch_Unsupported verifies cursor and zed return empty
+// even when given Skill.* fields — they do not support Agent Skills per FormatDoc.
+func TestRecognizeCustomBatch_Unsupported(t *testing.T) {
+	fields := map[string]capmon.FieldValue{
+		"Skill.Name":        {Value: "name"},
+		"Skill.Description": {Value: "description"},
+	}
+	for _, slug := range []string{"cursor", "zed"} {
+		result := capmon.RecognizeContentTypeDotPaths(slug, fields)
+		if len(result) != 0 {
+			t.Errorf("%s: unsupported provider should return empty map, got %v", slug, result)
+		}
 	}
 }
 
