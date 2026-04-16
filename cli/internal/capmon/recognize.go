@@ -1,3 +1,42 @@
+// Recognizer conformance contract.
+//
+// Every recognizer registered via RegisterRecognizer MUST satisfy these five
+// requirements. They are stated using RFC-2119 keywords (MUST / MUST NOT /
+// SHOULD) so callers and tooling can reason about behavior precisely.
+//
+//  1. INPUT CONTRACT — Recognizers MUST treat the supplied RecognitionContext
+//     as read-only. They MUST NOT mutate the Fields map, the Landmarks slice,
+//     or any other field on the context. They MUST NOT retain references to
+//     ctx.Fields, ctx.Landmarks, or any string within them across calls.
+//     A recognizer that needs to keep data around for diagnostics MUST copy it.
+//
+//  2. OUTPUT CONTRACT — Every key in RecognitionResult.Capabilities MUST match
+//     the regular expression  ^[a-z_]+(\.[a-z_]+)*$  . That is: lowercase
+//     ASCII letters and underscores, segments joined by literal dots, no
+//     leading/trailing dot, no empty segment. Tested by
+//     TestRecognitionConformance_KeyRegex.
+//
+//  3. PURITY — Recognizers MUST NOT perform I/O (no file reads, no network,
+//     no os.Stat). They MUST NOT read package-level mutable globals. They
+//     MUST NOT call time.Now, math/rand, crypto/rand, or any other source
+//     of nondeterminism. The only allowed inputs are the fields of the
+//     supplied RecognitionContext.
+//
+//  4. DETERMINISM — For two RecognitionContext values that are deeply equal
+//     (reflect.DeepEqual), recognizers MUST produce two RecognitionResult
+//     values that are deeply equal. Map iteration order MUST NOT leak into
+//     the output (build sorted keys when ordering matters).
+//
+//  5. STABILITY — Callers SHOULD construct RecognitionContext and read
+//     RecognitionResult by named field. Code outside the capmon package MUST
+//     NOT use struct literals to construct or destructure these types — the
+//     capmon package reserves the right to add fields without bumping a
+//     major version, and named-field access keeps such additions backward
+//     compatible.
+//
+// Violations of (1) and (3) are silent corruption. Violations of (2) and (4)
+// are caught by tests. Violation of (5) breaks at compile time the next time
+// capmon adds a field, which is the intended trip-wire.
 package capmon
 
 import (
@@ -8,14 +47,21 @@ import (
 	"strings"
 )
 
-// recognizerRegistry maps provider slugs to their recognizer functions.
-// Entries are registered via init() in per-provider recognize_<slug>.go files.
-var recognizerRegistry = map[string]func(map[string]FieldValue) map[string]string{}
+// recognizerRegistry maps provider slugs to their recognizer entries
+// (function + declared kind). Entries are registered via init() in per-provider
+// recognize_<slug>.go files.
+var recognizerRegistry = map[string]recognizerEntry{}
 
-// RegisterRecognizer adds a provider recognizer to the registry.
-// Called from init() in per-provider recognize_*.go files.
-func RegisterRecognizer(provider string, fn func(map[string]FieldValue) map[string]string) {
-	recognizerRegistry[provider] = fn
+// RegisterRecognizer adds a provider recognizer to the registry along with its
+// declared RecognizerKind. Called from init() in per-provider recognize_*.go files.
+//
+// Panics if a recognizer is already registered for the given provider — this is
+// a programmer error caught at startup, not a recoverable runtime condition.
+func RegisterRecognizer(provider string, kind RecognizerKind, fn func(RecognitionContext) RecognitionResult) {
+	if _, exists := recognizerRegistry[provider]; exists {
+		panic(fmt.Sprintf("capmon: recognizer for provider %q already registered", provider))
+	}
+	recognizerRegistry[provider] = recognizerEntry{fn: fn, kind: kind}
 }
 
 // IsRecognizerRegistered reports whether a recognizer is registered for the given provider slug.
@@ -25,8 +71,20 @@ func IsRecognizerRegistered(provider string) bool {
 	return ok
 }
 
-// RecognizeContentTypeDotPaths dispatches to the registered recognizer for the provider.
-// Returns a dot-path → value map suitable for passing to SeedProviderCapabilities.
+// RecognizerKindFor returns the declared RecognizerKind for the given provider,
+// or RecognizerKindUnknown when no recognizer is registered.
+func RecognizerKindFor(provider string) RecognizerKind {
+	entry, ok := recognizerRegistry[provider]
+	if !ok {
+		return RecognizerKindUnknown
+	}
+	return entry.kind
+}
+
+// RecognizeContentTypeDotPaths dispatches to the registered recognizer for the provider
+// and returns just the capability dot-paths. Backwards-compatible facade over the
+// structured RecognizeWithContext — callers that need Status / MissingAnchors should
+// use RecognizeWithContext directly.
 //
 // Dot-path format: "<content_type>.<section>.<key>.<field>" → value
 // Examples:
@@ -37,14 +95,45 @@ func IsRecognizerRegistered(provider string) bool {
 // If no recognizer is registered for the provider, logs a warning and returns an empty map.
 // Recognition is pattern-based and deterministic — no LLM calls.
 func RecognizeContentTypeDotPaths(provider string, fields map[string]FieldValue) map[string]string {
-	fn, ok := recognizerRegistry[provider]
-	if !ok {
-		fmt.Fprintf(os.Stderr, "capmon: warning: no recognizer registered for provider %q\n", provider)
+	ctx := RecognitionContext{
+		Fields:   fields,
+		Provider: provider,
+	}
+	res := RecognizeWithContext(provider, ctx)
+	if res.Capabilities == nil {
 		return make(map[string]string)
 	}
-	result := make(map[string]string)
-	mergeInto(result, fn(fields))
-	return result
+	return res.Capabilities
+}
+
+// RecognizeWithContext dispatches to the registered recognizer for the provider
+// using the structured RecognitionContext / RecognitionResult shape. This is the
+// preferred entry point for new callers that need to observe the Status and
+// MissingAnchors fields (added in PR4 for landmark-based recognition).
+//
+// If no recognizer is registered for the provider, logs a warning and returns
+// an empty result with Status == "not_evaluated".
+func RecognizeWithContext(provider string, ctx RecognitionContext) RecognitionResult {
+	entry, ok := recognizerRegistry[provider]
+	if !ok {
+		fmt.Fprintf(os.Stderr, "capmon: warning: no recognizer registered for provider %q\n", provider)
+		return RecognitionResult{Capabilities: make(map[string]string), Status: StatusNotEvaluated}
+	}
+	if ctx.Provider == "" {
+		ctx.Provider = provider
+	}
+	res := entry.fn(ctx)
+	if res.Capabilities == nil {
+		res.Capabilities = make(map[string]string)
+	}
+	if res.Status == "" {
+		if len(res.Capabilities) > 0 {
+			res.Status = StatusRecognized
+		} else {
+			res.Status = StatusNotEvaluated
+		}
+	}
+	return res
 }
 
 // GoStructOptions configures recognizeGoStruct for a specific content type.
@@ -152,6 +241,9 @@ func LoadAndRecognizeCache(cacheRoot, provider string) (map[string]string, error
 		return nil, err
 	}
 	allFields := make(map[string]FieldValue)
+	allLandmarks := make([]string, 0)
+	format := ""
+	partial := false
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
@@ -168,8 +260,26 @@ func LoadAndRecognizeCache(cacheRoot, provider string) (map[string]string, error
 		for k, fv := range src.Fields {
 			allFields[k] = fv
 		}
+		allLandmarks = append(allLandmarks, src.Landmarks...)
+		if format == "" {
+			format = src.Format
+		}
+		if src.Partial {
+			partial = true
+		}
 	}
-	return RecognizeContentTypeDotPaths(provider, allFields), nil
+	ctx := RecognitionContext{
+		Fields:    allFields,
+		Landmarks: allLandmarks,
+		Format:    format,
+		Provider:  provider,
+		Partial:   partial,
+	}
+	res := RecognizeWithContext(provider, ctx)
+	if res.Capabilities == nil {
+		return make(map[string]string), nil
+	}
+	return res.Capabilities, nil
 }
 
 func mergeInto(dst, src map[string]string) {
