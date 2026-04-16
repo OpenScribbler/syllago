@@ -147,9 +147,22 @@ func runStage1Fetch(ctx context.Context, opts PipelineOptions, manifest *RunMani
 					continue
 				}
 				sourceID := fmt.Sprintf("%s.%d", ctName, i)
+				useChromedp := src.FetchMethod == "chromedp" || (src.FetchMethod == "" && m.FetchTier == "html-scrape")
+
+				// Jitter between requests for browser-fetched sources to avoid
+				// burst patterns that trigger rate limiting.
+				if useChromedp && i > 0 {
+					jitter := time.Duration(500+rand.Intn(1500)) * time.Millisecond //nolint:gosec // jitter delay is not security-sensitive
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					case <-time.After(jitter):
+					}
+				}
+
 				var entry *CacheEntry
 				var fetchErr error
-				if src.FetchMethod == "chromedp" || (src.FetchMethod == "" && m.FetchTier == "html-scrape") {
+				if useChromedp {
 					entry, fetchErr = FetchChromedp(ctx, opts.CacheRoot, m.Slug, sourceID, src.URL)
 				} else {
 					entry, fetchErr = FetchSource(ctx, opts.CacheRoot, m.Slug, sourceID, src.URL)
