@@ -13,7 +13,7 @@ import (
 func makeLines(prefix string, n int) []byte {
 	var sb strings.Builder
 	for i := 0; i < n; i++ {
-		sb.WriteString(fmt.Sprintf("%s%06d\n", prefix, i))
+		fmt.Fprintf(&sb, "%s%06d\n", prefix, i)
 	}
 	return []byte(sb.String())
 }

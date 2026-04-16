@@ -132,7 +132,7 @@ func TestCapmonOnboardCmd_DryRunNoGHCalls(t *testing.T) {
 	capmonOnboardCmd.SetContext(context.Background())
 
 	// Run — fetch will fail (no real HTTP), but dry-run skips GH.
-	capmonOnboardCmd.RunE(capmonOnboardCmd, []string{}) //nolint:errcheck // fetch error is expected in test
+	capmonOnboardCmd.RunE(capmonOnboardCmd, []string{})
 
 	if ghCalled {
 		t.Error("dry-run: expected no gh calls")

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -17,10 +16,8 @@ import (
 
 // checkTestEnv sets up a minimal directory structure for RunCapmonCheck tests.
 type checkTestEnv struct {
-	Dir      string
-	opts     capmon.CapmonCheckOptions
-	ghCalled bool
-	ghArgs   [][]string
+	Dir  string
+	opts capmon.CapmonCheckOptions
 }
 
 func newCheckTestEnv(t *testing.T) *checkTestEnv {
@@ -105,14 +102,6 @@ func (e *checkTestEnv) setHTTPResponse(t *testing.T, body []byte, contentType st
 	t.Helper()
 	capmon.SetHTTPClientForTest(&http.Client{
 		Transport: &mockTransport{body: body, contentType: contentType},
-	})
-	t.Cleanup(func() { capmon.SetHTTPClientForTest(nil) })
-}
-
-func (e *checkTestEnv) setHTTPError(t *testing.T) {
-	t.Helper()
-	capmon.SetHTTPClientForTest(&http.Client{
-		Transport: &mockTransport{err: fmt.Errorf("connection refused")},
 	})
 	t.Cleanup(func() { capmon.SetHTTPClientForTest(nil) })
 }
