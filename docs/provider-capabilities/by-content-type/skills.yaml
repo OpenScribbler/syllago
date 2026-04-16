@@ -1,0 +1,43 @@
+# THIS FILE IS GENERATED. Do not edit directly.
+# Source: docs/provider-capabilities/*.yaml
+# Generated at: 2026-04-15T22:38:53Z
+
+content_type: skills
+providers:
+    crush:
+        supported: true
+        capabilities:
+            frontmatter_compatibility:
+                supported: true
+                mechanism: 'yaml key: compatibility'
+            frontmatter_description:
+                supported: true
+                mechanism: 'yaml key: description'
+            frontmatter_license:
+                supported: true
+                mechanism: 'yaml key: license'
+            frontmatter_metadata:
+                supported: true
+                mechanism: 'yaml key: metadata'
+            frontmatter_name:
+                supported: true
+                mechanism: 'yaml key: name'
+    roo-code:
+        supported: true
+        capabilities:
+            frontmatter_compatibility:
+                supported: true
+                mechanism: 'yaml key: compatibility'
+            frontmatter_description:
+                supported: true
+                mechanism: 'yaml key: description'
+            frontmatter_license:
+                supported: true
+                mechanism: 'yaml key: license'
+            frontmatter_metadata:
+                supported: true
+                mechanism: 'yaml key: metadata'
+            frontmatter_name:
+                supported: true
+                mechanism: 'yaml key: name'
+schema_version: "1"
