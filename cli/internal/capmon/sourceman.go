@@ -36,6 +36,40 @@ type SourceEntry struct {
 	Selector    SelectorConfig `yaml:"selector"`
 	Extracts    []string       `yaml:"extracts,omitempty"`
 	FetchMethod string         `yaml:"fetch_method,omitempty"` // overrides manifest-level
+	Healing     *HealingConfig `yaml:"healing,omitempty"`
+}
+
+// HealingConfig controls reactive URL healing behavior for a single source.
+// When nil or unset, reactive healing runs with all default strategies.
+// Set Enabled=false to opt out — useful for stable sources that should fail loudly.
+type HealingConfig struct {
+	Enabled    *bool    `yaml:"enabled,omitempty"`
+	Strategies []string `yaml:"strategies,omitempty"`
+}
+
+// DefaultHealingStrategies lists the strategies tried in order when a source's
+// Healing.Strategies list is empty. Each strategy is a pluggable heal path
+// registered by the capmon package.
+var DefaultHealingStrategies = []string{"redirect", "github-rename", "variant"}
+
+// IsHealingEnabled reports whether reactive healing should run for this source.
+// Default is true — callers must opt out via healing.enabled: false.
+func (s SourceEntry) IsHealingEnabled() bool {
+	if s.Healing == nil || s.Healing.Enabled == nil {
+		return true
+	}
+	return *s.Healing.Enabled
+}
+
+// EffectiveStrategies returns the healing strategy list for this source.
+// An empty or absent configuration falls back to DefaultHealingStrategies.
+func (s SourceEntry) EffectiveStrategies() []string {
+	if s.Healing == nil || len(s.Healing.Strategies) == 0 {
+		return DefaultHealingStrategies
+	}
+	out := make([]string, len(s.Healing.Strategies))
+	copy(out, s.Healing.Strategies)
+	return out
 }
 
 // LoadSourceManifest parses a single provider-sources YAML file.

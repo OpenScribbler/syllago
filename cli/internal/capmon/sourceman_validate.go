@@ -6,9 +6,18 @@ import (
 	"strings"
 )
 
+// KnownHealingStrategies is the set of healing strategy names accepted in
+// source manifests. Unknown strategies fail validation.
+var KnownHealingStrategies = map[string]bool{
+	"redirect":      true,
+	"github-rename": true,
+	"variant":       true,
+}
+
 // ValidateSources validates that a provider's source manifest has at least one
 // source URI for each content type, unless the content type is explicitly marked
-// as not supported (supported: false).
+// as not supported (supported: false). It also validates healing configuration
+// per source.
 func ValidateSources(sourcesDir, provider string) error {
 	path := filepath.Join(sourcesDir, provider+".yaml")
 	manifest, err := LoadSourceManifest(path)
@@ -24,6 +33,16 @@ func ValidateSources(sourcesDir, provider string) error {
 		}
 		if len(ctSource.Sources) == 0 {
 			errs = append(errs, fmt.Sprintf("content_types.%s: no source URIs and not marked as supported: false", ct))
+		}
+		for i, src := range ctSource.Sources {
+			if src.Healing == nil {
+				continue
+			}
+			for _, strat := range src.Healing.Strategies {
+				if !KnownHealingStrategies[strat] {
+					errs = append(errs, fmt.Sprintf("content_types.%s.sources[%d].healing.strategies: unknown strategy %q (valid: redirect, github-rename, variant)", ct, i, strat))
+				}
+			}
 		}
 	}
 

@@ -88,3 +88,144 @@ func TestLoadAllSourceManifests_SkipsTemplate(t *testing.T) {
 		t.Errorf("expected 1 manifest (template skipped), got %d", len(manifests))
 	}
 }
+
+func TestSourceEntry_HealingConfig_Absent(t *testing.T) {
+	dir := t.TempDir()
+	yamlContent := `schema_version: "1"
+slug: test-provider
+content_types:
+  skills:
+    sources:
+      - url: "https://example.com/skills"
+        type: documentation
+        format: md
+        selector: {}
+`
+	path := filepath.Join(dir, "test-provider.yaml")
+	if err := os.WriteFile(path, []byte(yamlContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := capmon.LoadSourceManifest(path)
+	if err != nil {
+		t.Fatalf("LoadSourceManifest: %v", err)
+	}
+	src := m.ContentTypes["skills"].Sources[0]
+	if src.Healing != nil {
+		t.Errorf("Healing = %+v, want nil when block absent", src.Healing)
+	}
+	if !src.IsHealingEnabled() {
+		t.Error("IsHealingEnabled() = false, want true when healing block absent")
+	}
+	got := src.EffectiveStrategies()
+	if len(got) != len(capmon.DefaultHealingStrategies) {
+		t.Errorf("EffectiveStrategies() len = %d, want %d", len(got), len(capmon.DefaultHealingStrategies))
+	}
+}
+
+func TestSourceEntry_HealingConfig_EnabledFalse(t *testing.T) {
+	dir := t.TempDir()
+	yamlContent := `schema_version: "1"
+slug: test-provider
+content_types:
+  skills:
+    sources:
+      - url: "https://example.com/skills"
+        type: documentation
+        format: md
+        selector: {}
+        healing:
+          enabled: false
+`
+	path := filepath.Join(dir, "test-provider.yaml")
+	if err := os.WriteFile(path, []byte(yamlContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := capmon.LoadSourceManifest(path)
+	if err != nil {
+		t.Fatalf("LoadSourceManifest: %v", err)
+	}
+	src := m.ContentTypes["skills"].Sources[0]
+	if src.Healing == nil {
+		t.Fatal("Healing = nil, want non-nil")
+	}
+	if src.IsHealingEnabled() {
+		t.Error("IsHealingEnabled() = true, want false when enabled: false")
+	}
+}
+
+func TestSourceEntry_HealingConfig_CustomStrategies(t *testing.T) {
+	dir := t.TempDir()
+	yamlContent := `schema_version: "1"
+slug: test-provider
+content_types:
+  skills:
+    sources:
+      - url: "https://example.com/skills"
+        type: documentation
+        format: md
+        selector: {}
+        healing:
+          strategies:
+            - redirect
+            - variant
+`
+	path := filepath.Join(dir, "test-provider.yaml")
+	if err := os.WriteFile(path, []byte(yamlContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := capmon.LoadSourceManifest(path)
+	if err != nil {
+		t.Fatalf("LoadSourceManifest: %v", err)
+	}
+	src := m.ContentTypes["skills"].Sources[0]
+	if !src.IsHealingEnabled() {
+		t.Error("IsHealingEnabled() = false, want true when strategies set but enabled unset")
+	}
+	got := src.EffectiveStrategies()
+	if len(got) != 2 || got[0] != "redirect" || got[1] != "variant" {
+		t.Errorf("EffectiveStrategies() = %v, want [redirect variant]", got)
+	}
+}
+
+func TestSourceEntry_HealingConfig_EmptyStrategiesUsesDefaults(t *testing.T) {
+	dir := t.TempDir()
+	yamlContent := `schema_version: "1"
+slug: test-provider
+content_types:
+  skills:
+    sources:
+      - url: "https://example.com/skills"
+        type: documentation
+        format: md
+        selector: {}
+        healing:
+          enabled: true
+`
+	path := filepath.Join(dir, "test-provider.yaml")
+	if err := os.WriteFile(path, []byte(yamlContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := capmon.LoadSourceManifest(path)
+	if err != nil {
+		t.Fatalf("LoadSourceManifest: %v", err)
+	}
+	src := m.ContentTypes["skills"].Sources[0]
+	got := src.EffectiveStrategies()
+	if len(got) != len(capmon.DefaultHealingStrategies) {
+		t.Errorf("EffectiveStrategies() len = %d, want default len %d", len(got), len(capmon.DefaultHealingStrategies))
+	}
+}
+
+func TestSourceEntry_EffectiveStrategies_ReturnsCopy(t *testing.T) {
+	src := capmon.SourceEntry{
+		Healing: &capmon.HealingConfig{
+			Strategies: []string{"redirect", "variant"},
+		},
+	}
+	got := src.EffectiveStrategies()
+	got[0] = "mutated"
+	got2 := src.EffectiveStrategies()
+	if got2[0] != "redirect" {
+		t.Errorf("EffectiveStrategies() returned aliased slice: after mutation got %q, want %q", got2[0], "redirect")
+	}
+}

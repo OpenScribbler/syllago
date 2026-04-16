@@ -74,6 +74,22 @@ type ProviderStatus struct {
 	DiffStatus       string          `json:"diff_status"`
 	ActionTaken      string          `json:"action_taken"`
 	FixtureAgeDays   *int            `json:"fixture_age_days"`
+	HealEvents       []HealEvent     `json:"heal_events,omitempty"`
+}
+
+// HealEvent is a record of one healing attempt made during Stage 1 Fetch.
+// Both success and failure produce events so the run manifest carries a
+// complete audit trail.
+type HealEvent struct {
+	ContentType string `json:"content_type"`
+	SourceIndex int    `json:"source_index"`
+	OldURL      string `json:"old_url"`
+	NewURL      string `json:"new_url,omitempty"`
+	Strategy    string `json:"strategy,omitempty"`
+	Success     bool   `json:"success"`
+	PRURL       string `json:"pr_url,omitempty"`
+	IssueNumber int    `json:"issue_number,omitempty"`
+	FailReason  string `json:"fail_reason,omitempty"`
 }
 
 // RunManifest is write-only observability output — never a pipeline input.
