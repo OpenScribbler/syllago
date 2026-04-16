@@ -189,16 +189,8 @@ func sortedSetKeys(set map[string]struct{}) []string {
 	return keys
 }
 
-// Confidence string constants. Recognizers MUST NOT use string literals for
-// confidence values — use these constants (or, for landmark recognizers, let
-// recognizeLandmarks set the value automatically). The lint test
-// TestNoConfidenceLiteralsOutsideAllowList enforces this.
-const (
-	// confidenceConfirmed is set automatically by recognizeGoStruct for typed-source
-	// recognition where the field comes directly from a typed schema definition.
-	confidenceConfirmed = "confirmed"
-	// confidenceInferred is set automatically by recognizeLandmarks for landmark-based
-	// recognition where the capability is derived from documentation structure
-	// rather than a typed schema.
-	confidenceInferred = "inferred"
-)
+// confidenceInferred is set automatically by recognizeLandmarks for
+// landmark-based recognition where the capability is derived from
+// documentation structure rather than a typed schema. Recognizers MUST NOT
+// override this — the helper hardcodes it for every emitted capability.
+const confidenceInferred = "inferred"
