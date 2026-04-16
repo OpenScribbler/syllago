@@ -63,29 +63,34 @@ content_types:
     provider_extensions:
       - id: mcp_bundling
         name: "MCP server bundling"
-        description: "Skills can include an mcp.json file to bundle an MCP server. The server starts when Amp launches but its tools remain hidden until the skill is loaded, keeping the tool list clean. Supports local command-based servers (command, args, env fields) and remote HTTP servers (url, headers fields). The optional includeTools field filters which tools are exposed."
+        summary: "Bundle an MCP server with the skill via mcp.json (local command or remote URL); tools stay hidden until skill loads."
         source_ref: "https://ampcode.com/manual/agent-skills.md"
         graduation_candidate: false
+        conversion: not-portable
       - id: toolbox_bundling
         name: "Executable tool bundling via toolbox/"
-        description: "Skills can bundle executable tools by placing them in a toolbox/ subdirectory within the skill directory. These executables are auto-discovered and registered as tools when the skill is loaded. They follow the same stdin/stdout JSON contract as standalone toolbox tools. Tools from skills are hidden until the skill is loaded."
+        summary: "Auto-register executables placed in skill's toolbox/ subdirectory as tools (stdin/stdout JSON contract)."
         source_ref: "https://ampcode.com/manual/agent-skills.md"
         graduation_candidate: false
+        conversion: not-portable
       - id: bundled_resources
         name: "Bundled passive resources"
-        description: "Skills can include arbitrary files (scripts, templates, config files, etc.) in the same directory as SKILL.md. The agent can access these files at paths relative to the skill file. This is distinct from toolbox/ executables — bundled resources are passive files read by the agent, not registered tools."
+        summary: "Include arbitrary files (scripts, templates, configs) alongside SKILL.md; agent reads them by relative path."
         source_ref: "https://ampcode.com/manual/agent-skills.md"
         graduation_candidate: true
+        conversion: embedded
       - id: skill_cli
         name: "CLI and command palette skill management"
-        description: "Skills are managed via the 'amp skill' CLI command and the command palette (Ctrl+O in CLI, Cmd+Shift+P in VS Code). Supported operations: 'skill: add' (install from GitHub URL, git URL, or local path), 'skill: list' (view installed skills), 'skill: remove' (remove a skill). The add command accepts shorthand GitHub paths (e.g., ampcode/amp-contrib/tmux)."
+        summary: "Manage skills via 'amp skill' CLI or command palette (add/list/remove); supports GitHub shorthand paths."
         source_ref: "https://ampcode.com/manual/agent-skills.md"
         graduation_candidate: false
+        conversion: not-portable
       - id: auto_invocation
         name: "Automatic model-driven invocation"
-        description: "The model automatically invokes a skill when the user's request matches the skill's name and description. Both frontmatter fields are always visible to the model at startup and determine when it selects the skill — the full SKILL.md body is only loaded once invoked. This is the primary invocation path; users describe what they want and the model selects the matching skill without explicit syntax."
+        summary: "Model auto-selects skill by matching user request against frontmatter name/description; SKILL.md body loads on demand."
         source_ref: "https://ampcode.com/manual/agent-skills.md"
         graduation_candidate: true
+        conversion: embedded
     loading_model: "Lazy — name and description (frontmatter) are always visible to the model and loaded at startup; SKILL.md body is loaded on demand when the skill is invoked. MCP tools and toolbox executables bundled in a skill remain hidden until the skill is loaded. Skill precedence order (first wins): ~/.config/agents/skills/, ~/.config/amp/skills/, .agents/skills/, .claude/skills/, ~/.claude/skills/, then plugins, toolbox directories, and built-in skills."
     notes: >
       Skill names must be unique per scope. Per the documented precedence list, user-wide
@@ -132,19 +137,22 @@ content_types:
     provider_extensions:
       - id: canonical_filename
         name: "Canonical filename: AGENT.md"
-        description: "Amp rules files are named AGENT.md. The filename is fixed — no frontmatter, no directory wrapper. The file contains plain Markdown with behavioral instructions, coding conventions, workflow guidelines, and any other context the agent should follow when working in the project."
+        summary: "Rules live in a fixed-name AGENT.md file with no frontmatter or directory wrapper — plain Markdown body only."
         source_ref: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/agent-file/AGENT.md"
         graduation_candidate: false
+        conversion: translated
       - id: project_scope
         name: "Project-scope placement at repository root"
-        description: "AGENT.md is placed at the root of the project repository. It is project-scoped: the instructions apply when Amp operates within that project. The file can be committed to version control so the whole team benefits from the same guidelines."
+        summary: "AGENT.md sits at the project repo root; team-shared via version control, applied when Amp operates in that project."
         source_ref: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/agent-file/AGENT.md"
         graduation_candidate: false
+        conversion: translated
       - id: plain_markdown_content
         name: "Plain Markdown, no frontmatter"
-        description: "AGENT.md contains plain Markdown only — no YAML frontmatter, no structured metadata fields. Sections are organized with Markdown headings. Typical content observed includes: build commands and scripts, architecture and directory layout, code style and conventions, testing methodology (e.g., TDD requirements), PR workflow rules, tool and dependency notes, and any team-specific behavioral instructions for the AI."
+        summary: "AGENT.md is plain Markdown with heading-organized sections — no YAML frontmatter or structured metadata."
         source_ref: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/agent-file/AGENT.md"
         graduation_candidate: false
+        conversion: embedded
     loading_model: "AGENT.md is loaded when Amp operates within the project directory. The full file content is provided as context to the agent. No lazy loading or frontmatter-first strategy is described — the entire file is treated as behavioral instructions."
     notes: >
       The two sources are example AGENT.md files, not formal Amp documentation for the rules format.
@@ -207,54 +215,73 @@ content_types:
     provider_extensions:
       - id: hook_events
         name: "Hook trigger events"
-        description: "Amp hooks support two trigger events: 'tool:pre-execute' fires before a tool (e.g. edit_file, Bash) is executed, and 'tool:post-execute' fires after a tool has been executed. Not all actions are compatible with all events — 'send-user-message' is only valid with 'tool:pre-execute', and 'redact-tool-input' is only valid with 'tool:post-execute'."
+        summary: "Two events: 'tool:pre-execute' (before tool runs) and 'tool:post-execute' (after); each event accepts only specific actions."
         source_ref: "https://ampcode.com/manual/hooks.md"
         graduation_candidate: false
+        conversion: translated
+        provider_field: "event"
       - id: hook_action_send_user_message
         name: "Hook action: send-user-message"
-        description: "The 'send-user-message' action sends a user message that interrupts the agent and cancels the pending tool call before it executes. Only valid with the 'tool:pre-execute' event. Used to enforce behavioral constraints when AGENTS.md instructions are not sufficient."
+        summary: "Pre-execute action that injects a user message and cancels the pending tool call to enforce behavioral constraints."
         source_ref: "https://ampcode.com/manual/hooks.md"
         graduation_candidate: false
+        conversion: not-portable
+        provider_field: "action.type"
       - id: hook_action_redact_tool_input
         name: "Hook action: redact-tool-input"
-        description: "The 'redact-tool-input' action redacts the tool input fields after execution. Only valid with the 'tool:post-execute' event. Intended for tools used for side effects only or that have sensitive inputs that should not be stored after execution."
+        summary: "Post-execute action that redacts tool input fields after execution to avoid storing sensitive arguments."
         source_ref: "https://ampcode.com/manual/hooks.md"
         graduation_candidate: false
+        conversion: not-portable
+        provider_field: "action.type"
       - id: hook_match_input_contains
         name: "Hook match condition: input.contains"
-        description: "Hook rules can match on 'input.contains' to filter which tool calls trigger the hook. This is an exact string match only — regular expressions and glob patterns are not supported. The hook fires only when the tool input contains the specified literal string."
+        summary: "Filter hook firing by exact literal substring match in tool input — no regex or glob support."
         source_ref: "https://ampcode.com/manual/hooks.md"
         graduation_candidate: false
+        conversion: translated
+        provider_field: "input.contains"
       - id: hook_config_location
         name: "Hook configuration in settings file"
-        description: "Hooks are defined as an array under the 'amp.hooks' key in an Amp settings file. Each entry specifies an event and an action object. Settings files are standard Amp configuration files (e.g., .amp/settings.json at project or user scope)."
+        summary: "Hooks live under the 'amp.hooks' array in Amp settings files (.amp/settings.json or user-scope settings)."
         source_ref: "https://ampcode.com/manual/hooks.md"
         graduation_candidate: false
+        conversion: not-portable
+        provider_field: "amp.hooks"
       - id: permissions_system
         name: "Permissions system (amp.permissions)"
-        description: "Amp has a separate, ordered permission rule system configured under 'amp.permissions' in the settings file. Rules are evaluated sequentially; the first matching rule wins. Each rule has: 'tool' (glob matching tool name), 'matches' (map of tool-argument to condition), 'action' (allow/reject/ask/delegate), 'context' (thread/subagent, optional), 'to' (program path, required only for delegate), and 'message' (returned to model on reject, optional). Default behavior when no rule matches: main thread asks the operator; sub-agent rejects the tool call. Built-in rules apply as fallback after user rules."
+        summary: "Ordered first-match-wins rule system under 'amp.permissions' with allow/reject/ask/delegate actions and per-context defaults."
         source_ref: "https://ampcode.com/manual/appendix/permissions-reference.md"
         graduation_candidate: false
+        conversion: not-portable
+        provider_field: "amp.permissions"
       - id: permissions_match_conditions
         name: "Permission match condition types"
-        description: "Permission rule 'matches' values support: string glob patterns (e.g. 'git *'), regex patterns (strings starting and ending with '/', e.g. '/git (status|log|diff)/'), arrays for OR logic, boolean/number/null/undefined for literal exact matches, and nested objects for deep property matching. Dot notation is supported for nested objects; numeric string keys for array indices."
+        summary: "Match values support globs, regex (slash-delimited), arrays (OR), literals, and nested objects with dot notation."
         source_ref: "https://ampcode.com/manual/appendix/permissions-reference.md"
         graduation_candidate: false
+        conversion: not-portable
+        provider_field: "matches"
       - id: permissions_delegate_action
         name: "Permission delegate action"
-        description: "The 'delegate' action passes the permission decision to an external program. Amp executes the program named in the 'to' field (must be on $PATH or an absolute path), pipes tool parameters to stdin as JSON, and exports AMP_THREAD_ID, AGENT_TOOL_NAME, and AGENT=amp environment variables. Exit code semantics: 0=allow, 1=ask operator, >=2=reject (stderr is surfaced to the model). The permissions documentation notes that for new permission hooks, the plugin API is preferred and is expected to replace the built-in permissions system."
+        summary: "Delegate decisions to an external program (JSON via stdin, exit code = decision); plugin API is the recommended successor."
         source_ref: "https://ampcode.com/manual/appendix/permissions-reference.md"
         graduation_candidate: false
+        conversion: not-portable
+        provider_field: "action"
       - id: permissions_context_restriction
         name: "Permission context restriction (thread vs subagent)"
-        description: "Permission rules can be scoped to the main conversation thread or to sub-agent tool calls via the optional 'context' field: 'thread' restricts the rule to the main thread only, 'subagent' restricts it to sub-agent calls only, and omitting the field applies the rule everywhere. The default fallback behavior also differs by context: main thread prompts the operator, sub-agent rejects outright."
+        summary: "Optional 'context' field scopes a rule to main thread, sub-agent only, or both (omitted); defaults differ by context."
         source_ref: "https://ampcode.com/manual/appendix/permissions-reference.md"
         graduation_candidate: false
+        conversion: not-portable
+        provider_field: "context"
       - id: permissions_cli
         name: "Permissions CLI (amp permissions)"
-        description: "Amp provides 'amp permissions' subcommands for managing permission rules without editing JSON directly. Supported operations: 'amp permissions list' (show user rules), 'amp permissions list --builtin' (show built-in rules), 'amp permissions add <action> <tool> [--arg val ...]' (add a rule), 'amp permissions edit' (open $EDITOR with rules in text format), and 'amp permissions test <tool> [--arg val ...]' (simulate a tool call and show which rule would match and what action it would take). The text format uses a UNIX-shell-compatible syntax: '<action> [--to <prog>] <tool> [--<key>[:<op>] <value>] ...' with quoted strings and JSON-literal bare words."
+        summary: "'amp permissions' subcommands (list/add/edit/test) manage rules in a UNIX-shell-style text format without editing JSON."
         source_ref: "https://ampcode.com/manual/appendix/permissions-reference.md"
         graduation_candidate: false
+        conversion: not-portable
     loading_model: "Hooks and permissions are loaded from the Amp settings file at startup. Hook definitions live under 'amp.hooks' and permission rules under 'amp.permissions'. Permission rules are evaluated as an ordered list — the first matching rule wins. No lazy loading is described; both systems are active for the duration of the Amp session."
     notes: >
       Amp has two distinct but related interception systems in these sources. The 'hooks' system
@@ -321,54 +348,66 @@ content_types:
     provider_extensions:
       - id: config_key_and_fields
         name: "MCP server configuration: amp.mcpServers"
-        description: "MCP servers are configured under the 'amp.mcpServers' key in the Amp settings file. Each server entry is keyed by a name and supports two transport modes: local servers use 'command', 'args', and 'env' fields; remote servers use 'url' and 'headers' fields. Environment variable values support '$' syntax for referencing shell env vars. An optional 'disabled' boolean field can be set to temporarily disable a server without removing its config."
+        summary: "Servers configured under 'amp.mcpServers' with local (command/args/env) or remote (url/headers) modes; supports '$' env-var refs and 'disabled' flag."
         source_ref: "https://ampcode.com/manual/mcp.md"
         graduation_candidate: false
+        conversion: translated
+        provider_field: "amp.mcpServers"
       - id: config_file_locations
         name: "Settings file locations by platform"
-        description: "The Amp settings file containing 'amp.mcpServers' lives at: Windows: '%APPDATA%\\amp\\settings.json'; macOS and Linux: '~/.config/amp/settings.json'. The project-scoped workspace settings file is '.amp/settings.json' at the project root."
+        summary: "Settings live at '%APPDATA%\\amp\\settings.json' (Windows) or '~/.config/amp/settings.json' (mac/Linux); workspace at '.amp/settings.json'."
         source_ref: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/mcp/amp-mcp-setup-guide.md"
         graduation_candidate: false
+        conversion: not-portable
       - id: cli_add_command
         name: "CLI: amp mcp add"
-        description: "MCP servers can be added via the CLI: 'amp mcp add <name> -- <command> [args...]' for local command-based servers, or 'amp mcp add <name> <url>' for remote HTTP servers. The double-dash separator is required before the command and its arguments for local servers. This writes the server entry into the user-level settings file."
+        summary: "Add servers via 'amp mcp add <name> -- <command> [args...]' (local) or 'amp mcp add <name> <url>' (remote); writes to user settings."
         source_ref: "https://ampcode.com/manual/mcp.md"
         graduation_candidate: false
+        conversion: not-portable
       - id: server_loading_precedence
         name: "MCP server loading precedence"
-        description: "When the same MCP server name appears in multiple configuration sources, Amp uses this precedence (highest to lowest): (1) CLI flags ('--mcp-config'), (2) user/workspace config ('amp.mcpServers'), (3) skills (only loaded if not already configured above). This means user or CLI config can override skill-provided MCP servers."
+        summary: "On name collisions, precedence is CLI flags > user/workspace config > skill-bundled servers."
         source_ref: "https://ampcode.com/manual/mcp.md"
         graduation_candidate: false
+        conversion: not-portable
       - id: workspace_server_trust
         name: "Workspace MCP server trust approval"
-        description: "MCP servers defined in workspace settings ('.amp/settings.json') require explicit approval before they can run, preventing untrusted code from executing automatically when a project is opened. A server awaiting approval appears as 'awaiting approval' in 'amp mcp doctor' output. To approve: 'amp mcp approve <server-name>'. MCP servers in global user settings ('~/.config/amp/settings.json') or passed via '--mcp-config' do not require approval."
+        summary: "Workspace-defined servers require 'amp mcp approve <name>' before running; global and CLI-provided servers run without approval."
         source_ref: "https://ampcode.com/manual/mcp.md"
         graduation_candidate: false
+        conversion: not-portable
       - id: oauth_support
         name: "OAuth authentication for remote MCP servers"
-        description: "Amp supports OAuth for remote MCP servers. For servers that implement automatic OAuth client registration (e.g., Linear), Amp starts the OAuth browser flow automatically at startup. For servers requiring manual OAuth setup: (1) create an OAuth client in the server's admin interface with redirect URI 'http://localhost:8976/oauth/callback'; (2) add the server via 'amp mcp add'; (3) register credentials via 'amp mcp oauth login <server> --server-url <url> --client-id <id> --client-secret <secret> --scopes <scopes>'. OAuth tokens are stored in '~/.amp/oauth/' and auto-refreshed. To clear stored tokens: 'amp mcp oauth logout <server>'."
+        summary: "OAuth flow auto-starts for self-registering servers; manual setup uses 'amp mcp oauth login'; tokens cached in '~/.amp/oauth/'."
         source_ref: "https://ampcode.com/manual/mcp.md"
         graduation_candidate: false
+        conversion: not-portable
       - id: per_tool_enable_disable
         name: "Per-tool enable/disable"
-        description: "Within a configured MCP server, individual tools can be disabled without removing the server. In VS Code, tools are listed after adding a server and individual tools can be unchecked. The mcp-1 source also describes using the 'amp mcp doctor' command to inspect server and tool status. The setup guide explicitly shows unchecking specific tools (e.g., disabling 'create_issue' on the Linear server) as a context-management best practice."
+        summary: "Individual tools within a configured MCP server can be disabled (via VS Code UI) without removing the server."
         source_ref: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/mcp/amp-mcp-setup-guide.md"
         graduation_candidate: false
+        conversion: translated
       - id: vscode_ui_configuration
         name: "VS Code extension UI for MCP setup"
-        description: "In VS Code with the Amp extension, MCP servers can be configured via the settings UI: Settings → Extensions → Amp → MCP Servers → 'Add MCP Server'. This UI accepts server name, command or URL, and arguments, and displays the list of available tools after the server is added. Individual tools can be enabled or disabled from this UI."
+        summary: "VS Code Amp extension exposes MCP setup via Settings > Extensions > Amp > MCP Servers > Add MCP Server."
         source_ref: "https://raw.githubusercontent.com/sourcegraph/amp-examples-and-guides/main/guides/mcp/amp-mcp-setup-guide.md"
         graduation_candidate: false
+        conversion: not-portable
       - id: skills_bundling_preferred
         name: "Skill-bundled MCP servers as preferred approach"
-        description: "The official recommendation is to bundle MCP servers in skills via 'mcp.json' rather than adding them to global settings. Bundled servers keep tools hidden until the skill loads, preventing tool-list bloat that can reduce model performance. Global configuration is reserved for servers that must always be available in the context window. The mcp.md source states this recommendation explicitly and links to the agent-skills documentation for the bundling mechanism."
+        summary: "Official guidance prefers bundling MCP servers in skills via mcp.json over global config to keep tool-lists clean."
         source_ref: "https://ampcode.com/manual/mcp.md"
         graduation_candidate: false
+        conversion: not-portable
       - id: enterprise_registry_allowlist
         name: "Enterprise MCP registry allowlist"
-        description: "Enterprise workspace admins can enforce an MCP registry so that only approved MCP servers are available to workspace members. If the registry is unreachable, all MCP servers are blocked. The registry protocol and schema follow the standard at 'registry.modelcontextprotocol.io' (the 'v0.1/servers' endpoint). The registry URL is set in workspace settings under 'MCP Registry'. The restriction can be scoped to specific workspace member email addresses ('Apply To: Specific users only'); users not on the list are unaffected. Clearing the registry URL removes the restriction and allows all servers."
+        summary: "Workspace admins enforce an approved-MCP registry (modelcontextprotocol.io schema); unreachable registry blocks all servers."
         source_ref: "https://ampcode.com/manual/appendix/mcp-registry-allowlist.md"
         graduation_candidate: false
+        conversion: not-portable
+        provider_field: "MCP Registry"
     loading_model: "MCP servers are loaded at Amp startup. Loading order follows the precedence chain: CLI flags → user/workspace config → skills. Workspace-scoped servers (in .amp/settings.json) require explicit operator approval before they run; global and CLI-provided servers start without approval. Skill-bundled MCP tools remain hidden until the skill is loaded, keeping the tool list clean during normal operation. OAuth flows for remote servers are initiated at startup when credentials are not yet stored."
     notes: >
       Three sources cover different facets of Amp MCP support. mcp-0

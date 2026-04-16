@@ -331,8 +331,9 @@ content_types:
     provider_extensions:
       - id: bad_type_ext
         name: "Bad Type Ext"
-        description: "test extension with non-allow-listed value_type"
+        summary: "test extension with non-allow-listed value_type"
         source_ref: "https://example.com"
+        conversion: embedded
         value_type: "not-in-allow-list"
 `
 	if err := os.WriteFile(filepath.Join(env.opts.FormatsDir, "test-provider.yaml"), []byte(docWithWarning), 0644); err != nil {
@@ -396,8 +397,9 @@ content_types:
     provider_extensions:
       - id: bad_ext
         name: "Bad Ext"
-        description: "extension with invalid value_type"
+        summary: "extension with invalid value_type"
         source_ref: "https://example.com"
+        conversion: embedded
         value_type: "not-in-allow-list"
 `
 	os.WriteFile(filepath.Join(env.opts.FormatsDir, "test-provider.yaml"), []byte(docWithWarning), 0644)
@@ -478,8 +480,9 @@ content_types:
     provider_extensions:
       - id: bad_ext
         name: "Bad Ext"
-        description: "extension with invalid value_type"
+        summary: "extension with invalid value_type"
         source_ref: "https://example.com"
+        conversion: embedded
         value_type: "not-in-allow-list"
 `
 	os.WriteFile(filepath.Join(env.opts.FormatsDir, "test-provider.yaml"), []byte(docWithWarning), 0644)
