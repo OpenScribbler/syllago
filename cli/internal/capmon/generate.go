@@ -74,6 +74,12 @@ func GenerateHooksSpecTables(capsDir, specDir string) error {
 		if err != nil {
 			return fmt.Errorf("load %s: %w", e.Name(), err)
 		}
+		// Skip per-content-type seed YAMLs (e.g. amp-skills.yaml). Those use
+		// `provider:` at the top level instead of `slug:`, so they parse with
+		// an empty Slug and would otherwise produce blank columns in the table.
+		if caps.Slug == "" {
+			continue
+		}
 		pi := providerInfo{slug: caps.Slug, events: make(map[string]string)}
 		if hooksEntry, ok := caps.ContentTypes["hooks"]; ok {
 			for canonical, ev := range hooksEntry.Events {
@@ -169,6 +175,10 @@ func GenerateContentTypeViews(capsDir, outDir string) error {
 		caps, err := capyaml.LoadCapabilityYAML(filepath.Join(capsDir, e.Name()))
 		if err != nil {
 			return fmt.Errorf("load %s: %w", e.Name(), err)
+		}
+		// Skip per-content-type seed YAMLs that have no top-level `slug:`.
+		if caps.Slug == "" {
+			continue
 		}
 		for ct, entry := range caps.ContentTypes {
 			if _, ok := byType[ct]; !ok {

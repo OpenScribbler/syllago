@@ -144,6 +144,60 @@ func TestGenerateHooksSpecTables_MissingEndMarker(t *testing.T) {
 	}
 }
 
+// TestGenerateHooksSpecTables_SkipsSeedYAMLs ensures that per-content-type
+// seed YAMLs (which use top-level `provider:` instead of `slug:`) are skipped
+// instead of producing empty columns in the generated table.
+func TestGenerateHooksSpecTables_SkipsSeedYAMLs(t *testing.T) {
+	capsDir := t.TempDir()
+	specDir := t.TempDir()
+
+	// Real capability YAML with a slug.
+	realYAML := `schema_version: "1"
+slug: real-provider
+display_name: Real
+content_types:
+  hooks:
+    supported: true
+    events:
+      before_tool_execute:
+        native_name: PreToolUse
+`
+	if err := os.WriteFile(filepath.Join(capsDir, "real-provider.yaml"), []byte(realYAML), 0644); err != nil {
+		t.Fatalf("write real: %v", err)
+	}
+
+	// Per-content-type seed YAML — uses `provider:` not `slug:`, so it parses
+	// with empty Slug. Must be skipped, not silently included with a blank column.
+	seedYAML := `provider: real-provider
+content_type: skills
+proposed_mappings: []
+`
+	if err := os.WriteFile(filepath.Join(capsDir, "real-provider-skills.yaml"), []byte(seedYAML), 0644); err != nil {
+		t.Fatalf("write seed: %v", err)
+	}
+
+	mdPath := filepath.Join(specDir, "events.md")
+	mdContent := "# Events\n\n" + capmon.GeneratedBannerStart + "\n\n" + capmon.GeneratedBannerEnd + "\n"
+	if err := os.WriteFile(mdPath, []byte(mdContent), 0644); err != nil {
+		t.Fatalf("write md: %v", err)
+	}
+
+	if err := capmon.GenerateHooksSpecTables(capsDir, specDir); err != nil {
+		t.Fatalf("GenerateHooksSpecTables: %v", err)
+	}
+
+	out, _ := os.ReadFile(mdPath)
+	body := string(out)
+	// Real provider must appear exactly once.
+	if strings.Count(body, "real-provider") != 1 {
+		t.Errorf("real-provider must appear once in generated table, body:\n%s", body)
+	}
+	// No empty-slug column (would render as " | |" with nothing between pipes).
+	if strings.Contains(body, "|  |") {
+		t.Errorf("generated table contains an empty-slug column, body:\n%s", body)
+	}
+}
+
 func TestReplaceGeneratedSection_Roundtrip(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "file.md")
