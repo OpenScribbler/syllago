@@ -140,11 +140,26 @@ func RecognizeWithContext(provider string, ctx RecognitionContext) RecognitionRe
 // Each content type (skills, rules, hooks, …) has its own struct prefix in the
 // extracted cache (e.g., "Skill." for skills, "Rule." for rules) and its own
 // YAML-key-to-canonical-key mapping.
+//
+// Prefix selection: exactly one of StructPrefixes or PrefixMatcher MUST be set.
+// Validation runs at recognizer call time; misconfiguration panics with a
+// descriptive message (programmer error, not a recoverable runtime condition).
+//   - StructPrefixes is the explicit allow-list — preferred for the 95% case
+//     including multi-struct sources like codex (PR3) where a fixed set of
+//     struct names is known and a few related names must be excluded.
+//   - PrefixMatcher is the escape hatch for arbitrary matching logic
+//     (regex, runtime computation, etc.). Use only when the allow-list cannot
+//     express the requirement.
 type GoStructOptions struct {
 	// ContentType is the top-level dot-path prefix: "skills", "rules", etc.
 	ContentType string
-	// StructPrefix matches extracted field keys (e.g., "Skill." matches "Skill.Name").
-	StructPrefix string
+	// StructPrefixes is the explicit allow-list of field-key prefixes to recognize.
+	// Each entry behaves like the old single-prefix StructPrefix — the OR of all
+	// entries is matched. Mutually exclusive with PrefixMatcher.
+	StructPrefixes []string
+	// PrefixMatcher is the escape hatch: a function that returns true for keys
+	// the recognizer should process. Mutually exclusive with StructPrefixes.
+	PrefixMatcher func(key string) bool
 	// KeyMapper converts a YAML key name to a canonical capability key.
 	// Unknown keys should be returned as-is.
 	KeyMapper func(yamlKey string) string
@@ -153,20 +168,51 @@ type GoStructOptions struct {
 	MechanismPrefix string
 }
 
+// validate enforces the StructPrefixes / PrefixMatcher mutual-exclusion invariant.
+// Called from recognizeGoStruct on every invocation to catch programmer errors
+// at the earliest deterministic moment (test-time when the recognizer first runs).
+func (o GoStructOptions) validate() {
+	hasList := len(o.StructPrefixes) > 0
+	hasMatcher := o.PrefixMatcher != nil
+	switch {
+	case hasList && hasMatcher:
+		panic(fmt.Sprintf("capmon: GoStructOptions for content_type=%q has both StructPrefixes and PrefixMatcher set; exactly one is required", o.ContentType))
+	case !hasList && !hasMatcher:
+		panic(fmt.Sprintf("capmon: GoStructOptions for content_type=%q has neither StructPrefixes nor PrefixMatcher set; exactly one is required", o.ContentType))
+	}
+}
+
+// matches reports whether a field key satisfies the prefix-selection criteria.
+// Uses StructPrefixes (any-of) when set, otherwise delegates to PrefixMatcher.
+// Caller MUST have already invoked validate() to ensure exactly one is configured.
+func (o GoStructOptions) matches(key string) bool {
+	if len(o.StructPrefixes) > 0 {
+		for _, p := range o.StructPrefixes {
+			if strings.HasPrefix(key, p) {
+				return true
+			}
+		}
+		return false
+	}
+	return o.PrefixMatcher(key)
+}
+
 // recognizeGoStruct recognizes GoStruct-pattern extracted fields for any content type.
-// Fields whose keys start with opts.StructPrefix are mapped through opts.KeyMapper
-// to produce canonical capability dot-paths rooted at opts.ContentType.
+// Fields whose keys are accepted by opts (via StructPrefixes or PrefixMatcher) are
+// mapped through opts.KeyMapper to produce canonical capability dot-paths rooted at
+// opts.ContentType.
 //
 // This utility is called by individual provider recognizers — it is NOT called from
-// RecognizeContentTypeDotPaths directly.
+// RecognizeContentTypeDotPaths directly. Panics on misconfigured opts.
 func recognizeGoStruct(fields map[string]FieldValue, opts GoStructOptions) map[string]string {
+	opts.validate()
 	result := make(map[string]string)
 	mechPrefix := opts.MechanismPrefix
 	if mechPrefix == "" {
 		mechPrefix = "yaml frontmatter key: "
 	}
 	for k, fv := range fields {
-		if !strings.HasPrefix(k, opts.StructPrefix) {
+		if !opts.matches(k) {
 			continue
 		}
 		yamlKey := fv.Value // e.g., "name", "description", "license"
@@ -188,9 +234,9 @@ func recognizeGoStruct(fields map[string]FieldValue, opts GoStructOptions) map[s
 // whose skills format mirrors the standard's Skill struct).
 func SkillsGoStructOptions() GoStructOptions {
 	return GoStructOptions{
-		ContentType:  "skills",
-		StructPrefix: "Skill.",
-		KeyMapper:    skillsKeyMapper,
+		ContentType:    "skills",
+		StructPrefixes: []string{"Skill."},
+		KeyMapper:      skillsKeyMapper,
 	}
 }
 
