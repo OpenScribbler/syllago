@@ -7,7 +7,7 @@ import (
 )
 
 func TestRecognizeContentTypeDotPaths_SkillGoStruct(t *testing.T) {
-	// Phase 6: crush recognizer is now wired and calls recognizeSkillsGoStruct internally.
+	// Phase 6: crush recognizer is now wired and calls recognizeGoStruct(SkillsGoStructOptions()) internally.
 	fields := map[string]capmon.FieldValue{
 		"Skill.Name": {
 			Value:     "name",
@@ -34,7 +34,7 @@ func TestRecognizeContentTypeDotPaths_SkillGoStruct(t *testing.T) {
 
 	result := capmon.RecognizeContentTypeDotPaths("crush", fields)
 
-	// Phase 6: crush recognizer now calls recognizeSkillsGoStruct, so Skill.* fields produce paths.
+	// Phase 6: crush recognizer now calls recognizeGoStruct, so Skill.* fields produce paths.
 	if result["skills.capabilities.display_name.supported"] != "true" {
 		t.Errorf("expected skills.capabilities.display_name.supported=true, got %q", result["skills.capabilities.display_name.supported"])
 	}
