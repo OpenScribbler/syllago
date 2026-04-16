@@ -24,7 +24,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
-	github.com/yuin/goldmark v1.7.13
+	github.com/yuin/goldmark v1.8.2
 	golang.org/x/net v0.52.0
 	gopkg.in/yaml.v3 v3.0.1
 )
