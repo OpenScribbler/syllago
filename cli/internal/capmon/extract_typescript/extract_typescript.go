@@ -71,9 +71,43 @@ func walkTopLevel(node *sitter.Node, src []byte, fields map[string]capmon.FieldV
 		extractEnum(node, src, fields, landmarks)
 	case "lexical_declaration":
 		extractLexical(node, src, fields)
-	case "interface_declaration", "type_alias_declaration":
+	case "interface_declaration":
+		extractInterface(node, src, fields, landmarks)
+	case "type_alias_declaration":
 		if name := namedChild(node, "name", src); name != "" {
 			*landmarks = append(*landmarks, name)
+		}
+	}
+}
+
+// extractInterface extracts property names from an interface declaration.
+// The interface name is added as a landmark. Properties are keyed as "InterfaceName.PropertyName".
+func extractInterface(node *sitter.Node, src []byte, fields map[string]capmon.FieldValue, landmarks *[]string) {
+	ifName := namedChild(node, "name", src)
+	if ifName != "" {
+		*landmarks = append(*landmarks, ifName)
+	}
+
+	for i := uint32(0); i < node.ChildCount(); i++ {
+		body := node.Child(int(i))
+		bodyType := body.Type()
+		if bodyType != "object_type" && bodyType != "interface_body" {
+			continue
+		}
+		for j := uint32(0); j < body.ChildCount(); j++ {
+			prop := body.Child(int(j))
+			if prop.Type() != "property_signature" {
+				continue
+			}
+			propName := namedChild(prop, "name", src)
+			if propName == "" {
+				continue
+			}
+			key := propName
+			if ifName != "" {
+				key = ifName + "." + propName
+			}
+			addField(fields, key, propName)
 		}
 	}
 }
