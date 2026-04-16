@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // recognizerRegistry maps provider slugs to their recognizer functions.
@@ -46,35 +47,67 @@ func RecognizeContentTypeDotPaths(provider string, fields map[string]FieldValue)
 	return result
 }
 
-// recognizeSkillsGoStruct recognizes the Agent Skills standard struct pattern.
-// Keys of the form "Skill.<FieldName>" with yaml key values map to skills frontmatter capabilities.
-// This utility is called by individual recognizer functions (e.g., recognizeCrush)
-// that implement the Agent Skills open standard.
+// GoStructOptions configures recognizeGoStruct for a specific content type.
+// Each content type (skills, rules, hooks, …) has its own struct prefix in the
+// extracted cache (e.g., "Skill." for skills, "Rule." for rules) and its own
+// YAML-key-to-canonical-key mapping.
+type GoStructOptions struct {
+	// ContentType is the top-level dot-path prefix: "skills", "rules", etc.
+	ContentType string
+	// StructPrefix matches extracted field keys (e.g., "Skill." matches "Skill.Name").
+	StructPrefix string
+	// KeyMapper converts a YAML key name to a canonical capability key.
+	// Unknown keys should be returned as-is.
+	KeyMapper func(yamlKey string) string
+	// MechanismPrefix is prepended to the YAML key in the mechanism string.
+	// Defaults to "yaml frontmatter key: " when empty.
+	MechanismPrefix string
+}
+
+// recognizeGoStruct recognizes GoStruct-pattern extracted fields for any content type.
+// Fields whose keys start with opts.StructPrefix are mapped through opts.KeyMapper
+// to produce canonical capability dot-paths rooted at opts.ContentType.
 //
-// IMPORTANT: This function is NOT called from RecognizeContentTypeDotPaths directly.
-// Individual provider recognizers call it when appropriate.
-func recognizeSkillsGoStruct(fields map[string]FieldValue) map[string]string {
+// This utility is called by individual provider recognizers — it is NOT called from
+// RecognizeContentTypeDotPaths directly.
+func recognizeGoStruct(fields map[string]FieldValue, opts GoStructOptions) map[string]string {
 	result := make(map[string]string)
+	mechPrefix := opts.MechanismPrefix
+	if mechPrefix == "" {
+		mechPrefix = "yaml frontmatter key: "
+	}
 	for k, fv := range fields {
-		if len(k) < 7 || k[:6] != "Skill." {
+		if !strings.HasPrefix(k, opts.StructPrefix) {
 			continue
 		}
 		yamlKey := fv.Value // e.g., "name", "description", "license"
 		if yamlKey == "" || yamlKey == "-" {
 			continue
 		}
-		capKey := canonicalKeyFromYAMLKey(yamlKey)
-		result["skills.capabilities."+capKey+".supported"] = "true"
-		result["skills.capabilities."+capKey+".mechanism"] = "yaml frontmatter key: " + yamlKey
-		result["skills.capabilities."+capKey+".confidence"] = "confirmed"
-		result["skills.supported"] = "true"
+		capKey := opts.KeyMapper(yamlKey)
+		capPath := opts.ContentType + ".capabilities." + capKey
+		result[capPath+".supported"] = "true"
+		result[capPath+".mechanism"] = mechPrefix + yamlKey
+		result[capPath+".confidence"] = "confirmed"
+		result[opts.ContentType+".supported"] = "true"
 	}
 	return result
 }
 
-// canonicalKeyFromYAMLKey maps a YAML frontmatter key name to the canonical capability key.
+// SkillsGoStructOptions returns the preset GoStructOptions for providers that
+// implement the Agent Skills open standard (crush, roo-code, and any provider
+// whose skills format mirrors the standard's Skill struct).
+func SkillsGoStructOptions() GoStructOptions {
+	return GoStructOptions{
+		ContentType:  "skills",
+		StructPrefix: "Skill.",
+		KeyMapper:    skillsKeyMapper,
+	}
+}
+
+// skillsKeyMapper maps a skills YAML frontmatter key name to the canonical capability key.
 // Unknown keys are passed through as-is (they may already be canonical).
-func canonicalKeyFromYAMLKey(yamlKey string) string {
+func skillsKeyMapper(yamlKey string) string {
 	switch yamlKey {
 	case "name":
 		return "display_name"
@@ -97,11 +130,11 @@ func canonicalKeyFromYAMLKey(yamlKey string) string {
 	}
 }
 
-// capabilityDotPaths returns the three dot-path entries for a single canonical capability.
-// The supported field is always set to "true" — a recognizer only emits a key if it is supported.
-// Used by individual recognizer functions to avoid boilerplate.
-func capabilityDotPaths(canonicalKey, mechanism, confidence string) map[string]string {
-	prefix := "skills.capabilities." + canonicalKey
+// capabilityDotPaths returns the three dot-path entries for a single canonical capability
+// under the given content type. The supported field is always "true" — a recognizer only
+// emits a key if it is supported. Used by provider recognizers to avoid boilerplate.
+func capabilityDotPaths(contentType, canonicalKey, mechanism, confidence string) map[string]string {
+	prefix := contentType + ".capabilities." + canonicalKey
 	return map[string]string{
 		prefix + ".supported":  "true",
 		prefix + ".mechanism":  mechanism,
