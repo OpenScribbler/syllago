@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Syllago Dashboard Mockups · Index</title>
+  <link rel="stylesheet" href="./shared/tokens.css" />
+  <style>
+    body {
+      font-family: "Inter", var(--font-sans); font-size: 15px;
+    }
+    .page { max-width: 1120px; margin: 0 auto; padding: 64px 40px 80px; }
+    header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+    h1 { font-size: 40px; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+    h1 .lago { color: var(--ac-red); }
+    .toggle {
+      font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 6px 12px; border: 1px solid var(--ui-3); border-radius: 999px; color: var(--tx-2);
+    }
+    .toggle:hover { color: var(--tx); border-color: var(--tx); }
+    .sub {
+      color: var(--tx-2); margin: 0 0 40px; max-width: 70ch;
+      font-size: 16px; line-height: 1.6;
+    }
+
+    .legend {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 36px;
+      font-size: 12px; color: var(--tx-2);
+    }
+    .legend .sw {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 999px; border: 1px solid var(--ui-2);
+    }
+    .legend .sw i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+    .grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      display: block; border: 1px solid var(--ui-2); border-radius: 12px;
+      padding: 20px 22px; background: var(--bg);
+      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+      text-decoration: none; color: var(--tx);
+    }
+    .card:hover {
+      transform: translateY(-2px); border-color: var(--ac-blue);
+      box-shadow: 0 6px 18px -8px rgba(0,0,0,0.12);
+      text-decoration: none;
+    }
+    .card .num {
+      display: inline-block; font-family: var(--font-mono); font-size: 11px;
+      padding: 2px 8px; border-radius: 4px; background: var(--bg-2); color: var(--tx-2);
+      margin-bottom: 12px; letter-spacing: 0.05em;
+    }
+    .card h3 { margin: 0 0 4px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+    .card .tagline { font-size: 13px; color: var(--tx-2); margin: 0 0 14px; line-height: 1.5; }
+    .card .tags { display: flex; gap: 6px; flex-wrap: wrap; font-size: 11px; }
+    .card .tags span {
+      padding: 2px 8px; border-radius: 999px;
+      background: var(--bg-2); color: var(--tx-2); border: 1px solid var(--ui-2);
+    }
+
+    .footnote { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--ui-2); color: var(--tx-2); font-size: 13px; line-height: 1.6; }
+    code { font-family: var(--font-mono); font-size: 0.9em; padding: 1px 6px; background: var(--bg-2); border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>Syl<span class="lago">lago</span> Dashboard · Mockups</h1>
+      <button class="toggle" id="themeBtn">Toggle theme</button>
+    </header>
+    <p class="sub">
+      Four aesthetic variations of the local dashboard, each rendering the same mock catalog
+      with the same search + filter behavior. All share the Flexoki palette and support light/dark
+      mode — the difference is typography, density, shape, and tone. Open each, type in the search,
+      click the chips, flip the theme.
+    </p>
+
+    <div class="legend">
+      <span class="sw"><i style="background:var(--ac-red)"></i>red</span>
+      <span class="sw"><i style="background:var(--ac-orange)"></i>orange</span>
+      <span class="sw"><i style="background:var(--ac-yellow)"></i>yellow</span>
+      <span class="sw"><i style="background:var(--ac-green)"></i>green</span>
+      <span class="sw"><i style="background:var(--ac-cyan)"></i>cyan</span>
+      <span class="sw"><i style="background:var(--ac-blue)"></i>blue</span>
+      <span class="sw"><i style="background:var(--ac-purple)"></i>purple</span>
+      <span class="sw"><i style="background:var(--ac-magenta)"></i>magenta</span>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="footnote">
+      <p>
+        Shared across all mockups: <code>shared/tokens.css</code> (Flexoki palette),
+        <code>shared/data.js</code> (mock catalog), <code>shared/filter.js</code>
+        (filter predicate — identical semantics everywhere), and <code>shared/render.js</code>
+        (DOM helpers). No build step, no dependencies — open the HTML directly.
+      </p>
+      <p>
+        <b>Keyboard:</b> <code>/</code> focuses search on Terminal &amp; Cyberpunk.
+        <code>⌘K</code> / <code>Ctrl-K</code> focuses search on Material &amp; Tech Docs.
+        <code>Esc</code> clears the search on any mockup.
+      </p>
+      <p>
+        Theme toggle persists per-browser via <code>localStorage</code>, and respects
+        <code>prefers-color-scheme</code> as the default when no override is set.
+      </p>
+    </div>
+  </div>
+
+  <script src="./shared/data.js"></script>
+  <script src="./shared/render.js"></script>
+  <script>
+    const MOCKUPS = [
+      { n: "01", file: "01-terminal.html",  name: "Terminal",  tagline: "Mono font, ASCII borders, / to focus search. TUI-in-HTML for power users.", tags: ["mono", "dense", "keyboard-first"] },
+      { n: "05", file: "05-cyberpunk.html", name: "Cyberpunk", tagline: "Dark-first, cyan+magenta glow, grid bg. Neon-outlined chips and search.",   tags: ["dark", "neon", "moody"] },
+      { n: "07", file: "07-material.html",  name: "Material",  tagline: "Rounded pill search, soft shadows, chip filters. Friendly SaaS app.",       tags: ["elevation", "rounded", "approachable"] },
+      { n: "10", file: "10-techdoc.html",   name: "Tech Docs", tagline: "Dense table, stats row, chip toolbar, ⌘K to search. Stripe/Linear feel.",   tags: ["dense", "table", "professional"] },
+    ];
+    const grid = document.getElementById("grid");
+    MOCKUPS.forEach(m => {
+      const card = el("a", { class: "card", href: m.file }, [
+        el("div", { class: "num" }, m.n),
+        el("h3", {}, m.name),
+        el("p", { class: "tagline" }, m.tagline),
+        el("div", { class: "tags" }, m.tags.map(t => el("span", {}, t))),
+      ]);
+      grid.appendChild(card);
+    });
+    initThemeToggle("themeBtn");
+  </script>
+</body>
+</html>
