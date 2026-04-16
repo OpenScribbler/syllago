@@ -5,7 +5,8 @@ func init() {
 }
 
 // recognizeCursor recognizes skills capabilities for the Cursor provider.
-// TODO(Phase 6): implement real recognition after seeder spec is approved.
+// Cursor does not support Agent Skills (FormatDoc status: unsupported).
+// Returning an empty map is the confirmed-negative signal.
 func recognizeCursor(fields map[string]FieldValue) map[string]string {
 	return make(map[string]string)
 }
