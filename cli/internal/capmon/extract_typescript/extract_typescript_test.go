@@ -120,6 +120,60 @@ func TestTypeScriptExtractor_EnumWithNumbers(t *testing.T) {
 	}
 }
 
+func TestTypeScriptExtractor_InterfaceProperties(t *testing.T) {
+	raw := []byte(`export interface Skill {
+  name: string;
+  description: string;
+  filePath: string;
+}`)
+	result, err := capmon.Extract(context.Background(), "typescript", raw, capmon.SelectorConfig{})
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+	foundLandmark := false
+	for _, l := range result.Landmarks {
+		if l == "Skill" {
+			foundLandmark = true
+			break
+		}
+	}
+	if !foundLandmark {
+		t.Errorf("expected 'Skill' in landmarks, got %v", result.Landmarks)
+	}
+	wantFields := map[string]string{
+		"Skill.name":        "name",
+		"Skill.description": "description",
+		"Skill.filePath":    "filePath",
+	}
+	for key, wantValue := range wantFields {
+		fv, ok := result.Fields[key]
+		if !ok {
+			t.Errorf("expected field %q, not found in %v", key, result.Fields)
+			continue
+		}
+		if fv.Value != wantValue {
+			t.Errorf("field %q: value = %q, want %q", key, fv.Value, wantValue)
+		}
+	}
+}
+
+func TestTypeScriptExtractor_InterfaceFromFixture(t *testing.T) {
+	raw, err := os.ReadFile("../testdata/fixtures/typescript/hooks.ts")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	result, err := capmon.Extract(context.Background(), "typescript", raw, capmon.SelectorConfig{})
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+	wantFields := []string{"HookConfig.event", "HookConfig.blocking", "HookConfig.command"}
+	for _, key := range wantFields {
+		if _, ok := result.Fields[key]; !ok {
+			t.Errorf("expected field %q from HookConfig interface, not found", key)
+		}
+	}
+}
+
 func TestTypeScriptExtractor_AnchorMissing(t *testing.T) {
 	raw := []byte(`export enum Foo { Bar = "Bar" }`)
 	cfg := capmon.SelectorConfig{ExpectedContains: "NonExistentAnchor"}

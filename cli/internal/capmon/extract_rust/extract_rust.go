@@ -40,7 +40,9 @@ func (e *rustExtractor) Extract(_ context.Context, raw []byte, cfg capmon.Select
 			extractEnum(child, raw, fields, &landmarks)
 		case "const_item":
 			extractConst(child, raw, fields)
-		case "struct_item", "trait_item", "type_item":
+		case "struct_item":
+			extractStruct(child, raw, fields, &landmarks)
+		case "trait_item", "type_item":
 			if name := firstChildOfType(child, "type_identifier", raw); name != "" {
 				landmarks = append(landmarks, name)
 			}
@@ -56,6 +58,39 @@ func (e *rustExtractor) Extract(_ context.Context, raw []byte, cfg capmon.Select
 		Fields:           fields,
 		Landmarks:        landmarks,
 	}, nil
+}
+
+// extractStruct extracts field names from a struct declaration.
+// The struct name is added as a landmark. Fields are keyed as "StructName.field_name".
+func extractStruct(node *sitter.Node, src []byte, fields map[string]capmon.FieldValue, landmarks *[]string) {
+	structName := firstChildOfType(node, "type_identifier", src)
+	if structName != "" {
+		*landmarks = append(*landmarks, structName)
+	}
+
+	fieldList := firstChildNode(node, "field_declaration_list")
+	if fieldList == nil {
+		return
+	}
+	for i := uint32(0); i < fieldList.ChildCount(); i++ {
+		decl := fieldList.Child(int(i))
+		if decl.Type() != "field_declaration" {
+			continue
+		}
+		fieldName := firstChildOfType(decl, "field_identifier", src)
+		if fieldName == "" {
+			continue
+		}
+		key := fieldName
+		if structName != "" {
+			key = structName + "." + fieldName
+		}
+		sanitized := capmon.SanitizeExtractedString(fieldName)
+		fields[key] = capmon.FieldValue{
+			Value:     sanitized,
+			ValueHash: capmon.SHA256Hex([]byte(sanitized)),
+		}
+	}
 }
 
 // extractEnum extracts enum name (landmark) and variant names (fields).
