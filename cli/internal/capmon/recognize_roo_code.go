@@ -1,12 +1,12 @@
 package capmon
 
 func init() {
-	RegisterRecognizer("roo-code", recognizeRooCodeSkills)
+	RegisterRecognizer("roo-code", recognizeRooCode)
 }
 
-// recognizeRooCodeSkills recognizes skills capabilities for the Roo Code provider.
+// recognizeRooCode recognizes skills capabilities for the Roo Code provider.
 // Roo Code implements the Agent Skills open standard (GoStruct pattern).
-func recognizeRooCodeSkills(fields map[string]FieldValue) map[string]string {
+func recognizeRooCode(fields map[string]FieldValue) map[string]string {
 	result := recognizeSkillsGoStruct(fields)
 	if len(result) == 0 {
 		return result

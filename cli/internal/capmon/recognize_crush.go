@@ -1,12 +1,12 @@
 package capmon
 
 func init() {
-	RegisterRecognizer("crush", recognizeCrushSkills)
+	RegisterRecognizer("crush", recognizeCrush)
 }
 
-// recognizeCrushSkills recognizes skills capabilities for the Crush provider.
+// recognizeCrush recognizes skills capabilities for the Crush provider.
 // Crush implements the Agent Skills open standard (GoStruct pattern).
-func recognizeCrushSkills(fields map[string]FieldValue) map[string]string {
+func recognizeCrush(fields map[string]FieldValue) map[string]string {
 	result := recognizeSkillsGoStruct(fields)
 	if len(result) == 0 {
 		return result
