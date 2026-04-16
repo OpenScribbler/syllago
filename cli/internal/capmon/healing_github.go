@@ -158,7 +158,7 @@ func fetchRepoTree(ctx context.Context, owner, repo, ref string) ([]gitTreeEntry
 	if err != nil {
 		return nil, fmt.Errorf("github tree request: %w", err)
 	}
-	defer resp.Body.Close() //nolint:errcheck
+	defer resp.Body.Close() //nolint:errcheck // nothing actionable on close failure of a drained body
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)

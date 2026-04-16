@@ -45,10 +45,10 @@ func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealRes
 	}
 
 	var reasons []string
-	for _, strat := range strategies {
+	for _, strategy := range strategies {
 		var candidates []string
 		var proofs map[string]string
-		switch strat {
+		switch strategy {
 		case "redirect":
 			cand, proof, ok := runRedirectStrategy(ctx, src.URL)
 			if !ok {
@@ -84,7 +84,7 @@ func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealRes
 				proofs[v.URL] = v.Reason
 			}
 		default:
-			reasons = append(reasons, fmt.Sprintf("%s: unknown strategy (ignored)", strat))
+			reasons = append(reasons, fmt.Sprintf("%s: unknown strategy (ignored)", strategy))
 			continue
 		}
 
@@ -94,15 +94,15 @@ func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealRes
 			if err := validateHealCandidate(ctx, src.URL, cand); err != nil {
 				var invalid *ErrContentInvalid
 				if errors.As(err, &invalid) {
-					reasons = append(reasons, fmt.Sprintf("%s %q: %s", strat, cand, invalid.Reason))
+					reasons = append(reasons, fmt.Sprintf("%s %q: %s", strategy, cand, invalid.Reason))
 					continue
 				}
-				reasons = append(reasons, fmt.Sprintf("%s %q: %v", strat, cand, err))
+				reasons = append(reasons, fmt.Sprintf("%s %q: %v", strategy, cand, err))
 				continue
 			}
 			result.Success = true
 			result.NewURL = cand
-			result.Strategy = strat
+			result.Strategy = strategy
 			result.Proof = proofs[cand]
 			return result, nil
 		}
@@ -155,7 +155,7 @@ func validateHealCandidate(ctx context.Context, originalURL, candidateURL string
 	if err != nil {
 		return fmt.Errorf("heal GET %q: %w", candidateURL, err)
 	}
-	defer resp.Body.Close() //nolint:errcheck
+	defer resp.Body.Close() //nolint:errcheck // nothing actionable on close failure of a drained body
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("heal GET %q: status %d", candidateURL, resp.StatusCode)
 	}
