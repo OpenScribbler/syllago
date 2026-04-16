@@ -110,15 +110,14 @@ func TestRecognizeContentTypeDotPaths_EmptyFields(t *testing.T) {
 // sources) will emit empty output in production; this test proves the plumbing
 // so those providers light up automatically when upstream extractors improve.
 //
-// codex, claude-code, amp, and cline are excluded from this batch. codex uses a
-// multi-struct allow-list; claude-code, amp, cline use landmark (doc-heading)
+// codex, claude-code, amp, cline, and copilot-cli are excluded from this batch.
+// codex uses a multi-struct allow-list; the rest use landmark (doc-heading)
 // recognition with no Skill.* field input. Each has its own dedicated test file.
 func TestRecognizeGoStructBatch_WithSkillFields(t *testing.T) {
 	providers := []struct {
 		slug     string
 		filename string // substring expected in canonical_filename.mechanism
 	}{
-		{"copilot-cli", "SKILL.md"},
 		{"factory-droid", "SKILL.md"},
 		{"kiro", "POWER.md"},
 		{"pi", "SKILL.md"},
@@ -155,10 +154,10 @@ func TestRecognizeGoStructBatch_WithSkillFields(t *testing.T) {
 
 // TestRecognizeGoStructBatch_EmptyFields verifies the GoStruct providers
 // return an empty map when no Skill.* fields are present (same guard as crush).
-// codex, claude-code, amp, cline excluded — they use a different mechanism and
-// have dedicated NoLandmarks tests in their own files.
+// codex, claude-code, amp, cline, copilot-cli excluded — they use a different
+// mechanism and have dedicated NoLandmarks tests in their own files.
 func TestRecognizeGoStructBatch_EmptyFields(t *testing.T) {
-	for _, slug := range []string{"copilot-cli", "factory-droid", "kiro", "pi"} {
+	for _, slug := range []string{"factory-droid", "kiro", "pi"} {
 		result := capmon.RecognizeContentTypeDotPaths(slug, map[string]capmon.FieldValue{})
 		if len(result) != 0 {
 			t.Errorf("%s: expected empty result, got %v", slug, result)
