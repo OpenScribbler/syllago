@@ -14,6 +14,29 @@ content_types:
         supported: true
         mechanism: JSON event context delivered via stdin documented under 'Common Input Structure' heading
         confidence: inferred
+  mcp:
+    supported: true
+    capabilities:
+      enterprise_management:
+        supported: true
+        mechanism: organization-level MCP admin controls (whitelist, custom registries, regex matching) documented under 'Admin Controls (Teams & Enterprises)' / 'Admin Configuration Guidelines' headings
+        confidence: inferred
+      env_var_expansion:
+        supported: true
+        mechanism: ${env:VAR_NAME} and ${file:/path} interpolation documented under 'Config Interpolation' heading
+        confidence: inferred
+      marketplace:
+        supported: true
+        mechanism: in-IDE MCP marketplace documented under 'MCP Registry' / 'Configuring Custom Registries' headings
+        confidence: inferred
+      tool_filtering:
+        supported: true
+        mechanism: per-server tool filtering documented under 'Configuring MCP tools' (UI tool toggles, 100-tool cap) and 'MCP Whitelist' (admin-side regex matching) headings
+        confidence: inferred
+      transport_types:
+        supported: true
+        mechanism: transport types (stdio for local, Streamable HTTP and SSE for remote) documented under 'Remote HTTP MCPs' heading; remote servers use serverUrl/url instead of command/args
+        confidence: inferred
   rules:
     supported: true
     capabilities:
