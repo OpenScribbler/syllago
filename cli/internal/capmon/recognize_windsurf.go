@@ -126,13 +126,36 @@ func windsurfMcpLandmarkOptions() LandmarkOptions {
 	)
 }
 
+// Agents recognition is intentionally NOT wired for windsurf.
+//
+// The cached "agents" source (.capmon-cache/windsurf/agents.0/extracted.json,
+// fetched from windsurf/cascade/agents-md.md) is the AGENTS.md cross-provider
+// instruction-file convention doc — NOT a custom-subagents reference.
+// Landmarks describe how the AGENTS.md file is discovered and scoped at the
+// repository root, with section headings like "AGENTS.md", "How It Works",
+// "Discovery and Scoping", and "Comparison with Rules". This belongs to the
+// rules content type's cross_provider_recognition.agents_md vocabulary, where
+// it is already mapped via windsurfRulesLandmarkOptions (rules.1).
+//
+// Windsurf does not appear to ship a custom-subagent feature analogous to
+// claude-code's subagents, kiro's agents, copilot-cli's custom agents, or
+// factory-droid's droids — there is no /agents directory, no per-agent
+// definition format, no per-agent tool restrictions. The agents.0 cache
+// entry is a misclassification at the source-manifest level, and emitting
+// any canonical agents.* keys from this doc would falsely claim a feature
+// that the provider does not have.
+//
+// If windsurf later ships custom subagents, wire recognition then. Until
+// then, recognizer silence preserves accuracy.
+
 // recognizeWindsurf recognizes skills + rules + hooks + mcp capabilities for
 // the Windsurf provider. Skills currently use the GoStruct strategy (Agent
 // Skills open standard) but the live windsurf docs cache contains no Skill.*
 // typed fields — skills emission depends on future typed-source availability.
 // Rules, hooks, and MCP are landmark-based against the rules.{0,1} (Memories
 // & Rules, AGENTS.md), hooks.0 (Cascade Hooks), and mcp.0 (cascade/mcp.md)
-// docs respectively.
+// docs respectively. Agents recognition is intentionally absent — see the
+// comment block immediately above this function for rationale.
 func recognizeWindsurf(ctx RecognitionContext) RecognitionResult {
 	skillsCaps := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
 	if len(skillsCaps) > 0 {
