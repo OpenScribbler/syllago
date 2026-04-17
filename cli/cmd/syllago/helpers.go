@@ -16,14 +16,29 @@ import (
 var findProjectRoot = findProjectRootImpl
 
 func findProjectRootImpl() (string, error) {
-	dir, err := os.Getwd()
+	cwd, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
+	return findProjectRootFrom(cwd, "")
+}
 
-	dir, err = filepath.Abs(dir)
+// findProjectRootFrom walks up from start looking for project markers.
+// If stopAt is non-empty, the walk does not ascend above that directory —
+// useful in tests so an ambient marker outside the test sandbox (e.g. a stray
+// /tmp/go.mod left by another tool) cannot silently satisfy the search.
+// On no match, returns start with a warning written to output.ErrWriter.
+func findProjectRootFrom(start, stopAt string) (string, error) {
+	dir, err := filepath.Abs(start)
 	if err != nil {
 		return "", err
+	}
+	var stopParent string
+	if stopAt != "" {
+		stopParent, err = filepath.Abs(stopAt)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	markers := []string{".git", "go.mod", "package.json", "Cargo.toml", "pyproject.toml"}
@@ -33,6 +48,9 @@ func findProjectRootImpl() (string, error) {
 				return dir, nil
 			}
 		}
+		if stopParent != "" && dir == stopParent {
+			break
+		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
 			break
@@ -40,13 +58,8 @@ func findProjectRootImpl() (string, error) {
 		dir = parent
 	}
 
-	// Fallback to cwd with warning
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	fmt.Fprintf(output.ErrWriter, "Warning: no project markers found (go.mod, package.json, etc.). Using current directory: %s\n", cwd)
-	return cwd, nil
+	fmt.Fprintf(output.ErrWriter, "Warning: no project markers found (go.mod, package.json, etc.). Using current directory: %s\n", start)
+	return start, nil
 }
 
 // isInteractive reports whether stdin is connected to a terminal.

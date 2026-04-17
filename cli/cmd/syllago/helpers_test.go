@@ -42,18 +42,17 @@ func TestFindProjectRootFallbackWarning(t *testing.T) {
 			tmp := t.TempDir()
 			tt.setup(tmp)
 
-			origDir, _ := os.Getwd()
-			os.Chdir(tmp)
-			defer os.Chdir(origDir)
-
 			var stderr bytes.Buffer
 			origErr := output.ErrWriter
 			output.ErrWriter = &stderr
 			defer func() { output.ErrWriter = origErr }()
 
-			root, err := findProjectRootImpl()
+			// Bound the walk to tmp so an ambient marker outside the test
+			// sandbox (e.g. a stray /tmp/go.mod from another tool) cannot
+			// silently satisfy the search and suppress the expected warning.
+			root, err := findProjectRootFrom(tmp, tmp)
 			if err != nil {
-				t.Fatalf("findProjectRoot failed: %v", err)
+				t.Fatalf("findProjectRootFrom failed: %v", err)
 			}
 
 			stderrStr := stderr.String()
