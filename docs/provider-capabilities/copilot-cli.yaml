@@ -3,6 +3,21 @@ slug: copilot-cli
 display_name: ""
 last_verified: ""
 content_types:
+  agents:
+    supported: true
+    capabilities:
+      definition_format:
+        supported: true
+        mechanism: markdown files with YAML frontmatter (name, description, tools, mcpServers fields) documented under 'YAML frontmatter properties' heading
+        confidence: inferred
+      per_agent_mcp:
+        supported: true
+        mechanism: per-agent mcpServers section in YAML frontmatter scopes which MCP servers each agent can access, documented under 'MCP server configuration details' / 'MCP server configurations' headings
+        confidence: inferred
+      tool_restrictions:
+        supported: true
+        mechanism: per-agent tool allowlist via tools field, with tool aliases for renaming, documented under 'Tools' / 'Tool aliases' / 'Tools processing' headings
+        confidence: inferred
   hooks:
     supported: true
     capabilities:

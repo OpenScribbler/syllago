@@ -70,6 +70,103 @@ var realCopilotCliHooksLandmarks = []string{
 	"Further reading",
 }
 
+// realCopilotCliAgentsLandmarks is a snapshot of the headings extracted from
+// Copilot CLI's custom-agents-configuration doc
+// (.capmon-cache/copilot-cli/agents.0/extracted.json) as of 2026-04-17.
+// agents.1 (create-custom-agents-for-cli.md) carries only generic landmarks
+// ("Introduction", "Further reading") plus Liquid-template names — agents.0
+// has all the heading-level capability evidence.
+var realCopilotCliAgentsLandmarks = []string{
+	"YAML frontmatter properties",
+	"Tools",
+	"Tool aliases",
+	"Tool names for \"out-of-the-box\" MCP servers",
+	"MCP server configuration details",
+	"MCP server type",
+	"MCP server environment variables and secrets",
+	"Processing of agents",
+	"Versioning",
+	"Tools processing",
+	"MCP server configurations",
+	"Further reading",
+}
+
+// TestRecognizeCopilotCli_RealAgentsLandmarks proves agents recognition emits
+// 3 canonical agents keys at "inferred" confidence: definition_format,
+// tool_restrictions, per_agent_mcp. The other 4 keys (invocation_patterns,
+// agent_scopes, model_selection, subagent_spawning) must NOT be emitted —
+// no heading-level evidence in the agents configuration doc.
+//
+// Test merges skills + rules + hooks + agents fixtures to mirror real-world
+// cache merging — the agents recognizer must distinguish its capabilities
+// from the others via the required-anchor uniqueness gate.
+func TestRecognizeCopilotCli_RealAgentsLandmarks(t *testing.T) {
+	merged := append([]string{}, realCopilotCliSkillsLandmarks...)
+	merged = append(merged, realCopilotCliRulesLandmarks...)
+	merged = append(merged, realCopilotCliHooksLandmarks...)
+	merged = append(merged, realCopilotCliAgentsLandmarks...)
+	result := capmon.RecognizeWithContext("copilot-cli", capmon.RecognitionContext{
+		Provider:  "copilot-cli",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["agents.supported"] != "true" {
+		t.Error("agents.supported missing")
+	}
+	agentsInferred := []string{
+		"definition_format",
+		"tool_restrictions",
+		"per_agent_mcp",
+	}
+	for _, c := range agentsInferred {
+		key := "agents.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["agents.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("agents.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"agents.capabilities.invocation_patterns.supported",
+		"agents.capabilities.agent_scopes.supported",
+		"agents.capabilities.model_selection.supported",
+		"agents.capabilities.subagent_spawning.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present (no heading evidence)", absent)
+		}
+	}
+}
+
+// TestRecognizeCopilotCli_AgentsAnchorsMissing proves the required-anchor
+// guard suppresses agents emission when "Tool aliases" is absent — preventing
+// agents patterns from firing on contexts that contain only the parent
+// "YAML frontmatter properties" landmark (which could appear in unrelated
+// frontmatter docs).
+func TestRecognizeCopilotCli_AgentsAnchorsMissing(t *testing.T) {
+	mutated := []string{}
+	for _, lm := range realCopilotCliAgentsLandmarks {
+		if lm == "Tool aliases" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("copilot-cli", capmon.RecognitionContext{
+		Provider:  "copilot-cli",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["agents.supported"]; has {
+		t.Error("agents.supported should NOT be present when 'Tool aliases' anchor is missing")
+	}
+}
+
 func TestRecognizeCopilotCli_RealLandmarks(t *testing.T) {
 	result := capmon.RecognizeWithContext("copilot-cli", capmon.RecognitionContext{
 		Provider:  "copilot-cli",
