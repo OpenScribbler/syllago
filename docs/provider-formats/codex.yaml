@@ -67,106 +67,76 @@ content_types:
     provider_extensions:
       - id: short_description
         name: Short Description
-        description: >
-          A condensed version of the skill description. Declared in SKILL.md frontmatter under
-          metadata.short-description (YAML key, hyphenated). Also available as
-          interface.short_description in the openai.yaml companion file. Truncated to 1024 chars.
-          Used for compact display contexts where the full description is too long.
+        summary: "Condensed skill description for compact UI; SKILL.md metadata.short-description or openai.yaml interface.short_description (≤1024 chars)."
         source_ref: "loader.rs (SkillFrontmatterMetadata.short_description, resolve_interface)"
         graduation_candidate: false
+        provider_field: "metadata.short-description"
+        conversion: embedded
       - id: openai_yaml_companion_file
         name: openai.yaml Companion Metadata File
-        description: >
-          An optional companion file at <skill_dir>/agents/openai.yaml that provides UI and policy
-          metadata separate from SKILL.md frontmatter. Contains three top-level sections:
-          interface (display_name, short_description, icon_small, icon_large, brand_color,
-          default_prompt), dependencies (tools list with type, value, description, transport,
-          command, url fields), and policy (allow_implicit_invocation, products). The file is
-          optional — missing it is not an error. Path resolution for icon assets enforces that
-          paths must be relative and under an assets/ subdirectory of the skill dir.
+        summary: "Optional <skill_dir>/agents/openai.yaml file providing interface, dependencies, and policy metadata separate from SKILL.md frontmatter."
         source_ref: "loader.rs (SKILLS_METADATA_DIR, SKILLS_METADATA_FILENAME, load_skill_metadata)"
         graduation_candidate: true
+        conversion: not-portable
       - id: skill_interface_icons
         name: Skill Interface Icons
-        description: >
-          Skills may declare small and large icons via openai.yaml interface.icon_small and
-          interface.icon_large. Values must be relative paths under the skill's assets/ directory
-          (absolute paths and path traversal via .. are rejected). Used for UI display.
+        summary: "Small and large skill icons via openai.yaml interface.icon_small/icon_large; paths must be relative under assets/."
         source_ref: "loader.rs (resolve_asset_path), model.rs (SkillInterface.icon_small, icon_large)"
         graduation_candidate: false
+        provider_field: "interface.icon_small"
+        conversion: dropped
       - id: skill_interface_brand_color
         name: Skill Brand Color
-        description: >
-          A brand color for the skill declared as interface.brand_color in openai.yaml. Must be
-          a valid #RRGGBB hex string (exactly 7 chars). Used for UI theming of the skill card.
+        summary: "Brand color for the skill card via openai.yaml interface.brand_color (#RRGGBB hex)."
         source_ref: "loader.rs (resolve_color_str), model.rs (SkillInterface.brand_color)"
         graduation_candidate: false
+        provider_field: "interface.brand_color"
+        conversion: dropped
       - id: skill_interface_default_prompt
         name: Default Prompt
-        description: >
-          A default prompt for the skill declared as interface.default_prompt in openai.yaml.
-          Max 1024 chars. Provides a pre-filled starting prompt when a user invokes the skill
-          from a UI that supports it.
+        summary: "Pre-filled starting prompt for UI invocation via openai.yaml interface.default_prompt (≤1024 chars)."
         source_ref: "loader.rs (resolve_interface), model.rs (SkillInterface.default_prompt)"
         graduation_candidate: false
+        provider_field: "interface.default_prompt"
+        conversion: embedded
       - id: tool_dependencies
         name: Tool Dependencies
-        description: >
-          Skills can declare tool dependencies via openai.yaml dependencies.tools (a list).
-          Each dependency has: type (required, max 64 chars), value (required, max 1024 chars),
-          description (optional, max 1024 chars), transport (optional, max 64 chars),
-          command (optional, max 1024 chars), url (optional, max 1024 chars). Used to declare
-          what external tools or MCP servers the skill requires.
+        summary: "Declare required external tools or MCP servers via openai.yaml dependencies.tools (type, value, transport, command, url)."
         source_ref: "loader.rs (resolve_dependency_tool, DependencyTool), model.rs (SkillDependencies, SkillToolDependency)"
         graduation_candidate: false
+        provider_field: "dependencies.tools"
+        conversion: embedded
       - id: product_gating
         name: Product Gating
-        description: >
-          Skills can be restricted to specific OpenAI products via openai.yaml policy.products
-          (a list of Product values). When products is non-empty, the skill is only shown/used
-          when the active product matches the restriction list. When products is empty, the skill
-          is available for all products. Filtering is applied at load time via
-          filter_skill_load_outcome_for_product().
+        summary: "Restrict skill visibility to specific OpenAI products via openai.yaml policy.products (empty = all products)."
         source_ref: "model.rs (SkillPolicy.products, matches_product_restriction_for_product), loader.rs (resolve_policy)"
         graduation_candidate: false
+        provider_field: "policy.products"
+        conversion: dropped
       - id: system_scope
         name: System Scope (Embedded Skills Cache)
-        description: >
-          A fourth scope beyond Repo/User/Admin. System-scoped skills are embedded by Codex itself
-          and cached under $CODEX_HOME/skills/.system (SkillScope::System). This scope does NOT
-          follow symlinks (unlike Repo, User, and Admin scopes). Parse errors for system-scoped
-          skills are silently suppressed (not added to SkillLoadOutcome.errors). Skills are
-          sorted Repo > User > System > Admin by priority.
+        summary: "Fourth scope beyond Repo/User/Admin: embedded skills cached under $CODEX_HOME/skills/.system; symlinks not followed."
         source_ref: "loader.rs (skill_roots_from_layer_stack_inner, discover_skills_under_root follow_symlinks logic)"
         graduation_candidate: false
+        conversion: not-portable
       - id: plugin_scope
         name: Plugin Scope
-        description: >
-          A plugin extension mechanism where additional skill roots are injected externally via
-          plugin_skill_roots (Vec<PathBuf> from codex_utils_plugins). Plugin skills are assigned
-          SkillScope::User scope and receive a namespaced name prefix (plugin_namespace_for_skill_path).
-          This allows third-party plugins to contribute skills without modifying config files.
+        summary: "Externally-injected plugin_skill_roots assigned User scope with namespaced name prefix; no config file required."
         source_ref: "loader.rs (skill_roots_with_home_dir, namespaced_skill_name, plugin_namespace_for_skill_path)"
         graduation_candidate: false
+        conversion: not-portable
       - id: monorepo_traversal
         name: Monorepo Skill Discovery
-        description: >
-          For Repo-scoped skills, codex walks all directories between the detected project root
-          and the current working directory, collecting any .agents/skills/ subdirectory found
-          along the path. Project root is determined by scanning ancestors for project_root_markers
-          (configurable, defaults to standard VCS/build markers). MAX_SCAN_DEPTH=6 limits
-          traversal depth within each skills root; MAX_SKILLS_DIRS_PER_ROOT=2000 caps total dirs
-          scanned per root.
+        summary: "Walk between project root and cwd collecting .agents/skills/ dirs; capped by MAX_SCAN_DEPTH=6 and MAX_SKILLS_DIRS_PER_ROOT=2000."
         source_ref: "loader.rs (repo_agents_skill_roots, dirs_between_project_root_and_cwd, MAX_SCAN_DEPTH, MAX_SKILLS_DIRS_PER_ROOT)"
         graduation_candidate: false
+        conversion: not-portable
       - id: skill_deduplication
         name: Skill Deduplication
-        description: >
-          After loading all roots, skills with duplicate SKILL.md paths are deduplicated —
-          only the first occurrence (highest-priority scope) is kept. Skills are then sorted
-          by scope priority (Repo > User > System > Admin), then by name, then by path.
+        summary: "Skills with duplicate paths are deduped (highest-priority scope wins) then sorted Repo > User > System > Admin, then by name and path."
         source_ref: "loader.rs (load_skills_from_roots dedup and sort logic)"
         graduation_candidate: false
+        conversion: not-portable
     loading_model: >
       Skills are loaded by scanning a priority-ordered list of roots: Repo (project config folder
       skills/ and monorepo .agents/skills/ dirs), User ($HOME/.agents/skills/ and deprecated
@@ -230,33 +200,25 @@ content_types:
     provider_extensions:
       - id: agents_md_filename
         name: AGENTS.md Filename
-        description: >
-          Codex loads AI instruction rules from a file named AGENTS.md (or a configurable fallback
-          list of filenames set via config.toml's project_doc_fallback_filenames). The file is
-          discovered by walking up from the current working directory. Multiple AGENTS.md files
-          can exist in a hierarchy — project root, subdirectory, and home directory — and their
-          contents are combined. The primary file is AGENTS.md; fallbacks (e.g. .agents.md,
-          CLAUDE.md) are checked when AGENTS.md is absent.
+        summary: "Native rules filename is AGENTS.md, with configurable fallback list via config.toml project_doc_fallback_filenames."
         source_ref: "config.schema.json (project_doc_fallback_filenames, project_doc_max_bytes)"
         graduation_candidate: false
+        provider_field: "project_doc_fallback_filenames"
+        conversion: translated
       - id: hierarchical_agents_md
         name: Hierarchical AGENTS.md (child_agents_md feature flag)
-        description: >
-          When the child_agents_md feature flag is enabled (via [features] in config.toml), Codex
-          appends additional guidance about AGENTS.md scope and precedence to the user instructions
-          message, and emits that message even when no AGENTS.md is present. This implements a
-          multi-file hierarchical rules model where rules from parent directories, project root,
-          and home directory can be combined with scoped precedence.
+        summary: "When features.child_agents_md is enabled, Codex emits scope/precedence guidance and combines AGENTS.md files across a directory hierarchy."
         source_ref: "docs/agents_md.md (Hierarchical agents message section)"
         graduation_candidate: true
+        provider_field: "features.child_agents_md"
+        conversion: not-portable
       - id: project_doc_max_bytes
         name: Project Doc Max Bytes
-        description: >
-          A configurable cap on how many bytes are read from an AGENTS.md file, set via
-          project_doc_max_bytes in config.toml. Prevents oversized rules files from consuming
-          excessive context window.
+        summary: "Configurable byte cap on AGENTS.md reads via config.toml project_doc_max_bytes; prevents oversized rules files from blowing the context window."
         source_ref: "config.schema.json (project_doc_max_bytes)"
         graduation_candidate: false
+        provider_field: "project_doc_max_bytes"
+        conversion: dropped
     loading_model: >
       Codex reads AGENTS.md (or configured fallback filenames) by scanning ancestors of the
       current working directory and the user home directory. Multiple AGENTS.md files across
@@ -398,101 +360,78 @@ content_types:
     provider_extensions:
       - id: hook_events
         name: Hook Events
-        description: >
-          Codex supports five hook events: PreToolUse, PostToolUse, SessionStart,
-          UserPromptSubmit, and Stop. Event names use PascalCase in the config.toml hooks file
-          (under [hooks.PreToolUse], etc.) and camelCase in the TypeScript app-server protocol
-          (preToolUse, postToolUse, sessionStart, userPromptSubmit, stop). In the Rust wire
-          payload, event names serialize as PascalCase strings (HookEventNameWire enum).
+        summary: "Five hook events: PreToolUse, PostToolUse, SessionStart, UserPromptSubmit, Stop (PascalCase in config.toml, camelCase in TS protocol)."
         source_ref: "config.rs (HookEvents struct), HookEventName.ts"
         graduation_candidate: false
+        conversion: translated
       - id: hook_handler_types
         name: Hook Handler Types
-        description: >
-          Each hook entry specifies a handler type via the type field. Three types are supported:
-          command (runs a shell command), prompt (invokes a prompt), and agent (delegates to a
-          sub-agent). The command type is the primary type for external scripts. Command handlers
-          support: command (required string), timeout/timeoutSec (optional duration in seconds),
-          async (bool, default false — runs hook asynchronously without blocking the operation),
-          and statusMessage (optional display string).
+        summary: "Each hook entry has a type: command (shell), prompt (LLM prompt), or agent (sub-agent delegation)."
         source_ref: "config.rs (HookHandlerConfig enum), HookHandlerType.ts"
         graduation_candidate: false
+        provider_field: "type"
+        conversion: translated
       - id: hook_matcher
         name: Tool Matcher (PreToolUse / PostToolUse)
-        description: >
-          PreToolUse and PostToolUse hook entries can include an optional matcher field (a string
-          pattern) that filters which tool calls trigger the hook. When absent, the hook fires for
-          all tool calls. This allows attaching hooks to specific tools by name.
+        summary: "Optional matcher string on PreToolUse/PostToolUse entries filters which tool calls trigger the hook (absent = all tools)."
         source_ref: "config.rs (MatcherGroup.matcher)"
         graduation_candidate: false
+        provider_field: "matcher"
+        conversion: translated
       - id: hook_execution_mode
         name: Hook Execution Mode (sync / async)
-        description: >
-          Hook handlers can run synchronously (blocking the current operation until the hook
-          completes) or asynchronously (fire-and-forget, does not block). Exposed in the TypeScript
-          protocol as HookExecutionMode with values sync and async. In the Rust config, the async
-          field on HookHandlerConfig::Command controls this for command handlers.
+        summary: "Hook handlers run sync (blocking) or async (fire-and-forget) via the async flag on command handlers / HookExecutionMode."
         source_ref: "HookExecutionMode.ts, config.rs (HookHandlerConfig::Command.async)"
         graduation_candidate: false
+        provider_field: "async"
+        conversion: translated
       - id: hook_scope
         name: Hook Scope (thread / turn)
-        description: >
-          Hooks can be scoped to a thread (lifetime of the entire session) or a turn (single
-          request/response cycle). Exposed in the TypeScript app-server protocol as HookScope
-          with values thread and turn.
+        summary: "Hooks scoped to a thread (whole session) or a turn (one request/response cycle) via the HookScope value."
         source_ref: "HookScope.ts"
         graduation_candidate: false
+        conversion: not-portable
       - id: hook_result_abort
         name: Hook Result Abort vs Continue
-        description: >
-          The Rust hook engine distinguishes three outcomes: Success, FailedContinue (hook failed
-          but subsequent hooks and the operation continue), and FailedAbort (hook failed and the
-          operation is aborted, no further hooks run). This tri-state is more expressive than a
-          simple pass/fail. For command hooks, the JSON output schema supports a continue boolean
-          (default true) and a decision field (approve/block for PreToolUse, block for PostToolUse)
-          to control operation flow.
+        summary: "Tri-state hook outcome: Success, FailedContinue, FailedAbort; output JSON also supports continue and decision (approve/block) fields."
         source_ref: "types.rs (HookResult enum), pre-tool-use.command.output.schema.json"
         graduation_candidate: false
+        conversion: translated
       - id: hook_suppress_output
         name: Suppress Output Flag
-        description: >
-          Hook command output schemas include a suppressOutput boolean (default false). When true,
-          the hook's stdout/stderr is not surfaced to the user. Available on all five event output
-          schemas.
+        summary: "Hook output suppressOutput boolean (default false) hides stdout/stderr from the user; available on all five event schemas."
         source_ref: "pre-tool-use.command.output.schema.json (suppressOutput)"
         graduation_candidate: false
+        provider_field: "suppressOutput"
+        conversion: dropped
       - id: hook_system_message
         name: System Message Injection
-        description: >
-          Hook command output schemas include a systemMessage field. When set, the hook can inject
-          additional context into the system message for the current turn. Available on all five
-          event output schemas.
+        summary: "Hook output systemMessage field injects extra context into the current turn's system message; available on all five event schemas."
         source_ref: "pre-tool-use.command.output.schema.json (systemMessage)"
         graduation_candidate: false
+        provider_field: "systemMessage"
+        conversion: translated
       - id: hook_turn_id
         name: Turn ID in Hook Payload
-        description: >
-          The hook input schemas (pre-tool-use, post-tool-use) include a turn_id field marked as a
-          Codex extension. This exposes the active turn ID to internal turn-scoped hooks, allowing
-          hooks to correlate their actions with specific model turns.
+        summary: "PreToolUse/PostToolUse input payload includes a turn_id field (marked Codex extension) so hooks can correlate with model turns."
         source_ref: "pre-tool-use.command.input.schema.json (turn_id description)"
         graduation_candidate: false
+        provider_field: "turn_id"
+        conversion: not-portable
       - id: hook_updated_input
         name: Updated Tool Input (PreToolUse)
-        description: >
-          The PreToolUse hook output schema includes an updatedInput field. When set by the hook,
-          the tool's input is replaced with the hook-provided value before the tool executes. This
-          allows hooks to modify or sanitize tool arguments before execution.
+        summary: "PreToolUse output updatedInput field replaces the tool's arguments before execution, allowing hooks to modify or sanitize input."
         source_ref: "pre-tool-use.command.output.schema.json (hookSpecificOutput.updatedInput)"
         graduation_candidate: false
+        provider_field: "hookSpecificOutput.updatedInput"
+        conversion: translated
       - id: hook_permission_decision
         name: Permission Decision (PreToolUse)
-        description: >
-          The PreToolUse hook output schema includes a permissionDecision field (allow, deny, ask)
-          within hookSpecificOutput. This gives hooks the ability to make fine-grained permission
-          decisions about tool execution, separate from the top-level approve/block decision.
+        summary: "PreToolUse output permissionDecision (allow/deny/ask) gives fine-grained tool permission control separate from the top-level decision."
         source_ref: "pre-tool-use.command.output.schema.json (PreToolUsePermissionDecisionWire)"
         graduation_candidate: false
+        provider_field: "hookSpecificOutput.permissionDecision"
+        conversion: translated
     loading_model: >
       Hooks are configured in the codex config.toml file under a top-level [hooks] section.
       Each event type (PreToolUse, PostToolUse, SessionStart, UserPromptSubmit, Stop) maps to
@@ -563,60 +502,38 @@ content_types:
     provider_extensions:
       - id: mcp_servers_config
         name: MCP Servers Config (config.toml mcp_servers)
-        description: >
-          MCP servers are configured in config.toml under the mcp_servers key, which is an object
-          mapping server names to RawMcpServerConfig entries. Each entry supports: command (stdio
-          binary path), url (HTTP/SSE endpoint), args (command arguments), env (environment
-          variables), env_vars (list of env var names to pass through), env_http_headers (env var
-          names for HTTP headers), http_headers (literal HTTP headers), bearer_token,
-          bearer_token_env_var, cwd (working directory), enabled (bool), required (bool, fails
-          session start if server is unreachable), startup_timeout_ms/startup_timeout_sec,
-          tool_timeout_sec, enabled_tools (allowlist), disabled_tools (blocklist), tools
-          (per-tool approval settings), oauth_resource, scopes (OAuth), and name (legacy
-          display-name, kept for backward compatibility).
+        summary: "MCP servers declared under mcp_servers in config.toml as RawMcpServerConfig entries (command/url, args, env, headers, OAuth, timeouts, enabled/disabled tools)."
         source_ref: "config.schema.json (RawMcpServerConfig, mcp_servers)"
         graduation_candidate: false
+        provider_field: "mcp_servers"
+        conversion: translated
       - id: mcp_per_tool_approval
         name: Per-Tool Approval Mode
-        description: >
-          Each MCP server can configure per-tool approval settings via the tools map in
-          RawMcpServerConfig. Each tool entry (McpServerToolConfig) specifies an approval_mode
-          that overrides the session-level approval policy for that specific tool. This allows
-          fine-grained permission control per MCP tool without requiring global policy changes.
+        summary: "Each MCP server can set per-tool approval_mode via the tools map, overriding session-level approval policy for individual tools."
         source_ref: "config.schema.json (McpServerToolConfig, AppToolApproval)"
         graduation_candidate: false
+        provider_field: "tools.approval_mode"
+        conversion: translated
       - id: mcp_oauth_support
         name: MCP OAuth Support
-        description: >
-          Codex supports OAuth authentication for MCP servers. Configuration fields include
-          mcp_oauth_callback_port (fixed port for local HTTP callback), mcp_oauth_callback_url
-          (custom redirect URI), and mcp_oauth_credentials_store (keyring, file, or auto).
-          Servers can specify oauth_resource and scopes fields in their config. The OAuth
-          credential store backend is OS-specific keyring by default with file fallback.
+        summary: "OAuth fields mcp_oauth_callback_port, mcp_oauth_callback_url, and mcp_oauth_credentials_store (keyring/file/auto), plus per-server oauth_resource and scopes."
         source_ref: "config.schema.json (mcp_oauth_callback_port, mcp_oauth_callback_url, mcp_oauth_credentials_store)"
         graduation_candidate: false
+        provider_field: "mcp_oauth_credentials_store"
+        conversion: translated
       - id: mcp_server_interface
         name: Codex MCP Server Interface (codex mcp-server)
-        description: >
-          Codex itself exposes an experimental MCP server interface via `codex mcp-server` (or
-          `codex-mcp-server`). This runs a JSON-RPC 2.0 server over stdio using the MCP transport
-          protocol, exposing v2 RPCs for thread management (thread/start, thread/resume,
-          thread/fork, thread/read, thread/list), turn control (turn/start, turn/steer,
-          turn/interrupt), account management, config read/write, model listing, and collaboration
-          modes. It also serves v1 compatibility methods and sends live event stream notifications
-          via codex/event/* channels. This is distinct from consuming MCP servers — it makes
-          Codex itself controllable as an MCP server.
+        summary: "Codex exposes itself as an MCP server via `codex mcp-server` (JSON-RPC 2.0 over stdio) for thread, turn, config, and event-stream control."
         source_ref: "codex_mcp_interface.md"
         graduation_candidate: false
+        conversion: not-portable
       - id: mcp_enabled_disabled_tools
         name: MCP Tool Allowlist and Blocklist
-        description: >
-          Each MCP server entry in config.toml supports enabled_tools (allowlist) and
-          disabled_tools (blocklist) arrays. When enabled_tools is set, only the listed tools
-          are exposed from that server. disabled_tools removes specific tools from the server's
-          offering. This allows users to surface only the relevant subset of a server's tools.
+        summary: "Per-server enabled_tools (allowlist) and disabled_tools (blocklist) arrays restrict which tools an MCP server exposes."
         source_ref: "config.schema.json (RawMcpServerConfig.enabled_tools, disabled_tools)"
         graduation_candidate: false
+        provider_field: "enabled_tools"
+        conversion: translated
     loading_model: >
       MCP servers are declared in config.toml under the mcp_servers key. Each entry maps a
       logical name to a RawMcpServerConfig that specifies either a stdio command (command + args)
@@ -691,63 +608,37 @@ content_types:
     provider_extensions:
       - id: agent_roles
         name: Agent Roles (config.toml [agents] section)
-        description: >
-          Codex supports a multi-agent system where spawned sub-agents run with a named role.
-          Roles are declared in config.toml under the agents key (AgentsToml). Each role entry
-          (AgentRoleToml) specifies: description (human-facing role documentation used in spawn
-          tool guidance), config_file (optional path to a role-specific config layer TOML), and
-          nickname_candidates (candidate names for agents spawned with this role). The agents
-          section also supports global limits: max_threads (concurrent agent threads cap),
-          max_depth (maximum nesting depth for spawned threads, minimum 1), and
-          job_max_runtime_seconds (default max runtime for agent job workers).
+        summary: "Named sub-agent roles declared in config.toml [agents] (description, config_file, nickname_candidates) plus global limits (max_threads, max_depth, job_max_runtime_seconds)."
         source_ref: "config.schema.json (AgentsToml, AgentRoleToml), role.rs"
         graduation_candidate: false
+        provider_field: "agents"
+        conversion: translated
       - id: builtin_agent_roles
         name: Built-in Agent Roles (default, explorer, worker)
-        description: >
-          Codex ships three built-in agent roles that are always available without user
-          configuration. default: the standard agent with no special config. explorer: a fast,
-          read-focused agent for codebase questions, runs with model_reasoning_effort=low and
-          uses explorer.toml config; description encourages parallel spawning for independent
-          questions. worker: an execution agent for implementing features, fixing bugs, and
-          splitting large refactors; description emphasizes ownership assignment and awareness
-          of parallel workers. A fourth role, awaiter (for monitoring long-running commands),
-          exists as a built-in config (awaiter.toml) but is currently commented out of the
-          active built-in registry.
+        summary: "Three built-in roles always available without config: default (standard), explorer (fast read-focused, low reasoning), and worker (execution); awaiter exists but is disabled."
         source_ref: "role.rs (built_in::configs(), DEFAULT_ROLE_NAME, explorer, worker, awaiter)"
         graduation_candidate: false
+        conversion: not-portable
       - id: role_config_layer
         name: Role Config Layer
-        description: >
-          When a role specifies a config_file, that file is loaded as a high-precedence config
-          layer on top of the active session config. This allows roles to override model, reasoning
-          effort, developer instructions, and other settings without modifying the user's base
-          config. The role layer is inserted at session-flag precedence. The caller's current
-          profile and model_provider are preserved unless the role explicitly selects them. Built-in
-          role configs are embedded as static strings in the binary; user-defined role configs are
-          read from disk paths relative to the config.toml that defines them.
+        summary: "A role's config_file is loaded as a high-precedence config layer overriding model, reasoning effort, and developer instructions for that spawned agent."
         source_ref: "role.rs (apply_role_to_config, apply_role_to_config_inner, preservation_policy)"
         graduation_candidate: false
+        provider_field: "config_file"
+        conversion: not-portable
       - id: multi_agent_v2
         name: Multi-Agent V2 Feature Flag
-        description: >
-          The multi-agent system is controlled by a feature flag: features.multi_agent_v2 in
-          config.toml (FeatureToml_for_MultiAgentV2ConfigToml — either a boolean or a config
-          object). The config object form supports: enabled (bool), hide_spawn_agent_metadata
-          (bool), usage_hint_enabled (bool), and usage_hint_text (string). This allows operators
-          to enable/disable multi-agent spawning and control how spawn metadata is surfaced.
+        summary: "Feature flag features.multi_agent_v2 (bool or object with enabled, hide_spawn_agent_metadata, usage_hint_enabled, usage_hint_text) gates the multi-agent system."
         source_ref: "config.schema.json (MultiAgentV2ConfigToml, FeatureToml_for_MultiAgentV2ConfigToml)"
         graduation_candidate: false
+        provider_field: "features.multi_agent_v2"
+        conversion: not-portable
       - id: spawn_tool_spec
         name: Spawn Tool Role Description Generation
-        description: >
-          At session start, Codex dynamically builds the spawn-agent tool description by combining
-          built-in and user-defined role descriptions and their locked settings (model and
-          reasoning_effort if set in the role config). User-defined roles take precedence over
-          built-in roles with the same name. This description is shown to the LLM to guide when
-          and how to spawn sub-agents.
+        summary: "The spawn-agent tool description is built dynamically at session start from all role descriptions and locked settings; user roles override built-in roles by name."
         source_ref: "role.rs (spawn_tool_spec::build, build_from_configs, format_role)"
         graduation_candidate: false
+        conversion: not-portable
     loading_model: >
       Codex's multi-agent system uses a role-based spawning model. Roles are declared in
       config.toml under [agents] as a map of role names to AgentRoleToml entries, alongside

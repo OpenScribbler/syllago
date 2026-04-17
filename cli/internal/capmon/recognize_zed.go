@@ -1,11 +1,12 @@
 package capmon
 
 func init() {
-	RegisterRecognizer("zed", recognizeZedSkills)
+	RegisterRecognizer("zed", RecognizerKindUnknown, recognizeZed)
 }
 
-// recognizeZedSkills recognizes skills capabilities for the Zed provider.
-// TODO(Phase 6): implement real recognition after seeder spec is approved.
-func recognizeZedSkills(fields map[string]FieldValue) map[string]string {
-	return make(map[string]string)
+// recognizeZed recognizes skills capabilities for the Zed provider.
+// Zed does not support Agent Skills (FormatDoc status: unsupported).
+// Returning an empty result is the confirmed-negative signal.
+func recognizeZed(ctx RecognitionContext) RecognitionResult {
+	return wrapCapabilities(make(map[string]string))
 }

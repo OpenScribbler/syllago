@@ -1,157 +1,107 @@
 {
-  "session_id": "session-2026-04-15-0853",
-  "started": "2026-04-15T15:53:39.332Z",
+  "session_id": "session-2026-04-16-0910",
+  "started": "2026-04-16T16:10:55.222Z",
   "files_read": {
-    "/home/hhewett/.local/src/syllago/.gitignore": {
+    "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md": {
       "count": 1,
-      "tokens": 314,
-      "first_read": "2026-04-15T16:11:22.333Z"
+      "tokens": 1180,
+      "first_read": "2026-04-16T16:14:09.104Z"
+    },
+    "/home/hhewett/.local/src/syllago/.claude/projects/.current": {
+      "count": 1,
+      "tokens": 6,
+      "first_read": "2026-04-16T16:14:23.131Z"
+    },
+    "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-self-healing-prompt.md": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-16T16:14:23.139Z"
+    },
+    "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md": {
+      "count": 1,
+      "tokens": 624,
+      "first_read": "2026-04-16T16:14:23.200Z"
+    },
+    "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md": {
+      "count": 1,
+      "tokens": 1001,
+      "first_read": "2026-04-16T16:14:23.203Z"
+    },
+    "/home/hhewett/.local/src/syllago/docs/provider-sources/kiro.yaml": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-16T16:14:31.019Z"
+    },
+    "/home/hhewett/personal/stealth-fetch/stealth-fetch.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-16T16:15:21.092Z"
+    },
+    "/home/hhewett/.config/pai/skills/research/SKILL.md": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-16T16:16:08.999Z"
+    },
+    "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md": {
+      "count": 2,
+      "tokens": 0,
+      "first_read": "2026-04-16T16:17:15.242Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/capmon/generate.go": {
+      "count": 2,
+      "tokens": 0,
+      "first_read": "2026-04-16T16:20:36.677Z"
     }
   },
   "files_written": [
     {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-15-local-dashboard-design.md",
-      "action": "create",
-      "tokens": 2692,
-      "at": "2026-04-15T15:55:00.099Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/tokens.css",
-      "action": "create",
-      "tokens": 2039,
-      "at": "2026-04-15T15:55:39.698Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/data.js",
-      "action": "create",
-      "tokens": 1085,
-      "at": "2026-04-15T15:56:04.424Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/render.js",
-      "action": "create",
-      "tokens": 245,
-      "at": "2026-04-15T15:57:11.602Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/01-terminal.html",
-      "action": "create",
-      "tokens": 2122,
-      "at": "2026-04-15T15:57:46.729Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/02-notebook.html",
-      "action": "create",
-      "tokens": 1578,
-      "at": "2026-04-15T15:58:20.477Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/03-brutalist.html",
-      "action": "create",
-      "tokens": 1415,
-      "at": "2026-04-15T15:58:45.790Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/04-bauhaus.html",
-      "action": "create",
-      "tokens": 1731,
-      "at": "2026-04-15T15:59:13.743Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/05-cyberpunk.html",
-      "action": "create",
-      "tokens": 2050,
-      "at": "2026-04-15T15:59:45.769Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/06-editorial.html",
-      "action": "create",
-      "tokens": 1451,
-      "at": "2026-04-15T16:00:12.339Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/07-material.html",
-      "action": "create",
-      "tokens": 2168,
-      "at": "2026-04-15T16:00:47.081Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/08-neobrutal.html",
-      "action": "create",
-      "tokens": 1760,
-      "at": "2026-04-15T16:01:18.334Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/09-swiss.html",
-      "action": "create",
-      "tokens": 1535,
-      "at": "2026-04-15T16:01:47.366Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/10-techdoc.html",
-      "action": "create",
-      "tokens": 2983,
-      "at": "2026-04-15T16:02:31.879Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/index.html",
-      "action": "create",
-      "tokens": 2010,
-      "at": "2026-04-15T16:03:10.017Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/.gitignore",
+      "file": "/home/hhewett/personal/stealth-fetch/stealth-fetch.ts",
       "action": "edit",
-      "tokens": 11,
-      "at": "2026-04-15T16:12:46.978Z"
+      "tokens": 415,
+      "at": "2026-04-16T16:15:32.016Z"
     },
     {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/shared/filter.js",
-      "action": "create",
-      "tokens": 288,
-      "at": "2026-04-15T16:34:59.094Z"
+      "file": "/home/hhewett/.config/pai/skills/research/SKILL.md",
+      "action": "edit",
+      "tokens": 334,
+      "at": "2026-04-16T16:16:25.673Z"
     },
     {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/01-terminal.html",
+      "file": "/home/hhewett/personal/stealth-fetch/.gitignore",
       "action": "create",
-      "tokens": 3336,
-      "at": "2026-04-15T16:36:06.684Z"
+      "tokens": 12,
+      "at": "2026-04-16T16:16:46.922Z"
     },
     {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/05-cyberpunk.html",
+      "file": "/home/hhewett/personal/stealth-fetch/README.md",
       "action": "create",
-      "tokens": 3371,
-      "at": "2026-04-15T16:36:57.587Z"
+      "tokens": 723,
+      "at": "2026-04-16T16:16:47.237Z"
     },
     {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/local-dashboard-mockups/07-material.html",
+      "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/reference_stealth_fetch.md",
       "action": "create",
-      "tokens": 3754,
-      "at": "2026-04-15T16:37:55.623Z"
+      "tokens": 336,
+      "at": "2026-04-16T16:17:15.008Z"
+    },
+    {
+      "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+      "action": "edit",
+      "tokens": 106,
+      "at": "2026-04-16T16:17:23.811Z"
     }
   ],
   "edit_counts": {
-    "docs/plans/2026-04-15-local-dashboard-design.md": 1,
-    "docs/plans/local-dashboard-mockups/shared/tokens.css": 1,
-    "docs/plans/local-dashboard-mockups/shared/data.js": 1,
-    "docs/plans/local-dashboard-mockups/shared/render.js": 1,
-    "docs/plans/local-dashboard-mockups/01-terminal.html": 2,
-    "docs/plans/local-dashboard-mockups/02-notebook.html": 1,
-    "docs/plans/local-dashboard-mockups/03-brutalist.html": 1,
-    "docs/plans/local-dashboard-mockups/04-bauhaus.html": 1,
-    "docs/plans/local-dashboard-mockups/05-cyberpunk.html": 2,
-    "docs/plans/local-dashboard-mockups/06-editorial.html": 1,
-    "docs/plans/local-dashboard-mockups/07-material.html": 2,
-    "docs/plans/local-dashboard-mockups/08-neobrutal.html": 1,
-    "docs/plans/local-dashboard-mockups/09-swiss.html": 1,
-    "docs/plans/local-dashboard-mockups/10-techdoc.html": 1,
-    "docs/plans/local-dashboard-mockups/index.html": 1,
-    ".gitignore": 1,
-    "docs/plans/local-dashboard-mockups/shared/filter.js": 1
+    "../../../personal/stealth-fetch/stealth-fetch.ts": 1,
+    "../../../.config/pai/skills/research/SKILL.md": 1,
+    "../../../personal/stealth-fetch/.gitignore": 1,
+    "../../../personal/stealth-fetch/README.md": 1,
+    "../../../.claude/projects/-home-hhewett--local-src-syllago/memory/reference_stealth_fetch.md": 1,
+    "../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md": 1
   },
-  "anatomy_hits": 1,
-  "anatomy_misses": 0,
-  "repeated_reads_warned": 0,
+  "anatomy_hits": 3,
+  "anatomy_misses": 5,
+  "repeated_reads_warned": 2,
   "cerebrum_warnings": 0,
-  "stop_count": 2
+  "stop_count": 3
 }

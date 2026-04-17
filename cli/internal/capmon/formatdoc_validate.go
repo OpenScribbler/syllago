@@ -126,6 +126,18 @@ var validConfidenceValues = map[string]bool{
 	"unknown":   true,
 }
 
+// validConversionValues is the controlled vocabulary for the provider extension
+// conversion field. Each value answers "what happens to this feature during
+// format conversion?" — see docs/plans/2026-04-16-provider-convention-pages-redesign.md
+// for full semantics.
+var validConversionValues = map[string]bool{
+	"translated":   true, // maps to canonical key, actively converted
+	"embedded":     true, // appended to body as conversion-notes block
+	"dropped":      true, // removed; portability warning emitted
+	"preserved":    true, // syntax survives but target may not interpret
+	"not-portable": true, // tied to provider runtime; cannot meaningfully exist elsewhere
+}
+
 // ValidateFormatDoc validates a provider's format doc against the canonical keys vocabulary.
 // It collects all errors (non-short-circuiting) and returns them as a combined error.
 // Output uses ✓/✗ prefixes suitable for human-readable terminal output.
@@ -133,9 +145,10 @@ var validConfidenceValues = map[string]bool{
 // Validation rules:
 //  1. Required top-level fields: provider, last_fetched_at, content_types (non-empty)
 //  2. Each key in canonical_mappings must exist in canonical-keys.yaml for the content type
-//  3. Each provider_extensions entry must have: id, name, description, source_ref
+//  3. Each provider_extensions entry must have: id, name, summary, source_ref, conversion
 //  4. confidence values must be confirmed | inferred | unknown
-//  5. generation_method and notes are NOT validated (informational)
+//  5. conversion values must be translated | embedded | dropped | preserved | not-portable
+//  6. generation_method and notes are NOT validated (informational)
 func ValidateFormatDoc(formatsDir, canonicalKeysPath, provider string) error {
 	canonicalKeys, err := loadCanonicalKeys(canonicalKeysPath)
 	if err != nil {
@@ -197,11 +210,14 @@ func ValidateFormatDoc(formatsDir, canonicalKeysPath, provider string) error {
 			if ext.Name == "" {
 				extErrs = append(extErrs, "name")
 			}
-			if ext.Description == "" {
-				extErrs = append(extErrs, "description")
+			if ext.Summary == "" {
+				extErrs = append(extErrs, "summary")
 			}
 			if ext.SourceRef == "" {
 				extErrs = append(extErrs, "source_ref")
+			}
+			if ext.Conversion == "" {
+				extErrs = append(extErrs, "conversion")
 			}
 			if len(extErrs) > 0 {
 				id := ext.ID
@@ -209,6 +225,15 @@ func ValidateFormatDoc(formatsDir, canonicalKeysPath, provider string) error {
 					id = "(unnamed)"
 				}
 				errs = append(errs, fmt.Sprintf("✗ content_types.%s.provider_extensions[%s]: missing required fields: %s", ct, id, strings.Join(extErrs, ", ")))
+			}
+
+			// Rule 5: conversion vocabulary
+			if ext.Conversion != "" && !validConversionValues[ext.Conversion] {
+				id := ext.ID
+				if id == "" {
+					id = "(unnamed)"
+				}
+				errs = append(errs, fmt.Sprintf("✗ content_types.%s.provider_extensions[%s].conversion: invalid value %q (must be %s)", ct, id, ext.Conversion, strings.Join(sortedKeys(validConversionValues), "|")))
 			}
 		}
 	}

@@ -60,49 +60,34 @@ content_types:
     provider_extensions:
       - id: supporting_files
         name: Supporting Files
-        description: >
-          Optional supporting files (scripts, schemas, checklists, etc.) can be co-located
-          in the skill directory alongside SKILL.md. The Droid can reference these files
-          when executing the skill. This enables self-contained skill packages that bundle
-          their own tooling assets.
+        summary: "Co-located scripts, schemas, or checklists alongside SKILL.md that the Droid can reference, enabling self-contained skill packages."
         source_ref: "https://docs.factory.ai/cli/configuration/skills"
         graduation_candidate: true
+        conversion: preserved
       - id: auto_invocation
         name: Auto-Invocation
-        description: >
-          The Droid automatically invokes matching skills when they apply to the current
-          task, without explicit user prompting. The skill description is the primary
-          trigger signal — the model uses it to determine whether a skill is relevant to
-          the current context. The user-invocable and disable-model-invocation frontmatter
-          keys control whether auto-invocation is permitted.
+        summary: "The Droid automatically invokes matching skills based on the description field; gated by user-invocable and disable-model-invocation flags."
         source_ref: "https://docs.factory.ai/cli/configuration/skills"
         graduation_candidate: true
+        conversion: translated
       - id: monorepo_skill_paths
         name: Monorepo Skill Paths
-        description: >
-          Skills can be organized per-project within a monorepo using per-project
-          .factory/skills/ directories, or shared across projects via a root-level
-          .factory/skills/ directory. This allows monorepos to maintain project-specific
-          skills alongside shared skills without path conflicts.
+        summary: "Skills may live in per-project .factory/skills/ directories or a shared root-level .factory/skills/ for monorepo organization."
         source_ref: "https://docs.factory.ai/cli/configuration/skills"
         graduation_candidate: false
+        conversion: not-portable
       - id: skill_composability
         name: Skill Composability
-        description: >
-          The Droid can chain multiple skills inside a single plan, invoking them in
-          sequence as the plan progresses. This enables composite workflows composed
-          of reusable skill primitives without requiring a single monolithic skill.
+        summary: "The Droid can chain multiple skills within a single plan, composing reusable primitives instead of building monolithic skills."
         source_ref: "https://docs.factory.ai/cli/configuration/skills"
         graduation_candidate: false
+        conversion: not-portable
       - id: legacy_commands_compatibility
         name: Legacy Commands Compatibility
-        description: >
-          Files under .factory/commands/ continue to work and are recognized by the
-          Droid. Skills (under .factory/skills/) supersede commands as the preferred
-          mechanism, but the commands directory is still loaded for backwards
-          compatibility with pre-skills configurations.
+        summary: "Files under .factory/commands/ are still loaded for backwards compatibility, though skills are now the preferred mechanism."
         source_ref: "https://docs.factory.ai/cli/configuration/skills"
         graduation_candidate: false
+        conversion: not-portable
     loading_model: ""
     notes: "A compatibility discovery path at <repo>/.agent/skills/ is also supported (not in original format doc). The docs additionally show skill.mdx accepted alongside SKILL.md. Skill descriptions serve double duty as both user-facing documentation and auto-invocation trigger signals — the model reads the description to decide whether the skill applies to the current task."
 
@@ -138,29 +123,23 @@ content_types:
     provider_extensions:
       - id: agents_md_format
         name: AGENTS.md Format
-        description: >
-          Factory uses AGENTS.md as its primary rules file format, explicitly mirroring
-          the cross-provider AGENTS.md standard originated by OpenAI/Codex. Multiple
-          AGENTS.md files can exist at different directory levels; the innermost file
-          takes precedence over outer ones.
+        summary: "Factory uses the cross-provider AGENTS.md standard (OpenAI/Codex origin), with innermost file precedence across directory levels."
         source_ref: "https://docs.factory.ai/cli/configuration"
         graduation_candidate: true
+        conversion: translated
       - id: global_rules_path
         name: Global Rules Path
-        description: >
-          A global AGENTS.md at ~/AGENTS.md applies across all projects. This
-          sits above the repo root in the discovery hierarchy and is overridden
-          by any project-level or subdirectory AGENTS.md.
+        summary: "A global ~/AGENTS.md applies across all projects, overridden by any project-level or subdirectory AGENTS.md."
         source_ref: "https://docs.factory.ai/cli/configuration"
         graduation_candidate: false
+        conversion: translated
       - id: custom_instructions_setting
         name: Custom Instructions Setting
-        description: >
-          The personal settings file ~/.factory/settings.json supports a
-          customInstructions key for always-on guidance that applies regardless
-          of which project is open. Complements rather than replaces AGENTS.md.
+        summary: "Personal settings file customInstructions key provides always-on guidance regardless of which project is open."
         source_ref: "https://docs.factory.ai/cli/configuration"
         graduation_candidate: false
+        provider_field: "customInstructions"
+        conversion: embedded
     loading_model: ""
     notes: "Factory mirrors the AGENTS.md cross-provider standard (OpenAI/Codex origin). Discovery hierarchy: ~/AGENTS.md (global) → repo root AGENTS.md → subdir AGENTS.md (innermost wins). Common sections: project overview, build/test commands, coding conventions, PR workflow."
 
@@ -217,49 +196,36 @@ content_types:
     provider_extensions:
       - id: hook_events
         name: Hook Events
-        description: >
-          Eight hook events: PreToolUse, PostToolUse, Notification, UserPromptSubmit,
-          Stop, SubagentStop, PreCompact, SessionStart, SessionEnd. PreToolUse can
-          block tool execution (decision: block). PostToolUse can trigger rerun
-          (decision: rerun). UserPromptSubmit can modify inputText before processing.
+        summary: "Nine hook events including PreToolUse (block), PostToolUse (rerun), UserPromptSubmit (modify inputText), Stop, SubagentStop, PreCompact, SessionStart, SessionEnd, Notification."
         source_ref: "https://docs.factory.ai/reference/hooks-reference"
         graduation_candidate: true
+        conversion: translated
       - id: hook_config_structure
         name: Hook Config Structure
-        description: >
-          Hooks are configured as JSON under a top-level "hooks" key:
-          {"hooks": {"EventName": [{"matcher": "ToolPattern", "hooks": [{"type":
-          "command", "command": "..."}]}]}}. Matchers support exact strings, regex
-          patterns, and "*" for all tools. MCP tool names follow the
-          mcp__serverName__toolName pattern.
+        summary: "JSON config under top-level hooks key with matcher patterns (exact, regex, or *) routing to command-type entries."
         source_ref: "https://docs.factory.ai/cli/configuration/hooks-guide"
         graduation_candidate: false
+        provider_field: "hooks"
+        conversion: translated
       - id: hook_scope_files
         name: Hook Scope Files
-        description: >
-          Hooks are stored in scoped settings files: ~/.factory/settings.json
-          (user-global), .factory/settings.json (project, committed),
-          .factory/settings.local.json (project-local, not committed). Plugin hooks
-          live in plugins/[name]/settings.json.
+        summary: "Hooks live in scoped settings files: ~/.factory/settings.json (global), .factory/settings.json (project), .factory/settings.local.json (local), plus plugin settings."
         source_ref: "https://docs.factory.ai/cli/configuration/hooks-guide"
         graduation_candidate: false
+        conversion: not-portable
       - id: hook_exit_code_behavior
         name: Hook Exit Code Behavior
-        description: >
-          Exit code 2 has special semantics: suppress output and return empty result.
-          JSON output fields include decision, reason, stopReason, inputText, and
-          suppressOutput. The FACTORY_TOOL_INPUT environment variable is available
-          to hook processes.
+        summary: "Exit code 2 suppresses output; JSON output fields decision, reason, stopReason, inputText, suppressOutput; FACTORY_TOOL_INPUT env var provided."
         source_ref: "https://docs.factory.ai/reference/hooks-reference"
         graduation_candidate: true
+        conversion: translated
       - id: pre_compact_event
         name: PreCompact Hook Event
-        description: >
-          The PreCompact event fires before context compaction occurs, enabling
-          hooks to inject memory or state into the compaction prompt. Useful for
-          preserving important session context across compaction boundaries.
+        summary: "Fires before context compaction, allowing hooks to inject memory or state into the compaction prompt to preserve important context."
         source_ref: "https://docs.factory.ai/reference/hooks-reference"
         graduation_candidate: true
+        provider_field: "PreCompact"
+        conversion: translated
     loading_model: ""
     notes: "Hook structure closely mirrors Claude Code's hook system (same event names, same JSON config shape, same exit-code semantics). The FACTORY_TOOL_INPUT env var and suppressOutput flag appear to be Factory-specific additions. Plugin hooks via plugins/[name]/settings.json enable installable hook bundles."
 
@@ -307,20 +273,16 @@ content_types:
     provider_extensions:
       - id: mcp_manager_ui
         name: MCP Manager UI
-        description: >
-          Factory added a dedicated MCP Manager UI in release 1.10, providing a
-          graphical interface for connecting and managing MCP servers without
-          manual JSON editing.
+        summary: "Dedicated MCP Manager UI introduced in release 1.10 for connecting and managing MCP servers graphically without manual JSON editing."
         source_ref: "https://docs.factory.ai/llms.txt"
         graduation_candidate: false
+        conversion: not-portable
       - id: factory_as_mcp_server
         name: Factory as MCP Server
-        description: >
-          Factory CLI can itself act as an MCP server, enabling programmatic
-          control and integration with other tools that speak the MCP client
-          protocol.
+        summary: "The Factory CLI can itself run as an MCP server, exposing its capabilities to other tools that speak the MCP client protocol."
         source_ref: "https://docs.factory.ai/llms.txt"
         graduation_candidate: false
+        conversion: not-portable
     loading_model: ""
     notes: "Full MCP config details require the /cli/configuration/mcp.md page (not fetched — source here is the llms.txt index only). MCP server support is also present in Factory's Zed editor integration."
 
@@ -364,45 +326,34 @@ content_types:
     provider_extensions:
       - id: droid_format
         name: Custom Droid Format
-        description: >
-          Agents (Custom Droids) are .md files stored under .factory/droids/
-          (project) or ~/.factory/droids/ (personal). Each droid defines its own
-          system prompt, model preference, and tooling policy in a single file.
-          The CLI scans top-level files only (no subdirectory recursion).
+        summary: "Agents are flat .md files in .factory/droids/ (project) or ~/.factory/droids/ (personal); top-level scan only, no recursion."
         source_ref: "https://docs.factory.ai/cli/configuration/custom-droids"
         graduation_candidate: true
+        conversion: translated
       - id: droid_precedence
         name: Project-Over-Personal Precedence
-        description: >
-          Project-scope droids override personal droids with the same slug.
-          This is the opposite of skills precedence (where personal overrides
-          project) and must be accounted for in any cross-provider conversion.
+        summary: "Project-scope droids override personal droids of the same slug — the reverse of skills precedence."
         source_ref: "https://docs.factory.ai/cli/configuration/custom-droids"
         graduation_candidate: false
+        conversion: not-portable
       - id: tool_categories
         name: Tool Categories
-        description: >
-          Droids specify allowed tools via named categories: filesystem, shell,
-          search, browser, web_fetch, and others. This categorical tooling policy
-          differs from per-tool allowlists used by some other providers.
+        summary: "Droids restrict tools by named categories (filesystem, shell, search, browser, web_fetch) instead of per-tool allowlists."
         source_ref: "https://docs.factory.ai/cli/configuration/custom-droids"
         graduation_candidate: true
+        conversion: embedded
       - id: model_selection_per_droid
         name: Per-Droid Model Selection
-        description: >
-          Each droid can specify its own model preference independently of the
-          global model setting, enabling mixed-model agent compositions within
-          a single project.
+        summary: "Each droid declares its own model preference independent of the global setting, enabling mixed-model agent compositions."
         source_ref: "https://docs.factory.ai/cli/configuration/custom-droids"
         graduation_candidate: true
+        conversion: translated
       - id: claude_code_subagent_import
         name: Claude Code Subagent Import
-        description: >
-          The /import-subagent command reads .claude/agents/*.md files and
-          converts them to Factory droid format, providing a migration path
-          from Claude Code agent definitions to Factory droids.
+        summary: "The /import-subagent slash command converts .claude/agents/*.md files to Factory droid format for migration."
         source_ref: "https://docs.factory.ai/cli/configuration/custom-droids"
         graduation_candidate: false
+        conversion: not-portable
     loading_model: ""
     notes: "Factory calls agents 'Custom Droids'. Exposed as subagent_type targets for the Task tool. Project droids override personal (note: reverse of skills). Droids are enabled by default with live progress reporting in the UI."
 
@@ -426,30 +377,21 @@ content_types:
     provider_extensions:
       - id: two_command_types
         name: Two Command Types
-        description: >
-          Commands come in two types: Markdown (.md files — prompt templates
-          injected into the conversation, support $ARGUMENTS substitution) and
-          Executable (scripts — run as shell commands with stdout fed into the
-          conversation). Both share the same discovery directories.
+        summary: "Commands are either Markdown templates (with $ARGUMENTS substitution) or Executable scripts whose stdout is injected into the conversation."
         source_ref: "https://docs.factory.ai/cli/configuration/custom-slash-commands"
         graduation_candidate: true
+        conversion: translated
       - id: command_discovery_paths
         name: Command Discovery Paths
-        description: >
-          Commands are discovered from .factory/commands/ (project) or
-          ~/.factory/commands/ (personal). The filename (without extension)
-          becomes the slash command name. Project commands override personal
-          commands with the same slug.
+        summary: "Commands are discovered from .factory/commands/ (project) or ~/.factory/commands/ (personal); filename becomes the slash command name."
         source_ref: "https://docs.factory.ai/cli/configuration/custom-slash-commands"
         graduation_candidate: false
+        conversion: translated
       - id: skills_supersede_commands
         name: Skills Supersede Commands
-        description: >
-          Factory's own docs note that skills are now user-invokable via slash
-          commands and recommend skills over commands for new work. Commands
-          remain supported for backwards compatibility but are considered
-          a legacy mechanism relative to skills.
+        summary: "Factory's docs recommend skills over commands for new work; commands remain supported only for backwards compatibility."
         source_ref: "https://docs.factory.ai/cli/configuration/custom-slash-commands"
         graduation_candidate: false
+        conversion: not-portable
     loading_model: ""
     notes: "Commands are partly superseded by skills in Factory's model — the docs explicitly suggest using skills for new commands. The $ARGUMENTS substitution in Markdown commands is equivalent to the $ARGUMENTS pattern found in other providers (e.g. Claude Code). Executable commands differ from skills by running as shell processes rather than being injected as prompts."
