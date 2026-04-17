@@ -4,11 +4,35 @@ func init() {
 	RegisterRecognizer("opencode", RecognizerKindGoStruct, recognizeOpencode)
 }
 
+// MCP recognition is intentionally NOT wired for opencode.
+//
+// The cached MCP sources are unusable for landmark recognition:
+//   - mcp.0 (.capmon-cache/opencode/mcp.0/extracted.json) points at
+//     https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json
+//     — this is the Crush JSON Schema, not opencode's. The seeder spec for
+//     opencode has the wrong source URL. Even if it were the right schema,
+//     JSON-Schema fields land in Fields not Landmarks (the listed landmarks
+//     are crush struct names like Permissions, Tools, LSPConfig, MCPConfig).
+//   - mcp.1 (https://raw.githubusercontent.com/opencode-ai/opencode/main/internal/llm/agent/mcp-tools.go)
+//     yields a single landmark "MCPClient" — a Go struct name, not heading
+//     evidence and not aligned to any of the 8 canonical MCP keys.
+//
+// docs/provider-formats/opencode.yaml has no curated mcp section either —
+// opencode is archived and the human-edited curator skipped MCP entirely.
+//
+// Recognizer silence is the right move — emitting any canonical MCP key
+// based on these landmarks would either be a false positive (crush schema
+// fields incorrectly attributed to opencode) or unanchored (struct name
+// without semantic meaning). MCP recognition can be wired once a correct
+// opencode MCP source is added to the cache.
+
 // recognizeOpencode recognizes skills capabilities for the OpenCode provider.
 // OpenCode is archived; it has no native skill implementation, so this
 // recognizer uses the cross-provider SKILL.md convention. GoStruct pattern
 // will produce output only if upstream extraction surfaces Skill.* fields
-// (unlikely for an archived project).
+// (unlikely for an archived project). MCP recognition is intentionally
+// absent — see the comment block immediately above this function for
+// rationale.
 func recognizeOpencode(ctx RecognitionContext) RecognitionResult {
 	result := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
 	if len(result) == 0 {
