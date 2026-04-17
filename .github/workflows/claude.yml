@@ -35,7 +35,7 @@ jobs:
 
       - name: Get Claude credentials from Aembit
         id: aembit
-        uses: Aembit/get-credentials@3de1076cbb219a12107a6f3f92b2ae8bc018e618 # v1.1.1
+        uses: Aembit/get-credentials@652c3288eba4b0f3f03d0fee970b0d6c490f010a # v1.1.2
         with:
           client-id: aembit:useast2:c7053f:identity:github_idtoken:2bbc8270-85a4-4c27-8c49-19e5590dfa87
           credential-type: ApiKey
