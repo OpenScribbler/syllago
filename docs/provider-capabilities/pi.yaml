@@ -3,6 +3,13 @@ slug: pi
 display_name: ""
 last_verified: ""
 content_types:
+  commands:
+    supported: true
+    capabilities:
+      argument_substitution:
+        supported: true
+        mechanism: positional shell-style substitution ($1, $2, $@, $ARGUMENTS, ${@:N}, ${@:N:L}) documented under 'Argument Hints' / 'Arguments' / 'Usage' headings
+        confidence: inferred
   hooks:
     supported: true
     capabilities:

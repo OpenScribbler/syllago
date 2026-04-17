@@ -136,3 +136,73 @@ func TestRecognizePi_NoLandmarks(t *testing.T) {
 		t.Errorf("status = %q, want %q", result.Status, capmon.StatusAnchorsMissing)
 	}
 }
+
+// realPiCommandsLandmarks is a snapshot of the H2/H3 headings extracted from
+// pi's prompt-templates doc (.capmon-cache/pi/commands.0/extracted.json) as
+// of 2026-04-17. Pi brands its slash-command surface as "Prompt Templates".
+// The "Argument Hints" + "Arguments" + "Usage" headings document the
+// positional shell-style substitution syntax ($1, $2, $@, $ARGUMENTS,
+// ${@:N}, ${@:N:L}) — strong heading-level evidence for argument_substitution.
+var realPiCommandsLandmarks = []string{
+	"Prompt Templates",
+	"Locations",
+	"Format",
+	"Argument Hints",
+	"Usage",
+	"Arguments",
+	"Loading Rules",
+}
+
+// TestRecognizePi_RealCommandsLandmarks proves commands recognition fires on
+// the merged hooks+commands fixture, emits argument_substitution at
+// "inferred" confidence, and does NOT emit builtin_commands (pi has no
+// built-in slash commands per the curator — Prompt Templates are
+// user-authored only).
+func TestRecognizePi_RealCommandsLandmarks(t *testing.T) {
+	merged := append([]string{}, realPiHooksLandmarks...)
+	merged = append(merged, realPiCommandsLandmarks...)
+	result := capmon.RecognizeWithContext("pi", capmon.RecognitionContext{
+		Provider:  "pi",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["commands.supported"] != "true" {
+		t.Error("commands.supported missing")
+	}
+	if caps["commands.capabilities.argument_substitution.supported"] != "true" {
+		t.Error("commands.capabilities.argument_substitution.supported missing")
+	}
+	if got := caps["commands.capabilities.argument_substitution.confidence"]; got != "inferred" {
+		t.Errorf("commands.argument_substitution.confidence = %q, want inferred", got)
+	}
+	if _, has := caps["commands.capabilities.builtin_commands.supported"]; has {
+		t.Error("commands.capabilities.builtin_commands.supported should NOT be present for pi (no built-in slash commands per curator)")
+	}
+}
+
+// TestRecognizePi_CommandsAnchorsMissing proves the required-anchor guard
+// suppresses commands emission when the unique "Argument Hints" anchor is
+// absent — preventing commands patterns from firing on contexts where only
+// the generic "Usage" or "Format" headings appear.
+func TestRecognizePi_CommandsAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realPiCommandsLandmarks))
+	for _, lm := range realPiCommandsLandmarks {
+		if lm == "Argument Hints" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("pi", capmon.RecognitionContext{
+		Provider:  "pi",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["commands.supported"]; has {
+		t.Error("commands.supported should NOT be present when 'Argument Hints' anchor is missing")
+	}
+}
