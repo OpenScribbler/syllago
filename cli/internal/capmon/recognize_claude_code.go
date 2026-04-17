@@ -157,15 +157,62 @@ func claudeCodeMcpLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeClaudeCode recognizes skills + rules + hooks + mcp capabilities for
-// the Claude Code provider. Source for all four content types is markdown
-// documentation, so recognition uses landmark (heading) matching rather than
-// typed-source struct extraction. Capabilities emitted at confidence "inferred"
-// — recognizeLandmarks enforces this.
+// claudeCodeAgentsLandmarkOptions returns the landmark patterns for Claude
+// Code's subagents documentation. Anchors derived from
+// .capmon-cache/claude-code/agents.0/extracted.json
+// (https://code.claude.com/docs/en/sub-agents.md) — 41 H2/H3 headings across
+// scope, definition format, tool control, invocation modes, model selection,
+// per-agent MCP, persistent memory, hooks, and multi-agent patterns.
 //
-// Static facts (project_scope, global_scope, canonical_filename) are still emitted
-// at "confirmed" confidence because they describe behavior documented in literal
-// terms, not inferred from heading presence.
+// Required anchors are unique to the subagents doc: "Create custom subagents"
+// and "Supported frontmatter fields" appear in no other content-type doc, so
+// this guard prevents agents patterns from firing on a context that includes
+// only skills, rules, hooks, or mcp landmarks.
+//
+// Object-typed canonical keys emit the bare key (no nested sub-segments) when
+// only the parent heading exists, and emit nested sub-segments when distinct
+// per-mode landmarks exist:
+//   - invocation_patterns: nested (.natural_language, .at_mention,
+//     .background) — three distinct invocation-mode landmarks present.
+//   - agent_scopes: bare key — the 5 scopes (managed, CLI flag, project,
+//     user, plugin) live in a table whose rows are not exposed as landmarks
+//     by the markdown extractor.
+func claudeCodeAgentsLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Create custom subagents", CaseInsensitive: true},
+		{Kind: "substring", Value: "Supported frontmatter fields", CaseInsensitive: true},
+	}
+	return AgentsLandmarkOptions(
+		AgentsLandmarkPattern("definition_format", "Write subagent files",
+			"markdown with YAML frontmatter (name/description required, plus tools/model/permissionMode/etc) documented under 'Write subagent files' / 'Supported frontmatter fields' headings", required),
+		AgentsLandmarkPattern("tool_restrictions", "Control subagent capabilities",
+			"per-subagent tool allowlist (tools), denylist (disallowedTools), and per-spawn restrictions documented under 'Control subagent capabilities' / 'Available tools' / 'Restrict which subagents can be spawned' headings", required),
+		AgentsLandmarkPattern("invocation_patterns.natural_language", "Understand automatic delegation",
+			"Claude decides whether to delegate based on the subagent's description (documented under 'Understand automatic delegation' heading)", required),
+		AgentsLandmarkPattern("invocation_patterns.at_mention", "Invoke subagents explicitly",
+			"@-mention syntax guarantees a specific subagent runs for one task (documented under 'Invoke subagents explicitly' heading)", required),
+		AgentsLandmarkPattern("invocation_patterns.background", "Run subagents in foreground or background",
+			"foreground (blocking) vs background (concurrent) execution modes documented under 'Run subagents in foreground or background' heading", required),
+		AgentsLandmarkPattern("agent_scopes", "Choose the subagent scope",
+			"five-tier scope hierarchy (managed > --agents CLI > project > user > plugin) documented under 'Choose the subagent scope' heading; precedence rules in scope table", required),
+		AgentsLandmarkPattern("model_selection", "Choose a model",
+			"per-subagent model override (sonnet/opus/haiku alias, full model ID, or inherit) documented under 'Choose a model' heading; resolution order via CLAUDE_CODE_SUBAGENT_MODEL env var, --model flag, frontmatter, or main session", required),
+		AgentsLandmarkPattern("per_agent_mcp", "Scope MCP servers to a subagent",
+			"per-subagent mcpServers field scopes which MCP servers each subagent can access (documented under 'Scope MCP servers to a subagent' heading)", required),
+		AgentsLandmarkPattern("subagent_spawning", "Chain subagents",
+			"multi-agent coordination via parallel research, chained subagents, and resumable transcripts (documented under 'Run parallel research' / 'Chain subagents' / 'Resume subagents' headings)", required),
+	)
+}
+
+// recognizeClaudeCode recognizes skills + rules + hooks + mcp + agents
+// capabilities for the Claude Code provider. Source for all five content
+// types is markdown documentation, so recognition uses landmark (heading)
+// matching rather than typed-source struct extraction. Capabilities emitted
+// at confidence "inferred" — recognizeLandmarks enforces this.
+//
+// Static facts (project_scope, global_scope, canonical_filename) are still
+// emitted at "confirmed" confidence because they describe behavior
+// documented in literal terms, not inferred from heading presence.
 func recognizeClaudeCode(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, claudeCodeLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
@@ -177,6 +224,7 @@ func recognizeClaudeCode(ctx RecognitionContext) RecognitionResult {
 	rulesResult := recognizeLandmarks(ctx, claudeCodeRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, claudeCodeHooksLandmarkOptions())
 	mcpResult := recognizeLandmarks(ctx, claudeCodeMcpLandmarkOptions())
+	agentsResult := recognizeLandmarks(ctx, claudeCodeAgentsLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult, agentsResult)
 }

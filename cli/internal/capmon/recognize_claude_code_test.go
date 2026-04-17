@@ -116,6 +116,7 @@ func TestRecognizeClaudeCode_RealLandmarks(t *testing.T) {
 	merged = append(merged, realClaudeCodeRulesLandmarks...)
 	merged = append(merged, realClaudeCodeHooksLandmarks...)
 	merged = append(merged, realClaudeCodeMcpLandmarks...)
+	merged = append(merged, realClaudeCodeAgentsLandmarks...)
 	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
 		Provider:  "claude-code",
 		Format:    "markdown",
@@ -368,5 +369,114 @@ func TestRecognizeClaudeCode_McpAnchorsMissing(t *testing.T) {
 	})
 	if _, has := result.Capabilities["mcp.supported"]; has {
 		t.Error("mcp.supported should NOT be present when 'MCP installation scopes' anchor is missing")
+	}
+}
+
+// realClaudeCodeAgentsLandmarks is a snapshot of the H2/H3 headings extracted
+// from code.claude.com/docs/en/sub-agents.md as of 2026-04-16. Source of
+// truth: .capmon-cache/claude-code/agents.0/extracted.json. Update when the
+// doc evolves.
+var realClaudeCodeAgentsLandmarks = []string{
+	"Documentation Index",
+	"Create custom subagents",
+	"Built-in subagents",
+	"Quickstart: create your first subagent",
+	"Configure subagents",
+	"Use the /agents command",
+	"Choose the subagent scope",
+	"Write subagent files",
+	"Supported frontmatter fields",
+	"Choose a model",
+	"Control subagent capabilities",
+	"Available tools",
+	"Restrict which subagents can be spawned",
+	"Scope MCP servers to a subagent",
+	"Permission modes",
+	"Preload skills into subagents",
+	"Enable persistent memory",
+	"Persistent memory tips",
+	"Conditional rules with hooks",
+	"Disable specific subagents",
+	"Define hooks for subagents",
+	"Hooks in subagent frontmatter",
+	"Project-level hooks for subagent events",
+	"Work with subagents",
+	"Understand automatic delegation",
+	"Invoke subagents explicitly",
+	"Run subagents in foreground or background",
+	"Common patterns",
+	"Isolate high-volume operations",
+	"Run parallel research",
+	"Chain subagents",
+	"Choose between subagents and main conversation",
+	"Manage subagent context",
+	"Resume subagents",
+	"Auto-compaction",
+	"Example subagents",
+	"Code reviewer",
+	"Debugger",
+	"Data scientist",
+	"Database query validator",
+	"Next steps",
+}
+
+// TestRecognizeClaudeCode_RealAgentsLandmarks proves agents recognition fires
+// against the real cache snapshot — emits all 7 canonical agents keys at
+// "inferred" confidence. invocation_patterns expands into 3 nested
+// sub-segments (.natural_language, .at_mention, .background); agent_scopes
+// emits as the bare key (table rows aren't surfaced as landmarks).
+func TestRecognizeClaudeCode_RealAgentsLandmarks(t *testing.T) {
+	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
+		Provider:  "claude-code",
+		Format:    "markdown",
+		Landmarks: realClaudeCodeAgentsLandmarks,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["agents.supported"] != "true" {
+		t.Error("agents.supported missing")
+	}
+	agentsInferred := []string{
+		"definition_format",
+		"tool_restrictions",
+		"invocation_patterns.natural_language",
+		"invocation_patterns.at_mention",
+		"invocation_patterns.background",
+		"agent_scopes",
+		"model_selection",
+		"per_agent_mcp",
+		"subagent_spawning",
+	}
+	for _, c := range agentsInferred {
+		key := "agents.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["agents.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("agents.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+}
+
+// TestRecognizeClaudeCode_AgentsAnchorsMissing proves the required-anchor
+// guard suppresses agents emission when 'Create custom subagents' is absent.
+func TestRecognizeClaudeCode_AgentsAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realClaudeCodeAgentsLandmarks))
+	for _, lm := range realClaudeCodeAgentsLandmarks {
+		if lm == "Create custom subagents" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
+		Provider:  "claude-code",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["agents.supported"]; has {
+		t.Error("agents.supported should NOT be present when 'Create custom subagents' anchor is missing")
 	}
 }

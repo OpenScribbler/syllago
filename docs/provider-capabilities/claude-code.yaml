@@ -3,6 +3,48 @@ slug: claude-code
 display_name: ""
 last_verified: ""
 content_types:
+  agents:
+    supported: true
+    capabilities:
+      agent_scopes:
+        supported: true
+        mechanism: five-tier scope hierarchy (managed > --agents CLI > project > user > plugin) documented under 'Choose the subagent scope' heading; precedence rules in scope table
+        confidence: inferred
+      definition_format:
+        supported: true
+        mechanism: markdown with YAML frontmatter (name/description required, plus tools/model/permissionMode/etc) documented under 'Write subagent files' / 'Supported frontmatter fields' headings
+        confidence: inferred
+      invocation_patterns:
+        supported: true
+        capabilities:
+          at_mention:
+            supported: true
+            mechanism: '@-mention syntax guarantees a specific subagent runs for one task (documented under ''Invoke subagents explicitly'' heading)'
+            confidence: inferred
+          background:
+            supported: true
+            mechanism: foreground (blocking) vs background (concurrent) execution modes documented under 'Run subagents in foreground or background' heading
+            confidence: inferred
+          natural_language:
+            supported: true
+            mechanism: Claude decides whether to delegate based on the subagent's description (documented under 'Understand automatic delegation' heading)
+            confidence: inferred
+      model_selection:
+        supported: true
+        mechanism: per-subagent model override (sonnet/opus/haiku alias, full model ID, or inherit) documented under 'Choose a model' heading; resolution order via CLAUDE_CODE_SUBAGENT_MODEL env var, --model flag, frontmatter, or main session
+        confidence: inferred
+      per_agent_mcp:
+        supported: true
+        mechanism: per-subagent mcpServers field scopes which MCP servers each subagent can access (documented under 'Scope MCP servers to a subagent' heading)
+        confidence: inferred
+      subagent_spawning:
+        supported: true
+        mechanism: multi-agent coordination via parallel research, chained subagents, and resumable transcripts (documented under 'Run parallel research' / 'Chain subagents' / 'Resume subagents' headings)
+        confidence: inferred
+      tool_restrictions:
+        supported: true
+        mechanism: per-subagent tool allowlist (tools), denylist (disallowedTools), and per-spawn restrictions documented under 'Control subagent capabilities' / 'Available tools' / 'Restrict which subagents can be spawned' headings
+        confidence: inferred
   hooks:
     supported: true
     capabilities:
