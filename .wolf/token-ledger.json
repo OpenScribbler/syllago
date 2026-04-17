@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-04-14T17:20:26.414Z",
   "lifetime": {
-    "total_tokens_estimated": 1360127,
-    "total_reads": 835,
-    "total_writes": 847,
-    "total_sessions": 57,
-    "anatomy_hits": 220,
-    "anatomy_misses": 495,
+    "total_tokens_estimated": 1380358,
+    "total_reads": 850,
+    "total_writes": 853,
+    "total_sessions": 70,
+    "anatomy_hits": 230,
+    "anatomy_misses": 498,
     "repeated_reads_blocked": 311,
-    "estimated_savings_vs_bare_cli": 618405
+    "estimated_savings_vs_bare_cli": 620405
   },
   "sessions": [
     {
@@ -11053,6 +11053,159 @@
         "writes_count": 2,
         "repeated_reads_blocked": 0,
         "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-17-1900",
+      "started": "2026-04-17T02:00:34.207Z",
+      "ended": "2026-04-17T02:10:15.144Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_codex.go",
+          "tokens_estimated": 582,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/seeder-specs/codex-rules.yaml",
+          "tokens_estimated": 1642,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 3518,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_codex_test.go",
+          "tokens_estimated": 1000,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/seeder-specs/zed-rules.yaml",
+          "tokens_estimated": 1395,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_zed.go",
+          "tokens_estimated": 111,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_rules.go",
+          "tokens_estimated": 1470,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 249,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/seeder-specs/crush-rules.yaml",
+          "tokens_estimated": 1600,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seed_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 254,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/seeder-specs/roo-code-rules.yaml",
+          "tokens_estimated": 1553,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_codex.go",
+          "tokens_estimated": 910,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_codex_test.go",
+          "tokens_estimated": 1052,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_zed.go",
+          "tokens_estimated": 1136,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_zed_test.go",
+          "tokens_estimated": 1400,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 524,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 507,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 13374,
+        "output_tokens_estimated": 5529,
+        "reads_count": 12,
+        "writes_count": 6,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 9
+      }
+    },
+    {
+      "id": "session-2026-04-17-2116",
+      "started": "2026-04-17T04:16:41.934Z",
+      "ended": "2026-04-17T04:18:08.205Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cline.go",
+          "tokens_estimated": 1328,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seed.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/capyaml/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 1328,
+        "output_tokens_estimated": 0,
+        "reads_count": 3,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
       }
     }
   ],

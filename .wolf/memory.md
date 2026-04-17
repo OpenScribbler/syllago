@@ -835,3 +835,134 @@
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 18:42 | Created cli/internal/capmon/recognize_compose.go | — | ~699 |
+| 18:42 | Created cli/internal/capmon/recognize_compose_test.go | — | ~1074 |
+| 18:43 | Edited cli/internal/capmon/recognize_compose.go | 5→3 lines | ~26 |
+| 18:43 | Edited cli/internal/capmon/recognize_compose.go | reduced (-15 lines) | ~32 |
+| 18:44 | Created cli/internal/capmon/recognize_claude_code.go | — | ~1469 |
+| 18:44 | Edited cli/internal/capmon/recognize_claude_code_test.go | modified TestRecognizeClaudeCode_RealLandmarks() | ~856 |
+| 18:45 | Edited cli/internal/capmon/recognize_claude_code_test.go | expanded (+22 lines) | ~281 |
+| 18:45 | Edited cli/internal/capmon/recognize_kiro.go | modified kiroRulesLandmarkOptions() | ~896 |
+| 18:45 | Edited cli/internal/capmon/recognize_kiro_test.go | expanded (+32 lines) | ~413 |
+| 18:46 | Edited cli/internal/capmon/recognize_kiro_test.go | modified TestRecognizeKiro_RealLandmarks() | ~701 |
+
+## Session: 2026-04-17 18:48
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:51 | Created cli/internal/capmon/recognize_windsurf.go | — | ~1121 |
+| 18:51 | Created cli/internal/capmon/recognize_windsurf_test.go | — | ~1091 |
+| 18:52 | Created cli/internal/capmon/recognize_gemini_cli.go | — | ~741 |
+| 18:52 | Created cli/internal/capmon/recognize_gemini_cli_test.go | — | ~715 |
+| 18:53 | Created cli/internal/capmon/recognize_cursor.go | — | ~843 |
+| 18:53 | Created cli/internal/capmon/recognize_cursor_test.go | — | ~987 |
+| 18:54 | Created cli/internal/capmon/recognize_copilot_cli.go | — | ~1398 |
+| 18:55 | Edited cli/internal/capmon/recognize_copilot_cli_test.go | expanded (+13 lines) | ~258 |
+| 18:55 | Edited cli/internal/capmon/recognize_copilot_cli_test.go | modified TestRecognizeCopilotCli_NoLandmarks() | ~635 |
+| 18:56 | Created cli/internal/capmon/recognize_amp.go | — | ~1267 |
+| 18:57 | Edited cli/internal/capmon/recognize_amp_test.go | expanded (+15 lines) | ~255 |
+| 18:57 | Edited cli/internal/capmon/recognize_amp_test.go | modified TestRecognizeAmp_NoLandmarks() | ~531 |
+| 18:57 | Edited cli/internal/capmon/recognize_cline.go | modified clineRulesLandmarkOptions() | ~720 |
+| 18:58 | Edited cli/internal/capmon/recognize_cline_test.go | expanded (+26 lines) | ~354 |
+| 18:58 | Edited cli/internal/capmon/recognize_cline_test.go | modified TestRecognizeCline_NoLandmarks() | ~583 |
+
+## Session: 2026-04-17 19:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:02 | Edited cli/internal/capmon/recognize_codex.go | modified codexRulesLandmarkOptions() | ~850 |
+| 19:02 | Edited cli/internal/capmon/recognize_codex_test.go | modified TestRecognizeCodex_OnlyExcludedStructs() | ~982 |
+| 19:05 | Edited cli/internal/capmon/recognize_zed.go | modified init() | ~1061 |
+| 19:05 | Created cli/internal/capmon/recognize_zed_test.go | — | ~1306 |
+| 19:07 | Edited cli/internal/capmon/recognize_crush.go | modified recognizeCrush() | ~489 |
+| 19:07 | Edited cli/internal/capmon/recognize_roo_code.go | modified recognizeRooCode() | ~473 |
+| 19:10 | Session end: 6 writes across 6 files (recognize_codex.go, recognize_codex_test.go, recognize_zed.go, recognize_zed_test.go, recognize_crush.go) | 12 reads | ~18903 tok |
+
+## Session: 2026-04-17 19:10
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 19:10
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 19:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 19:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 21:16
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 21:18
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:21 | Edited cli/internal/capmon/capyaml/types.go | expanded (+8 lines) | ~242 |
+| 21:21 | Edited cli/internal/capmon/seed.go | expanded (+28 lines) | ~651 |
+| 21:21 | Edited cli/internal/capmon/seed_test.go | 8→9 lines | ~47 |
+| 21:21 | Edited cli/internal/capmon/seed_test.go | modified TestSeedProviderCapabilities_NestedSubCapabilities() | ~745 |
+| 21:30 | Created cli/internal/capmon/recognize_hooks.go | — | ~1371 |
+| 21:31 | Created cli/internal/capmon/recognize_hooks_test.go | — | ~2153 |
+
+## Session: 2026-04-17 21:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:38 | Edited cli/internal/capmon/recognize_claude_code.go | modified claudeCodeHooksLandmarkOptions() | ~1156 |
+| 21:39 | Edited cli/internal/capmon/recognize_claude_code_test.go | modified TestRecognizeClaudeCode_RealLandmarks() | ~460 |
+| 21:39 | Edited cli/internal/capmon/recognize_claude_code_test.go | expanded (+23 lines) | ~241 |
+| 21:41 | Edited cli/internal/capmon/recognize_cline.go | modified clineHooksLandmarkOptions() | ~738 |
+| 21:41 | Edited cli/internal/capmon/recognize_cline_test.go | expanded (+23 lines) | ~352 |
+| 21:42 | Edited cli/internal/capmon/recognize_cline_test.go | modified TestRecognizeCline_RealHooksLandmarks() | ~586 |
+| 21:44 | Edited cli/internal/capmon/recognize_copilot_cli.go | modified copilotCliHooksLandmarkOptions() | ~668 |
+
+## Session: 2026-04-17 21:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:46 | Edited cli/internal/capmon/recognize_copilot_cli_test.go | expanded (+29 lines) | ~357 |
+| 21:46 | Edited cli/internal/capmon/recognize_copilot_cli_test.go | modified TestRecognizeCopilotCli_RealHooksLandmarks() | ~559 |
+| 06:28 | Edited cli/internal/capmon/recognize_gemini_cli.go | modified geminiCliHooksLandmarkOptions() | ~746 |
+| 06:29 | Edited cli/internal/capmon/recognize_gemini_cli_test.go | expanded (+46 lines) | ~419 |
+| 06:29 | Edited cli/internal/capmon/recognize_gemini_cli_test.go | modified TestRecognizeGeminiCli_NoLandmarks() | ~581 |
+| 06:30 | Edited cli/internal/capmon/recognize_kiro.go | modified kiroHooksLandmarkOptions() | ~666 |
+| 06:31 | Edited cli/internal/capmon/recognize_kiro_test.go | expanded (+21 lines) | ~359 |
+| 06:31 | Edited cli/internal/capmon/recognize_kiro_test.go | modified TestRecognizeKiro_NoLandmarks() | ~556 |
+| 06:32 | Edited cli/internal/capmon/recognize_pi.go | modified piHooksLandmarkOptions() | ~632 |
+| 06:33 | Created cli/internal/capmon/recognize_pi_test.go | — | ~1125 |
+| 06:35 | Edited cli/internal/capmon/recognize_windsurf.go | modified windsurfHooksLandmarkOptions() | ~790 |
+| 06:35 | Edited cli/internal/capmon/recognize_windsurf_test.go | modified TestRecognizeWindsurf_NoLandmarks() | ~859 |
+| 06:37 | Edited cli/internal/capmon/recognize_amp.go | modified ampHooksLandmarkOptions() | ~844 |
+
+## Session: 2026-04-17 06:39
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 06:40 | Edited cli/internal/capmon/recognize_amp_test.go | expanded (+24 lines) | ~367 |
+| 06:41 | Edited cli/internal/capmon/recognize_amp_test.go | modified TestRecognizeAmp_RealHooksLandmarks() | ~835 |
+| 06:48 | Edited docs/provider-sources/factory-droid.yaml | expanded (+12 lines) | ~760 |
+
+## Session: 2026-04-17 06:55
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 06:59 | Created cli/internal/capmon/recognize_factory_droid.go | — | ~1312 |
+| 06:59 | Edited cli/internal/capmon/recognize_factory_droid.go | 10→10 lines | ~138 |
+| 07:00 | Created cli/internal/capmon/recognize_factory_droid_test.go | — | ~2012 |
+| 07:03 | Created cli/internal/capmon/recognize_codex.go | — | ~2295 |
+| 07:04 | Edited cli/internal/capmon/recognize_codex_test.go | modified TestRecognizeCodex_RulesAnchorsMissing() | ~1174 |
+
+## Session: 2026-04-17 07:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
