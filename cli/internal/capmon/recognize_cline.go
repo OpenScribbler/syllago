@@ -101,10 +101,50 @@ func clineHooksLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeCline recognizes skills + rules + hooks capabilities for the Cline
-// provider. Source for all three content types is markdown; recognition uses
-// landmark (heading) matching. Static facts merge in at "confirmed" confidence
-// after a successful skills landmark match.
+// clineMcpLandmarkOptions returns the landmark patterns for Cline's MCP
+// documentation. Evidence is split across two cache sources:
+//   - mcp.0 (configuring-mcp-servers.md): server discovery, configuration UI,
+//     transport-section H2s, marketplace via "Finding MCP Servers"
+//   - mcp.1 (transport-mechanisms.md): authoritative transport reference with
+//     "MCP Transport Mechanisms" / "STDIO Transport" / "SSE Transport" headings
+//
+// Per the curated format YAML (docs/provider-formats/cline.yaml), 4 of the 8
+// canonical MCP keys are supported. Only 2 have heading-level evidence
+// suitable for landmark recognition:
+//   - transport_types → "MCP Transport Mechanisms" (mcp.1) — backed by
+//     dedicated H2s for STDIO and SSE transports
+//   - marketplace → "Finding MCP Servers" (mcp.0) — the section that
+//     introduces the Cline MCP Marketplace
+//
+// tool_filtering and auto_approve are curated as supported (both backed by
+// the alwaysAllow JSON field) but the docs cover them in body text under
+// "STDIO Transport (Local Servers)" / "Editing Configuration Files" rather
+// than dedicated headings — landmark recognition cannot confirm without
+// schema-field evidence. The curated YAML keeps them at "confirmed", so the
+// recognizer staying silent here is the safer choice.
+//
+// Required anchors are unique to the MCP docs:
+//   - "Adding & Configuring Servers" — H1 of mcp.0
+//   - "MCP Transport Mechanisms" — H1 of mcp.1
+//
+// Neither appears in cline's skills, rules, hooks, or commands docs.
+func clineMcpLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Adding & Configuring Servers", CaseInsensitive: true},
+		{Kind: "substring", Value: "MCP Transport Mechanisms", CaseInsensitive: true},
+	}
+	return McpLandmarkOptions(
+		McpLandmarkPattern("transport_types", "MCP Transport Mechanisms",
+			"transport types documented under 'MCP Transport Mechanisms' / 'STDIO Transport' / 'SSE Transport' headings (mcp.1)", required),
+		McpLandmarkPattern("marketplace", "Finding MCP Servers",
+			"in-IDE MCP Marketplace introduced under 'Finding MCP Servers' heading (mcp.0)", required),
+	)
+}
+
+// recognizeCline recognizes skills + rules + hooks + mcp capabilities for the
+// Cline provider. Source for all four content types is markdown; recognition
+// uses landmark (heading) matching. Static facts merge in at "confirmed"
+// confidence after a successful skills landmark match.
 func recognizeCline(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, clineLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
@@ -115,6 +155,7 @@ func recognizeCline(ctx RecognitionContext) RecognitionResult {
 
 	rulesResult := recognizeLandmarks(ctx, clineRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, clineHooksLandmarkOptions())
+	mcpResult := recognizeLandmarks(ctx, clineMcpLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult)
 }

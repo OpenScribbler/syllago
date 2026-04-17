@@ -225,6 +225,123 @@ func TestRecognizeCline_RealRulesLandmarks(t *testing.T) {
 	}
 }
 
+// realClineMcpLandmarks is a snapshot of the MCP-doc headings combined from
+// .capmon-cache/cline/mcp.0/extracted.json (configuring-mcp-servers.md) and
+// .capmon-cache/cline/mcp.1/extracted.json (transport-mechanisms.md) as of
+// 2026-04-16. mcp.0 supplies the required anchor "Adding & Configuring
+// Servers" and the marketplace anchor "Finding MCP Servers"; mcp.1 supplies
+// the second required anchor "MCP Transport Mechanisms" and the
+// transport_types evidence.
+var realClineMcpLandmarks = []string{
+	// mcp.0 — configuring-mcp-servers.md
+	"Documentation Index",
+	"Adding & Configuring Servers",
+	"Finding MCP Servers",
+	"Adding Servers with Cline",
+	"Managing Servers",
+	"Enable/Disable",
+	"Restart",
+	"Delete",
+	"Network Timeout",
+	"Editing Configuration Files",
+	"STDIO Transport (Local Servers)",
+	"SSE Transport (Remote Servers)",
+	"Global MCP Mode",
+	"Using MCP Tools",
+	"Troubleshooting",
+	"Related",
+	// mcp.1 — transport-mechanisms.md
+	"MCP Transport Mechanisms",
+	"STDIO Transport",
+	"How STDIO Transport Works",
+	"STDIO Characteristics",
+	"When to Use STDIO",
+	"STDIO Implementation Example",
+	"SSE Transport",
+	"How SSE Transport Works",
+	"SSE Characteristics",
+	"When to Use SSE",
+	"SSE Implementation Example",
+	"Local vs. Hosted: Deployment Aspects",
+	"STDIO: Local Deployment Model",
+	"SSE: Hosted Deployment Model",
+	"Hybrid Approaches",
+	"Choosing Between STDIO and SSE",
+	"Configuring Transports in Cline",
+}
+
+// TestRecognizeCline_RealMcpLandmarks proves MCP recognition emits the 2
+// canonical MCP keys backed by heading-level evidence: transport_types and
+// marketplace. The other 6 canonical keys are either curated as unsupported
+// or backed only by body-text evidence (alwaysAllow JSON field for
+// tool_filtering / auto_approve) and must NOT be emitted by the recognizer.
+// Test merges all four content type fixtures to verify cross-content-type
+// robustness.
+func TestRecognizeCline_RealMcpLandmarks(t *testing.T) {
+	merged := append([]string{}, realClineLandmarks...)
+	merged = append(merged, realClineRulesLandmarks...)
+	merged = append(merged, realClineHooksLandmarks...)
+	merged = append(merged, realClineMcpLandmarks...)
+	result := capmon.RecognizeWithContext("cline", capmon.RecognitionContext{
+		Provider:  "cline",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["mcp.supported"] != "true" {
+		t.Error("mcp.supported missing")
+	}
+	mcpInferred := []string{
+		"transport_types",
+		"marketplace",
+	}
+	for _, c := range mcpInferred {
+		key := "mcp.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["mcp.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("mcp.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"mcp.capabilities.oauth_support.supported",
+		"mcp.capabilities.env_var_expansion.supported",
+		"mcp.capabilities.tool_filtering.supported",
+		"mcp.capabilities.auto_approve.supported",
+		"mcp.capabilities.resource_referencing.supported",
+		"mcp.capabilities.enterprise_management.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present for cline (no heading evidence or curated unsupported)", absent)
+		}
+	}
+}
+
+// TestRecognizeCline_McpAnchorsMissing proves the required-anchor guard
+// suppresses MCP emission when "MCP Transport Mechanisms" is absent.
+func TestRecognizeCline_McpAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realClineMcpLandmarks))
+	for _, lm := range realClineMcpLandmarks {
+		if lm == "MCP Transport Mechanisms" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("cline", capmon.RecognitionContext{
+		Provider:  "cline",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["mcp.supported"]; has {
+		t.Error("mcp.supported should NOT be present when 'MCP Transport Mechanisms' anchor is missing")
+	}
+}
+
 // TestRecognizeCline_RealHooksLandmarks proves hooks recognition on the merged
 // skills+rules+hooks landmarks. Cline documents 4 of the 9 canonical hooks
 // keys at the heading level (handler_types, hook_scopes, json_io_protocol,
