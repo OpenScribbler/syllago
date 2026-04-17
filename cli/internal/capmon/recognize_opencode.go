@@ -26,13 +26,39 @@ func init() {
 // without semantic meaning). MCP recognition can be wired once a correct
 // opencode MCP source is added to the cache.
 
+// Agents recognition is intentionally NOT wired for opencode.
+//
+// The cached agents source (.capmon-cache/opencode/agents.0/extracted.json,
+// fetched from opencode-ai/opencode/main/internal/llm/agent/agent.go) is a
+// Go runtime-event implementation file. Landmarks are AgentEvent,
+// AgentEventType, Service — runtime types, not user-facing capability
+// vocabulary. Fields are AgentEvent.Done / .Error / .Message / .Progress /
+// .SessionID / .Type and AgentEventTypeError / .Response / .Summarize —
+// event constants, not agent-definition or scope or tool-restriction
+// vocabulary.
+//
+// None of the 7 canonical agents keys (definition_format, tool_restrictions,
+// invocation_patterns, agent_scopes, model_selection, per_agent_mcp,
+// subagent_spawning) can be anchored on these landmarks or fields. The
+// source describes how the runtime emits events about ONE agent's
+// processing, not how multiple custom agents are defined or invoked.
+//
+// docs/provider-formats/opencode.yaml has no curated agents section —
+// opencode is archived (charmbracelet/crush is its evolution) and the
+// human-edited curator skipped agents entirely.
+//
+// Recognizer silence is the right move — emitting any canonical agents key
+// based on AgentEvent runtime types would conflate "agent runtime exists"
+// with "user-defined custom agents are supported". The latter is not
+// documented in any cached opencode source.
+
 // recognizeOpencode recognizes skills capabilities for the OpenCode provider.
 // OpenCode is archived; it has no native skill implementation, so this
 // recognizer uses the cross-provider SKILL.md convention. GoStruct pattern
 // will produce output only if upstream extraction surfaces Skill.* fields
-// (unlikely for an archived project). MCP recognition is intentionally
-// absent — see the comment block immediately above this function for
-// rationale.
+// (unlikely for an archived project). MCP and agents recognition are
+// intentionally absent — see the comment blocks immediately above this
+// function for rationale.
 func recognizeOpencode(ctx RecognitionContext) RecognitionResult {
 	result := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
 	if len(result) == 0 {
