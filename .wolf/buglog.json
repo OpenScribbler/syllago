@@ -387,6 +387,903 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-16T16:16:25.675Z"
+    },
+    {
+      "id": "bug-025",
+      "timestamp": "2026-04-16T16:23:06.785Z",
+      "error_message": "Significant refactor of ",
+      "file": "../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 7→3 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T16:23:06.785Z"
+    },
+    {
+      "id": "bug-026",
+      "timestamp": "2026-04-16T16:30:44.804Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/formatdoc.go",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 8→19 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T16:30:44.804Z"
+    },
+    {
+      "id": "bug-027",
+      "timestamp": "2026-04-16T16:31:19.209Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/formatdoc_validate.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 23→35 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T16:31:19.209Z"
+    },
+    {
+      "id": "bug-028",
+      "timestamp": "2026-04-16T16:35:29.200Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/formatdoc_validate_test.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 10→50 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T16:35:29.200Z"
+    },
+    {
+      "id": "bug-029",
+      "timestamp": "2026-04-16T16:39:57.300Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-formats/cline.yaml",
+      "root_cause": "27 lines replaced/restructured",
+      "fix": "Rewrote 44→26 lines (27 removed) | Also: description: >; Cline automatically detects and loads rule files f | Also: description: >; Cline defines 8 hook types covering the full task  | Also: description: >; Cline includes a dedicated MCP Marketplace UI acce | Also: description: >; Cline ships six built-in slash commands accessible",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 5,
+      "last_seen": "2026-04-16T16:41:32.488Z"
+    },
+    {
+      "id": "bug-030",
+      "timestamp": "2026-04-16T16:40:03.344Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-formats/amp.yaml",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 25→30 lines (5 removed) | Also: description: \"Amp rules files are named AGENT.md. ; description: \"AGENT.md is placed at the root of th | Also: description: \"Amp hooks support two trigger events; description: \"The 'send-user-message' action sends | Also: description: \"MCP servers are configured under the; description: \"The Amp settings file containing 'am",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 4,
+      "last_seen": "2026-04-16T16:41:52.046Z"
+    },
+    {
+      "id": "bug-031",
+      "timestamp": "2026-04-16T16:40:36.973Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-formats/codex.yaml",
+      "root_cause": "58 lines replaced/restructured",
+      "fix": "Rewrote 103→73 lines (58 removed) | Also: description: >; Codex loads AI instruction rules from a file named | Also: description: >; MCP servers are configured in config.toml under th | Also: description: >; Codex supports a multi-agent system where spawned ",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 4,
+      "last_seen": "2026-04-16T16:44:54.288Z"
+    },
+    {
+      "id": "bug-032",
+      "timestamp": "2026-04-16T16:44:35.868Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-formats/factory-droid.yaml",
+      "root_cause": "25 lines replaced/restructured",
+      "fix": "Rewrote 46→31 lines (25 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T16:44:35.868Z"
+    },
+    {
+      "id": "bug-033",
+      "timestamp": "2026-04-16T16:45:28.489Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-formats/copilot-cli.yaml",
+      "root_cause": "30 lines replaced/restructured",
+      "fix": "Rewrote 50→28 lines (30 removed) | Also: description: >; A `.github/copilot-instructions.md` file at the re | Also: description: >; Copilot CLI exposes six named hook events: `sessio | Also: description: >; The GitHub MCP server is built into Copilot CLI an | Also: description: >; Custom agents are defined as Markdown files with a | Also: description: >; Copilot CLI does not have a standalone \"commands\" ",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 6,
+      "last_seen": "2026-04-16T16:47:33.031Z"
+    },
+    {
+      "id": "bug-034",
+      "timestamp": "2026-04-16T16:45:35.208Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-formats/gemini-cli.yaml",
+      "root_cause": "10 lines replaced/restructured",
+      "fix": "Rewrote 19→13 lines (10 removed) | Also: description: >; Gemini CLI loads GEMINI.md files from three tiers  | Also: description: >; Gemini CLI supports 11 hook events covering the fu | Also: description: >; Gemini CLI supports three MCP transport types: std | Also: description: >; Commands are defined as TOML files with a .toml ex",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 5,
+      "last_seen": "2026-04-16T16:47:36.856Z"
+    },
+    {
+      "id": "bug-035",
+      "timestamp": "2026-04-16T16:45:56.027Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-formats/windsurf.yaml",
+      "root_cause": "26 lines replaced/restructured",
+      "fix": "Rewrote 43→27 lines (26 removed) | Also: description: >; Workspace rules declare an activation mode in fron | Also: description: >; Windsurf Cascade Hooks support twelve named event  | Also: description: >; Windsurf supports stdio, Streamable HTTP, and SSE  | Also: description: >; Windsurf's agent instruction format is AGENTS.md ( | Also: description: >; Windsurf Command is an inline AI code generation a",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 6,
+      "last_seen": "2026-04-16T16:47:49.780Z"
+    },
+    {
+      "id": "bug-036",
+      "timestamp": "2026-04-16T16:46:42.864Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-formats/pi.yaml",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 46→55 lines (9 removed) | Also: description: \"Prompt templates support positional ; description: \"Templates accept an optional YAML fr",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-16T16:47:01.065Z"
+    },
+    {
+      "id": "bug-037",
+      "timestamp": "2026-04-16T16:48:10.246Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/provider-formats/copilot-cli.yaml",
+      "root_cause": "Had \"deny\"",
+      "fix": "Changed to 'Only preToolUse can block tool execution by retur",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T16:48:10.246Z"
+    },
+    {
+      "id": "bug-038",
+      "timestamp": "2026-04-16T18:58:00.518Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/capmon/seederspec.go",
+      "root_cause": "Was returning: filepath.Join(specsDir, provider+\"-skills.yaml\")",
+      "fix": "Now returns: filepath.Join(specsDir, provider+\"-\"+contentType+\"",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T18:58:00.518Z"
+    },
+    {
+      "id": "bug-039",
+      "timestamp": "2026-04-16T18:58:20.312Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/seederspec_test.go",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 7→18 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T18:58:20.312Z"
+    },
+    {
+      "id": "bug-040",
+      "timestamp": "2026-04-16T18:59:20.528Z",
+      "error_message": "Wrong reference: recognizeAmpSkills should be recognizeAmp",
+      "file": "cli/internal/capmon/recognize_amp.go",
+      "root_cause": "Used \"recognizeAmpSkills\" instead of \"recognizeAmp\"",
+      "fix": "Changed recognizeAmpSkills → recognizeAmp",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T18:59:20.528Z"
+    },
+    {
+      "id": "bug-041",
+      "timestamp": "2026-04-16T19:00:01.070Z",
+      "error_message": "Wrong reference: recognizeClaudeCodeSkills should be recognizeClaudeCode",
+      "file": "cli/internal/capmon/recognize_claude_code.go",
+      "root_cause": "Used \"recognizeClaudeCodeSkills\" instead of \"recognizeClaudeCode\"",
+      "fix": "Changed recognizeClaudeCodeSkills → recognizeClaudeCode",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:01.070Z"
+    },
+    {
+      "id": "bug-042",
+      "timestamp": "2026-04-16T19:00:01.409Z",
+      "error_message": "Wrong reference: recognizeClineSkills should be recognizeCline",
+      "file": "cli/internal/capmon/recognize_cline.go",
+      "root_cause": "Used \"recognizeClineSkills\" instead of \"recognizeCline\"",
+      "fix": "Changed recognizeClineSkills → recognizeCline",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:01.409Z"
+    },
+    {
+      "id": "bug-043",
+      "timestamp": "2026-04-16T19:00:01.718Z",
+      "error_message": "Wrong reference: recognizeCodexSkills should be recognizeCodex",
+      "file": "cli/internal/capmon/recognize_codex.go",
+      "root_cause": "Used \"recognizeCodexSkills\" instead of \"recognizeCodex\"",
+      "fix": "Changed recognizeCodexSkills → recognizeCodex",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:01.718Z"
+    },
+    {
+      "id": "bug-044",
+      "timestamp": "2026-04-16T19:00:02.029Z",
+      "error_message": "Wrong reference: recognizeCopilotCliSkills should be recognizeCopilotCli",
+      "file": "cli/internal/capmon/recognize_copilot_cli.go",
+      "root_cause": "Used \"recognizeCopilotCliSkills\" instead of \"recognizeCopilotCli\"",
+      "fix": "Changed recognizeCopilotCliSkills → recognizeCopilotCli",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:02.029Z"
+    },
+    {
+      "id": "bug-045",
+      "timestamp": "2026-04-16T19:00:02.349Z",
+      "error_message": "Wrong reference: recognizeCrushSkills should be recognizeCrush",
+      "file": "cli/internal/capmon/recognize_crush.go",
+      "root_cause": "Used \"recognizeCrushSkills\" instead of \"recognizeCrush\"",
+      "fix": "Changed recognizeCrushSkills → recognizeCrush",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:02.349Z"
+    },
+    {
+      "id": "bug-046",
+      "timestamp": "2026-04-16T19:00:02.693Z",
+      "error_message": "Wrong reference: recognizeCursorSkills should be recognizeCursor",
+      "file": "cli/internal/capmon/recognize_cursor.go",
+      "root_cause": "Used \"recognizeCursorSkills\" instead of \"recognizeCursor\"",
+      "fix": "Changed recognizeCursorSkills → recognizeCursor",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:02.693Z"
+    },
+    {
+      "id": "bug-047",
+      "timestamp": "2026-04-16T19:00:03.064Z",
+      "error_message": "Wrong reference: recognizeFactoryDroidSkills should be recognizeFactoryDroid",
+      "file": "cli/internal/capmon/recognize_factory_droid.go",
+      "root_cause": "Used \"recognizeFactoryDroidSkills\" instead of \"recognizeFactoryDroid\"",
+      "fix": "Changed recognizeFactoryDroidSkills → recognizeFactoryDroid",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:03.064Z"
+    },
+    {
+      "id": "bug-048",
+      "timestamp": "2026-04-16T19:00:03.384Z",
+      "error_message": "Wrong reference: recognizeGeminiCliSkills should be recognizeGeminiCli",
+      "file": "cli/internal/capmon/recognize_gemini_cli.go",
+      "root_cause": "Used \"recognizeGeminiCliSkills\" instead of \"recognizeGeminiCli\"",
+      "fix": "Changed recognizeGeminiCliSkills → recognizeGeminiCli",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:03.384Z"
+    },
+    {
+      "id": "bug-049",
+      "timestamp": "2026-04-16T19:00:03.727Z",
+      "error_message": "Wrong reference: recognizeKiroSkills should be recognizeKiro",
+      "file": "cli/internal/capmon/recognize_kiro.go",
+      "root_cause": "Used \"recognizeKiroSkills\" instead of \"recognizeKiro\"",
+      "fix": "Changed recognizeKiroSkills → recognizeKiro",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:03.727Z"
+    },
+    {
+      "id": "bug-050",
+      "timestamp": "2026-04-16T19:00:04.040Z",
+      "error_message": "Wrong reference: recognizeOpencodeSkills should be recognizeOpencode",
+      "file": "cli/internal/capmon/recognize_opencode.go",
+      "root_cause": "Used \"recognizeOpencodeSkills\" instead of \"recognizeOpencode\"",
+      "fix": "Changed recognizeOpencodeSkills → recognizeOpencode",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:04.040Z"
+    },
+    {
+      "id": "bug-051",
+      "timestamp": "2026-04-16T19:00:04.334Z",
+      "error_message": "Wrong reference: recognizePiSkills should be recognizePi",
+      "file": "cli/internal/capmon/recognize_pi.go",
+      "root_cause": "Used \"recognizePiSkills\" instead of \"recognizePi\"",
+      "fix": "Changed recognizePiSkills → recognizePi",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:04.334Z"
+    },
+    {
+      "id": "bug-052",
+      "timestamp": "2026-04-16T19:00:04.633Z",
+      "error_message": "Wrong reference: recognizeRooCodeSkills should be recognizeRooCode",
+      "file": "cli/internal/capmon/recognize_roo_code.go",
+      "root_cause": "Used \"recognizeRooCodeSkills\" instead of \"recognizeRooCode\"",
+      "fix": "Changed recognizeRooCodeSkills → recognizeRooCode",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:04.633Z"
+    },
+    {
+      "id": "bug-053",
+      "timestamp": "2026-04-16T19:00:04.964Z",
+      "error_message": "Wrong reference: recognizeWindsurfSkills should be recognizeWindsurf",
+      "file": "cli/internal/capmon/recognize_windsurf.go",
+      "root_cause": "Used \"recognizeWindsurfSkills\" instead of \"recognizeWindsurf\"",
+      "fix": "Changed recognizeWindsurfSkills → recognizeWindsurf",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:04.964Z"
+    },
+    {
+      "id": "bug-054",
+      "timestamp": "2026-04-16T19:00:05.273Z",
+      "error_message": "Wrong reference: recognizeZedSkills should be recognizeZed",
+      "file": "cli/internal/capmon/recognize_zed.go",
+      "root_cause": "Used \"recognizeZedSkills\" instead of \"recognizeZed\"",
+      "fix": "Changed recognizeZedSkills → recognizeZed",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:05.273Z"
+    },
+    {
+      "id": "bug-055",
+      "timestamp": "2026-04-16T19:00:05.585Z",
+      "error_message": "Wrong reference: recognizeCrushSkills should be recognizeCrush",
+      "file": "cli/internal/capmon/recognize.go",
+      "root_cause": "Used \"recognizeCrushSkills\" instead of \"recognizeCrush\"",
+      "fix": "Changed recognizeCrushSkills → recognizeCrush",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:00:05.585Z"
+    },
+    {
+      "id": "bug-056",
+      "timestamp": "2026-04-16T19:04:54.063Z",
+      "error_message": "Incorrect value in code",
+      "file": ".claude/projects/finish-phase0-capmon-refactor.md",
+      "root_cause": "Had `summary`",
+      "fix": "Changed to `description`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:04:54.063Z"
+    },
+    {
+      "id": "bug-057",
+      "timestamp": "2026-04-16T19:43:05.461Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/gencapabilities.go",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 9→4 lines (6 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T19:43:05.461Z"
+    },
+    {
+      "id": "bug-058",
+      "timestamp": "2026-04-16T20:12:33.326Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize.go",
+      "root_cause": "20 lines replaced/restructured",
+      "fix": "Rewrote 62→94 lines (20 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:12:33.326Z"
+    },
+    {
+      "id": "bug-059",
+      "timestamp": "2026-04-16T20:13:11.357Z",
+      "error_message": "Wrong reference: recognizeSkillsGoStruct should be recognizeGoStruct",
+      "file": "cli/internal/capmon/recognize_test.go",
+      "root_cause": "Used \"recognizeSkillsGoStruct\" instead of \"recognizeGoStruct\"",
+      "fix": "Changed recognizeSkillsGoStruct → recognizeGoStruct",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:13:11.357Z"
+    },
+    {
+      "id": "bug-060",
+      "timestamp": "2026-04-16T20:17:53.700Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/seederspec_audit_test.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 8→11 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:17:53.700Z"
+    },
+    {
+      "id": "bug-061",
+      "timestamp": "2026-04-16T20:18:59.041Z",
+      "error_message": "Significant refactor of ",
+      "file": "../syllago-capmon-heal-wt/cli/internal/capmon/healing_github.go",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 5→6 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:18:59.041Z"
+    },
+    {
+      "id": "bug-062",
+      "timestamp": "2026-04-16T20:28:26.373Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/capmon/recognize_amp.go",
+      "root_cause": "Was returning: make(map[string]string)",
+      "fix": "Now returns: result",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:28:26.373Z"
+    },
+    {
+      "id": "bug-063",
+      "timestamp": "2026-04-16T20:28:40.766Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/capmon/recognize_claude_code.go",
+      "root_cause": "Was returning: make(map[string]string)",
+      "fix": "Now returns: result",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:28:40.766Z"
+    },
+    {
+      "id": "bug-064",
+      "timestamp": "2026-04-16T20:28:53.430Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/capmon/recognize_cline.go",
+      "root_cause": "Was returning: make(map[string]string)",
+      "fix": "Now returns: result",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:28:53.430Z"
+    },
+    {
+      "id": "bug-065",
+      "timestamp": "2026-04-16T20:29:00.948Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/capmon/recognize_codex.go",
+      "root_cause": "Was returning: make(map[string]string)",
+      "fix": "Now returns: result",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:29:00.948Z"
+    },
+    {
+      "id": "bug-066",
+      "timestamp": "2026-04-16T20:29:10.216Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/capmon/recognize_copilot_cli.go",
+      "root_cause": "Was returning: make(map[string]string)",
+      "fix": "Now returns: result",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:29:10.216Z"
+    },
+    {
+      "id": "bug-067",
+      "timestamp": "2026-04-16T20:29:17.809Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/capmon/recognize_factory_droid.go",
+      "root_cause": "Was returning: make(map[string]string)",
+      "fix": "Now returns: result",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:29:17.809Z"
+    },
+    {
+      "id": "bug-068",
+      "timestamp": "2026-04-16T20:29:25.135Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/capmon/recognize_kiro.go",
+      "root_cause": "Was returning: make(map[string]string)",
+      "fix": "Now returns: result",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:29:25.135Z"
+    },
+    {
+      "id": "bug-069",
+      "timestamp": "2026-04-16T20:29:35.921Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/capmon/recognize_pi.go",
+      "root_cause": "Was returning: make(map[string]string)",
+      "fix": "Now returns: result",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:29:35.921Z"
+    },
+    {
+      "id": "bug-070",
+      "timestamp": "2026-04-16T20:31:08.883Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/capmon/recognize_windsurf.go",
+      "root_cause": "Was returning: make(map[string]string)",
+      "fix": "Now returns: result",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:31:08.883Z"
+    },
+    {
+      "id": "bug-071",
+      "timestamp": "2026-04-16T20:31:14.594Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/capmon/recognize_gemini_cli.go",
+      "root_cause": "Was returning: make(map[string]string)",
+      "fix": "Now returns: result",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:31:14.594Z"
+    },
+    {
+      "id": "bug-072",
+      "timestamp": "2026-04-16T20:31:22.839Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/capmon/recognize_opencode.go",
+      "root_cause": "Was returning: make(map[string]string)",
+      "fix": "Now returns: result",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T20:31:22.839Z"
+    },
+    {
+      "id": "bug-073",
+      "timestamp": "2026-04-16T22:46:37.630Z",
+      "error_message": "Significant refactor of ",
+      "file": ".panels/recognizer-api-evolution/consensus.md",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 9→16 lines (5 removed) | Also: **PR4 — Doc recognition primitive + first doc cana; - First canary provider (amp or claude-code per D3",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-16T22:46:50.875Z"
+    },
+    {
+      "id": "bug-074",
+      "timestamp": "2026-04-16T23:28:05.636Z",
+      "error_message": "Missing error handling in that",
+      "file": "cli/internal/capmon/recognize.go",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T23:28:05.636Z"
+    },
+    {
+      "id": "bug-075",
+      "timestamp": "2026-04-16T23:28:37.657Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_internal_test.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 34→126 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T23:28:37.657Z"
+    },
+    {
+      "id": "bug-076",
+      "timestamp": "2026-04-16T23:34:51.961Z",
+      "error_message": "Wrong reference: sortedKeys should be sortedSetKeys",
+      "file": "cli/internal/capmon/recognize_landmarks.go",
+      "root_cause": "Used \"sortedKeys\" instead of \"sortedSetKeys\"",
+      "fix": "Changed sortedKeys → sortedSetKeys",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T23:34:51.961Z"
+    },
+    {
+      "id": "bug-077",
+      "timestamp": "2026-04-16T23:58:15.646Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_landmarks.go",
+      "root_cause": "13 lines replaced/restructured",
+      "fix": "Rewrote 13→5 lines (13 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-16T23:58:15.646Z"
+    },
+    {
+      "id": "bug-NNN",
+      "timestamp": "2026-04-17T00:05:00.000Z",
+      "error_message": "TestFindProjectRootFallbackWarning/no_project_markers_-_fallback_to_cwd: expected warning but got none",
+      "file": "cli/cmd/syllago/helpers_test.go",
+      "root_cause": "findProjectRootImpl walks up from cwd looking for go.mod/.git/etc. Test chdirs to t.TempDir() under /tmp and expects no markers, but an orphan /tmp/go.mod (module 'scratch', from another tool) silently satisfied the walk-up and suppressed the expected fallback warning.",
+      "fix": "Removed orphan /tmp/go.mod to clear ambient state. Filed syllago-xpj40 to make the test isolate properly (stop-walk boundary or HOME-rooted temp dir) so it cannot regress when /tmp is polluted.",
+      "tags": [
+        "test-fragility",
+        "environmental",
+        "cli/cmd/syllago",
+        "filesystem-walk"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T00:05:00.000Z"
+    },
+    {
+      "id": "bug-079",
+      "timestamp": "2026-04-17T00:42:09.901Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/helpers.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 37→50 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T00:42:09.901Z"
+    },
+    {
+      "id": "bug-080",
+      "timestamp": "2026-04-17T01:04:56.954Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/gencapabilities.go",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 8→18 lines (4 removed) | Also: Supported bool     `json:\"supported\"`; Mechanism string   `json:\"mechanism\"` | Also: ID          string            `json:\"id\"`; Name        string            `json:\"name\"`",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-04-17T01:05:23.737Z"
     }
   ]
 }

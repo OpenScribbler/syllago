@@ -346,3 +346,492 @@
 | 09:17 | Edited ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md | 3→7 lines | ~99 |
 | 09:17 | Session end: 6 writes across 6 files (stealth-fetch.ts, SKILL.md, .gitignore, README.md, reference_stealth_fetch.md) | 9 reads | ~4737 tok |
 | 09:18 | Session end: 6 writes across 6 files (stealth-fetch.ts, SKILL.md, .gitignore, README.md, reference_stealth_fetch.md) | 9 reads | ~4737 tok |
+| 09:22 | Edited .claude/projects/finish-phase0-capmon-refactor.md | 1→2 lines | ~189 |
+| 09:22 | Edited .claude/projects/finish-phase0-capmon-refactor.md | inline fix | ~10 |
+| 09:23 | Edited ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md | 7→3 lines | ~46 |
+| 09:23 | Session end: 9 writes across 7 files (stealth-fetch.ts, SKILL.md, .gitignore, README.md, reference_stealth_fetch.md) | 10 reads | ~4998 tok |
+
+## Session: 2026-04-16 09:23
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:23 | Edited ../../../.config/pai/skills/research/SKILL.md | 5→5 lines | ~39 |
+| 09:23 | Session end: 1 writes across 1 files (SKILL.md) | 0 reads | ~42 tok |
+| 09:23 | Session end: 1 writes across 1 files (SKILL.md) | 0 reads | ~42 tok |
+| 09:25 | Session end: 1 writes across 1 files (SKILL.md) | 2 reads | ~4353 tok |
+
+## Session: 2026-04-16 09:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:26 | Created .claude/projects/.current | — | ~8 |
+| 09:26 | Session end: 1 writes across 1 files (.current) | 2 reads | ~1174 tok |
+| 09:30 | Edited cli/internal/capmon/formatdoc.go | expanded (+11 lines) | ~274 |
+| 09:30 | Edited cli/internal/capmon/formatdoc.go | expanded (+14 lines) | ~466 |
+| 09:31 | Edited cli/internal/capmon/formatdoc_validate.go | expanded (+12 lines) | ~231 |
+| 09:31 | Edited cli/internal/capmon/formatdoc_validate.go | expanded (+12 lines) | ~294 |
+| 09:31 | Edited cli/internal/capmon/formatdoc_validate.go | 6→7 lines | ~138 |
+| 09:35 | Session end: 6 writes across 3 files (.current, formatdoc.go, formatdoc_validate.go) | 8 reads | ~3858 tok |
+
+## Session: 2026-04-16 09:35
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:35 | Edited cli/internal/capmon/formatdoc_validate_test.go | 8→9 lines | ~66 |
+| 09:35 | Session end: 1 writes across 1 files (formatdoc_validate_test.go) | 0 reads | ~71 tok |
+
+## Session: 2026-04-16 09:35
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:35 | Edited cli/internal/capmon/formatdoc_validate_test.go | modified TestValidateFormatDoc_InvalidConversion() | ~413 |
+| 09:35 | Session end: 1 writes across 1 files (formatdoc_validate_test.go) | 0 reads | ~442 tok |
+| 09:35 | Edited cli/internal/capmon/formatdoc_validate_test.go | 5→6 lines | ~47 |
+| 09:35 | Edited cli/internal/capmon/formatdoc_validate_test.go | 7→8 lines | ~58 |
+| 09:35 | Edited cli/internal/capmon/formatdoc_validate_test.go | 7→8 lines | ~54 |
+| 09:35 | Edited cli/internal/capmon/formatdoc_validate_test.go | 7→8 lines | ~54 |
+| 09:36 | Edited cli/internal/capmon/formatdoc_validate_test.go | 8→9 lines | ~66 |
+| 09:36 | Edited cli/internal/capmon/formatdoc_validate_test.go | 8→9 lines | ~62 |
+| 09:36 | Edited cli/internal/capmon/formatdoc_test.go | 6→7 lines | ~80 |
+| 09:36 | Edited cli/internal/capmon/formatdoc_test.go | 21→24 lines | ~206 |
+| 09:36 | Edited cli/internal/capmon/check_test.go | 5→6 lines | ~62 |
+| 09:36 | Edited cli/internal/capmon/check_test.go | 5→6 lines | ~56 |
+| 09:37 | Session end: 11 writes across 3 files (formatdoc_validate_test.go, formatdoc_test.go, check_test.go) | 5 reads | ~5559 tok |
+| 09:39 | Session end: 11 writes across 3 files (formatdoc_validate_test.go, formatdoc_test.go, check_test.go) | 13 reads | ~13252 tok |
+| 09:39 | Edited docs/provider-formats/cline.yaml | reduced (-18 lines) | ~447 |
+
+## Session: 2026-04-16 09:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:40 | Edited docs/provider-formats/amp.yaml | 25→30 lines | ~481 |
+| 09:40 | Edited docs/provider-formats/cline.yaml | reduced (-15 lines) | ~432 |
+| 09:40 | Edited docs/provider-formats/amp.yaml | 15→18 lines | ~344 |
+| 09:40 | Edited docs/provider-formats/codex.yaml | reduced (-30 lines) | ~1280 |
+| 09:40 | Edited docs/provider-formats/cline.yaml | reduced (-22 lines) | ~714 |
+| 09:40 | Edited docs/provider-formats/codex.yaml | reduced (-8 lines) | ~375 |
+| 09:41 | Edited docs/provider-formats/amp.yaml | expanded (+19 lines) | ~1119 |
+| 09:41 | Edited docs/provider-formats/cline.yaml | reduced (-16 lines) | ~593 |
+| 09:41 | Edited docs/provider-formats/cline.yaml | reduced (-20 lines) | ~461 |
+| 09:41 | Edited docs/provider-formats/codex.yaml | reduced (-23 lines) | ~1226 |
+| 09:41 | Edited docs/provider-formats/amp.yaml | expanded (+12 lines) | ~1100 |
+| 09:42 | Edited docs/provider-formats/codex.yaml | reduced (-22 lines) | ~616 |
+| 09:44 | Session end: 12 writes across 3 files (amp.yaml, cline.yaml, codex.yaml) | 9 reads | ~33504 tok |
+| 09:44 | Edited docs/provider-formats/factory-droid.yaml | reduced (-15 lines) | ~515 |
+| 09:44 | Edited docs/provider-formats/factory-droid.yaml | reduced (-6 lines) | ~306 |
+| 09:44 | Edited docs/provider-formats/codex.yaml | reduced (-26 lines) | ~641 |
+| 09:45 | Edited docs/provider-formats/factory-droid.yaml | reduced (-13 lines) | ~556 |
+| 09:45 | Edited docs/provider-formats/factory-droid.yaml | 17→13 lines | ~199 |
+| 09:45 | Edited docs/provider-formats/kiro.yaml | expanded (+7 lines) | ~688 |
+| 09:45 | Edited docs/provider-formats/copilot-cli.yaml | reduced (-22 lines) | ~478 |
+| 09:45 | Edited docs/provider-formats/gemini-cli.yaml | reduced (-6 lines) | ~236 |
+| 09:45 | Session end: 20 writes across 7 files (amp.yaml, cline.yaml, codex.yaml, factory-droid.yaml, kiro.yaml) | 15 reads | ~46098 tok |
+| 09:45 | Edited docs/provider-formats/factory-droid.yaml | reduced (-11 lines) | ~507 |
+| 09:45 | Edited docs/provider-formats/pi.yaml | expanded (+10 lines) | ~856 |
+| 09:45 | Edited docs/provider-formats/kiro.yaml | 25→30 lines | ~565 |
+| 09:45 | Edited docs/provider-formats/copilot-cli.yaml | reduced (-21 lines) | ~524 |
+| 09:45 | Edited docs/provider-formats/factory-droid.yaml | reduced (-9 lines) | ~329 |
+| 09:45 | Edited docs/provider-formats/windsurf.yaml | reduced (-16 lines) | ~458 |
+| 09:45 | Edited docs/provider-formats/gemini-cli.yaml | reduced (-17 lines) | ~447 |
+| 09:45 | Edited docs/provider-formats/pi.yaml | 11→14 lines | ~261 |
+| 09:46 | Edited docs/provider-formats/kiro.yaml | 25→29 lines | ~565 |
+| 09:46 | Edited docs/provider-formats/copilot-cli.yaml | reduced (-19 lines) | ~379 |
+| 09:46 | Edited docs/provider-formats/windsurf.yaml | reduced (-23 lines) | ~474 |
+| 09:46 | Edited docs/provider-formats/kiro.yaml | expanded (+8 lines) | ~616 |
+| 09:46 | Session end: 32 writes across 9 files (amp.yaml, cline.yaml, codex.yaml, factory-droid.yaml, kiro.yaml) | 15 reads | ~52079 tok |
+| 09:46 | Edited docs/provider-formats/gemini-cli.yaml | reduced (-32 lines) | ~952 |
+| 09:46 | Edited docs/provider-formats/copilot-cli.yaml | reduced (-22 lines) | ~519 |
+| 09:46 | Edited docs/provider-formats/pi.yaml | expanded (+9 lines) | ~1131 |
+| 09:46 | Edited docs/provider-formats/windsurf.yaml | reduced (-26 lines) | ~625 |
+| 09:47 | Edited docs/provider-formats/pi.yaml | 16→20 lines | ~400 |
+| 09:47 | Edited docs/provider-formats/kiro.yaml | expanded (+16 lines) | ~1235 |
+| 09:47 | Edited docs/provider-formats/gemini-cli.yaml | reduced (-20 lines) | ~856 |
+| 09:47 | Edited docs/provider-formats/copilot-cli.yaml | reduced (-32 lines) | ~654 |
+| 09:47 | Edited docs/provider-formats/windsurf.yaml | reduced (-19 lines) | ~565 |
+| 09:47 | migrate kiro.yaml to FormatDoc schema (summary/conversion/provider_field) | docs/provider-formats/kiro.yaml | test passes | ~3500 |
+| 09:47 | Edited docs/provider-formats/windsurf.yaml | reduced (-8 lines) | ~248 |
+| 09:47 | Edited docs/provider-formats/copilot-cli.yaml | reduced (-20 lines) | ~411 |
+| 09:47 | Edited docs/provider-formats/gemini-cli.yaml | reduced (-25 lines) | ~837 |
+| 09:47 | Session end: 44 writes across 9 files (amp.yaml, cline.yaml, codex.yaml, factory-droid.yaml, kiro.yaml) | 15 reads | ~60512 tok |
+| 09:47 | Edited docs/provider-formats/windsurf.yaml | reduced (-11 lines) | ~354 |
+| 09:47 | Session end: 45 writes across 9 files (amp.yaml, cline.yaml, codex.yaml, factory-droid.yaml, kiro.yaml) | 15 reads | ~69997 tok |
+| 09:47 | Created docs/provider-formats/claude-code.yaml | — | ~13516 |
+| 09:48 | Edited docs/provider-formats/copilot-cli.yaml | inline fix | ~48 |
+| 09:48 | Edited docs/provider-formats/copilot-cli.yaml | "deny" → "Only preToolUse can block" | ~48 |
+| 09:48 | Edited docs/provider-formats/copilot-cli.yaml | inline fix | ~42 |
+| 09:48 | Edited docs/provider-formats/copilot-cli.yaml | inline fix | ~40 |
+| 09:48 | Session end: 50 writes across 10 files (amp.yaml, cline.yaml, codex.yaml, factory-droid.yaml, kiro.yaml) | 15 reads | ~90931 tok |
+| 09:48 | Session end: 50 writes across 10 files (amp.yaml, cline.yaml, codex.yaml, factory-droid.yaml, kiro.yaml) | 15 reads | ~90931 tok |
+| 09:48 | Session end: 50 writes across 10 files (amp.yaml, cline.yaml, codex.yaml, factory-droid.yaml, kiro.yaml) | 15 reads | ~90931 tok |
+| 09:50 | Edited cli/cmd/syllago/capmon_validate_format_doc_cmd_test.go | 5→6 lines | ~61 |
+| 09:51 | Session end: 51 writes across 11 files (amp.yaml, cline.yaml, codex.yaml, factory-droid.yaml, kiro.yaml) | 16 reads | ~90996 tok |
+
+## Session: 2026-04-16 09:51
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:53 | Edited cli/internal/capmon/generate.go | expanded (+6 lines) | ~179 |
+| 11:53 | Edited cli/internal/capmon/generate.go | 10→14 lines | ~113 |
+| 11:53 | Edited cli/internal/capmon/generate_hooks_test.go | modified TestGenerateHooksSpecTables_SkipsSeedYAMLs() | ~524 |
+
+## Session: 2026-04-16 11:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:58 | Edited cli/internal/capmon/seederspec.go | modified SeederSpecPath() | ~71 |
+| 11:58 | Edited cli/cmd/syllago/capmon_derive_cmd.go | inline fix | ~20 |
+| 11:58 | Edited cli/internal/capmon/seederspec_test.go | modified TestSeederSpecPath() | ~154 |
+| 11:58 | Edited cli/cmd/syllago/capmon_derive_cmd.go | 5→5 lines | ~78 |
+| 11:59 | Edited cli/internal/capmon/recognize_amp.go | inline fix | ~4 |
+| 12:00 | Edited cli/internal/capmon/recognize_claude_code.go | inline fix | ~6 |
+| 12:00 | Edited cli/internal/capmon/recognize_cline.go | inline fix | ~4 |
+| 12:00 | Edited cli/internal/capmon/recognize_codex.go | inline fix | ~4 |
+| 12:00 | Edited cli/internal/capmon/recognize_copilot_cli.go | inline fix | ~6 |
+| 12:00 | Edited cli/internal/capmon/recognize_crush.go | inline fix | ~4 |
+| 12:00 | Edited cli/internal/capmon/recognize_cursor.go | inline fix | ~4 |
+| 12:00 | Edited cli/internal/capmon/recognize_factory_droid.go | inline fix | ~6 |
+| 12:00 | Edited cli/internal/capmon/recognize_gemini_cli.go | inline fix | ~5 |
+| 12:00 | Edited cli/internal/capmon/recognize_kiro.go | inline fix | ~4 |
+| 12:00 | Edited cli/internal/capmon/recognize_opencode.go | inline fix | ~5 |
+| 12:00 | Edited cli/internal/capmon/recognize_pi.go | inline fix | ~3 |
+| 12:00 | Edited cli/internal/capmon/recognize_roo_code.go | inline fix | ~5 |
+| 12:00 | Edited cli/internal/capmon/recognize_windsurf.go | inline fix | ~5 |
+| 12:00 | Edited cli/internal/capmon/recognize_zed.go | inline fix | ~4 |
+| 12:00 | Edited cli/internal/capmon/recognize.go | 2→2 lines | ~36 |
+| 12:01 | Created cli/internal/capmon/extract_html/extract_html_test.go | — | ~1480 |
+| 12:04 | Edited .claude/projects/finish-phase0-capmon-refactor.md | 11→11 lines | ~200 |
+| 12:04 | Edited .claude/projects/finish-phase0-capmon-refactor.md | 3→3 lines | ~276 |
+| 12:05 | Edited .claude/projects/finish-phase0-capmon-refactor.md | 5→8 lines | ~181 |
+| 12:05 | Created ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/finish-phase0-capmon-refactor.md | — | ~421 |
+| 12:30 | Session end: 25 writes across 21 files (seederspec.go, capmon_derive_cmd.go, seederspec_test.go, recognize_amp.go, recognize_claude_code.go) | 22 reads | ~5018 tok |
+| 12:33 | Session end: 25 writes across 21 files (seederspec.go, capmon_derive_cmd.go, seederspec_test.go, recognize_amp.go, recognize_claude_code.go) | 23 reads | ~6198 tok |
+| 12:37 | Session end: 25 writes across 21 files (seederspec.go, capmon_derive_cmd.go, seederspec_test.go, recognize_amp.go, recognize_claude_code.go) | 23 reads | ~6198 tok |
+
+## Session: 2026-04-16 12:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:43 | Edited cli/internal/capmon/derive.go | 19→19 lines | ~149 |
+| 12:43 | Edited cli/cmd/syllago/capmon_onboard_cmd_test.go | inline fix | ~14 |
+| 12:43 | Edited cli/cmd/syllago/genproviders_test.go | inline fix | ~5 |
+| 12:43 | Edited cli/internal/capmon/check.go | inline fix | ~22 |
+| 12:43 | Edited cli/cmd/syllago/gencapabilities.go | 9→4 lines | ~41 |
+| 12:43 | Edited cli/internal/capmon/check_diff.go | 3→3 lines | ~27 |
+| 12:43 | Edited cli/internal/capmon/check_diff.go | 4→4 lines | ~40 |
+| 12:43 | Edited cli/internal/capmon/check_diff_test.go | inline fix | ~11 |
+| 12:43 | Edited cli/cmd/syllago/gencapabilities_test.go | inline fix | ~14 |
+| 12:43 | Edited cli/internal/capmon/check_test.go | 7→5 lines | ~41 |
+| 12:43 | Edited cli/internal/capmon/check_test.go | — | ~0 |
+| 12:43 | Edited cli/internal/capmon/check_test.go | 10→9 lines | ~27 |
+| 12:54 | Created .claude/projects/start-phase6-epic1-recognizers.md | — | ~855 |
+| 12:54 | Created ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/start-phase6-epic1-recognizers.md | — | ~524 |
+| 12:54 | Created .claude/projects/.current | — | ~9 |
+| 12:54 | Session end: 15 writes across 11 files (derive.go, capmon_onboard_cmd_test.go, genproviders_test.go, check.go, gencapabilities.go) | 14 reads | ~8684 tok |
+
+## Session: 2026-04-16 12:59
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:11 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/sourceman.go | expanded (+34 lines) | ~481 |
+| 13:11 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/sourceman_validate.go | modified ValidateSources() | ~443 |
+| 13:12 | Edited cli/internal/capmon/recognize.go | 8→9 lines | ~23 |
+| 13:12 | Edited cli/internal/capmon/recognize.go | modified recognizeGoStruct() | ~948 |
+| 13:12 | Edited cli/internal/capmon/recognize_crush.go | modified recognizeCrush() | ~212 |
+| 13:12 | Edited cli/internal/capmon/recognize_roo_code.go | modified recognizeRooCode() | ~216 |
+| 13:13 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeContentTypeDotPaths_SkillGoStruct() | ~47 |
+| 13:13 | Edited cli/internal/capmon/recognize_test.go | inline fix | ~25 |
+
+## Session: 2026-04-16 13:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:13 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStruct_ContentTypeAgnostic() | ~369 |
+| 13:14 | Edited cli/internal/capmon/recognize_test.go | removed 36 lines | ~18 |
+| 13:14 | Created cli/internal/capmon/recognize_internal_test.go | — | ~718 |
+| 13:14 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/sourceman_test.go | modified TestLoadAllSourceManifests_SkipsTemplate() | ~1251 |
+| 13:14 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/sourceman_validate_test.go | modified TestValidateSources_MissingManifest() | ~616 |
+| 13:14 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/sourceman_validate_test.go | 5→6 lines | ~15 |
+| 13:15 | Created cli/internal/capmon/seederspec_audit_test.go | — | ~403 |
+| 13:15 | Created ../syllago-capmon-heal-wt/cli/internal/capmon/healing_redirect.go | — | ~1043 |
+| 13:16 | Created ../syllago-capmon-heal-wt/cli/internal/capmon/healing_redirect_test.go | — | ~1926 |
+| 13:17 | Created ../syllago-capmon-heal-wt/cli/internal/capmon/healing_github.go | — | ~2049 |
+| 13:17 | Created ../syllago-capmon-heal-wt/cli/internal/capmon/healing_github_test.go | — | ~1775 |
+| 13:17 | Created .develop/seeder-specs/crush-skills.yaml | — | ~1307 |
+| 13:17 | Created .develop/seeder-specs/roo-code-skills.yaml | — | ~1209 |
+| 13:17 | Edited cli/internal/capmon/seederspec_audit_test.go | 8→11 lines | ~140 |
+| 13:18 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/healing_github_test.go | inline fix | ~16 |
+| 13:18 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/healing_github_test.go | modified TestDetectGitHubRename_RenamedFile() | ~424 |
+| 13:18 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/healing_github.go | 5→6 lines | ~97 |
+| 13:19 | Created ../syllago-capmon-heal-wt/cli/internal/capmon/healing_variants.go | — | ~1338 |
+| 13:20 | Created ../syllago-capmon-heal-wt/cli/internal/capmon/healing_variants_test.go | — | ~1312 |
+| 13:20 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/healing_variants.go | 9→10 lines | ~23 |
+| 13:20 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/healing_variants.go | 5→9 lines | ~98 |
+| 13:21 | Created ../syllago-capmon-heal-wt/cli/internal/capmon/healing.go | — | ~1670 |
+
+## Session: 2026-04-16 13:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:22 | Created ../syllago-capmon-heal-wt/cli/internal/capmon/healing_test.go | — | ~1914 |
+| 13:22 | Edited cli/internal/capmon/seederspec_audit_test.go | modified IsNotExist() | ~80 |
+| 13:23 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/fetch_validity.go | modified Hostname() | ~241 |
+| 13:24 | Created ../syllago-capmon-heal-wt/cli/internal/capmon/healing_pr.go | — | ~2549 |
+| 13:25 | Created ../syllago-capmon-heal-wt/cli/internal/capmon/healing_pr_test.go | — | ~2272 |
+| 13:26 | Created ../syllago-capmon-heal-wt/cli/internal/capmon/healing_issue.go | — | ~1797 |
+| 13:26 | Created ../syllago-capmon-heal-wt/cli/internal/capmon/healing_issue_test.go | — | ~1591 |
+| 13:27 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/types.go | expanded (+16 lines) | ~436 |
+| 13:27 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/pipeline.go | 3→7 lines | ~86 |
+| 13:27 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/pipeline.go | 3→6 lines | ~38 |
+| 13:27 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/pipeline.go | expanded (+12 lines) | ~194 |
+| 13:28 | Edited ../syllago-capmon-heal-wt/cli/internal/capmon/pipeline.go | modified tryHealSource() | ~640 |
+| 13:28 | Edited cli/internal/capmon/recognize_amp.go | modified recognizeAmp() | ~216 |
+| 13:28 | Edited cli/internal/capmon/recognize_claude_code.go | modified recognizeClaudeCode() | ~199 |
+| 13:28 | Edited cli/internal/capmon/recognize_cline.go | modified recognizeCline() | ~207 |
+| 13:29 | Edited cli/internal/capmon/recognize_codex.go | modified recognizeCodex() | ~228 |
+| 13:29 | Edited cli/internal/capmon/recognize_copilot_cli.go | modified recognizeCopilotCli() | ~223 |
+| 13:29 | Edited cli/internal/capmon/recognize_factory_droid.go | modified recognizeFactoryDroid() | ~207 |
+| 13:29 | Edited cli/internal/capmon/recognize_kiro.go | modified recognizeKiro() | ~184 |
+| 13:29 | Edited cli/internal/capmon/recognize_pi.go | modified recognizePi() | ~216 |
+| 13:30 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeContentTypeDotPaths_EmptyFields() | ~740 |
+| 13:30 | Edited cli/internal/capmon/recognize_test.go | 5→6 lines | ~24 |
+
+## Session: 2026-04-16 13:30
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:30 | Edited cli/internal/capmon/recognize_cursor.go | TODO() → Skills() | ~84 |
+| 13:31 | Edited cli/internal/capmon/recognize_zed.go | TODO() → Skills() | ~80 |
+| 13:31 | Edited cli/internal/capmon/recognize_windsurf.go | modified recognizeWindsurf() | ~246 |
+| 13:31 | Edited cli/internal/capmon/recognize_gemini_cli.go | modified recognizeGeminiCli() | ~180 |
+| 13:31 | Edited cli/internal/capmon/recognize_opencode.go | modified recognizeOpencode() | ~255 |
+| 13:31 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_EmptyFields() | ~613 |
+| 13:32 | Created ../syllago-capmon-heal-wt/cli/internal/capmon/pipeline_heal_test.go | — | ~1419 |
+| 13:34 | Session end: 7 writes across 7 files (recognize_cursor.go, recognize_zed.go, recognize_windsurf.go, recognize_gemini_cli.go, recognize_opencode.go) | 16 reads | ~11021 tok |
+
+## Session: 2026-04-16 13:34
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:36 | Created .claude/projects/start-phase6-epic1-recognizers.md | — | ~1627 |
+| 13:36 | Created ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/start-phase6-epic1-recognizers.md | — | ~641 |
+| 13:37 | Session end: 2 writes across 1 files (start-phase6-epic1-recognizers.md) | 2 reads | ~3233 tok |
+
+## Session: 2026-04-16 13:39
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:42 | Created .claude/projects/start-phase6-epic1-recognizers.md | — | ~1647 |
+| 13:43 | Created ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/start-phase6-epic1-recognizers.md | — | ~623 |
+| 13:45 | reframed handoff: no "known limitation" — filed syllago-zp5p8 for TS+Rust field extraction | .claude/projects/start-phase6-epic1-recognizers.md, Obsidian mirror | done | ~1500 |
+| 13:43 | Session end: 2 writes across 1 files (start-phase6-epic1-recognizers.md) | 0 reads | ~2433 tok |
+
+## Session: 2026-04-16 13:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:11 | Edited cli/internal/capmon/extract_typescript/extract_typescript.go | 4→6 lines | ~57 |
+| 14:11 | Edited cli/internal/capmon/extract_typescript/extract_typescript.go | modified extractInterface() | ~293 |
+| 14:11 | Edited cli/internal/capmon/extract_rust/extract_rust.go | 4→6 lines | ~60 |
+| 14:11 | Edited cli/internal/capmon/extract_rust/extract_rust.go | modified extractStruct() | ~306 |
+| 14:12 | Edited cli/internal/capmon/extract_typescript/extract_typescript_test.go | modified TestTypeScriptExtractor_InterfaceProperties() | ~427 |
+| 14:12 | Edited cli/internal/capmon/extract_rust/extract_rust_test.go | modified TestRustExtractor_StructFields() | ~429 |
+| 14:15 | Session end: 6 writes across 4 files (extract_typescript.go, extract_rust.go, extract_typescript_test.go, extract_rust_test.go) | 6 reads | ~3387 tok |
+
+## Session: 2026-04-16 14:29
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:30 | Created .claude/projects/start-phase6-epic1-recognizers.md | — | ~1524 |
+| 14:30 | Created ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/start-phase6-epic1-recognizers.md | — | ~736 |
+| 14:30 | Session end: 2 writes across 1 files (start-phase6-epic1-recognizers.md) | 0 reads | ~2421 tok |
+
+## Session: 2026-04-16 14:30
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-16 14:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-16 14:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:40 | Created .panels/recognizer-api-evolution/seed.md | — | ~1642 |
+| 14:40 | Session end: 1 writes across 1 files (seed.md) | 9 reads | ~5610 tok |
+| 14:42 | Edited cli/internal/capmon/healing.go | modified As() | ~498 |
+| 14:42 | Edited cli/internal/capmon/sourceman_validate.go | 5→5 lines | ~74 |
+| 14:42 | Edited cli/internal/capmon/healing.go | inline fix | ~27 |
+| 14:42 | Edited cli/internal/capmon/healing_github.go | inline fix | ~27 |
+| 14:43 | Session end: 5 writes across 4 files (seed.md, healing.go, sourceman_validate.go, healing_github.go) | 12 reads | ~7956 tok |
+
+## Session: 2026-04-16 14:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:06 | Created ../../../../../tmp/r2-karpathy.txt | — | ~1651 |
+| 15:06 | Created ../../../../../tmp/r2-steinberger.txt | — | ~1232 |
+| 15:06 | Created ../../../../../tmp/r2-platform-vendor.txt | — | ~1287 |
+| 15:06 | Created ../../../../../tmp/r2-spec-purist.txt | — | ~2108 |
+| 15:06 | Created ../../../../../tmp/r2-api-agent.txt | — | ~1448 |
+| 15:12 | Created ../../../../../tmp/r3-karpathy.txt | — | ~1135 |
+| 15:12 | Created ../../../../../tmp/r3-steinberger.txt | — | ~1120 |
+| 15:12 | Created ../../../../../tmp/r3-platform-vendor.txt | — | ~1395 |
+| 15:12 | Created ../../../../../tmp/r3-spec-purist.txt | — | ~1226 |
+| 15:12 | Created ../../../../../tmp/r3-api-agent.txt | — | ~929 |
+| 15:15 | Created .panels/recognizer-api-evolution/consensus.md | — | ~3403 |
+| 15:15 | Session end: 11 writes across 11 files (r2-karpathy.txt, r2-steinberger.txt, r2-platform-vendor.txt, r2-spec-purist.txt, r2-api-agent.txt) | 1 reads | ~18146 tok |
+| 15:22 | Session end: 11 writes across 11 files (r2-karpathy.txt, r2-steinberger.txt, r2-platform-vendor.txt, r2-spec-purist.txt, r2-api-agent.txt) | 1 reads | ~18146 tok |
+| 15:30 | Session end: 11 writes across 11 files (r2-karpathy.txt, r2-steinberger.txt, r2-platform-vendor.txt, r2-spec-purist.txt, r2-api-agent.txt) | 1 reads | ~18146 tok |
+| 15:46 | Edited .panels/recognizer-api-evolution/consensus.md | expanded (+7 lines) | ~477 |
+| 15:46 | Edited .panels/recognizer-api-evolution/consensus.md | 10→12 lines | ~276 |
+| 15:46 | Edited .panels/recognizer-api-evolution/consensus.md | 6→5 lines | ~87 |
+| 15:47 | Edited .panels/recognizer-api-evolution/consensus.md | 6→6 lines | ~193 |
+| 15:47 | Session end: 15 writes across 11 files (r2-karpathy.txt, r2-steinberger.txt, r2-platform-vendor.txt, r2-spec-purist.txt, r2-api-agent.txt) | 1 reads | ~19252 tok |
+
+## Session: 2026-04-16 16:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:22 | Created cli/internal/capmon/recognize_types.go | — | ~1407 |
+| 16:23 | Created cli/internal/capmon/recognize.go | — | ~2912 |
+| 16:24 | Created cli/internal/capmon/recognize_crush.go | — | ~249 |
+| 16:24 | Created cli/internal/capmon/recognize_codex.go | — | ~258 |
+| 16:25 | Created cli/internal/capmon/recognize_claude_code.go | — | ~290 |
+| 16:26 | Created cli/internal/capmon/recognize_roo_code.go | — | ~254 |
+| 16:26 | Created cli/internal/capmon/recognize_windsurf.go | — | ~284 |
+| 16:26 | Created cli/internal/capmon/recognize_gemini_cli.go | — | ~219 |
+| 16:26 | Created cli/internal/capmon/recognize_opencode.go | — | ~293 |
+| 16:26 | Created cli/internal/capmon/recognize_pi.go | — | ~244 |
+| 16:26 | Created cli/internal/capmon/recognize_amp.go | — | ~294 |
+| 16:26 | Created cli/internal/capmon/recognize_cline.go | — | ~286 |
+| 16:26 | Created cli/internal/capmon/recognize_copilot_cli.go | — | ~305 |
+| 16:26 | Created cli/internal/capmon/recognize_factory_droid.go | — | ~290 |
+| 16:26 | Created cli/internal/capmon/recognize_kiro.go | — | ~242 |
+| 16:26 | Created cli/internal/capmon/recognize_cursor.go | — | ~115 |
+| 16:26 | Created cli/internal/capmon/recognize_zed.go | — | ~111 |
+| 16:26 | Created cli/internal/capmon/recognize_conformance_test.go | — | ~993 |
+| 16:28 | Edited cli/internal/capmon/recognize.go | added error handling | ~1223 |
+| 16:28 | Edited cli/internal/capmon/recognize_internal_test.go | modified TestRecognizeGoStruct_ContentTypeAgnostic() | ~120 |
+| 16:28 | Edited cli/internal/capmon/recognize_internal_test.go | modified TestRecognizeGoStruct_MechanismPrefixOverride() | ~1184 |
+| 16:28 | Edited cli/internal/capmon/recognize_internal_test.go | 3→6 lines | ~13 |
+| 16:30 | Created cli/internal/capmon/recognize_codex.go | — | ~582 |
+| 16:30 | Created cli/internal/capmon/recognize_codex_test.go | — | ~1000 |
+| 16:30 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_WithSkillFields() | ~255 |
+| 16:30 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_EmptyFields() | ~109 |
+| 16:32 | Created cli/internal/capmon/recognize_landmarks.go | — | ~1919 |
+
+## Session: 2026-04-16 16:34
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:34 | Edited cli/internal/capmon/recognize_landmarks.go | sortedKeys() → sortedSetKeys() | ~20 |
+| 16:34 | Edited cli/internal/capmon/recognize_landmarks.go | inline fix | ~15 |
+| 16:35 | Created cli/internal/capmon/recognize_claude_code.go | — | ~912 |
+| 16:36 | Created cli/internal/capmon/recognize_claude_code_test.go | — | ~1409 |
+| 16:36 | Edited cli/internal/capmon/recognize_claude_code_test.go | 6→5 lines | ~47 |
+| 16:36 | Edited cli/internal/capmon/recognize_claude_code_test.go | 6→5 lines | ~43 |
+| 16:36 | Edited cli/internal/capmon/recognize_claude_code_test.go | 6→5 lines | ~42 |
+| 16:37 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_WithSkillFields() | ~175 |
+| 16:37 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_EmptyFields() | ~172 |
+| 16:38 | Created cli/internal/capmon/recognize_amp.go | — | ~671 |
+| 16:39 | Created cli/internal/capmon/recognize_amp_test.go | — | ~687 |
+| 16:39 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_WithSkillFields() | ~147 |
+| 16:39 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_EmptyFields() | ~115 |
+| 16:43 | Created cli/internal/capmon/recognize_cline.go | — | ~881 |
+| 16:43 | Created cli/internal/capmon/recognize_cline_test.go | — | ~1145 |
+| 16:44 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_WithSkillFields() | ~144 |
+| 16:44 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_EmptyFields() | ~74 |
+| 16:45 | Created cli/internal/capmon/recognize_copilot_cli.go | — | ~723 |
+| 16:46 | Created cli/internal/capmon/recognize_copilot_cli_test.go | — | ~1304 |
+| 16:46 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_WithSkillFields() | ~135 |
+| 16:46 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_EmptyFields() | ~73 |
+| 16:50 | Created cli/internal/capmon/recognize_factory_droid.go | — | ~801 |
+| 16:50 | Created cli/internal/capmon/recognize_factory_droid_test.go | — | ~1114 |
+| 16:51 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_WithSkillFields() | ~125 |
+| 16:51 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_EmptyFields() | ~72 |
+| 16:52 | Created cli/internal/capmon/recognize_kiro.go | — | ~774 |
+| 16:52 | Created cli/internal/capmon/recognize_kiro_test.go | — | ~1309 |
+
+## Session: 2026-04-16 16:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:54 | Edited cli/internal/capmon/recognize_kiro_test.go | 5→6 lines | ~24 |
+| 16:54 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_WithSkillFields() | ~120 |
+| 16:55 | Edited cli/internal/capmon/recognize_test.go | modified TestRecognizeGoStructBatch_EmptyFields() | ~162 |
+| 16:58 | Edited cli/internal/capmon/recognize_landmarks.go | reduced (-8 lines) | ~86 |
+| 16:58 | Session end: 4 writes across 3 files (recognize_kiro_test.go, recognize_test.go, recognize_landmarks.go) | 2 reads | ~2342 tok |
+
+## Session: 2026-04-16 16:59
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-16 16:59
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:42 | Edited cli/cmd/syllago/helpers.go | modified findProjectRootImpl() | ~388 |
+| 17:42 | Edited cli/cmd/syllago/helpers_test.go | modified Run() | ~255 |
+| 17:43 | Session end: 2 writes across 2 files (helpers.go, helpers_test.go) | 1 reads | ~689 tok |
+| 17:44 | Session end: 2 writes across 2 files (helpers.go, helpers_test.go) | 1 reads | ~689 tok |
+| 17:50 | Session end: 2 writes across 2 files (helpers.go, helpers_test.go) | 5 reads | ~5483 tok |
+
+## Session: 2026-04-17 17:55
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 18:01
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:04 | Edited cli/cmd/syllago/gencapabilities.go | expanded (+10 lines) | ~223 |
+| 18:05 | Edited cli/cmd/syllago/gencapabilities.go | expanded (+8 lines) | ~333 |
+| 18:05 | Edited cli/cmd/syllago/gencapabilities.go | expanded (+7 lines) | ~174 |
+| 18:05 | Edited cli/cmd/syllago/gencapabilities.go | 13→17 lines | ~266 |
+| 18:05 | Edited cli/cmd/syllago/gencapabilities.go | 31→35 lines | ~312 |
+| 18:05 | Edited cli/cmd/syllago/gencapabilities_test.go | 7→8 lines | ~63 |
+| 18:05 | Edited cli/cmd/syllago/gencapabilities_test.go | 6→7 lines | ~49 |
+| 18:05 | Edited cli/cmd/syllago/gencapabilities_test.go | 5→6 lines | ~43 |
+| 18:06 | Edited cli/cmd/syllago/gencapabilities_test.go | 22→26 lines | ~207 |
+| 18:06 | Edited cli/cmd/syllago/gencapabilities_test.go | 15→17 lines | ~126 |
+| 18:06 | Edited cli/cmd/syllago/gencapabilities_test.go | 20→22 lines | ~154 |
+| 18:07 | Edited cli/cmd/syllago/gencapabilities_test.go | modified TestGencapabilities_MappingProviderFieldPropagated() | ~2257 |
+
+## Session: 2026-04-17 18:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:17 | Created cli/internal/capmon/recognize_rules.go | — | ~1470 |
+| 18:18 | Created cli/internal/capmon/recognize_rules_test.go | — | ~2340 |
+| 18:18 | Edited cli/internal/capmon/recognize_rules_test.go | 10→7 lines | ~123 |
+| 18:18 | Edited cli/internal/capmon/recognize_rules_test.go | — | ~0 |
+
+## Session: 2026-04-17 18:20
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:24 | Created .develop/seeder-specs/claude-code-rules.yaml | — | ~2076 |
+| 18:28 | Created .develop/seeder-specs/windsurf-rules.yaml | — | ~1967 |
+| 18:28 | Created .develop/seeder-specs/gemini-cli-rules.yaml | — | ~1766 |
+| 18:29 | Created .develop/seeder-specs/cursor-rules.yaml | — | ~1692 |
+| 18:29 | Created .develop/seeder-specs/kiro-rules.yaml | — | ~1644 |
+| 18:30 | Created .develop/seeder-specs/cline-rules.yaml | — | ~1302 |
+| 18:30 | Created .develop/seeder-specs/copilot-cli-rules.yaml | — | ~1855 |
+| 18:31 | Created .develop/seeder-specs/amp-rules.yaml | — | ~1942 |
+| 18:32 | Created .develop/seeder-specs/codex-rules.yaml | — | ~1642 |
+| 18:32 | Created .develop/seeder-specs/zed-rules.yaml | — | ~1395 |
+| 18:33 | Created .develop/seeder-specs/crush-rules.yaml | — | ~1600 |
+| 18:33 | Created .develop/seeder-specs/factory-droid-rules.yaml | — | ~1056 |
+| 18:33 | Created .develop/seeder-specs/opencode-rules.yaml | — | ~1326 |
+| 18:34 | Created .develop/seeder-specs/pi-rules.yaml | — | ~1424 |
+| 18:34 | Created .develop/seeder-specs/roo-code-rules.yaml | — | ~1553 |
+
+## Session: 2026-04-17 18:37
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

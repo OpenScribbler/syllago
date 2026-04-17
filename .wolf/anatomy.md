@@ -1,7 +1,25 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-16T16:17:23.803Z
-> Files: 565 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-17T01:34:59.107Z
+> Files: 685 tracked | Anatomy hits: 0 | Misses: 0
+
+## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
+
+- `finish-phase0-capmon-refactor.md` — Finish Phase 6 Epic 0 — schema update, generator update, infra generalization (~395 tok)
+- `start-phase6-epic1-recognizers.md` — Start Phase 6 Epic 1 — wire skills recognizers for 14 stub providers (~690 tok)
+
+## ../../../../../tmp/
+
+- `r2-api-agent.txt` — Round 2 — api-agent (~1358 tok)
+- `r2-karpathy.txt` — Declares composes (~1548 tok)
+- `r2-platform-vendor.txt` — Declares split (~1207 tok)
+- `r2-spec-purist.txt` — Round 2 — Spec-Purist (~1976 tok)
+- `r2-steinberger.txt` — Declares or (~1155 tok)
+- `r3-api-agent.txt` — # D1 — Recognition-failure return shape (~871 tok)
+- `r3-karpathy.txt` — Declares cheap (~1064 tok)
+- `r3-platform-vendor.txt` — # D1 — Recognition-failure return shape (~1308 tok)
+- `r3-spec-purist.txt` — # Round 3 — Spec-Purist (final) (~1149 tok)
+- `r3-steinberger.txt` — Declares fact (~1050 tok)
 
 ## ../../../.claude/hooks/
 
@@ -9,12 +27,12 @@
 
 ## ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/
 
-- `MEMORY.md` — Syllago Project Memory (~1730 tok)
+- `MEMORY.md` — Syllago Project Memory (~1681 tok)
 - `reference_stealth_fetch.md` — stealth-fetch (~308 tok)
 
 ## ../../../.config/pai/skills/research/
 
-- `SKILL.md` — Research Skill (~1745 tok)
+- `SKILL.md` — Research Skill (~1746 tok)
 
 ## ../../../personal/stealth-fetch/
 
@@ -22,6 +40,29 @@
 - `package.json` — Node.js package manifest (~113 tok)
 - `README.md` — Project documentation (~633 tok)
 - `stealth-fetch.ts` — Output raw HTML instead of markdown (~1257 tok)
+
+## ../syllago-capmon-heal-wt/cli/internal/capmon/
+
+- `fetch_validity.go` — Struct: ErrContentInvalid (~1085 tok)
+- `healing_github_test.go` — TestDetectGitHubRename_NotAGitHubURL, TestDetectGitHubRename_MalformedPath, TestDetectGitHubRename_R (~1819 tok)
+- `healing_github.go` — Struct: RenameCandidate (~2077 tok)
+- `healing_issue_test.go` — TestHealFailureAnchor, TestRecordConsecutiveHealFailure_UnderThreshold, TestRecordConsecutiveHealFai (~1591 tok)
+- `healing_issue.go` — HealFailureAnchor, RecordConsecutiveHealFailure, ResolveHealFailure (~1797 tok)
+- `healing_pr_test.go` — TestUpdateManifestURL_ReplacesTargetOnly, TestUpdateManifestURL_WrongOldURL, TestUpdateManifestURL_I (~2272 tok)
+- `healing_pr.go` — Struct: HealPRInputs (~2549 tok)
+- `healing_redirect_test.go` — TestFollowRedirectChain_NoRedirect, TestFollowRedirectChain_SingleMovedPermanently, TestFollowRedire (~1926 tok)
+- `healing_redirect.go` — Struct: RedirectChain (~1043 tok)
+- `healing_test.go` — TestAttemptHeal_DisabledShortCircuits, TestAttemptHeal_VariantStrategySucceeds, TestAttemptHeal_Vari (~1914 tok)
+- `healing_variants_test.go` — TestGenerateVariants_CaseSwap, TestGenerateVariants_SeparatorSwap, TestGenerateVariants_PrefixSwap, (~1312 tok)
+- `healing_variants.go` — Struct: VariantCandidate (~1401 tok)
+- `healing.go` — Struct: HealResult (~1670 tok)
+- `pipeline_heal_test.go` — TestTryHealSource_DisabledReturnsNil, TestTryHealSource_FailureRecordsCounter, TestTryHealSource_Dry (~1419 tok)
+- `pipeline.go` — Struct: PipelineOptions (~3994 tok)
+- `sourceman_test.go` — TestLoadSourceManifest, TestLoadSourceManifest_NotFound, TestLoadAllSourceManifests, TestLoadAllSour (~1719 tok)
+- `sourceman_validate_test.go` — TestValidateSources_AllHaveSources, TestValidateSources_MissingURIs, TestValidateSources_SupportedFa (~1089 tok)
+- `sourceman_validate.go` — ValidateSources (~443 tok)
+- `sourceman.go` — Struct: SourceManifest (~1036 tok)
+- `types.go` — implements the syllago capability monitor pipeline. (~1290 tok)
 
 ## ./
 
@@ -1231,9 +1272,10 @@
 
 ## .claude/projects/
 
-- `.current` (~6 tok)
+- `.current` (~9 tok)
 - `continue-capmon-audit.md` — Continue auditing capmon (~624 tok)
-- `finish-phase0-capmon-refactor.md` — Finish Phase 0: Capmon Recognition Refactor (~1001 tok)
+- `finish-phase0-capmon-refactor.md` — Finish Phase 0: Capmon Recognition Refactor (~1391 tok)
+- `start-phase6-epic1-recognizers.md` — Start Phase 6 Epic 1 — Skills recognizers for 14 stub providers (~1429 tok)
 
 ## .claude/rules/
 
@@ -1390,20 +1432,128 @@
 - `smoke-test-providers.yml` — CI: Provider Smoke Tests (~869 tok)
 - `vouch-manage.yml` — CI: "Vouch: Manage by Issue" (~214 tok)
 
+## .develop/seeder-specs/
+
+- `amp-rules.yaml` (~1942 tok)
+- `claude-code-rules.yaml` — Declares fields (~2076 tok)
+- `cline-rules.yaml` (~1302 tok)
+- `codex-rules.yaml` (~1642 tok)
+- `copilot-cli-rules.yaml` — /*.instructions.md (~1855 tok)
+- `crush-rules.yaml` (~1600 tok)
+- `crush-skills.yaml` — Declares Skill (~1307 tok)
+- `cursor-rules.yaml` (~1692 tok)
+- `factory-droid-rules.yaml` (~1056 tok)
+- `gemini-cli-rules.yaml` (~1766 tok)
+- `kiro-rules.yaml` — /*", "**/*.test.*") (~1644 tok)
+- `opencode-rules.yaml` — Declares analogous (~1326 tok)
+- `pi-rules.yaml` — Declares in (~1424 tok)
+- `roo-code-rules.yaml` — Declares context (~1553 tok)
+- `roo-code-skills.yaml` — Declares Skill (~1209 tok)
+- `windsurf-rules.yaml` — Declares alternative (~1967 tok)
+- `zed-rules.yaml` — Declares mode (~1395 tok)
+
+## .panels/recognizer-api-evolution/
+
+- `consensus.md` — Recognizer API Evolution — Panel Consensus (~3569 tok)
+- `seed.md` — TOPIC (~1539 tok)
+
+## cli/cmd/syllago/
+
+- `capmon_derive_cmd.go` (~665 tok)
+- `capmon_onboard_cmd_test.go` — Struct: mockOnboardTransport (~1109 tok)
+- `capmon_validate_format_doc_cmd_test.go` — TestCapmonValidateFormatDocCmd_Registered, TestCapmonValidateFormatDocCmd_MissingProvider, TestCapmo (~1970 tok)
+- `gencapabilities_test.go` — TestGencapabilities_RootStructure, TestGencapabilities_ProviderSlugFromFilename, TestGencapabilities (~10895 tok)
+- `gencapabilities.go` — Struct: capYAML (~4235 tok)
+- `genproviders_test.go` — TestGenproviders, TestGenproviders_ClaudeCodeHookDetails, TestGenproviders_NonCCProviderEnrichment, (~5853 tok)
+- `helpers_test.go` — TestFindProjectRootFallbackWarning (~459 tok)
+- `helpers.go` (~1346 tok)
+
 ## cli/internal/capmon/
 
-- `check_test.go` — Struct: checkTestEnv (~4320 tok)
-- `check.go` — Struct: CapmonCheckOptions (~2505 tok)
+- `check_diff_test.go` — TestGenerateUnifiedDiff_NoTruncation, TestGenerateUnifiedDiff_SourceCodeTruncation, TestGenerateUnif (~1270 tok)
+- `check_diff.go` — Struct: lineEdit (~1112 tok)
+- `check_test.go` — Struct: checkTestEnv (~4263 tok)
+- `check.go` — Struct: CapmonCheckOptions (~2515 tok)
+- `derive.go` — DeriveSeederSpec, WriteSeederSpec (~779 tok)
 - `fetch_chromedp_test.go` — TestChromedpURLWiring, TestRealisticUA_NotHeadless (~306 tok)
 - `fetch_chromedp.go` — ChromedpRemoteURL, FetchChromedp (~836 tok)
+- `formatdoc_test.go` — TestLoadFormatDoc_RoundTrip, TestFormatDocPath, TestLoadFormatDoc_FileNotFound, TestValidateAllForma (~2073 tok)
+- `formatdoc_validate_test.go` — TestValidateFormatDoc_Valid, TestValidateFormatDoc_UnknownKey, TestValidateFormatDoc_MissingExtensio (~4010 tok)
+- `formatdoc_validate.go` — Struct: ValidationWarning (~2947 tok)
+- `formatdoc.go` — Struct: FormatDoc (~1493 tok)
+- `generate_hooks_test.go` — TestGenerateHooksSpecTables_BasicOutput, TestGenerateHooksSpecTables_MissingBanner, TestReplaceGener (~1955 tok)
+- `generate.go` — Struct: providerInfo (~1761 tok)
+- `healing_github.go` — Struct: RenameCandidate (~2092 tok)
+- `healing.go` — Struct: HealResult (~1690 tok)
 - `pipeline.go` — Struct: PipelineOptions (~3172 tok)
+- `recognize_amp_test.go` — TestRecognizeAmp_RealLandmarks, TestRecognizeAmp_AnchorsMissing, TestRecognizeAmp_NoLandmarks (~687 tok)
+- `recognize_amp.go` (~671 tok)
+- `recognize_claude_code_test.go` — TestRecognizeClaudeCode_RealLandmarks, TestRecognizeClaudeCode_AnchorsMissing, TestRecognizeClaudeCo (~1396 tok)
+- `recognize_claude_code.go` (~912 tok)
+- `recognize_cline_test.go` — TestRecognizeCline_RealLandmarks, TestRecognizeCline_NonSkillsLandmarks, TestRecognizeCline_AnchorsM (~1145 tok)
+- `recognize_cline.go` (~881 tok)
+- `recognize_codex_test.go` — TestRecognizeCodex_MultiStructAllowList, TestRecognizeCodex_OnlyExcludedStructs (~1000 tok)
+- `recognize_codex.go` (~582 tok)
+- `recognize_conformance_test.go` — TestRecognitionConformance_KeyRegex, TestRecognitionConformance_Determinism, TestRecognitionConforma (~993 tok)
+- `recognize_copilot_cli_test.go` — TestRecognizeCopilotCli_RealLandmarks, TestRecognizeCopilotCli_NonSkillsLandmarks, TestRecognizeCopi (~1304 tok)
+- `recognize_copilot_cli.go` (~723 tok)
+- `recognize_crush.go` (~249 tok)
+- `recognize_cursor.go` (~115 tok)
+- `recognize_factory_droid_test.go` — TestRecognizeFactoryDroid_SyntheticLandmarks, TestRecognizeFactoryDroid_PageTitleOnly, TestRecognize (~1114 tok)
+- `recognize_factory_droid.go` (~801 tok)
+- `recognize_gemini_cli.go` (~219 tok)
+- `recognize_internal_test.go` — TestRecognizeGoStruct_ContentTypeAgnostic, TestRecognizeGoStruct_MechanismPrefixOverride, TestSkills (~1551 tok)
+- `recognize_kiro_test.go` — TestRecognizeKiro_RealLandmarks, TestRecognizeKiro_NonSkillsLandmarks, TestRecognizeKiro_AnchorsMiss (~1312 tok)
+- `recognize_kiro.go` — Declares docs (~774 tok)
+- `recognize_landmarks.go` — Struct: StringMatcher (~1818 tok)
+- `recognize_opencode.go` (~293 tok)
+- `recognize_pi.go` (~244 tok)
+- `recognize_roo_code.go` (~254 tok)
+- `recognize_rules_test.go` — TestRulesContentType, TestCanonicalRulesKeys_MatchesCanonicalKeysYAML, TestIsCanonicalRulesKey, Test (~2175 tok)
+- `recognize_rules.go` — IsCanonicalRulesKey, RulesLandmarkOptions, RulesLandmarkPattern (~1470 tok)
+- `recognize_test.go` — TestRecognizeContentTypeDotPaths_SkillGoStruct, TestRecognizeCrushSkills, TestRecognizeRooCodeSkills (~2230 tok)
+- `recognize_types.go` — Struct: RecognitionContext (~1407 tok)
+- `recognize_windsurf.go` (~284 tok)
+- `recognize_zed.go` (~111 tok)
+- `recognize.go` — Recognizer conformance contract. (~3518 tok)
 - `report_test.go` — TestSanitizeSlug, TestDeduplicatePR_NoneExists, TestRecordConsecutiveFailure_ThirdFailure, TestGHRun (~3592 tok)
 - `report.go` — GHRunner, SetGHCommandForTest, SanitizeSlug, DeduplicatePR, RecordConsecutiveFailure (~3221 tok)
+- `seederspec_audit_test.go` — TestSeederSpecs_AllLoad (~508 tok)
+- `seederspec_test.go` — TestLoadSeederSpec_Valid, TestSeederSpecPath (~712 tok)
+- `seederspec.go` — Struct: ProposedMapping (~535 tok)
+- `sourceman_validate.go` — ValidateSources (~446 tok)
+
+## cli/internal/capmon/extract_html/
+
+- `extract_html_test.go` — TestHTMLExtractor_PrimarySelector, TestHTMLExtractor_FallbackMode, TestHTMLExtractor_AnchorMatch, Te (~1480 tok)
+
+## cli/internal/capmon/extract_rust/
+
+- `extract_rust_test.go` — go:build cgo (~1265 tok)
+- `extract_rust.go` — go:build cgo (~1295 tok)
+
+## cli/internal/capmon/extract_typescript/
+
+- `extract_typescript_test.go` — go:build cgo (~1629 tok)
+- `extract_typescript.go` — go:build cgo (~1784 tok)
 
 ## docs/plans/
 
 - `2026-04-16-capmon-phase6-recognition-plan.md` — Capmon Phase 6: Full Recognition Pipeline (~2343 tok)
 - `2026-04-16-capmon-self-healing-prompt.md` — Prompt: Self-Healing Source URLs for capmon (~2076 tok)
+
+## docs/provider-formats/
+
+- `amp.yaml` (~6950 tok)
+- `claude-code.yaml` (~13516 tok)
+- `cline.yaml` (~6484 tok)
+- `codex.yaml` (~12049 tok)
+- `copilot-cli.yaml` (~9133 tok)
+- `factory-droid.yaml` — Declares entries (~5847 tok)
+- `gemini-cli.yaml` (~7240 tok)
+- `kiro.yaml` — Declares that (~7594 tok)
+- `pi.yaml` — Declares as (~6195 tok)
+- `windsurf.yaml` (~8020 tok)
 
 ## docs/provider-sources/
 
