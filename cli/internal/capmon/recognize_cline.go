@@ -43,17 +43,47 @@ func clineLandmarkOptions() LandmarkOptions {
 	}
 }
 
-// recognizeCline recognizes skills capabilities for the Cline provider.
-// Cline's skills doc is markdown; recognition uses landmark (heading) matching.
-// Static facts (project_scope, global_scope, canonical_filename) merge in at
-// "confirmed" confidence after a successful landmark match.
-func recognizeCline(ctx RecognitionContext) RecognitionResult {
-	landmarkResult := recognizeLandmarks(ctx, clineLandmarkOptions())
-	if len(landmarkResult.Capabilities) == 0 {
-		return landmarkResult
+// clineRulesLandmarkOptions returns the landmark patterns for Cline's rules
+// documentation. Anchors derived from .capmon-cache/cline/rules.0/extracted.json
+// (cline-rules.md).
+//
+// Required anchors are unique to the rules doc — skills.0 uses "Where Skills
+// Live" (different word), so substring matching does not collide:
+//   - "Where Rules Live"
+//   - "Conditional Rules"
+//
+// Per the seeder spec, cline supports a smaller activation_mode vocabulary
+// than cursor/kiro/windsurf — only always_on (no conditional) and
+// frontmatter_globs (paths conditional). file_imports,
+// cross_provider_recognition, and auto_memory are intentionally absent.
+func clineRulesLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Where Rules Live", CaseInsensitive: true},
+		{Kind: "substring", Value: "Conditional Rules", CaseInsensitive: true},
 	}
-	mergeInto(landmarkResult.Capabilities, capabilityDotPaths("skills", "project_scope", "Skills stored in .cline/skills/<name>/SKILL.md (recommended), .clinerules/skills/<name>/SKILL.md, or .claude/skills/<name>/SKILL.md", "confirmed"))
-	mergeInto(landmarkResult.Capabilities, capabilityDotPaths("skills", "global_scope", "Skills stored in ~/.cline/skills/<name>/SKILL.md", "confirmed"))
-	mergeInto(landmarkResult.Capabilities, capabilityDotPaths("skills", "canonical_filename", "SKILL.md", "confirmed"))
-	return landmarkResult
+	return RulesLandmarkOptions(
+		RulesLandmarkPattern("activation_mode.always_on", "Conditional Rules",
+			"rules without conditionals load for every request (documented under 'Conditional Rules' / 'How It Works')", required),
+		RulesLandmarkPattern("activation_mode.frontmatter_globs", "The paths Conditional",
+			"'paths' Conditional uses glob-based path matching to scope rule activation (documented under 'The paths Conditional' / 'Writing Conditional Rules')", required),
+		RulesLandmarkPattern("hierarchical_loading", "Global Rules Directory",
+			"two-tier scope: Project rules (.clinerules/ in workspace) + Global rules (~/.cline/rules/ user-wide) — documented under 'Where Rules Live' / 'Global Rules Directory'", required),
+	)
+}
+
+// recognizeCline recognizes skills + rules capabilities for the Cline provider.
+// Source for both content types is markdown; recognition uses landmark
+// (heading) matching. Static facts merge in at "confirmed" confidence after a
+// successful skills landmark match.
+func recognizeCline(ctx RecognitionContext) RecognitionResult {
+	skillsResult := recognizeLandmarks(ctx, clineLandmarkOptions())
+	if len(skillsResult.Capabilities) > 0 {
+		mergeInto(skillsResult.Capabilities, capabilityDotPaths("skills", "project_scope", "Skills stored in .cline/skills/<name>/SKILL.md (recommended), .clinerules/skills/<name>/SKILL.md, or .claude/skills/<name>/SKILL.md", "confirmed"))
+		mergeInto(skillsResult.Capabilities, capabilityDotPaths("skills", "global_scope", "Skills stored in ~/.cline/skills/<name>/SKILL.md", "confirmed"))
+		mergeInto(skillsResult.Capabilities, capabilityDotPaths("skills", "canonical_filename", "SKILL.md", "confirmed"))
+	}
+
+	rulesResult := recognizeLandmarks(ctx, clineRulesLandmarkOptions())
+
+	return mergeRecognitionResults(skillsResult, rulesResult)
 }

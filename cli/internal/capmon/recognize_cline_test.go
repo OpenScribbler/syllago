@@ -29,14 +29,40 @@ var realClineLandmarks = []string{
 }
 
 // realClineNonSkillsLandmarks is a sample drawn from cline's other content-type
-// docs (rules, hooks, mcp, commands). The required anchors must NOT match any
-// of these — proves the false-positive guardrail works under multi-source merge.
+// docs (hooks, mcp, commands). The required anchors must NOT match any of these
+// — proves the false-positive guardrail works under multi-source merge.
+// Rules anchors are excluded here because they are now legitimately recognized
+// by the rules content type; see realClineRulesLandmarks for that case.
 var realClineNonSkillsLandmarks = []string{
 	"Documentation Index",
-	"Rules", "Supported Rule Types", "Where Rules Live", "Global Rules Directory",
 	"Hooks", "What You Can Build", "Hook Types", "Hook Lifecycle",
 	"Adding & Configuring Servers", "Finding MCP Servers", "Managing Servers",
 	"Using Commands", "Slash Commands",
+}
+
+// realClineRulesLandmarks is a snapshot of the rules-doc headings from
+// .capmon-cache/cline/rules.0/extracted.json (cline-rules.md) as of 2026-04-16.
+var realClineRulesLandmarks = []string{
+	"Documentation Index",
+	"Rules",
+	"Supported Rule Types",
+	"Where Rules Live",
+	"Global Rules Directory",
+	"Creating Rules",
+	"Toggling Rules",
+	"Writing Effective Rules",
+	"Conditional Rules",
+	"How It Works",
+	"Writing Conditional Rules",
+	"The paths Conditional",
+	"Behavior Details",
+	"Practical Examples",
+	"Frontend vs Backend Rules",
+	"Test File Rules",
+	"Documentation Rules",
+	"Combining with Rule Toggles",
+	"Tips for Effective Conditional Rules",
+	"Troubleshooting Conditional Rules",
 }
 
 func TestRecognizeCline_RealLandmarks(t *testing.T) {
@@ -125,5 +151,53 @@ func TestRecognizeCline_NoLandmarks(t *testing.T) {
 	}
 	if len(result.Capabilities) != 0 {
 		t.Errorf("expected zero capabilities, got %d", len(result.Capabilities))
+	}
+}
+
+// TestRecognizeCline_RealRulesLandmarks proves rules recognition on the merged
+// skills+rules landmarks. Per the seeder spec, cline supports a smaller
+// activation_mode vocabulary (only always_on + frontmatter_globs) than
+// cursor/kiro/windsurf. file_imports, cross_provider_recognition, and
+// auto_memory are intentionally absent.
+func TestRecognizeCline_RealRulesLandmarks(t *testing.T) {
+	merged := append([]string{}, realClineLandmarks...)
+	merged = append(merged, realClineRulesLandmarks...)
+	result := capmon.RecognizeWithContext("cline", capmon.RecognitionContext{
+		Provider:  "cline",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["rules.supported"] != "true" {
+		t.Error("rules.supported missing")
+	}
+	rulesInferred := []string{
+		"activation_mode.always_on",
+		"activation_mode.frontmatter_globs",
+		"hierarchical_loading",
+	}
+	for _, c := range rulesInferred {
+		key := "rules.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["rules.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("rules.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"rules.capabilities.file_imports.supported",
+		"rules.capabilities.cross_provider_recognition.agents_md.supported",
+		"rules.capabilities.auto_memory.supported",
+		"rules.capabilities.activation_mode.manual.supported",
+		"rules.capabilities.activation_mode.model_decision.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present for cline", absent)
+		}
 	}
 }

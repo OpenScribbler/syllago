@@ -42,15 +42,51 @@ var realClaudeCodeLandmarks = []string{
 	"Related resources",
 }
 
+// realClaudeCodeRulesLandmarks is a snapshot of the H2/H3 headings extracted
+// from docs.claude.com/en/docs/claude-code/memory as of 2026-04-16. Source of
+// truth: .capmon-cache/claude-code/rules.0/extracted.json. Update when the
+// doc evolves.
+var realClaudeCodeRulesLandmarks = []string{
+	"Documentation Index",
+	"How Claude remembers your project",
+	"CLAUDE.md vs auto memory",
+	"CLAUDE.md files",
+	"When to add to CLAUDE.md",
+	"Choose where to put CLAUDE.md files",
+	"Set up a project CLAUDE.md",
+	"Write effective instructions",
+	"Import additional files",
+	"AGENTS.md",
+	"How CLAUDE.md files load",
+	"Load from additional directories",
+	"Organize rules with .claude/rules/",
+	"Set up rules",
+	"Path-specific rules",
+	"Share rules across projects with symlinks",
+	"User-level rules",
+	"Manage CLAUDE.md for large teams",
+	"Deploy organization-wide CLAUDE.md",
+	"Exclude specific CLAUDE.md files",
+	"Auto memory",
+	"Enable or disable auto memory",
+	"Storage location",
+	"How it works",
+	"Audit and edit your memory",
+	"View and edit with /memory",
+	"Troubleshoot memory issues",
+}
+
 // TestRecognizeClaudeCode_RealLandmarks proves the canary path: feeding the
-// recognizer the real, current landmarks from the live skills doc produces
-// a non-empty result with the expected capability set at confidence "inferred"
-// (and the static facts at "confirmed").
+// recognizer the merged real landmarks from the live skills + rules docs
+// produces a non-empty result with both content types' expected capability
+// sets at confidence "inferred" (and the static facts at "confirmed").
 func TestRecognizeClaudeCode_RealLandmarks(t *testing.T) {
+	merged := append([]string{}, realClaudeCodeLandmarks...)
+	merged = append(merged, realClaudeCodeRulesLandmarks...)
 	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
 		Provider:  "claude-code",
 		Format:    "markdown",
-		Landmarks: realClaudeCodeLandmarks,
+		Landmarks: merged,
 	})
 
 	if result.Status != capmon.StatusRecognized {
@@ -95,6 +131,28 @@ func TestRecognizeClaudeCode_RealLandmarks(t *testing.T) {
 		}
 		if got := caps["skills.capabilities."+c+".confidence"]; got != "confirmed" {
 			t.Errorf("%s.confidence = %q, want confirmed", c, got)
+		}
+	}
+
+	// Rules content type must also recognize on the merged landmarks
+	if caps["rules.supported"] != "true" {
+		t.Error("rules.supported missing")
+	}
+	rulesCaps := []string{
+		"activation_mode.always_on",
+		"activation_mode.glob",
+		"file_imports",
+		"cross_provider_recognition.agents_md",
+		"auto_memory",
+		"hierarchical_loading",
+	}
+	for _, c := range rulesCaps {
+		key := "rules.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["rules.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("rules.%s.confidence = %q, want inferred", c, got)
 		}
 	}
 }

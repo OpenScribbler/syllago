@@ -33,17 +33,52 @@ func ampLandmarkOptions() LandmarkOptions {
 	}
 }
 
-// recognizeAmp recognizes skills capabilities for the Amp provider.
-// Amp's source is markdown documentation; recognition uses landmark (heading)
-// matching. Static facts (project_scope, global_scope, canonical_filename)
-// merge in at "confirmed" confidence after a successful landmark match.
-func recognizeAmp(ctx RecognitionContext) RecognitionResult {
-	landmarkResult := recognizeLandmarks(ctx, ampLandmarkOptions())
-	if len(landmarkResult.Capabilities) == 0 {
-		return landmarkResult
+// ampRulesLandmarkOptions returns the landmark patterns for Amp's rules
+// documentation. Anchors derived from .capmon-cache/amp/rules.2/extracted.json
+// (the HTML Owner's Manual at ampcode.com/manual). rules.0 and rules.1 are
+// example AGENTS.md *instances* from the amp-examples repo and intentionally
+// not used as evidence.
+//
+// Note: rules.2 landmarks have trailing "##" anchor-link suffixes (e.g.
+// "AGENTS.md##"). Substring matchers handle this transparently — the matcher
+// value "AGENTS.md" matches the landmark "AGENTS.md##".
+//
+// Required anchors are unique to the rules doc (skills.0 has no AGENTS.md or
+// "Writing AGENTS.md Files" landmarks):
+//   - "AGENTS.md" (matches "AGENTS.md##")
+//   - "Writing AGENTS.md Files"
+func ampRulesLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "AGENTS.md", CaseInsensitive: true},
+		{Kind: "substring", Value: "Writing AGENTS.md Files", CaseInsensitive: true},
 	}
-	mergeInto(landmarkResult.Capabilities, capabilityDotPaths("skills", "project_scope", "skill directory placed under .agents/skills/<name>/ or .claude/skills/<name>/ within the project root", "confirmed"))
-	mergeInto(landmarkResult.Capabilities, capabilityDotPaths("skills", "global_scope", "skill directory placed under ~/.config/agents/skills/<name>/, ~/.config/amp/skills/<name>/, or ~/.claude/skills/<name>/", "confirmed"))
-	mergeInto(landmarkResult.Capabilities, capabilityDotPaths("skills", "canonical_filename", "SKILL.md", "confirmed"))
-	return landmarkResult
+	return RulesLandmarkOptions(
+		RulesLandmarkPattern("activation_mode.always_on", "AGENTS.md",
+			"AGENTS.md files are always_on within their scope (cwd, parent dirs, subtrees) — documented under 'AGENTS.md' / 'Writing AGENTS.md Files'", required),
+		RulesLandmarkPattern("activation_mode.frontmatter_globs", "Granular Guidance",
+			"@-mentioned files use 'globs' frontmatter for selective activation (documented under 'Granular Guidance'); globs implicitly prefixed with **/ unless ../ or ./", required),
+		RulesLandmarkPattern("file_imports", "Granular Guidance",
+			"@-mention syntax includes other files as context — supports relative, absolute, and ~/ paths (documented under 'Granular Guidance')", required),
+		RulesLandmarkPattern("cross_provider_recognition.agents_md", "AGENTS.md",
+			"native AGENTS.md format; 'Migrating to AGENTS.md' documents one-time mv+symlink from CLAUDE.md and .cursorrules", required),
+		RulesLandmarkPattern("hierarchical_loading", "Writing AGENTS.md Files",
+			"three-tier scope: AGENTS.md in cwd + parent dirs + subtrees + personal global at $HOME/.config/amp/AGENTS.md (documented under 'Writing AGENTS.md Files'); subtree loading is unique to amp", required),
+	)
+}
+
+// recognizeAmp recognizes skills + rules capabilities for the Amp provider.
+// Source for both content types is markdown/HTML documentation; recognition
+// uses landmark (heading) matching. Static facts merge in at "confirmed"
+// confidence after a successful skills landmark match.
+func recognizeAmp(ctx RecognitionContext) RecognitionResult {
+	skillsResult := recognizeLandmarks(ctx, ampLandmarkOptions())
+	if len(skillsResult.Capabilities) > 0 {
+		mergeInto(skillsResult.Capabilities, capabilityDotPaths("skills", "project_scope", "skill directory placed under .agents/skills/<name>/ or .claude/skills/<name>/ within the project root", "confirmed"))
+		mergeInto(skillsResult.Capabilities, capabilityDotPaths("skills", "global_scope", "skill directory placed under ~/.config/agents/skills/<name>/, ~/.config/amp/skills/<name>/, or ~/.claude/skills/<name>/", "confirmed"))
+		mergeInto(skillsResult.Capabilities, capabilityDotPaths("skills", "canonical_filename", "SKILL.md", "confirmed"))
+	}
+
+	rulesResult := recognizeLandmarks(ctx, ampRulesLandmarkOptions())
+
+	return mergeRecognitionResults(skillsResult, rulesResult)
 }
