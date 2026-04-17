@@ -31,9 +31,42 @@ func geminiCliRulesLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeGeminiCli recognizes skills + rules capabilities for the Gemini CLI
-// provider. Skills use the GoStruct strategy (Agent Skills open standard).
-// Rules are landmark-based against the gemini-md.md doc.
+// geminiCliHooksLandmarkOptions returns the landmark patterns for Gemini CLI's
+// hooks documentation. Anchors derived from the merged headings of
+// .capmon-cache/gemini-cli/hooks.{2,3}/extracted.json (docs/hooks/index.md and
+// docs/hooks/reference.md).
+//
+// Required anchors are unique to the hooks docs:
+//   - "Hook events" — only appears in hooks.2 (the index doc's H2 listing all
+//     11 lifecycle events)
+//   - "Configuration schema" — appears in both hooks.2 and hooks.3, never in
+//     skills/rules/mcp/commands docs
+//
+// Per the curated format YAML (docs/provider-formats/gemini-cli.yaml), only
+// 3 of the 9 canonical hooks keys are supported in gemini-cli:
+// matcher_patterns, decision_control, json_io_protocol. handler_types is
+// explicitly false because gemini-cli only supports shell handlers (not
+// http/llm-prompt/agent types) — "Hook events" describes lifecycle event
+// types, not handler types, and is intentionally not mapped to handler_types.
+func geminiCliHooksLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Hook events", CaseInsensitive: true},
+		{Kind: "substring", Value: "Configuration schema", CaseInsensitive: true},
+	}
+	return HooksLandmarkOptions(
+		HooksLandmarkPattern("matcher_patterns", "Matchers",
+			"event/tool matchers documented under 'Matchers' / 'Matchers and tool names' headings", required),
+		HooksLandmarkPattern("decision_control", "Exit codes",
+			"decision control via exit codes documented under 'Exit codes' heading (non-zero blocks, zero allows)", required),
+		HooksLandmarkPattern("json_io_protocol", "Common output fields",
+			"JSON I/O protocol documented under 'Strict JSON requirements' / 'Common output fields' headings", required),
+	)
+}
+
+// recognizeGeminiCli recognizes skills + rules + hooks capabilities for the
+// Gemini CLI provider. Skills use the GoStruct strategy (Agent Skills open
+// standard). Rules and hooks are landmark-based against the gemini-md.md and
+// hooks/{index,reference}.md docs.
 func recognizeGeminiCli(ctx RecognitionContext) RecognitionResult {
 	skillsCaps := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
 	if len(skillsCaps) > 0 {
@@ -44,6 +77,7 @@ func recognizeGeminiCli(ctx RecognitionContext) RecognitionResult {
 	skillsResult := wrapCapabilities(skillsCaps)
 
 	rulesResult := recognizeLandmarks(ctx, geminiCliRulesLandmarkOptions())
+	hooksResult := recognizeLandmarks(ctx, geminiCliHooksLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
 }
