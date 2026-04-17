@@ -34,6 +34,37 @@ content_types:
         supported: true
         mechanism: permission control documented under 'PermissionRequest' / 'Permission update entries' headings (addRules/replaceRules/removeRules/setMode)
         confidence: inferred
+  mcp:
+    supported: true
+    capabilities:
+      enterprise_management:
+        supported: true
+        mechanism: 'managed MCP config with managed-mcp.json + allowlists/denylists documented under ''Managed MCP configuration'' / ''Option 1: Exclusive control with managed-mcp.json'' / ''Option 2: Policy-based control with allowlists and denylists'' headings'
+        confidence: inferred
+      env_var_expansion:
+        supported: true
+        mechanism: env-var expansion in .mcp.json documented under 'Environment variable expansion in .mcp.json' heading
+        confidence: inferred
+      marketplace:
+        supported: true
+        mechanism: in-doc curated server list documented under 'Popular MCP servers' heading; Claude Code surfaces servers via this catalog rather than an in-IDE marketplace
+        confidence: inferred
+      oauth_support:
+        supported: true
+        mechanism: OAuth 2.0 with callback port + pre-configured credentials documented under 'Authenticate with remote MCP servers' / 'Use a fixed OAuth callback port' / 'Use pre-configured OAuth credentials' headings
+        confidence: inferred
+      resource_referencing:
+        supported: true
+        mechanism: MCP resource @-mention referencing documented under 'Use MCP resources' / 'Reference MCP resources' headings
+        confidence: inferred
+      tool_filtering:
+        supported: true
+        mechanism: allowlist + denylist tool filtering documented under 'Allowlist behavior (allowedMcpServers)' / 'Denylist behavior (deniedMcpServers)' headings
+        confidence: inferred
+      transport_types:
+        supported: true
+        mechanism: 'three transport options documented under ''Option 1: Add a remote HTTP server'' / ''Option 2: Add a remote SSE server'' / ''Option 3: Add a local stdio server'' headings'
+        confidence: inferred
   rules:
     supported: true
     capabilities:
