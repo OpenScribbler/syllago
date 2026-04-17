@@ -2164,6 +2164,118 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-17T17:47:37.468Z"
+    },
+    {
+      "id": "bug-136",
+      "timestamp": "2026-04-17T18:39:54.685Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/provider-formats/windsurf.yaml",
+      "root_cause": "Had \"The `",
+      "fix": "Changed to \"Skill identifiers must be unique per scope and co",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-04-17T18:40:11.289Z"
+    },
+    {
+      "id": "bug-137",
+      "timestamp": "2026-04-17T18:39:55.094Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/provider-formats/claude-code.yaml",
+      "root_cause": "Had \"Frontmatter argument-hint shows expected argument",
+      "fix": "Changed to \"Shows expected argument format during autocomplet",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 13,
+      "last_seen": "2026-04-17T18:41:28.078Z"
+    },
+    {
+      "id": "bug-138",
+      "timestamp": "2026-04-17T18:40:03.768Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/provider-formats/factory-droid.yaml",
+      "root_cause": "Had \"Personal settings file customInstructions key pro",
+      "fix": "Changed to \"Provides always-on guidance to the Droid regardle",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T18:40:03.768Z"
+    },
+    {
+      "id": "bug-139",
+      "timestamp": "2026-04-17T18:40:04.209Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/provider-formats/amp.yaml",
+      "root_cause": "Had \"Hooks live under the '",
+      "fix": "Changed to \"Hook definitions live as an array in Amp settings",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-17T18:40:08.345Z"
+    },
+    {
+      "id": "bug-140",
+      "timestamp": "2026-04-17T18:40:04.474Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/provider-formats/pi.yaml",
+      "root_cause": "Had \"Optional YAML frontmatter description shown in / ",
+      "fix": "Changed to \"Shown in / autocomplete to describe the template;",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T18:40:04.474Z"
+    },
+    {
+      "id": "bug-141",
+      "timestamp": "2026-04-17T18:40:07.517Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/provider-formats/cline.yaml",
+      "root_cause": "Had \"YAML frontmatter `",
+      "fix": "Changed to \"Gates rule activation to files matching a glob ar",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T18:40:07.517Z"
+    },
+    {
+      "id": "bug-142",
+      "timestamp": "2026-04-17T18:40:28.448Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/provider-formats/kiro.yaml",
+      "root_cause": "Had 'prompt'",
+      "fix": "Changed to \"Load the system prompt from an external Markdown ",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 4,
+      "last_seen": "2026-04-17T18:40:39.380Z"
     }
   ]
 }

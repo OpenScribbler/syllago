@@ -1,11 +1,12 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-17T17:47:37.447Z
-> Files: 729 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-17T20:08:20.567Z
+> Files: 742 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
 - `finish-phase0-capmon-refactor.md` — Finish Phase 6 Epic 0 — schema update, generator update, infra generalization (~395 tok)
+- `ship-v072-smoke-fix.md` — Ship v0.7.2 with Provider Smoke Tests running green (~437 tok)
 - `start-epic4-mcp-recognition.md` — Start Phase 6 Epic 4 — wire MCP recognizers for 14 providers (~614 tok)
 - `start-phase6-epic1-recognizers.md` — Start Phase 6 Epic 1 — wire skills recognizers for 14 stub providers (~670 tok)
 
@@ -31,6 +32,10 @@
 - `feedback_release_notes_no_internal_labels.md` — Declares breakdowns (~803 tok)
 - `MEMORY.md` — Syllago Project Memory (~1683 tok)
 - `reference_stealth_fetch.md` — stealth-fetch (~308 tok)
+
+## ../../../.config/pai/
+
+- `.research-workflow-state-3e857b46-3822-488f-b024-16a79d21200e.json` (~28 tok)
 
 ## ../../../.config/pai/skills/research/
 
@@ -70,7 +75,7 @@
 
 - `.gitattributes` — Git attributes (~50 tok)
 - `.gitignore` — Git ignore rules (~369 tok)
-- `.release-pending.yml` (~42 tok)
+- `.release-pending.yml` (~34 tok)
 - `AGENTS.md` — Agent Instructions (~332 tok)
 - `ARCHITECTURE.md` — Syllago Architecture (~1663 tok)
 - `CHANGELOG.md` — Change log (~1326 tok)
@@ -1277,6 +1282,7 @@
 - `.current` (~9 tok)
 - `continue-capmon-audit.md` — Continue auditing capmon (~624 tok)
 - `finish-phase0-capmon-refactor.md` — Finish Phase 0: Capmon Recognition Refactor (~1391 tok)
+- `ship-v072-smoke-fix.md` — Ship v0.7.2 with Provider Smoke Tests running green (~515 tok)
 - `start-epic4-mcp-recognition.md` — Start Phase 6 Epic 4 — wire MCP recognizers for 14 providers (~1060 tok)
 - `start-epic5-agents-recognition.md` — Start Phase 6 Epic 5 — wire agents recognizers for 9 providers (~1042 tok)
 - `start-phase6-epic1-recognizers.md` — Start Phase 6 Epic 1 — Skills recognizers for 14 stub providers (~1436 tok)
@@ -1567,23 +1573,41 @@
 - `extract_typescript_test.go` — go:build cgo (~1629 tok)
 - `extract_typescript.go` — go:build cgo (~1784 tok)
 
+## cli/internal/converter/
+
+- `agents.go` — Struct: factoryDroidAgentMeta (~8580 tok)
+- `frontmatter_registry_test.go` — Struct: check (~2496 tok)
+- `skills.go` — Struct: SkillMeta (~8352 tok)
+
+## cli/internal/provider/
+
+- `crush.go` (~558 tok)
+- `factory_droid.go` (~696 tok)
+- `pi.go` (~650 tok)
+- `provider.go` — Struct: Provider (~1084 tok)
+
 ## docs/plans/
 
 - `2026-04-16-capmon-phase6-recognition-plan.md` — Capmon Phase 6: Full Recognition Pipeline (~2343 tok)
 - `2026-04-16-capmon-self-healing-prompt.md` — Prompt: Self-Healing Source URLs for capmon (~2076 tok)
 
+## docs/provider-capabilities/
+
+- `compatibility-matrix.md` — Provider Compatibility Matrix (~1848 tok)
+
 ## docs/provider-formats/
 
-- `amp.yaml` (~6950 tok)
-- `claude-code.yaml` (~13516 tok)
-- `cline.yaml` (~6484 tok)
-- `codex.yaml` (~12049 tok)
-- `copilot-cli.yaml` (~9133 tok)
-- `factory-droid.yaml` — Declares entries (~5847 tok)
-- `gemini-cli.yaml` (~7240 tok)
-- `kiro.yaml` — Declares that (~7594 tok)
-- `pi.yaml` — Declares as (~6195 tok)
-- `windsurf.yaml` (~8020 tok)
+- `amp.yaml` (~6964 tok)
+- `claude-code.yaml` (~13498 tok)
+- `cline.yaml` (~6513 tok)
+- `codex.yaml` (~12069 tok)
+- `copilot-cli.yaml` (~9194 tok)
+- `factory-droid.yaml` — Declares entries (~5903 tok)
+- `gemini-cli.yaml` (~7260 tok)
+- `kiro.yaml` — Declares that (~7651 tok)
+- `opencode.yaml` (~651 tok)
+- `pi.yaml` — Declares as (~6257 tok)
+- `windsurf.yaml` (~8056 tok)
 
 ## docs/provider-sources/
 
@@ -1596,6 +1620,7 @@
 - `v0.7.0.md` — v0.7.0 (~2536 tok)
 - `v0.7.1.md` — v0.7.1 (~1011 tok)
 - `v0.7.2.md` — v0.7.2 (~287 tok)
+- `v0.8.0.md` — v0.8.0 (~657 tok)
 
 ## tests/smoke/
 
