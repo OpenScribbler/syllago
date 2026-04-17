@@ -3,6 +3,21 @@ slug: codex
 display_name: ""
 last_verified: ""
 content_types:
+  agents:
+    supported: true
+    capabilities:
+      definition_format:
+        supported: true
+        mechanism: per-agent TOML files (e.g. awaiter.toml, explorer.toml under codex-rs/core/src/agent/builtins/) with developer_instructions (system prompt), model_reasoning_effort, and runtime knobs per AgentRoleToml + AgentsToml JSON Schema types
+        confidence: inferred
+      model_selection:
+        supported: true
+        mechanism: per-agent model_reasoning_effort field in the AgentRoleToml schema (ReasoningEffort enum) — each role declares its own reasoning effort even though codex uses one backing model across roles
+        confidence: inferred
+      subagent_spawning:
+        supported: true
+        mechanism: multi-agent coordination via MultiAgentV2ConfigToml + FeatureToml_for_MultiAgentV2ConfigToml feature flag — one agent can delegate to or spawn another
+        confidence: inferred
   hooks:
     supported: true
     capabilities:

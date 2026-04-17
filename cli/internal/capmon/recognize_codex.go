@@ -125,6 +125,80 @@ func codexHooksLandmarkOptions() LandmarkOptions {
 	)
 }
 
+// codexAgentsLandmarkOptions returns the landmark patterns for Codex's
+// agents (multi-agent / role) feature. Anchors derived from four caches:
+//   - agents.0 (JSON Schema: codex-rs/core/config.schema.json) — landmarks
+//     include AgentRoleToml, AgentsToml, MultiAgentV2ConfigToml,
+//     FeatureToml_for_MultiAgentV2ConfigToml, BundledSkillsConfig,
+//     ReasoningEffort. Strong type-vocabulary evidence for the format.
+//   - agents.1 (Rust: codex-rs/core/src/agent/role.rs) — null landmarks
+//     in the cache (constants only); not load-bearing for recognition.
+//   - agents.2 (TOML instance: codex-rs/core/src/agent/builtins/awaiter.toml)
+//     — landmarks include developer_instructions, model_reasoning_effort,
+//     background_terminal_max_timeout. Demonstrates the per-agent TOML
+//     schema (system prompt + model config + runtime knobs).
+//   - agents.3 (TOML instance: codex-rs/core/src/agent/builtins/explorer.toml)
+//     — null landmarks; second builtin agent example, not load-bearing.
+//
+// Maps 3 of 7 canonical agents keys at type-name landmark evidence:
+//   - definition_format: AgentRoleToml type + AgentsToml collection wrapper
+//     plus the awaiter.toml/explorer.toml builtin instances showing
+//     per-agent TOML schema (developer_instructions = system prompt,
+//     model_reasoning_effort = model knob, background_terminal_max_timeout
+//     = runtime knob).
+//   - model_selection: per-agent model_reasoning_effort field in the builtin
+//     TOML schema, plus the ReasoningEffort enum in agents.0 — clear
+//     evidence that each agent declares its own reasoning effort. (Codex
+//     uses the same backing model across roles; selection is reasoning
+//     effort, not provider/model_id, but the canonical key still applies.)
+//   - subagent_spawning: MultiAgentV2ConfigToml + FeatureToml_for_
+//     MultiAgentV2ConfigToml feature flag clearly indicate multi-agent
+//     coordination (one agent can delegate to or spawn another).
+//
+// Four keys are intentionally unmapped:
+//   - tool_restrictions: agents.0 has AppToolApproval / AppToolConfig /
+//     ToolsToml type names but those describe global tool config, not
+//     per-agent restrictions. The builtin TOML files show no per-agent
+//     tool allowlist field. Skip.
+//   - agent_scopes: codex builtins are baked into the binary at
+//     core/src/agent/builtins/. User-defined agents would presumably go
+//     under ~/.codex/ or .codex/ but no scope-distinction type or field
+//     is documented in cached evidence. Skip.
+//   - invocation_patterns: no clear invocation evidence in cached types
+//     or TOML files. Codex roles are presumably invoked via the multi-
+//     agent orchestrator rather than slash-command or @-mention. Skip.
+//   - per_agent_mcp: no evidence of per-agent MCP server scoping in cached
+//     types. RawMcpServerConfig / McpServerToolConfig describe global MCP
+//     config, not per-agent. Skip.
+//
+// Required anchors are unique to the agents caches:
+//   - "AgentRoleToml" — JSON Schema type name (agents.0); unique vs codex's
+//     skills (Skill* prefix), rules (no type names), hooks (Hook* prefix),
+//     mcp (Mcp* prefix), and commands content type vocabularies.
+//   - "AgentsToml"    — JSON Schema type name (agents.0); collection wrapper
+//     unique to agents vocabulary.
+//
+// Note: codex's agents.0 source URL (config.schema.json) is identical to
+// codex's mcp.0 source URL — they are the same monolithic config schema
+// covering all subsystems. Required anchors must therefore distinguish by
+// content type vocabulary (Agent* prefix) rather than by source identity.
+// Both required anchors are agents-specific type names, so the gate fires
+// only when agents-relevant landmarks are present in the merged context.
+func codexAgentsLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "AgentRoleToml", CaseInsensitive: true},
+		{Kind: "substring", Value: "AgentsToml", CaseInsensitive: true},
+	}
+	return AgentsLandmarkOptions(
+		AgentsLandmarkPattern("definition_format", "AgentRoleToml",
+			"per-agent TOML files (e.g. awaiter.toml, explorer.toml under codex-rs/core/src/agent/builtins/) with developer_instructions (system prompt), model_reasoning_effort, and runtime knobs per AgentRoleToml + AgentsToml JSON Schema types", required),
+		AgentsLandmarkPattern("model_selection", "AgentRoleToml",
+			"per-agent model_reasoning_effort field in the AgentRoleToml schema (ReasoningEffort enum) — each role declares its own reasoning effort even though codex uses one backing model across roles", required),
+		AgentsLandmarkPattern("subagent_spawning", "MultiAgentV2ConfigToml",
+			"multi-agent coordination via MultiAgentV2ConfigToml + FeatureToml_for_MultiAgentV2ConfigToml feature flag — one agent can delegate to or spawn another", required),
+	)
+}
+
 // MCP recognition is intentionally NOT wired for codex.
 //
 // Codex's MCP evidence is JSON Schema field-level data — config-key paths like
@@ -155,14 +229,16 @@ func codexHooksLandmarkOptions() LandmarkOptions {
 // analogous to GoStructOptions but reading "definitions.X.properties.Y"
 // paths — a separate scope from Phase 6 Epic 4.
 
-// recognizeCodex recognizes skills + rules + hooks capabilities for the Codex
-// provider. Codex implements the Agent Skills open standard. Skills source is
-// Rust; rules source is markdown; hooks source spans JSON Schema, TypeScript,
-// and Rust files (16 cache entries). MCP recognition is intentionally absent
-// — see the comment block immediately above this function for rationale.
-// Recognition fires only if the extractor surfaces fields under one of the 5
-// included struct prefixes (see codexSkillsOptions), landmarks under
-// codexRulesLandmarkOptions, or landmarks under codexHooksLandmarkOptions.
+// recognizeCodex recognizes skills + rules + hooks + agents capabilities for
+// the Codex provider. Codex implements the Agent Skills open standard. Skills
+// source is Rust; rules source is markdown; hooks source spans JSON Schema,
+// TypeScript, and Rust files (16 cache entries); agents source is JSON Schema
+// + Rust + builtin TOML files. MCP recognition is intentionally absent — see
+// the comment block above for rationale. Recognition fires only if the
+// extractor surfaces fields under one of the 5 included struct prefixes (see
+// codexSkillsOptions), landmarks under codexRulesLandmarkOptions, landmarks
+// under codexHooksLandmarkOptions, or landmarks under
+// codexAgentsLandmarkOptions.
 func recognizeCodex(ctx RecognitionContext) RecognitionResult {
 	skillsCaps := recognizeGoStruct(ctx.Fields, codexSkillsOptions())
 	if len(skillsCaps) > 0 {
@@ -174,6 +250,7 @@ func recognizeCodex(ctx RecognitionContext) RecognitionResult {
 
 	rulesResult := recognizeLandmarks(ctx, codexRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, codexHooksLandmarkOptions())
+	agentsResult := recognizeLandmarks(ctx, codexAgentsLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, agentsResult)
 }

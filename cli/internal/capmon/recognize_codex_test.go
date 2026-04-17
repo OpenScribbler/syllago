@@ -267,3 +267,102 @@ func TestRecognizeCodex_HooksAnchorsMissing(t *testing.T) {
 		t.Error("hooks.supported should NOT be present when 'HookScope' anchor is missing")
 	}
 }
+
+// realCodexAgentsLandmarks is a snapshot of agents-relevant type names from
+// codex's agents caches as of 2026-04-16. Agents.0 is the JSON Schema for
+// codex-rs/core/config.schema.json (covers all subsystems but agents-prefixed
+// type names are agents-specific). Agents.2 contributes builtin TOML
+// landmarks (developer_instructions, model_reasoning_effort,
+// background_terminal_max_timeout) demonstrating the per-agent TOML schema.
+//
+// Agents.1 (Rust role.rs constants) and agents.3 (explorer.toml) have null
+// landmarks in cache and contribute nothing to recognition.
+var realCodexAgentsLandmarks = []string{
+	// agents.0 (JSON Schema type names, agents-relevant subset)
+	"AgentRoleToml",
+	"AgentsToml",
+	"MultiAgentV2ConfigToml",
+	"FeatureToml_for_MultiAgentV2ConfigToml",
+	"BundledSkillsConfig",
+	"ReasoningEffort",
+	// agents.2 (builtin TOML field names)
+	"developer_instructions",
+	"model_reasoning_effort",
+	"background_terminal_max_timeout",
+}
+
+// TestRecognizeCodex_RealAgentsLandmarks proves agents recognition emits 3
+// canonical agents keys at "inferred" confidence: definition_format,
+// model_selection, and subagent_spawning. Four other canonical keys
+// (tool_restrictions, agent_scopes, invocation_patterns, per_agent_mcp) must
+// NOT be emitted — none have landmark evidence.
+func TestRecognizeCodex_RealAgentsLandmarks(t *testing.T) {
+	result := capmon.RecognizeWithContext("codex", capmon.RecognitionContext{
+		Provider:  "codex",
+		Format:    "json-schema",
+		Landmarks: realCodexAgentsLandmarks,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["agents.supported"] != "true" {
+		t.Error("agents.supported missing")
+	}
+	agentsInferred := []string{
+		"definition_format",
+		"model_selection",
+		"subagent_spawning",
+	}
+	for _, c := range agentsInferred {
+		key := "agents.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["agents.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("agents.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"agents.capabilities.tool_restrictions.supported",
+		"agents.capabilities.agent_scopes.supported",
+		"agents.capabilities.invocation_patterns.supported",
+		"agents.capabilities.per_agent_mcp.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present (no type or TOML evidence)", absent)
+		}
+	}
+}
+
+// TestRecognizeCodex_AgentsAnchorsMissing proves the required-anchor guard
+// suppresses agents emission when "AgentRoleToml" is absent. Other Agent*
+// landmarks (AgentsToml, MultiAgentV2ConfigToml) survive but do not contain
+// "AgentRoleToml" as a substring so the guard correctly fires.
+func TestRecognizeCodex_AgentsAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realCodexAgentsLandmarks))
+	for _, lm := range realCodexAgentsLandmarks {
+		if lm == "AgentRoleToml" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("codex", capmon.RecognitionContext{
+		Provider:  "codex",
+		Format:    "json-schema",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["agents.supported"]; has {
+		t.Error("agents.supported should NOT be present when 'AgentRoleToml' anchor is missing")
+	}
+	for _, absent := range []string{
+		"agents.capabilities.definition_format.supported",
+		"agents.capabilities.model_selection.supported",
+		"agents.capabilities.subagent_spawning.supported",
+	} {
+		if _, has := result.Capabilities[absent]; has {
+			t.Errorf("%s should NOT be present without required anchor", absent)
+		}
+	}
+}
