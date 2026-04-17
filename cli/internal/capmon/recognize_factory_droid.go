@@ -148,12 +148,49 @@ func factoryDroidAgentsLandmarkOptions() LandmarkOptions {
 // MCP recognition can be wired once the Mintlify SPA mcp.md page is in
 // the cache and yields heading-level evidence.
 
-// recognizeFactoryDroid recognizes skills + hooks capabilities for the Factory
-// Droid provider. Source for both is markdown documentation (Mintlify SPA);
-// recognition uses landmark matching. Static facts merge in at "confirmed"
-// confidence after a successful skills landmark match. MCP recognition is
-// intentionally absent — see the comment block immediately above this
-// function for rationale.
+// factoryDroidCommandsLandmarkOptions returns the landmark patterns for
+// Factory Droid's "Custom Slash Commands" doc. Anchors derived from
+// .capmon-cache/factory-droid/commands.0/extracted.json
+// (https://docs.factory.ai/cli/configuration/custom-slash-commands —
+// Mintlify SPA fetched via chromedp).
+//
+// Mintlify landmarks have a leading zero-width space prefix; substring
+// matchers handle this transparently.
+//
+// Maps 1 of 2 canonical commands keys at heading-level evidence:
+//   - argument_substitution → "5 · Usage patterns" / "2 · Markdown commands"
+//     headings + body content showing $ARGUMENTS in Markdown commands and
+//     positional args in Executable commands. Curator confirms support.
+//
+// builtin_commands is intentionally NOT mapped — per the curated YAML
+// (docs/provider-formats/factory-droid.yaml), Factory Droid has no built-in
+// slash commands; commands are entirely user-defined Markdown templates or
+// executables. The doc structure confirms: every section is about CUSTOM
+// commands (discovery/naming, markdown, executables, managing, usage,
+// examples).
+//
+// Required anchors are unique to commands.0:
+//   - "Custom Slash Commands" — H1 page heading; absent from all other
+//     factory-droid caches.
+//   - "Markdown commands"     — H2 ("2 · Markdown commands"); the doc's
+//     unique commands taxonomy phrase.
+func factoryDroidCommandsLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Custom Slash Commands", CaseInsensitive: true},
+		{Kind: "substring", Value: "Markdown commands", CaseInsensitive: true},
+	}
+	return CommandsLandmarkOptions(
+		CommandsLandmarkPattern("argument_substitution", "Usage patterns",
+			"$ARGUMENTS substitution in Markdown commands plus positional shell args ($1, $2, ...) in Executable commands documented under '2 · Markdown commands' / '3 · Executable commands' / '5 · Usage patterns' headings", required),
+	)
+}
+
+// recognizeFactoryDroid recognizes skills + hooks + agents + commands
+// capabilities for the Factory Droid provider. Source for all four is
+// markdown documentation (Mintlify SPA); recognition uses landmark matching.
+// Static facts merge in at "confirmed" confidence after a successful skills
+// landmark match. MCP recognition is intentionally absent — see the comment
+// block immediately above this function for rationale.
 func recognizeFactoryDroid(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, factoryDroidLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
@@ -164,6 +201,7 @@ func recognizeFactoryDroid(ctx RecognitionContext) RecognitionResult {
 
 	hooksResult := recognizeLandmarks(ctx, factoryDroidHooksLandmarkOptions())
 	agentsResult := recognizeLandmarks(ctx, factoryDroidAgentsLandmarkOptions())
+	commandsResult := recognizeLandmarks(ctx, factoryDroidCommandsLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, hooksResult, agentsResult)
+	return mergeRecognitionResults(skillsResult, hooksResult, agentsResult, commandsResult)
 }

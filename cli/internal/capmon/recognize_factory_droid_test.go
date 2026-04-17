@@ -284,3 +284,77 @@ func TestRecognizeFactoryDroid_HooksAnchorsMissing(t *testing.T) {
 		t.Error("hooks.supported should NOT be present when 'Hooks reference' anchor is missing")
 	}
 }
+
+// realFactoryDroidCommandsLandmarks is a snapshot of the headings extracted
+// from Factory Droid's "Custom Slash Commands" doc
+// (.capmon-cache/factory-droid/commands.0/extracted.json) as of 2026-04-17.
+// Mintlify zero-width space prefix on H2/H3 entries is handled transparently
+// by substring matchers.
+var realFactoryDroidCommandsLandmarks = []string{
+	"Custom Slash Commands",
+	"\u200b1 · Discovery & naming",
+	"\u200b2 · Markdown commands",
+	"\u200b3 · Executable commands",
+	"\u200b4 · Managing commands",
+	"\u200b5 · Usage patterns",
+	"\u200b6 · Examples",
+	"\u200bCode review rubric (Markdown)",
+	"\u200bDaily standup helper (Markdown)",
+	"\u200bRegression smoke test (Executable)",
+}
+
+// TestRecognizeFactoryDroid_RealCommandsLandmarks proves commands recognition
+// fires on the merged skills+hooks+agents+commands fixture, emits
+// argument_substitution at "inferred" confidence, and does NOT emit
+// builtin_commands (intentionally unmapped — factory-droid has no built-in
+// slash commands per the curator).
+func TestRecognizeFactoryDroid_RealCommandsLandmarks(t *testing.T) {
+	merged := append([]string{}, realFactoryDroidLandmarks...)
+	merged = append(merged, realFactoryDroidHooksLandmarks...)
+	merged = append(merged, realFactoryDroidAgentsLandmarks...)
+	merged = append(merged, realFactoryDroidCommandsLandmarks...)
+	result := capmon.RecognizeWithContext("factory-droid", capmon.RecognitionContext{
+		Provider:  "factory-droid",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["commands.supported"] != "true" {
+		t.Error("commands.supported missing")
+	}
+	if caps["commands.capabilities.argument_substitution.supported"] != "true" {
+		t.Error("commands.capabilities.argument_substitution.supported missing")
+	}
+	if got := caps["commands.capabilities.argument_substitution.confidence"]; got != "inferred" {
+		t.Errorf("commands.argument_substitution.confidence = %q, want inferred", got)
+	}
+	if _, has := caps["commands.capabilities.builtin_commands.supported"]; has {
+		t.Error("commands.capabilities.builtin_commands.supported should NOT be present (factory-droid has no built-in slash commands)")
+	}
+}
+
+// TestRecognizeFactoryDroid_CommandsAnchorsMissing proves the required-anchor
+// guard suppresses commands emission when "Markdown commands" is absent —
+// preventing patterns from firing on contexts that only mention "Custom
+// Slash Commands" without the taxonomy heading.
+func TestRecognizeFactoryDroid_CommandsAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realFactoryDroidCommandsLandmarks))
+	for _, lm := range realFactoryDroidCommandsLandmarks {
+		if lm == "\u200b2 · Markdown commands" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("factory-droid", capmon.RecognitionContext{
+		Provider:  "factory-droid",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["commands.supported"]; has {
+		t.Error("commands.supported should NOT be present when 'Markdown commands' anchor is missing")
+	}
+}
