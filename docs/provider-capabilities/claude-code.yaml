@@ -2,4 +2,88 @@ schema_version: "1"
 slug: claude-code
 display_name: ""
 last_verified: ""
-content_types: {}
+content_types:
+  rules:
+    supported: true
+    capabilities:
+      activation_mode:
+        supported: true
+        capabilities:
+          always_on:
+            supported: true
+            mechanism: CLAUDE.md auto-loads when present in project root or working tree
+            confidence: inferred
+          glob:
+            supported: true
+            mechanism: path-specific rules in .claude/rules/<name>.md fire on glob match (documented under 'Path-specific rules')
+            confidence: inferred
+      auto_memory:
+        supported: true
+        mechanism: agent-managed automatic memory with /memory audit/edit (documented under 'Auto memory' heading)
+        confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        capabilities:
+          agents_md:
+            supported: true
+            mechanism: AGENTS.md fallback when CLAUDE.md absent (documented under 'AGENTS.md' heading)
+            confidence: inferred
+      file_imports:
+        supported: true
+        mechanism: '@-mention import syntax pulls referenced files into context (documented under ''Import additional files'')'
+        confidence: inferred
+      hierarchical_loading:
+        supported: true
+        mechanism: user-level rules from ~/.claude/CLAUDE.md plus project + additional directories (documented under 'User-level rules')
+        confidence: inferred
+  skills:
+    supported: true
+    capabilities:
+      additional_directories:
+        supported: true
+        mechanism: documented under 'Skills from additional directories' heading
+        confidence: inferred
+      arguments:
+        supported: true
+        mechanism: documented under 'Pass arguments to skills' heading
+        confidence: inferred
+      canonical_filename:
+        supported: true
+        mechanism: SKILL.md
+        confidence: confirmed
+      dynamic_context:
+        supported: true
+        mechanism: documented under 'Inject dynamic context' heading
+        confidence: inferred
+      frontmatter:
+        supported: true
+        mechanism: documented under 'Frontmatter reference' heading
+        confidence: inferred
+      global_scope:
+        supported: true
+        mechanism: ~/.claude/skills/<skill-name>/SKILL.md in user home directory
+        confidence: confirmed
+      invoker_control:
+        supported: true
+        mechanism: documented under 'Control who invokes a skill' heading
+        confidence: inferred
+      live_reload:
+        supported: true
+        mechanism: documented under 'Live change detection' heading
+        confidence: inferred
+      nested_directories:
+        supported: true
+        mechanism: documented under 'Automatic discovery from nested directories' heading
+        confidence: inferred
+      project_scope:
+        supported: true
+        mechanism: .claude/skills/<skill-name>/SKILL.md committed to version control
+        confidence: confirmed
+      subagent_invocation:
+        supported: true
+        mechanism: documented under 'Run skills in a subagent' heading
+        confidence: inferred
+      tool_preapproval:
+        supported: true
+        mechanism: documented under 'Pre-approve tools for a skill' heading
+        confidence: inferred

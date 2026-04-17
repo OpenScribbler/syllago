@@ -2,4 +2,80 @@ schema_version: "1"
 slug: kiro
 display_name: ""
 last_verified: ""
-content_types: {}
+content_types:
+  rules:
+    supported: true
+    capabilities:
+      activation_mode:
+        supported: true
+        capabilities:
+          always_on:
+            supported: true
+            mechanism: steering loaded on every prompt by default (documented under 'Always included' inclusion mode)
+            confidence: inferred
+          frontmatter_globs:
+            supported: true
+            mechanism: glob-based path matching activates steering files (documented under 'Conditional inclusion' inclusion mode)
+            confidence: inferred
+          manual:
+            supported: true
+            mechanism: user explicitly references the file to activate (documented under 'Manual inclusion' inclusion mode)
+            confidence: inferred
+          model_decision:
+            supported: true
+            mechanism: agent decides based on context (documented under 'Auto inclusion' inclusion mode)
+            confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        capabilities:
+          agents_md:
+            supported: true
+            mechanism: Agents.md fallback for cross-tool compatibility (documented under 'Agents.md' heading)
+            confidence: inferred
+      file_imports:
+        supported: true
+        mechanism: steering files can reference other files (documented under 'File references' heading)
+        confidence: inferred
+      hierarchical_loading:
+        supported: true
+        mechanism: 'three-tier scope: workspace + global + team steering (documented under ''Workspace steering'' / ''Global steering'' / ''Team steering'')'
+        confidence: inferred
+  skills:
+    supported: true
+    capabilities:
+      canonical_filename:
+        supported: true
+        mechanism: POWER.md (fixed, all caps)
+        confidence: confirmed
+      directory_structure:
+        supported: true
+        mechanism: documented under 'Directory structure' heading
+        confidence: inferred
+      frontmatter:
+        supported: true
+        mechanism: 'documented under ''Frontmatter: When to activate'' heading'
+        confidence: inferred
+      mcp_integration:
+        supported: true
+        mechanism: documented under 'Adding MCP servers' heading
+        confidence: inferred
+      onboarding_instructions:
+        supported: true
+        mechanism: documented under 'Onboarding instructions' heading
+        confidence: inferred
+      project_scope:
+        supported: true
+        mechanism: Self-contained directory installed via Kiro Powers panel (UI installation, no fixed filesystem path)
+        confidence: confirmed
+      sharing:
+        supported: true
+        mechanism: documented under 'Sharing your power' heading
+        confidence: inferred
+      steering_instructions:
+        supported: true
+        mechanism: documented under 'Steering instructions' heading
+        confidence: inferred
+      testing:
+        supported: true
+        mechanism: documented under 'Testing locally' heading
+        confidence: inferred

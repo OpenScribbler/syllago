@@ -2,4 +2,64 @@ schema_version: "1"
 slug: amp
 display_name: ""
 last_verified: ""
-content_types: {}
+content_types:
+  rules:
+    supported: true
+    capabilities:
+      activation_mode:
+        supported: true
+        capabilities:
+          always_on:
+            supported: true
+            mechanism: AGENTS.md files are always_on within their scope (cwd, parent dirs, subtrees) — documented under 'AGENTS.md' / 'Writing AGENTS.md Files'
+            confidence: inferred
+          frontmatter_globs:
+            supported: true
+            mechanism: '@-mentioned files use ''globs'' frontmatter for selective activation (documented under ''Granular Guidance''); globs implicitly prefixed with **/ unless ../ or ./'
+            confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        capabilities:
+          agents_md:
+            supported: true
+            mechanism: native AGENTS.md format; 'Migrating to AGENTS.md' documents one-time mv+symlink from CLAUDE.md and .cursorrules
+            confidence: inferred
+      file_imports:
+        supported: true
+        mechanism: '@-mention syntax includes other files as context — supports relative, absolute, and ~/ paths (documented under ''Granular Guidance'')'
+        confidence: inferred
+      hierarchical_loading:
+        supported: true
+        mechanism: 'three-tier scope: AGENTS.md in cwd + parent dirs + subtrees + personal global at $HOME/.config/amp/AGENTS.md (documented under ''Writing AGENTS.md Files''); subtree loading is unique to amp'
+        confidence: inferred
+  skills:
+    supported: true
+    capabilities:
+      canonical_filename:
+        supported: true
+        mechanism: SKILL.md
+        confidence: confirmed
+      creation_workflow:
+        supported: true
+        mechanism: documented under 'Creating Skills' heading
+        confidence: inferred
+      executable_tools:
+        supported: true
+        mechanism: documented under 'Executable Tools in Skills' heading
+        confidence: inferred
+      global_scope:
+        supported: true
+        mechanism: skill directory placed under ~/.config/agents/skills/<name>/, ~/.config/amp/skills/<name>/, or ~/.claude/skills/<name>/
+        confidence: confirmed
+      installation_workflow:
+        supported: true
+        mechanism: documented under 'Installing Skills' heading
+        confidence: inferred
+      mcp_integration:
+        supported: true
+        mechanism: documented under 'MCP Servers in Skills' heading
+        confidence: inferred
+      project_scope:
+        supported: true
+        mechanism: skill directory placed under .agents/skills/<name>/ or .claude/skills/<name>/ within the project root
+        confidence: confirmed

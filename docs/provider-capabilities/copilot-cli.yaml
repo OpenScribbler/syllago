@@ -2,4 +2,56 @@ schema_version: "1"
 slug: copilot-cli
 display_name: ""
 last_verified: ""
-content_types: {}
+content_types:
+  rules:
+    supported: true
+    capabilities:
+      activation_mode:
+        supported: true
+        capabilities:
+          always_on:
+            supported: true
+            mechanism: .github/copilot-instructions.md applies to all requests in repository scope (documented under 'Repository-wide custom instructions')
+            confidence: inferred
+          frontmatter_globs:
+            supported: true
+            mechanism: NAME.instructions.md uses 'applyTo' frontmatter glob to scope to file patterns (documented under 'Path-specific custom instructions')
+            confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        capabilities:
+          agents_md:
+            supported: true
+            mechanism: AGENTS.md at repository root, cwd, or COPILOT_CUSTOM_INSTRUCTIONS_DIRS (documented under 'Agent instructions' section)
+            confidence: inferred
+          claude_md:
+            supported: true
+            mechanism: CLAUDE.md at repository root recognized alongside AGENTS.md (documented under 'Agent instructions' section)
+            confidence: inferred
+          gemini_md:
+            supported: true
+            mechanism: GEMINI.md at repository root recognized alongside AGENTS.md (documented under 'Agent instructions' section)
+            confidence: inferred
+      hierarchical_loading:
+        supported: true
+        mechanism: 'four-tier scope: Repository-wide + Path-specific + Agent (AGENTS.md) + Local ($HOME/.copilot/copilot-instructions.md) — files merge across tiers (documented under ''Repository-wide'' / ''Path-specific'' / ''Agent instructions'' / ''Local instructions'')'
+        confidence: inferred
+  skills:
+    supported: true
+    capabilities:
+      canonical_filename:
+        supported: true
+        mechanism: SKILL.md
+        confidence: confirmed
+      cli_management:
+        supported: true
+        mechanism: skill management commands documented under 'Skills commands in the CLI' heading
+        confidence: inferred
+      global_scope:
+        supported: true
+        mechanism: skill directory under ~/.copilot/skills/<name>/, ~/.claude/skills/<name>/, or ~/.agents/skills/<name>/
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: skill directory under .github/skills/<name>/, .claude/skills/<name>/, or .agents/skills/<name>/ in project repository
+        confidence: confirmed

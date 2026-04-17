@@ -2,4 +2,43 @@ schema_version: "1"
 slug: pi
 display_name: ""
 last_verified: ""
-content_types: {}
+content_types:
+  skills:
+    supported: true
+    capabilities:
+      baseDir:
+        supported: true
+        mechanism: 'yaml frontmatter key: baseDir'
+        confidence: confirmed
+      canonical_filename:
+        supported: true
+        mechanism: SKILL.md
+        confidence: confirmed
+      description:
+        supported: true
+        mechanism: 'yaml frontmatter key: description'
+        confidence: confirmed
+      disableModelInvocation:
+        supported: true
+        mechanism: 'yaml frontmatter key: disableModelInvocation'
+        confidence: confirmed
+      display_name:
+        supported: true
+        mechanism: 'yaml frontmatter key: name'
+        confidence: confirmed
+      filePath:
+        supported: true
+        mechanism: 'yaml frontmatter key: filePath'
+        confidence: confirmed
+      global_scope:
+        supported: true
+        mechanism: ~/.pi/agent/skills/<name>/SKILL.md or ~/.agents/skills/<name>/SKILL.md
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: .pi/skills/<name>/SKILL.md or .agents/skills/<name>/SKILL.md
+        confidence: confirmed
+      sourceInfo:
+        supported: true
+        mechanism: 'yaml frontmatter key: sourceInfo'
+        confidence: confirmed
