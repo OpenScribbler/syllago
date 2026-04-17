@@ -162,6 +162,16 @@ setup_test_home() {
   # so without this, snapshots would pollute the actual repo.
   mkdir -p "$SMOKE_TEST_HOME/.git"
 
+  # Seed the temp project root with the self-contained smoke fixture so
+  # syllago can scan rules/, hooks/, skills/, agents/, mcp/, commands/, and
+  # loadouts/ without depending on whatever content the repo happens to ship.
+  if [[ -d "$REPO_ROOT/tests/smoke/fixtures" ]]; then
+    cp -r "$REPO_ROOT/tests/smoke/fixtures/." "$SMOKE_TEST_HOME/"
+  else
+    echo -e "${RED}Smoke fixture not found at $REPO_ROOT/tests/smoke/fixtures${RESET}"
+    exit 1
+  fi
+
   # Copy auth credentials from real HOME so CLI tools can authenticate.
   # Claude Code stores SSO credentials in ~/.claude/.credentials.json
   # Gemini CLI stores OAuth credentials in ~/.gemini/oauth_creds.json

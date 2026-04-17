@@ -1,0 +1,6 @@
+id: smoke-rules
+name: smoke-rules
+description: Test rule used by tests/smoke/.
+tags:
+  - smoke-test
+  - internal
