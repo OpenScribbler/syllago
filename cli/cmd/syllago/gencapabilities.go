@@ -374,12 +374,7 @@ func buildCapEntry(lastChangedAt string, ct capContentTypeYAML) CapContentType {
 	for _, ext := range ct.ProviderExtensions {
 		examples := make([]CapExampleEntry, 0, len(ext.Examples))
 		for _, ex := range ext.Examples {
-			examples = append(examples, CapExampleEntry{
-				Title: ex.Title,
-				Lang:  ex.Lang,
-				Code:  ex.Code,
-				Note:  ex.Note,
-			})
+			examples = append(examples, CapExampleEntry(ex))
 		}
 		extensions = append(extensions, CapExtension{
 			ID:          ext.ID,

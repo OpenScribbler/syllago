@@ -200,8 +200,9 @@ content_types:
     provider_extensions:
       - id: bad_type_ext
         name: "Bad Type Ext"
-        description: "test extension with non-allowed value_type"
+        summary: "test extension with non-allowed value_type"
         source_ref: "https://example.com"
+        conversion: embedded
         value_type: "not-in-allow-list"
 `
 	if err := os.WriteFile(filepath.Join(formatsDir, "test-provider.yaml"), []byte(docWithWarning), 0644); err != nil {

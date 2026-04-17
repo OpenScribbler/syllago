@@ -110,6 +110,8 @@ func RunCapmonCheck(ctx context.Context, opts CapmonCheckOptions) error {
 		providers = append(providers, slug)
 	}
 
+	ciMode := os.Getenv("GITHUB_TOKEN") != ""
+
 	for _, provider := range providers {
 		// Step 0: Orphan detection (non-blocking warning).
 		if !knownSlugs[provider] {
@@ -122,18 +124,42 @@ func RunCapmonCheck(ctx context.Context, opts CapmonCheckOptions) error {
 		}
 
 		// Step 2: Validate format doc (blocking errors + non-blocking warnings).
-		// Warnings cover allow-list violations (e.g., unknown value_type) that should
-		// surface to operators but not fail the pipeline. A full capmon check run
-		// in CI will additionally route these through a GitHub issue manager
-		// (owned by the jtafb epic) using the per-warning DeduplicationKey; the
-		// stderr path is the local fallback.
+		// In CI (GITHUB_TOKEN set): route warnings to GitHub issues with dedup.
+		// Locally: log to stderr.
 		warnings, err := ValidateFormatDocWithWarnings(opts.FormatsDir, opts.CanonicalKeysPath, provider)
 		if err != nil {
 			return fmt.Errorf("capmon check: validate format doc for %s: %w", provider, err)
 		}
+
+		seenKeys := make(map[string]bool, len(warnings))
 		for _, w := range warnings {
+			seenKeys[w.DeduplicationKey()] = true
 			fmt.Fprintf(os.Stderr, "warning: format doc for %q: [%s] %s: %s\n",
 				provider, w.DeduplicationKey(), w.Field, w.Message)
+
+			if ciMode && !opts.DryRun {
+				issueNum, found, findErr := FindOpenCapmonWarningIssue(provider, w)
+				if findErr != nil {
+					fmt.Fprintf(os.Stderr, "warning: find warning issue for %s: %v\n", provider, findErr)
+					continue
+				}
+				if found {
+					_ = AppendCapmonChangeEvent(ctx, issueNum,
+						fmt.Sprintf("Still present: %s = `%s`", w.Field, w.Value))
+				} else {
+					_, createErr := CreateCapmonWarningIssue(ctx, provider, w)
+					if createErr != nil {
+						fmt.Fprintf(os.Stderr, "warning: create warning issue for %s: %v\n", provider, createErr)
+					}
+				}
+			}
+		}
+
+		// Auto-close resolved warning issues when in CI.
+		if ciMode && !opts.DryRun {
+			if closeErr := CloseResolvedWarningIssues(ctx, provider, seenKeys); closeErr != nil {
+				fmt.Fprintf(os.Stderr, "warning: close resolved issues for %s: %v\n", provider, closeErr)
+			}
 		}
 
 		// Step 3: Fetch and compare each source URI.
@@ -235,7 +261,7 @@ func fetchForCheck(ctx context.Context, rawURL string) (body []byte, contentType
 	if err != nil {
 		return nil, "", "", err
 	}
-	defer resp.Body.Close() //nolint:errcheck
+	defer resp.Body.Close() //nolint:errcheck // best-effort close on response body
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, "", "", fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}

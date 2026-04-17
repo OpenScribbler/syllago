@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-15T16:46:51Z",
+  "generatedAt": "2026-04-16T19:03:15Z",
   "syllagoVersion": "0.7.0",
   "commands": [
     {
@@ -339,7 +339,7 @@
       "parent": "capmon",
       "synopsis": "syllago capmon derive [flags]",
       "description": "Derive a seeder spec from a provider format doc",
-      "longDescription": "Deterministically derive a seeder spec YAML from a provider format doc.\n\nThe derived spec is written to --output-dir/\u003cprovider\u003e-skills.yaml.\nAll canonical_mappings keys are validated against --canonical-keys.\nContent types with status=unsupported are omitted from output.",
+      "longDescription": "Deterministically derive a seeder spec YAML from a provider format doc.\n\nThe derived spec is written to --output-dir/\u003cprovider\u003e-\u003ccontent_type\u003e.yaml.\nAll canonical_mappings keys are validated against --canonical-keys.\nContent types with status=unsupported are omitted from output.",
       "aliases": [],
       "flags": [
         {

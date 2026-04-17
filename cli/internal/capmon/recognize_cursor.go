@@ -1,11 +1,12 @@
 package capmon
 
 func init() {
-	RegisterRecognizer("cursor", recognizeCursorSkills)
+	RegisterRecognizer("cursor", RecognizerKindUnknown, recognizeCursor)
 }
 
-// recognizeCursorSkills recognizes skills capabilities for the Cursor provider.
-// TODO(Phase 6): implement real recognition after seeder spec is approved.
-func recognizeCursorSkills(fields map[string]FieldValue) map[string]string {
-	return make(map[string]string)
+// recognizeCursor recognizes skills capabilities for the Cursor provider.
+// Cursor does not support Agent Skills (FormatDoc status: unsupported).
+// Returning an empty result is the confirmed-negative signal.
+func recognizeCursor(ctx RecognitionContext) RecognitionResult {
+	return wrapCapabilities(make(map[string]string))
 }

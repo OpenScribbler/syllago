@@ -35,10 +35,11 @@ content_types:
     provider_extensions:
       - id: mcp_bundling
         name: "MCP server bundling"
-        description: "Skills can include an mcp.json file to bundle an MCP server."
+        summary: "Skills can include an mcp.json file to bundle an MCP server."
         source_ref: "https://ampcode.com/manual/agent-skills.md"
         graduation_candidate: false
         graduation_notes: ""
+        conversion: embedded
     loading_model: "Lazy — loaded on demand"
     notes: ""
 `
@@ -195,10 +196,11 @@ content_types:
     provider_extensions:
       - id: model_field
         name: Model Field
-        description: "Controls which model is used."
+        summary: "Controls which model is used."
         source_ref: "https://example.com"
         required: true
         value_type: "string"
+        conversion: embedded
         examples:
           - title: "Fast model"
             lang: yaml
@@ -207,13 +209,15 @@ content_types:
             note: "Default if absent."
       - id: optional_field
         name: Optional Field
-        description: "An optional capability."
+        summary: "An optional capability."
         source_ref: "https://example.com"
         required: false
+        conversion: embedded
       - id: unspecified_field
         name: Unspecified Field
-        description: "We do not know if this is required."
+        summary: "We do not know if this is required."
         source_ref: "https://example.com"
+        conversion: embedded
 `
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test-provider.yaml")

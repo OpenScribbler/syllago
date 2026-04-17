@@ -3,6 +3,7 @@ package capmon
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -80,5 +81,79 @@ func TestValidateSources_MissingManifest(t *testing.T) {
 	err := ValidateSources(dir, "nonexistent-provider")
 	if err == nil {
 		t.Fatal("expected error for missing manifest file")
+	}
+}
+
+func TestValidateSources_KnownHealingStrategies(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeTestSourceManifest(t, dir, "test-provider", `schema_version: "1"
+slug: test-provider
+display_name: Test Provider
+content_types:
+  skills:
+    sources:
+      - url: "https://example.com/skills"
+        type: documentation
+        format: md
+        selector: {}
+        healing:
+          strategies:
+            - redirect
+            - github-rename
+            - variant
+`)
+	if err := ValidateSources(dir, "test-provider"); err != nil {
+		t.Errorf("expected no error for known healing strategies, got: %v", err)
+	}
+}
+
+func TestValidateSources_UnknownHealingStrategy(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeTestSourceManifest(t, dir, "test-provider", `schema_version: "1"
+slug: test-provider
+display_name: Test Provider
+content_types:
+  skills:
+    sources:
+      - url: "https://example.com/skills"
+        type: documentation
+        format: md
+        selector: {}
+        healing:
+          strategies:
+            - archaeopteryx
+`)
+	err := ValidateSources(dir, "test-provider")
+	if err == nil {
+		t.Fatal("expected validation error for unknown healing strategy")
+	}
+	if !strings.Contains(err.Error(), "archaeopteryx") {
+		t.Errorf("error should name the unknown strategy; got: %v", err)
+	}
+}
+
+func TestValidateSources_HealingEnabledFalse_StrategyUnchecked(t *testing.T) {
+	// enabled: false still leaves Strategies visible; we still validate them
+	// because operators should be able to spot typos. But no strategies
+	// listed with enabled:false must not error.
+	t.Parallel()
+	dir := t.TempDir()
+	writeTestSourceManifest(t, dir, "test-provider", `schema_version: "1"
+slug: test-provider
+display_name: Test Provider
+content_types:
+  skills:
+    sources:
+      - url: "https://example.com/skills"
+        type: documentation
+        format: md
+        selector: {}
+        healing:
+          enabled: false
+`)
+	if err := ValidateSources(dir, "test-provider"); err != nil {
+		t.Errorf("expected no error for enabled: false with no strategies, got: %v", err)
 	}
 }
