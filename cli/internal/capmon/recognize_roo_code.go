@@ -31,8 +31,75 @@ func init() {
 // wired once a documentation source (e.g., the Roo Code docs site's MCP
 // pages) is added to the cache and yields heading-level evidence.
 
-// recognizeRooCode recognizes skills capabilities for the Roo Code provider.
-// Roo Code implements the Agent Skills open standard (GoStruct pattern).
+// rooCodeAgentsLandmarkOptions returns the landmark patterns for Roo Code's
+// custom modes (their term for agents). Anchors derived from three caches:
+//   - agents.0 (TypeScript: packages/types/src/mode.ts) — landmarks include
+//     ModeConfig, CustomModesSettings, GroupOptions, GroupEntry,
+//     PromptComponent, CustomModePrompts, CustomSupportPrompts. Strong
+//     type-vocabulary evidence for the format.
+//   - agents.1 (TypeScript: src/core/config/CustomModesManager.ts) —
+//     landmarks include ExportedModeConfig, ImportData, RuleFile,
+//     ExportResult, ImportResult.
+//   - agents.2 (YAML instance: .roomodes) — landmark "customModes". The
+//     instance demonstrates the per-mode schema: slug, name, description,
+//     roleDefinition, whenToUse, groups (array with optional inline filter
+//     {fileRegex, description} for the edit group), source ("project" |
+//     "global").
+//
+// Maps 3 of 7 canonical agents keys at type-name landmark evidence. This is
+// lower-quality evidence than HTML doc headings (no prose explaining what
+// the types do), but the type names are descriptive enough to anchor
+// confidently when paired with the YAML instance shape.
+//
+//   - definition_format: ModeConfig + CustomModesSettings parent type plus
+//     the .roomodes YAML instance file demonstrating slug/name/description/
+//     roleDefinition/whenToUse/groups/source field shape.
+//   - tool_restrictions: GroupEntry / GroupOptions types and the YAML groups
+//     array vocabulary (read | edit | command | mcp) with optional inline
+//     filter for the edit group.
+//   - agent_scopes: nested .project + .user emission. The YAML "source"
+//     field with values "project" (mapped to .project scope) and "global"
+//     (mapped to .user scope) per the .roomodes instance.
+//
+// Four keys are intentionally unmapped:
+//   - invocation_patterns: no clear evidence in the cached types or YAML.
+//     Mode invocation is presumably via UI mode-picker, not slash-command
+//     or @-mention. No invocation type or landmark.
+//   - per_agent_mcp: the "mcp" group enables MCP tool access for the mode
+//     but does NOT scope to specific MCP servers — it is a mode-level
+//     mcp-enabled toggle, not a per-mode server allowlist. Skip.
+//   - model_selection: no model field in ModeConfig per the type vocabulary.
+//   - subagent_spawning: no chain/spawn/delegate type or landmark. Modes do
+//     not coordinate or delegate to other modes per the cached types.
+//
+// Required anchors are unique to the agents caches:
+//   - "ModeConfig"  — TypeScript type name (agents.0); unique vs roo-code's
+//     mcp/rules/skills/commands type vocabularies (mcp uses Mcp* prefix,
+//     rules/commands have no overlapping type names).
+//   - "customModes" — YAML root key (agents.2); unique vs other content type
+//     YAML files in the cache.
+func rooCodeAgentsLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "ModeConfig", CaseInsensitive: true},
+		{Kind: "substring", Value: "customModes", CaseInsensitive: true},
+	}
+	return AgentsLandmarkOptions(
+		AgentsLandmarkPattern("definition_format", "ModeConfig",
+			"YAML modes (.roomodes file or settings) with slug, name, description, roleDefinition, whenToUse, groups, source fields per ModeConfig + CustomModesSettings TypeScript types", required),
+		AgentsLandmarkPattern("tool_restrictions", "GroupEntry",
+			"per-mode tool group allowlist (read | edit | command | mcp) with optional inline filter (e.g. {fileRegex, description}) for the edit group, per GroupEntry / GroupOptions TypeScript types", required),
+		AgentsLandmarkPattern("agent_scopes.project", "customModes",
+			"project-scoped custom modes via .roomodes file in repo root (mode source field = 'project')", required),
+		AgentsLandmarkPattern("agent_scopes.user", "customModes",
+			"user-scoped (global) custom modes via roo-code config (mode source field = 'global')", required),
+	)
+}
+
+// recognizeRooCode recognizes skills + agents capabilities for the Roo Code
+// provider. Roo Code implements the Agent Skills open standard (GoStruct
+// pattern). Custom modes (their agents primitive) use type-name landmark
+// matching against the TypeScript ModeConfig / CustomModesSettings types
+// plus the .roomodes YAML instance file.
 //
 // Rules recognition is intentionally NOT implemented for roo-code. Both
 // cached rules sources (rules.0 = .roo/rules/rules.md and rules.1 =
@@ -53,14 +120,17 @@ func init() {
 // MCP recognition is also intentionally absent — see the comment block
 // immediately above this function for rationale.
 func recognizeRooCode(ctx RecognitionContext) RecognitionResult {
-	result := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
-	if len(result) == 0 {
-		return wrapCapabilities(result)
+	skills := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
+	if len(skills) > 0 {
+		// Scope: roo-code supports project-local and global skill directories
+		mergeInto(skills, capabilityDotPaths("skills", "project_scope", "per-project .roo/skills/ directory", "confirmed"))
+		mergeInto(skills, capabilityDotPaths("skills", "global_scope", "user-global ~/.roo/skills/ directory", "confirmed"))
+		// Filename: roo-code uses the canonical SKILL.md filename
+		mergeInto(skills, capabilityDotPaths("skills", "canonical_filename", "SKILL.md", "confirmed"))
 	}
-	// Scope: roo-code supports project-local and global skill directories
-	mergeInto(result, capabilityDotPaths("skills", "project_scope", "per-project .roo/skills/ directory", "confirmed"))
-	mergeInto(result, capabilityDotPaths("skills", "global_scope", "user-global ~/.roo/skills/ directory", "confirmed"))
-	// Filename: roo-code uses the canonical SKILL.md filename
-	mergeInto(result, capabilityDotPaths("skills", "canonical_filename", "SKILL.md", "confirmed"))
-	return wrapCapabilities(result)
+	skillsResult := wrapCapabilities(skills)
+
+	agentsResult := recognizeLandmarks(ctx, rooCodeAgentsLandmarkOptions())
+
+	return mergeRecognitionResults(skillsResult, agentsResult)
 }
