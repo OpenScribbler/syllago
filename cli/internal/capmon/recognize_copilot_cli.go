@@ -100,6 +100,54 @@ func copilotCliHooksLandmarkOptions() LandmarkOptions {
 	)
 }
 
+// copilotCliAgentsLandmarkOptions returns the landmark patterns for Copilot
+// CLI's "custom agents configuration" doc. Anchors derived from
+// .capmon-cache/copilot-cli/agents.0/extracted.json
+// (raw.githubusercontent.com/.../custom-agents-configuration.md).
+//
+// Maps 3 of 7 canonical agents keys at heading-level evidence:
+//   - definition_format → "YAML frontmatter properties" (custom agents are
+//     markdown files with YAML frontmatter declaring name/description/tools/
+//     mcpServers).
+//   - tool_restrictions → "Tool aliases" (per-agent tool allowlist via the
+//     tools field, plus tool aliases for renaming).
+//   - per_agent_mcp → "MCP server configurations" (per-agent mcpServers
+//     section in the YAML frontmatter scopes which MCP servers each agent
+//     can access).
+//
+// The other 4 keys are intentionally unmapped:
+//   - invocation_patterns: agents.1 (how-to doc) describes invocation as
+//     `/agent <name>` body text, not as a heading. Skip.
+//   - agent_scopes: scope locations live in body text of agents.1, not as
+//     headings. Skip.
+//   - model_selection: no Model heading; the YAML frontmatter does not
+//     document a model field per the configuration spec.
+//   - subagent_spawning: no chain/spawn/delegate heading; no multi-agent
+//     coordination documented.
+//
+// Required anchors are unique to agents.0:
+//   - "YAML frontmatter properties" — H2, agents-specific
+//   - "Tool aliases"                — H3 under Tools, agents-specific
+//
+// Neither appears in copilot-cli's skills, rules, hooks, or mcp landmarks.
+// agents.1 landmarks ("Introduction", "Further reading") are too generic to
+// drive recognition and are deliberately ignored — agents.0 carries all the
+// heading-level capability evidence.
+func copilotCliAgentsLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "YAML frontmatter properties", CaseInsensitive: true},
+		{Kind: "substring", Value: "Tool aliases", CaseInsensitive: true},
+	}
+	return AgentsLandmarkOptions(
+		AgentsLandmarkPattern("definition_format", "YAML frontmatter properties",
+			"markdown files with YAML frontmatter (name, description, tools, mcpServers fields) documented under 'YAML frontmatter properties' heading", required),
+		AgentsLandmarkPattern("tool_restrictions", "Tool aliases",
+			"per-agent tool allowlist via tools field, with tool aliases for renaming, documented under 'Tools' / 'Tool aliases' / 'Tools processing' headings", required),
+		AgentsLandmarkPattern("per_agent_mcp", "MCP server configurations",
+			"per-agent mcpServers section in YAML frontmatter scopes which MCP servers each agent can access, documented under 'MCP server configuration details' / 'MCP server configurations' headings", required),
+	)
+}
+
 // MCP recognition is intentionally NOT wired for copilot-cli.
 //
 // Copilot CLI's MCP evidence (.capmon-cache/copilot-cli/mcp.0 + mcp.1) is
@@ -145,6 +193,7 @@ func recognizeCopilotCli(ctx RecognitionContext) RecognitionResult {
 
 	rulesResult := recognizeLandmarks(ctx, copilotCliRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, copilotCliHooksLandmarkOptions())
+	agentsResult := recognizeLandmarks(ctx, copilotCliAgentsLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, agentsResult)
 }
