@@ -105,8 +105,50 @@ func kiroHooksLandmarkOptions() LandmarkOptions {
 	}
 }
 
-// recognizeKiro recognizes skills + rules + hooks capabilities for the Kiro
-// provider. All three content types are HTML/markdown documentation;
+// kiroMcpLandmarkOptions returns the landmark patterns for Kiro's MCP
+// configuration doc. Anchors derived from .capmon-cache/kiro/mcp.0/extracted.json
+// (https://kiro.dev/docs/mcp/configuration/, HTML).
+//
+// Kiro's MCP doc maps only 2 of 8 canonical MCP keys at the heading level:
+// transport_types ("Local server" + "Remote server" sub-headings) and
+// env_var_expansion ("Environment variables" heading).
+//
+// The other 6 keys are intentionally unmapped here:
+//   - tool_filtering, auto_approve: documented only as JSON config fields
+//     ('disabledTools', 'autoApprove') — table-cell evidence, not headings.
+//     Curator marks both supported (confirmed) via provider extensions
+//     kiro_mcp_disabled_tools and kiro_mcp_auto_approve.
+//   - oauth_support, marketplace, resource_referencing, enterprise_management:
+//     no heading or field evidence; absent from Kiro's MCP surface.
+//
+// Required anchors are unique to the MCP doc:
+//   - "Configuration file structure" — H2 unique to mcp.0
+//   - "Configuration properties"     — H2 unique to mcp.0
+//
+// Neither appears in kiro's skills, rules, hooks, or agents docs. Note that
+// "Adding MCP servers" appears in skills.0 (powers can bundle mcp.json) but
+// is not a required anchor here, so cross-content false positives are blocked.
+//
+// Per docs/provider-formats/kiro.yaml, the curator marks transport_types and
+// env_var_expansion as unsupported (inferred). The recognizer disagrees
+// because heading-level evidence exists for both. The two YAML files are
+// independent: provider-capabilities/ tracks recognizer emissions,
+// provider-formats/ tracks curator judgments.
+func kiroMcpLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Configuration file structure", CaseInsensitive: true},
+		{Kind: "substring", Value: "Configuration properties", CaseInsensitive: true},
+	}
+	return McpLandmarkOptions(
+		McpLandmarkPattern("transport_types", "Local server",
+			"transport types (stdio for local, HTTPS/HTTP for remote) documented under 'Local server' / 'Remote server' configuration sub-headings", required),
+		McpLandmarkPattern("env_var_expansion", "Environment variables",
+			"environment variable expansion (${VAR} syntax) documented under 'Environment variables' heading with security warning against inline secrets", required),
+	)
+}
+
+// recognizeKiro recognizes skills + rules + hooks + mcp capabilities for the
+// Kiro provider. All four content types are HTML/markdown documentation;
 // recognition uses landmark matching. Static facts (project_scope,
 // canonical_filename) merge in at "confirmed" confidence after a successful
 // skills landmark match. Note: Kiro has no global_scope for skills — Powers
@@ -121,6 +163,7 @@ func recognizeKiro(ctx RecognitionContext) RecognitionResult {
 
 	rulesResult := recognizeLandmarks(ctx, kiroRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, kiroHooksLandmarkOptions())
+	mcpResult := recognizeLandmarks(ctx, kiroMcpLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult)
 }
