@@ -96,10 +96,51 @@ func ampHooksLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeAmp recognizes skills + rules + hooks capabilities for the Amp
-// provider. Source for all three content types is markdown/HTML documentation;
-// recognition uses landmark (heading) matching. Static facts merge in at
-// "confirmed" confidence after a successful skills landmark match.
+// ampMcpLandmarkOptions returns the landmark patterns for Amp's MCP
+// documentation. Evidence is split across three cache sources:
+//   - mcp.0 (amp-mcp-setup-guide.md): community VS Code setup guide; provides
+//     the "3. Configure Tool Access" heading that backs tool_filtering
+//     (per-tool enable/disable in the VS Code UI)
+//   - mcp.1 (ampcode.com/manual/mcp.md): authoritative Amp manual section
+//     covering CLI, config schema, OAuth, and workspace trust
+//   - mcp.2 (mcp-registry-allowlist.md): enterprise MCP registry allowlist
+//
+// Per the curated format YAML (docs/provider-formats/amp.yaml), 3 of the 8
+// canonical MCP keys are supported:
+//   - oauth_support → "OAuth for Remote MCP Servers" heading (mcp.1)
+//   - tool_filtering → "3. Configure Tool Access" heading (mcp.0)
+//   - enterprise_management → "MCP Registry Allowlist" heading (mcp.2)
+//
+// The other 5 canonical keys (transport_types, env_var_expansion, auto_approve,
+// marketplace, resource_referencing) are curated as unsupported and therefore
+// not mapped — emitting them on heading-presence alone would contradict the
+// curated YAML.
+//
+// Required anchors are unique to the MCP docs:
+//   - "Amp MCP Setup Guide" — H1 of mcp.0 (community setup guide)
+//   - "MCP Server Loading Order" — H2 of mcp.1 (manual section)
+//
+// Neither appears in amp's skills, rules, or hooks docs, so this guard
+// prevents MCP patterns from firing on non-MCP content-type contexts.
+func ampMcpLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Amp MCP Setup Guide", CaseInsensitive: true},
+		{Kind: "substring", Value: "MCP Server Loading Order", CaseInsensitive: true},
+	}
+	return McpLandmarkOptions(
+		McpLandmarkPattern("oauth_support", "OAuth for Remote MCP Servers",
+			"OAuth 2.0 authentication for remote MCP servers documented under 'OAuth for Remote MCP Servers' heading", required),
+		McpLandmarkPattern("tool_filtering", "Configure Tool Access",
+			"per-tool enable/disable documented under '3. Configure Tool Access' heading (VS Code UI exposes individual tool toggles within each configured server)", required),
+		McpLandmarkPattern("enterprise_management", "MCP Registry Allowlist",
+			"workspace-admin-enforced MCP registry with allowlist documented under 'MCP Registry Allowlist' heading (modelcontextprotocol.io schema; unreachable registry blocks all servers)", required),
+	)
+}
+
+// recognizeAmp recognizes skills + rules + hooks + mcp capabilities for the
+// Amp provider. Source for all four content types is markdown/HTML
+// documentation; recognition uses landmark (heading) matching. Static facts
+// merge in at "confirmed" confidence after a successful skills landmark match.
 //
 // Amp's hooks doc itself (hooks.0) has only a single H1 landmark, so hooks
 // recognition is anchored against the permissions reference doc (hooks.1)
@@ -114,6 +155,7 @@ func recognizeAmp(ctx RecognitionContext) RecognitionResult {
 
 	rulesResult := recognizeLandmarks(ctx, ampRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, ampHooksLandmarkOptions())
+	mcpResult := recognizeLandmarks(ctx, ampMcpLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult)
 }

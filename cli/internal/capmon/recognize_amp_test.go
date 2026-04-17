@@ -233,3 +233,113 @@ func TestRecognizeAmp_HooksAnchorsMissing(t *testing.T) {
 		t.Error("hooks.supported should NOT be present when 'Permissions Reference' anchor is missing")
 	}
 }
+
+// realAmpMcpLandmarks is a snapshot of the headings from amp's MCP docs as of
+// 2026-04-16 — combined from three cache sources:
+//   - .capmon-cache/amp/mcp.0/extracted.json (community setup guide)
+//   - .capmon-cache/amp/mcp.1/extracted.json (manual section)
+//   - .capmon-cache/amp/mcp.2/extracted.json (registry allowlist appendix)
+//
+// All three sources contribute the evidence the recognizer needs: mcp.0
+// supplies the required anchor "Amp MCP Setup Guide" and the tool_filtering
+// anchor "3. Configure Tool Access"; mcp.1 supplies the second required
+// anchor "MCP Server Loading Order" and the oauth_support anchor; mcp.2
+// supplies the enterprise_management anchor.
+var realAmpMcpLandmarks = []string{
+	// mcp.0 — community setup guide
+	"Amp MCP Setup Guide",
+	"MCP vs CLI Tools",
+	"Prerequisites",
+	"Finding MCP Servers",
+	"Setup Steps",
+	"1. Access VS Code Settings",
+	"2. Add MCP Servers",
+	"3. Configure Tool Access",
+	"4. Alternative: CLI Configuration",
+	"Testing the Integration",
+	"Best Practices & Troubleshooting",
+	"Context Management",
+	"Troubleshooting",
+	// mcp.1 — manual section
+	"MCP",
+	"MCP Server Loading Order",
+	"Workspace MCP Server Trust",
+	"MCP Best Practices",
+	"OAuth for Remote MCP Servers",
+	// mcp.2 — registry allowlist appendix
+	"MCP Registry Allowlist",
+}
+
+// TestRecognizeAmp_RealMcpLandmarks proves MCP recognition emits the 3
+// canonical MCP keys curated as supported in the format YAML: oauth_support,
+// tool_filtering, enterprise_management. The other 5 canonical keys are
+// curated as unsupported and must NOT be emitted. Test merges all four
+// content type fixtures to verify cross-content-type robustness — a
+// real-world cache call would do the same merge.
+func TestRecognizeAmp_RealMcpLandmarks(t *testing.T) {
+	merged := append([]string{}, realAmpLandmarks...)
+	merged = append(merged, realAmpRulesLandmarks...)
+	merged = append(merged, realAmpHooksLandmarks...)
+	merged = append(merged, realAmpMcpLandmarks...)
+	result := capmon.RecognizeWithContext("amp", capmon.RecognitionContext{
+		Provider:  "amp",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["mcp.supported"] != "true" {
+		t.Error("mcp.supported missing")
+	}
+	mcpInferred := []string{
+		"oauth_support",
+		"tool_filtering",
+		"enterprise_management",
+	}
+	for _, c := range mcpInferred {
+		key := "mcp.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["mcp.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("mcp.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"mcp.capabilities.transport_types.supported",
+		"mcp.capabilities.env_var_expansion.supported",
+		"mcp.capabilities.auto_approve.supported",
+		"mcp.capabilities.marketplace.supported",
+		"mcp.capabilities.resource_referencing.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present for amp (curated as unsupported)", absent)
+		}
+	}
+}
+
+// TestRecognizeAmp_McpAnchorsMissing proves the required-anchor guard
+// suppresses MCP emission when "Amp MCP Setup Guide" is absent — the
+// per-pattern matchers would otherwise fire on a context that happened to
+// include "OAuth for Remote MCP Servers" or similar landmarks from another
+// provider's docs.
+func TestRecognizeAmp_McpAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realAmpMcpLandmarks))
+	for _, lm := range realAmpMcpLandmarks {
+		if lm == "Amp MCP Setup Guide" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("amp", capmon.RecognitionContext{
+		Provider:  "amp",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["mcp.supported"]; has {
+		t.Error("mcp.supported should NOT be present when 'Amp MCP Setup Guide' anchor is missing")
+	}
+}

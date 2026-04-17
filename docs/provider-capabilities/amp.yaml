@@ -14,6 +14,21 @@ content_types:
         supported: true
         mechanism: hooks integrate with amp's permission system to control tool availability (documented under 'How Permissions Work' / 'Add Rules' headings)
         confidence: inferred
+  mcp:
+    supported: true
+    capabilities:
+      enterprise_management:
+        supported: true
+        mechanism: workspace-admin-enforced MCP registry with allowlist documented under 'MCP Registry Allowlist' heading (modelcontextprotocol.io schema; unreachable registry blocks all servers)
+        confidence: inferred
+      oauth_support:
+        supported: true
+        mechanism: OAuth 2.0 authentication for remote MCP servers documented under 'OAuth for Remote MCP Servers' heading
+        confidence: inferred
+      tool_filtering:
+        supported: true
+        mechanism: per-tool enable/disable documented under '3. Configure Tool Access' heading (VS Code UI exposes individual tool toggles within each configured server)
+        confidence: inferred
   rules:
     supported: true
     capabilities:
