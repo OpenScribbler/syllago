@@ -2,4 +2,41 @@ schema_version: "1"
 slug: windsurf
 display_name: ""
 last_verified: ""
-content_types: {}
+content_types:
+  rules:
+    supported: true
+    capabilities:
+      activation_mode:
+        supported: true
+        capabilities:
+          always_on:
+            supported: true
+            mechanism: always_on trigger value documented in 'Activation Modes' table — full rule content included in system prompt every message
+            confidence: inferred
+          glob:
+            supported: true
+            mechanism: glob trigger value documented in 'Activation Modes' table — activated when files matching glob pattern are in context
+            confidence: inferred
+          manual:
+            supported: true
+            mechanism: manual trigger value documented in 'Activation Modes' table — activated via @-mention
+            confidence: inferred
+          model_decision:
+            supported: true
+            mechanism: model_decision trigger value documented in 'Activation Modes' table — Cascade decides based on context
+            confidence: inferred
+      auto_memory:
+        supported: true
+        mechanism: Cascade-managed Memories layer auto-writes context based on conversation (documented under 'Memories & Rules' / 'How to Manage Memories')
+        confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        capabilities:
+          agents_md:
+            supported: true
+            mechanism: AGENTS.md fallback documented in dedicated rules.1 doc with 'Comparison with Rules' section
+            confidence: inferred
+      hierarchical_loading:
+        supported: true
+        mechanism: .windsurf/rules scanned in current workspace, sub-directories, and parent dirs up to git root (documented under 'Rules Discovery' / 'Rules Storage Locations')
+        confidence: inferred

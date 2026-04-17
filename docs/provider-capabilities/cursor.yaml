@@ -2,4 +2,41 @@ schema_version: "1"
 slug: cursor
 display_name: ""
 last_verified: ""
-content_types: {}
+content_types:
+  rules:
+    supported: true
+    capabilities:
+      activation_mode:
+        supported: true
+        capabilities:
+          always_on:
+            supported: true
+            mechanism: '''Always'' Rule Type — rule included in every prompt (documented under ''Activation and enforcement'')'
+            confidence: inferred
+          frontmatter_globs:
+            supported: true
+            mechanism: '''Auto Attached'' Rule Type — frontmatter glob patterns activate when matching files in context (documented under ''Activation and enforcement'')'
+            confidence: inferred
+          manual:
+            supported: true
+            mechanism: '''Apply Manually'' Rule Type — activated via @-mention in chat (documented under ''Activation and enforcement'')'
+            confidence: inferred
+          model_decision:
+            supported: true
+            mechanism: '''Agent Requested'' Rule Type — agent decides based on rule description (documented under ''Activation and enforcement'')'
+            confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        capabilities:
+          agents_md:
+            supported: true
+            mechanism: AGENTS.md fallback with nested directory support (documented under 'AGENTS.md' / 'Nested AGENTS.md support' headings)
+            confidence: inferred
+      file_imports:
+        supported: true
+        mechanism: rules can reference / import other rules (documented under 'Importing Rules' heading)
+        confidence: inferred
+      hierarchical_loading:
+        supported: true
+        mechanism: 'three-tier scope: Project rules (.cursor/rules) + Team Rules (org-wide) + User Rules (documented under ''Project rules'' / ''Team Rules'' / ''User Rules'')'
+        confidence: inferred
