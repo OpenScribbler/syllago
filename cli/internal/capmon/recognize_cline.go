@@ -71,10 +71,40 @@ func clineRulesLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeCline recognizes skills + rules capabilities for the Cline provider.
-// Source for both content types is markdown; recognition uses landmark
-// (heading) matching. Static facts merge in at "confirmed" confidence after a
-// successful skills landmark match.
+// clineHooksLandmarkOptions returns the landmark patterns for Cline's hooks
+// documentation. Anchors derived from .capmon-cache/cline/hooks.0/extracted.json
+// (docs.cline.bot/customization/hooks.md).
+//
+// Required anchors are unique to the hooks doc — "Hook Lifecycle" and "Hook
+// Locations" do not appear in skills/rules/mcp/commands docs, so this guard
+// prevents hooks patterns from firing on a context that includes only other
+// content-type landmarks.
+//
+// Cline documents 4 of the 9 canonical hooks keys at the heading level. The
+// other 5 (matcher_patterns, decision_control, async_execution,
+// permission_control, input_modification) live in body text or are not
+// documented capabilities, and are intentionally not mapped here.
+func clineHooksLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Hook Lifecycle", CaseInsensitive: true},
+		{Kind: "substring", Value: "Hook Locations", CaseInsensitive: true},
+	}
+	return HooksLandmarkOptions(
+		HooksLandmarkPattern("handler_types", "Hook Types",
+			"hook handler types documented under 'Hook Types' heading", required),
+		HooksLandmarkPattern("hook_scopes", "Hook Locations",
+			"hook scopes documented under 'Hook Locations' heading (project + global)", required),
+		HooksLandmarkPattern("json_io_protocol", "Input Structure",
+			"JSON I/O protocol documented under 'Input Structure' / 'Output Structure' headings", required),
+		HooksLandmarkPattern("context_injection", "Context Modification",
+			"context injection documented under 'Context Modification' heading", required),
+	)
+}
+
+// recognizeCline recognizes skills + rules + hooks capabilities for the Cline
+// provider. Source for all three content types is markdown; recognition uses
+// landmark (heading) matching. Static facts merge in at "confirmed" confidence
+// after a successful skills landmark match.
 func recognizeCline(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, clineLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
@@ -84,6 +114,7 @@ func recognizeCline(ctx RecognitionContext) RecognitionResult {
 	}
 
 	rulesResult := recognizeLandmarks(ctx, clineRulesLandmarkOptions())
+	hooksResult := recognizeLandmarks(ctx, clineHooksLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
 }
