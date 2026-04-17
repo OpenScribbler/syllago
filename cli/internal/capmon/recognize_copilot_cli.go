@@ -74,10 +74,36 @@ func copilotCliRulesLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeCopilotCli recognizes skills + rules capabilities for the Copilot CLI
-// provider. Source for both content types is markdown documentation; recognition
-// uses landmark (heading) matching. Static facts merge in at "confirmed"
-// confidence after a successful skills landmark match.
+// copilotCliHooksLandmarkOptions returns the landmark patterns for Copilot CLI's
+// hooks-configuration doc. Anchors derived from
+// .capmon-cache/copilot-cli/hooks.0/extracted.json
+// (raw.githubusercontent.com/.../hooks-configuration.md).
+//
+// Required anchors are unique to the hooks-configuration doc — "Hook types"
+// and "Reading input" do not appear in the rules, skills, or about-copilot-cli
+// docs.
+//
+// Copilot CLI documents 2 of the 9 canonical hooks keys at the heading level
+// (handler_types via "Hook types", json_io_protocol via "Reading input" /
+// "Outputting JSON"). The other 7 are not documented as headings and are
+// intentionally not mapped.
+func copilotCliHooksLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Hook types", CaseInsensitive: true},
+		{Kind: "substring", Value: "Reading input", CaseInsensitive: true},
+	}
+	return HooksLandmarkOptions(
+		HooksLandmarkPattern("handler_types", "Hook types",
+			"hook handler types documented under 'Hook types' heading (session, prompt, tool, error)", required),
+		HooksLandmarkPattern("json_io_protocol", "Outputting JSON",
+			"JSON I/O protocol documented under 'Reading input' / 'Outputting JSON' headings", required),
+	)
+}
+
+// recognizeCopilotCli recognizes skills + rules + hooks capabilities for the
+// Copilot CLI provider. Source for all three content types is markdown
+// documentation; recognition uses landmark (heading) matching. Static facts
+// merge in at "confirmed" confidence after a successful skills landmark match.
 func recognizeCopilotCli(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, copilotCliLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
@@ -87,6 +113,7 @@ func recognizeCopilotCli(ctx RecognitionContext) RecognitionResult {
 	}
 
 	rulesResult := recognizeLandmarks(ctx, copilotCliRulesLandmarkOptions())
+	hooksResult := recognizeLandmarks(ctx, copilotCliHooksLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
 }
