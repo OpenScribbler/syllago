@@ -3,6 +3,17 @@ slug: zed
 display_name: ""
 last_verified: ""
 content_types:
+  mcp:
+    supported: true
+    capabilities:
+      marketplace:
+        supported: true
+        mechanism: in-IDE MCP server marketplace via Zed's extension catalog documented under 'As Extensions' (vs 'As Custom Servers') sub-heading of 'Installing MCP Servers'
+        confidence: inferred
+      tool_filtering:
+        supported: true
+        mechanism: per-tool permission control documented under 'Tool Permissions' heading
+        confidence: inferred
   rules:
     supported: true
     capabilities:
