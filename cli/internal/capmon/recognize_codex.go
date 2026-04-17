@@ -125,13 +125,44 @@ func codexHooksLandmarkOptions() LandmarkOptions {
 	)
 }
 
+// MCP recognition is intentionally NOT wired for codex.
+//
+// Codex's MCP evidence is JSON Schema field-level data — config-key paths like
+// definitions.RawMcpServerConfig.properties.enabled_tools and
+// definitions.McpServerToolConfig.properties.approval_mode in
+// .capmon-cache/codex/mcp.0/extracted.json (codex-rs/core/config.schema.json).
+// The recognizeGoStruct field extractor reads "Type.field" prefixes (e.g.
+// "SkillMetadata."), but JSON Schema paths use "definitions.X.properties.Y"
+// — a different shape that the current GoStructOptions cannot match.
+//
+// Heading-level landmarks for codex MCP exist (RawMcpServerConfig,
+// McpServerToolConfig, MarketplaceConfig) but they are struct names alone —
+// they cannot distinguish between e.g. tool_filtering vs auto_approve, both
+// of which are field-level distinctions inside RawMcpServerConfig.
+//
+// The other source, .capmon-cache/codex/mcp.1/extracted.json, is the
+// codex_mcp_interface.md doc covering codex AS an MCP server (codex
+// mcp-server) — not codex consuming MCP servers. Its landmarks describe
+// the server interface protocol, not consumer-side capability vocabulary.
+//
+// Per docs/provider-formats/codex.yaml, 3 of 8 canonical MCP keys are
+// curated as supported at "confirmed" confidence (oauth_support,
+// tool_filtering, auto_approve). Recognizer silence here preserves that
+// higher-confidence curated data — landmark "inferred" emissions would
+// only be redundant noise.
+//
+// Wiring codex MCP recognition would require a JSON-Schema field extractor
+// analogous to GoStructOptions but reading "definitions.X.properties.Y"
+// paths — a separate scope from Phase 6 Epic 4.
+
 // recognizeCodex recognizes skills + rules + hooks capabilities for the Codex
 // provider. Codex implements the Agent Skills open standard. Skills source is
 // Rust; rules source is markdown; hooks source spans JSON Schema, TypeScript,
-// and Rust files (16 cache entries). Recognition fires only if the extractor
-// surfaces fields under one of the 5 included struct prefixes (see
-// codexSkillsOptions), landmarks under codexRulesLandmarkOptions, or landmarks
-// under codexHooksLandmarkOptions.
+// and Rust files (16 cache entries). MCP recognition is intentionally absent
+// — see the comment block immediately above this function for rationale.
+// Recognition fires only if the extractor surfaces fields under one of the 5
+// included struct prefixes (see codexSkillsOptions), landmarks under
+// codexRulesLandmarkOptions, or landmarks under codexHooksLandmarkOptions.
 func recognizeCodex(ctx RecognitionContext) RecognitionResult {
 	skillsCaps := recognizeGoStruct(ctx.Fields, codexSkillsOptions())
 	if len(skillsCaps) > 0 {
