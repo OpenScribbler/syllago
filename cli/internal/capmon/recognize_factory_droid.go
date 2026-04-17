@@ -83,6 +83,50 @@ func factoryDroidHooksLandmarkOptions() LandmarkOptions {
 	)
 }
 
+// factoryDroidAgentsLandmarkOptions returns the landmark patterns for Factory
+// Droid's "Custom Droids (Subagents)" doc. Anchors derived from
+// .capmon-cache/factory-droid/agents.0/extracted.json
+// (https://docs.factory.ai/cli/configuration/custom-droids — Mintlify SPA).
+//
+// Maps 2 of 7 canonical agents keys at heading-level evidence:
+//   - definition_format → "Configuration" heading; .md files with system
+//     prompt, model preference, and tooling policy.
+//   - tool_restrictions → "Tool categories → concrete tools" heading; named
+//     tool categories (filesystem, shell, search, browser, web_fetch) rather
+//     than per-tool allowlists.
+//
+// Five keys are intentionally unmapped despite the curator (factory-droid.yaml)
+// marking them supported. The recognizer requires heading-level evidence; the
+// curator may mark capabilities supported from broader knowledge of the source:
+//   - invocation_patterns: documented in body text under "Using custom droids
+//     effectively" but not as discrete invocation-mode headings.
+//   - agent_scopes: only example titles surface "(project scope)" and
+//     "(personal scope)" — these are example names, not scope-section
+//     headings, so the evidence is too weak for nested emission.
+//   - model_selection: no Model heading; per-droid model preference lives in
+//     YAML body of example configs, not as a section heading.
+//   - per_agent_mcp: no heading evidence; curator marks unsupported.
+//   - subagent_spawning: parent heading "Custom Droids (Subagents)" implies
+//     subagent semantics, and "Importing Claude Code subagents" describes
+//     interop, but no chain/spawn/delegate heading exists.
+//
+// Required anchors are unique to agents.0:
+//   - "Custom Droids"          — H1, agents-specific
+//   - "Tool categories"        — H3 ("Tool categories → concrete tools"),
+//     agents-specific (no other factory-droid doc uses this phrase).
+func factoryDroidAgentsLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Custom Droids", CaseInsensitive: true},
+		{Kind: "substring", Value: "Tool categories", CaseInsensitive: true},
+	}
+	return AgentsLandmarkOptions(
+		AgentsLandmarkPattern("definition_format", "Configuration",
+			"single-file .md droids with system prompt, model preference, and tooling policy documented under 'Configuration' heading", required),
+		AgentsLandmarkPattern("tool_restrictions", "Tool categories",
+			"categorical tool policy using named categories (filesystem, shell, search, browser, web_fetch) documented under 'Tool categories → concrete tools' heading", required),
+	)
+}
+
 // MCP recognition is intentionally NOT wired for factory-droid.
 //
 // The cached MCP source (.capmon-cache/factory-droid/mcp.0/extracted.json)
@@ -119,6 +163,7 @@ func recognizeFactoryDroid(ctx RecognitionContext) RecognitionResult {
 	}
 
 	hooksResult := recognizeLandmarks(ctx, factoryDroidHooksLandmarkOptions())
+	agentsResult := recognizeLandmarks(ctx, factoryDroidAgentsLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, hooksResult)
+	return mergeRecognitionResults(skillsResult, hooksResult, agentsResult)
 }

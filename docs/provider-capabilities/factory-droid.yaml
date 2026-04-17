@@ -3,6 +3,17 @@ slug: factory-droid
 display_name: ""
 last_verified: ""
 content_types:
+  agents:
+    supported: true
+    capabilities:
+      definition_format:
+        supported: true
+        mechanism: single-file .md droids with system prompt, model preference, and tooling policy documented under 'Configuration' heading
+        confidence: inferred
+      tool_restrictions:
+        supported: true
+        mechanism: categorical tool policy using named categories (filesystem, shell, search, browser, web_fetch) documented under 'Tool categories → concrete tools' heading
+        confidence: inferred
   hooks:
     supported: true
     capabilities:
