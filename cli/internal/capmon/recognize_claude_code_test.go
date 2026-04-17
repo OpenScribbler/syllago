@@ -76,13 +76,41 @@ var realClaudeCodeRulesLandmarks = []string{
 	"Troubleshoot memory issues",
 }
 
+// realClaudeCodeHooksLandmarks is a snapshot of the H2/H3 headings extracted
+// from code.claude.com/docs/en/hooks.md as of 2026-04-16. Source of truth:
+// .capmon-cache/claude-code/hooks.0/extracted.json. Update when the doc evolves.
+var realClaudeCodeHooksLandmarks = []string{
+	"Documentation Index",
+	"Hooks reference",
+	"Hook lifecycle",
+	"How a hook resolves",
+	"Configuration",
+	"Hook locations",
+	"Matcher patterns",
+	"Hook handler fields",
+	"Common fields",
+	"Command hook fields",
+	"HTTP hook fields",
+	"Prompt and agent hook fields",
+	"Hook input and output",
+	"Common input fields",
+	"JSON output",
+	"Decision control",
+	"Permission update entries",
+	"Run hooks in the background",
+	"Configure an async hook",
+	"How async hooks execute",
+	"Security best practices",
+}
+
 // TestRecognizeClaudeCode_RealLandmarks proves the canary path: feeding the
-// recognizer the merged real landmarks from the live skills + rules docs
-// produces a non-empty result with both content types' expected capability
-// sets at confidence "inferred" (and the static facts at "confirmed").
+// recognizer the merged real landmarks from the live skills + rules + hooks
+// docs produces a non-empty result with all three content types' expected
+// capability sets at confidence "inferred" (and the static facts at "confirmed").
 func TestRecognizeClaudeCode_RealLandmarks(t *testing.T) {
 	merged := append([]string{}, realClaudeCodeLandmarks...)
 	merged = append(merged, realClaudeCodeRulesLandmarks...)
+	merged = append(merged, realClaudeCodeHooksLandmarks...)
 	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
 		Provider:  "claude-code",
 		Format:    "markdown",
@@ -153,6 +181,29 @@ func TestRecognizeClaudeCode_RealLandmarks(t *testing.T) {
 		}
 		if got := caps["rules.capabilities."+c+".confidence"]; got != "inferred" {
 			t.Errorf("rules.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+
+	// Hooks content type must also recognize on the merged landmarks
+	if caps["hooks.supported"] != "true" {
+		t.Error("hooks.supported missing")
+	}
+	hooksCaps := []string{
+		"handler_types",
+		"matcher_patterns",
+		"decision_control",
+		"async_execution",
+		"hook_scopes",
+		"json_io_protocol",
+		"permission_control",
+	}
+	for _, c := range hooksCaps {
+		key := "hooks.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["hooks.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("hooks.%s.confidence = %q, want inferred", c, got)
 		}
 	}
 }
