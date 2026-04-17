@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-04-14T17:20:26.414Z",
   "lifetime": {
-    "total_tokens_estimated": 1380358,
-    "total_reads": 850,
-    "total_writes": 853,
-    "total_sessions": 70,
-    "anatomy_hits": 230,
+    "total_tokens_estimated": 1393603,
+    "total_reads": 855,
+    "total_writes": 857,
+    "total_sessions": 90,
+    "anatomy_hits": 235,
     "anatomy_misses": 498,
-    "repeated_reads_blocked": 311,
-    "estimated_savings_vs_bare_cli": 620405
+    "repeated_reads_blocked": 316,
+    "estimated_savings_vs_bare_cli": 631351
   },
   "sessions": [
     {
@@ -11206,6 +11206,73 @@
         "writes_count": 0,
         "repeated_reads_blocked": 0,
         "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-17-0917",
+      "started": "2026-04-17T16:17:18.094Z",
+      "ended": "2026-04-17T16:45:37.161Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_gemini_cli_test.go",
+          "tokens_estimated": 3258,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cline_test.go",
+          "tokens_estimated": 4356,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_pi_test.go",
+          "tokens_estimated": 1125,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-epic5-agents-recognition.md",
+          "tokens_estimated": 848,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_gemini_cli_test.go",
+          "tokens_estimated": 1252,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_pi_test.go",
+          "tokens_estimated": 909,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-epic5-agents-recognition.md",
+          "tokens_estimated": 54,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-epic5-agents-recognition.md",
+          "tokens_estimated": 263,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 10767,
+        "output_tokens_estimated": 2478,
+        "reads_count": 5,
+        "writes_count": 4,
+        "repeated_reads_blocked": 5,
+        "anatomy_lookups": 5
       }
     }
   ],

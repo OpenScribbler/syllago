@@ -1,11 +1,38 @@
 {
-  "session_id": "session-2026-04-17-0707",
-  "started": "2026-04-17T14:07:21.726Z",
-  "files_read": {},
-  "files_written": [],
-  "edit_counts": {},
+  "session_id": "session-2026-04-17-1009",
+  "started": "2026-04-17T17:09:47.037Z",
+  "files_read": {
+    "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_release_notes_no_internal_labels.md": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-17T17:09:58.157Z"
+    },
+    "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-17T17:10:35.009Z"
+    }
+  },
+  "files_written": [
+    {
+      "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_release_notes_no_internal_labels.md",
+      "action": "create",
+      "tokens": 917,
+      "at": "2026-04-17T17:10:29.207Z"
+    },
+    {
+      "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+      "action": "edit",
+      "tokens": 71,
+      "at": "2026-04-17T17:10:41.223Z"
+    }
+  ],
+  "edit_counts": {
+    "../../../.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_release_notes_no_internal_labels.md": 1,
+    "../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md": 1
+  },
   "anatomy_hits": 0,
-  "anatomy_misses": 0,
+  "anatomy_misses": 2,
   "repeated_reads_warned": 0,
   "cerebrum_warnings": 0,
   "stop_count": 0
