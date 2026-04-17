@@ -157,3 +157,113 @@ func TestRecognizeCodex_RulesAnchorsMissing(t *testing.T) {
 		t.Errorf("expected zero capabilities, got %d: %v", len(result.Capabilities), result.Capabilities)
 	}
 }
+
+// realCodexHooksLandmarks is the snapshot of type names extracted from codex's
+// 16 hooks cache sources (.capmon-cache/codex/hooks.{0..15}/extracted.json) as
+// of 2026-04-16. Sources span:
+//   - hooks.0-9 : JSON Schema files (5 events × input + output schemas)
+//   - hooks.10-13: TypeScript v2 protocol enums (HookEventName, HookHandlerType,
+//     HookExecutionMode, HookScope)
+//   - hooks.14-15: Rust source (engine config + types)
+//
+// Type names are emitted as landmarks by the JSON Schema and TypeScript
+// extractors. Update this fixture when upstream codex evolves.
+var realCodexHooksLandmarks = []string{
+	// JSON Schema event input/output type names
+	"PreToolUseToolInput",
+	"PreToolUseDecisionWire",
+	"PreToolUseHookSpecificOutputWire",
+	"PreToolUsePermissionDecisionWire",
+	"PostToolUseToolInput",
+	"BlockDecisionWire",
+	"PostToolUseHookSpecificOutputWire",
+	"SessionStartHookSpecificOutputWire",
+	"UserPromptSubmitHookSpecificOutputWire",
+	"HookEventNameWire",
+	"NullableString",
+	// TypeScript protocol enum names
+	"HookEventName",
+	"HookHandlerType",
+	"HookExecutionMode",
+	"HookScope",
+	// Rust engine + types struct names
+	"HooksFile",
+	"HookEvents",
+	"MatcherGroup",
+	"HookHandlerConfig",
+	"HookFn",
+	"HookResult",
+	"HookResponse",
+	"Hook",
+	"HookPayload",
+	"HookEventAfterAgent",
+	"HookToolKind",
+	"HookToolInputLocalShell",
+	"HookToolInput",
+	"HookEventAfterToolUse",
+	"HookEvent",
+}
+
+// TestRecognizeCodex_RealHooksLandmarks proves hooks recognition fires against
+// the merged 16-source landmark snapshot. Per the curated format YAML
+// (docs/provider-formats/codex.yaml), 8 of the 9 canonical hooks keys are
+// supported — only json_io_protocol is curated as unsupported (codex hooks use
+// exit codes + stdout text, not structured JSON I/O).
+func TestRecognizeCodex_RealHooksLandmarks(t *testing.T) {
+	result := capmon.RecognizeWithContext("codex", capmon.RecognitionContext{
+		Provider:  "codex",
+		Format:    "markdown",
+		Landmarks: realCodexHooksLandmarks,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["hooks.supported"] != "true" {
+		t.Error("hooks.supported missing")
+	}
+	hooksInferred := []string{
+		"handler_types",
+		"matcher_patterns",
+		"decision_control",
+		"input_modification",
+		"async_execution",
+		"hook_scopes",
+		"context_injection",
+		"permission_control",
+	}
+	for _, c := range hooksInferred {
+		key := "hooks.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["hooks.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("hooks.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	if _, has := caps["hooks.capabilities.json_io_protocol.supported"]; has {
+		t.Error("hooks.capabilities.json_io_protocol should NOT be present for codex (curated as unsupported)")
+	}
+}
+
+// TestRecognizeCodex_HooksAnchorsMissing proves the required-anchor guard
+// suppresses hooks emission when "HookScope" is absent — without the guard,
+// substring matchers like "HookHandlerType" would fire on partial cache states.
+func TestRecognizeCodex_HooksAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realCodexHooksLandmarks))
+	for _, lm := range realCodexHooksLandmarks {
+		if lm == "HookScope" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("codex", capmon.RecognitionContext{
+		Provider:  "codex",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["hooks.supported"]; has {
+		t.Error("hooks.supported should NOT be present when 'HookScope' anchor is missing")
+	}
+}

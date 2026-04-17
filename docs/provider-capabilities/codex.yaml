@@ -3,6 +3,41 @@ slug: codex
 display_name: ""
 last_verified: ""
 content_types:
+  hooks:
+    supported: true
+    capabilities:
+      async_execution:
+        supported: true
+        mechanism: 'hook_execution_mode: Codex supports sync and async hook execution modes for fire-and-forget background hook runs (HookExecutionMode.ts enum)'
+        confidence: inferred
+      context_injection:
+        supported: true
+        mechanism: 'hook_system_message: UserPromptSubmit and SessionStart hooks inject context via the additionalContext field on *HookSpecificOutputWire types'
+        confidence: inferred
+      decision_control:
+        supported: true
+        mechanism: 'hook_result_abort: Codex hooks can abort (block) the triggering action via decision wire types (BlockDecisionWire / PreToolUseDecisionWire in event output schemas)'
+        confidence: inferred
+      handler_types:
+        supported: true
+        mechanism: 'hook_handler_types: Codex supports shell command, LLM prompt, and agent handler types (HookHandlerType.ts enum, HookHandlerConfig in config.rs)'
+        confidence: inferred
+      hook_scopes:
+        supported: true
+        mechanism: 'hook_scope: Codex hooks can be scoped to global/user or project configuration (HookScope.ts enum)'
+        confidence: inferred
+      input_modification:
+        supported: true
+        mechanism: 'hook_updated_input: PreToolUse hooks return modified tool input via the updatedInput field on PreToolUseHookSpecificOutputWire'
+        confidence: inferred
+      matcher_patterns:
+        supported: true
+        mechanism: 'hook_matcher: Codex hooks support pattern matching to filter which tools or events trigger the hook (MatcherGroup struct in config.rs)'
+        confidence: inferred
+      permission_control:
+        supported: true
+        mechanism: 'hook_permission_decision: PreToolUse hooks return allow/deny/ask permission decisions via PreToolUsePermissionDecisionWire'
+        confidence: inferred
   rules:
     supported: true
     capabilities:

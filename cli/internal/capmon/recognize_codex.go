@@ -69,11 +69,69 @@ func codexRulesLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeCodex recognizes skills + rules capabilities for the Codex provider.
-// Codex implements the Agent Skills open standard. Skills source is Rust;
-// rules source is markdown. Recognition fires only if the extractor surfaces
-// fields under one of the 5 included struct prefixes (see codexSkillsOptions),
-// or landmarks under codexRulesLandmarkOptions.
+// codexHooksLandmarkOptions returns the landmark patterns for Codex's hooks
+// evidence. Codex's hooks subsystem has the richest typed-source surface of
+// any provider — 16 cache sources spanning JSON Schema files (hooks.0-9, one
+// input + output schema per event), TypeScript v2 protocol enums (hooks.10-13),
+// and Rust source (hooks.14 engine config + hooks.15 types).
+//
+// The JSON Schema and TypeScript extractors emit type names as landmarks
+// (e.g. "PreToolUseDecisionWire", "HookHandlerType", "HookExecutionMode")
+// rather than field-level data. The Rust extractor emits both struct names
+// and fields, but landmark recognition reads only the names. Capability
+// detection therefore proxies through type-name presence.
+//
+// Per the curated format YAML (docs/provider-formats/codex.yaml), 8 of the 9
+// canonical hooks keys are supported — only json_io_protocol is curated as
+// unsupported (codex hooks communicate via exit codes + stdout text rather
+// than structured JSON I/O). The 8 supported keys map to type-name landmarks:
+//
+//	handler_types       → HookHandlerType (TS) / HookHandlerConfig (Rust)
+//	matcher_patterns    → MatcherGroup (Rust config.rs)
+//	decision_control    → BlockDecisionWire / PreToolUseDecisionWire (JSON Schema)
+//	input_modification  → PreToolUseHookSpecificOutputWire (holds updatedInput)
+//	async_execution     → HookExecutionMode (TS)
+//	hook_scopes         → HookScope (TS)
+//	context_injection   → UserPromptSubmitHookSpecificOutputWire (holds additionalContext)
+//	permission_control  → PreToolUsePermissionDecisionWire (JSON Schema)
+//
+// Required anchors are unique to hooks evidence — they distinguish hooks
+// landmarks from skills/rules/agents/commands/mcp landmarks within codex:
+//   - "HookEventName" — substring matches "HookEventName" (TS) and
+//     "HookEventNameWire" (JSON Schema); both are unmistakably hooks vocabulary
+//   - "HookScope" — TS enum name unique to hooks
+func codexHooksLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "HookEventName", CaseInsensitive: true},
+		{Kind: "substring", Value: "HookScope", CaseInsensitive: true},
+	}
+	return HooksLandmarkOptions(
+		HooksLandmarkPattern("handler_types", "HookHandlerType",
+			"hook_handler_types: Codex supports shell command, LLM prompt, and agent handler types (HookHandlerType.ts enum, HookHandlerConfig in config.rs)", required),
+		HooksLandmarkPattern("matcher_patterns", "MatcherGroup",
+			"hook_matcher: Codex hooks support pattern matching to filter which tools or events trigger the hook (MatcherGroup struct in config.rs)", required),
+		HooksLandmarkPattern("decision_control", "BlockDecisionWire",
+			"hook_result_abort: Codex hooks can abort (block) the triggering action via decision wire types (BlockDecisionWire / PreToolUseDecisionWire in event output schemas)", required),
+		HooksLandmarkPattern("input_modification", "PreToolUseHookSpecificOutputWire",
+			"hook_updated_input: PreToolUse hooks return modified tool input via the updatedInput field on PreToolUseHookSpecificOutputWire", required),
+		HooksLandmarkPattern("async_execution", "HookExecutionMode",
+			"hook_execution_mode: Codex supports sync and async hook execution modes for fire-and-forget background hook runs (HookExecutionMode.ts enum)", required),
+		HooksLandmarkPattern("hook_scopes", "HookScope",
+			"hook_scope: Codex hooks can be scoped to global/user or project configuration (HookScope.ts enum)", required),
+		HooksLandmarkPattern("context_injection", "UserPromptSubmitHookSpecificOutputWire",
+			"hook_system_message: UserPromptSubmit and SessionStart hooks inject context via the additionalContext field on *HookSpecificOutputWire types", required),
+		HooksLandmarkPattern("permission_control", "PreToolUsePermissionDecisionWire",
+			"hook_permission_decision: PreToolUse hooks return allow/deny/ask permission decisions via PreToolUsePermissionDecisionWire", required),
+	)
+}
+
+// recognizeCodex recognizes skills + rules + hooks capabilities for the Codex
+// provider. Codex implements the Agent Skills open standard. Skills source is
+// Rust; rules source is markdown; hooks source spans JSON Schema, TypeScript,
+// and Rust files (16 cache entries). Recognition fires only if the extractor
+// surfaces fields under one of the 5 included struct prefixes (see
+// codexSkillsOptions), landmarks under codexRulesLandmarkOptions, or landmarks
+// under codexHooksLandmarkOptions.
 func recognizeCodex(ctx RecognitionContext) RecognitionResult {
 	skillsCaps := recognizeGoStruct(ctx.Fields, codexSkillsOptions())
 	if len(skillsCaps) > 0 {
@@ -84,6 +142,7 @@ func recognizeCodex(ctx RecognitionContext) RecognitionResult {
 	skillsResult := wrapCapabilities(skillsCaps)
 
 	rulesResult := recognizeLandmarks(ctx, codexRulesLandmarkOptions())
+	hooksResult := recognizeLandmarks(ctx, codexHooksLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
 }
