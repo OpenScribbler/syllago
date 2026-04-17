@@ -104,13 +104,18 @@ var realClaudeCodeHooksLandmarks = []string{
 }
 
 // TestRecognizeClaudeCode_RealLandmarks proves the canary path: feeding the
-// recognizer the merged real landmarks from the live skills + rules + hooks
-// docs produces a non-empty result with all three content types' expected
+// recognizer the merged real landmarks from the live skills + rules + hooks +
+// mcp docs produces a non-empty result with all four content types' expected
 // capability sets at confidence "inferred" (and the static facts at "confirmed").
+//
+// All four content types' landmarks must be merged because each content type's
+// required-anchor guard scans the full landmark list — omitting any one would
+// cause that content type's anchors to surface in MissingAnchors.
 func TestRecognizeClaudeCode_RealLandmarks(t *testing.T) {
 	merged := append([]string{}, realClaudeCodeLandmarks...)
 	merged = append(merged, realClaudeCodeRulesLandmarks...)
 	merged = append(merged, realClaudeCodeHooksLandmarks...)
+	merged = append(merged, realClaudeCodeMcpLandmarks...)
 	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
 		Provider:  "claude-code",
 		Format:    "markdown",
@@ -264,5 +269,104 @@ func TestRecognizeClaudeCode_NoLandmarks(t *testing.T) {
 	}
 	if len(result.Capabilities) != 0 {
 		t.Errorf("expected zero capabilities, got %d", len(result.Capabilities))
+	}
+}
+
+// realClaudeCodeMcpLandmarks is a snapshot of the H2/H3 headings extracted
+// from code.claude.com/docs/en/mcp.md as of 2026-04-16. Source of truth:
+// .capmon-cache/claude-code/mcp.0/extracted.json — 51 headings across
+// transports, scopes, OAuth, env-var expansion, allowlists, resource
+// referencing, and managed configuration. Update when the doc evolves.
+var realClaudeCodeMcpLandmarks = []string{
+	"Documentation Index",
+	"Connect Claude Code to tools via MCP",
+	"What you can do with MCP",
+	"Popular MCP servers",
+	"Installing MCP servers",
+	"Option 1: Add a remote HTTP server",
+	"Option 2: Add a remote SSE server",
+	"Option 3: Add a local stdio server",
+	"Managing your servers",
+	"MCP installation scopes",
+	"Local scope",
+	"Project scope",
+	"User scope",
+	"Scope hierarchy and precedence",
+	"Environment variable expansion in .mcp.json",
+	"Authenticate with remote MCP servers",
+	"Use a fixed OAuth callback port",
+	"Use pre-configured OAuth credentials",
+	"Override OAuth metadata discovery",
+	"Use dynamic headers for custom authentication",
+	"Add MCP servers from JSON configuration",
+	"Use MCP resources",
+	"Reference MCP resources",
+	"Managed MCP configuration",
+	"Option 1: Exclusive control with managed-mcp.json",
+	"Option 2: Policy-based control with allowlists and denylists",
+	"Allowlist behavior (allowedMcpServers)",
+	"Denylist behavior (deniedMcpServers)",
+}
+
+// TestRecognizeClaudeCode_RealMcpLandmarks proves MCP recognition fires against
+// the real cache snapshot — emits 7 of 8 canonical MCP keys at "inferred"
+// confidence (auto_approve intentionally absent — Claude Code's MCP doc has no
+// per-tool/per-server auto-approval heading above the hooks/permissions layer).
+func TestRecognizeClaudeCode_RealMcpLandmarks(t *testing.T) {
+	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
+		Provider:  "claude-code",
+		Format:    "markdown",
+		Landmarks: realClaudeCodeMcpLandmarks,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["mcp.supported"] != "true" {
+		t.Error("mcp.supported missing")
+	}
+	mcpInferred := []string{
+		"transport_types",
+		"oauth_support",
+		"env_var_expansion",
+		"tool_filtering",
+		"resource_referencing",
+		"enterprise_management",
+		"marketplace",
+	}
+	for _, c := range mcpInferred {
+		key := "mcp.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["mcp.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("mcp.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	if _, has := caps["mcp.capabilities.auto_approve.supported"]; has {
+		t.Error("mcp.capabilities.auto_approve should NOT be present (no heading evidence in claude-code docs)")
+	}
+}
+
+// TestRecognizeClaudeCode_McpAnchorsMissing proves the required-anchor guard
+// suppresses MCP emission when 'MCP installation scopes' is absent — without
+// the guard, substring patterns like "Use MCP resources" could fire on any
+// content type cached from a doc that mentions MCP in passing.
+func TestRecognizeClaudeCode_McpAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realClaudeCodeMcpLandmarks))
+	for _, lm := range realClaudeCodeMcpLandmarks {
+		if lm == "MCP installation scopes" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
+		Provider:  "claude-code",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["mcp.supported"]; has {
+		t.Error("mcp.supported should NOT be present when 'MCP installation scopes' anchor is missing")
 	}
 }

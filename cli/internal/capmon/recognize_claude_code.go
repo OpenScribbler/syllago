@@ -114,8 +114,51 @@ func claudeCodeHooksLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeClaudeCode recognizes skills + rules + hooks capabilities for the
-// Claude Code provider. Source for all three content types is markdown
+// claudeCodeMcpLandmarkOptions returns the landmark patterns for Claude Code's
+// MCP documentation. Anchors derived from .capmon-cache/claude-code/mcp.0/
+// extracted.json (https://code.claude.com/docs/en/mcp.md) — 51 H2/H3 headings
+// across transport types, scopes, OAuth, env-var expansion, allowlists, and
+// resource referencing.
+//
+// Required anchors are unique to the MCP doc: "MCP installation scopes" and
+// "Connect Claude Code to tools via MCP" appear in no other content-type doc,
+// so this guard prevents MCP patterns from firing on a context that includes
+// only skills, rules, or hooks landmarks.
+//
+// auto_approve is intentionally NOT mapped — Claude Code's MCP docs do not
+// document a per-tool or per-server auto-approval mechanism above the
+// permission-prompt layer described in the hooks/permissions docs. If the
+// upstream docs add such a heading later, add a McpLandmarkPattern here.
+//
+// transport_types is emitted as the bare object key (no .stdio/.sse/.http
+// nesting) because the seeder pipeline treats per-key supported as the
+// minimum signal — nested transport flags would require evidence beyond
+// heading presence (e.g., schema enum values).
+func claudeCodeMcpLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "MCP installation scopes", CaseInsensitive: true},
+		{Kind: "substring", Value: "Connect Claude Code to tools via MCP", CaseInsensitive: true},
+	}
+	return McpLandmarkOptions(
+		McpLandmarkPattern("transport_types", "Add a remote HTTP server",
+			"three transport options documented under 'Option 1: Add a remote HTTP server' / 'Option 2: Add a remote SSE server' / 'Option 3: Add a local stdio server' headings", required),
+		McpLandmarkPattern("oauth_support", "Authenticate with remote MCP servers",
+			"OAuth 2.0 with callback port + pre-configured credentials documented under 'Authenticate with remote MCP servers' / 'Use a fixed OAuth callback port' / 'Use pre-configured OAuth credentials' headings", required),
+		McpLandmarkPattern("env_var_expansion", "Environment variable expansion in .mcp.json",
+			"env-var expansion in .mcp.json documented under 'Environment variable expansion in .mcp.json' heading", required),
+		McpLandmarkPattern("tool_filtering", "Allowlist behavior",
+			"allowlist + denylist tool filtering documented under 'Allowlist behavior (allowedMcpServers)' / 'Denylist behavior (deniedMcpServers)' headings", required),
+		McpLandmarkPattern("resource_referencing", "Use MCP resources",
+			"MCP resource @-mention referencing documented under 'Use MCP resources' / 'Reference MCP resources' headings", required),
+		McpLandmarkPattern("enterprise_management", "Managed MCP configuration",
+			"managed MCP config with managed-mcp.json + allowlists/denylists documented under 'Managed MCP configuration' / 'Option 1: Exclusive control with managed-mcp.json' / 'Option 2: Policy-based control with allowlists and denylists' headings", required),
+		McpLandmarkPattern("marketplace", "Popular MCP servers",
+			"in-doc curated server list documented under 'Popular MCP servers' heading; Claude Code surfaces servers via this catalog rather than an in-IDE marketplace", required),
+	)
+}
+
+// recognizeClaudeCode recognizes skills + rules + hooks + mcp capabilities for
+// the Claude Code provider. Source for all four content types is markdown
 // documentation, so recognition uses landmark (heading) matching rather than
 // typed-source struct extraction. Capabilities emitted at confidence "inferred"
 // — recognizeLandmarks enforces this.
@@ -133,6 +176,7 @@ func recognizeClaudeCode(ctx RecognitionContext) RecognitionResult {
 
 	rulesResult := recognizeLandmarks(ctx, claudeCodeRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, claudeCodeHooksLandmarkOptions())
+	mcpResult := recognizeLandmarks(ctx, claudeCodeMcpLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult)
 }
