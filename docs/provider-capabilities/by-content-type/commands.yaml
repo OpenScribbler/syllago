@@ -1,0 +1,35 @@
+# THIS FILE IS GENERATED. Do not edit directly.
+# Source: docs/provider-capabilities/*.yaml
+# Generated at: 2026-04-17T16:13:10Z
+
+content_type: commands
+providers:
+    cline:
+        supported: true
+        capabilities:
+            builtin_commands:
+                supported: true
+                mechanism: 6 built-in slash commands documented as individual headings (/newtask, /smol, /newrule, /deep-planning, /explain-changes, /reportbug); hardcoded, not user-modifiable
+                confidence: inferred
+    factory-droid:
+        supported: true
+        capabilities:
+            argument_substitution:
+                supported: true
+                mechanism: $ARGUMENTS substitution in Markdown commands plus positional shell args ($1, $2, ...) in Executable commands documented under '2 · Markdown commands' / '3 · Executable commands' / '5 · Usage patterns' headings
+                confidence: inferred
+    gemini-cli:
+        supported: true
+        capabilities:
+            argument_substitution:
+                supported: true
+                mechanism: '{{args}} placeholder substitution plus !{...} shell-injection and @{...} file-injection escapes documented under ''Handling arguments'' / ''1. Context-aware injection with {{args}}'' / ''3. Executing shell commands with !{...}'' / ''4. Injecting file content with @{...}'' headings'
+                confidence: inferred
+    pi:
+        supported: true
+        capabilities:
+            argument_substitution:
+                supported: true
+                mechanism: positional shell-style substitution ($1, $2, $@, $ARGUMENTS, ${@:N}, ${@:N:L}) documented under 'Argument Hints' / 'Arguments' / 'Usage' headings
+                confidence: inferred
+schema_version: "1"
