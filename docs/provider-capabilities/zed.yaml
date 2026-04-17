@@ -2,4 +2,18 @@ schema_version: "1"
 slug: zed
 display_name: ""
 last_verified: ""
-content_types: {}
+content_types:
+  rules:
+    supported: true
+    capabilities:
+      activation_mode:
+        supported: true
+        capabilities:
+          always_on:
+            supported: true
+            mechanism: project-root .rules file (or first-match fallback name) auto-included in every Agent Panel interaction; Library entries marked as Default Rules also load always_on (documented under '.rules files' / 'Default Rules')
+            confidence: inferred
+          slash_command:
+            supported: true
+            mechanism: Library rules invoked via slash command to inject the rule into the current agent context (documented under 'Slash Commands in Rules')
+            confidence: inferred
