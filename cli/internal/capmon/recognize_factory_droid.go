@@ -83,10 +83,33 @@ func factoryDroidHooksLandmarkOptions() LandmarkOptions {
 	)
 }
 
+// MCP recognition is intentionally NOT wired for factory-droid.
+//
+// The cached MCP source (.capmon-cache/factory-droid/mcp.0/extracted.json)
+// is the docs.factory.ai/llms.txt index — a flat list of links whose
+// landmarks array contains only 4 generic entries: "Factory Documentation",
+// "Docs", "OpenAPI Specs", "Optional". None of these can anchor canonical
+// MCP keys via substring matching.
+//
+// Per docs/provider-formats/factory-droid.yaml, all 8 canonical MCP keys
+// are curated as unsupported (inferred). The curator's notes confirm the
+// gap: "Full MCP config details require the /cli/configuration/mcp.md page
+// (not fetched — source here is the llms.txt index only)." The provider
+// extensions list two MCP-related features (mcp_manager_ui,
+// factory_as_mcp_server) but those are non-portable extensions, not
+// canonical MCP-protocol capabilities.
+//
+// Recognizer silence is the right move — emitting "supported" for any
+// canonical key based on llms.txt nav landmarks would be a false positive.
+// MCP recognition can be wired once the Mintlify SPA mcp.md page is in
+// the cache and yields heading-level evidence.
+
 // recognizeFactoryDroid recognizes skills + hooks capabilities for the Factory
 // Droid provider. Source for both is markdown documentation (Mintlify SPA);
 // recognition uses landmark matching. Static facts merge in at "confirmed"
-// confidence after a successful skills landmark match.
+// confidence after a successful skills landmark match. MCP recognition is
+// intentionally absent — see the comment block immediately above this
+// function for rationale.
 func recognizeFactoryDroid(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, factoryDroidLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
