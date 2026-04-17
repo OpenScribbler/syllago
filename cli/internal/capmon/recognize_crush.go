@@ -22,6 +22,29 @@ func init() {
 // real but undocumented separately, so its rules.* dot-paths remain
 // "not_evaluated" until either a format-spec doc is added or the policy
 // changes.
+//
+// MCP recognition is intentionally NOT implemented for crush. The cached
+// MCP evidence (.capmon-cache/crush/mcp.0 + mcp.1) splits across two
+// incompatible shapes:
+//
+//   - mcp.0: JSON Schema with field-level paths like
+//     "$defs.MCPConfig.properties.disabled_tools" and ".type", ".url",
+//     ".command", ".args", ".env", ".headers", ".timeout". The
+//     recognizeGoStruct field extractor reads "Type.field" prefixes (e.g.
+//     "SkillMetadata.") — a different shape from JSON Schema's nested
+//     "$defs.X.properties.Y" paths that GoStructOptions cannot match.
+//   - mcp.1: README-style markdown with one inline mention
+//     ("Extensible: add capabilities via MCPs (http, stdio, and sse)").
+//     A single sentence in a feature bullet is insufficient anchor
+//     evidence to disambiguate canonical MCP keys via landmark matching.
+//
+// Same scope constraint as codex MCP — wiring crush MCP recognition would
+// require a JSON-Schema field extractor analogous to GoStructOptions but
+// reading "$defs.X.properties.Y" paths. Out of scope for Phase 6 Epic 4.
+// Crush's MCP capabilities therefore remain "not_evaluated" in
+// docs/provider-capabilities/crush.yaml until either the JSON-Schema
+// field extractor exists or a curated docs/provider-formats/crush.yaml
+// supplies values.
 func recognizeCrush(ctx RecognitionContext) RecognitionResult {
 	result := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
 	if len(result) == 0 {
