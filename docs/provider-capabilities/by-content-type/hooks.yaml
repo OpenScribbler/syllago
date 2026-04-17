@@ -1,0 +1,160 @@
+# THIS FILE IS GENERATED. Do not edit directly.
+# Source: docs/provider-capabilities/*.yaml
+# Generated at: 2026-04-17T16:13:10Z
+
+content_type: hooks
+providers:
+    amp:
+        supported: true
+        capabilities:
+            matcher_patterns:
+                supported: true
+                mechanism: per-tool input matching documented under 'Match Conditions' / 'Regular Expression Patterns' headings (hook_match_input_contains)
+                confidence: inferred
+            permission_control:
+                supported: true
+                mechanism: hooks integrate with amp's permission system to control tool availability (documented under 'How Permissions Work' / 'Add Rules' headings)
+                confidence: inferred
+    claude-code:
+        supported: true
+        capabilities:
+            async_execution:
+                supported: true
+                mechanism: async execution documented under 'Run hooks in the background' / 'Configure an async hook' / 'How async hooks execute' headings
+                confidence: inferred
+            decision_control:
+                supported: true
+                mechanism: decision control documented under 'Decision control' heading (exit codes + JSON output fields)
+                confidence: inferred
+            handler_types:
+                supported: true
+                mechanism: four handler types documented under 'Hook handler fields' (Common fields, Command hook fields, HTTP hook fields, Prompt and agent hook fields)
+                confidence: inferred
+            hook_scopes:
+                supported: true
+                mechanism: hook scopes documented under 'Hook locations' heading (user, project, local, managed policy, plugin, component frontmatter)
+                confidence: inferred
+            json_io_protocol:
+                supported: true
+                mechanism: JSON I/O protocol documented under 'Hook input and output' / 'JSON output' headings (continue, stopReason, suppressOutput, systemMessage, hookSpecificOutput)
+                confidence: inferred
+            matcher_patterns:
+                supported: true
+                mechanism: matcher patterns documented under 'Matcher patterns' heading (exact, pipe-separated, regex)
+                confidence: inferred
+            permission_control:
+                supported: true
+                mechanism: permission control documented under 'PermissionRequest' / 'Permission update entries' headings (addRules/replaceRules/removeRules/setMode)
+                confidence: inferred
+    cline:
+        supported: true
+        capabilities:
+            context_injection:
+                supported: true
+                mechanism: context injection documented under 'Context Modification' heading
+                confidence: inferred
+            handler_types:
+                supported: true
+                mechanism: hook handler types documented under 'Hook Types' heading
+                confidence: inferred
+            hook_scopes:
+                supported: true
+                mechanism: hook scopes documented under 'Hook Locations' heading (project + global)
+                confidence: inferred
+            json_io_protocol:
+                supported: true
+                mechanism: JSON I/O protocol documented under 'Input Structure' / 'Output Structure' headings
+                confidence: inferred
+    codex:
+        supported: true
+        capabilities:
+            async_execution:
+                supported: true
+                mechanism: 'hook_execution_mode: Codex supports sync and async hook execution modes for fire-and-forget background hook runs (HookExecutionMode.ts enum)'
+                confidence: inferred
+            context_injection:
+                supported: true
+                mechanism: 'hook_system_message: UserPromptSubmit and SessionStart hooks inject context via the additionalContext field on *HookSpecificOutputWire types'
+                confidence: inferred
+            decision_control:
+                supported: true
+                mechanism: 'hook_result_abort: Codex hooks can abort (block) the triggering action via decision wire types (BlockDecisionWire / PreToolUseDecisionWire in event output schemas)'
+                confidence: inferred
+            handler_types:
+                supported: true
+                mechanism: 'hook_handler_types: Codex supports shell command, LLM prompt, and agent handler types (HookHandlerType.ts enum, HookHandlerConfig in config.rs)'
+                confidence: inferred
+            hook_scopes:
+                supported: true
+                mechanism: 'hook_scope: Codex hooks can be scoped to global/user or project configuration (HookScope.ts enum)'
+                confidence: inferred
+            input_modification:
+                supported: true
+                mechanism: 'hook_updated_input: PreToolUse hooks return modified tool input via the updatedInput field on PreToolUseHookSpecificOutputWire'
+                confidence: inferred
+            matcher_patterns:
+                supported: true
+                mechanism: 'hook_matcher: Codex hooks support pattern matching to filter which tools or events trigger the hook (MatcherGroup struct in config.rs)'
+                confidence: inferred
+            permission_control:
+                supported: true
+                mechanism: 'hook_permission_decision: PreToolUse hooks return allow/deny/ask permission decisions via PreToolUsePermissionDecisionWire'
+                confidence: inferred
+    copilot-cli:
+        supported: true
+        capabilities:
+            handler_types:
+                supported: true
+                mechanism: hook handler types documented under 'Hook types' heading (session, prompt, tool, error)
+                confidence: inferred
+            json_io_protocol:
+                supported: true
+                mechanism: JSON I/O protocol documented under 'Reading input' / 'Outputting JSON' headings
+                confidence: inferred
+    factory-droid:
+        supported: true
+        capabilities:
+            decision_control:
+                supported: true
+                mechanism: 'hook_exit_code_behavior: Factory Droid hooks use exit codes to signal block (non-zero) or allow (zero) decisions on the triggering action; documented under per-event ''Decision Control'' headings'
+                confidence: inferred
+    gemini-cli:
+        supported: true
+        capabilities:
+            decision_control:
+                supported: true
+                mechanism: decision control via exit codes documented under 'Exit codes' heading (non-zero blocks, zero allows)
+                confidence: inferred
+            json_io_protocol:
+                supported: true
+                mechanism: JSON I/O protocol documented under 'Strict JSON requirements' / 'Common output fields' headings
+                confidence: inferred
+            matcher_patterns:
+                supported: true
+                mechanism: event/tool matchers documented under 'Matchers' / 'Matchers and tool names' headings
+                confidence: inferred
+    kiro:
+        supported: true
+    pi:
+        supported: true
+        capabilities:
+            handler_types:
+                supported: true
+                mechanism: TypeScript-native extension handlers documented under 'Writing an Extension' / 'Extension Styles' (beyond shell-only)
+                confidence: inferred
+            input_modification:
+                supported: true
+                mechanism: tool_call event handlers can intercept and modify tool call inputs before execution (documented under 'tool_call' event)
+                confidence: inferred
+    windsurf:
+        supported: true
+        capabilities:
+            hook_scopes:
+                supported: true
+                mechanism: three-tier config scopes documented under 'System-Level' / 'User-Level' / 'Workspace-Level' headings
+                confidence: inferred
+            json_io_protocol:
+                supported: true
+                mechanism: JSON event context delivered via stdin documented under 'Common Input Structure' heading
+                confidence: inferred
+schema_version: "1"

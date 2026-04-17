@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "smoke-stdio-server": {
+      "command": "echo",
+      "args": ["smoke-stdio"]
+    },
+    "smoke-http-server": {
+      "type": "http",
+      "url": "http://127.0.0.1:65535/smoke"
+    }
+  }
+}

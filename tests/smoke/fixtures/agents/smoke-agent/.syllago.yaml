@@ -1,0 +1,6 @@
+id: smoke-agent
+name: smoke-agent
+description: Test agent used by tests/smoke/.
+tags:
+  - smoke-test
+  - internal

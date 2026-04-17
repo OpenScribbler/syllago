@@ -14,22 +14,27 @@ content_types:
     canonical_mappings:
       display_name:
         supported: true
+        provider_field: "name"
         mechanism: "yaml frontmatter key: name (required)"
         confidence: confirmed
       description:
         supported: true
+        provider_field: "description"
         mechanism: "yaml frontmatter key: description (required)"
         confidence: confirmed
       license:
         supported: true
+        provider_field: "license"
         mechanism: "yaml frontmatter key: license (optional)"
         confidence: confirmed
       compatibility:
         supported: true
+        provider_field: "compatibility"
         mechanism: "yaml frontmatter key: compatibility (optional)"
         confidence: confirmed
       metadata_map:
         supported: true
+        provider_field: "metadata"
         mechanism: "yaml frontmatter key: metadata (optional map)"
         confidence: confirmed
       project_scope:

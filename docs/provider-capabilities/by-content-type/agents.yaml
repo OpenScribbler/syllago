@@ -1,0 +1,153 @@
+# THIS FILE IS GENERATED. Do not edit directly.
+# Source: docs/provider-capabilities/*.yaml
+# Generated at: 2026-04-17T16:13:10Z
+
+content_type: agents
+providers:
+    claude-code:
+        supported: true
+        capabilities:
+            agent_scopes:
+                supported: true
+                mechanism: five-tier scope hierarchy (managed > --agents CLI > project > user > plugin) documented under 'Choose the subagent scope' heading; precedence rules in scope table
+                confidence: inferred
+            definition_format:
+                supported: true
+                mechanism: markdown with YAML frontmatter (name/description required, plus tools/model/permissionMode/etc) documented under 'Write subagent files' / 'Supported frontmatter fields' headings
+                confidence: inferred
+            invocation_patterns:
+                supported: true
+                capabilities:
+                    at_mention:
+                        supported: true
+                        mechanism: '@-mention syntax guarantees a specific subagent runs for one task (documented under ''Invoke subagents explicitly'' heading)'
+                        confidence: inferred
+                    background:
+                        supported: true
+                        mechanism: foreground (blocking) vs background (concurrent) execution modes documented under 'Run subagents in foreground or background' heading
+                        confidence: inferred
+                    natural_language:
+                        supported: true
+                        mechanism: Claude decides whether to delegate based on the subagent's description (documented under 'Understand automatic delegation' heading)
+                        confidence: inferred
+            model_selection:
+                supported: true
+                mechanism: per-subagent model override (sonnet/opus/haiku alias, full model ID, or inherit) documented under 'Choose a model' heading; resolution order via CLAUDE_CODE_SUBAGENT_MODEL env var, --model flag, frontmatter, or main session
+                confidence: inferred
+            per_agent_mcp:
+                supported: true
+                mechanism: per-subagent mcpServers field scopes which MCP servers each subagent can access (documented under 'Scope MCP servers to a subagent' heading)
+                confidence: inferred
+            subagent_spawning:
+                supported: true
+                mechanism: multi-agent coordination via parallel research, chained subagents, and resumable transcripts (documented under 'Run parallel research' / 'Chain subagents' / 'Resume subagents' headings)
+                confidence: inferred
+            tool_restrictions:
+                supported: true
+                mechanism: per-subagent tool allowlist (tools), denylist (disallowedTools), and per-spawn restrictions documented under 'Control subagent capabilities' / 'Available tools' / 'Restrict which subagents can be spawned' headings
+                confidence: inferred
+    codex:
+        supported: true
+        capabilities:
+            definition_format:
+                supported: true
+                mechanism: per-agent TOML files (e.g. awaiter.toml, explorer.toml under codex-rs/core/src/agent/builtins/) with developer_instructions (system prompt), model_reasoning_effort, and runtime knobs per AgentRoleToml + AgentsToml JSON Schema types
+                confidence: inferred
+            model_selection:
+                supported: true
+                mechanism: per-agent model_reasoning_effort field in the AgentRoleToml schema (ReasoningEffort enum) — each role declares its own reasoning effort even though codex uses one backing model across roles
+                confidence: inferred
+            subagent_spawning:
+                supported: true
+                mechanism: multi-agent coordination via MultiAgentV2ConfigToml + FeatureToml_for_MultiAgentV2ConfigToml feature flag — one agent can delegate to or spawn another
+                confidence: inferred
+    copilot-cli:
+        supported: true
+        capabilities:
+            definition_format:
+                supported: true
+                mechanism: markdown files with YAML frontmatter (name, description, tools, mcpServers fields) documented under 'YAML frontmatter properties' heading
+                confidence: inferred
+            per_agent_mcp:
+                supported: true
+                mechanism: per-agent mcpServers section in YAML frontmatter scopes which MCP servers each agent can access, documented under 'MCP server configuration details' / 'MCP server configurations' headings
+                confidence: inferred
+            tool_restrictions:
+                supported: true
+                mechanism: per-agent tool allowlist via tools field, with tool aliases for renaming, documented under 'Tools' / 'Tool aliases' / 'Tools processing' headings
+                confidence: inferred
+    factory-droid:
+        supported: true
+        capabilities:
+            definition_format:
+                supported: true
+                mechanism: single-file .md droids with system prompt, model preference, and tooling policy documented under 'Configuration' heading
+                confidence: inferred
+            tool_restrictions:
+                supported: true
+                mechanism: categorical tool policy using named categories (filesystem, shell, search, browser, web_fetch) documented under 'Tool categories → concrete tools' heading
+                confidence: inferred
+    kiro:
+        supported: true
+        capabilities:
+            agent_scopes:
+                supported: true
+                capabilities:
+                    project:
+                        supported: true
+                        mechanism: project-scoped agents stored under .kiro/agents/ documented under 'Local agents (project-specific)' heading; precedence rules under 'Agent precedence'
+                        confidence: inferred
+                    user:
+                        supported: true
+                        mechanism: user-scoped agents stored under ~/.kiro/agents/ documented under 'Global agents (user-wide)' heading; precedence rules under 'Agent precedence'
+                        confidence: inferred
+            definition_format:
+                supported: true
+                mechanism: JSON config with Name/Description/Prompt fields (Inline prompt or File URI prompt) documented under 'Name field' / 'Description field' / 'Prompt field' headings
+                confidence: inferred
+            model_selection:
+                supported: true
+                mechanism: per-agent model override documented under 'Model field' heading in the configuration reference
+                confidence: inferred
+            per_agent_mcp:
+                supported: true
+                mechanism: per-agent MCP server scoping documented under 'McpServers field' heading; supports OAuth configuration per server
+                confidence: inferred
+            tool_restrictions:
+                supported: true
+                mechanism: per-agent tool allowlist with exact matches, wildcard patterns, and MCP tool patterns documented under 'Tools field' / 'AllowedTools field' / 'ToolsSettings field' headings
+                confidence: inferred
+    roo-code:
+        supported: true
+        capabilities:
+            agent_scopes:
+                supported: true
+                capabilities:
+                    project:
+                        supported: true
+                        mechanism: project-scoped custom modes via .roomodes file in repo root (mode source field = 'project')
+                        confidence: inferred
+                    user:
+                        supported: true
+                        mechanism: user-scoped (global) custom modes via roo-code config (mode source field = 'global')
+                        confidence: inferred
+            definition_format:
+                supported: true
+                mechanism: YAML modes (.roomodes file or settings) with slug, name, description, roleDefinition, whenToUse, groups, source fields per ModeConfig + CustomModesSettings TypeScript types
+                confidence: inferred
+            tool_restrictions:
+                supported: true
+                mechanism: per-mode tool group allowlist (read | edit | command | mcp) with optional inline filter (e.g. {fileRegex, description}) for the edit group, per GroupEntry / GroupOptions TypeScript types
+                confidence: inferred
+    zed:
+        supported: true
+        capabilities:
+            per_agent_mcp:
+                supported: true
+                mechanism: per-profile MCP context server scoping (AgentProfileSettings.context_servers IndexMap<server_id, ContextServerPreset> with per-tool granularity), documented under 'MCP Tool Permissions' heading
+                confidence: inferred
+            tool_restrictions:
+                supported: true
+                mechanism: per-profile tool toggle map (AgentProfileSettings.tools IndexMap<tool_name, bool>) with default + per-tool override semantics, documented under 'Default Tool Permissions' / 'Per-tool Permission Rules' / 'Pattern Precedence' headings
+                confidence: inferred
+schema_version: "1"

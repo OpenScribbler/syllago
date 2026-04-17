@@ -59,9 +59,10 @@ content_types:
     provider_extensions:
       - id: custom_ext
         name: "Custom Extension"
-        description: "A custom capability"
+        summary: "A custom capability"
         source_ref: "https://example.com/docs"
         graduation_candidate: false
+        conversion: embedded
     notes: ""
 `
 
@@ -146,10 +147,50 @@ content_types:
 
 	err := ValidateFormatDoc(formatsDir, canonicalKeysPath, "test-provider")
 	if err == nil {
-		t.Fatal("expected error for missing description field")
+		t.Fatal("expected error for missing summary and conversion fields")
 	}
-	if !strings.Contains(err.Error(), "description") {
-		t.Errorf("error should mention description, got: %v", err)
+	if !strings.Contains(err.Error(), "summary") {
+		t.Errorf("error should mention summary, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "conversion") {
+		t.Errorf("error should mention conversion, got: %v", err)
+	}
+}
+
+func TestValidateFormatDoc_InvalidConversion(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	canonicalKeysPath := writeTestCanonicalKeys(t, dir)
+	formatsDir := filepath.Join(dir, "formats")
+	if err := os.MkdirAll(formatsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	content := `provider: test-provider
+last_fetched_at: "2026-04-11T00:00:00Z"
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://example.com"
+        type: documentation
+        fetch_method: md_url
+        content_hash: ""
+        fetched_at: "2026-04-11T00:00:00Z"
+    provider_extensions:
+      - id: my_ext
+        name: "My Extension"
+        summary: "Some summary"
+        source_ref: "https://example.com"
+        conversion: maybe-someday
+`
+	writeTestFormatDoc(t, formatsDir, "test-provider", content)
+
+	err := ValidateFormatDoc(formatsDir, canonicalKeysPath, "test-provider")
+	if err == nil {
+		t.Fatal("expected error for invalid conversion value")
+	}
+	if !strings.Contains(err.Error(), "maybe-someday") {
+		t.Errorf("error should mention invalid value 'maybe-someday', got: %v", err)
 	}
 }
 
@@ -310,8 +351,9 @@ content_types:
     provider_extensions:
       - id: bad_type
         name: Bad Type
-        description: "test"
+        summary: "test"
         source_ref: "https://example.com"
+        conversion: embedded
         value_type: "array<string>"
 `,
 			wantWarnCount: 1,
@@ -329,8 +371,9 @@ content_types:
     provider_extensions:
       - id: bad_lang
         name: Bad Lang
-        description: "test"
+        summary: "test"
         source_ref: "https://example.com"
+        conversion: embedded
         examples:
           - lang: "cobol"
             code: "MOVE 1 TO X."
@@ -350,8 +393,9 @@ content_types:
     provider_extensions:
       - id: no_lang
         name: No Lang
-        description: "test"
+        summary: "test"
         source_ref: "https://example.com"
+        conversion: embedded
         examples:
           - lang: ""
             code: "x: 1"
@@ -371,8 +415,9 @@ content_types:
     provider_extensions:
       - id: no_code
         name: No Code
-        description: "test"
+        summary: "test"
         source_ref: "https://example.com"
+        conversion: embedded
         examples:
           - lang: "yaml"
             code: ""
@@ -412,8 +457,9 @@ content_types:
     provider_extensions:
       - id: ok_type
         name: OK Type
-        description: "test"
+        summary: "test"
         source_ref: "https://example.com"
+        conversion: embedded
         value_type: "string | string[]"
         examples:
           - lang: yaml
@@ -433,8 +479,9 @@ content_types:
     provider_extensions:
       - id: multi
         name: Multi
-        description: "test"
+        summary: "test"
         source_ref: "https://example.com"
+        conversion: embedded
         value_type: "not-valid"
         examples:
           - lang: "perl"

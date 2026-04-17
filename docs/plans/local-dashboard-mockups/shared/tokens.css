@@ -1,0 +1,212 @@
+/*
+ * Flexoki design tokens
+ * Palette by Steph Ango — https://stephango.com/flexoki
+ *
+ * Light mode = paper-warm base with 600-weight accents
+ * Dark mode  = black base with 400-weight accents
+ *
+ * Both [data-theme="light"] / [data-theme="dark"] overrides
+ * and @media (prefers-color-scheme) defaults are provided.
+ */
+
+:root {
+  /* === Flexoki raw scale (base warm grays) === */
+  --flexoki-paper: #FFFCF0;
+  --flexoki-base-50:  #F2F0E5;
+  --flexoki-base-100: #E6E4D9;
+  --flexoki-base-150: #DAD8CE;
+  --flexoki-base-200: #CECDC3;
+  --flexoki-base-300: #B7B5AC;
+  --flexoki-base-500: #878580;
+  --flexoki-base-600: #6F6E69;
+  --flexoki-base-700: #575653;
+  --flexoki-base-800: #403E3C;
+  --flexoki-base-850: #343331;
+  --flexoki-base-900: #282726;
+  --flexoki-base-950: #1C1B1A;
+  --flexoki-black:    #100F0F;
+
+  /* === Accent 600 (used on paper bg) === */
+  --flexoki-red-600:     #AF3029;
+  --flexoki-orange-600:  #BC5215;
+  --flexoki-yellow-600:  #AD8301;
+  --flexoki-green-600:   #66800B;
+  --flexoki-cyan-600:    #24837B;
+  --flexoki-blue-600:    #205EA6;
+  --flexoki-purple-600:  #5E409D;
+  --flexoki-magenta-600: #A02F6F;
+
+  /* === Accent 400 (used on black bg) === */
+  --flexoki-red-400:     #D14D41;
+  --flexoki-orange-400:  #DA702C;
+  --flexoki-yellow-400:  #D0A215;
+  --flexoki-green-400:   #879A39;
+  --flexoki-cyan-400:    #3AA99F;
+  --flexoki-blue-400:    #4385BE;
+  --flexoki-purple-400:  #8B7EC8;
+  --flexoki-magenta-400: #CE5D97;
+
+  /* === Accent 200 (softer tints) === */
+  --flexoki-red-200:     #F6E5E1;
+  --flexoki-orange-200:  #F7E6D5;
+  --flexoki-yellow-200:  #F7EDD0;
+  --flexoki-green-200:   #E8EBC9;
+  --flexoki-cyan-200:    #D5EDE9;
+  --flexoki-blue-200:    #DCE5F2;
+  --flexoki-purple-200:  #E5DFF0;
+  --flexoki-magenta-200: #F4DFEA;
+
+  /* === Semantic tokens — LIGHT defaults === */
+  --bg:      var(--flexoki-paper);
+  --bg-2:    var(--flexoki-base-50);
+  --bg-3:    var(--flexoki-base-100);
+  --ui:      var(--flexoki-base-100);
+  --ui-2:    var(--flexoki-base-150);
+  --ui-3:    var(--flexoki-base-200);
+  --tx-3:    var(--flexoki-base-300);
+  --tx-2:    var(--flexoki-base-600);
+  --tx:      var(--flexoki-black);
+
+  --ac-red:     var(--flexoki-red-600);
+  --ac-orange:  var(--flexoki-orange-600);
+  --ac-yellow:  var(--flexoki-yellow-600);
+  --ac-green:   var(--flexoki-green-600);
+  --ac-cyan:    var(--flexoki-cyan-600);
+  --ac-blue:    var(--flexoki-blue-600);
+  --ac-purple:  var(--flexoki-purple-600);
+  --ac-magenta: var(--flexoki-magenta-600);
+
+  --tint-red:     var(--flexoki-red-200);
+  --tint-orange:  var(--flexoki-orange-200);
+  --tint-yellow:  var(--flexoki-yellow-200);
+  --tint-green:   var(--flexoki-green-200);
+  --tint-cyan:    var(--flexoki-cyan-200);
+  --tint-blue:    var(--flexoki-blue-200);
+  --tint-purple:  var(--flexoki-purple-200);
+  --tint-magenta: var(--flexoki-magenta-200);
+
+  color-scheme: light dark;
+}
+
+/* === DARK mode — auto (system preference) === */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg:   var(--flexoki-black);
+    --bg-2: var(--flexoki-base-950);
+    --bg-3: var(--flexoki-base-900);
+    --ui:   var(--flexoki-base-900);
+    --ui-2: var(--flexoki-base-850);
+    --ui-3: var(--flexoki-base-800);
+    --tx-3: var(--flexoki-base-700);
+    --tx-2: var(--flexoki-base-500);
+    --tx:   var(--flexoki-base-200);
+
+    --ac-red:     var(--flexoki-red-400);
+    --ac-orange:  var(--flexoki-orange-400);
+    --ac-yellow:  var(--flexoki-yellow-400);
+    --ac-green:   var(--flexoki-green-400);
+    --ac-cyan:    var(--flexoki-cyan-400);
+    --ac-blue:    var(--flexoki-blue-400);
+    --ac-purple:  var(--flexoki-purple-400);
+    --ac-magenta: var(--flexoki-magenta-400);
+
+    --tint-red:     rgba(209, 77, 65, 0.14);
+    --tint-orange:  rgba(218, 112, 44, 0.14);
+    --tint-yellow:  rgba(208, 162, 21, 0.14);
+    --tint-green:   rgba(135, 154, 57, 0.14);
+    --tint-cyan:    rgba(58, 169, 159, 0.14);
+    --tint-blue:    rgba(67, 133, 190, 0.14);
+    --tint-purple:  rgba(139, 126, 200, 0.14);
+    --tint-magenta: rgba(206, 93, 151, 0.14);
+  }
+}
+
+/* === DARK mode — manual override === */
+[data-theme="dark"] {
+  --bg:   var(--flexoki-black);
+  --bg-2: var(--flexoki-base-950);
+  --bg-3: var(--flexoki-base-900);
+  --ui:   var(--flexoki-base-900);
+  --ui-2: var(--flexoki-base-850);
+  --ui-3: var(--flexoki-base-800);
+  --tx-3: var(--flexoki-base-700);
+  --tx-2: var(--flexoki-base-500);
+  --tx:   var(--flexoki-base-200);
+
+  --ac-red:     var(--flexoki-red-400);
+  --ac-orange:  var(--flexoki-orange-400);
+  --ac-yellow:  var(--flexoki-yellow-400);
+  --ac-green:   var(--flexoki-green-400);
+  --ac-cyan:    var(--flexoki-cyan-400);
+  --ac-blue:    var(--flexoki-blue-400);
+  --ac-purple:  var(--flexoki-purple-400);
+  --ac-magenta: var(--flexoki-magenta-400);
+
+  --tint-red:     rgba(209, 77, 65, 0.14);
+  --tint-orange:  rgba(218, 112, 44, 0.14);
+  --tint-yellow:  rgba(208, 162, 21, 0.14);
+  --tint-green:   rgba(135, 154, 57, 0.14);
+  --tint-cyan:    rgba(58, 169, 159, 0.14);
+  --tint-blue:    rgba(67, 133, 190, 0.14);
+  --tint-purple:  rgba(139, 126, 200, 0.14);
+  --tint-magenta: rgba(206, 93, 151, 0.14);
+}
+
+/* === Light mode manual override (defeats system dark) === */
+[data-theme="light"] {
+  --bg:      var(--flexoki-paper);
+  --bg-2:    var(--flexoki-base-50);
+  --bg-3:    var(--flexoki-base-100);
+  --ui:      var(--flexoki-base-100);
+  --ui-2:    var(--flexoki-base-150);
+  --ui-3:    var(--flexoki-base-200);
+  --tx-3:    var(--flexoki-base-300);
+  --tx-2:    var(--flexoki-base-600);
+  --tx:      var(--flexoki-black);
+
+  --ac-red:     var(--flexoki-red-600);
+  --ac-orange:  var(--flexoki-orange-600);
+  --ac-yellow:  var(--flexoki-yellow-600);
+  --ac-green:   var(--flexoki-green-600);
+  --ac-cyan:    var(--flexoki-cyan-600);
+  --ac-blue:    var(--flexoki-blue-600);
+  --ac-purple:  var(--flexoki-purple-600);
+  --ac-magenta: var(--flexoki-magenta-600);
+
+  --tint-red:     var(--flexoki-red-200);
+  --tint-orange:  var(--flexoki-orange-200);
+  --tint-yellow:  var(--flexoki-yellow-200);
+  --tint-green:   var(--flexoki-green-200);
+  --tint-cyan:    var(--flexoki-cyan-200);
+  --tint-blue:    var(--flexoki-blue-200);
+  --tint-purple:  var(--flexoki-purple-200);
+  --tint-magenta: var(--flexoki-magenta-200);
+}
+
+/* === Baseline reset === */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--tx);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--ac-blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+/* === Shared mock data helpers (inline) === */
+:root {
+  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-display: "Space Grotesk", "Inter", -apple-system, sans-serif;
+}

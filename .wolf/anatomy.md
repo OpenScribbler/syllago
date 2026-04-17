@@ -1,18 +1,87 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-15T16:37:55.614Z
-> Files: 567 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-17T20:08:20.567Z
+> Files: 742 tracked | Anatomy hits: 0 | Misses: 0
+
+## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
+
+- `finish-phase0-capmon-refactor.md` — Finish Phase 6 Epic 0 — schema update, generator update, infra generalization (~395 tok)
+- `ship-v072-smoke-fix.md` — Ship v0.7.2 with Provider Smoke Tests running green (~437 tok)
+- `start-epic4-mcp-recognition.md` — Start Phase 6 Epic 4 — wire MCP recognizers for 14 providers (~614 tok)
+- `start-phase6-epic1-recognizers.md` — Start Phase 6 Epic 1 — wire skills recognizers for 14 stub providers (~670 tok)
+
+## ../../../../../tmp/
+
+- `r2-api-agent.txt` — Round 2 — api-agent (~1358 tok)
+- `r2-karpathy.txt` — Declares composes (~1548 tok)
+- `r2-platform-vendor.txt` — Declares split (~1207 tok)
+- `r2-spec-purist.txt` — Round 2 — Spec-Purist (~1976 tok)
+- `r2-steinberger.txt` — Declares or (~1155 tok)
+- `r3-api-agent.txt` — # D1 — Recognition-failure return shape (~871 tok)
+- `r3-karpathy.txt` — Declares cheap (~1064 tok)
+- `r3-platform-vendor.txt` — # D1 — Recognition-failure return shape (~1308 tok)
+- `r3-spec-purist.txt` — # Round 3 — Spec-Purist (final) (~1149 tok)
+- `r3-steinberger.txt` — Declares fact (~1050 tok)
+
+## ../../../.claude/hooks/
+
+- `stop-phrase-guard.sh` — stop-phrase-guard.sh — Stop hook that catches ownership-dodging and (~1930 tok)
+
+## ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/
+
+- `feedback_release_notes_no_internal_labels.md` — Declares breakdowns (~803 tok)
+- `MEMORY.md` — Syllago Project Memory (~1683 tok)
+- `reference_stealth_fetch.md` — stealth-fetch (~308 tok)
+
+## ../../../.config/pai/
+
+- `.research-workflow-state-3e857b46-3822-488f-b024-16a79d21200e.json` (~28 tok)
+
+## ../../../.config/pai/skills/research/
+
+- `SKILL.md` — Research Skill (~1746 tok)
+
+## ../../../personal/stealth-fetch/
+
+- `.gitignore` — Git ignore rules (~11 tok)
+- `package.json` — Node.js package manifest (~113 tok)
+- `README.md` — Project documentation (~633 tok)
+- `stealth-fetch.ts` — Output raw HTML instead of markdown (~1257 tok)
+
+## ../syllago-capmon-heal-wt/cli/internal/capmon/
+
+- `fetch_validity.go` — Struct: ErrContentInvalid (~1085 tok)
+- `healing_github_test.go` — TestDetectGitHubRename_NotAGitHubURL, TestDetectGitHubRename_MalformedPath, TestDetectGitHubRename_R (~1819 tok)
+- `healing_github.go` — Struct: RenameCandidate (~2077 tok)
+- `healing_issue_test.go` — TestHealFailureAnchor, TestRecordConsecutiveHealFailure_UnderThreshold, TestRecordConsecutiveHealFai (~1591 tok)
+- `healing_issue.go` — HealFailureAnchor, RecordConsecutiveHealFailure, ResolveHealFailure (~1797 tok)
+- `healing_pr_test.go` — TestUpdateManifestURL_ReplacesTargetOnly, TestUpdateManifestURL_WrongOldURL, TestUpdateManifestURL_I (~2272 tok)
+- `healing_pr.go` — Struct: HealPRInputs (~2549 tok)
+- `healing_redirect_test.go` — TestFollowRedirectChain_NoRedirect, TestFollowRedirectChain_SingleMovedPermanently, TestFollowRedire (~1926 tok)
+- `healing_redirect.go` — Struct: RedirectChain (~1043 tok)
+- `healing_test.go` — TestAttemptHeal_DisabledShortCircuits, TestAttemptHeal_VariantStrategySucceeds, TestAttemptHeal_Vari (~1914 tok)
+- `healing_variants_test.go` — TestGenerateVariants_CaseSwap, TestGenerateVariants_SeparatorSwap, TestGenerateVariants_PrefixSwap, (~1312 tok)
+- `healing_variants.go` — Struct: VariantCandidate (~1401 tok)
+- `healing.go` — Struct: HealResult (~1670 tok)
+- `pipeline_heal_test.go` — TestTryHealSource_DisabledReturnsNil, TestTryHealSource_FailureRecordsCounter, TestTryHealSource_Dry (~1419 tok)
+- `pipeline.go` — Struct: PipelineOptions (~3994 tok)
+- `sourceman_test.go` — TestLoadSourceManifest, TestLoadSourceManifest_NotFound, TestLoadAllSourceManifests, TestLoadAllSour (~1719 tok)
+- `sourceman_validate_test.go` — TestValidateSources_AllHaveSources, TestValidateSources_MissingURIs, TestValidateSources_SupportedFa (~1089 tok)
+- `sourceman_validate.go` — ValidateSources (~443 tok)
+- `sourceman.go` — Struct: SourceManifest (~1036 tok)
+- `types.go` — implements the syllago capability monitor pipeline. (~1290 tok)
 
 ## ./
 
 - `.gitattributes` — Git attributes (~50 tok)
-- `.gitignore` — Git ignore rules (~320 tok)
+- `.gitignore` — Git ignore rules (~369 tok)
+- `.release-pending.yml` (~34 tok)
 - `AGENTS.md` — Agent Instructions (~332 tok)
 - `ARCHITECTURE.md` — Syllago Architecture (~1663 tok)
 - `CHANGELOG.md` — Change log (~1326 tok)
 - `CLAUDE.md` — OpenWolf (~1035 tok)
 - `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct (~1370 tok)
-- `commands.json` (~16 tok)
+- `commands.json` — Declares or (~48402 tok)
 - `CONTRIBUTING.md` — Contributing to syllago (~1285 tok)
 - `GEMINI.md` — Syllago (~697 tok)
 - `install.sh` — Install syllago — AI coding tool content manager (~880 tok)
@@ -50,7 +119,7 @@
 - `beads.left.meta.json` (~26 tok)
 - `config.yaml` — Beads Configuration File (~668 tok)
 - `daemon.pid` (~2 tok)
-- `interactions.jsonl` — Declares added (~2046 tok)
+- `interactions.jsonl` — Declares added (~2835 tok)
 - `last-touched` (~4 tok)
 - `metadata.json` (~18 tok)
 - `README.md` — Project documentation (~561 tok)
@@ -60,12 +129,16 @@
 
 - `9hhh14uigmffvldnkv3di25k410uqr33.darc` (~7868 tok)
 - `backup_state.json` (~32 tok)
+- `iu2e9hgv37ucaueonjbt00fn8gguik65.darc` (~106106 tok)
+- `jd3gkrb67gqa3mlg1suamtakavugvcoc.darc` (~8583 tok)
 - `lhmgjp98sb58ockgoe867d6u7c6l0r1n.darc` (~14586 tok)
 - `LOCK` (~0 tok)
-- `manifest` (~108 tok)
+- `manifest` (~147 tok)
 - `nas7fporh3ooura63gcouptjisfnpinm.darc` (~15921 tok)
 - `ok70ojhua6tuq35c3ut2qd3k1u8ch63n.darc` (~195405 tok)
 - `pljjkd0dcpqhtd312fva2socqng6a6nn.darc` (~7937 tok)
+- `pq7eco0l7pldn88pu34va4treat1k9b3.darc` (~36541 tok)
+- `vbfbtlo0d8f9fkogguncccn5fdufgddp.darc` (~11048 tok)
 
 ## .beads/embeddeddolt/
 
@@ -1204,6 +1277,16 @@
 - `tui-pattern-nudge.sh` — TUI Pattern Nudge Hook (~433 tok)
 - `wizard-invariant-gate.sh` — PostToolUse hook: Run wizard invariant tests after any TUI file edit. (~207 tok)
 
+## .claude/projects/
+
+- `.current` (~9 tok)
+- `continue-capmon-audit.md` — Continue auditing capmon (~624 tok)
+- `finish-phase0-capmon-refactor.md` — Finish Phase 0: Capmon Recognition Refactor (~1391 tok)
+- `ship-v072-smoke-fix.md` — Ship v0.7.2 with Provider Smoke Tests running green (~515 tok)
+- `start-epic4-mcp-recognition.md` — Start Phase 6 Epic 4 — wire MCP recognizers for 14 providers (~1060 tok)
+- `start-epic5-agents-recognition.md` — Start Phase 6 Epic 5 — wire agents recognizers for 9 providers (~1042 tok)
+- `start-phase6-epic1-recognizers.md` — Start Phase 6 Epic 1 — Skills recognizers for 14 stub providers (~1436 tok)
+
 ## .claude/rules/
 
 - `cli-test-patterns.md` — CLI Test Patterns (Non-TUI) (~1140 tok)
@@ -1227,7 +1310,7 @@
 
 ## .claude/skills/release/workflows/
 
-- `create-release.md` — Create Release Workflow (~1286 tok)
+- `create-release.md` — Create Release Workflow (~2065 tok)
 
 ## .claude/skills/tui-builder/
 
@@ -1359,50 +1442,223 @@
 - `smoke-test-providers.yml` — CI: Provider Smoke Tests (~869 tok)
 - `vouch-manage.yml` — CI: "Vouch: Manage by Issue" (~214 tok)
 
-## .claude/worktrees/agent-a0114795/.handoffs/
+## .develop/seeder-specs/
 
-- `add-wizard-ux-polish-and-bugfixes.json` — Declares add (~1366 tok)
-- `added-crush-agent-skills-and-pi-to-agent.json` (~1206 tok)
-- `agent-skills-spec-research-and-convention-strategy.json` (~1640 tok)
-- `architectural-rethink-of-agent-skills-spec-moving.json` (~1175 tok)
+- `amp-rules.yaml` (~1942 tok)
+- `claude-code-rules.yaml` — Declares fields (~2076 tok)
+- `cline-rules.yaml` (~1302 tok)
+- `codex-rules.yaml` (~1642 tok)
+- `copilot-cli-rules.yaml` — /*.instructions.md (~1855 tok)
+- `crush-rules.yaml` (~1600 tok)
+- `crush-skills.yaml` — Declares Skill (~1307 tok)
+- `cursor-rules.yaml` (~1692 tok)
+- `factory-droid-rules.yaml` (~1056 tok)
+- `gemini-cli-rules.yaml` (~1766 tok)
+- `kiro-rules.yaml` — /*", "**/*.test.*") (~1644 tok)
+- `opencode-rules.yaml` — Declares analogous (~1326 tok)
+- `pi-rules.yaml` — Declares in (~1424 tok)
+- `roo-code-rules.yaml` — Declares context (~1553 tok)
+- `roo-code-skills.yaml` — Declares Skill (~1209 tok)
+- `windsurf-rules.yaml` — Declares alternative (~1967 tok)
+- `zed-rules.yaml` — Declares mode (~1395 tok)
+
+## .github/workflows/
+
+- `smoke-test-providers.yml` — CI: Provider Smoke Tests (~828 tok)
+
+## .panels/recognizer-api-evolution/
+
+- `consensus.md` — Recognizer API Evolution — Panel Consensus (~3569 tok)
+- `seed.md` — TOPIC (~1539 tok)
 
 ## cli/cmd/syllago/
 
-- `capmon_validate_format_doc_cmd_test.go` — TestCapmonValidateFormatDocCmd_Registered, TestCapmonValidateFormatDocCmd_MissingProvider, TestCapmo (~1963 tok)
-- `capmon_validate_format_doc_cmd.go` (~661 tok)
-- `gencapabilities_test.go` — TestGencapabilities_RootStructure, TestGencapabilities_ProviderSlugFromFilename, TestGencapabilities (~8675 tok)
-- `gencapabilities.go` — Struct: capYAML (~3743 tok)
-- `info_test.go` — TestInfoJSON, TestInfoProvidersUsesDisplayNames, TestInfoFormatsShowsProviders, TestInfoTextShowsAll (~1778 tok)
-- `info.go` — Struct: detectedProvider (~2093 tok)
+- `capmon_derive_cmd.go` (~665 tok)
+- `capmon_onboard_cmd_test.go` — Struct: mockOnboardTransport (~1109 tok)
+- `capmon_validate_format_doc_cmd_test.go` — TestCapmonValidateFormatDocCmd_Registered, TestCapmonValidateFormatDocCmd_MissingProvider, TestCapmo (~1970 tok)
+- `gencapabilities_test.go` — TestGencapabilities_RootStructure, TestGencapabilities_ProviderSlugFromFilename, TestGencapabilities (~10895 tok)
+- `gencapabilities.go` — Struct: capYAML (~4235 tok)
+- `genproviders_test.go` — TestGenproviders, TestGenproviders_ClaudeCodeHookDetails, TestGenproviders_NonCCProviderEnrichment, (~5853 tok)
+- `helpers_test.go` — TestFindProjectRootFallbackWarning (~459 tok)
+- `helpers.go` (~1346 tok)
 
 ## cli/internal/capmon/
 
-- `check_test.go` — Struct: checkTestEnv (~3148 tok)
-- `check.go` — Struct: CapmonCheckOptions (~2304 tok)
-- `formatdoc_validate_test.go` — TestValidateFormatDoc_Valid, TestValidateFormatDoc_UnknownKey, TestValidateFormatDoc_MissingExtensio (~3639 tok)
-- `formatdoc_validate.go` — Struct: ValidationWarning (~2620 tok)
+- `check_diff_test.go` — TestGenerateUnifiedDiff_NoTruncation, TestGenerateUnifiedDiff_SourceCodeTruncation, TestGenerateUnif (~1270 tok)
+- `check_diff.go` — Struct: lineEdit (~1112 tok)
+- `check_test.go` — Struct: checkTestEnv (~4263 tok)
+- `check.go` — Struct: CapmonCheckOptions (~2515 tok)
+- `derive.go` — DeriveSeederSpec, WriteSeederSpec (~779 tok)
+- `fetch_chromedp_test.go` — TestChromedpURLWiring, TestRealisticUA_NotHeadless (~306 tok)
+- `fetch_chromedp.go` — ChromedpRemoteURL, FetchChromedp (~836 tok)
+- `formatdoc_test.go` — TestLoadFormatDoc_RoundTrip, TestFormatDocPath, TestLoadFormatDoc_FileNotFound, TestValidateAllForma (~2073 tok)
+- `formatdoc_validate_test.go` — TestValidateFormatDoc_Valid, TestValidateFormatDoc_UnknownKey, TestValidateFormatDoc_MissingExtensio (~4010 tok)
+- `formatdoc_validate.go` — Struct: ValidationWarning (~2947 tok)
+- `formatdoc.go` — Struct: FormatDoc (~1493 tok)
+- `generate_hooks_test.go` — TestGenerateHooksSpecTables_BasicOutput, TestGenerateHooksSpecTables_MissingBanner, TestReplaceGener (~1955 tok)
+- `generate.go` — Struct: providerInfo (~1761 tok)
+- `healing_github.go` — Struct: RenameCandidate (~2092 tok)
+- `healing.go` — Struct: HealResult (~1690 tok)
+- `pipeline.go` — Struct: PipelineOptions (~3172 tok)
+- `recognize_agents_test.go` — TestAgentsContentType, TestCanonicalAgentsKeys_MatchesCanonicalKeysYAML, TestIsCanonicalAgentsKey, T (~2192 tok)
+- `recognize_agents.go` — IsCanonicalAgentsKey, AgentsLandmarkOptions, AgentsLandmarkPattern (~1526 tok)
+- `recognize_amp_test.go` — TestRecognizeAmp_RealLandmarks, TestRecognizeAmp_AnchorsMissing, TestRecognizeAmp_NoLandmarks, TestR (~3302 tok)
+- `recognize_amp.go` — Declares contexts (~2477 tok)
+- `recognize_claude_code_test.go` — TestRecognizeClaudeCode_RealLandmarks, TestRecognizeClaudeCode_AnchorsMissing, TestRecognizeClaudeCo (~4350 tok)
+- `recognize_claude_code.go` — Declares doc (~4732 tok)
+- `recognize_cline_test.go` — TestRecognizeCline_RealLandmarks, TestRecognizeCline_NonSkillsLandmarks, TestRecognizeCline_AnchorsM (~4356 tok)
+- `recognize_cline.go` — Declares landmarks (~2800 tok)
+- `recognize_codex_test.go` — TestRecognizeCodex_MultiStructAllowList, TestRecognizeCodex_OnlyExcludedStructs, TestRecognizeCodex_ (~3737 tok)
+- `recognize_codex.go` — Declares names (~4442 tok)
+- `recognize_commands_test.go` — TestCommandsContentType, TestCanonicalCommandsKeys_MatchesCanonicalKeysYAML, TestIsCanonicalCommands (~2158 tok)
+- `recognize_commands.go` — IsCanonicalCommandsKey, CommandsLandmarkOptions, CommandsLandmarkPattern (~1476 tok)
+- `recognize_compose_test.go` — TestMergeRecognitionResults_Empty, TestMergeRecognitionResults_TwoRecognized, TestMergeRecognitionRe (~1074 tok)
+- `recognize_compose.go` — Declares prefix (~591 tok)
+- `recognize_conformance_test.go` — TestRecognitionConformance_KeyRegex, TestRecognitionConformance_Determinism, TestRecognitionConforma (~993 tok)
+- `recognize_copilot_cli_test.go` — TestRecognizeCopilotCli_RealAgentsLandmarks, TestRecognizeCopilotCli_AgentsAnchorsMissing, TestRecog (~3648 tok)
+- `recognize_copilot_cli.go` (~3455 tok)
+- `recognize_crush.go` (~865 tok)
+- `recognize_cursor_test.go` — TestRecognizeCursor_RealRulesLandmarks, TestRecognizeCursor_AnchorsMissing, TestRecognizeCursor_NoLa (~2199 tok)
+- `recognize_cursor.go` (~1600 tok)
+- `recognize_factory_droid_test.go` — TestRecognizeFactoryDroid_RealLandmarks, TestRecognizeFactoryDroid_AnchorsMissing, TestRecognizeFact (~3923 tok)
+- `recognize_factory_droid.go` — Declares for (~2930 tok)
+- `recognize_gemini_cli_test.go` — TestRecognizeGeminiCli_RealRulesLandmarks, TestRecognizeGeminiCli_AnchorsMissing, TestRecognizeGemin (~4183 tok)
+- `recognize_gemini_cli.go` (~2807 tok)
+- `recognize_hooks_test.go` — TestHooksContentType, TestCanonicalHooksKeys_MatchesCanonicalKeysYAML, TestIsCanonicalHooksKey, Test (~2153 tok)
+- `recognize_hooks.go` — IsCanonicalHooksKey, HooksLandmarkOptions, HooksLandmarkPattern (~1371 tok)
+- `recognize_internal_test.go` — TestRecognizeGoStruct_ContentTypeAgnostic, TestRecognizeGoStruct_MechanismPrefixOverride, TestSkills (~1551 tok)
+- `recognize_kiro_test.go` — TestRecognizeKiro_RealLandmarks, TestRecognizeKiro_NonSkillsLandmarks, TestRecognizeKiro_AnchorsMiss (~4736 tok)
+- `recognize_kiro.go` — Declares docs (~3320 tok)
+- `recognize_landmarks.go` — Struct: StringMatcher (~1818 tok)
+- `recognize_mcp_test.go` — TestMcpContentType, TestCanonicalMcpKeys_MatchesCanonicalKeysYAML, TestIsCanonicalMcpKey, TestMcpLan (~2119 tok)
+- `recognize_mcp.go` — IsCanonicalMcpKey, McpLandmarkOptions, McpLandmarkPattern (~1426 tok)
+- `recognize_opencode.go` — Declares for (~1382 tok)
+- `recognize_pi_test.go` — TestRecognizePi_RealHooksLandmarks, TestRecognizePi_HooksAnchorsMissing, TestRecognizePi_NoLandmarks (~1892 tok)
+- `recognize_pi.go` (~1167 tok)
+- `recognize_roo_code_test.go` — TestRecognizeRooCode_RealAgentsLandmarks, TestRecognizeRooCode_AgentsAnchorsMissing (~1077 tok)
+- `recognize_roo_code.go` — Declares names (~2562 tok)
+- `recognize_rules_test.go` — TestRulesContentType, TestCanonicalRulesKeys_MatchesCanonicalKeysYAML, TestIsCanonicalRulesKey, Test (~2175 tok)
+- `recognize_rules.go` — IsCanonicalRulesKey, RulesLandmarkOptions, RulesLandmarkPattern (~1470 tok)
+- `recognize_test.go` — TestRecognizeContentTypeDotPaths_SkillGoStruct, TestRecognizeCrushSkills, TestRecognizeRooCodeSkills (~2230 tok)
+- `recognize_types.go` — Struct: RecognitionContext (~1407 tok)
+- `recognize_windsurf_test.go` — TestRecognizeWindsurf_RealRulesLandmarks, TestRecognizeWindsurf_AnchorsMissing, TestRecognizeWindsur (~2729 tok)
+- `recognize_windsurf.go` — Declares for (~3232 tok)
+- `recognize_zed_test.go` — TestRecognizeZed_RealRulesLandmarks, TestRecognizeZed_RulesAnchorsMissing, TestRecognizeZed_NoLandma (~3397 tok)
+- `recognize_zed.go` — Declares is (~3142 tok)
+- `recognize.go` — Recognizer conformance contract. (~3518 tok)
+- `report_test.go` — TestSanitizeSlug, TestDeduplicatePR_NoneExists, TestRecordConsecutiveFailure_ThirdFailure, TestGHRun (~3592 tok)
+- `report.go` — GHRunner, SetGHCommandForTest, SanitizeSlug, DeduplicatePR, RecordConsecutiveFailure (~3221 tok)
+- `seed_test.go` — TestSeedProviderCapabilities_Idempotent, TestSeedProviderCapabilities_PreservesExclusive, TestSeedPr (~2519 tok)
+- `seed.go` — Struct: SeedOptions (~1112 tok)
+- `seederspec_audit_test.go` — TestSeederSpecs_AllLoad (~508 tok)
+- `seederspec_test.go` — TestLoadSeederSpec_Valid, TestSeederSpecPath (~712 tok)
+- `seederspec.go` — Struct: ProposedMapping (~535 tok)
+- `sourceman_validate.go` — ValidateSources (~446 tok)
+
+## cli/internal/capmon/capyaml/
+
+- `types.go` — Struct: ProviderCapabilities (~794 tok)
+
+## cli/internal/capmon/extract_html/
+
+- `extract_html_test.go` — TestHTMLExtractor_PrimarySelector, TestHTMLExtractor_FallbackMode, TestHTMLExtractor_AnchorMatch, Te (~1480 tok)
+
+## cli/internal/capmon/extract_rust/
+
+- `extract_rust_test.go` — go:build cgo (~1265 tok)
+- `extract_rust.go` — go:build cgo (~1295 tok)
+
+## cli/internal/capmon/extract_typescript/
+
+- `extract_typescript_test.go` — go:build cgo (~1629 tok)
+- `extract_typescript.go` — go:build cgo (~1784 tok)
+
+## cli/internal/converter/
+
+- `agents.go` — Struct: factoryDroidAgentMeta (~8580 tok)
+- `frontmatter_registry_test.go` — Struct: check (~2496 tok)
+- `skills.go` — Struct: SkillMeta (~8352 tok)
+
+## cli/internal/provider/
+
+- `crush.go` (~558 tok)
+- `factory_droid.go` (~696 tok)
+- `pi.go` (~650 tok)
+- `provider.go` — Struct: Provider (~1084 tok)
 
 ## docs/plans/
 
-- `2026-04-15-local-dashboard-design.md` — Local Dashboard Design (~2355 tok)
+- `2026-04-16-capmon-phase6-recognition-plan.md` — Capmon Phase 6: Full Recognition Pipeline (~2343 tok)
+- `2026-04-16-capmon-self-healing-prompt.md` — Prompt: Self-Healing Source URLs for capmon (~2076 tok)
 
-## docs/plans/local-dashboard-mockups/
+## docs/provider-capabilities/
 
-- `01-terminal.html` — Syllago · Terminal (~3114 tok)
-- `02-notebook.html` — Syllago · Notebook (~1473 tok)
-- `03-brutalist.html` — Syllago · Brutalist (~1321 tok)
-- `04-bauhaus.html` — Syllago · Bauhaus (~1616 tok)
-- `05-cyberpunk.html` — Syllago · Cyberpunk (~3147 tok)
-- `06-editorial.html` — Syllago · Editorial (~1354 tok)
-- `07-material.html` — Syllago · Material (~3504 tok)
-- `08-neobrutal.html` — Syllago · Neo-brutal (~1643 tok)
-- `09-swiss.html` — Syllago · Swiss (~1433 tok)
-- `10-techdoc.html` — Syllago · Tech Docs (~2784 tok)
-- `index.html` — Syllago Dashboard Mockups · Index (~1876 tok)
+- `compatibility-matrix.md` — Provider Compatibility Matrix (~1848 tok)
 
-## docs/plans/local-dashboard-mockups/shared/
+## docs/provider-formats/
 
-- `data.js` — Declares btn (~1085 tok)
-- `filter.js` — Declares q (~288 tok)
-- `render.js` — Declares node (~245 tok)
-- `tokens.css` — Styles: 1 rules, 142 vars (~2039 tok)
+- `amp.yaml` (~6964 tok)
+- `claude-code.yaml` (~13498 tok)
+- `cline.yaml` (~6513 tok)
+- `codex.yaml` (~12069 tok)
+- `copilot-cli.yaml` (~9194 tok)
+- `factory-droid.yaml` — Declares entries (~5903 tok)
+- `gemini-cli.yaml` (~7260 tok)
+- `kiro.yaml` — Declares that (~7651 tok)
+- `opencode.yaml` (~651 tok)
+- `pi.yaml` — Declares as (~6257 tok)
+- `windsurf.yaml` (~8056 tok)
+
+## docs/provider-sources/
+
+- `amp.yaml` — Amp — Provider Source Manifest (~1090 tok)
+- `copilot-cli.yaml` — Copilot CLI — Provider Source Manifest (~1514 tok)
+- `factory-droid.yaml` — Factory Droid — Provider Source Manifest (~1068 tok)
+
+## releases/
+
+- `v0.7.0.md` — v0.7.0 (~2536 tok)
+- `v0.7.1.md` — v0.7.1 (~1011 tok)
+- `v0.7.2.md` — v0.7.2 (~287 tok)
+- `v0.8.0.md` — v0.8.0 (~657 tok)
+
+## tests/smoke/
+
+- `claude-code.sh` — claude-code.sh — E2E smoke tests for syllago + Claude Code integration. (~2484 tok)
+- `gemini-cli.sh` — gemini-cli.sh — E2E smoke tests for syllago + Gemini CLI integration. (~2510 tok)
+- `helpers.sh` — helpers.sh — Shared test framework for syllago provider smoke tests. (~2182 tok)
+
+## tests/smoke/fixtures/agents/smoke-agent/
+
+- `.syllago.yaml` (~33 tok)
+- `AGENT.md` — Smoke Agent (~62 tok)
+
+## tests/smoke/fixtures/commands/claude-code/smoke-commands/
+
+- `.syllago.yaml` (~35 tok)
+- `command.md` — Smoke Command (~48 tok)
+
+## tests/smoke/fixtures/hooks/claude-code/smoke-hook/
+
+- `.syllago.yaml` (~32 tok)
+- `hook.json` (~42 tok)
+
+## tests/smoke/fixtures/loadouts/claude-code/syllago-smoke-test/
+
+- `.syllago.yaml` (~42 tok)
+- `loadout.yaml` — Declares so (~132 tok)
+
+## tests/smoke/fixtures/mcp/smoke-mcp/
+
+- `.syllago.yaml` (~34 tok)
+- `config.json` (~62 tok)
+
+## tests/smoke/fixtures/rules/claude-code/smoke-rules/
+
+- `.syllago.yaml` (~33 tok)
+- `rule.md` — Smoke Rules (~58 tok)
+
+## tests/smoke/fixtures/skills/smoke-skill/
+
+- `.syllago.yaml` (~33 tok)
+- `SKILL.md` — Smoke Skill (~62 tok)

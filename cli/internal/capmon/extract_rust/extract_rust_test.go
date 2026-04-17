@@ -84,6 +84,60 @@ func TestRustExtractor_Landmarks(t *testing.T) {
 	}
 }
 
+func TestRustExtractor_StructFields(t *testing.T) {
+	raw := []byte(`pub struct SkillMetadata {
+    pub name: String,
+    pub description: String,
+    pub version: String,
+}`)
+	result, err := capmon.Extract(context.Background(), "rust", raw, capmon.SelectorConfig{})
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+	foundLandmark := false
+	for _, l := range result.Landmarks {
+		if l == "SkillMetadata" {
+			foundLandmark = true
+			break
+		}
+	}
+	if !foundLandmark {
+		t.Errorf("expected 'SkillMetadata' in landmarks, got %v", result.Landmarks)
+	}
+	wantFields := map[string]string{
+		"SkillMetadata.name":        "name",
+		"SkillMetadata.description": "description",
+		"SkillMetadata.version":     "version",
+	}
+	for key, wantValue := range wantFields {
+		fv, ok := result.Fields[key]
+		if !ok {
+			t.Errorf("expected field %q, not found in %v", key, result.Fields)
+			continue
+		}
+		if fv.Value != wantValue {
+			t.Errorf("field %q: value = %q, want %q", key, fv.Value, wantValue)
+		}
+	}
+}
+
+func TestRustExtractor_StructFromFixture(t *testing.T) {
+	raw, err := os.ReadFile("../testdata/fixtures/rust/hooks.rs")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	result, err := capmon.Extract(context.Background(), "rust", raw, capmon.SelectorConfig{})
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+	wantFields := []string{"HookConfig.event", "HookConfig.blocking", "HookConfig.command"}
+	for _, key := range wantFields {
+		if _, ok := result.Fields[key]; !ok {
+			t.Errorf("expected field %q from HookConfig struct, not found", key)
+		}
+	}
+}
+
 func TestRustExtractor_AnchorMissing(t *testing.T) {
 	raw := []byte(`pub enum Foo { Bar }`)
 	cfg := capmon.SelectorConfig{ExpectedContains: "NonExistentAnchor"}

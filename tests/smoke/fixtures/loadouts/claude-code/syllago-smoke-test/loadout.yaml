@@ -1,0 +1,22 @@
+kind: loadout
+version: 1
+provider: claude-code
+name: syllago-smoke-test
+description: >
+  Self-contained loadout used only by tests/smoke/. Exercises every
+  installable content type so the smoke suite can verify symlinks and
+  JSON merges end-to-end without depending on external content.
+
+rules:
+  - smoke-rules
+hooks:
+  - smoke-hook
+commands:
+  - smoke-commands
+skills:
+  - smoke-skill
+agents:
+  - smoke-agent
+mcp:
+  - smoke-stdio-server
+  - smoke-http-server

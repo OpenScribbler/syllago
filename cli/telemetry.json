@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-15T16:46:52Z",
-  "syllagoVersion": "0.7.0",
+  "generatedAt": "2026-04-17T19:13:10Z",
+  "syllagoVersion": "0.7.2",
   "events": [
     {
       "name": "command_executed",
