@@ -39,18 +39,54 @@ func kiroLandmarkOptions() LandmarkOptions {
 	}
 }
 
-// recognizeKiro recognizes skills capabilities for the Kiro provider.
-// Source is markdown documentation; recognition uses landmark (heading)
-// matching. Static facts (project_scope, canonical_filename) merge in at
-// "confirmed" confidence after a successful landmark match. Note: Kiro has no
-// global_scope — Powers are installed via the Kiro Powers panel UI without a
-// fixed user-wide filesystem path.
-func recognizeKiro(ctx RecognitionContext) RecognitionResult {
-	landmarkResult := recognizeLandmarks(ctx, kiroLandmarkOptions())
-	if len(landmarkResult.Capabilities) == 0 {
-		return landmarkResult
+// kiroRulesLandmarkOptions returns the landmark patterns for Kiro's "Steering"
+// (rules) doc. Anchors derived from .capmon-cache/kiro/rules.0/extracted.json.
+// Required anchors "What is steering?" and "Steering file scope" are unique to
+// the steering doc — they prevent rules patterns from firing on the powers
+// (skills) doc or the cookie-banner noise.
+//
+// Note: kiro's rules-format vocabulary uses "Inclusion modes" instead of
+// "activation modes". The four named modes ("Always included", "Conditional
+// inclusion", "Manual inclusion", "Auto inclusion") map one-to-one onto the
+// canonical activation_mode sub-vocabulary (always_on, frontmatter_globs,
+// manual, model_decision).
+func kiroRulesLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "What is steering?", CaseInsensitive: true},
+		{Kind: "substring", Value: "Steering file scope", CaseInsensitive: true},
 	}
-	mergeInto(landmarkResult.Capabilities, capabilityDotPaths("skills", "project_scope", "Self-contained directory installed via Kiro Powers panel (UI installation, no fixed filesystem path)", "confirmed"))
-	mergeInto(landmarkResult.Capabilities, capabilityDotPaths("skills", "canonical_filename", "POWER.md (fixed, all caps)", "confirmed"))
-	return landmarkResult
+	return RulesLandmarkOptions(
+		RulesLandmarkPattern("activation_mode.always_on", "Always included",
+			"steering loaded on every prompt by default (documented under 'Always included' inclusion mode)", required),
+		RulesLandmarkPattern("activation_mode.frontmatter_globs", "Conditional inclusion",
+			"glob-based path matching activates steering files (documented under 'Conditional inclusion' inclusion mode)", required),
+		RulesLandmarkPattern("activation_mode.manual", "Manual inclusion",
+			"user explicitly references the file to activate (documented under 'Manual inclusion' inclusion mode)", required),
+		RulesLandmarkPattern("activation_mode.model_decision", "Auto inclusion",
+			"agent decides based on context (documented under 'Auto inclusion' inclusion mode)", required),
+		RulesLandmarkPattern("file_imports", "File references",
+			"steering files can reference other files (documented under 'File references' heading)", required),
+		RulesLandmarkPattern("cross_provider_recognition.agents_md", "Agents.md",
+			"Agents.md fallback for cross-tool compatibility (documented under 'Agents.md' heading)", required),
+		RulesLandmarkPattern("hierarchical_loading", "Workspace steering",
+			"three-tier scope: workspace + global + team steering (documented under 'Workspace steering' / 'Global steering' / 'Team steering')", required),
+	)
+}
+
+// recognizeKiro recognizes skills + rules capabilities for the Kiro provider.
+// Both content types are HTML/markdown documentation; recognition uses landmark
+// matching. Static facts (project_scope, canonical_filename) merge in at
+// "confirmed" confidence after a successful skills landmark match. Note: Kiro
+// has no global_scope for skills — Powers are installed via the Kiro Powers
+// panel UI without a fixed user-wide filesystem path.
+func recognizeKiro(ctx RecognitionContext) RecognitionResult {
+	skillsResult := recognizeLandmarks(ctx, kiroLandmarkOptions())
+	if len(skillsResult.Capabilities) > 0 {
+		mergeInto(skillsResult.Capabilities, capabilityDotPaths("skills", "project_scope", "Self-contained directory installed via Kiro Powers panel (UI installation, no fixed filesystem path)", "confirmed"))
+		mergeInto(skillsResult.Capabilities, capabilityDotPaths("skills", "canonical_filename", "POWER.md (fixed, all caps)", "confirmed"))
+	}
+
+	rulesResult := recognizeLandmarks(ctx, kiroRulesLandmarkOptions())
+
+	return mergeRecognitionResults(skillsResult, rulesResult)
 }

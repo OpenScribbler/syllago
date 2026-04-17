@@ -40,21 +40,55 @@ func claudeCodeLandmarkOptions() LandmarkOptions {
 	}
 }
 
-// recognizeClaudeCode recognizes skills capabilities for the Claude Code provider.
-// Claude Code's source is markdown documentation, so recognition uses landmark
-// (heading) matching rather than typed-source struct extraction. Capabilities
-// emitted at confidence "inferred" — recognizeLandmarks enforces this.
+// claudeCodeRulesLandmarkOptions returns the landmark patterns for Claude Code's
+// memory/rules documentation. Anchors derived from
+// .capmon-cache/claude-code/rules.0/extracted.json — Claude Code's rules format
+// is the richest documented case (32 landmarks across CLAUDE.md, .claude/rules/,
+// auto-memory, AGENTS.md fallback, hierarchical loading, and import syntax).
+//
+// Required anchors are unique to the rules doc: "CLAUDE.md files" and "How
+// CLAUDE.md files load" do not appear in the skills doc, so this guard prevents
+// rules patterns from firing on a merged-landmark context that includes only
+// skills landmarks.
+func claudeCodeRulesLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "CLAUDE.md files", CaseInsensitive: true},
+		{Kind: "substring", Value: "How CLAUDE.md files load", CaseInsensitive: true},
+	}
+	return RulesLandmarkOptions(
+		RulesLandmarkPattern("activation_mode.always_on", "CLAUDE.md files",
+			"CLAUDE.md auto-loads when present in project root or working tree", required),
+		RulesLandmarkPattern("activation_mode.glob", "Path-specific rules",
+			"path-specific rules in .claude/rules/<name>.md fire on glob match (documented under 'Path-specific rules')", required),
+		RulesLandmarkPattern("file_imports", "Import additional files",
+			"@-mention import syntax pulls referenced files into context (documented under 'Import additional files')", required),
+		RulesLandmarkPattern("cross_provider_recognition.agents_md", "AGENTS.md",
+			"AGENTS.md fallback when CLAUDE.md absent (documented under 'AGENTS.md' heading)", required),
+		RulesLandmarkPattern("auto_memory", "Auto memory",
+			"agent-managed automatic memory with /memory audit/edit (documented under 'Auto memory' heading)", required),
+		RulesLandmarkPattern("hierarchical_loading", "User-level rules",
+			"user-level rules from ~/.claude/CLAUDE.md plus project + additional directories (documented under 'User-level rules')", required),
+	)
+}
+
+// recognizeClaudeCode recognizes skills + rules capabilities for the Claude Code
+// provider. Source for both content types is markdown documentation, so
+// recognition uses landmark (heading) matching rather than typed-source struct
+// extraction. Capabilities emitted at confidence "inferred" — recognizeLandmarks
+// enforces this.
 //
 // Static facts (project_scope, global_scope, canonical_filename) are still emitted
 // at "confirmed" confidence because they describe behavior documented in literal
 // terms, not inferred from heading presence.
 func recognizeClaudeCode(ctx RecognitionContext) RecognitionResult {
-	landmarkResult := recognizeLandmarks(ctx, claudeCodeLandmarkOptions())
-	if len(landmarkResult.Capabilities) == 0 {
-		return landmarkResult
+	skillsResult := recognizeLandmarks(ctx, claudeCodeLandmarkOptions())
+	if len(skillsResult.Capabilities) > 0 {
+		mergeInto(skillsResult.Capabilities, capabilityDotPaths("skills", "project_scope", ".claude/skills/<skill-name>/SKILL.md committed to version control", "confirmed"))
+		mergeInto(skillsResult.Capabilities, capabilityDotPaths("skills", "global_scope", "~/.claude/skills/<skill-name>/SKILL.md in user home directory", "confirmed"))
+		mergeInto(skillsResult.Capabilities, capabilityDotPaths("skills", "canonical_filename", "SKILL.md", "confirmed"))
 	}
-	mergeInto(landmarkResult.Capabilities, capabilityDotPaths("skills", "project_scope", ".claude/skills/<skill-name>/SKILL.md committed to version control", "confirmed"))
-	mergeInto(landmarkResult.Capabilities, capabilityDotPaths("skills", "global_scope", "~/.claude/skills/<skill-name>/SKILL.md in user home directory", "confirmed"))
-	mergeInto(landmarkResult.Capabilities, capabilityDotPaths("skills", "canonical_filename", "SKILL.md", "confirmed"))
-	return landmarkResult
+
+	rulesResult := recognizeLandmarks(ctx, claudeCodeRulesLandmarkOptions())
+
+	return mergeRecognitionResults(skillsResult, rulesResult)
 }

@@ -23,9 +23,22 @@ var realCopilotCliNonSkillsLandmarks = []string{
 	"Documentation Index",
 	"Hook types", "Session start hook", "Pre-tool use hook",
 	"Adding an MCP server", "Managing MCP servers",
-	"Types of custom instructions", "Repository-wide custom instructions",
 	"Plugin structure", "Creating a plugin",
 	"YAML frontmatter properties", "MCP server configuration details",
+}
+
+// realCopilotCliRulesLandmarks is a snapshot of the headings from Copilot
+// CLI's custom-instructions rules.0/extracted.json (add-custom-instructions.md)
+// as of 2026-04-16. Update when the doc evolves.
+var realCopilotCliRulesLandmarks = []string{
+	"Types of custom instructions",
+	"Repository-wide custom instructions",
+	"Path-specific custom instructions",
+	"Agent instructions",
+	"Local instructions",
+	"Creating repository-wide custom instructions",
+	"Creating path-specific custom instructions",
+	"Further reading",
 }
 
 func TestRecognizeCopilotCli_RealLandmarks(t *testing.T) {
@@ -117,5 +130,53 @@ func TestRecognizeCopilotCli_NoLandmarks(t *testing.T) {
 	}
 	if len(result.Capabilities) != 0 {
 		t.Errorf("expected zero capabilities, got %d", len(result.Capabilities))
+	}
+}
+
+// TestRecognizeCopilotCli_RealRulesLandmarks proves rules recognition on the
+// merged skills+rules landmarks. Copilot CLI has the most comprehensive
+// cross-provider compatibility surface in the cache (AGENTS.md + CLAUDE.md +
+// GEMINI.md), all gated on the "Agent instructions" landmark.
+func TestRecognizeCopilotCli_RealRulesLandmarks(t *testing.T) {
+	merged := append([]string{}, realCopilotCliSkillsLandmarks...)
+	merged = append(merged, realCopilotCliRulesLandmarks...)
+	result := capmon.RecognizeWithContext("copilot-cli", capmon.RecognitionContext{
+		Provider:  "copilot-cli",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["rules.supported"] != "true" {
+		t.Error("rules.supported missing")
+	}
+	rulesInferred := []string{
+		"activation_mode.always_on",
+		"activation_mode.frontmatter_globs",
+		"cross_provider_recognition.agents_md",
+		"cross_provider_recognition.claude_md",
+		"cross_provider_recognition.gemini_md",
+		"hierarchical_loading",
+	}
+	for _, c := range rulesInferred {
+		key := "rules.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["rules.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("rules.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	// auto_memory must NOT be emitted — copilot-cli docs do not document an
+	// agent-managed memory feature.
+	if _, has := caps["rules.capabilities.auto_memory.supported"]; has {
+		t.Error("rules.capabilities.auto_memory should NOT be present for copilot-cli")
+	}
+	// file_imports must NOT be emitted — no @-import syntax documented.
+	if _, has := caps["rules.capabilities.file_imports.supported"]; has {
+		t.Error("rules.capabilities.file_imports should NOT be present for copilot-cli")
 	}
 }

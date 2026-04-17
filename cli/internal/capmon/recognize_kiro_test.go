@@ -30,21 +30,55 @@ var realKiroSkillsLandmarks = []string{
 	"Examples",
 }
 
-// realKiroNonSkillsLandmarks is a sample drawn from kiro's other content-type
-// docs (agents, hooks, mcp, rules). Required anchors must NOT match any of these.
+// realKiroNonSkillsLandmarks is a sample drawn from kiro's non-skills,
+// non-rules content-type docs (agents, hooks, mcp). Required anchors for the
+// SKILLS recognizer must NOT match any of these. Note: rules/steering anchors
+// are deliberately excluded — those drive rules recognition.
 var realKiroNonSkillsLandmarks = []string{
 	"Select your cookie preferences", "Essential", "Performance",
 	"Agent configuration reference", "Name field", "Description field",
 	"Hooks", "What are agent hooks?", "How agent hooks work",
 	"Configuration", "Configuration file structure", "Remote server", "Local server",
-	"Steering", "What is steering?", "Workspace steering", "Global steering",
+}
+
+// realKiroRulesLandmarks is a snapshot of kiro's steering doc landmarks
+// (.capmon-cache/kiro/rules.0/extracted.json). Includes the cookie-banner
+// boilerplate for false-positive checking, plus the substantive Steering
+// section + Inclusion modes + Agents.md fallback.
+var realKiroRulesLandmarks = []string{
+	"Select your cookie preferences",
+	"Customize cookie preferences",
+	"Essential", "Performance", "Functional", "Advertising",
+	"Your privacy choices",
+	"Unable to save cookie preferences",
+	"Steering",
+	"What is steering?",
+	"Key benefits",
+	"Steering file scope",
+	"Workspace steering",
+	"Global steering",
+	"Team steering",
+	"Foundational steering files",
+	"Creating custom steering files",
+	"Agents.md",
+	"Inclusion modes",
+	"Always included (default)",
+	"Conditional inclusion",
+	"Manual inclusion",
+	"Auto inclusion",
+	"File references",
+	"Best practices",
+	"Common steering file strategies",
+	"Related documentation",
 }
 
 func TestRecognizeKiro_RealLandmarks(t *testing.T) {
+	merged := append([]string{}, realKiroSkillsLandmarks...)
+	merged = append(merged, realKiroRulesLandmarks...)
 	result := capmon.RecognizeWithContext("kiro", capmon.RecognitionContext{
 		Provider:  "kiro",
 		Format:    "markdown",
-		Landmarks: realKiroSkillsLandmarks,
+		Landmarks: merged,
 	})
 	if result.Status != capmon.StatusRecognized {
 		t.Fatalf("status = %q, want %q", result.Status, capmon.StatusRecognized)
@@ -75,6 +109,31 @@ func TestRecognizeKiro_RealLandmarks(t *testing.T) {
 	if _, has := caps["skills.capabilities.global_scope.supported"]; has {
 		t.Error("global_scope should NOT be present for kiro (no global filesystem path)")
 	}
+
+	// Rules content type
+	if caps["rules.supported"] != "true" {
+		t.Error("rules.supported missing")
+	}
+	rulesInferred := []string{
+		"activation_mode.always_on",
+		"activation_mode.frontmatter_globs",
+		"activation_mode.manual",
+		"activation_mode.model_decision",
+		"file_imports",
+		"cross_provider_recognition.agents_md",
+		"hierarchical_loading",
+	}
+	for _, c := range rulesInferred {
+		key := "rules.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+	}
+	// auto_memory must NOT be emitted — kiro has no auto-memory feature
+	if _, has := caps["rules.capabilities.auto_memory.supported"]; has {
+		t.Error("rules.capabilities.auto_memory should NOT be present for kiro")
+	}
+
 	// Sanity: the cookie banner landmarks should not have produced any
 	// capabilities — confirms no accidental substring match.
 	for k := range caps {
