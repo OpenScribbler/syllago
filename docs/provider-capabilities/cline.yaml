@@ -3,6 +3,25 @@ slug: cline
 display_name: ""
 last_verified: ""
 content_types:
+  hooks:
+    supported: true
+    capabilities:
+      context_injection:
+        supported: true
+        mechanism: context injection documented under 'Context Modification' heading
+        confidence: inferred
+      handler_types:
+        supported: true
+        mechanism: hook handler types documented under 'Hook Types' heading
+        confidence: inferred
+      hook_scopes:
+        supported: true
+        mechanism: hook scopes documented under 'Hook Locations' heading (project + global)
+        confidence: inferred
+      json_io_protocol:
+        supported: true
+        mechanism: JSON I/O protocol documented under 'Input Structure' / 'Output Structure' headings
+        confidence: inferred
   rules:
     supported: true
     capabilities:
