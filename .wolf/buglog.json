@@ -1620,6 +1620,470 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-17T13:37:47.319Z"
+    },
+    {
+      "id": "bug-102",
+      "timestamp": "2026-04-17T14:17:00.566Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_claude_code.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 22→66 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T14:17:00.566Z"
+    },
+    {
+      "id": "bug-103",
+      "timestamp": "2026-04-17T14:18:09.035Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_claude_code_test.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 20→25 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T14:18:09.035Z"
+    },
+    {
+      "id": "bug-104",
+      "timestamp": "2026-04-17T14:22:59.306Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_amp.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 21→63 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T14:22:59.306Z"
+    },
+    {
+      "id": "bug-105",
+      "timestamp": "2026-04-17T14:26:08.260Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_cline.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 17→58 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T14:26:08.260Z"
+    },
+    {
+      "id": "bug-106",
+      "timestamp": "2026-04-17T14:29:18.038Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_codex.go",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 8→39 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T14:29:18.038Z"
+    },
+    {
+      "id": "bug-107",
+      "timestamp": "2026-04-17T14:37:51.251Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_cursor.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 6→49 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T14:37:51.251Z"
+    },
+    {
+      "id": "bug-108",
+      "timestamp": "2026-04-17T14:43:37.245Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_gemini_cli.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 18→70 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T14:43:37.245Z"
+    },
+    {
+      "id": "bug-109",
+      "timestamp": "2026-04-17T14:48:25.110Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_kiro.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 19→62 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T14:48:25.110Z"
+    },
+    {
+      "id": "bug-110",
+      "timestamp": "2026-04-17T14:52:42.204Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_windsurf.go",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 20→75 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T14:52:42.204Z"
+    },
+    {
+      "id": "bug-111",
+      "timestamp": "2026-04-17T14:54:52.465Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_zed.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 7→49 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T14:54:52.465Z"
+    },
+    {
+      "id": "bug-112",
+      "timestamp": "2026-04-17T15:01:51.283Z",
+      "error_message": "Wrong reference: false should be true",
+      "file": ".claude/projects/start-epic4-mcp-recognition.md",
+      "root_cause": "Used \"false\" instead of \"true\"",
+      "fix": "Changed false → true",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T15:01:51.284Z"
+    },
+    {
+      "id": "bug-113",
+      "timestamp": "2026-04-17T15:07:24.275Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_claude_code.go",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 23→71 lines (9 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T15:07:24.275Z"
+    },
+    {
+      "id": "bug-114",
+      "timestamp": "2026-04-17T15:10:37.851Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_kiro.go",
+      "root_cause": "8 lines replaced/restructured",
+      "fix": "Rewrote 20→64 lines (8 removed) | Also: // Kiro's agents doc maps 3 of 7 canonical agents ; // The other 4 keys are intentionally unmapped:",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-17T15:14:23.150Z"
+    },
+    {
+      "id": "bug-115",
+      "timestamp": "2026-04-17T15:17:33.256Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/capmon/recognize_copilot_cli.go",
+      "root_cause": "Was returning: mergeRecognitionResults(skillsResult, rulesResult,",
+      "fix": "Now returns: mergeRecognitionResults(skillsResult, rulesResult,",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T15:17:33.256Z"
+    },
+    {
+      "id": "bug-116",
+      "timestamp": "2026-04-17T15:20:17.174Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/capmon/recognize_factory_droid.go",
+      "root_cause": "Was returning: mergeRecognitionResults(skillsResult, hooksResult)",
+      "fix": "Now returns: mergeRecognitionResults(skillsResult, hooksResult,",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T15:20:17.174Z"
+    },
+    {
+      "id": "bug-117",
+      "timestamp": "2026-04-17T15:31:16.560Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_zed.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 9→67 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T15:31:16.560Z"
+    },
+    {
+      "id": "bug-118",
+      "timestamp": "2026-04-17T15:35:22.657Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_roo_code.go",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 33→103 lines (9 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T15:35:22.657Z"
+    },
+    {
+      "id": "bug-119",
+      "timestamp": "2026-04-17T15:36:24.654Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_roo_code_test.go",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 12→14 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T15:36:24.654Z"
+    },
+    {
+      "id": "bug-120",
+      "timestamp": "2026-04-17T15:36:49.223Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_opencode.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 7→33 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T15:36:49.223Z"
+    },
+    {
+      "id": "bug-121",
+      "timestamp": "2026-04-17T16:05:12.958Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_cline.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 18→46 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T16:05:12.958Z"
+    },
+    {
+      "id": "bug-122",
+      "timestamp": "2026-04-17T16:05:45.071Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_factory_droid.go",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 19→57 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T16:05:45.071Z"
+    },
+    {
+      "id": "bug-123",
+      "timestamp": "2026-04-17T16:09:08.295Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_gemini_cli.go",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 20→54 lines (6 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T16:09:08.295Z"
+    },
+    {
+      "id": "bug-124",
+      "timestamp": "2026-04-17T16:09:29.653Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_pi.go",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 16→50 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T16:09:29.653Z"
+    },
+    {
+      "id": "bug-125",
+      "timestamp": "2026-04-17T16:10:45.578Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_codex.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 10→31 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T16:10:45.578Z"
+    },
+    {
+      "id": "bug-126",
+      "timestamp": "2026-04-17T16:11:01.401Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_copilot_cli.go",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 6→35 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T16:11:01.401Z"
+    },
+    {
+      "id": "bug-127",
+      "timestamp": "2026-04-17T16:11:18.258Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_opencode.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 7→29 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T16:11:18.258Z"
+    },
+    {
+      "id": "bug-128",
+      "timestamp": "2026-04-17T16:11:44.763Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_roo_code.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 24→55 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T16:11:44.763Z"
+    },
+    {
+      "id": "bug-129",
+      "timestamp": "2026-04-17T16:12:04.283Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/recognize_windsurf.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 8→35 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T16:12:04.283Z"
+    },
+    {
+      "id": "bug-130",
+      "timestamp": "2026-04-17T17:06:47.097Z",
+      "error_message": "Significant refactor of ",
+      "file": ".claude/skills/release/workflows/create-release.md",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 12→41 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T17:06:47.097Z"
     }
   ]
 }

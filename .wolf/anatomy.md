@@ -1,12 +1,13 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-17T14:04:32.496Z
-> Files: 698 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-17T17:10:41.213Z
+> Files: 710 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
 - `finish-phase0-capmon-refactor.md` — Finish Phase 6 Epic 0 — schema update, generator update, infra generalization (~395 tok)
-- `start-phase6-epic1-recognizers.md` — Start Phase 6 Epic 1 — wire skills recognizers for 14 stub providers (~690 tok)
+- `start-epic4-mcp-recognition.md` — Start Phase 6 Epic 4 — wire MCP recognizers for 14 providers (~614 tok)
+- `start-phase6-epic1-recognizers.md` — Start Phase 6 Epic 1 — wire skills recognizers for 14 stub providers (~670 tok)
 
 ## ../../../../../tmp/
 
@@ -27,7 +28,8 @@
 
 ## ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/
 
-- `MEMORY.md` — Syllago Project Memory (~1681 tok)
+- `feedback_release_notes_no_internal_labels.md` — Declares breakdowns (~803 tok)
+- `MEMORY.md` — Syllago Project Memory (~1683 tok)
 - `reference_stealth_fetch.md` — stealth-fetch (~308 tok)
 
 ## ../../../.config/pai/skills/research/
@@ -67,7 +69,7 @@
 ## ./
 
 - `.gitattributes` — Git attributes (~50 tok)
-- `.gitignore` — Git ignore rules (~320 tok)
+- `.gitignore` — Git ignore rules (~369 tok)
 - `.release-pending.yml` (~42 tok)
 - `AGENTS.md` — Agent Instructions (~332 tok)
 - `ARCHITECTURE.md` — Syllago Architecture (~1663 tok)
@@ -1275,7 +1277,9 @@
 - `.current` (~9 tok)
 - `continue-capmon-audit.md` — Continue auditing capmon (~624 tok)
 - `finish-phase0-capmon-refactor.md` — Finish Phase 0: Capmon Recognition Refactor (~1391 tok)
-- `start-phase6-epic1-recognizers.md` — Start Phase 6 Epic 1 — Skills recognizers for 14 stub providers (~1429 tok)
+- `start-epic4-mcp-recognition.md` — Start Phase 6 Epic 4 — wire MCP recognizers for 14 providers (~1060 tok)
+- `start-epic5-agents-recognition.md` — Start Phase 6 Epic 5 — wire agents recognizers for 9 providers (~1042 tok)
+- `start-phase6-epic1-recognizers.md` — Start Phase 6 Epic 1 — Skills recognizers for 14 stub providers (~1436 tok)
 
 ## .claude/rules/
 
@@ -1300,7 +1304,7 @@
 
 ## .claude/skills/release/workflows/
 
-- `create-release.md` — Create Release Workflow (~1447 tok)
+- `create-release.md` — Create Release Workflow (~2065 tok)
 
 ## .claude/skills/tui-builder/
 
@@ -1486,44 +1490,51 @@
 - `healing_github.go` — Struct: RenameCandidate (~2092 tok)
 - `healing.go` — Struct: HealResult (~1690 tok)
 - `pipeline.go` — Struct: PipelineOptions (~3172 tok)
-- `recognize_amp_test.go` — TestRecognizeAmp_RealLandmarks, TestRecognizeAmp_AnchorsMissing, TestRecognizeAmp_NoLandmarks, TestR (~2228 tok)
-- `recognize_amp.go` (~1811 tok)
-- `recognize_claude_code_test.go` — TestRecognizeClaudeCode_RealLandmarks, TestRecognizeClaudeCode_AnchorsMissing, TestRecognizeClaudeCo (~2277 tok)
-- `recognize_claude_code.go` — Declares doc (~2274 tok)
-- `recognize_cline_test.go` — TestRecognizeCline_RealLandmarks, TestRecognizeCline_NonSkillsLandmarks, TestRecognizeCline_AnchorsM (~2474 tok)
-- `recognize_cline.go` — Declares landmarks (~1779 tok)
-- `recognize_codex_test.go` — TestRecognizeCodex_MultiStructAllowList, TestRecognizeCodex_OnlyExcludedStructs, TestRecognizeCodex_ (~2739 tok)
-- `recognize_codex.go` — Declares names (~2295 tok)
+- `recognize_agents_test.go` — TestAgentsContentType, TestCanonicalAgentsKeys_MatchesCanonicalKeysYAML, TestIsCanonicalAgentsKey, T (~2192 tok)
+- `recognize_agents.go` — IsCanonicalAgentsKey, AgentsLandmarkOptions, AgentsLandmarkPattern (~1526 tok)
+- `recognize_amp_test.go` — TestRecognizeAmp_RealLandmarks, TestRecognizeAmp_AnchorsMissing, TestRecognizeAmp_NoLandmarks, TestR (~3302 tok)
+- `recognize_amp.go` — Declares contexts (~2477 tok)
+- `recognize_claude_code_test.go` — TestRecognizeClaudeCode_RealLandmarks, TestRecognizeClaudeCode_AnchorsMissing, TestRecognizeClaudeCo (~4350 tok)
+- `recognize_claude_code.go` — Declares doc (~4732 tok)
+- `recognize_cline_test.go` — TestRecognizeCline_RealLandmarks, TestRecognizeCline_NonSkillsLandmarks, TestRecognizeCline_AnchorsM (~4356 tok)
+- `recognize_cline.go` — Declares landmarks (~2800 tok)
+- `recognize_codex_test.go` — TestRecognizeCodex_MultiStructAllowList, TestRecognizeCodex_OnlyExcludedStructs, TestRecognizeCodex_ (~3737 tok)
+- `recognize_codex.go` — Declares names (~4442 tok)
+- `recognize_commands_test.go` — TestCommandsContentType, TestCanonicalCommandsKeys_MatchesCanonicalKeysYAML, TestIsCanonicalCommands (~2158 tok)
+- `recognize_commands.go` — IsCanonicalCommandsKey, CommandsLandmarkOptions, CommandsLandmarkPattern (~1476 tok)
 - `recognize_compose_test.go` — TestMergeRecognitionResults_Empty, TestMergeRecognitionResults_TwoRecognized, TestMergeRecognitionRe (~1074 tok)
 - `recognize_compose.go` — Declares prefix (~591 tok)
 - `recognize_conformance_test.go` — TestRecognitionConformance_KeyRegex, TestRecognitionConformance_Determinism, TestRecognitionConforma (~993 tok)
-- `recognize_copilot_cli_test.go` — TestRecognizeCopilotCli_RealLandmarks, TestRecognizeCopilotCli_NonSkillsLandmarks, TestRecognizeCopi (~2659 tok)
-- `recognize_copilot_cli.go` (~1758 tok)
-- `recognize_crush.go` (~516 tok)
-- `recognize_cursor_test.go` — TestRecognizeCursor_RealRulesLandmarks, TestRecognizeCursor_AnchorsMissing, TestRecognizeCursor_NoLa (~987 tok)
-- `recognize_cursor.go` (~843 tok)
-- `recognize_factory_droid_test.go` — TestRecognizeFactoryDroid_RealLandmarks, TestRecognizeFactoryDroid_AnchorsMissing, TestRecognizeFact (~2012 tok)
-- `recognize_factory_droid.go` (~1316 tok)
-- `recognize_gemini_cli_test.go` — TestRecognizeGeminiCli_RealRulesLandmarks, TestRecognizeGeminiCli_AnchorsMissing, TestRecognizeGemin (~1503 tok)
-- `recognize_gemini_cli.go` (~1247 tok)
+- `recognize_copilot_cli_test.go` — TestRecognizeCopilotCli_RealAgentsLandmarks, TestRecognizeCopilotCli_AgentsAnchorsMissing, TestRecog (~3648 tok)
+- `recognize_copilot_cli.go` (~3455 tok)
+- `recognize_crush.go` (~865 tok)
+- `recognize_cursor_test.go` — TestRecognizeCursor_RealRulesLandmarks, TestRecognizeCursor_AnchorsMissing, TestRecognizeCursor_NoLa (~2199 tok)
+- `recognize_cursor.go` (~1600 tok)
+- `recognize_factory_droid_test.go` — TestRecognizeFactoryDroid_RealLandmarks, TestRecognizeFactoryDroid_AnchorsMissing, TestRecognizeFact (~3923 tok)
+- `recognize_factory_droid.go` — Declares for (~2930 tok)
+- `recognize_gemini_cli_test.go` — TestRecognizeGeminiCli_RealRulesLandmarks, TestRecognizeGeminiCli_AnchorsMissing, TestRecognizeGemin (~4183 tok)
+- `recognize_gemini_cli.go` (~2807 tok)
 - `recognize_hooks_test.go` — TestHooksContentType, TestCanonicalHooksKeys_MatchesCanonicalKeysYAML, TestIsCanonicalHooksKey, Test (~2153 tok)
 - `recognize_hooks.go` — IsCanonicalHooksKey, HooksLandmarkOptions, HooksLandmarkPattern (~1371 tok)
 - `recognize_internal_test.go` — TestRecognizeGoStruct_ContentTypeAgnostic, TestRecognizeGoStruct_MechanismPrefixOverride, TestSkills (~1551 tok)
-- `recognize_kiro_test.go` — TestRecognizeKiro_RealLandmarks, TestRecognizeKiro_NonSkillsLandmarks, TestRecognizeKiro_AnchorsMiss (~2467 tok)
-- `recognize_kiro.go` — Declares docs (~1787 tok)
+- `recognize_kiro_test.go` — TestRecognizeKiro_RealLandmarks, TestRecognizeKiro_NonSkillsLandmarks, TestRecognizeKiro_AnchorsMiss (~4736 tok)
+- `recognize_kiro.go` — Declares docs (~3320 tok)
 - `recognize_landmarks.go` — Struct: StringMatcher (~1818 tok)
-- `recognize_opencode.go` (~293 tok)
-- `recognize_pi_test.go` — TestRecognizePi_RealHooksLandmarks, TestRecognizePi_HooksAnchorsMissing, TestRecognizePi_NoLandmarks (~1125 tok)
-- `recognize_pi.go` (~659 tok)
-- `recognize_roo_code.go` (~502 tok)
+- `recognize_mcp_test.go` — TestMcpContentType, TestCanonicalMcpKeys_MatchesCanonicalKeysYAML, TestIsCanonicalMcpKey, TestMcpLan (~2119 tok)
+- `recognize_mcp.go` — IsCanonicalMcpKey, McpLandmarkOptions, McpLandmarkPattern (~1426 tok)
+- `recognize_opencode.go` — Declares for (~1382 tok)
+- `recognize_pi_test.go` — TestRecognizePi_RealHooksLandmarks, TestRecognizePi_HooksAnchorsMissing, TestRecognizePi_NoLandmarks (~1892 tok)
+- `recognize_pi.go` (~1167 tok)
+- `recognize_roo_code_test.go` — TestRecognizeRooCode_RealAgentsLandmarks, TestRecognizeRooCode_AgentsAnchorsMissing (~1077 tok)
+- `recognize_roo_code.go` — Declares names (~2562 tok)
 - `recognize_rules_test.go` — TestRulesContentType, TestCanonicalRulesKeys_MatchesCanonicalKeysYAML, TestIsCanonicalRulesKey, Test (~2175 tok)
 - `recognize_rules.go` — IsCanonicalRulesKey, RulesLandmarkOptions, RulesLandmarkPattern (~1470 tok)
 - `recognize_test.go` — TestRecognizeContentTypeDotPaths_SkillGoStruct, TestRecognizeCrushSkills, TestRecognizeRooCodeSkills (~2230 tok)
 - `recognize_types.go` — Struct: RecognitionContext (~1407 tok)
-- `recognize_windsurf_test.go` — TestRecognizeWindsurf_RealRulesLandmarks, TestRecognizeWindsurf_AnchorsMissing, TestRecognizeWindsur (~1801 tok)
-- `recognize_windsurf.go` (~1556 tok)
-- `recognize_zed_test.go` — TestRecognizeZed_RealRulesLandmarks, TestRecognizeZed_RulesAnchorsMissing, TestRecognizeZed_NoLandma (~1306 tok)
-- `recognize_zed.go` (~1061 tok)
+- `recognize_windsurf_test.go` — TestRecognizeWindsurf_RealRulesLandmarks, TestRecognizeWindsurf_AnchorsMissing, TestRecognizeWindsur (~2729 tok)
+- `recognize_windsurf.go` — Declares for (~3232 tok)
+- `recognize_zed_test.go` — TestRecognizeZed_RealRulesLandmarks, TestRecognizeZed_RulesAnchorsMissing, TestRecognizeZed_NoLandma (~3397 tok)
+- `recognize_zed.go` — Declares is (~3142 tok)
 - `recognize.go` — Recognizer conformance contract. (~3518 tok)
 - `report_test.go` — TestSanitizeSlug, TestDeduplicatePR_NoneExists, TestRecordConsecutiveFailure_ThirdFailure, TestGHRun (~3592 tok)
 - `report.go` — GHRunner, SetGHCommandForTest, SanitizeSlug, DeduplicatePR, RecordConsecutiveFailure (~3221 tok)
@@ -1579,3 +1590,4 @@
 ## releases/
 
 - `v0.7.0.md` — v0.7.0 (~2536 tok)
+- `v0.7.1.md` — v0.7.1 (~1011 tok)

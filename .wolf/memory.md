@@ -966,3 +966,194 @@
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 07:12 | Edited .claude/projects/start-phase6-epic1-recognizers.md | 9→9 lines | ~336 |
+| 07:12 | Edited ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/start-phase6-epic1-recognizers.md | 9→9 lines | ~336 |
+| 07:13 | Edited .claude/projects/start-phase6-epic1-recognizers.md | 6→7 lines | ~117 |
+| 07:13 | Created .claude/projects/start-epic4-mcp-recognition.md | — | ~1015 |
+| 07:13 | Created ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/start-epic4-mcp-recognition.md | — | ~655 |
+| 07:13 | Created .claude/projects/.current | — | ~8 |
+| 07:15 | Created cli/internal/capmon/recognize_mcp.go | — | ~1426 |
+| 07:16 | Created cli/internal/capmon/recognize_mcp_test.go | — | ~2119 |
+| 07:17 | Edited cli/internal/capmon/recognize_claude_code.go | modified claudeCodeMcpLandmarkOptions() | ~1256 |
+| 07:17 | Edited cli/internal/capmon/recognize_claude_code_test.go | modified TestRecognizeClaudeCode_NoLandmarks() | ~1179 |
+| 07:18 | Edited cli/internal/capmon/recognize_claude_code_test.go | modified TestRecognizeClaudeCode_RealLandmarks() | ~329 |
+
+## Session: 2026-04-17 07:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:22 | Edited cli/internal/capmon/recognize_amp.go | modified ampMcpLandmarkOptions() | ~1051 |
+| 07:23 | Edited cli/internal/capmon/recognize_amp_test.go | modified TestRecognizeAmp_HooksAnchorsMissing() | ~1283 |
+| 07:26 | Edited cli/internal/capmon/recognize_cline.go | modified clineMcpLandmarkOptions() | ~910 |
+| 07:26 | Edited cli/internal/capmon/recognize_cline_test.go | modified TestRecognizeCline_RealMcpLandmarks() | ~1181 |
+| 07:29 | Edited cli/internal/capmon/recognize_codex.go | modified for() | ~625 |
+
+## Session: 2026-04-17 07:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:34 | Edited cli/internal/capmon/recognize_copilot_cli.go | modified for() | ~599 |
+| 07:36 | Edited cli/internal/capmon/recognize_crush.go | expanded (+23 lines) | ~655 |
+| 07:37 | Edited cli/internal/capmon/recognize_cursor.go | modified cursorMcpLandmarkOptions() | ~840 |
+| 07:38 | Edited cli/internal/capmon/recognize_cursor_test.go | modified TestRecognizeCursor_NoLandmarks() | ~1135 |
+| 07:40 | Edited cli/internal/capmon/recognize_cursor.go | modified cursorMcpLandmarkOptions() | ~720 |
+| 07:40 | Edited cli/internal/capmon/recognize_cursor_test.go | modified TestRecognizeCursor_RealMcpLandmarks() | ~997 |
+| 07:41 | Edited cli/internal/capmon/recognize_factory_droid.go | modified for() | ~432 |
+| 07:43 | Edited cli/internal/capmon/recognize_gemini_cli.go | modified geminiCliMcpLandmarkOptions() | ~1274 |
+| 07:44 | Edited cli/internal/capmon/recognize_gemini_cli_test.go | modified TestRecognizeGeminiCli_RealMcpLandmarks() | ~1887 |
+
+## Session: 2026-04-17 07:46
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:48 | Edited cli/internal/capmon/recognize_kiro.go | modified kiroMcpLandmarkOptions() | ~966 |
+| 07:48 | Edited cli/internal/capmon/recognize_kiro_test.go | modified TestRecognizeKiro_RealMcpLandmarks() | ~1032 |
+| 07:50 | Edited cli/internal/capmon/recognize_opencode.go | modified for() | ~495 |
+| 07:51 | Edited cli/internal/capmon/recognize_roo_code.go | modified for() | ~752 |
+| 07:52 | Edited cli/internal/capmon/recognize_windsurf.go | modified windsurfMcpLandmarkOptions() | ~1279 |
+| 07:53 | Edited cli/internal/capmon/recognize_windsurf_test.go | modified TestRecognizeWindsurf_RealMcpLandmarks() | ~1069 |
+| 07:54 | Edited cli/internal/capmon/recognize_zed.go | modified zedMcpLandmarkOptions() | ~705 |
+| 07:55 | Edited cli/internal/capmon/recognize_zed_test.go | modified TestRecognizeZed_RealMcpLandmarks() | ~987 |
+| 07:58 | Edited .claude/projects/start-epic4-mcp-recognition.md | inline fix | ~10 |
+| 07:58 | Edited .claude/projects/start-epic4-mcp-recognition.md | 8→10 lines | ~148 |
+
+## Session: 2026-04-17 08:01
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:01 | Edited .claude/projects/start-epic4-mcp-recognition.md | inline fix | ~3 |
+| 08:02 | Created .claude/projects/start-epic5-agents-recognition.md | — | ~904 |
+| 08:02 | Created .claude/projects/.current | — | ~9 |
+| 08:03 | Created cli/internal/capmon/recognize_agents.go | — | ~1526 |
+| 08:04 | Created cli/internal/capmon/recognize_agents_test.go | — | ~2192 |
+| 08:05 | Edited .gitignore | expanded (+7 lines) | ~68 |
+| 08:07 | Edited cli/internal/capmon/recognize_claude_code.go | modified claudeCodeAgentsLandmarkOptions() | ~1456 |
+| 08:08 | Edited cli/internal/capmon/recognize_claude_code_test.go | modified TestRecognizeClaudeCode_McpAnchorsMissing() | ~1216 |
+| 08:08 | Edited cli/internal/capmon/recognize_claude_code_test.go | modified TestRecognizeClaudeCode_RealLandmarks() | ~93 |
+| 08:10 | Edited cli/internal/capmon/recognize_kiro.go | modified kiroAgentsLandmarkOptions() | ~1012 |
+
+## Session: 2026-04-17 08:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:14 | Edited cli/internal/capmon/recognize_kiro.go | modified kiroAgentsLandmarkOptions() | ~857 |
+| 08:14 | Edited cli/internal/capmon/recognize_kiro_test.go | modified capabilities() | ~684 |
+| 08:15 | Edited cli/internal/capmon/recognize_kiro_test.go | modified TestRecognizeKiro_RealAgentsLandmarks() | ~784 |
+| 08:17 | Edited cli/internal/capmon/recognize_copilot_cli.go | modified copilotCliAgentsLandmarkOptions() | ~757 |
+| 08:17 | Edited cli/internal/capmon/recognize_copilot_cli.go | 5→6 lines | ~84 |
+| 08:18 | Edited cli/internal/capmon/recognize_copilot_cli_test.go | modified TestRecognizeCopilotCli_RealAgentsLandmarks() | ~1005 |
+| 08:20 | Edited cli/internal/capmon/recognize_factory_droid.go | modified factoryDroidAgentsLandmarkOptions() | ~719 |
+| 08:20 | Edited cli/internal/capmon/recognize_factory_droid.go | 4→5 lines | ~62 |
+| 08:20 | Edited cli/internal/capmon/recognize_factory_droid_test.go | modified TestRecognizeFactoryDroid_RealAgentsLandmarks() | ~1129 |
+| 08:22 | Edited cli/internal/capmon/recognize_windsurf.go | modified for() | ~503 |
+
+## Session: 2026-04-17 08:27
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:31 | Edited cli/internal/capmon/recognize_zed.go | modified zedAgentsLandmarkOptions() | ~1088 |
+| 08:31 | Edited cli/internal/capmon/recognize_zed_test.go | modified TestRecognizeZed_RealAgentsLandmarks() | ~1259 |
+| 08:32 | Edited cli/internal/capmon/recognize_zed.go | 8→10 lines | ~166 |
+| 08:35 | Edited cli/internal/capmon/recognize_roo_code.go | modified rooCodeAgentsLandmarkOptions() | ~1642 |
+| 08:36 | Created cli/internal/capmon/recognize_roo_code_test.go | — | ~1026 |
+| 08:36 | Edited cli/internal/capmon/recognize_roo_code_test.go | modified TestRecognizeRooCode_AgentsAnchorsMissing() | ~178 |
+| 08:36 | Edited cli/internal/capmon/recognize_opencode.go | modified for() | ~503 |
+| 08:39 | Edited cli/internal/capmon/recognize_codex.go | modified codexAgentsLandmarkOptions() | ~1308 |
+| 08:39 | Edited cli/internal/capmon/recognize_codex.go | modified recognizeCodex() | ~442 |
+| 08:40 | Edited cli/internal/capmon/recognize_codex_test.go | modified TestRecognizeCodex_HooksAnchorsMissing() | ~1204 |
+
+## Session: 2026-04-17 08:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:59 | Created cli/internal/capmon/recognize_commands.go | — | ~1476 |
+| 09:00 | Created cli/internal/capmon/recognize_commands_test.go | — | ~2158 |
+| 09:05 | Edited cli/internal/capmon/recognize_cline.go | modified clineCommandsLandmarkOptions() | ~755 |
+| 09:05 | Edited cli/internal/capmon/recognize_factory_droid.go | modified factoryDroidCommandsLandmarkOptions() | ~897 |
+
+## Session: 2026-04-17 09:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:09 | Edited cli/internal/capmon/recognize_gemini_cli.go | modified geminiCliCommandsLandmarkOptions() | ~875 |
+| 09:09 | Edited cli/internal/capmon/recognize_pi.go | modified piCommandsLandmarkOptions() | ~762 |
+| 09:10 | Edited cli/internal/capmon/recognize_claude_code.go | modified for() | ~679 |
+| 09:10 | Edited cli/internal/capmon/recognize_codex.go | expanded (+21 lines) | ~520 |
+| 09:11 | Edited cli/internal/capmon/recognize_copilot_cli.go | expanded (+29 lines) | ~549 |
+| 09:11 | Edited cli/internal/capmon/recognize_opencode.go | modified for() | ~447 |
+| 09:11 | Edited cli/internal/capmon/recognize_roo_code.go | modified for() | ~851 |
+| 09:12 | Edited cli/internal/capmon/recognize_windsurf.go | modified for() | ~578 |
+| 09:12 | Edited cli/internal/capmon/recognize_zed.go | modified for() | ~602 |
+| 09:14 | Edited cli/internal/capmon/recognize_cline_test.go | modified TestRecognizeCline_RealCommandsLandmarks() | ~896 |
+| 09:15 | Edited cli/internal/capmon/recognize_factory_droid_test.go | modified TestRecognizeFactoryDroid_HooksAnchorsMissing() | ~1096 |
+
+## Session: 2026-04-17 09:17
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:18 | Edited cli/internal/capmon/recognize_gemini_cli_test.go | modified TestRecognizeGeminiCli_McpAnchorsMissing() | ~1168 |
+| 09:19 | Edited cli/internal/capmon/recognize_pi_test.go | modified TestRecognizePi_NoLandmarks() | ~848 |
+| 09:23 | Edited .claude/projects/start-epic5-agents-recognition.md | 5→5 lines | ~50 |
+| 09:24 | Edited .claude/projects/start-epic5-agents-recognition.md | 7→10 lines | ~246 |
+| 09:45 | Session end: 4 writes across 3 files (recognize_gemini_cli_test.go, recognize_pi_test.go, start-epic5-agents-recognition.md) | 5 reads | ~13245 tok |
+
+## Session: 2026-04-17 09:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 09:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 09:46
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 09:46
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 09:46
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 09:46
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 09:47
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 09:47
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 09:47
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 09:48
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:02 | Created VERSION | — | ~2 |
+| 10:03 | Created releases/v0.7.1.md | — | ~1554 |
+| 10:06 | Created releases/v0.7.1.md | — | ~1079 |
+| 10:06 | Edited .claude/skills/release/workflows/create-release.md | expanded (+29 lines) | ~964 |
+
+## Session: 2026-04-17 10:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:10 | Created ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_release_notes_no_internal_labels.md | — | ~856 |
+| 10:10 | Edited ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md | inline fix | ~67 |
