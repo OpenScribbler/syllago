@@ -1,0 +1,10 @@
+{
+  "event": "PreToolUse",
+  "matcher": "Bash",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "echo smoke-test-hook"
+    }
+  ]
+}

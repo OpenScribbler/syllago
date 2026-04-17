@@ -1,0 +1,6 @@
+id: smoke-commands
+name: smoke-commands
+description: Test command used by tests/smoke/.
+tags:
+  - smoke-test
+  - internal
