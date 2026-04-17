@@ -367,3 +367,81 @@ func TestRecognizeGeminiCli_McpAnchorsMissing(t *testing.T) {
 		t.Error("mcp.supported should NOT be present when 'MCP servers with Gemini CLI' anchor is missing")
 	}
 }
+
+// realGeminiCliCommandsLandmarks is a snapshot of the headings extracted from
+// Gemini CLI's custom-commands doc (.capmon-cache/gemini-cli/commands.0/
+// extracted.json — docs/cli/custom-commands.md) as of 2026-04-17. The
+// "Handling arguments" subsection enumerates four substitution mechanisms
+// ({{args}}, default arg handling, !{...} shell injection, @{...} file
+// injection) — strong heading-level evidence for argument_substitution.
+var realGeminiCliCommandsLandmarks = []string{
+	"Custom commands",
+	"File locations and precedence",
+	"Naming and namespacing",
+	"TOML file format (v1)",
+	"Required fields",
+	"Optional fields",
+	"Handling arguments",
+	"1. Context-aware injection with {{args}}",
+	"2. Default argument handling",
+	"3. Executing shell commands with !{...}",
+	"4. Injecting file content with @{...}",
+	`Example: A "Pure Function" refactoring command`,
+}
+
+// TestRecognizeGeminiCli_RealCommandsLandmarks proves commands recognition
+// fires on the merged rules+hooks+mcp+commands fixture, emits
+// argument_substitution at "inferred" confidence, and does NOT emit
+// builtin_commands (built-in slash commands are documented in the CLI binary
+// commands page — a different cache source not pulled in by this fixture).
+func TestRecognizeGeminiCli_RealCommandsLandmarks(t *testing.T) {
+	merged := append([]string{}, realGeminiCliRulesLandmarks...)
+	merged = append(merged, realGeminiCliHooksLandmarks...)
+	merged = append(merged, realGeminiCliMcpLandmarks...)
+	merged = append(merged, realGeminiCliCommandsLandmarks...)
+	result := capmon.RecognizeWithContext("gemini-cli", capmon.RecognitionContext{
+		Provider:  "gemini-cli",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["commands.supported"] != "true" {
+		t.Error("commands.supported missing")
+	}
+	if caps["commands.capabilities.argument_substitution.supported"] != "true" {
+		t.Error("commands.capabilities.argument_substitution.supported missing")
+	}
+	if got := caps["commands.capabilities.argument_substitution.confidence"]; got != "inferred" {
+		t.Errorf("commands.argument_substitution.confidence = %q, want inferred", got)
+	}
+	if _, has := caps["commands.capabilities.builtin_commands.supported"]; has {
+		t.Error("commands.capabilities.builtin_commands.supported should NOT be present for gemini-cli (built-ins live in CLI binary docs page, not custom-commands.md)")
+	}
+}
+
+// TestRecognizeGeminiCli_CommandsAnchorsMissing proves the required-anchor
+// guard suppresses commands emission when the unique "Handling arguments"
+// anchor is absent — preventing commands patterns from firing on contexts
+// where only the generic "Custom commands" or "Required fields" headings
+// appear.
+func TestRecognizeGeminiCli_CommandsAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realGeminiCliCommandsLandmarks))
+	for _, lm := range realGeminiCliCommandsLandmarks {
+		if lm == "Handling arguments" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("gemini-cli", capmon.RecognitionContext{
+		Provider:  "gemini-cli",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["commands.supported"]; has {
+		t.Error("commands.supported should NOT be present when 'Handling arguments' anchor is missing")
+	}
+}
