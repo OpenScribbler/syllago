@@ -22,6 +22,17 @@ content_types:
         supported: true
         mechanism: JSON I/O protocol documented under 'Input Structure' / 'Output Structure' headings
         confidence: inferred
+  mcp:
+    supported: true
+    capabilities:
+      marketplace:
+        supported: true
+        mechanism: in-IDE MCP Marketplace introduced under 'Finding MCP Servers' heading (mcp.0)
+        confidence: inferred
+      transport_types:
+        supported: true
+        mechanism: transport types documented under 'MCP Transport Mechanisms' / 'STDIO Transport' / 'SSE Transport' headings (mcp.1)
+        confidence: inferred
   rules:
     supported: true
     capabilities:
