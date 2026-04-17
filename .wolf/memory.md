@@ -1157,3 +1157,59 @@
 |------|--------|---------|---------|--------|
 | 10:10 | Created ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_release_notes_no_internal_labels.md | — | ~856 |
 | 10:10 | Edited ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md | inline fix | ~67 |
+| 10:11 | Session end: 2 writes across 2 files (feedback_release_notes_no_internal_labels.md, MEMORY.md) | 2 reads | ~988 tok |
+| 10:20 | Session end: 2 writes across 2 files (feedback_release_notes_no_internal_labels.md, MEMORY.md) | 2 reads | ~988 tok |
+| 10:26 | Session end: 2 writes across 2 files (feedback_release_notes_no_internal_labels.md, MEMORY.md) | 9 reads | ~988 tok |
+
+## Session: 2026-04-17 10:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 10:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:35 | Created tests/smoke/fixtures/loadouts/claude-code/syllago-smoke-test/loadout.yaml | — | ~124 |
+| 10:35 | Created tests/smoke/fixtures/loadouts/claude-code/syllago-smoke-test/.syllago.yaml | — | ~42 |
+| 10:35 | Created tests/smoke/fixtures/rules/claude-code/smoke-rules/rule.md | — | ~62 |
+| 10:35 | Created tests/smoke/fixtures/rules/claude-code/smoke-rules/.syllago.yaml | — | ~33 |
+| 10:35 | Created tests/smoke/fixtures/hooks/claude-code/smoke-hook/hook.json | — | ~42 |
+| 10:35 | Created tests/smoke/fixtures/hooks/claude-code/smoke-hook/.syllago.yaml | — | ~32 |
+| 10:35 | Created tests/smoke/fixtures/commands/claude-code/smoke-commands/command.md | — | ~51 |
+| 10:35 | Created tests/smoke/fixtures/commands/claude-code/smoke-commands/.syllago.yaml | — | ~35 |
+| 10:35 | Created tests/smoke/fixtures/skills/smoke-skill/SKILL.md | — | ~66 |
+| 10:35 | Created tests/smoke/fixtures/skills/smoke-skill/.syllago.yaml | — | ~33 |
+| 10:35 | Created tests/smoke/fixtures/agents/smoke-agent/AGENT.md | — | ~66 |
+| 10:35 | Created tests/smoke/fixtures/agents/smoke-agent/.syllago.yaml | — | ~33 |
+| 10:35 | Created tests/smoke/fixtures/mcp/smoke-mcp/config.json | — | ~62 |
+| 10:35 | Created tests/smoke/fixtures/mcp/smoke-mcp/.syllago.yaml | — | ~34 |
+| 10:35 | Edited tests/smoke/helpers.sh | expanded (+10 lines) | ~190 |
+| 10:36 | Edited tests/smoke/claude-code.sh | "example-kitchen-sink-load" → "syllago-smoke-test" | ~9 |
+| 10:36 | Edited tests/smoke/claude-code.sh | inline fix | ~3 |
+| 10:36 | Edited tests/smoke/claude-code.sh | inline fix | ~3 |
+| 10:36 | Edited tests/smoke/claude-code.sh | inline fix | ~4 |
+| 10:36 | Edited tests/smoke/claude-code.sh | inline fix | ~4 |
+| 10:36 | Edited tests/smoke/claude-code.sh | inline fix | ~5 |
+| 10:36 | Edited tests/smoke/claude-code.sh | inline fix | ~5 |
+| 10:36 | Edited tests/smoke/claude-code.sh | 3→3 lines | ~48 |
+| 10:36 | Edited tests/smoke/claude-code.sh | "smoke-stdio-server" → "s config.json defines " | ~19 |
+| 10:36 | Edited tests/smoke/gemini-cli.sh | inline fix | ~20 |
+| 10:36 | Edited tests/smoke/gemini-cli.sh | "example-kitchen-sink-load" → "syllago-smoke-test" | ~9 |
+| 10:36 | Edited tests/smoke/gemini-cli.sh | inline fix | ~3 |
+| 10:36 | Edited tests/smoke/gemini-cli.sh | inline fix | ~4 |
+| 10:36 | Edited tests/smoke/gemini-cli.sh | inline fix | ~3 |
+| 10:36 | Edited tests/smoke/gemini-cli.sh | inline fix | ~4 |
+| 10:36 | Edited tests/smoke/gemini-cli.sh | inline fix | ~25 |
+| 10:38 | Edited tests/smoke/fixtures/loadouts/claude-code/syllago-smoke-test/loadout.yaml | 2→3 lines | ~14 |
+| 10:40 | Edited tests/smoke/gemini-cli.sh | 3→3 lines | ~51 |
+| 10:40 | Edited tests/smoke/gemini-cli.sh | 2→2 lines | ~29 |
+| 10:41 | Edited tests/smoke/gemini-cli.sh | inline fix | ~12 |
+| 10:41 | Edited VERSION | inline fix | ~2 |
+| 10:42 | Created releases/v0.7.2.md | — | ~306 |
+
+## Session: 2026-04-17 10:46
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:47 | Edited .github/workflows/smoke-test-providers.yml | 7→4 lines | ~34 |

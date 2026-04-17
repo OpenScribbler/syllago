@@ -1,38 +1,26 @@
 {
-  "session_id": "session-2026-04-17-1009",
-  "started": "2026-04-17T17:09:47.037Z",
+  "session_id": "session-2026-04-17-1046",
+  "started": "2026-04-17T17:46:39.547Z",
   "files_read": {
-    "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_release_notes_no_internal_labels.md": {
+    "/home/hhewett/.local/src/syllago/.github/workflows/smoke-test-providers.yml": {
       "count": 1,
       "tokens": 0,
-      "first_read": "2026-04-17T17:09:58.157Z"
-    },
-    "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-04-17T17:10:35.009Z"
+      "first_read": "2026-04-17T17:46:46.613Z"
     }
   },
   "files_written": [
     {
-      "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_release_notes_no_internal_labels.md",
-      "action": "create",
-      "tokens": 917,
-      "at": "2026-04-17T17:10:29.207Z"
-    },
-    {
-      "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+      "file": "/home/hhewett/.local/src/syllago/.github/workflows/smoke-test-providers.yml",
       "action": "edit",
-      "tokens": 71,
-      "at": "2026-04-17T17:10:41.223Z"
+      "tokens": 34,
+      "at": "2026-04-17T17:47:37.464Z"
     }
   ],
   "edit_counts": {
-    "../../../.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_release_notes_no_internal_labels.md": 1,
-    "../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md": 1
+    ".github/workflows/smoke-test-providers.yml": 1
   },
   "anatomy_hits": 0,
-  "anatomy_misses": 2,
+  "anatomy_misses": 1,
   "repeated_reads_warned": 0,
   "cerebrum_warnings": 0,
   "stop_count": 0
