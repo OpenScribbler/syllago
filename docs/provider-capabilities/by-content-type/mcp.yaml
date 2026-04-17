@@ -1,0 +1,163 @@
+# THIS FILE IS GENERATED. Do not edit directly.
+# Source: docs/provider-capabilities/*.yaml
+# Generated at: 2026-04-17T15:55:31Z
+
+content_type: mcp
+providers:
+    amp:
+        supported: true
+        capabilities:
+            enterprise_management:
+                supported: true
+                mechanism: workspace-admin-enforced MCP registry with allowlist documented under 'MCP Registry Allowlist' heading (modelcontextprotocol.io schema; unreachable registry blocks all servers)
+                confidence: inferred
+            oauth_support:
+                supported: true
+                mechanism: OAuth 2.0 authentication for remote MCP servers documented under 'OAuth for Remote MCP Servers' heading
+                confidence: inferred
+            tool_filtering:
+                supported: true
+                mechanism: per-tool enable/disable documented under '3. Configure Tool Access' heading (VS Code UI exposes individual tool toggles within each configured server)
+                confidence: inferred
+    claude-code:
+        supported: true
+        capabilities:
+            enterprise_management:
+                supported: true
+                mechanism: 'managed MCP config with managed-mcp.json + allowlists/denylists documented under ''Managed MCP configuration'' / ''Option 1: Exclusive control with managed-mcp.json'' / ''Option 2: Policy-based control with allowlists and denylists'' headings'
+                confidence: inferred
+            env_var_expansion:
+                supported: true
+                mechanism: env-var expansion in .mcp.json documented under 'Environment variable expansion in .mcp.json' heading
+                confidence: inferred
+            marketplace:
+                supported: true
+                mechanism: in-doc curated server list documented under 'Popular MCP servers' heading; Claude Code surfaces servers via this catalog rather than an in-IDE marketplace
+                confidence: inferred
+            oauth_support:
+                supported: true
+                mechanism: OAuth 2.0 with callback port + pre-configured credentials documented under 'Authenticate with remote MCP servers' / 'Use a fixed OAuth callback port' / 'Use pre-configured OAuth credentials' headings
+                confidence: inferred
+            resource_referencing:
+                supported: true
+                mechanism: MCP resource @-mention referencing documented under 'Use MCP resources' / 'Reference MCP resources' headings
+                confidence: inferred
+            tool_filtering:
+                supported: true
+                mechanism: allowlist + denylist tool filtering documented under 'Allowlist behavior (allowedMcpServers)' / 'Denylist behavior (deniedMcpServers)' headings
+                confidence: inferred
+            transport_types:
+                supported: true
+                mechanism: 'three transport options documented under ''Option 1: Add a remote HTTP server'' / ''Option 2: Add a remote SSE server'' / ''Option 3: Add a local stdio server'' headings'
+                confidence: inferred
+    cline:
+        supported: true
+        capabilities:
+            marketplace:
+                supported: true
+                mechanism: in-IDE MCP Marketplace introduced under 'Finding MCP Servers' heading (mcp.0)
+                confidence: inferred
+            transport_types:
+                supported: true
+                mechanism: transport types documented under 'MCP Transport Mechanisms' / 'STDIO Transport' / 'SSE Transport' headings (mcp.1)
+                confidence: inferred
+    cursor:
+        supported: true
+        capabilities:
+            auto_approve:
+                supported: true
+                mechanism: auto-approval / auto-run mode for trusted tools documented under 'Auto-run' heading
+                confidence: inferred
+            env_var_expansion:
+                supported: true
+                mechanism: ${env:NAME}, ${userHome}, ${workspaceFolder}, ${pathSeparator} variable interpolation documented under 'Config interpolation' / 'Combining with config interpolation' headings
+                confidence: inferred
+            marketplace:
+                supported: true
+                mechanism: one-click MCP server installation from a curated catalog documented under 'One-click installation' heading
+                confidence: inferred
+            oauth_support:
+                supported: true
+                mechanism: OAuth 2.0 (with Client ID/Secret + scopes) documented under 'Static OAuth for remote servers' / 'Authentication' headings
+                confidence: inferred
+            tool_filtering:
+                supported: true
+                mechanism: per-server enable/disable toggle and per-tool approval documented under 'Tool approval' / 'Using MCP in chat' headings
+                confidence: inferred
+            transport_types:
+                supported: true
+                mechanism: stdio transport documented under 'STDIO server configuration' heading; SSE and Streamable HTTP variants covered in body text and configuration tables
+                confidence: inferred
+    gemini-cli:
+        supported: true
+        capabilities:
+            auto_approve:
+                supported: true
+                mechanism: auto-approval via trust-based bypass and dynamic allow-listing documented under 'Trust-based bypass' / 'Dynamic allow-listing' headings (under '2. Confirmation process')
+                confidence: inferred
+            env_var_expansion:
+                supported: true
+                mechanism: environment variable expansion documented under 'Environment variable expansion' heading with 'Security and environment sanitization' / 'Automatic redaction' / 'Explicit overrides' guidance
+                confidence: inferred
+            oauth_support:
+                supported: true
+                mechanism: OAuth 2.0 with automatic discovery, browser redirect flow, token management, and Google credentials documented under 'OAuth support for remote MCP servers' / 'Automatic OAuth discovery' / 'Authentication flow' headings
+                confidence: inferred
+            resource_referencing:
+                supported: true
+                mechanism: MCP resources (discovery, listing, in-conversation referencing) documented under 'Working with MCP resources' / 'Discovery and listing' / 'Referencing resources in a conversation' headings
+                confidence: inferred
+            tool_filtering:
+                supported: true
+                mechanism: per-server tool allow/deny filtering documented under 'MCP server with tool filtering' (Example configurations) and 'Dynamic allow-listing' headings
+                confidence: inferred
+            transport_types:
+                supported: true
+                mechanism: transport types (stdio, HTTP, SSE) documented under 'Transport mechanisms' heading; per-transport sub-headings 'Adding an stdio server' / 'Adding an HTTP server' / 'Adding an SSE server' under 'gemini mcp add'
+                confidence: inferred
+    kiro:
+        supported: true
+        capabilities:
+            env_var_expansion:
+                supported: true
+                mechanism: environment variable expansion (${VAR} syntax) documented under 'Environment variables' heading with security warning against inline secrets
+                confidence: inferred
+            transport_types:
+                supported: true
+                mechanism: transport types (stdio for local, HTTPS/HTTP for remote) documented under 'Local server' / 'Remote server' configuration sub-headings
+                confidence: inferred
+    windsurf:
+        supported: true
+        capabilities:
+            enterprise_management:
+                supported: true
+                mechanism: organization-level MCP admin controls (whitelist, custom registries, regex matching) documented under 'Admin Controls (Teams & Enterprises)' / 'Admin Configuration Guidelines' headings
+                confidence: inferred
+            env_var_expansion:
+                supported: true
+                mechanism: ${env:VAR_NAME} and ${file:/path} interpolation documented under 'Config Interpolation' heading
+                confidence: inferred
+            marketplace:
+                supported: true
+                mechanism: in-IDE MCP marketplace documented under 'MCP Registry' / 'Configuring Custom Registries' headings
+                confidence: inferred
+            tool_filtering:
+                supported: true
+                mechanism: per-server tool filtering documented under 'Configuring MCP tools' (UI tool toggles, 100-tool cap) and 'MCP Whitelist' (admin-side regex matching) headings
+                confidence: inferred
+            transport_types:
+                supported: true
+                mechanism: transport types (stdio for local, Streamable HTTP and SSE for remote) documented under 'Remote HTTP MCPs' heading; remote servers use serverUrl/url instead of command/args
+                confidence: inferred
+    zed:
+        supported: true
+        capabilities:
+            marketplace:
+                supported: true
+                mechanism: in-IDE MCP server marketplace via Zed's extension catalog documented under 'As Extensions' (vs 'As Custom Servers') sub-heading of 'Installing MCP Servers'
+                confidence: inferred
+            tool_filtering:
+                supported: true
+                mechanism: per-tool permission control documented under 'Tool Permissions' heading
+                confidence: inferred
+schema_version: "1"

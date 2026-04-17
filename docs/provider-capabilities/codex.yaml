@@ -107,7 +107,7 @@ content_types:
         confidence: confirmed
       display_name:
         supported: true
-        mechanism: 'yaml frontmatter key: display_name'
+        mechanism: 'yaml frontmatter key: name'
         confidence: confirmed
       global_scope:
         supported: true
