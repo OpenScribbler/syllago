@@ -147,13 +147,63 @@ func kiroMcpLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeKiro recognizes skills + rules + hooks + mcp capabilities for the
-// Kiro provider. All four content types are HTML/markdown documentation;
-// recognition uses landmark matching. Static facts (project_scope,
-// canonical_filename) merge in at "confirmed" confidence after a successful
-// skills landmark match. Note: Kiro has no global_scope for skills — Powers
-// are installed via the Kiro Powers panel UI without a fixed user-wide
-// filesystem path.
+// kiroAgentsLandmarkOptions returns the landmark patterns for Kiro's
+// "Agent configuration reference" doc. Anchors derived from
+// .capmon-cache/kiro/agents.0/extracted.json
+// (https://kiro.dev/docs/cli/custom-agents/configuration-reference/, HTML).
+//
+// Kiro's agents doc maps 5 of 7 canonical agents keys at heading-level
+// evidence:
+//   - definition_format → Name field / Description field / Prompt field
+//     (JSON config with required fields)
+//   - tool_restrictions → AllowedTools field / ToolsSettings field / Tools
+//     field (allowlist + per-tool config)
+//   - per_agent_mcp → McpServers field (per-agent MCP server scoping)
+//   - agent_scopes (nested .project, .user) → Local agents (project-specific)
+//     / Global agents (user-wide) / Agent precedence headings
+//   - model_selection → Model field (per-agent model override)
+//
+// The other 2 keys are intentionally unmapped:
+//   - invocation_patterns: only "KeyboardShortcut field" surfaces as a
+//     heading — a single invocation mode does not warrant the bare-key
+//     emission, and the canonical sub-vocabulary does not list a keyboard
+//     shortcut mode. Skip until additional invocation modes appear in docs.
+//   - subagent_spawning: no chain/spawn/delegate/subagent terms in any
+//     heading; config schema does not document multi-agent coordination.
+//
+// Required anchors are unique to the agents doc:
+//   - "Agent configuration reference" — H1, agents-specific
+//   - "AllowedTools field"            — H2, agents-specific
+//
+// Neither appears in kiro's skills, rules, hooks, or mcp docs.
+func kiroAgentsLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Agent configuration reference", CaseInsensitive: true},
+		{Kind: "substring", Value: "AllowedTools field", CaseInsensitive: true},
+	}
+	return AgentsLandmarkOptions(
+		AgentsLandmarkPattern("definition_format", "Prompt field",
+			"JSON config with Name/Description/Prompt fields (Inline prompt or File URI prompt) documented under 'Name field' / 'Description field' / 'Prompt field' headings", required),
+		AgentsLandmarkPattern("tool_restrictions", "AllowedTools field",
+			"per-agent tool allowlist with exact matches, wildcard patterns, and MCP tool patterns documented under 'Tools field' / 'AllowedTools field' / 'ToolsSettings field' headings", required),
+		AgentsLandmarkPattern("per_agent_mcp", "McpServers field",
+			"per-agent MCP server scoping documented under 'McpServers field' heading; supports OAuth configuration per server", required),
+		AgentsLandmarkPattern("agent_scopes.project", "Local agents (project-specific)",
+			"project-scoped agents stored under .kiro/agents/ documented under 'Local agents (project-specific)' heading; precedence rules under 'Agent precedence'", required),
+		AgentsLandmarkPattern("agent_scopes.user", "Global agents (user-wide)",
+			"user-scoped agents stored under ~/.kiro/agents/ documented under 'Global agents (user-wide)' heading; precedence rules under 'Agent precedence'", required),
+		AgentsLandmarkPattern("model_selection", "Model field",
+			"per-agent model override documented under 'Model field' heading in the configuration reference", required),
+	)
+}
+
+// recognizeKiro recognizes skills + rules + hooks + mcp + agents
+// capabilities for the Kiro provider. All five content types are
+// HTML/markdown documentation; recognition uses landmark matching. Static
+// facts (project_scope, canonical_filename) merge in at "confirmed"
+// confidence after a successful skills landmark match. Note: Kiro has no
+// global_scope for skills — Powers are installed via the Kiro Powers panel
+// UI without a fixed user-wide filesystem path.
 func recognizeKiro(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, kiroLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
@@ -164,6 +214,7 @@ func recognizeKiro(ctx RecognitionContext) RecognitionResult {
 	rulesResult := recognizeLandmarks(ctx, kiroRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, kiroHooksLandmarkOptions())
 	mcpResult := recognizeLandmarks(ctx, kiroMcpLandmarkOptions())
+	agentsResult := recognizeLandmarks(ctx, kiroAgentsLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult, agentsResult)
 }

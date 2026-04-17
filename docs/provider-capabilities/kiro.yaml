@@ -3,6 +3,36 @@ slug: kiro
 display_name: ""
 last_verified: ""
 content_types:
+  agents:
+    supported: true
+    capabilities:
+      agent_scopes:
+        supported: true
+        capabilities:
+          project:
+            supported: true
+            mechanism: project-scoped agents stored under .kiro/agents/ documented under 'Local agents (project-specific)' heading; precedence rules under 'Agent precedence'
+            confidence: inferred
+          user:
+            supported: true
+            mechanism: user-scoped agents stored under ~/.kiro/agents/ documented under 'Global agents (user-wide)' heading; precedence rules under 'Agent precedence'
+            confidence: inferred
+      definition_format:
+        supported: true
+        mechanism: JSON config with Name/Description/Prompt fields (Inline prompt or File URI prompt) documented under 'Name field' / 'Description field' / 'Prompt field' headings
+        confidence: inferred
+      model_selection:
+        supported: true
+        mechanism: per-agent model override documented under 'Model field' heading in the configuration reference
+        confidence: inferred
+      per_agent_mcp:
+        supported: true
+        mechanism: per-agent MCP server scoping documented under 'McpServers field' heading; supports OAuth configuration per server
+        confidence: inferred
+      tool_restrictions:
+        supported: true
+        mechanism: per-agent tool allowlist with exact matches, wildcard patterns, and MCP tool patterns documented under 'Tools field' / 'AllowedTools field' / 'ToolsSettings field' headings
+        confidence: inferred
   hooks:
     supported: true
   mcp:
