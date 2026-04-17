@@ -5,6 +5,17 @@ last_verified: ""
 content_types:
   hooks:
     supported: true
+  mcp:
+    supported: true
+    capabilities:
+      env_var_expansion:
+        supported: true
+        mechanism: environment variable expansion (${VAR} syntax) documented under 'Environment variables' heading with security warning against inline secrets
+        confidence: inferred
+      transport_types:
+        supported: true
+        mechanism: transport types (stdio for local, HTTPS/HTTP for remote) documented under 'Local server' / 'Remote server' configuration sub-headings
+        confidence: inferred
   rules:
     supported: true
     capabilities:

@@ -213,6 +213,108 @@ func TestRecognizeKiro_NoLandmarks(t *testing.T) {
 	}
 }
 
+// realKiroMcpLandmarks is a snapshot of the headings extracted from kiro's
+// MCP configuration doc (.capmon-cache/kiro/mcp.0/extracted.json) as of
+// 2026-04-16. Includes the AWS docs cookie-banner boilerplate.
+var realKiroMcpLandmarks = []string{
+	"Select your cookie preferences",
+	"Customize cookie preferences",
+	"Essential", "Performance", "Functional", "Advertising",
+	"Your privacy choices",
+	"Unable to save cookie preferences",
+	"Configuration",
+	"Configuration file structure",
+	"Configuration properties",
+	"Remote server",
+	"Local server",
+	"Configuration locations",
+	"Creating configuration files",
+	"Using the command palette",
+	"Using the Kiro panel",
+	"Environment variables",
+	"Disabling servers temporarily",
+	"Security considerations",
+	"Troubleshooting configuration issues",
+}
+
+// TestRecognizeKiro_RealMcpLandmarks proves MCP recognition emits 2 canonical
+// MCP keys at "inferred" confidence: transport_types and env_var_expansion.
+// The other 6 keys (oauth_support, tool_filtering, auto_approve, marketplace,
+// resource_referencing, enterprise_management) must NOT be emitted — none
+// have heading-level evidence in the MCP doc. tool_filtering and auto_approve
+// are documented only as JSON config fields (not landmarks); the rest are
+// absent from the kiro MCP surface entirely.
+//
+// Test merges skills + rules + hooks + MCP fixtures to mirror real-world
+// cache merging — the MCP recognizer must distinguish its capabilities from
+// the others via the required-anchor uniqueness gate.
+func TestRecognizeKiro_RealMcpLandmarks(t *testing.T) {
+	merged := append([]string{}, realKiroSkillsLandmarks...)
+	merged = append(merged, realKiroRulesLandmarks...)
+	merged = append(merged, realKiroHooksLandmarks...)
+	merged = append(merged, realKiroMcpLandmarks...)
+	result := capmon.RecognizeWithContext("kiro", capmon.RecognitionContext{
+		Provider:  "kiro",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["mcp.supported"] != "true" {
+		t.Error("mcp.supported missing")
+	}
+	mcpInferred := []string{
+		"transport_types",
+		"env_var_expansion",
+	}
+	for _, c := range mcpInferred {
+		key := "mcp.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["mcp.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("mcp.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"mcp.capabilities.oauth_support.supported",
+		"mcp.capabilities.tool_filtering.supported",
+		"mcp.capabilities.auto_approve.supported",
+		"mcp.capabilities.marketplace.supported",
+		"mcp.capabilities.resource_referencing.supported",
+		"mcp.capabilities.enterprise_management.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present (no heading evidence)", absent)
+		}
+	}
+}
+
+// TestRecognizeKiro_McpAnchorsMissing proves the required-anchor guard
+// suppresses MCP emission when "Configuration properties" is absent —
+// preventing MCP patterns from firing on contexts that contain the more
+// generic "Configuration file structure" landmark alone.
+func TestRecognizeKiro_McpAnchorsMissing(t *testing.T) {
+	mutated := []string{}
+	for _, lm := range realKiroMcpLandmarks {
+		if lm == "Configuration properties" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("kiro", capmon.RecognitionContext{
+		Provider:  "kiro",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["mcp.supported"]; has {
+		t.Error("mcp.supported should NOT be present when 'Configuration properties' anchor is missing")
+	}
+}
+
 // TestRecognizeKiro_RealHooksLandmarks proves hooks recognition emits
 // hooks.supported = true on the merged skills+rules+hooks landmarks. Per the
 // curated format YAML, ALL 9 canonical hooks keys are unsupported in kiro
