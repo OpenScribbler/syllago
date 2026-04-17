@@ -3,6 +3,17 @@ slug: windsurf
 display_name: ""
 last_verified: ""
 content_types:
+  hooks:
+    supported: true
+    capabilities:
+      hook_scopes:
+        supported: true
+        mechanism: three-tier config scopes documented under 'System-Level' / 'User-Level' / 'Workspace-Level' headings
+        confidence: inferred
+      json_io_protocol:
+        supported: true
+        mechanism: JSON event context delivered via stdin documented under 'Common Input Structure' heading
+        confidence: inferred
   rules:
     supported: true
     capabilities:
