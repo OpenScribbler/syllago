@@ -66,10 +66,44 @@ func ampRulesLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeAmp recognizes skills + rules capabilities for the Amp provider.
-// Source for both content types is markdown/HTML documentation; recognition
-// uses landmark (heading) matching. Static facts merge in at "confirmed"
-// confidence after a successful skills landmark match.
+// ampHooksLandmarkOptions returns the landmark patterns for Amp's hooks
+// capabilities. Evidence is split across two cache sources:
+//   - hooks.0 (hooks.md): only one landmark "Hooks" — too thin to anchor on
+//   - hooks.1 (permissions-reference.md): rich landmarks describing match
+//     conditions, regex patterns, and rule management
+//
+// Per the curated format YAML (docs/provider-formats/amp.yaml), 2 of the 9
+// canonical hooks keys are supported: matcher_patterns
+// (hook_match_input_contains via "Match Conditions" + "Regular Expression
+// Patterns") and permission_control (permissions_system via "How Permissions
+// Work" + "Add Rules"). Both pieces of evidence live in the permissions
+// reference doc — amp's hooks integrate with the permission system rather
+// than expose a hook-specific protocol.
+//
+// Required anchors are unique to the permissions doc:
+//   - "Permissions Reference" — H1 of permissions-reference.md
+//   - "How Permissions Work" — H2, not present in any other amp content doc
+func ampHooksLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Permissions Reference", CaseInsensitive: true},
+		{Kind: "substring", Value: "How Permissions Work", CaseInsensitive: true},
+	}
+	return HooksLandmarkOptions(
+		HooksLandmarkPattern("matcher_patterns", "Match Conditions",
+			"per-tool input matching documented under 'Match Conditions' / 'Regular Expression Patterns' headings (hook_match_input_contains)", required),
+		HooksLandmarkPattern("permission_control", "How Permissions Work",
+			"hooks integrate with amp's permission system to control tool availability (documented under 'How Permissions Work' / 'Add Rules' headings)", required),
+	)
+}
+
+// recognizeAmp recognizes skills + rules + hooks capabilities for the Amp
+// provider. Source for all three content types is markdown/HTML documentation;
+// recognition uses landmark (heading) matching. Static facts merge in at
+// "confirmed" confidence after a successful skills landmark match.
+//
+// Amp's hooks doc itself (hooks.0) has only a single H1 landmark, so hooks
+// recognition is anchored against the permissions reference doc (hooks.1)
+// where the matcher_patterns and permission_control evidence lives.
 func recognizeAmp(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, ampLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
@@ -79,6 +113,7 @@ func recognizeAmp(ctx RecognitionContext) RecognitionResult {
 	}
 
 	rulesResult := recognizeLandmarks(ctx, ampRulesLandmarkOptions())
+	hooksResult := recognizeLandmarks(ctx, ampHooksLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
 }
