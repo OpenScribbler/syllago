@@ -44,9 +44,54 @@ func cursorRulesLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeCursor recognizes rules capabilities for the Cursor provider.
+// cursorMcpLandmarkOptions returns the landmark patterns for Cursor's MCP
+// documentation. Anchors derived from .capmon-cache/cursor/mcp.0/extracted.json
+// (https://cursor.com/docs/context/mcp, HTML).
+//
+// Cursor's MCP doc maps 6 of 8 canonical MCP keys at the heading level.
+// Two are intentionally absent:
+//   - resource_referencing: documented in the "Protocol and extension support"
+//     capability table as a row labeled "Resources", but table cells are
+//     extracted into Fields, not Landmarks. No heading-level evidence exists
+//     so the recognizer cannot anchor on it via landmark substring matching.
+//   - enterprise_management: cursor's enterprise MCP policy lives in
+//     admin-console docs not in this scrape.
+//
+// Required anchors are unique to the MCP doc:
+//   - "What is MCP?" — H1/H2 of MCP discovery section
+//   - "Installing MCP servers" — H2 unique to MCP installation flow
+//
+// Neither appears in cursor's rules, skills, or hooks docs.
+//
+// Per docs/provider-formats/cursor.yaml, no curated MCP section exists yet
+// (only skills is curated, marked unsupported). Recognizer emissions land in
+// docs/provider-capabilities/cursor.yaml at "inferred" confidence.
+func cursorMcpLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "What is MCP?", CaseInsensitive: true},
+		{Kind: "substring", Value: "Installing MCP servers", CaseInsensitive: true},
+	}
+	return McpLandmarkOptions(
+		McpLandmarkPattern("transport_types", "STDIO server configuration",
+			"stdio transport documented under 'STDIO server configuration' heading; SSE and Streamable HTTP variants covered in body text and configuration tables", required),
+		McpLandmarkPattern("oauth_support", "Static OAuth for remote servers",
+			"OAuth 2.0 (with Client ID/Secret + scopes) documented under 'Static OAuth for remote servers' / 'Authentication' headings", required),
+		McpLandmarkPattern("env_var_expansion", "Config interpolation",
+			"${env:NAME}, ${userHome}, ${workspaceFolder}, ${pathSeparator} variable interpolation documented under 'Config interpolation' / 'Combining with config interpolation' headings", required),
+		McpLandmarkPattern("tool_filtering", "Tool approval",
+			"per-server enable/disable toggle and per-tool approval documented under 'Tool approval' / 'Using MCP in chat' headings", required),
+		McpLandmarkPattern("auto_approve", "Auto-run",
+			"auto-approval / auto-run mode for trusted tools documented under 'Auto-run' heading", required),
+		McpLandmarkPattern("marketplace", "One-click installation",
+			"one-click MCP server installation from a curated catalog documented under 'One-click installation' heading", required),
+	)
+}
+
+// recognizeCursor recognizes rules + mcp capabilities for the Cursor provider.
 // Cursor does not support Agent Skills (FormatDoc status: unsupported), so no
-// skills emission. Rules are landmark-based against cursor.com/docs/rules.
+// skills emission. Rules and MCP are landmark-based against cursor.com/docs.
 func recognizeCursor(ctx RecognitionContext) RecognitionResult {
-	return recognizeLandmarks(ctx, cursorRulesLandmarkOptions())
+	rulesResult := recognizeLandmarks(ctx, cursorRulesLandmarkOptions())
+	mcpResult := recognizeLandmarks(ctx, cursorMcpLandmarkOptions())
+	return mergeRecognitionResults(rulesResult, mcpResult)
 }

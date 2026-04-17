@@ -3,6 +3,33 @@ slug: cursor
 display_name: ""
 last_verified: ""
 content_types:
+  mcp:
+    supported: true
+    capabilities:
+      auto_approve:
+        supported: true
+        mechanism: auto-approval / auto-run mode for trusted tools documented under 'Auto-run' heading
+        confidence: inferred
+      env_var_expansion:
+        supported: true
+        mechanism: ${env:NAME}, ${userHome}, ${workspaceFolder}, ${pathSeparator} variable interpolation documented under 'Config interpolation' / 'Combining with config interpolation' headings
+        confidence: inferred
+      marketplace:
+        supported: true
+        mechanism: one-click MCP server installation from a curated catalog documented under 'One-click installation' heading
+        confidence: inferred
+      oauth_support:
+        supported: true
+        mechanism: OAuth 2.0 (with Client ID/Secret + scopes) documented under 'Static OAuth for remote servers' / 'Authentication' headings
+        confidence: inferred
+      tool_filtering:
+        supported: true
+        mechanism: per-server enable/disable toggle and per-tool approval documented under 'Tool approval' / 'Using MCP in chat' headings
+        confidence: inferred
+      transport_types:
+        supported: true
+        mechanism: stdio transport documented under 'STDIO server configuration' heading; SSE and Streamable HTTP variants covered in body text and configuration tables
+        confidence: inferred
   rules:
     supported: true
     capabilities:
