@@ -52,10 +52,52 @@ func zedRulesLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeZed recognizes rules capabilities for the Zed provider. Zed does
-// not support Agent Skills, so skills emission is intentionally a no-op
-// (confirmed-negative signal). Rules recognition uses landmark matching from
-// zed's HTML docs at zed.dev/docs/ai/rules.
+// zedMcpLandmarkOptions returns the landmark patterns for Zed's MCP
+// documentation. Anchors derived from .capmon-cache/zed/mcp.1/extracted.json
+// (zed.dev/docs/ai/mcp, HTML). mcp.0 is a Rust source file
+// (crates/context_server/src/context_server.rs) yielding only 3 struct
+// names — typed evidence not aligned to landmark matching.
+//
+// Zed's MCP doc maps only 2 of 8 canonical MCP keys at the heading level:
+// tool_filtering ("Tool Permissions") and marketplace ("As Extensions" —
+// Zed's extension catalog is the in-IDE MCP server marketplace).
+//
+// The other 6 keys are intentionally unmapped here:
+//   - transport_types: "As Custom Servers" / "As Extensions" sub-headings
+//     describe install methods, not transport types. The Rust struct
+//     ContextServerTransport (mcp.0) hints at transport abstraction but the
+//     doc heading evidence is too weak.
+//   - oauth_support, env_var_expansion, auto_approve, resource_referencing,
+//     enterprise_management: no heading evidence in mcp.1.
+//
+// Required anchors are unique to the MCP doc:
+//   - "Model Context Protocol" — H1, MCP-specific
+//   - "Installing MCP Servers"  — H2, MCP-specific
+//
+// Neither appears in zed's rules, commands, or agents docs.
+//
+// docs/provider-formats/zed.yaml has no curated MCP section — the only
+// curated content type is skills (marked unsupported). Recognizer emissions
+// land in docs/provider-capabilities/zed.yaml at "inferred" confidence.
+func zedMcpLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Model Context Protocol", CaseInsensitive: true},
+		{Kind: "substring", Value: "Installing MCP Servers", CaseInsensitive: true},
+	}
+	return McpLandmarkOptions(
+		McpLandmarkPattern("tool_filtering", "Tool Permissions",
+			"per-tool permission control documented under 'Tool Permissions' heading", required),
+		McpLandmarkPattern("marketplace", "As Extensions",
+			"in-IDE MCP server marketplace via Zed's extension catalog documented under 'As Extensions' (vs 'As Custom Servers') sub-heading of 'Installing MCP Servers'", required),
+	)
+}
+
+// recognizeZed recognizes rules + mcp capabilities for the Zed provider. Zed
+// does not support Agent Skills, so skills emission is intentionally a no-op
+// (confirmed-negative signal). Rules and MCP recognition use landmark
+// matching from zed's HTML docs at zed.dev/docs/ai/{rules,mcp}.
 func recognizeZed(ctx RecognitionContext) RecognitionResult {
-	return recognizeLandmarks(ctx, zedRulesLandmarkOptions())
+	rulesResult := recognizeLandmarks(ctx, zedRulesLandmarkOptions())
+	mcpResult := recognizeLandmarks(ctx, zedMcpLandmarkOptions())
+	return mergeRecognitionResults(rulesResult, mcpResult)
 }
