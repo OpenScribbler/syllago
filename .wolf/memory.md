@@ -1213,3 +1213,118 @@
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 10:47 | Edited .github/workflows/smoke-test-providers.yml | 7→4 lines | ~34 |
+| 10:52 | Created .claude/projects/ship-v072-smoke-fix.md | — | ~549 |
+| 10:52 | Created ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/ship-v072-smoke-fix.md | — | ~466 |
+| 10:52 | Session end: 3 writes across 2 files (smoke-test-providers.yml, ship-v072-smoke-fix.md) | 2 reads | ~2163 tok |
+
+## Session: 2026-04-17 10:52
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 10:52
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 10:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 10:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 11:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:39 | Edited docs/provider-formats/opencode.yaml | 20→25 lines | ~247 |
+| 11:39 | Session end: 1 writes across 1 files (opencode.yaml) | 16 reads | ~87510 tok |
+| 11:39 | Edited docs/provider-formats/claude-code.yaml | 16→21 lines | ~244 |
+| 11:39 | Edited docs/provider-formats/codex.yaml | 8→10 lines | ~158 |
+| 11:39 | Edited docs/provider-formats/windsurf.yaml | 8→12 lines | ~197 |
+| 11:39 | Session end: 4 writes across 4 files (opencode.yaml, claude-code.yaml, codex.yaml, windsurf.yaml) | 16 reads | ~88109 tok |
+| 11:39 | Edited docs/provider-formats/windsurf.yaml | 3→3 lines | ~57 |
+| 11:39 | Edited docs/provider-formats/claude-code.yaml | "Frontmatter argument-hint" → "Shows expected argument f" | ~27 |
+| 11:39 | Edited docs/provider-formats/pi.yaml | expanded (+6 lines) | ~374 |
+| 11:39 | Edited docs/provider-formats/factory-droid.yaml | 16→20 lines | ~237 |
+| 11:39 | Edited docs/provider-formats/claude-code.yaml | "Frontmatter allowed-tools" → "Pre-approves tool calls w" | ~31 |
+| 11:39 | Edited docs/provider-formats/amp.yaml | 8→10 lines | ~98 |
+| 11:40 | Edited docs/provider-formats/gemini-cli.yaml | 8→10 lines | ~138 |
+| 11:40 | Edited docs/provider-formats/claude-code.yaml | "Frontmatter model overrid" → "Overrides the session mod" | ~22 |
+| 11:40 | Edited docs/provider-formats/factory-droid.yaml | "Personal settings file cu" → "Provides always-on guidan" | ~47 |
+| 11:40 | Edited docs/provider-formats/cline.yaml | 8→11 lines | ~142 |
+| 11:40 | Edited docs/provider-formats/amp.yaml | 3→3 lines | ~59 |
+| 11:40 | Edited docs/provider-formats/windsurf.yaml | 3→3 lines | ~61 |
+| 11:40 | Edited docs/provider-formats/pi.yaml | 3→3 lines | ~70 |
+| 11:40 | Edited docs/provider-formats/copilot-cli.yaml | 8→10 lines | ~115 |
+| 11:40 | Edited docs/provider-formats/claude-code.yaml | "Frontmatter effort overri" → "Overrides the session eff" | ~30 |
+| 11:40 | Edited docs/provider-formats/cline.yaml | "YAML frontmatter " → "Gates rule activation to " | ~37 |
+| 11:40 | Edited docs/provider-formats/amp.yaml | 3→3 lines | ~67 |
+| 11:40 | Edited docs/provider-formats/claude-code.yaml | "Frontmatter context: fork" → "Runs the skill in an isol" | ~44 |
+| 11:40 | Edited docs/provider-formats/copilot-cli.yaml | 4→6 lines | ~93 |
+| 11:40 | Edited docs/provider-formats/windsurf.yaml | 3→3 lines | ~73 |
+| 11:40 | Edited docs/provider-formats/claude-code.yaml | "Frontmatter hooks attache" → "Attaches lifecycle hooks " | ~25 |
+| 11:40 | Edited docs/provider-formats/kiro.yaml | 4→5 lines | ~54 |
+| 11:40 | Edited docs/provider-formats/copilot-cli.yaml | 8→10 lines | ~126 |
+| 11:40 | Edited docs/provider-formats/claude-code.yaml | "Frontmatter paths globs l" → "Limits auto-activation to" | ~34 |
+| 11:40 | Edited docs/provider-formats/kiro.yaml | 16→20 lines | ~200 |
+| 11:40 | Edited docs/provider-formats/claude-code.yaml | "Frontmatter shell selects" → "Selects bash (default) or" | ~32 |
+| 11:40 | Edited docs/provider-formats/copilot-cli.yaml | 3→3 lines | ~71 |
+| 11:40 | Edited docs/provider-formats/claude-code.yaml | "Managed setting disableSk" → "Disables inline shell com" | ~31 |
+| 11:40 | Edited docs/provider-formats/kiro.yaml | "prompt" → "Load the system prompt fr" | ~38 |
+| 11:40 | Edited docs/provider-formats/kiro.yaml | "resources" → "Attach files, skills, or " | ~36 |
+| 11:40 | Edited docs/provider-formats/kiro.yaml | "toolsSettings" → "Provide per-tool configur" | ~36 |
+| 11:40 | Session end: 35 writes across 11 files (opencode.yaml, claude-code.yaml, codex.yaml, windsurf.yaml, pi.yaml) | 16 reads | ~90892 tok |
+| 11:40 | Edited docs/provider-formats/claude-code.yaml | "Setting claudeMdExcludes " → "Skips ancestor CLAUDE.md " | ~32 |
+| 11:40 | Edited docs/provider-formats/kiro.yaml | "keyboardShortcut" → "Bind an IDE keyboard shor" | ~29 |
+| 11:40 | Session end: 37 writes across 11 files (opencode.yaml, claude-code.yaml, codex.yaml, windsurf.yaml, pi.yaml) | 16 reads | ~91010 tok |
+| 11:40 | Session end: 37 writes across 11 files (opencode.yaml, claude-code.yaml, codex.yaml, windsurf.yaml, pi.yaml) | 16 reads | ~91010 tok |
+| 11:41 | Edited docs/provider-formats/claude-code.yaml | "Frontmatter memory field " → "Gives an agent a persiste" | ~38 |
+| 11:41 | Edited docs/provider-formats/claude-code.yaml | "Setting isolation: worktr" → "Runs the agent in a tempo" | ~35 |
+| 11:41 | Edited docs/provider-formats/claude-code.yaml | "Frontmatter mcpServers gi" → "Gives an agent inline or " | ~39 |
+
+## Session: 2026-04-17 11:42
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 12:04
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:06 | Edited cli/internal/provider/provider.go | 8→9 lines | ~100 |
+| 12:06 | Edited cli/internal/provider/provider.go | 14→17 lines | ~47 |
+| 12:06 | Created cli/internal/provider/factory_droid.go | — | ~696 |
+| 12:07 | Created cli/internal/provider/pi.go | — | ~650 |
+| 12:07 | Created cli/internal/provider/crush.go | — | ~558 |
+| 12:08 | Edited cli/internal/converter/skills.go | 2→5 lines | ~73 |
+| 12:09 | Edited cli/internal/converter/skills.go | expanded (+30 lines) | ~443 |
+| 12:09 | Edited cli/internal/converter/agents.go | expanded (+12 lines) | ~171 |
+| 12:09 | Edited cli/internal/converter/frontmatter_registry_test.go | expanded (+7 lines) | ~121 |
+| 12:09 | Edited docs/provider-capabilities/compatibility-matrix.md | inline fix | ~45 |
+| 12:09 | Edited docs/provider-capabilities/compatibility-matrix.md | inline fix | ~19 |
+| 12:09 | Edited docs/provider-capabilities/compatibility-matrix.md | inline fix | ~19 |
+| 12:10 | Edited docs/provider-capabilities/compatibility-matrix.md | inline fix | ~19 |
+| 12:10 | Edited docs/provider-capabilities/compatibility-matrix.md | 2→2 lines | ~95 |
+| 12:10 | Edited docs/provider-capabilities/compatibility-matrix.md | 2→2 lines | ~110 |
+| 12:10 | Edited docs/provider-capabilities/compatibility-matrix.md | 2→2 lines | ~66 |
+| 12:10 | Edited docs/provider-capabilities/compatibility-matrix.md | 12→12 lines | ~359 |
+
+## Session: 2026-04-17 12:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:07 | Created releases/v0.8.0.md | — | ~701 |
+| 13:07 | Created VERSION | — | ~2 |
+
+## Session: 2026-04-17 13:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:07 | Created .release-pending.yml | — | ~34 |
+| 13:08 | Created ../../../.config/pai/.research-workflow-state-3e857b46-3822-488f-b024-16a79d21200e.json | — | ~28 |
+| 13:11 | Session end: 2 writes across 2 files (.release-pending.yml, .research-workflow-state-3e857b46-3822-488f-b024-16a79d21200e.json) | 1 reads | ~62 tok |

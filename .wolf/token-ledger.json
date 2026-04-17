@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-04-14T17:20:26.414Z",
   "lifetime": {
-    "total_tokens_estimated": 1396567,
-    "total_reads": 868,
-    "total_writes": 863,
-    "total_sessions": 93,
-    "anatomy_hits": 235,
-    "anatomy_misses": 511,
-    "repeated_reads_blocked": 316,
-    "estimated_savings_vs_bare_cli": 631351
+    "total_tokens_estimated": 1849388,
+    "total_reads": 953,
+    "total_writes": 982,
+    "total_sessions": 102,
+    "anatomy_hits": 282,
+    "anatomy_misses": 529,
+    "repeated_reads_blocked": 393,
+    "estimated_savings_vs_bare_cli": 1261595
   },
   "sessions": [
     {
@@ -11429,6 +11429,1246 @@
         "input_tokens_estimated": 0,
         "output_tokens_estimated": 988,
         "reads_count": 9,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-17-1046",
+      "started": "2026-04-17T17:46:39.547Z",
+      "ended": "2026-04-17T17:52:37.591Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/smoke-test-providers.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-epic5-agents-recognition.md",
+          "tokens_estimated": 1042,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/smoke-test-providers.yml",
+          "tokens_estimated": 34,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/ship-v072-smoke-fix.md",
+          "tokens_estimated": 588,
+          "action": "create"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/ship-v072-smoke-fix.md",
+          "tokens_estimated": 499,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1042,
+        "output_tokens_estimated": 1121,
+        "reads_count": 2,
+        "writes_count": 3,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-17-1126",
+      "started": "2026-04-17T18:26:08.370Z",
+      "ended": "2026-04-17T18:39:44.176Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities.go",
+          "tokens_estimated": 4235,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 13516,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 6950,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6484,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/roo-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/zed.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 8020,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 5847,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 7594,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 6195,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 12049,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 7240,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 9133,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 247,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 87263,
+        "output_tokens_estimated": 247,
+        "reads_count": 16,
+        "writes_count": 1,
+        "repeated_reads_blocked": 8,
+        "anatomy_lookups": 9
+      }
+    },
+    {
+      "id": "session-2026-04-17-1126",
+      "started": "2026-04-17T18:26:08.370Z",
+      "ended": "2026-04-17T18:39:49.360Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities.go",
+          "tokens_estimated": 4235,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 13516,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 6950,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6484,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/roo-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/zed.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 8020,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 5847,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 7594,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 6195,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 12049,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 7240,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 9133,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 247,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 244,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 158,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 197,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 87263,
+        "output_tokens_estimated": 846,
+        "reads_count": 16,
+        "writes_count": 4,
+        "repeated_reads_blocked": 8,
+        "anatomy_lookups": 9
+      }
+    },
+    {
+      "id": "session-2026-04-17-1126",
+      "started": "2026-04-17T18:26:08.370Z",
+      "ended": "2026-04-17T18:40:36.782Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities.go",
+          "tokens_estimated": 4235,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 13516,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 6964,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6513,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/roo-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/zed.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 8056,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 5903,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 7594,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 6257,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 12069,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 7240,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 9194,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 247,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 244,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 158,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 197,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 57,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 27,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 374,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 237,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 31,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 98,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 138,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 47,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 142,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 59,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 61,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 70,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 115,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 30,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 37,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 67,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 44,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 93,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 73,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 25,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 54,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 126,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 34,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 200,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 32,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 71,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 31,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 38,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 36,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 36,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 87541,
+        "output_tokens_estimated": 3351,
+        "reads_count": 16,
+        "writes_count": 35,
+        "repeated_reads_blocked": 19,
+        "anatomy_lookups": 9
+      }
+    },
+    {
+      "id": "session-2026-04-17-1126",
+      "started": "2026-04-17T18:26:08.370Z",
+      "ended": "2026-04-17T18:40:46.921Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities.go",
+          "tokens_estimated": 4235,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 13516,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 6964,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6513,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/roo-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/zed.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 8056,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 5903,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 7651,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 6257,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 12069,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 7240,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 9194,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 247,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 244,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 158,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 197,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 57,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 27,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 374,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 237,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 31,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 98,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 138,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 47,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 142,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 59,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 61,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 70,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 115,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 30,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 37,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 67,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 44,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 93,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 73,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 25,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 54,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 126,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 34,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 200,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 32,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 71,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 31,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 38,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 36,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 36,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 32,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 29,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 87598,
+        "output_tokens_estimated": 3412,
+        "reads_count": 16,
+        "writes_count": 37,
+        "repeated_reads_blocked": 21,
+        "anatomy_lookups": 9
+      }
+    },
+    {
+      "id": "session-2026-04-17-1126",
+      "started": "2026-04-17T18:26:08.370Z",
+      "ended": "2026-04-17T18:40:53.238Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities.go",
+          "tokens_estimated": 4235,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 13516,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 6964,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6513,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/roo-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/zed.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 8056,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 5903,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 7651,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 6257,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 12069,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 7240,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 9194,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 247,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 244,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 158,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 197,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 57,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 27,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 374,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 237,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 31,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 98,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 138,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 47,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 142,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 59,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 61,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 70,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 115,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 30,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 37,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 67,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 44,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 93,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 73,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 25,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 54,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 126,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 34,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 200,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 32,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 71,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 31,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 38,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 36,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 36,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 32,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 29,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 87598,
+        "output_tokens_estimated": 3412,
+        "reads_count": 16,
+        "writes_count": 37,
+        "repeated_reads_blocked": 21,
+        "anatomy_lookups": 9
+      }
+    },
+    {
+      "id": "session-2026-04-17-1142",
+      "started": "2026-04-17T18:42:24.821Z",
+      "ended": "2026-04-17T18:58:36.184Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/skills/release/workflows/create-release.md",
+          "tokens_estimated": 2065,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/provider.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 2065,
+        "output_tokens_estimated": 0,
+        "reads_count": 2,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-17-1307",
+      "started": "2026-04-17T20:07:39.191Z",
+      "ended": "2026-04-17T20:11:27.847Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.release-pending.yml",
+          "tokens_estimated": 34,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.config/pai/.research-workflow-state-3e857b46-3822-488f-b024-16a79d21200e.json",
+          "tokens_estimated": 28,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 62,
+        "reads_count": 1,
         "writes_count": 2,
         "repeated_reads_blocked": 0,
         "anatomy_lookups": 0
