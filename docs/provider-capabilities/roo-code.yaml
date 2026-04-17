@@ -3,6 +3,28 @@ slug: roo-code
 display_name: ""
 last_verified: ""
 content_types:
+  agents:
+    supported: true
+    capabilities:
+      agent_scopes:
+        supported: true
+        capabilities:
+          project:
+            supported: true
+            mechanism: project-scoped custom modes via .roomodes file in repo root (mode source field = 'project')
+            confidence: inferred
+          user:
+            supported: true
+            mechanism: user-scoped (global) custom modes via roo-code config (mode source field = 'global')
+            confidence: inferred
+      definition_format:
+        supported: true
+        mechanism: YAML modes (.roomodes file or settings) with slug, name, description, roleDefinition, whenToUse, groups, source fields per ModeConfig + CustomModesSettings TypeScript types
+        confidence: inferred
+      tool_restrictions:
+        supported: true
+        mechanism: per-mode tool group allowlist (read | edit | command | mcp) with optional inline filter (e.g. {fileRegex, description}) for the edit group, per GroupEntry / GroupOptions TypeScript types
+        confidence: inferred
   skills:
     supported: true
     capabilities:
