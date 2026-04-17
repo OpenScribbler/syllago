@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-17T17:41:40Z",
+  "generatedAt": "2026-04-17T19:13:10Z",
   "syllagoVersion": "0.7.2",
   "providers": [
     {
@@ -1437,6 +1437,356 @@
           "frontmatterFields": [
             "name",
             "description"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Factory Droid",
+      "slug": "factory-droid",
+      "configDir": ".factory",
+      "emitPath": "{project}/AGENTS.md",
+      "content": {
+        "agents": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.factory/droids",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.factory/droids"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "model",
+            "tools"
+          ]
+        },
+        "commands": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.factory/commands",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.factory/commands"
+          ]
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.factory/settings.json"
+          ],
+          "hookEvents": [
+            {
+              "canonical": "after_tool_execute",
+              "nativeName": "PostToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "agent_stop",
+              "nativeName": "Stop",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_compact",
+              "nativeName": "PreCompact",
+              "category": "context"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "UserPromptSubmit",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_tool_execute",
+              "nativeName": "PreToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "session_end",
+              "nativeName": "SessionEnd",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "SessionStart",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "subagent_start",
+              "nativeName": "SubagentStart",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "subagent_stop",
+              "nativeName": "SubagentStop",
+              "category": "lifecycle"
+            }
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".factory/settings.json"
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.factory/mcp.json"
+          ],
+          "configLocation": ".factory/mcp.json",
+          "mcpTransports": [
+            "stdio",
+            "http"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/AGENTS.md"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.factory/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.factory/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "license",
+            "compatibility",
+            "metadata"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Pi",
+      "slug": "pi",
+      "configDir": ".pi",
+      "emitPath": "{project}/AGENTS.md",
+      "content": {
+        "agents": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "commands": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.pi/agent/prompts",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.pi/prompts"
+          ]
+        },
+        "hooks": {
+          "supported": true,
+          "fileFormat": "ts",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.pi/agent/extensions",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.pi/extensions"
+          ],
+          "hookEvents": [
+            {
+              "canonical": "after_tool_execute",
+              "nativeName": "tool_result",
+              "category": "tool"
+            },
+            {
+              "canonical": "agent_stop",
+              "nativeName": "agent_end",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_compact",
+              "nativeName": "session_before_compact",
+              "category": "context"
+            },
+            {
+              "canonical": "before_prompt",
+              "nativeName": "input",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "before_tool_execute",
+              "nativeName": "tool_call",
+              "category": "tool"
+            },
+            {
+              "canonical": "context_update",
+              "nativeName": "context",
+              "category": "context"
+            },
+            {
+              "canonical": "message_end",
+              "nativeName": "message_end",
+              "category": "model"
+            },
+            {
+              "canonical": "message_start",
+              "nativeName": "message_start",
+              "category": "model"
+            },
+            {
+              "canonical": "model_select",
+              "nativeName": "model_select",
+              "category": "model"
+            },
+            {
+              "canonical": "session_end",
+              "nativeName": "session_shutdown",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "session_start",
+              "nativeName": "session_start",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "subagent_start",
+              "nativeName": "before_agent_start",
+              "category": "lifecycle"
+            },
+            {
+              "canonical": "turn_end",
+              "nativeName": "turn_end",
+              "category": "model"
+            },
+            {
+              "canonical": "turn_start",
+              "nativeName": "turn_start",
+              "category": "model"
+            },
+            {
+              "canonical": "user_bash",
+              "nativeName": "user_bash",
+              "category": "tool"
+            }
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".pi/extensions/"
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/AGENTS.md"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.pi/agent/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.pi/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "license",
+            "compatibility",
+            "metadata"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Crush",
+      "slug": "crush",
+      "configDir": ".config/crush",
+      "emitPath": "{project}/AGENTS.md",
+      "content": {
+        "agents": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "commands": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "hooks": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "loadouts": {
+          "supported": false,
+          "symlinkSupport": false
+        },
+        "mcp": {
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/crush.json"
+          ],
+          "configLocation": "crush.json",
+          "mcpTransports": [
+            "stdio",
+            "http",
+            "sse"
+          ]
+        },
+        "rules": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "project-scope",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/AGENTS.md"
+          ]
+        },
+        "skills": {
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.config/crush/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.crush/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "license",
+            "compatibility",
+            "metadata"
           ]
         }
       }

@@ -111,6 +111,9 @@ func init() {
 	RegisterFrontmatter(catalog.Skills, "amp", ampSkillMeta{})
 	RegisterFrontmatter(catalog.Skills, "cline", clineSkillMeta{})
 	RegisterFrontmatter(catalog.Skills, "roo-code", rooCodeSkillMeta{})
+	RegisterFrontmatter(catalog.Skills, "factory-droid", factoryDroidSkillMeta{})
+	RegisterFrontmatter(catalog.Skills, "pi", piSkillMeta{})
+	RegisterFrontmatter(catalog.Skills, "crush", crushSkillMeta{})
 }
 
 // flexStringList is a []string that also accepts a single YAML scalar string.
@@ -801,6 +804,36 @@ func renderClineSkill(meta SkillMeta, body string) (*Result, error) {
 type rooCodeSkillMeta struct {
 	Name        string `yaml:"name,omitempty"`
 	Description string `yaml:"description,omitempty"`
+}
+
+// factoryDroidSkillMeta reflects the Agent Skills v1 standard fields that
+// Factory Droid supports in SKILL.md frontmatter.
+type factoryDroidSkillMeta struct {
+	Name          string            `yaml:"name,omitempty"`
+	Description   string            `yaml:"description,omitempty"`
+	License       string            `yaml:"license,omitempty"`
+	Compatibility string            `yaml:"compatibility,omitempty"`
+	Metadata      map[string]string `yaml:"metadata,omitempty"`
+}
+
+// piSkillMeta reflects the Agent Skills v1 standard fields that Pi
+// supports in SKILL.md frontmatter.
+type piSkillMeta struct {
+	Name          string            `yaml:"name,omitempty"`
+	Description   string            `yaml:"description,omitempty"`
+	License       string            `yaml:"license,omitempty"`
+	Compatibility string            `yaml:"compatibility,omitempty"`
+	Metadata      map[string]string `yaml:"metadata,omitempty"`
+}
+
+// crushSkillMeta reflects the Agent Skills v1 standard fields that Crush
+// supports in SKILL.md frontmatter.
+type crushSkillMeta struct {
+	Name          string            `yaml:"name,omitempty"`
+	Description   string            `yaml:"description,omitempty"`
+	License       string            `yaml:"license,omitempty"`
+	Compatibility string            `yaml:"compatibility,omitempty"`
+	Metadata      map[string]string `yaml:"metadata,omitempty"`
 }
 
 // renderRooCodeSkill renders a canonical skill to Roo Code's SKILL.md format.
