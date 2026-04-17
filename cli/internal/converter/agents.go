@@ -19,6 +19,18 @@ func init() {
 	RegisterFrontmatter(catalog.Agents, "opencode", opencodeAgentMeta{})
 	RegisterFrontmatter(catalog.Agents, "kiro", kiroAgentMeta{})
 	RegisterFrontmatter(catalog.Agents, "roo-code", rooCodeMode{})
+	RegisterFrontmatter(catalog.Agents, "factory-droid", factoryDroidAgentMeta{})
+}
+
+// factoryDroidAgentMeta reflects the Custom Droid frontmatter fields
+// declared in .factory/droids/<name>.md files. Tools use categorical names
+// (filesystem, shell, search, browser, web_fetch) rather than per-tool
+// allowlists — represented as a string slice.
+type factoryDroidAgentMeta struct {
+	Name        string   `yaml:"name,omitempty"`
+	Description string   `yaml:"description,omitempty"`
+	Model       string   `yaml:"model,omitempty"`
+	Tools       []string `yaml:"tools,omitempty"`
 }
 
 // AgentMeta is the canonical agent metadata (YAML frontmatter, superset of all providers).
