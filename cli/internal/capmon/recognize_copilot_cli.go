@@ -100,10 +100,41 @@ func copilotCliHooksLandmarkOptions() LandmarkOptions {
 	)
 }
 
+// MCP recognition is intentionally NOT wired for copilot-cli.
+//
+// Copilot CLI's MCP evidence (.capmon-cache/copilot-cli/mcp.0 + mcp.1) is
+// procedural body text rather than heading-level structure. The mcp.0 doc
+// (add-mcp-servers.md) walks through the interactive `/mcp add` form via
+// numbered list items: "Next to Server Type, select... Local or STDIO...
+// HTTP or SSE..." and "Next to Tools, specify which tools...". Transport
+// types and tool filtering are mentioned, but as inline list options inside
+// a single procedure — not as discrete H1/H2 anchors that the substring
+// matcher can use to distinguish capabilities.
+//
+// Per docs/provider-formats/copilot-cli.yaml, only 1 of 8 canonical MCP keys
+// (tool_filtering, mechanism: --allow-tool/--deny-tool CLI flags) is curated
+// as supported, at "confirmed" confidence. The other 7 are curated as
+// unsupported. The doc-source landmark approach would either:
+//   - Be redundant (recognizer "inferred" loses to curator "confirmed" for
+//     tool_filtering, and the doc evidence is the config-form Tools field —
+//     a different mechanism than the curated --allow-tool flags).
+//   - Contradict the curator (e.g. emitting transport_types as inferred-true
+//     against curator's explicit unsupported assertion based on procedural
+//     body text rather than heading evidence).
+//
+// Recognizer silence preserves the curator's higher-confidence data and
+// avoids surfacing false-positive heading inferences from list-item body
+// text. mcp.1 (concepts/context/mcp.md) is the GitHub-wide MCP discovery
+// page covering chat/IDE/cloud-agent variants — its landmarks describe
+// extension and integration concepts, not consumer-side capability
+// vocabulary specific to the CLI.
+
 // recognizeCopilotCli recognizes skills + rules + hooks capabilities for the
 // Copilot CLI provider. Source for all three content types is markdown
 // documentation; recognition uses landmark (heading) matching. Static facts
 // merge in at "confirmed" confidence after a successful skills landmark match.
+// MCP recognition is intentionally absent — see the comment block immediately
+// above this function for rationale.
 func recognizeCopilotCli(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, copilotCliLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
