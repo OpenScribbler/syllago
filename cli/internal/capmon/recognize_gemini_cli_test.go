@@ -177,3 +177,193 @@ func TestRecognizeGeminiCli_RealHooksLandmarks(t *testing.T) {
 		}
 	}
 }
+
+// realGeminiCliMcpLandmarks is a snapshot of the headings from gemini-cli's
+// MCP docs (.capmon-cache/gemini-cli/mcp.{1,2}/extracted.json — mcp-server.md
+// and mcp-setup.md) as of 2026-04-16. mcp.0 (settings.schema.json) is JSON
+// Schema and contributes Fields not Landmarks; the heading evidence comes
+// from the two markdown sources merged.
+//
+// Gemini CLI's mcp-server.md is the deepest single MCP doc in the cache (89
+// landmarks) — it backs 6 of 8 canonical MCP keys including OAuth, transport
+// types, env var expansion, tool filtering, auto-approve (trust-based bypass),
+// and resource referencing.
+var realGeminiCliMcpLandmarks = []string{
+	// mcp.1 — mcp-server.md (89 headings)
+	"MCP servers with Gemini CLI",
+	"What is an MCP server?",
+	"Core integration architecture",
+	"Discovery Layer (mcp-client.ts)",
+	"Execution layer (mcp-tool.ts)",
+	"Transport mechanisms",
+	"Working with MCP resources",
+	"Discovery and listing",
+	"Referencing resources in a conversation",
+	"How to set up your MCP server",
+	"Configure the MCP server in settings.json",
+	"Global MCP settings (mcp)",
+	"Server-specific configuration (mcpServers)",
+	"Configuration structure",
+	"Configuration properties",
+	"Required (one of the following)",
+	"Optional",
+	"Environment variable expansion",
+	"Security and environment sanitization",
+	"Automatic redaction",
+	"Explicit overrides",
+	"OAuth support for remote MCP servers",
+	"Automatic OAuth discovery",
+	"Authentication flow",
+	"Browser redirect requirements",
+	"Managing OAuth authentication",
+	"OAuth configuration properties",
+	"Token management",
+	"Authentication provider type",
+	"Google credentials",
+	"Service account impersonation",
+	"Setup instructions",
+	"Example configurations",
+	"Python MCP server (stdio)",
+	"Node.js MCP server (stdio)",
+	"Docker-based MCP server",
+	"HTTP-based MCP server",
+	"HTTP-based MCP Server with custom headers",
+	"MCP server with tool filtering",
+	"SSE MCP server with SA impersonation",
+	"Discovery process deep dive",
+	"1. Server iteration and connection",
+	"2. Tool discovery",
+	"3. Tool naming and namespaces",
+	"4. Schema processing",
+	"5. Connection management",
+	"Tool execution flow",
+	"1. Tool invocation",
+	"2. Confirmation process",
+	"Trust-based bypass",
+	"Dynamic allow-listing",
+	"User choice handling",
+	"3. Execution",
+	"4. Response handling",
+	"How to interact with your MCP server",
+	"Using the /mcp command",
+	"Example /mcp output",
+	"Tool usage",
+	"Status monitoring and troubleshooting",
+	"Connection states",
+	"Overriding extension configurations",
+	"Server status (MCPServerStatus)",
+	"Discovery state (MCPDiscoveryState)",
+	"Common issues and solutions",
+	"Server won't connect",
+	"No tools discovered",
+	"Tools not executing",
+	"Sandbox compatibility",
+	"Debugging tips",
+	"Important notes",
+	"Security considerations",
+	"Performance and resource management",
+	"Schema compatibility",
+	"Returning rich content from tools",
+	"How it works",
+	"Example: Returning text and an image",
+	"MCP prompts as slash commands",
+	"Defining prompts on the server",
+	"Invoking prompts",
+	"Managing MCP servers with gemini mcp",
+	"Adding a server (gemini mcp add)",
+	"Adding an stdio server",
+	"Adding an HTTP server",
+	"Adding an SSE server",
+	"Listing servers (gemini mcp list)",
+	"Troubleshooting and Diagnostics",
+	"Removing a server (gemini mcp remove)",
+	"Enabling/disabling a server (gemini mcp enable, gemini mcp disable)",
+	"Instructions",
+	// mcp.2 — mcp-setup.md (10 headings)
+	"Set up an MCP server",
+	"Prerequisites",
+	"How to prepare your credentials",
+	"How to configure Gemini CLI",
+	"How to verify the connection",
+	"How to use the new tools",
+	"Scenario: Listing pull requests",
+	"Scenario: Creating an issue",
+	"Troubleshooting",
+	"Next steps",
+}
+
+// TestRecognizeGeminiCli_RealMcpLandmarks proves MCP recognition emits 6
+// canonical MCP keys at "inferred" confidence: transport_types, oauth_support,
+// env_var_expansion, tool_filtering, auto_approve, resource_referencing.
+// marketplace and enterprise_management must NOT be emitted (no heading
+// evidence — gemini-cli has no in-IDE marketplace and no documented org-level
+// MCP management).
+//
+// Test merges all four content type fixtures to verify cross-content-type
+// robustness and exercise the required-anchor uniqueness gate.
+func TestRecognizeGeminiCli_RealMcpLandmarks(t *testing.T) {
+	merged := append([]string{}, realGeminiCliRulesLandmarks...)
+	merged = append(merged, realGeminiCliHooksLandmarks...)
+	merged = append(merged, realGeminiCliMcpLandmarks...)
+	result := capmon.RecognizeWithContext("gemini-cli", capmon.RecognitionContext{
+		Provider:  "gemini-cli",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["mcp.supported"] != "true" {
+		t.Error("mcp.supported missing")
+	}
+	mcpInferred := []string{
+		"transport_types",
+		"oauth_support",
+		"env_var_expansion",
+		"tool_filtering",
+		"auto_approve",
+		"resource_referencing",
+	}
+	for _, c := range mcpInferred {
+		key := "mcp.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["mcp.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("mcp.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"mcp.capabilities.marketplace.supported",
+		"mcp.capabilities.enterprise_management.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present for gemini-cli (no heading evidence)", absent)
+		}
+	}
+}
+
+// TestRecognizeGeminiCli_McpAnchorsMissing proves the required-anchor guard
+// suppresses MCP emission when "MCP servers with Gemini CLI" is absent —
+// preventing MCP patterns from firing on contexts that include
+// "Transport mechanisms" or "OAuth support for remote MCP servers" landmarks
+// but lack the MCP doc anchor.
+func TestRecognizeGeminiCli_McpAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realGeminiCliMcpLandmarks))
+	for _, lm := range realGeminiCliMcpLandmarks {
+		if lm == "MCP servers with Gemini CLI" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("gemini-cli", capmon.RecognitionContext{
+		Provider:  "gemini-cli",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["mcp.supported"]; has {
+		t.Error("mcp.supported should NOT be present when 'MCP servers with Gemini CLI' anchor is missing")
+	}
+}
