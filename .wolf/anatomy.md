@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-17T01:34:59.107Z
-> Files: 685 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-17T14:04:32.496Z
+> Files: 698 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -1486,42 +1486,57 @@
 - `healing_github.go` — Struct: RenameCandidate (~2092 tok)
 - `healing.go` — Struct: HealResult (~1690 tok)
 - `pipeline.go` — Struct: PipelineOptions (~3172 tok)
-- `recognize_amp_test.go` — TestRecognizeAmp_RealLandmarks, TestRecognizeAmp_AnchorsMissing, TestRecognizeAmp_NoLandmarks (~687 tok)
-- `recognize_amp.go` (~671 tok)
-- `recognize_claude_code_test.go` — TestRecognizeClaudeCode_RealLandmarks, TestRecognizeClaudeCode_AnchorsMissing, TestRecognizeClaudeCo (~1396 tok)
-- `recognize_claude_code.go` (~912 tok)
-- `recognize_cline_test.go` — TestRecognizeCline_RealLandmarks, TestRecognizeCline_NonSkillsLandmarks, TestRecognizeCline_AnchorsM (~1145 tok)
-- `recognize_cline.go` (~881 tok)
-- `recognize_codex_test.go` — TestRecognizeCodex_MultiStructAllowList, TestRecognizeCodex_OnlyExcludedStructs (~1000 tok)
-- `recognize_codex.go` (~582 tok)
+- `recognize_amp_test.go` — TestRecognizeAmp_RealLandmarks, TestRecognizeAmp_AnchorsMissing, TestRecognizeAmp_NoLandmarks, TestR (~2228 tok)
+- `recognize_amp.go` (~1811 tok)
+- `recognize_claude_code_test.go` — TestRecognizeClaudeCode_RealLandmarks, TestRecognizeClaudeCode_AnchorsMissing, TestRecognizeClaudeCo (~2277 tok)
+- `recognize_claude_code.go` — Declares doc (~2274 tok)
+- `recognize_cline_test.go` — TestRecognizeCline_RealLandmarks, TestRecognizeCline_NonSkillsLandmarks, TestRecognizeCline_AnchorsM (~2474 tok)
+- `recognize_cline.go` — Declares landmarks (~1779 tok)
+- `recognize_codex_test.go` — TestRecognizeCodex_MultiStructAllowList, TestRecognizeCodex_OnlyExcludedStructs, TestRecognizeCodex_ (~2739 tok)
+- `recognize_codex.go` — Declares names (~2295 tok)
+- `recognize_compose_test.go` — TestMergeRecognitionResults_Empty, TestMergeRecognitionResults_TwoRecognized, TestMergeRecognitionRe (~1074 tok)
+- `recognize_compose.go` — Declares prefix (~591 tok)
 - `recognize_conformance_test.go` — TestRecognitionConformance_KeyRegex, TestRecognitionConformance_Determinism, TestRecognitionConforma (~993 tok)
-- `recognize_copilot_cli_test.go` — TestRecognizeCopilotCli_RealLandmarks, TestRecognizeCopilotCli_NonSkillsLandmarks, TestRecognizeCopi (~1304 tok)
-- `recognize_copilot_cli.go` (~723 tok)
-- `recognize_crush.go` (~249 tok)
-- `recognize_cursor.go` (~115 tok)
-- `recognize_factory_droid_test.go` — TestRecognizeFactoryDroid_SyntheticLandmarks, TestRecognizeFactoryDroid_PageTitleOnly, TestRecognize (~1114 tok)
-- `recognize_factory_droid.go` (~801 tok)
-- `recognize_gemini_cli.go` (~219 tok)
+- `recognize_copilot_cli_test.go` — TestRecognizeCopilotCli_RealLandmarks, TestRecognizeCopilotCli_NonSkillsLandmarks, TestRecognizeCopi (~2659 tok)
+- `recognize_copilot_cli.go` (~1758 tok)
+- `recognize_crush.go` (~516 tok)
+- `recognize_cursor_test.go` — TestRecognizeCursor_RealRulesLandmarks, TestRecognizeCursor_AnchorsMissing, TestRecognizeCursor_NoLa (~987 tok)
+- `recognize_cursor.go` (~843 tok)
+- `recognize_factory_droid_test.go` — TestRecognizeFactoryDroid_RealLandmarks, TestRecognizeFactoryDroid_AnchorsMissing, TestRecognizeFact (~2012 tok)
+- `recognize_factory_droid.go` (~1316 tok)
+- `recognize_gemini_cli_test.go` — TestRecognizeGeminiCli_RealRulesLandmarks, TestRecognizeGeminiCli_AnchorsMissing, TestRecognizeGemin (~1503 tok)
+- `recognize_gemini_cli.go` (~1247 tok)
+- `recognize_hooks_test.go` — TestHooksContentType, TestCanonicalHooksKeys_MatchesCanonicalKeysYAML, TestIsCanonicalHooksKey, Test (~2153 tok)
+- `recognize_hooks.go` — IsCanonicalHooksKey, HooksLandmarkOptions, HooksLandmarkPattern (~1371 tok)
 - `recognize_internal_test.go` — TestRecognizeGoStruct_ContentTypeAgnostic, TestRecognizeGoStruct_MechanismPrefixOverride, TestSkills (~1551 tok)
-- `recognize_kiro_test.go` — TestRecognizeKiro_RealLandmarks, TestRecognizeKiro_NonSkillsLandmarks, TestRecognizeKiro_AnchorsMiss (~1312 tok)
-- `recognize_kiro.go` — Declares docs (~774 tok)
+- `recognize_kiro_test.go` — TestRecognizeKiro_RealLandmarks, TestRecognizeKiro_NonSkillsLandmarks, TestRecognizeKiro_AnchorsMiss (~2467 tok)
+- `recognize_kiro.go` — Declares docs (~1787 tok)
 - `recognize_landmarks.go` — Struct: StringMatcher (~1818 tok)
 - `recognize_opencode.go` (~293 tok)
-- `recognize_pi.go` (~244 tok)
-- `recognize_roo_code.go` (~254 tok)
+- `recognize_pi_test.go` — TestRecognizePi_RealHooksLandmarks, TestRecognizePi_HooksAnchorsMissing, TestRecognizePi_NoLandmarks (~1125 tok)
+- `recognize_pi.go` (~659 tok)
+- `recognize_roo_code.go` (~502 tok)
 - `recognize_rules_test.go` — TestRulesContentType, TestCanonicalRulesKeys_MatchesCanonicalKeysYAML, TestIsCanonicalRulesKey, Test (~2175 tok)
 - `recognize_rules.go` — IsCanonicalRulesKey, RulesLandmarkOptions, RulesLandmarkPattern (~1470 tok)
 - `recognize_test.go` — TestRecognizeContentTypeDotPaths_SkillGoStruct, TestRecognizeCrushSkills, TestRecognizeRooCodeSkills (~2230 tok)
 - `recognize_types.go` — Struct: RecognitionContext (~1407 tok)
-- `recognize_windsurf.go` (~284 tok)
-- `recognize_zed.go` (~111 tok)
+- `recognize_windsurf_test.go` — TestRecognizeWindsurf_RealRulesLandmarks, TestRecognizeWindsurf_AnchorsMissing, TestRecognizeWindsur (~1801 tok)
+- `recognize_windsurf.go` (~1556 tok)
+- `recognize_zed_test.go` — TestRecognizeZed_RealRulesLandmarks, TestRecognizeZed_RulesAnchorsMissing, TestRecognizeZed_NoLandma (~1306 tok)
+- `recognize_zed.go` (~1061 tok)
 - `recognize.go` — Recognizer conformance contract. (~3518 tok)
 - `report_test.go` — TestSanitizeSlug, TestDeduplicatePR_NoneExists, TestRecordConsecutiveFailure_ThirdFailure, TestGHRun (~3592 tok)
 - `report.go` — GHRunner, SetGHCommandForTest, SanitizeSlug, DeduplicatePR, RecordConsecutiveFailure (~3221 tok)
+- `seed_test.go` — TestSeedProviderCapabilities_Idempotent, TestSeedProviderCapabilities_PreservesExclusive, TestSeedPr (~2519 tok)
+- `seed.go` — Struct: SeedOptions (~1112 tok)
 - `seederspec_audit_test.go` — TestSeederSpecs_AllLoad (~508 tok)
 - `seederspec_test.go` — TestLoadSeederSpec_Valid, TestSeederSpecPath (~712 tok)
 - `seederspec.go` — Struct: ProposedMapping (~535 tok)
 - `sourceman_validate.go` — ValidateSources (~446 tok)
+
+## cli/internal/capmon/capyaml/
+
+- `types.go` — Struct: ProviderCapabilities (~794 tok)
 
 ## cli/internal/capmon/extract_html/
 
@@ -1559,6 +1574,7 @@
 
 - `amp.yaml` — Amp — Provider Source Manifest (~1090 tok)
 - `copilot-cli.yaml` — Copilot CLI — Provider Source Manifest (~1514 tok)
+- `factory-droid.yaml` — Factory Droid — Provider Source Manifest (~1068 tok)
 
 ## releases/
 
