@@ -390,3 +390,77 @@ func TestRecognizeCline_RealHooksLandmarks(t *testing.T) {
 		}
 	}
 }
+
+// realClineCommandsLandmarks is a snapshot of the headings extracted from
+// Cline's slash-commands doc (.capmon-cache/cline/commands.0/extracted.json)
+// as of 2026-04-17. Six built-in slash commands appear as individual H2/H3
+// landmarks — the strongest possible heading-level evidence for
+// builtin_commands.
+var realClineCommandsLandmarks = []string{
+	"Documentation Index",
+	"Using Commands",
+	"Slash Commands",
+	"/newtask",
+	"/smol",
+	"/newrule",
+	"/deep-planning",
+	"/explain-changes",
+	"/reportbug",
+	"Custom Workflows",
+}
+
+// TestRecognizeCline_RealCommandsLandmarks proves commands recognition fires
+// on the merged skills+rules+hooks+commands fixture, emits builtin_commands
+// at "inferred" confidence, and does NOT emit argument_substitution
+// (intentionally unmapped — no documented substitution syntax in cline's
+// custom workflows per the curator).
+func TestRecognizeCline_RealCommandsLandmarks(t *testing.T) {
+	merged := append([]string{}, realClineLandmarks...)
+	merged = append(merged, realClineRulesLandmarks...)
+	merged = append(merged, realClineHooksLandmarks...)
+	merged = append(merged, realClineCommandsLandmarks...)
+	result := capmon.RecognizeWithContext("cline", capmon.RecognitionContext{
+		Provider:  "cline",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["commands.supported"] != "true" {
+		t.Error("commands.supported missing")
+	}
+	if caps["commands.capabilities.builtin_commands.supported"] != "true" {
+		t.Error("commands.capabilities.builtin_commands.supported missing")
+	}
+	if got := caps["commands.capabilities.builtin_commands.confidence"]; got != "inferred" {
+		t.Errorf("commands.builtin_commands.confidence = %q, want inferred", got)
+	}
+	if _, has := caps["commands.capabilities.argument_substitution.supported"]; has {
+		t.Error("commands.capabilities.argument_substitution.supported should NOT be present for cline (no documented substitution syntax)")
+	}
+}
+
+// TestRecognizeCline_CommandsAnchorsMissing proves the required-anchor guard
+// suppresses commands emission when the unique "/newtask" anchor is absent —
+// preventing commands patterns from firing on contexts where only the
+// generic "Slash Commands" header appears.
+func TestRecognizeCline_CommandsAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realClineCommandsLandmarks))
+	for _, lm := range realClineCommandsLandmarks {
+		if lm == "/newtask" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("cline", capmon.RecognitionContext{
+		Provider:  "cline",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["commands.supported"]; has {
+		t.Error("commands.supported should NOT be present when '/newtask' anchor is missing")
+	}
+}

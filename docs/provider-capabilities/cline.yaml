@@ -3,6 +3,13 @@ slug: cline
 display_name: ""
 last_verified: ""
 content_types:
+  commands:
+    supported: true
+    capabilities:
+      builtin_commands:
+        supported: true
+        mechanism: 6 built-in slash commands documented as individual headings (/newtask, /smol, /newrule, /deep-planning, /explain-changes, /reportbug); hardcoded, not user-modifiable
+        confidence: inferred
   hooks:
     supported: true
     capabilities:

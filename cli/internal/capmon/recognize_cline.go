@@ -141,10 +141,37 @@ func clineMcpLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeCline recognizes skills + rules + hooks + mcp capabilities for the
-// Cline provider. Source for all four content types is markdown; recognition
-// uses landmark (heading) matching. Static facts merge in at "confirmed"
-// confidence after a successful skills landmark match.
+// clineCommandsLandmarkOptions returns the landmark patterns for Cline's
+// slash-commands documentation. Anchors derived from
+// .capmon-cache/cline/commands.0/extracted.json. Six built-in slash commands
+// are exposed as individual landmarks (/newtask, /smol, /newrule, etc.) — the
+// strongest possible evidence for builtin_commands at the heading layer.
+//
+// Required anchors are unique to commands.0:
+//   - "Slash Commands" — the H1 page heading; appears in no other cline cache.
+//   - "/newtask" — the first specific built-in command landmark; would never
+//     appear in skills/rules/hooks/mcp content-type docs.
+//
+// argument_substitution is intentionally NOT mapped — per the curated YAML
+// (docs/provider-formats/cline.yaml), cline's custom workflows are plain
+// prompt templates with no documented argument substitution mechanism. The
+// commands.0 cache confirms this: no $ARGUMENTS, $1, {{args}}, or similar
+// syntax appears in landmarks or fields.
+func clineCommandsLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Slash Commands", CaseInsensitive: true},
+		{Kind: "substring", Value: "/newtask", CaseInsensitive: true},
+	}
+	return CommandsLandmarkOptions(
+		CommandsLandmarkPattern("builtin_commands", "Slash Commands",
+			"6 built-in slash commands documented as individual headings (/newtask, /smol, /newrule, /deep-planning, /explain-changes, /reportbug); hardcoded, not user-modifiable", required),
+	)
+}
+
+// recognizeCline recognizes skills + rules + hooks + mcp + commands
+// capabilities for the Cline provider. Source for all five content types is
+// markdown; recognition uses landmark (heading) matching. Static facts merge
+// in at "confirmed" confidence after a successful skills landmark match.
 func recognizeCline(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, clineLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
@@ -156,6 +183,7 @@ func recognizeCline(ctx RecognitionContext) RecognitionResult {
 	rulesResult := recognizeLandmarks(ctx, clineRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, clineHooksLandmarkOptions())
 	mcpResult := recognizeLandmarks(ctx, clineMcpLandmarkOptions())
+	commandsResult := recognizeLandmarks(ctx, clineCommandsLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult, commandsResult)
 }
