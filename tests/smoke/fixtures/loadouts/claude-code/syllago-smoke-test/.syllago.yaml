@@ -1,0 +1,6 @@
+id: syllago-smoke-test
+name: syllago-smoke-test
+description: Self-contained loadout used only by tests/smoke/.
+tags:
+  - smoke-test
+  - internal

@@ -2,4 +2,192 @@ schema_version: "1"
 slug: claude-code
 display_name: ""
 last_verified: ""
-content_types: {}
+content_types:
+  agents:
+    supported: true
+    capabilities:
+      agent_scopes:
+        supported: true
+        mechanism: five-tier scope hierarchy (managed > --agents CLI > project > user > plugin) documented under 'Choose the subagent scope' heading; precedence rules in scope table
+        confidence: inferred
+      definition_format:
+        supported: true
+        mechanism: markdown with YAML frontmatter (name/description required, plus tools/model/permissionMode/etc) documented under 'Write subagent files' / 'Supported frontmatter fields' headings
+        confidence: inferred
+      invocation_patterns:
+        supported: true
+        capabilities:
+          at_mention:
+            supported: true
+            mechanism: '@-mention syntax guarantees a specific subagent runs for one task (documented under ''Invoke subagents explicitly'' heading)'
+            confidence: inferred
+          background:
+            supported: true
+            mechanism: foreground (blocking) vs background (concurrent) execution modes documented under 'Run subagents in foreground or background' heading
+            confidence: inferred
+          natural_language:
+            supported: true
+            mechanism: Claude decides whether to delegate based on the subagent's description (documented under 'Understand automatic delegation' heading)
+            confidence: inferred
+      model_selection:
+        supported: true
+        mechanism: per-subagent model override (sonnet/opus/haiku alias, full model ID, or inherit) documented under 'Choose a model' heading; resolution order via CLAUDE_CODE_SUBAGENT_MODEL env var, --model flag, frontmatter, or main session
+        confidence: inferred
+      per_agent_mcp:
+        supported: true
+        mechanism: per-subagent mcpServers field scopes which MCP servers each subagent can access (documented under 'Scope MCP servers to a subagent' heading)
+        confidence: inferred
+      subagent_spawning:
+        supported: true
+        mechanism: multi-agent coordination via parallel research, chained subagents, and resumable transcripts (documented under 'Run parallel research' / 'Chain subagents' / 'Resume subagents' headings)
+        confidence: inferred
+      tool_restrictions:
+        supported: true
+        mechanism: per-subagent tool allowlist (tools), denylist (disallowedTools), and per-spawn restrictions documented under 'Control subagent capabilities' / 'Available tools' / 'Restrict which subagents can be spawned' headings
+        confidence: inferred
+  hooks:
+    supported: true
+    capabilities:
+      async_execution:
+        supported: true
+        mechanism: async execution documented under 'Run hooks in the background' / 'Configure an async hook' / 'How async hooks execute' headings
+        confidence: inferred
+      decision_control:
+        supported: true
+        mechanism: decision control documented under 'Decision control' heading (exit codes + JSON output fields)
+        confidence: inferred
+      handler_types:
+        supported: true
+        mechanism: four handler types documented under 'Hook handler fields' (Common fields, Command hook fields, HTTP hook fields, Prompt and agent hook fields)
+        confidence: inferred
+      hook_scopes:
+        supported: true
+        mechanism: hook scopes documented under 'Hook locations' heading (user, project, local, managed policy, plugin, component frontmatter)
+        confidence: inferred
+      json_io_protocol:
+        supported: true
+        mechanism: JSON I/O protocol documented under 'Hook input and output' / 'JSON output' headings (continue, stopReason, suppressOutput, systemMessage, hookSpecificOutput)
+        confidence: inferred
+      matcher_patterns:
+        supported: true
+        mechanism: matcher patterns documented under 'Matcher patterns' heading (exact, pipe-separated, regex)
+        confidence: inferred
+      permission_control:
+        supported: true
+        mechanism: permission control documented under 'PermissionRequest' / 'Permission update entries' headings (addRules/replaceRules/removeRules/setMode)
+        confidence: inferred
+  mcp:
+    supported: true
+    capabilities:
+      enterprise_management:
+        supported: true
+        mechanism: 'managed MCP config with managed-mcp.json + allowlists/denylists documented under ''Managed MCP configuration'' / ''Option 1: Exclusive control with managed-mcp.json'' / ''Option 2: Policy-based control with allowlists and denylists'' headings'
+        confidence: inferred
+      env_var_expansion:
+        supported: true
+        mechanism: env-var expansion in .mcp.json documented under 'Environment variable expansion in .mcp.json' heading
+        confidence: inferred
+      marketplace:
+        supported: true
+        mechanism: in-doc curated server list documented under 'Popular MCP servers' heading; Claude Code surfaces servers via this catalog rather than an in-IDE marketplace
+        confidence: inferred
+      oauth_support:
+        supported: true
+        mechanism: OAuth 2.0 with callback port + pre-configured credentials documented under 'Authenticate with remote MCP servers' / 'Use a fixed OAuth callback port' / 'Use pre-configured OAuth credentials' headings
+        confidence: inferred
+      resource_referencing:
+        supported: true
+        mechanism: MCP resource @-mention referencing documented under 'Use MCP resources' / 'Reference MCP resources' headings
+        confidence: inferred
+      tool_filtering:
+        supported: true
+        mechanism: allowlist + denylist tool filtering documented under 'Allowlist behavior (allowedMcpServers)' / 'Denylist behavior (deniedMcpServers)' headings
+        confidence: inferred
+      transport_types:
+        supported: true
+        mechanism: 'three transport options documented under ''Option 1: Add a remote HTTP server'' / ''Option 2: Add a remote SSE server'' / ''Option 3: Add a local stdio server'' headings'
+        confidence: inferred
+  rules:
+    supported: true
+    capabilities:
+      activation_mode:
+        supported: true
+        capabilities:
+          always_on:
+            supported: true
+            mechanism: CLAUDE.md auto-loads when present in project root or working tree
+            confidence: inferred
+          glob:
+            supported: true
+            mechanism: path-specific rules in .claude/rules/<name>.md fire on glob match (documented under 'Path-specific rules')
+            confidence: inferred
+      auto_memory:
+        supported: true
+        mechanism: agent-managed automatic memory with /memory audit/edit (documented under 'Auto memory' heading)
+        confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        capabilities:
+          agents_md:
+            supported: true
+            mechanism: AGENTS.md fallback when CLAUDE.md absent (documented under 'AGENTS.md' heading)
+            confidence: inferred
+      file_imports:
+        supported: true
+        mechanism: '@-mention import syntax pulls referenced files into context (documented under ''Import additional files'')'
+        confidence: inferred
+      hierarchical_loading:
+        supported: true
+        mechanism: user-level rules from ~/.claude/CLAUDE.md plus project + additional directories (documented under 'User-level rules')
+        confidence: inferred
+  skills:
+    supported: true
+    capabilities:
+      additional_directories:
+        supported: true
+        mechanism: documented under 'Skills from additional directories' heading
+        confidence: inferred
+      arguments:
+        supported: true
+        mechanism: documented under 'Pass arguments to skills' heading
+        confidence: inferred
+      canonical_filename:
+        supported: true
+        mechanism: SKILL.md
+        confidence: confirmed
+      dynamic_context:
+        supported: true
+        mechanism: documented under 'Inject dynamic context' heading
+        confidence: inferred
+      frontmatter:
+        supported: true
+        mechanism: documented under 'Frontmatter reference' heading
+        confidence: inferred
+      global_scope:
+        supported: true
+        mechanism: ~/.claude/skills/<skill-name>/SKILL.md in user home directory
+        confidence: confirmed
+      invoker_control:
+        supported: true
+        mechanism: documented under 'Control who invokes a skill' heading
+        confidence: inferred
+      live_reload:
+        supported: true
+        mechanism: documented under 'Live change detection' heading
+        confidence: inferred
+      nested_directories:
+        supported: true
+        mechanism: documented under 'Automatic discovery from nested directories' heading
+        confidence: inferred
+      project_scope:
+        supported: true
+        mechanism: .claude/skills/<skill-name>/SKILL.md committed to version control
+        confidence: confirmed
+      subagent_invocation:
+        supported: true
+        mechanism: documented under 'Run skills in a subagent' heading
+        confidence: inferred
+      tool_preapproval:
+        supported: true
+        mechanism: documented under 'Pre-approve tools for a skill' heading
+        confidence: inferred

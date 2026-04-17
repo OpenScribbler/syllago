@@ -41,11 +41,19 @@ type EventEntry struct {
 }
 
 // CapabilityEntry is one capability (e.g., structured_output) in a capability YAML.
+//
+// Object-typed canonical keys (activation_mode, cross_provider_recognition; see
+// docs/spec/canonical-keys.yaml) hold a nested map of sub-capabilities under
+// the recursive Capabilities field. Flat canonical keys (file_imports,
+// hierarchical_loading, etc.) leave Capabilities nil. When at least one
+// sub-capability is added, the parent's Supported is set to true automatically
+// so a downstream reader sees the parent concept as supported.
 type CapabilityEntry struct {
-	Supported  bool     `yaml:"supported"`
-	Mechanism  string   `yaml:"mechanism,omitempty"`
-	Confidence string   `yaml:"confidence,omitempty"`
-	Refs       []string `yaml:"refs,omitempty"`
+	Supported    bool                       `yaml:"supported"`
+	Mechanism    string                     `yaml:"mechanism,omitempty"`
+	Confidence   string                     `yaml:"confidence,omitempty"`
+	Refs         []string                   `yaml:"refs,omitempty"`
+	Capabilities map[string]CapabilityEntry `yaml:"capabilities,omitempty"`
 }
 
 // ToolEntry maps a canonical tool name to its provider-native name.

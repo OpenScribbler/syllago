@@ -15,10 +15,14 @@ content_types:
     canonical_mappings:
       display_name:
         supported: true
+        provider_field: "name"
+        extension_id: name_format_constraint
         mechanism: "yaml frontmatter key: name (required). Must be lowercase letters, numbers, and hyphens only (e.g., deploy-to-staging, code-review). Used in UI listings and for @-mentions."
         confidence: confirmed
       description:
         supported: true
+        provider_field: "description"
+        extension_id: auto_invocation
         mechanism: "yaml frontmatter key: description (required). Brief explanation shown to the model to help it decide when to auto-invoke the skill. Key field for automatic invocation matching."
         confidence: confirmed
       user_invocable:
@@ -56,46 +60,30 @@ content_types:
     provider_extensions:
       - id: supporting_resource_files
         name: Supporting resource files
-        description: >
-          A skill directory may contain arbitrary additional files alongside SKILL.md (e.g., shell
-          scripts, markdown checklists, config templates, test templates, environment files). These
-          files become available to Cascade when the skill is invoked. There is no restriction on
-          file type or count. The skill directory is effectively a mini-bundle of everything needed
-          to execute a multi-step workflow. This is the primary structural differentiator between
-          Skills (folder-based bundles) and Rules/Workflows (single-file). Examples from docs:
-          deployment-checklist.md, rollback-procedure.md, config-template.yaml, pre-deploy-checks.sh,
-          security-checklist.md, review-template.md, test-template.py, coverage-config.json.
+        summary: "Arbitrary additional files alongside SKILL.md (scripts, checklists, templates) bundle a multi-step workflow into a single skill directory."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/skills.md#adding-supporting-resources"
         graduation_candidate: true
+        conversion: not-portable
       - id: name_format_constraint
         name: Skill name format constraint
-        description: >
-          Skill names (the `name` frontmatter field) must be unique per scope and use only lowercase
-          letters, numbers, and hyphens. This constraint is enforced by the UI wizard and documented
-          as a requirement. Invalid names are not accepted. Examples of valid names: deploy-to-staging,
-          code-review, setup-dev-environment.
+        summary: "Skill identifiers must be unique per scope and contain only lowercase letters, numbers, and hyphens."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/skills.md#required-frontmatter-fields"
         graduation_candidate: false
+        provider_field: "name"
+        conversion: embedded
       - id: auto_invocation
         name: Automatic model-driven invocation
-        description: >
-          Beyond explicit @mention, Cascade automatically invokes skills when the user's request
-          semantically matches a skill's description. This is described as the most common invocation
-          path. The description frontmatter field is the key signal: it tells Cascade when to invoke
-          the skill. This is distinct from user_invocable (@mention) and is driven entirely by
-          model inference against the description field. Users simply describe what they want and
-          Cascade selects relevant skills without any explicit invocation syntax.
+        summary: "Cascade auto-invokes a skill when the user's request semantically matches its `description` frontmatter field."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/skills.md#automatic-invocation"
         graduation_candidate: false
+        provider_field: "description"
+        conversion: not-portable
       - id: ui_creation
         name: UI-based skill creation
-        description: >
-          Skills can be created through the Cascade panel UI without manual file creation. Flow:
-          open Cascade panel → three dots (top right) → customizations menu → Skills section →
-          click "+ Workspace" (project-specific) or "+ Global" (all workspaces) → enter name.
-          The UI enforces the name format constraint (lowercase, numbers, hyphens).
+        summary: "Skills can be created through the Cascade panel UI (Workspace or Global) without manually authoring files."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/skills.md#using-the-ui-easiest"
         graduation_candidate: false
+        conversion: not-portable
     loading_model: >
       Progressive disclosure (agentskills.io standard): only the skill's name and description are
       shown to the model by default. The full SKILL.md content and all supporting resource files
@@ -152,52 +140,29 @@ content_types:
     provider_extensions:
       - id: activation_modes
         name: Four activation modes via trigger frontmatter
-        description: >
-          Workspace rules declare an activation mode in frontmatter via the `trigger` field.
-          Four modes exist: `always_on` (included in every system prompt), `model_decision`
-          (description always shown; full content loaded on demand when the model judges it
-          relevant), `glob` (applied when Cascade reads or edits files matching the `globs`
-          pattern), and `manual` (excluded from system prompt until @-mentioned by name in
-          the Cascade input box). The global rules file and root-level AGENTS.md do not use
-          frontmatter — they are always on.
+        summary: "Rules select one of four activation modes (always_on, model_decision, glob, or manual) via frontmatter."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/memories.md#activation-modes"
         graduation_candidate: true
+        provider_field: "trigger"
+        conversion: translated
       - id: agents_md_auto_scoping
         name: "AGENTS.md: location-based auto-scoping without frontmatter"
-        description: >
-          AGENTS.md (or agents.md) files use plain markdown with no frontmatter. Windsurf
-          infers the activation mode from file location: a root-level AGENTS.md is treated as
-          always-on; any subdirectory AGENTS.md is treated as a glob rule scoped to that
-          directory's subtree (auto-generated pattern `<directory>/**`). This provides simple
-          directory-specific guidance without any frontmatter configuration.
+        summary: "AGENTS.md files use no frontmatter; root-level files are always-on while subdirectory files become auto-glob rules scoped to that subtree."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/agents-md.md"
         graduation_candidate: true
+        conversion: not-portable
       - id: three_scopes_plus_system
         name: Global, workspace, and system rule scopes
-        description: >
-          Rules exist at three user-accessible scopes plus an enterprise system scope.
-          Global: single file at ~/.codeium/windsurf/memories/global_rules.md, always-on,
-          6,000 character limit. Workspace: one .md file per rule in .windsurf/rules/,
-          each with its own activation mode, 12,000 character limit per file. System
-          (Enterprise): OS-specific read-only directories deployed by IT — macOS
-          /Library/Application Support/Windsurf/rules/*.md, Linux/WSL
-          /etc/windsurf/rules/*.md, Windows C:\ProgramData\Windsurf\rules\*.md.
-          Workspace rules are also discovered in subdirectories and parent directories up
-          to the git root, with deduplication across multiple open folders.
+        summary: "Rules load from three user scopes plus an enterprise system scope, with per-scope character limits and OS-specific managed paths."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/memories.md#rules"
         graduation_candidate: false
+        conversion: not-portable
       - id: auto_generated_memories
         name: Auto-generated memories distinct from rules
-        description: >
-          Memories are a separate mechanism from Rules. Cascade auto-generates memories
-          during conversations when it encounters context worth remembering, and stores them
-          at ~/.codeium/windsurf/memories/ (workspace-scoped, not committed to git). Users
-          can also ask Cascade to create a memory explicitly. Memories do not consume
-          credits. They are distinct from Rules, which are user-authored and version-controlled.
-          The docs recommend preferring Rules or AGENTS.md over memories for durable,
-          team-shareable knowledge.
+        summary: "Cascade auto-generates workspace-scoped memories during conversations, stored separately from user-authored Rules and not committed to git."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/memories.md#memories"
         graduation_candidate: false
+        conversion: not-portable
     loading_model: >
       Mode-dependent. `always_on` rules are injected into the system prompt on every message.
       `model_decision` rules expose only their description in the system prompt; the full content
@@ -265,61 +230,35 @@ content_types:
     provider_extensions:
       - id: twelve_hook_events
         name: Twelve hook event types
-        description: >
-          Windsurf Cascade Hooks support twelve named event types covering the full agent
-          action lifecycle: pre_read_code, post_read_code, pre_write_code, post_write_code,
-          pre_run_command, post_run_command, pre_mcp_tool_use, post_mcp_tool_use,
-          pre_user_prompt, post_cascade_response, post_cascade_response_with_transcript,
-          and post_setup_worktree. Pre-hooks (pre_user_prompt, pre_read_code, pre_write_code,
-          pre_run_command, pre_mcp_tool_use) can block the action by exiting with code 2.
-          Post-hooks cannot block since the action has already occurred.
+        summary: "Twelve named event types span the agent lifecycle (pre/post read, write, run, mcp_tool_use, user_prompt, cascade_response, setup_worktree); pre-hooks can block via exit code 2."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/hooks.md#hook-events"
         graduation_candidate: true
+        conversion: translated
       - id: json_stdin_context
         name: JSON context delivered via stdin
-        description: >
-          Each hook receives a JSON object on stdin with common fields (agent_action_name,
-          trajectory_id, execution_id, timestamp, tool_info) plus event-specific fields in
-          tool_info. For example, pre_write_code includes file_path and an edits array with
-          old_string/new_string pairs; pre_run_command includes command_line and cwd;
-          pre_mcp_tool_use includes mcp_server_name, mcp_tool_name, and mcp_tool_arguments.
-          Scripts can be written in any language (Python, Bash, Node.js, any executable).
+        summary: "Each hook receives a JSON object on stdin with common fields (agent_action_name, trajectory_id, tool_info) plus event-specific data."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/hooks.md#common-input-structure"
         graduation_candidate: true
+        conversion: translated
       - id: three_config_scopes
         name: System, user, and workspace config scopes merged in order
-        description: >
-          Hook configurations are JSON files loaded from three scopes and merged together.
-          System-level (enterprise, managed by IT): macOS /Library/Application Support/Windsurf/hooks.json,
-          Linux/WSL /etc/windsurf/hooks.json, Windows C:\ProgramData\Windsurf\hooks.json.
-          User-level (personal): ~/.codeium/windsurf/hooks.json (Windsurf IDE) or
-          ~/.codeium/hooks.json (JetBrains plugin). Workspace-level (project, version-controlled):
-          .windsurf/hooks.json in the workspace root. Hooks from all levels are combined and
-          execute in order: cloud dashboard → system → user → workspace.
+        summary: "Hook JSON files load from system, user, and workspace scopes (plus optional cloud dashboard) and merge in a fixed precedence order."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/hooks.md#configuration"
         graduation_candidate: false
+        conversion: not-portable
       - id: cloud_dashboard_distribution
         name: Cloud dashboard distribution for enterprise teams
-        description: >
-          Enterprise teams can configure Cascade Hooks directly from the Windsurf Team Settings
-          dashboard without managing local files. Requires Enterprise plan and
-          TEAM_SETTINGS_UPDATE permission. Cloud-configured hooks are automatically distributed
-          to all team members and loaded first (before system, user, and workspace hooks).
-          Multiple team configs are merged per action rather than overwritten.
+        summary: "Enterprise teams configure hooks via the Windsurf Team Settings dashboard, distributed to all members and merged ahead of local scopes."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/hooks.md#cloud-dashboard-configuration"
         graduation_candidate: false
+        conversion: not-portable
       - id: transcript_hook
         name: Full conversation transcript hook variant
-        description: >
-          post_cascade_response_with_transcript is a distinct variant of post_cascade_response
-          that writes the full conversation transcript (from conversation start) to a local JSONL
-          file at ~/.windsurf/transcripts/{trajectory_id}.jsonl and delivers the file path in
-          tool_info rather than inline markdown. The JSONL format includes structured step-level
-          data (file contents, command outputs, tool arguments, applied rules). Files are written
-          with 0600 permissions; the directory is capped at 100 files with oldest pruned first.
-          Designed for enterprise audit and compliance logging.
+        summary: "A transcript-aware post-response hook variant writes structured JSONL to ~/.windsurf/transcripts/ and delivers the file path instead of inline markdown."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/hooks.md#post_cascade_response_with_transcript"
         graduation_candidate: false
+        provider_field: "post_cascade_response_with_transcript"
+        conversion: not-portable
     loading_model: >
       Hooks are not loaded into the model context. They are shell commands that execute as
       side-effects at specific agent lifecycle events. Hook configuration is read from JSON
@@ -379,53 +318,34 @@ content_types:
     provider_extensions:
       - id: three_transport_types
         name: "Three transport types: stdio, Streamable HTTP, SSE"
-        description: >
-          Windsurf supports stdio, Streamable HTTP, and SSE transport types for MCP servers,
-          plus OAuth for each. For HTTP servers the URL field should be the endpoint URL
-          (e.g., https://<server>/mcp). Remote HTTP servers use a `serverUrl` or `url` field
-          rather than `command`/`args`. This three-transport support is broader than providers
-          that only support stdio.
+        summary: "MCP servers can use stdio, Streamable HTTP, or SSE transports; remote servers use `serverUrl`/`url` fields instead of `command`/`args`."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/mcp.md"
         graduation_candidate: true
+        conversion: translated
       - id: config_interpolation
         name: Variable interpolation in mcp_config.json
-        description: >
-          The mcp_config.json file supports variable interpolation in command, args, env,
-          serverUrl, url, and headers fields. Two patterns: `${env:VAR_NAME}` is replaced
-          with the named environment variable (empty string if unset); `${file:/path/to/file}`
-          is replaced with the trimmed contents of the file at that path (tilde paths
-          supported; left unchanged if file is unread). This avoids hardcoding secrets in
-          the config file.
+        summary: "Config fields support `${env:VAR_NAME}` and `${file:/path}` interpolation to inject env vars and file contents without hardcoding secrets."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/mcp.md#config-interpolation"
         graduation_candidate: true
+        conversion: embedded
       - id: tool_limit_100
         name: 100-tool cap across all MCP servers
-        description: >
-          Cascade has a hard limit of 100 total MCP tools available at any one time across
-          all configured servers. Individual tools per server can be toggled on or off via
-          the MCP settings UI to stay within this limit.
+        summary: "Cascade caps total MCP tools at 100 across all configured servers; individual tools can be toggled to stay within the limit."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/mcp.md#configuring-mcp-tools"
         graduation_candidate: false
+        conversion: not-portable
       - id: enterprise_whitelist_and_registry
         name: Enterprise MCP whitelist and custom registry
-        description: >
-          Team admins can whitelist approved MCP servers; once any server is whitelisted, all
-          non-whitelisted servers are blocked for the team. Whitelist matching uses regex
-          patterns on command, args (per-element, length-matched), with env not matched. Teams
-          can also configure custom MCP registry URLs to replace the default Windsurf marketplace;
-          multiple registry URLs are unioned. Custom registries must follow the official MCP
-          registry schema.
+        summary: "Team admins can whitelist approved MCP servers (regex matching) and replace the default marketplace with custom MCP registry URLs."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/mcp.md#admin-controls-teams-enterprises"
         graduation_candidate: false
+        conversion: not-portable
       - id: mcp_marketplace
         name: In-IDE MCP marketplace
-        description: >
-          Windsurf includes a built-in MCP marketplace accessible from the Cascade panel
-          (MCPs icon in top-right menu) or Windsurf Settings > Cascade > MCP Servers.
-          Official MCPs are marked with a blue checkmark. Users click Install to add a
-          server. For MCPs not in the marketplace, users can edit mcp_config.json directly.
+        summary: "Built-in MCP marketplace accessible from the Cascade panel for one-click discovery and installation of MCP servers."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/mcp.md"
         graduation_candidate: false
+        conversion: not-portable
     loading_model: >
       MCP servers are configured in ~/.codeium/windsurf/mcp_config.json (global user config)
       using a `mcpServers` key. Each entry is a server definition with transport-specific fields:
@@ -480,24 +400,16 @@ content_types:
     provider_extensions:
       - id: agents_md_format
         name: "AGENTS.md: plain markdown with location-inferred scope"
-        description: >
-          Windsurf's agent instruction format is AGENTS.md (or agents.md — case insensitive),
-          a plain markdown file with no required frontmatter. Scope is inferred from file
-          location: root-level files apply to all files in the workspace (always-on); any
-          subdirectory AGENTS.md applies to files within that subtree (auto-glob `<dir>/**`).
-          Multiple AGENTS.md files can coexist at different directory levels for increasingly
-          specific guidance. Both filenames are recognized.
+        summary: "AGENTS.md (case-insensitive) is a plain markdown file with no frontmatter; scope is inferred from file location (root = always-on, subdir = auto-glob)."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/agents-md.md"
         graduation_candidate: true
+        conversion: not-portable
       - id: git_root_discovery
         name: Discovery up to git root across parent directories
-        description: >
-          For git repositories, Windsurf searches parent directories up to the git root when
-          discovering AGENTS.md files. This means AGENTS.md files in parent directories above
-          the workspace root (but within the same git repo) are also picked up. Multiple open
-          workspace folders are deduplicated.
+        summary: "For git repos, Windsurf searches parent directories up to the git root when discovering AGENTS.md files, deduplicating across open folders."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/agents-md.md#discovery-and-scoping"
         graduation_candidate: false
+        conversion: not-portable
     loading_model: >
       AGENTS.md files are processed by the same Rules engine as .windsurf/rules/ files.
       Root-level files are always included in the system prompt (always-on activation).
@@ -533,33 +445,22 @@ content_types:
     provider_extensions:
       - id: command_inline_editor
         name: "Windsurf Command: inline natural language code editing (Cmd/Ctrl+I)"
-        description: >
-          Windsurf Command is an inline AI code generation and editing feature invoked via
-          Cmd+I (Mac) or Ctrl+I (Windows/Linux) directly in the editor. It is distinct from
-          Cascade (the agentic chat panel). Command is scoped to the current file: if code
-          is highlighted it edits the selection; otherwise it generates at cursor position.
-          Does NOT consume premium model credits. Uses a separate set of models optimized
-          for current-file edits. Diffs are shown inline with accept/reject code lenses.
+        summary: "Inline AI code editing in the editor via Cmd+I/Ctrl+I, scoped to the current file with accept/reject diff lenses; distinct from Cascade chat."
         source_ref: "https://docs.windsurf.com/command/windsurf-overview.md"
         graduation_candidate: false
+        conversion: not-portable
       - id: terminal_command
         name: Terminal Command via Cmd/Ctrl+I in terminal
-        description: >
-          Command is also available in the integrated terminal (Cmd+I / Ctrl+I) to generate
-          CLI syntax from natural language prompts. This is a separate invocation surface
-          from the editor Command — it generates shell commands rather than code edits.
+        summary: "Cmd+I/Ctrl+I in the integrated terminal generates shell commands from natural language prompts, separate from the editor surface."
         source_ref: "https://docs.windsurf.com/command/windsurf-overview.md#terminal-command"
         graduation_candidate: false
+        conversion: not-portable
       - id: workflows_slash_commands
         name: "Workflows: slash-command-invoked prompt templates"
-        description: >
-          Windsurf Workflows are single .md files stored in .windsurf/workflows/ (workspace)
-          or ~/.codeium/windsurf/workflows/ (global) that serve as reusable prompt templates
-          for multi-step tasks. Invoked via /[workflow-name] slash command in the Cascade input.
-          Workflows are manual-only — they are never auto-invoked by the model. This is the
-          closest Windsurf equivalent to slash commands as defined by other providers.
+        summary: "Single .md files in .windsurf/workflows/ that serve as manual-only `/[name]` prompt templates invoked from the Cascade input."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/memories.md"
         graduation_candidate: true
+        conversion: translated
     loading_model: >
       Windsurf Command (inline editor) is a pure UI feature with no persistent configuration
       files — it is invoked on-demand via keyboard shortcut. Workflows (the slash-command

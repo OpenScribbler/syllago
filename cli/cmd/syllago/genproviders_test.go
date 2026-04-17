@@ -30,7 +30,7 @@ func captureStdout(t *testing.T, fn func()) []byte {
 	var buf bytes.Buffer
 	done := make(chan struct{})
 	go func() {
-		io.Copy(&buf, r) //nolint:errcheck
+		io.Copy(&buf, r)
 		close(done)
 	}()
 

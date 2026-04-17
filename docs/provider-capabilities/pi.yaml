@@ -2,4 +2,61 @@ schema_version: "1"
 slug: pi
 display_name: ""
 last_verified: ""
-content_types: {}
+content_types:
+  commands:
+    supported: true
+    capabilities:
+      argument_substitution:
+        supported: true
+        mechanism: positional shell-style substitution ($1, $2, $@, $ARGUMENTS, ${@:N}, ${@:N:L}) documented under 'Argument Hints' / 'Arguments' / 'Usage' headings
+        confidence: inferred
+  hooks:
+    supported: true
+    capabilities:
+      handler_types:
+        supported: true
+        mechanism: TypeScript-native extension handlers documented under 'Writing an Extension' / 'Extension Styles' (beyond shell-only)
+        confidence: inferred
+      input_modification:
+        supported: true
+        mechanism: tool_call event handlers can intercept and modify tool call inputs before execution (documented under 'tool_call' event)
+        confidence: inferred
+  skills:
+    supported: true
+    capabilities:
+      baseDir:
+        supported: true
+        mechanism: 'yaml frontmatter key: baseDir'
+        confidence: confirmed
+      canonical_filename:
+        supported: true
+        mechanism: SKILL.md
+        confidence: confirmed
+      description:
+        supported: true
+        mechanism: 'yaml frontmatter key: description'
+        confidence: confirmed
+      disableModelInvocation:
+        supported: true
+        mechanism: 'yaml frontmatter key: disableModelInvocation'
+        confidence: confirmed
+      display_name:
+        supported: true
+        mechanism: 'yaml frontmatter key: name'
+        confidence: confirmed
+      filePath:
+        supported: true
+        mechanism: 'yaml frontmatter key: filePath'
+        confidence: confirmed
+      global_scope:
+        supported: true
+        mechanism: ~/.pi/agent/skills/<name>/SKILL.md or ~/.agents/skills/<name>/SKILL.md
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: .pi/skills/<name>/SKILL.md or .agents/skills/<name>/SKILL.md
+        confidence: confirmed
+      sourceInfo:
+        supported: true
+        mechanism: 'yaml frontmatter key: sourceInfo'
+        confidence: confirmed

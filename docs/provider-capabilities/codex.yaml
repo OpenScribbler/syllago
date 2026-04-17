@@ -2,4 +2,170 @@ schema_version: "1"
 slug: codex
 display_name: ""
 last_verified: ""
-content_types: {}
+content_types:
+  agents:
+    supported: true
+    capabilities:
+      definition_format:
+        supported: true
+        mechanism: per-agent TOML files (e.g. awaiter.toml, explorer.toml under codex-rs/core/src/agent/builtins/) with developer_instructions (system prompt), model_reasoning_effort, and runtime knobs per AgentRoleToml + AgentsToml JSON Schema types
+        confidence: inferred
+      model_selection:
+        supported: true
+        mechanism: per-agent model_reasoning_effort field in the AgentRoleToml schema (ReasoningEffort enum) — each role declares its own reasoning effort even though codex uses one backing model across roles
+        confidence: inferred
+      subagent_spawning:
+        supported: true
+        mechanism: multi-agent coordination via MultiAgentV2ConfigToml + FeatureToml_for_MultiAgentV2ConfigToml feature flag — one agent can delegate to or spawn another
+        confidence: inferred
+  hooks:
+    supported: true
+    capabilities:
+      async_execution:
+        supported: true
+        mechanism: 'hook_execution_mode: Codex supports sync and async hook execution modes for fire-and-forget background hook runs (HookExecutionMode.ts enum)'
+        confidence: inferred
+      context_injection:
+        supported: true
+        mechanism: 'hook_system_message: UserPromptSubmit and SessionStart hooks inject context via the additionalContext field on *HookSpecificOutputWire types'
+        confidence: inferred
+      decision_control:
+        supported: true
+        mechanism: 'hook_result_abort: Codex hooks can abort (block) the triggering action via decision wire types (BlockDecisionWire / PreToolUseDecisionWire in event output schemas)'
+        confidence: inferred
+      handler_types:
+        supported: true
+        mechanism: 'hook_handler_types: Codex supports shell command, LLM prompt, and agent handler types (HookHandlerType.ts enum, HookHandlerConfig in config.rs)'
+        confidence: inferred
+      hook_scopes:
+        supported: true
+        mechanism: 'hook_scope: Codex hooks can be scoped to global/user or project configuration (HookScope.ts enum)'
+        confidence: inferred
+      input_modification:
+        supported: true
+        mechanism: 'hook_updated_input: PreToolUse hooks return modified tool input via the updatedInput field on PreToolUseHookSpecificOutputWire'
+        confidence: inferred
+      matcher_patterns:
+        supported: true
+        mechanism: 'hook_matcher: Codex hooks support pattern matching to filter which tools or events trigger the hook (MatcherGroup struct in config.rs)'
+        confidence: inferred
+      permission_control:
+        supported: true
+        mechanism: 'hook_permission_decision: PreToolUse hooks return allow/deny/ask permission decisions via PreToolUsePermissionDecisionWire'
+        confidence: inferred
+  rules:
+    supported: true
+    capabilities:
+      activation_mode:
+        supported: true
+        capabilities:
+          always_on:
+            supported: true
+            mechanism: AGENTS.md files are always_on within their scope (project root and child directories) — documented under 'AGENTS.md' (per docs/agents_md.md, redirects to developers.openai.com spec)
+            confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        capabilities:
+          agents_md:
+            supported: true
+            mechanism: codex is a primary AGENTS.md spec implementer (per github.com/openai/codex docs); AGENTS.md is the cross-provider standard
+            confidence: inferred
+      hierarchical_loading:
+        supported: true
+        mechanism: hierarchical AGENTS.md loading gated by child_agents_md feature flag in config.toml; codex emits a precedence-explanation message to the model when enabled (documented under 'Hierarchical agents message')
+        confidence: inferred
+  skills:
+    supported: true
+    capabilities:
+      allow_implicit_invocation:
+        supported: true
+        mechanism: 'yaml frontmatter key: allow_implicit_invocation'
+        confidence: confirmed
+      brand_color:
+        supported: true
+        mechanism: 'yaml frontmatter key: brand_color'
+        confidence: confirmed
+      canonical_filename:
+        supported: true
+        mechanism: SKILL.md (SKILLS_FILENAME constant)
+        confidence: confirmed
+      command:
+        supported: true
+        mechanism: 'yaml frontmatter key: command'
+        confidence: confirmed
+      default_prompt:
+        supported: true
+        mechanism: 'yaml frontmatter key: default_prompt'
+        confidence: confirmed
+      dependencies:
+        supported: true
+        mechanism: 'yaml frontmatter key: dependencies'
+        confidence: confirmed
+      description:
+        supported: true
+        mechanism: 'yaml frontmatter key: description'
+        confidence: confirmed
+      display_name:
+        supported: true
+        mechanism: 'yaml frontmatter key: name'
+        confidence: confirmed
+      global_scope:
+        supported: true
+        mechanism: ~/.agents/skills/<name>/ (SkillScope::User)
+        confidence: confirmed
+      icon_large:
+        supported: true
+        mechanism: 'yaml frontmatter key: icon_large'
+        confidence: confirmed
+      icon_small:
+        supported: true
+        mechanism: 'yaml frontmatter key: icon_small'
+        confidence: confirmed
+      interface:
+        supported: true
+        mechanism: 'yaml frontmatter key: interface'
+        confidence: confirmed
+      path_to_skills_md:
+        supported: true
+        mechanism: 'yaml frontmatter key: path_to_skills_md'
+        confidence: confirmed
+      policy:
+        supported: true
+        mechanism: 'yaml frontmatter key: policy'
+        confidence: confirmed
+      products:
+        supported: true
+        mechanism: 'yaml frontmatter key: products'
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: .agents/skills/<name>/ under project config folder or between project root and cwd (SkillScope::Repo)
+        confidence: confirmed
+      r#type:
+        supported: true
+        mechanism: 'yaml frontmatter key: r#type'
+        confidence: confirmed
+      scope:
+        supported: true
+        mechanism: 'yaml frontmatter key: scope'
+        confidence: confirmed
+      short_description:
+        supported: true
+        mechanism: 'yaml frontmatter key: short_description'
+        confidence: confirmed
+      tools:
+        supported: true
+        mechanism: 'yaml frontmatter key: tools'
+        confidence: confirmed
+      transport:
+        supported: true
+        mechanism: 'yaml frontmatter key: transport'
+        confidence: confirmed
+      url:
+        supported: true
+        mechanism: 'yaml frontmatter key: url'
+        confidence: confirmed
+      value:
+        supported: true
+        mechanism: 'yaml frontmatter key: value'
+        confidence: confirmed

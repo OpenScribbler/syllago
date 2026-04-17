@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Syllago · Terminal</title>
+  <link rel="stylesheet" href="./shared/tokens.css" />
+  <style>
+    body { font-family: var(--font-mono); font-size: 13px; line-height: 1.55; letter-spacing: 0.01em; }
+    .shell { max-width: 1280px; margin: 24px auto; padding: 0 20px; }
+    .frame { border: 1px solid var(--ui-3); background: var(--bg); }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; border-bottom: 1px solid var(--ui-3); color: var(--tx-2);
+    }
+    .topbar .logo { color: var(--ac-green); font-weight: 600; }
+    .topbar .logo .lago { color: var(--ac-purple); }
+    .topbar .path b { color: var(--tx); font-weight: 500; }
+    .topbar .tools { display: flex; gap: 14px; color: var(--tx-3); }
+    .topbar button:hover { color: var(--ac-cyan); }
+    .tabs {
+      display: flex; gap: 4px; padding: 6px 12px;
+      border-bottom: 1px solid var(--ui-3); background: var(--bg-2);
+    }
+    .tab { padding: 4px 10px; color: var(--tx-2); border: 1px solid transparent; }
+    .tab.active {
+      color: var(--ac-cyan); background: var(--bg);
+      border: 1px solid var(--ui-3); border-bottom-color: var(--bg);
+      margin-bottom: -1px; position: relative;
+    }
+    .tab .key { color: var(--ac-yellow); }
+
+    .grid { display: grid; grid-template-columns: 220px 1fr; }
+    .side { border-right: 1px solid var(--ui-3); padding: 16px 0; background: var(--bg-2); }
+    .side h4 {
+      margin: 0 16px 6px; color: var(--tx-3); font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500;
+    }
+    .side ul { list-style: none; padding: 0; margin: 0 0 14px; }
+    .side li button {
+      display: flex; justify-content: space-between; width: 100%;
+      padding: 4px 16px; color: var(--tx-2); text-align: left;
+    }
+    .side li button:hover { background: var(--ui); color: var(--tx); }
+    .side li button.active { color: var(--ac-cyan); background: var(--bg); }
+    .side .count { color: var(--tx-3); }
+    .side li button.active .count { color: var(--ac-cyan); }
+
+    .main { padding: 16px 20px; }
+    .search-row {
+      display: flex; align-items: center; gap: 10px;
+      border: 1px solid var(--ui-3); padding: 8px 12px; margin-bottom: 14px;
+      background: var(--bg-2);
+    }
+    .search-row .prompt { color: var(--ac-green); font-weight: 600; }
+    .search-row input {
+      flex: 1; background: transparent; border: 0; outline: 0;
+      font: inherit; color: var(--tx); caret-color: var(--ac-green);
+    }
+    .search-row input::placeholder { color: var(--tx-3); }
+    .search-row .hint { color: var(--tx-3); font-size: 11px; letter-spacing: 0.04em; }
+    .search-row .count { color: var(--ac-yellow); font-weight: 500; }
+
+    .chip-row {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;
+    }
+    .chip-row .label {
+      color: var(--tx-3); font-size: 11px; letter-spacing: 0.08em;
+      text-transform: uppercase; padding: 3px 6px 0 0;
+    }
+    .chip {
+      padding: 2px 8px; border: 1px solid var(--ui-3);
+      color: var(--tx-2); font-size: 12px;
+    }
+    .chip:hover { border-color: var(--ac-cyan); color: var(--ac-cyan); }
+    .chip.active { border-color: var(--ac-cyan); color: var(--ac-cyan); background: var(--bg-2); }
+    .chip .n { color: var(--tx-3); margin-left: 4px; }
+    .chip.active .n { color: var(--ac-cyan); }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 6px 10px; text-align: left; border-bottom: 1px dashed var(--ui-2); }
+    th {
+      color: var(--tx-3); font-weight: 500; font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      border-bottom: 1px solid var(--ui-3);
+    }
+    tr:hover td { background: var(--ui); }
+    .name { color: var(--ac-blue); font-weight: 500; }
+    .type { display: inline-block; padding: 0 6px; font-size: 11px;
+      color: var(--ac-cyan); border: 1px solid var(--ac-cyan); }
+    .type.skills   { color: var(--ac-blue);    border-color: var(--ac-blue); }
+    .type.agents   { color: var(--ac-purple);  border-color: var(--ac-purple); }
+    .type.commands { color: var(--ac-green);   border-color: var(--ac-green); }
+    .type.hooks    { color: var(--ac-orange);  border-color: var(--ac-orange); }
+    .type.mcp      { color: var(--ac-magenta); border-color: var(--ac-magenta); }
+    .type.loadouts { color: var(--ac-red);     border-color: var(--ac-red); }
+    .dim { color: var(--tx-3); }
+
+    .empty {
+      padding: 40px 20px; text-align: center; color: var(--tx-3);
+      border: 1px dashed var(--ui-3); margin-top: 6px;
+    }
+    .empty b { color: var(--ac-yellow); font-weight: 500; }
+
+    .cmdbar {
+      margin-top: 14px; padding: 8px 14px; border-top: 1px solid var(--ui-3);
+      background: var(--bg-2); display: flex; gap: 18px; color: var(--tx-3); font-size: 12px;
+    }
+    .cmdbar b { color: var(--ac-yellow); font-weight: 500; }
+    .status { color: var(--ac-green); margin-left: auto; }
+    .toggle { padding: 2px 8px; border: 1px solid var(--ui-3); color: var(--tx-2); }
+    .toggle:hover { border-color: var(--ac-cyan); color: var(--ac-cyan); }
+    .cursor::after { content: "█"; color: var(--ac-green); animation: blink 1s infinite; margin-left: 4px; }
+    @keyframes blink { 50% { opacity: 0; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="frame">
+      <div class="topbar">
+        <div class="logo">syl<span class="lago">lago</span> <span class="dim">v0.4.0</span></div>
+        <div class="path">~/.syllago &gt; <b>catalog</b><span class="cursor"></span></div>
+        <div class="tools">
+          <button>[?] help</button>
+          <button>[r] refresh</button>
+          <button class="toggle" id="themeBtn">toggle theme</button>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active"><span class="key">[1]</span> catalog</button>
+        <button class="tab"><span class="key">[2]</span> providers</button>
+        <button class="tab"><span class="key">[3]</span> settings</button>
+      </div>
+
+      <div class="grid">
+        <aside class="side">
+          <h4>Type</h4>
+          <ul id="sideTypes"></ul>
+          <h4>Origin</h4>
+          <ul id="sideOrigins"></ul>
+        </aside>
+
+        <main class="main">
+          <div class="search-row">
+            <span class="prompt">/</span>
+            <input id="searchInput" type="text" placeholder="search name, description, type, provider…" autofocus />
+            <span class="hint">[esc] clear</span>
+            <span class="count" id="resultCount">8/8</span>
+          </div>
+
+          <div class="chip-row" id="typeChips"></div>
+          <div class="chip-row" id="originChips"></div>
+
+          <table id="catalog">
+            <thead>
+              <tr><th>name</th><th>type</th><th>provider</th><th>files</th><th>updated</th><th>description</th></tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+          <div id="empty" class="empty" style="display:none">
+            no matches for <b id="emptyQuery"></b> · try a different query or clear filters
+          </div>
+
+          <div class="cmdbar">
+            <span><b>[/]</b> search</span>
+            <span><b>[↵]</b> open</span>
+            <span><b>[a]</b> add</span>
+            <span><b>[i]</b> install</span>
+            <span><b>[q]</b> quit</span>
+            <span class="status">● connected · ws://127.0.0.1:19099</span>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <script src="./shared/data.js"></script>
+  <script src="./shared/render.js"></script>
+  <script src="./shared/filter.js"></script>
+  <script>
+    const state = createFilterState();
+    const typeCounts   = countBy(MOCK_CATALOG, "type");
+    const originCounts = countBy(MOCK_CATALOG, "origin");
+
+    function buildSideList(container, key, values, counts) {
+      clear(container);
+      const all = el("li", {}, el("button", { "data-val": "all" },
+        [el("span", {}, "all"), el("span", { class: "count" }, String(MOCK_CATALOG.length))]));
+      container.appendChild(all);
+      values.forEach(v => {
+        container.appendChild(el("li", {}, el("button", { "data-val": v },
+          [el("span", {}, v), el("span", { class: "count" }, String(counts[v]))])));
+      });
+      container.querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state[key] = btn.dataset.val;
+          render();
+        });
+      });
+    }
+
+    function buildChipRow(container, key, label, values, counts) {
+      clear(container);
+      container.appendChild(el("span", { class: "label" }, label));
+      const all = el("button", { class: "chip", "data-val": "all" },
+        [el("span", {}, "all"), el("span", { class: "n" }, String(MOCK_CATALOG.length))]);
+      container.appendChild(all);
+      values.forEach(v => {
+        container.appendChild(el("button", { class: "chip", "data-val": v },
+          [el("span", {}, v), el("span", { class: "n" }, String(counts[v]))]));
+      });
+      container.querySelectorAll("button").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state[key] = btn.dataset.val;
+          render();
+        });
+      });
+    }
+
+    buildSideList(document.getElementById("sideTypes"),   "type",   Object.keys(typeCounts),   typeCounts);
+    buildSideList(document.getElementById("sideOrigins"), "origin", Object.keys(originCounts), originCounts);
+    buildChipRow(document.getElementById("typeChips"),    "type",   "type:",   Object.keys(typeCounts),   typeCounts);
+    buildChipRow(document.getElementById("originChips"),  "origin", "origin:", Object.keys(originCounts), originCounts);
+
+    const tbody  = document.getElementById("tbody");
+    const empty  = document.getElementById("empty");
+    const emptyQ = document.getElementById("emptyQuery");
+    const count  = document.getElementById("resultCount");
+
+    function render() {
+      const filtered = applyFilter(state, MOCK_CATALOG);
+      clear(tbody);
+      filtered.forEach(i => {
+        tbody.appendChild(el("tr", {}, [
+          el("td", { class: "name" }, i.name),
+          el("td", {}, el("span", { class: "type " + i.type }, i.type)),
+          el("td", { class: "dim" }, i.provider),
+          el("td", {}, String(i.files)),
+          el("td", { class: "dim" }, i.updated),
+          el("td", { class: "dim" }, i.description),
+        ]));
+      });
+      count.textContent = filtered.length + "/" + MOCK_CATALOG.length;
+      empty.style.display = filtered.length === 0 ? "block" : "none";
+      emptyQ.textContent = state.query ? '"' + state.query + '"' : "current filters";
+      document.querySelectorAll("[data-val]").forEach(btn => {
+        const row = btn.closest(".chip-row, ul");
+        if (!row) return;
+        const key = row.id.startsWith("side") ? (row.id === "sideTypes" ? "type" : "origin") :
+                    (row.id === "typeChips" ? "type" : "origin");
+        btn.classList.toggle("active", btn.dataset.val === state[key]);
+      });
+    }
+
+    const searchInput = document.getElementById("searchInput");
+    searchInput.addEventListener("input", e => { state.query = e.target.value; render(); });
+    searchInput.addEventListener("keydown", e => { if (e.key === "Escape") { searchInput.value = ""; state.query = ""; render(); } });
+    document.addEventListener("keydown", e => {
+      if (e.key === "/" && document.activeElement !== searchInput) { e.preventDefault(); searchInput.focus(); }
+    });
+
+    render();
+    initThemeToggle("themeBtn");
+  </script>
+</body>
+</html>
