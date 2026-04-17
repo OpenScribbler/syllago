@@ -3,6 +3,17 @@ slug: amp
 display_name: ""
 last_verified: ""
 content_types:
+  hooks:
+    supported: true
+    capabilities:
+      matcher_patterns:
+        supported: true
+        mechanism: per-tool input matching documented under 'Match Conditions' / 'Regular Expression Patterns' headings (hook_match_input_contains)
+        confidence: inferred
+      permission_control:
+        supported: true
+        mechanism: hooks integrate with amp's permission system to control tool availability (documented under 'How Permissions Work' / 'Add Rules' headings)
+        confidence: inferred
   rules:
     supported: true
     capabilities:
