@@ -73,12 +73,45 @@ func kiroRulesLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeKiro recognizes skills + rules capabilities for the Kiro provider.
-// Both content types are HTML/markdown documentation; recognition uses landmark
-// matching. Static facts (project_scope, canonical_filename) merge in at
-// "confirmed" confidence after a successful skills landmark match. Note: Kiro
-// has no global_scope for skills — Powers are installed via the Kiro Powers
-// panel UI without a fixed user-wide filesystem path.
+// kiroHooksLandmarkOptions returns the landmark patterns for Kiro's "Agent
+// hooks" doc. Anchors derived from .capmon-cache/kiro/hooks.0/extracted.json.
+//
+// Required anchors are unique to the hooks doc:
+//   - "What are agent hooks?" — H2 in hooks doc, not present in skills/rules
+//   - "Setting up agent hooks" — H2 in hooks doc, not present elsewhere
+//
+// Per the curated format YAML (docs/provider-formats/kiro.yaml), ALL 9
+// canonical hooks keys are marked supported: false for kiro — the doc
+// describes hooks as observational shell-command triggers without matchers,
+// JSON I/O, decision control, or any of the other documented capabilities.
+//
+// As a result, this recognizer only emits hooks.supported = true via a
+// bare anchor-only pattern. No capability-specific patterns are mapped.
+func kiroHooksLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "What are agent hooks?", CaseInsensitive: true},
+		{Kind: "substring", Value: "Setting up agent hooks", CaseInsensitive: true},
+	}
+	return LandmarkOptions{
+		ContentType: "hooks",
+		Patterns: []LandmarkPattern{
+			// Bare anchor-only pattern (no Capability) ensures hooks.supported
+			// is emitted when the required anchors match.
+			{
+				Required: required,
+				Matchers: required,
+			},
+		},
+	}
+}
+
+// recognizeKiro recognizes skills + rules + hooks capabilities for the Kiro
+// provider. All three content types are HTML/markdown documentation;
+// recognition uses landmark matching. Static facts (project_scope,
+// canonical_filename) merge in at "confirmed" confidence after a successful
+// skills landmark match. Note: Kiro has no global_scope for skills — Powers
+// are installed via the Kiro Powers panel UI without a fixed user-wide
+// filesystem path.
 func recognizeKiro(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, kiroLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
@@ -87,6 +120,7 @@ func recognizeKiro(ctx RecognitionContext) RecognitionResult {
 	}
 
 	rulesResult := recognizeLandmarks(ctx, kiroRulesLandmarkOptions())
+	hooksResult := recognizeLandmarks(ctx, kiroHooksLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
 }

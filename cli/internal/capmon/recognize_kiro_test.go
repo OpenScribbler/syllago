@@ -31,14 +31,35 @@ var realKiroSkillsLandmarks = []string{
 }
 
 // realKiroNonSkillsLandmarks is a sample drawn from kiro's non-skills,
-// non-rules content-type docs (agents, hooks, mcp). Required anchors for the
-// SKILLS recognizer must NOT match any of these. Note: rules/steering anchors
-// are deliberately excluded — those drive rules recognition.
+// non-rules, non-hooks content-type docs (agents, mcp). Required anchors for
+// the SKILLS, RULES, and HOOKS recognizers must NOT match any of these.
+// Partial hooks landmarks ("Hooks", "What are agent hooks?") are included to
+// verify the hooks required-anchor guard suppresses cleanly when "Setting up
+// agent hooks" is absent.
 var realKiroNonSkillsLandmarks = []string{
 	"Select your cookie preferences", "Essential", "Performance",
 	"Agent configuration reference", "Name field", "Description field",
 	"Hooks", "What are agent hooks?", "How agent hooks work",
 	"Configuration", "Configuration file structure", "Remote server", "Local server",
+}
+
+// realKiroHooksLandmarks is a snapshot of the headings extracted from kiro's
+// agent hooks doc (.capmon-cache/kiro/hooks.0/extracted.json) as of 2026-04-16.
+// Includes the AWS docs cookie-banner boilerplate.
+var realKiroHooksLandmarks = []string{
+	"Select your cookie preferences",
+	"Customize cookie preferences",
+	"Essential", "Performance", "Functional", "Advertising",
+	"Your privacy choices",
+	"Unable to save cookie preferences",
+	"Hooks",
+	"What are agent hooks?",
+	"How agent hooks work",
+	"Setting up agent hooks",
+	"Creating a hook",
+	"Ask Kiro to create a hook",
+	"Manually create a hook",
+	"Next steps",
 }
 
 // realKiroRulesLandmarks is a snapshot of kiro's steering doc landmarks
@@ -189,5 +210,46 @@ func TestRecognizeKiro_NoLandmarks(t *testing.T) {
 	result := capmon.RecognizeWithContext("kiro", capmon.RecognitionContext{Provider: "kiro", Format: "markdown"})
 	if result.Status != capmon.StatusAnchorsMissing {
 		t.Errorf("status = %q, want %q", result.Status, capmon.StatusAnchorsMissing)
+	}
+}
+
+// TestRecognizeKiro_RealHooksLandmarks proves hooks recognition emits
+// hooks.supported = true on the merged skills+rules+hooks landmarks. Per the
+// curated format YAML, ALL 9 canonical hooks keys are unsupported in kiro
+// (observational shell-only, no matchers/JSON I/O/decision control). The
+// recognizer therefore emits ONLY hooks.supported via the bare anchor-only
+// pattern — no specific canonical capabilities are mapped.
+func TestRecognizeKiro_RealHooksLandmarks(t *testing.T) {
+	merged := append([]string{}, realKiroSkillsLandmarks...)
+	merged = append(merged, realKiroRulesLandmarks...)
+	merged = append(merged, realKiroHooksLandmarks...)
+	result := capmon.RecognizeWithContext("kiro", capmon.RecognitionContext{
+		Provider:  "kiro",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["hooks.supported"] != "true" {
+		t.Error("hooks.supported missing")
+	}
+	// All 9 canonical hooks keys are curated as unsupported for kiro — none
+	// must be emitted.
+	for _, absent := range []string{
+		"hooks.capabilities.handler_types.supported",
+		"hooks.capabilities.matcher_patterns.supported",
+		"hooks.capabilities.decision_control.supported",
+		"hooks.capabilities.async_execution.supported",
+		"hooks.capabilities.hook_scopes.supported",
+		"hooks.capabilities.json_io_protocol.supported",
+		"hooks.capabilities.context_injection.supported",
+		"hooks.capabilities.permission_control.supported",
+		"hooks.capabilities.input_modification.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present for kiro (curated as unsupported)", absent)
+		}
 	}
 }

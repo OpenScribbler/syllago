@@ -3,6 +3,8 @@ slug: kiro
 display_name: ""
 last_verified: ""
 content_types:
+  hooks:
+    supported: true
   rules:
     supported: true
     capabilities:
