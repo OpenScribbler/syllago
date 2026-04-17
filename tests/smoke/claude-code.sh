@@ -29,7 +29,7 @@ if ! command -v claude &>/dev/null; then
   exit 1
 fi
 
-LOADOUT_NAME="example-kitchen-sink-loadout"
+LOADOUT_NAME="syllago-smoke-test"
 
 # ── Test: First-time setup (clean HOME) ──────────────────────────────────────
 
@@ -42,19 +42,19 @@ test_first_time_apply() {
   assert_file_exists "$HOME/.claude" ".claude directory should be created"
 
   # Verify rules symlink
-  assert_symlink "$HOME/.claude/rules/example-kitchen-sink-rules" \
+  assert_symlink "$HOME/.claude/rules/smoke-rules" \
     "rules should be symlinked"
 
   # Verify skills symlink
-  assert_symlink "$HOME/.claude/skills/syllago-guide" \
+  assert_symlink "$HOME/.claude/skills/smoke-skill" \
     "skills should be symlinked"
 
   # Verify agents symlink
-  assert_symlink "$HOME/.claude/agents/example-kitchen-sink-agent.md" \
+  assert_symlink "$HOME/.claude/agents/smoke-agent.md" \
     "agent should be symlinked"
 
   # Verify commands symlink
-  assert_symlink "$HOME/.claude/commands/example-kitchen-sink-commands" \
+  assert_symlink "$HOME/.claude/commands/smoke-commands" \
     "commands should be symlinked"
 
   # Verify hooks merged into settings.json
@@ -66,7 +66,7 @@ test_first_time_apply() {
   # Verify MCP merged into .claude.json
   assert_file_exists "$HOME/.claude.json" \
     ".claude.json should exist after MCP merge"
-  assert_json_field "$HOME/.claude.json" '.mcpServers["example-stdio-server"]' \
+  assert_json_field "$HOME/.claude.json" '.mcpServers["smoke-stdio-server"]' \
     ".claude.json should have MCP server entries from config.json"
 
   # Verify loadout status shows active
@@ -89,13 +89,13 @@ test_clean_removal() {
   syllago loadout remove --auto 2>&1
 
   # Verify symlinks are gone
-  assert_file_not_exists "$HOME/.claude/rules/example-kitchen-sink-rules" \
+  assert_file_not_exists "$HOME/.claude/rules/smoke-rules" \
     "rules symlink should be removed"
-  assert_file_not_exists "$HOME/.claude/skills/syllago-guide" \
+  assert_file_not_exists "$HOME/.claude/skills/smoke-skill" \
     "skills symlink should be removed"
-  assert_file_not_exists "$HOME/.claude/agents/example-kitchen-sink-agent.md" \
+  assert_file_not_exists "$HOME/.claude/agents/smoke-agent.md" \
     "agent symlink should be removed"
-  assert_file_not_exists "$HOME/.claude/commands/example-kitchen-sink-commands" \
+  assert_file_not_exists "$HOME/.claude/commands/smoke-commands" \
     "commands symlink should be removed"
 
   # Verify loadout status shows inactive
@@ -157,7 +157,7 @@ MCP
     "existing user MCP server should survive merge"
 
   # Verify loadout content was also added
-  assert_json_field "$HOME/.claude.json" '.mcpServers["example-stdio-server"]' \
+  assert_json_field "$HOME/.claude.json" '.mcpServers["smoke-stdio-server"]' \
     "loadout MCP should be added alongside existing"
 
   # Remove and verify user content is restored
@@ -179,16 +179,16 @@ run_test "Merge with existing config" test_merge_existing_config
 test_sequential_loadouts() {
   # Apply, remove, apply again — verifies clean state between applications
   syllago loadout apply "$LOADOUT_NAME" --keep 2>&1
-  assert_symlink "$HOME/.claude/rules/example-kitchen-sink-rules" \
+  assert_symlink "$HOME/.claude/rules/smoke-rules" \
     "first apply: rules should exist"
 
   syllago loadout remove --auto 2>&1
-  assert_file_not_exists "$HOME/.claude/rules/example-kitchen-sink-rules" \
+  assert_file_not_exists "$HOME/.claude/rules/smoke-rules" \
     "after remove: rules should be gone"
 
   # Second apply should work cleanly
   syllago loadout apply "$LOADOUT_NAME" --keep 2>&1
-  assert_symlink "$HOME/.claude/rules/example-kitchen-sink-rules" \
+  assert_symlink "$HOME/.claude/rules/smoke-rules" \
     "second apply: rules should exist again"
 
   local status
@@ -223,21 +223,21 @@ test_claude_mcp_list() {
   syllago loadout apply "$LOADOUT_NAME" --keep 2>&1
 
   # Verify MCP servers extracted from config.json appear in .claude.json.
-  # The kitchen-sink config.json defines "example-stdio-server" and
-  # "example-http-server" inside mcpServers.
+  # The smoke fixture's config.json defines "smoke-stdio-server" and
+  # "smoke-http-server" inside mcpServers.
   assert_file_exists "$HOME/.claude.json" ".claude.json should exist"
-  assert_json_field "$HOME/.claude.json" '.mcpServers["example-stdio-server"]' \
-    ".claude.json should have example-stdio-server"
-  assert_json_field "$HOME/.claude.json" '.mcpServers["example-http-server"]' \
-    ".claude.json should have example-http-server"
+  assert_json_field "$HOME/.claude.json" '.mcpServers["smoke-stdio-server"]' \
+    ".claude.json should have smoke-stdio-server"
+  assert_json_field "$HOME/.claude.json" '.mcpServers["smoke-http-server"]' \
+    ".claude.json should have smoke-http-server"
 
   # Verify claude mcp list sees the servers.
   # Note: claude mcp list may only show cloud/remote servers depending on
   # project context. The file-level assertions above are the primary check.
   local mcp_output
   mcp_output=$(claude mcp list 2>&1 || true)
-  if ! echo "$mcp_output" | grep -qF "example-stdio-server"; then
-    echo -e "  ${YELLOW}INFO${RESET}: claude mcp list did not show local servers (cloud servers shown instead)"
+  if ! echo "$mcp_output" | grep -qF "smoke-stdio-server"; then
+    echo -e "  ${YELLOW}INFO${RESET}: claude mcp list did not show smoke servers (cloud servers shown instead)"
   fi
 
   syllago loadout remove --auto 2>&1
@@ -246,7 +246,7 @@ test_claude_mcp_list() {
   if [[ -f "$HOME/.claude.json" ]]; then
     local mcpjson
     mcpjson=$(cat "$HOME/.claude.json")
-    assert_not_contains "$mcpjson" "example-stdio-server" \
+    assert_not_contains "$mcpjson" "smoke-stdio-server" \
       ".claude.json should not contain MCP servers after removal"
   fi
 }
@@ -266,7 +266,7 @@ test_preview_mode() {
   assert_contains "$output" "Preview" "should indicate preview mode"
 
   # But nothing should actually be installed
-  assert_file_not_exists "$HOME/.claude/rules/example-kitchen-sink-rules" \
+  assert_file_not_exists "$HOME/.claude/rules/smoke-rules" \
     "preview should not create files"
 
   # Loadout should not be active

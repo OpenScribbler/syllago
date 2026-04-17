@@ -2,4 +2,106 @@ schema_version: "1"
 slug: cline
 display_name: ""
 last_verified: ""
-content_types: {}
+content_types:
+  commands:
+    supported: true
+    capabilities:
+      builtin_commands:
+        supported: true
+        mechanism: 6 built-in slash commands documented as individual headings (/newtask, /smol, /newrule, /deep-planning, /explain-changes, /reportbug); hardcoded, not user-modifiable
+        confidence: inferred
+  hooks:
+    supported: true
+    capabilities:
+      context_injection:
+        supported: true
+        mechanism: context injection documented under 'Context Modification' heading
+        confidence: inferred
+      handler_types:
+        supported: true
+        mechanism: hook handler types documented under 'Hook Types' heading
+        confidence: inferred
+      hook_scopes:
+        supported: true
+        mechanism: hook scopes documented under 'Hook Locations' heading (project + global)
+        confidence: inferred
+      json_io_protocol:
+        supported: true
+        mechanism: JSON I/O protocol documented under 'Input Structure' / 'Output Structure' headings
+        confidence: inferred
+  mcp:
+    supported: true
+    capabilities:
+      marketplace:
+        supported: true
+        mechanism: in-IDE MCP Marketplace introduced under 'Finding MCP Servers' heading (mcp.0)
+        confidence: inferred
+      transport_types:
+        supported: true
+        mechanism: transport types documented under 'MCP Transport Mechanisms' / 'STDIO Transport' / 'SSE Transport' headings (mcp.1)
+        confidence: inferred
+  rules:
+    supported: true
+    capabilities:
+      activation_mode:
+        supported: true
+        capabilities:
+          always_on:
+            supported: true
+            mechanism: rules without conditionals load for every request (documented under 'Conditional Rules' / 'How It Works')
+            confidence: inferred
+          frontmatter_globs:
+            supported: true
+            mechanism: '''paths'' Conditional uses glob-based path matching to scope rule activation (documented under ''The paths Conditional'' / ''Writing Conditional Rules'')'
+            confidence: inferred
+      hierarchical_loading:
+        supported: true
+        mechanism: 'two-tier scope: Project rules (.clinerules/ in workspace) + Global rules (~/.cline/rules/ user-wide) — documented under ''Where Rules Live'' / ''Global Rules Directory'''
+        confidence: inferred
+  skills:
+    supported: true
+    capabilities:
+      bundled_files:
+        supported: true
+        mechanism: documented under 'Bundling Supporting Files' heading
+        confidence: inferred
+      canonical_filename:
+        supported: true
+        mechanism: SKILL.md
+        confidence: confirmed
+      creation_workflow:
+        supported: true
+        mechanism: documented under 'Creating a Skill' heading
+        confidence: inferred
+      description_guidance:
+        supported: true
+        mechanism: documented under 'Writing Effective Descriptions' heading
+        confidence: inferred
+      directory_structure:
+        supported: true
+        mechanism: documented under 'Skill Structure' heading
+        confidence: inferred
+      file_references:
+        supported: true
+        mechanism: documented under 'Referencing Bundled Files' heading
+        confidence: inferred
+      frontmatter:
+        supported: true
+        mechanism: frontmatter format documented under 'Writing Your SKILL.md' heading
+        confidence: inferred
+      global_scope:
+        supported: true
+        mechanism: Skills stored in ~/.cline/skills/<name>/SKILL.md
+        confidence: confirmed
+      naming_conventions:
+        supported: true
+        mechanism: documented under 'Naming Conventions' heading
+        confidence: inferred
+      project_scope:
+        supported: true
+        mechanism: Skills stored in .cline/skills/<name>/SKILL.md (recommended), .clinerules/skills/<name>/SKILL.md, or .claude/skills/<name>/SKILL.md
+        confidence: confirmed
+      toggling:
+        supported: true
+        mechanism: per-skill enable/disable documented under 'Toggling Skills' heading
+        confidence: inferred

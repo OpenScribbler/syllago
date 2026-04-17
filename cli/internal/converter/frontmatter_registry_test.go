@@ -42,6 +42,13 @@ func TestFrontmatterRegistry_Completeness(t *testing.T) {
 		"cursor/commands":   true,
 		"cline/commands":    true,
 		"windsurf/commands": true,
+		// factory-droid, pi, crush use plain AGENTS.md for rules and plain
+		// markdown (no frontmatter) for commands/prompt templates.
+		"factory-droid/rules":    true,
+		"factory-droid/commands": true,
+		"pi/rules":               true,
+		"pi/commands":            true,
+		"crush/rules":            true,
 	}
 
 	contentTypesWithFrontmatter := []catalog.ContentType{

@@ -1,0 +1,6 @@
+id: smoke-hook
+name: smoke-hook
+description: Test hook used by tests/smoke/.
+tags:
+  - smoke-test
+  - internal

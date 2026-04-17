@@ -17,12 +17,13 @@ const ProjectScopeSentinel = "__project_scope__"
 type Format string
 
 const (
-	FormatMarkdown Format = "md"
-	FormatMDC      Format = "mdc" // Cursor .mdc format
-	FormatJSON     Format = "json"
-	FormatYAML     Format = "yaml"
-	FormatJSONC    Format = "jsonc" // JSON with comments (OpenCode)
-	FormatTOML     Format = "toml"  // TOML (Codex multi-agent config)
+	FormatMarkdown   Format = "md"
+	FormatMDC        Format = "mdc" // Cursor .mdc format
+	FormatJSON       Format = "json"
+	FormatYAML       Format = "yaml"
+	FormatJSONC      Format = "jsonc" // JSON with comments (OpenCode)
+	FormatTOML       Format = "toml"  // TOML (Codex multi-agent config)
+	FormatTypeScript Format = "ts"    // TypeScript (Pi programmatic hooks)
 )
 
 type Provider struct {
@@ -88,6 +89,9 @@ var AllProviders = []Provider{
 	OpenCode,
 	Kiro,
 	Amp,
+	FactoryDroid,
+	Pi,
+	Crush,
 }
 
 // DetectedOnly returns the subset of AllProviders that are detected

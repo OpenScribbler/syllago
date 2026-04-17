@@ -1,0 +1,459 @@
+# THIS FILE IS GENERATED. Do not edit directly.
+# Source: docs/provider-capabilities/*.yaml
+# Generated at: 2026-04-17T16:13:10Z
+
+content_type: skills
+providers:
+    amp:
+        supported: true
+        capabilities:
+            canonical_filename:
+                supported: true
+                mechanism: SKILL.md
+                confidence: confirmed
+            creation_workflow:
+                supported: true
+                mechanism: documented under 'Creating Skills' heading
+                confidence: inferred
+            executable_tools:
+                supported: true
+                mechanism: documented under 'Executable Tools in Skills' heading
+                confidence: inferred
+            global_scope:
+                supported: true
+                mechanism: skill directory placed under ~/.config/agents/skills/<name>/, ~/.config/amp/skills/<name>/, or ~/.claude/skills/<name>/
+                confidence: confirmed
+            installation_workflow:
+                supported: true
+                mechanism: documented under 'Installing Skills' heading
+                confidence: inferred
+            mcp_integration:
+                supported: true
+                mechanism: documented under 'MCP Servers in Skills' heading
+                confidence: inferred
+            project_scope:
+                supported: true
+                mechanism: skill directory placed under .agents/skills/<name>/ or .claude/skills/<name>/ within the project root
+                confidence: confirmed
+    claude-code:
+        supported: true
+        capabilities:
+            additional_directories:
+                supported: true
+                mechanism: documented under 'Skills from additional directories' heading
+                confidence: inferred
+            arguments:
+                supported: true
+                mechanism: documented under 'Pass arguments to skills' heading
+                confidence: inferred
+            canonical_filename:
+                supported: true
+                mechanism: SKILL.md
+                confidence: confirmed
+            dynamic_context:
+                supported: true
+                mechanism: documented under 'Inject dynamic context' heading
+                confidence: inferred
+            frontmatter:
+                supported: true
+                mechanism: documented under 'Frontmatter reference' heading
+                confidence: inferred
+            global_scope:
+                supported: true
+                mechanism: ~/.claude/skills/<skill-name>/SKILL.md in user home directory
+                confidence: confirmed
+            invoker_control:
+                supported: true
+                mechanism: documented under 'Control who invokes a skill' heading
+                confidence: inferred
+            live_reload:
+                supported: true
+                mechanism: documented under 'Live change detection' heading
+                confidence: inferred
+            nested_directories:
+                supported: true
+                mechanism: documented under 'Automatic discovery from nested directories' heading
+                confidence: inferred
+            project_scope:
+                supported: true
+                mechanism: .claude/skills/<skill-name>/SKILL.md committed to version control
+                confidence: confirmed
+            subagent_invocation:
+                supported: true
+                mechanism: documented under 'Run skills in a subagent' heading
+                confidence: inferred
+            tool_preapproval:
+                supported: true
+                mechanism: documented under 'Pre-approve tools for a skill' heading
+                confidence: inferred
+    cline:
+        supported: true
+        capabilities:
+            bundled_files:
+                supported: true
+                mechanism: documented under 'Bundling Supporting Files' heading
+                confidence: inferred
+            canonical_filename:
+                supported: true
+                mechanism: SKILL.md
+                confidence: confirmed
+            creation_workflow:
+                supported: true
+                mechanism: documented under 'Creating a Skill' heading
+                confidence: inferred
+            description_guidance:
+                supported: true
+                mechanism: documented under 'Writing Effective Descriptions' heading
+                confidence: inferred
+            directory_structure:
+                supported: true
+                mechanism: documented under 'Skill Structure' heading
+                confidence: inferred
+            file_references:
+                supported: true
+                mechanism: documented under 'Referencing Bundled Files' heading
+                confidence: inferred
+            frontmatter:
+                supported: true
+                mechanism: frontmatter format documented under 'Writing Your SKILL.md' heading
+                confidence: inferred
+            global_scope:
+                supported: true
+                mechanism: Skills stored in ~/.cline/skills/<name>/SKILL.md
+                confidence: confirmed
+            naming_conventions:
+                supported: true
+                mechanism: documented under 'Naming Conventions' heading
+                confidence: inferred
+            project_scope:
+                supported: true
+                mechanism: Skills stored in .cline/skills/<name>/SKILL.md (recommended), .clinerules/skills/<name>/SKILL.md, or .claude/skills/<name>/SKILL.md
+                confidence: confirmed
+            toggling:
+                supported: true
+                mechanism: per-skill enable/disable documented under 'Toggling Skills' heading
+                confidence: inferred
+    codex:
+        supported: true
+        capabilities:
+            allow_implicit_invocation:
+                supported: true
+                mechanism: 'yaml frontmatter key: allow_implicit_invocation'
+                confidence: confirmed
+            brand_color:
+                supported: true
+                mechanism: 'yaml frontmatter key: brand_color'
+                confidence: confirmed
+            canonical_filename:
+                supported: true
+                mechanism: SKILL.md (SKILLS_FILENAME constant)
+                confidence: confirmed
+            command:
+                supported: true
+                mechanism: 'yaml frontmatter key: command'
+                confidence: confirmed
+            default_prompt:
+                supported: true
+                mechanism: 'yaml frontmatter key: default_prompt'
+                confidence: confirmed
+            dependencies:
+                supported: true
+                mechanism: 'yaml frontmatter key: dependencies'
+                confidence: confirmed
+            description:
+                supported: true
+                mechanism: 'yaml frontmatter key: description'
+                confidence: confirmed
+            display_name:
+                supported: true
+                mechanism: 'yaml frontmatter key: name'
+                confidence: confirmed
+            global_scope:
+                supported: true
+                mechanism: ~/.agents/skills/<name>/ (SkillScope::User)
+                confidence: confirmed
+            icon_large:
+                supported: true
+                mechanism: 'yaml frontmatter key: icon_large'
+                confidence: confirmed
+            icon_small:
+                supported: true
+                mechanism: 'yaml frontmatter key: icon_small'
+                confidence: confirmed
+            interface:
+                supported: true
+                mechanism: 'yaml frontmatter key: interface'
+                confidence: confirmed
+            path_to_skills_md:
+                supported: true
+                mechanism: 'yaml frontmatter key: path_to_skills_md'
+                confidence: confirmed
+            policy:
+                supported: true
+                mechanism: 'yaml frontmatter key: policy'
+                confidence: confirmed
+            products:
+                supported: true
+                mechanism: 'yaml frontmatter key: products'
+                confidence: confirmed
+            project_scope:
+                supported: true
+                mechanism: .agents/skills/<name>/ under project config folder or between project root and cwd (SkillScope::Repo)
+                confidence: confirmed
+            r#type:
+                supported: true
+                mechanism: 'yaml frontmatter key: r#type'
+                confidence: confirmed
+            scope:
+                supported: true
+                mechanism: 'yaml frontmatter key: scope'
+                confidence: confirmed
+            short_description:
+                supported: true
+                mechanism: 'yaml frontmatter key: short_description'
+                confidence: confirmed
+            tools:
+                supported: true
+                mechanism: 'yaml frontmatter key: tools'
+                confidence: confirmed
+            transport:
+                supported: true
+                mechanism: 'yaml frontmatter key: transport'
+                confidence: confirmed
+            url:
+                supported: true
+                mechanism: 'yaml frontmatter key: url'
+                confidence: confirmed
+            value:
+                supported: true
+                mechanism: 'yaml frontmatter key: value'
+                confidence: confirmed
+    copilot-cli:
+        supported: true
+        capabilities:
+            canonical_filename:
+                supported: true
+                mechanism: SKILL.md
+                confidence: confirmed
+            cli_management:
+                supported: true
+                mechanism: skill management commands documented under 'Skills commands in the CLI' heading
+                confidence: inferred
+            global_scope:
+                supported: true
+                mechanism: skill directory under ~/.copilot/skills/<name>/, ~/.claude/skills/<name>/, or ~/.agents/skills/<name>/
+                confidence: confirmed
+            project_scope:
+                supported: true
+                mechanism: skill directory under .github/skills/<name>/, .claude/skills/<name>/, or .agents/skills/<name>/ in project repository
+                confidence: confirmed
+    crush:
+        supported: true
+        capabilities:
+            canonical_filename:
+                supported: true
+                mechanism: SKILL.md
+                confidence: confirmed
+            compatibility:
+                supported: true
+                mechanism: 'yaml frontmatter key: compatibility'
+                confidence: confirmed
+            description:
+                supported: true
+                mechanism: 'yaml frontmatter key: description'
+                confidence: confirmed
+            display_name:
+                supported: true
+                mechanism: 'yaml frontmatter key: name'
+                confidence: confirmed
+            frontmatter_compatibility:
+                supported: true
+                mechanism: 'yaml key: compatibility'
+            frontmatter_description:
+                supported: true
+                mechanism: 'yaml key: description'
+            frontmatter_license:
+                supported: true
+                mechanism: 'yaml key: license'
+            frontmatter_metadata:
+                supported: true
+                mechanism: 'yaml key: metadata'
+            frontmatter_name:
+                supported: true
+                mechanism: 'yaml key: name'
+            global_scope:
+                supported: true
+                mechanism: user-global ~/.crush/skills/ directory
+                confidence: confirmed
+            license:
+                supported: true
+                mechanism: 'yaml frontmatter key: license'
+                confidence: confirmed
+            metadata_map:
+                supported: true
+                mechanism: 'yaml frontmatter key: metadata'
+                confidence: confirmed
+            project_scope:
+                supported: true
+                mechanism: per-project .crush/skills/ directory
+                confidence: confirmed
+    factory-droid:
+        supported: true
+        capabilities:
+            canonical_filename:
+                supported: true
+                mechanism: SKILL.md (skill.mdx also accepted)
+                confidence: confirmed
+            creation_workflow:
+                supported: true
+                mechanism: documented under 'Quickstart' heading
+                confidence: inferred
+            directory_structure:
+                supported: true
+                mechanism: documented under 'Where skills live' heading
+                confidence: inferred
+            frontmatter:
+                supported: true
+                mechanism: documented under 'Frontmatter reference' heading
+                confidence: inferred
+            global_scope:
+                supported: true
+                mechanism: ~/.factory/skills/<skill-name>/SKILL.md
+                confidence: confirmed
+            invocation:
+                supported: true
+                mechanism: documented under 'Control who invokes a skill' heading
+                confidence: inferred
+            project_scope:
+                supported: true
+                mechanism: <repo>/.factory/skills/<skill-name>/SKILL.md or .agent/skills/<skill-name>/SKILL.md
+                confidence: confirmed
+    kiro:
+        supported: true
+        capabilities:
+            canonical_filename:
+                supported: true
+                mechanism: POWER.md (fixed, all caps)
+                confidence: confirmed
+            directory_structure:
+                supported: true
+                mechanism: documented under 'Directory structure' heading
+                confidence: inferred
+            frontmatter:
+                supported: true
+                mechanism: 'documented under ''Frontmatter: When to activate'' heading'
+                confidence: inferred
+            mcp_integration:
+                supported: true
+                mechanism: documented under 'Adding MCP servers' heading
+                confidence: inferred
+            onboarding_instructions:
+                supported: true
+                mechanism: documented under 'Onboarding instructions' heading
+                confidence: inferred
+            project_scope:
+                supported: true
+                mechanism: Self-contained directory installed via Kiro Powers panel (UI installation, no fixed filesystem path)
+                confidence: confirmed
+            sharing:
+                supported: true
+                mechanism: documented under 'Sharing your power' heading
+                confidence: inferred
+            steering_instructions:
+                supported: true
+                mechanism: documented under 'Steering instructions' heading
+                confidence: inferred
+            testing:
+                supported: true
+                mechanism: documented under 'Testing locally' heading
+                confidence: inferred
+    pi:
+        supported: true
+        capabilities:
+            baseDir:
+                supported: true
+                mechanism: 'yaml frontmatter key: baseDir'
+                confidence: confirmed
+            canonical_filename:
+                supported: true
+                mechanism: SKILL.md
+                confidence: confirmed
+            description:
+                supported: true
+                mechanism: 'yaml frontmatter key: description'
+                confidence: confirmed
+            disableModelInvocation:
+                supported: true
+                mechanism: 'yaml frontmatter key: disableModelInvocation'
+                confidence: confirmed
+            display_name:
+                supported: true
+                mechanism: 'yaml frontmatter key: name'
+                confidence: confirmed
+            filePath:
+                supported: true
+                mechanism: 'yaml frontmatter key: filePath'
+                confidence: confirmed
+            global_scope:
+                supported: true
+                mechanism: ~/.pi/agent/skills/<name>/SKILL.md or ~/.agents/skills/<name>/SKILL.md
+                confidence: confirmed
+            project_scope:
+                supported: true
+                mechanism: .pi/skills/<name>/SKILL.md or .agents/skills/<name>/SKILL.md
+                confidence: confirmed
+            sourceInfo:
+                supported: true
+                mechanism: 'yaml frontmatter key: sourceInfo'
+                confidence: confirmed
+    roo-code:
+        supported: true
+        capabilities:
+            canonical_filename:
+                supported: true
+                mechanism: SKILL.md
+                confidence: confirmed
+            compatibility:
+                supported: true
+                mechanism: 'yaml frontmatter key: compatibility'
+                confidence: confirmed
+            description:
+                supported: true
+                mechanism: 'yaml frontmatter key: description'
+                confidence: confirmed
+            display_name:
+                supported: true
+                mechanism: 'yaml frontmatter key: name'
+                confidence: confirmed
+            frontmatter_compatibility:
+                supported: true
+                mechanism: 'yaml key: compatibility'
+            frontmatter_description:
+                supported: true
+                mechanism: 'yaml key: description'
+            frontmatter_license:
+                supported: true
+                mechanism: 'yaml key: license'
+            frontmatter_metadata:
+                supported: true
+                mechanism: 'yaml key: metadata'
+            frontmatter_name:
+                supported: true
+                mechanism: 'yaml key: name'
+            global_scope:
+                supported: true
+                mechanism: user-global ~/.roo/skills/ directory
+                confidence: confirmed
+            license:
+                supported: true
+                mechanism: 'yaml frontmatter key: license'
+                confidence: confirmed
+            metadata_map:
+                supported: true
+                mechanism: 'yaml frontmatter key: metadata'
+                confidence: confirmed
+            project_scope:
+                supported: true
+                mechanism: per-project .roo/skills/ directory
+                confidence: confirmed
+schema_version: "1"

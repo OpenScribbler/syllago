@@ -226,6 +226,124 @@ func AppendCapmonChangeEvent(_ context.Context, issueNumber int, body string) er
 	return nil
 }
 
+// FindOpenCapmonWarningIssue searches for an open GitHub issue matching a
+// validation warning's dedup key. Returns (issueNumber, true, nil) when found.
+func FindOpenCapmonWarningIssue(provider string, w ValidationWarning) (int, bool, error) {
+	slug, err := SanitizeSlug(provider)
+	if err != nil {
+		return 0, false, err
+	}
+	anchor := fmt.Sprintf("<!-- capmon-warn: %s -->", w.DeduplicationKey())
+
+	out, err := ghRunner("issue", "list",
+		"--label", "capmon-warn",
+		"--label", "provider:"+slug,
+		"--state", "open",
+		"--json", "number,body",
+	)
+	if err != nil {
+		return 0, false, fmt.Errorf("gh issue list: %w", err)
+	}
+
+	var issues []struct {
+		Number int    `json:"number"`
+		Body   string `json:"body"`
+	}
+	if err := json.Unmarshal(out, &issues); err != nil {
+		return 0, false, fmt.Errorf("parse issue list: %w", err)
+	}
+
+	for _, iss := range issues {
+		if strings.Contains(iss.Body, anchor) {
+			return iss.Number, true, nil
+		}
+	}
+	return 0, false, nil
+}
+
+// CreateCapmonWarningIssue creates a GitHub issue for a validation warning.
+// The issue body includes a hidden anchor with the dedup key for future lookups.
+func CreateCapmonWarningIssue(_ context.Context, provider string, w ValidationWarning) (int, error) {
+	slug, err := SanitizeSlug(provider)
+	if err != nil {
+		return 0, err
+	}
+	anchor := fmt.Sprintf("<!-- capmon-warn: %s -->", w.DeduplicationKey())
+	title := fmt.Sprintf("[capmon-warn-%s] Allow-list violation: %s", w.DeduplicationKey(), w.Field)
+	body := anchor + "\n" +
+		fmt.Sprintf("**Provider:** %s\n**Field:** %s\n**Value:** `%s`\n\n%s", slug, w.Field, w.Value, w.Message)
+
+	out, err := ghRunner("issue", "create",
+		"--title", title,
+		"--label", "capmon-warn",
+		"--label", "provider:"+slug,
+		"--body", body,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("gh issue create: %w", err)
+	}
+
+	issueURL := strings.TrimSpace(string(out))
+	parts := strings.Split(issueURL, "/")
+	if len(parts) == 0 {
+		return 0, fmt.Errorf("unexpected gh issue create output: %q", issueURL)
+	}
+	num, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		return 0, fmt.Errorf("parse issue number from %q: %w", issueURL, err)
+	}
+	return num, nil
+}
+
+// CloseResolvedWarningIssues closes any open capmon-warn issues for a provider
+// whose dedup keys are not in the seenKeys set. This auto-closes warnings that
+// have been fixed since the last run.
+func CloseResolvedWarningIssues(_ context.Context, provider string, seenKeys map[string]bool) error {
+	slug, err := SanitizeSlug(provider)
+	if err != nil {
+		return err
+	}
+
+	out, err := ghRunner("issue", "list",
+		"--label", "capmon-warn",
+		"--label", "provider:"+slug,
+		"--state", "open",
+		"--json", "number,body",
+	)
+	if err != nil {
+		return fmt.Errorf("gh issue list for close: %w", err)
+	}
+
+	var issues []struct {
+		Number int    `json:"number"`
+		Body   string `json:"body"`
+	}
+	if err := json.Unmarshal(out, &issues); err != nil {
+		return fmt.Errorf("parse issue list: %w", err)
+	}
+
+	for _, iss := range issues {
+		// Extract key from anchor: <!-- capmon-warn: KEY -->
+		start := strings.Index(iss.Body, "<!-- capmon-warn: ")
+		if start == -1 {
+			continue
+		}
+		start += len("<!-- capmon-warn: ")
+		end := strings.Index(iss.Body[start:], " -->")
+		if end == -1 {
+			continue
+		}
+		key := iss.Body[start : start+end]
+		if !seenKeys[key] {
+			_, _ = ghRunner("issue", "close",
+				fmt.Sprintf("%d", iss.Number),
+				"--comment", "Resolved: allow-list violation no longer present in format doc.",
+			)
+		}
+	}
+	return nil
+}
+
 // BuildPRBody writes a PR body to w for the given CapabilityDiff.
 // Extracted values are NEVER passed through a template engine — they are written
 // directly to the io.Writer inside triple-backtick fences.

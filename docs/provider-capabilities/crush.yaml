@@ -6,6 +6,22 @@ content_types:
   skills:
     supported: true
     capabilities:
+      canonical_filename:
+        supported: true
+        mechanism: SKILL.md
+        confidence: confirmed
+      compatibility:
+        supported: true
+        mechanism: 'yaml frontmatter key: compatibility'
+        confidence: confirmed
+      description:
+        supported: true
+        mechanism: 'yaml frontmatter key: description'
+        confidence: confirmed
+      display_name:
+        supported: true
+        mechanism: 'yaml frontmatter key: name'
+        confidence: confirmed
       frontmatter_compatibility:
         supported: true
         mechanism: 'yaml key: compatibility'
@@ -21,3 +37,19 @@ content_types:
       frontmatter_name:
         supported: true
         mechanism: 'yaml key: name'
+      global_scope:
+        supported: true
+        mechanism: user-global ~/.crush/skills/ directory
+        confidence: confirmed
+      license:
+        supported: true
+        mechanism: 'yaml frontmatter key: license'
+        confidence: confirmed
+      metadata_map:
+        supported: true
+        mechanism: 'yaml frontmatter key: metadata'
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: per-project .crush/skills/ directory
+        confidence: confirmed

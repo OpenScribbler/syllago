@@ -30,6 +30,10 @@ type PipelineOptions struct {
 	SourceManifestsDir string
 	// CapabilitiesDir is the path to docs/provider-capabilities/. Defaults to "docs/provider-capabilities".
 	CapabilitiesDir string
+	// RepoRoot is the directory used as the working directory for git/gh
+	// commands. Defaults to ".". Used by reactive healing to open PRs that
+	// update source manifests.
+	RepoRoot string
 }
 
 // RunPipeline executes the capmon pipeline with the given options.
@@ -43,6 +47,9 @@ func RunPipeline(ctx context.Context, opts PipelineOptions) (exitClass int, err 
 	}
 	if opts.CapabilitiesDir == "" {
 		opts.CapabilitiesDir = "docs/provider-capabilities"
+	}
+	if opts.RepoRoot == "" {
+		opts.RepoRoot = "."
 	}
 
 	// Validate stage value
@@ -147,17 +154,42 @@ func runStage1Fetch(ctx context.Context, opts PipelineOptions, manifest *RunMani
 					continue
 				}
 				sourceID := fmt.Sprintf("%s.%d", ctName, i)
+				useChromedp := src.FetchMethod == "chromedp" || (src.FetchMethod == "" && m.FetchTier == "html-scrape")
+
+				// Jitter between requests for browser-fetched sources to avoid
+				// burst patterns that trigger rate limiting.
+				if useChromedp && i > 0 {
+					jitter := time.Duration(500+rand.Intn(1500)) * time.Millisecond //nolint:gosec // jitter delay is not security-sensitive
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					case <-time.After(jitter):
+					}
+				}
+
 				var entry *CacheEntry
 				var fetchErr error
-				if src.FetchMethod == "chromedp" || (src.FetchMethod == "" && m.FetchTier == "html-scrape") {
+				if useChromedp {
 					entry, fetchErr = FetchChromedp(ctx, opts.CacheRoot, m.Slug, sourceID, src.URL)
 				} else {
 					entry, fetchErr = FetchSource(ctx, opts.CacheRoot, m.Slug, sourceID, src.URL)
 				}
 				if fetchErr != nil {
 					status.Errors = append(status.Errors, fmt.Sprintf("%s: %v", sourceID, fetchErr))
+					// Attempt reactive healing. This never retries the fetch
+					// in-run — it records the heal outcome and proposes a PR.
+					// The next pipeline run (after PR merge) will pick up the
+					// corrected URL.
+					heal := tryHealSource(ctx, opts, m.Slug, ctName, i, src, fetchErr, manifest.RunID)
+					if heal != nil {
+						status.HealEvents = append(status.HealEvents, *heal)
+					}
 					continue
 				}
+				// Fetch succeeded — clear any lingering heal-failure state
+				// for this source so the counter doesn't survive a later
+				// regression.
+				_ = ResolveHealFailure(opts.CacheRoot, m.Slug, ctName, i)
 				// Patch meta with format and URL for stage 2
 				entry.Meta.Format = src.Format
 				entry.Meta.SourceURL = src.URL
@@ -170,6 +202,71 @@ func runStage1Fetch(ctx context.Context, opts PipelineOptions, manifest *RunMani
 		manifest.Providers[m.Slug] = status
 	}
 	return nil
+}
+
+// tryHealSource runs the healing orchestrator for a source whose fetch
+// just failed and, on success, opens a PR proposing the manifest update.
+// Failures are recorded via RecordConsecutiveHealFailure so repeated
+// heal attempts escalate to a human-readable issue.
+//
+// Returns a non-nil HealEvent in every case (success OR failure) so the
+// run manifest captures what was tried. Returns nil only when healing
+// is disabled for this source.
+func tryHealSource(ctx context.Context, opts PipelineOptions, providerSlug, contentType string, sourceIndex int, src SourceEntry, fetchErr error, runID string) *HealEvent {
+	if !src.IsHealingEnabled() {
+		return nil
+	}
+	result, err := AttemptHeal(ctx, src, fetchErr)
+	event := &HealEvent{
+		ContentType: contentType,
+		SourceIndex: sourceIndex,
+		OldURL:      src.URL,
+	}
+	if err != nil {
+		event.FailReason = "heal orchestrator error: " + err.Error()
+		return event
+	}
+	if !result.Success {
+		event.FailReason = result.FailReason
+		if !opts.DryRun {
+			if issueNum, ierr := RecordConsecutiveHealFailure(opts.CacheRoot, providerSlug, contentType, sourceIndex, result.FailReason); ierr == nil {
+				event.IssueNumber = issueNum
+			}
+		}
+		return event
+	}
+
+	event.Success = true
+	event.NewURL = result.NewURL
+	event.Strategy = result.Strategy
+
+	if opts.DryRun {
+		// Record the heal but don't propose a PR.
+		return event
+	}
+
+	manifestPath := filepath.Join(opts.SourceManifestsDir, providerSlug+".yaml")
+	prURL, perr := ProposeManifestHealPR(ctx, opts.RepoRoot, HealPRInputs{
+		ManifestPath: manifestPath,
+		Provider:     providerSlug,
+		ContentType:  contentType,
+		SourceIndex:  sourceIndex,
+		RunID:        runID,
+		OldURL:       src.URL,
+		Heal:         *result,
+	})
+	if perr != nil {
+		// PR creation failed — the heal itself succeeded (content was
+		// validated), but we couldn't open the review PR. Escalate as a
+		// heal failure so operators see it.
+		event.FailReason = "heal found " + result.NewURL + " but PR open failed: " + perr.Error()
+		return event
+	}
+	event.PRURL = prURL
+	// Clear the heal-failure counter so the escalation issue auto-closes on
+	// a subsequent successful fetch.
+	_ = ResolveHealFailure(opts.CacheRoot, providerSlug, contentType, sourceIndex)
+	return event
 }
 
 // runStage2Extract reads each cached source, runs the appropriate extractor,

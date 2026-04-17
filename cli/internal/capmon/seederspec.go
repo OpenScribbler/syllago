@@ -35,9 +35,9 @@ type SeederSpec struct {
 }
 
 // SeederSpecPath returns the conventional path for a seeder spec file given
-// the directory and the provider slug.
-func SeederSpecPath(specsDir, provider string) string {
-	return filepath.Join(specsDir, provider+"-skills.yaml")
+// the directory, provider slug, and content type.
+func SeederSpecPath(specsDir, provider, contentType string) string {
+	return filepath.Join(specsDir, provider+"-"+contentType+".yaml")
 }
 
 // LoadSeederSpec reads and unmarshals a seeder spec YAML file at the given path.

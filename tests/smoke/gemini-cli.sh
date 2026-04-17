@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gemini-cli.sh — E2E smoke tests for syllago + Gemini CLI integration.
 #
-# Tests cross-provider conversion: applies Claude Code kitchen-sink loadout
+# Tests cross-provider conversion: applies the Claude Code smoke loadout
 # with --to gemini-cli, verifying content lands in Gemini-specific paths.
 # Also exercises Gemini-specific content format differences.
 #
@@ -30,7 +30,7 @@ if ! command -v gemini &>/dev/null; then
   exit 1
 fi
 
-LOADOUT_NAME="example-kitchen-sink-loadout"
+LOADOUT_NAME="syllago-smoke-test"
 
 # Seed Gemini auth into settings.json. Loadout remove restores the pre-apply
 # settings.json, which may not have auth. Call this before apply in auth tests.
@@ -61,7 +61,7 @@ _seed_gemini_auth() {
 #   - Rules: symlinked into ~/.gemini/ root (not a rules/ subdir)
 #   - Skills: ~/.gemini/skills/<name>/
 #   - Agents: ~/.gemini/agents/<name>.md
-#   - Commands: symlinked into ~/.gemini/ root
+#   - Commands: ~/.gemini/commands/<name>/
 #   - MCP + Hooks: merged into ~/.gemini/settings.json (single file, not split)
 #
 # NOTE: Gemini CLI introspection commands (mcp list, skills list) require
@@ -78,20 +78,20 @@ test_cross_provider_apply() {
   assert_file_exists "$HOME/.gemini" ".gemini directory should be created"
 
   # Verify skills symlink
-  assert_symlink "$HOME/.gemini/skills/syllago-guide" \
+  assert_symlink "$HOME/.gemini/skills/smoke-skill" \
     "skills should be symlinked into .gemini/skills/"
 
   # Verify agents symlink
-  assert_symlink "$HOME/.gemini/agents/example-kitchen-sink-agent.md" \
+  assert_symlink "$HOME/.gemini/agents/smoke-agent.md" \
     "agent should be symlinked into .gemini/agents/"
 
   # Verify rules symlink (Gemini puts rules in root, not a rules/ subdir)
-  assert_symlink "$HOME/.gemini/example-kitchen-sink-rules" \
+  assert_symlink "$HOME/.gemini/smoke-rules" \
     "rules should be symlinked into .gemini/ root"
 
-  # Verify commands symlink (Gemini puts commands in root)
-  assert_symlink "$HOME/.gemini/example-kitchen-sink-commands" \
-    "commands should be symlinked into .gemini/ root"
+  # Verify commands symlink (Gemini puts commands under .gemini/commands/)
+  assert_symlink "$HOME/.gemini/commands/smoke-commands" \
+    "commands should be symlinked into .gemini/commands/"
 
   # Verify hooks merged into settings.json
   assert_file_exists "$HOME/.gemini/settings.json" \
@@ -116,13 +116,13 @@ test_gemini_clean_removal() {
   syllago loadout remove --auto 2>&1
 
   # Verify symlinks removed
-  assert_file_not_exists "$HOME/.gemini/skills/syllago-guide" \
+  assert_file_not_exists "$HOME/.gemini/skills/smoke-skill" \
     "skills symlink should be removed"
-  assert_file_not_exists "$HOME/.gemini/agents/example-kitchen-sink-agent.md" \
+  assert_file_not_exists "$HOME/.gemini/agents/smoke-agent.md" \
     "agent symlink should be removed"
-  assert_file_not_exists "$HOME/.gemini/example-kitchen-sink-rules" \
+  assert_file_not_exists "$HOME/.gemini/smoke-rules" \
     "rules symlink should be removed"
-  assert_file_not_exists "$HOME/.gemini/example-kitchen-sink-commands" \
+  assert_file_not_exists "$HOME/.gemini/commands/smoke-commands" \
     "commands symlink should be removed"
 
   # Verify loadout inactive
@@ -205,7 +205,7 @@ test_gemini_mcp_list() {
   # entries, so gemini may not recognize them.
   local mcp_output
   mcp_output=$(gemini mcp list 2>&1 || true)
-  if echo "$mcp_output" | grep -qF "No MCP" || ! echo "$mcp_output" | grep -qF "example"; then
+  if echo "$mcp_output" | grep -qF "No MCP" || ! echo "$mcp_output" | grep -qF "smoke"; then
     echo -e "  ${YELLOW}WARN${RESET}: gemini mcp list sees no servers (known MCP merge issue, see syllago-0sbe)"
   fi
 
@@ -218,7 +218,7 @@ test_gemini_skills_list() {
 
   local skills_output
   skills_output=$(gemini skills list 2>&1 || true)
-  assert_contains "$skills_output" "syllago-guide" \
+  assert_contains "$skills_output" "smoke-skill" \
     "gemini skills list should show the loadout's skill"
 
   syllago loadout remove --auto 2>&1
@@ -236,13 +236,13 @@ fi
 
 test_gemini_sequential() {
   syllago loadout apply "$LOADOUT_NAME" --to gemini-cli --keep 2>&1
-  assert_symlink "$HOME/.gemini/skills/syllago-guide" "first apply"
+  assert_symlink "$HOME/.gemini/skills/smoke-skill" "first apply"
 
   syllago loadout remove --auto 2>&1
-  assert_file_not_exists "$HOME/.gemini/skills/syllago-guide" "after remove"
+  assert_file_not_exists "$HOME/.gemini/skills/smoke-skill" "after remove"
 
   syllago loadout apply "$LOADOUT_NAME" --to gemini-cli --keep 2>&1
-  assert_symlink "$HOME/.gemini/skills/syllago-guide" "second apply"
+  assert_symlink "$HOME/.gemini/skills/smoke-skill" "second apply"
 
   syllago loadout remove --auto 2>&1
 }

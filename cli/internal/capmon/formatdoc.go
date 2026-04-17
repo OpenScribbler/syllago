@@ -46,11 +46,22 @@ type SourceRef struct {
 
 // CanonicalMapping records how a provider implements a canonical capability key.
 // The canonical key itself is the map key in ContentTypeFormatDoc.CanonicalMappings.
+//
+// ProviderField names the actual native field (frontmatter key, config key, TOML
+// field, dot-notation path) when the mapping corresponds to a specific named
+// field. Omitted when the mapping is structural or behavioral.
+//
+// ExtensionID points to a ProviderExtension entry that describes the same concept
+// in provider-specific detail. The component renders one unified row when set.
+// The canonical mapping is the authority; the extension is the detail — so the
+// authority points to the detail, not the other way around.
 type CanonicalMapping struct {
-	Supported  bool     `yaml:"supported"`
-	Mechanism  string   `yaml:"mechanism"`
-	Paths      []string `yaml:"paths,omitempty"`
-	Confidence string   `yaml:"confidence"`
+	Supported     bool     `yaml:"supported"`
+	Mechanism     string   `yaml:"mechanism"`
+	Paths         []string `yaml:"paths,omitempty"`
+	Confidence    string   `yaml:"confidence"`
+	ProviderField string   `yaml:"provider_field,omitempty"`
+	ExtensionID   string   `yaml:"extension_id,omitempty"`
 }
 
 // ExtensionExample is a runnable snippet attached to a provider extension. Examples
@@ -68,16 +79,30 @@ type ExtensionExample struct {
 // a source reference pointing to where the capability was found, and a graduation candidate
 // flag indicating whether the capability may be common enough across providers to warrant
 // a canonical key.
+//
+// Summary is one sentence (~150 chars max) describing what the feature is. Deep
+// explanations belong on the page linked by SourceRef. (Replaces the longer
+// Description field used in earlier schema versions.)
+//
+// ProviderField names the actual native field when the extension describes a
+// frontmatter key, config key, or TOML field. Also serves as the UI grouping
+// signal: entries with ProviderField appear in "fields"; entries without it in
+// "other".
+//
+// Conversion declares what happens to the feature during format conversion. Must
+// be one of: translated | embedded | dropped | preserved | not-portable.
 type ProviderExtension struct {
 	ID                  string             `yaml:"id"`
 	Name                string             `yaml:"name"`
-	Description         string             `yaml:"description"`
+	Summary             string             `yaml:"summary"`
 	SourceRef           string             `yaml:"source_ref"`
 	GraduationCandidate bool               `yaml:"graduation_candidate"`
 	GraduationNotes     string             `yaml:"graduation_notes,omitempty"`
 	Required            *bool              `yaml:"required"`
 	ValueType           string             `yaml:"value_type,omitempty"`
 	Examples            []ExtensionExample `yaml:"examples,omitempty"`
+	ProviderField       string             `yaml:"provider_field,omitempty"`
+	Conversion          string             `yaml:"conversion"`
 }
 
 // LoadFormatDoc reads and unmarshals a format doc YAML file.

@@ -2,7 +2,7 @@
 # Mixed sources: GitHub example/guide repos + minimal llms.txt stub. Docs are thin.
 
 schema_version: "1"
-last_verified: "2026-03-27"
+last_verified: "2026-04-16"
 provider_version: "" # No public version tracking
 
 slug: amp
@@ -43,10 +43,14 @@ content_types:
         format: markdown
         extracts: [file_format, features]
 
-      - url: https://ampcode.com/manual/AGENTS.md
+      - url: https://ampcode.com/manual
         type: docs
-        format: markdown
-        extracts: [file_format, features]
+        format: html
+        fetch_method: chromedp
+        selector:
+          primary: "#AGENTS\\.md, #AGENTS\\.md ~ p, #AGENTS\\.md ~ ul, #AGENTS\\.md ~ ol, #AGENTS\\.md ~ table, #AGENTS\\.md ~ h4, #AGENTS\\.md ~ details"
+          expected_contains: "AGENTS.md"
+        extracts: [file_format, file_locations, features, glob_support, migration]
     # Format: AGENT.md (plain markdown). Amp's equivalent of CLAUDE.md/.cursorrules.
 
   hooks:

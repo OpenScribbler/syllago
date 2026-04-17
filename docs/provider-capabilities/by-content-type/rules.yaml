@@ -1,0 +1,288 @@
+# THIS FILE IS GENERATED. Do not edit directly.
+# Source: docs/provider-capabilities/*.yaml
+# Generated at: 2026-04-17T16:13:10Z
+
+content_type: rules
+providers:
+    amp:
+        supported: true
+        capabilities:
+            activation_mode:
+                supported: true
+                capabilities:
+                    always_on:
+                        supported: true
+                        mechanism: AGENTS.md files are always_on within their scope (cwd, parent dirs, subtrees) — documented under 'AGENTS.md' / 'Writing AGENTS.md Files'
+                        confidence: inferred
+                    frontmatter_globs:
+                        supported: true
+                        mechanism: '@-mentioned files use ''globs'' frontmatter for selective activation (documented under ''Granular Guidance''); globs implicitly prefixed with **/ unless ../ or ./'
+                        confidence: inferred
+            cross_provider_recognition:
+                supported: true
+                capabilities:
+                    agents_md:
+                        supported: true
+                        mechanism: native AGENTS.md format; 'Migrating to AGENTS.md' documents one-time mv+symlink from CLAUDE.md and .cursorrules
+                        confidence: inferred
+            file_imports:
+                supported: true
+                mechanism: '@-mention syntax includes other files as context — supports relative, absolute, and ~/ paths (documented under ''Granular Guidance'')'
+                confidence: inferred
+            hierarchical_loading:
+                supported: true
+                mechanism: 'three-tier scope: AGENTS.md in cwd + parent dirs + subtrees + personal global at $HOME/.config/amp/AGENTS.md (documented under ''Writing AGENTS.md Files''); subtree loading is unique to amp'
+                confidence: inferred
+    claude-code:
+        supported: true
+        capabilities:
+            activation_mode:
+                supported: true
+                capabilities:
+                    always_on:
+                        supported: true
+                        mechanism: CLAUDE.md auto-loads when present in project root or working tree
+                        confidence: inferred
+                    glob:
+                        supported: true
+                        mechanism: path-specific rules in .claude/rules/<name>.md fire on glob match (documented under 'Path-specific rules')
+                        confidence: inferred
+            auto_memory:
+                supported: true
+                mechanism: agent-managed automatic memory with /memory audit/edit (documented under 'Auto memory' heading)
+                confidence: inferred
+            cross_provider_recognition:
+                supported: true
+                capabilities:
+                    agents_md:
+                        supported: true
+                        mechanism: AGENTS.md fallback when CLAUDE.md absent (documented under 'AGENTS.md' heading)
+                        confidence: inferred
+            file_imports:
+                supported: true
+                mechanism: '@-mention import syntax pulls referenced files into context (documented under ''Import additional files'')'
+                confidence: inferred
+            hierarchical_loading:
+                supported: true
+                mechanism: user-level rules from ~/.claude/CLAUDE.md plus project + additional directories (documented under 'User-level rules')
+                confidence: inferred
+    cline:
+        supported: true
+        capabilities:
+            activation_mode:
+                supported: true
+                capabilities:
+                    always_on:
+                        supported: true
+                        mechanism: rules without conditionals load for every request (documented under 'Conditional Rules' / 'How It Works')
+                        confidence: inferred
+                    frontmatter_globs:
+                        supported: true
+                        mechanism: '''paths'' Conditional uses glob-based path matching to scope rule activation (documented under ''The paths Conditional'' / ''Writing Conditional Rules'')'
+                        confidence: inferred
+            hierarchical_loading:
+                supported: true
+                mechanism: 'two-tier scope: Project rules (.clinerules/ in workspace) + Global rules (~/.cline/rules/ user-wide) — documented under ''Where Rules Live'' / ''Global Rules Directory'''
+                confidence: inferred
+    codex:
+        supported: true
+        capabilities:
+            activation_mode:
+                supported: true
+                capabilities:
+                    always_on:
+                        supported: true
+                        mechanism: AGENTS.md files are always_on within their scope (project root and child directories) — documented under 'AGENTS.md' (per docs/agents_md.md, redirects to developers.openai.com spec)
+                        confidence: inferred
+            cross_provider_recognition:
+                supported: true
+                capabilities:
+                    agents_md:
+                        supported: true
+                        mechanism: codex is a primary AGENTS.md spec implementer (per github.com/openai/codex docs); AGENTS.md is the cross-provider standard
+                        confidence: inferred
+            hierarchical_loading:
+                supported: true
+                mechanism: hierarchical AGENTS.md loading gated by child_agents_md feature flag in config.toml; codex emits a precedence-explanation message to the model when enabled (documented under 'Hierarchical agents message')
+                confidence: inferred
+    copilot-cli:
+        supported: true
+        capabilities:
+            activation_mode:
+                supported: true
+                capabilities:
+                    always_on:
+                        supported: true
+                        mechanism: .github/copilot-instructions.md applies to all requests in repository scope (documented under 'Repository-wide custom instructions')
+                        confidence: inferred
+                    frontmatter_globs:
+                        supported: true
+                        mechanism: NAME.instructions.md uses 'applyTo' frontmatter glob to scope to file patterns (documented under 'Path-specific custom instructions')
+                        confidence: inferred
+            cross_provider_recognition:
+                supported: true
+                capabilities:
+                    agents_md:
+                        supported: true
+                        mechanism: AGENTS.md at repository root, cwd, or COPILOT_CUSTOM_INSTRUCTIONS_DIRS (documented under 'Agent instructions' section)
+                        confidence: inferred
+                    claude_md:
+                        supported: true
+                        mechanism: CLAUDE.md at repository root recognized alongside AGENTS.md (documented under 'Agent instructions' section)
+                        confidence: inferred
+                    gemini_md:
+                        supported: true
+                        mechanism: GEMINI.md at repository root recognized alongside AGENTS.md (documented under 'Agent instructions' section)
+                        confidence: inferred
+            hierarchical_loading:
+                supported: true
+                mechanism: 'four-tier scope: Repository-wide + Path-specific + Agent (AGENTS.md) + Local ($HOME/.copilot/copilot-instructions.md) — files merge across tiers (documented under ''Repository-wide'' / ''Path-specific'' / ''Agent instructions'' / ''Local instructions'')'
+                confidence: inferred
+    cursor:
+        supported: true
+        capabilities:
+            activation_mode:
+                supported: true
+                capabilities:
+                    always_on:
+                        supported: true
+                        mechanism: '''Always'' Rule Type — rule included in every prompt (documented under ''Activation and enforcement'')'
+                        confidence: inferred
+                    frontmatter_globs:
+                        supported: true
+                        mechanism: '''Auto Attached'' Rule Type — frontmatter glob patterns activate when matching files in context (documented under ''Activation and enforcement'')'
+                        confidence: inferred
+                    manual:
+                        supported: true
+                        mechanism: '''Apply Manually'' Rule Type — activated via @-mention in chat (documented under ''Activation and enforcement'')'
+                        confidence: inferred
+                    model_decision:
+                        supported: true
+                        mechanism: '''Agent Requested'' Rule Type — agent decides based on rule description (documented under ''Activation and enforcement'')'
+                        confidence: inferred
+            cross_provider_recognition:
+                supported: true
+                capabilities:
+                    agents_md:
+                        supported: true
+                        mechanism: AGENTS.md fallback with nested directory support (documented under 'AGENTS.md' / 'Nested AGENTS.md support' headings)
+                        confidence: inferred
+            file_imports:
+                supported: true
+                mechanism: rules can reference / import other rules (documented under 'Importing Rules' heading)
+                confidence: inferred
+            hierarchical_loading:
+                supported: true
+                mechanism: 'three-tier scope: Project rules (.cursor/rules) + Team Rules (org-wide) + User Rules (documented under ''Project rules'' / ''Team Rules'' / ''User Rules'')'
+                confidence: inferred
+    gemini-cli:
+        supported: true
+        capabilities:
+            activation_mode:
+                supported: true
+                capabilities:
+                    always_on:
+                        supported: true
+                        mechanism: GEMINI.md files load automatically within scope (global, workspace, or JIT) — no frontmatter activation modes documented
+                        confidence: inferred
+            auto_memory:
+                supported: true
+                mechanism: /memory show / add / reload slash commands manage hierarchical memory (documented under 'Manage context with the /memory command')
+                confidence: inferred
+            file_imports:
+                supported: true
+                mechanism: GEMINI.md supports importing other markdown files (documented under 'Modularize context with imports' heading)
+                confidence: inferred
+            hierarchical_loading:
+                supported: true
+                mechanism: 'three-tier hierarchy: global ~/.gemini/GEMINI.md + workspace + JIT ancestor scan up to trusted root (documented under ''Understand the context hierarchy'')'
+                confidence: inferred
+    kiro:
+        supported: true
+        capabilities:
+            activation_mode:
+                supported: true
+                capabilities:
+                    always_on:
+                        supported: true
+                        mechanism: steering loaded on every prompt by default (documented under 'Always included' inclusion mode)
+                        confidence: inferred
+                    frontmatter_globs:
+                        supported: true
+                        mechanism: glob-based path matching activates steering files (documented under 'Conditional inclusion' inclusion mode)
+                        confidence: inferred
+                    manual:
+                        supported: true
+                        mechanism: user explicitly references the file to activate (documented under 'Manual inclusion' inclusion mode)
+                        confidence: inferred
+                    model_decision:
+                        supported: true
+                        mechanism: agent decides based on context (documented under 'Auto inclusion' inclusion mode)
+                        confidence: inferred
+            cross_provider_recognition:
+                supported: true
+                capabilities:
+                    agents_md:
+                        supported: true
+                        mechanism: Agents.md fallback for cross-tool compatibility (documented under 'Agents.md' heading)
+                        confidence: inferred
+            file_imports:
+                supported: true
+                mechanism: steering files can reference other files (documented under 'File references' heading)
+                confidence: inferred
+            hierarchical_loading:
+                supported: true
+                mechanism: 'three-tier scope: workspace + global + team steering (documented under ''Workspace steering'' / ''Global steering'' / ''Team steering'')'
+                confidence: inferred
+    windsurf:
+        supported: true
+        capabilities:
+            activation_mode:
+                supported: true
+                capabilities:
+                    always_on:
+                        supported: true
+                        mechanism: always_on trigger value documented in 'Activation Modes' table — full rule content included in system prompt every message
+                        confidence: inferred
+                    glob:
+                        supported: true
+                        mechanism: glob trigger value documented in 'Activation Modes' table — activated when files matching glob pattern are in context
+                        confidence: inferred
+                    manual:
+                        supported: true
+                        mechanism: manual trigger value documented in 'Activation Modes' table — activated via @-mention
+                        confidence: inferred
+                    model_decision:
+                        supported: true
+                        mechanism: model_decision trigger value documented in 'Activation Modes' table — Cascade decides based on context
+                        confidence: inferred
+            auto_memory:
+                supported: true
+                mechanism: Cascade-managed Memories layer auto-writes context based on conversation (documented under 'Memories & Rules' / 'How to Manage Memories')
+                confidence: inferred
+            cross_provider_recognition:
+                supported: true
+                capabilities:
+                    agents_md:
+                        supported: true
+                        mechanism: AGENTS.md fallback documented in dedicated rules.1 doc with 'Comparison with Rules' section
+                        confidence: inferred
+            hierarchical_loading:
+                supported: true
+                mechanism: .windsurf/rules scanned in current workspace, sub-directories, and parent dirs up to git root (documented under 'Rules Discovery' / 'Rules Storage Locations')
+                confidence: inferred
+    zed:
+        supported: true
+        capabilities:
+            activation_mode:
+                supported: true
+                capabilities:
+                    always_on:
+                        supported: true
+                        mechanism: project-root .rules file (or first-match fallback name) auto-included in every Agent Panel interaction; Library entries marked as Default Rules also load always_on (documented under '.rules files' / 'Default Rules')
+                        confidence: inferred
+                    slash_command:
+                        supported: true
+                        mechanism: Library rules invoked via slash command to inject the rule into the current agent context (documented under 'Slash Commands in Rules')
+                        confidence: inferred
+schema_version: "1"

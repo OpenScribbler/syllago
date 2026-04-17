@@ -60,5 +60,12 @@ tmp/
 # Agent worktrees (ephemeral, created by subagent sessions)
 .claude/worktrees/
 
+# Cross-session handoff state (managed by /handoff skill, machine-local)
+.claude/projects/
+
+# Handoff drafts and panel discussion transcripts (ephemeral)
+.handoffs/
+.panels/
+
 # Release state (ephemeral, created by /release skill)
 .release-pending.yml

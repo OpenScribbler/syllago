@@ -2,4 +2,75 @@ schema_version: "1"
 slug: gemini-cli
 display_name: ""
 last_verified: ""
-content_types: {}
+content_types:
+  commands:
+    supported: true
+    capabilities:
+      argument_substitution:
+        supported: true
+        mechanism: '{{args}} placeholder substitution plus !{...} shell-injection and @{...} file-injection escapes documented under ''Handling arguments'' / ''1. Context-aware injection with {{args}}'' / ''3. Executing shell commands with !{...}'' / ''4. Injecting file content with @{...}'' headings'
+        confidence: inferred
+  hooks:
+    supported: true
+    capabilities:
+      decision_control:
+        supported: true
+        mechanism: decision control via exit codes documented under 'Exit codes' heading (non-zero blocks, zero allows)
+        confidence: inferred
+      json_io_protocol:
+        supported: true
+        mechanism: JSON I/O protocol documented under 'Strict JSON requirements' / 'Common output fields' headings
+        confidence: inferred
+      matcher_patterns:
+        supported: true
+        mechanism: event/tool matchers documented under 'Matchers' / 'Matchers and tool names' headings
+        confidence: inferred
+  mcp:
+    supported: true
+    capabilities:
+      auto_approve:
+        supported: true
+        mechanism: auto-approval via trust-based bypass and dynamic allow-listing documented under 'Trust-based bypass' / 'Dynamic allow-listing' headings (under '2. Confirmation process')
+        confidence: inferred
+      env_var_expansion:
+        supported: true
+        mechanism: environment variable expansion documented under 'Environment variable expansion' heading with 'Security and environment sanitization' / 'Automatic redaction' / 'Explicit overrides' guidance
+        confidence: inferred
+      oauth_support:
+        supported: true
+        mechanism: OAuth 2.0 with automatic discovery, browser redirect flow, token management, and Google credentials documented under 'OAuth support for remote MCP servers' / 'Automatic OAuth discovery' / 'Authentication flow' headings
+        confidence: inferred
+      resource_referencing:
+        supported: true
+        mechanism: MCP resources (discovery, listing, in-conversation referencing) documented under 'Working with MCP resources' / 'Discovery and listing' / 'Referencing resources in a conversation' headings
+        confidence: inferred
+      tool_filtering:
+        supported: true
+        mechanism: per-server tool allow/deny filtering documented under 'MCP server with tool filtering' (Example configurations) and 'Dynamic allow-listing' headings
+        confidence: inferred
+      transport_types:
+        supported: true
+        mechanism: transport types (stdio, HTTP, SSE) documented under 'Transport mechanisms' heading; per-transport sub-headings 'Adding an stdio server' / 'Adding an HTTP server' / 'Adding an SSE server' under 'gemini mcp add'
+        confidence: inferred
+  rules:
+    supported: true
+    capabilities:
+      activation_mode:
+        supported: true
+        capabilities:
+          always_on:
+            supported: true
+            mechanism: GEMINI.md files load automatically within scope (global, workspace, or JIT) — no frontmatter activation modes documented
+            confidence: inferred
+      auto_memory:
+        supported: true
+        mechanism: /memory show / add / reload slash commands manage hierarchical memory (documented under 'Manage context with the /memory command')
+        confidence: inferred
+      file_imports:
+        supported: true
+        mechanism: GEMINI.md supports importing other markdown files (documented under 'Modularize context with imports' heading)
+        confidence: inferred
+      hierarchical_loading:
+        supported: true
+        mechanism: 'three-tier hierarchy: global ~/.gemini/GEMINI.md + workspace + JIT ancestor scan up to trusted root (documented under ''Understand the context hierarchy'')'
+        confidence: inferred
