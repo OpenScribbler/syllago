@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-04-14T17:20:26.414Z",
   "lifetime": {
-    "total_tokens_estimated": 545486,
-    "total_reads": 505,
-    "total_writes": 277,
-    "total_sessions": 27,
-    "anatomy_hits": 103,
-    "anatomy_misses": 321,
-    "repeated_reads_blocked": 73,
-    "estimated_savings_vs_bare_cli": 85687
+    "total_tokens_estimated": 1360127,
+    "total_reads": 835,
+    "total_writes": 847,
+    "total_sessions": 57,
+    "anatomy_hits": 220,
+    "anatomy_misses": 495,
+    "repeated_reads_blocked": 311,
+    "estimated_savings_vs_bare_cli": 618405
   },
   "sessions": [
     {
@@ -5486,6 +5486,5572 @@
         "reads_count": 9,
         "writes_count": 6,
         "repeated_reads_blocked": 1,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0910",
+      "started": "2026-04-16T16:10:55.222Z",
+      "ended": "2026-04-16T16:23:18.506Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 6,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-self-healing-prompt.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md",
+          "tokens_estimated": 624,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 1001,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/stealth-fetch.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.config/pai/skills/research/SKILL.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/generate.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/stealth-fetch.ts",
+          "tokens_estimated": 415,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.config/pai/skills/research/SKILL.md",
+          "tokens_estimated": 334,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/.gitignore",
+          "tokens_estimated": 12,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/personal/stealth-fetch/README.md",
+          "tokens_estimated": 723,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/reference_stealth_fetch.md",
+          "tokens_estimated": 336,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 106,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 202,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 10,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 49,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 2811,
+        "output_tokens_estimated": 2187,
+        "reads_count": 10,
+        "writes_count": 9,
+        "repeated_reads_blocked": 3,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0923",
+      "started": "2026-04-16T16:23:19.075Z",
+      "ended": "2026-04-16T16:23:33.538Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.config/pai/skills/research/SKILL.md",
+          "tokens_estimated": 42,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 42,
+        "reads_count": 0,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-16-0923",
+      "started": "2026-04-16T16:23:19.075Z",
+      "ended": "2026-04-16T16:23:48.035Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.config/pai/skills/research/SKILL.md",
+          "tokens_estimated": 42,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 42,
+        "reads_count": 0,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-16-0923",
+      "started": "2026-04-16T16:23:19.075Z",
+      "ended": "2026-04-16T16:25:07.653Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/amp.yaml",
+          "tokens_estimated": 1090,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/report.go",
+          "tokens_estimated": 3221,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.config/pai/skills/research/SKILL.md",
+          "tokens_estimated": 42,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 4311,
+        "output_tokens_estimated": 42,
+        "reads_count": 2,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-0925",
+      "started": "2026-04-16T16:25:29.268Z",
+      "ended": "2026-04-16T16:26:19.475Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 1159,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 6,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 9,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1165,
+        "output_tokens_estimated": 9,
+        "reads_count": 2,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-16-0925",
+      "started": "2026-04-16T16:25:29.268Z",
+      "ended": "2026-04-16T16:35:01.026Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 1159,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 6,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 9,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 294,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 500,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 247,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 315,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 148,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 2345,
+        "output_tokens_estimated": 1513,
+        "reads_count": 8,
+        "writes_count": 6,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-16-0935",
+      "started": "2026-04-16T16:35:01.374Z",
+      "ended": "2026-04-16T16:35:22.563Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 71,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 71,
+        "reads_count": 0,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-16-0935",
+      "started": "2026-04-16T16:35:23.137Z",
+      "ended": "2026-04-16T16:35:33.784Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 442,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 442,
+        "reads_count": 0,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-16-0935",
+      "started": "2026-04-16T16:35:23.137Z",
+      "ended": "2026-04-16T16:37:09.987Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go",
+          "tokens_estimated": 4320,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/derive_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seed_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/capyaml/load_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 442,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 50,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 62,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 58,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 58,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 71,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 66,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 86,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 220,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go",
+          "tokens_estimated": 66,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go",
+          "tokens_estimated": 60,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 4320,
+        "output_tokens_estimated": 1239,
+        "reads_count": 5,
+        "writes_count": 11,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-0935",
+      "started": "2026-04-16T16:35:23.137Z",
+      "ended": "2026-04-16T16:39:50.634Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 2073,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go",
+          "tokens_estimated": 4320,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/derive_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seed_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/capyaml/load_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 2947,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 1493,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 442,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 50,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 62,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 58,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 58,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 71,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate_test.go",
+          "tokens_estimated": 66,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 86,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 220,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go",
+          "tokens_estimated": 66,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go",
+          "tokens_estimated": 60,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 12013,
+        "output_tokens_estimated": 1239,
+        "reads_count": 13,
+        "writes_count": 11,
+        "repeated_reads_blocked": 6,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-16-0940",
+      "started": "2026-04-16T16:40:00.982Z",
+      "ended": "2026-04-16T16:44:29.517Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 7712,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 12611,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 2947,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 1493,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 481,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 432,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 344,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1280,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 714,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 375,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1119,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 593,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 461,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1226,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1100,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 24763,
+        "output_tokens_estimated": 8741,
+        "reads_count": 9,
+        "writes_count": 12,
+        "repeated_reads_blocked": 5,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-16-0940",
+      "started": "2026-04-16T16:40:00.982Z",
+      "ended": "2026-04-16T16:45:35.220Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 6950,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 12611,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 2947,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 1493,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 2073,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6484,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 481,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 432,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 344,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1280,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 714,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 375,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1119,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 593,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 461,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1226,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1100,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 515,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 306,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 641,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 556,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 199,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 688,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 478,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 236,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 33738,
+        "output_tokens_estimated": 12360,
+        "reads_count": 15,
+        "writes_count": 20,
+        "repeated_reads_blocked": 15,
+        "anatomy_lookups": 7
+      }
+    },
+    {
+      "id": "session-2026-04-16-0940",
+      "started": "2026-04-16T16:40:00.982Z",
+      "ended": "2026-04-16T16:46:28.590Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 6950,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 12611,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 2947,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 1493,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 2073,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6484,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 481,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 432,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 344,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1280,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 714,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 375,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1119,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 593,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 461,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1226,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1100,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 515,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 306,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 641,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 556,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 199,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 688,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 478,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 236,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 507,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 856,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 524,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 329,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 458,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 447,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 261,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 379,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 474,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 33738,
+        "output_tokens_estimated": 18341,
+        "reads_count": 15,
+        "writes_count": 32,
+        "repeated_reads_blocked": 15,
+        "anatomy_lookups": 7
+      }
+    },
+    {
+      "id": "session-2026-04-16-0940",
+      "started": "2026-04-16T16:40:00.982Z",
+      "ended": "2026-04-16T16:47:42.655Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 6950,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 12611,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 2947,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 1493,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 2073,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6484,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 481,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 432,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 344,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1280,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 714,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 375,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1119,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 593,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 461,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1226,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1100,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 515,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 306,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 641,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 556,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 199,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 688,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 478,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 236,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 507,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 856,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 524,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 329,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 458,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 447,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 261,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 379,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 474,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 952,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 519,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 1131,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 625,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 400,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 1235,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 856,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 654,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 248,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 411,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 837,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 33738,
+        "output_tokens_estimated": 26774,
+        "reads_count": 15,
+        "writes_count": 44,
+        "repeated_reads_blocked": 15,
+        "anatomy_lookups": 7
+      }
+    },
+    {
+      "id": "session-2026-04-16-0940",
+      "started": "2026-04-16T16:40:00.982Z",
+      "ended": "2026-04-16T16:47:51.094Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 6950,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 9131,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 12611,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 2947,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 1493,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 2073,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6484,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 481,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 432,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 344,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1280,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 714,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 375,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1119,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 593,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 461,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1226,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1100,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 515,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 306,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 641,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 556,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 199,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 688,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 478,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 236,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 507,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 856,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 524,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 329,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 458,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 447,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 261,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 379,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 474,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 952,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 519,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 1131,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 625,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 400,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 1235,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 856,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 654,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 248,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 411,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 837,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 354,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 42869,
+        "output_tokens_estimated": 27128,
+        "reads_count": 15,
+        "writes_count": 45,
+        "repeated_reads_blocked": 16,
+        "anatomy_lookups": 7
+      }
+    },
+    {
+      "id": "session-2026-04-16-0940",
+      "started": "2026-04-16T16:40:00.982Z",
+      "ended": "2026-04-16T16:48:29.069Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 6950,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 9131,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 12611,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 2947,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 1493,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 7240,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 2073,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6484,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 481,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 432,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 344,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1280,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 714,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 375,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1119,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 593,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 461,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1226,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1100,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 515,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 306,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 641,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 556,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 199,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 688,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 478,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 236,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 507,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 856,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 524,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 329,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 458,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 447,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 261,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 379,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 474,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 952,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 519,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 1131,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 625,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 400,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 1235,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 856,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 654,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 248,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 411,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 837,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 354,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 13516,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 42,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 40,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 50109,
+        "output_tokens_estimated": 40822,
+        "reads_count": 15,
+        "writes_count": 50,
+        "repeated_reads_blocked": 17,
+        "anatomy_lookups": 7
+      }
+    },
+    {
+      "id": "session-2026-04-16-0940",
+      "started": "2026-04-16T16:40:00.982Z",
+      "ended": "2026-04-16T16:48:37.832Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 6950,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 9131,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 12611,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 2947,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 1493,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 7240,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 2073,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6484,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 481,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 432,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 344,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1280,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 714,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 375,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1119,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 593,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 461,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1226,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1100,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 515,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 306,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 641,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 556,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 199,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 688,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 478,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 236,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 507,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 856,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 524,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 329,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 458,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 447,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 261,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 379,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 474,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 952,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 519,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 1131,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 625,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 400,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 1235,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 856,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 654,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 248,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 411,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 837,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 354,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 13516,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 42,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 40,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 50109,
+        "output_tokens_estimated": 40822,
+        "reads_count": 15,
+        "writes_count": 50,
+        "repeated_reads_blocked": 17,
+        "anatomy_lookups": 7
+      }
+    },
+    {
+      "id": "session-2026-04-16-0940",
+      "started": "2026-04-16T16:40:00.982Z",
+      "ended": "2026-04-16T16:48:57.756Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 6950,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 9131,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 12611,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 2947,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 1493,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 7240,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 2073,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6484,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 481,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 432,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 344,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1280,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 714,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 375,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1119,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 593,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 461,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1226,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1100,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 515,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 306,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 641,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 556,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 199,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 688,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 478,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 236,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 507,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 856,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 524,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 329,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 458,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 447,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 261,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 379,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 474,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 952,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 519,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 1131,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 625,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 400,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 1235,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 856,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 654,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 248,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 411,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 837,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 354,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 13516,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 42,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 40,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 50109,
+        "output_tokens_estimated": 40822,
+        "reads_count": 15,
+        "writes_count": 50,
+        "repeated_reads_blocked": 17,
+        "anatomy_lookups": 7
+      }
+    },
+    {
+      "id": "session-2026-04-16-0940",
+      "started": "2026-04-16T16:40:00.982Z",
+      "ended": "2026-04-16T16:51:18.928Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 6950,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 9131,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 12611,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_validate.go",
+          "tokens_estimated": 2947,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 1493,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 7240,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc_test.go",
+          "tokens_estimated": 2073,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6484,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_validate_format_doc_cmd_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 481,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 432,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 344,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1280,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 714,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 375,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1119,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 593,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 461,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 1226,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 1100,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 515,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 306,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/codex.yaml",
+          "tokens_estimated": 641,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 556,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 199,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 688,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 478,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 236,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 507,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 856,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 524,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/factory-droid.yaml",
+          "tokens_estimated": 329,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 458,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 447,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 261,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 379,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 474,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 616,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 952,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 519,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 1131,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 625,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/pi.yaml",
+          "tokens_estimated": 400,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/kiro.yaml",
+          "tokens_estimated": 1235,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 856,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 654,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 565,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 248,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 411,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 837,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 354,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 13516,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 42,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/copilot-cli.yaml",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_validate_format_doc_cmd_test.go",
+          "tokens_estimated": 65,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 50109,
+        "output_tokens_estimated": 40887,
+        "reads_count": 16,
+        "writes_count": 51,
+        "repeated_reads_blocked": 18,
+        "anatomy_lookups": 7
+      }
+    },
+    {
+      "id": "session-2026-04-16-1157",
+      "started": "2026-04-16T18:57:13.891Z",
+      "ended": "2026-04-16T19:30:47.287Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_derive_cmd.go",
+          "tokens_estimated": 663,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_amp.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_copilot_cli.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_gemini_cli.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_opencode.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_claude_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cline.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_codex.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_pi.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_kiro.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_windsurf.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_go/extract_go_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.git/hooks/pre-push",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 1159,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 76,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_derive_cmd.go",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec_test.go",
+          "tokens_estimated": 165,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_derive_cmd.go",
+          "tokens_estimated": 83,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_amp.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_claude_code.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cline.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_codex.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_copilot_cli.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 5,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_factory_droid.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_gemini_cli.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_kiro.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_opencode.go",
+          "tokens_estimated": 5,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_pi.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 5,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_windsurf.go",
+          "tokens_estimated": 5,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_zed.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 38,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html_test.go",
+          "tokens_estimated": 1586,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 295,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 194,
+          "action": "edit"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 451,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1822,
+        "output_tokens_estimated": 3196,
+        "reads_count": 22,
+        "writes_count": 25,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-1157",
+      "started": "2026-04-16T18:57:13.891Z",
+      "ended": "2026-04-16T19:33:58.995Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_derive_cmd.go",
+          "tokens_estimated": 663,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_amp.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_copilot_cli.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_gemini_cli.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_opencode.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_claude_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cline.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_codex.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_pi.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_kiro.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_windsurf.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_go/extract_go_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.git/hooks/pre-push",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 1159,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 76,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_derive_cmd.go",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec_test.go",
+          "tokens_estimated": 165,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_derive_cmd.go",
+          "tokens_estimated": 83,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_amp.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_claude_code.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cline.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_codex.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_copilot_cli.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 5,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_factory_droid.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_gemini_cli.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_kiro.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_opencode.go",
+          "tokens_estimated": 5,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_pi.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 5,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_windsurf.go",
+          "tokens_estimated": 5,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_zed.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 38,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html_test.go",
+          "tokens_estimated": 1586,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 295,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 194,
+          "action": "edit"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 451,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 3002,
+        "output_tokens_estimated": 3196,
+        "reads_count": 23,
+        "writes_count": 25,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-16-1157",
+      "started": "2026-04-16T18:57:13.891Z",
+      "ended": "2026-04-16T19:37:44.119Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_derive_cmd.go",
+          "tokens_estimated": 663,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_amp.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_copilot_cli.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_gemini_cli.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_opencode.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_claude_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cline.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_codex.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_pi.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_kiro.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_windsurf.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_go/extract_go_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.git/hooks/pre-push",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 1159,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 76,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_derive_cmd.go",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec_test.go",
+          "tokens_estimated": 165,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_derive_cmd.go",
+          "tokens_estimated": 83,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_amp.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_claude_code.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cline.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_codex.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_copilot_cli.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 5,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_factory_droid.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_gemini_cli.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_kiro.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_opencode.go",
+          "tokens_estimated": 5,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_pi.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 5,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_windsurf.go",
+          "tokens_estimated": 5,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_zed.go",
+          "tokens_estimated": 4,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 38,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_html/extract_html_test.go",
+          "tokens_estimated": 1586,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 295,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 194,
+          "action": "edit"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/finish-phase0-capmon-refactor.md",
+          "tokens_estimated": 451,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 3002,
+        "output_tokens_estimated": 3196,
+        "reads_count": 23,
+        "writes_count": 25,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-16-1240",
+      "started": "2026-04-16T19:40:04.637Z",
+      "ended": "2026-04-16T19:54:59.767Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_onboard_cmd_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/genproviders_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check.go",
+          "tokens_estimated": 2505,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_diff.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go",
+          "tokens_estimated": 4265,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.golangci.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/.golangci.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/promote/promote_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/metadata/metadata_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/templates/repo-project.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/templates/obsidian-project.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 8,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/derive.go",
+          "tokens_estimated": 160,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/capmon_onboard_cmd_test.go",
+          "tokens_estimated": 15,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/genproviders_test.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check.go",
+          "tokens_estimated": 23,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities.go",
+          "tokens_estimated": 44,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_diff.go",
+          "tokens_estimated": 29,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_diff.go",
+          "tokens_estimated": 42,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_diff_test.go",
+          "tokens_estimated": 12,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/gencapabilities_test.go",
+          "tokens_estimated": 15,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go",
+          "tokens_estimated": 44,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go",
+          "tokens_estimated": 0,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go",
+          "tokens_estimated": 29,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 916,
+          "action": "create"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 562,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 9,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 6778,
+        "output_tokens_estimated": 1906,
+        "reads_count": 14,
+        "writes_count": 15,
+        "repeated_reads_blocked": 3,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-1259",
+      "started": "2026-04-16T19:59:18.267Z",
+      "ended": "2026-04-16T19:59:55.709Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 9,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 9,
+        "output_tokens_estimated": 0,
+        "reads_count": 2,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-1259",
+      "started": "2026-04-16T19:59:18.267Z",
+      "ended": "2026-04-16T20:07:32.688Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 9,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 1371,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 220,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_roo_code.go",
+          "tokens_estimated": 225,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_claude_code.go",
+          "tokens_estimated": 96,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/seeder-specs/claude-code-skills.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 3101,
+        "output_tokens_estimated": 0,
+        "reads_count": 8,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 6
+      }
+    },
+    {
+      "id": "session-2026-04-16-1330",
+      "started": "2026-04-16T20:30:47.314Z",
+      "ended": "2026-04-16T20:34:35.171Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_zed.go",
+          "tokens_estimated": 100,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_gemini_cli.go",
+          "tokens_estimated": 204,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_opencode.go",
+          "tokens_estimated": 278,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 105,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_windsurf.go",
+          "tokens_estimated": 269,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-capmon-heal-wt/cli/internal/capmon/healing_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-capmon-heal-wt/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 234,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_amp.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_claude_code.go",
+          "tokens_estimated": 223,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_factory_droid.go",
+          "tokens_estimated": 232,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_kiro.go",
+          "tokens_estimated": 205,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cline.go",
+          "tokens_estimated": 228,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_codex.go",
+          "tokens_estimated": 250,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_copilot_cli.go",
+          "tokens_estimated": 247,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_test.go",
+          "tokens_estimated": 2192,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_cursor.go",
+          "tokens_estimated": 90,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_zed.go",
+          "tokens_estimated": 86,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_windsurf.go",
+          "tokens_estimated": 264,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_gemini_cli.go",
+          "tokens_estimated": 193,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_opencode.go",
+          "tokens_estimated": 273,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_test.go",
+          "tokens_estimated": 656,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-capmon-heal-wt/cli/internal/capmon/pipeline_heal_test.go",
+          "tokens_estimated": 1520,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 7939,
+        "output_tokens_estimated": 3082,
+        "reads_count": 16,
+        "writes_count": 7,
+        "repeated_reads_blocked": 3,
+        "anatomy_lookups": 10
+      }
+    },
+    {
+      "id": "session-2026-04-16-1334",
+      "started": "2026-04-16T20:34:35.642Z",
+      "ended": "2026-04-16T20:37:10.298Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 802,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 1744,
+          "action": "create"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 687,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 802,
+        "output_tokens_estimated": 2431,
+        "reads_count": 2,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-1339",
+      "started": "2026-04-16T20:39:35.234Z",
+      "ended": "2026-04-16T20:43:46.193Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 1765,
+          "action": "create"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 668,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 2433,
+        "reads_count": 0,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-16-1343",
+      "started": "2026-04-16T20:43:46.606Z",
+      "ended": "2026-04-16T21:15:31.859Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_typescript/extract_typescript.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 1702,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_typescript/extract_typescript_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_rust/extract_rust.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/testdata/fixtures/typescript/hooks.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_rust/extract_rust_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_typescript/extract_typescript.go",
+          "tokens_estimated": 61,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_typescript/extract_typescript.go",
+          "tokens_estimated": 314,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_rust/extract_rust.go",
+          "tokens_estimated": 65,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_rust/extract_rust.go",
+          "tokens_estimated": 328,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_typescript/extract_typescript_test.go",
+          "tokens_estimated": 457,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_rust/extract_rust_test.go",
+          "tokens_estimated": 460,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1702,
+        "output_tokens_estimated": 1685,
+        "reads_count": 6,
+        "writes_count": 6,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-1429",
+      "started": "2026-04-16T21:29:36.139Z",
+      "ended": "2026-04-16T21:30:34.948Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 1633,
+          "action": "create"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 788,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 2421,
+        "reads_count": 0,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-16-1432",
+      "started": "2026-04-16T21:32:31.298Z",
+      "ended": "2026-04-16T21:33:09.736Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 1429,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 1429,
+        "output_tokens_estimated": 0,
+        "reads_count": 1,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-1432",
+      "started": "2026-04-16T21:32:31.298Z",
+      "ended": "2026-04-16T21:33:11.899Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 1429,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 1429,
+        "output_tokens_estimated": 0,
+        "reads_count": 1,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-1432",
+      "started": "2026-04-16T21:32:31.298Z",
+      "ended": "2026-04-16T21:35:15.561Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 1429,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/brainstorm/workflows/design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 1702,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 234,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_amp.go",
+          "tokens_estimated": 236,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_codex.go",
+          "tokens_estimated": 250,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 3851,
+        "output_tokens_estimated": 0,
+        "reads_count": 7,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-16-1432",
+      "started": "2026-04-16T21:32:31.298Z",
+      "ended": "2026-04-16T21:40:48.530Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 1429,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/brainstorm/workflows/design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 1702,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 234,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_amp.go",
+          "tokens_estimated": 236,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_codex.go",
+          "tokens_estimated": 250,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/panel-discussion/references/agent-catalog.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/panel-discussion/workflows/run-panel.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.panels/recognizer-api-evolution/seed.md",
+          "tokens_estimated": 1759,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 3851,
+        "output_tokens_estimated": 1759,
+        "reads_count": 9,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-16-1432",
+      "started": "2026-04-16T21:32:31.298Z",
+      "ended": "2026-04-16T21:43:20.585Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-phase6-epic1-recognizers.md",
+          "tokens_estimated": 1429,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/brainstorm/workflows/design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize.go",
+          "tokens_estimated": 1702,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_crush.go",
+          "tokens_estimated": 234,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_amp.go",
+          "tokens_estimated": 236,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_codex.go",
+          "tokens_estimated": 250,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/panel-discussion/references/agent-catalog.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/panel-discussion/workflows/run-panel.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing.go",
+          "tokens_estimated": 1675,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_github.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.panels/recognizer-api-evolution/seed.md",
+          "tokens_estimated": 1759,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing.go",
+          "tokens_estimated": 534,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/sourceman_validate.go",
+          "tokens_estimated": 79,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing.go",
+          "tokens_estimated": 29,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_github.go",
+          "tokens_estimated": 29,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 5526,
+        "output_tokens_estimated": 2430,
+        "reads_count": 12,
+        "writes_count": 5,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-16-1458",
+      "started": "2026-04-16T21:58:11.954Z",
+      "ended": "2026-04-16T22:15:14.253Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.panels/recognizer-api-evolution/bus.jsonl",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/tmp/r2-karpathy.txt",
+          "tokens_estimated": 1769,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-steinberger.txt",
+          "tokens_estimated": 1320,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-platform-vendor.txt",
+          "tokens_estimated": 1379,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-spec-purist.txt",
+          "tokens_estimated": 2259,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-api-agent.txt",
+          "tokens_estimated": 1552,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-karpathy.txt",
+          "tokens_estimated": 1216,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-steinberger.txt",
+          "tokens_estimated": 1200,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-platform-vendor.txt",
+          "tokens_estimated": 1495,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-spec-purist.txt",
+          "tokens_estimated": 1314,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-api-agent.txt",
+          "tokens_estimated": 996,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.panels/recognizer-api-evolution/consensus.md",
+          "tokens_estimated": 3646,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 18146,
+        "reads_count": 1,
+        "writes_count": 11,
+        "repeated_reads_blocked": 21,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-16-1458",
+      "started": "2026-04-16T21:58:11.954Z",
+      "ended": "2026-04-16T22:22:51.049Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.panels/recognizer-api-evolution/bus.jsonl",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/tmp/r2-karpathy.txt",
+          "tokens_estimated": 1769,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-steinberger.txt",
+          "tokens_estimated": 1320,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-platform-vendor.txt",
+          "tokens_estimated": 1379,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-spec-purist.txt",
+          "tokens_estimated": 2259,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-api-agent.txt",
+          "tokens_estimated": 1552,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-karpathy.txt",
+          "tokens_estimated": 1216,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-steinberger.txt",
+          "tokens_estimated": 1200,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-platform-vendor.txt",
+          "tokens_estimated": 1495,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-spec-purist.txt",
+          "tokens_estimated": 1314,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-api-agent.txt",
+          "tokens_estimated": 996,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.panels/recognizer-api-evolution/consensus.md",
+          "tokens_estimated": 3646,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 18146,
+        "reads_count": 1,
+        "writes_count": 11,
+        "repeated_reads_blocked": 21,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-16-1458",
+      "started": "2026-04-16T21:58:11.954Z",
+      "ended": "2026-04-16T22:30:50.039Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.panels/recognizer-api-evolution/bus.jsonl",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/tmp/r2-karpathy.txt",
+          "tokens_estimated": 1769,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-steinberger.txt",
+          "tokens_estimated": 1320,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-platform-vendor.txt",
+          "tokens_estimated": 1379,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-spec-purist.txt",
+          "tokens_estimated": 2259,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-api-agent.txt",
+          "tokens_estimated": 1552,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-karpathy.txt",
+          "tokens_estimated": 1216,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-steinberger.txt",
+          "tokens_estimated": 1200,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-platform-vendor.txt",
+          "tokens_estimated": 1495,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-spec-purist.txt",
+          "tokens_estimated": 1314,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-api-agent.txt",
+          "tokens_estimated": 996,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.panels/recognizer-api-evolution/consensus.md",
+          "tokens_estimated": 3646,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 18146,
+        "reads_count": 1,
+        "writes_count": 11,
+        "repeated_reads_blocked": 21,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-16-1458",
+      "started": "2026-04-16T21:58:11.954Z",
+      "ended": "2026-04-16T22:47:13.549Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.panels/recognizer-api-evolution/bus.jsonl",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/tmp/r2-karpathy.txt",
+          "tokens_estimated": 1769,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-steinberger.txt",
+          "tokens_estimated": 1320,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-platform-vendor.txt",
+          "tokens_estimated": 1379,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-spec-purist.txt",
+          "tokens_estimated": 2259,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r2-api-agent.txt",
+          "tokens_estimated": 1552,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-karpathy.txt",
+          "tokens_estimated": 1216,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-steinberger.txt",
+          "tokens_estimated": 1200,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-platform-vendor.txt",
+          "tokens_estimated": 1495,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-spec-purist.txt",
+          "tokens_estimated": 1314,
+          "action": "create"
+        },
+        {
+          "file": "/tmp/r3-api-agent.txt",
+          "tokens_estimated": 996,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.panels/recognizer-api-evolution/consensus.md",
+          "tokens_estimated": 3646,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.panels/recognizer-api-evolution/consensus.md",
+          "tokens_estimated": 511,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.panels/recognizer-api-evolution/consensus.md",
+          "tokens_estimated": 296,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.panels/recognizer-api-evolution/consensus.md",
+          "tokens_estimated": 93,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.panels/recognizer-api-evolution/consensus.md",
+          "tokens_estimated": 206,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 19252,
+        "reads_count": 1,
+        "writes_count": 15,
+        "repeated_reads_blocked": 21,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-16-1654",
+      "started": "2026-04-16T23:54:33.469Z",
+      "ended": "2026-04-16T23:58:59.280Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/helpers_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_landmarks.go",
+          "tokens_estimated": 1922,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_kiro_test.go",
+          "tokens_estimated": 26,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_test.go",
+          "tokens_estimated": 129,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_test.go",
+          "tokens_estimated": 173,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/recognize_landmarks.go",
+          "tokens_estimated": 92,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1922,
+        "output_tokens_estimated": 420,
+        "reads_count": 2,
+        "writes_count": 4,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-16-1659",
+      "started": "2026-04-16T23:59:16.617Z",
+      "ended": "2026-04-17T00:02:22.428Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/helpers.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 1,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-16-1659",
+      "started": "2026-04-16T23:59:16.617Z",
+      "ended": "2026-04-17T00:43:30.946Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/helpers.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/helpers.go",
+          "tokens_estimated": 416,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/helpers_test.go",
+          "tokens_estimated": 273,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 689,
+        "reads_count": 1,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-16-1659",
+      "started": "2026-04-16T23:59:16.617Z",
+      "ended": "2026-04-17T00:44:27.054Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/helpers.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/helpers.go",
+          "tokens_estimated": 416,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/helpers_test.go",
+          "tokens_estimated": 273,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 689,
+        "reads_count": 1,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-16-1659",
+      "started": "2026-04-16T23:59:16.617Z",
+      "ended": "2026-04-17T00:50:00.324Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/helpers.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_rust/extract_rust.go",
+          "tokens_estimated": 1295,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/extract_typescript/extract_typescript.go",
+          "tokens_estimated": 1784,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/seederspec.go",
+          "tokens_estimated": 535,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/helpers.go",
+          "tokens_estimated": 416,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/helpers_test.go",
+          "tokens_estimated": 273,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 4794,
+        "output_tokens_estimated": 689,
+        "reads_count": 5,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
         "anatomy_lookups": 3
       }
     }

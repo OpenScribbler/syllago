@@ -1,107 +1,12 @@
 {
-  "session_id": "session-2026-04-16-0910",
-  "started": "2026-04-16T16:10:55.222Z",
-  "files_read": {
-    "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-phase6-recognition-plan.md": {
-      "count": 1,
-      "tokens": 1180,
-      "first_read": "2026-04-16T16:14:09.104Z"
-    },
-    "/home/hhewett/.local/src/syllago/.claude/projects/.current": {
-      "count": 1,
-      "tokens": 6,
-      "first_read": "2026-04-16T16:14:23.131Z"
-    },
-    "/home/hhewett/.local/src/syllago/docs/plans/2026-04-16-capmon-self-healing-prompt.md": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-04-16T16:14:23.139Z"
-    },
-    "/home/hhewett/.local/src/syllago/.claude/projects/continue-capmon-audit.md": {
-      "count": 1,
-      "tokens": 624,
-      "first_read": "2026-04-16T16:14:23.200Z"
-    },
-    "/home/hhewett/.local/src/syllago/.claude/projects/finish-phase0-capmon-refactor.md": {
-      "count": 1,
-      "tokens": 1001,
-      "first_read": "2026-04-16T16:14:23.203Z"
-    },
-    "/home/hhewett/.local/src/syllago/docs/provider-sources/kiro.yaml": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-04-16T16:14:31.019Z"
-    },
-    "/home/hhewett/personal/stealth-fetch/stealth-fetch.ts": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-04-16T16:15:21.092Z"
-    },
-    "/home/hhewett/.config/pai/skills/research/SKILL.md": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-04-16T16:16:08.999Z"
-    },
-    "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md": {
-      "count": 2,
-      "tokens": 0,
-      "first_read": "2026-04-16T16:17:15.242Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/capmon/generate.go": {
-      "count": 2,
-      "tokens": 0,
-      "first_read": "2026-04-16T16:20:36.677Z"
-    }
-  },
-  "files_written": [
-    {
-      "file": "/home/hhewett/personal/stealth-fetch/stealth-fetch.ts",
-      "action": "edit",
-      "tokens": 415,
-      "at": "2026-04-16T16:15:32.016Z"
-    },
-    {
-      "file": "/home/hhewett/.config/pai/skills/research/SKILL.md",
-      "action": "edit",
-      "tokens": 334,
-      "at": "2026-04-16T16:16:25.673Z"
-    },
-    {
-      "file": "/home/hhewett/personal/stealth-fetch/.gitignore",
-      "action": "create",
-      "tokens": 12,
-      "at": "2026-04-16T16:16:46.922Z"
-    },
-    {
-      "file": "/home/hhewett/personal/stealth-fetch/README.md",
-      "action": "create",
-      "tokens": 723,
-      "at": "2026-04-16T16:16:47.237Z"
-    },
-    {
-      "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/reference_stealth_fetch.md",
-      "action": "create",
-      "tokens": 336,
-      "at": "2026-04-16T16:17:15.008Z"
-    },
-    {
-      "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
-      "action": "edit",
-      "tokens": 106,
-      "at": "2026-04-16T16:17:23.811Z"
-    }
-  ],
-  "edit_counts": {
-    "../../../personal/stealth-fetch/stealth-fetch.ts": 1,
-    "../../../.config/pai/skills/research/SKILL.md": 1,
-    "../../../personal/stealth-fetch/.gitignore": 1,
-    "../../../personal/stealth-fetch/README.md": 1,
-    "../../../.claude/projects/-home-hhewett--local-src-syllago/memory/reference_stealth_fetch.md": 1,
-    "../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md": 1
-  },
-  "anatomy_hits": 3,
-  "anatomy_misses": 5,
-  "repeated_reads_warned": 2,
+  "session_id": "session-2026-04-17-1837",
+  "started": "2026-04-17T01:37:11.014Z",
+  "files_read": {},
+  "files_written": [],
+  "edit_counts": {},
+  "anatomy_hits": 0,
+  "anatomy_misses": 0,
+  "repeated_reads_warned": 0,
   "cerebrum_warnings": 0,
-  "stop_count": 3
+  "stop_count": 0
 }
