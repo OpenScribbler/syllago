@@ -41,6 +41,35 @@ var realCopilotCliRulesLandmarks = []string{
 	"Further reading",
 }
 
+// realCopilotCliHooksLandmarks is a snapshot of the headings from Copilot
+// CLI's hooks-configuration doc (.capmon-cache/copilot-cli/hooks.0/extracted.json)
+// as of 2026-04-16. Update when the doc evolves.
+var realCopilotCliHooksLandmarks = []string{
+	"Hook types",
+	"Session start hook",
+	"Session end hook",
+	"User prompt submitted hook",
+	"Pre-tool use hook",
+	"Post-tool use hook",
+	"Error occurred hook",
+	"Script best practices",
+	"Reading input",
+	"Outputting JSON",
+	"Error handling",
+	"Handling timeouts",
+	"Advanced patterns",
+	"Multiple hooks of the same type",
+	"Conditional logic in scripts",
+	"Structured logging",
+	"Integration with external systems",
+	"Example use cases",
+	"Compliance audit trail",
+	"Cost tracking",
+	"Code quality enforcement",
+	"Notification system",
+	"Further reading",
+}
+
 func TestRecognizeCopilotCli_RealLandmarks(t *testing.T) {
 	result := capmon.RecognizeWithContext("copilot-cli", capmon.RecognitionContext{
 		Provider:  "copilot-cli",
@@ -178,5 +207,54 @@ func TestRecognizeCopilotCli_RealRulesLandmarks(t *testing.T) {
 	// file_imports must NOT be emitted — no @-import syntax documented.
 	if _, has := caps["rules.capabilities.file_imports.supported"]; has {
 		t.Error("rules.capabilities.file_imports should NOT be present for copilot-cli")
+	}
+}
+
+// TestRecognizeCopilotCli_RealHooksLandmarks proves hooks recognition on the
+// merged skills+rules+hooks landmarks. Copilot CLI documents 2 of the 9
+// canonical hooks keys at the heading level (handler_types, json_io_protocol);
+// the other 7 are not surfaced as headings and must NOT be emitted.
+func TestRecognizeCopilotCli_RealHooksLandmarks(t *testing.T) {
+	merged := append([]string{}, realCopilotCliSkillsLandmarks...)
+	merged = append(merged, realCopilotCliRulesLandmarks...)
+	merged = append(merged, realCopilotCliHooksLandmarks...)
+	result := capmon.RecognizeWithContext("copilot-cli", capmon.RecognitionContext{
+		Provider:  "copilot-cli",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["hooks.supported"] != "true" {
+		t.Error("hooks.supported missing")
+	}
+	hooksInferred := []string{
+		"handler_types",
+		"json_io_protocol",
+	}
+	for _, c := range hooksInferred {
+		key := "hooks.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["hooks.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("hooks.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"hooks.capabilities.matcher_patterns.supported",
+		"hooks.capabilities.decision_control.supported",
+		"hooks.capabilities.async_execution.supported",
+		"hooks.capabilities.hook_scopes.supported",
+		"hooks.capabilities.context_injection.supported",
+		"hooks.capabilities.permission_control.supported",
+		"hooks.capabilities.input_modification.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present for copilot-cli (no heading evidence)", absent)
+		}
 	}
 }

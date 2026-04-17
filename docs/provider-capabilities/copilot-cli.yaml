@@ -3,6 +3,17 @@ slug: copilot-cli
 display_name: ""
 last_verified: ""
 content_types:
+  hooks:
+    supported: true
+    capabilities:
+      handler_types:
+        supported: true
+        mechanism: hook handler types documented under 'Hook types' heading (session, prompt, tool, error)
+        confidence: inferred
+      json_io_protocol:
+        supported: true
+        mechanism: JSON I/O protocol documented under 'Reading input' / 'Outputting JSON' headings
+        confidence: inferred
   rules:
     supported: true
     capabilities:
