@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-17T17:10:41.213Z
-> Files: 710 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-17T17:47:37.447Z
+> Files: 729 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -1456,6 +1456,10 @@
 - `windsurf-rules.yaml` — Declares alternative (~1967 tok)
 - `zed-rules.yaml` — Declares mode (~1395 tok)
 
+## .github/workflows/
+
+- `smoke-test-providers.yml` — CI: Provider Smoke Tests (~828 tok)
+
 ## .panels/recognizer-api-evolution/
 
 - `consensus.md` — Recognizer API Evolution — Panel Consensus (~3569 tok)
@@ -1591,3 +1595,45 @@
 
 - `v0.7.0.md` — v0.7.0 (~2536 tok)
 - `v0.7.1.md` — v0.7.1 (~1011 tok)
+- `v0.7.2.md` — v0.7.2 (~287 tok)
+
+## tests/smoke/
+
+- `claude-code.sh` — claude-code.sh — E2E smoke tests for syllago + Claude Code integration. (~2484 tok)
+- `gemini-cli.sh` — gemini-cli.sh — E2E smoke tests for syllago + Gemini CLI integration. (~2510 tok)
+- `helpers.sh` — helpers.sh — Shared test framework for syllago provider smoke tests. (~2182 tok)
+
+## tests/smoke/fixtures/agents/smoke-agent/
+
+- `.syllago.yaml` (~33 tok)
+- `AGENT.md` — Smoke Agent (~62 tok)
+
+## tests/smoke/fixtures/commands/claude-code/smoke-commands/
+
+- `.syllago.yaml` (~35 tok)
+- `command.md` — Smoke Command (~48 tok)
+
+## tests/smoke/fixtures/hooks/claude-code/smoke-hook/
+
+- `.syllago.yaml` (~32 tok)
+- `hook.json` (~42 tok)
+
+## tests/smoke/fixtures/loadouts/claude-code/syllago-smoke-test/
+
+- `.syllago.yaml` (~42 tok)
+- `loadout.yaml` — Declares so (~132 tok)
+
+## tests/smoke/fixtures/mcp/smoke-mcp/
+
+- `.syllago.yaml` (~34 tok)
+- `config.json` (~62 tok)
+
+## tests/smoke/fixtures/rules/claude-code/smoke-rules/
+
+- `.syllago.yaml` (~33 tok)
+- `rule.md` — Smoke Rules (~58 tok)
+
+## tests/smoke/fixtures/skills/smoke-skill/
+
+- `.syllago.yaml` (~33 tok)
+- `SKILL.md` — Smoke Skill (~62 tok)
