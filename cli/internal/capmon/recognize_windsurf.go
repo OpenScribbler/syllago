@@ -148,14 +148,41 @@ func windsurfMcpLandmarkOptions() LandmarkOptions {
 // If windsurf later ships custom subagents, wire recognition then. Until
 // then, recognizer silence preserves accuracy.
 
+// Commands recognition is intentionally NOT wired for windsurf.
+//
+// The cached commands source (.capmon-cache/windsurf/commands.0/extracted.json)
+// is the WRONG page — its 5 landmarks are "Documentation Index", "Command",
+// "Models", "Terminal Command", "Best Practices". "Command" and "Terminal
+// Command" describe windsurf UI features (the Cascade chat command box and
+// the in-terminal command-execution surface), NOT user-authored slash
+// commands. The seeder spec for windsurf has the wrong source URL (likely
+// pointing at docs/cascade/command.md instead of docs/cascade/workflows.md
+// or whatever the actual workflows / slash-commands page is named).
+//
+// Per docs/provider-formats/windsurf.yaml, windsurf supports user-authored
+// "Workflows" — markdown files under .windsurf/workflows/ invoked via the
+// /workflow-name shortcut, with auto-execute behavior. The curator marks
+// argument_substitution as supported (workflow body templating) and
+// builtin_commands as supported (Cascade ships /help, /search, /memory,
+// etc.), both at "confirmed" confidence based on the workflows docs page
+// (not in the cache).
+//
+// Recognizer silence is the right move — emitting any commands key from
+// the wrong cache source would conflate Cascade's UI Command feature with
+// user-authored Workflows. Commands recognition can be wired once the
+// correct workflows / slash-commands docs page is added to the cache and
+// yields heading-level evidence (e.g. "Workflows" / "Creating a Workflow"
+// / "Workflow arguments" anchors).
+
 // recognizeWindsurf recognizes skills + rules + hooks + mcp capabilities for
 // the Windsurf provider. Skills currently use the GoStruct strategy (Agent
 // Skills open standard) but the live windsurf docs cache contains no Skill.*
 // typed fields — skills emission depends on future typed-source availability.
 // Rules, hooks, and MCP are landmark-based against the rules.{0,1} (Memories
 // & Rules, AGENTS.md), hooks.0 (Cascade Hooks), and mcp.0 (cascade/mcp.md)
-// docs respectively. Agents recognition is intentionally absent — see the
-// comment block immediately above this function for rationale.
+// docs respectively. Agents and commands recognition are intentionally
+// absent — see the comment blocks immediately above this function for
+// rationale.
 func recognizeWindsurf(ctx RecognitionContext) RecognitionResult {
 	skillsCaps := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
 	if len(skillsCaps) > 0 {

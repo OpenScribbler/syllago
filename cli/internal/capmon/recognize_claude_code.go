@@ -204,11 +204,45 @@ func claudeCodeAgentsLandmarkOptions() LandmarkOptions {
 	)
 }
 
+// Commands recognition is intentionally NOT wired for claude-code.
+//
+// The cached commands source (.capmon-cache/claude-code/commands.0/extracted.json,
+// fetched from code.claude.com/docs/en/slash-commands.md) yields only 4
+// landmarks: "Documentation Index", "Commands", "MCP prompts", and "See
+// also". Two problems:
+//
+//  1. Required-anchor uniqueness fails. "Commands" is too generic for a
+//     required gate (it appears in mcp.0's "MCP commands" body context and
+//     would self-trigger elsewhere). "MCP prompts" overlaps with the MCP
+//     content type's vocabulary (claude-code mcp.0 mentions MCP prompts in
+//     body text under the resource-referencing section). Substring matching
+//     cannot scope cleanly.
+//  2. Anchor evidence is body-text-rooted. The /-commands catalog and
+//     $ARGUMENTS substitution syntax both live in tables and code blocks,
+//     not as discrete H2/H3 anchors. The markdown extractor surfaces row
+//     contents as fields (row_*_col_*) rather than landmarks — a layer the
+//     landmark recognizer cannot read.
+//
+// Per docs/provider-formats/claude-code.yaml, both canonical commands keys
+// (argument_substitution and builtin_commands) are curated as supported at
+// "confirmed" confidence — the curator has reviewed the slash-commands.md
+// source's body and confirmed claude-code ships built-in /-commands and
+// supports $ARGUMENTS / $1 / $2 / $@ substitution. The recognizer staying
+// silent here preserves that higher-confidence curated data; emitting an
+// "inferred" downgrade from weak landmarks would be lossy noise.
+//
+// Wiring claude-code commands recognition would require either a field-
+// extractor pass over commands.0 row data or a typed-source extractor
+// reading the SlashCommand registry from claude-code's binary (out of
+// scope — claude-code is closed-source).
+
 // recognizeClaudeCode recognizes skills + rules + hooks + mcp + agents
 // capabilities for the Claude Code provider. Source for all five content
 // types is markdown documentation, so recognition uses landmark (heading)
 // matching rather than typed-source struct extraction. Capabilities emitted
-// at confidence "inferred" — recognizeLandmarks enforces this.
+// at confidence "inferred" — recognizeLandmarks enforces this. Commands
+// recognition is intentionally absent — see the comment block immediately
+// above this function for rationale.
 //
 // Static facts (project_scope, global_scope, canonical_filename) are still
 // emitted at "confirmed" confidence because they describe behavior

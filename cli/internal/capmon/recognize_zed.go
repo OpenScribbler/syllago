@@ -150,11 +150,45 @@ func zedAgentsLandmarkOptions() LandmarkOptions {
 	)
 }
 
+// Commands recognition is intentionally NOT wired for zed.
+//
+// The cached commands source (.capmon-cache/zed/commands.0/extracted.json,
+// fetched from zed.dev's slash-command Rust trait or extension API) yields
+// 4 landmarks: "SlashCommand", "SlashCommandOutput",
+// "SlashCommandOutputSection", "SlashCommandArgumentCompletion". These are
+// Rust trait + struct names from zed's extension API (extension-api crate).
+// Type-name landmark matching could theoretically anchor builtin_commands
+// (every concrete SlashCommand impl is a built-in), but zed's slash-
+// commands surface is provided by the EXTENSION ecosystem rather than a
+// closed built-in catalog — there is no canonical "list of built-in
+// commands" inside zed itself, so the canonical key would have unclear
+// semantics here.
+//
+// More importantly, docs/provider-formats/zed.yaml has no curated commands
+// section at all — the only curated content type is skills (marked
+// unsupported). With no curator baseline, the recognizer would be the sole
+// source of truth for zed.commands.* dot-paths, and emitting from extension-
+// API trait names alone (without a docs page explaining how zed users
+// invoke /-commands or whether argument substitution is supported) would
+// be a guess rather than evidence.
+//
+// SlashCommandArgumentCompletion hints that arguments exist, but that
+// trait is for IDE auto-complete on argument input, not for in-prompt
+// substitution syntax — a different mechanism than {{args}} or
+// $ARGUMENTS. Mapping it to canonical argument_substitution would be
+// semantically wrong.
+//
+// Recognizer silence is the right move. Commands recognition can be wired
+// once a zed docs page documenting /-command authoring (extension or
+// otherwise) and argument substitution semantics is added to the cache.
+
 // recognizeZed recognizes rules + mcp + agents capabilities for the Zed
 // provider. Zed does not support Agent Skills, so skills emission is
 // intentionally a no-op (confirmed-negative signal). Rules, MCP, and agents
 // recognition use landmark matching from zed's HTML docs at
-// zed.dev/docs/ai/{rules,mcp,agent-settings}.
+// zed.dev/docs/ai/{rules,mcp,agent-settings}. Commands recognition is
+// intentionally absent — see the comment block immediately above this
+// function for rationale.
 func recognizeZed(ctx RecognitionContext) RecognitionResult {
 	rulesResult := recognizeLandmarks(ctx, zedRulesLandmarkOptions())
 	mcpResult := recognizeLandmarks(ctx, zedMcpLandmarkOptions())

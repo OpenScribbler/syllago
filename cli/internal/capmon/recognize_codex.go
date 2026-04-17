@@ -229,15 +229,36 @@ func codexAgentsLandmarkOptions() LandmarkOptions {
 // analogous to GoStructOptions but reading "definitions.X.properties.Y"
 // paths — a separate scope from Phase 6 Epic 4.
 
+// Commands recognition is intentionally NOT wired for codex.
+//
+// The cached commands source (.capmon-cache/codex/commands.0/extracted.json)
+// yields exactly one landmark: "Slash commands". One landmark cannot anchor
+// the required-anchor uniqueness gate (it requires two unique substrings
+// to scope merged-cache landmark recognition cleanly). Falling back to a
+// single-anchor pattern would risk false positives on any cache that
+// mentions "slash commands" in passing (e.g. codex's hooks docs reference
+// /-commands as an example of UserPromptSubmit-eligible inputs).
+//
+// docs/provider-formats/codex.yaml has no curated commands section either —
+// the curator left commands "unknown" because the source doc covers slash-
+// commands at a high level without documenting argument substitution syntax
+// or enumerating built-ins. With neither curator confidence nor recognizer
+// evidence, the YAML's commands section stays "not_evaluated".
+//
+// Wiring codex commands recognition would require additional cached sources
+// (e.g. the per-command Rust source at codex-rs/core/src/slash/ or a docs
+// page enumerating built-ins) so the required-anchor gate can be scoped
+// commands-only. Out of scope for Phase 6 Epic 6.
+
 // recognizeCodex recognizes skills + rules + hooks + agents capabilities for
 // the Codex provider. Codex implements the Agent Skills open standard. Skills
 // source is Rust; rules source is markdown; hooks source spans JSON Schema,
 // TypeScript, and Rust files (16 cache entries); agents source is JSON Schema
-// + Rust + builtin TOML files. MCP recognition is intentionally absent — see
-// the comment block above for rationale. Recognition fires only if the
-// extractor surfaces fields under one of the 5 included struct prefixes (see
-// codexSkillsOptions), landmarks under codexRulesLandmarkOptions, landmarks
-// under codexHooksLandmarkOptions, or landmarks under
+// + Rust + builtin TOML files. MCP and commands recognition are intentionally
+// absent — see the comment blocks above for rationale. Recognition fires only
+// if the extractor surfaces fields under one of the 5 included struct prefixes
+// (see codexSkillsOptions), landmarks under codexRulesLandmarkOptions,
+// landmarks under codexHooksLandmarkOptions, or landmarks under
 // codexAgentsLandmarkOptions.
 func recognizeCodex(ctx RecognitionContext) RecognitionResult {
 	skillsCaps := recognizeGoStruct(ctx.Fields, codexSkillsOptions())
