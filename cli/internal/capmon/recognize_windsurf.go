@@ -44,12 +44,41 @@ func windsurfRulesLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeWindsurf recognizes skills + rules capabilities for the Windsurf
-// provider. Skills currently use the GoStruct strategy (Agent Skills open
-// standard) but the live windsurf docs cache contains no Skill.* typed fields
-// — skills emission depends on future typed-source availability. Rules are
-// landmark-based against the rules.0 (Memories & Rules) + rules.1 (AGENTS.md)
-// docs.
+// windsurfHooksLandmarkOptions returns the landmark patterns for Windsurf's
+// "Cascade Hooks" doc. Anchors derived from
+// .capmon-cache/windsurf/hooks.0/extracted.json (cascade/hooks.md).
+//
+// Required anchors are unique to the hooks doc:
+//   - "Cascade Hooks" — H1 of the hooks page, not present in rules/skills/mcp
+//   - "Hook Events" — H2 listing the 12 lifecycle events, unique to hooks
+//
+// Per the curated format YAML (docs/provider-formats/windsurf.yaml), 2 of the
+// 9 canonical hooks keys are supported: hook_scopes (System/User/Workspace
+// three-tier config scopes) and json_io_protocol (JSON event context via
+// stdin). Both are mapped here at "inferred" confidence via heading evidence.
+//
+// Matchers "Workspace-Level" and "Common Input Structure" are themselves
+// unique to the hooks doc — verified absent from rules, skills, mcp, and
+// commands landmarks.
+func windsurfHooksLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Cascade Hooks", CaseInsensitive: true},
+		{Kind: "substring", Value: "Hook Events", CaseInsensitive: true},
+	}
+	return HooksLandmarkOptions(
+		HooksLandmarkPattern("hook_scopes", "Workspace-Level",
+			"three-tier config scopes documented under 'System-Level' / 'User-Level' / 'Workspace-Level' headings", required),
+		HooksLandmarkPattern("json_io_protocol", "Common Input Structure",
+			"JSON event context delivered via stdin documented under 'Common Input Structure' heading", required),
+	)
+}
+
+// recognizeWindsurf recognizes skills + rules + hooks capabilities for the
+// Windsurf provider. Skills currently use the GoStruct strategy (Agent Skills
+// open standard) but the live windsurf docs cache contains no Skill.* typed
+// fields — skills emission depends on future typed-source availability. Rules
+// and hooks are landmark-based against the rules.{0,1} (Memories & Rules,
+// AGENTS.md) and hooks.0 (Cascade Hooks) docs respectively.
 func recognizeWindsurf(ctx RecognitionContext) RecognitionResult {
 	skillsCaps := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
 	if len(skillsCaps) > 0 {
@@ -60,6 +89,7 @@ func recognizeWindsurf(ctx RecognitionContext) RecognitionResult {
 	skillsResult := wrapCapabilities(skillsCaps)
 
 	rulesResult := recognizeLandmarks(ctx, windsurfRulesLandmarkOptions())
+	hooksResult := recognizeLandmarks(ctx, windsurfHooksLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
 }

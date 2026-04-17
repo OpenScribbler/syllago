@@ -124,3 +124,86 @@ func TestRecognizeWindsurf_NoLandmarks(t *testing.T) {
 		t.Errorf("expected zero capabilities, got %d", len(result.Capabilities))
 	}
 }
+
+// realWindsurfHooksLandmarks is a snapshot of the H2/H3 headings from
+// .capmon-cache/windsurf/hooks.0/extracted.json (cascade/hooks.md) as of
+// 2026-04-16. Update when the doc evolves.
+var realWindsurfHooksLandmarks = []string{
+	"Documentation Index",
+	"Cascade Hooks",
+	"What You Can Build",
+	"How Hooks Work",
+	"Configuration",
+	"System-Level",
+	"User-Level",
+	"Workspace-Level",
+	"Basic Structure",
+	"Configuration Options",
+	"Cross-Platform Behavior",
+	"Hook Events",
+	"Common Input Structure",
+	"pre_read_code",
+	"post_read_code",
+	"pre_write_code",
+	"post_write_code",
+	"pre_run_command",
+	"post_run_command",
+	"pre_mcp_tool_use",
+	"post_mcp_tool_use",
+	"pre_user_prompt",
+	"post_cascade_response",
+	"post_cascade_response_with_transcript",
+	"post_setup_worktree",
+	"Exit Codes",
+	"Best Practices",
+	"Security",
+	"Enterprise Distribution",
+}
+
+// TestRecognizeWindsurf_RealHooksLandmarks proves hooks recognition emits the
+// 2 canonical hooks keys curated as supported in the format YAML: hook_scopes
+// (System/User/Workspace three-tier scopes) and json_io_protocol (JSON event
+// context via stdin). The other 7 canonical keys are curated as unsupported.
+func TestRecognizeWindsurf_RealHooksLandmarks(t *testing.T) {
+	merged := append([]string{}, realWindsurfRulesLandmarks...)
+	merged = append(merged, realWindsurfHooksLandmarks...)
+	result := capmon.RecognizeWithContext("windsurf", capmon.RecognitionContext{
+		Provider:  "windsurf",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["hooks.supported"] != "true" {
+		t.Error("hooks.supported missing")
+	}
+	hooksInferred := []string{
+		"hook_scopes",
+		"json_io_protocol",
+	}
+	for _, c := range hooksInferred {
+		key := "hooks.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["hooks.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("hooks.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"hooks.capabilities.handler_types.supported",
+		"hooks.capabilities.matcher_patterns.supported",
+		"hooks.capabilities.decision_control.supported",
+		"hooks.capabilities.async_execution.supported",
+		"hooks.capabilities.context_injection.supported",
+		"hooks.capabilities.permission_control.supported",
+		"hooks.capabilities.input_modification.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present for windsurf (curated as unsupported)", absent)
+		}
+	}
+}
