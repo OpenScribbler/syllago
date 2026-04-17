@@ -3,6 +3,37 @@ slug: claude-code
 display_name: ""
 last_verified: ""
 content_types:
+  hooks:
+    supported: true
+    capabilities:
+      async_execution:
+        supported: true
+        mechanism: async execution documented under 'Run hooks in the background' / 'Configure an async hook' / 'How async hooks execute' headings
+        confidence: inferred
+      decision_control:
+        supported: true
+        mechanism: decision control documented under 'Decision control' heading (exit codes + JSON output fields)
+        confidence: inferred
+      handler_types:
+        supported: true
+        mechanism: four handler types documented under 'Hook handler fields' (Common fields, Command hook fields, HTTP hook fields, Prompt and agent hook fields)
+        confidence: inferred
+      hook_scopes:
+        supported: true
+        mechanism: hook scopes documented under 'Hook locations' heading (user, project, local, managed policy, plugin, component frontmatter)
+        confidence: inferred
+      json_io_protocol:
+        supported: true
+        mechanism: JSON I/O protocol documented under 'Hook input and output' / 'JSON output' headings (continue, stopReason, suppressOutput, systemMessage, hookSpecificOutput)
+        confidence: inferred
+      matcher_patterns:
+        supported: true
+        mechanism: matcher patterns documented under 'Matcher patterns' heading (exact, pipe-separated, regex)
+        confidence: inferred
+      permission_control:
+        supported: true
+        mechanism: permission control documented under 'PermissionRequest' / 'Permission update entries' headings (addRules/replaceRules/removeRules/setMode)
+        confidence: inferred
   rules:
     supported: true
     capabilities:

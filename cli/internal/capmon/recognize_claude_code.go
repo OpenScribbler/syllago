@@ -71,11 +71,54 @@ func claudeCodeRulesLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeClaudeCode recognizes skills + rules capabilities for the Claude Code
-// provider. Source for both content types is markdown documentation, so
-// recognition uses landmark (heading) matching rather than typed-source struct
-// extraction. Capabilities emitted at confidence "inferred" — recognizeLandmarks
-// enforces this.
+// claudeCodeHooksLandmarkOptions returns the landmark patterns for Claude Code's
+// hooks documentation. Anchors derived from .capmon-cache/claude-code/hooks.0/
+// extracted.json (https://code.claude.com/docs/en/hooks.md) — 126 H2/H3 headings
+// across handler types, matchers, decisions, scopes, JSON I/O, async, and
+// permissions.
+//
+// Required anchors are unique to the hooks doc: "Hook lifecycle" and "Hook
+// handler fields" appear in no other content-type doc, so this guard prevents
+// hooks patterns from firing on a context that includes only skills or rules
+// landmarks.
+//
+// Two canonical hooks keys are intentionally NOT mapped here:
+//   - input_modification: documented only in body text under "PreToolUse decision
+//     control" (no dedicated heading). Landmark recognition cannot confirm.
+//   - context_injection: documented as systemMessage / additionalContext field in
+//     "JSON output" body — no dedicated heading.
+//
+// Both are real claude-code capabilities (per docs/provider-formats/claude-code.yaml)
+// but their evidence lives below the heading layer the landmark recognizer reads.
+// Adding them would require field-level recognition (out of scope for Epic 3b).
+func claudeCodeHooksLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Hook lifecycle", CaseInsensitive: true},
+		{Kind: "substring", Value: "Hook handler fields", CaseInsensitive: true},
+	}
+	return HooksLandmarkOptions(
+		HooksLandmarkPattern("handler_types", "Hook handler fields",
+			"four handler types documented under 'Hook handler fields' (Common fields, Command hook fields, HTTP hook fields, Prompt and agent hook fields)", required),
+		HooksLandmarkPattern("matcher_patterns", "Matcher patterns",
+			"matcher patterns documented under 'Matcher patterns' heading (exact, pipe-separated, regex)", required),
+		HooksLandmarkPattern("decision_control", "Decision control",
+			"decision control documented under 'Decision control' heading (exit codes + JSON output fields)", required),
+		HooksLandmarkPattern("async_execution", "Run hooks in the background",
+			"async execution documented under 'Run hooks in the background' / 'Configure an async hook' / 'How async hooks execute' headings", required),
+		HooksLandmarkPattern("hook_scopes", "Hook locations",
+			"hook scopes documented under 'Hook locations' heading (user, project, local, managed policy, plugin, component frontmatter)", required),
+		HooksLandmarkPattern("json_io_protocol", "JSON output",
+			"JSON I/O protocol documented under 'Hook input and output' / 'JSON output' headings (continue, stopReason, suppressOutput, systemMessage, hookSpecificOutput)", required),
+		HooksLandmarkPattern("permission_control", "Permission update entries",
+			"permission control documented under 'PermissionRequest' / 'Permission update entries' headings (addRules/replaceRules/removeRules/setMode)", required),
+	)
+}
+
+// recognizeClaudeCode recognizes skills + rules + hooks capabilities for the
+// Claude Code provider. Source for all three content types is markdown
+// documentation, so recognition uses landmark (heading) matching rather than
+// typed-source struct extraction. Capabilities emitted at confidence "inferred"
+// — recognizeLandmarks enforces this.
 //
 // Static facts (project_scope, global_scope, canonical_filename) are still emitted
 // at "confirmed" confidence because they describe behavior documented in literal
@@ -89,6 +132,7 @@ func recognizeClaudeCode(ctx RecognitionContext) RecognitionResult {
 	}
 
 	rulesResult := recognizeLandmarks(ctx, claudeCodeRulesLandmarkOptions())
+	hooksResult := recognizeLandmarks(ctx, claudeCodeHooksLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
 }
