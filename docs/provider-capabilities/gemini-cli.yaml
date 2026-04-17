@@ -3,6 +3,21 @@ slug: gemini-cli
 display_name: ""
 last_verified: ""
 content_types:
+  hooks:
+    supported: true
+    capabilities:
+      decision_control:
+        supported: true
+        mechanism: decision control via exit codes documented under 'Exit codes' heading (non-zero blocks, zero allows)
+        confidence: inferred
+      json_io_protocol:
+        supported: true
+        mechanism: JSON I/O protocol documented under 'Strict JSON requirements' / 'Common output fields' headings
+        confidence: inferred
+      matcher_patterns:
+        supported: true
+        mechanism: event/tool matchers documented under 'Matchers' / 'Matchers and tool names' headings
+        confidence: inferred
   rules:
     supported: true
     capabilities:
