@@ -15,22 +15,27 @@ content_types:
     canonical_mappings:
       display_name:
         supported: true
+        provider_field: "name"
         mechanism: "yaml frontmatter key: name (required, slug-style identifier)"
         confidence: confirmed
       description:
         supported: true
+        provider_field: "description"
         mechanism: "yaml frontmatter key: description (required)"
         confidence: confirmed
       license:
         supported: true
+        provider_field: "license"
         mechanism: "yaml frontmatter key: license (optional)"
         confidence: confirmed
       compatibility:
         supported: true
+        provider_field: "compatibility"
         mechanism: "yaml frontmatter key: compatibility (optional)"
         confidence: confirmed
       metadata_map:
         supported: true
+        provider_field: "metadata"
         mechanism: "yaml frontmatter key: metadata (optional map)"
         confidence: confirmed
       project_scope:
@@ -362,7 +367,7 @@ content_types:
     provider_extensions:
       - id: kiro_agent_file_uri_prompt
         name: "File URI for externalizing agent prompt"
-        summary: "'prompt' field accepting a 'file://path' URI to load the system prompt from an external Markdown file."
+        summary: "Load the system prompt from an external Markdown file via a 'file://path' URI instead of embedding inline text."
         source_ref: "https://kiro.dev/docs/cli/custom-agents/configuration-reference/"
         graduation_candidate: true
         graduation_notes: "Externalizing agent prompts to separate files is a cross-provider useful pattern — reduces JSON config verbosity and enables reuse of prompt files across agents."
@@ -378,7 +383,7 @@ content_types:
         conversion: embedded
       - id: kiro_agent_resources
         name: "Resources attachment (files, skills, knowledge-base)"
-        summary: "'resources' array attaching files, skills, or knowledge-base entries into the agent's context."
+        summary: "Attach files, skills, or knowledge-base entries into the agent's context via a configured resources list."
         source_ref: "https://kiro.dev/docs/cli/custom-agents/configuration-reference/"
         graduation_candidate: true
         graduation_notes: "Attaching structured resources (files, skills, knowledge) to an agent definition is a cross-provider useful concept — analogous to context attachment in other agent frameworks."
@@ -402,7 +407,7 @@ content_types:
         conversion: not-portable
       - id: kiro_agent_tools_settings
         name: "toolsSettings per-tool configuration map"
-        summary: "'toolsSettings' map providing per-tool configuration objects for fine-grained behavioral settings."
+        summary: "Provide per-tool configuration objects for fine-grained behavioral settings via a map keyed by tool name."
         source_ref: "https://kiro.dev/docs/cli/custom-agents/configuration-reference/"
         graduation_candidate: false
         graduation_notes: "Per-tool settings are tool-implementation-specific and not portable across providers."
@@ -410,7 +415,7 @@ content_types:
         conversion: not-portable
       - id: kiro_agent_keyboard_shortcut
         name: "keyboardShortcut binding"
-        summary: "'keyboardShortcut' string binding an IDE keyboard shortcut for quick agent invocation."
+        summary: "Bind an IDE keyboard shortcut string for quick agent invocation from the editor."
         source_ref: "https://kiro.dev/docs/cli/custom-agents/configuration-reference/"
         graduation_candidate: false
         graduation_notes: "IDE-specific keybinding — not portable or relevant outside Kiro's UI."

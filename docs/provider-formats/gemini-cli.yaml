@@ -15,10 +15,12 @@ content_types:
     canonical_mappings:
       display_name:
         supported: true
+        provider_field: "name"
         mechanism: "yaml frontmatter key: name (required); value should match the skill's directory name"
         confidence: confirmed
       description:
         supported: true
+        provider_field: "description"
         mechanism: "yaml frontmatter key: description (required); documents what the skill does and when Gemini should use it — drives auto-invocation decisions"
         confidence: confirmed
       project_scope:

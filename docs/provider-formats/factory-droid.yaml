@@ -15,18 +15,22 @@ content_types:
     canonical_mappings:
       display_name:
         supported: true
+        provider_field: "name"
         mechanism: "yaml frontmatter key: name (optional, defaults to directory name)"
         confidence: confirmed
       description:
         supported: true
+        provider_field: "description"
         mechanism: "yaml frontmatter key: description (recommended, not required)"
         confidence: confirmed
       user_invocable:
         supported: true
+        provider_field: "user-invocable"
         mechanism: "yaml frontmatter key: user-invocable (optional bool, default: true)"
         confidence: confirmed
       disable_model_invocation:
         supported: true
+        provider_field: "disable-model-invocation"
         mechanism: "yaml frontmatter key: disable-model-invocation (optional bool, default: false)"
         confidence: confirmed
       project_scope:
@@ -135,7 +139,7 @@ content_types:
         conversion: translated
       - id: custom_instructions_setting
         name: Custom Instructions Setting
-        summary: "Personal settings file customInstructions key provides always-on guidance regardless of which project is open."
+        summary: "Provides always-on guidance to the Droid regardless of which project is open, configured via the personal settings file's customInstructions key."
         source_ref: "https://docs.factory.ai/cli/configuration"
         graduation_candidate: false
         provider_field: "customInstructions"

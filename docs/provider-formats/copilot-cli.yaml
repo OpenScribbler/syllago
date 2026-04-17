@@ -20,10 +20,12 @@ content_types:
     canonical_mappings:
       display_name:
         supported: true
+        provider_field: "name"
         mechanism: "yaml frontmatter key: name (required per Agent Skills open standard)"
         confidence: confirmed
       description:
         supported: true
+        provider_field: "description"
         mechanism: "yaml frontmatter key: description (required per Agent Skills open standard)"
         confidence: confirmed
       user_invocable:
@@ -405,6 +407,8 @@ content_types:
         confidence: confirmed
       tool_restrictions:
         supported: true
+        provider_field: "tools"
+        extension_id: tool_aliases
         mechanism: "tools field with cross-provider alias system (execute/shell/Bash, read/Read, edit/Edit, etc.); [\"*\"] grants all tools; unrecognized names silently ignored"
         confidence: confirmed
       invocation_patterns:
@@ -417,10 +421,12 @@ content_types:
         confidence: confirmed
       model_selection:
         supported: true
+        provider_field: "model"
         mechanism: "model field in frontmatter overrides default model for that agent"
         confidence: confirmed
       per_agent_mcp:
         supported: true
+        provider_field: "mcp-servers"
         mechanism: "mcp-servers inline config in frontmatter; available for cloud agent only; workspace MCP config shared by default"
         confidence: inferred
       subagent_spawning:
@@ -451,7 +457,7 @@ content_types:
 
       - id: tool_aliases
         name: Cross-Provider Tool Aliases
-        summary: The tools field accepts case-insensitive aliases (execute/shell/Bash, read/Read, edit/Edit/Write, etc.); unknown names are silently ignored for portability.
+        summary: Restricts available tools using case-insensitive aliases (execute/shell/Bash, read/Read, edit/Edit/Write, etc.); unknown names are silently ignored for portability.
         source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/custom-agents-configuration.md"
         graduation_candidate: true
         conversion: translated
