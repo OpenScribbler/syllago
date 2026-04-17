@@ -82,10 +82,7 @@ jobs:
 
       - name: Install Gemini CLI
         run: |
-          npm install -g @anthropic-ai/gemini-cli || npm install -g @anthropic-ai/gemini || {
-            echo "Gemini CLI package name may have changed — update this step"
-            exit 1
-          }
+          npm install -g @google/gemini-cli
           gemini --version
 
       # TODO: Configure SSO/service account auth for Gemini CLI.
