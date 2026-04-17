@@ -18,6 +18,33 @@ content_types:
         supported: true
         mechanism: event/tool matchers documented under 'Matchers' / 'Matchers and tool names' headings
         confidence: inferred
+  mcp:
+    supported: true
+    capabilities:
+      auto_approve:
+        supported: true
+        mechanism: auto-approval via trust-based bypass and dynamic allow-listing documented under 'Trust-based bypass' / 'Dynamic allow-listing' headings (under '2. Confirmation process')
+        confidence: inferred
+      env_var_expansion:
+        supported: true
+        mechanism: environment variable expansion documented under 'Environment variable expansion' heading with 'Security and environment sanitization' / 'Automatic redaction' / 'Explicit overrides' guidance
+        confidence: inferred
+      oauth_support:
+        supported: true
+        mechanism: OAuth 2.0 with automatic discovery, browser redirect flow, token management, and Google credentials documented under 'OAuth support for remote MCP servers' / 'Automatic OAuth discovery' / 'Authentication flow' headings
+        confidence: inferred
+      resource_referencing:
+        supported: true
+        mechanism: MCP resources (discovery, listing, in-conversation referencing) documented under 'Working with MCP resources' / 'Discovery and listing' / 'Referencing resources in a conversation' headings
+        confidence: inferred
+      tool_filtering:
+        supported: true
+        mechanism: per-server tool allow/deny filtering documented under 'MCP server with tool filtering' (Example configurations) and 'Dynamic allow-listing' headings
+        confidence: inferred
+      transport_types:
+        supported: true
+        mechanism: transport types (stdio, HTTP, SSE) documented under 'Transport mechanisms' heading; per-transport sub-headings 'Adding an stdio server' / 'Adding an HTTP server' / 'Adding an SSE server' under 'gemini mcp add'
+        confidence: inferred
   rules:
     supported: true
     capabilities:

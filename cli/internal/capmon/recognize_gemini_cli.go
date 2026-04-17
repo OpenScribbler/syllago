@@ -63,10 +63,61 @@ func geminiCliHooksLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeGeminiCli recognizes skills + rules + hooks capabilities for the
-// Gemini CLI provider. Skills use the GoStruct strategy (Agent Skills open
-// standard). Rules and hooks are landmark-based against the gemini-md.md and
-// hooks/{index,reference}.md docs.
+// geminiCliMcpLandmarkOptions returns the landmark patterns for Gemini CLI's
+// MCP documentation. Anchors derived from the merged headings of
+// .capmon-cache/gemini-cli/mcp.{1,2}/extracted.json (mcp-server.md and
+// mcp-setup.md). mcp.0 is the settings.schema.json — JSON-schema fields are
+// extracted into Fields not Landmarks, but its struct names appear in mcp.1's
+// "Configuration properties" body text.
+//
+// Gemini CLI's mcp-server.md is a deeply structured reference doc with 89
+// landmarks. 6 of 8 canonical MCP keys map to heading-level evidence:
+// transport_types, oauth_support, env_var_expansion, tool_filtering,
+// auto_approve, resource_referencing. marketplace and enterprise_management
+// are absent — gemini-cli has no in-IDE MCP marketplace and no documented
+// org-level MCP management surface.
+//
+// Required anchors are unique to the MCP docs:
+//   - "MCP servers with Gemini CLI" — H1 of mcp.1, MCP-specific
+//   - "Set up an MCP server" — H1 of mcp.2, MCP-specific
+//
+// Neither appears in gemini-cli's skills, rules, or hooks docs.
+//
+// Per docs/provider-formats/gemini-cli.yaml, 4 of 8 keys are curated as
+// supported at "confirmed" confidence (transport_types, env_var_expansion,
+// tool_filtering, resource_referencing). The recognizer additionally emits
+// oauth_support and auto_approve as "inferred" — both have direct
+// heading-level evidence in mcp.1 ("OAuth support for remote MCP servers"
+// and "Trust-based bypass" / "Confirmation process") that the curator
+// marked as unsupported. Recognizer emissions land in
+// docs/provider-capabilities/gemini-cli.yaml independently of the curated
+// docs/provider-formats/gemini-cli.yaml.
+func geminiCliMcpLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "MCP servers with Gemini CLI", CaseInsensitive: true},
+		{Kind: "substring", Value: "Set up an MCP server", CaseInsensitive: true},
+	}
+	return McpLandmarkOptions(
+		McpLandmarkPattern("transport_types", "Transport mechanisms",
+			"transport types (stdio, HTTP, SSE) documented under 'Transport mechanisms' heading; per-transport sub-headings 'Adding an stdio server' / 'Adding an HTTP server' / 'Adding an SSE server' under 'gemini mcp add'", required),
+		McpLandmarkPattern("oauth_support", "OAuth support for remote MCP servers",
+			"OAuth 2.0 with automatic discovery, browser redirect flow, token management, and Google credentials documented under 'OAuth support for remote MCP servers' / 'Automatic OAuth discovery' / 'Authentication flow' headings", required),
+		McpLandmarkPattern("env_var_expansion", "Environment variable expansion",
+			"environment variable expansion documented under 'Environment variable expansion' heading with 'Security and environment sanitization' / 'Automatic redaction' / 'Explicit overrides' guidance", required),
+		McpLandmarkPattern("tool_filtering", "MCP server with tool filtering",
+			"per-server tool allow/deny filtering documented under 'MCP server with tool filtering' (Example configurations) and 'Dynamic allow-listing' headings", required),
+		McpLandmarkPattern("auto_approve", "Trust-based bypass",
+			"auto-approval via trust-based bypass and dynamic allow-listing documented under 'Trust-based bypass' / 'Dynamic allow-listing' headings (under '2. Confirmation process')", required),
+		McpLandmarkPattern("resource_referencing", "Working with MCP resources",
+			"MCP resources (discovery, listing, in-conversation referencing) documented under 'Working with MCP resources' / 'Discovery and listing' / 'Referencing resources in a conversation' headings", required),
+	)
+}
+
+// recognizeGeminiCli recognizes skills + rules + hooks + mcp capabilities for
+// the Gemini CLI provider. Skills use the GoStruct strategy (Agent Skills
+// open standard). Rules, hooks, and MCP are landmark-based against the
+// gemini-md.md, hooks/{index,reference}.md, and mcp-server.md /
+// mcp-setup.md docs.
 func recognizeGeminiCli(ctx RecognitionContext) RecognitionResult {
 	skillsCaps := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
 	if len(skillsCaps) > 0 {
@@ -78,6 +129,7 @@ func recognizeGeminiCli(ctx RecognitionContext) RecognitionResult {
 
 	rulesResult := recognizeLandmarks(ctx, geminiCliRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, geminiCliHooksLandmarkOptions())
+	mcpResult := recognizeLandmarks(ctx, geminiCliMcpLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult)
 }
