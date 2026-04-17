@@ -52,12 +52,34 @@ func init() {
 // with "user-defined custom agents are supported". The latter is not
 // documented in any cached opencode source.
 
+// Commands recognition is intentionally NOT wired for opencode.
+//
+// The cached commands source (.capmon-cache/opencode/commands.0/extracted.json,
+// fetched from opencode-ai/opencode/main/internal/tui/components/dialog/
+// commands.go) yields exactly one landmark: "CommandRunCustomMsg". This is
+// a Go BubbleTea message struct used internally to dispatch slash-command
+// runs through the TUI event loop — a runtime type, not a user-facing
+// capability vocabulary. Neither canonical commands key
+// (argument_substitution, builtin_commands) can be anchored on a single
+// message-struct name.
+//
+// docs/provider-formats/opencode.yaml has no curated commands section —
+// opencode is archived (charmbracelet/crush is its evolution) and the
+// human-edited curator skipped commands entirely.
+//
+// Recognizer silence is the right move — emitting any commands key based on
+// CommandRunCustomMsg would conflate "TUI dispatcher exists" with "slash-
+// command authoring is supported". The latter is not documented in any
+// cached opencode source. Commands recognition can be wired once a
+// documentation source (or a typed source enumerating built-in /-commands)
+// is added to the cache.
+
 // recognizeOpencode recognizes skills capabilities for the OpenCode provider.
 // OpenCode is archived; it has no native skill implementation, so this
 // recognizer uses the cross-provider SKILL.md convention. GoStruct pattern
 // will produce output only if upstream extraction surfaces Skill.* fields
-// (unlikely for an archived project). MCP and agents recognition are
-// intentionally absent — see the comment blocks immediately above this
+// (unlikely for an archived project). MCP, agents, and commands recognition
+// are intentionally absent — see the comment blocks immediately above this
 // function for rationale.
 func recognizeOpencode(ctx RecognitionContext) RecognitionResult {
 	result := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())

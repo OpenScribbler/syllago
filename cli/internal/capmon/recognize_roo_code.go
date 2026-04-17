@@ -95,6 +95,37 @@ func rooCodeAgentsLandmarkOptions() LandmarkOptions {
 	)
 }
 
+// Commands recognition is intentionally NOT wired for roo-code.
+//
+// The cached commands source (.capmon-cache/roo-code/commands.0/extracted.json)
+// yields one landmark, and it is an instance frontmatter snippet rather than
+// a heading: "description: 'Commit and push changes with a descriptive
+// message'argument-hint: '[optional-context]'mode: code". This is the YAML
+// frontmatter of an example /-command file (commit-and-push), surfaced as a
+// landmark by the markdown extractor because the file lacks any H1/H2
+// headings above the snippet.
+//
+// Two problems:
+//  1. The required-anchor uniqueness gate cannot fire on a single instance-
+//     specific frontmatter blob — there's no second unique substring, and
+//     the single landmark contains command-name-specific text that would
+//     not generalize to other roo-code commands.
+//  2. The frontmatter shape (argument-hint, mode) hints that argument
+//     substitution exists, but argument-hint is just a UI hint string for
+//     auto-complete — it does NOT prove a substitution syntax (like
+//     {{args}} or $ARGUMENTS) is supported. Inferring argument_substitution
+//     from a hint field would be a guess, not evidence.
+//
+// docs/provider-formats/roo-code.yaml has no curated commands section —
+// the format YAML covers skills + agents/modes only, with commands left
+// "not_evaluated" pending a docs-page or schema source.
+//
+// Recognizer silence is the right move — emitting any commands key from a
+// single example file's frontmatter would conflate "an example exists" with
+// "the capability is documented". Commands recognition can be wired once
+// the Roo Code docs site adds a /-commands reference page or once the
+// cache includes a TypeScript schema for the command-file frontmatter.
+
 // recognizeRooCode recognizes skills + agents capabilities for the Roo Code
 // provider. Roo Code implements the Agent Skills open standard (GoStruct
 // pattern). Custom modes (their agents primitive) use type-name landmark
@@ -117,8 +148,8 @@ func rooCodeAgentsLandmarkOptions() LandmarkOptions {
 // Roo-code's rules.* dot-paths remain "not_evaluated" until either a
 // format-spec doc is added or the policy on instance-as-evidence changes.
 //
-// MCP recognition is also intentionally absent — see the comment block
-// immediately above this function for rationale.
+// MCP and commands recognition are also intentionally absent — see the
+// comment blocks immediately above this function for rationale.
 func recognizeRooCode(ctx RecognitionContext) RecognitionResult {
 	skills := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
 	if len(skills) > 0 {

@@ -177,12 +177,41 @@ func copilotCliAgentsLandmarkOptions() LandmarkOptions {
 // extension and integration concepts, not consumer-side capability
 // vocabulary specific to the CLI.
 
-// recognizeCopilotCli recognizes skills + rules + hooks capabilities for the
-// Copilot CLI provider. Source for all three content types is markdown
+// Commands recognition is intentionally NOT wired for copilot-cli.
+//
+// All three cached commands sources describe the PLUGIN system, not slash
+// commands:
+//   - commands.0 (about-copilot-cli-plugins.md) — overview of "what is a
+//     plugin", landmarks "What is a plugin?" / "What plugins contain" / "Why
+//     use plugins?". No slash-command vocabulary.
+//   - commands.1 (copilot-cli-plugin-specification.md) — plugin.json schema
+//     reference, landmarks "Plugin specification for install command" /
+//     "marketplace.json" / "Component path fields". The "CLI commands"
+//     landmark refers to plugin-management CLI commands (install/uninstall),
+//     not user-invokable slash commands.
+//   - commands.2 (creating-copilot-cli-plugin.md) — plugin-author tutorial,
+//     landmarks "Plugin structure" / "Creating a plugin" / "Distributing
+//     your plugin". Again no slash-command surface.
+//
+// Per docs/provider-formats/copilot-cli.yaml, copilot-cli has NO user-
+// invokable slash commands — the /-prefix surface is reserved for built-in
+// CLI features (/help, /reset, /quit) that are not documented as a custom-
+// command authoring API. The plugin system is a parallel extension surface
+// covered by the existing skills + agents recognizers. Both canonical
+// commands keys (argument_substitution, builtin_commands) are curated as
+// unsupported.
+//
+// Recognizer silence preserves the curator's "unsupported" assertion.
+// Emitting any commands.* key from plugin landmarks would conflate plugins
+// (a packaging mechanism) with slash commands (an invocation mechanism) —
+// two unrelated capability surfaces.
+
+// recognizeCopilotCli recognizes skills + rules + hooks + agents capabilities
+// for the Copilot CLI provider. Source for all four content types is markdown
 // documentation; recognition uses landmark (heading) matching. Static facts
 // merge in at "confirmed" confidence after a successful skills landmark match.
-// MCP recognition is intentionally absent — see the comment block immediately
-// above this function for rationale.
+// MCP and commands recognition are intentionally absent — see the comment
+// blocks above for rationale.
 func recognizeCopilotCli(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, copilotCliLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
