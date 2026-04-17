@@ -3,6 +3,17 @@ slug: zed
 display_name: ""
 last_verified: ""
 content_types:
+  agents:
+    supported: true
+    capabilities:
+      per_agent_mcp:
+        supported: true
+        mechanism: per-profile MCP context server scoping (AgentProfileSettings.context_servers IndexMap<server_id, ContextServerPreset> with per-tool granularity), documented under 'MCP Tool Permissions' heading
+        confidence: inferred
+      tool_restrictions:
+        supported: true
+        mechanism: per-profile tool toggle map (AgentProfileSettings.tools IndexMap<tool_name, bool>) with default + per-tool override semantics, documented under 'Default Tool Permissions' / 'Per-tool Permission Rules' / 'Pattern Precedence' headings
+        confidence: inferred
   mcp:
     supported: true
     capabilities:

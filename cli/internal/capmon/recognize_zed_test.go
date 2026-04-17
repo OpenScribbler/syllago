@@ -216,6 +216,127 @@ func TestRecognizeZed_McpAnchorsMissing(t *testing.T) {
 	}
 }
 
+// realZedAgentsLandmarks is a snapshot of headings extracted from zed's
+// "Agent Settings" HTML doc (.capmon-cache/zed/agents.2/extracted.json —
+// zed.dev/docs/ai/agent-settings) as of 2026-04-16.
+//
+// Maps 2 of 7 canonical agents keys at heading level: tool_restrictions
+// ("Per-tool Permission Rules" / "Default Tool Permissions") and per_agent_mcp
+// ("MCP Tool Permissions"). The other 5 canonical keys lack heading evidence
+// in this doc — see recognize_zed.go zedAgentsLandmarkOptions doc-comment.
+var realZedAgentsLandmarks = []string{
+	"Agent Settings",
+	"Model Settings",
+	"Default Model",
+	"Feature-specific Models",
+	"Alternative Models for Inline Assists",
+	"Model Temperature",
+	"Agent Panel Settings",
+	"Font Size",
+	"Default Tool Permissions",
+	"Per-tool Permission Rules",
+	"Pattern Precedence",
+	"Case Sensitivity",
+	"copy_path and move_path Patterns",
+	"MCP Tool Permissions",
+	"Edit Display Mode",
+	"Sound Notification",
+	"Message Editor Size",
+	"Modifier to Send",
+	"Edit Card",
+	"Terminal Card",
+	"Feedback Controls",
+}
+
+// TestRecognizeZed_RealAgentsLandmarks proves agents recognition emits 2
+// canonical agents keys at "inferred" confidence: tool_restrictions and
+// per_agent_mcp. Five other canonical keys (definition_format,
+// invocation_patterns, agent_scopes, model_selection, subagent_spawning) must
+// NOT be emitted — none have heading-level evidence in the agent-settings
+// doc.
+//
+// Test merges rules + MCP + agents fixtures to mirror real-world cache
+// merging across content types. The required-anchor uniqueness gate
+// ("Agent Settings" + "Per-tool Permission Rules") prevents agents emission
+// from firing on rules or MCP landmarks alone.
+func TestRecognizeZed_RealAgentsLandmarks(t *testing.T) {
+	merged := append([]string{}, realZedRulesLandmarks...)
+	merged = append(merged, realZedMcpLandmarks...)
+	merged = append(merged, realZedAgentsLandmarks...)
+	result := capmon.RecognizeWithContext("zed", capmon.RecognitionContext{
+		Provider:  "zed",
+		Format:    "html",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["agents.supported"] != "true" {
+		t.Error("agents.supported missing")
+	}
+	agentsInferred := []string{
+		"tool_restrictions",
+		"per_agent_mcp",
+	}
+	for _, c := range agentsInferred {
+		key := "agents.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["agents.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("agents.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"agents.capabilities.definition_format.supported",
+		"agents.capabilities.invocation_patterns.supported",
+		"agents.capabilities.agent_scopes.supported",
+		"agents.capabilities.model_selection.supported",
+		"agents.capabilities.subagent_spawning.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present (no heading evidence)", absent)
+		}
+	}
+}
+
+// TestRecognizeZed_AgentsAnchorsMissing proves the required-anchor guard
+// suppresses agents emission when "Per-tool Permission Rules" is absent.
+// This is critical because the rules and mcp docs both contain landmarks
+// that could otherwise trigger false-positive agents recognition.
+func TestRecognizeZed_AgentsAnchorsMissing(t *testing.T) {
+	mutated := []string{}
+	for _, lm := range realZedAgentsLandmarks {
+		if lm == "Per-tool Permission Rules" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	// Merge with rules + mcp to simulate real cache state minus the agents
+	// uniqueness anchor.
+	merged := append([]string{}, realZedRulesLandmarks...)
+	merged = append(merged, realZedMcpLandmarks...)
+	merged = append(merged, mutated...)
+	result := capmon.RecognizeWithContext("zed", capmon.RecognitionContext{
+		Provider:  "zed",
+		Format:    "html",
+		Landmarks: merged,
+	})
+	if _, has := result.Capabilities["agents.supported"]; has {
+		t.Error("agents.supported should NOT be present when 'Per-tool Permission Rules' anchor is missing")
+	}
+	for _, absent := range []string{
+		"agents.capabilities.tool_restrictions.supported",
+		"agents.capabilities.per_agent_mcp.supported",
+	} {
+		if _, has := result.Capabilities[absent]; has {
+			t.Errorf("%s should NOT be present without required anchor", absent)
+		}
+	}
+}
+
 // TestRecognizeZed_InstanceLandmarksNoMatch proves zed's own .rules instance
 // file (Rust coding guidelines) does NOT trigger recognition. This is the
 // instance-vs-spec guardrail: rules.0 is example content, not vocabulary.
