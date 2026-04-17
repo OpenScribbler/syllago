@@ -113,11 +113,44 @@ func geminiCliMcpLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeGeminiCli recognizes skills + rules + hooks + mcp capabilities for
-// the Gemini CLI provider. Skills use the GoStruct strategy (Agent Skills
-// open standard). Rules, hooks, and MCP are landmark-based against the
-// gemini-md.md, hooks/{index,reference}.md, and mcp-server.md /
-// mcp-setup.md docs.
+// geminiCliCommandsLandmarkOptions returns the landmark patterns for Gemini
+// CLI's custom-commands documentation. Anchors derived from
+// .capmon-cache/gemini-cli/commands.0/extracted.json (custom-commands.md).
+//
+// Maps 1 of 2 canonical commands keys at heading-level evidence:
+//   - argument_substitution → "Handling arguments" / "1. Context-aware
+//     injection with {{args}}" / "2. Default argument handling" headings;
+//     also covers the !{...} shell-injection and @{...} file-injection
+//     escapes which are sub-headings under the same section.
+//
+// builtin_commands is intentionally NOT mapped — per the curated YAML
+// (docs/provider-formats/gemini-cli.yaml), Gemini CLI ships built-in
+// commands (/help, /memory, /chat, etc.) but their definitions live in the
+// CLI binary, not in this docs page; this cache surfaces only the custom
+// (TOML-defined) commands surface. Recognition stays silent rather than
+// emit a false-positive built-in claim from custom-command landmarks.
+//
+// Required anchors are unique to commands.0:
+//   - "TOML file format (v1)" — H2; the schema-format heading; absent from
+//     skills/rules/hooks/mcp caches.
+//   - "Handling arguments"    — H2; the section that introduces all four
+//     argument-substitution mechanisms; absent from every other cache.
+func geminiCliCommandsLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "TOML file format (v1)", CaseInsensitive: true},
+		{Kind: "substring", Value: "Handling arguments", CaseInsensitive: true},
+	}
+	return CommandsLandmarkOptions(
+		CommandsLandmarkPattern("argument_substitution", "Context-aware injection with {{args}}",
+			"{{args}} placeholder substitution plus !{...} shell-injection and @{...} file-injection escapes documented under 'Handling arguments' / '1. Context-aware injection with {{args}}' / '3. Executing shell commands with !{...}' / '4. Injecting file content with @{...}' headings", required),
+	)
+}
+
+// recognizeGeminiCli recognizes skills + rules + hooks + mcp + commands
+// capabilities for the Gemini CLI provider. Skills use the GoStruct strategy
+// (Agent Skills open standard). Rules, hooks, MCP, and commands are
+// landmark-based against the gemini-md.md, hooks/{index,reference}.md,
+// mcp-server.md / mcp-setup.md, and custom-commands.md docs.
 func recognizeGeminiCli(ctx RecognitionContext) RecognitionResult {
 	skillsCaps := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
 	if len(skillsCaps) > 0 {
@@ -130,6 +163,7 @@ func recognizeGeminiCli(ctx RecognitionContext) RecognitionResult {
 	rulesResult := recognizeLandmarks(ctx, geminiCliRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, geminiCliHooksLandmarkOptions())
 	mcpResult := recognizeLandmarks(ctx, geminiCliMcpLandmarkOptions())
+	commandsResult := recognizeLandmarks(ctx, geminiCliCommandsLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult, commandsResult)
 }

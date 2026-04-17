@@ -3,6 +3,13 @@ slug: gemini-cli
 display_name: ""
 last_verified: ""
 content_types:
+  commands:
+    supported: true
+    capabilities:
+      argument_substitution:
+        supported: true
+        mechanism: '{{args}} placeholder substitution plus !{...} shell-injection and @{...} file-injection escapes documented under ''Handling arguments'' / ''1. Context-aware injection with {{args}}'' / ''3. Executing shell commands with !{...}'' / ''4. Injecting file content with @{...}'' headings'
+        confidence: inferred
   hooks:
     supported: true
     capabilities:
