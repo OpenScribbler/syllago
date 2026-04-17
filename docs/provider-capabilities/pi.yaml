@@ -3,6 +3,17 @@ slug: pi
 display_name: ""
 last_verified: ""
 content_types:
+  hooks:
+    supported: true
+    capabilities:
+      handler_types:
+        supported: true
+        mechanism: TypeScript-native extension handlers documented under 'Writing an Extension' / 'Extension Styles' (beyond shell-only)
+        confidence: inferred
+      input_modification:
+        supported: true
+        mechanism: tool_call event handlers can intercept and modify tool call inputs before execution (documented under 'tool_call' event)
+        confidence: inferred
   skills:
     supported: true
     capabilities:
