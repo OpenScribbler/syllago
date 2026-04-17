@@ -43,6 +43,68 @@ var realKiroNonSkillsLandmarks = []string{
 	"Configuration", "Configuration file structure", "Remote server", "Local server",
 }
 
+// realKiroAgentsLandmarks is a snapshot of the headings extracted from kiro's
+// "Agent configuration reference" doc (.capmon-cache/kiro/agents.0/extracted.json)
+// as of 2026-04-17. Includes the AWS docs cookie-banner boilerplate.
+//
+// Mapped capabilities (5 of 7 canonical agents keys):
+//   - definition_format → Name/Description/Prompt fields
+//   - tool_restrictions → AllowedTools/Tools/ToolsSettings
+//   - per_agent_mcp → McpServers field
+//   - agent_scopes (nested .project + .user) → Local agents / Global agents
+//   - model_selection → Model field
+//
+// Unmapped: invocation_patterns (only KeyboardShortcut field heading, single
+// mode), subagent_spawning (no chain/spawn/delegate/subagent heading).
+var realKiroAgentsLandmarks = []string{
+	"Select your cookie preferences",
+	"Customize cookie preferences",
+	"Essential", "Performance", "Functional", "Advertising",
+	"Your privacy choices",
+	"Unable to save cookie preferences",
+	"Agent configuration reference",
+	"Name field",
+	"Description field",
+	"Prompt field",
+	"Inline prompt",
+	"File URI prompt",
+	"File URI path resolution",
+	"File URI examples",
+	"McpServers field",
+	"OAuth configuration",
+	"Tools field",
+	"ToolAliases field",
+	"AllowedTools field",
+	"Exact matches",
+	"Wildcard patterns",
+	"MCP tool patterns",
+	"Examples",
+	"Pattern matching rules",
+	"ToolsSettings field",
+	"Resources field",
+	"File resources",
+	"Skill resources",
+	"Knowledge base resources",
+	"Hooks field",
+	"includeMcpJson field",
+	"Model field",
+	"KeyboardShortcut field",
+	"WelcomeMessage field",
+	"Complete example",
+	"Quick start",
+	"File locations",
+	"Local agents (project-specific)",
+	"Global agents (user-wide)",
+	"Agent precedence",
+	"Configuration fields",
+	"Best practices",
+	"Local vs global agents",
+	"Security",
+	"Write tool permissions",
+	"Organization",
+	"Next steps",
+}
+
 // realKiroHooksLandmarks is a snapshot of the headings extracted from kiro's
 // agent hooks doc (.capmon-cache/kiro/hooks.0/extracted.json) as of 2026-04-16.
 // Includes the AWS docs cookie-banner boilerplate.
@@ -312,6 +374,83 @@ func TestRecognizeKiro_McpAnchorsMissing(t *testing.T) {
 	})
 	if _, has := result.Capabilities["mcp.supported"]; has {
 		t.Error("mcp.supported should NOT be present when 'Configuration properties' anchor is missing")
+	}
+}
+
+// TestRecognizeKiro_RealAgentsLandmarks proves agents recognition emits 5
+// canonical agents keys at "inferred" confidence: definition_format,
+// tool_restrictions, per_agent_mcp, agent_scopes (nested .project + .user),
+// and model_selection. The other 2 keys (invocation_patterns,
+// subagent_spawning) must NOT be emitted — no heading-level evidence in the
+// agents reference doc.
+//
+// Test merges skills + rules + hooks + mcp + agents fixtures to mirror
+// real-world cache merging — the agents recognizer must distinguish its
+// capabilities from the others via the required-anchor uniqueness gate.
+func TestRecognizeKiro_RealAgentsLandmarks(t *testing.T) {
+	merged := append([]string{}, realKiroSkillsLandmarks...)
+	merged = append(merged, realKiroRulesLandmarks...)
+	merged = append(merged, realKiroHooksLandmarks...)
+	merged = append(merged, realKiroMcpLandmarks...)
+	merged = append(merged, realKiroAgentsLandmarks...)
+	result := capmon.RecognizeWithContext("kiro", capmon.RecognitionContext{
+		Provider:  "kiro",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["agents.supported"] != "true" {
+		t.Error("agents.supported missing")
+	}
+	agentsInferred := []string{
+		"definition_format",
+		"tool_restrictions",
+		"per_agent_mcp",
+		"agent_scopes.project",
+		"agent_scopes.user",
+		"model_selection",
+	}
+	for _, c := range agentsInferred {
+		key := "agents.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["agents.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("agents.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"agents.capabilities.invocation_patterns.supported",
+		"agents.capabilities.subagent_spawning.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present (no heading evidence)", absent)
+		}
+	}
+}
+
+// TestRecognizeKiro_AgentsAnchorsMissing proves the required-anchor guard
+// suppresses agents emission when "AllowedTools field" is absent — preventing
+// agents patterns from firing on contexts that contain only the parent
+// "Agent configuration reference" landmark.
+func TestRecognizeKiro_AgentsAnchorsMissing(t *testing.T) {
+	mutated := []string{}
+	for _, lm := range realKiroAgentsLandmarks {
+		if lm == "AllowedTools field" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("kiro", capmon.RecognitionContext{
+		Provider:  "kiro",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["agents.supported"]; has {
+		t.Error("agents.supported should NOT be present when 'AllowedTools field' anchor is missing")
 	}
 }
 
