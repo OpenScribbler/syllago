@@ -15,10 +15,14 @@ content_types:
     canonical_mappings:
       display_name:
         supported: true
+        provider_field: "name"
+        extension_id: name_format_constraint
         mechanism: "yaml frontmatter key: name (required). Must be lowercase letters, numbers, and hyphens only (e.g., deploy-to-staging, code-review). Used in UI listings and for @-mentions."
         confidence: confirmed
       description:
         supported: true
+        provider_field: "description"
+        extension_id: auto_invocation
         mechanism: "yaml frontmatter key: description (required). Brief explanation shown to the model to help it decide when to auto-invoke the skill. Key field for automatic invocation matching."
         confidence: confirmed
       user_invocable:
@@ -62,7 +66,7 @@ content_types:
         conversion: not-portable
       - id: name_format_constraint
         name: Skill name format constraint
-        summary: "The `name` frontmatter field must be unique per scope and contain only lowercase letters, numbers, and hyphens."
+        summary: "Skill identifiers must be unique per scope and contain only lowercase letters, numbers, and hyphens."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/skills.md#required-frontmatter-fields"
         graduation_candidate: false
         provider_field: "name"
@@ -136,7 +140,7 @@ content_types:
     provider_extensions:
       - id: activation_modes
         name: Four activation modes via trigger frontmatter
-        summary: "The `trigger` frontmatter field selects one of four activation modes: always_on, model_decision, glob, or manual."
+        summary: "Rules select one of four activation modes (always_on, model_decision, glob, or manual) via frontmatter."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/memories.md#activation-modes"
         graduation_candidate: true
         provider_field: "trigger"
@@ -250,7 +254,7 @@ content_types:
         conversion: not-portable
       - id: transcript_hook
         name: Full conversation transcript hook variant
-        summary: "post_cascade_response_with_transcript writes a structured JSONL transcript to ~/.windsurf/transcripts/ and delivers the file path instead of inline markdown."
+        summary: "A transcript-aware post-response hook variant writes structured JSONL to ~/.windsurf/transcripts/ and delivers the file path instead of inline markdown."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/hooks.md#post_cascade_response_with_transcript"
         graduation_candidate: false
         provider_field: "post_cascade_response_with_transcript"

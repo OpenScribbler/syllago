@@ -20,26 +20,32 @@ content_types:
     canonical_mappings:
       display_name:
         supported: true
+        provider_field: "name"
         mechanism: "yaml frontmatter key: name (required, max 64 chars, lowercase a-z/0-9/hyphens, must match parent directory name)"
         confidence: confirmed
       description:
         supported: true
+        provider_field: "description"
         mechanism: "yaml frontmatter key: description (required, max 1024 chars)"
         confidence: confirmed
       license:
         supported: true
+        provider_field: "license"
         mechanism: "yaml frontmatter key: license (optional)"
         confidence: confirmed
       compatibility:
         supported: true
+        provider_field: "compatibility"
         mechanism: "yaml frontmatter key: compatibility (optional, max 500 chars)"
         confidence: confirmed
       metadata_map:
         supported: true
+        provider_field: "metadata"
         mechanism: "yaml frontmatter key: metadata (optional, arbitrary key-value mapping)"
         confidence: confirmed
       disable_model_invocation:
         supported: true
+        provider_field: "disable-model-invocation"
         mechanism: "yaml frontmatter key: disable-model-invocation (optional bool); confirmed in SkillFrontmatter TypeScript interface as disable-model-invocation?: boolean"
         confidence: confirmed
       project_scope:
@@ -308,7 +314,7 @@ content_types:
         conversion: preserved
       - id: pi_prompt_template_description_frontmatter
         name: "Optional description frontmatter for autocomplete"
-        summary: "Optional YAML frontmatter description shown in / autocomplete; falls back to the first non-empty body line if omitted."
+        summary: "Shown in / autocomplete to describe the template; falls back to the first non-empty body line if omitted."
         source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/prompt-templates.md"
         graduation_candidate: true
         provider_field: "description"

@@ -25,10 +25,12 @@ content_types:
     canonical_mappings:
       display_name:
         supported: true
+        provider_field: "name"
         mechanism: "YAML frontmatter key: name (optional — falls back to parent directory name if absent or empty; max 64 chars enforced after whitespace normalization)"
         confidence: confirmed
       description:
         supported: true
+        provider_field: "description"
         mechanism: "YAML frontmatter key: description (required — empty string triggers MissingField error; max 1024 chars enforced after whitespace normalization)"
         confidence: confirmed
       disable_model_invocation:

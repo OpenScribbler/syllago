@@ -15,18 +15,23 @@ content_types:
     canonical_mappings:
       display_name:
         supported: true
+        provider_field: "name"
         mechanism: "yaml frontmatter key: name (optional, falls back to directory name)"
         confidence: confirmed
       description:
         supported: true
+        provider_field: "description"
         mechanism: "yaml frontmatter key: description (recommended)"
         confidence: confirmed
       disable_model_invocation:
         supported: true
+        provider_field: "disable-model-invocation"
+        extension_id: "auto_invocation"
         mechanism: "yaml frontmatter key: disable-model-invocation (optional bool, default false)"
         confidence: confirmed
       user_invocable:
         supported: true
+        provider_field: "user-invocable"
         mechanism: "yaml frontmatter key: user-invocable (optional bool, default true)"
         confidence: confirmed
       project_scope:
@@ -81,7 +86,7 @@ content_types:
 
       - id: argument_hint
         name: Argument Hint
-        summary: "Frontmatter argument-hint shows expected argument format during autocomplete (purely presentational)."
+        summary: "Shows expected argument format during autocomplete (purely presentational)."
         conversion: embedded
         provider_field: "argument-hint"
         source_ref: "https://code.claude.com/docs/en/skills.md#frontmatter-reference"
@@ -89,7 +94,7 @@ content_types:
 
       - id: allowed_tools
         name: Allowed Tools Pre-Approval
-        summary: "Frontmatter allowed-tools pre-approves tool calls while the skill is active (does not restrict availability)."
+        summary: "Pre-approves tool calls while the skill is active; does not restrict tool availability."
         conversion: embedded
         provider_field: "allowed-tools"
         source_ref: "https://code.claude.com/docs/en/skills.md#pre-approve-tools-for-a-skill"
@@ -97,7 +102,7 @@ content_types:
 
       - id: model_override
         name: Per-Skill Model Override
-        summary: "Frontmatter model overrides the session model while this skill is active."
+        summary: "Overrides the session model while this skill is active."
         conversion: embedded
         provider_field: "model"
         source_ref: "https://code.claude.com/docs/en/skills.md#frontmatter-reference"
@@ -105,7 +110,7 @@ content_types:
 
       - id: effort_override
         name: Per-Skill Effort Level
-        summary: "Frontmatter effort overrides the session effort level (low/medium/high/max) while the skill is active."
+        summary: "Overrides the session effort level (low/medium/high/max) while the skill is active."
         conversion: embedded
         provider_field: "effort"
         source_ref: "https://code.claude.com/docs/en/skills.md#frontmatter-reference"
@@ -113,7 +118,7 @@ content_types:
 
       - id: subagent_execution
         name: Subagent Execution via context fork
-        summary: "Frontmatter context: fork runs the skill in an isolated subagent with no conversation history; companion agent field selects the subagent type."
+        summary: "Runs the skill in an isolated subagent with no conversation history when set to fork; companion agent field selects the subagent type."
         conversion: embedded
         provider_field: "context"
         source_ref: "https://code.claude.com/docs/en/skills.md#run-skills-in-a-subagent"
@@ -121,7 +126,7 @@ content_types:
 
       - id: skill_scoped_hooks
         name: Skill-Scoped Lifecycle Hooks
-        summary: "Frontmatter hooks attaches lifecycle hooks that fire only while this skill is active."
+        summary: "Attaches lifecycle hooks that fire only while this skill is active."
         conversion: embedded
         provider_field: "hooks"
         source_ref: "https://code.claude.com/docs/en/skills.md#frontmatter-reference"
@@ -129,7 +134,7 @@ content_types:
 
       - id: path_activation_filter
         name: Path-Based Activation Filter
-        summary: "Frontmatter paths globs limit auto-activation to file matches; explicit /skill-name invocation is unrestricted."
+        summary: "Limits auto-activation to file glob matches; explicit /skill-name invocation remains unrestricted."
         conversion: embedded
         provider_field: "paths"
         source_ref: "https://code.claude.com/docs/en/skills.md#frontmatter-reference"
@@ -137,7 +142,7 @@ content_types:
 
       - id: shell_selection
         name: Per-Skill Shell Selection
-        summary: "Frontmatter shell selects bash (default) or powershell for inline command execution blocks within the skill."
+        summary: "Selects bash (default) or powershell for inline command execution blocks within the skill."
         conversion: embedded
         provider_field: "shell"
         source_ref: "https://code.claude.com/docs/en/skills.md#frontmatter-reference"
@@ -194,7 +199,7 @@ content_types:
 
       - id: disable_skill_shell_execution_policy
         name: Organization Policy to Disable Shell Execution in Skills
-        summary: "Managed setting disableSkillShellExecution disables inline shell command injection for user/project/plugin/added-directory skills."
+        summary: "Disables inline shell command injection for user/project/plugin/added-directory skills."
         conversion: embedded
         provider_field: "disableSkillShellExecution"
         source_ref: "https://code.claude.com/docs/en/skills.md#inject-dynamic-context"
@@ -285,7 +290,7 @@ content_types:
 
       - id: claude_md_excludes
         name: Exclude CLAUDE.md Files by Pattern
-        summary: "Setting claudeMdExcludes skips ancestor CLAUDE.md or rules files by path/glob; managed CLAUDE.md cannot be excluded."
+        summary: "Skips ancestor CLAUDE.md or rules files by path/glob; managed CLAUDE.md cannot be excluded."
         conversion: embedded
         provider_field: "claudeMdExcludes"
         source_ref: "https://code.claude.com/docs/en/memory.md#exclude-specific-claude-md-files"
@@ -740,7 +745,7 @@ content_types:
 
       - id: agent_persistent_memory
         name: Persistent Cross-Session Memory
-        summary: "Frontmatter memory field gives an agent a persistent directory (user/project/local scope) seeded with MEMORY.md and Read/Write/Edit tools."
+        summary: "Gives an agent a persistent directory (user/project/local scope) seeded with MEMORY.md and Read/Write/Edit tools."
         conversion: embedded
         provider_field: "memory"
         source_ref: "https://code.claude.com/docs/en/sub-agents.md#enable-persistent-memory"
@@ -756,7 +761,7 @@ content_types:
 
       - id: agent_isolation_worktree
         name: Isolated Git Worktree Execution
-        summary: "Setting isolation: worktree runs the agent in a temporary git worktree, auto-cleaned if no changes are made."
+        summary: "Runs the agent in a temporary git worktree when set to worktree, auto-cleaned if no changes are made."
         conversion: not-portable
         provider_field: "isolation"
         source_ref: "https://code.claude.com/docs/en/sub-agents.md#supported-frontmatter-fields"
@@ -778,7 +783,7 @@ content_types:
 
       - id: agent_mcp_scoping
         name: Per-Agent MCP Server Scoping
-        summary: "Frontmatter mcpServers gives an agent inline or referenced MCP servers; inline definitions keep tool descriptions out of the parent context."
+        summary: "Gives an agent inline or referenced MCP servers; inline definitions keep tool descriptions out of the parent context."
         conversion: embedded
         provider_field: "mcpServers"
         source_ref: "https://code.claude.com/docs/en/sub-agents.md#scope-mcp-servers-to-a-subagent"

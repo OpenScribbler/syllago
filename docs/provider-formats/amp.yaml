@@ -15,10 +15,12 @@ content_types:
     canonical_mappings:
       display_name:
         supported: true
+        provider_field: "name"
         mechanism: "yaml frontmatter key: name (required)"
         confidence: confirmed
       description:
         supported: true
+        provider_field: "description"
         mechanism: "yaml frontmatter key: description (required)"
         confidence: confirmed
       project_scope:
@@ -243,7 +245,7 @@ content_types:
         provider_field: "input.contains"
       - id: hook_config_location
         name: "Hook configuration in settings file"
-        summary: "Hooks live under the 'amp.hooks' array in Amp settings files (.amp/settings.json or user-scope settings)."
+        summary: "Hook definitions live as an array in Amp settings files (.amp/settings.json or user-scope settings)."
         source_ref: "https://ampcode.com/manual/hooks.md"
         graduation_candidate: false
         conversion: not-portable
@@ -271,7 +273,7 @@ content_types:
         provider_field: "action"
       - id: permissions_context_restriction
         name: "Permission context restriction (thread vs subagent)"
-        summary: "Optional 'context' field scopes a rule to main thread, sub-agent only, or both (omitted); defaults differ by context."
+        summary: "Optionally scopes a rule to main thread, sub-agent only, or both (omitted); defaults differ by context."
         source_ref: "https://ampcode.com/manual/appendix/permissions-reference.md"
         graduation_candidate: false
         conversion: not-portable

@@ -20,10 +20,13 @@ content_types:
     canonical_mappings:
       display_name:
         supported: true
+        provider_field: "name"
         mechanism: "yaml frontmatter key: name (required) — must exactly match the directory name"
         confidence: confirmed
       description:
         supported: true
+        provider_field: "description"
+        extension_id: description_based_auto_invocation
         mechanism: "yaml frontmatter key: description (required) — tells Cline when to use this skill, max 1024 characters"
         confidence: confirmed
       project_scope:
@@ -141,7 +144,7 @@ content_types:
         conversion: not-portable
       - id: conditional_rules_paths
         name: Conditional Rules via YAML Frontmatter paths
-        summary: "YAML frontmatter `paths` (glob array) gates rule activation to matching files; empty array disables, missing frontmatter is always-on."
+        summary: "Gates rule activation to files matching a glob array; empty array disables, missing frontmatter is always-on."
         source_ref: "https://docs.cline.bot/customization/rules#conditional-rules"
         graduation_candidate: true
         provider_field: "paths"
