@@ -48,11 +48,21 @@ type capSourceYAML struct {
 
 // capMappingYAML is a single canonical key entry under canonical_mappings.
 // confidence is present in YAML but must never be emitted.
+//
+// ProviderField names the actual native field (frontmatter key, config key,
+// TOML field) when the mapping corresponds to a specific named field. Omitted
+// when the mapping is structural or behavioral.
+//
+// ExtensionID points to a provider_extensions entry that describes the same
+// concept in provider-specific detail. The downstream component renders one
+// unified row when set.
 type capMappingYAML struct {
-	Supported  bool     `yaml:"supported"`
-	Mechanism  string   `yaml:"mechanism"`
-	Paths      []string `yaml:"paths"`
-	Confidence string   `yaml:"confidence"` // internal only
+	Supported     bool     `yaml:"supported"`
+	Mechanism     string   `yaml:"mechanism"`
+	Paths         []string `yaml:"paths"`
+	Confidence    string   `yaml:"confidence"` // internal only
+	ProviderField string   `yaml:"provider_field"`
+	ExtensionID   string   `yaml:"extension_id"`
 }
 
 // capExtensionExampleYAML is one entry in provider_extensions[i].examples.
@@ -65,15 +75,23 @@ type capExtensionExampleYAML struct {
 
 // capExtensionYAML is a single provider_extensions entry.
 // graduation_candidate is present in YAML but must never be emitted.
+//
+// Summary is one sentence (~150 chars max) — replaces the older Description
+// field. ProviderField names the actual native field when the extension
+// describes a frontmatter key, config key, or TOML field; absent for behavioral
+// extensions. Conversion declares what happens to the feature during format
+// conversion: translated | embedded | dropped | preserved | not-portable.
 type capExtensionYAML struct {
 	ID                  string                    `yaml:"id"`
 	Name                string                    `yaml:"name"`
-	Description         string                    `yaml:"description"`
+	Summary             string                    `yaml:"summary"`
 	SourceRef           string                    `yaml:"source_ref"`
 	GraduationCandidate *bool                     `yaml:"graduation_candidate"` // internal only
 	Required            *bool                     `yaml:"required"`
 	ValueType           string                    `yaml:"value_type,omitempty"`
 	Examples            []capExtensionExampleYAML `yaml:"examples,omitempty"`
+	ProviderField       string                    `yaml:"provider_field"`
+	Conversion          string                    `yaml:"conversion"`
 }
 
 // canonicalKeysYAML is the top-level structure of docs/spec/canonical-keys.yaml.
@@ -130,10 +148,17 @@ type CapSource struct {
 }
 
 // CapMapping is the public-facing canonical key entry (confidence stripped).
+//
+// ProviderField names the actual native field (e.g., "name", "description",
+// "disable-model-invocation"); empty for structural mappings. ExtensionID
+// links to a CapExtension entry that describes the same concept in
+// provider-specific detail; downstream renders one unified row when set.
 type CapMapping struct {
-	Supported bool     `json:"supported"`
-	Mechanism string   `json:"mechanism"`
-	Paths     []string `json:"paths,omitempty"`
+	Supported     bool     `json:"supported"`
+	Mechanism     string   `json:"mechanism"`
+	Paths         []string `json:"paths,omitempty"`
+	ProviderField string   `json:"provider_field,omitempty"`
+	ExtensionID   string   `json:"extension_id,omitempty"`
 }
 
 // CapExampleEntry is the public-facing example entry in provider_extensions.
@@ -148,14 +173,18 @@ type CapExampleEntry struct {
 // source_ref is omitempty because some extensions in the YAML omit it.
 // required has no omitempty: null must be emitted explicitly so downstream
 // consumers can render a three-state badge (required / optional / unknown).
+// conversion has no omitempty: every extension must declare its conversion
+// behavior; an empty value indicates a missing required field, not a default.
 type CapExtension struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name"`
-	Description string            `json:"description"`
-	SourceRef   string            `json:"source_ref,omitempty"`
-	Required    *bool             `json:"required"`
-	ValueType   string            `json:"value_type,omitempty"`
-	Examples    []CapExampleEntry `json:"examples,omitempty"`
+	ID            string            `json:"id"`
+	Name          string            `json:"name"`
+	Summary       string            `json:"summary"`
+	SourceRef     string            `json:"source_ref,omitempty"`
+	Required      *bool             `json:"required"`
+	ValueType     string            `json:"value_type,omitempty"`
+	Examples      []CapExampleEntry `json:"examples,omitempty"`
+	ProviderField string            `json:"provider_field,omitempty"`
+	Conversion    string            `json:"conversion"`
 }
 
 // CanonicalKeyMeta is a single canonical key's metadata in the JSON output.
@@ -355,7 +384,7 @@ func buildCapEntry(lastChangedAt string, ct capContentTypeYAML) CapContentType {
 		})
 	}
 
-	// Build canonical mappings — strip confidence.
+	// Build canonical mappings — strip confidence, propagate provider_field and extension_id.
 	mappings := make(map[string]CapMapping, len(ct.CanonicalMappings))
 	for key, m := range ct.CanonicalMappings {
 		var paths []string
@@ -363,9 +392,11 @@ func buildCapEntry(lastChangedAt string, ct capContentTypeYAML) CapContentType {
 			paths = m.Paths
 		}
 		mappings[key] = CapMapping{
-			Supported: m.Supported,
-			Mechanism: m.Mechanism,
-			Paths:     paths,
+			Supported:     m.Supported,
+			Mechanism:     m.Mechanism,
+			Paths:         paths,
+			ProviderField: m.ProviderField,
+			ExtensionID:   m.ExtensionID,
 		}
 	}
 
@@ -377,13 +408,15 @@ func buildCapEntry(lastChangedAt string, ct capContentTypeYAML) CapContentType {
 			examples = append(examples, CapExampleEntry(ex))
 		}
 		extensions = append(extensions, CapExtension{
-			ID:          ext.ID,
-			Name:        ext.Name,
-			Description: strings.TrimSpace(ext.Description),
-			SourceRef:   ext.SourceRef,
-			Required:    ext.Required,
-			ValueType:   ext.ValueType,
-			Examples:    examples,
+			ID:            ext.ID,
+			Name:          ext.Name,
+			Summary:       strings.TrimSpace(ext.Summary),
+			SourceRef:     ext.SourceRef,
+			Required:      ext.Required,
+			ValueType:     ext.ValueType,
+			Examples:      examples,
+			ProviderField: ext.ProviderField,
+			Conversion:    ext.Conversion,
 		})
 	}
 
