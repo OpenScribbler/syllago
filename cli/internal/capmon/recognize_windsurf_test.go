@@ -207,3 +207,104 @@ func TestRecognizeWindsurf_RealHooksLandmarks(t *testing.T) {
 		}
 	}
 }
+
+// realWindsurfMcpLandmarks is a snapshot of the headings extracted from
+// windsurf's MCP doc (.capmon-cache/windsurf/mcp.0/extracted.json —
+// docs.windsurf.com/windsurf/cascade/mcp.md) as of 2026-04-16.
+//
+// Windsurf's MCP doc maps 5 of 8 canonical MCP keys via heading-level
+// evidence: transport_types, env_var_expansion, tool_filtering, marketplace,
+// enterprise_management. oauth_support, auto_approve, and resource_referencing
+// are absent — no heading evidence in the doc.
+var realWindsurfMcpLandmarks = []string{
+	"Documentation Index",
+	"Model Context Protocol (MCP)",
+	"Adding a new MCP",
+	"Configuring MCP tools",
+	"mcp\\_config.json",
+	"Popular MCP Server Examples",
+	"Remote HTTP MCPs",
+	"Config Interpolation",
+	"Admin Controls (Teams & Enterprises)",
+	"MCP Registry",
+	"Configuring Custom Registries",
+	"MCP Whitelist",
+	"How Server Matching Works",
+	"Configuration Options",
+	"Common Regex Patterns",
+	"Notes",
+	"Admin Configuration Guidelines",
+	"Troubleshooting",
+	"General Information",
+}
+
+// TestRecognizeWindsurf_RealMcpLandmarks proves MCP recognition emits 5
+// canonical MCP keys at "inferred" confidence: transport_types,
+// env_var_expansion, tool_filtering, marketplace, enterprise_management.
+// oauth_support, auto_approve, and resource_referencing must NOT be emitted —
+// none have heading-level evidence in windsurf's MCP doc.
+//
+// Test merges rules + hooks + MCP fixtures to mirror real-world cache merging.
+func TestRecognizeWindsurf_RealMcpLandmarks(t *testing.T) {
+	merged := append([]string{}, realWindsurfRulesLandmarks...)
+	merged = append(merged, realWindsurfHooksLandmarks...)
+	merged = append(merged, realWindsurfMcpLandmarks...)
+	result := capmon.RecognizeWithContext("windsurf", capmon.RecognitionContext{
+		Provider:  "windsurf",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["mcp.supported"] != "true" {
+		t.Error("mcp.supported missing")
+	}
+	mcpInferred := []string{
+		"transport_types",
+		"env_var_expansion",
+		"tool_filtering",
+		"marketplace",
+		"enterprise_management",
+	}
+	for _, c := range mcpInferred {
+		key := "mcp.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["mcp.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("mcp.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"mcp.capabilities.oauth_support.supported",
+		"mcp.capabilities.auto_approve.supported",
+		"mcp.capabilities.resource_referencing.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present (no heading evidence)", absent)
+		}
+	}
+}
+
+// TestRecognizeWindsurf_McpAnchorsMissing proves the required-anchor guard
+// suppresses MCP emission when "Adding a new MCP" is absent.
+func TestRecognizeWindsurf_McpAnchorsMissing(t *testing.T) {
+	mutated := []string{}
+	for _, lm := range realWindsurfMcpLandmarks {
+		if lm == "Adding a new MCP" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("windsurf", capmon.RecognitionContext{
+		Provider:  "windsurf",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["mcp.supported"]; has {
+		t.Error("mcp.supported should NOT be present when 'Adding a new MCP' anchor is missing")
+	}
+}

@@ -73,12 +73,66 @@ func windsurfHooksLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeWindsurf recognizes skills + rules + hooks capabilities for the
-// Windsurf provider. Skills currently use the GoStruct strategy (Agent Skills
-// open standard) but the live windsurf docs cache contains no Skill.* typed
-// fields — skills emission depends on future typed-source availability. Rules
-// and hooks are landmark-based against the rules.{0,1} (Memories & Rules,
-// AGENTS.md) and hooks.0 (Cascade Hooks) docs respectively.
+// windsurfMcpLandmarkOptions returns the landmark patterns for Windsurf's
+// MCP documentation. Anchors derived from
+// .capmon-cache/windsurf/mcp.0/extracted.json (cascade/mcp.md).
+//
+// Windsurf's MCP doc is the richest of the 14 providers — 19 landmarks
+// covering transport, interpolation, marketplace, enterprise admin controls,
+// and registry customization. 5 of 8 canonical MCP keys map to heading-level
+// evidence: transport_types, env_var_expansion, tool_filtering, marketplace,
+// enterprise_management.
+//
+// Three keys are intentionally absent:
+//   - oauth_support: no OAuth heading; curator confirms windsurf does not
+//     document OAuth 2.0 for remote servers.
+//   - auto_approve: no auto-approve heading; curator confirms windsurf does
+//     not support pre-configured auto-approval.
+//   - resource_referencing: no @-mention or resources heading; curator
+//     confirms windsurf does not document MCP resource access.
+//
+// Required anchors are unique to the MCP doc:
+//   - "Model Context Protocol (MCP)" — H1, MCP-specific
+//   - "Adding a new MCP" — H2, MCP-specific
+//
+// Neither appears in windsurf's skills, rules, hooks, agents, or commands
+// docs.
+//
+// Per docs/provider-formats/windsurf.yaml, the curator marks 4 keys as
+// supported confirmed (transport_types, env_var_expansion, marketplace,
+// enterprise_management) and tool_filtering as unsupported. The recognizer
+// additionally emits tool_filtering as "inferred" because heading-level
+// evidence exists ("Configuring MCP tools" and "MCP Whitelist") — the
+// curator interprets these headings as the 100-tool cap and admin-side
+// regex matching rather than per-server tool allowlist. The two YAML files
+// are independent: provider-capabilities/ tracks recognizer emissions,
+// provider-formats/ tracks curator judgments.
+func windsurfMcpLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Model Context Protocol (MCP)", CaseInsensitive: true},
+		{Kind: "substring", Value: "Adding a new MCP", CaseInsensitive: true},
+	}
+	return McpLandmarkOptions(
+		McpLandmarkPattern("transport_types", "Remote HTTP MCPs",
+			"transport types (stdio for local, Streamable HTTP and SSE for remote) documented under 'Remote HTTP MCPs' heading; remote servers use serverUrl/url instead of command/args", required),
+		McpLandmarkPattern("env_var_expansion", "Config Interpolation",
+			"${env:VAR_NAME} and ${file:/path} interpolation documented under 'Config Interpolation' heading", required),
+		McpLandmarkPattern("tool_filtering", "MCP Whitelist",
+			"per-server tool filtering documented under 'Configuring MCP tools' (UI tool toggles, 100-tool cap) and 'MCP Whitelist' (admin-side regex matching) headings", required),
+		McpLandmarkPattern("marketplace", "MCP Registry",
+			"in-IDE MCP marketplace documented under 'MCP Registry' / 'Configuring Custom Registries' headings", required),
+		McpLandmarkPattern("enterprise_management", "Admin Controls (Teams & Enterprises)",
+			"organization-level MCP admin controls (whitelist, custom registries, regex matching) documented under 'Admin Controls (Teams & Enterprises)' / 'Admin Configuration Guidelines' headings", required),
+	)
+}
+
+// recognizeWindsurf recognizes skills + rules + hooks + mcp capabilities for
+// the Windsurf provider. Skills currently use the GoStruct strategy (Agent
+// Skills open standard) but the live windsurf docs cache contains no Skill.*
+// typed fields — skills emission depends on future typed-source availability.
+// Rules, hooks, and MCP are landmark-based against the rules.{0,1} (Memories
+// & Rules, AGENTS.md), hooks.0 (Cascade Hooks), and mcp.0 (cascade/mcp.md)
+// docs respectively.
 func recognizeWindsurf(ctx RecognitionContext) RecognitionResult {
 	skillsCaps := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
 	if len(skillsCaps) > 0 {
@@ -90,6 +144,7 @@ func recognizeWindsurf(ctx RecognitionContext) RecognitionResult {
 
 	rulesResult := recognizeLandmarks(ctx, windsurfRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, windsurfHooksLandmarkOptions())
+	mcpResult := recognizeLandmarks(ctx, windsurfMcpLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult)
 }
