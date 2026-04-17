@@ -1,0 +1,6 @@
+id: smoke-mcp
+name: smoke-mcp
+description: Test MCP servers used by tests/smoke/.
+tags:
+  - smoke-test
+  - internal

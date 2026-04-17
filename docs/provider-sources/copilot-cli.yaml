@@ -3,7 +3,7 @@
 # Note: docs use Liquid template variables ({% data %}) that need stripping during extraction.
 
 schema_version: "1"
-last_verified: "2026-03-27"
+last_verified: "2026-04-16"
 provider_version: "" # No version tracking — CLI is distributed as binary, no public version tags
 
 slug: copilot-cli
@@ -87,7 +87,7 @@ content_types:
         format: markdown
         extracts: [file_format, features]
 
-      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/create-skills.md
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-skills.md
         type: docs
         format: markdown
         extracts: [file_format, file_locations, features]

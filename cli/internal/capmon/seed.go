@@ -44,12 +44,18 @@ func SeedProviderCapabilities(opts SeedOptions) error {
 	}
 
 	// Apply extracted dot-path mappings to the capability struct.
-	// Dot-path format: "<content_type>.<section>.<key>.<field>" → value.
+	// Dot-path formats:
+	//   "<content_type>.supported" → bool
+	//   "<content_type>.capabilities.<cap>.<field>" → flat capability field
+	//   "<content_type>.capabilities.<cap>.<sub>.<field>" → nested sub-capability
+	//     for object-typed canonical keys (activation_mode, cross_provider_recognition).
+	//     The parent capability's Supported is auto-set to true when any sub-cap is added.
+	//   "<content_type>.events.<event>.<field>" → hook event field
 	if caps.ContentTypes == nil {
 		caps.ContentTypes = make(map[string]capyaml.ContentTypeEntry)
 	}
 	for path, value := range opts.Extracted {
-		parts := strings.SplitN(path, ".", 4)
+		parts := strings.SplitN(path, ".", 5)
 		if len(parts) < 2 {
 			continue
 		}
@@ -75,6 +81,28 @@ func SeedProviderCapabilities(opts SeedOptions) error {
 				ce.Confidence = value
 			}
 			ctEntry.Capabilities[capKey] = ce
+
+		case len(parts) == 5 && parts[1] == "capabilities":
+			capKey, subKey, field := parts[2], parts[3], parts[4]
+			if ctEntry.Capabilities == nil {
+				ctEntry.Capabilities = make(map[string]capyaml.CapabilityEntry)
+			}
+			parent := ctEntry.Capabilities[capKey]
+			parent.Supported = true
+			if parent.Capabilities == nil {
+				parent.Capabilities = make(map[string]capyaml.CapabilityEntry)
+			}
+			sub := parent.Capabilities[subKey]
+			switch field {
+			case "supported":
+				sub.Supported = value == "true"
+			case "mechanism":
+				sub.Mechanism = value
+			case "confidence":
+				sub.Confidence = value
+			}
+			parent.Capabilities[subKey] = sub
+			ctEntry.Capabilities[capKey] = parent
 
 		case len(parts) == 4 && parts[1] == "events":
 			eventKey, field := parts[2], parts[3]

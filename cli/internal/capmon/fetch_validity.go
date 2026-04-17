@@ -75,7 +75,21 @@ func ValidateContentResponse(body []byte, contentType, originalURL, finalURL str
 		}
 	}
 
-	// Check 3: eTLD+1 domain match between original and final URLs.
+	// Check 3: domain match between original and final URLs.
+	origURL, err := url.Parse(originalURL)
+	if err != nil {
+		return fmt.Errorf("parse original URL: %w", err)
+	}
+	finURL, err := url.Parse(finalURL)
+	if err != nil {
+		return fmt.Errorf("parse final URL: %w", err)
+	}
+	// Same-host short-circuit: identical hostnames can't be a redirect
+	// hijack. This also avoids publicsuffix lookups that reject raw IPs
+	// (httptest servers listen on 127.0.0.1).
+	if origURL.Hostname() == finURL.Hostname() {
+		return nil
+	}
 	origETLD, err := etldPlusOne(originalURL)
 	if err != nil {
 		return fmt.Errorf("parse original URL: %w", err)

@@ -1,0 +1,482 @@
+package capmon_test
+
+import (
+	"testing"
+
+	"github.com/OpenScribbler/syllago/cli/internal/capmon"
+)
+
+// realClaudeCodeLandmarks is a snapshot of the H2/H3 headings extracted from
+// docs.claude.com/en/docs/claude-code/skills as of 2026-04-16. Source of truth:
+// .capmon-cache/claude-code/skills.0/extracted.json. Update when the doc evolves.
+var realClaudeCodeLandmarks = []string{
+	"Documentation Index",
+	"Extend Claude with skills",
+	"Bundled skills",
+	"Getting started",
+	"Create your first skill",
+	"Where skills live",
+	"Live change detection",
+	"Automatic discovery from nested directories",
+	"Skills from additional directories",
+	"Configure skills",
+	"Types of skill content",
+	"Frontmatter reference",
+	"Available string substitutions",
+	"Add supporting files",
+	"Control who invokes a skill",
+	"Skill content lifecycle",
+	"Pre-approve tools for a skill",
+	"Pass arguments to skills",
+	"Advanced patterns",
+	"Inject dynamic context",
+	"Run skills in a subagent",
+	"Example: Research skill using Explore agent",
+	"Restrict Claude's skill access",
+	"Share skills",
+	"Generate visual output",
+	"Troubleshooting",
+	"Skill not triggering",
+	"Skill triggers too often",
+	"Skill descriptions are cut short",
+	"Related resources",
+}
+
+// realClaudeCodeRulesLandmarks is a snapshot of the H2/H3 headings extracted
+// from docs.claude.com/en/docs/claude-code/memory as of 2026-04-16. Source of
+// truth: .capmon-cache/claude-code/rules.0/extracted.json. Update when the
+// doc evolves.
+var realClaudeCodeRulesLandmarks = []string{
+	"Documentation Index",
+	"How Claude remembers your project",
+	"CLAUDE.md vs auto memory",
+	"CLAUDE.md files",
+	"When to add to CLAUDE.md",
+	"Choose where to put CLAUDE.md files",
+	"Set up a project CLAUDE.md",
+	"Write effective instructions",
+	"Import additional files",
+	"AGENTS.md",
+	"How CLAUDE.md files load",
+	"Load from additional directories",
+	"Organize rules with .claude/rules/",
+	"Set up rules",
+	"Path-specific rules",
+	"Share rules across projects with symlinks",
+	"User-level rules",
+	"Manage CLAUDE.md for large teams",
+	"Deploy organization-wide CLAUDE.md",
+	"Exclude specific CLAUDE.md files",
+	"Auto memory",
+	"Enable or disable auto memory",
+	"Storage location",
+	"How it works",
+	"Audit and edit your memory",
+	"View and edit with /memory",
+	"Troubleshoot memory issues",
+}
+
+// realClaudeCodeHooksLandmarks is a snapshot of the H2/H3 headings extracted
+// from code.claude.com/docs/en/hooks.md as of 2026-04-16. Source of truth:
+// .capmon-cache/claude-code/hooks.0/extracted.json. Update when the doc evolves.
+var realClaudeCodeHooksLandmarks = []string{
+	"Documentation Index",
+	"Hooks reference",
+	"Hook lifecycle",
+	"How a hook resolves",
+	"Configuration",
+	"Hook locations",
+	"Matcher patterns",
+	"Hook handler fields",
+	"Common fields",
+	"Command hook fields",
+	"HTTP hook fields",
+	"Prompt and agent hook fields",
+	"Hook input and output",
+	"Common input fields",
+	"JSON output",
+	"Decision control",
+	"Permission update entries",
+	"Run hooks in the background",
+	"Configure an async hook",
+	"How async hooks execute",
+	"Security best practices",
+}
+
+// TestRecognizeClaudeCode_RealLandmarks proves the canary path: feeding the
+// recognizer the merged real landmarks from the live skills + rules + hooks +
+// mcp docs produces a non-empty result with all four content types' expected
+// capability sets at confidence "inferred" (and the static facts at "confirmed").
+//
+// All four content types' landmarks must be merged because each content type's
+// required-anchor guard scans the full landmark list — omitting any one would
+// cause that content type's anchors to surface in MissingAnchors.
+func TestRecognizeClaudeCode_RealLandmarks(t *testing.T) {
+	merged := append([]string{}, realClaudeCodeLandmarks...)
+	merged = append(merged, realClaudeCodeRulesLandmarks...)
+	merged = append(merged, realClaudeCodeHooksLandmarks...)
+	merged = append(merged, realClaudeCodeMcpLandmarks...)
+	merged = append(merged, realClaudeCodeAgentsLandmarks...)
+	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
+		Provider:  "claude-code",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q", result.Status, capmon.StatusRecognized)
+	}
+	if len(result.MissingAnchors) != 0 {
+		t.Errorf("expected no missing anchors, got %v", result.MissingAnchors)
+	}
+
+	caps := result.Capabilities
+	if caps["skills.supported"] != "true" {
+		t.Error("skills.supported missing")
+	}
+
+	// Inferred capabilities (from landmark patterns)
+	inferred := []string{
+		"frontmatter",
+		"live_reload",
+		"nested_directories",
+		"additional_directories",
+		"arguments",
+		"tool_preapproval",
+		"subagent_invocation",
+		"dynamic_context",
+		"invoker_control",
+	}
+	for _, c := range inferred {
+		key := "skills.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["skills.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("%s.confidence = %q, want inferred", c, got)
+		}
+	}
+
+	// Confirmed capabilities (static facts merged after landmark match)
+	confirmed := []string{"project_scope", "global_scope", "canonical_filename"}
+	for _, c := range confirmed {
+		if caps["skills.capabilities."+c+".supported"] != "true" {
+			t.Errorf("%s.supported missing", c)
+		}
+		if got := caps["skills.capabilities."+c+".confidence"]; got != "confirmed" {
+			t.Errorf("%s.confidence = %q, want confirmed", c, got)
+		}
+	}
+
+	// Rules content type must also recognize on the merged landmarks
+	if caps["rules.supported"] != "true" {
+		t.Error("rules.supported missing")
+	}
+	rulesCaps := []string{
+		"activation_mode.always_on",
+		"activation_mode.glob",
+		"file_imports",
+		"cross_provider_recognition.agents_md",
+		"auto_memory",
+		"hierarchical_loading",
+	}
+	for _, c := range rulesCaps {
+		key := "rules.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["rules.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("rules.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+
+	// Hooks content type must also recognize on the merged landmarks
+	if caps["hooks.supported"] != "true" {
+		t.Error("hooks.supported missing")
+	}
+	hooksCaps := []string{
+		"handler_types",
+		"matcher_patterns",
+		"decision_control",
+		"async_execution",
+		"hook_scopes",
+		"json_io_protocol",
+		"permission_control",
+	}
+	for _, c := range hooksCaps {
+		key := "hooks.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["hooks.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("hooks.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+}
+
+// TestRecognizeClaudeCode_AnchorsMissing proves the negative path: stripping
+// one of the required anchors from the input causes the entire recognition to
+// suppress (status=anchors_missing, no capabilities, anchor name surfaced).
+// This is the false-positive guardrail — a docs index that lists "Skills" as
+// a link must NOT trigger the recognizer.
+func TestRecognizeClaudeCode_AnchorsMissing(t *testing.T) {
+	// Strip "Where skills live" — the location anchor that proves we're on
+	// the format-describing doc, not a passing reference.
+	mutated := make([]string, 0, len(realClaudeCodeLandmarks))
+	for _, lm := range realClaudeCodeLandmarks {
+		if lm == "Where skills live" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+
+	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
+		Provider:  "claude-code",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+
+	if result.Status != capmon.StatusAnchorsMissing {
+		t.Fatalf("status = %q, want %q", result.Status, capmon.StatusAnchorsMissing)
+	}
+	if len(result.Capabilities) != 0 {
+		t.Errorf("expected zero capabilities when anchor missing, got %d: %v", len(result.Capabilities), result.Capabilities)
+	}
+	// MissingAnchors should mention the stripped anchor
+	found := false
+	for _, m := range result.MissingAnchors {
+		if m == "Where skills live" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("MissingAnchors %v does not include 'Where skills live'", result.MissingAnchors)
+	}
+}
+
+// TestRecognizeClaudeCode_NoLandmarks proves an entirely empty landmark list
+// produces "anchors_missing" status (since required anchors fail) with no
+// capabilities. This is the universal "fed nothing" case.
+func TestRecognizeClaudeCode_NoLandmarks(t *testing.T) {
+	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
+		Provider:  "claude-code",
+		Format:    "markdown",
+		Landmarks: nil,
+	})
+
+	if result.Status != capmon.StatusAnchorsMissing {
+		t.Errorf("status = %q, want %q", result.Status, capmon.StatusAnchorsMissing)
+	}
+	if len(result.Capabilities) != 0 {
+		t.Errorf("expected zero capabilities, got %d", len(result.Capabilities))
+	}
+}
+
+// realClaudeCodeMcpLandmarks is a snapshot of the H2/H3 headings extracted
+// from code.claude.com/docs/en/mcp.md as of 2026-04-16. Source of truth:
+// .capmon-cache/claude-code/mcp.0/extracted.json — 51 headings across
+// transports, scopes, OAuth, env-var expansion, allowlists, resource
+// referencing, and managed configuration. Update when the doc evolves.
+var realClaudeCodeMcpLandmarks = []string{
+	"Documentation Index",
+	"Connect Claude Code to tools via MCP",
+	"What you can do with MCP",
+	"Popular MCP servers",
+	"Installing MCP servers",
+	"Option 1: Add a remote HTTP server",
+	"Option 2: Add a remote SSE server",
+	"Option 3: Add a local stdio server",
+	"Managing your servers",
+	"MCP installation scopes",
+	"Local scope",
+	"Project scope",
+	"User scope",
+	"Scope hierarchy and precedence",
+	"Environment variable expansion in .mcp.json",
+	"Authenticate with remote MCP servers",
+	"Use a fixed OAuth callback port",
+	"Use pre-configured OAuth credentials",
+	"Override OAuth metadata discovery",
+	"Use dynamic headers for custom authentication",
+	"Add MCP servers from JSON configuration",
+	"Use MCP resources",
+	"Reference MCP resources",
+	"Managed MCP configuration",
+	"Option 1: Exclusive control with managed-mcp.json",
+	"Option 2: Policy-based control with allowlists and denylists",
+	"Allowlist behavior (allowedMcpServers)",
+	"Denylist behavior (deniedMcpServers)",
+}
+
+// TestRecognizeClaudeCode_RealMcpLandmarks proves MCP recognition fires against
+// the real cache snapshot — emits 7 of 8 canonical MCP keys at "inferred"
+// confidence (auto_approve intentionally absent — Claude Code's MCP doc has no
+// per-tool/per-server auto-approval heading above the hooks/permissions layer).
+func TestRecognizeClaudeCode_RealMcpLandmarks(t *testing.T) {
+	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
+		Provider:  "claude-code",
+		Format:    "markdown",
+		Landmarks: realClaudeCodeMcpLandmarks,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["mcp.supported"] != "true" {
+		t.Error("mcp.supported missing")
+	}
+	mcpInferred := []string{
+		"transport_types",
+		"oauth_support",
+		"env_var_expansion",
+		"tool_filtering",
+		"resource_referencing",
+		"enterprise_management",
+		"marketplace",
+	}
+	for _, c := range mcpInferred {
+		key := "mcp.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["mcp.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("mcp.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	if _, has := caps["mcp.capabilities.auto_approve.supported"]; has {
+		t.Error("mcp.capabilities.auto_approve should NOT be present (no heading evidence in claude-code docs)")
+	}
+}
+
+// TestRecognizeClaudeCode_McpAnchorsMissing proves the required-anchor guard
+// suppresses MCP emission when 'MCP installation scopes' is absent — without
+// the guard, substring patterns like "Use MCP resources" could fire on any
+// content type cached from a doc that mentions MCP in passing.
+func TestRecognizeClaudeCode_McpAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realClaudeCodeMcpLandmarks))
+	for _, lm := range realClaudeCodeMcpLandmarks {
+		if lm == "MCP installation scopes" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
+		Provider:  "claude-code",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["mcp.supported"]; has {
+		t.Error("mcp.supported should NOT be present when 'MCP installation scopes' anchor is missing")
+	}
+}
+
+// realClaudeCodeAgentsLandmarks is a snapshot of the H2/H3 headings extracted
+// from code.claude.com/docs/en/sub-agents.md as of 2026-04-16. Source of
+// truth: .capmon-cache/claude-code/agents.0/extracted.json. Update when the
+// doc evolves.
+var realClaudeCodeAgentsLandmarks = []string{
+	"Documentation Index",
+	"Create custom subagents",
+	"Built-in subagents",
+	"Quickstart: create your first subagent",
+	"Configure subagents",
+	"Use the /agents command",
+	"Choose the subagent scope",
+	"Write subagent files",
+	"Supported frontmatter fields",
+	"Choose a model",
+	"Control subagent capabilities",
+	"Available tools",
+	"Restrict which subagents can be spawned",
+	"Scope MCP servers to a subagent",
+	"Permission modes",
+	"Preload skills into subagents",
+	"Enable persistent memory",
+	"Persistent memory tips",
+	"Conditional rules with hooks",
+	"Disable specific subagents",
+	"Define hooks for subagents",
+	"Hooks in subagent frontmatter",
+	"Project-level hooks for subagent events",
+	"Work with subagents",
+	"Understand automatic delegation",
+	"Invoke subagents explicitly",
+	"Run subagents in foreground or background",
+	"Common patterns",
+	"Isolate high-volume operations",
+	"Run parallel research",
+	"Chain subagents",
+	"Choose between subagents and main conversation",
+	"Manage subagent context",
+	"Resume subagents",
+	"Auto-compaction",
+	"Example subagents",
+	"Code reviewer",
+	"Debugger",
+	"Data scientist",
+	"Database query validator",
+	"Next steps",
+}
+
+// TestRecognizeClaudeCode_RealAgentsLandmarks proves agents recognition fires
+// against the real cache snapshot — emits all 7 canonical agents keys at
+// "inferred" confidence. invocation_patterns expands into 3 nested
+// sub-segments (.natural_language, .at_mention, .background); agent_scopes
+// emits as the bare key (table rows aren't surfaced as landmarks).
+func TestRecognizeClaudeCode_RealAgentsLandmarks(t *testing.T) {
+	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
+		Provider:  "claude-code",
+		Format:    "markdown",
+		Landmarks: realClaudeCodeAgentsLandmarks,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["agents.supported"] != "true" {
+		t.Error("agents.supported missing")
+	}
+	agentsInferred := []string{
+		"definition_format",
+		"tool_restrictions",
+		"invocation_patterns.natural_language",
+		"invocation_patterns.at_mention",
+		"invocation_patterns.background",
+		"agent_scopes",
+		"model_selection",
+		"per_agent_mcp",
+		"subagent_spawning",
+	}
+	for _, c := range agentsInferred {
+		key := "agents.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["agents.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("agents.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+}
+
+// TestRecognizeClaudeCode_AgentsAnchorsMissing proves the required-anchor
+// guard suppresses agents emission when 'Create custom subagents' is absent.
+func TestRecognizeClaudeCode_AgentsAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realClaudeCodeAgentsLandmarks))
+	for _, lm := range realClaudeCodeAgentsLandmarks {
+		if lm == "Create custom subagents" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("claude-code", capmon.RecognitionContext{
+		Provider:  "claude-code",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["agents.supported"]; has {
+		t.Error("agents.supported should NOT be present when 'Create custom subagents' anchor is missing")
+	}
+}

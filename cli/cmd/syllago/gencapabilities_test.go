@@ -105,9 +105,10 @@ content_types:
     provider_extensions:
       - id: cool_feature
         name: Cool Feature
-        description: "Does something cool."
+        summary: "Does something cool."
         source_ref: "https://example.com/docs#cool"
         graduation_candidate: true
+        conversion: embedded
 `
 
 const unsupportedTypeYAML = `
@@ -157,8 +158,9 @@ content_types:
     provider_extensions:
       - id: rule_ext
         name: Rule Extension
-        description: "An extension for rules."
+        summary: "An extension for rules."
         graduation_candidate: false
+        conversion: dropped
 `
 
 const extensionNoSourceRefYAML = `
@@ -175,7 +177,8 @@ content_types:
     provider_extensions:
       - id: no_ref_ext
         name: No Ref Extension
-        description: "Extension without a source_ref."
+        summary: "Extension without a source_ref."
+        conversion: dropped
 `
 
 // --- Root structure tests ---
@@ -292,7 +295,7 @@ func TestGencapabilities_ConfidenceNotEmitted(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 
 	if strings.Contains(string(raw), "confidence") {
@@ -311,7 +314,7 @@ func TestGencapabilities_GraduationCandidateNotEmitted(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 
 	if strings.Contains(string(raw), "graduation_candidate") {
@@ -330,7 +333,7 @@ func TestGencapabilities_GenerationMethodNotEmitted(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 
 	if strings.Contains(string(raw), "generation_method") {
@@ -349,7 +352,7 @@ func TestGencapabilities_ContentHashNotEmitted(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 
 	if strings.Contains(string(raw), "content_hash") {
@@ -368,7 +371,7 @@ func TestGencapabilities_FetchMethodNotEmitted(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 
 	if strings.Contains(string(raw), "fetch_method") {
@@ -440,7 +443,7 @@ func TestGencapabilities_CanonicalMappingPathsOmittedWhenEmpty(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 
 	// global_scope in the fixture has paths: [] — should be omitted via omitempty
@@ -596,7 +599,7 @@ func TestGencapabilities_AllRealProviders(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(providerFormatsDir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 	for _, forbidden := range []string{"confidence", "graduation_candidate", "generation_method", "content_hash", "fetch_method"} {
 		if strings.Contains(string(raw), forbidden) {
@@ -652,24 +655,28 @@ content_types:
     provider_extensions:
       - id: model_field
         name: Model Field
-        description: "Which model to use."
+        summary: "Which model to use."
         source_ref: "https://example.com"
         required: true
         value_type: "string"
+        conversion: embedded
+        provider_field: "model"
         examples:
           - lang: yaml
             code: "model: claude-haiku"
             note: "Fast tier."
       - id: opt_field
         name: Optional Field
-        description: "An optional thing."
+        summary: "An optional thing."
         source_ref: "https://example.com"
         required: false
+        conversion: embedded
       - id: unspec_field
         name: Unspecified Field
-        description: "Unknown required status."
+        summary: "Unknown required status."
         source_ref: "https://example.com"
         graduation_candidate: false
+        conversion: dropped
 `
 
 func TestGencapabilities_ExtensionRequiredFieldTrue(t *testing.T) {
@@ -714,7 +721,7 @@ func TestGencapabilities_ExtensionRequiredFieldNull(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 	// Encoder uses SetIndent("  ","  "), so "required": null with a space. Accept either form for robustness.
 	s := string(raw)
@@ -761,17 +768,19 @@ content_types:
     provider_extensions:
       - id: full_ext
         name: Full Extension
-        description: "Has all depth fields."
+        summary: "Has all depth fields."
         source_ref: "https://example.com"
         required: true
         value_type: "string"
+        conversion: translated
         examples:
           - lang: yaml
             code: "model: x"
       - id: bare_ext
         name: Bare Extension
-        description: "Has no depth fields."
+        summary: "Has no depth fields."
         source_ref: "https://example.com"
+        conversion: dropped
 `
 
 const extensionAllFullYAML = `
@@ -788,19 +797,21 @@ content_types:
     provider_extensions:
       - id: first
         name: First
-        description: "Fully populated."
+        summary: "Fully populated."
         source_ref: "https://example.com"
         required: false
         value_type: "bool"
+        conversion: embedded
         examples:
           - lang: yaml
             code: "enabled: true"
       - id: second
         name: Second
-        description: "Also fully populated."
+        summary: "Also fully populated."
         source_ref: "https://example.com"
         required: true
         value_type: "string"
+        conversion: translated
         examples:
           - lang: yaml
             code: "name: foo"
@@ -817,7 +828,7 @@ func TestGencapabilities_DataQualityBlockPresent(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 	if !strings.Contains(string(raw), `"data_quality"`) {
 		t.Error("manifest must contain \"data_quality\" key")
@@ -920,7 +931,7 @@ func TestGencapabilities_GraduationCandidateStillNotEmitted(t *testing.T) {
 		origSpec := canonicalKeysSpecPath
 		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
 		defer func() { canonicalKeysSpecPath = origSpec }()
-		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil) //nolint:errcheck
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
 	})
 	if strings.Contains(string(raw), "graduation_candidate") {
 		t.Error("regression: new extension fields must not re-emit 'graduation_candidate'")
@@ -966,6 +977,238 @@ func TestGencapabilities_TrackingIssueMissingSidecarIsFine(t *testing.T) {
 	}
 	if entry.TrackingIssue != "" {
 		t.Errorf("TrackingIssue should be empty without sidecar, got %q", entry.TrackingIssue)
+	}
+}
+
+// --- Phase 6 schema enrichment: provider_field, extension_id, summary, conversion ---
+
+const enrichedFieldsYAML = `
+provider: enriched
+last_fetched_at: "2026-04-16T00:00:00Z"
+last_changed_at: "2026-04-16T00:00:00Z"
+generation_method: subagent
+
+content_types:
+  skills:
+    status: supported
+    sources: []
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "yaml frontmatter key"
+        confidence: confirmed
+        provider_field: "name"
+      disable_model_invocation:
+        supported: true
+        mechanism: "yaml frontmatter key"
+        confidence: confirmed
+        provider_field: "disable-model-invocation"
+        extension_id: auto_invocation
+      project_scope:
+        supported: true
+        mechanism: "structural"
+        confidence: confirmed
+    provider_extensions:
+      - id: auto_invocation
+        name: Auto Invocation
+        summary: "Skills auto-invoke based on description match."
+        source_ref: "https://example.com#auto"
+        provider_field: "disable-model-invocation"
+        conversion: embedded
+      - id: behavioral_only
+        name: Behavioral Extension
+        summary: "Has no native field."
+        source_ref: "https://example.com#beh"
+        conversion: not-portable
+`
+
+func TestGencapabilities_MappingProviderFieldPropagated(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"enriched.yaml": enrichedFieldsYAML,
+	})
+	m := loadCapManifest(t, dir)
+
+	mappings := m.Providers["enriched"]["skills"].CanonicalMappings
+	if got := mappings["display_name"].ProviderField; got != "name" {
+		t.Errorf("display_name.provider_field = %q, want %q", got, "name")
+	}
+	if got := mappings["disable_model_invocation"].ProviderField; got != "disable-model-invocation" {
+		t.Errorf("disable_model_invocation.provider_field = %q, want %q", got, "disable-model-invocation")
+	}
+}
+
+func TestGencapabilities_MappingExtensionIDPropagated(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"enriched.yaml": enrichedFieldsYAML,
+	})
+	m := loadCapManifest(t, dir)
+
+	mappings := m.Providers["enriched"]["skills"].CanonicalMappings
+	if got := mappings["disable_model_invocation"].ExtensionID; got != "auto_invocation" {
+		t.Errorf("disable_model_invocation.extension_id = %q, want %q", got, "auto_invocation")
+	}
+}
+
+func TestGencapabilities_MappingProviderFieldOmittedWhenEmpty(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"enriched.yaml": enrichedFieldsYAML,
+	})
+	raw := captureStdout(t, func() {
+		origDir := capabilitiesProviderFormatsDir
+		capabilitiesProviderFormatsDir = dir
+		defer func() { capabilitiesProviderFormatsDir = origDir }()
+		origSpec := canonicalKeysSpecPath
+		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
+		defer func() { canonicalKeysSpecPath = origSpec }()
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
+	})
+
+	// project_scope has no provider_field — must be omitted via omitempty
+	var doc map[string]interface{}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	prov := doc["providers"].(map[string]interface{})["enriched"].(map[string]interface{})
+	skills := prov["skills"].(map[string]interface{})
+	mappings := skills["canonical_mappings"].(map[string]interface{})
+	ps := mappings["project_scope"].(map[string]interface{})
+	if _, has := ps["provider_field"]; has {
+		t.Error("project_scope has provider_field but it should be omitted when empty")
+	}
+	if _, has := ps["extension_id"]; has {
+		t.Error("project_scope has extension_id but it should be omitted when empty")
+	}
+}
+
+func TestGencapabilities_ExtensionSummaryPropagated(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"enriched.yaml": enrichedFieldsYAML,
+	})
+	m := loadCapManifest(t, dir)
+
+	exts := m.Providers["enriched"]["skills"].ProviderExtensions
+	if len(exts) != 2 {
+		t.Fatalf("extensions count = %d, want 2", len(exts))
+	}
+	if exts[0].Summary != "Skills auto-invoke based on description match." {
+		t.Errorf("exts[0].Summary = %q", exts[0].Summary)
+	}
+	if exts[1].Summary != "Has no native field." {
+		t.Errorf("exts[1].Summary = %q", exts[1].Summary)
+	}
+}
+
+func TestGencapabilities_ExtensionProviderFieldPropagated(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"enriched.yaml": enrichedFieldsYAML,
+	})
+	m := loadCapManifest(t, dir)
+
+	exts := m.Providers["enriched"]["skills"].ProviderExtensions
+	if exts[0].ProviderField != "disable-model-invocation" {
+		t.Errorf("exts[0].ProviderField = %q, want %q", exts[0].ProviderField, "disable-model-invocation")
+	}
+	if exts[1].ProviderField != "" {
+		t.Errorf("exts[1].ProviderField = %q, want empty (behavioral extension)", exts[1].ProviderField)
+	}
+}
+
+func TestGencapabilities_ExtensionConversionPropagated(t *testing.T) {
+	dir := capFixtureDir(t, map[string]string{
+		"enriched.yaml": enrichedFieldsYAML,
+	})
+	m := loadCapManifest(t, dir)
+
+	exts := m.Providers["enriched"]["skills"].ProviderExtensions
+	if exts[0].Conversion != "embedded" {
+		t.Errorf("exts[0].Conversion = %q, want %q", exts[0].Conversion, "embedded")
+	}
+	if exts[1].Conversion != "not-portable" {
+		t.Errorf("exts[1].Conversion = %q, want %q", exts[1].Conversion, "not-portable")
+	}
+}
+
+// TestGencapabilities_ExtensionConversionAlwaysEmitted verifies that conversion
+// is emitted as the empty string when missing — never via omitempty. The
+// validator (Rule 3) requires conversion on every extension; an empty value in
+// JSON output is a visible signal of missing data, not a silently-omitted field.
+func TestGencapabilities_ExtensionConversionAlwaysEmitted(t *testing.T) {
+	const noConversionYAML = `
+provider: missing-conversion
+last_fetched_at: "2026-04-16T00:00:00Z"
+last_changed_at: "2026-04-16T00:00:00Z"
+
+content_types:
+  skills:
+    status: supported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions:
+      - id: bare
+        name: Bare
+        summary: "Forgot to set conversion."
+`
+	dir := capFixtureDir(t, map[string]string{
+		"missing-conversion.yaml": noConversionYAML,
+	})
+	raw := captureStdout(t, func() {
+		origDir := capabilitiesProviderFormatsDir
+		capabilitiesProviderFormatsDir = dir
+		defer func() { capabilitiesProviderFormatsDir = origDir }()
+		origSpec := canonicalKeysSpecPath
+		canonicalKeysSpecPath = filepath.Join(filepath.Dir(dir), "spec", "canonical-keys.yaml")
+		defer func() { canonicalKeysSpecPath = origSpec }()
+		gencapabilitiesCmd.RunE(gencapabilitiesCmd, nil)
+	})
+
+	s := string(raw)
+	if !strings.Contains(s, `"conversion": ""`) && !strings.Contains(s, `"conversion":""`) {
+		t.Error("missing conversion must emit \"conversion\": \"\" — not omitted via omitempty")
+	}
+}
+
+// TestGencapabilities_RealClaudeCodeHasEnrichedFields verifies that the real
+// docs/provider-formats/claude-code.yaml carries the new enrichment fields all
+// the way to JSON output. Guards against regressions in the field propagation
+// path without requiring a full integration roundtrip.
+func TestGencapabilities_RealClaudeCodeHasEnrichedFields(t *testing.T) {
+	repoRoot := findRepoRoot(t)
+	providerFormatsDir := filepath.Join(repoRoot, "docs", "provider-formats")
+	if _, err := os.Stat(providerFormatsDir); os.IsNotExist(err) {
+		t.Skip("docs/provider-formats not found")
+	}
+
+	m := loadCapManifest(t, providerFormatsDir)
+	skills := m.Providers["claude-code"]["skills"]
+
+	// At least one extension should have a non-empty summary AND conversion.
+	var sawSummary, sawConversion bool
+	for _, ext := range skills.ProviderExtensions {
+		if ext.Summary != "" {
+			sawSummary = true
+		}
+		if ext.Conversion != "" {
+			sawConversion = true
+		}
+	}
+	if !sawSummary {
+		t.Error("claude-code skills extensions all have empty summary — enrichment missing")
+	}
+	if !sawConversion {
+		t.Error("claude-code skills extensions all have empty conversion — enrichment missing")
+	}
+
+	// At least one extension should have a non-empty provider_field
+	// (claude-code skills has many: disable-model-invocation, model, etc.)
+	var sawProviderField bool
+	for _, ext := range skills.ProviderExtensions {
+		if ext.ProviderField != "" {
+			sawProviderField = true
+			break
+		}
+	}
+	if !sawProviderField {
+		t.Error("claude-code skills extensions have no provider_field — enrichment missing")
 	}
 }
 

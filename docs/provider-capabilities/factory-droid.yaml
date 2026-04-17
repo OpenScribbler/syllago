@@ -2,4 +2,60 @@ schema_version: "1"
 slug: factory-droid
 display_name: ""
 last_verified: ""
-content_types: {}
+content_types:
+  agents:
+    supported: true
+    capabilities:
+      definition_format:
+        supported: true
+        mechanism: single-file .md droids with system prompt, model preference, and tooling policy documented under 'Configuration' heading
+        confidence: inferred
+      tool_restrictions:
+        supported: true
+        mechanism: categorical tool policy using named categories (filesystem, shell, search, browser, web_fetch) documented under 'Tool categories → concrete tools' heading
+        confidence: inferred
+  commands:
+    supported: true
+    capabilities:
+      argument_substitution:
+        supported: true
+        mechanism: $ARGUMENTS substitution in Markdown commands plus positional shell args ($1, $2, ...) in Executable commands documented under '2 · Markdown commands' / '3 · Executable commands' / '5 · Usage patterns' headings
+        confidence: inferred
+  hooks:
+    supported: true
+    capabilities:
+      decision_control:
+        supported: true
+        mechanism: 'hook_exit_code_behavior: Factory Droid hooks use exit codes to signal block (non-zero) or allow (zero) decisions on the triggering action; documented under per-event ''Decision Control'' headings'
+        confidence: inferred
+  skills:
+    supported: true
+    capabilities:
+      canonical_filename:
+        supported: true
+        mechanism: SKILL.md (skill.mdx also accepted)
+        confidence: confirmed
+      creation_workflow:
+        supported: true
+        mechanism: documented under 'Quickstart' heading
+        confidence: inferred
+      directory_structure:
+        supported: true
+        mechanism: documented under 'Where skills live' heading
+        confidence: inferred
+      frontmatter:
+        supported: true
+        mechanism: documented under 'Frontmatter reference' heading
+        confidence: inferred
+      global_scope:
+        supported: true
+        mechanism: ~/.factory/skills/<skill-name>/SKILL.md
+        confidence: confirmed
+      invocation:
+        supported: true
+        mechanism: documented under 'Control who invokes a skill' heading
+        confidence: inferred
+      project_scope:
+        supported: true
+        mechanism: <repo>/.factory/skills/<skill-name>/SKILL.md or .agent/skills/<skill-name>/SKILL.md
+        confidence: confirmed

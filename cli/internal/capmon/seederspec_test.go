@@ -68,9 +68,20 @@ func TestLoadSeederSpec_Valid(t *testing.T) {
 }
 
 func TestSeederSpecPath(t *testing.T) {
-	got := capmon.SeederSpecPath("/some/dir", "my-provider")
-	want := "/some/dir/my-provider-skills.yaml"
-	if got != want {
-		t.Errorf("SeederSpecPath: got %q, want %q", got, want)
+	cases := []struct {
+		provider    string
+		contentType string
+		want        string
+	}{
+		{"my-provider", "skills", "/some/dir/my-provider-skills.yaml"},
+		{"my-provider", "rules", "/some/dir/my-provider-rules.yaml"},
+		{"my-provider", "agents", "/some/dir/my-provider-agents.yaml"},
+	}
+	for _, tc := range cases {
+		got := capmon.SeederSpecPath("/some/dir", tc.provider, tc.contentType)
+		if got != tc.want {
+			t.Errorf("SeederSpecPath(%q, %q, %q): got %q, want %q",
+				"/some/dir", tc.provider, tc.contentType, got, tc.want)
+		}
 	}
 }

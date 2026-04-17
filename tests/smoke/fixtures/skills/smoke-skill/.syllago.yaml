@@ -1,0 +1,6 @@
+id: smoke-skill
+name: smoke-skill
+description: Test skill used by tests/smoke/.
+tags:
+  - smoke-test
+  - internal

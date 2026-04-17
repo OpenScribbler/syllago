@@ -57,8 +57,37 @@ If the user provides a custom version via "Other", validate it's greater than cu
    - **Improvements**, **Security**, **Bug Fixes**: Only include sections with content
    - **Stats**: Files changed, insertions, deletions
    - Omit empty sections entirely
-   - **Never include internal labels.** Release notes are user-facing. Before showing the draft, scrub all internal tokens: beads issue codes (`D1`, `D13`, `D14-delta`, `D16`), task IDs (`T7-T16`, `T27`, `V4`, `V5`), beads slugs (`syllago-jtafb`, `beads-xxx`), epic names, and delta/phase markers that only make sense internally (`D14-delta`, `Phase 2-b`, etc.). If you find yourself copying a label from a commit message or an issue tracker, describe what changed for the user instead of naming the work item. `Phase 1` or `Phase 2` is acceptable only when the user-facing feature genuinely ships in phases and the numbering aids understanding.
-4. Show the draft to the user
+   - **Write straightforward, fact-based descriptions of what changed.** Release notes are read by users and contributors who do not work on syllago internals every day. Anything that requires having watched the development process to understand does not belong.
+
+   **Strip every form of internal jargon. Forbidden examples:**
+
+   | Forbidden | Why | Write instead |
+   |-----------|-----|---------------|
+   | `Phase 6`, `Phase 2-b`, `Epic 5`, `Epic 6 (commands)` | Internal project structure — users do not know phases or epics exist | "Provider capability data is now complete for ..." |
+   | `D1`, `D13`, `D14-delta`, `T7-T16`, `T27`, `V4`, `V5` | Beads issue codes and task IDs | Describe the actual change |
+   | `syllago-jtafb`, `beads-xxx`, `PR3/9` | Beads slugs and internal PR numbering | Describe the actual change |
+   | `delta`, `delta marker`, `the X-delta` | Internal change-tracking labels | Describe the actual change |
+   | `Capmon Phase 6`, `Phase 6 work`, `the Phase 6 sweep` | Project-internal phasing language | "Capability data updates" or describe the user-facing effect |
+   | `landmark recognition`, `typed-source recognition`, `GoStruct extraction`, `required-anchor uniqueness gate`, `skip-rationale doc-comment block`, `drift guard`, `seeder spec` | Recognition-pipeline implementation vocabulary | Describe what the user sees: more accurate capability data, broader provider coverage, etc. |
+   | `(N of M keys)`, `landmark counts`, `452 emissions`, `recognition emissions` | Internal metrics that mean nothing to users | Either omit or translate to coverage statements ("all 14 providers") |
+   | Internal commit-type breakdowns like `(56 feat, 13 docs, 7 fix)` | Conventional-commit metadata, not features | Omit; the commit count is enough |
+   | `auto-issue escalation`, `heal failures`, `confidence-confirmed sweep` | Internal infrastructure terms | Describe the user-visible behavior, or omit |
+
+   **Test:** Read each line aloud. If a brand-new user of syllago could not understand what changed without asking "what is X?", rewrite it. If you find yourself copying a label from a commit message, an issue title, or a planning doc, stop and describe what actually changed for the user.
+
+   **Phase / epic language is banned entirely.** Even when a feature genuinely shipped in stages, do not say so in release notes. Each release stands on its own — describe what is true now, not how the work was organized internally.
+
+   **Subcommand names are fine.** `syllago capmon generate` is a real CLI command users invoke. Reference it directly. The internal phrase "the capmon pipeline" is not — say what the pipeline produces (capability data, validation, etc.).
+
+4. **Audit pass.** Before showing the draft, run a grep over the file:
+
+   ```bash
+   grep -nE "Phase ?[0-9]|Epic ?[0-9]|D[0-9]+|T[0-9]+-T[0-9]+|delta|syllago-[a-z0-9]{4,}|beads-[a-z0-9]+|V[0-9]|PR[0-9]+/[0-9]+|landmark|GoStruct|seeder|recognition emissions" releases/v<version>.md
+   ```
+
+   If any line matches, rewrite it before showing the user. Empty output means the draft is clean.
+
+5. Show the draft to the user
 
 ### Step 4: Approve Notes
 

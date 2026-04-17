@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/capmon"
+	"github.com/OpenScribbler/syllago/cli/internal/capmon/capyaml"
 )
 
 func TestSeedProviderCapabilities_Idempotent(t *testing.T) {
@@ -149,6 +150,81 @@ func TestSeedCrushAndRooCodeE2E(t *testing.T) {
 				t.Errorf("%s: output YAML missing 'canonical_filename'\n%s", provider, out)
 			}
 		})
+	}
+}
+
+// TestSeedProviderCapabilities_NestedSubCapabilities verifies that 5-segment
+// dot-paths for object-typed canonical keys (activation_mode,
+// cross_provider_recognition) round-trip through write and load with their
+// nested structure intact. The parent CapabilityEntry's Supported flag must
+// be auto-set to true when any sub-capability is added.
+func TestSeedProviderCapabilities_NestedSubCapabilities(t *testing.T) {
+	capsDir := t.TempDir()
+	seedOpts := capmon.SeedOptions{
+		CapsDir:  capsDir,
+		Provider: "test-provider",
+		Extracted: map[string]string{
+			"rules.supported": "true",
+			"rules.capabilities.activation_mode.always_on.supported":          "true",
+			"rules.capabilities.activation_mode.always_on.mechanism":          "rules without conditionals load every request",
+			"rules.capabilities.activation_mode.always_on.confidence":         "inferred",
+			"rules.capabilities.activation_mode.frontmatter_globs.supported":  "true",
+			"rules.capabilities.activation_mode.frontmatter_globs.mechanism":  "glob-based path matching",
+			"rules.capabilities.activation_mode.frontmatter_globs.confidence": "inferred",
+		},
+	}
+	if err := capmon.SeedProviderCapabilities(seedOpts); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	path := filepath.Join(capsDir, "test-provider.yaml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read output: %v", err)
+	}
+	out := string(data)
+	for _, want := range []string{
+		"activation_mode:",
+		"always_on:",
+		"frontmatter_globs:",
+		"glob-based path matching",
+		"confidence: inferred",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output missing %q\nFull output:\n%s", want, out)
+		}
+	}
+	// Round-trip through Load: the nested map must rehydrate
+	caps, err := capyaml.LoadCapabilityYAML(path)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	rules, ok := caps.ContentTypes["rules"]
+	if !ok {
+		t.Fatal("rules content type missing after round-trip")
+	}
+	am, ok := rules.Capabilities["activation_mode"]
+	if !ok {
+		t.Fatal("activation_mode capability missing after round-trip")
+	}
+	if !am.Supported {
+		t.Error("activation_mode parent.Supported should be auto-set to true")
+	}
+	if len(am.Capabilities) != 2 {
+		t.Fatalf("expected 2 sub-capabilities, got %d: %v", len(am.Capabilities), am.Capabilities)
+	}
+	always := am.Capabilities["always_on"]
+	if !always.Supported {
+		t.Error("always_on.supported should be true")
+	}
+	if always.Confidence != "inferred" {
+		t.Errorf("always_on.confidence = %q, want %q", always.Confidence, "inferred")
+	}
+	if always.Mechanism == "" {
+		t.Error("always_on.mechanism should be populated")
+	}
+	globs := am.Capabilities["frontmatter_globs"]
+	if !globs.Supported {
+		t.Error("frontmatter_globs.supported should be true")
 	}
 }
 
