@@ -167,6 +167,102 @@ func TestRecognizeFactoryDroid_RealHooksLandmarks(t *testing.T) {
 	}
 }
 
+// realFactoryDroidAgentsLandmarks is a snapshot of the headings extracted from
+// Factory Droid's "Custom Droids (Subagents)" doc
+// (.capmon-cache/factory-droid/agents.0/extracted.json) as of 2026-04-17.
+// Mintlify zero-width space prefix on H2/H3/H4 entries handled transparently
+// by substring matchers.
+var realFactoryDroidAgentsLandmarks = []string{
+	"Custom Droids (Subagents)",
+	"\u200b1 · What are custom droids?",
+	"\u200b2 · Why use them?",
+	"\u200b3 · Quick start",
+	"\u200b4 · Configuration",
+	"\u200bTool categories → concrete tools",
+	"\u200b5 · Managing droids in the UI",
+	"\u200b5.5 · Importing Claude Code subagents",
+	"\u200bHow to import",
+	"\u200bWhat happens during import",
+	"\u200bExample import flow",
+	"\u200bHandling tool validation errors",
+	"\u200b6 · Using custom droids effectively",
+	"\u200b7 · Examples",
+	"\u200bCode reviewer (project scope)",
+	"\u200bSecurity sweeper (personal scope)",
+	"\u200bTask coordinator (with live progress)",
+}
+
+// TestRecognizeFactoryDroid_RealAgentsLandmarks proves agents recognition
+// emits 2 canonical agents keys at "inferred" confidence: definition_format
+// and tool_restrictions. The other 5 (invocation_patterns, agent_scopes,
+// model_selection, per_agent_mcp, subagent_spawning) must NOT be emitted —
+// no heading-level evidence in the agents doc, even though the curator marks
+// most of them supported from broader source knowledge.
+//
+// Test merges skills + hooks + agents fixtures to mirror real-world cache
+// merging — the agents recognizer must distinguish its capabilities from
+// the others via the required-anchor uniqueness gate.
+func TestRecognizeFactoryDroid_RealAgentsLandmarks(t *testing.T) {
+	merged := append([]string{}, realFactoryDroidLandmarks...)
+	merged = append(merged, realFactoryDroidHooksLandmarks...)
+	merged = append(merged, realFactoryDroidAgentsLandmarks...)
+	result := capmon.RecognizeWithContext("factory-droid", capmon.RecognitionContext{
+		Provider:  "factory-droid",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["agents.supported"] != "true" {
+		t.Error("agents.supported missing")
+	}
+	for _, c := range []string{"definition_format", "tool_restrictions"} {
+		key := "agents.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["agents.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("agents.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"agents.capabilities.invocation_patterns.supported",
+		"agents.capabilities.agent_scopes.supported",
+		"agents.capabilities.model_selection.supported",
+		"agents.capabilities.per_agent_mcp.supported",
+		"agents.capabilities.subagent_spawning.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present (no heading evidence; curator-only)", absent)
+		}
+	}
+}
+
+// TestRecognizeFactoryDroid_AgentsAnchorsMissing proves the required-anchor
+// guard suppresses agents emission when "Tool categories" is absent —
+// preventing agents patterns from firing on contexts that mention only the
+// parent "Custom Droids" landmark.
+func TestRecognizeFactoryDroid_AgentsAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realFactoryDroidAgentsLandmarks))
+	for _, lm := range realFactoryDroidAgentsLandmarks {
+		if lm == "\u200bTool categories → concrete tools" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("factory-droid", capmon.RecognitionContext{
+		Provider:  "factory-droid",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["agents.supported"]; has {
+		t.Error("agents.supported should NOT be present when 'Tool categories' anchor is missing")
+	}
+}
+
 // TestRecognizeFactoryDroid_HooksAnchorsMissing proves the required-anchor
 // guard suppresses hooks emission when "Hooks reference" is absent — without
 // the guard, the substring "Decision Control" pattern would fire on any
