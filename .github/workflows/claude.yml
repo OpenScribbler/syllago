@@ -43,7 +43,7 @@ jobs:
 
       - name: Run Claude Code
         id: claude
-        uses: anthropics/claude-code-action@3ac52d0da9f8ec9ca7b4dc23bb477e36ef9c77a9 # v1
+        uses: anthropics/claude-code-action@5fb899572b81d2bb648d4d187173a2f423a9677c # v1
         with:
           claude_code_oauth_token: ${{ steps.aembit.outputs.api-key }}
 
