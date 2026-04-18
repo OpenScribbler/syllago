@@ -7,6 +7,16 @@ import (
 	"time"
 )
 
+// Test fixtures: valid-format sha256 digests (64 hex chars). The exact bytes
+// don't matter — only the shape is validated by ParseManifest.
+const (
+	testHashA   = "sha256:" + "1111111111111111111111111111111111111111111111111111111111111111"
+	testHashB   = "sha256:" + "2222222222222222222222222222222222222222222222222222222222222222"
+	testHashC   = "sha256:" + "3333333333333333333333333333333333333333333333333333333333333333"
+	testHashD   = "sha256:" + "4444444444444444444444444444444444444444444444444444444444444444"
+	testHashBad = "sha256:" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+)
+
 // minimalManifestJSON is the smallest spec-conformant manifest — used as
 // the baseline for validation tests that mutate one field at a time.
 const minimalManifestJSON = `{
@@ -74,7 +84,7 @@ func TestParseManifest_FullExample(t *testing.T) {
       "name": "my-skill",
       "display_name": "My Skill",
       "type": "skill",
-      "content_hash": "sha256:abc123",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
       "source_uri": "https://github.com/owner/repo",
       "attested_at": "2026-04-08T00:00:00Z",
       "private_repo": false,
@@ -83,7 +93,7 @@ func TestParseManifest_FullExample(t *testing.T) {
   ],
   "revocations": [
     {
-      "content_hash": "sha256:badbad",
+      "content_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "reason": "malicious",
       "details_url": "https://example.com/revocations/1"
     }
@@ -100,7 +110,7 @@ func TestParseManifest_FullExample(t *testing.T) {
 		t.Fatalf("Content len = %d; want 1", len(m.Content))
 	}
 	got := m.Content[0]
-	if got.Name != "my-skill" || got.Type != "skill" || got.ContentHash != "sha256:abc123" {
+	if got.Name != "my-skill" || got.Type != "skill" || got.ContentHash != testHashA {
 		t.Errorf("content[0] fields unexpected: %+v", got)
 	}
 	if got.RekorLogIndex == nil || *got.RekorLogIndex != 1336116369 {
@@ -129,7 +139,7 @@ func TestParseManifest_TrustTiers(t *testing.T) {
 			name: "unsigned_no_rekor",
 			entryJSON: `{
       "name": "item", "display_name": "Item", "type": "skill",
-      "content_hash": "sha256:abc", "source_uri": "https://example.com/r",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "https://example.com/r",
       "attested_at": "2026-04-08T00:00:00Z", "private_repo": false
     }`,
 			wantTier:   TrustTierUnsigned,
@@ -139,7 +149,7 @@ func TestParseManifest_TrustTiers(t *testing.T) {
 			name: "signed_rekor_only",
 			entryJSON: `{
       "name": "item", "display_name": "Item", "type": "skill",
-      "content_hash": "sha256:abc", "source_uri": "https://example.com/r",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "https://example.com/r",
       "attested_at": "2026-04-08T00:00:00Z", "private_repo": false,
       "rekor_log_index": 42
     }`,
@@ -150,7 +160,7 @@ func TestParseManifest_TrustTiers(t *testing.T) {
 			name: "dual_attested_rekor_and_profile",
 			entryJSON: `{
       "name": "item", "display_name": "Item", "type": "skill",
-      "content_hash": "sha256:abc", "source_uri": "https://example.com/r",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "https://example.com/r",
       "attested_at": "2026-04-08T00:00:00Z", "private_repo": false,
       "rekor_log_index": 42,
       "signing_profile": {
@@ -294,7 +304,7 @@ func TestParseManifest_ContentEntryValidation(t *testing.T) {
 			name: "unknown_type",
 			entry: `{
       "name": "x", "display_name": "X", "type": "widget",
-      "content_hash": "sha256:abc", "source_uri": "u",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "u",
       "attested_at": "2026-04-08T00:00:00Z", "private_repo": false
     }`,
 			wantErrSubs: "closed set",
@@ -312,7 +322,7 @@ func TestParseManifest_ContentEntryValidation(t *testing.T) {
 			name: "signing_profile_without_rekor",
 			entry: `{
       "name": "x", "display_name": "X", "type": "skill",
-      "content_hash": "sha256:abc", "source_uri": "u",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "u",
       "attested_at": "2026-04-08T00:00:00Z", "private_repo": false,
       "signing_profile": {"issuer": "i", "subject": "s"}
     }`,
@@ -322,7 +332,7 @@ func TestParseManifest_ContentEntryValidation(t *testing.T) {
 			name: "signing_profile_missing_subject",
 			entry: `{
       "name": "x", "display_name": "X", "type": "skill",
-      "content_hash": "sha256:abc", "source_uri": "u",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "u",
       "attested_at": "2026-04-08T00:00:00Z", "private_repo": false,
       "rekor_log_index": 1,
       "signing_profile": {"issuer": "i"}
@@ -355,12 +365,12 @@ func TestParseManifest_NameTypeUniqueness(t *testing.T) {
 
 	const duplicate = `{
       "name": "dup", "display_name": "Dup", "type": "skill",
-      "content_hash": "sha256:abc", "source_uri": "u",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "u",
       "attested_at": "2026-04-08T00:00:00Z", "private_repo": false
     },
     {
       "name": "dup", "display_name": "Dup Again", "type": "skill",
-      "content_hash": "sha256:def", "source_uri": "u",
+      "content_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "source_uri": "u",
       "attested_at": "2026-04-08T00:00:00Z", "private_repo": false
     }`
 	data := buildManifest(t, duplicate)
@@ -375,12 +385,12 @@ func TestParseManifest_NameTypeUniqueness(t *testing.T) {
 	// Same name with different type MUST be allowed.
 	const sameNameDiffType = `{
       "name": "twin", "display_name": "Twin Skill", "type": "skill",
-      "content_hash": "sha256:abc", "source_uri": "u",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "u",
       "attested_at": "2026-04-08T00:00:00Z", "private_repo": false
     },
     {
       "name": "twin", "display_name": "Twin Agent", "type": "agent",
-      "content_hash": "sha256:def", "source_uri": "u",
+      "content_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "source_uri": "u",
       "attested_at": "2026-04-08T00:00:00Z", "private_repo": false
     }`
 	data = buildManifest(t, sameNameDiffType)
@@ -411,17 +421,17 @@ func TestParseManifest_RevocationValidation(t *testing.T) {
 		},
 		{
 			name:        "unknown_reason",
-			rev:         `{"content_hash": "sha256:abc", "reason": "vibes", "details_url": "https://x/1"}`,
+			rev:         `{"content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "reason": "vibes", "details_url": "https://x/1"}`,
 			wantErrSubs: "closed set",
 		},
 		{
 			name:        "missing_details_url_registry_source",
-			rev:         `{"content_hash": "sha256:abc", "reason": "malicious"}`,
+			rev:         `{"content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "reason": "malicious"}`,
 			wantErrSubs: "details_url",
 		},
 		{
 			name:        "unknown_source",
-			rev:         `{"content_hash": "sha256:abc", "reason": "malicious", "details_url": "https://x/1", "source": "publisher2"}`,
+			rev:         `{"content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "reason": "malicious", "details_url": "https://x/1", "source": "publisher2"}`,
 			wantErrSubs: "publisher2",
 		},
 	}
@@ -485,7 +495,7 @@ func TestParseManifest_UnknownFieldsForwardCompat(t *testing.T) {
   "content": [
     {
       "name": "x", "display_name": "X", "type": "skill",
-      "content_hash": "sha256:abc", "source_uri": "u",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "u",
       "attested_at": "2026-04-08T00:00:00Z", "private_repo": false,
       "future_annotation": "reserved"
     }

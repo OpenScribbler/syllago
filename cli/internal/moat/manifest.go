@@ -243,6 +243,9 @@ func (c *ContentEntry) validate(idx int) error {
 	if c.ContentHash == "" {
 		return fmt.Errorf("manifest content[%d] (%s): missing required field: content_hash", idx, c.Name)
 	}
+	if _, _, err := ParseContentHash(c.ContentHash); err != nil {
+		return fmt.Errorf("manifest content[%d] (%s): %w", idx, c.Name, err)
+	}
 	if c.SourceURI == "" {
 		return fmt.Errorf("manifest content[%d] (%s): missing required field: source_uri", idx, c.Name)
 	}
@@ -265,6 +268,9 @@ func (c *ContentEntry) validate(idx int) error {
 func (r *Revocation) validate(idx int) error {
 	if r.ContentHash == "" {
 		return fmt.Errorf("manifest revocations[%d]: missing required field: content_hash", idx)
+	}
+	if _, _, err := ParseContentHash(r.ContentHash); err != nil {
+		return fmt.Errorf("manifest revocations[%d]: %w", idx, err)
 	}
 	if !validRevocationReasons[r.Reason] {
 		return fmt.Errorf("manifest revocations[%d]: reason %q not in closed set {malicious, compromised, deprecated, policy_violation}",
