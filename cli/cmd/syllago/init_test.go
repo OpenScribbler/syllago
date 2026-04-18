@@ -8,10 +8,203 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
+
+// writeBuiltinSkill creates a shared-content skill at <projectRoot>/skills/<name>/
+// tagged as "builtin" via .syllago.yaml so catalog.Scan treats it as a builtin.
+func writeBuiltinSkill(t *testing.T, projectRoot, name string) string {
+	t.Helper()
+	dir := filepath.Join(projectRoot, "skills", name)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	skill := "---\nname: " + name + "\ndescription: builtin test skill\n---\n# " + name + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(skill), 0644); err != nil {
+		t.Fatal(err)
+	}
+	meta := "id: " + name + "\nname: " + name + "\ntags:\n  - builtin\n"
+	if err := os.WriteFile(filepath.Join(dir, ".syllago.yaml"), []byte(meta), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+// writePlainSkill creates an un-tagged (non-builtin) skill for negative fixtures.
+func writePlainSkill(t *testing.T, projectRoot, name string) string {
+	t.Helper()
+	dir := filepath.Join(projectRoot, "skills", name)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	skill := "---\nname: " + name + "\ndescription: plain test skill\n---\n# " + name + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(skill), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+// testSkillsProvider builds a provider stub that installs skills under
+// <home>/.test-provider/skills/ for use in installBuiltins tests.
+func testSkillsProvider() provider.Provider {
+	return provider.Provider{
+		Name: "Test Provider",
+		Slug: "test-provider",
+		InstallDir: func(home string, ct catalog.ContentType) string {
+			if ct == catalog.Skills {
+				return filepath.Join(home, ".test-provider", "skills")
+			}
+			return ""
+		},
+		SupportsType: func(ct catalog.ContentType) bool {
+			return ct == catalog.Skills
+		},
+		Detected: true,
+	}
+}
+
+func TestInstallBuiltins_NoBuiltinsReturnsNil(t *testing.T) {
+	repo := t.TempDir()
+	writePlainSkill(t, repo, "not-builtin")
+
+	// Bypass the Scanln prompt regardless of interactivity.
+	initCmd.Flags().Set("yes", "true")
+	defer initCmd.Flags().Set("yes", "false")
+
+	result := installBuiltins(initCmd, repo, []provider.Provider{testSkillsProvider()})
+	if result != nil {
+		t.Errorf("expected nil when no builtins are tagged, got %v", result)
+	}
+}
+
+func TestInstallBuiltins_InstallsTaggedBuiltin(t *testing.T) {
+	repo := t.TempDir()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	writeBuiltinSkill(t, repo, "alpha")
+
+	initCmd.Flags().Set("yes", "true")
+	defer initCmd.Flags().Set("yes", "false")
+
+	result := installBuiltins(initCmd, repo, []provider.Provider{testSkillsProvider()})
+	if len(result) != 1 {
+		t.Fatalf("expected 1 installed item, got %d: %v", len(result), result)
+	}
+	if result[0].Name != "alpha" {
+		t.Errorf("installed Name = %q, want %q", result[0].Name, "alpha")
+	}
+	if result[0].Provider != "test-provider" {
+		t.Errorf("installed Provider = %q, want %q", result[0].Provider, "test-provider")
+	}
+
+	target := filepath.Join(home, ".test-provider", "skills", "alpha")
+	if _, err := os.Lstat(target); err != nil {
+		t.Errorf("expected install target at %s: %v", target, err)
+	}
+}
+
+func TestInstallBuiltins_SkipsWhenAlreadyInstalled(t *testing.T) {
+	repo := t.TempDir()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	writeBuiltinSkill(t, repo, "beta")
+
+	// Pre-create the target so CheckStatus returns StatusInstalled.
+	targetDir := filepath.Join(home, ".test-provider", "skills")
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(targetDir, "beta"), []byte("already"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	initCmd.Flags().Set("yes", "true")
+	defer initCmd.Flags().Set("yes", "false")
+
+	result := installBuiltins(initCmd, repo, []provider.Provider{testSkillsProvider()})
+	if len(result) != 0 {
+		t.Errorf("expected 0 installs when already installed, got %d: %v", len(result), result)
+	}
+}
+
+func TestInstallBuiltins_SkipsProviderWithoutSupport(t *testing.T) {
+	repo := t.TempDir()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	writeBuiltinSkill(t, repo, "gamma")
+
+	// Provider stub that returns no install dir for Skills → StatusNotAvailable.
+	noSkillProv := provider.Provider{
+		Name: "No-Skills Provider",
+		Slug: "no-skills",
+		InstallDir: func(home string, ct catalog.ContentType) string {
+			return ""
+		},
+		SupportsType: func(ct catalog.ContentType) bool {
+			return false
+		},
+		Detected: true,
+	}
+
+	initCmd.Flags().Set("yes", "true")
+	defer initCmd.Flags().Set("yes", "false")
+
+	result := installBuiltins(initCmd, repo, []provider.Provider{noSkillProv})
+	if len(result) != 0 {
+		t.Errorf("expected 0 installs when provider does not support Skills, got %d: %v", len(result), result)
+	}
+}
+
+func TestInstallBuiltins_ContinuesPastInstallError(t *testing.T) {
+	repo := t.TempDir()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	writeBuiltinSkill(t, repo, "epsilon")
+
+	// Block symlink creation by placing a regular file where the install
+	// dir's parent should be — MkdirAll will fail with "not a directory".
+	blocker := filepath.Join(home, ".test-provider")
+	if err := os.WriteFile(blocker, []byte("not-a-dir"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	initCmd.Flags().Set("yes", "true")
+	defer initCmd.Flags().Set("yes", "false")
+
+	result := installBuiltins(initCmd, repo, []provider.Provider{testSkillsProvider()})
+	if len(result) != 0 {
+		t.Errorf("expected 0 installs when install fails, got %d: %v", len(result), result)
+	}
+}
+
+func TestInstallBuiltins_JSONModeSkipsPrompt(t *testing.T) {
+	repo := t.TempDir()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	writeBuiltinSkill(t, repo, "delta")
+
+	// JSON output mode bypasses the interactive prompt even without --yes.
+	initCmd.Flags().Set("yes", "false")
+	defer initCmd.Flags().Set("yes", "false")
+
+	origJSON := output.JSON
+	output.JSON = true
+	t.Cleanup(func() { output.JSON = origJSON })
+
+	result := installBuiltins(initCmd, repo, []provider.Provider{testSkillsProvider()})
+	if len(result) != 1 {
+		t.Errorf("expected 1 install in JSON mode, got %d: %v", len(result), result)
+	}
+}
 
 func TestEnsureGlobalContentDir_CreatesDirectory(t *testing.T) {
 	tmp := t.TempDir()
