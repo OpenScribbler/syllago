@@ -27,6 +27,7 @@ gendocs: build
 	./$(OUTPUT) _genproviders > providers.json
 	./$(OUTPUT) _gentelemetry > telemetry.json
 	./$(OUTPUT) _gencontentformat > content-format.json
+	./$(OUTPUT) _genyamlschema > syllago-yaml-schema.json
 
 clean:
 	rm -f $(BINARY) $(BINARY).exe $(BINARY)-* syl syl.exe
