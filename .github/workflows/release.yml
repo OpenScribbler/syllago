@@ -42,7 +42,7 @@ jobs:
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o syllago-windows-amd64.exe ./cmd/syllago
           CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build -ldflags "$LDFLAGS" -o syllago-windows-arm64.exe ./cmd/syllago
 
-      - name: Generate commands.json, providers.json, telemetry.json, and capabilities.json
+      - name: Generate commands.json, providers.json, telemetry.json, capabilities.json, and content-format.json
         working-directory: cli
         run: |
           LDFLAGS="-X main.version=${VERSION}"
@@ -51,6 +51,7 @@ jobs:
           ./syllago-gendocs _genproviders > providers.json
           ./syllago-gendocs _gentelemetry > telemetry.json
           ./syllago-gendocs _gencapabilities > capabilities.json
+          ./syllago-gendocs _gencontentformat > content-format.json
           rm -f syllago-gendocs
 
       - name: Install syft
@@ -66,7 +67,7 @@ jobs:
           sha256sum syllago-linux-amd64 syllago-linux-arm64 \
             syllago-darwin-amd64 syllago-darwin-arm64 \
             syllago-windows-amd64.exe syllago-windows-arm64.exe \
-            commands.json providers.json telemetry.json capabilities.json sbom.spdx.json \
+            commands.json providers.json telemetry.json capabilities.json content-format.json sbom.spdx.json \
             > checksums.txt
 
       - name: Install cosign
@@ -97,7 +98,7 @@ jobs:
             syllago-linux-amd64 syllago-linux-arm64 \
             syllago-darwin-amd64 syllago-darwin-arm64 \
             syllago-windows-amd64.exe syllago-windows-arm64.exe \
-            commands.json providers.json telemetry.json capabilities.json sbom.spdx.json \
+            commands.json providers.json telemetry.json capabilities.json content-format.json sbom.spdx.json \
             checksums.txt checksums.txt.bundle
 
       - name: Create GitHub Release (auto-generated notes)
@@ -112,7 +113,7 @@ jobs:
             syllago-linux-amd64 syllago-linux-arm64 \
             syllago-darwin-amd64 syllago-darwin-arm64 \
             syllago-windows-amd64.exe syllago-windows-arm64.exe \
-            commands.json providers.json telemetry.json capabilities.json sbom.spdx.json \
+            commands.json providers.json telemetry.json capabilities.json content-format.json sbom.spdx.json \
             checksums.txt checksums.txt.bundle
 
       - name: Get Homebrew tap credentials from Aembit
