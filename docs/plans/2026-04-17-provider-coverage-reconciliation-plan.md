@@ -1,7 +1,7 @@
 # Provider Coverage Reconciliation
 
 **Date:** 2026-04-17
-**Status:** Planning — all open questions resolved; ready for implementation
+**Status:** Complete — shipped in v0.9.0 (tag pushed 2026-04-17). All phases done; syllago-docs synced (commit 593aefe).
 **Scope:**
 - Primary: Reconcile syllago provider capability data (Go code + format YAMLs + source manifests) against verified upstream runtime support, starting with 5 known-incomplete providers (Cursor, Roo Code, Zed, OpenCode, Crush).
 - Expanded (from Q3 regression sweep): Amp hooks drift (Phase 1c), Cline + Windsurf workflows-as-commands (Phase 1d). Cline skills deferred as known gap (Phase 1e).
