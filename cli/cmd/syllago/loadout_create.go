@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +13,10 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/spf13/cobra"
 )
+
+// loadoutCreateStdin is the input source for the interactive wizard.
+// Overridable by tests to simulate multi-step stdin input.
+var loadoutCreateStdin io.Reader = os.Stdin
 
 var loadoutCreateCmd = &cobra.Command{
 	Use:     "create",
@@ -45,7 +50,7 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(loadoutCreateStdin)
 
 	// Step 1: Name
 	fmt.Fprint(output.Writer, "Loadout name: ")

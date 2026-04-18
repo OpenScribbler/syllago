@@ -1377,3 +1377,182 @@ func TestRunLoadoutApply_PreviewJSONOutput(t *testing.T) {
 		t.Errorf("expected JSON on stdout, got %q: %v", stdout.String(), err)
 	}
 }
+
+// --- runLoadoutCreate (0% coverage) ---
+
+// setupLoadoutCreateRepo prepares a repo with a single rule that runLoadoutCreate
+// can offer for selection. It manages repoRoot + findProjectRoot overrides and
+// creates the content layout catalog.Scan expects.
+func setupLoadoutCreateRepo(t *testing.T, providerSlug, ruleName string) string {
+	t.Helper()
+	root := t.TempDir()
+	os.WriteFile(filepath.Join(root, "go.mod"), []byte("module test"), 0644)
+
+	origRepoRoot := repoRoot
+	repoRoot = ""
+	t.Cleanup(func() { repoRoot = origRepoRoot })
+	withFakeRepoRoot(t, root)
+
+	ruleDir := filepath.Join(root, "rules", providerSlug, ruleName)
+	os.MkdirAll(ruleDir, 0755)
+	os.WriteFile(filepath.Join(ruleDir, "rule.md"), []byte("# Rule\n"), 0644)
+	return root
+}
+
+// primeLoadoutCreate installs canned stdin + interactive stub. Pairs of
+// t.Cleanup reset both after the test.
+func primeLoadoutCreate(t *testing.T, input string) {
+	t.Helper()
+	origStdin := loadoutCreateStdin
+	loadoutCreateStdin = strings.NewReader(input)
+	t.Cleanup(func() { loadoutCreateStdin = origStdin })
+
+	origInteractive := isInteractive
+	isInteractive = func() bool { return true }
+	t.Cleanup(func() { isInteractive = origInteractive })
+}
+
+func TestRunLoadoutCreate_NonInteractiveErrors(t *testing.T) {
+	root := setupLoadoutCreateRepo(t, "claude-code", "demo")
+	_ = root
+
+	origInteractive := isInteractive
+	isInteractive = func() bool { return false }
+	t.Cleanup(func() { isInteractive = origInteractive })
+
+	output.SetForTest(t)
+
+	err := loadoutCreateCmd.RunE(loadoutCreateCmd, nil)
+	if err == nil {
+		t.Fatal("expected error for non-interactive terminal")
+	}
+	if !strings.Contains(err.Error(), "interactive") {
+		t.Errorf("error should mention interactive requirement, got %v", err)
+	}
+}
+
+func TestRunLoadoutCreate_HappyPath(t *testing.T) {
+	root := setupLoadoutCreateRepo(t, "claude-code", "demo")
+	// Inputs: name, description, provider (accept default), rules selection (#1), Y/n (accept).
+	primeLoadoutCreate(t, "my-loadout\na test loadout\n\n1\ny\n")
+	output.SetForTest(t)
+
+	if err := loadoutCreateCmd.RunE(loadoutCreateCmd, nil); err != nil {
+		t.Fatalf("create should succeed, got %v", err)
+	}
+
+	outPath := filepath.Join(root, "content", "loadouts", "claude-code", "my-loadout", "loadout.yaml")
+	if _, err := os.Stat(outPath); err != nil {
+		t.Errorf("expected loadout.yaml at %s: %v", outPath, err)
+	}
+}
+
+func TestRunLoadoutCreate_InvalidNameRejected(t *testing.T) {
+	setupLoadoutCreateRepo(t, "claude-code", "demo")
+	primeLoadoutCreate(t, "-bad-name\n")
+	output.SetForTest(t)
+
+	err := loadoutCreateCmd.RunE(loadoutCreateCmd, nil)
+	if err == nil {
+		t.Fatal("expected error for invalid name")
+	}
+	if !strings.Contains(err.Error(), "invalid loadout name") {
+		t.Errorf("error should mention invalid loadout name, got %v", err)
+	}
+}
+
+func TestRunLoadoutCreate_NoItemsSelectedAborts(t *testing.T) {
+	root := setupLoadoutCreateRepo(t, "claude-code", "demo")
+	// Inputs: name, description, provider default, rules selection (empty → skip).
+	primeLoadoutCreate(t, "empty-loadout\ndesc\n\n\n")
+	output.SetForTest(t)
+
+	if err := loadoutCreateCmd.RunE(loadoutCreateCmd, nil); err != nil {
+		t.Fatalf("empty-selection path should return nil, got %v", err)
+	}
+
+	outPath := filepath.Join(root, "content", "loadouts", "claude-code", "empty-loadout", "loadout.yaml")
+	if _, err := os.Stat(outPath); err == nil {
+		t.Errorf("no loadout should be written when no items selected, but found %s", outPath)
+	}
+}
+
+func TestRunLoadoutCreate_CancelAtReview(t *testing.T) {
+	root := setupLoadoutCreateRepo(t, "claude-code", "demo")
+	// Name, description, provider default, select rule #1, answer "n" to confirmation.
+	primeLoadoutCreate(t, "cancel-me\ndesc\n\n1\nn\n")
+	output.SetForTest(t)
+
+	if err := loadoutCreateCmd.RunE(loadoutCreateCmd, nil); err != nil {
+		t.Fatalf("cancel path should return nil, got %v", err)
+	}
+
+	outPath := filepath.Join(root, "content", "loadouts", "claude-code", "cancel-me", "loadout.yaml")
+	if _, err := os.Stat(outPath); err == nil {
+		t.Errorf("no loadout should be written after cancel, but found %s", outPath)
+	}
+}
+
+func TestRunLoadoutCreate_InvalidSelectionSkipped(t *testing.T) {
+	root := setupLoadoutCreateRepo(t, "claude-code", "demo")
+	// Select "abc" (not a number) + "1" — the bad entry is skipped, the valid one is kept.
+	primeLoadoutCreate(t, "partial\ndesc\n\nabc,1\ny\n")
+	_, stderr := output.SetForTest(t)
+
+	if err := loadoutCreateCmd.RunE(loadoutCreateCmd, nil); err != nil {
+		t.Fatalf("partial-selection path should succeed, got %v", err)
+	}
+
+	if !strings.Contains(stderr.String(), "skipping invalid selection") {
+		t.Errorf("stderr should warn about invalid selection, got %q", stderr.String())
+	}
+
+	outPath := filepath.Join(root, "content", "loadouts", "claude-code", "partial", "loadout.yaml")
+	if _, err := os.Stat(outPath); err != nil {
+		t.Errorf("expected loadout.yaml at %s: %v", outPath, err)
+	}
+}
+
+func TestRunLoadoutCreate_EmptyNameErrors(t *testing.T) {
+	setupLoadoutCreateRepo(t, "claude-code", "demo")
+	// Empty name on first line.
+	primeLoadoutCreate(t, "\n")
+	output.SetForTest(t)
+
+	err := loadoutCreateCmd.RunE(loadoutCreateCmd, nil)
+	if err == nil {
+		t.Fatal("expected error for empty name")
+	}
+	if !strings.Contains(err.Error(), "invalid loadout name") {
+		t.Errorf("error should mention invalid loadout name, got %v", err)
+	}
+}
+
+func TestRunLoadoutCreate_NoContentRepoErrors(t *testing.T) {
+	// No go.mod → findProjectRoot fails → findContentRepoRoot errors.
+	tmp := t.TempDir()
+	origRepoRoot := repoRoot
+	repoRoot = ""
+	t.Cleanup(func() { repoRoot = origRepoRoot })
+
+	origFinder := findProjectRoot
+	findProjectRoot = func() (string, error) {
+		return "", os.ErrNotExist
+	}
+	t.Cleanup(func() { findProjectRoot = origFinder })
+	_ = tmp
+
+	origInteractive := isInteractive
+	isInteractive = func() bool { return true }
+	t.Cleanup(func() { isInteractive = origInteractive })
+
+	output.SetForTest(t)
+
+	err := loadoutCreateCmd.RunE(loadoutCreateCmd, nil)
+	if err == nil {
+		t.Fatal("expected error when content repo is missing")
+	}
+	if !strings.Contains(err.Error(), "syllago") {
+		t.Errorf("error should mention syllago repo, got %v", err)
+	}
+}
