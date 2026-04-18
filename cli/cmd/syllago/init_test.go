@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -580,5 +581,107 @@ func TestInitWizard_OfficialRegistryOption(t *testing.T) {
 	}
 	if w.registryURL != registry.OfficialRegistryURL {
 		t.Errorf("registryURL should be %q, got %q", registry.OfficialRegistryURL, w.registryURL)
+	}
+}
+
+// TestInitJSONOutputEmitsResult exercises the JSON output branch of runInit
+// (lines 173-179). Setting output.JSON = true triggers the initResult emission
+// after config/local/gitignore work is done.
+func TestInitJSONOutputEmitsResult(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+
+	origDir, _ := os.Getwd()
+	os.Chdir(tmp)
+	defer os.Chdir(origDir)
+
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+
+	initCmd.Flags().Set("yes", "true")
+	initCmd.Flags().Set("force", "false")
+	defer initCmd.Flags().Set("yes", "false")
+
+	if err := initCmd.RunE(initCmd, []string{}); err != nil {
+		t.Fatalf("init --yes (json) failed: %v", err)
+	}
+
+	var result initResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatalf("expected JSON initResult on stdout, got %q: %v", stdout.String(), err)
+	}
+	if result.ConfigPath == "" {
+		t.Error("initResult.ConfigPath should be populated")
+	}
+	if !strings.HasSuffix(result.ConfigPath, filepath.Join(".syllago", "config.json")) {
+		t.Errorf("ConfigPath should end with .syllago/config.json, got %q", result.ConfigPath)
+	}
+}
+
+// TestInitCreatesGlobalConfigWhenMissing exercises the global-config creation
+// branch of runInit (lines 154-162). With $HOME pointed at a fresh temp dir,
+// the global config does not exist and should be created by SaveGlobal.
+func TestInitCreatesGlobalConfigWhenMissing(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+
+	// Point HOME at a fresh temp dir so ~/.syllago/config.json doesn't exist.
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+
+	origDir, _ := os.Getwd()
+	os.Chdir(tmp)
+	defer os.Chdir(origDir)
+
+	initCmd.Flags().Set("yes", "true")
+	initCmd.Flags().Set("force", "false")
+	defer initCmd.Flags().Set("yes", "false")
+
+	if err := initCmd.RunE(initCmd, []string{}); err != nil {
+		t.Fatalf("init --yes failed: %v", err)
+	}
+
+	globalCfg := filepath.Join(tmpHome, ".syllago", "config.json")
+	if _, err := os.Stat(globalCfg); err != nil {
+		t.Errorf("expected ~/.syllago/config.json to be created, got stat error: %v", err)
+	}
+}
+
+// TestInitNoProvidersDetectedPrintsNone exercises the empty-detected-list branch
+// of runInit (line 107-109). With AllProviders cleared, DetectedOnly returns [],
+// and the non-interactive printer should emit "(none detected)".
+func TestInitNoProvidersDetectedPrintsNone(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+
+	origDir, _ := os.Getwd()
+	os.Chdir(tmp)
+	defer os.Chdir(origDir)
+
+	// Clear registered providers so none can match.
+	origProviders := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = nil
+	t.Cleanup(func() { provider.AllProviders = origProviders })
+
+	// Force the non-interactive branch.
+	origIsInteractive := isInteractive
+	isInteractive = func() bool { return false }
+	t.Cleanup(func() { isInteractive = origIsInteractive })
+
+	initCmd.Flags().Set("yes", "true")
+	initCmd.Flags().Set("force", "false")
+	defer initCmd.Flags().Set("yes", "false")
+
+	if err := initCmd.RunE(initCmd, []string{}); err != nil {
+		t.Fatalf("init --yes failed: %v", err)
+	}
+
+	// The "none detected" branch still writes an empty-provider config.
+	cfg, err := config.Load(tmp)
+	if err != nil {
+		t.Fatalf("config.Load: %v", err)
+	}
+	if len(cfg.Providers) != 0 {
+		t.Errorf("expected empty Providers when none detected, got %v", cfg.Providers)
 	}
 }
