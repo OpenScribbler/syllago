@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 func TestSyncAndExportCommandRegisters(t *testing.T) {
@@ -585,6 +587,158 @@ func TestRunExportOp_DelegatesAllToExportAll(t *testing.T) {
 	// runExportAll prints the summary section.
 	if !strings.Contains(stdout.String(), "Export All Summary") {
 		t.Errorf("expected 'Export All Summary' from runExportAll, got: %s", stdout.String())
+	}
+}
+
+// withStubbedSyncAll overrides syncAllRegistries for the test duration.
+func withStubbedSyncAll(t *testing.T, stub func([]string) []registry.SyncResult) {
+	t.Helper()
+	orig := syncAllRegistries
+	syncAllRegistries = stub
+	t.Cleanup(func() { syncAllRegistries = orig })
+}
+
+func TestSyncAndExport_WithRegistries_Success(t *testing.T) {
+	// Registries configured → sync runs, all succeed, then export runs.
+	root := setupExportRepo(t)
+	withFakeRepoRoot(t, root)
+	installBase := t.TempDir()
+	origP := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name: "TestProv",
+			Slug: "test-prov",
+			InstallDir: func(homeDir string, ct catalog.ContentType) string {
+				if ct == catalog.Skills {
+					return filepath.Join(installBase, string(ct))
+				}
+				return ""
+			},
+			SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Skills },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = origP })
+
+	syllagoDir := filepath.Join(root, ".syllago")
+	os.MkdirAll(syllagoDir, 0755)
+	os.WriteFile(filepath.Join(syllagoDir, "config.json"), []byte(`{"registries":[{"name":"foo","url":"https://example.invalid"}]}`), 0644)
+
+	var syncedNames []string
+	withStubbedSyncAll(t, func(names []string) []registry.SyncResult {
+		syncedNames = names
+		out := make([]registry.SyncResult, len(names))
+		for i, n := range names {
+			out[i] = registry.SyncResult{Name: n, Err: nil}
+		}
+		return out
+	})
+
+	stdout, _ := output.SetForTest(t)
+
+	syncAndExportCmd.Flags().Set("to", "test-prov")
+	defer syncAndExportCmd.Flags().Set("to", "")
+	syncAndExportCmd.Flags().Set("type", "skills")
+	defer syncAndExportCmd.Flags().Set("type", "")
+	syncAndExportCmd.Flags().Set("source", "shared")
+	defer syncAndExportCmd.Flags().Set("source", "local")
+
+	err := syncAndExportCmd.RunE(syncAndExportCmd, []string{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(syncedNames) != 1 || syncedNames[0] != "foo" {
+		t.Errorf("expected syncAllRegistries([\"foo\"]), got %v", syncedNames)
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "Syncing 1 registries") {
+		t.Errorf("expected 'Syncing 1 registries' in output, got: %s", out)
+	}
+	if !strings.Contains(out, "Synced: foo") {
+		t.Errorf("expected 'Synced: foo' in output, got: %s", out)
+	}
+}
+
+func TestSyncAndExport_SyncFailure_ReturnsError(t *testing.T) {
+	// Registry sync fails → runSyncAndExport returns structured error without exporting.
+	root := setupExportRepo(t)
+	withFakeRepoRoot(t, root)
+	origP := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name:         "TestProv",
+			Slug:         "test-prov",
+			SupportsType: func(catalog.ContentType) bool { return true },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = origP })
+
+	syllagoDir := filepath.Join(root, ".syllago")
+	os.MkdirAll(syllagoDir, 0755)
+	os.WriteFile(filepath.Join(syllagoDir, "config.json"), []byte(`{"registries":[{"name":"broken","url":"https://example.invalid"}]}`), 0644)
+
+	withStubbedSyncAll(t, func(names []string) []registry.SyncResult {
+		return []registry.SyncResult{{Name: names[0], Err: fmt.Errorf("network unreachable")}}
+	})
+
+	output.SetForTest(t)
+	syncAndExportCmd.Flags().Set("to", "test-prov")
+	defer syncAndExportCmd.Flags().Set("to", "")
+
+	err := syncAndExportCmd.RunE(syncAndExportCmd, []string{})
+	if err == nil {
+		t.Fatal("expected error from sync failure, got nil")
+	}
+	if !strings.Contains(err.Error(), "sync failed") {
+		t.Errorf("expected 'sync failed' in error, got: %v", err)
+	}
+}
+
+func TestSyncAndExport_JSONOutputSuppressesSyncBanner(t *testing.T) {
+	// In JSON mode, "Syncing N registries" text is suppressed from stdout.
+	root := setupExportRepo(t)
+	withFakeRepoRoot(t, root)
+	installBase := t.TempDir()
+	origP := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name: "TestProv",
+			Slug: "test-prov",
+			InstallDir: func(homeDir string, ct catalog.ContentType) string {
+				if ct == catalog.Skills {
+					return filepath.Join(installBase, string(ct))
+				}
+				return ""
+			},
+			SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Skills },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = origP })
+
+	syllagoDir := filepath.Join(root, ".syllago")
+	os.MkdirAll(syllagoDir, 0755)
+	os.WriteFile(filepath.Join(syllagoDir, "config.json"), []byte(`{"registries":[{"name":"foo","url":"https://example.invalid"}]}`), 0644)
+
+	withStubbedSyncAll(t, func(names []string) []registry.SyncResult {
+		return []registry.SyncResult{{Name: "foo", Err: nil}}
+	})
+
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+
+	syncAndExportCmd.Flags().Set("to", "test-prov")
+	defer syncAndExportCmd.Flags().Set("to", "")
+	syncAndExportCmd.Flags().Set("type", "skills")
+	defer syncAndExportCmd.Flags().Set("type", "")
+	syncAndExportCmd.Flags().Set("source", "shared")
+	defer syncAndExportCmd.Flags().Set("source", "local")
+
+	err := syncAndExportCmd.RunE(syncAndExportCmd, []string{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	out := stdout.String()
+	if strings.Contains(out, "Syncing") {
+		t.Errorf("expected no 'Syncing' banner in JSON output, got: %s", out)
 	}
 }
 
