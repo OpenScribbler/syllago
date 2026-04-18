@@ -1132,3 +1132,248 @@ func TestRunLoadoutRemove_Auto_NoSnapshot(t *testing.T) {
 		t.Fatalf("runLoadoutRemove --auto: %v", err)
 	}
 }
+
+// --- runLoadoutApply error-path coverage ---
+
+// setupLoadoutApplyRepo creates a project/content root containing an optional loadout
+// directory. If loadoutName is empty, no loadout is created (empty catalog).
+// Also clears repoRoot so findContentRepoRoot falls through to findProjectRoot.
+func setupLoadoutApplyRepo(t *testing.T, loadoutName, providerSlug string, refs map[string][]string) string {
+	t.Helper()
+	root := t.TempDir()
+	os.MkdirAll(filepath.Join(root, ".syllago"), 0755)
+
+	// Clear ldflag-embedded repoRoot so findContentRepoRoot uses findProjectRoot.
+	origRepoRoot := repoRoot
+	repoRoot = ""
+	t.Cleanup(func() { repoRoot = origRepoRoot })
+
+	withFakeRepoRoot(t, root)
+
+	if loadoutName != "" {
+		// Loadouts live under loadouts/<provider>/<name>/ — they are not universal.
+		provDir := providerSlug
+		if provDir == "" {
+			provDir = "claude-code"
+		}
+		loDir := filepath.Join(root, "loadouts", provDir, loadoutName)
+		os.MkdirAll(loDir, 0755)
+		var sb strings.Builder
+		sb.WriteString("kind: loadout\nversion: 1\n")
+		sb.WriteString("name: " + loadoutName + "\n")
+		sb.WriteString("description: test loadout\n")
+		if providerSlug != "" {
+			sb.WriteString("provider: " + providerSlug + "\n")
+		}
+		for section, names := range refs {
+			if len(names) == 0 {
+				continue
+			}
+			sb.WriteString(section + ":\n")
+			for _, n := range names {
+				sb.WriteString("  - " + n + "\n")
+			}
+		}
+		os.WriteFile(filepath.Join(loDir, "loadout.yaml"), []byte(sb.String()), 0644)
+	}
+
+	return root
+}
+
+// resetLoadoutApplyFlags restores loadoutApplyCmd flags to their defaults so
+// tests don't poison each other. Call as deferred immediately after setting flags.
+func resetLoadoutApplyFlags() {
+	loadoutApplyCmd.Flags().Set("try", "false")
+	loadoutApplyCmd.Flags().Set("keep", "false")
+	loadoutApplyCmd.Flags().Set("preview", "false")
+	loadoutApplyCmd.Flags().Set("base-dir", "")
+	loadoutApplyCmd.Flags().Set("to", "")
+	loadoutApplyCmd.Flags().Set("method", "symlink")
+}
+
+func TestRunLoadoutApply_EmptyLibraryReturnsNil(t *testing.T) {
+	setupLoadoutApplyRepo(t, "", "", nil) // no loadouts
+	output.SetForTest(t)
+
+	err := loadoutApplyCmd.RunE(loadoutApplyCmd, nil)
+	if err != nil {
+		t.Fatalf("expected nil when no loadouts, got %v", err)
+	}
+}
+
+func TestRunLoadoutApply_LoadoutNotFoundByName(t *testing.T) {
+	setupLoadoutApplyRepo(t, "exists", "claude-code", nil)
+	output.SetForTest(t)
+	defer resetLoadoutApplyFlags()
+
+	err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"does-not-exist"})
+	if err == nil {
+		t.Fatal("expected ErrLoadoutNotFound, got nil")
+	}
+	if !strings.Contains(err.Error(), "does-not-exist") {
+		t.Errorf("error should mention missing name, got %v", err)
+	}
+}
+
+func TestRunLoadoutApply_NoArgsNoTerminalErrors(t *testing.T) {
+	setupLoadoutApplyRepo(t, "some-loadout", "claude-code", nil)
+	output.SetForTest(t)
+
+	origIsInteractive := isInteractive
+	isInteractive = func() bool { return false }
+	t.Cleanup(func() { isInteractive = origIsInteractive })
+
+	err := loadoutApplyCmd.RunE(loadoutApplyCmd, nil)
+	if err == nil {
+		t.Fatal("expected ErrInputTerminal, got nil")
+	}
+	if !strings.Contains(err.Error(), "not a terminal") {
+		t.Errorf("error should mention terminal requirement, got %v", err)
+	}
+}
+
+func TestRunLoadoutApply_TryAndKeepConflict(t *testing.T) {
+	setupLoadoutApplyRepo(t, "conflict", "claude-code", nil)
+	output.SetForTest(t)
+
+	loadoutApplyCmd.Flags().Set("try", "true")
+	loadoutApplyCmd.Flags().Set("keep", "true")
+	defer resetLoadoutApplyFlags()
+
+	err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"conflict"})
+	if err == nil {
+		t.Fatal("expected ErrInputConflict, got nil")
+	}
+	if !strings.Contains(err.Error(), "mutually exclusive") {
+		t.Errorf("error should mention mutual exclusion, got %v", err)
+	}
+}
+
+func TestRunLoadoutApply_UnknownProviderFlag(t *testing.T) {
+	setupLoadoutApplyRepo(t, "has-provider", "claude-code", nil)
+	output.SetForTest(t)
+
+	loadoutApplyCmd.Flags().Set("to", "does-not-exist-provider-xyz")
+	defer resetLoadoutApplyFlags()
+
+	err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"has-provider"})
+	if err == nil {
+		t.Fatal("expected ErrProviderNotFound, got nil")
+	}
+	if !strings.Contains(err.Error(), "unknown provider") {
+		t.Errorf("error should mention unknown provider, got %v", err)
+	}
+}
+
+func TestRunLoadoutApply_ManifestUnknownProvider(t *testing.T) {
+	setupLoadoutApplyRepo(t, "bad-prov", "does-not-exist-manifest-provider", nil)
+	output.SetForTest(t)
+	defer resetLoadoutApplyFlags()
+
+	err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"bad-prov"})
+	if err == nil {
+		t.Fatal("expected ErrLoadoutProvider, got nil")
+	}
+	if !strings.Contains(err.Error(), "unknown provider") {
+		t.Errorf("error should mention unknown provider, got %v", err)
+	}
+}
+
+func TestRunLoadoutApply_PreviewHappyPath(t *testing.T) {
+	root := setupLoadoutApplyRepo(t, "demo", "claude-code",
+		map[string][]string{"rules": {"demo-rule"}})
+	output.SetForTest(t)
+
+	// Create a rule referenced by the loadout.
+	ruleDir := filepath.Join(root, "rules", "claude-code", "demo-rule")
+	os.MkdirAll(ruleDir, 0755)
+	os.WriteFile(filepath.Join(ruleDir, "rule.md"), []byte("# Demo rule\n"), 0644)
+
+	// Isolate global config so LoadGlobal works against an empty dir.
+	origGlobal := config.GlobalDirOverride
+	config.GlobalDirOverride = t.TempDir()
+	t.Cleanup(func() { config.GlobalDirOverride = origGlobal })
+
+	loadoutApplyCmd.Flags().Set("preview", "true")
+	defer resetLoadoutApplyFlags()
+
+	if err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"demo"}); err != nil {
+		t.Fatalf("preview should not error, got %v", err)
+	}
+}
+
+func TestRunLoadoutApply_MalformedManifestErrors(t *testing.T) {
+	root := t.TempDir()
+	os.MkdirAll(filepath.Join(root, ".syllago"), 0755)
+
+	origRepoRoot := repoRoot
+	repoRoot = ""
+	t.Cleanup(func() { repoRoot = origRepoRoot })
+	withFakeRepoRoot(t, root)
+
+	// Write a loadout dir that scanner will pick up, but with invalid YAML content.
+	loDir := filepath.Join(root, "loadouts", "claude-code", "broken")
+	os.MkdirAll(loDir, 0755)
+	os.WriteFile(filepath.Join(loDir, "loadout.yaml"), []byte("kind: loadout\nversion: 1\nname: [this is not a string]\n"), 0644)
+
+	output.SetForTest(t)
+	defer resetLoadoutApplyFlags()
+
+	err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"broken"})
+	if err == nil {
+		t.Fatal("expected ErrLoadoutParse, got nil")
+	}
+	if !strings.Contains(err.Error(), "parsing") {
+		t.Errorf("error should mention parse failure, got %v", err)
+	}
+}
+
+func TestRunLoadoutApply_SnapshotAlreadyActiveConflicts(t *testing.T) {
+	root := setupLoadoutApplyRepo(t, "already", "claude-code",
+		map[string][]string{"rules": {"r1"}})
+	// Pre-seed a snapshot manifest under .syllago/snapshots/<ts>/manifest.json
+	// so snapshot.Load returns successfully, triggering the already-active guard.
+	snapTSDir := filepath.Join(root, ".syllago", "snapshots", "20260417-000000")
+	os.MkdirAll(snapTSDir, 0755)
+	os.WriteFile(filepath.Join(snapTSDir, "manifest.json"), []byte(`{"loadoutName":"whatever","source":"loadout:whatever","mode":"keep","createdAt":"2026-04-17T00:00:00Z"}`), 0644)
+
+	output.SetForTest(t)
+	loadoutApplyCmd.Flags().Set("keep", "true")
+	defer resetLoadoutApplyFlags()
+
+	err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"already"})
+	if err == nil {
+		t.Fatal("expected ErrLoadoutConflict, got nil")
+	}
+	if !strings.Contains(err.Error(), "already active") {
+		t.Errorf("error should mention already active, got %v", err)
+	}
+}
+
+func TestRunLoadoutApply_PreviewJSONOutput(t *testing.T) {
+	root := setupLoadoutApplyRepo(t, "jdemo", "claude-code",
+		map[string][]string{"rules": {"json-rule"}})
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+
+	ruleDir := filepath.Join(root, "rules", "claude-code", "json-rule")
+	os.MkdirAll(ruleDir, 0755)
+	os.WriteFile(filepath.Join(ruleDir, "rule.md"), []byte("# JSON rule\n"), 0644)
+
+	origGlobal := config.GlobalDirOverride
+	config.GlobalDirOverride = t.TempDir()
+	t.Cleanup(func() { config.GlobalDirOverride = origGlobal })
+
+	loadoutApplyCmd.Flags().Set("preview", "true")
+	defer resetLoadoutApplyFlags()
+
+	if err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"jdemo"}); err != nil {
+		t.Fatalf("preview JSON should not error, got %v", err)
+	}
+	// Just verify something JSON-like came out. The exact shape is stable in
+	// loadout.ApplyResult — we only need the command to emit JSON not text.
+	var anyResult map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &anyResult); err != nil {
+		t.Errorf("expected JSON on stdout, got %q: %v", stdout.String(), err)
+	}
+}
