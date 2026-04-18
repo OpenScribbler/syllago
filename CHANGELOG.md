@@ -24,7 +24,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 - Amp hooks file format now reports `json` (was defaulting to `markdown`)
 - Amp hooks config location corrected from `.amp/hooks.json` to `.amp/settings.json`
-- Source manifests for cursor, gemini-cli, opencode, roo-code, windsurf, zed, cline, and crush reconciled against verified upstream runtime support — capmon will now monitor the newly-flipped content types
+- Source manifests for cursor, gemini-cli, opencode, roo-code, windsurf, zed, cline, and crush reconciled against verified upstream runtime support
 
 ## [0.7.0] - 2026-03-23
 
