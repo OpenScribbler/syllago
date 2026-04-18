@@ -379,7 +379,11 @@ and "syllago install" to activate updated content.`,
 				return output.NewStructuredError(output.ErrRegistryNotCloned, fmt.Sprintf("registry %q is not cloned locally", name), "Run 'syllago registry add' first")
 			}
 			fmt.Fprintf(output.Writer, "Syncing %s...\n", name)
-			if err := registry.Sync(name); err != nil {
+			client, err := registry.Open(name)
+			if err != nil {
+				return err
+			}
+			if err := client.Sync(cmd.Context()); err != nil {
 				return err
 			}
 			// Re-probe visibility on sync
