@@ -2276,6 +2276,360 @@
       "related_bugs": [],
       "occurrences": 4,
       "last_seen": "2026-04-17T18:40:39.380Z"
+    },
+    {
+      "id": "bug-143",
+      "timestamp": "2026-04-17T22:52:32.430Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+      "root_cause": "8 lines replaced/restructured",
+      "fix": "Rewrote 12→67 lines (8 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T22:52:32.430Z"
+    },
+    {
+      "id": "bug-144",
+      "timestamp": "2026-04-17T23:09:07.335Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 8→41 lines (6 removed) | Also: ### Q5 — Crush successor status to OpenCode; Earlier capmon work characterized Crush as the suc | Also: **Status:** Planning; **Scope:** Reconcile syllago provider capability d",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-04-17T23:10:53.292Z"
+    },
+    {
+      "id": "bug-145",
+      "timestamp": "2026-04-17T23:14:26.906Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 6→8 lines (3 removed) | Also: - **66 normative client requirements** extracted f; - **12 major gaps** in Syllago's implementation | Also: **MOAT requires:** 24-hour staleness threshold com; **Gap:** No `last_fetched_at` timestamp per regist | Also: ### G-12: Content Type Alignment [MODERATE — Renam; **MOAT normative types:** `skill`, `subagent`, `ru | Also: ### Phase 0: Spec Fixes + Meta-Registry Bootstrap; **Goal:** Fix MOAT spec blockers. Bootstrap meta-r | Also: **Goal:** Go implementation of MOAT `content_hash`; 1. Create `cli/internal/moat/hash.go` — port of `m | Also: 13. Implement revocation checking against manifest; 14. Implement hard-block for registry revocations | Also: 3. `expires_at` manifest rejection; 5. `self_published` surfacing in UI | Also: - `.github/workflows/moat.yml` — Publisher Action; - `.github/workflows/moat-registry.yml` — Registry | Also: | Topic | Position A | Position B |; |-------|-----------|-----------|",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 10,
+      "last_seen": "2026-04-17T23:19:31.211Z"
+    },
+    {
+      "id": "bug-146",
+      "timestamp": "2026-04-17T23:32:40.591Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/provider/roocode_test.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 13→46 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T23:32:40.591Z"
+    },
+    {
+      "id": "bug-147",
+      "timestamp": "2026-04-17T23:33:58.836Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/provider/amp_test.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 5→30 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T23:33:58.836Z"
+    },
+    {
+      "id": "bug-148",
+      "timestamp": "2026-04-17T23:35:34.065Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/provider/cline_test.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 13→46 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T23:35:34.065Z"
+    },
+    {
+      "id": "bug-149",
+      "timestamp": "2026-04-17T23:42:23.011Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/provider/coverage_test.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 34→42 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T23:42:23.011Z"
+    },
+    {
+      "id": "bug-150",
+      "timestamp": "2026-04-17T23:50:00.000Z",
+      "error_message": "TestFrontmatterRegistry_Completeness: provider \"roo-code\" supports commands (format=markdown) but no frontmatter struct registered",
+      "file": "cli/internal/converter/frontmatter_registry_test.go",
+      "root_cause": "Phase 1a added Commands support to roo-code provider (roocode.go) without updating the converter-side frontmatter registry exception map. Roo-code workflows are plain markdown (no frontmatter), matching the pattern already used for cursor/cline/windsurf commands, but the exception list was never extended.",
+      "fix": "Added \"roo-code/commands\": true to noFrontmatterOK map alongside the other plain-markdown command providers.",
+      "tags": [
+        "phase-1a",
+        "provider-coverage-reconciliation",
+        "frontmatter",
+        "converter",
+        "cross-package-regression"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T23:50:00.000Z"
+    },
+    {
+      "id": "bug-151",
+      "timestamp": "2026-04-17T23:52:11.382Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/provider-formats/cline.yaml",
+      "root_cause": "Had \"2026-04-11T00:00:00Z\"",
+      "fix": "Changed to \"2026-04-17T00:00:00Z\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T23:52:11.382Z"
+    },
+    {
+      "id": "bug-152",
+      "timestamp": "2026-04-17T23:52:11.735Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-formats/cline.yaml",
+      "root_cause": "14 lines replaced/restructured",
+      "fix": "Rewrote 49→75 lines (14 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T23:52:11.735Z"
+    },
+    {
+      "id": "bug-153",
+      "timestamp": "2026-04-17T23:52:34.047Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/provider-formats/windsurf.yaml",
+      "root_cause": "Had \"2026-04-11T00:00:00Z\"",
+      "fix": "Changed to \"2026-04-17T00:00:00Z\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T23:52:34.047Z"
+    },
+    {
+      "id": "bug-154",
+      "timestamp": "2026-04-17T23:52:34.347Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-formats/windsurf.yaml",
+      "root_cause": "28 lines replaced/restructured",
+      "fix": "Rewrote 49→74 lines (28 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-17T23:52:34.347Z"
+    },
+    {
+      "id": "bug-155",
+      "timestamp": "2026-04-18T00:03:13.067Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/provider/cline_test.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 13→58 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-18T00:03:13.067Z"
+    },
+    {
+      "id": "bug-156",
+      "timestamp": "2026-04-18T00:07:35.162Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-formats/opencode.yaml",
+      "root_cause": "15 lines replaced/restructured",
+      "fix": "Rewrote 22→9 lines (15 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-18T00:07:35.162Z"
+    },
+    {
+      "id": "bug-157",
+      "timestamp": "2026-04-18T00:07:45.463Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-formats/windsurf.yaml",
+      "root_cause": "13 lines replaced/restructured",
+      "fix": "Rewrote 25→9 lines (13 removed) | Also: status: supported; sources:",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-18T00:09:39.693Z"
+    },
+    {
+      "id": "bug-158",
+      "timestamp": "2026-04-18T00:11:59.271Z",
+      "error_message": "Significant refactor of ",
+      "file": ".github/workflows/scorecard.yml",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 7→4 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-18T00:11:59.271Z"
+    },
+    {
+      "id": "bug-159",
+      "timestamp": "2026-04-18T00:16:25.916Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-sources/gemini-cli.yaml",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 3→5 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-18T00:16:25.916Z"
+    },
+    {
+      "id": "bug-160",
+      "timestamp": "2026-04-18T00:16:26.229Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-sources/cursor.yaml",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 12→9 lines (7 removed) | Also: supported: false; supported: false",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-18T00:16:26.556Z"
+    },
+    {
+      "id": "bug-161",
+      "timestamp": "2026-04-18T00:16:27.164Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-sources/windsurf.yaml",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 14→16 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-18T00:16:27.164Z"
+    },
+    {
+      "id": "bug-162",
+      "timestamp": "2026-04-18T00:16:27.490Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-sources/zed.yaml",
+      "root_cause": "24 lines replaced/restructured",
+      "fix": "Rewrote 30→8 lines (24 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-18T00:16:27.490Z"
+    },
+    {
+      "id": "bug-163",
+      "timestamp": "2026-04-18T00:16:27.776Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-sources/opencode.yaml",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 4→6 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-18T00:16:27.776Z"
+    },
+    {
+      "id": "bug-164",
+      "timestamp": "2026-04-18T00:16:29.007Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/provider-sources/cline.yaml",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 7→9 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-18T00:16:29.007Z"
     }
   ]
 }

@@ -1328,3 +1328,291 @@
 | 13:07 | Created .release-pending.yml | — | ~34 |
 | 13:08 | Created ../../../.config/pai/.research-workflow-state-3e857b46-3822-488f-b024-16a79d21200e.json | — | ~28 |
 | 13:11 | Session end: 2 writes across 2 files (.release-pending.yml, .research-workflow-state-3e857b46-3822-488f-b024-16a79d21200e.json) | 1 reads | ~62 tok |
+| 13:15 | Session end: 2 writes across 2 files (.release-pending.yml, .research-workflow-state-3e857b46-3822-488f-b024-16a79d21200e.json) | 1 reads | ~62 tok |
+
+## Session: 2026-04-17 13:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 13:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 13:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 14:56
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:22 | Created ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_no_vague_limitations.md | — | ~358 |
+| 15:22 | Edited ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md | 1→2 lines | ~125 |
+| 15:22 | Session end: 2 writes across 2 files (feedback_no_vague_limitations.md, MEMORY.md) | 5 reads | ~2562 tok |
+
+## Session: 2026-04-17 15:22
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:26 | Created ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_docs_scope_boundary.md | — | ~427 |
+| 15:26 | Edited ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md | 1→2 lines | ~128 |
+| 15:26 | Session end: 2 writes across 2 files (feedback_docs_scope_boundary.md, MEMORY.md) | 0 reads | ~595 tok |
+| 15:37 | Created ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/project_provider_eligibility.md | — | ~492 |
+| 15:37 | Edited ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md | 3→7 lines | ~121 |
+| 15:37 | Session end: 4 writes across 3 files (feedback_docs_scope_boundary.md, MEMORY.md, project_provider_eligibility.md) | 10 reads | ~2598 tok |
+
+## Session: 2026-04-17 15:38
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 15:38
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 15:38
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 15:41
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:52 | Edited docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md | modified reality() | ~1172 |
+| 15:52 | Edited docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md | modified names() | ~443 |
+| 15:53 | Edited docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md | 32→32 lines | ~778 |
+| 15:53 | Edited docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md | modified supports() | ~920 |
+| 15:54 | Edited docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md | expanded (+7 lines) | ~300 |
+| 15:55 | Session end: 5 writes across 1 files (2026-04-17-provider-coverage-reconciliation-plan.md) | 4 reads | ~5048 tok |
+| 16:03 | Session end: 5 writes across 1 files (2026-04-17-provider-coverage-reconciliation-plan.md) | 4 reads | ~5048 tok |
+
+## Session: 2026-04-17 16:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:09 | Edited docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md | modified at() | ~691 |
+| 16:10 | Edited docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md | expanded (+13 lines) | ~373 |
+| 16:10 | Edited docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md | modified Expanded() | ~226 |
+| 16:11 | Session end: 3 writes across 1 files (2026-04-17-provider-coverage-reconciliation-plan.md) | 5 reads | ~1382 tok |
+| 16:11 | Session end: 3 writes across 1 files (2026-04-17-provider-coverage-reconciliation-plan.md) | 5 reads | ~1382 tok |
+| 16:11 | Session end: 3 writes across 1 files (2026-04-17-provider-coverage-reconciliation-plan.md) | 5 reads | ~1382 tok |
+| 16:14 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | 6→8 lines | ~216 |
+| 16:14 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | 6→6 lines | ~164 |
+| 16:14 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | 3→5 lines | ~105 |
+| 16:14 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | 3→5 lines | ~101 |
+| 16:14 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | 3→5 lines | ~114 |
+| 16:15 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | modified context() | ~261 |
+| 16:15 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | modified requires() | ~252 |
+| 16:15 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | modified requires() | ~481 |
+| 16:15 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | modified types() | ~302 |
+| 16:16 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | 13→13 lines | ~201 |
+| 16:16 | Created .claude/projects/start-provider-coverage-implementation.md | — | ~2102 |
+| 16:16 | Created ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/start-provider-coverage-implementation.md | — | ~1103 |
+| 16:16 | Created .claude/projects/.current | — | ~11 |
+| 16:16 | Session end: 16 writes across 4 files (2026-04-17-provider-coverage-reconciliation-plan.md, 2026-04-12-moat-conformance-gap-analysis.md, start-provider-coverage-implementation.md, .current) | 9 reads | ~8232 tok |
+| 16:17 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | modified Spec() | ~2211 |
+
+## Session: 2026-04-17 16:17
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:17 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | mapping() → reason() | ~262 |
+| 16:17 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | expanded (+8 lines) | ~223 |
+| 16:17 | Session end: 2 writes across 1 files (2026-04-12-moat-conformance-gap-analysis.md) | 1 reads | ~2488 tok |
+| 16:17 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | vectors() → Action() | ~381 |
+| 16:18 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | 15→17 lines | ~424 |
+| 16:18 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | modified additions() | ~488 |
+| 16:18 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | 12→12 lines | ~171 |
+| 16:18 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | 9→11 lines | ~188 |
+| 16:19 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | 6→6 lines | ~291 |
+| 16:19 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | expanded (+8 lines) | ~197 |
+| 16:19 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | 8→8 lines | ~438 |
+| 16:19 | Session end: 10 writes across 1 files (2026-04-12-moat-conformance-gap-analysis.md) | 1 reads | ~5250 tok |
+
+## Session: 2026-04-17 16:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:27 | Edited .claude/projects/start-provider-coverage-implementation.md | modified beads() | ~555 |
+| 16:27 | Edited .claude/projects/start-provider-coverage-implementation.md | inline fix | ~10 |
+| 16:28 | Created 23-bead gated chain for provider coverage reconciliation | beads (23 issues, 32 deps) | 4 Phase 1 entry beads ready; downstream chain wired | ~3000 |
+| 16:27 | Session end: 2 writes across 1 files (start-provider-coverage-implementation.md) | 1 reads | ~16286 tok |
+| 16:31 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~25 |
+| 16:31 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~22 |
+| 16:31 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~26 |
+| 16:31 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~23 |
+| 16:31 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~20 |
+| 16:31 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~20 |
+| 16:31 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~16 |
+| 16:31 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~21 |
+| 16:31 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~21 |
+| 16:31 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~22 |
+| 16:31 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~20 |
+| 16:31 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~23 |
+| 16:31 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~19 |
+| 16:31 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~23 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~26 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~23 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~22 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~21 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~15 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~21 |
+| 16:32 | Edited cli/internal/provider/roocode.go | 5→7 lines | ~53 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~19 |
+| 16:32 | Edited cli/internal/provider/roocode.go | expanded (+7 lines) | ~96 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~17 |
+| 16:32 | Edited cli/internal/provider/roocode.go | 14→15 lines | ~106 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~22 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~15 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~19 |
+| 16:32 | Edited cli/internal/provider/roocode_test.go | modified TestRooCodeSupportsTypes() | ~392 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~26 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~16 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~20 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~17 |
+| 16:32 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~16 |
+| 16:33 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~17 |
+| 16:33 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~15 |
+| 16:33 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~26 |
+| 16:33 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~14 |
+| 16:33 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | inline fix | ~31 |
+| 16:33 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | 5→5 lines | ~92 |
+| 16:33 | Edited cli/internal/provider/amp.go | 5→7 lines | ~32 |
+| 16:33 | Edited cli/internal/provider/amp.go | expanded (+6 lines) | ~137 |
+| 16:33 | Edited cli/internal/provider/amp.go | 17→18 lines | ~147 |
+| 16:33 | Edited cli/internal/provider/amp_test.go | modified TestAmpSupportsType() | ~106 |
+| 16:33 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | modified Skipped() | ~550 |
+| 16:33 | Edited cli/internal/provider/amp_test.go | modified TestAmpHooksSupport() | ~238 |
+| 16:34 | Edited cli/internal/provider/cline.go | 5→9 lines | ~99 |
+| 16:35 | Edited cli/internal/provider/cline.go | expanded (+7 lines) | ~132 |
+| 16:35 | Edited cli/internal/provider/cline.go | 13→14 lines | ~108 |
+| 16:35 | Edited cli/internal/provider/windsurf.go | 7→9 lines | ~52 |
+| 16:35 | Edited cli/internal/provider/windsurf.go | expanded (+7 lines) | ~149 |
+| 16:35 | Edited cli/internal/provider/windsurf.go | 14→15 lines | ~116 |
+| 16:35 | Edited cli/internal/provider/cline_test.go | modified TestClineSupportsTypes() | ~391 |
+| 16:40 | MOAT bead chain created — 34 beads (4 phase epics + 23 gap beads + 7 meta-registry + sigstore spike + RegistryClient) | docs/plans/2026-04-12-moat-conformance-gap-analysis.md | Chain wired with deps; bd ready surfaces 8 starting points (Sigstore spike P0, G-1, G-12, G-20, RegistryClient, MR-1, MR-2, MR-3) | ~9000 |
+| 16:35 | Created cli/internal/provider/windsurf_test.go | — | ~519 |
+| 16:35 | Session end: 56 writes across 10 files (start-provider-coverage-implementation.md, 2026-04-12-moat-conformance-gap-analysis.md, roocode.go, roocode_test.go, amp.go) | 10 reads | ~21467 tok |
+| 16:38 | Session end: 56 writes across 10 files (start-provider-coverage-implementation.md, 2026-04-12-moat-conformance-gap-analysis.md, roocode.go, roocode_test.go, amp.go) | 17 reads | ~37085 tok |
+| 16:38 | Created cli/internal/provider/coverage.go | — | ~2258 |
+
+## Session: 2026-04-17 16:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:41 | Created cli/internal/provider/coverage_test.go | — | ~651 |
+| 16:41 | Created cli/internal/provider/coverage_test.go | — | ~815 |
+| 16:42 | Edited cli/internal/provider/coverage_test.go | modified TestCoverageNoDrift() | ~356 |
+| 16:42 | Edited cli/internal/capmon/types.go | 3→4 lines | ~71 |
+| 16:42 | Edited cli/internal/capmon/pipeline.go | 12→13 lines | ~48 |
+| 16:43 | Edited cli/internal/capmon/pipeline.go | expanded (+11 lines) | ~211 |
+| 16:43 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | 3→5 lines | ~160 |
+| 16:43 | Session end: 7 writes across 4 files (coverage_test.go, types.go, pipeline.go, 2026-04-12-moat-conformance-gap-analysis.md) | 3 reads | ~21978 tok |
+| 16:44 | Session end: 7 writes across 4 files (coverage_test.go, types.go, pipeline.go, 2026-04-12-moat-conformance-gap-analysis.md) | 3 reads | ~21978 tok |
+| 16:45 | Edited cli/internal/converter/frontmatter_registry_test.go | 4→5 lines | ~51 |
+| 16:50 | Created docs/provider-formats/zed.yaml | — | ~1952 |
+| 16:50 | Created docs/provider-formats/opencode.yaml | — | ~4191 |
+| 16:51 | Created docs/provider-formats/roo-code.yaml | — | ~7050 |
+| 16:51 | Created docs/provider-formats/cursor.yaml | — | ~7826 |
+| 16:51 | Edited docs/provider-formats/amp.yaml | 4→4 lines | ~35 |
+| 16:51 | Created docs/provider-formats/crush.yaml | — | ~3293 |
+| 16:51 | Edited docs/provider-formats/amp.yaml | 37→39 lines | ~569 |
+
+## Session: 2026-04-17 16:51
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:51 | Edited docs/provider-formats/amp.yaml | expanded (+14 lines) | ~386 |
+| 16:52 | Edited docs/provider-formats/cline.yaml | "2026-04-11T00:00:00Z" → "2026-04-17T00:00:00Z" | ~12 |
+| 16:52 | Edited docs/provider-formats/cline.yaml | expanded (+26 lines) | ~1391 |
+| 16:52 | Session end: 3 writes across 2 files (amp.yaml, cline.yaml) | 4 reads | ~10954 tok |
+
+## Session: 2026-04-17 16:52
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:52 | Edited docs/provider-formats/windsurf.yaml | "2026-04-11T00:00:00Z" → "2026-04-17T00:00:00Z" | ~12 |
+| 16:52 | Edited docs/provider-formats/windsurf.yaml | expanded (+25 lines) | ~1286 |
+| 16:52 | Session end: 2 writes across 1 files (windsurf.yaml) | 0 reads | ~1298 tok |
+| 16:52 | Session end: 2 writes across 1 files (windsurf.yaml) | 0 reads | ~1298 tok |
+| 16:52 | Session end: 2 writes across 1 files (windsurf.yaml) | 0 reads | ~1298 tok |
+| 16:54 | Created ../syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md | — | ~1602 |
+
+## Session: 2026-04-17 16:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-17 16:55
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:58 | Created ../syllago-meta-registry-phase0-wt/registry.yml | — | ~82 |
+| 16:59 | Edited ../syllago-meta-registry-phase0-wt/.github/workflows/moat.yml | inline fix | ~22 |
+| 17:01 | Edited ../syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md | 2→3 lines | ~50 |
+| 17:02 | Edited cli/internal/provider/cline.go | 15→19 lines | ~235 |
+| 17:02 | Edited cli/internal/provider/cline.go | expanded (+13 lines) | ~225 |
+| 17:03 | Edited cli/internal/provider/cline.go | 14→15 lines | ~131 |
+| 17:03 | Edited cli/internal/provider/cline_test.go | modified TestClineSupportsTypes() | ~511 |
+| 17:05 | Edited .github/workflows/codeql.yml | 7→4 lines | ~25 |
+| 17:06 | Session end: 8 writes across 6 files (registry.yml, moat.yml, bootstrap-moat-meta-registry.md, cline.go, cline_test.go) | 21 reads | ~77504 tok |
+| 17:07 | Edited docs/provider-formats/opencode.yaml | reduced (-7 lines) | ~562 |
+| 17:07 | Edited docs/provider-formats/opencode.yaml | description() → invocation() | ~158 |
+| 17:07 | Edited docs/provider-formats/windsurf.yaml | reduced (-16 lines) | ~159 |
+| 17:09 | Edited docs/provider-formats/windsurf.yaml | reduced (-50 lines) | ~231 |
+| 17:11 | Edited .github/workflows/scorecard.yml | 7→4 lines | ~19 |
+| 17:12 | Edited .github/workflows/ci.yml | 9→13 lines | ~41 |
+| 17:12 | Session end: 14 writes across 10 files (registry.yml, moat.yml, bootstrap-moat-meta-registry.md, cline.go, cline_test.go) | 28 reads | ~81135 tok |
+
+## Session: 2026-04-18 17:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:16 | Edited docs/provider-sources/gemini-cli.yaml | 3→5 lines | ~78 |
+| 17:16 | Edited docs/provider-sources/cursor.yaml | 12→9 lines | ~161 |
+| 17:16 | Edited docs/provider-sources/cursor.yaml | expanded (+14 lines) | ~198 |
+| 17:16 | Edited docs/provider-sources/windsurf.yaml | agents() → harness() | ~152 |
+| 17:16 | Edited docs/provider-sources/windsurf.yaml | 14→16 lines | ~206 |
+| 17:16 | Edited docs/provider-sources/zed.yaml | reduced (-22 lines) | ~80 |
+| 17:16 | Edited docs/provider-sources/opencode.yaml | 4→6 lines | ~96 |
+| 17:16 | Edited docs/provider-sources/crush.yaml | 7→7 lines | ~130 |
+| 17:16 | Edited docs/provider-sources/roo-code.yaml | expanded (+7 lines) | ~173 |
+| 17:16 | Edited docs/provider-sources/cline.yaml | 7→8 lines | ~152 |
+| 17:16 | Edited docs/provider-sources/cline.yaml | 7→9 lines | ~119 |
+| 17:17 | Edited ../syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md | 1→2 lines | ~48 |
+
+## Session: 2026-04-18 17:22
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:31 | Created .claude/projects/continue-provider-coverage-reconciliation.md | — | ~1496 |
+| 17:32 | Created ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/continue-provider-coverage-reconciliation.md | — | ~964 |
+| 17:32 | Edited .claude/projects/.current | inline fix | ~11 |
+| 17:32 | Session end: 3 writes across 2 files (continue-provider-coverage-reconciliation.md, .current) | 5 reads | ~6417 tok |
+
+## Session: 2026-04-18 17:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-18 17:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:45 | Edited cli/internal/provider/amp.go | 8→8 lines | ~44 |
+| 20:46 | Edited cli/internal/provider/amp_test.go | 4→7 lines | ~63 |
+| 20:48 | Created releases/v0.9.0.md | — | ~1333 |
+| 20:48 | Edited CHANGELOG.md | expanded (+21 lines) | ~415 |
+| 20:51 | Edited releases/v0.9.0.md | inline fix | ~48 |
+| 20:51 | Edited CHANGELOG.md | inline fix | ~40 |
+| 20:52 | Edited .claude/projects/continue-provider-coverage-reconciliation.md | modified 0() | ~434 |
+
+## Session: 2026-04-18 20:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

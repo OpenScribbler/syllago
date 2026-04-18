@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-04-14T17:20:26.414Z",
   "lifetime": {
-    "total_tokens_estimated": 1849388,
-    "total_reads": 953,
-    "total_writes": 982,
-    "total_sessions": 102,
-    "anatomy_hits": 282,
-    "anatomy_misses": 529,
-    "repeated_reads_blocked": 393,
-    "estimated_savings_vs_bare_cli": 1261595
+    "total_tokens_estimated": 2208660,
+    "total_reads": 1130,
+    "total_writes": 1201,
+    "total_sessions": 124,
+    "anatomy_hits": 343,
+    "anatomy_misses": 610,
+    "repeated_reads_blocked": 472,
+    "estimated_savings_vs_bare_cli": 1505169
   },
   "sessions": [
     {
@@ -12672,6 +12672,2695 @@
         "writes_count": 2,
         "repeated_reads_blocked": 0,
         "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-17-1307",
+      "started": "2026-04-17T20:07:39.191Z",
+      "ended": "2026-04-17T20:15:13.950Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.release-pending.yml",
+          "tokens_estimated": 34,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.config/pai/.research-workflow-state-3e857b46-3822-488f-b024-16a79d21200e.json",
+          "tokens_estimated": 28,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 62,
+        "reads_count": 1,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-17-1456",
+      "started": "2026-04-17T21:56:28.725Z",
+      "ended": "2026-04-17T21:57:09.679Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 1180,
+        "output_tokens_estimated": 0,
+        "reads_count": 1,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-17-1456",
+      "started": "2026-04-17T21:56:28.725Z",
+      "ended": "2026-04-17T21:58:26.245Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 1180,
+        "output_tokens_estimated": 0,
+        "reads_count": 1,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-17-1456",
+      "started": "2026-04-17T21:56:28.725Z",
+      "ended": "2026-04-17T22:10:10.534Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 651,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/opencode/agents.0/extracted.json",
+          "tokens_estimated": 208,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/src/data/providers/opencode.json",
+          "tokens_estimated": 5,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 2044,
+        "output_tokens_estimated": 0,
+        "reads_count": 4,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-17-1456",
+      "started": "2026-04-17T21:56:28.725Z",
+      "ended": "2026-04-17T22:21:16.555Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 651,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/opencode/agents.0/extracted.json",
+          "tokens_estimated": 208,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/src/data/providers/opencode.json",
+          "tokens_estimated": 5,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 2044,
+        "output_tokens_estimated": 0,
+        "reads_count": 4,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-17-1456",
+      "started": "2026-04-17T21:56:28.725Z",
+      "ended": "2026-04-17T22:22:29.740Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 651,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/opencode/agents.0/extracted.json",
+          "tokens_estimated": 208,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/src/data/providers/opencode.json",
+          "tokens_estimated": 5,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_no_vague_limitations.md",
+          "tokens_estimated": 384,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 134,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 2044,
+        "output_tokens_estimated": 518,
+        "reads_count": 5,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-17-1522",
+      "started": "2026-04-17T22:22:30.100Z",
+      "ended": "2026-04-17T22:26:08.654Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_docs_scope_boundary.md",
+          "tokens_estimated": 458,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 137,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 595,
+        "reads_count": 0,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-17-1522",
+      "started": "2026-04-17T22:22:30.100Z",
+      "ended": "2026-04-17T22:37:36.963Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/codex.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/pi.go",
+          "tokens_estimated": 650,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/claude.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/copilot.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/factory_droid.go",
+          "tokens_estimated": 696,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/gemini.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/feedback_docs_scope_boundary.md",
+          "tokens_estimated": 458,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 137,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/project_provider_eligibility.md",
+          "tokens_estimated": 527,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+          "tokens_estimated": 130,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1346,
+        "output_tokens_estimated": 1252,
+        "reads_count": 10,
+        "writes_count": 4,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-17-1538",
+      "started": "2026-04-17T22:38:28.403Z",
+      "ended": "2026-04-17T22:41:58.775Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/kiro.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/amp.yaml",
+          "tokens_estimated": 1090,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cline.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/pi.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 1090,
+        "output_tokens_estimated": 0,
+        "reads_count": 7,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-17-1541",
+      "started": "2026-04-17T22:41:59.270Z",
+      "ended": "2026-04-17T22:49:50.437Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/project_moat_integration.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/signing/signing.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 3,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-17-1541",
+      "started": "2026-04-17T22:41:59.270Z",
+      "ended": "2026-04-17T22:55:08.340Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/project_moat_integration.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/signing/signing.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1255,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 474,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 833,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 985,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 321,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1180,
+        "output_tokens_estimated": 3868,
+        "reads_count": 4,
+        "writes_count": 5,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-17-1541",
+      "started": "2026-04-17T22:41:59.270Z",
+      "ended": "2026-04-17T23:03:51.390Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/project_moat_integration.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/signing/signing.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1255,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 474,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 833,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 985,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 321,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1180,
+        "output_tokens_estimated": 3868,
+        "reads_count": 4,
+        "writes_count": 5,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-17-1607",
+      "started": "2026-04-17T23:07:31.918Z",
+      "ended": "2026-04-17T23:11:07.895Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/moat/moat-spec.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/specs/registry-action.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/specs/publisher-action.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/specs/moat-verify.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 740,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 400,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 242,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 1382,
+        "reads_count": 5,
+        "writes_count": 3,
+        "repeated_reads_blocked": 10,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-17-1607",
+      "started": "2026-04-17T23:07:31.918Z",
+      "ended": "2026-04-17T23:11:13.932Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/moat/moat-spec.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/specs/registry-action.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/specs/publisher-action.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/specs/moat-verify.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 740,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 400,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 242,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 1382,
+        "reads_count": 5,
+        "writes_count": 3,
+        "repeated_reads_blocked": 10,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-17-1607",
+      "started": "2026-04-17T23:07:31.918Z",
+      "ended": "2026-04-17T23:11:55.710Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/moat/moat-spec.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/specs/registry-action.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/specs/publisher-action.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/specs/moat-verify.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 740,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 400,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 242,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 1382,
+        "reads_count": 5,
+        "writes_count": 3,
+        "repeated_reads_blocked": 10,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-17-1607",
+      "started": "2026-04-17T23:07:31.918Z",
+      "ended": "2026-04-17T23:16:40.091Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/moat/moat-spec.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/specs/registry-action.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/specs/publisher-action.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/specs/moat-verify.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-epic5-agents-recognition.md",
+          "tokens_estimated": 1042,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/templates/obsidian-project.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/templates/repo-project.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 9,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 740,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 400,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 242,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 231,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 175,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 113,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 108,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 122,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 280,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 270,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 515,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 324,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-provider-coverage-implementation.md",
+          "tokens_estimated": 2252,
+          "action": "create"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/start-provider-coverage-implementation.md",
+          "tokens_estimated": 1182,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 12,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1051,
+        "output_tokens_estimated": 7181,
+        "reads_count": 9,
+        "writes_count": 16,
+        "repeated_reads_blocked": 12,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-17-1617",
+      "started": "2026-04-17T23:17:07.004Z",
+      "ended": "2026-04-17T23:17:41.693Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-provider-coverage-implementation.md",
+          "tokens_estimated": 1970,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 280,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 238,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1970,
+        "output_tokens_estimated": 518,
+        "reads_count": 1,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-17-1617",
+      "started": "2026-04-17T23:17:07.004Z",
+      "ended": "2026-04-17T23:19:54.179Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-provider-coverage-implementation.md",
+          "tokens_estimated": 1970,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 280,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 238,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 408,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 454,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 522,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 183,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 202,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 312,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 211,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 470,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 1970,
+        "output_tokens_estimated": 3280,
+        "reads_count": 1,
+        "writes_count": 10,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-17-1624",
+      "started": "2026-04-17T23:24:04.414Z",
+      "ended": "2026-04-17T23:27:30.347Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 15681,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-provider-coverage-implementation.md",
+          "tokens_estimated": 595,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-provider-coverage-implementation.md",
+          "tokens_estimated": 10,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 15681,
+        "output_tokens_estimated": 605,
+        "reads_count": 1,
+        "writes_count": 2,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-17-1624",
+      "started": "2026-04-17T23:24:04.414Z",
+      "ended": "2026-04-17T23:35:55.026Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 16330,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/roocode.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/roocode_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/claude.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/provider_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-provider-coverage-implementation.md",
+          "tokens_estimated": 595,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-provider-coverage-implementation.md",
+          "tokens_estimated": 10,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 27,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 23,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 25,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 17,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 23,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 23,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 20,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 25,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 23,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/roocode.go",
+          "tokens_estimated": 57,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 20,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/roocode.go",
+          "tokens_estimated": 103,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 18,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/roocode.go",
+          "tokens_estimated": 113,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 20,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/roocode_test.go",
+          "tokens_estimated": 420,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 17,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 18,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 17,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 18,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 15,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 33,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 99,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp.go",
+          "tokens_estimated": 34,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp.go",
+          "tokens_estimated": 147,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp.go",
+          "tokens_estimated": 157,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp_test.go",
+          "tokens_estimated": 113,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 589,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp_test.go",
+          "tokens_estimated": 255,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 106,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 141,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 115,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf.go",
+          "tokens_estimated": 55,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf.go",
+          "tokens_estimated": 159,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf.go",
+          "tokens_estimated": 124,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline_test.go",
+          "tokens_estimated": 419,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf_test.go",
+          "tokens_estimated": 556,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 16330,
+        "output_tokens_estimated": 5137,
+        "reads_count": 10,
+        "writes_count": 56,
+        "repeated_reads_blocked": 3,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-17-1624",
+      "started": "2026-04-17T23:24:04.414Z",
+      "ended": "2026-04-17T23:38:11.198Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 16330,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/roocode.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/roocode_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/claude.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/provider_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/roo-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/roo-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 13498,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/capyaml/types.go",
+          "tokens_estimated": 794,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/capyaml/load.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-capabilities/roo-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/CHANGELOG.md",
+          "tokens_estimated": 1326,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-provider-coverage-implementation.md",
+          "tokens_estimated": 595,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-provider-coverage-implementation.md",
+          "tokens_estimated": 10,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 27,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 23,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 25,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 17,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 23,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 23,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 20,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 25,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 23,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/roocode.go",
+          "tokens_estimated": 57,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 20,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/roocode.go",
+          "tokens_estimated": 103,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 18,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/roocode.go",
+          "tokens_estimated": 113,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 20,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/roocode_test.go",
+          "tokens_estimated": 420,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 17,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 18,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 17,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 18,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 15,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 33,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 99,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp.go",
+          "tokens_estimated": 34,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp.go",
+          "tokens_estimated": 147,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp.go",
+          "tokens_estimated": 157,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp_test.go",
+          "tokens_estimated": 113,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 589,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/amp_test.go",
+          "tokens_estimated": 255,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 106,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 141,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 115,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf.go",
+          "tokens_estimated": 55,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf.go",
+          "tokens_estimated": 159,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf.go",
+          "tokens_estimated": 124,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline_test.go",
+          "tokens_estimated": 419,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf_test.go",
+          "tokens_estimated": 556,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 31948,
+        "output_tokens_estimated": 5137,
+        "reads_count": 17,
+        "writes_count": 56,
+        "repeated_reads_blocked": 3,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-17-1640",
+      "started": "2026-04-17T23:40:40.546Z",
+      "ended": "2026-04-17T23:43:24.337Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 16330,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/coverage_test.go",
+          "tokens_estimated": 697,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/coverage_test.go",
+          "tokens_estimated": 873,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/coverage_test.go",
+          "tokens_estimated": 381,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 76,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 51,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 226,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 172,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 19502,
+        "output_tokens_estimated": 2476,
+        "reads_count": 3,
+        "writes_count": 7,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-17-1640",
+      "started": "2026-04-17T23:40:40.546Z",
+      "ended": "2026-04-17T23:44:49.808Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 3172,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 16330,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/coverage_test.go",
+          "tokens_estimated": 697,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/coverage_test.go",
+          "tokens_estimated": 873,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/coverage_test.go",
+          "tokens_estimated": 381,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+          "tokens_estimated": 76,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 51,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+          "tokens_estimated": 226,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 172,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 19502,
+        "output_tokens_estimated": 2476,
+        "reads_count": 3,
+        "writes_count": 7,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-17-1651",
+      "started": "2026-04-17T23:51:43.221Z",
+      "ended": "2026-04-17T23:52:19.842Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf.go",
+          "tokens_estimated": 725,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/gemini-cli.yaml",
+          "tokens_estimated": 7260,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/roo-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/amp.yaml",
+          "tokens_estimated": 386,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 12,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 1391,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 9165,
+        "output_tokens_estimated": 1789,
+        "reads_count": 4,
+        "writes_count": 3,
+        "repeated_reads_blocked": 2,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-17-1652",
+      "started": "2026-04-17T23:52:20.389Z",
+      "ended": "2026-04-17T23:52:38.491Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 12,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 1286,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 1298,
+        "reads_count": 0,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-17-1652",
+      "started": "2026-04-17T23:52:20.389Z",
+      "ended": "2026-04-17T23:52:43.400Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 12,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 1286,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 1298,
+        "reads_count": 0,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-17-1652",
+      "started": "2026-04-17T23:52:20.389Z",
+      "ended": "2026-04-17T23:52:50.240Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 12,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 1286,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 1298,
+        "reads_count": 0,
+        "writes_count": 2,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-17-1655",
+      "started": "2026-04-17T23:55:00.995Z",
+      "ended": "2026-04-17T23:55:43.095Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 1,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-17-1655",
+      "started": "2026-04-17T23:55:00.995Z",
+      "ended": "2026-04-18T00:06:56.714Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 16444,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/coverage.go",
+          "tokens_estimated": 2258,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 4191,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/crush.yaml",
+          "tokens_estimated": 3293,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6994,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/roo-code.yaml",
+          "tokens_estimated": 7050,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 8472,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/zed.yaml",
+          "tokens_estimated": 1952,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/reference/moat.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/reference/moat-registry.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 13498,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.github/workflows/moat.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf.go",
+          "tokens_estimated": 725,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 1000,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline_test.go",
+          "tokens_estimated": 992,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/codeql.yml",
+          "tokens_estimated": 264,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/ci.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cursor.yaml",
+          "tokens_estimated": 7826,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/registry.yml",
+          "tokens_estimated": 82,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.github/workflows/moat.yml",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 54,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 252,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 241,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 141,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline_test.go",
+          "tokens_estimated": 548,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/codeql.yml",
+          "tokens_estimated": 25,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 76139,
+        "output_tokens_estimated": 1365,
+        "reads_count": 21,
+        "writes_count": 8,
+        "repeated_reads_blocked": 10,
+        "anatomy_lookups": 11
+      }
+    },
+    {
+      "id": "session-2026-04-17-1655",
+      "started": "2026-04-17T23:55:00.995Z",
+      "ended": "2026-04-18T00:12:45.230Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 16444,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/coverage.go",
+          "tokens_estimated": 2258,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 4191,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/crush.yaml",
+          "tokens_estimated": 3293,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cline.yaml",
+          "tokens_estimated": 6994,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/roo-code.yaml",
+          "tokens_estimated": 7050,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 8242,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/zed.yaml",
+          "tokens_estimated": 1952,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/reference/moat.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/reference/moat-registry.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/claude-code.yaml",
+          "tokens_estimated": 13498,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.github/workflows/moat.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf.go",
+          "tokens_estimated": 725,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 1000,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline_test.go",
+          "tokens_estimated": 992,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/codeql.yml",
+          "tokens_estimated": 264,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/ci.yml",
+          "tokens_estimated": 848,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/spec/canonical-keys.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cursor.yaml",
+          "tokens_estimated": 7826,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/capmon.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/capmon-check.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/smoke-test-providers.yml",
+          "tokens_estimated": 828,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/scorecard.yml",
+          "tokens_estimated": 319,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/vouch-manage.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/pr-policy.yml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/factory_droid.go",
+          "tokens_estimated": 696,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/registry.yml",
+          "tokens_estimated": 82,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.github/workflows/moat.yml",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 54,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 252,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 241,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline.go",
+          "tokens_estimated": 141,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cline_test.go",
+          "tokens_estimated": 548,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/codeql.yml",
+          "tokens_estimated": 25,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 562,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/opencode.yaml",
+          "tokens_estimated": 158,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 159,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 231,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/scorecard.yml",
+          "tokens_estimated": 19,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/ci.yml",
+          "tokens_estimated": 41,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 78600,
+        "output_tokens_estimated": 2535,
+        "reads_count": 28,
+        "writes_count": 14,
+        "repeated_reads_blocked": 16,
+        "anatomy_lookups": 13
+      }
+    },
+    {
+      "id": "session-2026-04-18-1712",
+      "started": "2026-04-18T00:12:48.493Z",
+      "ended": "2026-04-18T00:14:00.730Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/gemini-cli.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/roo-code.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/crush.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/cursor.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/opencode.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/zed.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/windsurf.yaml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/gemini.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/zed.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-sources/factory-droid.yaml",
+          "tokens_estimated": 1068,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/windsurf.go",
+          "tokens_estimated": 725,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provider/cursor.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/windsurf.yaml",
+          "tokens_estimated": 7388,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/provider-formats/cursor.yaml",
+          "tokens_estimated": 7826,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 17007,
+        "output_tokens_estimated": 0,
+        "reads_count": 14,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-18-1722",
+      "started": "2026-04-18T00:22:58.437Z",
+      "ended": "2026-04-18T00:32:24.288Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/adr/0001-hook-degradation-enforcement.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.capmon-cache/last-run.json",
+          "tokens_estimated": 145,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/start-provider-coverage-implementation.md",
+          "tokens_estimated": 2433,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 11,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-provider-coverage-reconciliation.md",
+          "tokens_estimated": 1603,
+          "action": "create"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/continue-provider-coverage-reconciliation.md",
+          "tokens_estimated": 1033,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 12,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 3769,
+        "output_tokens_estimated": 2648,
+        "reads_count": 5,
+        "writes_count": 3,
+        "repeated_reads_blocked": 2,
+        "anatomy_lookups": 4
       }
     }
   ],
