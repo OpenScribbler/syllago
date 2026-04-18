@@ -66,8 +66,8 @@ type Meta struct {
 
 	// Content-signal detection fields — scanner-computed, never read from incoming YAML.
 	// Set by add.writeItem() from the actual discovery source, not from package metadata.
-	Confidence      float64 `yaml:"confidence,omitempty"`
-	DetectionSource string  `yaml:"detection_source,omitempty"`
+	Confidence      float64 `yaml:"confidence,omitempty"`       // scanner-assigned confidence score (0.0–1.0)
+	DetectionSource string  `yaml:"detection_source,omitempty"` // where the scanner observed this content (e.g. "registry:acme/rules", "provider:claude-code")
 	DetectionMethod string  `yaml:"detection_method,omitempty"` // "automatic" or "user-directed"
 }
 

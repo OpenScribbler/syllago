@@ -1,0 +1,332 @@
+{
+  "version": "1",
+  "generated_at": "2026-04-18T08:14:39Z",
+  "syllago_version": "0.9.0",
+  "schema": {
+    "struct_name": "Meta",
+    "format_version": 1,
+    "fields": [
+      {
+        "name": "FormatVersion",
+        "yaml_key": "format_version",
+        "type": "int",
+        "omitempty": true,
+        "required": false,
+        "comment": "syllago format version (1 = current)",
+        "group": "identity"
+      },
+      {
+        "name": "ID",
+        "yaml_key": "id",
+        "type": "string",
+        "omitempty": false,
+        "required": true,
+        "group": "identity"
+      },
+      {
+        "name": "Name",
+        "yaml_key": "name",
+        "type": "string",
+        "omitempty": false,
+        "required": true,
+        "group": "identity"
+      },
+      {
+        "name": "Description",
+        "yaml_key": "description",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "group": "identity"
+      },
+      {
+        "name": "Version",
+        "yaml_key": "version",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "group": "identity"
+      },
+      {
+        "name": "Type",
+        "yaml_key": "type",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "group": "identity"
+      },
+      {
+        "name": "Author",
+        "yaml_key": "author",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "group": "identity"
+      },
+      {
+        "name": "Source",
+        "yaml_key": "source",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "group": "source-provenance"
+      },
+      {
+        "name": "Tags",
+        "yaml_key": "tags",
+        "type": "list of string",
+        "omitempty": true,
+        "required": false,
+        "group": "identity"
+      },
+      {
+        "name": "Hidden",
+        "yaml_key": "hidden",
+        "type": "bool",
+        "omitempty": true,
+        "required": false,
+        "group": "identity"
+      },
+      {
+        "name": "Dependencies",
+        "yaml_key": "dependencies",
+        "type": "list of Dependency",
+        "omitempty": true,
+        "required": false,
+        "group": "dependencies"
+      },
+      {
+        "name": "BundledScripts",
+        "yaml_key": "bundled_scripts",
+        "type": "list of BundledScriptMeta",
+        "omitempty": true,
+        "required": false,
+        "comment": "scripts copied into hook dir at add time",
+        "group": "bundled-scripts"
+      },
+      {
+        "name": "CreatedAt",
+        "yaml_key": "created_at",
+        "type": "time.Time",
+        "omitempty": true,
+        "required": false,
+        "comment": "when item was scaffolded via syllago create",
+        "group": "lifecycle"
+      },
+      {
+        "name": "PromotedAt",
+        "yaml_key": "promoted_at",
+        "type": "time.Time",
+        "omitempty": true,
+        "required": false,
+        "group": "lifecycle"
+      },
+      {
+        "name": "PRBranch",
+        "yaml_key": "pr_branch",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "group": "lifecycle"
+      },
+      {
+        "name": "SourceProvider",
+        "yaml_key": "source_provider",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "comment": "provider slug content was imported from",
+        "group": "source-provenance"
+      },
+      {
+        "name": "SourceFormat",
+        "yaml_key": "source_format",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "comment": "original file extension (e.g. \"mdc\", \"md\")",
+        "group": "source-provenance"
+      },
+      {
+        "name": "SourceType",
+        "yaml_key": "source_type",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "comment": "git | filesystem | registry | provider",
+        "group": "source-provenance",
+        "enum_values": [
+          "git",
+          "filesystem",
+          "registry",
+          "provider"
+        ]
+      },
+      {
+        "name": "SourceURL",
+        "yaml_key": "source_url",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "comment": "for future syllago update capability",
+        "group": "source-provenance"
+      },
+      {
+        "name": "HasSource",
+        "yaml_key": "has_source",
+        "type": "bool",
+        "omitempty": true,
+        "required": false,
+        "comment": "whether .source/ directory exists",
+        "group": "source-provenance"
+      },
+      {
+        "name": "SourceHash",
+        "yaml_key": "source_hash",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "comment": "SHA-256 of source content at import time",
+        "group": "source-provenance"
+      },
+      {
+        "name": "SourceRegistry",
+        "yaml_key": "source_registry",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "comment": "registry name content was imported from (e.g. \"acme/internal-rules\")",
+        "group": "registry"
+      },
+      {
+        "name": "SourceVisibility",
+        "yaml_key": "source_visibility",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "comment": "visibility at import time: \"public\", \"private\", \"unknown\"",
+        "group": "registry",
+        "enum_values": [
+          "public",
+          "private",
+          "unknown"
+        ]
+      },
+      {
+        "name": "AddedAt",
+        "yaml_key": "added_at",
+        "type": "time.Time",
+        "omitempty": true,
+        "required": false,
+        "comment": "when content was added to library",
+        "group": "source-provenance"
+      },
+      {
+        "name": "AddedBy",
+        "yaml_key": "added_by",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "comment": "e.g. \"syllago v0.1.0\"",
+        "group": "source-provenance"
+      },
+      {
+        "name": "SourceScope",
+        "yaml_key": "source_scope",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "comment": "\"global\" or \"project\"",
+        "group": "scope",
+        "enum_values": [
+          "global",
+          "project"
+        ]
+      },
+      {
+        "name": "SourceProject",
+        "yaml_key": "source_project",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "comment": "project directory name (only when scope is \"project\")",
+        "group": "scope"
+      },
+      {
+        "name": "Confidence",
+        "yaml_key": "confidence",
+        "type": "float64",
+        "omitempty": true,
+        "required": false,
+        "comment": "scanner-assigned confidence score (0.0–1.0)",
+        "group": "detection-signals"
+      },
+      {
+        "name": "DetectionSource",
+        "yaml_key": "detection_source",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "comment": "where the scanner observed this content (e.g. \"registry:acme/rules\", \"provider:claude-code\")",
+        "group": "detection-signals"
+      },
+      {
+        "name": "DetectionMethod",
+        "yaml_key": "detection_method",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "comment": "\"automatic\" or \"user-directed\"",
+        "group": "detection-signals",
+        "enum_values": [
+          "automatic",
+          "user-directed"
+        ]
+      }
+    ],
+    "nested_types": [
+      {
+        "name": "Dependency",
+        "fields": [
+          {
+            "name": "Type",
+            "yaml_key": "type",
+            "type": "string",
+            "omitempty": false,
+            "required": true,
+            "group": "identity"
+          },
+          {
+            "name": "Name",
+            "yaml_key": "name",
+            "type": "string",
+            "omitempty": false,
+            "required": true,
+            "group": "identity"
+          }
+        ]
+      },
+      {
+        "name": "BundledScriptMeta",
+        "fields": [
+          {
+            "name": "OriginalPath",
+            "yaml_key": "original_path",
+            "type": "string",
+            "omitempty": false,
+            "required": true,
+            "comment": "absolute path at add time"
+          },
+          {
+            "name": "Filename",
+            "yaml_key": "filename",
+            "type": "string",
+            "omitempty": false,
+            "required": true,
+            "comment": "filename in library dir"
+          }
+        ]
+      }
+    ]
+  }
+}

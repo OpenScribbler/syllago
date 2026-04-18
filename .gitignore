@@ -2,6 +2,7 @@
 cli/syllago
 cli/syllago.*
 cli/syllago-*
+!cli/syllago-yaml-schema.json
 cli/syl
 cli/syl.exe
 
