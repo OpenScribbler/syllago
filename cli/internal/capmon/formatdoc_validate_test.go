@@ -39,6 +39,7 @@ func writeTestFormatDoc(t *testing.T, dir, provider, content string) {
 }
 
 const validFormatDocContent = `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-11T00:00:00Z"
 generation_method: human-edited
 
@@ -91,6 +92,7 @@ func TestValidateFormatDoc_UnknownKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	content := `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-11T00:00:00Z"
 content_types:
   skills:
@@ -127,6 +129,7 @@ func TestValidateFormatDoc_MissingExtensionField(t *testing.T) {
 		t.Fatal(err)
 	}
 	content := `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-11T00:00:00Z"
 content_types:
   skills:
@@ -166,6 +169,7 @@ func TestValidateFormatDoc_InvalidConversion(t *testing.T) {
 		t.Fatal(err)
 	}
 	content := `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-11T00:00:00Z"
 content_types:
   skills:
@@ -203,6 +207,7 @@ func TestValidateFormatDoc_InvalidConfidence(t *testing.T) {
 		t.Fatal(err)
 	}
 	content := `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-11T00:00:00Z"
 content_types:
   skills:
@@ -227,6 +232,61 @@ content_types:
 	}
 	if !strings.Contains(err.Error(), "maybe") {
 		t.Errorf("error should mention invalid value 'maybe', got: %v", err)
+	}
+}
+
+func TestValidateFormatDoc_MissingDocsURL(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	canonicalKeysPath := writeTestCanonicalKeys(t, dir)
+	formatsDir := filepath.Join(dir, "formats")
+	if err := os.MkdirAll(formatsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// Intentionally omit docs_url to exercise the docs_url rule.
+	content := `provider: test-provider-missing-docs
+last_fetched_at: "2026-04-11T00:00:00Z"
+content_types:
+  skills:
+    status: supported
+`
+	writeTestFormatDoc(t, formatsDir, "test-provider-missing-docs", content)
+
+	err := ValidateFormatDoc(formatsDir, canonicalKeysPath, "test-provider-missing-docs")
+	if err == nil {
+		t.Fatal("expected error for missing docs_url")
+	}
+	if !strings.Contains(err.Error(), "docs_url") {
+		t.Errorf("error should mention docs_url, got: %v", err)
+	}
+}
+
+func TestValidateFormatDoc_MalformedDocsURL(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	canonicalKeysPath := writeTestCanonicalKeys(t, dir)
+	formatsDir := filepath.Join(dir, "formats")
+	if err := os.MkdirAll(formatsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	content := `provider: test-provider
+docs_url: "not-a-url"
+last_fetched_at: "2026-04-11T00:00:00Z"
+content_types:
+  skills:
+    status: supported
+`
+	writeTestFormatDoc(t, formatsDir, "test-provider", content)
+
+	err := ValidateFormatDoc(formatsDir, canonicalKeysPath, "test-provider")
+	if err == nil {
+		t.Fatal("expected error for malformed docs_url")
+	}
+	if !strings.Contains(err.Error(), "docs_url") {
+		t.Errorf("error should mention docs_url, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "http") {
+		t.Errorf("error should mention http(s) requirement, got: %v", err)
 	}
 }
 
@@ -263,6 +323,7 @@ func TestValidateFormatDoc_SupportedUnknown(t *testing.T) {
 	// supported: unknown is invalid YAML for a bool field — validate should
 	// catch it before the YAML parser produces an opaque type error.
 	content := `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-11T00:00:00Z"
 content_types:
   skills:
@@ -302,6 +363,7 @@ func TestValidateFormatDoc_InformationalFieldsNotValidated(t *testing.T) {
 		t.Fatal(err)
 	}
 	content := `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-11T00:00:00Z"
 generation_method: anything-goes
 content_types:
@@ -342,6 +404,7 @@ func TestValidateFormatDocWithWarnings(t *testing.T) {
 		{
 			name: "value_type_not_in_allow_list",
 			yamlContent: `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-14T00:00:00Z"
 content_types:
   skills:
@@ -362,6 +425,7 @@ content_types:
 		{
 			name: "example_lang_not_in_allow_list",
 			yamlContent: `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-14T00:00:00Z"
 content_types:
   skills:
@@ -384,6 +448,7 @@ content_types:
 		{
 			name: "example_lang_empty_is_warning",
 			yamlContent: `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-14T00:00:00Z"
 content_types:
   skills:
@@ -406,6 +471,7 @@ content_types:
 		{
 			name: "example_code_empty_is_warning",
 			yamlContent: `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-14T00:00:00Z"
 content_types:
   skills:
@@ -428,6 +494,7 @@ content_types:
 		{
 			name: "source_section_not_in_allow_list",
 			yamlContent: `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-14T00:00:00Z"
 content_types:
   skills:
@@ -448,6 +515,7 @@ content_types:
 		{
 			name: "allow_listed_value_type_no_warning",
 			yamlContent: `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-14T00:00:00Z"
 content_types:
   skills:
@@ -470,6 +538,7 @@ content_types:
 		{
 			name: "multiple_violations_accumulate",
 			yamlContent: `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-14T00:00:00Z"
 content_types:
   skills:

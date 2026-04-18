@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -11,6 +13,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 // ProviderManifest is the top-level JSON structure output by _genproviders.
@@ -28,6 +31,7 @@ type ProviderCapEntry struct {
 	Slug      string                       `json:"slug"`
 	ConfigDir string                       `json:"configDir"`
 	EmitPath  string                       `json:"emitPath,omitempty"` // e.g. "{project}/CLAUDE.md"
+	DocsURL   string                       `json:"docsURL,omitempty"`  // provider's official documentation root (from format-doc docs_url)
 	Content   map[string]ContentCapability `json:"content"`
 }
 
@@ -70,11 +74,58 @@ func init() {
 	rootCmd.AddCommand(genprovidersCmd)
 }
 
-func runGenproviders(_ *cobra.Command, _ []string) error {
-	var entries []ProviderCapEntry
+// providerFormatsDirForDocsURL is the directory containing
+// docs/provider-formats/*.yaml files from which we cross-reference the
+// authored docs_url field. Overridable in tests.
+var providerFormatsDirForDocsURL = filepath.Join("..", "docs", "provider-formats")
 
+// providerDocsURLYAML captures only the fields we need to pluck the docs_url
+// out of a format-doc YAML without pulling in the full capmon schema.
+type providerDocsURLYAML struct {
+	Provider string `yaml:"provider"`
+	DocsURL  string `yaml:"docs_url"`
+}
+
+// loadProviderDocsURLs reads every <slug>.yaml under dir and returns a map
+// from provider slug → docs_url. Slug is derived from the filename stem so a
+// mismatched provider: field inside the file does not shadow it.
+func loadProviderDocsURLs(dir string) (map[string]string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("readdir %q: %w", dir, err)
+	}
+	out := make(map[string]string)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if !strings.HasSuffix(name, ".yaml") {
+			continue
+		}
+		slug := strings.TrimSuffix(name, ".yaml")
+		raw, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			return nil, fmt.Errorf("reading %q: %w", name, err)
+		}
+		var doc providerDocsURLYAML
+		if err := yaml.Unmarshal(raw, &doc); err != nil {
+			return nil, fmt.Errorf("parsing %q: %w", name, err)
+		}
+		out[slug] = doc.DocsURL
+	}
+	return out, nil
+}
+
+func runGenproviders(_ *cobra.Command, _ []string) error {
+	docsURLs, err := loadProviderDocsURLs(providerFormatsDirForDocsURL)
+	if err != nil {
+		return fmt.Errorf("loading provider docs URLs: %w", err)
+	}
+
+	var entries []ProviderCapEntry
 	for _, prov := range provider.AllProviders {
-		entries = append(entries, buildProviderEntry(prov))
+		entries = append(entries, buildProviderEntry(prov, docsURLs[prov.Slug]))
 	}
 
 	v := version
@@ -100,7 +151,7 @@ func runGenproviders(_ *cobra.Command, _ []string) error {
 	return enc.Encode(manifest)
 }
 
-func buildProviderEntry(prov provider.Provider) ProviderCapEntry {
+func buildProviderEntry(prov provider.Provider, docsURL string) ProviderCapEntry {
 	content := make(map[string]ContentCapability)
 
 	for _, ct := range catalog.AllContentTypes() {
@@ -117,6 +168,7 @@ func buildProviderEntry(prov provider.Provider) ProviderCapEntry {
 		Slug:      prov.Slug,
 		ConfigDir: prov.ConfigDir,
 		EmitPath:  emitPath,
+		DocsURL:   docsURL,
 		Content:   content,
 	}
 }

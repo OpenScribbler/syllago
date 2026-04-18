@@ -1,4 +1,5 @@
 provider: zed
+docs_url: "https://zed.dev/docs"
 # Optional extension depth fields (populated by capmon subagent):
 # - required: true | false | null (null = source doesn't say)
 # - value_type: see allow-list in formatdoc_validate.go

@@ -184,6 +184,11 @@ func ValidateFormatDoc(formatsDir, canonicalKeysPath, provider string) error {
 	if len(doc.ContentTypes) == 0 {
 		errs = append(errs, "✗ content_types: required field is empty")
 	}
+	if doc.DocsURL == "" {
+		errs = append(errs, "✗ docs_url: required field is empty (must be the provider's official documentation root, e.g. https://docs.example.com)")
+	} else if !strings.HasPrefix(doc.DocsURL, "http://") && !strings.HasPrefix(doc.DocsURL, "https://") {
+		errs = append(errs, fmt.Sprintf("✗ docs_url: must start with http:// or https:// (got %q)", doc.DocsURL))
+	}
 
 	// Per-content-type rules
 	for ct, ctDoc := range doc.ContentTypes {

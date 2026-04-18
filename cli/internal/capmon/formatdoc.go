@@ -14,6 +14,7 @@ import (
 // extensions that have no canonical equivalent yet.
 type FormatDoc struct {
 	Provider         string                          `yaml:"provider"`
+	DocsURL          string                          `yaml:"docs_url"`
 	LastFetchedAt    string                          `yaml:"last_fetched_at"`
 	LastChangedAt    string                          `yaml:"last_changed_at"`
 	GenerationMethod string                          `yaml:"generation_method"`

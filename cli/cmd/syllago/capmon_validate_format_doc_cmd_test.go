@@ -60,6 +60,7 @@ func TestCapmonValidateFormatDocCmd_ValidFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	validDoc := `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-11T00:00:00Z"
 content_types:
   skills:
@@ -121,6 +122,7 @@ func TestCapmonValidateFormatDocCmd_UnknownKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	invalidDoc := `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-11T00:00:00Z"
 content_types:
   skills:
@@ -186,6 +188,7 @@ func TestCapmonValidateFormatDocCmd_WarningPrintedToStderr(t *testing.T) {
 	// Doc passes blocking validation but has a value_type outside the allow-list,
 	// which should produce a non-blocking warning.
 	docWithWarning := `provider: test-provider
+docs_url: "https://example.com/docs"
 last_fetched_at: "2026-04-15T00:00:00Z"
 content_types:
   skills:
