@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -168,5 +169,222 @@ func TestRegistryAddExpandsAlias(t *testing.T) {
 	err := registryAddCmd.RunE(registryAddCmd, []string{testAlias})
 	if err != nil && strings.Contains(err.Error(), "allowedRegistries") {
 		t.Errorf("alias should expand before allowedRegistries check, got: %v", err)
+	}
+}
+
+// chdirTo changes to dir and restores the original cwd on cleanup.
+func chdirTo(t *testing.T, dir string) {
+	t.Helper()
+	orig, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("os.Getwd: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("os.Chdir: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(orig) })
+}
+
+// resetRegistryCreateFlags resets the flags mutated by registry create tests.
+func resetRegistryCreateFlags(t *testing.T) {
+	t.Helper()
+	t.Cleanup(func() {
+		registryCreateCmd.Flags().Set("new", "")
+		registryCreateCmd.Flags().Set("description", "")
+		registryCreateCmd.Flags().Set("no-git", "false")
+		registryCreateCmd.Flags().Set("from-native", "false")
+	})
+}
+
+func TestRunRegistryCreateNew_HappyPath(t *testing.T) {
+	tmp := t.TempDir()
+	chdirTo(t, tmp)
+	resetRegistryCreateFlags(t)
+
+	stdout, _ := output.SetForTest(t)
+	registryCreateCmd.Flags().Set("new", "my-registry")
+	registryCreateCmd.Flags().Set("no-git", "true") // avoid git dependency in unit tests
+
+	if err := registryCreateCmd.RunE(registryCreateCmd, nil); err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+
+	dir := filepath.Join(tmp, "my-registry")
+	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+		t.Fatalf("expected scaffold dir %s, stat err=%v", dir, err)
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "Created registry scaffold at") {
+		t.Errorf("expected scaffold message, got: %s", out)
+	}
+	if !strings.Contains(out, "Next steps:") {
+		t.Errorf("expected next-steps message, got: %s", out)
+	}
+}
+
+func TestRunRegistryCreateNew_WithDescription(t *testing.T) {
+	tmp := t.TempDir()
+	chdirTo(t, tmp)
+	resetRegistryCreateFlags(t)
+
+	_, _ = output.SetForTest(t)
+	registryCreateCmd.Flags().Set("new", "desc-registry")
+	registryCreateCmd.Flags().Set("description", "Team rules")
+	registryCreateCmd.Flags().Set("no-git", "true")
+
+	if err := registryCreateCmd.RunE(registryCreateCmd, nil); err != nil {
+		t.Fatalf("expected success with description, got: %v", err)
+	}
+
+	manifestPath := filepath.Join(tmp, "desc-registry", "registry.yaml")
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("reading manifest: %v", err)
+	}
+	if !strings.Contains(string(data), "Team rules") {
+		t.Errorf("expected description in manifest, got: %s", data)
+	}
+}
+
+func TestRunRegistryCreateNew_InvalidName(t *testing.T) {
+	tmp := t.TempDir()
+	chdirTo(t, tmp)
+	resetRegistryCreateFlags(t)
+
+	_, _ = output.SetForTest(t)
+	// Path separators and spaces are invalid.
+	registryCreateCmd.Flags().Set("new", "bad name/with-slash")
+	registryCreateCmd.Flags().Set("no-git", "true")
+
+	err := registryCreateCmd.RunE(registryCreateCmd, nil)
+	if err == nil {
+		t.Fatal("expected error for invalid registry name")
+	}
+	if !strings.Contains(err.Error(), "invalid characters") {
+		t.Errorf("expected 'invalid characters' in error, got: %v", err)
+	}
+}
+
+func TestRunRegistryCreateNew_DirAlreadyExists(t *testing.T) {
+	tmp := t.TempDir()
+	chdirTo(t, tmp)
+	resetRegistryCreateFlags(t)
+
+	// Pre-create the target dir.
+	if err := os.MkdirAll(filepath.Join(tmp, "existing"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	_, _ = output.SetForTest(t)
+	registryCreateCmd.Flags().Set("new", "existing")
+	registryCreateCmd.Flags().Set("no-git", "true")
+
+	err := registryCreateCmd.RunE(registryCreateCmd, nil)
+	if err == nil {
+		t.Fatal("expected error when target dir exists")
+	}
+	if !strings.Contains(err.Error(), "already exists") {
+		t.Errorf("expected 'already exists' in error, got: %v", err)
+	}
+}
+
+func TestRunRegistryCreateNew_NoGitFlagSkipsGitInit(t *testing.T) {
+	tmp := t.TempDir()
+	chdirTo(t, tmp)
+	resetRegistryCreateFlags(t)
+
+	stdout, _ := output.SetForTest(t)
+	registryCreateCmd.Flags().Set("new", "no-git-registry")
+	registryCreateCmd.Flags().Set("no-git", "true")
+
+	if err := registryCreateCmd.RunE(registryCreateCmd, nil); err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+
+	// With no-git: no "Initialized git repository" message, and no .git dir.
+	out := stdout.String()
+	if strings.Contains(out, "Initialized git repository") {
+		t.Errorf("expected no git init with --no-git, got: %s", out)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, "no-git-registry", ".git")); !os.IsNotExist(err) {
+		t.Errorf("expected no .git dir with --no-git, stat err=%v", err)
+	}
+	// Instructions should mention manual git init.
+	if !strings.Contains(out, "git init && git add") {
+		t.Errorf("expected manual-git instructions in output, got: %s", out)
+	}
+}
+
+func TestRunRegistryCreateNew_GitInitSuccess(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git binary not available")
+	}
+	tmp := t.TempDir()
+	chdirTo(t, tmp)
+	resetRegistryCreateFlags(t)
+
+	stdout, _ := output.SetForTest(t)
+	registryCreateCmd.Flags().Set("new", "git-registry")
+	// no-git defaults to false, so git init should happen.
+
+	if err := registryCreateCmd.RunE(registryCreateCmd, nil); err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "Initialized git repository") {
+		t.Errorf("expected git init success message, got: %s", out)
+	}
+	if _, err := os.Stat(filepath.Join(tmp, "git-registry", ".git")); err != nil {
+		t.Errorf("expected .git dir, stat err=%v", err)
+	}
+}
+
+func TestRunRegistryCreateNew_AlreadyInGitRepo(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git binary not available")
+	}
+	tmp := t.TempDir()
+
+	// Pre-init tmp as a git repo so IsInsideGitRepo returns true.
+	for _, args := range [][]string{
+		{"init", "-q"},
+		{"config", "user.email", "t@example.com"},
+		{"config", "user.name", "Test"},
+	} {
+		c := exec.Command("git", args...)
+		c.Dir = tmp
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+
+	chdirTo(t, tmp)
+	resetRegistryCreateFlags(t)
+
+	stdout, _ := output.SetForTest(t)
+	registryCreateCmd.Flags().Set("new", "nested-registry")
+	// no-git left false, but since we're already in a git repo, init is skipped.
+
+	if err := registryCreateCmd.RunE(registryCreateCmd, nil); err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "already inside a git repo") {
+		t.Errorf("expected 'already inside a git repo' note, got: %s", out)
+	}
+}
+
+func TestRunRegistryCreateNew_NoFlagsShowsHelp(t *testing.T) {
+	tmp := t.TempDir()
+	chdirTo(t, tmp)
+	resetRegistryCreateFlags(t)
+
+	_, _ = output.SetForTest(t)
+	// Neither --new nor --from-native set.
+	if err := registryCreateCmd.RunE(registryCreateCmd, nil); err != nil {
+		t.Fatalf("expected help output with no flags, got error: %v", err)
 	}
 }
