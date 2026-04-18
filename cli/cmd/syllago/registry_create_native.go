@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,6 +14,11 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"gopkg.in/yaml.v3"
 )
+
+// registryCreateNativeStdin is the input source for the interactive
+// `registry create --from-native` wizard. Tests replace it with a
+// strings.NewReader to simulate multi-step stdin.
+var registryCreateNativeStdin io.Reader = os.Stdin
 
 // registryCreateFromNative scans native provider content and generates
 // a registry.yaml with indexed items. Called by `registry create --from-native`.
@@ -52,7 +58,7 @@ func registryCreateFromNative(desc string) error {
 		return output.NewStructuredError(output.ErrRegistryInvalid, "no indexable items found", "Check that the content directories contain valid files")
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(registryCreateNativeStdin)
 
 	// Selection mode
 	fmt.Fprintf(output.Writer, "How would you like to index this content?\n\n")
