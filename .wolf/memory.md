@@ -1688,3 +1688,5 @@
 | 23:38 | Created .claude/projects/bootstrap-moat-meta-registry.md | — | ~835 |
 | 23:43 | Edited .claude/projects/bootstrap-moat-meta-registry.md | expanded (+6 lines) | ~269 |
 | 23:44 | Session end: 5 writes across 3 files (sigstore_verify.go, sigstore_verify_test.go, bootstrap-moat-meta-registry.md) | 8 reads | ~10792 tok |
+| 23:45 | Edited cli/internal/moat/verify.go | "Rekor log index mismatch:" → "rekor log index mismatch:" | ~28 |
+| 23:45 | Edited cli/internal/moat/verify.go | 2→2 lines | ~33 |

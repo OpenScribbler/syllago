@@ -2678,6 +2678,22 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-18T06:13:21.363Z"
+    },
+    {
+      "id": "bug-168",
+      "timestamp": "2026-04-18T06:45:45.237Z",
+      "error_message": "Incorrect value in code",
+      "file": "cli/internal/moat/verify.go",
+      "root_cause": "Had \"Rekor log index mismatch: entry=%d, item=%d\"",
+      "fix": "Changed to \"rekor log index mismatch: entry=%d, item=%d\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-18T06:45:49.097Z"
     }
   ]
 }
