@@ -647,6 +647,278 @@ func TestInitCreatesGlobalConfigWhenMissing(t *testing.T) {
 	}
 }
 
+// TestInitWizard_InitReturnsNil verifies the wizard's Init command is nil
+// (no startup cmd needed — no initial async work).
+func TestInitWizard_InitReturnsNil(t *testing.T) {
+	w := newInitWizard(nil, nil)
+	if cmd := w.Init(); cmd != nil {
+		t.Errorf("initWizard.Init() should return nil cmd, got %v", cmd)
+	}
+}
+
+// TestInitWizard_ViewProviderStep renders step 0 and checks for the expected prompt.
+func TestInitWizard_ViewProviderStep(t *testing.T) {
+	all := []provider.Provider{
+		{Name: "Claude Code", Slug: "claude-code", Detected: true},
+		{Name: "Cursor", Slug: "cursor", Detected: false},
+	}
+	w := newInitWizard(all[:1], all)
+	v := w.View()
+
+	if !strings.Contains(v, "Which tools") {
+		t.Errorf("View should contain the provider-step prompt, got %q", v)
+	}
+	if !strings.Contains(v, "Claude Code") {
+		t.Errorf("View should list Claude Code, got %q", v)
+	}
+	if !strings.Contains(v, "(detected)") {
+		t.Errorf("View should tag detected providers, got %q", v)
+	}
+	if !strings.Contains(v, "(not found)") {
+		t.Errorf("View should tag non-detected providers, got %q", v)
+	}
+}
+
+// TestInitWizard_ViewRegistryStep renders step 1 and checks for registry options.
+func TestInitWizard_ViewRegistryStep(t *testing.T) {
+	w := newInitWizard(nil, []provider.Provider{{Name: "X", Slug: "x"}})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	v := w.View()
+	if !strings.Contains(v, "Set up a registry") {
+		t.Errorf("View should contain registry prompt, got %q", v)
+	}
+	if !strings.Contains(v, "Skip for now") {
+		t.Errorf("View should list skip option, got %q", v)
+	}
+}
+
+// TestInitWizard_ViewInputStepForAddURL renders step 2 in add-URL mode.
+func TestInitWizard_ViewInputStepForAddURL(t *testing.T) {
+	w := newInitWizard(nil, []provider.Provider{{Name: "X", Slug: "x"}})
+	// Advance provider -> registry -> select "Add custom" (cursor 1) -> input
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	v := w.View()
+	if !strings.Contains(v, "Enter the registry URL") {
+		t.Errorf("View should contain URL prompt, got %q", v)
+	}
+}
+
+// TestInitWizard_ViewInputStepForCreate renders step 2 in create mode.
+func TestInitWizard_ViewInputStepForCreate(t *testing.T) {
+	w := newInitWizard(nil, []provider.Provider{{Name: "X", Slug: "x"}})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	// Move to "Create new registry" (cursor 2) and press Enter
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	v := w.View()
+	if !strings.Contains(v, "Enter a name") {
+		t.Errorf("View should contain create-name prompt, got %q", v)
+	}
+}
+
+// TestInitWizard_RegistryCursorNavigation exercises up/down nav and bounds at the registry step.
+func TestInitWizard_RegistryCursorNavigation(t *testing.T) {
+	w := newInitWizard(nil, []provider.Provider{{Name: "X", Slug: "x"}})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // into registry step
+
+	if w.registryCursor != 0 {
+		t.Fatalf("registryCursor should start at 0, got %d", w.registryCursor)
+	}
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if w.registryCursor != 1 {
+		t.Errorf("expected 1 after one down, got %d", w.registryCursor)
+	}
+	// Walk to bottom
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if w.registryCursor != 3 {
+		t.Errorf("registryCursor should clamp to 3 at the bottom, got %d", w.registryCursor)
+	}
+	// Walk back up past top
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyUp})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyUp})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyUp})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyUp})
+	if w.registryCursor != 0 {
+		t.Errorf("registryCursor should clamp to 0 at the top, got %d", w.registryCursor)
+	}
+}
+
+// TestInitWizard_RegistryEscCancels verifies Esc on the registry step cancels.
+func TestInitWizard_RegistryEscCancels(t *testing.T) {
+	w := newInitWizard(nil, []provider.Provider{{Name: "X", Slug: "x"}})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEsc})
+
+	if !w.cancelled {
+		t.Error("Esc on registry step should set cancelled")
+	}
+	if !w.done {
+		t.Error("Esc on registry step should set done")
+	}
+}
+
+// TestInitWizard_InputAddURLConfirms exercises the add-URL happy path through stepInput.
+func TestInitWizard_InputAddURLConfirms(t *testing.T) {
+	w := newInitWizard(nil, []provider.Provider{{Name: "X", Slug: "x"}})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown}) // add custom
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	// Type a URL one rune at a time
+	for _, r := range "https://example.com/r.git" {
+		w, _ = w.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+	}
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if !w.done {
+		t.Error("entering a URL and pressing Enter should finish the wizard")
+	}
+	if w.registryAction != "add" {
+		t.Errorf("registryAction should be 'add', got %q", w.registryAction)
+	}
+	if w.registryURL != "https://example.com/r.git" {
+		t.Errorf("registryURL mismatch, got %q", w.registryURL)
+	}
+}
+
+// TestInitWizard_InputCreateNameConfirms exercises the create-registry happy path.
+func TestInitWizard_InputCreateNameConfirms(t *testing.T) {
+	w := newInitWizard(nil, []provider.Provider{{Name: "X", Slug: "x"}})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown}) // add
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown}) // create
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	for _, r := range "team-registry" {
+		w, _ = w.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+	}
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if !w.done {
+		t.Error("entering a name and pressing Enter should finish the wizard")
+	}
+	if w.registryAction != "create" {
+		t.Errorf("registryAction should be 'create', got %q", w.registryAction)
+	}
+	if w.registryName != "team-registry" {
+		t.Errorf("registryName mismatch, got %q", w.registryName)
+	}
+}
+
+// TestInitWizard_InputEmptyEnterIgnored verifies Enter with blank input does not finish.
+func TestInitWizard_InputEmptyEnterIgnored(t *testing.T) {
+	w := newInitWizard(nil, []provider.Provider{{Name: "X", Slug: "x"}})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter}) // into input step
+
+	// Press Enter without typing anything
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if w.done {
+		t.Error("Enter on empty input should be ignored, not finish the wizard")
+	}
+}
+
+// TestInitWizard_InputEscCancels verifies Esc on stepInput cancels.
+func TestInitWizard_InputEscCancels(t *testing.T) {
+	w := newInitWizard(nil, []provider.Provider{{Name: "X", Slug: "x"}})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyDown})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEsc})
+
+	if !w.cancelled {
+		t.Error("Esc on input step should set cancelled")
+	}
+	if !w.done {
+		t.Error("Esc on input step should set done")
+	}
+}
+
+// TestInitWizardModel_Wrapper exercises the tea.Model-compliant wrapper.
+// It verifies Init/View delegation and that Update returns tea.Quit when done.
+func TestInitWizardModel_Wrapper(t *testing.T) {
+	inner := newInitWizard(nil, []provider.Provider{{Name: "X", Slug: "x"}})
+	m := initWizardModel{wizard: inner}
+
+	if cmd := m.Init(); cmd != nil {
+		t.Errorf("initWizardModel.Init() should be nil, got %v", cmd)
+	}
+
+	if !strings.Contains(m.View(), "Which tools") {
+		t.Errorf("Wrapper View should delegate to initWizard.View(), got %q", m.View())
+	}
+
+	// Esc the inner wizard via the wrapper. Because the inner becomes done,
+	// Update should return tea.Quit.
+	nextModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if cmd == nil {
+		t.Fatal("expected tea.Quit cmd after Esc, got nil")
+	}
+	// tea.Quit is a function; compare by function pointer is flaky — execute it and
+	// check it returns a tea.QuitMsg.
+	msg := cmd()
+	if _, ok := msg.(tea.QuitMsg); !ok {
+		t.Errorf("expected tea.QuitMsg from cmd, got %T", msg)
+	}
+	wrapped, ok := nextModel.(initWizardModel)
+	if !ok {
+		t.Fatalf("Update should return initWizardModel, got %T", nextModel)
+	}
+	if !wrapped.wizard.cancelled {
+		t.Error("inner wizard should be cancelled after Esc")
+	}
+}
+
+// TestInitWizardModel_NotDoneReturnsNonQuitCmd exercises the not-done branch
+// of initWizardModel.Update (cursor nav doesn't finish, so tea.Quit must not fire).
+func TestInitWizardModel_NotDoneReturnsNonQuitCmd(t *testing.T) {
+	m := initWizardModel{wizard: newInitWizard(nil, []provider.Provider{
+		{Name: "A", Slug: "a"},
+		{Name: "B", Slug: "b"},
+	})}
+	nextModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+
+	wrapped, ok := nextModel.(initWizardModel)
+	if !ok {
+		t.Fatalf("Update should return initWizardModel, got %T", nextModel)
+	}
+	if wrapped.wizard.done {
+		t.Error("KeyDown on provider step should not finish the wizard")
+	}
+	// cmd may be nil (no command) — but it must NOT be tea.Quit.
+	if cmd != nil {
+		if _, ok := cmd().(tea.QuitMsg); ok {
+			t.Error("KeyDown on provider step must not return tea.Quit")
+		}
+	}
+}
+
+// TestInitWizard_SpaceBoundsGuard exercises the cursor-OOB guard in KeySpace.
+func TestInitWizard_SpaceBoundsGuard(t *testing.T) {
+	// Build a wizard, then shrink w.checks to force cursor >= len(checks).
+	w := newInitWizard(nil, []provider.Provider{
+		{Name: "A", Slug: "a"},
+		{Name: "B", Slug: "b"},
+	})
+	w.cursor = 1
+	w.checks = w.checks[:1] // cursor(1) >= len(checks)(1)
+
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeySpace})
+	if len(w.checks) != 1 {
+		t.Errorf("checks should not grow when cursor is OOB, got %d", len(w.checks))
+	}
+}
+
 // TestInitNoProvidersDetectedPrintsNone exercises the empty-detected-list branch
 // of runInit (line 107-109). With AllProviders cleared, DetectedOnly returns [],
 // and the non-interactive printer should emit "(none detected)".
