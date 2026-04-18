@@ -53,6 +53,8 @@ func init() {
 	rootCmd.AddCommand(doctorCmd)
 }
 
+var osExit = os.Exit
+
 func runDoctor(cmd *cobra.Command, args []string) error {
 	var checks []checkResult
 
@@ -100,10 +102,12 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	}
 
 	if errs > 0 {
-		os.Exit(2)
+		osExit(2)
+		return nil
 	}
 	if warns > 0 {
-		os.Exit(1)
+		osExit(1)
+		return nil
 	}
 	return nil
 }

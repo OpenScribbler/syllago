@@ -307,3 +307,123 @@ func TestDoctorCmdRegistered(t *testing.T) {
 		t.Error("expected doctor command registered on rootCmd")
 	}
 }
+
+// captureOsExit swaps the osExit seam for a test that records the code.
+// Returns a pointer to the captured code (0 = not called) and registers cleanup.
+func captureOsExit(t *testing.T) *int {
+	t.Helper()
+	var captured int
+	orig := osExit
+	osExit = func(code int) { captured = code }
+	t.Cleanup(func() { osExit = orig })
+	return &captured
+}
+
+func TestRunDoctor_MissingLibraryExitsWith2(t *testing.T) {
+	// Library missing → checkLibrary returns checkErr → runDoctor calls osExit(2).
+	orig := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = filepath.Join(t.TempDir(), "nonexistent")
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return "", nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	output.SetForTest(t)
+	exitCode := captureOsExit(t)
+
+	err := runDoctor(doctorCmd, nil)
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if *exitCode != 2 {
+		t.Errorf("expected osExit(2), got osExit(%d)", *exitCode)
+	}
+}
+
+func TestRunDoctor_ReturnsNilWhenAllClean(t *testing.T) {
+	// With a valid library and project root, runDoctor should return without error.
+	// The exact osExit behavior depends on the environment (providers detected,
+	// registries configured), so we only assert that RunE returns nil.
+	dir := t.TempDir()
+	orig := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = dir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	output.SetForTest(t)
+	captureOsExit(t)
+
+	err := runDoctor(doctorCmd, nil)
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+}
+
+func TestRunDoctor_JSONOutput(t *testing.T) {
+	// JSON output mode emits the doctor result as JSON on stdout.
+	dir := t.TempDir()
+	orig := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = dir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+	captureOsExit(t)
+
+	err := runDoctor(doctorCmd, nil)
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+
+	var result doctorResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatalf("failed to parse JSON output: %v\nraw: %s", err, stdout.String())
+	}
+	if len(result.Checks) == 0 {
+		t.Error("expected at least one check in JSON output")
+	}
+	if result.Summary == "" {
+		t.Error("expected summary in JSON output")
+	}
+}
+
+func TestCheckNamingQuality_MissingDisplayNames(t *testing.T) {
+	// A hook item without a DisplayName triggers the unnamed count.
+	dir := t.TempDir()
+	orig := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = dir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
+
+	hookDir := filepath.Join(dir, "hooks", "my-hook")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.yaml"), []byte("events: []\n"), 0644)
+
+	c := checkNamingQuality(dir)
+	if c.Status != checkWarn {
+		t.Errorf("Status = %s, want warn when hooks lack display names; message: %s", c.Status, c.Message)
+	}
+	if !strings.Contains(c.Message, "hooks/MCP items have no display name") {
+		t.Errorf("Message = %q, want mention of missing display names", c.Message)
+	}
+}
+
+func TestCheckNamingQuality_AllNamed(t *testing.T) {
+	// No hooks or MCP items → 0 unnamed → checkOK.
+	dir := t.TempDir()
+	orig := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = dir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
+
+	c := checkNamingQuality(dir)
+	if c.Status != checkOK {
+		t.Errorf("Status = %s, want ok when no hooks/MCP items; message: %s", c.Status, c.Message)
+	}
+}
