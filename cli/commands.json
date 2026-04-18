@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-18T03:48:20Z",
-  "syllagoVersion": "0.9.0",
+  "generatedAt": "2026-04-18T08:05:43Z",
+  "syllagoVersion": "dev",
   "commands": [
     {
       "name": "add",
@@ -2762,6 +2762,22 @@
           "default": null,
           "required": false,
           "description": "Show what would happen without making changes"
+        },
+        {
+          "name": "--force",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Proceed past high-severity scanner findings"
+        },
+        {
+          "name": "--hook-scanner",
+          "shorthand": null,
+          "type": "stringSlice",
+          "default": null,
+          "required": false,
+          "description": "Path to external hook scanner binary (repeatable)"
         },
         {
           "name": "--method",
