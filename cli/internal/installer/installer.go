@@ -12,6 +12,34 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
+// scannerChainPaths holds paths to external hook scanner binaries added via
+// CLI (--hook-scanner). It is read by installHook before writing. Empty by
+// default — only the builtin scanner runs.
+//
+// scannerForceBypass allows a user to proceed past high-severity findings
+// (--force). Tests set these via SetScannerChain + t.Cleanup save-restore
+// in the same pattern as the other package-level globals listed in
+// .claude/rules/cli-test-patterns.md.
+var (
+	scannerChainPaths  []string
+	scannerForceBypass bool
+)
+
+// SetScannerChain configures the hook scanner chain for subsequent installs.
+// Called by cmd/syllago/install_cmd.go after parsing flags. Tests use
+// t.Cleanup to restore the prior values.
+func SetScannerChain(paths []string, force bool) {
+	scannerChainPaths = paths
+	scannerForceBypass = force
+}
+
+// ScannerChain returns the currently configured scanner paths and force bit.
+// Exposed for tests (and potentially diagnostic output) so save-restore
+// cleanup can roll back cleanly.
+func ScannerChain() ([]string, bool) {
+	return append([]string(nil), scannerChainPaths...), scannerForceBypass
+}
+
 // InstallMethod controls how content is placed in the target directory.
 type InstallMethod string
 

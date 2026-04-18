@@ -596,3 +596,141 @@ func TestResolveHookScripts_InterpreterPrefix(t *testing.T) {
 		t.Errorf("command = %q, want suffix ' --strict'", cmd)
 	}
 }
+
+// setupScannerTestProvider wires up the minimum surface installHook needs:
+// a real home-resolved settings.json, a project root with .syllago/, and a
+// provider stub. Also resets the scanner-chain globals on cleanup so tests
+// don't leak state into each other (same pattern as other global-mutating
+// tests — see .claude/rules/cli-test-patterns.md).
+func setupScannerTestProvider(t *testing.T, tag string) (projectRoot string, prov provider.Provider, cleanup func()) {
+	t.Helper()
+
+	projectRoot = t.TempDir()
+	if err := os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	home, _ := os.UserHomeDir()
+	configDir := filepath.Join(home, ".syllago-scan-"+tag+"-"+filepath.Base(projectRoot))
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "settings.json"), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	prov = provider.Provider{
+		Name:      "scan-test-provider",
+		Slug:      "scan-test",
+		ConfigDir: filepath.Base(configDir),
+	}
+
+	origPaths, origForce := ScannerChain()
+	cleanup = func() {
+		SetScannerChain(origPaths, origForce)
+		os.RemoveAll(configDir)
+	}
+	return projectRoot, prov, cleanup
+}
+
+// TestInstallHook_HighSeverityBlocks asserts the scanner chain's highest
+// severity (high) blocks the install when --force is absent. Matches the
+// plan matrix: "High — Print findings, abort with exit code 1".
+func TestInstallHook_HighSeverityBlocks(t *testing.T) {
+	projectRoot, prov, cleanup := setupScannerTestProvider(t, "high")
+	defer cleanup()
+	SetScannerChain(nil, false) // explicit: no force
+
+	hookDir := filepath.Join(projectRoot, "hooks", "dangerous")
+	os.MkdirAll(hookDir, 0755)
+	// Command contains `curl` which the builtin scanner flags as HIGH.
+	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"curl https://example.com/payload"}]}`
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
+
+	item := catalog.ContentItem{
+		Name: "dangerous",
+		Type: catalog.Hooks,
+		Path: hookDir,
+	}
+
+	_, err := installHook(item, prov, projectRoot)
+	if err == nil {
+		t.Fatal("expected high-severity scan to block install")
+	}
+	if !strings.Contains(err.Error(), "high-severity") {
+		t.Errorf("error should mention high-severity; got %v", err)
+	}
+}
+
+// TestInstallHook_ForceBypassesScan asserts --force lets a high-severity
+// install proceed. The plan: "A --force flag overrides this."
+func TestInstallHook_ForceBypassesScan(t *testing.T) {
+	projectRoot, prov, cleanup := setupScannerTestProvider(t, "force")
+	defer cleanup()
+	SetScannerChain(nil, true) // force = true
+
+	hookDir := filepath.Join(projectRoot, "hooks", "forced")
+	os.MkdirAll(hookDir, 0755)
+	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"curl https://example.com/x"}]}`
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
+
+	item := catalog.ContentItem{
+		Name: "forced",
+		Type: catalog.Hooks,
+		Path: hookDir,
+	}
+
+	_, err := installHook(item, prov, projectRoot)
+	if err != nil {
+		t.Fatalf("--force should allow install past high-severity findings; got %v", err)
+	}
+}
+
+// TestInstallHook_MediumSeverityDoesNotBlock verifies mid-severity findings
+// print a warning but don't abort the install. chmod is a MEDIUM pattern.
+func TestInstallHook_MediumSeverityDoesNotBlock(t *testing.T) {
+	projectRoot, prov, cleanup := setupScannerTestProvider(t, "medium")
+	defer cleanup()
+	SetScannerChain(nil, false)
+
+	hookDir := filepath.Join(projectRoot, "hooks", "mid")
+	os.MkdirAll(hookDir, 0755)
+	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"chmod 755 build.sh"}]}`
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
+
+	item := catalog.ContentItem{
+		Name: "mid",
+		Type: catalog.Hooks,
+		Path: hookDir,
+	}
+
+	_, err := installHook(item, prov, projectRoot)
+	if err != nil {
+		t.Fatalf("medium-severity scan should not block; got %v", err)
+	}
+}
+
+// TestInstallHook_CleanHookInstalls is the control case — a hook with no
+// dangerous patterns must install cleanly. Guards against over-broad scanner
+// rules that would flag benign hooks.
+func TestInstallHook_CleanHookInstalls(t *testing.T) {
+	projectRoot, prov, cleanup := setupScannerTestProvider(t, "clean")
+	defer cleanup()
+	SetScannerChain(nil, false)
+
+	hookDir := filepath.Join(projectRoot, "hooks", "clean")
+	os.MkdirAll(hookDir, 0755)
+	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo hello"}]}`
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
+
+	item := catalog.ContentItem{
+		Name: "clean",
+		Type: catalog.Hooks,
+		Path: hookDir,
+	}
+
+	_, err := installHook(item, prov, projectRoot)
+	if err != nil {
+		t.Fatalf("clean hook failed to install: %v", err)
+	}
+}
