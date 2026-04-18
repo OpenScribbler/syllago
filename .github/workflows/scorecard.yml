@@ -1,9 +1,6 @@
 name: Scorecard
 
 on:
-  push:
-    branches:
-      - main
   schedule:
     # Weekly on Saturdays
     - cron: '30 1 * * 6'
