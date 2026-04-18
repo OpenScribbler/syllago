@@ -1616,3 +1616,75 @@
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 21:03 | Edited ../moat/reference/moat.yml | 6→6 lines | ~56 |
+| 21:04 | Edited ../moat/reference/moat-registry.yml | 6→6 lines | ~56 |
+| 21:04 | Edited ../moat/reference/moat-registry.yml | modified get_moat_attestation() | ~708 |
+| 21:05 | Edited ../moat/reference/moat-registry.yml | modified logic() | ~1004 |
+| 21:05 | Edited ../moat/reference/moat-registry.yml | modified push_manifest() | ~490 |
+| 21:06 | Edited ../syllago-docs/CHANGELOG.md | expanded (+11 lines) | ~359 |
+
+## Session: 2026-04-18 21:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:08 | Edited ../moat/CHANGELOG.md | 7→12 lines | ~403 |
+| 21:09 | Edited docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md | 2→2 lines | ~38 |
+| 21:10 | Edited .claude/projects/continue-provider-coverage-reconciliation.md | modified 593aefe() | ~289 |
+| 21:10 | Edited ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/continue-provider-coverage-reconciliation.md | modified 593aefe() | ~289 |
+| 21:11 | Created .claude/projects/.current | — | ~0 |
+| 21:11 | Session end: 5 writes across 4 files (CHANGELOG.md, 2026-04-17-provider-coverage-reconciliation-plan.md, continue-provider-coverage-reconciliation.md, .current) | 12 reads | ~8222 tok |
+| 21:11 | Edited ../syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md | yml() → master() | ~262 |
+| 21:12 | Edited ../syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md | 4→7 lines | ~192 |
+| 21:12 | Edited ../syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md | modified fix() | ~362 |
+| 21:12 | Created ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/bootstrap-moat-meta-registry.md | — | ~558 |
+| 21:13 | Session end: 9 writes across 5 files (CHANGELOG.md, 2026-04-17-provider-coverage-reconciliation-plan.md, continue-provider-coverage-reconciliation.md, .current, bootstrap-moat-meta-registry.md) | 13 reads | ~9694 tok |
+
+## Session: 2026-04-18 21:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:18 | Edited ../moat/.github/workflows/close-prs.yml | 6→7 lines | ~78 |
+| 21:19 | Session end: 1 writes across 1 files (close-prs.yml) | 1 reads | ~78 tok |
+| 21:21 | Edited ../syllago-meta-registry-phase0-wt/.github/workflows/moat.yml | inline fix | ~22 |
+| 21:22 | Session end: 2 writes across 2 files (close-prs.yml, moat.yml) | 2 reads | ~100 tok |
+| 21:36 | Edited ../syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md | master() → items() | ~216 |
+| 21:37 | Edited ../syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md | 1→4 lines | ~163 |
+| 21:37 | Created ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/bootstrap-moat-meta-registry.md | — | ~466 |
+| 21:38 | Session end: 5 writes across 3 files (close-prs.yml, moat.yml, bootstrap-moat-meta-registry.md) | 4 reads | ~1006 tok |
+| 21:45 | Session end: 5 writes across 3 files (close-prs.yml, moat.yml, bootstrap-moat-meta-registry.md) | 5 reads | ~17450 tok |
+| 23:05 | Created cli/internal/moat/verify.go | — | ~842 |
+
+## Session: 2026-04-18 23:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:09 | Created cli/internal/moat/canonical_payload_test.go | — | ~315 |
+| 23:12 | Created cli/internal/moat/rekor.go | — | ~860 |
+| 23:13 | Created cli/internal/moat/rekor_test.go | — | ~716 |
+| 23:13 | Edited cli/internal/moat/rekor_test.go | 6→7 lines | ~22 |
+| 23:13 | Edited cli/internal/moat/rekor_test.go | b64encode() → EncodeToString() | ~32 |
+| 23:16 | Session end: 5 writes across 3 files (canonical_payload_test.go, rekor.go, rekor_test.go) | 1 reads | ~2083 tok |
+
+## Session: 2026-04-18 23:16
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:24 | Created cli/internal/moat/cert.go | — | ~640 |
+| 23:24 | Created cli/internal/moat/cert_test.go | — | ~483 |
+| 23:25 | Created cli/internal/moat/signature.go | — | ~340 |
+| 23:25 | Created cli/internal/moat/signature_test.go | — | ~600 |
+| 23:26 | Edited cli/internal/moat/verify.go | 6→8 lines | ~22 |
+| 23:26 | Edited cli/internal/moat/verify.go | modified CanonicalPayloadFor() | ~840 |
+| 23:26 | Created cli/internal/moat/verify_test.go | — | ~984 |
+| 23:28 | Session end: 7 writes across 6 files (cert.go, cert_test.go, signature.go, signature_test.go, verify.go) | 0 reads | ~4188 tok |
+
+## Session: 2026-04-18 23:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:34 | Created cli/internal/moat/sigstore_verify.go | — | ~2216 |
+| 23:35 | Created cli/internal/moat/sigstore_verify.go | — | ~1604 |
+| 23:36 | Created cli/internal/moat/sigstore_verify_test.go | — | ~1138 |
+| 23:38 | Created .claude/projects/bootstrap-moat-meta-registry.md | — | ~835 |
+| 23:43 | Edited .claude/projects/bootstrap-moat-meta-registry.md | expanded (+6 lines) | ~269 |
+| 23:44 | Session end: 5 writes across 3 files (sigstore_verify.go, sigstore_verify_test.go, bootstrap-moat-meta-registry.md) | 8 reads | ~10792 tok |

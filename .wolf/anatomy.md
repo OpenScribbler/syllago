@@ -1,11 +1,12 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-18T03:52:28.122Z
-> Files: 781 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-18T06:43:56.789Z
+> Files: 799 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
-- `continue-provider-coverage-reconciliation.md` — Continue provider coverage reconciliation (~904 tok)
+- `bootstrap-moat-meta-registry.md` — Bootstrap syllago-meta-registry as the first self-publishing MOAT v0.6.0 registry (~437 tok)
+- `continue-provider-coverage-reconciliation.md` — Continue provider coverage reconciliation (~698 tok)
 - `finish-phase0-capmon-refactor.md` — Finish Phase 6 Epic 0 — schema update, generator update, infra generalization (~395 tok)
 - `ship-v072-smoke-fix.md` — Ship v0.7.2 with Provider Smoke Tests running green (~437 tok)
 - `start-epic4-mcp-recognition.md` — Start Phase 6 Epic 4 — wire MCP recognizers for 14 providers (~614 tok)
@@ -53,6 +54,19 @@
 - `README.md` — Project documentation (~633 tok)
 - `stealth-fetch.ts` — Output raw HTML instead of markdown (~1257 tok)
 
+## ../moat/
+
+- `CHANGELOG.md` — MOAT Specification Changelog (~5721 tok)
+
+## ../moat/.github/workflows/
+
+- `close-prs.yml` — CI: Auto-close PRs (~284 tok)
+
+## ../moat/reference/
+
+- `moat-registry.yml` — CI: MOAT Registry Action (~10106 tok)
+- `moat.yml` — '  # belt-and-suspenders guard; see branch note above (~5027 tok)
+
 ## ../syllago-capmon-heal-wt/cli/internal/capmon/
 
 - `fetch_validity.go` — Struct: ErrContentInvalid (~1085 tok)
@@ -76,17 +90,21 @@
 - `sourceman.go` — Struct: SourceManifest (~1036 tok)
 - `types.go` — implements the syllago capability monitor pipeline. (~1290 tok)
 
+## ../syllago-docs/
+
+- `CHANGELOG.md` — Changelog (~5163 tok)
+
 ## ../syllago-meta-registry-phase0-wt/
 
 - `registry.yml` (~82 tok)
 
 ## ../syllago-meta-registry-phase0-wt/.claude/projects/
 
-- `bootstrap-moat-meta-registry.md` — Bootstrap syllago-meta-registry as the first self-publishing MOAT v0.6.0 registry (~1547 tok)
+- `bootstrap-moat-meta-registry.md` — Bootstrap syllago-meta-registry as the first self-publishing MOAT v0.6.0 registry (~1711 tok)
 
 ## ../syllago-meta-registry-phase0-wt/.github/workflows/
 
-- `moat.yml` — '  # belt-and-suspenders guard; see branch note above (~5031 tok)
+- `moat.yml` — '  # belt-and-suspenders guard; see branch note above (~5029 tok)
 
 ## ./
 
@@ -1296,9 +1314,10 @@
 
 ## .claude/projects/
 
-- `.current` (~12 tok)
+- `.current` (~0 tok)
+- `bootstrap-moat-meta-registry.md` — Bootstrap MOAT meta-registry verification (spike) (~904 tok)
 - `continue-capmon-audit.md` — Continue auditing capmon (~624 tok)
-- `continue-provider-coverage-reconciliation.md` — Continue provider coverage reconciliation (~1388 tok)
+- `continue-provider-coverage-reconciliation.md` — Continue provider coverage reconciliation (~1196 tok)
 - `finish-phase0-capmon-refactor.md` — Finish Phase 0: Capmon Recognition Refactor (~1391 tok)
 - `ship-v072-smoke-fix.md` — Ship v0.7.2 with Provider Smoke Tests running green (~515 tok)
 - `start-epic4-mcp-recognition.md` — Start Phase 6 Epic 4 — wire MCP recognizers for 14 providers (~1060 tok)
@@ -1602,6 +1621,20 @@
 - `frontmatter_registry_test.go` — Struct: check (~2508 tok)
 - `skills.go` — Struct: SkillMeta (~8352 tok)
 
+## cli/internal/moat/
+
+- `canonical_payload_test.go` — TestCanonicalPayloadFor (~315 tok)
+- `cert_test.go` — TestExtractCert_AndIdentity (~483 tok)
+- `cert.go` (~640 tok)
+- `rekor_test.go` — TestRekorBody_HashMatchesCanonicalPayload, TestDecodeHashedRekordBody_RejectsWrongKind (~728 tok)
+- `rekor.go` — Struct: rekorEntry (~860 tok)
+- `signature_test.go` — TestVerifySignature_FromFixture, TestVerifySignature_RejectsTamperedPayload (~600 tok)
+- `signature.go` — Declares does (~340 tok)
+- `sigstore_verify_test.go` — TestBuildBundle_FromRekorFixture, TestVerifyItemSigstore_HappyPath, TestVerifyItemSigstore_RejectsWr (~1138 tok)
+- `sigstore_verify.go` — BuildBundle, VerifyItemSigstore (~1604 tok)
+- `verify_test.go` — TestVerifyItem_HappyPath, TestVerifyItem_NegativePaths (~984 tok)
+- `verify.go` — implements a conforming client for MOAT v0.6.0 registries. (~1475 tok)
+
 ## cli/internal/provider/
 
 - `amp_test.go` — TestAmpSupportsType, TestAmpDetect, TestAmpInstallDir, TestAmpHooksSupport, TestAmpDiscoveryPaths (~1233 tok)
@@ -1624,7 +1657,7 @@
 - `2026-04-12-moat-conformance-gap-analysis.md` — MOAT Conformance Gap Analysis — Syllago + syllago-meta-registry (~16444 tok)
 - `2026-04-16-capmon-phase6-recognition-plan.md` — Capmon Phase 6: Full Recognition Pipeline (~2343 tok)
 - `2026-04-16-capmon-self-healing-prompt.md` — Prompt: Self-Healing Source URLs for capmon (~2076 tok)
-- `2026-04-17-provider-coverage-reconciliation-plan.md` — Provider Coverage Reconciliation (~8094 tok)
+- `2026-04-17-provider-coverage-reconciliation-plan.md` — Provider Coverage Reconciliation (~8105 tok)
 
 ## docs/provider-capabilities/
 
