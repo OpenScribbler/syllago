@@ -5,6 +5,27 @@ All notable changes to syllago are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] - 2026-04-17
+
+### Added
+
+- Roo Code: `commands` content type support (`.roo/commands/*.md`)
+- Amp: `hooks` content type support (JSON merge into `.amp/settings.json` under `amp.hooks`)
+- Cline: `skills` content type support (`~/.cline/skills/<slug>/SKILL.md`)
+- Cline: `commands` content type support mapping Cline Workflows (`.clinerules/workflows/*.md`)
+- Windsurf: `commands` content type support mapping Cascade Workflows (`.windsurf/workflows/*.md`)
+- `docs/provider-formats/crush.yaml` (new file): rules, skills, mcp capability data
+- Cursor capability data for all 6 supported content types (previously skills-only)
+- Zed capability data for rules and mcp (previously skills-only)
+- OpenCode capability data for rules, agents, commands, mcp (previously skills-only)
+- `CheckCoverage()` library function + `TestCoverageNoDrift` test asserting agreement across `cli/internal/provider/`, `docs/provider-formats/`, and `docs/provider-sources/`. Full assertion set gated by `SYLLAGO_COVERAGE_STRICT=1`.
+
+### Fixed
+
+- Amp hooks file format now reports `json` (was defaulting to `markdown`)
+- Amp hooks config location corrected from `.amp/hooks.json` to `.amp/settings.json`
+- Source manifests for cursor, gemini-cli, opencode, roo-code, windsurf, zed, cline, and crush reconciled against verified upstream runtime support — capmon will now monitor the newly-flipped content types
+
 ## [0.7.0] - 2026-03-23
 
 ### Added

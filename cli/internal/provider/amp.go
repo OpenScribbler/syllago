@@ -70,7 +70,7 @@ var Amp = Provider{
 	// InstallDir targets ~/.config/agents/skills/ (highest priority).
 	FileFormat: func(ct catalog.ContentType) Format {
 		switch ct {
-		case catalog.MCP:
+		case catalog.MCP, catalog.Hooks:
 			return FormatJSON
 		default:
 			return FormatMarkdown
