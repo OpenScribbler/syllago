@@ -1,5 +1,6 @@
 provider: crush
 docs_url: "https://github.com/charmbracelet/crush"
+category: cli
 # Provenance note (Q5, plan 2026-04-17 §2e):
 # Crush is an independent Charm project. Its lineage traces to the archived
 # opencode-ai/opencode, whose original author continued the work at Charm.

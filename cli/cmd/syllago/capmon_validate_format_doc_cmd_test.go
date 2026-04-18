@@ -61,6 +61,7 @@ func TestCapmonValidateFormatDocCmd_ValidFile(t *testing.T) {
 	}
 	validDoc := `provider: test-provider
 docs_url: "https://example.com/docs"
+category: cli
 last_fetched_at: "2026-04-11T00:00:00Z"
 content_types:
   skills:
@@ -123,6 +124,7 @@ func TestCapmonValidateFormatDocCmd_UnknownKey(t *testing.T) {
 	}
 	invalidDoc := `provider: test-provider
 docs_url: "https://example.com/docs"
+category: cli
 last_fetched_at: "2026-04-11T00:00:00Z"
 content_types:
   skills:
@@ -189,6 +191,7 @@ func TestCapmonValidateFormatDocCmd_WarningPrintedToStderr(t *testing.T) {
 	// which should produce a non-blocking warning.
 	docWithWarning := `provider: test-provider
 docs_url: "https://example.com/docs"
+category: cli
 last_fetched_at: "2026-04-15T00:00:00Z"
 content_types:
   skills:

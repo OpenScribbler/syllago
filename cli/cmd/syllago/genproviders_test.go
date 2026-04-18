@@ -469,6 +469,30 @@ func TestGenproviders_AllDocsURLsPopulated(t *testing.T) {
 	}
 }
 
+// TestGenproviders_AllCategoriesPopulated verifies every provider entry carries
+// a category sourced from its format-doc YAML, and that the value is in the
+// allowed enum. This is the providers.json-side mirror of the capmon category
+// validator.
+func TestGenproviders_AllCategoriesPopulated(t *testing.T) {
+	manifest := loadTestManifest(t)
+
+	allowed := map[string]bool{
+		"cli":            true,
+		"ide-extension":  true,
+		"standalone-app": true,
+		"web-based":      true,
+	}
+	for _, prov := range manifest.Providers {
+		if prov.Category == "" {
+			t.Errorf("provider %q has empty category", prov.Slug)
+			continue
+		}
+		if !allowed[prov.Category] {
+			t.Errorf("provider %q category = %q; must be one of cli|ide-extension|standalone-app|web-based", prov.Slug, prov.Category)
+		}
+	}
+}
+
 // TestGenproviders_ConfigLocationMatchesDiscoveryPaths ensures that the hardcoded
 // configLocation values in genproviders.go are consistent with what the provider's
 // DiscoveryPaths function actually returns. This catches copy-paste errors where

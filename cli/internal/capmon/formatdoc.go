@@ -15,10 +15,21 @@ import (
 type FormatDoc struct {
 	Provider         string                          `yaml:"provider"`
 	DocsURL          string                          `yaml:"docs_url"`
+	Category         string                          `yaml:"category"`
 	LastFetchedAt    string                          `yaml:"last_fetched_at"`
 	LastChangedAt    string                          `yaml:"last_changed_at"`
 	GenerationMethod string                          `yaml:"generation_method"`
 	ContentTypes     map[string]ContentTypeFormatDoc `yaml:"content_types"`
+}
+
+// ValidProviderCategories enumerates the allowed values for FormatDoc.Category.
+// Changes here must stay in sync with the category validator in
+// formatdoc_validate.go and the category_label map in syllago-docs.
+var ValidProviderCategories = []string{
+	"cli",
+	"ide-extension",
+	"standalone-app",
+	"web-based",
 }
 
 // ContentTypeFormatDoc describes how a provider supports a single content type

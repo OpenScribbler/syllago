@@ -1,5 +1,6 @@
 provider: factory-droid
 docs_url: "https://docs.factory.ai"
+category: cli
 last_fetched_at: "2026-04-11T21:50:31Z"
 last_changed_at: "2026-04-11T00:00:00Z"
 generation_method: subagent

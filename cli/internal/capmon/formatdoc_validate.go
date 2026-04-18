@@ -189,6 +189,20 @@ func ValidateFormatDoc(formatsDir, canonicalKeysPath, provider string) error {
 	} else if !strings.HasPrefix(doc.DocsURL, "http://") && !strings.HasPrefix(doc.DocsURL, "https://") {
 		errs = append(errs, fmt.Sprintf("✗ docs_url: must start with http:// or https:// (got %q)", doc.DocsURL))
 	}
+	if doc.Category == "" {
+		errs = append(errs, fmt.Sprintf("✗ category: required field is empty (must be one of %s)", strings.Join(ValidProviderCategories, ", ")))
+	} else {
+		validCategory := false
+		for _, c := range ValidProviderCategories {
+			if doc.Category == c {
+				validCategory = true
+				break
+			}
+		}
+		if !validCategory {
+			errs = append(errs, fmt.Sprintf("✗ category: %q is not in the allowed set (must be one of %s)", doc.Category, strings.Join(ValidProviderCategories, ", ")))
+		}
+	}
 
 	// Per-content-type rules
 	for ct, ctDoc := range doc.ContentTypes {
