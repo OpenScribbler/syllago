@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -388,3 +389,241 @@ func TestRunRegistryCreateNew_NoFlagsShowsHelp(t *testing.T) {
 		t.Fatalf("expected help output with no flags, got error: %v", err)
 	}
 }
+
+// --- reprobeRegistryVisibility ---
+
+// isolateRegistryCache empties registry.CacheDirOverride for LoadManifest calls.
+// Without an explicit override, LoadManifest would read a shared user cache dir.
+func isolateRegistryCache(t *testing.T) {
+	t.Helper()
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = t.TempDir()
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+}
+
+// overrideProbe swaps registry.OverrideProbeForTest for the duration of a test.
+func overrideProbe(t *testing.T, fn func(url string) (string, error)) {
+	t.Helper()
+	orig := registry.OverrideProbeForTest
+	registry.OverrideProbeForTest = fn
+	t.Cleanup(func() { registry.OverrideProbeForTest = orig })
+}
+
+func TestReprobeRegistryVisibility_UpdatesPublic(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+
+	// Manifest must also declare "public" for the stricter-wins resolver to pick it.
+	cacheDir := t.TempDir()
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = cacheDir
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+	regDir := filepath.Join(cacheDir, "reg1")
+	os.MkdirAll(regDir, 0755)
+	os.WriteFile(filepath.Join(regDir, "registry.yaml"), []byte("name: reg1\nvisibility: public\n"), 0644)
+
+	overrideProbe(t, func(url string) (string, error) {
+		return registry.VisibilityPublic, nil
+	})
+
+	cfg := &config.Config{
+		Registries: []config.Registry{
+			{Name: "reg1", URL: "https://github.com/owner/repo.git", Visibility: registry.VisibilityUnknown},
+		},
+	}
+	if err := config.Save(tmp, cfg); err != nil {
+		t.Fatalf("config.Save: %v", err)
+	}
+
+	reprobeRegistryVisibility(cfg, "reg1", tmp)
+
+	if cfg.Registries[0].Visibility != registry.VisibilityPublic {
+		t.Errorf("expected Visibility=public, got %q", cfg.Registries[0].Visibility)
+	}
+	if cfg.Registries[0].VisibilityCheckedAt == nil {
+		t.Error("expected VisibilityCheckedAt to be set")
+	}
+	// Verify config was saved.
+	saved, err := config.Load(tmp)
+	if err != nil {
+		t.Fatalf("config.Load: %v", err)
+	}
+	if len(saved.Registries) != 1 || saved.Registries[0].Visibility != registry.VisibilityPublic {
+		t.Errorf("saved config did not persist visibility update: %+v", saved.Registries)
+	}
+}
+
+func TestReprobeRegistryVisibility_NoManifestResolvesToUnknown(t *testing.T) {
+	// Probe returns "public" but no manifest → stricter-wins resolves to "unknown".
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	isolateRegistryCache(t)
+	overrideProbe(t, func(url string) (string, error) {
+		return registry.VisibilityPublic, nil
+	})
+
+	cfg := &config.Config{
+		Registries: []config.Registry{
+			{Name: "reg1", URL: "https://github.com/owner/repo.git"},
+		},
+	}
+
+	reprobeRegistryVisibility(cfg, "reg1", tmp)
+
+	if cfg.Registries[0].Visibility != registry.VisibilityUnknown {
+		t.Errorf("expected Visibility=unknown (no manifest declaration), got %q", cfg.Registries[0].Visibility)
+	}
+	if cfg.Registries[0].VisibilityCheckedAt == nil {
+		t.Error("expected VisibilityCheckedAt to be set after successful probe")
+	}
+}
+
+func TestReprobeRegistryVisibility_UpdatesPrivate(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	isolateRegistryCache(t)
+	overrideProbe(t, func(url string) (string, error) {
+		return registry.VisibilityPrivate, nil
+	})
+
+	cfg := &config.Config{
+		Registries: []config.Registry{
+			{Name: "reg1", URL: "https://github.com/owner/private.git", Visibility: registry.VisibilityPublic},
+		},
+	}
+	if err := config.Save(tmp, cfg); err != nil {
+		t.Fatalf("config.Save: %v", err)
+	}
+
+	reprobeRegistryVisibility(cfg, "reg1", tmp)
+
+	if cfg.Registries[0].Visibility != registry.VisibilityPrivate {
+		t.Errorf("expected Visibility=private, got %q", cfg.Registries[0].Visibility)
+	}
+}
+
+func TestReprobeRegistryVisibility_ProbeErrorDoesNotUpdate(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	isolateRegistryCache(t)
+	overrideProbe(t, func(url string) (string, error) {
+		return "", errProbeFailed
+	})
+
+	cfg := &config.Config{
+		Registries: []config.Registry{
+			{Name: "reg1", URL: "https://github.com/owner/repo.git", Visibility: registry.VisibilityPublic},
+		},
+	}
+
+	reprobeRegistryVisibility(cfg, "reg1", tmp)
+
+	if cfg.Registries[0].Visibility != registry.VisibilityPublic {
+		t.Errorf("expected Visibility unchanged (public), got %q", cfg.Registries[0].Visibility)
+	}
+	if cfg.Registries[0].VisibilityCheckedAt != nil {
+		t.Error("expected VisibilityCheckedAt to remain nil on probe error")
+	}
+}
+
+func TestReprobeRegistryVisibility_FreshCacheSkipsProbe(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	isolateRegistryCache(t)
+
+	probeCalled := false
+	overrideProbe(t, func(url string) (string, error) {
+		probeCalled = true
+		return registry.VisibilityPrivate, nil
+	})
+
+	now := time.Now().UTC()
+	cfg := &config.Config{
+		Registries: []config.Registry{
+			{Name: "reg1", URL: "https://github.com/owner/repo.git",
+				Visibility: registry.VisibilityPublic, VisibilityCheckedAt: &now},
+		},
+	}
+
+	reprobeRegistryVisibility(cfg, "reg1", tmp)
+
+	if probeCalled {
+		t.Error("expected probe NOT to be called when cache is fresh")
+	}
+	if cfg.Registries[0].Visibility != registry.VisibilityPublic {
+		t.Errorf("expected Visibility unchanged, got %q", cfg.Registries[0].Visibility)
+	}
+}
+
+func TestReprobeRegistryVisibility_NameNotFoundNoOp(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	isolateRegistryCache(t)
+
+	probeCalled := false
+	overrideProbe(t, func(url string) (string, error) {
+		probeCalled = true
+		return registry.VisibilityPublic, nil
+	})
+
+	cfg := &config.Config{
+		Registries: []config.Registry{
+			{Name: "other", URL: "https://github.com/owner/repo.git"},
+		},
+	}
+
+	reprobeRegistryVisibility(cfg, "missing", tmp)
+
+	if probeCalled {
+		t.Error("expected probe NOT to be called when name is not found")
+	}
+	if cfg.Registries[0].Name != "other" {
+		t.Errorf("registry list was mutated unexpectedly: %+v", cfg.Registries)
+	}
+}
+
+func TestReprobeRegistryVisibility_ManifestStricterWins(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+
+	// Set up a cached manifest with explicit "private" declaration.
+	cacheDir := t.TempDir()
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = cacheDir
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+
+	regDir := filepath.Join(cacheDir, "reg1")
+	if err := os.MkdirAll(regDir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	manifestYAML := "name: reg1\nvisibility: private\n"
+	if err := os.WriteFile(filepath.Join(regDir, "registry.yaml"), []byte(manifestYAML), 0644); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+
+	// Probe says public, but manifest says private → private wins.
+	overrideProbe(t, func(url string) (string, error) {
+		return registry.VisibilityPublic, nil
+	})
+
+	cfg := &config.Config{
+		Registries: []config.Registry{
+			{Name: "reg1", URL: "https://github.com/owner/repo.git"},
+		},
+	}
+	if err := config.Save(tmp, cfg); err != nil {
+		t.Fatalf("config.Save: %v", err)
+	}
+
+	reprobeRegistryVisibility(cfg, "reg1", tmp)
+
+	if cfg.Registries[0].Visibility != registry.VisibilityPrivate {
+		t.Errorf("expected manifest-declared private to win over public probe, got %q", cfg.Registries[0].Visibility)
+	}
+}
+
+var errProbeFailed = &probeErr{msg: "probe failed"}
+
+type probeErr struct{ msg string }
+
+func (e *probeErr) Error() string { return e.msg }
