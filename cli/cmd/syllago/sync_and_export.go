@@ -38,6 +38,10 @@ to ensure registries are up-to-date before installing.`,
 	RunE: runSyncAndExport,
 }
 
+// syncAllRegistries is a test seam for registry.SyncAll so tests can stub
+// out network I/O without running a real git fetch.
+var syncAllRegistries = registry.SyncAll
+
 func init() {
 	syncAndExportCmd.Flags().String("to", "", "Provider slug to export to, or \"all\" for every provider (required)")
 	syncAndExportCmd.MarkFlagRequired("to")
@@ -72,7 +76,7 @@ func runSyncAndExport(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(output.Writer, "Syncing %d registries...\n", len(names))
 		}
 
-		results := registry.SyncAll(names)
+		results := syncAllRegistries(names)
 		for _, res := range results {
 			if res.Err != nil {
 				return output.NewStructuredErrorDetail(output.ErrRegistrySyncFailed, fmt.Sprintf("registry sync failed for %q", res.Name), "Check network connectivity and registry URL", res.Err.Error())
