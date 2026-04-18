@@ -50,9 +50,13 @@ type AttestationItem struct {
 // workflow. For GitHub Actions keyless signing, the issuer is always
 // https://token.actions.githubusercontent.com; the subject is the workflow
 // URI (e.g. https://github.com/OWNER/REPO/.github/workflows/NAME.yml@REF).
+//
+// The JSON tags serve manifest.go's registry_signing_profile and per-item
+// signing_profile fields — the wire representation uses lowercase keys.
+// Verification code that holds SigningProfile values in memory is unaffected.
 type SigningProfile struct {
-	Issuer  string
-	Subject string
+	Issuer  string `json:"issuer"`
+	Subject string `json:"subject"`
 }
 
 // CanonicalPayloadFor returns the exact byte sequence that the Publisher
