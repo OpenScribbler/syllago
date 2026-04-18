@@ -15,14 +15,93 @@ import (
 const DirName = ".syllago"
 const FileName = "config.json"
 
-// Registry represents a git-based content source registered in this project.
+// Registry types.
+//
+// Absent Type (empty string) means git-backed — this is the historical default
+// and preserves back-compat with configs written before the MOAT work landed.
+// New registries added via `syllago registry add` set Type explicitly.
+const (
+	RegistryTypeGit  = "git"
+	RegistryTypeMOAT = "moat"
+)
+
+// SigningProfile is the issuer+subject tuple recorded at TOFU approval time
+// for a MOAT registry. Compared on every Sync against the manifest's
+// registry_signing_profile — a mismatch requires explicit re-approval (spec
+// §Registry Signing + G-4). Name/operator changes in the manifest do NOT
+// require re-approval; only this pair does.
+type SigningProfile struct {
+	Issuer  string `json:"issuer"`
+	Subject string `json:"subject"`
+}
+
+// IsZero reports whether no signing profile has been recorded yet. Used to
+// distinguish "first time seeing this registry" (TOFU prompt) from "profile
+// changed since last approval" (re-approval prompt).
+func (s SigningProfile) IsZero() bool {
+	return s.Issuer == "" && s.Subject == ""
+}
+
+// Equal reports exact issuer+subject match. Both fields must match — the
+// signing profile is a pair, not a disjunction.
+func (s SigningProfile) Equal(other SigningProfile) bool {
+	return s.Issuer == other.Issuer && s.Subject == other.Subject
+}
+
+// Registry represents a content source registered in this project.
+//
+// Two backends: git (the original; default when Type is empty) and MOAT
+// (manifest-based, signature-verified). MOAT fields are populated only when
+// Type == RegistryTypeMOAT and are zero-valued for git registries.
 type Registry struct {
-	Name                string     `json:"name"`
-	URL                 string     `json:"url"`
-	Ref                 string     `json:"ref,omitempty"`                   // branch/tag/commit, defaults to default branch
+	Name string `json:"name"`
+	URL  string `json:"url"`
+	Ref  string `json:"ref,omitempty"` // branch/tag/commit, defaults to default branch (git only)
+
+	// Type is the registry backend. Empty = git for back-compat; new
+	// entries populate this explicitly.
+	Type string `json:"type,omitempty"`
+
+	// MOAT-only fields. Ignored (and MUST be zero) when Type != "moat".
+	// SigningProfile is a pointer so unset profiles omit cleanly from JSON
+	// (struct-value omitempty doesn't work — a zero struct still serializes
+	// its empty fields).
+	ManifestURI    string          `json:"manifest_uri,omitempty"`    // HTTPS URL of the MOAT manifest JSON
+	SigningProfile *SigningProfile `json:"signing_profile,omitempty"` // TOFU-approved issuer+subject
+	LastFetchedAt  *time.Time      `json:"last_fetched_at,omitempty"` // last successful manifest fetch
+	Operator       string          `json:"operator,omitempty"`        // display label from manifest
+	ManifestETag   string          `json:"manifest_etag,omitempty"`   // If-None-Match on next fetch
+
 	Trust               string     `json:"trust,omitempty"`                 // "trusted", "verified", "community" (default: "community")
 	Visibility          string     `json:"visibility,omitempty"`            // "public", "private", "unknown"
 	VisibilityCheckedAt *time.Time `json:"visibility_checked_at,omitempty"` // for TTL cache (re-probe after 1 hour)
+}
+
+// IsMOAT reports whether this registry is MOAT-backed. Treats the zero/empty
+// value of Type as git for back-compat with pre-MOAT configs.
+func (r *Registry) IsMOAT() bool {
+	return r.Type == RegistryTypeMOAT
+}
+
+// IsGit reports whether this registry is git-backed. Matches both the
+// explicit "git" value and the empty default (pre-MOAT configs).
+func (r *Registry) IsGit() bool {
+	return r.Type == "" || r.Type == RegistryTypeGit
+}
+
+// NeedsSigningProfileReapproval reports whether syncing against `incoming`
+// would require a re-approval prompt. Returns false when no signing profile
+// has been recorded yet (that is a TOFU case, not a re-approval case) and
+// when the incoming profile matches the recorded one exactly.
+//
+// Name/Operator changes alone do NOT trigger re-approval — they live
+// elsewhere on the struct and are intentionally not consulted here. Only
+// the signing-profile pair is trust-load-bearing.
+func (r *Registry) NeedsSigningProfileReapproval(incoming SigningProfile) bool {
+	if r.SigningProfile == nil || r.SigningProfile.IsZero() {
+		return false
+	}
+	return !r.SigningProfile.Equal(incoming)
 }
 
 // ProviderPathConfig holds custom path overrides for a single provider.
