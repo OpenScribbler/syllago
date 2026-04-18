@@ -1,14 +1,16 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-17T20:08:20.567Z
-> Files: 742 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-18T03:52:28.122Z
+> Files: 781 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
+- `continue-provider-coverage-reconciliation.md` — Continue provider coverage reconciliation (~904 tok)
 - `finish-phase0-capmon-refactor.md` — Finish Phase 6 Epic 0 — schema update, generator update, infra generalization (~395 tok)
 - `ship-v072-smoke-fix.md` — Ship v0.7.2 with Provider Smoke Tests running green (~437 tok)
 - `start-epic4-mcp-recognition.md` — Start Phase 6 Epic 4 — wire MCP recognizers for 14 providers (~614 tok)
 - `start-phase6-epic1-recognizers.md` — Start Phase 6 Epic 1 — wire skills recognizers for 14 stub providers (~670 tok)
+- `start-provider-coverage-implementation.md` — Start provider coverage implementation (~1034 tok)
 
 ## ../../../../../tmp/
 
@@ -29,8 +31,11 @@
 
 ## ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/
 
+- `feedback_docs_scope_boundary.md` (~414 tok)
+- `feedback_no_vague_limitations.md` (~349 tok)
 - `feedback_release_notes_no_internal_labels.md` — Declares breakdowns (~803 tok)
-- `MEMORY.md` — Syllago Project Memory (~1683 tok)
+- `MEMORY.md` — Syllago Project Memory (~1874 tok)
+- `project_provider_eligibility.md` (~475 tok)
 - `reference_stealth_fetch.md` — stealth-fetch (~308 tok)
 
 ## ../../../.config/pai/
@@ -71,6 +76,18 @@
 - `sourceman.go` — Struct: SourceManifest (~1036 tok)
 - `types.go` — implements the syllago capability monitor pipeline. (~1290 tok)
 
+## ../syllago-meta-registry-phase0-wt/
+
+- `registry.yml` (~82 tok)
+
+## ../syllago-meta-registry-phase0-wt/.claude/projects/
+
+- `bootstrap-moat-meta-registry.md` — Bootstrap syllago-meta-registry as the first self-publishing MOAT v0.6.0 registry (~1547 tok)
+
+## ../syllago-meta-registry-phase0-wt/.github/workflows/
+
+- `moat.yml` — '  # belt-and-suspenders guard; see branch note above (~5031 tok)
+
 ## ./
 
 - `.gitattributes` — Git attributes (~50 tok)
@@ -78,7 +95,7 @@
 - `.release-pending.yml` (~34 tok)
 - `AGENTS.md` — Agent Instructions (~332 tok)
 - `ARCHITECTURE.md` — Syllago Architecture (~1663 tok)
-- `CHANGELOG.md` — Change log (~1326 tok)
+- `CHANGELOG.md` — Changelog (~1660 tok)
 - `CLAUDE.md` — OpenWolf (~1035 tok)
 - `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct (~1370 tok)
 - `commands.json` — Declares or (~48402 tok)
@@ -1279,13 +1296,15 @@
 
 ## .claude/projects/
 
-- `.current` (~9 tok)
+- `.current` (~12 tok)
 - `continue-capmon-audit.md` — Continue auditing capmon (~624 tok)
+- `continue-provider-coverage-reconciliation.md` — Continue provider coverage reconciliation (~1388 tok)
 - `finish-phase0-capmon-refactor.md` — Finish Phase 0: Capmon Recognition Refactor (~1391 tok)
 - `ship-v072-smoke-fix.md` — Ship v0.7.2 with Provider Smoke Tests running green (~515 tok)
 - `start-epic4-mcp-recognition.md` — Start Phase 6 Epic 4 — wire MCP recognizers for 14 providers (~1060 tok)
 - `start-epic5-agents-recognition.md` — Start Phase 6 Epic 5 — wire agents recognizers for 9 providers (~1042 tok)
 - `start-phase6-epic1-recognizers.md` — Start Phase 6 Epic 1 — Skills recognizers for 14 stub providers (~1436 tok)
+- `start-provider-coverage-implementation.md` — Start provider coverage implementation (~2433 tok)
 
 ## .claude/rules/
 
@@ -1464,6 +1483,9 @@
 
 ## .github/workflows/
 
+- `ci.yml` — CI: CI (~848 tok)
+- `codeql.yml` — CI: CodeQL (~264 tok)
+- `scorecard.yml` — CI: Scorecard (~319 tok)
 - `smoke-test-providers.yml` — CI: Provider Smoke Tests (~828 tok)
 
 ## .panels/recognizer-api-evolution/
@@ -1499,7 +1521,7 @@
 - `generate.go` — Struct: providerInfo (~1761 tok)
 - `healing_github.go` — Struct: RenameCandidate (~2092 tok)
 - `healing.go` — Struct: HealResult (~1690 tok)
-- `pipeline.go` — Struct: PipelineOptions (~3172 tok)
+- `pipeline.go` — Struct: PipelineOptions (~4164 tok)
 - `recognize_agents_test.go` — TestAgentsContentType, TestCanonicalAgentsKeys_MatchesCanonicalKeysYAML, TestIsCanonicalAgentsKey, T (~2192 tok)
 - `recognize_agents.go` — IsCanonicalAgentsKey, AgentsLandmarkOptions, AgentsLandmarkPattern (~1526 tok)
 - `recognize_amp_test.go` — TestRecognizeAmp_RealLandmarks, TestRecognizeAmp_AnchorsMissing, TestRecognizeAmp_NoLandmarks, TestR (~3302 tok)
@@ -1554,6 +1576,7 @@
 - `seederspec_test.go` — TestLoadSeederSpec_Valid, TestSeederSpecPath (~712 tok)
 - `seederspec.go` — Struct: ProposedMapping (~535 tok)
 - `sourceman_validate.go` — ValidateSources (~446 tok)
+- `types.go` — implements the syllago capability monitor pipeline. (~1315 tok)
 
 ## cli/internal/capmon/capyaml/
 
@@ -1576,20 +1599,32 @@
 ## cli/internal/converter/
 
 - `agents.go` — Struct: factoryDroidAgentMeta (~8580 tok)
-- `frontmatter_registry_test.go` — Struct: check (~2496 tok)
+- `frontmatter_registry_test.go` — Struct: check (~2508 tok)
 - `skills.go` — Struct: SkillMeta (~8352 tok)
 
 ## cli/internal/provider/
 
+- `amp_test.go` — TestAmpSupportsType, TestAmpDetect, TestAmpInstallDir, TestAmpHooksSupport, TestAmpDiscoveryPaths (~1233 tok)
+- `amp.go` (~883 tok)
+- `cline_test.go` — TestClineSupportsTypes, TestClineSkillsSupport, TestClineCommandsSupport, TestClineDiscoveryPaths, T (~1387 tok)
+- `cline.go` — ClineMCPSettingsPath (~1236 tok)
+- `coverage_test.go` — TestCoverageInternalGoConsistency, TestCoverageNoDrift, TestFindRepoRoot (~901 tok)
+- `coverage.go` — Struct: CoverageDrift (~2258 tok)
 - `crush.go` (~558 tok)
 - `factory_droid.go` (~696 tok)
 - `pi.go` (~650 tok)
 - `provider.go` — Struct: Provider (~1084 tok)
+- `roocode_test.go` — TestRooCodeSupportsTypes, TestRooCodeCommandsSupport, TestRooCodeDiscoveryPaths, TestRooCodeEmitPath (~912 tok)
+- `roocode.go` (~831 tok)
+- `windsurf_test.go` — TestWindsurfSupportsTypes, TestWindsurfCommandsSupport, TestWindsurfEmitPath (~519 tok)
+- `windsurf.go` (~725 tok)
 
 ## docs/plans/
 
+- `2026-04-12-moat-conformance-gap-analysis.md` — MOAT Conformance Gap Analysis — Syllago + syllago-meta-registry (~16444 tok)
 - `2026-04-16-capmon-phase6-recognition-plan.md` — Capmon Phase 6: Full Recognition Pipeline (~2343 tok)
 - `2026-04-16-capmon-self-healing-prompt.md` — Prompt: Self-Healing Source URLs for capmon (~2076 tok)
+- `2026-04-17-provider-coverage-reconciliation-plan.md` — Provider Coverage Reconciliation (~8094 tok)
 
 ## docs/provider-capabilities/
 
@@ -1597,23 +1632,35 @@
 
 ## docs/provider-formats/
 
-- `amp.yaml` (~6964 tok)
+- `amp.yaml` (~7352 tok)
 - `claude-code.yaml` (~13498 tok)
-- `cline.yaml` (~6513 tok)
+- `cline.yaml` (~6994 tok)
 - `codex.yaml` (~12069 tok)
 - `copilot-cli.yaml` (~9194 tok)
+- `crush.yaml` (~3293 tok)
+- `cursor.yaml` (~7826 tok)
 - `factory-droid.yaml` — Declares entries (~5903 tok)
 - `gemini-cli.yaml` (~7260 tok)
 - `kiro.yaml` — Declares that (~7651 tok)
-- `opencode.yaml` (~651 tok)
+- `opencode.yaml` (~4233 tok)
 - `pi.yaml` — Declares as (~6257 tok)
-- `windsurf.yaml` (~8056 tok)
+- `roo-code.yaml` — Declares field (~7050 tok)
+- `windsurf.yaml` (~7388 tok)
+- `zed.yaml` — Declares content (~1952 tok)
 
 ## docs/provider-sources/
 
 - `amp.yaml` — Amp — Provider Source Manifest (~1090 tok)
+- `cline.yaml` — Cline — Provider Source Manifest (~1052 tok)
 - `copilot-cli.yaml` — Copilot CLI — Provider Source Manifest (~1514 tok)
+- `crush.yaml` — Crush — Provider Source Manifest (~1176 tok)
+- `cursor.yaml` — Cursor — Provider Source Manifest (~944 tok)
 - `factory-droid.yaml` — Factory Droid — Provider Source Manifest (~1068 tok)
+- `gemini-cli.yaml` — Gemini CLI — Provider Source Manifest (~1633 tok)
+- `opencode.yaml` — OpenCode / Crush — Provider Source Manifest (~1289 tok)
+- `roo-code.yaml` — Roo Code — Provider Source Manifest (~1410 tok)
+- `windsurf.yaml` — Windsurf — Provider Source Manifest (~891 tok)
+- `zed.yaml` — Zed — Provider Source Manifest (~808 tok)
 
 ## releases/
 
@@ -1621,6 +1668,7 @@
 - `v0.7.1.md` — v0.7.1 (~1011 tok)
 - `v0.7.2.md` — v0.7.2 (~287 tok)
 - `v0.8.0.md` — v0.8.0 (~657 tok)
+- `v0.9.0.md` — v0.9.0 (~1231 tok)
 
 ## tests/smoke/
 

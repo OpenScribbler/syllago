@@ -1,33 +1,27 @@
 {
-  "session_id": "session-2026-04-17-1307",
-  "started": "2026-04-17T20:07:39.191Z",
+  "session_id": "session-2026-04-18-2054",
+  "started": "2026-04-18T03:54:06.573Z",
   "files_read": {
-    "/home/hhewett/.local/src/syllago/.github/workflows/release.yml": {
+    "/home/hhewett/.local/src/moat/reference/moat.yml": {
       "count": 1,
       "tokens": 0,
-      "first_read": "2026-04-17T20:09:13.799Z"
-    }
-  },
-  "files_written": [
-    {
-      "file": "/home/hhewett/.local/src/syllago/.release-pending.yml",
-      "action": "create",
-      "tokens": 34,
-      "at": "2026-04-17T20:07:43.278Z"
+      "first_read": "2026-04-18T03:55:47.680Z"
     },
-    {
-      "file": "/home/hhewett/.config/pai/.research-workflow-state-3e857b46-3822-488f-b024-16a79d21200e.json",
-      "action": "create",
-      "tokens": 28,
-      "at": "2026-04-17T20:08:20.575Z"
+    "/home/hhewett/.local/src/moat/specs/publisher-action.md": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-18T03:59:16.316Z"
+    },
+    "/home/hhewett/.local/src/moat/moat-spec.md": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-18T03:59:28.305Z"
     }
-  ],
-  "edit_counts": {
-    ".release-pending.yml": 1,
-    "../../../.config/pai/.research-workflow-state-3e857b46-3822-488f-b024-16a79d21200e.json": 1
   },
+  "files_written": [],
+  "edit_counts": {},
   "anatomy_hits": 0,
-  "anatomy_misses": 1,
+  "anatomy_misses": 3,
   "repeated_reads_warned": 0,
   "cerebrum_warnings": 0,
   "stop_count": 1
