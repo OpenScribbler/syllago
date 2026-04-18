@@ -73,12 +73,25 @@
       "action": "edit",
       "tokens": 288,
       "at": "2026-04-18T06:43:56.796Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/verify.go",
+      "action": "edit",
+      "tokens": 30,
+      "at": "2026-04-18T06:45:45.236Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/verify.go",
+      "action": "edit",
+      "tokens": 35,
+      "at": "2026-04-18T06:45:49.096Z"
     }
   ],
   "edit_counts": {
     "cli/internal/moat/sigstore_verify.go": 2,
     "cli/internal/moat/sigstore_verify_test.go": 1,
-    ".claude/projects/bootstrap-moat-meta-registry.md": 2
+    ".claude/projects/bootstrap-moat-meta-registry.md": 2,
+    "cli/internal/moat/verify.go": 2
   },
   "anatomy_hits": 5,
   "anatomy_misses": 3,
