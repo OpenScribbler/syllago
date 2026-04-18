@@ -1,5 +1,6 @@
 provider: windsurf
 docs_url: "https://docs.windsurf.com"
+category: standalone-app
 last_fetched_at: "2026-04-11T21:50:59Z"
 last_changed_at: "2026-04-17T00:00:00Z"
 generation_method: subagent

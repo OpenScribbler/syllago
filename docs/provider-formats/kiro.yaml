@@ -1,5 +1,6 @@
 provider: kiro
 docs_url: "https://kiro.dev/docs"
+category: standalone-app
 last_fetched_at: "2026-04-11T21:50:49Z"
 last_changed_at: "2026-04-11T00:00:00Z"
 generation_method: subagent

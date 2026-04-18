@@ -32,6 +32,7 @@ type ProviderCapEntry struct {
 	ConfigDir string                       `json:"configDir"`
 	EmitPath  string                       `json:"emitPath,omitempty"` // e.g. "{project}/CLAUDE.md"
 	DocsURL   string                       `json:"docsURL,omitempty"`  // provider's official documentation root (from format-doc docs_url)
+	Category  string                       `json:"category,omitempty"` // "cli" | "ide-extension" | "standalone-app" | "web-based" (from format-doc category)
 	Content   map[string]ContentCapability `json:"content"`
 }
 
@@ -75,26 +76,34 @@ func init() {
 }
 
 // providerFormatsDirForDocsURL is the directory containing
-// docs/provider-formats/*.yaml files from which we cross-reference the
-// authored docs_url field. Overridable in tests.
+// docs/provider-formats/*.yaml files from which we cross-reference authored
+// static metadata (docs_url, category). Overridable in tests.
 var providerFormatsDirForDocsURL = filepath.Join("..", "docs", "provider-formats")
 
-// providerDocsURLYAML captures only the fields we need to pluck the docs_url
-// out of a format-doc YAML without pulling in the full capmon schema.
-type providerDocsURLYAML struct {
+// providerStaticMetaYAML captures only the fields we need to pluck out of a
+// format-doc YAML without pulling in the full capmon schema.
+type providerStaticMetaYAML struct {
 	Provider string `yaml:"provider"`
 	DocsURL  string `yaml:"docs_url"`
+	Category string `yaml:"category"`
 }
 
-// loadProviderDocsURLs reads every <slug>.yaml under dir and returns a map
-// from provider slug → docs_url. Slug is derived from the filename stem so a
-// mismatched provider: field inside the file does not shadow it.
-func loadProviderDocsURLs(dir string) (map[string]string, error) {
+// providerStaticMeta carries per-provider static fields sourced from format-doc YAMLs.
+type providerStaticMeta struct {
+	DocsURL  string
+	Category string
+}
+
+// loadProviderStaticMeta reads every <slug>.yaml under dir and returns a map
+// from provider slug → its format-doc-authored static metadata. Slug is derived
+// from the filename stem so a mismatched provider: field inside the file does
+// not shadow it.
+func loadProviderStaticMeta(dir string) (map[string]providerStaticMeta, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("readdir %q: %w", dir, err)
 	}
-	out := make(map[string]string)
+	out := make(map[string]providerStaticMeta)
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -108,24 +117,24 @@ func loadProviderDocsURLs(dir string) (map[string]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("reading %q: %w", name, err)
 		}
-		var doc providerDocsURLYAML
+		var doc providerStaticMetaYAML
 		if err := yaml.Unmarshal(raw, &doc); err != nil {
 			return nil, fmt.Errorf("parsing %q: %w", name, err)
 		}
-		out[slug] = doc.DocsURL
+		out[slug] = providerStaticMeta{DocsURL: doc.DocsURL, Category: doc.Category}
 	}
 	return out, nil
 }
 
 func runGenproviders(_ *cobra.Command, _ []string) error {
-	docsURLs, err := loadProviderDocsURLs(providerFormatsDirForDocsURL)
+	staticMeta, err := loadProviderStaticMeta(providerFormatsDirForDocsURL)
 	if err != nil {
-		return fmt.Errorf("loading provider docs URLs: %w", err)
+		return fmt.Errorf("loading provider static metadata: %w", err)
 	}
 
 	var entries []ProviderCapEntry
 	for _, prov := range provider.AllProviders {
-		entries = append(entries, buildProviderEntry(prov, docsURLs[prov.Slug]))
+		entries = append(entries, buildProviderEntry(prov, staticMeta[prov.Slug]))
 	}
 
 	v := version
@@ -151,7 +160,7 @@ func runGenproviders(_ *cobra.Command, _ []string) error {
 	return enc.Encode(manifest)
 }
 
-func buildProviderEntry(prov provider.Provider, docsURL string) ProviderCapEntry {
+func buildProviderEntry(prov provider.Provider, meta providerStaticMeta) ProviderCapEntry {
 	content := make(map[string]ContentCapability)
 
 	for _, ct := range catalog.AllContentTypes() {
@@ -168,7 +177,8 @@ func buildProviderEntry(prov provider.Provider, docsURL string) ProviderCapEntry
 		Slug:      prov.Slug,
 		ConfigDir: prov.ConfigDir,
 		EmitPath:  emitPath,
-		DocsURL:   docsURL,
+		DocsURL:   meta.DocsURL,
+		Category:  meta.Category,
 		Content:   content,
 	}
 }

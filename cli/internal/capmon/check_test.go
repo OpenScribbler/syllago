@@ -78,6 +78,7 @@ func (e *checkTestEnv) writeFormatDoc(t *testing.T, provider, sourceURI, content
 	t.Helper()
 	content := `provider: ` + provider + `
 docs_url: "https://example.com/docs"
+category: cli
 last_fetched_at: "2026-04-11T00:00:00Z"
 generation_method: human-edited
 content_types:
@@ -304,6 +305,7 @@ func TestRunCapmonCheck_FormatDocWarningLoggedToStderr(t *testing.T) {
 	// value_type, which ValidateFormatDocWithWarnings returns as a warning.
 	docWithWarning := `provider: test-provider
 docs_url: "https://example.com/docs"
+category: cli
 last_fetched_at: "2026-04-15T00:00:00Z"
 content_types:
   skills:
@@ -371,6 +373,7 @@ func TestRunCapmonCheck_CIModeCreatesWarningIssues(t *testing.T) {
 	// Format doc with a non-allow-listed value_type to trigger a warning.
 	docWithWarning := `provider: test-provider
 docs_url: "https://example.com/docs"
+category: cli
 last_fetched_at: "2026-04-15T00:00:00Z"
 content_types:
   skills:
@@ -455,6 +458,7 @@ func TestRunCapmonCheck_CIModeDryRunSkipsIssues(t *testing.T) {
 
 	docWithWarning := `provider: test-provider
 docs_url: "https://example.com/docs"
+category: cli
 last_fetched_at: "2026-04-15T00:00:00Z"
 content_types:
   skills:

@@ -1,5 +1,6 @@
 provider: cline
 docs_url: "https://docs.cline.bot"
+category: ide-extension
 last_fetched_at: "2026-04-11T21:49:56Z"
 last_changed_at: "2026-04-17T00:00:00Z"
 generation_method: subagent
