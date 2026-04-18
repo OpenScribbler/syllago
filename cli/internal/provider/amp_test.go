@@ -134,6 +134,9 @@ func TestAmpFileFormat(t *testing.T) {
 	if Amp.FileFormat(catalog.MCP) != FormatJSON {
 		t.Error("MCP format should be JSON")
 	}
+	if Amp.FileFormat(catalog.Hooks) != FormatJSON {
+		t.Error("Hooks format should be JSON (hooks live in .amp/settings.json via JSON merge)")
+	}
 }
 
 func TestAmpEmitPath(t *testing.T) {

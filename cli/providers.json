@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-17T19:13:10Z",
-  "syllagoVersion": "0.7.2",
+  "generatedAt": "2026-04-18T03:48:20Z",
+  "syllagoVersion": "0.9.0",
   "providers": [
     {
       "name": "Claude Code",
@@ -604,8 +604,15 @@
           "symlinkSupport": false
         },
         "commands": {
-          "supported": false,
-          "symlinkSupport": false
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.codeium/windsurf/global_workflows",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.windsurf/workflows",
+            "{home}/.codeium/windsurf/global_workflows"
+          ]
         },
         "hooks": {
           "supported": true,
@@ -993,8 +1000,15 @@
           "symlinkSupport": false
         },
         "commands": {
-          "supported": false,
-          "symlinkSupport": false
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/Documents/Cline/Workflows",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.clinerules/workflows",
+            "{home}/Documents/Cline/Workflows"
+          ]
         },
         "hooks": {
           "supported": true,
@@ -1042,8 +1056,21 @@
           ]
         },
         "skills": {
-          "supported": false,
-          "symlinkSupport": false
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.cline/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.cline/skills",
+            "{project}/.clinerules/skills",
+            "{project}/.claude/skills",
+            "{home}/.cline/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description"
+          ]
         }
       }
     },
@@ -1068,8 +1095,15 @@
           ]
         },
         "commands": {
-          "supported": false,
-          "symlinkSupport": false
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.roo/commands",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.roo/commands",
+            "{home}/.roo/commands"
+          ]
         },
         "hooks": {
           "supported": false,
@@ -1388,8 +1422,17 @@
           "symlinkSupport": false
         },
         "hooks": {
-          "supported": false,
-          "symlinkSupport": false
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/.amp/settings.json"
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": ".amp/settings.json"
         },
         "loadouts": {
           "supported": false,
