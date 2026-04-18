@@ -20,6 +20,13 @@ type shareResult struct {
 	CompareURL string `json:"compare_url,omitempty"`
 }
 
+// Function-variable indirection lets tests stub the promote package without
+// needing to set up a full git-repo-with-remote fixture for wiring coverage.
+var (
+	promoteFunc           = promote.Promote
+	promoteToRegistryFunc = promote.PromoteToRegistry
+)
+
 var shareCmd = &cobra.Command{
 	Use:   "share <name>",
 	Short: "Contribute library content to a team repo or registry",
@@ -85,7 +92,7 @@ func runShare(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(output.Writer, "Publishing to registry...\n")
 		}
 
-		result, err := promote.PromoteToRegistry(root, toRegistry, *item, noInput)
+		result, err := promoteToRegistryFunc(root, toRegistry, *item, noInput)
 		if err != nil {
 			return output.NewStructuredErrorDetail(output.ErrPromoteGitFailed, "share to registry failed", "Check git credentials and network connectivity", err.Error())
 		}
@@ -116,7 +123,7 @@ func runShare(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(output.Writer, "Staging changes...\n")
 	}
 
-	result, err := promote.Promote(root, *item, noInput)
+	result, err := promoteFunc(root, *item, noInput)
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrPromoteGitFailed, "sharing failed", "Check git status and permissions in the team repo", err.Error())
 	}
