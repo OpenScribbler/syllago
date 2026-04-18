@@ -111,6 +111,8 @@ func init() {
 	installCmd.Flags().BoolP("dry-run", "n", false, "Show what would happen without making changes")
 	installCmd.Flags().String("base-dir", "", "Override base directory for content installation")
 	installCmd.Flags().Bool("no-input", false, "Disable interactive prompts, use defaults")
+	installCmd.Flags().StringSlice("hook-scanner", nil, "Path to external hook scanner binary (repeatable)")
+	installCmd.Flags().Bool("force", false, "Proceed past high-severity scanner findings")
 	rootCmd.AddCommand(installCmd)
 }
 
@@ -122,6 +124,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	baseDir, _ := cmd.Flags().GetString("base-dir")
 	installAll, _ := cmd.Flags().GetBool("all")
+	scannerPaths, _ := cmd.Flags().GetStringSlice("hook-scanner")
+	force, _ := cmd.Flags().GetBool("force")
+	installer.SetScannerChain(scannerPaths, force)
 
 	// --to-all and --to are mutually exclusive.
 	if toAll && toSlug != "" {

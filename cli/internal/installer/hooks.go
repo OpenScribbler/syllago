@@ -85,11 +85,31 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return "", fmt.Errorf("filtering matcher group: %w", err)
 	}
 
-	// M2: Run security scanner on the hook before installing
-	warnings := converter.ScanHookSecurityFromRaw(matcherGroup)
-	for _, w := range warnings {
-		fmt.Fprintf(output.ErrWriter, "  %s WARNING [%s]: %s\n    command: %s\n",
-			strings.ToUpper(w.Severity), w.HookName, w.Description, w.Command)
+	// M2: Run the pluggable scanner chain (builtin + any --hook-scanner paths)
+	// against the source hook directory. The builtin scanner examines hook.json
+	// and any recognized script files; external scanners run as subprocesses
+	// per the protocol in docs/plans/implementation/pluggable-scanner.md.
+	//
+	// High-severity findings block the install unless --force was supplied.
+	// Lower severities print warnings and proceed.
+	itemDir := item.Path
+	if fi, err := os.Stat(item.Path); err == nil && !fi.IsDir() {
+		itemDir = filepath.Dir(item.Path)
+	}
+	scanResult, _ := converter.RunScanChain(itemDir, scannerChainPaths)
+	for _, f := range scanResult.Findings {
+		loc := f.File
+		if f.Line > 0 {
+			loc = fmt.Sprintf("%s:%d", f.File, f.Line)
+		}
+		fmt.Fprintf(output.ErrWriter, "  %s [%s] %s (scanner=%s)\n",
+			strings.ToUpper(f.Severity), loc, f.Description, f.Scanner)
+	}
+	for _, e := range scanResult.Errors {
+		fmt.Fprintf(output.ErrWriter, "  scanner error: %s\n", e)
+	}
+	if !scannerForceBypass && converter.HighestSeverity(scanResult.Findings) == "high" {
+		return "", fmt.Errorf("hook %q has high-severity security findings; re-run with --force to install anyway", item.Name)
 	}
 
 	// Copy script files referenced by hook commands to a stable location.
