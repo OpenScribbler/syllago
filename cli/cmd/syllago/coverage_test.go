@@ -834,6 +834,23 @@ func TestRunRename_NotFound(t *testing.T) {
 
 // --- runAddFromShared (0% coverage) ---
 
+// writeSharedSkill creates a shared-content skill item at
+// <projectRoot>/skills/<name>/SKILL.md. Skills are a universal content type,
+// so the layout is type/name (no provider subdirectory) and the scanner gives
+// the directory name directly as ContentItem.Name.
+func writeSharedSkill(t *testing.T, projectRoot, name string) string {
+	t.Helper()
+	dir := filepath.Join(projectRoot, "skills", name)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	skill := "---\nname: " + name + "\ndescription: test skill\n---\n# " + name + "\n"
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(skill), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
 func TestRunAddFromShared_NoSharedContent(t *testing.T) {
 	stdout, _ := output.SetForTest(t)
 	_ = stdout
@@ -848,6 +865,205 @@ func TestRunAddFromShared_NoSharedContent(t *testing.T) {
 	err := runAddFromShared(root, nil, false, false, false)
 	if err != nil {
 		t.Fatalf("runAddFromShared: %v", err)
+	}
+}
+
+// TestRunAddFromShared_DiscoveryMode exercises the "list available items" path
+// (no args, addAll=false).
+func TestRunAddFromShared_DiscoveryMode(t *testing.T) {
+	stdout, _ := output.SetForTest(t)
+
+	root := t.TempDir()
+	withFakeRepoRoot(t, root)
+	writeSharedSkill(t, root, "alpha")
+	writeSharedSkill(t, root, "beta")
+
+	origGlobal := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = filepath.Join(root, "content")
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	if err := runAddFromShared(root, nil, false, false, false); err != nil {
+		t.Fatalf("runAddFromShared: %v", err)
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "alpha") || !strings.Contains(out, "beta") {
+		t.Errorf("discovery output should mention both items, got: %s", out)
+	}
+	if !strings.Contains(out, "--all") {
+		t.Errorf("discovery output should hint at --all flag, got: %s", out)
+	}
+}
+
+// TestRunAddFromShared_AddAll copies every shared item into the library and
+// creates metadata sidecars.
+func TestRunAddFromShared_AddAll(t *testing.T) {
+	stdout, _ := output.SetForTest(t)
+
+	root := t.TempDir()
+	withFakeRepoRoot(t, root)
+	writeSharedSkill(t, root, "alpha")
+	writeSharedSkill(t, root, "beta")
+
+	libDir := filepath.Join(root, "library")
+	origGlobal := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = libDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	if err := runAddFromShared(root, nil, true, false, false); err != nil {
+		t.Fatalf("runAddFromShared: %v", err)
+	}
+
+	for _, name := range []string{"alpha", "beta"} {
+		dest := filepath.Join(libDir, "skills", name)
+		if _, err := os.Stat(dest); err != nil {
+			t.Errorf("expected skills/%s copied to library: %v", name, err)
+		}
+		if _, err := metadata.Load(dest); err != nil {
+			t.Errorf("expected metadata sidecar for skills/%s: %v", name, err)
+		}
+	}
+	if out := stdout.String(); !strings.Contains(out, "Added 2") {
+		t.Errorf("expected summary to report 2 items added, got: %s", out)
+	}
+}
+
+// TestRunAddFromShared_NamedItem copies only the item matching args[0].
+func TestRunAddFromShared_NamedItem(t *testing.T) {
+	stdout, _ := output.SetForTest(t)
+
+	root := t.TempDir()
+	withFakeRepoRoot(t, root)
+	writeSharedSkill(t, root, "alpha")
+	writeSharedSkill(t, root, "bravo")
+
+	libDir := filepath.Join(root, "library")
+	origGlobal := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = libDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	if err := runAddFromShared(root, []string{"alpha"}, false, false, false); err != nil {
+		t.Fatalf("runAddFromShared: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(libDir, "skills", "alpha")); err != nil {
+		t.Errorf("alpha should have been copied: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(libDir, "skills", "bravo")); err == nil {
+		t.Errorf("bravo should NOT have been copied (name filter)")
+	}
+	_ = stdout
+}
+
+// TestRunAddFromShared_NamedItem_NotFound returns ErrItemNotFound when the
+// named item has no matching shared content.
+func TestRunAddFromShared_NamedItem_NotFound(t *testing.T) {
+	stdout, _ := output.SetForTest(t)
+	_ = stdout
+
+	root := t.TempDir()
+	withFakeRepoRoot(t, root)
+	writeSharedSkill(t, root, "alpha")
+
+	origGlobal := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = filepath.Join(root, "library")
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	err := runAddFromShared(root, []string{"ghost"}, false, false, false)
+	if err == nil {
+		t.Fatal("expected error for missing named item")
+	}
+	if !strings.Contains(err.Error(), "ghost") {
+		t.Errorf("error should mention requested item name, got: %v", err)
+	}
+}
+
+// TestRunAddFromShared_DryRun prints the plan without touching the library.
+func TestRunAddFromShared_DryRun(t *testing.T) {
+	stdout, _ := output.SetForTest(t)
+
+	root := t.TempDir()
+	withFakeRepoRoot(t, root)
+	writeSharedSkill(t, root, "alpha")
+
+	libDir := filepath.Join(root, "library")
+	origGlobal := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = libDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	if err := runAddFromShared(root, nil, true, true, false); err != nil {
+		t.Fatalf("runAddFromShared: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(libDir, "skills", "alpha")); err == nil {
+		t.Error("dry-run must not write to library")
+	}
+	if out := stdout.String(); !strings.Contains(out, "dry-run") {
+		t.Errorf("dry-run output should announce mode, got: %s", out)
+	}
+}
+
+// TestRunAddFromShared_SkipWhenAlreadyInLibrary preserves the existing library
+// entry when --force is not set.
+func TestRunAddFromShared_SkipWhenAlreadyInLibrary(t *testing.T) {
+	stdout, _ := output.SetForTest(t)
+
+	root := t.TempDir()
+	withFakeRepoRoot(t, root)
+	writeSharedSkill(t, root, "alpha")
+
+	libDir := filepath.Join(root, "library")
+	existing := filepath.Join(libDir, "skills", "alpha")
+	if err := os.MkdirAll(existing, 0755); err != nil {
+		t.Fatal(err)
+	}
+	sentinel := filepath.Join(existing, "existing.md")
+	if err := os.WriteFile(sentinel, []byte("# keep me"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	origGlobal := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = libDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	if err := runAddFromShared(root, nil, true, false, false); err != nil {
+		t.Fatalf("runAddFromShared: %v", err)
+	}
+	if _, err := os.Stat(sentinel); err != nil {
+		t.Errorf("existing library file should be preserved without --force: %v", err)
+	}
+	if out := stdout.String(); !strings.Contains(out, "SKIP") {
+		t.Errorf("output should mention SKIP, got: %s", out)
+	}
+}
+
+// TestRunAddFromShared_ForceOverwrite replaces the existing library item when
+// --force is passed.
+func TestRunAddFromShared_ForceOverwrite(t *testing.T) {
+	stdout, _ := output.SetForTest(t)
+	_ = stdout
+
+	root := t.TempDir()
+	withFakeRepoRoot(t, root)
+	writeSharedSkill(t, root, "alpha")
+
+	libDir := filepath.Join(root, "library")
+	existing := filepath.Join(libDir, "skills", "alpha")
+	if err := os.MkdirAll(existing, 0755); err != nil {
+		t.Fatal(err)
+	}
+	oldSentinel := filepath.Join(existing, "old-only.md")
+	if err := os.WriteFile(oldSentinel, []byte("# old"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	origGlobal := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = libDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	if err := runAddFromShared(root, nil, true, false, true); err != nil {
+		t.Fatalf("runAddFromShared: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(existing, "SKILL.md")); err != nil {
+		t.Errorf("force should overwrite with new content: %v", err)
 	}
 }
 
