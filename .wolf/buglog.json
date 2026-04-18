@@ -2630,6 +2630,54 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-18T00:16:29.007Z"
+    },
+    {
+      "id": "bug-165",
+      "timestamp": "2026-04-18T04:05:05.610Z",
+      "error_message": "Significant refactor of ",
+      "file": "../moat/reference/moat-registry.yml",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 34→71 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-18T04:05:05.610Z"
+    },
+    {
+      "id": "bug-166",
+      "timestamp": "2026-04-18T04:10:29.866Z",
+      "error_message": "Significant refactor of ",
+      "file": ".claude/projects/continue-provider-coverage-reconciliation.md",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 11→11 lines (4 removed) | Also: done: false; updated: 2026-04-17T17:30:00-07:00",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-18T04:10:50.085Z"
+    },
+    {
+      "id": "bug-167",
+      "timestamp": "2026-04-18T06:13:21.363Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/moat/rekor_test.go",
+      "root_cause": "Was returning: b64encode([]byte(raw))",
+      "fix": "Now returns: base64.StdEncoding.EncodeToString([]byte(raw))",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-18T06:13:21.363Z"
     }
   ]
 }

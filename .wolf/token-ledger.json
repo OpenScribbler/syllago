@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-04-14T17:20:26.414Z",
   "lifetime": {
-    "total_tokens_estimated": 2208660,
-    "total_reads": 1130,
-    "total_writes": 1201,
-    "total_sessions": 124,
-    "anatomy_hits": 343,
-    "anatomy_misses": 610,
-    "repeated_reads_blocked": 472,
-    "estimated_savings_vs_bare_cli": 1505169
+    "total_tokens_estimated": 2262273,
+    "total_reads": 1179,
+    "total_writes": 1245,
+    "total_sessions": 129,
+    "anatomy_hits": 359,
+    "anatomy_misses": 635,
+    "repeated_reads_blocked": 479,
+    "estimated_savings_vs_bare_cli": 1510729
   },
   "sessions": [
     {
@@ -15361,6 +15361,688 @@
         "writes_count": 3,
         "repeated_reads_blocked": 2,
         "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-18-2054",
+      "started": "2026-04-18T03:54:06.573Z",
+      "ended": "2026-04-18T04:02:18.561Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/moat/reference/moat.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/specs/publisher-action.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/moat-spec.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 0,
+        "reads_count": 3,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-18-2108",
+      "started": "2026-04-18T04:08:25.611Z",
+      "ended": "2026-04-18T04:11:09.534Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/moat/CHANGELOG.md",
+          "tokens_estimated": 1660,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/src/data/providers/amp.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/src/data/providers/roo-code.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/src/data/providers/windsurf.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/src/data/providers/cline.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/CHANGELOG.md",
+          "tokens_estimated": 1660,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.9.0.md",
+          "tokens_estimated": 1231,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-provider-coverage-reconciliation.md",
+          "tokens_estimated": 1388,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/continue-provider-coverage-reconciliation.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 12,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/moat/CHANGELOG.md",
+          "tokens_estimated": 432,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 41,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-provider-coverage-reconciliation.md",
+          "tokens_estimated": 309,
+          "action": "edit"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/continue-provider-coverage-reconciliation.md",
+          "tokens_estimated": 309,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 0,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 7131,
+        "output_tokens_estimated": 1091,
+        "reads_count": 12,
+        "writes_count": 5,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-18-2108",
+      "started": "2026-04-18T04:08:25.611Z",
+      "ended": "2026-04-18T04:13:16.728Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/moat/CHANGELOG.md",
+          "tokens_estimated": 1660,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/src/data/providers/amp.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/src/data/providers/roo-code.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/src/data/providers/windsurf.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/src/data/providers/cline.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-docs/CHANGELOG.md",
+          "tokens_estimated": 1660,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.9.0.md",
+          "tokens_estimated": 1231,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-provider-coverage-reconciliation.md",
+          "tokens_estimated": 1388,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/continue-provider-coverage-reconciliation.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 12,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/templates/obsidian-project.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/moat/CHANGELOG.md",
+          "tokens_estimated": 432,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
+          "tokens_estimated": 41,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/continue-provider-coverage-reconciliation.md",
+          "tokens_estimated": 309,
+          "action": "edit"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/continue-provider-coverage-reconciliation.md",
+          "tokens_estimated": 309,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/.current",
+          "tokens_estimated": 0,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 281,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 205,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 388,
+          "action": "edit"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 598,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 7131,
+        "output_tokens_estimated": 2563,
+        "reads_count": 13,
+        "writes_count": 9,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-18-2113",
+      "started": "2026-04-18T04:13:17.269Z",
+      "ended": "2026-04-18T04:19:54.234Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/moat/.github/workflows/close-prs.yml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/moat/.github/workflows/close-prs.yml",
+          "tokens_estimated": 78,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 78,
+        "reads_count": 1,
+        "writes_count": 1,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-18-2113",
+      "started": "2026-04-18T04:13:17.269Z",
+      "ended": "2026-04-18T04:22:40.997Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/moat/.github/workflows/close-prs.yml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.github/workflows/moat.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/moat/.github/workflows/close-prs.yml",
+          "tokens_estimated": 78,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.github/workflows/moat.yml",
+          "tokens_estimated": 22,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 100,
+        "reads_count": 2,
+        "writes_count": 2,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-18-2113",
+      "started": "2026-04-18T04:13:17.269Z",
+      "ended": "2026-04-18T04:38:00.328Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/moat/.github/workflows/close-prs.yml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.github/workflows/moat.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.github/workflows/moat-registry.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/.current",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/moat/.github/workflows/close-prs.yml",
+          "tokens_estimated": 78,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.github/workflows/moat.yml",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 232,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 174,
+          "action": "edit"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 500,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 1006,
+        "reads_count": 4,
+        "writes_count": 5,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-18-2113",
+      "started": "2026-04-18T04:13:17.269Z",
+      "ended": "2026-04-18T04:45:58.271Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/moat/.github/workflows/close-prs.yml",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.github/workflows/moat.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.github/workflows/moat-registry.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/.current",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
+          "tokens_estimated": 16444,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/moat/.github/workflows/close-prs.yml",
+          "tokens_estimated": 78,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.github/workflows/moat.yml",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 232,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago-meta-registry-phase0-wt/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 174,
+          "action": "edit"
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 500,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 16444,
+        "output_tokens_estimated": 1006,
+        "reads_count": 5,
+        "writes_count": 5,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-18-2307",
+      "started": "2026-04-18T06:07:33.691Z",
+      "ended": "2026-04-18T06:16:54.045Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/testdata/rekor-syllago-guide.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/canonical_payload_test.go",
+          "tokens_estimated": 337,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor.go",
+          "tokens_estimated": 922,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor_test.go",
+          "tokens_estimated": 767,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor_test.go",
+          "tokens_estimated": 23,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor_test.go",
+          "tokens_estimated": 34,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 2083,
+        "reads_count": 1,
+        "writes_count": 5,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-18-2316",
+      "started": "2026-04-18T06:16:54.500Z",
+      "ended": "2026-04-18T06:28:12.145Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/cert.go",
+          "tokens_estimated": 685,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/cert_test.go",
+          "tokens_estimated": 517,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/signature.go",
+          "tokens_estimated": 365,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/signature_test.go",
+          "tokens_estimated": 643,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/verify.go",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/verify.go",
+          "tokens_estimated": 900,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/verify_test.go",
+          "tokens_estimated": 1054,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 4188,
+        "reads_count": 0,
+        "writes_count": 7,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-18-2332",
+      "started": "2026-04-18T06:32:23.926Z",
+      "ended": "2026-04-18T06:44:16.958Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/verify.go",
+          "tokens_estimated": 1475,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor.go",
+          "tokens_estimated": 860,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/go/pkg/mod/github.com/sigstore/protobuf-specs@v0.5.0/gen/pb-go/bundle/v1/sigstore_bundle.pb.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/cert.go",
+          "tokens_estimated": 640,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/signature.go",
+          "tokens_estimated": 340,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/verify_test.go",
+          "tokens_estimated": 984,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/handoff/templates/repo-project.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/sigstore_verify.go",
+          "tokens_estimated": 2374,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/sigstore_verify.go",
+          "tokens_estimated": 1718,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/sigstore_verify_test.go",
+          "tokens_estimated": 1219,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 894,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.claude/projects/bootstrap-moat-meta-registry.md",
+          "tokens_estimated": 288,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 4299,
+        "output_tokens_estimated": 6493,
+        "reads_count": 8,
+        "writes_count": 5,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 5
       }
     }
   ],
