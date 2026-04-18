@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-18T03:48:20Z",
+  "generatedAt": "2026-04-18T08:31:13Z",
   "syllagoVersion": "0.9.0",
   "providers": [
     {
@@ -8,6 +8,7 @@
       "slug": "claude-code",
       "configDir": ".claude",
       "emitPath": "{project}/CLAUDE.md",
+      "docsURL": "https://docs.claude.com/en/docs/claude-code",
       "content": {
         "agents": {
           "supported": true,
@@ -268,6 +269,7 @@
       "slug": "gemini-cli",
       "configDir": ".gemini",
       "emitPath": "{project}/GEMINI.md",
+      "docsURL": "https://github.com/google-gemini/gemini-cli",
       "content": {
         "agents": {
           "supported": true,
@@ -424,6 +426,7 @@
       "slug": "cursor",
       "configDir": ".cursor",
       "emitPath": "{project}/.cursor/rules/syllago-context.mdc",
+      "docsURL": "https://cursor.com/docs",
       "content": {
         "agents": {
           "supported": true,
@@ -598,6 +601,7 @@
       "slug": "windsurf",
       "configDir": ".codeium/windsurf",
       "emitPath": "{project}/.windsurf/rules",
+      "docsURL": "https://docs.windsurf.com",
       "content": {
         "agents": {
           "supported": false,
@@ -709,6 +713,7 @@
       "slug": "codex",
       "configDir": ".codex",
       "emitPath": "{project}/AGENTS.md",
+      "docsURL": "https://github.com/openai/codex",
       "content": {
         "agents": {
           "supported": true,
@@ -789,6 +794,7 @@
       "slug": "copilot-cli",
       "configDir": ".copilot",
       "emitPath": "{project}/.github/copilot-instructions.md",
+      "docsURL": "https://docs.github.com/en/copilot/how-tos/use-copilot-agents/copilot-cli",
       "content": {
         "agents": {
           "supported": true,
@@ -945,6 +951,7 @@
       "slug": "zed",
       "configDir": ".config/zed",
       "emitPath": "{project}/.rules",
+      "docsURL": "https://zed.dev/docs",
       "content": {
         "agents": {
           "supported": false,
@@ -994,6 +1001,7 @@
       "slug": "cline",
       "configDir": ".clinerules",
       "emitPath": "{project}/.clinerules",
+      "docsURL": "https://docs.cline.bot",
       "content": {
         "agents": {
           "supported": false,
@@ -1079,6 +1087,7 @@
       "slug": "roo-code",
       "configDir": ".roo",
       "emitPath": "{project}/.roo/rules",
+      "docsURL": "https://docs.roocode.com",
       "content": {
         "agents": {
           "supported": true,
@@ -1166,6 +1175,7 @@
       "slug": "opencode",
       "configDir": ".config/opencode",
       "emitPath": "{project}/AGENTS.md",
+      "docsURL": "https://opencode.ai/docs",
       "content": {
         "agents": {
           "supported": true,
@@ -1260,6 +1270,7 @@
       "slug": "kiro",
       "configDir": ".kiro",
       "emitPath": "{project}/.kiro/steering",
+      "docsURL": "https://kiro.dev/docs",
       "content": {
         "agents": {
           "supported": true,
@@ -1412,6 +1423,7 @@
       "slug": "amp",
       "configDir": ".config/amp",
       "emitPath": "{project}/AGENTS.md",
+      "docsURL": "https://ampcode.com/manual",
       "content": {
         "agents": {
           "supported": false,
@@ -1489,6 +1501,7 @@
       "slug": "factory-droid",
       "configDir": ".factory",
       "emitPath": "{project}/AGENTS.md",
+      "docsURL": "https://docs.factory.ai",
       "content": {
         "agents": {
           "supported": true,
@@ -1627,6 +1640,7 @@
       "slug": "pi",
       "configDir": ".pi",
       "emitPath": "{project}/AGENTS.md",
+      "docsURL": "https://github.com/badlogic/pi-mono",
       "content": {
         "agents": {
           "supported": false,
@@ -1774,6 +1788,7 @@
       "slug": "crush",
       "configDir": ".config/crush",
       "emitPath": "{project}/AGENTS.md",
+      "docsURL": "https://github.com/charmbracelet/crush",
       "content": {
         "agents": {
           "supported": false,

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -12,6 +14,21 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
+
+// repoProviderFormatsDir resolves the absolute path to the repo's real
+// docs/provider-formats directory, independent of the test working directory.
+// Used to point var-overrides like providerFormatsDirForDocsURL at on-disk
+// YAMLs when exercising genprovidersCmd end-to-end.
+func repoProviderFormatsDir(t *testing.T) string {
+	t.Helper()
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller(0) failed")
+	}
+	// thisFile = <repo>/cli/cmd/syllago/genproviders_test.go
+	// target  = <repo>/docs/provider-formats
+	return filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "docs", "provider-formats")
+}
 
 // captureStdout runs fn and returns whatever it wrote to os.Stdout.
 // Reading happens in a goroutine to avoid pipe buffer deadlock on large outputs.
@@ -43,6 +60,10 @@ func captureStdout(t *testing.T, fn func()) []byte {
 }
 
 func TestGenproviders(t *testing.T) {
+	origDir := providerFormatsDirForDocsURL
+	providerFormatsDirForDocsURL = repoProviderFormatsDir(t)
+	t.Cleanup(func() { providerFormatsDirForDocsURL = origDir })
+
 	raw := captureStdout(t, func() {
 		if err := genprovidersCmd.RunE(genprovidersCmd, nil); err != nil {
 			t.Fatalf("_genproviders failed: %v", err)
@@ -431,6 +452,23 @@ func TestGenproviders_AllEmitPathsPopulated(t *testing.T) {
 	}
 }
 
+// TestGenproviders_AllDocsURLsPopulated verifies every provider entry carries a
+// docsURL sourced from its format-doc YAML, and that the URL is http(s). This
+// is the providers.json-side mirror of the capmon docs_url validator.
+func TestGenproviders_AllDocsURLsPopulated(t *testing.T) {
+	manifest := loadTestManifest(t)
+
+	for _, prov := range manifest.Providers {
+		if prov.DocsURL == "" {
+			t.Errorf("provider %q has empty docsURL", prov.Slug)
+			continue
+		}
+		if !strings.HasPrefix(prov.DocsURL, "http://") && !strings.HasPrefix(prov.DocsURL, "https://") {
+			t.Errorf("provider %q docsURL = %q; must be http(s) URL", prov.Slug, prov.DocsURL)
+		}
+	}
+}
+
 // TestGenproviders_ConfigLocationMatchesDiscoveryPaths ensures that the hardcoded
 // configLocation values in genproviders.go are consistent with what the provider's
 // DiscoveryPaths function actually returns. This catches copy-paste errors where
@@ -657,6 +695,10 @@ func TestGenproviders_HookEventCategoryCompleteness(t *testing.T) {
 
 func loadTestManifest(t *testing.T) ProviderManifest {
 	t.Helper()
+	origDir := providerFormatsDirForDocsURL
+	providerFormatsDirForDocsURL = repoProviderFormatsDir(t)
+	t.Cleanup(func() { providerFormatsDirForDocsURL = origDir })
+
 	raw := captureStdout(t, func() {
 		if err := genprovidersCmd.RunE(genprovidersCmd, nil); err != nil {
 			t.Fatalf("_genproviders failed: %v", err)
