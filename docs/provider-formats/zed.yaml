@@ -8,9 +8,140 @@ last_changed_at: "2026-04-11T00:00:00Z"
 generation_method: human-edited
 
 content_types:
+  rules:
+    status: supported
+    sources:
+      - uri: "https://zed.dev/docs/ai/rules"
+        type: documentation
+        fetch_method: gh_raw
+        fetched_at: "2026-04-11T00:00:00Z"
+      - uri: "https://raw.githubusercontent.com/zed-industries/zed/main/.rules"
+        type: example
+        fetch_method: gh_raw
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      activation_mode:
+        supported: false
+        mechanism: "Zed rule files load unconditionally when present at project root; no conditional activation syntax documented"
+        confidence: inferred
+      file_imports:
+        supported: false
+        mechanism: "no import directive documented for Zed's .rules file"
+        confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        mechanism: "Zed discovers .rules, .cursorrules, and CLAUDE.md at project root, so rule files authored for other agents are picked up"
+        confidence: confirmed
+      auto_memory:
+        supported: false
+        mechanism: "Zed does not document a command that persists agent memory into the rules file"
+        confidence: inferred
+      hierarchical_loading:
+        supported: false
+        mechanism: "Zed loads rule files from the project root only; no multi-tier hierarchical loading documented"
+        confidence: inferred
+    provider_extensions:
+      - id: cross_provider_rule_files
+        name: Cross-provider rule file recognition
+        summary: At project root, Zed recognizes .rules, .cursorrules, and CLAUDE.md so rule content authored for other agents is used without renaming.
+        source_ref: "https://zed.dev/docs/ai/rules"
+        graduation_candidate: true
+        conversion: preserved
+    loading_model: "Rules are plain Markdown with no frontmatter. Zed looks at the project root for a rule file named .rules (preferred), falling back to .cursorrules or CLAUDE.md. The file contents are provided to the agent as project context."
+    notes: "Single file at project root — no directory, no hierarchical scopes, no frontmatter. Global/user-scope rule files are not documented."
+
+  mcp:
+    status: supported
+    sources:
+      - uri: "https://zed.dev/docs/ai/mcp"
+        type: documentation
+        fetch_method: gh_raw
+        fetched_at: "2026-04-11T00:00:00Z"
+      - uri: "https://raw.githubusercontent.com/zed-industries/zed/main/crates/context_server/src/context_server.rs"
+        type: source_code
+        fetch_method: gh_raw
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      transport_types:
+        supported: true
+        mechanism: "MCP servers are configured with a stdio command under context_servers in settings.json"
+        confidence: confirmed
+      oauth_support:
+        supported: false
+        mechanism: "Zed MCP configuration does not document OAuth 2.0 authentication for MCP servers"
+        confidence: inferred
+      env_var_expansion:
+        supported: false
+        mechanism: "no automatic environment variable expansion documented in Zed MCP env blocks"
+        confidence: inferred
+      tool_filtering:
+        supported: false
+        mechanism: "no per-server include/exclude tool filter documented in Zed MCP configuration"
+        confidence: inferred
+      auto_approve:
+        supported: false
+        mechanism: "Zed does not document a pre-approved MCP tools list"
+        confidence: inferred
+      marketplace:
+        supported: true
+        mechanism: "Zed exposes an in-app MCP server gallery where servers can be browsed and installed"
+        confidence: confirmed
+      resource_referencing:
+        supported: false
+        mechanism: "MCP resource referencing via @-style syntax is not documented"
+        confidence: inferred
+      enterprise_management:
+        supported: false
+        mechanism: "Zed does not document org-level MCP management"
+        confidence: inferred
+    provider_extensions:
+      - id: context_servers_key
+        name: context_servers settings block
+        summary: MCP servers are registered under the top-level context_servers object in Zed's settings.json, keyed by server name.
+        source_ref: "https://zed.dev/docs/ai/mcp"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: context_servers
+      - id: stdio_command_config
+        name: Stdio command + args + env server config
+        summary: Each server entry defines a command with executable path, argument array, and env map that Zed launches as a stdio subprocess.
+        source_ref: "https://raw.githubusercontent.com/zed-industries/zed/main/crates/context_server/src/context_server.rs"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: command
+      - id: server_gallery
+        name: In-app MCP server gallery
+        summary: Zed ships an agent panel UI for browsing and installing MCP servers without hand-editing settings.json.
+        source_ref: "https://zed.dev/docs/ai/mcp"
+        graduation_candidate: false
+        conversion: not-portable
+    loading_model: "MCP servers are defined in Zed's settings.json (user settings at ~/.config/zed/settings.json on Linux/macOS) under the context_servers key. Each entry supplies a stdio command with args and env for Zed to spawn. Servers are attached to the agent panel's available tools when enabled."
+    notes: "Only stdio transport is documented for user-configurable MCP servers in Zed's settings.json. Settings merge follows Zed's standard project/user override model."
+
   skills:
     status: unsupported
     sources: []
     canonical_mappings: {}
     provider_extensions: []
-    notes: "Zed does not support Skills as a content type. The human format doc confirms this and no capmon cache entries exist for skills."
+    notes: "Zed does not document an Agent Skills loader; skills are not a first-class content type in Zed."
+
+  hooks:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "Zed does not expose user-definable lifecycle hooks; its agent does not document stdin/stdout or event-triggered hook commands."
+
+  agents:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "Zed's agent profiles (write, ask, minimal) are built into the binary and are not user-definable as portable file-based content."
+
+  commands:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "Zed's slash commands are built-in extension-registered commands, not user-definable file-based content."

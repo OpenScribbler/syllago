@@ -1,16 +1,411 @@
 provider: roo-code
-# Optional extension depth fields (populated by capmon subagent):
-# - required: true | false | null (null = source doesn't say)
-# - value_type: see allow-list in formatdoc_validate.go
-# - examples: [{title?, lang, code, note?}]
 last_fetched_at: "2026-04-11T00:00:00Z"
 last_changed_at: "2026-04-11T00:00:00Z"
 generation_method: human-edited
 
 content_types:
+  rules:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/rules/rules.md"
+        type: documentation
+        fetch_method: gh_raw
+        fetched_at: "2026-04-11T00:00:00Z"
+      - uri: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/rules-code/use-safeWriteJson.md"
+        type: documentation
+        fetch_method: gh_raw
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      activation_mode:
+        supported: true
+        mechanism: "mode_partitioned_activation: rule files in mode-specific directories (.roo/rules-<mode-slug>/) activate only when that mode is active; files in .roo/rules/ activate for all modes"
+        confidence: confirmed
+      file_imports:
+        supported: false
+        mechanism: "No import directive syntax documented — rule files are loaded as plain markdown bodies"
+        confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        mechanism: "legacy_clinerules_fallback: Roo Code reads .clinerules/ as a backward-compatibility fallback when native .roo/rules/ is absent"
+        confidence: confirmed
+      auto_memory:
+        supported: false
+        mechanism: "No auto-append or persistent memory command documented for rule content"
+        confidence: inferred
+      hierarchical_loading:
+        supported: true
+        mechanism: "mode_scoped_loading: files under .roo/rules/ load universally; files under .roo/rules-<mode>/ load conditionally based on the active mode"
+        paths:
+          - ".roo/rules/"
+          - ".roo/rules-code/"
+          - ".roo/rules-architect/"
+          - ".roo/rules-ask/"
+          - ".roo/rules-debug/"
+          - ".roo/rules-orchestrator/"
+          - ".roo/rules-<custom-mode-slug>/"
+          - ".roorules"
+        confidence: confirmed
+    provider_extensions:
+      - id: mode_partitioned_directories
+        name: Mode-partitioned rule directories
+        summary: Per-mode directories (.roo/rules-code/, .roo/rules-architect/, .roo/rules-ask/, .roo/rules-debug/, .roo/rules-orchestrator/, and one per custom mode slug) scope rule files to a specific mode so only active-mode rules enter context.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/rules/rules.md"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: ".roo/rules-<mode>/"
+      - id: universal_rules_dir
+        name: Universal .roo/rules/ directory
+        summary: Files under .roo/rules/ apply to every mode and are concatenated into system context regardless of the currently active mode.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/rules/rules.md"
+        graduation_candidate: true
+        conversion: preserved
+        provider_field: ".roo/rules/"
+      - id: legacy_roorules_file
+        name: Legacy .roorules single-file rules
+        summary: Single-file .roorules at the project root is honored for backward compatibility with pre-directory rule conventions.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/rules/rules.md"
+        graduation_candidate: false
+        conversion: preserved
+        provider_field: ".roorules"
+      - id: clinerules_backcompat
+        name: .clinerules/ backward compatibility
+        summary: Roo Code reads .clinerules/ directories from its Cline ancestry when no .roo/rules/ directory is present so existing Cline rule sets continue to work.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/rules/rules.md"
+        graduation_candidate: false
+        conversion: preserved
+        provider_field: ".clinerules/"
+    loading_model: "Rules are Markdown files organized by scope and mode. Universal rules under .roo/rules/ apply to every mode. Mode-partitioned rules under .roo/rules-<mode-slug>/ apply only when that mode is active (built-in modes: code, architect, ask, debug, orchestrator; custom modes contribute their own slug). A legacy single-file .roorules at the project root is also honored, and .clinerules/ directories are read as a backward-compat fallback. No frontmatter is required — file bodies are concatenated into system context in load order for the active mode."
+    notes: "Rule files are plain Markdown with no required frontmatter. Mode-scoped directories are the primary activation mechanism — moving a file between .roo/rules/ and .roo/rules-code/ changes whether it loads for every mode or only code mode."
+
   skills:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/skills/roo-translation/SKILL.md"
+        type: documentation
+        fetch_method: gh_raw
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        provider_field: "name"
+        mechanism: "yaml frontmatter key: name (required); identifies the skill and typically matches the directory name"
+        confidence: confirmed
+      description:
+        supported: true
+        provider_field: "description"
+        mechanism: "yaml frontmatter key: description (required); documents what the skill does and when Roo should load it"
+        confidence: confirmed
+      license:
+        supported: false
+        mechanism: "No license frontmatter field observed in Roo Code skill examples"
+        confidence: inferred
+      compatibility:
+        supported: false
+        mechanism: "No compatibility frontmatter field observed in Roo Code skill examples"
+        confidence: inferred
+      metadata_map:
+        supported: false
+        mechanism: "No metadata frontmatter key observed in Roo Code skill examples"
+        confidence: inferred
+      project_scope:
+        supported: true
+        mechanism: ".roo/skills/<slug>/SKILL.md"
+        paths:
+          - ".roo/skills/<slug>/SKILL.md"
+        confidence: confirmed
+      global_scope:
+        supported: true
+        mechanism: "~/.roo/skills/<slug>/SKILL.md"
+        paths:
+          - "~/.roo/skills/<slug>/SKILL.md"
+        confidence: inferred
+      shared_scope:
+        supported: true
+        mechanism: ".agents/skills/<slug>/SKILL.md cross-provider convention directory read alongside .roo/skills/"
+        paths:
+          - ".agents/skills/<slug>/SKILL.md"
+          - "~/.agents/skills/<slug>/SKILL.md"
+        confidence: inferred
+      canonical_filename:
+        supported: true
+        mechanism: "SKILL.md (required, fixed name per Agent Skills standard)"
+        confidence: confirmed
+      custom_filename:
+        supported: false
+        mechanism: "Filename is fixed as SKILL.md — no alternate filenames observed"
+        confidence: confirmed
+      disable_model_invocation:
+        supported: false
+        mechanism: "No disable-model-invocation frontmatter field observed"
+        confidence: inferred
+      user_invocable:
+        supported: false
+        mechanism: "No user-invocation flag observed — skills are auto-loaded based on description matching"
+        confidence: inferred
+    provider_extensions:
+      - id: agents_skills_shared_dir
+        name: .agents/skills/ cross-provider directory
+        summary: Roo Code reads .agents/skills/ alongside .roo/skills/ so skill content authored under the cross-provider convention can be consumed without duplication.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/skills/roo-translation/SKILL.md"
+        graduation_candidate: true
+        conversion: preserved
+        provider_field: ".agents/skills/"
+      - id: agent_skills_standard
+        name: Agent Skills open standard compliance
+        summary: Roo Code implements the Agent Skills standard — SKILL.md with name and description frontmatter — using a lighter field subset than the full Anthropic spec.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/skills/roo-translation/SKILL.md"
+        graduation_candidate: false
+        conversion: translated
+    loading_model: "A skill is a directory containing a SKILL.md file. Project skills live under .roo/skills/<slug>/SKILL.md and the cross-provider .agents/skills/<slug>/SKILL.md directory is also read. Global skills live under ~/.roo/skills/. SKILL.md supplies YAML frontmatter (name, description) followed by a Markdown body that guides the agent when the skill is loaded. Skill selection is driven by the description field rather than explicit user invocation."
+    notes: "Only name and description are observed in Roo Code's in-repo skill examples. The broader Anthropic Agent Skills frontmatter set (license, compatibility, metadata, disable-model-invocation) is not documented upstream and should be treated as a lighter subset than Claude Code or Gemini CLI."
+
+  hooks:
     status: unsupported
     sources: []
     canonical_mappings: {}
     provider_extensions: []
-    notes: "Roo Code does not support Skills as a content type. Skills are not in scope for Roo Code (Cline fork, no native skills runtime). The human format doc confirms this."
+    notes: "Roo Code has no user-definable lifecycle hook system — the upstream docs document no hook configuration surface."
+
+  mcp:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/src/services/mcp/McpHub.ts"
+        type: source_code
+        fetch_method: gh_raw
+        fetched_at: "2026-04-11T00:00:00Z"
+      - uri: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mcp.ts"
+        type: source_code
+        fetch_method: gh_raw
+        fetched_at: "2026-04-11T00:00:00Z"
+      - uri: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/src/shared/globalFileNames.ts"
+        type: source_code
+        fetch_method: gh_raw
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      transport_types:
+        supported: true
+        mechanism: "transport_types: stdio, sse, and streamable-http are supported and selected via the type field on each server entry"
+        confidence: confirmed
+      oauth_support:
+        supported: false
+        mechanism: "No OAuth 2.0 authentication flow documented for Roo Code MCP servers"
+        confidence: inferred
+      env_var_expansion:
+        supported: true
+        mechanism: "env_variable_expansion: server env blocks accept environment variables so secrets can be referenced from the shell environment"
+        confidence: inferred
+      tool_filtering:
+        supported: true
+        mechanism: "per_server_tool_filtering: alwaysAllow and disabledTools arrays on each server entry filter which MCP tools are exposed and which bypass confirmation"
+        confidence: confirmed
+      auto_approve:
+        supported: true
+        mechanism: "always_allow_list: alwaysAllow tool names bypass confirmation prompts for that server"
+        confidence: confirmed
+      marketplace:
+        supported: false
+        mechanism: "No in-app MCP marketplace documented"
+        confidence: inferred
+      resource_referencing:
+        supported: false
+        mechanism: "MCP resource referencing is not documented as a first-class feature in Roo Code"
+        confidence: inferred
+      enterprise_management:
+        supported: false
+        mechanism: "No organization-level MCP management documented"
+        confidence: inferred
+    provider_extensions:
+      - id: transport_types
+        name: Three transport mechanisms
+        summary: stdio, SSE, and streamable-http transports are selected via the type field on each server entry — note streamable-http is kebab-case, distinct from Cline's streamableHttp camelCase.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/src/services/mcp/McpHub.ts"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: type
+      - id: always_allow
+        name: alwaysAllow per-server allowlist
+        summary: Array of tool names that skip the user confirmation prompt for that server; distinct from Cline's autoApprove field name.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mcp.ts"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: alwaysAllow
+      - id: disabled_tools
+        name: disabledTools per-server blocklist
+        summary: Array of tool names hidden from the agent, applied alongside alwaysAllow on each server entry.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mcp.ts"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: disabledTools
+      - id: watch_paths
+        name: watchPaths config-reload triggers
+        summary: Array of filesystem paths that trigger a server reload when their contents change, useful for development iteration on stdio server binaries.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mcp.ts"
+        graduation_candidate: false
+        conversion: embedded
+        provider_field: watchPaths
+      - id: disabled_flag
+        name: Per-server disabled flag
+        summary: Boolean disabled field on a server entry turns that server off without removing its configuration.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mcp.ts"
+        graduation_candidate: false
+        conversion: embedded
+        provider_field: disabled
+      - id: server_timeout
+        name: Per-server timeout override
+        summary: Numeric timeout field overrides the default MCP request timeout per server.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mcp.ts"
+        graduation_candidate: true
+        conversion: embedded
+        provider_field: timeout
+    loading_model: "MCP servers are configured in .roo/mcp.json (project scope) or in Roo Code's global MCP settings file (~/.roo/mcp_settings.json or the platform-specific location referenced by globalFileNames.ts). The configuration is a map of server-name to server-config objects declaring transport type (stdio/sse/streamable-http), connection details, env, alwaysAllow, disabledTools, watchPaths, disabled, and timeout. Roo Code merges project and global configurations at startup and establishes transport connections for enabled servers."
+    notes: "Transport type names use kebab-case (streamable-http) rather than Cline's camelCase streamableHttp. Per-server fields alwaysAllow and disabledTools differ from Cline's autoApprove field name and are a Roo-specific divergence from the Cline fork ancestry."
+
+  agents:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mode.ts"
+        type: source_code
+        fetch_method: gh_raw
+        fetched_at: "2026-04-11T00:00:00Z"
+      - uri: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/src/core/config/CustomModesManager.ts"
+        type: source_code
+        fetch_method: gh_raw
+        fetched_at: "2026-04-11T00:00:00Z"
+      - uri: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roomodes"
+        type: documentation
+        fetch_method: gh_raw
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      definition_format:
+        supported: true
+        mechanism: "YAML file (.roomodes for project scope, custom_modes.yaml for global scope) containing an array of custom mode entries with slug, name, roleDefinition, groups, and optional whenToUse, description, customInstructions fields"
+        confidence: confirmed
+      tool_restrictions:
+        supported: true
+        mechanism: "groups array declares which tool groups (e.g., read, edit, browser, command, mcp) the mode may use; group entries may be strings or objects with fileRegex restrictions"
+        confidence: confirmed
+      invocation_patterns:
+        supported: true
+        mechanism: "Users switch modes via the mode selector or /mode command; each mode is a distinct operating persona with its own roleDefinition and tool groups"
+        confidence: confirmed
+      agent_scopes:
+        supported: true
+        mechanism: "Two scopes: project (.roomodes at the project root) and global (custom_modes.yaml in Roo Code's settings dir); project entries override global entries with the same slug"
+        confidence: confirmed
+      model_selection:
+        supported: false
+        mechanism: "No per-mode model selection field documented in the mode schema"
+        confidence: inferred
+      per_agent_mcp:
+        supported: false
+        mechanism: "Custom modes do not declare their own MCP server lists — MCP configuration is global per the .roo/mcp.json and global MCP settings"
+        confidence: inferred
+      subagent_spawning:
+        supported: false
+        mechanism: "Custom modes are switched-to by the user rather than spawned as subagents; Roo Code's orchestrator mode delegates to other modes at runtime but mode files themselves do not spawn peers"
+        confidence: inferred
+    provider_extensions:
+      - id: custom_modes_yaml_format
+        name: YAML custom mode definitions
+        summary: Custom modes live in .roomodes (project) or custom_modes.yaml (global) as a YAML array of mode entries, not individual Markdown files per mode.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mode.ts"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: customModes
+      - id: role_definition
+        name: roleDefinition field
+        summary: Long-form text defining the mode's persona and system prompt; the primary behavioral instruction channel for a custom mode.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mode.ts"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: roleDefinition
+      - id: when_to_use
+        name: whenToUse field
+        summary: Optional guidance on when the orchestrator or user should switch to this mode; consumed by mode-selection heuristics.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mode.ts"
+        graduation_candidate: true
+        conversion: embedded
+        provider_field: whenToUse
+      - id: custom_instructions
+        name: customInstructions field
+        summary: Additional mode-specific instructions appended to roleDefinition to refine behavior without rewriting the persona.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mode.ts"
+        graduation_candidate: true
+        conversion: embedded
+        provider_field: customInstructions
+      - id: tool_groups
+        name: groups tool-group allowlist
+        summary: Array declaring which Roo Code tool groups (read, edit, browser, command, mcp) the mode may use; edit may also carry a fileRegex restriction object for path-scoped file writes.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mode.ts"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: groups
+      - id: builtin_modes
+        name: Built-in modes (code, architect, ask, debug, orchestrator)
+        summary: Five built-in modes ship with Roo Code; custom mode slugs must not collide with these, and custom-mode rule directories (.roo/rules-<slug>/) extend the same activation model.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/src/core/config/CustomModesManager.ts"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: source_field
+        name: Optional source field
+        summary: Optional source field on a mode entry annotates whether the mode is project-scoped or global-scoped for UI display.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/packages/types/src/mode.ts"
+        graduation_candidate: false
+        conversion: embedded
+        provider_field: source
+    loading_model: "Custom modes are defined as entries in a YAML array. Project-scope modes live in .roomodes at the project root; global-scope modes live in custom_modes.yaml within Roo Code's settings directory. Each entry declares slug (unique identifier), name (display label), roleDefinition (system prompt), groups (tool-group allowlist), and optional whenToUse, description, customInstructions, and source fields. Roo Code merges project and global entries at load, with project slugs taking precedence. Mode-scoped rules under .roo/rules-<slug>/ extend a mode's behavior with additional Markdown content activated only when that mode is selected."
+    notes: "Roo Code refers to these as 'Custom Modes'. Syllago uses 'agents' as the public-facing term. Unlike Claude Code subagents, modes are not spawned as children of a main-thread agent — they are user-switched personas. A custom mode slug may be paired with a .roo/rules-<slug>/ directory to ship additional context alongside the mode definition."
+
+  commands:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/commands/commit.md"
+        type: documentation
+        fetch_method: gh_raw
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      argument_substitution:
+        supported: true
+        mechanism: "argument-hint frontmatter field documents expected arguments; user-supplied arguments are appended to the command body at invocation time"
+        confidence: inferred
+      builtin_commands:
+        supported: false
+        mechanism: "Roo Code commands are user-defined Markdown files in .roo/commands/ — no user-overridable built-in slash-command layer documented"
+        confidence: inferred
+    provider_extensions:
+      - id: markdown_command_format
+        name: Markdown command file format
+        summary: Custom commands are .md files in .roo/commands/ (project) or ~/.roo/commands/ (global); the filename (minus extension) becomes the slash command name.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/commands/commit.md"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: ".roo/commands/"
+      - id: description_frontmatter
+        name: description frontmatter field
+        summary: Optional one-line description in YAML frontmatter is shown in the command picker and /help menu.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/commands/commit.md"
+        graduation_candidate: true
+        conversion: embedded
+        provider_field: description
+      - id: argument_hint
+        name: argument-hint frontmatter field
+        summary: Optional argument-hint field documents the expected argument shape for the command in the picker UI.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/commands/commit.md"
+        graduation_candidate: true
+        conversion: embedded
+        provider_field: argument-hint
+      - id: mode_binding
+        name: mode frontmatter field
+        summary: Optional mode field binds the command to a specific Roo Code mode (built-in or custom) so it is surfaced only when that mode is active.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/commands/commit.md"
+        graduation_candidate: true
+        conversion: embedded
+        provider_field: mode
+      - id: filename_as_command_name
+        name: Filename-as-command-name
+        summary: The Markdown filename (without extension) is the slash command name — /commit.md on disk becomes /commit in the CLI.
+        source_ref: "https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/commands/commit.md"
+        graduation_candidate: true
+        conversion: translated
+    loading_model: "Commands are Markdown files in .roo/commands/ (project scope) or ~/.roo/commands/ (global scope). The filename (minus the .md extension) becomes the slash command name — /commit is served from commit.md. YAML frontmatter supplies optional description, argument-hint, and mode fields; the Markdown body is the prompt template sent to the agent when the command is invoked. Commands added in Roo Code 3.25+ integrate with the mode system via the mode frontmatter field."
+    notes: "Commands are a Roo Code 3.25+ feature. The mode frontmatter field is Roo-specific and ties a command to a particular custom or built-in mode so the command is surfaced contextually in that mode only."

@@ -106,8 +106,10 @@ content_types:
     # Note: directory paths sourced from codebase, not the linked docs page.
 
   agents:
-    supported: false
-    # No user-definable agent format. Subagent support exists but is internal.
+    supported: true
+    # Gemini CLI has no native agent file format. Syllago implements agents via
+    # the cross-provider AGENTS.md convention at .gemini/agents/ (project) and
+    # ~/.gemini/agents/ (user). No provider-specific documentation URL to monitor.
 
   commands:
     sources:

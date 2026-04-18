@@ -23,6 +23,8 @@ var Amp = Provider{
 			return filepath.Join(homeDir, ".config", "agents", "skills")
 		case catalog.MCP:
 			return JSONMergeSentinel
+		case catalog.Hooks:
+			return JSONMergeSentinel
 		}
 		return ""
 	},
@@ -52,6 +54,12 @@ var Amp = Provider{
 			return []string{
 				filepath.Join(projectRoot, ".amp", "settings.json"),
 			}
+		case catalog.Hooks:
+			// Hooks are stored as amp.hooks array inside the same settings.json
+			// used for MCP servers (workspace or user-level).
+			return []string{
+				filepath.Join(projectRoot, ".amp", "settings.json"),
+			}
 		default:
 			return nil
 		}
@@ -73,7 +81,7 @@ var Amp = Provider{
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {
-		case catalog.Rules, catalog.Skills, catalog.MCP:
+		case catalog.Rules, catalog.Skills, catalog.MCP, catalog.Hooks:
 			return true
 		default:
 			return false
@@ -83,9 +91,10 @@ var Amp = Provider{
 		catalog.Rules:  true,
 		catalog.Skills: true,
 		catalog.MCP:    false, // JSON merge
+		catalog.Hooks:  false, // JSON merge into amp.hooks key
 	},
 	ConfigLocations: map[catalog.ContentType]string{
-		catalog.Hooks: ".amp/hooks.json",
+		catalog.Hooks: ".amp/settings.json", // amp.hooks array inside settings.json
 		catalog.MCP:   ".amp/settings.json",
 	},
 	MCPTransports: []string{"stdio", "sse"},

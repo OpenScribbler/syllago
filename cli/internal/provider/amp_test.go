@@ -10,12 +10,12 @@ import (
 
 func TestAmpSupportsType(t *testing.T) {
 	t.Parallel()
-	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.MCP} {
+	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.MCP, catalog.Hooks} {
 		if !Amp.SupportsType(ct) {
 			t.Errorf("Amp should support %s", ct)
 		}
 	}
-	for _, ct := range []catalog.ContentType{catalog.Agents, catalog.Hooks, catalog.Commands} {
+	for _, ct := range []catalog.ContentType{catalog.Agents, catalog.Commands} {
 		if Amp.SupportsType(ct) {
 			t.Errorf("Amp should NOT support %s", ct)
 		}
@@ -54,8 +54,33 @@ func TestAmpInstallDir(t *testing.T) {
 	}
 
 	hooks := Amp.InstallDir(home, catalog.Hooks)
-	if hooks != "" {
-		t.Errorf("Hooks install dir = %q, want empty", hooks)
+	if hooks != JSONMergeSentinel {
+		t.Errorf("Hooks install dir = %q, want %q", hooks, JSONMergeSentinel)
+	}
+}
+
+func TestAmpHooksSupport(t *testing.T) {
+	t.Parallel()
+
+	paths := Amp.DiscoveryPaths("/project", catalog.Hooks)
+	if len(paths) != 1 {
+		t.Fatalf("Hooks discovery paths = %d, want 1", len(paths))
+	}
+	wantPath := filepath.Join("/project", ".amp", "settings.json")
+	if paths[0] != wantPath {
+		t.Errorf("Hooks[0] = %q, want %q", paths[0], wantPath)
+	}
+
+	if got := Amp.ConfigLocations[catalog.Hooks]; got != ".amp/settings.json" {
+		t.Errorf("ConfigLocations[Hooks] = %q, want .amp/settings.json (hooks live in settings.json, not .amp/hooks.json)", got)
+	}
+
+	if Amp.SymlinkSupport[catalog.Hooks] {
+		t.Error("Hooks should NOT support symlinks (JSON merge)")
+	}
+
+	if len(Amp.HookTypes) == 0 {
+		t.Error("HookTypes should be non-empty")
 	}
 }
 

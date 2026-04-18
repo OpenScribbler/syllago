@@ -86,9 +86,11 @@ content_types:
     # Crush adds: http type, disabled, disabled_tools[], timeout, env changed to map[string]string.
 
   skills:
-    supported: false
-    # No native skill format in OpenCode or Crush. Syllago installs cross-provider
-    # SKILL.md files here, but there is no provider documentation to monitor.
+    supported: true
+    # OpenCode has no native skill documentation to monitor. Syllago installs
+    # skills using the cross-provider Agent Skills convention (SKILL.md with
+    # YAML frontmatter) at .opencode/skills/ (project) and ~/.config/opencode/skills/
+    # (user), plus the cross-provider .agents/skills/ location.
 
   agents:
     sources:

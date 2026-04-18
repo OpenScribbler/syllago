@@ -9,15 +9,48 @@ import (
 
 func TestRooCodeSupportsTypes(t *testing.T) {
 	t.Parallel()
-	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.MCP, catalog.Agents} {
+	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.MCP, catalog.Agents, catalog.Commands} {
 		if !RooCode.SupportsType(ct) {
 			t.Errorf("RooCode.SupportsType(%s) = false, want true", ct)
 		}
 	}
-	for _, ct := range []catalog.ContentType{catalog.Hooks, catalog.Commands} {
+	for _, ct := range []catalog.ContentType{catalog.Hooks} {
 		if RooCode.SupportsType(ct) {
 			t.Errorf("RooCode.SupportsType(%s) = true, want false", ct)
 		}
+	}
+}
+
+func TestRooCodeCommandsSupport(t *testing.T) {
+	t.Parallel()
+
+	homeDir := "/home/testuser"
+	installDir := RooCode.InstallDir(homeDir, catalog.Commands)
+	wantInstall := "/home/testuser/.roo/commands"
+	if installDir != wantInstall {
+		t.Errorf("RooCode.InstallDir(Commands) = %q, want %q", installDir, wantInstall)
+	}
+
+	paths := RooCode.DiscoveryPaths("/tmp/project", catalog.Commands)
+	if len(paths) == 0 {
+		t.Fatal("expected at least one discovery path for Commands")
+	}
+	foundProject := false
+	for _, p := range paths {
+		if strings.HasSuffix(p, ".roo/commands") && strings.Contains(p, "/tmp/project") {
+			foundProject = true
+		}
+	}
+	if !foundProject {
+		t.Errorf("expected project discovery path ending in .roo/commands, got: %v", paths)
+	}
+
+	if got := RooCode.FileFormat(catalog.Commands); got != FormatMarkdown {
+		t.Errorf("RooCode.FileFormat(Commands) = %q, want %q", got, FormatMarkdown)
+	}
+
+	if !RooCode.SymlinkSupport[catalog.Commands] {
+		t.Errorf("RooCode.SymlinkSupport[Commands] = false, want true")
 	}
 }
 

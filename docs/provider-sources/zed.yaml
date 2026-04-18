@@ -73,32 +73,10 @@ content_types:
     supported: false
 
   agents:
-    sources:
-      - url: https://raw.githubusercontent.com/zed-industries/zed/main/crates/agent_settings/src/agent_settings.rs
-        type: source-code
-        format: rust
-        extracts: [config_fields, file_format]
-
-      - url: https://raw.githubusercontent.com/zed-industries/zed/main/crates/agent_settings/src/agent_profile.rs
-        type: source-code
-        format: rust
-        extracts: [config_fields]
-
-      - url: https://zed.dev/docs/ai/agent-settings
-        type: docs
-        format: html
-        extracts: [config_fields, config_examples]
-
-      - url: https://zed.dev/docs/ai/configuration
-        type: docs
-        format: html
-        extracts: [config_fields, config_examples]
-    # Builtin profiles: write, ask, minimal. Profiles define: tools, context servers, model selection.
+    supported: false
+    # Zed's "agent profiles" (write, ask, minimal) are builtin — not user-definable
+    # files. No extractable user-authored agent format.
 
   commands:
-    sources:
-      - url: https://raw.githubusercontent.com/zed-industries/zed/main/crates/extension/src/types/slash_command.rs
-        type: source-code
-        format: rust
-        extracts: [config_fields]
-    # Slash commands are built into the binary — no user-definable command files.
+    supported: false
+    # Zed's slash commands are builtin — no user-definable command files.

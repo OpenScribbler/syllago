@@ -106,9 +106,16 @@ content_types:
     # 5 built-in: architect, code, ask, debug, orchestrator.
 
   commands:
+    supported: true
     sources:
+      - url: https://github.com/RooVetGit/Roo-Code/tree/main/.roo/commands
+        type: example
+        format: directory-listing
+        extracts: [file_locations]
       - url: https://raw.githubusercontent.com/RooVetGit/Roo-Code/main/.roo/commands/commit.md
         type: example
         format: markdown
         extracts: [file_format]
-    # Format: .roo/commands/*.md. Markdown command files.
+    # Format: .roo/commands/*.md. Markdown command files. Roo Code has no
+    # dedicated docs page for commands — file format is self-documenting via
+    # the example commit.md, directory layout via the tree listing.

@@ -1,6 +1,6 @@
 provider: windsurf
 last_fetched_at: "2026-04-11T21:50:59Z"
-last_changed_at: "2026-04-11T00:00:00Z"
+last_changed_at: "2026-04-17T00:00:00Z"
 generation_method: subagent
 
 content_types:
@@ -361,116 +361,75 @@ content_types:
       call failures since tool implementations are written by arbitrary server authors.
 
   agents:
-    status: supported
-    sources:
-      - uri: "https://docs.windsurf.com/windsurf/cascade/agents-md.md"
-        type: documentation
-        fetch_method: http
-        content_hash: "sha256:f548a8f1eb667020edd37631daa1f858325459135b39ef3bc347c9d6891a2c10"
-        fetched_at: "2026-04-11T21:48:31.830747939Z"
-    canonical_mappings:
-      definition_format:
-        supported: true
-        mechanism: "AGENTS.md (or agents.md) plain markdown files with no frontmatter; scope inferred from directory location (root = always-on, subdirectory = auto-glob subtree)"
-        confidence: confirmed
-      tool_restrictions:
-        supported: false
-        mechanism: "AGENTS.md contains free-form instructions only; no structured tool restriction mechanism — it is a rules delivery format, not an agent harness"
-        confidence: confirmed
-      invocation_patterns:
-        supported: false
-        mechanism: "AGENTS.md files are always-on rule injection, not invocable agents; no manual invocation or delegation mechanism"
-        confidence: confirmed
-      agent_scopes:
-        supported: true
-        mechanism: "scope from file location: root-level = workspace-wide always-on, subdirectory = subtree glob; git root discovery extends scope to parent directories within the repo"
-        confidence: confirmed
-      model_selection:
-        supported: false
-        mechanism: "AGENTS.md has no frontmatter; no per-agent model selection"
-        confidence: confirmed
-      per_agent_mcp:
-        supported: false
-        mechanism: "AGENTS.md has no structured config; MCP is workspace-wide only, not per-agent"
-        confidence: confirmed
-      subagent_spawning:
-        supported: false
-        mechanism: "no structured agent orchestration; AGENTS.md is rules injection piggybacking on the Rules engine, not an agent harness"
-        confidence: confirmed
-    provider_extensions:
-      - id: agents_md_format
-        name: "AGENTS.md: plain markdown with location-inferred scope"
-        summary: "AGENTS.md (case-insensitive) is a plain markdown file with no frontmatter; scope is inferred from file location (root = always-on, subdir = auto-glob)."
-        source_ref: "https://docs.windsurf.com/windsurf/cascade/agents-md.md"
-        graduation_candidate: true
-        conversion: not-portable
-      - id: git_root_discovery
-        name: Discovery up to git root across parent directories
-        summary: "For git repos, Windsurf searches parent directories up to the git root when discovering AGENTS.md files, deduplicating across open folders."
-        source_ref: "https://docs.windsurf.com/windsurf/cascade/agents-md.md#discovery-and-scoping"
-        graduation_candidate: false
-        conversion: not-portable
-    loading_model: >
-      AGENTS.md files are processed by the same Rules engine as .windsurf/rules/ files.
-      Root-level files are always included in the system prompt (always-on activation).
-      Subdirectory files are loaded only when Cascade reads or edits files within that
-      directory's subtree (glob activation with auto-generated pattern). There is no
-      frontmatter; the activation mode is determined entirely by file location.
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
     notes: >
-      AGENTS.md in Windsurf is not a separate agent harness or orchestration format — it is
-      a simplified rule delivery mechanism that piggybacks on the Rules engine. The distinction
-      from .windsurf/rules/ files is purely ergonomic: no frontmatter required, and scoping is
-      implicit from directory placement. This makes AGENTS.md ideal for checked-in conventions
-      that should apply automatically when working in a specific part of the codebase. Cross-agent
-      interoperability: Windsurf recognizes AGENTS.md files regardless of which agent originally
-      created them.
+      Windsurf has no installable-agent harness. The AGENTS.md support documented at
+      https://docs.windsurf.com/windsurf/cascade/agents-md.md is a rules delivery
+      mechanism that piggybacks on the Rules engine — root-level AGENTS.md files are
+      always-on and subdirectory files are subtree-scoped, but these are not invocable
+      agents and have no structured definition, tool restrictions, or orchestration.
+      AGENTS.md recognition is represented under content_types.rules.cross_provider_recognition,
+      not as an agents-content-type. Reassess if Windsurf adds a dedicated custom-agent
+      format (equivalent to Cursor's .cursor/agents/ or Factory's custom droids).
 
   commands:
     status: supported
     sources:
-      - uri: "https://docs.windsurf.com/command/windsurf-overview.md"
+      - uri: "https://docs.windsurf.com/windsurf/cascade/workflows.md"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:22486b5ef954cfda8ba1cee70ce66115fd01a2e884ad842d187191a15c8be729"
-        fetched_at: "2026-04-11T21:51:02.329185401Z"
+        fetched_at: "2026-04-17T00:00:00Z"
     canonical_mappings:
       argument_substitution:
         supported: false
-        mechanism: "Windsurf Workflows (.windsurf/workflows/*.md) are plain Markdown prompt templates with no documented argument substitution mechanism"
+        mechanism: "Cascade Workflows are plain Markdown prompt templates; no `{{args}}` or equivalent placeholder syntax is documented for user-provided arguments"
         confidence: inferred
       builtin_commands:
-        supported: false
-        mechanism: "no built-in slash commands for Workflows; Windsurf Command (Cmd+I) is a UI keyboard shortcut, not a slash command"
-        confidence: confirmed
+        supported: true
+        mechanism: "Cascade exposes its own built-in chat slash commands (e.g. for conversation control) independently of user-authored Workflows; the `/<workflow-name>` namespace is reserved for user files"
+        confidence: inferred
     provider_extensions:
-      - id: command_inline_editor
-        name: "Windsurf Command: inline natural language code editing (Cmd/Ctrl+I)"
-        summary: "Inline AI code editing in the editor via Cmd+I/Ctrl+I, scoped to the current file with accept/reject diff lenses; distinct from Cascade chat."
-        source_ref: "https://docs.windsurf.com/command/windsurf-overview.md"
+      - id: character_limit_12000
+        name: "12,000 character per-file limit"
+        summary: "Each workflow markdown file is capped at 12,000 characters; content beyond the cap fails to load or save."
+        source_ref: "https://docs.windsurf.com/windsurf/cascade/workflows.md"
         graduation_candidate: false
         conversion: not-portable
-      - id: terminal_command
-        name: Terminal Command via Cmd/Ctrl+I in terminal
-        summary: "Cmd+I/Ctrl+I in the integrated terminal generates shell commands from natural language prompts, separate from the editor surface."
-        source_ref: "https://docs.windsurf.com/command/windsurf-overview.md#terminal-command"
-        graduation_candidate: false
-        conversion: not-portable
-      - id: workflows_slash_commands
-        name: "Workflows: slash-command-invoked prompt templates"
-        summary: "Single .md files in .windsurf/workflows/ that serve as manual-only `/[name]` prompt templates invoked from the Cascade input."
-        source_ref: "https://docs.windsurf.com/windsurf/cascade/memories.md"
+      - id: manual_only_invocation
+        name: Manual-only slash-command invocation
+        summary: "Workflows never auto-invoke from model decisions or file patterns; the user must explicitly type /<workflow-name> in the Cascade input to run one."
+        source_ref: "https://docs.windsurf.com/windsurf/cascade/workflows.md"
         graduation_candidate: true
         conversion: translated
+      - id: two_scope_loading
+        name: Workspace and global scope loading
+        summary: "Workflows load from two scopes: workspace (.windsurf/workflows/) for team-shared commands committed with the repo, and global (~/.codeium/windsurf/global_workflows/) for per-user commands available everywhere."
+        source_ref: "https://docs.windsurf.com/windsurf/cascade/workflows.md"
+        graduation_candidate: true
+        conversion: not-portable
+      - id: filename_as_command_name
+        name: Filename drives slash-command identifier
+        summary: "The markdown file basename (minus .md) is the invocation name; no frontmatter or manifest is required to register a workflow."
+        source_ref: "https://docs.windsurf.com/windsurf/cascade/workflows.md"
+        graduation_candidate: true
+        conversion: embedded
     loading_model: >
-      Windsurf Command (inline editor) is a pure UI feature with no persistent configuration
-      files — it is invoked on-demand via keyboard shortcut. Workflows (the slash-command
-      equivalent) are .md files loaded on explicit /workflow-name invocation in Cascade;
-      they are not in the system prompt until called. Workflow files are single markdown files,
-      not directory bundles.
+      Cascade Workflows are discovered by scanning two directories at IDE startup and on
+      filesystem change: workspace-scope `.windsurf/workflows/` and global-scope
+      `~/.codeium/windsurf/global_workflows/`. Each `.md` file registers a slash command
+      whose name is the file basename (minus `.md`). Workflow bodies are plain markdown
+      with no required frontmatter. The workflow content is not injected into the system
+      prompt; it is loaded only when the user explicitly invokes `/<workflow-name>` in the
+      Cascade input, at which point the markdown body is read into the conversation as a
+      prompt template.
     notes: >
-      The "commands" content type in syllago maps to two distinct Windsurf surfaces. The primary
-      match for cross-provider slash commands is Windsurf Workflows (/workflow-name), which are
-      manual-only prompt templates. Windsurf Command (Cmd+I) is an inline editor feature with no
-      equivalent in other providers' slash-command systems — it operates on the current file in
-      the editor rather than through an agent chat interface. Workflows are version-controllable
-      and team-shareable; Command is purely a UI interaction mode with no persistent config.
+      Cascade Workflows are manual-only: Cascade never auto-invokes a workflow based on model
+      decisions or file-pattern matches — the user must type `/<workflow-name>` in the Cascade
+      input. Each workflow file is capped at 12,000 characters; larger bodies fail to load or
+      save. Workflow bodies are plain markdown with no required frontmatter. Dual-scope loading:
+      workspace files live at `.windsurf/workflows/` (team-shared, committed with the repo) and
+      global files at `~/.codeium/windsurf/global_workflows/` (per-user, not committed). The
+      filename basename (minus `.md`) is the slash-command identifier.

@@ -1,6 +1,6 @@
 provider: amp
 last_fetched_at: "2026-04-11T21:49:38Z"
-last_changed_at: "2026-04-11T21:49:38Z"
+last_changed_at: "2026-04-17T00:00:00Z"
 generation_method: subagent
 
 content_types:
@@ -179,20 +179,22 @@ content_types:
         fetched_at: "2026-04-11T21:49:36Z"
     canonical_mappings:
       handler_types:
-        supported: false
-        mechanism: "Amp hooks execute shell commands only; no other handler types documented"
-        confidence: inferred
+        supported: true
+        provider_field: "action"
+        mechanism: "command-only: hook 'action' field runs a shell command; no HTTP, LLM, or agent handler types documented"
+        confidence: confirmed
       matcher_patterns:
         supported: true
-        mechanism: "hook_match_input_contains: Amp hooks can match on input content containing specific strings"
+        provider_field: "input.contains"
+        mechanism: "Amp hooks filter firing via 'input.contains' — exact literal substring match against tool input"
         confidence: confirmed
       decision_control:
-        supported: false
-        mechanism: "Amp hooks are observational; no mechanism to block, allow, or modify tool invocations documented"
-        confidence: inferred
+        supported: true
+        mechanism: "Pre-execute 'send-user-message' action cancels the pending tool call and injects a user message; exit code 0 = allow, non-zero = block"
+        confidence: confirmed
       input_modification:
         supported: false
-        mechanism: "Amp hooks cannot modify tool input before execution"
+        mechanism: "Amp hooks cannot modify tool input before execution; only substring match and cancel-with-message are documented"
         confidence: inferred
       async_execution:
         supported: false
@@ -200,24 +202,38 @@ content_types:
         confidence: inferred
       hook_scopes:
         supported: false
-        mechanism: "Amp hooks are project-scoped; no multi-scope configuration documented"
-        confidence: inferred
+        mechanism: "Project only: hooks live in a single 'amp.hooks' array inside '.amp/settings.json' (or user-scope settings); no multi-scope layering documented"
+        confidence: confirmed
       json_io_protocol:
         supported: false
-        mechanism: "Amp hooks communicate via exit codes; no JSON stdin/stdout protocol documented"
+        mechanism: "Amp hooks signal decisions via exit codes and declarative action types; no JSON stdin/stdout protocol documented"
         confidence: inferred
       context_injection:
         supported: false
-        mechanism: "Amp hooks cannot inject context into the agent session"
+        mechanism: "Amp hooks cannot inject context into the agent session beyond the pre-execute 'send-user-message' action that cancels the tool call"
         confidence: inferred
       permission_control:
         supported: true
         mechanism: "permissions_system: Amp has a permissions system that hooks interact with to make tool availability decisions"
         confidence: confirmed
     provider_extensions:
+      - id: settings_json_merge
+        name: "JSON merge into amp.hooks array"
+        summary: "Hooks are stored as an array under the 'amp.hooks' key inside '.amp/settings.json' (workspace) or user-scope settings; they are not a standalone hooks file."
+        source_ref: "https://ampcode.com/manual/hooks.md"
+        graduation_candidate: false
+        conversion: not-portable
+        provider_field: "amp.hooks"
+      - id: command_handler_only
+        name: "Command handler type only"
+        summary: "The hook 'action' field invokes a shell command (declarative pre-execute 'send-user-message' and post-execute 'redact-tool-input' actions); no HTTP, LLM, or agent handler types are documented."
+        source_ref: "https://ampcode.com/manual/hooks.md"
+        graduation_candidate: false
+        conversion: translated
+        provider_field: "action"
       - id: hook_events
         name: "Hook trigger events"
-        summary: "Two events: 'tool:pre-execute' (before tool runs) and 'tool:post-execute' (after); each event accepts only specific actions."
+        summary: "Two events: 'tool:pre-execute' (before tool runs) and 'tool:post-execute' (after); each event accepts only specific actions. Canonical mapping: before_tool_execute → tool:pre-execute, after_tool_execute → tool:post-execute."
         source_ref: "https://ampcode.com/manual/hooks.md"
         graduation_candidate: false
         conversion: translated

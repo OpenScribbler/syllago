@@ -56,3 +56,232 @@ content_types:
     provider_extensions: []
     loading_model: ""
     notes: "OpenCode is archived (final version v0.0.55; succeeded by Crush). It has no native skill implementation — syllago uses the cross-provider SKILL.md convention. All mappings are inferred from community convention and the human format doc, not from OpenCode's own source."
+
+  rules:
+    status: supported
+    sources:
+      - uri: "https://opencode.ai/docs/rules/"
+        type: documentation
+        fetch_method: readability
+    canonical_mappings:
+      activation_mode:
+        supported: false
+        mechanism: "OpenCode rule files load unconditionally as context; no conditional activation syntax documented"
+        confidence: inferred
+      file_imports:
+        supported: false
+        mechanism: "No documented import directive for rule files"
+        confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        mechanism: "OpenCode reads both AGENTS.md (cross-provider convention) and CLAUDE.md (historical Claude Code convention) from project root"
+        confidence: confirmed
+      auto_memory:
+        supported: false
+        mechanism: "No runtime command documented for persisting notes into rule files"
+        confidence: inferred
+      hierarchical_loading:
+        supported: true
+        mechanism: "Project-root AGENTS.md/CLAUDE.md combined with global context files at ~/.config/opencode/"
+        confidence: inferred
+    provider_extensions:
+      - id: agents_md_convention
+        name: AGENTS.md cross-provider convention
+        summary: Plain markdown rule file at project root, shared with other agent tools (no frontmatter, context-injected).
+        source_ref: "https://opencode.ai/docs/rules/"
+        graduation_candidate: false
+        conversion: preserved
+      - id: claude_md_compat
+        name: CLAUDE.md compatibility
+        summary: OpenCode also reads CLAUDE.md at project root for compatibility with Claude Code projects.
+        source_ref: "https://opencode.ai/docs/rules/"
+        graduation_candidate: false
+        conversion: preserved
+    loading_model: "Rules are plain markdown files named AGENTS.md (cross-provider convention) or CLAUDE.md (historical Claude Code convention) at the project root. No frontmatter is required or documented. The file contents are injected into the agent's context at session start."
+    notes: "Rule files have no frontmatter schema — they are treated as plain markdown context. Canonical mappings marked inferred where upstream docs do not explicitly address the feature."
+
+  agents:
+    status: supported
+    sources:
+      - uri: "https://opencode.ai/docs/agents/"
+        type: documentation
+        fetch_method: readability
+      - uri: "https://raw.githubusercontent.com/sst/opencode/dev/packages/opencode/src/config/agent.ts"
+        type: source_code
+        fetch_method: gh_raw
+    canonical_mappings:
+      definition_format:
+        supported: true
+        mechanism: "Markdown files with YAML frontmatter loaded from .opencode/agents/*.md (project) and ~/.config/opencode/agents/*.md (global). The loader glob accepts both agent/ and agents/ directory names and recurses. Frontmatter declares description (required), mode, model, permission, steps, temperature, top_p, color, and hidden; the markdown body becomes the system prompt."
+        confidence: confirmed
+      tool_restrictions:
+        supported: true
+        mechanism: "The permission frontmatter map configures ask/allow/deny per tool, replacing the deprecated tools allow/deny map."
+        confidence: confirmed
+      invocation_patterns:
+        supported: true
+        mechanism: "Agent name derives from the filename (configEntryNameFromPath). Agents with mode: primary can be selected as the session agent; agents with mode: subagent are invoked by other agents via description-driven matching; mode: all allows both."
+        confidence: confirmed
+      agent_scopes:
+        supported: true
+        mechanism: "Two scopes: project (.opencode/agents/) and user-global (~/.config/opencode/agents/). Both scopes are loaded and coexist."
+        confidence: confirmed
+      model_selection:
+        supported: true
+        provider_field: "model"
+        mechanism: "Frontmatter model field selects a specific model alias or full model string for the agent, overriding the session default."
+        confidence: confirmed
+      per_agent_mcp:
+        supported: false
+        mechanism: "OpenCode agent frontmatter does not document a per-agent mcpServers field; agents inherit the workspace MCP configuration."
+        confidence: inferred
+      subagent_spawning:
+        supported: true
+        mechanism: "Agents with mode: subagent (or mode: all) can be invoked from other agents; delegation is driven by the callee's description field."
+        confidence: confirmed
+    provider_extensions:
+      - id: agent_mode
+        name: Agent mode (primary / subagent / all)
+        summary: Frontmatter mode field selects whether the agent is a root primary agent, a subagent invoked by another agent, or both.
+        source_ref: "https://opencode.ai/docs/agents/"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: mode
+      - id: temperature
+        name: Sampling temperature override
+        summary: Per-agent sampling temperature via frontmatter temperature field.
+        source_ref: "https://opencode.ai/docs/agents/"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: temperature
+      - id: top_p
+        name: top_p sampling override
+        summary: Per-agent nucleus sampling top_p value via frontmatter.
+        source_ref: "https://opencode.ai/docs/agents/"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: top_p
+      - id: steps
+        name: Per-step iteration limit
+        summary: Frontmatter steps field caps the number of model steps for this agent. Replaces the deprecated maxSteps field.
+        source_ref: "https://raw.githubusercontent.com/sst/opencode/dev/packages/opencode/src/config/agent.ts"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: steps
+      - id: permission_map
+        name: Per-tool permission overrides
+        summary: Frontmatter permission map configures ask/allow/deny behavior per tool, replacing the deprecated tools allow/deny map.
+        source_ref: "https://opencode.ai/docs/agents/"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: permission
+      - id: color
+        name: Agent color tag
+        summary: Optional color hint for UI display of the agent.
+        source_ref: "https://raw.githubusercontent.com/sst/opencode/dev/packages/opencode/src/config/agent.ts"
+        graduation_candidate: false
+        conversion: embedded
+        provider_field: color
+      - id: hidden
+        name: Hidden from pickers
+        summary: Boolean hidden flag excludes the agent from interactive selection UIs while still allowing programmatic invocation.
+        source_ref: "https://raw.githubusercontent.com/sst/opencode/dev/packages/opencode/src/config/agent.ts"
+        graduation_candidate: false
+        conversion: embedded
+        provider_field: hidden
+    loading_model: "Agents are markdown files with YAML frontmatter loaded from .opencode/agents/*.md (project scope) or ~/.config/opencode/agents/*.md (global scope). The loader glob accepts both singular 'agent/' and plural 'agents/' directory names and recurses. The agent name is derived from the filename (not a frontmatter field). Frontmatter declares description (required), mode (primary | subagent | all), model, temperature, top_p, steps, permission, color, and hidden."
+    notes: "The canonical per-step iteration limit field is 'steps' (the legacy 'maxSteps' field is deprecated). The legacy 'tools' frontmatter map is deprecated in favor of 'permission'. Agent identity derives from the filename — there is no 'name' frontmatter key."
+
+  commands:
+    status: supported
+    sources:
+      - uri: "https://opencode.ai/docs/commands/"
+        type: documentation
+        fetch_method: readability
+    canonical_mappings:
+      argument_substitution:
+        supported: true
+        mechanism: "Named arguments via $VAR tokens substituted from user input at invocation (pattern observed in custom_commands.go — e.g. $ISSUE_NUMBER)."
+        confidence: inferred
+      builtin_commands:
+        supported: false
+        mechanism: "OpenCode documentation describes only user-authored slash commands loaded from .opencode/commands/ and ~/.config/opencode/commands/; no built-in commands are documented for this namespace."
+        confidence: inferred
+    provider_extensions:
+      - id: agent_binding
+        name: Per-command agent binding
+        summary: Frontmatter agent field routes the command to a specific named agent.
+        source_ref: "https://opencode.ai/docs/commands/"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: agent
+      - id: model_override
+        name: Per-command model override
+        summary: Frontmatter model field overrides the default model for this command invocation.
+        source_ref: "https://opencode.ai/docs/commands/"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: model
+      - id: subtask
+        name: Subtask execution flag
+        summary: Frontmatter subtask field runs the command as an isolated subtask rather than in the current session.
+        source_ref: "https://opencode.ai/docs/commands/"
+        graduation_candidate: false
+        conversion: embedded
+        provider_field: subtask
+    loading_model: "Commands are markdown files with YAML frontmatter loaded from .opencode/commands/<name>.md (project scope) or ~/.config/opencode/commands/<name>.md (global scope). The command name is the filename without the .md extension. Invoked with a leading slash (/name). Frontmatter declares description, agent, model, and subtask."
+    notes: "Argument substitution handling marked inferred — pattern observed in the source manifest (opencode-ai/opencode custom_commands.go extracts named arguments like $ISSUE_NUMBER) but not explicitly re-verified against sst/opencode docs."
+
+  mcp:
+    status: supported
+    sources:
+      - uri: "https://opencode.ai/docs/mcp-servers/"
+        type: documentation
+        fetch_method: readability
+      - uri: "https://raw.githubusercontent.com/sst/opencode/dev/schema.json"
+        type: schema
+        fetch_method: gh_raw
+    canonical_mappings:
+      transport_types:
+        supported: true
+        mechanism: "transport_types: OpenCode documents stdio transport; remote transports (http/sse) are available on sst/opencode depending on version"
+        confidence: inferred
+      env_var_expansion:
+        supported: true
+        mechanism: "env_variable_expansion: environment variables configured in server env blocks"
+        confidence: inferred
+      tool_filtering:
+        supported: false
+        mechanism: "No per-server tool allowlist/blocklist documented"
+        confidence: inferred
+      oauth_support:
+        supported: false
+        mechanism: "No OAuth 2.0 authentication for remote MCP servers documented"
+        confidence: inferred
+      enterprise_management:
+        supported: false
+        mechanism: "No organization-level MCP management documented"
+        confidence: inferred
+    provider_extensions:
+      - id: stdio_transport
+        name: stdio MCP transport
+        summary: Local MCP servers launched via command/args/env and communicate over stdio.
+        source_ref: "https://opencode.ai/docs/mcp-servers/"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: type
+      - id: jsonc_config
+        name: JSONC config file format
+        summary: MCP servers are configured in opencode.json or opencode.jsonc at the project root; JSONC allows comments.
+        source_ref: "https://opencode.ai/docs/mcp-servers/"
+        graduation_candidate: false
+        conversion: translated
+    loading_model: "MCP servers are configured under the mcp key in opencode.json (or opencode.jsonc) at the project root. Each entry is a named server config with command, args, env, and transport type. OpenCode supports stdio servers; remote transport support (http/sse) varies by version."
+    notes: "Transport type support for http/sse marked inferred — the source manifest notes Crush adds an http type distinct from OpenCode, so the exact set available in sst/opencode is version-dependent."
+
+  hooks:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "OpenCode does not expose user-definable lifecycle hooks — no hook events, no hook configuration schema in opencode.json."
