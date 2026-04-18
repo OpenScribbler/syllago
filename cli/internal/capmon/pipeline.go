@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"gopkg.in/yaml.v3"
 )
 
@@ -113,6 +114,17 @@ func RunPipeline(ctx context.Context, opts PipelineOptions) (exitClass int, err 
 			}
 		} else if paused {
 			manifest.ExitClass = ExitPaused
+		}
+	}
+
+	// Final visibility pass: record provider coverage drift in the run manifest.
+	// This is observation-only — coverage drift never changes exit class because
+	// the test suite (TestCoverageInternalGoConsistency + TestCoverageNoDrift) is
+	// the authoritative CI gate. Surfacing drift here makes it visible in capmon
+	// run summaries so operators notice YAML ↔ Go mismatches during routine runs.
+	if drifts, cerr := provider.CheckCoverage(opts.RepoRoot); cerr == nil {
+		for _, d := range drifts {
+			manifest.CoverageDrifts = append(manifest.CoverageDrifts, d.String())
 		}
 	}
 

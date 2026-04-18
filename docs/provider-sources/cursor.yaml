@@ -24,15 +24,12 @@ changelog:
 
 content_types:
   # ── Support summary ───────────────────────────────────────────────────
-  # Cursor supports: rules, skills, hooks, mcp; agents and commands via AGENTS.md
-  #   cross-provider convention (no cursor-native file format documented)
-  # Not supported: agents (no cursor-native format), commands (no cursor-native format)
-  # Syllago: rules ✓, skills ✓, hooks ✓, mcp ✓, agents ✓ (via AGENTS.md convention),
-  #   commands ✓ (via .cursor/commands/)
+  # Cursor supports: rules, skills, hooks, mcp, agents (Cursor 2.4 custom
+  #   agents at .cursor/agents/), commands (Cursor 1.6 custom commands at
+  #   .cursor/commands/)
+  # Syllago: rules ✓, skills ✓, hooks ✓, mcp ✓, agents ✓, commands ✓
   # Note: cursor.com docs rate-limit automated fetching (429). All sources use
   #   cursor.com/docs URLs — may need user-agent rotation or cached fetches.
-  #   Agents and commands stubs reflect lack of cursor-native docs; syllago uses
-  #   cross-provider conventions.
   # ─────────────────────────────────────────────────────────────────────
 
   rules:
@@ -73,7 +70,21 @@ content_types:
     # Cursor skills support exists but documentation is limited.
 
   agents:
-    supported: false
+    sources:
+      - url: https://cursor.com/docs/agents
+        type: docs
+        format: html
+        extracts: [file_format, config_fields, file_locations]
+    # Format: Markdown files with YAML frontmatter (name, description, model,
+    # readonly, is_background) in .cursor/agents/ (project) or ~/.cursor/agents/
+    # (user). Added in Cursor 2.4.
 
   commands:
-    supported: false
+    sources:
+      - url: https://cursor.com/docs/commands
+        type: docs
+        format: html
+        extracts: [file_format, file_locations]
+    # Format: plain Markdown files under .cursor/commands/ (project) or
+    # ~/.cursor/commands/ (user). Filename becomes slash-command name.
+    # Added in Cursor 1.6.

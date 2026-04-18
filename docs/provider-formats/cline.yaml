@@ -1,6 +1,6 @@
 provider: cline
 last_fetched_at: "2026-04-11T21:49:56Z"
-last_changed_at: "2026-04-11T00:00:00Z"
+last_changed_at: "2026-04-17T00:00:00Z"
 generation_method: subagent
 
 content_types:
@@ -357,6 +357,10 @@ content_types:
   commands:
     status: supported
     sources:
+      - uri: "https://docs.cline.bot/customization/workflows.md"
+        type: documentation
+        fetch_method: http
+        fetched_at: "2026-04-17T00:00:00Z"
       - uri: "https://docs.cline.bot/core-workflows/using-commands"
         type: documentation
         fetch_method: http
@@ -365,24 +369,36 @@ content_types:
     canonical_mappings:
       argument_substitution:
         supported: false
-        mechanism: "custom workflow commands (.clinerules/workflows/*.md) are plain prompt templates with no documented argument substitution mechanism"
+        mechanism: "Workflow markdown files are plain prompt templates with no documented argument-substitution placeholder (no {{args}} or equivalent)"
         confidence: inferred
       builtin_commands:
         supported: true
-        mechanism: "6 built-in slash commands: /newtask, /smol (/compact), /newrule, /deep-planning, /explain-changes (VS Code only), /reportbug; hardcoded, not user-modifiable"
+        mechanism: "Built-in slash commands (e.g., /newtask, /smol alias /compact, /newrule, /deep-planning, /explain-changes in VS Code, /reportbug) are hardcoded and not user-modifiable; user-authored workflows are additive, invoked alongside built-ins"
         confidence: confirmed
     provider_extensions:
+      - id: filename_as_command_name
+        name: Filename as Command Name (Workflows)
+        summary: "Markdown filenames under the workflows directory become the invocation trigger; users type /<filename>.md including the .md extension in chat."
+        source_ref: "https://docs.cline.bot/customization/workflows.md"
+        graduation_candidate: true
+        conversion: preserved
+      - id: two_scope_loading
+        name: Two-Scope Workflow Loading (Project and Global)
+        summary: "Project workflows in .clinerules/workflows/ and global workflows in ~/Documents/Cline/Workflows/ are both discovered; project scope wins on name collision."
+        source_ref: "https://docs.cline.bot/customization/workflows.md"
+        graduation_candidate: true
+        conversion: not-portable
+      - id: plain_markdown_body
+        name: Plain Markdown Instruction Body (No Frontmatter)
+        summary: "Workflow files have no documented frontmatter schema; the entire markdown body is instruction text for the agent to execute as a multi-step workflow."
+        source_ref: "https://docs.cline.bot/customization/workflows.md"
+        graduation_candidate: false
+        conversion: preserved
       - id: builtin_slash_commands
-        name: Six Built-In Slash Commands
-        summary: "Six hardcoded slash commands: /newtask, /smol (/compact), /newrule, /deep-planning, /explain-changes (VS Code), /reportbug."
+        name: Built-In Slash Commands
+        summary: "Hardcoded slash commands including /newtask, /smol (alias /compact), /newrule, /deep-planning, /explain-changes (VS Code only), /reportbug; separate from user-authored workflows."
         source_ref: "https://docs.cline.bot/core-workflows/using-commands#slash-commands"
         graduation_candidate: false
-        conversion: not-portable
-      - id: custom_workflow_commands
-        name: Custom Workflow Slash Commands via .clinerules/workflows/
-        summary: "Markdown files in .clinerules/workflows/ are auto-discovered and invoked as /<filename>.md prompt templates."
-        source_ref: "https://docs.cline.bot/core-workflows/using-commands#custom-workflows"
-        graduation_candidate: true
         conversion: not-portable
       - id: newtask_context_distillation
         name: /newtask Context Distillation for Long Sessions
@@ -397,9 +413,19 @@ content_types:
         graduation_candidate: true
         conversion: not-portable
     loading_model: >
-      Built-in slash commands (/newtask, /smol, etc.) are triggered by typing / in the chat
-      input and selecting from a command picker. Custom workflow commands are discovered from
-      Markdown files in .clinerules/workflows/ and invoked as /filename.md. Commands are not
-      pre-loaded into context — they execute when invoked. There is no frontmatter schema for
-      workflow files documented; they are treated as plain instruction text.
-    notes: "/explain-changes is VS Code only and not available in the Cline CLI or other editor integrations. /smol has an alias /compact. Custom workflows live in .clinerules/workflows/ and are version-control friendly. Built-in commands are not user-modifiable."
+      Cline discovers user-authored workflows as plain markdown files in two locations:
+      .clinerules/workflows/ (project scope) and ~/Documents/Cline/Workflows/ (global scope).
+      Each file's basename becomes the invocation trigger — the user types /<filename>.md in
+      the chat input (extension included) to run the workflow. Workflow bodies are plain
+      markdown instructions with no frontmatter schema; Cline injects the body as a prompt
+      template when invoked. Workflows are not pre-loaded into context — they execute on
+      demand. Built-in slash commands (/newtask, /smol, /newrule, /deep-planning,
+      /explain-changes in VS Code, /reportbug) coexist with user workflows and are also
+      accessible via the / command picker.
+    notes: >
+      Global workflows path is ~/Documents/Cline/Workflows on macOS/Linux and maps to
+      %USERPROFILE%\\Documents\\Cline\\Workflows on Windows because Cline resolves the OS
+      Documents folder. Workflow files are plain markdown — no frontmatter schema is defined
+      and none is required. Invocation includes the .md extension (e.g., /deploy.md, not
+      /deploy). Project workflows take precedence over global workflows on name collision.
+      Built-in slash commands are not user-modifiable; /explain-changes is VS Code-only.

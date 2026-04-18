@@ -21,11 +21,11 @@ change_detection:
 content_types:
 
   # ── Support summary ───────────────────────────────────────────────────
-  # Windsurf supports: rules (.windsurfrules), skills, hooks, mcp, agents (AGENTS.md convention only), commands (windsurf CLI — not user-definable files)
-  # Not supported: user-definable agent format, user-definable command files
-  # Syllago: rules ✓, skills ✓, hooks ✓, mcp ✓ | agents ✗, commands ✗
-  # Agents tracked for AGENTS.md cross-provider convention — not a windsurf-native format.
-  # windsurf CLI commands are not user-definable files.
+  # Windsurf supports: rules (.windsurfrules + AGENTS.md), skills, hooks, mcp,
+  #   commands (Cascade Workflows — .windsurf/workflows/ + global_workflows/)
+  # Not supported: user-definable agent harness (AGENTS.md is rules delivery,
+  #   not an agent format — tracked under rules.cross_provider_recognition).
+  # Syllago: rules ✓, skills ✓, hooks ✓, mcp ✓, commands ✓ | agents ✗
   # ─────────────────────────────────────────────────────────────────────
 
   rules:
@@ -66,16 +66,18 @@ content_types:
         extracts: [file_format, features]
 
   agents:
-    # Covered by agents-md.md under rules. No separate agent system.
-    sources:
-      - url: https://docs.windsurf.com/windsurf/cascade/agents-md.md
-        type: docs
-        format: markdown
-        extracts: [file_format]
+    supported: false
+    # Windsurf has no installable-agent harness. AGENTS.md support is a rules
+    # delivery mechanism that piggybacks on the Rules engine — tracked under
+    # content_types.rules (see agents-md.md source there), not as a separate
+    # agents content type.
 
   commands:
     sources:
-      - url: https://docs.windsurf.com/command/windsurf-overview.md
+      - url: https://docs.windsurf.com/windsurf/cascade/workflows.md
         type: docs
         format: markdown
-        extracts: [features]
+        extracts: [file_format, file_locations, features]
+    # Format: plain Markdown files under .windsurf/workflows/ (project) and
+    # ~/.codeium/windsurf/global_workflows/ (global). Filename drives slash-
+    # command identifier; 12,000-character per-file cap; manual invocation only.

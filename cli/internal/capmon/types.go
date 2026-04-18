@@ -103,4 +103,5 @@ type RunManifest struct {
 	Providers                     map[string]ProviderStatus `json:"providers"`
 	Warnings                      []string                  `json:"warnings"`
 	FingerprintDivergenceWarnings []string                  `json:"fingerprint_divergence_warnings"`
+	CoverageDrifts                []string                  `json:"coverage_drifts,omitempty"`
 }

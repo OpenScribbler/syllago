@@ -40,10 +40,18 @@ var Cline = Provider{
 		switch ct {
 		case catalog.Rules:
 			return ProjectScopeSentinel // Rules go in project root as .clinerules/ directory
+		case catalog.Skills:
+			// Global skills live at ~/.cline/skills/<name>/SKILL.md per
+			// https://docs.cline.bot/customization/skills.md#where-skills-live
+			return filepath.Join(homeDir, ".cline", "skills")
 		case catalog.Hooks:
 			return ProjectScopeSentinel // Hooks are file-based executables in .clinerules/hooks/
 		case catalog.MCP:
 			return JSONMergeSentinel // Merges into VS Code globalStorage config
+		case catalog.Commands:
+			// Global workflows live at ~/Documents/Cline/Workflows on all platforms
+			// (Cline uses the Documents folder, which maps to %USERPROFILE%\Documents on Windows).
+			return filepath.Join(homeDir, "Documents", "Cline", "Workflows")
 		}
 		return ""
 	},
@@ -61,6 +69,19 @@ var Cline = Provider{
 				paths = append(paths, filepath.Join(home, "Documents", "Cline", "Rules"))
 			}
 			return paths
+		case catalog.Skills:
+			// Cline discovers skills at three project-scope directories and one global-scope
+			// directory. `.cline/skills/` is the canonical path per docs; `.clinerules/skills/`
+			// and `.claude/skills/` are documented interop fallbacks.
+			paths := []string{
+				filepath.Join(projectRoot, ".cline", "skills"),
+				filepath.Join(projectRoot, ".clinerules", "skills"),
+				filepath.Join(projectRoot, ".claude", "skills"),
+			}
+			if home, err := os.UserHomeDir(); err == nil {
+				paths = append(paths, filepath.Join(home, ".cline", "skills"))
+			}
+			return paths
 		case catalog.Hooks:
 			return []string{filepath.Join(projectRoot, ".clinerules", "hooks")}
 		case catalog.MCP:
@@ -68,6 +89,13 @@ var Cline = Provider{
 				return []string{p}
 			}
 			return nil
+		case catalog.Commands:
+			// Workflows live at .clinerules/workflows/ (project) and ~/Documents/Cline/Workflows (global).
+			paths := []string{filepath.Join(projectRoot, ".clinerules", "workflows")}
+			if home, err := os.UserHomeDir(); err == nil {
+				paths = append(paths, filepath.Join(home, "Documents", "Cline", "Workflows"))
+			}
+			return paths
 		default:
 			return nil
 		}
@@ -85,16 +113,18 @@ var Cline = Provider{
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {
-		case catalog.Rules, catalog.Hooks, catalog.MCP:
+		case catalog.Rules, catalog.Skills, catalog.Hooks, catalog.MCP, catalog.Commands:
 			return true
 		default:
 			return false
 		}
 	},
 	SymlinkSupport: map[catalog.ContentType]bool{
-		catalog.Rules: true,
-		catalog.Hooks: true,  // File-based executables
-		catalog.MCP:   false, // JSON merge
+		catalog.Rules:    true,
+		catalog.Skills:   true,  // File-based SKILL.md in skill directories
+		catalog.Hooks:    true,  // File-based executables
+		catalog.Commands: true,  // File-based workflows
+		catalog.MCP:      false, // JSON merge
 	},
 	ConfigLocations: map[catalog.ContentType]string{
 		catalog.Hooks: ".clinerules/hooks",

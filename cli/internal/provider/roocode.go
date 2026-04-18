@@ -21,6 +21,8 @@ var RooCode = Provider{
 			return JSONMergeSentinel // Merges into .roo/mcp.json
 		case catalog.Agents:
 			return ProjectScopeSentinel // Custom modes in project .roomodes or .roo/
+		case catalog.Commands:
+			return filepath.Join(homeDir, ".roo", "commands")
 		}
 		return ""
 	},
@@ -53,6 +55,13 @@ var RooCode = Provider{
 			}
 		case catalog.MCP:
 			return []string{filepath.Join(projectRoot, ".roo", "mcp.json")}
+		case catalog.Commands:
+			homeDir, _ := os.UserHomeDir()
+			paths := []string{filepath.Join(projectRoot, ".roo", "commands")}
+			if homeDir != "" {
+				paths = append(paths, filepath.Join(homeDir, ".roo", "commands"))
+			}
+			return paths
 		default:
 			return nil
 		}
@@ -72,17 +81,18 @@ var RooCode = Provider{
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {
-		case catalog.Rules, catalog.Skills, catalog.MCP, catalog.Agents:
+		case catalog.Rules, catalog.Skills, catalog.MCP, catalog.Agents, catalog.Commands:
 			return true
 		default:
 			return false
 		}
 	},
 	SymlinkSupport: map[catalog.ContentType]bool{
-		catalog.Rules:  true,
-		catalog.Skills: true,
-		catalog.Agents: true,
-		catalog.MCP:    false, // JSON merge
+		catalog.Rules:    true,
+		catalog.Skills:   true,
+		catalog.Agents:   true,
+		catalog.Commands: true,
+		catalog.MCP:      false, // JSON merge
 	},
 	GlobalSharedReadPaths: func(homeDir string, ct catalog.ContentType) []string {
 		if ct == catalog.Skills {

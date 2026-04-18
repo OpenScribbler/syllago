@@ -22,6 +22,8 @@ var Windsurf = Provider{
 			return JSONMergeSentinel
 		case catalog.MCP:
 			return JSONMergeSentinel
+		case catalog.Commands:
+			return filepath.Join(base, "global_workflows")
 		}
 		return ""
 	},
@@ -41,6 +43,13 @@ var Windsurf = Provider{
 				filepath.Join(projectRoot, ".windsurf", "skills"),
 				filepath.Join(projectRoot, ".agents", "skills"),
 			}
+		case catalog.Commands:
+			// Workflows live at .windsurf/workflows/ (project) and ~/.codeium/windsurf/global_workflows (global).
+			paths := []string{filepath.Join(projectRoot, ".windsurf", "workflows")}
+			if home, err := os.UserHomeDir(); err == nil {
+				paths = append(paths, filepath.Join(home, ".codeium", "windsurf", "global_workflows"))
+			}
+			return paths
 		default:
 			return nil
 		}
@@ -58,17 +67,18 @@ var Windsurf = Provider{
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {
-		case catalog.Rules, catalog.Skills, catalog.Hooks, catalog.MCP:
+		case catalog.Rules, catalog.Skills, catalog.Hooks, catalog.MCP, catalog.Commands:
 			return true
 		default:
 			return false
 		}
 	},
 	SymlinkSupport: map[catalog.ContentType]bool{
-		catalog.Rules:  true,
-		catalog.Skills: true,
-		catalog.Hooks:  false, // JSON merge
-		catalog.MCP:    false, // JSON merge
+		catalog.Rules:    true,
+		catalog.Skills:   true,
+		catalog.Commands: true,  // File-based workflows
+		catalog.Hooks:    false, // JSON merge
+		catalog.MCP:      false, // JSON merge
 	},
 	GlobalSharedReadPaths: func(homeDir string, ct catalog.ContentType) []string {
 		if ct == catalog.Skills {

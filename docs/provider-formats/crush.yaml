@@ -1,0 +1,218 @@
+provider: crush
+# Provenance note (Q5, plan 2026-04-17 §2e):
+# Crush is an independent Charm project. Its lineage traces to the archived
+# opencode-ai/opencode, whose original author continued the work at Charm.
+# sst/opencode is a separate fork of the same archived ancestor by a different
+# team. Crush and sst/opencode are sibling successors, not parent/child.
+# Licensed under the Charm License (proprietary).
+#
+# Upstream Charm documentation for Crush is incomplete — the official README
+# and schema cover MCP and config but say little about rules, skills, or
+# content conventions. Facts marked `inferred` below are drawn from:
+#   1. charmbracelet/crush Go source (internal/skills/skills.go, schema.json,
+#      AGENTS.md at project root),
+#   2. Community convention (the Anthropic Agent Skills standard at
+#      agentskills.io, which Crush's skill loader implements),
+#   3. Analogy with the preceding OpenCode format (the archived ancestor and
+#      Crush's sibling successor sst/opencode).
+# Confirmed facts are backed by direct upstream source references.
+last_fetched_at: "2026-04-17T00:00:00Z"
+last_changed_at: "2026-04-17T00:00:00Z"
+generation_method: human-edited
+
+content_types:
+  rules:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/AGENTS.md"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: ""
+        fetched_at: "2026-04-17T00:00:00Z"
+    canonical_mappings:
+      activation_mode:
+        supported: false
+        mechanism: "Crush rule files (AGENTS.md) load unconditionally as project context; no conditional activation syntax documented"
+        confidence: inferred
+      file_imports:
+        supported: false
+        mechanism: "No file import directive documented for AGENTS.md in Crush"
+        confidence: inferred
+      cross_provider_recognition:
+        supported: true
+        mechanism: "cross_provider_convention: Crush reads AGENTS.md, the cross-provider rules convention shared across multiple agents"
+        confidence: confirmed
+      auto_memory:
+        supported: false
+        mechanism: "No runtime memory/append command documented for Crush rule files"
+        confidence: inferred
+      hierarchical_loading:
+        supported: false
+        mechanism: "Crush documents AGENTS.md at the project root only; no hierarchical/subdirectory loading documented"
+        confidence: inferred
+    provider_extensions:
+      - id: crush_md_variant
+        name: CRUSH.md Crush-specific variant
+        summary: Crush additionally recognizes a project-scope CRUSH.md file as a Crush-specific rules variant alongside the cross-provider AGENTS.md convention.
+        source_ref: "https://github.com/charmbracelet/crush"
+        graduation_candidate: false
+        conversion: translated
+    loading_model: "Rules are plain Markdown files at the project root, with no YAML frontmatter. Crush reads AGENTS.md as the cross-provider rules convention; it additionally recognizes CRUSH.md as a Crush-specific variant. Rule content is loaded as context for the agent at session start."
+    notes: "No global user-scope rules file is documented in Crush. Project-scope only. Hierarchical/subdirectory loading not documented — inferred unsupported pending upstream clarification."
+
+  skills:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/skills.go"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: ""
+        fetched_at: "2026-04-17T00:00:00Z"
+      - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/builtin/crush-config/SKILL.md"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: ""
+        fetched_at: "2026-04-17T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        provider_field: "name"
+        mechanism: "yaml frontmatter key: name (required); follows the Anthropic Agent Skills standard"
+        confidence: confirmed
+      description:
+        supported: true
+        provider_field: "description"
+        mechanism: "yaml frontmatter key: description (required); documents what the skill does and when Crush should invoke it"
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: ".crush/skills/<name>/SKILL.md (native) and .agents/skills/<name>/SKILL.md (cross-provider convention)"
+        paths:
+          - ".crush/skills/<name>/SKILL.md"
+          - ".agents/skills/<name>/SKILL.md"
+        confidence: confirmed
+      global_scope:
+        supported: true
+        mechanism: "~/.config/crush/skills/<name>/SKILL.md (XDG-compliant native path) and ~/.agents/skills/<name>/SKILL.md (cross-provider convention)"
+        paths:
+          - "~/.config/crush/skills/<name>/SKILL.md"
+          - "~/.agents/skills/<name>/SKILL.md"
+        confidence: confirmed
+      shared_scope:
+        supported: false
+        confidence: inferred
+      canonical_filename:
+        supported: true
+        mechanism: "SKILL.md (required, fixed name per the Agent Skills standard)"
+        confidence: confirmed
+      custom_filename:
+        supported: false
+        mechanism: "filename is fixed as SKILL.md per the Agent Skills standard"
+        confidence: confirmed
+      disable_model_invocation:
+        supported: true
+        provider_field: "disable-model-invocation"
+        mechanism: "yaml frontmatter key: disable-model-invocation (optional boolean) per the Agent Skills standard"
+        confidence: inferred
+      user_invocable:
+        supported: false
+        confidence: inferred
+    provider_extensions:
+      - id: agent_skills_standard
+        name: Anthropic Agent Skills standard frontmatter
+        summary: Frontmatter follows the Agent Skills open standard (agentskills.io) with name, description, license, compatibility, metadata, and disable-model-invocation fields.
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/skills.go"
+        graduation_candidate: true
+        conversion: preserved
+      - id: cross_provider_discovery
+        name: Cross-provider skill discovery
+        summary: Crush discovers skills from .agents/skills/ (cross-provider convention) in addition to .crush/skills/ (native) and ~/.config/crush/skills/ (user global).
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/skills.go"
+        graduation_candidate: true
+        conversion: preserved
+    loading_model: "A skill is a directory containing a SKILL.md file. Crush discovers skills from .crush/skills/<name>/SKILL.md (native project scope), .agents/skills/<name>/SKILL.md (cross-provider project convention), and ~/.config/crush/skills/<name>/SKILL.md plus ~/.agents/skills/<name>/SKILL.md (user global scope). The SKILL.md YAML frontmatter supplies name and description; the Markdown body contains instructions that guide agent behavior when the skill is active."
+    notes: "Implements the Agent Skills open standard (https://agentskills.io). Frontmatter keys license, compatibility, and metadata are optional; disable-model-invocation follows the standard but its exact handling in Crush is inferred from the standard rather than explicitly documented in Charm's upstream docs."
+
+  mcp:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: ""
+        fetched_at: "2026-04-17T00:00:00Z"
+      - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/README.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: ""
+        fetched_at: "2026-04-17T00:00:00Z"
+    canonical_mappings:
+      transport_types:
+        supported: true
+        mechanism: "transport_types: Crush documents stdio, http, and sse transports in its JSON schema for MCP server configuration"
+        confidence: confirmed
+      oauth_support:
+        supported: false
+        mechanism: "Crush MCP does not document OAuth 2.0 authentication for remote servers"
+        confidence: inferred
+      env_var_expansion:
+        supported: true
+        mechanism: "env_variable_expansion: Crush MCP configuration supports environment variable references in server env blocks"
+        confidence: inferred
+      tool_filtering:
+        supported: false
+        mechanism: "Per-server tool allow/block list not documented in the Crush MCP schema"
+        confidence: inferred
+      auto_approve:
+        supported: false
+        mechanism: "Crush does not document pre-configured auto-approval for specific MCP tools"
+        confidence: inferred
+      marketplace:
+        supported: false
+        mechanism: "Crush does not have an in-app MCP marketplace"
+        confidence: confirmed
+      resource_referencing:
+        supported: false
+        mechanism: "MCP resource referencing (as distinct from tool calls) not documented in Crush"
+        confidence: inferred
+      enterprise_management:
+        supported: false
+        mechanism: "Crush does not document organization-level MCP management"
+        confidence: inferred
+    provider_extensions:
+      - id: transport_types
+        name: Three transport mechanisms
+        summary: Supports stdio, http, and sse transports for MCP server connections, configured via the mcp key in crush.json.
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: type
+      - id: unified_config_file
+        name: Unified crush.json config file
+        summary: MCP servers, tools, permissions, and model settings all share a single crush.json config file rather than being split across multiple settings files.
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
+        graduation_candidate: false
+        conversion: not-portable
+    loading_model: "MCP servers are configured in crush.json under the mcp key as a map of server-name to server config objects. The config file lives at the project root (crush.json) or under the user's XDG config directory (~/.config/crush/crush.json). On startup, Crush iterates configured servers, establishes transport connections (stdio, http, or sse), fetches tool definitions, and registers tools for the agent."
+    notes: "Transport types (stdio, http, sse) are confirmed from the upstream JSON schema and match the Go provider's MCPTransports declaration. OAuth, per-server tool filtering, and resource referencing are not documented in Crush's public schema — inferred unsupported pending upstream clarification."
+
+  hooks:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "Crush does not expose user-definable lifecycle hooks; no hook configuration key or event system is documented in the Crush schema."
+
+  agents:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "Crush's two-model (large/small) architecture is fixed in the binary; no user-definable agent file format is documented."
+
+  commands:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "Crush does not document a user-definable slash-command or custom-command system; command-like behavior is driven by skills instead."

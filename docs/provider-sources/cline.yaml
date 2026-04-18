@@ -24,10 +24,11 @@ changelog:
 
 content_types:
   # ── Support summary ───────────────────────────────────────────────────
-  # Cline supports: rules, hooks, mcp, skills (via cross-provider SKILL.md convention), commands (CLI-only slash commands, not user-definable files)
+  # Cline supports: rules, hooks, mcp, skills (cross-provider SKILL.md convention
+  #   at .cline/skills/, .clinerules/skills/, .claude/skills/, ~/.cline/skills/),
+  #   commands (Workflows at .clinerules/workflows/ + ~/Documents/Cline/Workflows)
   # Not supported: agents (no agent file format)
-  # Syllago: rules ✓, hooks ✓, mcp ✓ | skills ✗, commands ✗ (not yet implemented in syllago for cline)
-  #   Syllago implements rules/hooks/mcp for cline. Skills and commands are tracked in manifest for monitoring purposes — syllago install not yet supported.
+  # Syllago: rules ✓, hooks ✓, mcp ✓, skills ✓, commands ✓ | agents ✗
   # ─────────────────────────────────────────────────────────────────────
 
   rules:
@@ -85,8 +86,10 @@ content_types:
 
   commands:
     sources:
-      - url: https://docs.cline.bot/core-workflows/using-commands.md
+      - url: https://docs.cline.bot/features/slash-commands/workflows.md
         type: docs
         format: markdown
-        extracts: [config_fields, features]
-    # CLI slash commands only — no user-definable command files.
+        extracts: [file_format, file_locations, features]
+    # Syllago maps cline Workflows to the Commands content type. Format: plain
+    # markdown files at .clinerules/workflows/ (project) and
+    # ~/Documents/Cline/Workflows/ (global). Invoked via /<workflow-name>.

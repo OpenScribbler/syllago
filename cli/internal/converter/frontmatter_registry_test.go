@@ -38,10 +38,11 @@ func TestFrontmatterRegistry_Completeness(t *testing.T) {
 		"codex/skills": true,
 		// Agents: codex agents use TOML (not frontmatter in markdown)
 		"codex/agents": true,
-		// Commands: cursor and cline commands are plain markdown
+		// Commands: cursor/cline/windsurf/roo-code commands are plain markdown
 		"cursor/commands":   true,
 		"cline/commands":    true,
 		"windsurf/commands": true,
+		"roo-code/commands": true,
 		// factory-droid, pi, crush use plain AGENTS.md for rules and plain
 		// markdown (no frontmatter) for commands/prompt templates.
 		"factory-droid/rules":    true,

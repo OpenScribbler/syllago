@@ -10,15 +10,93 @@ import (
 
 func TestClineSupportsTypes(t *testing.T) {
 	t.Parallel()
-	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Hooks, catalog.MCP} {
+	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.Hooks, catalog.MCP, catalog.Commands} {
 		if !Cline.SupportsType(ct) {
 			t.Errorf("Cline.SupportsType(%s) = false, want true", ct)
 		}
 	}
-	for _, ct := range []catalog.ContentType{catalog.Skills, catalog.Agents, catalog.Commands} {
+	for _, ct := range []catalog.ContentType{catalog.Agents} {
 		if Cline.SupportsType(ct) {
 			t.Errorf("Cline.SupportsType(%s) = true, want false", ct)
 		}
+	}
+}
+
+func TestClineSkillsSupport(t *testing.T) {
+	t.Parallel()
+
+	home := "/home/testuser"
+	installDir := Cline.InstallDir(home, catalog.Skills)
+	wantInstall := "/home/testuser/.cline/skills"
+	if installDir != wantInstall {
+		t.Errorf("Cline.InstallDir(Skills) = %q, want %q", installDir, wantInstall)
+	}
+
+	paths := Cline.DiscoveryPaths("/tmp/project", catalog.Skills)
+	if len(paths) == 0 {
+		t.Fatal("expected at least one discovery path for Skills")
+	}
+
+	var foundCline, foundClinerules, foundClaude bool
+	for _, p := range paths {
+		switch {
+		case strings.HasSuffix(p, ".cline/skills") && strings.Contains(p, "/tmp/project"):
+			foundCline = true
+		case strings.HasSuffix(p, ".clinerules/skills") && strings.Contains(p, "/tmp/project"):
+			foundClinerules = true
+		case strings.HasSuffix(p, ".claude/skills") && strings.Contains(p, "/tmp/project"):
+			foundClaude = true
+		}
+	}
+	if !foundCline {
+		t.Errorf("expected project discovery path ending in .cline/skills, got: %v", paths)
+	}
+	if !foundClinerules {
+		t.Errorf("expected project discovery path ending in .clinerules/skills, got: %v", paths)
+	}
+	if !foundClaude {
+		t.Errorf("expected project discovery path ending in .claude/skills (interop), got: %v", paths)
+	}
+
+	if got := Cline.FileFormat(catalog.Skills); got != FormatMarkdown {
+		t.Errorf("Cline.FileFormat(Skills) = %q, want %q", got, FormatMarkdown)
+	}
+
+	if !Cline.SymlinkSupport[catalog.Skills] {
+		t.Errorf("Cline.SymlinkSupport[Skills] = false, want true")
+	}
+}
+
+func TestClineCommandsSupport(t *testing.T) {
+	t.Parallel()
+
+	home := "/home/testuser"
+	installDir := Cline.InstallDir(home, catalog.Commands)
+	wantInstall := "/home/testuser/Documents/Cline/Workflows"
+	if installDir != wantInstall {
+		t.Errorf("Cline.InstallDir(Commands) = %q, want %q", installDir, wantInstall)
+	}
+
+	paths := Cline.DiscoveryPaths("/tmp/project", catalog.Commands)
+	if len(paths) == 0 {
+		t.Fatal("expected at least one discovery path for Commands")
+	}
+	foundProject := false
+	for _, p := range paths {
+		if strings.HasSuffix(p, ".clinerules/workflows") && strings.Contains(p, "/tmp/project") {
+			foundProject = true
+		}
+	}
+	if !foundProject {
+		t.Errorf("expected project discovery path ending in .clinerules/workflows, got: %v", paths)
+	}
+
+	if got := Cline.FileFormat(catalog.Commands); got != FormatMarkdown {
+		t.Errorf("Cline.FileFormat(Commands) = %q, want %q", got, FormatMarkdown)
+	}
+
+	if !Cline.SymlinkSupport[catalog.Commands] {
+		t.Errorf("Cline.SymlinkSupport[Commands] = false, want true")
 	}
 }
 
