@@ -1528,6 +1528,50 @@ func TestRunLoadoutCreate_EmptyNameErrors(t *testing.T) {
 	}
 }
 
+// --- runUpdateContent (0% coverage, stub) ---
+
+func TestRunUpdateContent_NotImplemented(t *testing.T) {
+	output.SetForTest(t)
+	err := updateContentCmd.RunE(updateContentCmd, nil)
+	if err == nil {
+		t.Fatal("expected 'not yet implemented' error")
+	}
+	if !strings.Contains(err.Error(), "not yet implemented") {
+		t.Errorf("error should mention not-yet-implemented, got %v", err)
+	}
+}
+
+// --- runRegistryCreateFromNative wrapper (0% coverage) ---
+
+func TestRunRegistryCreateFromNative_WrapperDelegates(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, ".cursorrules"), []byte("# rules\n"), 0644)
+	origDir, _ := os.Getwd()
+	os.Chdir(tmp)
+	t.Cleanup(func() { os.Chdir(origDir) })
+	t.Setenv("HOME", t.TempDir())
+
+	origStdin := registryCreateNativeStdin
+	registryCreateNativeStdin = strings.NewReader("\n\n\n") // default choice, default name, no desc prompt (desc comes from flag)
+	t.Cleanup(func() { registryCreateNativeStdin = origStdin })
+
+	registryCreateCmd.Flags().Set("description", "flag-desc")
+	t.Cleanup(func() { registryCreateCmd.Flags().Set("description", "") })
+
+	output.SetForTest(t)
+
+	if err := runRegistryCreateFromNative(registryCreateCmd); err != nil {
+		t.Fatalf("wrapper should succeed, got %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(tmp, "registry.yaml"))
+	if err != nil {
+		t.Fatalf("registry.yaml missing: %v", err)
+	}
+	if !strings.Contains(string(data), "flag-desc") {
+		t.Errorf("expected flag description in manifest: %s", data)
+	}
+}
+
 func TestRunLoadoutCreate_NoContentRepoErrors(t *testing.T) {
 	// No go.mod → findProjectRoot fails → findContentRepoRoot errors.
 	tmp := t.TempDir()
