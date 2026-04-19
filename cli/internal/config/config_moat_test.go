@@ -171,23 +171,77 @@ func TestSigningProfile_IsZero(t *testing.T) {
 	}
 }
 
-// TestSigningProfile_Equal requires BOTH fields to match — the profile is
-// a pair, not an OR. A registry that changes issuer but keeps subject (or
-// vice versa) counts as a different signer.
+// TestSigningProfile_Equal requires issuer+subject+numeric-IDs to match.
+// Regexes and ProfileVersion are metadata, not identity — they do not
+// participate in equality. A TOFU profile that later gains numeric IDs is
+// treated as different from the original per ADR 0007, to force re-approval
+// when the trust anchor expands.
 func TestSigningProfile_Equal(t *testing.T) {
 	t.Parallel()
 
-	base := SigningProfile{Issuer: "iss", Subject: "sub"}
+	base := SigningProfile{
+		Issuer:            "iss",
+		Subject:           "sub",
+		RepositoryID:      "111",
+		RepositoryOwnerID: "222",
+	}
 
 	tests := []struct {
 		name  string
 		other SigningProfile
 		want  bool
 	}{
-		{"same", SigningProfile{Issuer: "iss", Subject: "sub"}, true},
-		{"issuer_differs", SigningProfile{Issuer: "other", Subject: "sub"}, false},
-		{"subject_differs", SigningProfile{Issuer: "iss", Subject: "other"}, false},
-		{"both_empty_vs_populated", SigningProfile{}, false},
+		{
+			"same_all_fields",
+			SigningProfile{Issuer: "iss", Subject: "sub", RepositoryID: "111", RepositoryOwnerID: "222"},
+			true,
+		},
+		{
+			"issuer_differs",
+			SigningProfile{Issuer: "other", Subject: "sub", RepositoryID: "111", RepositoryOwnerID: "222"},
+			false,
+		},
+		{
+			"subject_differs",
+			SigningProfile{Issuer: "iss", Subject: "other", RepositoryID: "111", RepositoryOwnerID: "222"},
+			false,
+		},
+		{
+			"repo_id_differs",
+			SigningProfile{Issuer: "iss", Subject: "sub", RepositoryID: "999", RepositoryOwnerID: "222"},
+			false,
+		},
+		{
+			"owner_id_differs",
+			SigningProfile{Issuer: "iss", Subject: "sub", RepositoryID: "111", RepositoryOwnerID: "999"},
+			false,
+		},
+		{
+			"tofu_becomes_pinned",
+			// Issuer+subject identical, but one side captured numeric IDs and
+			// the other didn't. Per ADR 0007 this is a re-approval event.
+			SigningProfile{Issuer: "iss", Subject: "sub"},
+			false,
+		},
+		{
+			"regex_metadata_ignored",
+			// Regexes are relaxation knobs, not identity — they do not break equality.
+			SigningProfile{
+				Issuer:            "iss",
+				Subject:           "sub",
+				RepositoryID:      "111",
+				RepositoryOwnerID: "222",
+				SubjectRegex:      ".+",
+				IssuerRegex:       ".+",
+				ProfileVersion:    1,
+			},
+			true,
+		},
+		{
+			"both_empty_vs_populated",
+			SigningProfile{},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt

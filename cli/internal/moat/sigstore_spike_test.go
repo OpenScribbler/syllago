@@ -1,3 +1,11 @@
+// Spike helpers retained for the Phase-0 Rekor-fixture integration test.
+// Per ADR 0007, production MOAT verification consumes .sigstore bundles
+// directly via sgbundle.LoadJSONFromReader (see manifest_verify.go), so
+// BuildBundle and VerifyItemSigstore are test-only. Keeping them here
+// preserves the end-to-end spike assertion that our canonical payload
+// hashing matches Rekor logIndex 1336116369 from syllago-meta-registry.
+//
+// This file is compiled only into the test binary (suffix _test.go).
 package moat
 
 import (
