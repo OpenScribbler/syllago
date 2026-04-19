@@ -266,3 +266,44 @@ func TestVerifyManifest_TamperedArtifact(t *testing.T) {
 	_, err := VerifyManifest(tampered, bundleBytes, &profile, trustedRoot)
 	expectVerifyError(t, err, CodeInvalid)
 }
+
+// TestVerifyManifest_WrongTrustAnchor — valid-shape trusted root JSON with
+// no Fulcio CAs and no Rekor keys must fail verification. This is the
+// reduced-form "rotated-key" test: a trust anchor that doesn't contain the
+// material needed to validate the bundle. The full rotated-key test (bundle
+// signed against v1 keys, verified against v2 trusted root) needs a second
+// captured trust root and is deferred to slice 2+ per ADR 0007.
+//
+// Slice-1 error taxonomy: either CodeTrustedRootCorrupt (sigstore-go rejects
+// the minimal JSON at parse time) or CodeInvalid (parse succeeds, verify
+// fails with no matching key). Both are acceptable; the test accepts either
+// to avoid coupling to sigstore-go's internal parse/verify boundary.
+func TestVerifyManifest_WrongTrustAnchor(t *testing.T) {
+	t.Parallel()
+	artifact, bundleBytes := buildFixtureBundleBytes(t)
+	profile := expectedProfile()
+
+	// Minimal trusted root payload: valid JSON + the mediaType sigstore-go
+	// inspects, but no CA/log material. Serves as a stand-in for "trusted
+	// root that doesn't cover the key material in the bundle."
+	empty := []byte(`{
+		"mediaType": "application/vnd.dev.sigstore.trustedroot+json;version=0.1",
+		"tlogs": [],
+		"certificateAuthorities": [],
+		"ctlogs": [],
+		"timestampAuthorities": []
+	}`)
+
+	_, err := VerifyManifest(artifact, bundleBytes, &profile, empty)
+	if err == nil {
+		t.Fatal("VerifyManifest must reject a bundle whose key material is absent from the trusted root")
+	}
+	var ve *VerifyError
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected *VerifyError, got %T: %v", err, err)
+	}
+	if ve.Code != CodeInvalid && ve.Code != CodeTrustedRootCorrupt {
+		t.Errorf("expected %s or %s, got %s (err=%v)",
+			CodeInvalid, CodeTrustedRootCorrupt, ve.Code, err)
+	}
+}
