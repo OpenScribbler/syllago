@@ -105,6 +105,7 @@ func init() {
 	rootCmd.AddCommand(backfillCmd)
 	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(capmonCmd)
+	rootCmd.AddCommand(moatCmd)
 }
 
 var versionCmd = &cobra.Command{

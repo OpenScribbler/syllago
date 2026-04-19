@@ -30,22 +30,58 @@ const (
 // registry_signing_profile — a mismatch requires explicit re-approval (spec
 // §Registry Signing + G-4). Name/operator changes in the manifest do NOT
 // require re-approval; only this pair does.
+//
+// Per ADR 0007 the profile grew numeric-ID fields (RepositoryID,
+// RepositoryOwnerID) to bind GitHub-issued signatures to immutable owner/repo
+// identifiers, closing the repo-transfer forgery vector. Old configs captured
+// before these fields existed deserialize with empty strings and continue to
+// work — Equal and IsZero both handle the empty-string case as "not pinned."
 type SigningProfile struct {
 	Issuer  string `json:"issuer"`
 	Subject string `json:"subject"`
+
+	// ProfileVersion tracks schema shape for additive extensions. Absent or
+	// zero on load means v1 (back-compat for profiles captured before the
+	// field existed). New captures set this explicitly.
+	ProfileVersion int `json:"profile_version,omitempty"`
+
+	// SubjectRegex / IssuerRegex relax the exact-match rule when set. Reserved
+	// for slice 2+; slice-1 verifiers compare Subject/Issuer exactly.
+	SubjectRegex string `json:"subject_regex,omitempty"`
+	IssuerRegex  string `json:"issuer_regex,omitempty"`
+
+	// RepositoryID / RepositoryOwnerID are the immutable GitHub OIDC numeric
+	// identifiers. Populated at pin-time by TOFU capture from the first
+	// observed cert. When Issuer is the GitHub Actions issuer, the verifier
+	// MUST match both — see moat.VerifyManifest.
+	RepositoryID      string `json:"repository_id,omitempty"`
+	RepositoryOwnerID string `json:"repository_owner_id,omitempty"`
 }
 
 // IsZero reports whether no signing profile has been recorded yet. Used to
 // distinguish "first time seeing this registry" (TOFU prompt) from "profile
 // changed since last approval" (re-approval prompt).
+//
+// Only the issuer+subject pair determines "has a profile" — ProfileVersion,
+// regexes, and numeric IDs are metadata that can only exist alongside a
+// populated issuer+subject.
 func (s SigningProfile) IsZero() bool {
 	return s.Issuer == "" && s.Subject == ""
 }
 
-// Equal reports exact issuer+subject match. Both fields must match — the
-// signing profile is a pair, not a disjunction.
+// Equal reports exact issuer+subject + numeric-ID match. All four fields
+// (issuer, subject, repository_id, repository_owner_id) must match. A profile
+// that pinned the numeric IDs and a profile that didn't are NOT equal even if
+// the issuer+subject line up — bumping from TOFU to pinned-ID is a
+// re-approval event per ADR 0007.
+//
+// ProfileVersion and the regex fields do not participate in equality: they
+// are schema metadata and relaxation knobs, not identity.
 func (s SigningProfile) Equal(other SigningProfile) bool {
-	return s.Issuer == other.Issuer && s.Subject == other.Subject
+	return s.Issuer == other.Issuer &&
+		s.Subject == other.Subject &&
+		s.RepositoryID == other.RepositoryID &&
+		s.RepositoryOwnerID == other.RepositoryOwnerID
 }
 
 // Registry represents a content source registered in this project.
@@ -75,6 +111,18 @@ type Registry struct {
 	Trust               string     `json:"trust,omitempty"`                 // "trusted", "verified", "community" (default: "community")
 	Visibility          string     `json:"visibility,omitempty"`            // "public", "private", "unknown"
 	VisibilityCheckedAt *time.Time `json:"visibility_checked_at,omitempty"` // for TTL cache (re-probe after 1 hour)
+
+	// TrustedRoot is a forward-compat reservation per ADR 0007. When
+	// populated, it names a filesystem path to a Sigstore trusted_root.json
+	// the verifier should use for THIS registry in preference to the bundled
+	// default. Slice 1 does not consume the field — the verifier always
+	// loads the bundled root — but the field must exist on-disk now so
+	// slice 2+ can wire it through without a config migration.
+	//
+	// Empty string means "use bundled default." Values are treated as
+	// absolute filesystem paths; relative paths are not supported (they
+	// would be ambiguous across project-root vs. CWD contexts).
+	TrustedRoot string `json:"trusted_root,omitempty"`
 }
 
 // IsMOAT reports whether this registry is MOAT-backed. Treats the zero/empty

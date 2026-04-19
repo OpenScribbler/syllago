@@ -182,17 +182,29 @@ Loadouts remain distributed via Syllago's own `registry.yaml` mechanism without 
 
 ### G-3: Manifest Signing and Verification [MAJOR — No Implementation Exists] — `syllago-pwojm`
 
+**See ADR 0007** (`docs/adr/0007-moat-g3-slice-1-scope.md`) for the architectural decisions that supersede the original options below. ADR 0007 is the authoritative source for slice-1 scope; the text here is retained for historical context.
+
 **MOAT requires:** Verify registry manifest using cosign keyless OIDC signing. Fetch bundle at `{manifest_uri}.sigstore`. Verify bundle covers exact manifest bytes, OIDC issuer/subject match `registry_signing_profile`, Rekor transparency log entry is valid. Rekor unavailability is a hard failure.
 
-**Syllago has:** Hidden stub commands `sign`/`verify` returning "not yet implemented." An unimplemented `signing` package with interface definitions.
+**Syllago has:** Hidden stub commands `sign`/`verify` returning "not yet implemented." An unimplemented `signing` package with interface definitions. A spike (`syllago-9jzgr`) in `cli/internal/moat/` that verifies one real meta-registry Rekor entry end-to-end via sigstore-go, built around a `BuildBundle` helper that converts raw Rekor API JSON into a sigstore bundle.
 
-**Gap:** No Sigstore/cosign integration. No Rekor client. No OIDC verification.
+**Gap:** No production-ready primitive. The spike's `BuildBundle` path is architectural dead-weight: MOAT Publisher Actions emit `.sigstore` bundles directly, and sigstore-go can load them via `sgbundle.LoadJSONFromReader`. The spike predates that decision.
 
-**Architecture:** Two options:
-1. **Shell out to `cosign` CLI** — simpler, requires cosign installed. Good for MVP.
-2. **Use `sigstore-go` library** — no external dependency, better for production.
+**Architecture (decided in ADR 0007):** Ship a primitive-only slice 1 plus minimal forward-compat schema.
 
-Recommendation: Use `sigstore-go` from the start. It's the mature Go library for this. The existing `signing` package interfaces should be evaluated for compatibility but will likely need redesign (they're per-hook, not per-manifest/per-item).
+**Slice 1 consists of:**
+
+1. `VerifyManifest(manifestBytes, bundleBytes, pinnedProfile, trustedRoot) (VerificationResult, error)` consuming `.sigstore` bundles by constructing `*sgbundle.Bundle` and calling its `UnmarshalJSON` method. No raw Rekor JSON in production. No live network calls.
+2. Structured `VerificationResult` exposing `RevocationChecked: false` explicitly — callers cannot collapse to "verified" without ignoring the bit.
+3. `SigningProfile` gains `ProfileVersion`, `SubjectRegex`, `IssuerRegex`, `RepositoryID`, `RepositoryOwnerID`. When issuer is `https://token.actions.githubusercontent.com`, verifier MUST match both numeric IDs (from Fulcio OIDC extensions `1.3.6.1.4.1.57264.1.15` (repo) and `1.3.6.1.4.1.57264.1.17` (owner)) — this closes the repo-transfer forgery vector. Note: `.12`/`.13` are URI/digest strings (mutable on transfer) and are NOT the correct OIDs for this binding.
+4. `config.Registry.TrustedRoot` optional string (schema only; zero value = bundled default). Wired through to verification in slice 2+.
+5. `trusted_root.json` bundled via `go:embed` alongside an `issued_at` constant. 90-day warn / 180-day escalation / 365-day hard-fail. `moat trust status` command exit-coded 0/1/2.
+6. `BuildBundle` moves to test-only helpers.
+7. Three-state trust output: `signed` / `unsigned` / `invalid`. The word `verified` is reserved for when revocation lands.
+
+**Explicitly deferred to slice 2+:** `registry add` TOFU flow, install-time verification wiring, signing-identity UX (flag vs. allowlist vs. interactive), TUF refresh, revocation trust model, per-registry `TrustedRoot` enforcement, non-GitHub OIDC issuers.
+
+**Parallel MOAT spec PR:** syllago commits to contributing a spec PR formalizing trusted-root acquisition modes, GitHub OIDC numeric-ID binding, and the slice-1 error code vocabulary.
 
 ### G-4: Registry Trust Bootstrap & Signing Profile Tracking [MAJOR] — `syllago-25vib`
 

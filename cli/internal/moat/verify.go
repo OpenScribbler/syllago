@@ -46,6 +46,13 @@ type AttestationItem struct {
 	RekorLogIndex int64  `json:"rekor_log_index"`
 }
 
+// ProfileVersion values in use. Unversioned profiles (captured before this
+// field existed) default to ProfileVersionV1 on load. A future bump to v2
+// signals GitLab/Buildkite/etc. issuer support.
+const (
+	ProfileVersionV1 = 1
+)
+
 // SigningProfile is the expected OIDC identity for a Publisher or Registry
 // workflow. For GitHub Actions keyless signing, the issuer is always
 // https://token.actions.githubusercontent.com; the subject is the workflow
@@ -54,9 +61,57 @@ type AttestationItem struct {
 // The JSON tags serve manifest.go's registry_signing_profile and per-item
 // signing_profile fields — the wire representation uses lowercase keys.
 // Verification code that holds SigningProfile values in memory is unaffected.
+//
+// Numeric ID binding (RepositoryID, RepositoryOwnerID) closes the GitHub
+// repo-transfer forgery vector: the SAN subject is derived from mutable
+// owner/repo names that a transferee can re-register, but the GitHub OIDC
+// extensions at OIDs 1.3.6.1.4.1.57264.1.15 (repo) and .1.17 (owner) are
+// immutable numeric identifiers. When Issuer is the GitHub Actions issuer,
+// verifiers MUST compare both numeric IDs in addition to the SAN. See ADR
+// 0007 and the header of manifest_verify.go for why .12/.13 is wrong.
 type SigningProfile struct {
 	Issuer  string `json:"issuer"`
 	Subject string `json:"subject"`
+
+	// ProfileVersion tracks schema shape for additive extensions. Absent or
+	// zero on load means v1 (back-compat for profiles captured before the
+	// field existed). New captures set this explicitly.
+	ProfileVersion int `json:"profile_version,omitempty"`
+
+	// SubjectRegex and IssuerRegex are optional match relaxations for when
+	// an exact string match is too strict (e.g. branch rotation). When set,
+	// they take precedence over the exact Subject/Issuer equality check.
+	// Reserved for slice 2+ usage; verifiers in slice 1 compare Subject/Issuer
+	// exactly.
+	SubjectRegex string `json:"subject_regex,omitempty"`
+	IssuerRegex  string `json:"issuer_regex,omitempty"`
+
+	// RepositoryID and RepositoryOwnerID are the GitHub OIDC numeric
+	// identifiers extracted from the Fulcio cert. Populated at pin-time by
+	// TOFU capture from the first observed cert. When Issuer is the GitHub
+	// Actions issuer, the verifier MUST match both.
+	RepositoryID      string `json:"repository_id,omitempty"`
+	RepositoryOwnerID string `json:"repository_owner_id,omitempty"`
+}
+
+// GitHubActionsIssuer is the OIDC issuer string for workflows running in
+// GitHub Actions. Used to gate the numeric-ID match.
+const GitHubActionsIssuer = "https://token.actions.githubusercontent.com"
+
+// EffectiveProfileVersion returns the profile version with the v1 default
+// applied for pre-versioning profiles.
+func (s SigningProfile) EffectiveProfileVersion() int {
+	if s.ProfileVersion == 0 {
+		return ProfileVersionV1
+	}
+	return s.ProfileVersion
+}
+
+// RequiresNumericIDMatch reports whether the issuer is the GitHub Actions
+// issuer, in which case verifiers MUST match RepositoryID and
+// RepositoryOwnerID against the OIDC extensions on the cert.
+func (s SigningProfile) RequiresNumericIDMatch() bool {
+	return s.Issuer == GitHubActionsIssuer
 }
 
 // CanonicalPayloadFor returns the exact byte sequence that the Publisher
