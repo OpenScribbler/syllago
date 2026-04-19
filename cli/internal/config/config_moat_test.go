@@ -145,6 +145,101 @@ func containsSubstring(haystack, needle string) bool {
 	return false
 }
 
+// TestRegistry_TrustedRootRoundTrip exercises the ADR 0007 forward-compat
+// field. We care that the value persists, that the zero value omits from
+// JSON (so existing configs don't pick up trailing noise on save), and that
+// slice-1 consumers get the same string back they wrote.
+func TestRegistry_TrustedRootRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	r := Registry{
+		Name:        "acme",
+		URL:         "https://registry.example.com",
+		Type:        RegistryTypeMOAT,
+		ManifestURI: "https://registry.example.com/manifest.json",
+		TrustedRoot: "/etc/syllago/corp-trusted-root.json",
+	}
+	data, err := json.Marshal(r)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if !containsSubstring(string(data), `"trusted_root":"/etc/syllago/corp-trusted-root.json"`) {
+		t.Errorf("trusted_root must serialize when populated, got: %s", data)
+	}
+
+	var restored Registry
+	if err := json.Unmarshal(data, &restored); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if restored.TrustedRoot != r.TrustedRoot {
+		t.Errorf("TrustedRoot not preserved: got %q want %q", restored.TrustedRoot, r.TrustedRoot)
+	}
+
+	// Empty value must omit entirely. Stale configs that save-and-reload
+	// must not grow a trusted_root:"" field.
+	empty := Registry{Name: "g", URL: "u", Type: RegistryTypeGit}
+	emptyData, _ := json.Marshal(empty)
+	if containsSubstring(string(emptyData), `"trusted_root"`) {
+		t.Errorf("empty trusted_root must be omitted, got: %s", emptyData)
+	}
+}
+
+// TestSigningProfile_NumericIDsRoundTrip — the repository_id /
+// repository_owner_id / profile_version / regex fields must persist
+// through a Marshal/Unmarshal cycle. This is the forward-compat capture
+// path — if these silently drop, TOFU pinning is broken.
+func TestSigningProfile_NumericIDsRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	orig := SigningProfile{
+		Issuer:            "https://token.actions.githubusercontent.com",
+		Subject:           "https://github.com/acme/reg/.github/workflows/pub.yml@refs/heads/main",
+		ProfileVersion:    1,
+		SubjectRegex:      ".+/pub\\.yml@.+",
+		IssuerRegex:       "^https://.+",
+		RepositoryID:      "987654321",
+		RepositoryOwnerID: "123456789",
+	}
+	data, err := json.Marshal(orig)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	var restored SigningProfile
+	if err := json.Unmarshal(data, &restored); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if restored.RepositoryID != orig.RepositoryID {
+		t.Errorf("RepositoryID = %q; want %q", restored.RepositoryID, orig.RepositoryID)
+	}
+	if restored.RepositoryOwnerID != orig.RepositoryOwnerID {
+		t.Errorf("RepositoryOwnerID = %q; want %q", restored.RepositoryOwnerID, orig.RepositoryOwnerID)
+	}
+	if restored.ProfileVersion != orig.ProfileVersion {
+		t.Errorf("ProfileVersion = %d; want %d", restored.ProfileVersion, orig.ProfileVersion)
+	}
+	if restored.SubjectRegex != orig.SubjectRegex {
+		t.Errorf("SubjectRegex = %q; want %q", restored.SubjectRegex, orig.SubjectRegex)
+	}
+	if restored.IssuerRegex != orig.IssuerRegex {
+		t.Errorf("IssuerRegex = %q; want %q", restored.IssuerRegex, orig.IssuerRegex)
+	}
+
+	// Empty extension fields must omit from JSON (keep legacy configs clean).
+	legacy := SigningProfile{Issuer: "i", Subject: "s"}
+	legacyData, _ := json.Marshal(legacy)
+	for _, banned := range []string{
+		`"profile_version"`,
+		`"subject_regex"`,
+		`"issuer_regex"`,
+		`"repository_id"`,
+		`"repository_owner_id"`,
+	} {
+		if containsSubstring(string(legacyData), banned) {
+			t.Errorf("legacy-shape SigningProfile JSON must omit %s, got: %s", banned, legacyData)
+		}
+	}
+}
+
 // TestSigningProfile_IsZero covers the tri-state logic: unset (zero),
 // partially set (either field empty), and fully populated.
 func TestSigningProfile_IsZero(t *testing.T) {
