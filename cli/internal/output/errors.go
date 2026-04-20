@@ -91,12 +91,13 @@ const (
 	ErrSystemIO      = "SYSTEM_002" // filesystem read/write/mkdir failure
 
 	// MOAT: manifest-based signing / verification.
-	ErrMoatIdentityUnpinned = "MOAT_001" // registry add has neither allowlist match nor --signing-identity
-	ErrMoatIdentityInvalid  = "MOAT_002" // --signing-* flags are incomplete or malformed
-	ErrMoatIdentityMismatch = "MOAT_003" // manifest cert does not match pinned profile (numeric ID, issuer, or subject)
-	ErrMoatInvalid          = "MOAT_004" // manifest or bundle malformed, missing, or unreadable
-	ErrMoatTrustedRootStale = "MOAT_005" // bundled trusted root exceeded its 365-day cliff
-	ErrMoatUnsignedWithPin  = "MOAT_006" // registry has a pinned profile but no manifest/bundle found in checkout
+	ErrMoatIdentityUnpinned    = "MOAT_001" // registry add has neither allowlist match nor --signing-identity
+	ErrMoatIdentityInvalid     = "MOAT_002" // --signing-* flags are incomplete or malformed
+	ErrMoatIdentityMismatch    = "MOAT_003" // manifest cert does not match pinned profile (numeric ID, issuer, or subject)
+	ErrMoatInvalid             = "MOAT_004" // manifest or bundle malformed, missing, or unreadable
+	ErrMoatTrustedRootStale    = "MOAT_005" // bundled trusted root exceeded its 365-day cliff
+	ErrMoatUnsignedWithPin     = "MOAT_006" // registry has a pinned profile but no manifest/bundle found in checkout
+	ErrMoatTrustedRootOverride = "MOAT_007" // operator-supplied trusted_root.json path (--trusted-root or reg.trusted_root) unusable
 )
 
 // docsURL converts an error code like "CATALOG_001" to its documentation URL.
@@ -203,6 +204,7 @@ func AllErrorCodes() []string {
 		ErrMoatInvalid,
 		ErrMoatTrustedRootStale,
 		ErrMoatUnsignedWithPin,
+		ErrMoatTrustedRootOverride,
 	}
 }
 

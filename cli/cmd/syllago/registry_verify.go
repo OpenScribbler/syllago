@@ -61,6 +61,7 @@ const (
 type verifyOutcome struct {
 	Label            trustLabel
 	Source           moat.TrustedRootSource
+	TrustedRootPath  string // populated only when Source is path (override in use)
 	ProfileVersion   int
 	ResultSummary    string // one-line human summary for stdout
 	NumericIDMatched bool
@@ -71,11 +72,40 @@ type verifyOutcome struct {
 var verifyManifestFn = moat.VerifyManifest
 
 // verifyTrustedRootFn returns the trusted-root info to use for a given
-// registry and wall-clock. Tests override this to exercise staleness
-// branches without touching the embedded bundle. Slice 2d will extend
-// this to honor reg.TrustedRoot.
-var verifyTrustedRootFn = func(_ *config.Registry, now time.Time) moat.TrustedRootInfo {
-	return moat.BundledTrustedRoot(now)
+// registry, CLI override, and wall-clock. Precedence per ADR 0007 slice 2d:
+//  1. override != "" (the --trusted-root CLI flag) wins over everything.
+//  2. reg.TrustedRoot is used if set.
+//  3. Fall back to the bundled root.
+//
+// An error return means the operator's override path is unusable — callers
+// must surface MOAT_007 rather than silently fall back to the bundled root,
+// which would be a trust downgrade the operator did not authorize.
+//
+// Tests override this to inject canned trusted-root info without touching
+// the filesystem or embedded bundle.
+var verifyTrustedRootFn = func(reg *config.Registry, override string, now time.Time) (moat.TrustedRootInfo, error) {
+	path := override
+	if path == "" && reg != nil {
+		path = reg.TrustedRoot
+	}
+	if path == "" {
+		return moat.BundledTrustedRoot(now), nil
+	}
+	return moat.TrustedRootFromPath(path, now)
+}
+
+// trustedRootPathForRegistry returns the resolved path the verifier will
+// load when called with (reg, override) — used by emitters to name the file
+// in operator-visible output. Kept separate from verifyTrustedRootFn so
+// tests that swap the loader don't lose the path-reporting signal.
+func trustedRootPathForRegistry(reg *config.Registry, override string) string {
+	if override != "" {
+		return override
+	}
+	if reg != nil {
+		return reg.TrustedRoot
+	}
+	return ""
 }
 
 // verifyRegistryForAdd is the main entry point called from runAddFromRegistry.
@@ -83,7 +113,10 @@ var verifyTrustedRootFn = func(_ *config.Registry, now time.Time) moat.TrustedRo
 // (caller proceeds silently). Returns a populated outcome for MOAT registries
 // that passed verification. Returns a *StructuredError for verification
 // failures — callers should return that error straight up the stack.
-func verifyRegistryForAdd(reg *config.Registry, cloneDir string) (*verifyOutcome, error) {
+//
+// trustedRootOverride is the optional --trusted-root CLI flag. Empty means
+// "consult reg.TrustedRoot; fall back to bundled."
+func verifyRegistryForAdd(reg *config.Registry, cloneDir string, trustedRootOverride string) (*verifyOutcome, error) {
 	if reg == nil {
 		return nil, nil
 	}
@@ -117,10 +150,22 @@ func verifyRegistryForAdd(reg *config.Registry, cloneDir string) (*verifyOutcome
 		)
 	}
 
-	// Staleness check: refuse to verify against an expired trusted root. This
-	// fires BEFORE we read the manifest so operators see the refresh hint
-	// regardless of manifest state.
-	rootInfo := verifyTrustedRootFn(reg, time.Now())
+	// Load the trusted root — CLI override > reg.TrustedRoot > bundled. An
+	// error from the loader is MOAT_007 (operator config broken). Silent
+	// fall-back to the bundled root would be a trust downgrade.
+	rootInfo, rootErr := verifyTrustedRootFn(reg, trustedRootOverride, time.Now())
+	if rootErr != nil {
+		return nil, output.NewStructuredErrorDetail(
+			output.ErrMoatTrustedRootOverride,
+			fmt.Sprintf("cannot load operator-supplied trusted root for registry %q", reg.Name),
+			"Fix the path or remove it to fall back to the bundled trusted root. See `syllago moat trust status` for what's in effect now.",
+			rootErr.Error(),
+		)
+	}
+
+	// Staleness check applies only to the bundled root — override paths
+	// are the operator's responsibility (moat.TrustedRootFromPath always
+	// returns Status=Fresh).
 	if rootInfo.Status == moat.TrustedRootStatusExpired ||
 		rootInfo.Status == moat.TrustedRootStatusMissing ||
 		rootInfo.Status == moat.TrustedRootStatusCorrupt {
@@ -131,6 +176,12 @@ func verifyRegistryForAdd(reg *config.Registry, cloneDir string) (*verifyOutcome
 			moat.StalenessMessage(rootInfo),
 		)
 	}
+
+	// Emit the operator info line for override paths BEFORE reading the
+	// manifest. Auditors reading stderr on a verify-fail need to see which
+	// root was in effect, even when verification later errors out.
+	trustedRootPath := trustedRootPathForRegistry(reg, trustedRootOverride)
+	emitTrustedRootPathInfo(reg.Name, rootInfo.Source, trustedRootPath)
 
 	// Load manifest + bundle from the clone directory. Missing files with a
 	// pinned profile is MOAT_006 — do not silently fall through to unsigned.
@@ -176,6 +227,7 @@ func verifyRegistryForAdd(reg *config.Registry, cloneDir string) (*verifyOutcome
 	return &verifyOutcome{
 		Label:            trustSigned,
 		Source:           rootInfo.Source,
+		TrustedRootPath:  trustedRootPath,
 		ProfileVersion:   moatProfile.EffectiveProfileVersion(),
 		ResultSummary:    summary,
 		NumericIDMatched: result.NumericIDMatched,
@@ -264,4 +316,19 @@ func emitTrustLabel(outcome *verifyOutcome, regName string) {
 	}
 	fmt.Fprintf(output.Writer, "  Trust: %s (registry %s, root: %s)\n",
 		outcome.Label, regName, outcome.Source)
+}
+
+// emitTrustedRootPathInfo writes an auditor-visible marker naming the
+// operator-supplied trusted_root.json in effect. Emitted to stderr in the
+// stable key=value form specified by ADR 0007 D1, so CI pipelines can grep
+// on it. Silent when the bundled root is in use — that's the default case
+// and spamming it would train operators to ignore the line.
+func emitTrustedRootPathInfo(regName string, source moat.TrustedRootSource, path string) {
+	if source != moat.TrustedRootSourcePathFlag || path == "" {
+		return
+	}
+	if output.Quiet || output.JSON {
+		return
+	}
+	fmt.Fprintf(output.ErrWriter, "moat.trusted_root_path=%s (registry=%s)\n", path, regName)
 }

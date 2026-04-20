@@ -15,6 +15,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -36,10 +37,13 @@ func freshBundledRoot() moat.TrustedRootInfo {
 
 // withStubbedVerifiers wires the two indirection points for one test case
 // and registers cleanup. Helpers keep the per-test boilerplate to one line.
+// The trusted-root stub takes the slice-2d (reg, override, now) signature;
+// tests that don't exercise the override branch pass a closure that ignores
+// the override argument.
 func withStubbedVerifiers(
 	t *testing.T,
 	vm func([]byte, []byte, *moat.SigningProfile, []byte) (moat.VerificationResult, error),
-	tr func(*config.Registry, time.Time) moat.TrustedRootInfo,
+	tr func(*config.Registry, string, time.Time) (moat.TrustedRootInfo, error),
 ) {
 	t.Helper()
 	origVM := verifyManifestFn
@@ -50,6 +54,13 @@ func withStubbedVerifiers(
 		verifyManifestFn = origVM
 		verifyTrustedRootFn = origTR
 	})
+}
+
+// stubbedFreshBundledRoot is a convenience trusted-root stub for tests that
+// just need verification to move past the staleness gate with the bundled
+// default in effect.
+func stubbedFreshBundledRoot(_ *config.Registry, _ string, _ time.Time) (moat.TrustedRootInfo, error) {
+	return freshBundledRoot(), nil
 }
 
 // writeManifestFixture drops placeholder manifest + bundle files into a
@@ -95,7 +106,7 @@ func expectStructuredErrorCode(t *testing.T, err error, wantCode string) {
 // (nil, nil) so callers can chain without nil-check boilerplate.
 func TestVerifyRegistryForAdd_NilReg(t *testing.T) {
 	t.Parallel()
-	out, err := verifyRegistryForAdd(nil, "")
+	out, err := verifyRegistryForAdd(nil, "", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -109,7 +120,7 @@ func TestVerifyRegistryForAdd_NilReg(t *testing.T) {
 func TestVerifyRegistryForAdd_UnpinnedGitRegistry(t *testing.T) {
 	t.Parallel()
 	reg := &config.Registry{Name: "someone/legacy", Type: config.RegistryTypeGit}
-	out, err := verifyRegistryForAdd(reg, t.TempDir())
+	out, err := verifyRegistryForAdd(reg, t.TempDir(), "")
 	if err != nil {
 		t.Fatalf("unsigned git registry should bypass verify: %v", err)
 	}
@@ -123,7 +134,7 @@ func TestVerifyRegistryForAdd_UnpinnedGitRegistry(t *testing.T) {
 func TestVerifyRegistryForAdd_MoatTypedWithoutProfile(t *testing.T) {
 	t.Parallel()
 	reg := &config.Registry{Name: "corrupt/moat", Type: config.RegistryTypeMOAT}
-	_, err := verifyRegistryForAdd(reg, t.TempDir())
+	_, err := verifyRegistryForAdd(reg, t.TempDir(), "")
 	expectStructuredErrorCode(t, err, output.ErrMoatIdentityUnpinned)
 }
 
@@ -142,7 +153,7 @@ func TestVerifyRegistryForAdd_HappyPath(t *testing.T) {
 				NumericIDMatched:      true,
 			}, nil
 		},
-		func(*config.Registry, time.Time) moat.TrustedRootInfo { return freshBundledRoot() },
+		stubbedFreshBundledRoot,
 	)
 
 	reg := &config.Registry{
@@ -150,7 +161,7 @@ func TestVerifyRegistryForAdd_HappyPath(t *testing.T) {
 		Type:           config.RegistryTypeMOAT,
 		SigningProfile: pinnedGitHubProfile(),
 	}
-	out, err := verifyRegistryForAdd(reg, cloneDir)
+	out, err := verifyRegistryForAdd(reg, cloneDir, "")
 	if err != nil {
 		t.Fatalf("happy path must succeed: %v", err)
 	}
@@ -180,7 +191,7 @@ func TestVerifyRegistryForAdd_IdentityMismatch(t *testing.T) {
 				Message: "repository_id mismatch: got=\"9999\" want=\"1193220959\"",
 			}
 		},
-		func(*config.Registry, time.Time) moat.TrustedRootInfo { return freshBundledRoot() },
+		stubbedFreshBundledRoot,
 	)
 
 	reg := &config.Registry{
@@ -188,7 +199,7 @@ func TestVerifyRegistryForAdd_IdentityMismatch(t *testing.T) {
 		Type:           config.RegistryTypeMOAT,
 		SigningProfile: pinnedGitHubProfile(),
 	}
-	_, err := verifyRegistryForAdd(reg, cloneDir)
+	_, err := verifyRegistryForAdd(reg, cloneDir, "")
 	expectStructuredErrorCode(t, err, output.ErrMoatIdentityMismatch)
 }
 
@@ -204,7 +215,7 @@ func TestVerifyRegistryForAdd_GenericVerifyErrorCollapses(t *testing.T) {
 				Message: "sigstore-go verify: signature invalid",
 			}
 		},
-		func(*config.Registry, time.Time) moat.TrustedRootInfo { return freshBundledRoot() },
+		stubbedFreshBundledRoot,
 	)
 
 	reg := &config.Registry{
@@ -212,7 +223,7 @@ func TestVerifyRegistryForAdd_GenericVerifyErrorCollapses(t *testing.T) {
 		Type:           config.RegistryTypeMOAT,
 		SigningProfile: pinnedGitHubProfile(),
 	}
-	_, err := verifyRegistryForAdd(reg, cloneDir)
+	_, err := verifyRegistryForAdd(reg, cloneDir, "")
 	expectStructuredErrorCode(t, err, output.ErrMoatInvalid)
 }
 
@@ -228,7 +239,7 @@ func TestVerifyRegistryForAdd_TrustedRootStaleCode(t *testing.T) {
 				Message: "trusted root bytes empty",
 			}
 		},
-		func(*config.Registry, time.Time) moat.TrustedRootInfo { return freshBundledRoot() },
+		stubbedFreshBundledRoot,
 	)
 
 	reg := &config.Registry{
@@ -236,7 +247,7 @@ func TestVerifyRegistryForAdd_TrustedRootStaleCode(t *testing.T) {
 		Type:           config.RegistryTypeMOAT,
 		SigningProfile: pinnedGitHubProfile(),
 	}
-	_, err := verifyRegistryForAdd(reg, cloneDir)
+	_, err := verifyRegistryForAdd(reg, cloneDir, "")
 	expectStructuredErrorCode(t, err, output.ErrMoatTrustedRootStale)
 }
 
@@ -252,7 +263,7 @@ func TestVerifyRegistryForAdd_VerifyIdentityUnpinnedCode(t *testing.T) {
 				Message: "pinned signing profile required",
 			}
 		},
-		func(*config.Registry, time.Time) moat.TrustedRootInfo { return freshBundledRoot() },
+		stubbedFreshBundledRoot,
 	)
 
 	reg := &config.Registry{
@@ -260,7 +271,7 @@ func TestVerifyRegistryForAdd_VerifyIdentityUnpinnedCode(t *testing.T) {
 		Type:           config.RegistryTypeMOAT,
 		SigningProfile: pinnedGitHubProfile(),
 	}
-	_, err := verifyRegistryForAdd(reg, cloneDir)
+	_, err := verifyRegistryForAdd(reg, cloneDir, "")
 	expectStructuredErrorCode(t, err, output.ErrMoatIdentityUnpinned)
 }
 
@@ -274,7 +285,7 @@ func TestVerifyRegistryForAdd_PlainErrorCollapses(t *testing.T) {
 		func(_, _ []byte, _ *moat.SigningProfile, _ []byte) (moat.VerificationResult, error) {
 			return moat.VerificationResult{}, errors.New("something unexpected")
 		},
-		func(*config.Registry, time.Time) moat.TrustedRootInfo { return freshBundledRoot() },
+		stubbedFreshBundledRoot,
 	)
 
 	reg := &config.Registry{
@@ -282,7 +293,7 @@ func TestVerifyRegistryForAdd_PlainErrorCollapses(t *testing.T) {
 		Type:           config.RegistryTypeMOAT,
 		SigningProfile: pinnedGitHubProfile(),
 	}
-	_, err := verifyRegistryForAdd(reg, cloneDir)
+	_, err := verifyRegistryForAdd(reg, cloneDir, "")
 	expectStructuredErrorCode(t, err, output.ErrMoatInvalid)
 }
 
@@ -296,7 +307,7 @@ func TestVerifyRegistryForAdd_MissingManifestWithPin(t *testing.T) {
 			t.Fatal("verifyManifestFn should not run when manifest is missing")
 			return moat.VerificationResult{}, nil
 		},
-		func(*config.Registry, time.Time) moat.TrustedRootInfo { return freshBundledRoot() },
+		stubbedFreshBundledRoot,
 	)
 
 	reg := &config.Registry{
@@ -304,7 +315,7 @@ func TestVerifyRegistryForAdd_MissingManifestWithPin(t *testing.T) {
 		Type:           config.RegistryTypeMOAT,
 		SigningProfile: pinnedGitHubProfile(),
 	}
-	_, err := verifyRegistryForAdd(reg, cloneDir)
+	_, err := verifyRegistryForAdd(reg, cloneDir, "")
 	expectStructuredErrorCode(t, err, output.ErrMoatUnsignedWithPin)
 }
 
@@ -320,7 +331,7 @@ func TestVerifyRegistryForAdd_MissingBundleOnly(t *testing.T) {
 			t.Fatal("verifyManifestFn should not run when bundle is missing")
 			return moat.VerificationResult{}, nil
 		},
-		func(*config.Registry, time.Time) moat.TrustedRootInfo { return freshBundledRoot() },
+		stubbedFreshBundledRoot,
 	)
 
 	reg := &config.Registry{
@@ -328,7 +339,7 @@ func TestVerifyRegistryForAdd_MissingBundleOnly(t *testing.T) {
 		Type:           config.RegistryTypeMOAT,
 		SigningProfile: pinnedGitHubProfile(),
 	}
-	_, err := verifyRegistryForAdd(reg, cloneDir)
+	_, err := verifyRegistryForAdd(reg, cloneDir, "")
 	expectStructuredErrorCode(t, err, output.ErrMoatUnsignedWithPin)
 }
 
@@ -343,7 +354,7 @@ func TestVerifyRegistryForAdd_TrustedRootExpired(t *testing.T) {
 			t.Fatal("verifyManifestFn should not run when trusted root is expired")
 			return moat.VerificationResult{}, nil
 		},
-		func(*config.Registry, time.Time) moat.TrustedRootInfo {
+		func(*config.Registry, string, time.Time) (moat.TrustedRootInfo, error) {
 			return moat.TrustedRootInfo{
 				Source:    moat.TrustedRootSourceBundled,
 				Status:    moat.TrustedRootStatusExpired,
@@ -351,7 +362,7 @@ func TestVerifyRegistryForAdd_TrustedRootExpired(t *testing.T) {
 				AgeDays:   730,
 				CliffDate: time.Now().AddDate(-1, 0, 0),
 				Bytes:     []byte("stale"),
-			}
+			}, nil
 		},
 	)
 
@@ -360,7 +371,7 @@ func TestVerifyRegistryForAdd_TrustedRootExpired(t *testing.T) {
 		Type:           config.RegistryTypeMOAT,
 		SigningProfile: pinnedGitHubProfile(),
 	}
-	_, err := verifyRegistryForAdd(reg, cloneDir)
+	_, err := verifyRegistryForAdd(reg, cloneDir, "")
 	expectStructuredErrorCode(t, err, output.ErrMoatTrustedRootStale)
 }
 
@@ -374,7 +385,7 @@ func TestVerifyRegistryForAdd_UnknownProfileVersion(t *testing.T) {
 			t.Fatal("verifyManifestFn should not run for unknown profile versions")
 			return moat.VerificationResult{}, nil
 		},
-		func(*config.Registry, time.Time) moat.TrustedRootInfo { return freshBundledRoot() },
+		stubbedFreshBundledRoot,
 	)
 
 	profile := pinnedGitHubProfile()
@@ -384,7 +395,7 @@ func TestVerifyRegistryForAdd_UnknownProfileVersion(t *testing.T) {
 		Type:           config.RegistryTypeMOAT,
 		SigningProfile: profile,
 	}
-	_, err := verifyRegistryForAdd(reg, cloneDir)
+	_, err := verifyRegistryForAdd(reg, cloneDir, "")
 	expectStructuredErrorCode(t, err, output.ErrMoatInvalid)
 }
 
@@ -460,5 +471,303 @@ func TestEmitTrustLabel_QuietOrJSONSuppresses(t *testing.T) {
 	emitTrustLabel(out, "reg")
 	if buf.Len() == 0 {
 		t.Error("normal mode must write trust label")
+	}
+}
+
+// --------------------------------------------------------------------
+// Slice-2d tests: per-registry trusted-root override & --trusted-root flag.
+// --------------------------------------------------------------------
+
+// writeTrustedRootFile drops a minimal valid trusted_root.json into a temp
+// path and returns the path. Used by the slice-2d override tests which
+// exercise the REAL verifyTrustedRootFn (not a stub) — the whole point is
+// to prove the default loader reaches the file through reg.TrustedRoot or
+// the override parameter.
+func writeTrustedRootFile(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "trusted_root.json")
+	if err := os.WriteFile(path, []byte(`{"mediaType":"test"}`), 0644); err != nil {
+		t.Fatalf("write trusted root: %v", err)
+	}
+	return path
+}
+
+// TestVerifyRegistryForAdd_TrustedRootCLIOverride_SuccessPath — --trusted-root
+// flag points at a valid file. Verifier reaches it, Source=path propagates to
+// the outcome, TrustedRootPath is recorded for the info emitter.
+//
+// Stubs only verifyManifestFn — the real verifyTrustedRootFn must load the
+// file. This test would regress if anyone turns the default loader into a
+// no-op or forgets to consult the override parameter.
+func TestVerifyRegistryForAdd_TrustedRootCLIOverride_SuccessPath(t *testing.T) {
+	cloneDir := t.TempDir()
+	writeManifestFixture(t, cloneDir)
+	overridePath := writeTrustedRootFile(t)
+
+	origVM := verifyManifestFn
+	verifyManifestFn = func(_, _ []byte, _ *moat.SigningProfile, trustedRoot []byte) (moat.VerificationResult, error) {
+		// Prove the override bytes reach the verifier — the bundled root
+		// would be several KB, our fixture is 21 bytes.
+		if len(trustedRoot) > 100 {
+			t.Errorf("expected override trusted-root bytes (~21B), got %d", len(trustedRoot))
+		}
+		return moat.VerificationResult{SignatureValid: true, NumericIDMatched: true}, nil
+	}
+	t.Cleanup(func() { verifyManifestFn = origVM })
+
+	reg := &config.Registry{
+		Name:           "OpenScribbler/syllago-meta-registry",
+		Type:           config.RegistryTypeMOAT,
+		SigningProfile: pinnedGitHubProfile(),
+	}
+	out, err := verifyRegistryForAdd(reg, cloneDir, overridePath)
+	if err != nil {
+		t.Fatalf("override success path must not error: %v", err)
+	}
+	if out == nil {
+		t.Fatal("expected a populated outcome")
+	}
+	if out.Source != moat.TrustedRootSourcePathFlag {
+		t.Errorf("Source = %q, want %q", out.Source, moat.TrustedRootSourcePathFlag)
+	}
+	if out.TrustedRootPath != overridePath {
+		t.Errorf("TrustedRootPath = %q, want %q", out.TrustedRootPath, overridePath)
+	}
+}
+
+// TestVerifyRegistryForAdd_TrustedRootRegistryConfig_UsedWhenNoCLIOverride —
+// reg.TrustedRoot is consulted when the CLI flag is empty. Slice-1 already
+// persisted the field; slice-2d is the wiring that finally honors it.
+func TestVerifyRegistryForAdd_TrustedRootRegistryConfig_UsedWhenNoCLIOverride(t *testing.T) {
+	cloneDir := t.TempDir()
+	writeManifestFixture(t, cloneDir)
+	regConfigPath := writeTrustedRootFile(t)
+
+	origVM := verifyManifestFn
+	verifyManifestFn = func(_, _ []byte, _ *moat.SigningProfile, _ []byte) (moat.VerificationResult, error) {
+		return moat.VerificationResult{SignatureValid: true}, nil
+	}
+	t.Cleanup(func() { verifyManifestFn = origVM })
+
+	reg := &config.Registry{
+		Name:           "enterprise/internal",
+		Type:           config.RegistryTypeMOAT,
+		SigningProfile: pinnedGitHubProfile(),
+		TrustedRoot:    regConfigPath,
+	}
+	out, err := verifyRegistryForAdd(reg, cloneDir, "") // empty CLI override
+	if err != nil {
+		t.Fatalf("reg.TrustedRoot path must be used when CLI override is empty: %v", err)
+	}
+	if out.Source != moat.TrustedRootSourcePathFlag {
+		t.Errorf("Source should reflect path override from reg config, got %q", out.Source)
+	}
+	if out.TrustedRootPath != regConfigPath {
+		t.Errorf("TrustedRootPath = %q, want %q", out.TrustedRootPath, regConfigPath)
+	}
+}
+
+// TestVerifyRegistryForAdd_TrustedRootCLIOverride_WinsOverRegistryConfig —
+// when both are set, the CLI flag must win. Matters for enterprise
+// operators debugging a specific invocation without editing config.json.
+func TestVerifyRegistryForAdd_TrustedRootCLIOverride_WinsOverRegistryConfig(t *testing.T) {
+	cloneDir := t.TempDir()
+	writeManifestFixture(t, cloneDir)
+	cliPath := writeTrustedRootFile(t)
+	regPath := writeTrustedRootFile(t)
+	if cliPath == regPath {
+		t.Fatal("temp dirs should produce distinct paths")
+	}
+
+	origVM := verifyManifestFn
+	verifyManifestFn = func(_, _ []byte, _ *moat.SigningProfile, _ []byte) (moat.VerificationResult, error) {
+		return moat.VerificationResult{SignatureValid: true}, nil
+	}
+	t.Cleanup(func() { verifyManifestFn = origVM })
+
+	reg := &config.Registry{
+		Name:           "enterprise/internal",
+		Type:           config.RegistryTypeMOAT,
+		SigningProfile: pinnedGitHubProfile(),
+		TrustedRoot:    regPath,
+	}
+	out, err := verifyRegistryForAdd(reg, cloneDir, cliPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out.TrustedRootPath != cliPath {
+		t.Errorf("CLI flag must win: got %q, want %q", out.TrustedRootPath, cliPath)
+	}
+}
+
+// TestVerifyRegistryForAdd_TrustedRootCLIOverride_MissingFile — --trusted-root
+// names a path that doesn't exist → MOAT_007. Must NOT silently fall back to
+// the bundled root (trust downgrade).
+func TestVerifyRegistryForAdd_TrustedRootCLIOverride_MissingFile(t *testing.T) {
+	cloneDir := t.TempDir()
+	writeManifestFixture(t, cloneDir)
+	missing := filepath.Join(t.TempDir(), "not-there.json")
+
+	origVM := verifyManifestFn
+	verifyManifestFn = func(_, _ []byte, _ *moat.SigningProfile, _ []byte) (moat.VerificationResult, error) {
+		t.Fatal("verify must not run when trusted-root override is unloadable")
+		return moat.VerificationResult{}, nil
+	}
+	t.Cleanup(func() { verifyManifestFn = origVM })
+
+	reg := &config.Registry{
+		Name:           "enterprise/internal",
+		Type:           config.RegistryTypeMOAT,
+		SigningProfile: pinnedGitHubProfile(),
+	}
+	_, err := verifyRegistryForAdd(reg, cloneDir, missing)
+	expectStructuredErrorCode(t, err, output.ErrMoatTrustedRootOverride)
+}
+
+// TestVerifyRegistryForAdd_TrustedRootCLIOverride_MalformedJSON — override
+// path exists but isn't valid JSON → MOAT_007.
+func TestVerifyRegistryForAdd_TrustedRootCLIOverride_MalformedJSON(t *testing.T) {
+	cloneDir := t.TempDir()
+	writeManifestFixture(t, cloneDir)
+	badDir := t.TempDir()
+	badPath := filepath.Join(badDir, "bad.json")
+	if err := os.WriteFile(badPath, []byte("totally-not-json{{{"), 0644); err != nil {
+		t.Fatalf("seeding bad file: %v", err)
+	}
+
+	origVM := verifyManifestFn
+	verifyManifestFn = func(_, _ []byte, _ *moat.SigningProfile, _ []byte) (moat.VerificationResult, error) {
+		t.Fatal("verify must not run when override JSON is malformed")
+		return moat.VerificationResult{}, nil
+	}
+	t.Cleanup(func() { verifyManifestFn = origVM })
+
+	reg := &config.Registry{
+		Name:           "enterprise/internal",
+		Type:           config.RegistryTypeMOAT,
+		SigningProfile: pinnedGitHubProfile(),
+	}
+	_, err := verifyRegistryForAdd(reg, cloneDir, badPath)
+	expectStructuredErrorCode(t, err, output.ErrMoatTrustedRootOverride)
+}
+
+// TestVerifyRegistryForAdd_NoOverride_UsesBundled — the default path: no
+// CLI flag, no reg.TrustedRoot → bundled root is used. Also exercises the
+// real verifyTrustedRootFn path to prove it falls through to
+// BundledTrustedRoot rather than erroring on an empty path.
+func TestVerifyRegistryForAdd_NoOverride_UsesBundled(t *testing.T) {
+	cloneDir := t.TempDir()
+	writeManifestFixture(t, cloneDir)
+
+	origVM := verifyManifestFn
+	verifyManifestFn = func(_, _ []byte, _ *moat.SigningProfile, trustedRoot []byte) (moat.VerificationResult, error) {
+		// Bundled root is a real embedded file, several KB. If the loader
+		// defaulted to an empty path and errored, we'd never get here.
+		if len(trustedRoot) < 500 {
+			t.Errorf("expected bundled trusted-root bytes (>500B), got %d — override path leaked through?", len(trustedRoot))
+		}
+		return moat.VerificationResult{SignatureValid: true}, nil
+	}
+	t.Cleanup(func() { verifyManifestFn = origVM })
+
+	reg := &config.Registry{
+		Name:           "OpenScribbler/syllago-meta-registry",
+		Type:           config.RegistryTypeMOAT,
+		SigningProfile: pinnedGitHubProfile(),
+	}
+	out, err := verifyRegistryForAdd(reg, cloneDir, "")
+	if err != nil {
+		t.Fatalf("bundled-default path must succeed: %v", err)
+	}
+	if out.Source != moat.TrustedRootSourceBundled {
+		t.Errorf("Source = %q, want %q (bundled default)", out.Source, moat.TrustedRootSourceBundled)
+	}
+	if out.TrustedRootPath != "" {
+		t.Errorf("TrustedRootPath must be empty when bundled default is in use, got %q", out.TrustedRootPath)
+	}
+}
+
+// TestTrustedRootPathForRegistry — table of resolver scenarios. The
+// resolver is what emitTrustedRootPathInfo consults to name the file, so
+// CLI-flag > reg.TrustedRoot > "" precedence must hold here too.
+func TestTrustedRootPathForRegistry(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name     string
+		reg      *config.Registry
+		override string
+		want     string
+	}{
+		{"both-empty", &config.Registry{}, "", ""},
+		{"nil-reg-no-override", nil, "", ""},
+		{"nil-reg-with-override", nil, "/tmp/x", "/tmp/x"},
+		{"reg-config-only", &config.Registry{TrustedRoot: "/etc/y"}, "", "/etc/y"},
+		{"cli-only", &config.Registry{}, "/tmp/cli", "/tmp/cli"},
+		{"cli-wins-over-reg", &config.Registry{TrustedRoot: "/etc/y"}, "/tmp/cli", "/tmp/cli"},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got := trustedRootPathForRegistry(tc.reg, tc.override)
+			if got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestEmitTrustedRootPathInfo_EmitsOnOverride — the info line is the
+// auditor signal for "who chose this trusted root?" It must fire on the
+// path-flag source and stay silent on the bundled source (otherwise
+// operators would tune out the noise).
+func TestEmitTrustedRootPathInfo_EmitsOnOverride(t *testing.T) {
+	// Cannot t.Parallel — mutates output package globals.
+	_, errBuf := output.SetForTest(t)
+
+	// Bundled source: silent.
+	emitTrustedRootPathInfo("reg", moat.TrustedRootSourceBundled, "/ignored")
+	if errBuf.Len() != 0 {
+		t.Errorf("bundled source must not emit, got %q", errBuf.String())
+	}
+
+	// Path source with empty path: defensive silent.
+	emitTrustedRootPathInfo("reg", moat.TrustedRootSourcePathFlag, "")
+	if errBuf.Len() != 0 {
+		t.Errorf("empty path must not emit, got %q", errBuf.String())
+	}
+
+	// Path source with path: emits key=value line with both fields.
+	emitTrustedRootPathInfo("corp", moat.TrustedRootSourcePathFlag, "/etc/x.json")
+	got := errBuf.String()
+	if !strings.Contains(got, "moat.trusted_root_path=/etc/x.json") {
+		t.Errorf("info line missing key=value: %q", got)
+	}
+	if !strings.Contains(got, "registry=corp") {
+		t.Errorf("info line missing registry label: %q", got)
+	}
+}
+
+// TestEmitTrustedRootPathInfo_QuietAndJSONSuppress — JSON callers parse
+// machine output structurally; free-form stderr would break that contract.
+// Quiet mode must also suppress (operator opt-out).
+func TestEmitTrustedRootPathInfo_QuietAndJSONSuppress(t *testing.T) {
+	// Cannot t.Parallel — mutates output package globals.
+	_, errBuf := output.SetForTest(t)
+
+	origQuiet := output.Quiet
+	output.Quiet = true
+	emitTrustedRootPathInfo("reg", moat.TrustedRootSourcePathFlag, "/etc/x.json")
+	output.Quiet = origQuiet
+	if errBuf.Len() != 0 {
+		t.Errorf("quiet mode must suppress, got %q", errBuf.String())
+	}
+
+	origJSON := output.JSON
+	output.JSON = true
+	emitTrustedRootPathInfo("reg", moat.TrustedRootSourcePathFlag, "/etc/x.json")
+	output.JSON = origJSON
+	if errBuf.Len() != 0 {
+		t.Errorf("JSON mode must suppress, got %q", errBuf.String())
 	}
 }
