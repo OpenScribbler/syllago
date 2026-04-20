@@ -298,4 +298,4 @@ Sourced from the panel consensus (Remy's slice-1 list, adopted as authoritative)
 - sigstore-go: `github.com/sigstore/sigstore-go/pkg/{bundle,root,verify}`
 - Refresh runbook: [`docs/runbooks/moat-trusted-root-refresh.md`](../runbooks/moat-trusted-root-refresh.md)
 - Staleness-check workflow: [`.github/workflows/moat-trusted-root-check.yml`](../../.github/workflows/moat-trusted-root-check.yml)
-- Follow-up beads: `syllago-9cv8m` (upstream MOAT spec PR)
+- Upstream MOAT spec PR: [OpenScribbler/moat#5](https://github.com/OpenScribbler/moat/pull/5) — formalizes trusted-root acquisition, GitHub OIDC numeric-ID binding, and the trust-state error vocabulary that slice-1 implements.
