@@ -89,6 +89,10 @@ const (
 	// System: environment and filesystem issues.
 	ErrSystemHomedir = "SYSTEM_001" // cannot determine home directory
 	ErrSystemIO      = "SYSTEM_002" // filesystem read/write/mkdir failure
+
+	// MOAT: manifest-based signing / verification.
+	ErrMoatIdentityUnpinned = "MOAT_001" // registry add has neither allowlist match nor --signing-identity
+	ErrMoatIdentityInvalid  = "MOAT_002" // --signing-* flags are incomplete or malformed
 )
 
 // docsURL converts an error code like "CATALOG_001" to its documentation URL.
@@ -188,6 +192,9 @@ func AllErrorCodes() []string {
 		// System
 		ErrSystemHomedir,
 		ErrSystemIO,
+		// MOAT
+		ErrMoatIdentityUnpinned,
+		ErrMoatIdentityInvalid,
 	}
 }
 
