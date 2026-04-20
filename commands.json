@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-15T16:45:12Z",
-  "syllagoVersion": "0.7.0",
+  "generatedAt": "2026-04-20T16:33:07Z",
+  "syllagoVersion": "0.9.0",
   "commands": [
     {
       "name": "add",
@@ -339,7 +339,7 @@
       "parent": "capmon",
       "synopsis": "syllago capmon derive [flags]",
       "description": "Derive a seeder spec from a provider format doc",
-      "longDescription": "Deterministically derive a seeder spec YAML from a provider format doc.\n\nThe derived spec is written to --output-dir/\u003cprovider\u003e-skills.yaml.\nAll canonical_mappings keys are validated against --canonical-keys.\nContent types with status=unsupported are omitted from output.",
+      "longDescription": "Deterministically derive a seeder spec YAML from a provider format doc.\n\nThe derived spec is written to --output-dir/\u003cprovider\u003e-\u003ccontent_type\u003e.yaml.\nAll canonical_mappings keys are validated against --canonical-keys.\nContent types with status=unsupported are omitted from output.",
       "aliases": [],
       "flags": [
         {
@@ -2764,6 +2764,22 @@
           "description": "Show what would happen without making changes"
         },
         {
+          "name": "--force",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Proceed past high-severity scanner findings"
+        },
+        {
+          "name": "--hook-scanner",
+          "shorthand": null,
+          "type": "stringSlice",
+          "default": null,
+          "required": false,
+          "description": "Path to external hook scanner binary (repeatable)"
+        },
+        {
           "name": "--method",
           "shorthand": null,
           "type": "string",
@@ -3441,6 +3457,162 @@
       "source": "cli/cmd/syllago/manifest_cmd.go"
     },
     {
+      "name": "moat",
+      "displayName": "Moat",
+      "slug": "moat",
+      "parent": null,
+      "synopsis": "syllago moat",
+      "description": "Manage MOAT registry trust and verification",
+      "longDescription": "Inspect and manage the MOAT (MOAT Of Attested Trust) subsystem.\n\nSlice 1 surface: trusted-root lifecycle via `moat trust status`.\nLater slices will add manifest verification, tier policy, and revocation.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [
+        "trust"
+      ],
+      "seeAlso": [],
+      "examples": null,
+      "source": "cli/cmd/syllago/moat_cmd.go"
+    },
+    {
+      "name": "moat trust",
+      "displayName": "Moat Trust",
+      "slug": "moat-trust",
+      "parent": "moat",
+      "synopsis": "syllago moat trust",
+      "description": "Trusted-root lifecycle (status, refresh)",
+      "longDescription": "Operate on the Sigstore trusted-root bundle used to verify signed registry manifests.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [
+        "status"
+      ],
+      "seeAlso": [
+        "moat"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/moat_cmd.go"
+    },
+    {
+      "name": "moat trust status",
+      "displayName": "Moat Trust Status",
+      "slug": "moat-trust-status",
+      "parent": "moat trust",
+      "synopsis": "syllago moat trust status [flags]",
+      "description": "Report the bundled Sigstore trusted root's freshness",
+      "longDescription": "Print the source and calendar age of the bundled Sigstore trusted root,\nthen exit with a stable code CI pipelines can gate on:\n\n  0  fresh       (age \u003c 90 days)\n  1  warn        (90–179 days)  — verification still runs\n  1  escalated   (180–364 days) — verification still runs\n  2  expired     (365+ days)    — verification refuses\n  2  missing     (embed is empty — build-time bug)\n  2  corrupt     (issued-at constant malformed — build-time bug)\n\nUse --json to emit a single JSON line for scripts.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Emit a single JSON line instead of key=value lines"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "moat trust"
+      ],
+      "examples": null,
+      "source": "cli/cmd/syllago/trust_cmd.go"
+    },
+    {
       "name": "registry",
       "displayName": "Registry",
       "slug": "registry",
@@ -3507,6 +3679,14 @@
       "aliases": [],
       "flags": [
         {
+          "name": "--moat",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Add as a MOAT-signed registry (required when URL is not in the bundled allowlist and no --signing-identity is passed)"
+        },
+        {
           "name": "--name",
           "shorthand": null,
           "type": "string",
@@ -3521,6 +3701,38 @@
           "default": null,
           "required": false,
           "description": "Branch, tag, or commit to checkout (default: repo default branch)"
+        },
+        {
+          "name": "--signing-identity",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Workflow subject SAN (e.g. https://github.com/OWNER/REPO/.github/workflows/moat.yml@refs/heads/main) — implies --moat"
+        },
+        {
+          "name": "--signing-issuer",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "OIDC issuer URL (default: GitHub Actions issuer)"
+        },
+        {
+          "name": "--signing-repository-id",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "GitHub numeric repository ID (required for GitHub Actions issuer)"
+        },
+        {
+          "name": "--signing-repository-owner-id",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "GitHub numeric repository-owner ID (required for GitHub Actions issuer)"
         }
       ],
       "inheritedFlags": [

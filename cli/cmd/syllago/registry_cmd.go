@@ -63,6 +63,25 @@ var registryAddCmd = &cobra.Command{
 		nameFlag, _ := cmd.Flags().GetString("name")
 		refFlag, _ := cmd.Flags().GetString("ref")
 
+		moatFlag, _ := cmd.Flags().GetBool("moat")
+		rawSigningFlags := signingFlagSet{
+			Identity:          mustStringFlag(cmd, "signing-identity"),
+			Issuer:            mustStringFlag(cmd, "signing-issuer"),
+			RepositoryID:      mustStringFlag(cmd, "signing-repository-id"),
+			RepositoryOwnerID: mustStringFlag(cmd, "signing-repository-owner-id"),
+		}
+		rawSigningFlags = trimAllFlagValues(rawSigningFlags)
+		rawSigningFlags.UserRequestedMOAT = moatFlag || anySigningFlagSet(rawSigningFlags)
+
+		// Resolve signing profile BEFORE the clone so a hard-fail doesn't
+		// leave a half-cloned orphan on disk. The signing resolution is
+		// cheap (local allowlist lookup + flag validation) so running it
+		// first is free.
+		signing, err := resolveSigningProfile(gitURL, rawSigningFlags)
+		if err != nil {
+			return err
+		}
+
 		name := nameFlag
 		if name == "" {
 			name = registry.NameFromURL(gitURL)
@@ -109,6 +128,12 @@ var registryAddCmd = &cobra.Command{
 `)
 		} else {
 			fmt.Fprintf(output.ErrWriter, "Warning: Registry content is unverified. Only add registries you trust.\n")
+		}
+
+		// Announce signing-identity resolution before the clone so the
+		// operator sees the pinning decision in context with the clone.
+		if msg := describeProfileSource(signing, gitURL); msg != "" {
+			fmt.Fprintf(output.Writer, "%s\n", msg)
 		}
 
 		// Clone the registry
@@ -173,14 +198,21 @@ var registryAddCmd = &cobra.Command{
 			fmt.Fprintf(output.Writer, "Visibility: public\n")
 		}
 
-		// Save to config
-		cfg.Registries = append(cfg.Registries, config.Registry{
+		// Save to config. A populated signing profile also flips the
+		// registry Type to "moat" — the verifier and install pipeline key
+		// on Type, so persisting both together keeps them in sync.
+		newRegistry := config.Registry{
 			Name:                name,
 			URL:                 gitURL,
 			Ref:                 refFlag,
 			Visibility:          visibility,
 			VisibilityCheckedAt: &now,
-		})
+		}
+		if signing != nil && signing.Profile != nil {
+			newRegistry.Type = config.RegistryTypeMOAT
+			newRegistry.SigningProfile = signing.Profile
+		}
+		cfg.Registries = append(cfg.Registries, newRegistry)
 		if err := config.Save(root, cfg); err != nil {
 			// Config save failed — clean up the clone so it doesn't become orphaned.
 			dir, _ := registry.CloneDir(name)
@@ -657,6 +689,11 @@ func reprobeRegistryVisibility(cfg *config.Config, name, root string) {
 func init() {
 	registryAddCmd.Flags().String("name", "", "Override the registry name (default: derived from URL)")
 	registryAddCmd.Flags().String("ref", "", "Branch, tag, or commit to checkout (default: repo default branch)")
+	registryAddCmd.Flags().Bool("moat", false, "Add as a MOAT-signed registry (required when URL is not in the bundled allowlist and no --signing-identity is passed)")
+	registryAddCmd.Flags().String("signing-identity", "", "Workflow subject SAN (e.g. https://github.com/OWNER/REPO/.github/workflows/moat.yml@refs/heads/main) — implies --moat")
+	registryAddCmd.Flags().String("signing-issuer", "", "OIDC issuer URL (default: GitHub Actions issuer)")
+	registryAddCmd.Flags().String("signing-repository-id", "", "GitHub numeric repository ID (required for GitHub Actions issuer)")
+	registryAddCmd.Flags().String("signing-repository-owner-id", "", "GitHub numeric repository-owner ID (required for GitHub Actions issuer)")
 	registryItemsCmd.Flags().String("type", "", "Filter by content type (skills, rules, hooks, etc.)")
 
 	registryCreateCmd.Flags().String("new", "", "Scaffold an empty registry directory with this name")
