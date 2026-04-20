@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-19T21:26:03Z",
+  "generatedAt": "2026-04-20T17:02:02Z",
   "syllagoVersion": "0.9.0",
   "commands": [
     {
@@ -100,6 +100,14 @@
           "default": null,
           "required": false,
           "description": "Source registry visibility (public, private, unknown)"
+        },
+        {
+          "name": "--trusted-root",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Path to Sigstore trusted_root.json (overrides registry config and the bundled default)"
         }
       ],
       "inheritedFlags": [
@@ -3679,6 +3687,14 @@
       "aliases": [],
       "flags": [
         {
+          "name": "--moat",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Add as a MOAT-signed registry (required when URL is not in the bundled allowlist and no --signing-identity is passed)"
+        },
+        {
           "name": "--name",
           "shorthand": null,
           "type": "string",
@@ -3693,6 +3709,38 @@
           "default": null,
           "required": false,
           "description": "Branch, tag, or commit to checkout (default: repo default branch)"
+        },
+        {
+          "name": "--signing-identity",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Workflow subject SAN (e.g. https://github.com/OWNER/REPO/.github/workflows/moat.yml@refs/heads/main) — implies --moat"
+        },
+        {
+          "name": "--signing-issuer",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "OIDC issuer URL (default: GitHub Actions issuer)"
+        },
+        {
+          "name": "--signing-repository-id",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "GitHub numeric repository ID (required for GitHub Actions issuer)"
+        },
+        {
+          "name": "--signing-repository-owner-id",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "GitHub numeric repository-owner ID (required for GitHub Actions issuer)"
         }
       ],
       "inheritedFlags": [
