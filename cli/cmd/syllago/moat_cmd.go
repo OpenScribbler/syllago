@@ -41,7 +41,7 @@ func moatNow() time.Time {
 var moatCmd = &cobra.Command{
 	Use:   "moat",
 	Short: "Manage MOAT registry trust and verification",
-	Long: `Inspect and manage the MOAT (MOAT Of Attested Trust) subsystem.
+	Long: `Inspect and manage the MOAT (Model for Origin Attestation and Trust) subsystem.
 
 Slice 1 surface: trusted-root lifecycle via ` + "`moat trust status`" + `.
 Later slices will add manifest verification, tier policy, and revocation.`,
