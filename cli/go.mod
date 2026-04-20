@@ -21,6 +21,7 @@ require (
 	github.com/rmhubbert/bubbletea-overlay v0.6.6
 	github.com/sigstore/protobuf-specs v0.5.0
 	github.com/sigstore/rekor v1.5.1
+	github.com/sigstore/sigstore v1.10.4
 	github.com/sigstore/sigstore-go v1.1.4
 	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82
 	github.com/spf13/cobra v1.10.2
@@ -107,7 +108,6 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.10.0 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/sigstore/rekor-tiles/v2 v2.0.1 // indirect
-	github.com/sigstore/sigstore v1.10.4 // indirect
 	github.com/sigstore/timestamp-authority/v2 v2.0.3 // indirect
 	github.com/theupdateframework/go-tuf/v2 v2.3.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
