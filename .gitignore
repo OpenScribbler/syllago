@@ -49,6 +49,7 @@ docs/*
 docs/provider-formats/*.quality.json
 !docs/research/
 !docs/provider-capabilities/
+!docs/runbooks/
 .capmon-cache/
 tmp/
 
