@@ -175,8 +175,8 @@ func TestSync_SecurityHardening(t *testing.T) {
 	// Create a working copy to make initial commit
 	work := t.TempDir()
 	run(work, "clone", bare, ".")
-	run(work, "config", "user.email", "test@test.com")
-	run(work, "config", "user.name", "test")
+	run(work, "config", "user.email", "test@example.com")
+	run(work, "config", "user.name", "Test User")
 	os.WriteFile(filepath.Join(work, "README.md"), []byte("init"), 0644)
 	run(work, "add", ".")
 	run(work, "commit", "-m", "init")

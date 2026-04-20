@@ -325,6 +325,13 @@ func TestRunRegistryCreateNew_GitInitSuccess(t *testing.T) {
 	chdirTo(t, tmp)
 	resetRegistryCreateFlags(t)
 
+	// Set git identity via env vars for CI environments where no global config exists.
+	// example.com is RFC 2606-reserved for documentation/testing.
+	t.Setenv("GIT_AUTHOR_NAME", "Test User")
+	t.Setenv("GIT_AUTHOR_EMAIL", "test@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "Test User")
+	t.Setenv("GIT_COMMITTER_EMAIL", "test@example.com")
+
 	stdout, _ := output.SetForTest(t)
 	registryCreateCmd.Flags().Set("new", "git-registry")
 	// no-git defaults to false, so git init should happen.
