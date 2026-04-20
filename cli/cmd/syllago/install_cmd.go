@@ -65,6 +65,11 @@ type installedItem struct {
 	Method   string   `json:"method"`
 	Path     string   `json:"path"`
 	Warnings []string `json:"warnings,omitempty"` // portability warnings
+	// Trust is the MOAT trust tier drill-down description, e.g. "Verified
+	// (registry-attested)". Empty when the item was not sourced from a MOAT
+	// manifest — absent key rather than empty string so JSON consumers can
+	// distinguish "no trust data" from "empty trust data."
+	Trust string `json:"trust,omitempty"`
 }
 
 type skippedItem struct {
@@ -324,12 +329,23 @@ func installToProvider(
 			}
 		}
 
+		trustText := catalog.TrustDescription(item.TrustTier, item.Recalled, item.RecallReason)
+		if trustText != "" && !output.JSON && !output.Quiet {
+			badge := catalog.UserFacingBadge(item.TrustTier, item.Recalled)
+			glyph := badge.Glyph()
+			if glyph != "" {
+				glyph += " "
+			}
+			fmt.Fprintf(output.Writer, "  %s%s — %s\n", glyph, item.Name, trustText)
+		}
+
 		result.Installed = append(result.Installed, installedItem{
 			Name:     item.Name,
 			Type:     string(item.Type),
 			Method:   string(method),
 			Path:     desc,
 			Warnings: warnings,
+			Trust:    trustText,
 		})
 
 		// Audit log (best-effort).
