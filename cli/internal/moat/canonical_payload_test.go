@@ -77,3 +77,124 @@ func TestCanonicalPayloadFor_NormativeDigest(t *testing.T) {
 		t.Errorf("SHA-256 digest of normative payload mismatch:\n  got:  %s\n  want: %s", got, wantDigest)
 	}
 }
+
+// TestCurrentPayloadVersion_IsOne is a drift guard: a change to this
+// constant is a spec change (grace-period transition), not a tuning knob.
+// If this test fails, either the spec moved or the constant was altered
+// unintentionally. Either way, SupportedPayloadVersions and every fixture
+// anchored on `_version:1` need a coordinated review.
+func TestCurrentPayloadVersion_IsOne(t *testing.T) {
+	t.Parallel()
+	if CurrentPayloadVersion != 1 {
+		t.Errorf("CurrentPayloadVersion = %d, want 1 (spec v0.6.0)", CurrentPayloadVersion)
+	}
+}
+
+// TestSupportedPayloadVersions_OnlyCurrentToday captures today's (pre-bump)
+// state: exactly one accepted version. When a grace period opens, this
+// test needs to be updated to assert both prior and current are accepted —
+// the failure message should make the grace-period intent explicit.
+func TestSupportedPayloadVersions_OnlyCurrentToday(t *testing.T) {
+	t.Parallel()
+	if len(SupportedPayloadVersions) != 1 {
+		t.Errorf("SupportedPayloadVersions length = %d, want 1 outside grace period",
+			len(SupportedPayloadVersions))
+	}
+	if SupportedPayloadVersions[0] != CurrentPayloadVersion {
+		t.Errorf("SupportedPayloadVersions[0] = %d, want CurrentPayloadVersion=%d",
+			SupportedPayloadVersions[0], CurrentPayloadVersion)
+	}
+}
+
+// TestIsSupportedPayloadVersion covers the ordering-step-2 gate: recognized
+// versions return true, everything else false. An unknown version is a
+// hard reject per spec §Version Transition after the grace period; during
+// a future grace, new values would be added to SupportedPayloadVersions,
+// and this test would be extended to assert both.
+func TestIsSupportedPayloadVersion(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		v    int
+		want bool
+	}{
+		{1, true}, // current
+		{0, false},
+		{2, false}, // future, not yet in-grace
+		{-1, false},
+		{999, false},
+	}
+	for _, tc := range cases {
+		if got := IsSupportedPayloadVersion(tc.v); got != tc.want {
+			t.Errorf("IsSupportedPayloadVersion(%d) = %v, want %v", tc.v, got, tc.want)
+		}
+	}
+}
+
+// TestCanonicalPayloadForVersion_V1_MatchesShortcut proves that the
+// CanonicalPayloadFor shortcut and CanonicalPayloadForVersion(1, hash)
+// produce byte-exact identical output. A regression here means the v1
+// short-circuit silently drifted from the versioned builder — which
+// would break Rekor fixture anchors used by sigstore_verify_test.go
+// and rekor_test.go.
+func TestCanonicalPayloadForVersion_V1_MatchesShortcut(t *testing.T) {
+	t.Parallel()
+	const hash = "sha256:f997b299344032fb6f12c80b86dffad33a1ad2ec0c23bd2476ce3d4c8781a6f2"
+	shortcut := CanonicalPayloadFor(hash)
+	versioned, ok := CanonicalPayloadForVersion(CurrentPayloadVersion, hash)
+	if !ok {
+		t.Fatalf("CanonicalPayloadForVersion(%d, _) returned ok=false for current version",
+			CurrentPayloadVersion)
+	}
+	if !bytes.Equal(shortcut, versioned) {
+		t.Errorf("shortcut/versioned drift:\n  CanonicalPayloadFor:        %s\n  CanonicalPayloadForVersion: %s",
+			shortcut, versioned)
+	}
+}
+
+// TestCanonicalPayloadForVersion_UnknownReturnsNil locks the rejection
+// contract: an unsupported version MUST yield (nil, false) — never a
+// partial payload, never a panic. A verifier that gets (nil, false) knows
+// to reject; a verifier that gets non-nil bytes knows the version was
+// pre-approved and the bytes are safe to compare against Rekor.
+//
+// Covers the TOCTOU-defense: if the dispatcher were to fall through to
+// `v:1` on any unknown v, the TOCTOU window would reopen.
+func TestCanonicalPayloadForVersion_UnknownReturnsNil(t *testing.T) {
+	t.Parallel()
+	const hash = "sha256:f997b299344032fb6f12c80b86dffad33a1ad2ec0c23bd2476ce3d4c8781a6f2"
+	for _, v := range []int{0, 2, 99, -1} {
+		payload, ok := CanonicalPayloadForVersion(v, hash)
+		if ok {
+			t.Errorf("CanonicalPayloadForVersion(%d, _) ok = true, want false", v)
+		}
+		if payload != nil {
+			t.Errorf("CanonicalPayloadForVersion(%d, _) payload = %q, want nil", v, payload)
+		}
+	}
+}
+
+// TestCanonicalPayloadForVersion_VersionAppearsFirst is a structural
+// invariant: the `_version` field MUST appear before `content_hash` in
+// every supported version's serialized output. Publishers hash these
+// exact bytes; if Go's default struct serializer were ever substituted
+// here and alphabetized the fields, `content_hash` would come first and
+// every signature would fail. This test catches that class of regression
+// across any version the slice carries.
+func TestCanonicalPayloadForVersion_VersionAppearsFirst(t *testing.T) {
+	t.Parallel()
+	const hash = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+	for _, v := range SupportedPayloadVersions {
+		payload, ok := CanonicalPayloadForVersion(v, hash)
+		if !ok {
+			t.Fatalf("supported version %d unexpectedly rejected", v)
+		}
+		vIdx := bytes.Index(payload, []byte(`"_version"`))
+		hIdx := bytes.Index(payload, []byte(`"content_hash"`))
+		if vIdx < 0 || hIdx < 0 {
+			t.Fatalf("v%d payload missing required keys: %s", v, payload)
+		}
+		if vIdx > hIdx {
+			t.Errorf("v%d payload has content_hash before _version: %s", v, payload)
+		}
+	}
+}

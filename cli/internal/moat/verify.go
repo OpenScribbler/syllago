@@ -114,19 +114,80 @@ func (s SigningProfile) RequiresNumericIDMatch() bool {
 	return s.Issuer == GitHubActionsIssuer
 }
 
-// CanonicalPayloadFor returns the exact byte sequence that the Publisher
-// Action hashes and signs for a given content hash. The serialization is
-// normative: compact JSON, no whitespace, field order fixed.
+// CurrentPayloadVersion is the canonical-payload schema version Syllago
+// emits and expects today (spec v0.6.0 §Attestation Payload). A future
+// schema bump increments this constant, triggering a grace period during
+// which SupportedPayloadVersions carries both the prior and the new value.
+const CurrentPayloadVersion = 1
+
+// SupportedPayloadVersions is the closed set of `_version` values a
+// conforming verifier MUST accept. Spec §Version Transition requires
+// clients to honor both the prior and the current value for six months
+// after a schema bump; outside that window, only CurrentPayloadVersion
+// appears here. Today the slice has one element; during a grace period it
+// will carry two. Order is intentional: most-recent first, so dispatchers
+// that iterate can prefer the current version when multiple match (which
+// should never happen in practice — each `_version` produces a distinct
+// canonical payload hash — but the ordering keeps behavior deterministic).
 //
-// This is NOT produced by json.Marshal because Go's encoding/json alphabetizes
-// struct fields; the spec fixes "_version" first, "content_hash" second. Any
-// drift here causes every signature to fail verification.
-func CanonicalPayloadFor(contentHash string) []byte {
-	// Manually serialized to lock field order. The contentHash value is
-	// JSON-encoded (via json.Marshal on a string) to handle escaping of
-	// characters that could appear in a future hash algorithm prefix.
+// Not a const because Go has no slice constants; callers MUST treat it as
+// read-only. The spec change that triggers a grace period is the only
+// legitimate reason to edit this declaration.
+var SupportedPayloadVersions = []int{CurrentPayloadVersion}
+
+// IsSupportedPayloadVersion reports whether v is an accepted canonical
+// payload `_version` value (in-grace or current, per the spec §Version
+// Transition rule). Intended as the ordering-step-2 gate described in
+// ADR 0007 G-14.
+func IsSupportedPayloadVersion(v int) bool {
+	for _, s := range SupportedPayloadVersions {
+		if s == v {
+			return true
+		}
+	}
+	return false
+}
+
+// CanonicalPayloadForVersion returns the exact byte sequence a conforming
+// verifier hashes and expects Rekor's `data.hash.value` to match, for the
+// given `_version` and content hash.
+//
+// Returns (nil, false) if v is not in SupportedPayloadVersions. Callers
+// MUST check the bool before using the bytes — a successful match against
+// an unsupported version is a signal to reject, not to repair.
+//
+// TOCTOU-safety (ADR 0007 G-14): this builder NEVER reads `_version` from
+// the wire. Both inputs (v, contentHash) are client-controlled — either
+// hard-coded or taken from the lockfile/manifest entry the client already
+// decided to install. A grace-period-aware verifier iterates
+// SupportedPayloadVersions and calls this function once per version, then
+// checks which (if any) matches Rekor's recorded hash — the content_hash
+// is fixed per call, and the `_version` tried is pre-approved, so there
+// is no window where an attacker-supplied field decides the code path.
+//
+// The serialization is normative: compact JSON, no whitespace, field
+// order `_version` then `content_hash`. Produced by hand because Go's
+// json.Marshal alphabetizes struct fields and would corrupt the order.
+func CanonicalPayloadForVersion(v int, contentHash string) (payload []byte, ok bool) {
+	if !IsSupportedPayloadVersion(v) {
+		return nil, false
+	}
+	// The contentHash value is JSON-encoded (via json.Marshal on a
+	// string) to handle escaping of characters that could appear in a
+	// future hash algorithm prefix.
 	hashJSON, _ := json.Marshal(contentHash)
-	return fmt.Appendf(nil, `{"_version":1,"content_hash":%s}`, hashJSON)
+	return fmt.Appendf(nil, `{"_version":%d,"content_hash":%s}`, v, hashJSON), true
+}
+
+// CanonicalPayloadFor returns the canonical payload bytes for the current
+// payload version. Convenience wrapper around CanonicalPayloadForVersion
+// for call sites that don't need grace-period awareness. Any drift in
+// output here breaks every signature verification — the byte sequence is
+// fixture-anchored against the syllago-meta-registry Phase 0 Rekor entry
+// (see rekor_test.go and canonical_payload_test.go).
+func CanonicalPayloadFor(contentHash string) []byte {
+	payload, _ := CanonicalPayloadForVersion(CurrentPayloadVersion, contentHash)
+	return payload
 }
 
 // VerifyItem performs offline verification of a single attestation item
