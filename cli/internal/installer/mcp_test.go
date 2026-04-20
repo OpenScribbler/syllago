@@ -12,7 +12,7 @@ import (
 )
 
 func TestInstallMCP_WhitelistsFields(t *testing.T) {
-	t.Parallel()
+	// Not parallel — mutates package-level mcpConfigPath
 	tmpDir := t.TempDir()
 
 	// Create a mock MCP item with extra unknown fields
