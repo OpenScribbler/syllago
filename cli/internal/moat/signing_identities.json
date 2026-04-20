@@ -1,0 +1,17 @@
+{
+  "_version": 1,
+  "description": "Bundled allowlist of known-good MOAT signing identities keyed by registry URL. Entries here skip the TOFU prompt and CLI --signing-identity flags; a match at `syllago registry add` time auto-pins the profile. Inclusion criteria: the registry is published by a well-known operator, its signing workflow is publicly inspectable, and its GitHub OIDC numeric IDs are recorded here so repo-transfer forgery is blocked.",
+  "identities": [
+    {
+      "registry_url": "https://github.com/OpenScribbler/syllago-meta-registry",
+      "description": "syllago official meta-registry (OpenScribbler/syllago-meta-registry)",
+      "profile": {
+        "issuer": "https://token.actions.githubusercontent.com",
+        "subject_regex": "^https://github\\.com/OpenScribbler/syllago-meta-registry/\\.github/workflows/(moat|moat-registry)\\.yml@refs/heads/master$",
+        "profile_version": 1,
+        "repository_id": "1193220959",
+        "repository_owner_id": "263775997"
+      }
+    }
+  ]
+}
