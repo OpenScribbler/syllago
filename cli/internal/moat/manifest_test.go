@@ -192,6 +192,136 @@ func TestParseManifest_TrustTiers(t *testing.T) {
 	}
 }
 
+// TestParseManifest_AttestationHashMismatchDowngrade covers the G-13
+// contract: when `attestation_hash_mismatch: true` is set, TrustTier() MUST
+// return Signed (never Dual-Attested) even if signing_profile is populated.
+// The spec has the Registry Action downgrade server-side; this test locks
+// the defensive client-side enforcement so a misbehaving or compromised
+// registry cannot re-elevate the tier by leaving stale signing_profile on
+// a mismatched entry.
+//
+// Also verifies the bounds of the rule: an Unsigned entry (no rekor index)
+// stays Unsigned regardless of the flag — mismatch does not synthesize a
+// trust anchor where none existed.
+func TestParseManifest_AttestationHashMismatchDowngrade(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		entryJSON string
+		wantTier  TrustTier
+	}{
+		{
+			// Publisher attested, registry detected mismatch, registry
+			// LEFT signing_profile in the entry. A naive tier check would
+			// return DUAL-ATTESTED. The downgrade rule forces SIGNED.
+			name: "mismatch_with_signing_profile_downgrades_to_signed",
+			entryJSON: `{
+      "name": "item", "display_name": "Item", "type": "skill",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "https://example.com/r",
+      "attested_at": "2026-04-08T00:00:00Z", "private_repo": false,
+      "rekor_log_index": 42,
+      "signing_profile": {
+        "issuer": "https://token.actions.githubusercontent.com",
+        "subject": "repo:pub/pub:ref:refs/heads/main"
+      },
+      "attestation_hash_mismatch": true
+    }`,
+			wantTier: TrustTierSigned,
+		},
+		{
+			// Mismatch set but no signing_profile — already Signed; rule
+			// doesn't flip the tier in either direction. Guards against
+			// an accidental Unsigned demotion.
+			name: "mismatch_without_signing_profile_stays_signed",
+			entryJSON: `{
+      "name": "item", "display_name": "Item", "type": "skill",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "https://example.com/r",
+      "attested_at": "2026-04-08T00:00:00Z", "private_repo": false,
+      "rekor_log_index": 42,
+      "attestation_hash_mismatch": true
+    }`,
+			wantTier: TrustTierSigned,
+		},
+		{
+			// No rekor index → Unsigned. Mismatch flag MUST NOT synthesize
+			// a trust anchor. This locks the rule's precondition: the
+			// downgrade operates on existing Signed/Dual-Attested tiers,
+			// not on Unsigned entries.
+			name: "mismatch_without_rekor_stays_unsigned",
+			entryJSON: `{
+      "name": "item", "display_name": "Item", "type": "skill",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "https://example.com/r",
+      "attested_at": "2026-04-08T00:00:00Z", "private_repo": false,
+      "attestation_hash_mismatch": true
+    }`,
+			wantTier: TrustTierUnsigned,
+		},
+		{
+			// Absence of the flag must still allow Dual-Attested to
+			// compute cleanly. Guards against accidental false-default
+			// behavior (e.g., treating zero-valued bool as "true").
+			name: "no_mismatch_flag_with_signing_profile_dual_attested",
+			entryJSON: `{
+      "name": "item", "display_name": "Item", "type": "skill",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "https://example.com/r",
+      "attested_at": "2026-04-08T00:00:00Z", "private_repo": false,
+      "rekor_log_index": 42,
+      "signing_profile": {
+        "issuer": "https://token.actions.githubusercontent.com",
+        "subject": "repo:pub/pub:ref:refs/heads/main"
+      }
+    }`,
+			wantTier: TrustTierDualAttested,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			data := buildManifest(t, tt.entryJSON)
+			m, err := ParseManifest(data)
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			if got := m.Content[0].TrustTier(); got != tt.wantTier {
+				t.Errorf("TrustTier() = %v; want %v (entry: %s)",
+					got, tt.wantTier, tt.entryJSON)
+			}
+		})
+	}
+}
+
+// TestContentEntry_TrustTierDowngradeDirect exercises the downgrade without
+// the JSON parser in the loop. If the parse test fails, this narrows the
+// blame to the tier function itself versus struct-tag wiring.
+func TestContentEntry_TrustTierDowngradeDirect(t *testing.T) {
+	t.Parallel()
+
+	idx := int64(42)
+	profile := &SigningProfile{
+		Issuer:  "https://token.actions.githubusercontent.com",
+		Subject: "repo:pub/pub:ref:refs/heads/main",
+	}
+
+	// Baseline: without the flag, rekor + profile → Dual-Attested.
+	clean := ContentEntry{RekorLogIndex: &idx, SigningProfile: profile}
+	if got := clean.TrustTier(); got != TrustTierDualAttested {
+		t.Fatalf("baseline (no mismatch) should be DUAL-ATTESTED, got %v", got)
+	}
+
+	// With the flag set, even the identical attestation surface MUST
+	// downgrade to Signed. This is the G-13 defensive rule: the client
+	// never returns DUAL-ATTESTED when the publisher's attestation does
+	// not cover the current content.
+	mismatched := clean
+	mismatched.AttestationHashMismatch = true
+	if got := mismatched.TrustTier(); got != TrustTierSigned {
+		t.Errorf("downgrade rule violated: mismatch + profile should be SIGNED, got %v", got)
+	}
+}
+
 // TestParseManifest_ValidationErrors locks the exact contract for malformed
 // manifests. Every case names a REQUIRED field that is missing or invalid.
 func TestParseManifest_ValidationErrors(t *testing.T) {
