@@ -127,6 +127,59 @@ func TestRevocationSet_UnknownReasonCarriedVerbatim(t *testing.T) {
 	}
 }
 
+func TestRevocationSet_UnknownSourceFailsClosed(t *testing.T) {
+	// Spec §Revocation Mechanism (G-17): clients MUST branch on the explicit
+	// source field. ParseManifest rejects unknown source values, but this
+	// enforcement layer is reached by programmatically-built Revocations too
+	// (in-process manifest builders, tests, future callers). If the source
+	// value is anything other than "publisher", enforcement MUST fall through
+	// to a registry-block — never downgrade to warn on an unrecognized value.
+	set := NewRevocationSet()
+	m := &Manifest{
+		Revocations: []Revocation{
+			makeRev(revHashA, RevocationReasonMalicious, "future_source", "https://x"),
+		},
+	}
+	set.AddFromManifest(m, "https://r/mf")
+
+	recs := set.Lookup(revHashA)
+	if len(recs) != 1 {
+		t.Fatalf("expected 1 record, got %d", len(recs))
+	}
+	if recs[0].Status != RevStatusRegistryBlock {
+		t.Errorf("unknown source must fail closed to registry-block, got %s", recs[0].Status)
+	}
+	// Source is carried verbatim — enforcement downgrades to block but the
+	// original string is preserved for diagnostics.
+	if recs[0].Source != "future_source" {
+		t.Errorf("unknown source value must be preserved verbatim, got %q", recs[0].Source)
+	}
+}
+
+func TestRevocationSet_StatusBranchesOnSourceNotContext(t *testing.T) {
+	// Spec §Revocation Mechanism (G-17): enforcement decision is a pure
+	// function of source. Same hash, same reason, same details_url — flipping
+	// source MUST flip Status. This guards against a future refactor that
+	// tries to "infer" source from reason or other fields.
+	set := NewRevocationSet()
+	m := &Manifest{
+		Revocations: []Revocation{
+			makeRev(revHashA, RevocationReasonMalicious, RevocationSourceRegistry, "https://same"),
+			makeRev(revHashB, RevocationReasonMalicious, RevocationSourcePublisher, "https://same"),
+		},
+	}
+	set.AddFromManifest(m, "https://r/mf")
+
+	a := set.Lookup(revHashA)
+	b := set.Lookup(revHashB)
+	if len(a) != 1 || a[0].Status != RevStatusRegistryBlock {
+		t.Fatalf("hash A (source=registry) must block, got %+v", a)
+	}
+	if len(b) != 1 || b[0].Status != RevStatusPublisherWarn {
+		t.Fatalf("hash B (source=publisher) must warn, got %+v", b)
+	}
+}
+
 func TestRevocationSet_MultipleRegistriesIndexIndependently(t *testing.T) {
 	// The same hash can be revoked by multiple registries; Lookup should
 	// return every record so the caller can attribute each to its source.

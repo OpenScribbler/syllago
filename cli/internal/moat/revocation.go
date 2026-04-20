@@ -82,9 +82,13 @@ func NewRevocationSet() *RevocationSet {
 // registryURL is the URL the manifest was fetched from — surfaced as
 // `IssuingRegistryURL` on each resulting record. A nil manifest is a no-op.
 //
-// Source classification uses Revocation.EffectiveSource() so an absent `source`
-// field defaults to "registry" per spec. Unknown source values fall through to
-// RevStatusRegistryBlock as the safer default.
+// Source classification (ADR 0007 G-17, spec §Revocation Mechanism) branches
+// on the explicit `source` field — never inferred from reason, details_url, or
+// any other context. Revocation.EffectiveSource() applies the "absent →
+// registry" fail-closed default. Unknown source values (programmatically
+// constructed Revocations that bypass ParseManifest) also fall through to
+// RevStatusRegistryBlock — enforcement must never downgrade to warn on an
+// unrecognized value.
 func (s *RevocationSet) AddFromManifest(m *Manifest, registryURL string) {
 	if s == nil || m == nil {
 		return
