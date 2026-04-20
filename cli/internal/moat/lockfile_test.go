@@ -460,3 +460,188 @@ func TestJSONIsNull(t *testing.T) {
 		}
 	}
 }
+
+// TestSyncRegistryRevocations_AddsRegistrySourceOnly covers the source-class
+// gate: registry-source revocations MUST land in revoked_hashes (becoming a
+// hard-block on IsRevoked), while publisher-source revocations MUST NOT —
+// those use warn-once-per-session semantics and promoting them to a permanent
+// block would violate the two-tier contract (ADR 0007 G-8).
+func TestSyncRegistryRevocations_AddsRegistrySourceOnly(t *testing.T) {
+	t.Parallel()
+	lf := NewLockfile()
+	m := &Manifest{Revocations: []Revocation{
+		{ContentHash: "sha256:aaa", Reason: RevocationReasonMalicious, Source: RevocationSourceRegistry, DetailsURL: "https://example.com/a"},
+		{ContentHash: "sha256:bbb", Reason: RevocationReasonDeprecated, Source: RevocationSourcePublisher, DetailsURL: "https://example.com/b"},
+	}}
+	added := lf.SyncRegistryRevocations(m)
+	if added != 1 {
+		t.Errorf("added = %d, want 1 (only registry-source hash)", added)
+	}
+	if !lf.IsRevoked("sha256:aaa") {
+		t.Error("registry-source hash not hard-blocked via IsRevoked")
+	}
+	if lf.IsRevoked("sha256:bbb") {
+		t.Error("publisher-source hash must NOT land in revoked_hashes")
+	}
+}
+
+// TestSyncRegistryRevocations_AbsentSourceDefaultsToRegistry locks the
+// fail-closed default for the OPTIONAL source field (spec §Revocation
+// Mechanism / ADR 0007 G-17). A revocation with source="" MUST be treated as
+// registry-source and hard-blocked — a permissive default would let a
+// compromised registry omit source to downgrade blocks to warnings.
+func TestSyncRegistryRevocations_AbsentSourceDefaultsToRegistry(t *testing.T) {
+	t.Parallel()
+	lf := NewLockfile()
+	m := &Manifest{Revocations: []Revocation{
+		{ContentHash: "sha256:ccc", Reason: RevocationReasonMalicious, Source: "", DetailsURL: "https://example.com/c"},
+	}}
+	added := lf.SyncRegistryRevocations(m)
+	if added != 1 {
+		t.Errorf("added = %d, want 1", added)
+	}
+	if !lf.IsRevoked("sha256:ccc") {
+		t.Error("absent-source revocation must default to registry hard-block")
+	}
+}
+
+// TestSyncRegistryRevocations_IdempotentAcrossCalls proves that re-syncing
+// the same manifest does not grow the slice. Registry-sync flows may call
+// this on every startup — duplicate entries would bloat the lockfile.
+func TestSyncRegistryRevocations_IdempotentAcrossCalls(t *testing.T) {
+	t.Parallel()
+	lf := NewLockfile()
+	m := &Manifest{Revocations: []Revocation{
+		{ContentHash: "sha256:aaa", Reason: RevocationReasonMalicious, Source: RevocationSourceRegistry, DetailsURL: "https://example.com/a"},
+	}}
+	if added := lf.SyncRegistryRevocations(m); added != 1 {
+		t.Errorf("first sync added = %d, want 1", added)
+	}
+	if added := lf.SyncRegistryRevocations(m); added != 0 {
+		t.Errorf("second sync added = %d, want 0 (idempotent)", added)
+	}
+	if added := lf.SyncRegistryRevocations(m); added != 0 {
+		t.Errorf("third sync added = %d, want 0 (idempotent)", added)
+	}
+	if len(lf.RevokedHashes) != 1 {
+		t.Errorf("revoked_hashes grew to %d; idempotent sync must not bloat", len(lf.RevokedHashes))
+	}
+}
+
+// TestSyncRegistryRevocations_PersistsAcrossManifestPruning is the
+// headline G-15 invariant: when a registry prunes a revocation entry
+// (permitted after ≥180 days per spec §Revocation), the lockfile's
+// corresponding revoked_hashes entry MUST persist. Silent pruning would
+// let a compromised registry un-revoke malicious content by dropping
+// revocations and waiting for clients to re-sync — this test proves the
+// client-side guarantee holds.
+//
+// Sequence:
+//  1. Sync manifest-v1 carrying revocations for hashes A and B.
+//  2. Sync manifest-v2 with only hash A (hash B has been pruned).
+//  3. Assert both A and B remain revoked — the pruning of B MUST NOT
+//     cause its removal.
+func TestSyncRegistryRevocations_PersistsAcrossManifestPruning(t *testing.T) {
+	t.Parallel()
+	lf := NewLockfile()
+
+	manifestV1 := &Manifest{Revocations: []Revocation{
+		{ContentHash: "sha256:aaa", Reason: RevocationReasonMalicious, Source: RevocationSourceRegistry, DetailsURL: "https://example.com/a"},
+		{ContentHash: "sha256:bbb", Reason: RevocationReasonCompromised, Source: RevocationSourceRegistry, DetailsURL: "https://example.com/b"},
+	}}
+	if added := lf.SyncRegistryRevocations(manifestV1); added != 2 {
+		t.Fatalf("initial sync added = %d, want 2", added)
+	}
+
+	// Simulate a registry re-publishing with hash B pruned (only A remains).
+	manifestV2 := &Manifest{Revocations: []Revocation{
+		{ContentHash: "sha256:aaa", Reason: RevocationReasonMalicious, Source: RevocationSourceRegistry, DetailsURL: "https://example.com/a"},
+	}}
+	if added := lf.SyncRegistryRevocations(manifestV2); added != 0 {
+		t.Errorf("pruning sync added = %d, want 0 (nothing new)", added)
+	}
+
+	if !lf.IsRevoked("sha256:aaa") {
+		t.Error("hash A must remain revoked")
+	}
+	if !lf.IsRevoked("sha256:bbb") {
+		t.Error("G-15 violation: pruned hash B silently removed — revoked_hashes is append-only")
+	}
+	if len(lf.RevokedHashes) != 2 {
+		t.Errorf("revoked_hashes length = %d, want 2 (both hashes retained)", len(lf.RevokedHashes))
+	}
+}
+
+// TestSyncRegistryRevocations_PersistsAcrossSaveAndReload confirms that the
+// archival invariant survives round-tripping through disk: if a verifier
+// crashes and restarts between a hash being revoked and the next manifest
+// sync that prunes it, the on-disk lockfile must still reject the hash.
+func TestSyncRegistryRevocations_PersistsAcrossSaveAndReload(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "moat-lockfile.json")
+
+	lf := NewLockfile()
+	m := &Manifest{Revocations: []Revocation{
+		{ContentHash: "sha256:aaa", Reason: RevocationReasonMalicious, Source: RevocationSourceRegistry, DetailsURL: "https://example.com/a"},
+	}}
+	lf.SyncRegistryRevocations(m)
+	if err := lf.Save(path); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	reloaded, err := LoadLockfile(path)
+	if err != nil {
+		t.Fatalf("LoadLockfile: %v", err)
+	}
+	// Manifest now prunes the revocation.
+	prunedManifest := &Manifest{Revocations: nil}
+	reloaded.SyncRegistryRevocations(prunedManifest)
+	if !reloaded.IsRevoked("sha256:aaa") {
+		t.Error("reloaded lockfile lost revoked_hashes entry across save/prune — G-15 archival invariant broken on disk")
+	}
+}
+
+// TestSyncRegistryRevocations_NilInputs ensures both a nil receiver and a
+// nil manifest degrade to a no-op instead of panicking. Call sites may
+// legitimately pass a freshly-allocated Manifest with no revocations or
+// handle a nil lockfile in error paths — neither should crash.
+func TestSyncRegistryRevocations_NilInputs(t *testing.T) {
+	t.Parallel()
+	var nilLF *Lockfile
+	if got := nilLF.SyncRegistryRevocations(&Manifest{}); got != 0 {
+		t.Errorf("nil receiver returned added=%d, want 0", got)
+	}
+
+	lf := NewLockfile()
+	if got := lf.SyncRegistryRevocations(nil); got != 0 {
+		t.Errorf("nil manifest returned added=%d, want 0", got)
+	}
+	if len(lf.RevokedHashes) != 0 {
+		t.Errorf("nil manifest mutated lockfile: len=%d", len(lf.RevokedHashes))
+	}
+}
+
+// TestSyncRegistryRevocations_PreservesPreExistingEntries covers the
+// out-of-band append path: if a prior session added a hash via AddRevokedHash
+// (not via SyncRegistryRevocations), a later manifest sync that omits that
+// hash MUST leave it in place. This matters because the first-ever MOAT
+// lockfile migration may seed revoked_hashes from sources other than a
+// manifest sync.
+func TestSyncRegistryRevocations_PreservesPreExistingEntries(t *testing.T) {
+	t.Parallel()
+	lf := NewLockfile()
+	lf.AddRevokedHash("sha256:seed")
+
+	m := &Manifest{Revocations: []Revocation{
+		{ContentHash: "sha256:new", Reason: RevocationReasonMalicious, Source: RevocationSourceRegistry, DetailsURL: "https://example.com/n"},
+	}}
+	lf.SyncRegistryRevocations(m)
+
+	if !lf.IsRevoked("sha256:seed") {
+		t.Error("pre-existing entry removed by sync — violates archival invariant")
+	}
+	if !lf.IsRevoked("sha256:new") {
+		t.Error("manifest entry not added by sync")
+	}
+}
