@@ -8,6 +8,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 // tierBadge returns a colored "● Label" string for a confidence tier.
@@ -369,6 +370,24 @@ func (m *installWizardModel) viewReview() string {
 		if badge != "" {
 			summaryLines = append(summaryLines, pad+mutedStyle.Render("Detection: ")+badge)
 		}
+	}
+
+	// Trust line — MOAT AD-7 Panel C9. Rendered only when the item carries
+	// a trust surface (Verified green check / Recalled red X). Items from
+	// git registries or without a computed tier produce TrustBadgeNone and
+	// the row is suppressed — absence is intentional per AD-7.
+	if trustBadge := catalog.UserFacingBadge(m.item.TrustTier, m.item.Recalled); trustBadge != catalog.TrustBadgeNone {
+		var glyphStyle lipgloss.Style
+		switch trustBadge {
+		case catalog.TrustBadgeVerified:
+			glyphStyle = lipgloss.NewStyle().Foreground(successColor).Bold(true)
+		case catalog.TrustBadgeRecalled:
+			glyphStyle = lipgloss.NewStyle().Foreground(dangerColor).Bold(true)
+		}
+		trustText := catalog.TrustDescription(m.item.TrustTier, m.item.Recalled, m.item.RecallReason)
+		summaryLines = append(summaryLines, pad+mutedStyle.Render("Trust:     ")+
+			glyphStyle.Render(trustBadge.Glyph())+" "+
+			lipgloss.NewStyle().Foreground(primaryText).Render(trustText))
 	}
 
 	// Buttons on the last line of the summary area

@@ -73,6 +73,16 @@ type ContentItem struct {
 	Library     bool           // true if item lives in the global content library (~/.syllago/content/)
 	Registry    string         // non-empty if item came from a git registry (value is the registry name)
 	Source      string         // "project", "global", "library", or registry name
+
+	// MOAT trust state. TrustTier is the normative internal classification
+	// (Dual-Attested / Signed / Unsigned / Unknown); Recalled flips on when
+	// the publisher or registry has revoked this content hash (G-8). These
+	// fields stay zero for items not sourced from a MOAT manifest — a git
+	// registry item is indistinguishable from "trust question not asked."
+	// See AD-7 and UserFacingBadge for the collapse rules.
+	TrustTier    TrustTier
+	Recalled     bool
+	RecallReason string // populated when Recalled; consumed by TrustDescription
 }
 
 // IsExample returns true if this item is tagged as example content.
