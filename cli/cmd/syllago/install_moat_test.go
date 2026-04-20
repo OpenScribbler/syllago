@@ -302,11 +302,11 @@ func TestRunInstallFromRegistry_DryRunPrintsSummary(t *testing.T) {
 	}
 }
 
-// --- runInstallFromRegistry: non-dry-run defers file-fetch to a follow-up
-// bead, but only AFTER gates are evaluated. Gates-clean path surfaces a
-// structured error explaining the deferral.
+// --- runInstallFromRegistry: non-dry-run drives the Proceed-branch fetcher.
+// Gates-clean UNSIGNED items flow through fetchAndRecord; SIGNED/DUAL-ATTESTED
+// and unsupported source_uri schemes surface MOAT_004 without touching disk.
 
-func TestRunInstallFromRegistry_NonDryRunDefersFetch(t *testing.T) {
+func TestRunInstallFromRegistry_NonDryRunGitSchemeUnsupported(t *testing.T) {
 	orig := moatSyncFn
 	hash := "sha256:" + strings.Repeat("cd", 32)
 	moatSyncFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
@@ -333,13 +333,52 @@ func TestRunInstallFromRegistry_NonDryRunDefersFetch(t *testing.T) {
 		t.TempDir(),
 		"example",
 		"my-skill",
-		false, // non-dry-run — should surface the transitional error
+		false,
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 	var se output.StructuredError
-	if !errors.As(err, &se) || !strings.Contains(se.Message, "cleared MOAT gates") {
-		t.Errorf("expected message to note gate-clearing + deferred fetch; got %+v", err)
+	if !errors.As(err, &se) || !strings.Contains(se.Message, "source_uri scheme not supported") {
+		t.Errorf("expected scheme-not-supported message; got %+v", err)
+	}
+}
+
+func TestRunInstallFromRegistry_NonDryRunSignedTierDeferred(t *testing.T) {
+	orig := moatSyncFn
+	hash := "sha256:" + strings.Repeat("cd", 32)
+	idx := int64(42)
+	moatSyncFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+		return moat.SyncResult{
+			ManifestURL: "https://example.com/m",
+			Manifest: &moat.Manifest{Content: []moat.ContentEntry{{
+				Name:          "my-skill",
+				Type:          "skill",
+				ContentHash:   hash,
+				SourceURI:     "https://example.com/my-skill.tar.gz",
+				RekorLogIndex: &idx,
+			}}},
+			IncomingProfile: incomingProfile(),
+			Staleness:       moat.StalenessFresh,
+		}, nil
+	}
+	t.Cleanup(func() { moatSyncFn = orig })
+
+	cfg := cfgWithPinnedMOATRegistry()
+	err := runInstallFromRegistry(
+		context.Background(),
+		&bytes.Buffer{},
+		&bytes.Buffer{},
+		cfg,
+		t.TempDir(),
+		"example",
+		"my-skill",
+		false,
+		time.Now(),
+	)
+	assertStructuredCode(t, err, output.ErrMoatInvalid)
+	var se output.StructuredError
+	if !errors.As(err, &se) || !strings.Contains(se.Message, "trust tier SIGNED") {
+		t.Errorf("expected SIGNED-tier deferred message; got %+v", err)
 	}
 }
 

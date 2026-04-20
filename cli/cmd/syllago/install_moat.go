@@ -293,19 +293,18 @@ func runInstallFromRegistry(
 		return nil
 	}
 
-	// Gates cleared, but the source-fetcher + lockfile write land in a
-	// sibling bead. Returning a structured error here is intentional: the
-	// operator has just been prompted (or not, if all gates were clean),
-	// and the "would install" state is worth surfacing explicitly rather
-	// than silently succeeding with no file. The sync-state side effects
-	// above (ETag, fetched_at, revocation archival) have already
-	// persisted — those are legitimately "work the client did" and do
-	// not depend on the file arriving.
-	return output.NewStructuredError(
-		output.ErrMoatInvalid,
-		fmt.Sprintf("install of %s/%s cleared MOAT gates; source-fetcher wiring is deferred to a follow-up bead", reg.Name, entry.Name),
-		"Re-run with --dry-run to inspect the resolution, or wait for the source-fetcher bead (tracked as syllago-install-fetch in the svdwc decomposition) to land the file copy + RecordInstall step.",
-	)
+	// Gates cleared. Fetch the source artifact, verify sha256 matches the
+	// manifest-attested content_hash, extract into the per-item cache, and
+	// record the install in the lockfile. UNSIGNED-tier entries land with a
+	// null AttestationBundle; SIGNED/DUAL-ATTESTED tiers surface a structured
+	// error until per-item Rekor bundle fetching ships. See
+	// install_moat_fetch.go for the scope boundaries of this slice.
+	cacheDir, fetchErr := fetchAndRecord(ctx, entry, reg.Name, reg.ManifestURI, lockfilePath, lf)
+	if fetchErr != nil {
+		return fetchErr
+	}
+	fmt.Fprintf(out, "installed %s/%s (%s) to %s\n", reg.Name, entry.Name, entry.TrustTier().String(), cacheDir)
+	return nil
 }
 
 // resolveGateDecision maps a GateBlock to proceed/error/exit semantics.
