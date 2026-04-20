@@ -354,8 +354,8 @@ func TestSyncAll_WithClonedRepos(t *testing.T) {
 	os.WriteFile(filepath.Join(workDir, "README.md"), []byte("# Test"), 0644)
 
 	run("init", workDir)
-	run("-C", workDir, "config", "user.email", "test@test.com")
-	run("-C", workDir, "config", "user.name", "Test")
+	run("-C", workDir, "config", "user.email", "test@example.com")
+	run("-C", workDir, "config", "user.name", "Test User")
 	run("-C", workDir, "add", "-A")
 	run("-C", workDir, "commit", "-m", "init")
 	run("clone", "--bare", workDir, bareDir)

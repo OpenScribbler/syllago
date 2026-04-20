@@ -67,8 +67,8 @@ func createBareRepo(t *testing.T, layout string) string {
 		t.Fatalf("MkdirAll: %v", err)
 	}
 	run(t, work, "git", "init")
-	run(t, work, "git", "config", "user.email", "test@test.com")
-	run(t, work, "git", "config", "user.name", "Test")
+	run(t, work, "git", "config", "user.email", "test@example.com")
+	run(t, work, "git", "config", "user.name", "Test User")
 
 	switch layout {
 	case "valid":
@@ -227,8 +227,8 @@ func TestIntegration_Sync(t *testing.T) {
 	// Push a new skill to the bare repo via a temp workspace
 	workspace := filepath.Join(t.TempDir(), "workspace")
 	run(t, "", "git", "clone", bare, workspace)
-	run(t, workspace, "git", "config", "user.email", "test@test.com")
-	run(t, workspace, "git", "config", "user.name", "Test")
+	run(t, workspace, "git", "config", "user.email", "test@example.com")
+	run(t, workspace, "git", "config", "user.name", "Test User")
 	writeFile(t, workspace, "skills/new-skill/SKILL.md", "---\nname: New Skill\ndescription: Added after clone\n---\n\nNew skill.\n")
 	run(t, workspace, "git", "add", "-A")
 	run(t, workspace, "git", "commit", "-m", "add new skill")

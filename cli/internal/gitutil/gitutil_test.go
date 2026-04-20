@@ -38,10 +38,10 @@ func TestInitAndCommit(t *testing.T) {
 
 	// Set git identity via env vars for CI environments where no global config exists.
 	// t.Setenv is inherited by child processes and restored after the test.
-	t.Setenv("GIT_AUTHOR_NAME", "Test")
-	t.Setenv("GIT_AUTHOR_EMAIL", "test@test.com")
-	t.Setenv("GIT_COMMITTER_NAME", "Test")
-	t.Setenv("GIT_COMMITTER_EMAIL", "test@test.com")
+	t.Setenv("GIT_AUTHOR_NAME", "Test User")
+	t.Setenv("GIT_AUTHOR_EMAIL", "test@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "Test User")
+	t.Setenv("GIT_COMMITTER_EMAIL", "test@example.com")
 
 	if err := InitAndCommit(tmp, "Initial commit"); err != nil {
 		t.Fatalf("InitAndCommit: %v", err)
@@ -70,10 +70,10 @@ func TestInitAndCommit_EmptyDir(t *testing.T) {
 		t.Skip("git not available")
 	}
 	// An empty directory causes "git commit" to fail because there's nothing to commit.
-	t.Setenv("GIT_AUTHOR_NAME", "Test")
-	t.Setenv("GIT_AUTHOR_EMAIL", "test@test.com")
-	t.Setenv("GIT_COMMITTER_NAME", "Test")
-	t.Setenv("GIT_COMMITTER_EMAIL", "test@test.com")
+	t.Setenv("GIT_AUTHOR_NAME", "Test User")
+	t.Setenv("GIT_AUTHOR_EMAIL", "test@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "Test User")
+	t.Setenv("GIT_COMMITTER_EMAIL", "test@example.com")
 
 	err := InitAndCommit(t.TempDir(), "empty commit")
 	if err == nil {

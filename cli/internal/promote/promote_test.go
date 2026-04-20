@@ -22,8 +22,8 @@ func initGitRepo(t *testing.T) string {
 
 	cmds := [][]string{
 		{"git", "init", dir},
-		{"git", "-C", dir, "config", "user.email", "test@test.com"},
-		{"git", "-C", dir, "config", "user.name", "Test"},
+		{"git", "-C", dir, "config", "user.email", "test@example.com"},
+		{"git", "-C", dir, "config", "user.name", "Test User"},
 	}
 	for _, args := range cmds {
 		cmd := exec.Command(args[0], args[1:]...)
@@ -440,8 +440,8 @@ func TestPromoteToRegistry_ItemAlreadyExists(t *testing.T) {
 	// Init git in the registry dir
 	for _, args := range [][]string{
 		{"git", "init", regDir},
-		{"git", "-C", regDir, "config", "user.email", "test@test.com"},
-		{"git", "-C", regDir, "config", "user.name", "Test"},
+		{"git", "-C", regDir, "config", "user.email", "test@example.com"},
+		{"git", "-C", regDir, "config", "user.name", "Test User"},
 	} {
 		cmd := exec.Command(args[0], args[1:]...)
 		if out, err := cmd.CombinedOutput(); err != nil {
@@ -544,8 +544,8 @@ func TestPromoteToRegistry_FailsAtPush(t *testing.T) {
 	// Init git in registry dir
 	for _, args := range [][]string{
 		{"git", "init", regDir},
-		{"git", "-C", regDir, "config", "user.email", "test@test.com"},
-		{"git", "-C", regDir, "config", "user.name", "Test"},
+		{"git", "-C", regDir, "config", "user.email", "test@example.com"},
+		{"git", "-C", regDir, "config", "user.name", "Test User"},
 	} {
 		cmd := exec.Command(args[0], args[1:]...)
 		if out, err := cmd.CombinedOutput(); err != nil {
@@ -616,8 +616,8 @@ func TestPromote_FullFlow_PushSucceeds(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git clone failed: %v\n%s", err, out)
 	}
-	exec.Command("git", "-C", dir, "config", "user.email", "test@test.com").Run()
-	exec.Command("git", "-C", dir, "config", "user.name", "Test").Run()
+	exec.Command("git", "-C", dir, "config", "user.email", "test@example.com").Run()
+	exec.Command("git", "-C", dir, "config", "user.name", "Test User").Run()
 
 	// Create initial commit on master/main and push
 	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# repo"), 0644)
@@ -681,8 +681,8 @@ func TestPromoteToRegistry_FullFlow_PushSucceeds(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git clone failed: %v\n%s", err, out)
 	}
-	exec.Command("git", "-C", regDir, "config", "user.email", "test@test.com").Run()
-	exec.Command("git", "-C", regDir, "config", "user.name", "Test").Run()
+	exec.Command("git", "-C", regDir, "config", "user.email", "test@example.com").Run()
+	exec.Command("git", "-C", regDir, "config", "user.name", "Test User").Run()
 
 	// Initial commit
 	os.WriteFile(filepath.Join(regDir, "README.md"), []byte("# reg"), 0644)
