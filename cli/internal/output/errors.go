@@ -98,6 +98,8 @@ const (
 	ErrMoatTrustedRootStale    = "MOAT_005" // bundled trusted root exceeded its 365-day cliff
 	ErrMoatUnsignedWithPin     = "MOAT_006" // registry has a pinned profile but no manifest/bundle found in checkout
 	ErrMoatTrustedRootOverride = "MOAT_007" // operator-supplied trusted_root.json path (--trusted-root or reg.trusted_root) unusable
+	ErrMoatRevocationBlock     = "MOAT_008" // archival or live registry-source revocation refuses install (ADR 0007 G-8/G-15)
+	ErrMoatTierBelowPolicy     = "MOAT_009" // resolved content trust tier is below the caller-configured policy floor
 )
 
 // docsURL converts an error code like "CATALOG_001" to its documentation URL.
@@ -205,6 +207,8 @@ func AllErrorCodes() []string {
 		ErrMoatTrustedRootStale,
 		ErrMoatUnsignedWithPin,
 		ErrMoatTrustedRootOverride,
+		ErrMoatRevocationBlock,
+		ErrMoatTierBelowPolicy,
 	}
 }
 
