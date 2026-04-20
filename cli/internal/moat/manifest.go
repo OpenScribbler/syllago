@@ -79,6 +79,17 @@ type Manifest struct {
 // uniform.
 
 // ContentEntry is one row in manifest.content[].
+//
+// PrivateRepo is per-item (ADR 0007 G-10, spec §Private Content Isolation):
+// conforming clients MUST NOT infer an item's visibility from the registry
+// or the Syllago-side probe (`registry.Visibility*`). The registry-level
+// probe answers "is the git registry world-readable?"; the per-item
+// `private_repo` flag is a publisher declaration of whether this specific
+// item's source repository was private at publish time. A manifest MAY
+// mix private and public items — install/sync flows that need to prompt
+// the user before bulk install should call Manifest.HasPrivateContent
+// and per-entry IsPrivate rather than falling back to a registry-level
+// default.
 type ContentEntry struct {
 	Name                    string          `json:"name"`
 	DisplayName             string          `json:"display_name"`
@@ -93,6 +104,19 @@ type ContentEntry struct {
 	Version                 string          `json:"version,omitempty"`
 	ScanStatus              json.RawMessage `json:"scan_status,omitempty"`
 	AttestationHashMismatch bool            `json:"attestation_hash_mismatch,omitempty"`
+}
+
+// IsPrivate reports whether this specific item was declared as originating
+// from a private repository. This is the per-item contract required by
+// ADR 0007 G-10; callers MUST read this rather than inferring visibility
+// from the registry or from any attestation-level default. A nil receiver
+// returns false (treated as public) — avoids defensive nil checks at call
+// sites for the common case where `range m.Content` holds values.
+func (c *ContentEntry) IsPrivate() bool {
+	if c == nil {
+		return false
+	}
+	return c.PrivateRepo
 }
 
 // TrustTier classifies ContentEntry by the attestation fields present.
@@ -145,6 +169,42 @@ func (c *ContentEntry) TrustTier() TrustTier {
 		return TrustTierDualAttested
 	}
 	return TrustTierSigned
+}
+
+// HasPrivateContent reports whether any entry in content[] is declared
+// private. Install and sync flows use this to decide whether a bulk
+// operation requires explicit user confirmation (ADR 0007 G-10, spec
+// §Private Content Isolation). The check is per-item — if content[]
+// mixes private and public entries, this returns true so the prompt
+// can enumerate which items are private. A nil receiver or empty
+// content[] returns false.
+func (m *Manifest) HasPrivateContent() bool {
+	if m == nil {
+		return false
+	}
+	for i := range m.Content {
+		if m.Content[i].PrivateRepo {
+			return true
+		}
+	}
+	return false
+}
+
+// PrivateContent returns the subset of content[] entries declared as
+// originating from private repositories. Ordering is preserved from
+// m.Content so callers can present the list in the manifest's own
+// order. A nil receiver returns nil.
+func (m *Manifest) PrivateContent() []ContentEntry {
+	if m == nil {
+		return nil
+	}
+	var out []ContentEntry
+	for i := range m.Content {
+		if m.Content[i].PrivateRepo {
+			out = append(out, m.Content[i])
+		}
+	}
+	return out
 }
 
 // Revocation is one row in manifest.revocations[].
