@@ -123,9 +123,23 @@ func (t TrustTier) String() string {
 // TrustTier computes the trust tier from the entry's attestation fields.
 // Absence of rekor_log_index is the Unsigned signal; presence of both
 // rekor_log_index AND per-item signing_profile is the Dual-Attested signal.
+//
+// attestation_hash_mismatch downgrade (spec v0.6.0, ADR 0007 G-13): when
+// the flag is true, the publisher's per-item attestation does not cover
+// the current content — the registry computed a different hash than the
+// one in moat-attestation.json. The Registry Action downgrades to Signed
+// at publish time; this local recomputation enforces the same contract
+// defensively, so a manifest that still carries signing_profile with the
+// mismatch flag can NEVER elevate the tier to Dual-Attested on the client
+// side. Clients MUST NOT hard-block on the flag alone (trust display
+// only); the tier downgrade is the surfacing mechanism — metadata panels
+// read TrustTier(), not the raw field.
 func (c *ContentEntry) TrustTier() TrustTier {
 	if c.RekorLogIndex == nil {
 		return TrustTierUnsigned
+	}
+	if c.AttestationHashMismatch {
+		return TrustTierSigned
 	}
 	if c.SigningProfile != nil {
 		return TrustTierDualAttested
