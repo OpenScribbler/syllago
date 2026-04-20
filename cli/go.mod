@@ -131,3 +131,8 @@ require (
 	google.golang.org/grpc v1.79.2 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
+
+// Pin go-tuf/v2 to v2.4.1 to patch three CVEs (GO-2026-4348, -4349, -4377)
+// reachable via sigstore-go v1.1.4's transitive TUF init chain. Remove when
+// sigstore-go releases a version that pins go-tuf/v2 >= v2.4.1 directly.
+replace github.com/theupdateframework/go-tuf/v2 => github.com/theupdateframework/go-tuf/v2 v2.4.1
