@@ -1,0 +1,106 @@
+name: MOAT Trusted Root Staleness Check
+
+# Runs weekly against the bundled Sigstore trusted root. When the staleness
+# status leaves `fresh`, opens or updates a single GitHub issue so the MOAT
+# maintainers notice before the 365-day hard-fail cliff.
+#
+# See docs/runbooks/moat-trusted-root-refresh.md for the refresh procedure.
+#
+# Security posture: this workflow consumes only:
+#   - the repo contents at HEAD (trusted)
+#   - the syllago binary built in-step (trusted)
+#   - the syllago binary's own JSON output (trusted — produced by our code)
+# No github.event.* inputs are referenced. All dynamic content passes through
+# files or environment variables rather than shell-interpolated strings.
+
+on:
+  schedule:
+    # Mondays at 12:00 UTC — fresh signal at the start of the workweek,
+    # before an escalated/expired status could trip a release.
+    - cron: '0 12 * * 1'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: moat-trusted-root-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check bundled trusted-root staleness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: '1.26.x'
+          cache-dependency-path: cli/go.sum
+
+      - name: Build syllago
+        working-directory: cli
+        run: make build
+
+      - name: Run moat trust status
+        id: status
+        working-directory: cli
+        run: |
+          set +e
+          ./syllago moat trust status --json > "${RUNNER_TEMP}/trust-status.json" 2>/dev/null
+          STATUS_EXIT=$?
+          echo "exit=${STATUS_EXIT}" >> "${GITHUB_OUTPUT}"
+          exit 0
+
+      - name: Build issue body
+        if: steps.status.outputs.exit != '0'
+        env:
+          STATUS_EXIT: ${{ steps.status.outputs.exit }}
+        run: |
+          set -euo pipefail
+          DETECTED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          BODY_FILE="${RUNNER_TEMP}/issue-body.md"
+          {
+            echo "The bundled Sigstore trusted root is past the \`fresh\` threshold."
+            echo
+            echo "\`syllago moat trust status --json\`:"
+            echo
+            echo '```json'
+            cat "${RUNNER_TEMP}/trust-status.json"
+            echo
+            echo '```'
+            echo
+            echo "Exit code: \`${STATUS_EXIT}\` (1 = warn/escalated, 2 = expired/missing/corrupt)."
+            echo
+            echo "**Action:** follow [\`docs/runbooks/moat-trusted-root-refresh.md\`](../blob/main/docs/runbooks/moat-trusted-root-refresh.md)."
+            echo
+            echo "Detected: \`${DETECTED}\` by [\`moat-trusted-root-check.yml\`](../actions/workflows/moat-trusted-root-check.yml)."
+          } > "${BODY_FILE}"
+
+      - name: Open or update refresh-due issue
+        if: steps.status.outputs.exit != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_TITLE: MOAT trusted root refresh due
+        run: |
+          set -euo pipefail
+          EXISTING="$(gh issue list \
+            --search "${ISSUE_TITLE} in:title" \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')"
+          if [ -n "${EXISTING}" ]; then
+            echo "Updating existing issue #${EXISTING}"
+            gh issue comment "${EXISTING}" --body-file "${RUNNER_TEMP}/issue-body.md"
+          else
+            echo "Opening new refresh-due issue"
+            gh issue create \
+              --title "${ISSUE_TITLE}" \
+              --body-file "${RUNNER_TEMP}/issue-body.md"
+          fi
