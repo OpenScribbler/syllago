@@ -1099,6 +1099,17 @@ func runAddFromRegistry(projectRoot string, args []string, fromSlug string, addA
 		return err
 	}
 
+	// MOAT slice-2c: verify the registry's signed manifest BEFORE any content
+	// transitions into the library. Unsigned registries (no pinned profile,
+	// Type != moat) bypass verification for slice-1 back-compat.
+	verifyOutcome, verifyErr := verifyRegistryForAdd(reg, cloneDir)
+	if verifyErr != nil {
+		return verifyErr
+	}
+	if verifyOutcome != nil {
+		emitTrustLabel(verifyOutcome, reg.Name)
+	}
+
 	// Parse type/name filter from positional args.
 	var typeStr, nameFilter string
 	if len(args) > 0 {
