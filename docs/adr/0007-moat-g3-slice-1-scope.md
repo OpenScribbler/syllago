@@ -238,7 +238,7 @@ Error codes: `MOAT_SIGNED`, `MOAT_UNSIGNED`, `MOAT_INVALID`,
 - The bundled trusted root is an ongoing operational artifact. It must be
   refreshed at least every 9 months to stay out of the 180-day warning band.
   This requires a release-process discipline that syllago does not currently
-  practice. A follow-up bead tracks the refresh runbook.
+  practice. Tracked by `syllago-eafuv` (refresh runbook + cadence mechanism).
 - `BuildBundle`'s retirement to test-only means the spike fixtures (raw Rekor
   API JSON) stay in `testdata/` and need their own migration when the test
   vectors get regenerated. The TODO lives in the spike bead's closing notes.
@@ -258,6 +258,7 @@ commits to contributing a MOAT spec PR that formalizes:
 Without the spec PR, syllago's slice-1 shipping behavior is a unilateral
 extension rather than a conforming interpretation. The panel reserved the
 right to reopen if the spec PR is not drafted within a reasonable window.
+Tracked by `syllago-9cv8m`.
 
 ## Implementation checklist
 
@@ -292,3 +293,5 @@ Sourced from the panel consensus (Remy's slice-1 list, adopted as authoritative)
 - MOAT specification: `../moat/moat-spec.md` v0.6.0
 - Fulcio OID registry: `1.3.6.1.4.1.57264.1.*` (GitHub OIDC extensions)
 - sigstore-go: `github.com/sigstore/sigstore-go/pkg/{bundle,root,verify}`
+- Follow-up beads: `syllago-9cv8m` (upstream MOAT spec PR),
+  `syllago-eafuv` (trusted_root.json refresh runbook + cadence)
