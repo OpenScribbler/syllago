@@ -106,7 +106,8 @@ func TestWalk_DepthLimitWarning(t *testing.T) {
 }
 
 func TestWalk_FileLimitWarning(t *testing.T) {
-	t.Parallel()
+	// Mutates package-level testMaxFiles; see .claude/rules/cli-test-patterns.md
+	// "Skip t.Parallel() when mutating globals."
 	root := t.TempDir()
 
 	// Create more files than the test limit.
