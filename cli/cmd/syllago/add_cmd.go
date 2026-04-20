@@ -73,6 +73,10 @@ func init() {
 	addCmd.Flags().String("source-visibility", "", "Source registry visibility (public, private, unknown)")
 	_ = addCmd.Flags().MarkHidden("source-registry")
 	_ = addCmd.Flags().MarkHidden("source-visibility")
+	// MOAT slice-2d: operator escape hatch. Air-gapped / enterprise registries
+	// can pin a Sigstore trusted_root.json per-invocation. Takes precedence
+	// over registry.trusted_root in config.json. Absolute path only.
+	addCmd.Flags().String("trusted-root", "", "Path to Sigstore trusted_root.json (overrides registry config and the bundled default)")
 	rootCmd.AddCommand(addCmd)
 }
 
@@ -98,6 +102,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	addAll, _ := cmd.Flags().GetBool("all")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	force, _ := cmd.Flags().GetBool("force")
+	trustedRootOverride, _ := cmd.Flags().GetString("trusted-root")
 
 	// --all and a positional target are mutually exclusive.
 	if addAll && len(args) > 0 {
@@ -111,7 +116,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		if globalDir == "" {
 			return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
 		}
-		return runAddFromRegistry(root, args, fromSlug, addAll, dryRun, force, globalDir)
+		return runAddFromRegistry(root, args, fromSlug, addAll, dryRun, force, globalDir, trustedRootOverride)
 	}
 
 	baseDir, _ := cmd.Flags().GetString("base-dir")
@@ -1063,7 +1068,7 @@ func findRegistryForSlug(fromSlug string, configs ...*config.Config) *config.Reg
 // runAddFromRegistry handles "syllago add [type] --from <registry-name>".
 // It looks up the registry by short or full name, scans its clone directory,
 // applies type/name filters from args, and writes matching items to the library.
-func runAddFromRegistry(projectRoot string, args []string, fromSlug string, addAll, dryRun, force bool, globalDir string) error {
+func runAddFromRegistry(projectRoot string, args []string, fromSlug string, addAll, dryRun, force bool, globalDir string, trustedRootOverride string) error {
 	globalCfg, _ := config.LoadGlobal()
 	projectCfg, _ := config.Load(projectRoot)
 
@@ -1099,10 +1104,11 @@ func runAddFromRegistry(projectRoot string, args []string, fromSlug string, addA
 		return err
 	}
 
-	// MOAT slice-2c: verify the registry's signed manifest BEFORE any content
-	// transitions into the library. Unsigned registries (no pinned profile,
-	// Type != moat) bypass verification for slice-1 back-compat.
-	verifyOutcome, verifyErr := verifyRegistryForAdd(reg, cloneDir)
+	// MOAT slice-2c/2d: verify the registry's signed manifest BEFORE any
+	// content transitions into the library. Unsigned registries (no pinned
+	// profile, Type != moat) bypass verification for slice-1 back-compat.
+	// trustedRootOverride is the optional --trusted-root CLI flag.
+	verifyOutcome, verifyErr := verifyRegistryForAdd(reg, cloneDir, trustedRootOverride)
 	if verifyErr != nil {
 		return verifyErr
 	}
