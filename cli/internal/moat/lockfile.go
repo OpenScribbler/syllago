@@ -130,6 +130,15 @@ func NullAttestationBundle() json.RawMessage { return nullRaw }
 // Lockfile is the full on-disk structure. Load/Save handle the file I/O;
 // AddEntry is the only mutation path for entries[] because it enforces
 // the pre-write hash invariant.
+//
+// RevokedHashes is append-only by contract (spec v0.6.0 §Revocation,
+// ADR 0007 G-15): registries MAY prune revocation entries after ≥180 days,
+// and once a hash has been added the lockfile becomes the authoritative
+// hard-block record. A revocation that later disappears from the manifest
+// MUST NOT cause the entry to be removed — silent pruning would let a
+// compromised registry un-revoke malicious content by dropping the
+// revocation and waiting. Use AddRevokedHash / SyncRegistryRevocations for
+// mutation; never trim the slice.
 type Lockfile struct {
 	Version       int                          `json:"moat_lockfile_version"`
 	Registries    map[string]RegistryLockState `json:"registries"`
@@ -300,14 +309,53 @@ func (l *Lockfile) IsRevoked(contentHash string) bool {
 }
 
 // AddRevokedHash appends a hash to revoked_hashes if not already present.
-// De-duplication is safe because the spec says "entries MUST NOT be
-// silently removed" — this function never removes, and adding a duplicate
-// would bloat the file without changing semantics.
+// De-duplication is safe because the spec (v0.6.0 §Revocation, ADR 0007
+// G-15) says "entries MUST NOT be silently removed" — this function never
+// removes, and adding a duplicate would bloat the file without changing
+// semantics.
 func (l *Lockfile) AddRevokedHash(contentHash string) {
 	if l.IsRevoked(contentHash) {
 		return
 	}
 	l.RevokedHashes = append(l.RevokedHashes, contentHash)
+}
+
+// SyncRegistryRevocations merges the registry-source revocations from a
+// freshly-fetched manifest into revoked_hashes. Publisher-source
+// revocations are deliberately NOT written here — they use
+// warn-once-per-session semantics (ADR 0007 G-8, spec §Revocation
+// Mechanism) and must not be promoted to a permanent hard-block. Unknown
+// / absent source values fail closed to "registry" via
+// Revocation.EffectiveSource().
+//
+// Spec v0.6.0 §Revocation Archival (ADR 0007 G-15): this operation is
+// strictly additive. Any hash already present in revoked_hashes that is
+// absent from m.Revocations MUST remain — once a registry prunes a
+// revocation (permitted after ≥180 days), the lockfile becomes the
+// authoritative hard-block record. The counterpart meta-registry-side
+// enforcement (MR-11, revocation-tombstones.json) ensures a pruned hash
+// cannot reappear in content[]. Client-side, the guarantee is: once
+// blocked, always blocked.
+//
+// Returns the number of newly-added hashes. A nil receiver or nil
+// manifest returns 0.
+func (l *Lockfile) SyncRegistryRevocations(m *Manifest) int {
+	if l == nil || m == nil {
+		return 0
+	}
+	added := 0
+	for i := range m.Revocations {
+		r := &m.Revocations[i]
+		if r.EffectiveSource() != RevocationSourceRegistry {
+			continue
+		}
+		if l.IsRevoked(r.ContentHash) {
+			continue
+		}
+		l.RevokedHashes = append(l.RevokedHashes, r.ContentHash)
+		added++
+	}
+	return added
 }
 
 // ErrSignedPayloadHashMismatch is returned when AddEntry's pre-write check
