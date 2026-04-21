@@ -130,6 +130,11 @@ func TestMCPConfigPath_ProjectScoped(t *testing.T) {
 		{"opencode", filepath.Join(repoRoot, "opencode.json")},
 		{"cline", provider.ClineMCPSettingsPath()},
 		{"roo-code", filepath.Join(repoRoot, ".roo", "mcp.json")},
+		// Cursor is documented at both the global and project path; we install
+		// to the project path for parity with other per-repo providers. If this
+		// case disappears, production install for slug=cursor regresses to the
+		// "MCP config path not defined" error path (see bead syllago-4w5xy).
+		{"cursor", filepath.Join(repoRoot, ".cursor", "mcp.json")},
 	}
 
 	for _, tt := range tests {
@@ -143,6 +148,132 @@ func TestMCPConfigPath_ProjectScoped(t *testing.T) {
 				t.Errorf("want %s, got %s", tt.wantPath, got)
 			}
 		})
+	}
+}
+
+// TestMCPConfigPath_HomeScoped covers Windsurf, whose MCP config lives at
+// ~/.codeium/windsurf/mcp_config.json with no project-local alternative.
+// Unlike the project-scoped cases this one depends on os.UserHomeDir(), so
+// we assert via suffix rather than hard-coding a home path.
+func TestMCPConfigPath_HomeScoped(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("os.UserHomeDir: %v", err)
+	}
+
+	tests := []struct {
+		slug     string
+		wantPath string
+	}{
+		{"windsurf", filepath.Join(home, ".codeium", "windsurf", "mcp_config.json")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.slug, func(t *testing.T) {
+			prov := provider.Provider{Slug: tt.slug}
+			got, err := mcpConfigPathImpl(prov, "/tmp/irrelevant-repo")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.wantPath {
+				t.Errorf("want %s, got %s", tt.wantPath, got)
+			}
+		})
+	}
+}
+
+// TestInstallMCP_Cursor_ProductionPath exercises the real mcpConfigPath
+// function (no test-seam override) so the switch case for slug=cursor is
+// covered end-to-end. Without this, the unit tests above assert the switch
+// maps correctly, but installMCP itself could still regress if a future
+// refactor rerouted its path lookup through a different function.
+func TestInstallMCP_Cursor_ProductionPath(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	itemDir := filepath.Join(tmpDir, "cursor-mcp")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	configJSON, _ := json.Marshal(map[string]interface{}{
+		"command": "npx",
+		"args":    []string{"-y", "@modelcontextprotocol/server-github"},
+	})
+	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), configJSON, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Pre-create the project-local MCP config file at the canonical path.
+	cfgDir := filepath.Join(tmpDir, ".cursor")
+	if err := os.MkdirAll(cfgDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	cfgPath := filepath.Join(cfgDir, "mcp.json")
+	if err := os.WriteFile(cfgPath, []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	item := catalog.ContentItem{Name: "github", Type: catalog.MCP, Path: itemDir}
+	prov := provider.Provider{Slug: "cursor", Name: "Cursor"}
+
+	if _, err := installMCP(item, prov, tmpDir); err != nil {
+		t.Fatalf("installMCP via real path: %v — regression; slug=cursor no longer maps through mcpConfigPathImpl", err)
+	}
+
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatalf("cursor MCP config was not written at the canonical path %s: %v", cfgPath, err)
+	}
+	if got := gjson.GetBytes(data, "mcpServers.github.command").String(); got != "npx" {
+		t.Errorf("mcpServers.github.command = %q, want npx (merge via real path broke)", got)
+	}
+}
+
+// TestInstallMCP_Windsurf_ProductionPath exercises slug=windsurf without
+// the test seam. Windsurf's MCP config lives at the user's home dir, so the
+// test has to HOME-swap to avoid polluting the real developer machine.
+func TestInstallMCP_Windsurf_ProductionPath(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	fakeHome := filepath.Join(tmpDir, "home")
+	if err := os.MkdirAll(fakeHome, 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", fakeHome)
+
+	itemDir := filepath.Join(tmpDir, "windsurf-mcp")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	configJSON, _ := json.Marshal(map[string]interface{}{
+		"command": "python",
+		"args":    []string{"-m", "mcp_local"},
+	})
+	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), configJSON, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfgDir := filepath.Join(fakeHome, ".codeium", "windsurf")
+	if err := os.MkdirAll(cfgDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	cfgPath := filepath.Join(cfgDir, "mcp_config.json")
+	if err := os.WriteFile(cfgPath, []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	item := catalog.ContentItem{Name: "local-py", Type: catalog.MCP, Path: itemDir}
+	prov := provider.Provider{Slug: "windsurf", Name: "Windsurf"}
+
+	if _, err := installMCP(item, prov, tmpDir); err != nil {
+		t.Fatalf("installMCP via real path: %v — regression; slug=windsurf no longer maps through mcpConfigPathImpl", err)
+	}
+
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatalf("windsurf MCP config was not written at the canonical path %s: %v", cfgPath, err)
+	}
+	if got := gjson.GetBytes(data, "mcpServers.local-py.command").String(); got != "python" {
+		t.Errorf("mcpServers.local-py.command = %q, want python (merge via real path broke)", got)
 	}
 }
 
@@ -1154,5 +1285,289 @@ func TestInstallMCP_PerServer_InvalidServerKey(t *testing.T) {
 	_, err := installMCP(item, prov, tmpDir)
 	if err == nil {
 		t.Fatal("expected error for missing server key")
+	}
+}
+
+// --- Cursor and Windsurf MCP install (syllago-14usr) -------------------
+//
+// Prior coverage in mcp_test.go exercised Zed, Cline, OpenCode, Kiro,
+// Codex, and Amp install paths but nothing for Cursor or Windsurf — both
+// of which declare MCP via JSONMergeSentinel in their provider records.
+// The test-quality audit flagged this as an install gap: a broken MCP
+// render for either provider would ship silently-wrong configs.
+//
+// These tests exercise:
+//   - Installing a fresh canonical MCP into an empty settings file and
+//     asserting the merged JSON via schema-level gjson paths (not
+//     substring containment).
+//   - The H2 conflict guard: a pre-existing MCP entry with the same name
+//     that was NOT installed by syllago must cause installMCP to refuse
+//     the install rather than silently clobber it.
+//   - Syllago-managed overwrite: if installed.json records the same
+//     server name as syllago-installed, installMCP must merge cleanly
+//     over the existing entry.
+//
+// Note: Cursor and Windsurf are NOT currently handled by the
+// mcpConfigPathImpl switch — production would fail with "MCP config path
+// not defined". These tests use the existing mcpConfigPath test seam to
+// validate the merge/render logic in isolation; filling in the real
+// config-path mapping is tracked separately.
+
+// TestInstallMCP_Cursor_MergesIntoMcpJsonSchema pins the canonical MCP →
+// .cursor/mcp.json install path. Unlike the converter-level round-trip
+// test, this exercises the full installer stack: it creates a fresh
+// config.json item, runs installMCP with a Cursor provider, then asserts
+// the result via gjson field paths so the test fails loudly if the merge
+// produced an unexpected shape (missing mcpServers key, wrong indent,
+// fields moved into a sibling object, etc.).
+func TestInstallMCP_Cursor_MergesIntoMcpJsonSchema(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	itemDir := filepath.Join(tmpDir, "cursor-mcp")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	configJSON, err := json.Marshal(map[string]interface{}{
+		"type":    "stdio",
+		"command": "npx",
+		"args":    []string{"-y", "@modelcontextprotocol/server-github"},
+		"env":     map[string]string{"GITHUB_TOKEN": "placeholder"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), configJSON, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	configFile := filepath.Join(tmpDir, "cursor-mcp.json")
+	if err := os.WriteFile(configFile, []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	item := catalog.ContentItem{Name: "github", Type: catalog.MCP, Path: itemDir}
+	prov := provider.Provider{Slug: "cursor", Name: "Cursor"}
+
+	origPath := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = origPath }()
+
+	if _, err := installMCP(item, prov, tmpDir); err != nil {
+		t.Fatalf("installMCP: %v", err)
+	}
+
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Schema-level assertions — each path must exist with the expected
+	// scalar/array value. A substring test would accept a degenerate
+	// payload like `{"mcpServers":null,"github":{...}}`.
+	got := gjson.GetBytes(data, "mcpServers.github")
+	if !got.Exists() {
+		t.Fatal("mcpServers.github not present after install")
+	}
+	if got := got.Get("command").String(); got != "npx" {
+		t.Errorf("command = %q, want npx", got)
+	}
+	args := got.Get("args").Array()
+	if len(args) != 2 || args[0].String() != "-y" || args[1].String() != "@modelcontextprotocol/server-github" {
+		t.Errorf("args = %v, want [-y @modelcontextprotocol/server-github]", args)
+	}
+	if got := got.Get("env.GITHUB_TOKEN").String(); got != "placeholder" {
+		t.Errorf("env.GITHUB_TOKEN = %q, want placeholder", got)
+	}
+	if got := got.Get("type").String(); got != "stdio" {
+		t.Errorf("type = %q, want stdio (transport must survive merge)", got)
+	}
+}
+
+// TestInstallMCP_Cursor_RefusesConflictWithUserEntry covers the H2 guard
+// for Cursor. A pre-existing MCP server entry under the same name that
+// the user added manually (not syllago-managed) must block the install
+// rather than get silently overwritten — users rely on their own MCP
+// entries surviving `syllago install`.
+func TestInstallMCP_Cursor_RefusesConflictWithUserEntry(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	itemDir := filepath.Join(tmpDir, "cursor-mcp")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	configJSON, _ := json.Marshal(map[string]interface{}{
+		"command": "npx",
+		"args":    []string{"-y", "@modelcontextprotocol/server-github"},
+	})
+	os.WriteFile(filepath.Join(itemDir, "config.json"), configJSON, 0644)
+
+	// User has a prior entry with the same key — not recorded in installed.json.
+	configFile := filepath.Join(tmpDir, "cursor-mcp.json")
+	existing := `{"mcpServers":{"github":{"command":"/usr/local/bin/custom-github","args":["--user-flag"]}}}`
+	if err := os.WriteFile(configFile, []byte(existing), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	item := catalog.ContentItem{Name: "github", Type: catalog.MCP, Path: itemDir}
+	prov := provider.Provider{Slug: "cursor", Name: "Cursor"}
+
+	origPath := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = origPath }()
+
+	_, err := installMCP(item, prov, tmpDir)
+	if err == nil {
+		t.Fatal("installMCP succeeded despite user-owned MCP entry — H2 guard failed for Cursor")
+	}
+
+	// The file must be untouched (aside from the backup the installer
+	// writes before attempting the merge). gjson path should still return
+	// the user's command, not syllago's.
+	data, _ := os.ReadFile(configFile)
+	if got := gjson.GetBytes(data, "mcpServers.github.command").String(); got != "/usr/local/bin/custom-github" {
+		t.Errorf("user-owned command overwritten: got %q, want /usr/local/bin/custom-github", got)
+	}
+}
+
+// TestInstallMCP_Cursor_AllowsOverwriteOfSyllagoManaged covers the other
+// side of H2: when installed.json says syllago previously installed the
+// same server name, the install path must overwrite cleanly. Without this
+// path, a `syllago install` idempotency retry (or a registry update)
+// would start failing with spurious "entry already exists" errors.
+func TestInstallMCP_Cursor_AllowsOverwriteOfSyllagoManaged(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	itemDir := filepath.Join(tmpDir, "cursor-mcp")
+	os.MkdirAll(itemDir, 0755)
+	newConfig, _ := json.Marshal(map[string]interface{}{
+		"command": "npx",
+		"args":    []string{"-y", "@modelcontextprotocol/server-github", "--v2"},
+	})
+	os.WriteFile(filepath.Join(itemDir, "config.json"), newConfig, 0644)
+
+	configFile := filepath.Join(tmpDir, "cursor-mcp.json")
+	existing := `{"mcpServers":{"github":{"command":"npx","args":["-y","@modelcontextprotocol/server-github","--v1"]}}}`
+	os.WriteFile(configFile, []byte(existing), 0644)
+
+	inst := &Installed{
+		MCP: []InstalledMCP{{
+			Name:        "github",
+			ServerNames: []string{"github"},
+			Source:      "export",
+		}},
+	}
+	if err := SaveInstalled(tmpDir, inst); err != nil {
+		t.Fatal(err)
+	}
+
+	item := catalog.ContentItem{Name: "github", Type: catalog.MCP, Path: itemDir}
+	prov := provider.Provider{Slug: "cursor", Name: "Cursor"}
+
+	origPath := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = origPath }()
+
+	if _, err := installMCP(item, prov, tmpDir); err != nil {
+		t.Fatalf("installMCP refused overwrite of syllago-managed entry: %v", err)
+	}
+
+	data, _ := os.ReadFile(configFile)
+	args := gjson.GetBytes(data, "mcpServers.github.args").Array()
+	if len(args) != 3 || args[2].String() != "--v2" {
+		t.Errorf("args = %v; expected the new --v2 array after overwrite", args)
+	}
+}
+
+// TestInstallMCP_Windsurf_MergesIntoMcpConfigJsonSchema mirrors the
+// Cursor happy-path test but targets Windsurf's .windsurf/mcp_config.json
+// (note the different filename). Same schema-level assertions: every
+// field must land on the expected JSON path rather than merely "appear
+// somewhere in the output bytes".
+func TestInstallMCP_Windsurf_MergesIntoMcpConfigJsonSchema(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	itemDir := filepath.Join(tmpDir, "windsurf-mcp")
+	os.MkdirAll(itemDir, 0755)
+	configJSON, _ := json.Marshal(map[string]interface{}{
+		"command": "python",
+		"args":    []string{"-m", "mcp_local"},
+		"env":     map[string]string{"PORT": "3000"},
+	})
+	os.WriteFile(filepath.Join(itemDir, "config.json"), configJSON, 0644)
+
+	configFile := filepath.Join(tmpDir, "windsurf-mcp_config.json")
+	os.WriteFile(configFile, []byte("{}"), 0644)
+
+	item := catalog.ContentItem{Name: "local-py", Type: catalog.MCP, Path: itemDir}
+	prov := provider.Provider{Slug: "windsurf", Name: "Windsurf"}
+
+	origPath := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = origPath }()
+
+	if _, err := installMCP(item, prov, tmpDir); err != nil {
+		t.Fatalf("installMCP: %v", err)
+	}
+
+	data, _ := os.ReadFile(configFile)
+	got := gjson.GetBytes(data, "mcpServers.local-py")
+	if !got.Exists() {
+		t.Fatal("mcpServers.local-py not present after Windsurf install")
+	}
+	if got := got.Get("command").String(); got != "python" {
+		t.Errorf("command = %q, want python", got)
+	}
+	args := got.Get("args").Array()
+	if len(args) != 2 || args[0].String() != "-m" || args[1].String() != "mcp_local" {
+		t.Errorf("args = %v, want [-m mcp_local]", args)
+	}
+	if got := got.Get("env.PORT").String(); got != "3000" {
+		t.Errorf("env.PORT = %q, want 3000", got)
+	}
+}
+
+// TestInstallMCP_Windsurf_RefusesConflictWithUserEntry mirrors the Cursor
+// H2 guard test against Windsurf's mcp_config.json shape. A user-owned
+// entry must block the install.
+func TestInstallMCP_Windsurf_RefusesConflictWithUserEntry(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	itemDir := filepath.Join(tmpDir, "windsurf-mcp")
+	os.MkdirAll(itemDir, 0755)
+	configJSON, _ := json.Marshal(map[string]interface{}{
+		"command": "node",
+		"args":    []string{"new.js"},
+	})
+	os.WriteFile(filepath.Join(itemDir, "config.json"), configJSON, 0644)
+
+	configFile := filepath.Join(tmpDir, "windsurf-mcp_config.json")
+	existing := `{"mcpServers":{"local-py":{"command":"python","args":["user-owned.py"]}}}`
+	os.WriteFile(configFile, []byte(existing), 0644)
+
+	item := catalog.ContentItem{Name: "local-py", Type: catalog.MCP, Path: itemDir}
+	prov := provider.Provider{Slug: "windsurf", Name: "Windsurf"}
+
+	origPath := mcpConfigPath
+	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
+		return configFile, nil
+	}
+	defer func() { mcpConfigPath = origPath }()
+
+	_, err := installMCP(item, prov, tmpDir)
+	if err == nil {
+		t.Fatal("installMCP succeeded despite user-owned MCP entry — H2 guard failed for Windsurf")
+	}
+
+	data, _ := os.ReadFile(configFile)
+	if got := gjson.GetBytes(data, "mcpServers.local-py.command").String(); got != "python" {
+		t.Errorf("user-owned command overwritten: got %q, want python", got)
 	}
 }
