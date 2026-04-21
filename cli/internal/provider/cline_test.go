@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -170,5 +171,85 @@ func TestClineMCPSettingsPath(t *testing.T) {
 		if !strings.Contains(path, ".config") {
 			t.Errorf("on linux, expected '.config' in path, got %q", path)
 		}
+	}
+}
+
+// TestClineMCPSettingsPathFor_AllPlatforms exercises every GOOS branch of
+// the path builder. The outer ClineMCPSettingsPath runs against whatever
+// runtime.GOOS the test process happens to have, so the other branches
+// would be permanently dark without this.
+func TestClineMCPSettingsPathFor_AllPlatforms(t *testing.T) {
+	t.Parallel()
+
+	const extSegment = "saoudrizwan.claude-dev"
+	const leaf = "cline_mcp_settings.json"
+
+	cases := []struct {
+		name        string
+		goos        string
+		home        string
+		appdata     string
+		wantContain []string
+	}{
+		{
+			name:        "darwin uses Library/Application Support",
+			goos:        "darwin",
+			home:        "/Users/alice",
+			appdata:     "",
+			wantContain: []string{"/Users/alice", "Library/Application Support", "globalStorage", extSegment, leaf},
+		},
+		{
+			name:        "windows with APPDATA set uses APPDATA directly",
+			goos:        "windows",
+			home:        `C:\Users\alice`,
+			appdata:     `C:\Users\alice\AppData\Roaming`,
+			wantContain: []string{`C:\Users\alice\AppData\Roaming`, "globalStorage", extSegment, leaf},
+		},
+		{
+			name:        "windows with APPDATA unset falls back to home/AppData/Roaming",
+			goos:        "windows",
+			home:        `C:\Users\bob`,
+			appdata:     "",
+			wantContain: []string{filepath.Join(`C:\Users\bob`, "AppData", "Roaming"), "globalStorage", extSegment, leaf},
+		},
+		{
+			name:        "linux uses .config",
+			goos:        "linux",
+			home:        "/home/carol",
+			appdata:     "",
+			wantContain: []string{"/home/carol/.config", "globalStorage", extSegment, leaf},
+		},
+		{
+			name:        "unrecognised GOOS falls through default (.config)",
+			goos:        "freebsd",
+			home:        "/home/dave",
+			appdata:     "",
+			wantContain: []string{"/home/dave/.config", "globalStorage", extSegment, leaf},
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := clineMCPSettingsPathFor(tc.goos, tc.home, tc.appdata)
+			if got == "" {
+				t.Fatalf("clineMCPSettingsPathFor(%q, %q, %q) = empty", tc.goos, tc.home, tc.appdata)
+			}
+			for _, want := range tc.wantContain {
+				if !strings.Contains(got, want) {
+					t.Errorf("path %q missing expected segment %q", got, want)
+				}
+			}
+			// Windows branch must never route through the Linux .config path
+			// (regression guard against the branches accidentally merging).
+			if tc.goos == "windows" && strings.Contains(got, ".config") {
+				t.Errorf("windows path should not contain '.config', got %q", got)
+			}
+			// Darwin branch must never route through the Linux .config path.
+			if tc.goos == "darwin" && strings.Contains(got, ".config") {
+				t.Errorf("darwin path should not contain '.config', got %q", got)
+			}
+		})
 	}
 }
