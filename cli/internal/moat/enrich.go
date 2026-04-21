@@ -76,17 +76,25 @@ func moatTierToCatalogTier(t TrustTier) catalog.TrustTier {
 //     list — e.g., in-progress content the publisher has not yet
 //     attested).
 //   - Set item.TrustTier from entry.TrustTier() (with G-13 downgrade).
+//   - Set item.PrivateRepo from entry.PrivateRepo (per-item G-10 declaration,
+//     independent of registry-level Visibility probe). Populated even when
+//     no revocation is present.
 //   - If any revocation in m.Revocations covers the entry's ContentHash:
-//     set item.Recalled = true and item.RecallReason from the first
-//     matching revocation's Reason. A verbatim-carried opaque Reason is
-//     acceptable per the MOAT spec — callers display it as-is.
+//     set item.Recalled, item.RecallReason, item.RecallSource,
+//     item.RecallDetailsURL, and item.RecallIssuer. Publisher-controlled
+//     strings (Reason, DetailsURL, Issuer) pass through SanitizeForDisplay
+//     at this boundary so downstream consumers never see attacker-controlled
+//     terminal bytes. The enrich step is the single chokepoint — no later
+//     consumer needs to re-sanitize.
 //
 // A nil catalog or nil manifest is a no-op. Items from other registries
 // (or with empty Registry) are left completely untouched.
 //
-// Revocation source (registry vs publisher) is NOT considered here —
-// display-layer Recalled collapses both under the user-facing Recalled
-// badge per AD-7 Panel C9. Install-flow enforcement uses RevocationSet
+// Revocation source (registry vs publisher) is NOT considered for the
+// user-facing Recalled badge per AD-7 Panel C9 (both collapse to the same
+// glyph). The source IS exposed via item.RecallSource so drill-down text
+// can show "(publisher)" vs "(registry)" without breaking the collapse
+// rule. Install-flow enforcement uses RevocationSet / installer.PreInstallCheck
 // directly and still branches on source for the two-tier contract.
 func EnrichCatalog(cat *catalog.Catalog, registryName string, m *Manifest) {
 	if cat == nil || m == nil {
@@ -115,9 +123,44 @@ func EnrichCatalog(cat *catalog.Catalog, registryName string, m *Manifest) {
 			continue
 		}
 		item.TrustTier = moatTierToCatalogTier(entry.TrustTier())
+		item.PrivateRepo = entry.PrivateRepo
 		if rev, ok := revByHash[entry.ContentHash]; ok {
 			item.Recalled = true
-			item.RecallReason = rev.Reason
+			item.RecallReason = SanitizeForDisplay(rev.Reason)
+			item.RecallSource = rev.EffectiveSource()
+			item.RecallDetailsURL = SanitizeForDisplay(rev.DetailsURL)
+			item.RecallIssuer = resolveRecallIssuer(rev, m, entry)
 		}
 	}
+}
+
+// resolveRecallIssuer derives the revoker identity from the manifest and
+// entry. The rule mirrors MOAT spec v0.6.0:
+//
+//   - registry source → Manifest.Operator, falling back to
+//     Manifest.RegistrySigningProfile.Subject. Manifest.validate()
+//     guarantees Subject is non-empty at parse time, so the fallback is
+//     always populated.
+//   - publisher source → ContentEntry.SigningProfile.Subject when present,
+//     else a literal "(publisher — identity not provided)" sentinel so the
+//     drill-down banner still has non-empty text to render.
+//
+// All returned strings pass through SanitizeForDisplay here so callers
+// can splice the value into TUI cells without re-scrubbing. An unknown
+// source (shouldn't happen after manifest validation, but be defensive)
+// returns empty — consumers branch on "".
+func resolveRecallIssuer(rev *Revocation, m *Manifest, entry *ContentEntry) string {
+	switch rev.EffectiveSource() {
+	case RevocationSourceRegistry:
+		if m.Operator != "" {
+			return SanitizeForDisplay(m.Operator)
+		}
+		return SanitizeForDisplay(m.RegistrySigningProfile.Subject)
+	case RevocationSourcePublisher:
+		if entry.SigningProfile != nil && entry.SigningProfile.Subject != "" {
+			return SanitizeForDisplay(entry.SigningProfile.Subject)
+		}
+		return "(publisher — identity not provided)"
+	}
+	return ""
 }

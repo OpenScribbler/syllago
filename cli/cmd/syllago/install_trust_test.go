@@ -117,8 +117,8 @@ func TestInstallTrustLine_Recalled(t *testing.T) {
 	if !strings.Contains(out, "Recalled \u2014 publisher revoked 2026-04-18") {
 		t.Errorf("expected recall reason in drill-down, got: %s", out)
 	}
-	if !strings.Contains(out, "\u2717") {
-		t.Errorf("expected Recalled glyph (U+2717) in stdout, got: %s", out)
+	if !strings.Contains(out, "R my-skill") {
+		t.Errorf("expected Recalled glyph (R) preceding item name in stdout, got: %s", out)
 	}
 	if strings.Contains(out, "Verified") {
 		t.Errorf("Recalled must suppress Verified badge, but output contained Verified: %s", out)
