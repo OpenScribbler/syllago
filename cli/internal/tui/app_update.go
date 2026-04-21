@@ -478,6 +478,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.updateNavState()
 		return a, nil
 
+	case libraryTrustInspectMsg:
+		if msg.item != nil {
+			a.trustInspector.OpenForItem(*msg.item)
+		}
+		return a, nil
+
 	case libraryCloseMsg:
 		a.updateNavState()
 		return a, nil

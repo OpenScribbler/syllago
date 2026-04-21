@@ -464,9 +464,16 @@ func (t tableModel) renderSearchBar() string {
 }
 
 // columnWidths computes column widths based on available space.
+//
+// trustW is fixed at 2 chars — just enough for the "<trust><visibility>"
+// glyph cell. The header label renders as "Tr" (truncated "Trust") so the
+// column is legible without devouring horizontal budget. The 1-char gap
+// after Trust is accounted for in the +1 constants below.
 type colLayout struct {
-	name, ctype, scope, files, installed, desc int
+	trust, name, ctype, scope, files, installed, desc int
 }
+
+const trustColW = 2
 
 func (t tableModel) columnWidths() colLayout {
 	w := t.width - 4 // prefix (3) + right padding (1)
@@ -482,15 +489,17 @@ func (t tableModel) columnWidths() colLayout {
 		scope = 12
 		installed = 14
 		nameW := 22
-		fixed := nameW + ctype + scope + files + installed + 5 // 5 gaps
+		// 6 gaps: trust|name|type|scope|files|installed|desc has 6 gaps between 7 cols
+		fixed := trustColW + nameW + ctype + scope + files + installed + 6
 		desc := max(15, w-fixed)
-		return colLayout{nameW, ctype, scope, files, installed, desc}
+		return colLayout{trustColW, nameW, ctype, scope, files, installed, desc}
 	}
 
 	// Standard: drop description
-	fixed := ctype + scope + files + installed + 4 // 4 gaps
+	// 5 gaps: trust|name|type|scope|files|installed has 5 gaps between 6 cols
+	fixed := trustColW + ctype + scope + files + installed + 5
 	nameW := min(20, max(12, w-fixed))
-	return colLayout{nameW, ctype, scope, files, installed, 0}
+	return colLayout{trustColW, nameW, ctype, scope, files, installed, 0}
 }
 
 // sortIndicator returns ▲ or ▼ if this column is the sort column, else "".
@@ -505,9 +514,13 @@ func (t tableModel) sortIndicator(col sortColumn) string {
 }
 
 // renderHeader renders the column header row with clickable zone markers.
+// The Trust column header is intentionally NOT zone-marked — per the bead
+// scope, the glyphs are purely visual. Click interaction for trust lives in
+// the metapanel Trust field and the [t] hotkey, not in the table cell.
 func (t tableModel) renderHeader(c colLayout) string {
 	row := "   " // prefix space
-	row += zone.Mark("col-name", t.headerCell("Name", sortByName, c.name))
+	row += padRight("Tr", c.trust)
+	row += " " + zone.Mark("col-name", t.headerCell("Name", sortByName, c.name))
 	row += " " + zone.Mark("col-type", t.headerCell("Type", sortByType, c.ctype))
 	row += " " + zone.Mark("col-scope", t.headerCell("Scope", sortByScope, c.scope))
 	row += " " + zone.Mark("col-files", t.headerCell("Files", sortByFiles, c.files))
@@ -554,13 +567,13 @@ func (t tableModel) renderRow(index int, c colLayout) string {
 		prefix = " > "
 	}
 
-	// MOAT trust + visibility prefix (3 chars: <trust><private><space>).
+	// MOAT trust + visibility glyphs occupy the dedicated Trust column.
 	// Glyphs are intentionally monochrome here — the row's selection style
-	// would override any foreground color, and the colored chips in the
-	// metapanel drill-down carry the reinforcing semantics. Non-MOAT rows
-	// render 3 spaces so column alignment stays stable.
-	row := prefix + trustPrefix(t.items[index])
-	row += padRight(truncate(r.name, c.name), c.name)
+	// would override any foreground color, and the colored Trust field in
+	// the metapanel carries the reinforcing semantics. Non-MOAT rows
+	// render spaces so column alignment stays stable.
+	row := prefix + padRight(trustGlyphs(t.items[index]), c.trust)
+	row += " " + padRight(truncate(r.name, c.name), c.name)
 	row += " " + padRight(truncate(r.contentType, c.ctype), c.ctype)
 	row += " " + padRight(truncate(r.scope, c.scope), c.scope)
 	row += " " + padRight(truncate(r.files, c.files), c.files)
@@ -601,11 +614,19 @@ func (t tableModel) renderEmpty() string {
 //   - byte 1: visibility glyph ("P" for private, else " ")
 //   - byte 2: trailing space separator
 //
-// The prefix is emitted by both the library table and the explorer items
-// list so MOAT trust surfacing is consistent across surfaces. Non-MOAT
-// items (TrustTierUnknown + not Recalled + not PrivateRepo) emit three
-// spaces so column alignment stays stable for legacy content.
+// Used by the explorer items list where trust info is inlined in a single
+// text column rather than a dedicated Trust table column. The library
+// table uses trustGlyphs() (without the trailing separator) so the
+// Trust column's own cell-gap handles spacing.
 func trustPrefix(item catalog.ContentItem) string {
+	return trustGlyphs(item) + " "
+}
+
+// trustGlyphs returns the 2-character "<trust><visibility>" cell content
+// for the library table's dedicated Trust column. Non-MOAT items (Unknown
+// tier, not recalled, not private) render as two spaces so alignment
+// across the column stays stable.
+func trustGlyphs(item catalog.ContentItem) string {
 	tg := " "
 	if g := catalog.UserFacingBadge(item.TrustTier, item.Recalled).Glyph(); g != "" {
 		tg = g
@@ -614,7 +635,7 @@ func trustPrefix(item catalog.ContentItem) string {
 	if item.PrivateRepo {
 		pg = "P"
 	}
-	return tg + pg + " "
+	return tg + pg
 }
 
 // sanitizeLine strips newlines, carriage returns, and tabs from a string

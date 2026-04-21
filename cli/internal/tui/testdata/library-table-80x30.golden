@@ -9,7 +9,7 @@
 │ Scope: project   Registry: not in a registry                                 │
 │                                                   [d] Remove      [e] Edit   │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│   Name ▲               Type     Scope        Files Installed                 │
+│   Tr Name ▲               Type     Scope        Files Installed              │
 │ >    alpha-skill          Skill    team-rules   1     --                     │
 │      beta-skill           Skill    team-rules   1     --                     │
 │      delta-agent          Agent    my-registry  1     --                     │

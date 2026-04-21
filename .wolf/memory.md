@@ -3030,3 +3030,111 @@
 | 09:57 | Created cli/internal/tui/explorer_test.go | — | ~5539 |
 | 09:58 | Edited cli/internal/tui/explorer.go | modified InBounds() | ~38 |
 | 09:58 | Edited cli/internal/tui/explorer.go | modified InBounds() | ~65 |
+| 10:00 | Session end: 3 writes across 2 files (explorer_test.go, explorer.go) | 7 reads | ~34264 tok |
+
+## Session: 2026-04-21 10:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 10:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:48 | Edited cli/internal/tui/doc.go | 4→3 lines | ~35 |
+| 12:48 | Edited cli/.golangci.yml | 8→5 lines | ~36 |
+| 13:03 | Session end: 2 writes across 2 files (doc.go, .golangci.yml) | 11 reads | ~9556 tok |
+| 13:38 | Session end: 2 writes across 2 files (doc.go, .golangci.yml) | 11 reads | ~9556 tok |
+| 13:43 | Session end: 2 writes across 2 files (doc.go, .golangci.yml) | 11 reads | ~9556 tok |
+| 13:47 | Session end: 2 writes across 2 files (doc.go, .golangci.yml) | 11 reads | ~9556 tok |
+| 13:55 | Session end: 2 writes across 2 files (doc.go, .golangci.yml) | 14 reads | ~15938 tok |
+| 14:02 | Session end: 2 writes across 2 files (doc.go, .golangci.yml) | 14 reads | ~15938 tok |
+| 14:27 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | 7→7 lines | ~320 |
+| 14:28 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | added error handling | ~3014 |
+| 14:28 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | expanded (+8 lines) | ~697 |
+| 14:29 | Session end: 5 writes across 3 files (doc.go, .golangci.yml, 2026-04-21-provmon-drift-detection-design.md) | 16 reads | ~23017 tok |
+| 14:29 | Session end: 5 writes across 3 files (doc.go, .golangci.yml, 2026-04-21-provmon-drift-detection-design.md) | 16 reads | ~23017 tok |
+| 14:35 | Created docs/adr/0008-capmon-synthetic-fixtures-correct.md | — | ~1617 |
+| 14:35 | Edited docs/adr/INDEX.md | 1→2 lines | ~180 |
+| 14:36 | Session end: 7 writes across 5 files (doc.go, .golangci.yml, 2026-04-21-provmon-drift-detection-design.md, 0008-capmon-synthetic-fixtures-correct.md, INDEX.md) | 22 reads | ~25423 tok |
+| 14:42 | Session end: 7 writes across 5 files (doc.go, .golangci.yml, 2026-04-21-provmon-drift-detection-design.md, 0008-capmon-synthetic-fixtures-correct.md, INDEX.md) | 22 reads | ~25423 tok |
+| 14:47 | Session end: 7 writes across 5 files (doc.go, .golangci.yml, 2026-04-21-provmon-drift-detection-design.md, 0008-capmon-synthetic-fixtures-correct.md, INDEX.md) | 22 reads | ~25423 tok |
+| 15:02 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | inline fix | ~108 |
+| 15:03 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | modified struct() | ~1898 |
+| 15:03 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | 10→12 lines | ~415 |
+| 15:03 | Session end: 10 writes across 5 files (doc.go, .golangci.yml, 2026-04-21-provmon-drift-detection-design.md, 0008-capmon-synthetic-fixtures-correct.md, INDEX.md) | 22 reads | ~28017 tok |
+| 15:08 | Created cli/internal/tui/trust_inspector.go | — | ~2227 |
+| 15:09 | Session end: 11 writes across 6 files (doc.go, .golangci.yml, 2026-04-21-provmon-drift-detection-design.md, 0008-capmon-synthetic-fixtures-correct.md, INDEX.md) | 37 reads | ~59841 tok |
+| 15:09 | Edited cli/internal/tui/app.go | 6→7 lines | ~149 |
+| 15:09 | Edited cli/internal/tui/app.go | 4→5 lines | ~44 |
+| 15:09 | Edited cli/internal/tui/app_update.go | 3→4 lines | ~36 |
+
+## Session: 2026-04-21 15:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:12 | Edited cli/internal/tui/app_update.go | 18→23 lines | ~142 |
+| 15:12 | Edited cli/internal/tui/app_update.go | expanded (+10 lines) | ~154 |
+| 15:12 | Edited cli/internal/tui/app_view.go | 4→7 lines | ~68 |
+| 15:13 | Created cli/internal/tui/trust_inspector_test.go | — | ~3388 |
+| 15:14 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | 4→4 lines | ~395 |
+| 15:14 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | 9→10 lines | ~278 |
+| 15:14 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | 4→4 lines | ~149 |
+| 15:14 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | SeedSourceHash() → handle() | ~318 |
+| 15:15 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | reduced (-8 lines) | ~146 |
+| 15:15 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | 8→13 lines | ~166 |
+| 15:15 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | modified code() | ~426 |
+| 15:15 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | 4→4 lines | ~157 |
+| 15:16 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | 8→7 lines | ~256 |
+| 15:16 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | 21→20 lines | ~169 |
+| 15:16 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | 9→10 lines | ~273 |
+| 15:16 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | removed 5 lines | ~1 |
+| 15:17 | Edited cli/cmd/syllago/main.go | 6→7 lines | ~106 |
+| 15:17 | Edited cli/cmd/syllago/main.go | expanded (+8 lines) | ~361 |
+| 15:17 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | modified gaps() | ~3419 |
+
+## Session: 2026-04-21 15:19
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:19 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | modified migration() | ~233 |
+| 15:19 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | 4→4 lines | ~76 |
+| 15:20 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | SeedSourceHash() → gaps() | ~451 |
+| 15:20 | Edited docs/plans/2026-04-21-provmon-drift-detection-design.md | 5→10 lines | ~293 |
+
+## Session: 2026-04-21 15:20
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:25 | Edited cli/internal/tui/table.go | expanded (+9 lines) | ~335 |
+| 15:25 | Edited cli/internal/tui/table.go | 11→15 lines | ~251 |
+| 15:25 | Edited cli/internal/tui/table.go | 13→13 lines | ~153 |
+| 15:25 | Edited cli/internal/tui/table.go | modified trustPrefix() | ~281 |
+| 15:26 | Edited cli/internal/tui/metapanel.go | surface() → items() | ~242 |
+| 15:26 | Edited cli/internal/tui/metapanel.go | 57→62 lines | ~627 |
+| 15:26 | Edited cli/internal/tui/keys.go | 6→7 lines | ~33 |
+| 15:27 | Edited cli/internal/tui/library.go | expanded (+7 lines) | ~90 |
+| 15:27 | Edited cli/internal/tui/library.go | expanded (+7 lines) | ~139 |
+| 15:27 | Edited cli/internal/tui/library.go | modified InBounds() | ~207 |
+| 15:27 | Edited cli/internal/tui/library.go | modified InBounds() | ~183 |
+| 15:27 | Edited cli/internal/tui/app_update.go | expanded (+6 lines) | ~47 |
+| 15:28 | Edited cli/internal/tui/metapanel_test.go | modified TestMetaBarLinesFor() | ~559 |
+| 15:28 | Edited cli/internal/tui/metapanel_test.go | expanded (+10 lines) | ~308 |
+| 15:28 | Edited cli/internal/tui/metapanel_test.go | modified TestRenderMetaPanel_RecalledCollapsed() | ~384 |
+| 15:29 | Created docs/plans/2026-04-21-provmon-drift-detection-implementation.md | — | ~18808 |
+| 15:29 | Edited cli/internal/tui/golden_moat_test.go | modified TestMOAT_RecalledMetapanelShowsCollapsedSummary() | ~370 |
+
+## Session: 2026-04-21 15:30
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 15:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:31 | Edited cli/internal/tui/golden_moat_test.go | 9→13 lines | ~111 |
+| 15:34 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | modified body() | ~152 |
+| 15:34 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | modified newHashedServer() | ~245 |
+| 15:34 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | removed 29 lines | ~12 |
+| 15:34 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | 7→7 lines | ~59 |

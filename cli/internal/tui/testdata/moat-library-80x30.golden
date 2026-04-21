@@ -10,7 +10,7 @@
 │                                                                   [e] Edit   │
 │ Trust: Verified (registry-attested)  Visibility: Private                     │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│   Name ▲               Type     Scope        Files Installed                 │
+│   Tr Name ▲               Type     Scope        Files Installed              │
 │ > ✓P private-skill        Skill    moat-regi... 1     --                     │
 │   R  recalled-skill       Skill    moat-regi... 1     --                     │
 │      vanilla-skill        Skill    library      1     --                     │
