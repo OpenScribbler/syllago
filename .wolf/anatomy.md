@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-21T16:37:44.143Z
-> Files: 1012 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-21T16:58:44.169Z
+> Files: 1013 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -1904,6 +1904,7 @@
 - `checkbox_list_test.go` — TestCheckboxList_Navigation, TestCheckboxList_Toggle, TestCheckboxList_ToggleDisabled, TestCheckboxL (~2398 tok)
 - `checkbox_list.go` — Struct: checkboxItem (~1893 tok)
 - `cross_model_transitions_test.go` — TestCrossModel_InstallFlowPreservesLibraryTabAndSyncsItems, TestCrossModel_AddWizardEscPreservesCont (~2362 tok)
+- `explorer_test.go` — TestExplorer_MetaBarTotal_IsLinesPlusSeparator, TestExplorer_DetailTreeWidth_Responsive, TestExplore (~5539 tok)
 - `explorer.go` — Struct: itemSelectedMsg (~7177 tok)
 - `gallery_mouse_test.go` — TestGalleryMouse_CardClickSelects, TestGalleryMouse_CardDoubleClickDrills, TestGalleryMouse_CardClic (~2277 tok)
 - `gallery_test.go` — TestCardGrid_ArrowNavigation, TestCardGrid_UpDownNavigation, TestCardGrid_EmptyGrid, TestCardGrid_Re (~2585 tok)
