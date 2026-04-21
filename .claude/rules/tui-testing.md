@@ -34,7 +34,18 @@ Every visual component must be tested at 60x20, 80x30, and 120x40.
 - `requireGolden(t, name, snapshot)` — compare against golden file
 - `snapshotApp(t, app)` — capture app view for golden comparison
 
-## 5. Deterministic Output (testmain_test.go)
+## 5. Mouse/Zone Tests Must Be Sequential
+
+Tests that call `scanZones()` or `zone.Scan()` MUST NOT use `t.Parallel()`.
+bubblezone v1.0.0 uses a singleton manager — concurrent Scan calls clobber
+the global zone map between another test's `Scan()` and `Get()`. The `-race`
+detector catches this as flaky test failures (not a Go data race).
+
+All mouse tests in `install_mouse_test.go`, `add_wizard_mouse_test.go`, and
+`gallery_mouse_test.go` are sequential by convention. Follow the same rule
+for any new zone-scanning test.
+
+## 6. Deterministic Output (testmain_test.go)
 
 Already configured — do not modify without understanding:
 - `lipgloss.SetColorProfile(termenv.Ascii)` — no color codes in goldens
