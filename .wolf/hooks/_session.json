@@ -1,101 +1,18 @@
 {
-  "session_id": "session-2026-04-18-2332",
-  "started": "2026-04-18T06:32:23.926Z",
+  "session_id": "session-2026-04-21-0950",
+  "started": "2026-04-21T16:50:15.221Z",
   "files_read": {
-    "/home/hhewett/.local/src/syllago/cli/internal/moat/verify.go": {
-      "count": 1,
-      "tokens": 1475,
-      "first_read": "2026-04-18T06:32:32.463Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor.go": {
-      "count": 1,
-      "tokens": 860,
-      "first_read": "2026-04-18T06:32:36.824Z"
-    },
-    "/home/hhewett/go/pkg/mod/github.com/sigstore/protobuf-specs@v0.5.0/gen/pb-go/bundle/v1/sigstore_bundle.pb.go": {
-      "count": 2,
-      "tokens": 0,
-      "first_read": "2026-04-18T06:33:23.292Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/moat/cert.go": {
-      "count": 1,
-      "tokens": 640,
-      "first_read": "2026-04-18T06:33:59.266Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/moat/signature.go": {
-      "count": 1,
-      "tokens": 340,
-      "first_read": "2026-04-18T06:34:02.076Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/moat/verify_test.go": {
-      "count": 1,
-      "tokens": 984,
-      "first_read": "2026-04-18T06:36:14.146Z"
-    },
-    "/home/hhewett/.claude/skills/handoff/templates/repo-project.md": {
+    "/home/hhewett/.local/src/syllago/docs/adr/0001-hook-degradation-enforcement.md": {
       "count": 1,
       "tokens": 0,
-      "first_read": "2026-04-18T06:37:52.978Z"
-    },
-    "/mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/bootstrap-moat-meta-registry.md": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-04-18T06:43:08.225Z"
+      "first_read": "2026-04-21T16:52:13.593Z"
     }
   },
-  "files_written": [
-    {
-      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/sigstore_verify.go",
-      "action": "create",
-      "tokens": 2374,
-      "at": "2026-04-18T06:34:56.684Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/sigstore_verify.go",
-      "action": "create",
-      "tokens": 1718,
-      "at": "2026-04-18T06:35:30.324Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/sigstore_verify_test.go",
-      "action": "create",
-      "tokens": 1219,
-      "at": "2026-04-18T06:36:36.339Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/.claude/projects/bootstrap-moat-meta-registry.md",
-      "action": "create",
-      "tokens": 894,
-      "at": "2026-04-18T06:38:24.691Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/.claude/projects/bootstrap-moat-meta-registry.md",
-      "action": "edit",
-      "tokens": 288,
-      "at": "2026-04-18T06:43:56.796Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/verify.go",
-      "action": "edit",
-      "tokens": 30,
-      "at": "2026-04-18T06:45:45.236Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/verify.go",
-      "action": "edit",
-      "tokens": 35,
-      "at": "2026-04-18T06:45:49.096Z"
-    }
-  ],
-  "edit_counts": {
-    "cli/internal/moat/sigstore_verify.go": 2,
-    "cli/internal/moat/sigstore_verify_test.go": 1,
-    ".claude/projects/bootstrap-moat-meta-registry.md": 2,
-    "cli/internal/moat/verify.go": 2
-  },
-  "anatomy_hits": 5,
-  "anatomy_misses": 3,
-  "repeated_reads_warned": 1,
+  "files_written": [],
+  "edit_counts": {},
+  "anatomy_hits": 0,
+  "anatomy_misses": 1,
+  "repeated_reads_warned": 0,
   "cerebrum_warnings": 0,
-  "stop_count": 1
+  "stop_count": 0
 }

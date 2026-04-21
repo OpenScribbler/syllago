@@ -1690,3 +1690,1340 @@
 | 23:44 | Session end: 5 writes across 3 files (sigstore_verify.go, sigstore_verify_test.go, bootstrap-moat-meta-registry.md) | 8 reads | ~10792 tok |
 | 23:45 | Edited cli/internal/moat/verify.go | "Rekor log index mismatch:" → "rekor log index mismatch:" | ~28 |
 | 23:45 | Edited cli/internal/moat/verify.go | 2→2 lines | ~33 |
+
+## Session: 2026-04-18 23:52
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:59 | Created cli/internal/moat/hash.go | — | ~2564 |
+| 00:02 | Created cli/internal/moat/hash_test.go | — | ~7030 |
+| 00:02 | Edited cli/internal/moat/hash_test.go | 12→13 lines | ~36 |
+| 00:04 | Edited cli/internal/moat/hash.go | inline fix | ~9 |
+| 00:04 | Edited cli/internal/moat/hash.go | modified Is() | ~60 |
+| 00:04 | Edited cli/internal/moat/hash.go | 14→15 lines | ~43 |
+| 00:04 | Edited cli/internal/moat/hash.go | 6→4 lines | ~22 |
+| 00:05 | Edited cli/internal/moat/hash.go | 7→7 lines | ~37 |
+| 00:05 | Edited cli/internal/moat/hash.go | 2→2 lines | ~6 |
+| 00:06 | Edited cli/internal/moat/canonical_payload_test.go | added error handling | ~762 |
+
+## Session: 2026-04-18 00:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:10 | Created cli/internal/moat/typemap.go | — | ~650 |
+| 00:10 | Created cli/internal/moat/typemap_test.go | — | ~1176 |
+| 00:13 | Created cli/internal/moat/manifest.go | — | ~2904 |
+| 00:14 | Created cli/internal/moat/fetch.go | — | ~1444 |
+| 00:14 | Edited cli/internal/moat/verify.go | 8→12 lines | ~167 |
+| 00:14 | Edited cli/internal/moat/manifest.go | 10→8 lines | ~110 |
+| 00:15 | Created cli/internal/moat/manifest_test.go | — | ~4064 |
+| 00:16 | Created cli/internal/moat/fetch_test.go | — | ~1984 |
+| 00:17 | Created cli/internal/moat/algo.go | — | ~820 |
+| 00:17 | Edited cli/internal/moat/manifest.go | modified Errorf() | ~71 |
+| 00:18 | Edited cli/internal/moat/manifest.go | 4→7 lines | ~79 |
+| 00:18 | Edited cli/internal/moat/manifest_test.go | expanded (+10 lines) | ~181 |
+| 00:18 | Edited cli/internal/moat/manifest_test.go | inline fix | ~24 |
+| 00:18 | Edited cli/internal/moat/manifest_test.go | inline fix | ~24 |
+| 00:18 | Edited cli/internal/moat/manifest_test.go | inline fix | ~24 |
+| 00:18 | Edited cli/internal/moat/manifest_test.go | inline fix | ~24 |
+| 00:18 | Edited cli/internal/moat/manifest_test.go | 3→3 lines | ~38 |
+| 00:19 | Created cli/internal/moat/algo_test.go | — | ~1127 |
+
+## Session: 2026-04-18 00:22
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:25 | Created cli/internal/registry/client.go | — | ~1378 |
+| 00:26 | Created cli/internal/registry/git_client.go | — | ~1401 |
+| 00:27 | Created cli/internal/registry/client_test.go | — | ~2254 |
+| 00:27 | Edited cli/cmd/syllago/registry_cmd.go | 4→8 lines | ~55 |
+| 00:30 | Edited cli/internal/config/config.go | modified IsZero() | ~1050 |
+| 00:31 | Created cli/internal/config/config_moat_test.go | — | ~2130 |
+| 00:32 | Edited cli/internal/config/config.go | 6→9 lines | ~198 |
+| 00:32 | Edited cli/internal/config/config.go | modified IsZero() | ~184 |
+| 00:32 | Edited cli/internal/config/config_moat_test.go | 14→15 lines | ~154 |
+| 00:32 | Edited cli/internal/config/config_moat_test.go | modified Equal() | ~56 |
+| 00:32 | Edited cli/internal/config/config_moat_test.go | modified Run() | ~309 |
+
+## Session: 2026-04-18 00:34
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:34 | Edited cli/internal/config/config_moat_test.go | 6→6 lines | ~46 |
+| 00:43 | Created cli/internal/converter/script_security.go | — | ~4104 |
+| 00:46 | Created cli/internal/converter/script_security_test.go | — | ~3400 |
+| 00:46 | Edited cli/internal/converter/script_security_test.go | modified containsWarning() | ~110 |
+| 00:48 | Edited cli/internal/converter/script_security.go | modified ScanHookFull() | ~827 |
+
+## Session: 2026-04-18 00:50
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:50 | Edited cli/internal/converter/script_security_test.go | modified containsWarning() | ~76 |
+| 00:54 | Created cli/internal/converter/scanner.go | — | ~2978 |
+| 00:56 | Created cli/internal/converter/scanner_test.go | — | ~4704 |
+| 00:57 | Edited cli/internal/converter/scanner.go | expanded (+11 lines) | ~725 |
+| 00:57 | Edited cli/internal/converter/scanner_test.go | 3→5 lines | ~63 |
+| 01:00 | Edited cli/internal/installer/installer.go | modified SetScannerChain() | ~325 |
+| 01:00 | Edited cli/internal/installer/hooks.go | modified IsDir() | ~317 |
+| 01:01 | Edited cli/cmd/syllago/install_cmd.go | 4→6 lines | ~110 |
+| 01:01 | Edited cli/cmd/syllago/install_cmd.go | 3→6 lines | ~78 |
+| 01:02 | Edited cli/internal/installer/hooks_test.go | modified setupScannerTestProvider() | ~1324 |
+
+## Session: 2026-04-18 01:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 01:08 | Created cli/internal/contentformat/enums.go | — | ~519 |
+| 01:08 | Edited cli/internal/contentformat/enums.go | 13→12 lines | ~84 |
+| 01:08 | Created cli/cmd/syllago/gencontentformat.go | — | ~555 |
+| 01:08 | Created cli/cmd/syllago/gencontentformat_test.go | — | ~914 |
+| 01:08 | Edited cli/Makefile | 4→5 lines | ~52 |
+| 01:09 | Edited .github/workflows/release.yml | 10→11 lines | ~176 |
+| 01:09 | Edited .github/workflows/release.yml | 5→5 lines | ~92 |
+| 01:09 | Edited .github/workflows/release.yml | 2→2 lines | ~45 |
+| 01:12 | Created cli/internal/metadata/schemadoc.go | — | ~2314 |
+| 01:13 | Created cli/cmd/syllago/genyamlschema.go | — | ~413 |
+| 01:13 | Created cli/internal/metadata/schemadoc_test.go | — | ~1487 |
+| 01:13 | Created cli/cmd/syllago/genyamlschema_test.go | — | ~553 |
+| 01:14 | Edited cli/internal/metadata/metadata.go | 5→5 lines | ~143 |
+| 01:14 | Edited cli/Makefile | 5→6 lines | ~67 |
+| 01:14 | Edited .github/workflows/release.yml | 11→12 lines | ~175 |
+| 01:14 | Edited .github/workflows/release.yml | 5→6 lines | ~104 |
+| 01:14 | Edited .github/workflows/release.yml | 2→3 lines | ~56 |
+| 01:16 | Edited .gitignore | 6→7 lines | ~28 |
+
+## Session: 2026-04-18 01:20
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 01:22 | Edited cli/cmd/syllago/genproviders.go | 12→15 lines | ~82 |
+| 01:22 | Edited cli/cmd/syllago/genproviders.go | 8→9 lines | ~151 |
+| 01:22 | Edited cli/cmd/syllago/genproviders.go | modified loadProviderDocsURLs() | ~738 |
+| 01:22 | Edited cli/internal/capmon/formatdoc.go | 7→8 lines | ~123 |
+| 01:22 | Edited cli/internal/capmon/formatdoc_validate.go | modified HasPrefix() | ~190 |
+| 01:23 | Edited docs/provider-formats/cursor.yaml | modified fields() | ~34 |
+| 01:23 | Edited docs/provider-formats/opencode.yaml | modified fields() | ~35 |
+| 01:23 | Edited docs/provider-formats/amp.yaml | 2→3 lines | ~27 |
+| 01:23 | Edited docs/provider-formats/claude-code.yaml | 2→3 lines | ~34 |
+| 01:23 | Edited docs/provider-formats/cline.yaml | 2→3 lines | ~26 |
+| 01:23 | Edited docs/provider-formats/codex.yaml | 2→3 lines | ~29 |
+| 01:23 | Edited docs/provider-formats/copilot-cli.yaml | 2→3 lines | ~42 |
+| 01:23 | Edited docs/provider-formats/crush.yaml | modified note() | ~32 |
+| 01:23 | Edited docs/provider-formats/factory-droid.yaml | 2→3 lines | ~29 |
+| 01:23 | Edited docs/provider-formats/gemini-cli.yaml | 2→3 lines | ~34 |
+| 01:23 | Edited docs/provider-formats/kiro.yaml | 2→3 lines | ~26 |
+| 01:23 | Edited docs/provider-formats/pi.yaml | 2→3 lines | ~29 |
+| 01:23 | Edited docs/provider-formats/roo-code.yaml | 2→3 lines | ~28 |
+| 01:23 | Edited docs/provider-formats/windsurf.yaml | 2→3 lines | ~28 |
+| 01:23 | Edited docs/provider-formats/zed.yaml | modified fields() | ~32 |
+| 01:24 | Edited cli/cmd/syllago/genproviders_test.go | modified TestGenproviders_AllEmitPathsPopulated() | ~260 |
+| 01:24 | Edited cli/internal/capmon/formatdoc_validate_test.go | 27→28 lines | ~206 |
+| 01:24 | Edited cli/internal/capmon/formatdoc_validate_test.go | modified TestValidateFormatDoc_MissingDocsURL() | ~431 |
+| 01:25 | Edited cli/internal/capmon/formatdoc_validate_test.go | 2→3 lines | ~27 |
+| 01:25 | Edited cli/internal/capmon/formatdoc_validate_test.go | 2→3 lines | ~27 |
+| 01:25 | Edited cli/internal/capmon/formatdoc_validate_test.go | modified TestValidateFormatDoc_MissingDocsURL() | ~216 |
+
+## Session: 2026-04-18 01:27
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 01:27 | Edited cli/internal/capmon/check_test.go | 2→3 lines | ~27 |
+| 01:28 | Edited cli/cmd/syllago/capmon_validate_format_doc_cmd_test.go | 2→3 lines | ~27 |
+| 01:29 | Edited cli/cmd/syllago/genproviders_test.go | modified repoProviderFormatsDir() | ~242 |
+| 01:29 | Edited cli/cmd/syllago/genproviders_test.go | modified loadTestManifest() | ~103 |
+| 01:29 | Edited cli/cmd/syllago/genproviders_test.go | modified TestGenproviders() | ~95 |
+| 01:29 | Edited cli/cmd/syllago/capmon_validate_format_doc_cmd_test.go | 2→3 lines | ~32 |
+| 01:30 | Edited cli/internal/capmon/check_test.go | 3→4 lines | ~40 |
+| 01:32 | Edited cli/internal/capmon/formatdoc.go | expanded (+11 lines) | ~226 |
+| 01:33 | Edited cli/internal/capmon/formatdoc_validate.go | modified HasPrefix() | ~236 |
+| 01:33 | Edited docs/provider-formats/amp.yaml | 2→3 lines | ~19 |
+| 01:33 | Edited docs/provider-formats/claude-code.yaml | 2→3 lines | ~26 |
+| 01:33 | Edited docs/provider-formats/cline.yaml | 2→3 lines | ~22 |
+| 01:33 | Edited docs/provider-formats/codex.yaml | 2→3 lines | ~21 |
+| 01:33 | Edited docs/provider-formats/copilot-cli.yaml | 2→3 lines | ~35 |
+| 01:33 | Edited docs/provider-formats/crush.yaml | 2→3 lines | ~23 |
+| 01:33 | Edited docs/provider-formats/cursor.yaml | 2→3 lines | ~22 |
+| 01:34 | Edited docs/provider-formats/factory-droid.yaml | 2→3 lines | ~21 |
+| 01:34 | Edited docs/provider-formats/gemini-cli.yaml | 2→3 lines | ~26 |
+| 01:34 | Edited docs/provider-formats/kiro.yaml | 2→3 lines | ~21 |
+| 01:34 | Edited docs/provider-formats/opencode.yaml | 2→3 lines | ~20 |
+| 01:34 | Edited docs/provider-formats/pi.yaml | 2→3 lines | ~22 |
+| 01:34 | Edited docs/provider-formats/roo-code.yaml | 2→3 lines | ~23 |
+| 01:34 | Edited docs/provider-formats/windsurf.yaml | 2→3 lines | ~24 |
+| 01:34 | Edited docs/provider-formats/zed.yaml | 2→3 lines | ~21 |
+| 01:35 | Edited cli/cmd/syllago/genproviders.go | 7→8 lines | ~164 |
+| 01:35 | Edited cli/cmd/syllago/genproviders.go | modified loadProviderStaticMeta() | ~576 |
+| 01:35 | Edited cli/cmd/syllago/genproviders.go | modified buildProviderEntry() | ~145 |
+| 01:36 | Edited cli/internal/capmon/formatdoc_validate_test.go | 1→2 lines | ~14 |
+| 01:36 | Edited cli/internal/capmon/check_test.go | 1→2 lines | ~14 |
+| 01:36 | Edited cli/cmd/syllago/capmon_validate_format_doc_cmd_test.go | 1→2 lines | ~14 |
+| 01:36 | Edited cli/cmd/syllago/genproviders_test.go | modified TestGenproviders_AllDocsURLsPopulated() | ~387 |
+| 01:37 | Edited cli/internal/capmon/formatdoc_validate_test.go | modified TestValidateFormatDoc_MalformedDocsURL() | ~710 |
+| 01:41 | Edited cli/cmd/syllago/coverage_test.go | modified writeSharedItem() | ~2101 |
+| 01:41 | Edited cli/cmd/syllago/coverage_test.go | modified writeSharedSkill() | ~180 |
+| 01:42 | Edited cli/cmd/syllago/coverage_test.go | writeSharedItem() → writeSharedSkill() | ~1782 |
+
+## Session: 2026-04-18 01:44
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 01:48 | Edited cli/cmd/syllago/init_test.go | modified writeBuiltinSkill() | ~1501 |
+| 01:48 | Edited cli/cmd/syllago/init_test.go | 4→5 lines | ~76 |
+| 01:49 | Edited cli/cmd/syllago/init_test.go | modified TestInstallBuiltins_ContinuesPastInstallError() | ~214 |
+| 01:52 | Created cli/cmd/syllago/loadout_remove_test.go | — | ~1767 |
+| 01:53 | Edited cli/cmd/syllago/loadout_remove_test.go | modified func() | ~224 |
+| 01:53 | Edited cli/cmd/syllago/loadout_remove_test.go | modified withFakeStdin() | ~952 |
+| 01:56 | Edited cli/cmd/syllago/share_cmd_test.go | 9→13 lines | ~68 |
+| 01:56 | Edited cli/cmd/syllago/share_cmd_test.go | modified TestShareItemNotFound() | ~1532 |
+
+## Session: 2026-04-18 01:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 02:00 | Edited cli/cmd/syllago/share_cmd.go | expanded (+7 lines) | ~150 |
+| 02:00 | Edited cli/cmd/syllago/share_cmd.go | inline fix | ~20 |
+| 02:00 | Edited cli/cmd/syllago/share_cmd.go | inline fix | ~14 |
+| 02:00 | Edited cli/cmd/syllago/share_cmd_test.go | 11→13 lines | ~84 |
+| 02:00 | Edited cli/cmd/syllago/share_cmd_test.go | modified withStubbedPromote() | ~1712 |
+| 02:03 | Edited cli/cmd/syllago/registry_cmd_test.go | modified chdirTo() | ~1356 |
+| 02:03 | Edited cli/cmd/syllago/registry_cmd_test.go | modified TestRunRegistryCreateNew_GitInitSuccess() | ~496 |
+| 02:04 | Edited cli/cmd/syllago/registry_cmd_test.go | 10→11 lines | ~64 |
+| 02:07 | Edited cli/cmd/syllago/sync_and_export_test.go | modified setupExportEnv() | ~1992 |
+| 02:07 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~21 |
+| 02:07 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~19 |
+| 02:07 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~19 |
+| 02:07 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~17 |
+| 02:07 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~19 |
+| 02:07 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~16 |
+| 02:07 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~15 |
+| 02:07 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~18 |
+| 02:07 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~17 |
+| 02:09 | Edited cli/cmd/syllago/sync_and_export_test.go | modified TestRunExportOp_InstallDirEmptySkips() | ~1187 |
+| 02:10 | Edited cli/cmd/syllago/sync_and_export_test.go | modified TestRunExportOp_CrossProviderConversion() | ~523 |
+| 02:11 | Edited cli/cmd/syllago/sync_and_export_test.go | modified Cleanup() | ~276 |
+| 02:12 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~38 |
+| 02:13 | Edited cli/cmd/syllago/sync_and_export_test.go | modified Contains() | ~101 |
+| 02:14 | Edited cli/cmd/syllago/sync_and_export_test.go | modified TestRunExportOp_ExampleWarning() | ~874 |
+
+## Session: 2026-04-18 02:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 02:18 | Edited cli/cmd/syllago/sync_and_export_test.go | modified TestRunExportOp_ProjectScopeWithDiscovery() | ~801 |
+| 02:19 | Edited cli/cmd/syllago/sync_and_export_test.go | 2→2 lines | ~78 |
+| 02:19 | Edited cli/cmd/syllago/sync_and_export_test.go | modified Contains() | ~111 |
+| 02:20 | Edited cli/cmd/syllago/sync_and_export_test.go | TempDir() → setupExportRepo() | ~78 |
+| 02:20 | Edited cli/cmd/syllago/sync_and_export_test.go | modified Contains() | ~206 |
+| 02:20 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~21 |
+| 02:21 | Edited cli/cmd/syllago/sync_and_export_test.go | reduced (-14 lines) | ~140 |
+| 02:23 | Edited cli/cmd/syllago/doctor_cmd.go | modified init() | ~34 |
+| 02:23 | Edited cli/cmd/syllago/doctor_cmd.go | Exit() → osExit() | ~27 |
+| 02:24 | Edited cli/cmd/syllago/doctor_cmd_test.go | modified TestDoctorCmdRegistered() | ~1173 |
+| 02:24 | Edited cli/cmd/syllago/doctor_cmd_test.go | modified TestRunDoctor_ReturnsNilWhenAllClean() | ~197 |
+| 02:27 | Edited cli/cmd/syllago/sync_and_export.go | modified init() | ~80 |
+| 02:27 | Edited cli/cmd/syllago/sync_and_export.go | inline fix | ~10 |
+| 02:27 | Edited cli/cmd/syllago/sync_and_export_test.go | modified withStubbedSyncAll() | ~1408 |
+| 02:27 | Edited cli/cmd/syllago/sync_and_export_test.go | 10→12 lines | ~78 |
+
+## Session: 2026-04-18 02:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 02:33 | Edited cli/cmd/syllago/init_test.go | 14→15 lines | ~107 |
+| 02:33 | Edited cli/cmd/syllago/init_test.go | modified TestInitJSONOutputEmitsResult() | ~613 |
+| 02:35 | Edited cli/cmd/syllago/init_test.go | modified TestInitNoProvidersDetectedPrintsNone() | ~388 |
+| 02:35 | Edited cli/cmd/syllago/init_test.go | 14→17 lines | ~132 |
+| 02:38 | Edited cli/cmd/syllago/init_test.go | modified TestInitWizard_InitReturnsNil() | ~2415 |
+| 02:38 | Edited cli/cmd/syllago/init_test.go | modified TestInitWizardModel_NotDoneReturnsNonQuitCmd() | ~281 |
+| 02:43 | Edited cli/cmd/syllago/coverage_test.go | modified setupLoadoutRepo() | ~1776 |
+| 02:43 | Edited cli/cmd/syllago/coverage_test.go | inline fix | ~6 |
+| 02:44 | Edited cli/cmd/syllago/coverage_test.go | 3→8 lines | ~73 |
+| 02:45 | Edited cli/cmd/syllago/coverage_test.go | modified TestRunLoadoutApply_MalformedManifestErrors() | ~492 |
+| 02:45 | Edited cli/cmd/syllago/coverage_test.go | 5→5 lines | ~118 |
+
+## Session: 2026-04-18 02:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 02:51 | Edited cli/cmd/syllago/registry_cmd_test.go | 13→14 lines | ~70 |
+| 02:51 | Edited cli/cmd/syllago/registry_cmd_test.go | modified TestRunRegistryCreateNew_NoFlagsShowsHelp() | ~1791 |
+| 02:52 | Edited cli/cmd/syllago/registry_cmd_test.go | modified TestReprobeRegistryVisibility_UpdatesPublic() | ~636 |
+| 02:54 | Edited cli/cmd/syllago/loadout_create.go | 21→26 lines | ~168 |
+| 02:54 | Edited cli/cmd/syllago/loadout_create.go | inline fix | ~13 |
+| 02:55 | Edited cli/cmd/syllago/coverage_test.go | modified setupLoadoutCreateRepo() | ~1766 |
+| 02:56 | Edited cli/cmd/syllago/registry_create_native.go | expanded (+6 lines) | ~140 |
+| 02:57 | Edited cli/cmd/syllago/registry_create_native.go | inline fix | ~15 |
+| 02:57 | Edited cli/cmd/syllago/registry_create_native_test.go | 11→13 lines | ~67 |
+| 02:58 | Edited cli/cmd/syllago/registry_create_native_test.go | modified chdirToNative() | ~2469 |
+| 03:00 | Edited cli/cmd/syllago/coverage_test.go | modified TestRunUpdateContent_NotImplemented() | ~413 |
+| 03:03 | Created .claude/projects/finish-cmd-coverage-epic.md | — | ~543 |
+
+## Session: 2026-04-18 03:04
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 03:05 | Edited .claude/projects/finish-cmd-coverage-epic.md | inline fix | ~10 |
+| 03:05 | Edited .claude/projects/finish-cmd-coverage-epic.md | modified scope() | ~226 |
+| 03:06 | Session end: 2 writes across 1 files (finish-cmd-coverage-epic.md) | 1 reads | ~252 tok |
+
+## Session: 2026-04-18 03:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-18 03:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-18 03:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-18 03:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-18 03:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-18 03:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-18 03:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:10 | Created .scratch/panel/moat-trusted-root/seed.txt | — | ~1334 |
+| 08:15 | Created .scratch/panel/moat-trusted-root/r1-remy.txt | — | ~1101 |
+| 08:15 | Created .scratch/panel/moat-trusted-root/r1-enterprise-security.txt | — | ~1322 |
+| 08:15 | Created .scratch/panel/moat-trusted-root/r1-spec-purist.txt | — | ~1092 |
+| 08:15 | Created .scratch/panel/moat-trusted-root/r1-karpathy.txt | — | ~993 |
+| 08:15 | Created .scratch/panel/moat-trusted-root/r1-valsorda.txt | — | ~1505 |
+
+## Session: 2026-04-18 08:18
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:28 | Created .scratch/panel/moat-trusted-root/r2-remy.txt | — | ~3288 |
+| 08:28 | Created .scratch/panel/moat-trusted-root/r2-karpathy.txt | — | ~2768 |
+| 08:28 | Created .scratch/panel/moat-trusted-root/r2-valsorda.txt | — | ~3020 |
+| 08:28 | Created .scratch/panel/moat-trusted-root/r2-enterprise-security.txt | — | ~2812 |
+| 08:28 | Created .scratch/panel/moat-trusted-root/r2-spec-purist.txt | — | ~3124 |
+| 08:39 | Created .scratch/panel/moat-trusted-root/r3-remy.txt | — | ~3380 |
+| 08:39 | Created .scratch/panel/moat-trusted-root/r3-karpathy.txt | — | ~2694 |
+| 08:39 | Created .scratch/panel/moat-trusted-root/r3-valsorda.txt | — | ~2738 |
+| 08:39 | Created .scratch/panel/moat-trusted-root/r3-enterprise-security.txt | — | ~3317 |
+| 08:39 | Created .scratch/panel/moat-trusted-root/r3-spec-purist.txt | — | ~3946 |
+
+## Session: 2026-04-18 08:41
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:42 | Created .scratch/panel/moat-trusted-root/consensus.md | — | ~2802 |
+| 08:43 | Session end: 1 writes across 1 files (consensus.md) | 0 reads | ~3002 tok |
+| 11:28 | Created docs/adr/0007-moat-g3-slice-1-scope.md | — | ~3635 |
+| 11:28 | Edited docs/adr/INDEX.md | 1→2 lines | ~137 |
+| 11:28 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | modified Architecture() | ~811 |
+| 11:31 | Edited cli/internal/moat/verify.go | expanded (+54 lines) | ~831 |
+| 11:31 | Edited cli/internal/moat/sigstore_spike_test.go | expanded (+8 lines) | ~274 |
+| 11:33 | Created cli/internal/moat/manifest_verify.go | — | ~3324 |
+| 11:34 | Edited cli/internal/moat/manifest_verify.go | 10→9 lines | ~49 |
+| 11:34 | Edited cli/internal/moat/manifest_verify.go | 8→12 lines | ~190 |
+
+## Session: 2026-04-18 11:36
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:19 | Edited cli/internal/moat/manifest_verify.go | 9→12 lines | ~78 |
+| 13:19 | Edited cli/internal/moat/manifest_verify.go | 12→9 lines | ~49 |
+| 13:19 | Edited cli/internal/moat/manifest_verify.go | 7→9 lines | ~119 |
+| 13:19 | Edited cli/internal/moat/manifest_verify.go | modified stringContainsAny() | ~42 |
+| 13:19 | Edited cli/internal/moat/manifest_verify.go | New() → Errorf() | ~253 |
+| 13:20 | Edited docs/adr/0007-moat-g3-slice-1-scope.md | 7→8 lines | ~78 |
+| 13:20 | Edited docs/adr/0007-moat-g3-slice-1-scope.md | modified exists() | ~112 |
+| 13:20 | Edited docs/adr/0007-moat-g3-slice-1-scope.md | expanded (+9 lines) | ~302 |
+| 13:20 | Edited docs/adr/0007-moat-g3-slice-1-scope.md | 2→3 lines | ~58 |
+| 13:21 | Edited docs/adr/0007-moat-g3-slice-1-scope.md | added 1 import(s) | ~62 |
+| 13:21 | Edited docs/adr/INDEX.md | inline fix | ~89 |
+| 14:10 | Edited cli/internal/moat/manifest_verify.go | modified RequiresNumericIDMatch() | ~173 |
+| 14:10 | Edited cli/internal/moat/manifest_verify.go | modified matchNumericIDs() | ~540 |
+| 14:12 | Created cli/internal/moat/manifest_verify_test.go | — | ~2746 |
+| 14:14 | Edited cli/internal/moat/manifest_verify.go | 9→10 lines | ~65 |
+| 14:15 | Edited cli/internal/moat/manifest_verify.go | modified RequiresNumericIDMatch() | ~217 |
+| 14:15 | Edited cli/internal/moat/manifest_verify.go | extensionsFromSigstoreResult() → extensionsFromBundle() | ~255 |
+| 14:15 | Edited cli/internal/moat/manifest_verify.go | modified extensionsFromBundle() | ~431 |
+| 14:16 | Edited cli/internal/config/config.go | expanded (+12 lines) | ~275 |
+| 14:18 | Created cli/internal/moat/trusted_root_loader.go | — | ~2264 |
+
+## Session: 2026-04-19 14:20
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:21 | Created cli/internal/moat/trusted_root_loader_test.go | — | ~2256 |
+| 14:23 | Created cli/cmd/syllago/moat_cmd.go | — | ~1486 |
+| 14:23 | Edited cli/cmd/syllago/main.go | 5→6 lines | ~42 |
+| 14:24 | Created cli/cmd/syllago/moat_cmd_test.go | — | ~1481 |
+| 14:27 | Edited cli/internal/moat/verify.go | 6→7 lines | ~138 |
+| 14:27 | Edited cli/internal/config/config.go | expanded (+36 lines) | ~771 |
+| 14:28 | Edited cli/internal/config/config_moat_test.go | modified TestSigningProfile_Equal() | ~580 |
+| 14:30 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | 3→3 lines | ~235 |
+| 14:32 | Edited cli/internal/config/config_moat_test.go | modified containsSubstring() | ~1027 |
+| 14:33 | Edited cli/internal/moat/manifest_verify_test.go | modified TestVerifyManifest_TamperedArtifact() | ~659 |
+
+## Session: 2026-04-19 14:37
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-19 14:39
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-19 14:39
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-19 14:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:59 | Created ../../../.config/pai/.research-workflow-state-ee5810f1-f94c-485e-85a5-dd85c582ee03.json | — | ~28 |
+| 08:01 | Session end: 1 writes across 1 files (.research-workflow-state-ee5810f1-f94c-485e-85a5-dd85c582ee03.json) | 2 reads | ~28 tok |
+| 08:05 | Session end: 1 writes across 1 files (.research-workflow-state-ee5810f1-f94c-485e-85a5-dd85c582ee03.json) | 2 reads | ~28 tok |
+| 08:05 | Edited ../../../.config/pai/hooks/develop-precompact.ts | added 1 condition(s) | ~31 |
+| 08:05 | Session end: 2 writes across 2 files (.research-workflow-state-ee5810f1-f94c-485e-85a5-dd85c582ee03.json, develop-precompact.ts) | 2 reads | ~59 tok |
+
+## Session: 2026-04-20 08:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-20 08:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:23 | Edited cli/go.mod | 3→8 lines | ~112 |
+
+## Session: 2026-04-20 08:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:43 | Edited cli/internal/gitutil/gitutil.go | expanded (+17 lines) | ~206 |
+| 08:44 | Edited cli/internal/gitutil/gitutil.go | 6→8 lines | ~58 |
+| 08:44 | Edited cli/internal/gitutil/gitutil_test.go | modified TestInitAndCommit_NoInheritedIdentity() | ~300 |
+| 08:45 | Edited cli/internal/gitutil/gitutil.go | 6→6 lines | ~49 |
+| 08:46 | Session end: 4 writes across 2 files (gitutil.go, gitutil_test.go) | 2 reads | ~657 tok |
+| 08:48 | Edited cli/cmd/syllago/registry_cmd_test.go | modified TestRunRegistryCreateNew_GitInitSuccess() | ~166 |
+| 08:50 | Session end: 5 writes across 3 files (gitutil.go, gitutil_test.go, registry_cmd_test.go) | 3 reads | ~6166 tok |
+| 08:51 | Edited cli/cmd/syllago/registry_cmd_test.go | 5→6 lines | ~91 |
+| 08:52 | Edited cli/internal/promote/promote_test.go | "test@test.com" → "test@example.com" | ~5 |
+| 08:52 | Edited cli/internal/promote/promote_test.go | inline fix | ~7 |
+| 08:52 | Edited cli/internal/gitutil/gitutil_test.go | "test@test.com" → "test@example.com" | ~5 |
+| 08:52 | Edited cli/internal/gitutil/gitutil_test.go | inline fix | ~11 |
+| 08:52 | Edited cli/internal/gitutil/gitutil_test.go | inline fix | ~12 |
+| 08:52 | Edited cli/internal/registry/registry_test.go | 2→2 lines | ~27 |
+| 08:53 | Edited cli/internal/registry/coverage_test.go | 2→2 lines | ~32 |
+| 08:53 | Edited cli/internal/registry/integration_test.go | "test@test.com" → "test@example.com" | ~5 |
+| 08:53 | Edited cli/internal/registry/integration_test.go | inline fix | ~7 |
+| 08:54 | Session end: 15 writes across 7 files (gitutil.go, gitutil_test.go, registry_cmd_test.go, promote_test.go, registry_test.go) | 7 reads | ~6383 tok |
+| 08:56 | Session end: 15 writes across 7 files (gitutil.go, gitutil_test.go, registry_cmd_test.go, promote_test.go, registry_test.go) | 8 reads | ~9997 tok |
+| 08:57 | Edited docs/adr/0007-moat-g3-slice-1-scope.md | 2→2 lines | ~42 |
+| 08:57 | Edited docs/adr/0007-moat-g3-slice-1-scope.md | 3→4 lines | ~67 |
+| 08:57 | Edited docs/adr/0007-moat-g3-slice-1-scope.md | 1→3 lines | ~53 |
+| 08:58 | Session end: 18 writes across 8 files (gitutil.go, gitutil_test.go, registry_cmd_test.go, promote_test.go, registry_test.go) | 8 reads | ~10169 tok |
+| 09:00 | Session end: 18 writes across 8 files (gitutil.go, gitutil_test.go, registry_cmd_test.go, promote_test.go, registry_test.go) | 8 reads | ~10169 tok |
+| 09:07 | Session end: 18 writes across 8 files (gitutil.go, gitutil_test.go, registry_cmd_test.go, promote_test.go, registry_test.go) | 8 reads | ~10169 tok |
+| 09:12 | Session end: 18 writes across 8 files (gitutil.go, gitutil_test.go, registry_cmd_test.go, promote_test.go, registry_test.go) | 8 reads | ~10169 tok |
+
+## Session: 2026-04-20 09:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:15 | Edited cli/internal/analyzer/walk_test.go | modified TestWalk_FileLimitWarning() | ~88 |
+
+## Session: 2026-04-20 09:18
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:20 | Created cli/internal/moat/signing_identities.json | — | ~291 |
+| 09:21 | Created cli/internal/moat/signing_identities_loader.go | — | ~2111 |
+| 09:22 | Created cli/internal/moat/signing_identities_loader_test.go | — | ~2991 |
+| 09:23 | Edited cli/internal/moat/signing_identities_loader.go | 5→4 lines | ~24 |
+| 09:23 | Edited cli/internal/moat/signing_identities_loader.go | modified loadSigningIdentityIndex() | ~248 |
+| 09:23 | Edited cli/internal/moat/signing_identities_loader_test.go | modified TestMustParseSigningIdentities_PanicsOnInvalid() | ~391 |
+| 09:25 | Edited cli/internal/output/errors.go | 4→8 lines | ~115 |
+| 09:25 | Edited cli/internal/output/errors.go | 5→8 lines | ~31 |
+| 09:26 | Created cli/cmd/syllago/registry_signing.go | — | ~1859 |
+| 09:26 | Edited cli/cmd/syllago/registry_cmd.go | modified IsValidRegistryName() | ~324 |
+| 09:26 | Edited cli/cmd/syllago/registry_signing.go | modified mustStringFlag() | ~149 |
+| 09:26 | Edited cli/cmd/syllago/registry_cmd.go | expanded (+6 lines) | ~112 |
+| 09:27 | Edited cli/cmd/syllago/registry_cmd.go | expanded (+7 lines) | ~159 |
+| 09:27 | Edited cli/cmd/syllago/registry_cmd.go | 2→7 lines | ~248 |
+| 09:28 | Created cli/cmd/syllago/registry_signing_test.go | — | ~2884 |
+| 09:29 | Edited cli/cmd/syllago/registry_signing_test.go | modified TestDescribeProfileSource_UnknownSourceIsSilent() | ~156 |
+| 09:29 | Edited cli/cmd/syllago/registry_signing_test.go | 8→9 lines | ~48 |
+| 09:29 | Edited cli/cmd/syllago/registry_signing_test.go | modified TestMustStringFlag_ReadsValue() | ~276 |
+| 09:31 | Created cli/internal/errordocs/docs/moat-001.md | — | ~573 |
+| 09:31 | Created cli/internal/errordocs/docs/moat-002.md | — | ~417 |
+
+## Session: 2026-04-20 09:36
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:38 | Edited cli/internal/output/errors.go | 4→8 lines | ~177 |
+| 09:38 | Edited cli/internal/output/errors.go | 5→9 lines | ~44 |
+| 09:39 | Created cli/internal/errordocs/docs/moat-003.md | — | ~622 |
+| 09:39 | Created cli/internal/errordocs/docs/moat-004.md | — | ~612 |
+| 09:39 | Created cli/internal/errordocs/docs/moat-005.md | — | ~494 |
+| 09:40 | Created cli/internal/errordocs/docs/moat-006.md | — | ~606 |
+| 09:41 | Created cli/cmd/syllago/registry_verify.go | — | ~2856 |
+| 09:41 | Edited cli/cmd/syllago/add_cmd.go | modified IsCloned() | ~206 |
+| 09:43 | Created cli/cmd/syllago/registry_verify_test.go | — | ~4483 |
+
+## Session: 2026-04-20 09:44
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:48 | Created cli/internal/moat/trusted_root_path.go | — | ~600 |
+| 09:49 | Edited cli/internal/output/errors.go | 2→3 lines | ~66 |
+| 09:49 | Edited cli/internal/output/errors.go | 3→4 lines | ~16 |
+| 09:49 | Created cli/internal/errordocs/docs/moat-007.md | — | ~575 |
+| 09:50 | Edited cli/cmd/syllago/registry_verify.go | modified trustedRootPathForRegistry() | ~496 |
+| 09:50 | Edited cli/cmd/syllago/registry_verify.go | modified verifyRegistryForAdd() | ~947 |
+| 09:50 | Edited cli/cmd/syllago/registry_verify.go | 18→19 lines | ~163 |
+| 09:51 | Edited cli/cmd/syllago/registry_verify.go | modified emitTrustLabel() | ~298 |
+| 09:51 | Edited cli/cmd/syllago/add_cmd.go | 9→10 lines | ~104 |
+| 09:51 | Edited cli/cmd/syllago/add_cmd.go | 2→2 lines | ~29 |
+| 09:51 | Edited cli/cmd/syllago/add_cmd.go | inline fix | ~42 |
+| 09:51 | Edited cli/cmd/syllago/add_cmd.go | 10→11 lines | ~129 |
+| 09:51 | Edited cli/cmd/syllago/add_cmd.go | 6→10 lines | ~179 |
+| 09:52 | Edited cli/cmd/syllago/registry_verify_test.go | modified withStubbedVerifiers() | ~283 |
+| 09:52 | Edited cli/cmd/syllago/registry_verify_test.go | inline fix | ~7 |
+| 09:52 | Edited cli/cmd/syllago/registry_verify_test.go | inline fix | ~13 |
+| 09:52 | Edited cli/cmd/syllago/registry_verify_test.go | inline fix | ~15 |
+| 09:52 | Edited cli/cmd/syllago/registry_verify_test.go | inline fix | ~15 |
+| 09:52 | Edited cli/cmd/syllago/registry_verify_test.go | inline fix | ~14 |
+| 09:52 | Edited cli/cmd/syllago/registry_verify_test.go | inline fix | ~14 |
+| 09:52 | Edited cli/cmd/syllago/registry_verify_test.go | 10→10 lines | ~95 |
+| 09:53 | Created cli/internal/moat/trusted_root_path_test.go | — | ~1022 |
+| 09:54 | Edited cli/cmd/syllago/registry_verify_test.go | modified writeTrustedRootFile() | ~3151 |
+| 09:54 | Edited cli/cmd/syllago/registry_verify_test.go | 11→12 lines | ~64 |
+| 09:58 | Created ../syllago-docs/src/content/docs/moat/registry-add-signing-identity.mdx | — | ~2272 |
+
+## Session: 2026-04-20 10:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-20 10:03
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-20 10:03
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-20 10:03
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:22 | Created docs/runbooks/moat-trusted-root-refresh.md | — | ~2085 |
+| 10:23 | Created .github/workflows/moat-trusted-root-check.yml | — | ~1072 |
+| 10:23 | Edited docs/adr/0007-moat-g3-slice-1-scope.md | 4→7 lines | ~130 |
+| 10:23 | Edited docs/adr/0007-moat-g3-slice-1-scope.md | 2→3 lines | ~80 |
+| 10:24 | Edited .gitignore | 2→3 lines | ~16 |
+| 10:27 | Edited ../moat/moat-spec.md | modified modes() | ~909 |
+| 10:28 | Edited ../moat/moat-spec.md | modified binding() | ~507 |
+| 10:28 | Edited ../moat/moat-spec.md | modified structure() | ~822 |
+
+## Session: 2026-04-20 10:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:31 | Edited ../moat/moat-spec.md | modified states() | ~890 |
+| 10:32 | Edited ../moat/CHANGELOG.md | expanded (+7 lines) | ~532 |
+| 10:33 | Edited docs/adr/0007-moat-g3-slice-1-scope.md | 3→3 lines | ~124 |
+| 10:40 | Session end: 3 writes across 3 files (moat-spec.md, CHANGELOG.md, 0007-moat-g3-slice-1-scope.md) | 8 reads | ~32831 tok |
+
+## Session: 2026-04-20 10:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:45 | Created cli/internal/moat/item_verify.go | — | ~3478 |
+| 10:45 | Edited cli/internal/moat/item_verify.go | expanded (+9 lines) | ~174 |
+| 10:46 | Edited cli/internal/moat/item_verify.go | 6→2 lines | ~31 |
+| 10:46 | Edited cli/internal/moat/item_verify.go | modified parseUTF8StringExt() | ~374 |
+| 10:46 | Edited cli/internal/moat/item_verify.go | 3→4 lines | ~54 |
+| 10:46 | Edited cli/internal/moat/item_verify.go | modified buildInclusionProofModel() | ~119 |
+| 10:48 | Created cli/internal/moat/item_verify_test.go | — | ~2606 |
+
+## Session: 2026-04-20 10:50
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:50 | Edited cli/internal/moat/item_verify_test.go | inline fix | ~18 |
+| 10:50 | Edited cli/internal/moat/item_verify_test.go | modified extractFixtureNumericIDsFromRekor() | ~168 |
+| 10:52 | Edited cli/internal/moat/item_verify.go | 5→6 lines | ~74 |
+| 10:52 | Edited cli/internal/moat/item_verify.go | 24→29 lines | ~348 |
+| 10:52 | Edited cli/internal/moat/item_verify.go | modified buildTransparencyLogEntry() | ~491 |
+| 10:55 | Session end: 5 writes across 2 files (item_verify_test.go, item_verify.go) | 6 reads | ~8986 tok |
+| 11:04 | Created cli/internal/catalog/trust.go | — | ~1347 |
+| 11:04 | Edited cli/internal/catalog/types.go | expanded (+10 lines) | ~222 |
+| 11:05 | Created cli/internal/catalog/trust_test.go | — | ~1335 |
+| 11:05 | Edited cli/internal/catalog/trust_test.go | expanded (+6 lines) | ~97 |
+| 11:07 | Edited cli/internal/tui/install_view.go | expanded (+18 lines) | ~345 |
+| 11:07 | Edited cli/internal/tui/install_view.go | 2→3 lines | ~31 |
+| 11:07 | Edited cli/cmd/syllago/install_cmd.go | 7→12 lines | ~147 |
+| 11:07 | Edited cli/cmd/syllago/install_cmd.go | expanded (+11 lines) | ~155 |
+
+## Session: 2026-04-20 11:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:14 | Created cli/cmd/syllago/install_trust_test.go | — | ~2141 |
+| 11:19 | Created cli/internal/moat/lockfile.go | — | ~4218 |
+| 11:20 | Created cli/internal/moat/lockfile_test.go | — | ~3796 |
+| 11:21 | Edited cli/internal/moat/lockfile_test.go | reduced (-9 lines) | ~122 |
+| 11:21 | Edited cli/internal/moat/lockfile_test.go | inline fix | ~8 |
+| 11:21 | Edited cli/internal/moat/lockfile_test.go | inline fix | ~15 |
+| 11:21 | Edited cli/internal/moat/lockfile_test.go | expanded (+13 lines) | ~228 |
+| 11:23 | Edited cli/internal/moat/lockfile.go | 8→8 lines | ~62 |
+| 11:24 | Edited cli/internal/moat/lockfile.go | inline fix | ~9 |
+| 11:24 | Edited cli/internal/moat/lockfile.go | inline fix | ~12 |
+
+## Session: 2026-04-20 11:27
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:30 | Created cli/internal/moat/revocation.go | — | ~1902 |
+| 11:31 | Created cli/internal/moat/revocation_test.go | — | ~3114 |
+| 11:32 | Session end: 2 writes across 2 files (revocation.go, revocation_test.go) | 2 reads | ~12232 tok |
+
+## Session: 2026-04-20 11:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:42 | Edited cli/internal/converter/frontmatter_registry.go | expanded (+9 lines) | ~242 |
+| 11:42 | Edited cli/internal/converter/frontmatter_registry.go | modified FrontmatterFieldsFor() | ~178 |
+
+## Session: 2026-04-20 11:46
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:47 | Edited cli/internal/installer/mcp_test.go | modified TestInstallMCP_WhitelistsFields() | ~35 |
+| 11:58 | Session end: 1 writes across 1 files (mcp_test.go) | 2 reads | ~38 tok |
+
+## Session: 2026-04-20 11:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:06 | Edited cli/internal/moat/revocation_test.go | modified TestRevocationSet_UnknownSourceFailsClosed() | ~598 |
+| 12:06 | Edited cli/internal/moat/revocation.go | 7→11 lines | ~187 |
+| 12:09 | Created cli/internal/moat/freshness.go | — | ~1694 |
+| 12:10 | Created cli/internal/moat/freshness_test.go | — | ~2029 |
+| 12:12 | Edited cli/cmd/syllago/install_conflict_test.go | append() → Replace() | ~131 |
+| 12:13 | Session end: 5 writes across 5 files (revocation_test.go, revocation.go, freshness.go, freshness_test.go, install_conflict_test.go) | 5 reads | ~17184 tok |
+| 12:17 | Session end: 5 writes across 5 files (revocation_test.go, revocation.go, freshness.go, freshness_test.go, install_conflict_test.go) | 5 reads | ~17184 tok |
+| 12:20 | Edited cli/internal/moat/freshness_test.go | modified TestCheckStaleness_FreshWithin72h() | ~31 |
+| 12:29 | Session end: 6 writes across 5 files (revocation_test.go, revocation.go, freshness.go, freshness_test.go, install_conflict_test.go) | 5 reads | ~17218 tok |
+| 12:30 | Session end: 6 writes across 5 files (revocation_test.go, revocation.go, freshness.go, freshness_test.go, install_conflict_test.go) | 5 reads | ~17218 tok |
+
+## Session: 2026-04-20 12:36
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:39 | Created cli/internal/moat/noninteractive.go | — | ~1928 |
+| 12:39 | Created cli/internal/moat/noninteractive_test.go | — | ~1947 |
+| 12:40 | Edited docs/plans/2026-04-12-moat-conformance-gap-analysis.md | expanded (+6 lines) | ~584 |
+| 12:42 | Edited cli/internal/moat/manifest.go | modified downgrade() | ~315 |
+| 12:43 | Edited cli/internal/moat/manifest_test.go | modified TestParseManifest_AttestationHashMismatchDowngrade() | ~1457 |
+| 12:46 | Edited cli/internal/moat/verify.go | modified IsSupportedPayloadVersion() | ~1022 |
+| 12:46 | Edited cli/internal/moat/item_verify.go | modified ordering() | ~424 |
+| 12:47 | Edited cli/internal/moat/canonical_payload_test.go | modified TestCurrentPayloadVersion_IsOne() | ~1451 |
+
+## Session: 2026-04-20 12:50
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:52 | Edited cli/internal/moat/lockfile.go | modified contract() | ~272 |
+| 12:52 | Edited cli/internal/moat/lockfile.go | modified never() | ~506 |
+| 12:53 | Edited cli/internal/moat/lockfile_test.go | modified TestSyncRegistryRevocations_AddsRegistrySourceOnly() | ~2146 |
+| 12:55 | Session end: 3 writes across 2 files (lockfile.go, lockfile_test.go) | 4 reads | ~30568 tok |
+
+## Session: 2026-04-20 12:55
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:59 | Edited cli/internal/moat/manifest.go | modified item() | ~585 |
+| 12:59 | Edited cli/internal/moat/manifest.go | expanded (+36 lines) | ~305 |
+| 13:00 | Edited cli/internal/moat/manifest_test.go | modified buildManifest() | ~1306 |
+| 13:00 | Edited cli/internal/moat/manifest_test.go | modified IsPrivate() | ~98 |
+| 13:01 | Session end: 4 writes across 2 files (manifest.go, manifest_test.go) | 4 reads | ~28861 tok |
+| 13:08 | Session end: 4 writes across 2 files (manifest.go, manifest_test.go) | 4 reads | ~28861 tok |
+
+## Session: 2026-04-20 13:18
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:23 | Created cli/internal/moat/sync.go | — | ~3941 |
+| 13:24 | Edited cli/internal/moat/sync.go | expanded (+7 lines) | ~210 |
+| 13:24 | Edited cli/internal/moat/sync.go | VerifyManifest() → syncVerifyFn() | ~58 |
+| 13:26 | Created cli/internal/moat/sync_test.go | — | ~5545 |
+| 13:28 | Edited cli/internal/moat/sync_test.go | modified TestSync_HappyPath_ProfileMatches() | ~55 |
+| 13:28 | Edited cli/internal/moat/sync_test.go | modified TestSync_TOFU_NoPinnedProfile() | ~109 |
+| 13:28 | Edited cli/internal/moat/sync_test.go | modified TestSync_ProfileChanged() | ~44 |
+| 13:28 | Edited cli/internal/moat/sync_test.go | modified TestSync_VerifyErrorPropagates() | ~46 |
+| 13:28 | Edited cli/internal/moat/sync_test.go | modified TestSync_RevocationSyncAndPrivateCount() | ~42 |
+| 13:28 | Edited cli/internal/moat/sync_test.go | modified TestSync_Staleness_RespectsManifestExpires() | ~50 |
+| 13:28 | Edited cli/internal/moat/sync_test.go | modified TestSync_BundleURLIsManifestURIPlusSuffix() | ~49 |
+| 13:29 | Edited cli/internal/moat/sync_test.go | expanded (+11 lines) | ~111 |
+| 13:30 | Edited cli/internal/moat/sync_test.go | 13→12 lines | ~45 |
+| 13:30 | Edited cli/internal/moat/sync_test.go | — | ~0 |
+
+## Session: 2026-04-20 13:35
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:39 | Created cli/cmd/syllago/registry_sync_moat.go | — | ~1695 |
+| 13:39 | Edited cli/cmd/syllago/registry_cmd.go | modified findRegistryByName() | ~911 |
+| 13:39 | Edited cli/cmd/syllago/registry_cmd.go | 1→2 lines | ~63 |
+| 13:42 | Created cli/cmd/syllago/registry_sync_moat_test.go | — | ~4366 |
+| 13:42 | Edited cli/cmd/syllago/registry_sync_moat_test.go | 5→5 lines | ~57 |
+| 13:43 | Edited cli/cmd/syllago/registry_sync_moat_test.go | modified TestSyncMOAT_PersistenceRoundTrip() | ~596 |
+| 13:43 | Edited cli/cmd/syllago/registry_sync_moat_test.go | 16→13 lines | ~55 |
+| 13:44 | Edited cli/cmd/syllago/registry_sync_moat_test.go | modified TestSyncMOAT_TrustedRootExpired_ReturnsStructuredError() | ~414 |
+| 13:44 | Edited cli/cmd/syllago/moat_cmd.go | inline fix | ~24 |
+| 13:47 | Phase 2a CLI wrapper syncMOATRegistry() + 11 tests + --yes flag | cli/cmd/syllago/registry_sync_moat.go, registry_cmd.go, registry_sync_moat_test.go | 92.7% coverage, all G-18 exit codes 10/11/13 covered | ~12000 |
+| 13:48 | Session end: 9 writes across 4 files (registry_sync_moat.go, registry_cmd.go, registry_sync_moat_test.go, moat_cmd.go) | 12 reads | ~55142 tok |
+
+## Session: 2026-04-20 13:48
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-20 14:01
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:08 | Created cli/internal/installer/moat_gate.go | — | ~3868 |
+
+## Session: 2026-04-20 14:10
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:10 | Edited cli/internal/installer/moat_gate.go | modified sha256HexOf() | ~176 |
+| 14:13 | Created cli/internal/installer/moat_gate_test.go | — | ~4748 |
+| 14:14 | Edited cli/internal/installer/moat_gate_test.go | modified TestRecordInstall_PropagatesAddEntryError() | ~200 |
+| 14:16 | Session end: 3 writes across 2 files (moat_gate.go, moat_gate_test.go) | 4 reads | ~18570 tok |
+
+## Session: 2026-04-20 14:16
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-20 14:16
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:19 | Created ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/user_commit_email.md | — | ~239 |
+| 14:19 | Edited ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md | 1→5 lines | ~59 |
+| 14:19 | Session end: 2 writes across 2 files (user_commit_email.md, MEMORY.md) | 1 reads | ~319 tok |
+| 14:33 | Created cli/internal/moat/enrich.go | — | ~1311 |
+
+## Session: 2026-04-20 14:35
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:36 | Created cli/internal/moat/enrich_test.go | — | ~3034 |
+| 14:37 | Edited cli/internal/moat/enrich_test.go | modified TestMoatTierToCatalogTier_UnknownFallsThroughToUnknown() | ~174 |
+
+## Session: 2026-04-20 14:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:40 | syllago-kvf66: wrote EnrichCatalog + FindContentEntry helpers | cli/internal/moat/enrich.go, enrich_test.go | 100% coverage, 14 tests, make test green; bead closed | ~3000 |
+| 14:40 | Session end: 2 writes across 1 files (enrich_test.go) | 8 reads | ~27201 tok |
+| 14:51 | Created ../../../../../tmp/raivj_desc.txt | — | ~233 |
+| 14:51 | Created ../../../../../tmp/bk2vg_desc.txt | — | ~212 |
+| 14:54 | Created cli/cmd/syllago/install_moat.go | — | ~2873 |
+| 14:55 | Edited cli/cmd/syllago/install_cmd.go | expanded (+21 lines) | ~444 |
+| 14:55 | Edited cli/cmd/syllago/install_moat.go | expanded (+7 lines) | ~120 |
+| 14:56 | Created cli/cmd/syllago/install_moat_test.go | — | ~3233 |
+
+## Session: 2026-04-20 14:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:58 | Edited cli/cmd/syllago/install_moat_test.go | modified As() | ~35 |
+| 14:59 | Edited cli/cmd/syllago/install_moat_test.go | modified Contains() | ~65 |
+| 14:59 | Edited cli/cmd/syllago/install_moat_test.go | 7→8 lines | ~70 |
+| 14:59 | Edited cli/cmd/syllago/install_moat_test.go | inline fix | ~29 |
+| 15:12 | Edited cli/internal/output/errors.go | 1→3 lines | ~99 |
+| 15:12 | Edited cli/internal/output/errors.go | 3→5 lines | ~23 |
+| 15:14 | Edited cli/internal/telemetry/catalog.go | expanded (+14 lines) | ~186 |
+| 15:14 | Edited cli/cmd/syllago/install_moat.go | 12→16 lines | ~97 |
+| 15:14 | Edited cli/cmd/syllago/install_moat.go | modified defaultMoatInstallPrompt() | ~499 |
+| 15:15 | Edited cli/cmd/syllago/install_moat.go | modified resolveGateDecision() | ~1533 |
+| 15:15 | Edited cli/cmd/syllago/install_moat.go | modified moatInstallInteractiveFn() | ~110 |
+| 15:16 | Edited cli/cmd/syllago/install_moat.go | modified printRegistryItemSummary() | ~477 |
+| 15:17 | Edited cli/cmd/syllago/install_moat_test.go | 8→7 lines | ~63 |
+| 15:17 | Edited cli/cmd/syllago/install_moat_test.go | inline fix | ~28 |
+| 15:17 | Edited cli/cmd/syllago/install_moat_test.go | TestRunInstallFromRegistry_NonDryRunIsNotYetWired() → TestRunInstallFromRegistry_NonDryRunDefersFetch() | ~71 |
+| 15:17 | Edited cli/cmd/syllago/install_moat_test.go | modified Contains() | ~68 |
+| 15:19 | Edited cli/cmd/syllago/install_moat_test.go | modified assertStructuredCode() | ~3359 |
+| 15:19 | Edited cli/cmd/syllago/install_moat_test.go | 12→14 lines | ~67 |
+| 15:19 | Edited cli/cmd/syllago/install_moat.go | modified printRegistryItemSummaryWithGate() | ~144 |
+
+## Session: 2026-04-20 15:22
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:23 | Created cli/internal/errordocs/docs/moat-008.md | — | ~712 |
+| 15:23 | Created cli/internal/errordocs/docs/moat-009.md | — | ~703 |
+| 15:26 | Edited cli/cmd/syllago/install_moat.go | 7→7 lines | ~45 |
+| 15:26 | Edited cli/cmd/syllago/install_moat.go | 6→6 lines | ~33 |
+| 15:27 | Session end: 4 writes across 3 files (moat-008.md, moat-009.md, install_moat.go) | 3 reads | ~8267 tok |
+
+## Session: 2026-04-20 15:27
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:31 | Created cli/cmd/syllago/install_moat_fetch.go | — | ~3366 |
+| 15:31 | Edited cli/cmd/syllago/install_moat_fetch.go | inline fix | ~6 |
+| 15:31 | Edited cli/cmd/syllago/install_moat_fetch.go | 19→20 lines | ~92 |
+| 15:31 | Edited cli/cmd/syllago/install_moat_fetch.go | inline fix | ~14 |
+| 15:31 | Edited cli/cmd/syllago/install_moat_fetch.go | — | ~0 |
+| 15:32 | Edited cli/cmd/syllago/install_moat.go | 19→18 lines | ~219 |
+| 15:33 | Edited cli/cmd/syllago/install_moat_test.go | modified TestRunInstallFromRegistry_NonDryRunGitSchemeUnsupported() | ~682 |
+| 15:34 | Created cli/cmd/syllago/install_moat_fetch_test.go | — | ~3094 |
+| 15:34 | Edited cli/cmd/syllago/install_moat_fetch_test.go | modified withTLSClient() | ~217 |
+| 15:34 | Edited cli/cmd/syllago/install_moat_fetch_test.go | modified TestDownloadTarball_OK() | ~233 |
+| 15:34 | Edited cli/cmd/syllago/install_moat_fetch_test.go | modified TestFetchAndRecord_Happy_Unsigned() | ~100 |
+| 15:34 | Edited cli/cmd/syllago/install_moat_fetch_test.go | modified TestFetchAndRecord_HashMismatch() | ~72 |
+| 15:35 | Edited cli/cmd/syllago/install_moat_fetch.go | modified func() | ~39 |
+| 15:35 | Edited cli/cmd/syllago/install_moat_fetch.go | modified func() | ~43 |
+| 15:35 | Edited cli/cmd/syllago/install_moat_fetch.go | 4→4 lines | ~42 |
+| 15:36 | Edited cli/cmd/syllago/install_moat_fetch_test.go | modified TestFetchAndRecord_NilGuards() | ~572 |
+| 15:39 | Created cli/cmd/syllago/install_moat_integration_test.go | — | ~2595 |
+
+## Session: 2026-04-20 15:41
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:06 | Created docs/plans/2026-04-20-moat-tui-trust-surfacing-spec.md | — | ~4973 |
+
+## Session: 2026-04-21 17:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:19 | Created docs/plans/2026-04-20-moat-tui-trust-surfacing-findings.md | — | ~6168 |
+
+## Session: 2026-04-21 17:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:00 | Created docs/plans/2026-04-20-moat-tui-trust-surfacing-spec.md | — | ~10168 |
+| 18:02 | Session end: 1 writes across 1 files (2026-04-20-moat-tui-trust-surfacing-spec.md) | 2 reads | ~21339 tok |
+| 18:17 | Session end: 1 writes across 1 files (2026-04-20-moat-tui-trust-surfacing-spec.md) | 17 reads | ~42761 tok |
+| 18:25 | Created docs/plans/2026-04-20-moat-tui-trust-surfacing-spec.md | — | ~11815 |
+
+## Session: 2026-04-21 18:27
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:32 | Edited docs/plans/2026-04-20-moat-tui-trust-surfacing-spec.md | modified itself() | ~693 |
+| 18:32 | Edited docs/plans/2026-04-20-moat-tui-trust-surfacing-spec.md | inline fix | ~71 |
+| 18:32 | Edited docs/plans/2026-04-20-moat-tui-trust-surfacing-spec.md | 3→3 lines | ~167 |
+| 18:34 | Session end: 3 writes across 1 files (2026-04-20-moat-tui-trust-surfacing-spec.md) | 15 reads | ~29044 tok |
+| 19:05 | Edited cli/internal/catalog/types.go | expanded (+12 lines) | ~362 |
+| 19:05 | Edited cli/internal/catalog/trust.go | expanded (+7 lines) | ~220 |
+| 19:05 | Edited cli/internal/catalog/trust_test.go | 3→3 lines | ~31 |
+| 19:05 | Edited cli/internal/catalog/trust_test.go | expanded (+17 lines) | ~221 |
+| 19:06 | Created cli/internal/moat/sanitize.go | — | ~1638 |
+| 19:07 | Created cli/internal/moat/sanitize_test.go | — | ~1050 |
+| 19:07 | Edited cli/internal/moat/sanitize_test.go | 18→20 lines | ~140 |
+| 19:08 | Edited cli/internal/moat/enrich.go | modified EnrichCatalog() | ~1132 |
+| 19:09 | Edited cli/internal/moat/enrich_test.go | modified TestEnrichCatalog_PrivateRepoPopulated() | ~2210 |
+
+## Session: 2026-04-21 19:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:16 | Created cli/internal/moat/producer.go | — | ~2589 |
+| 19:17 | Created cli/internal/moat/producer_test.go | — | ~3368 |
+
+## Session: 2026-04-21 19:19
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 19:20
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 19:28
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:32 | Edited cli/internal/tui/app.go | 13→15 lines | ~130 |
+| 19:32 | Edited cli/internal/tui/app.go | expanded (+7 lines) | ~160 |
+| 19:33 | Session end: 2 writes across 1 files (app.go) | 4 reads | ~9118 tok |
+| 19:34 | Edited cli/cmd/syllago/install_trust_test.go | modified Contains() | ~35 |
+| 19:35 | Session end: 3 writes across 2 files (app.go, install_trust_test.go) | 6 reads | ~12764 tok |
+
+## Session: 2026-04-21 19:38
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 19:38
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:41 | Created ../../../.config/pai/.research-workflow-state-ba666b6c-9b90-4938-9c5d-ad15b2ac2563.json | — | ~24 |
+| 19:42 | Created work-stats.md | — | ~1363 |
+| 19:42 | Session end: 2 writes across 2 files (.research-workflow-state-ba666b6c-9b90-4938-9c5d-ad15b2ac2563.json, work-stats.md) | 0 reads | ~1484 tok |
+| 19:44 | Edited work-stats.md | expanded (+15 lines) | ~481 |
+| 19:44 | Session end: 3 writes across 2 files (.research-workflow-state-ba666b6c-9b90-4938-9c5d-ad15b2ac2563.json, work-stats.md) | 83 reads | ~86485 tok |
+| 19:47 | Edited cli/internal/tui/styles.go | expanded (+7 lines) | ~184 |
+| 19:47 | Edited cli/internal/tui/metapanel.go | modified metaBarLinesFor() | ~395 |
+| 19:47 | Edited cli/internal/tui/library.go | modified rather() | ~280 |
+| 19:49 | Session end: 6 writes across 5 files (.research-workflow-state-ba666b6c-9b90-4938-9c5d-ad15b2ac2563.json, work-stats.md, styles.go, metapanel.go, library.go) | 103 reads | ~106281 tok |
+
+## Session: 2026-04-21 19:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:51 | Edited cli/internal/tui/gallery.go | 2→2 lines | ~24 |
+| 19:51 | Edited cli/internal/tui/gallery.go | 2→2 lines | ~26 |
+| 19:51 | Edited cli/internal/tui/library.go | modified SetSize() | ~339 |
+| 19:51 | Edited cli/internal/tui/library.go | inline fix | ~12 |
+| 19:51 | Edited cli/internal/tui/library.go | 3→3 lines | ~34 |
+| 19:51 | Edited cli/internal/tui/library.go | 2→2 lines | ~36 |
+| 19:51 | Edited cli/internal/tui/explorer.go | modified sizeBrowsePanes() | ~298 |
+| 19:52 | Edited cli/internal/tui/explorer.go | inline fix | ~12 |
+| 19:52 | Edited cli/internal/tui/explorer.go | 4→4 lines | ~39 |
+| 19:52 | Edited cli/internal/tui/explorer.go | 2→2 lines | ~36 |
+| 19:52 | Edited cli/internal/tui/explorer.go | 3→3 lines | ~36 |
+| 19:52 | Edited cli/internal/tui/metapanel.go | modified renderMetaPanel() | ~137 |
+| 19:53 | Edited cli/internal/tui/metapanel.go | expanded (+50 lines) | ~599 |
+| 19:54 | Edited cli/internal/tui/table.go | 12→17 lines | ~172 |
+| 19:54 | Edited cli/internal/tui/table.go | modified trustPrefix() | ~231 |
+| 19:54 | Edited cli/internal/tui/items.go | 9→13 lines | ~104 |
+| 19:54 | Edited cli/internal/tui/items.go | 3→3 lines | ~31 |
+| 19:56 | Created cli/internal/tui/metapanel_test.go | — | ~1925 |
+| 19:59 | Edited cli/internal/tui/library.go | — | ~0 |
+
+## Session: 2026-04-21 20:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:04 | Edited cli/internal/tui/app.go | expanded (+8 lines) | ~166 |
+| 20:04 | Created cli/internal/tui/publisher_warn.go | — | ~583 |
+| 20:05 | Edited cli/internal/tui/actions.go | modified isPublisherRevoked() | ~267 |
+| 20:05 | Edited cli/internal/tui/actions.go | modified isPublisherRevoked() | ~208 |
+| 20:05 | Edited cli/internal/tui/actions.go | expanded (+22 lines) | ~413 |
+| 20:06 | Created cli/internal/tui/publisher_warn_test.go | — | ~2481 |
+| 20:09 | Session end: 6 writes across 4 files (app.go, publisher_warn.go, actions.go, publisher_warn_test.go) | 7 reads | ~12489 tok |
+
+## Session: 2026-04-21 20:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 20:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:54 | Edited cli/internal/tui/testhelpers_test.go | modified testCatalogWithItems() | ~804 |
+| 21:55 | Created cli/internal/tui/golden_moat_test.go | — | ~1519 |
+| 21:55 | Edited cli/internal/tui/golden_moat_test.go | 7→9 lines | ~36 |
+| 21:55 | Edited cli/internal/tui/golden_moat_test.go | 4→4 lines | ~24 |
+| 21:56 | Edited cli/internal/tui/golden_moat_test.go | 3→3 lines | ~68 |
+| 21:56 | Edited cli/internal/tui/golden_moat_test.go | modified cursorToMOATRow() | ~154 |
+| 21:56 | Edited cli/internal/tui/golden_moat_test.go | Selected() → currentMetaItem() | ~26 |
+| 21:56 | Edited cli/internal/tui/golden_moat_test.go | inline fix | ~13 |
+| 21:56 | Edited cli/internal/tui/golden_moat_test.go | inline fix | ~13 |
+| 21:57 | Edited cli/internal/tui/golden_moat_test.go | modified TestGolden_MOAT_LibraryRecalledSelected_120x40() | ~64 |
+| 21:57 | Edited cli/internal/tui/golden_moat_test.go | modified TestMOAT_RecalledMetapanelShowsBanner() | ~47 |
+| 21:57 | Edited cli/internal/tui/golden_moat_test.go | modified TestMOAT_PrivateMetapanelShowsVisibilityChip() | ~49 |
+
+## Session: 2026-04-21 22:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:00 | Created docs/plans/2026-04-20-test-quality-audit.md | — | ~971 |
+| 22:01 | Session end: 1 writes across 1 files (2026-04-20-test-quality-audit.md) | 0 reads | ~1041 tok |
+| 22:02 | Edited docs/plans/2026-04-20-test-quality-audit.md | expanded (+42 lines) | ~855 |
+| 22:02 | Edited docs/plans/2026-04-20-test-quality-audit.md | 3→3 lines | ~178 |
+| 22:02 | Edited docs/plans/2026-04-20-test-quality-audit.md | 5→5 lines | ~61 |
+| 22:04 | Session end: 4 writes across 1 files (2026-04-20-test-quality-audit.md) | 0 reads | ~2213 tok |
+| 22:04 | Edited docs/plans/2026-04-20-test-quality-audit.md | added error handling | ~1552 |
+| 22:05 | Edited work-stats.md | modified Fails() | ~2366 |
+| 22:05 | Edited work-stats.md | 6→8 lines | ~271 |
+| 22:05 | Session end: 7 writes across 2 files (2026-04-20-test-quality-audit.md, work-stats.md) | 0 reads | ~6701 tok |
+| 22:06 | Edited docs/plans/2026-04-20-test-quality-audit.md | expanded (+48 lines) | ~1130 |
+| 22:08 | Edited docs/plans/2026-04-20-test-quality-audit.md | expanded (+66 lines) | ~1512 |
+| 22:09 | Session end: 9 writes across 2 files (2026-04-20-test-quality-audit.md, work-stats.md) | 0 reads | ~9531 tok |
+| 22:11 | Session end: 9 writes across 2 files (2026-04-20-test-quality-audit.md, work-stats.md) | 0 reads | ~9531 tok |
+| 22:13 | Edited work-stats.md | modified timestamps() | ~1642 |
+| 22:14 | Edited work-stats.md | 8→11 lines | ~464 |
+| 22:14 | Created cli/internal/moat/item_verify_shard_index_test.go | — | ~2374 |
+| 22:14 | Edited cli/internal/moat/item_verify.go | 2→2 lines | ~35 |
+| 22:14 | Session end: 13 writes across 4 files (2026-04-20-test-quality-audit.md, work-stats.md, item_verify_shard_index_test.go, item_verify.go) | 2 reads | ~19755 tok |
+| 22:14 | Edited cli/internal/moat/item_verify.go | 2→2 lines | ~29 |
+| 22:16 | Edited work-stats.md | expanded (+114 lines) | ~1267 |
+| 22:16 | Edited work-stats.md | 9→13 lines | ~354 |
+
+## Session: 2026-04-21 22:16
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 22:17
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:20 | Edited cli/internal/loadout/integration_test.go | modified TestApply_MultiItemRollback_HookFailureRevertsSymlinks() | ~3239 |
+| 22:20 | Created tests/smoke/moat-trust-surfacing.sh | — | ~2388 |
+| 22:21 | Edited cli/internal/loadout/apply.go | modified Errorf() | ~75 |
+| 22:21 | Edited cli/internal/loadout/integration_test.go | 12→9 lines | ~84 |
+| 22:21 | Edited cli/internal/loadout/integration_test.go | 6→11 lines | ~113 |
+| 22:22 | Edited cli/internal/loadout/apply.go | modified Errorf() | ~131 |
+| 22:24 | Edited cli/internal/snapshot/snapshot_test.go | modified TestRestore_MissingBackupFile_ReturnsError() | ~2809 |
+| 22:24 | Edited cli/internal/snapshot/snapshot_test.go | 6→7 lines | ~18 |
+
+## Session: 2026-04-21 22:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 22:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:26 | Edited cli/internal/updater/updater_test.go | modified TestUpdate_NoSigningKey_EmitsConservativeWarningEndToEnd() | ~1365 |
+| 22:27 | Edited cli/internal/updater/updater.go | 5→5 lines | ~36 |
+| 22:27 | Edited cli/internal/updater/updater.go | 5→5 lines | ~41 |
+| 22:27 | Session end: 3 writes across 2 files (updater_test.go, updater.go) | 0 reads | ~1544 tok |
+
+## Session: 2026-04-21 22:29
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:30 | Created docs/research/2026-04-20-mod-organizer-patterns-research.md | — | ~3353 |
+| 22:31 | Session end: 1 writes across 1 files (2026-04-20-mod-organizer-patterns-research.md) | 5 reads | ~17665 tok |
+| 22:31 | Edited work-stats.md | modified lifespan() | ~1444 |
+| 22:32 | Edited cli/internal/moat/enrich_test.go | modified is() | ~114 |
+| 22:32 | Edited work-stats.md | 13→17 lines | ~520 |
+| 22:32 | Session end: 4 writes across 3 files (2026-04-20-mod-organizer-patterns-research.md, work-stats.md, enrich_test.go) | 5 reads | ~19891 tok |
+| 22:33 | Edited cli/internal/moat/enrich_test.go | modified TestEnrichCatalog_E2E_ParseManifestThroughDisplay() | ~2739 |
+| 22:33 | Edited cli/internal/moat/enrich.go | added error handling | ~44 |
+| 22:33 | Edited cli/internal/moat/enrich.go | 3→2 lines | ~27 |
+| 22:35 | Edited cli/internal/converter/rules_test.go | modified TestGeminiCLIRuleCanonicalize_PlainMarkdown() | ~2286 |
+| 22:36 | Edited cli/internal/converter/rules.go | 4→3 lines | ~33 |
+| 22:36 | Edited cli/internal/converter/rules.go | 3→3 lines | ~44 |
+| 22:36 | Edited cli/internal/converter/rules.go | 3→4 lines | ~45 |
+| 22:40 | Created docs/research/2026-04-20-mod-organizer-patterns-research.md | — | ~3670 |
+| 22:40 | Edited cli/internal/installer/mcp_test.go | modified TestInstallMCP_Cursor_MergesIntoMcpJsonSchema() | ~3027 |
+| 22:40 | Session end: 13 writes across 7 files (2026-04-20-mod-organizer-patterns-research.md, work-stats.md, enrich_test.go, enrich.go, rules_test.go) | 25 reads | ~52332 tok |
+
+## Session: 2026-04-21 22:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 22:42
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:43 | Edited cli/internal/installer/mcp.go | 3→1 lines | ~13 |
+| 22:43 | Edited cli/internal/installer/mcp.go | 1→3 lines | ~45 |
+| 22:43 | Edited cli/internal/installer/mcp.go | 1→2 lines | ~28 |
+| 22:43 | Edited cli/internal/installer/mcp.go | 2→1 lines | ~17 |
+| 22:48 | Edited cli/internal/converter/field_preservation_test.go | modified TestFieldPreservation_Skills_FanOut() | ~2766 |
+| 22:48 | Edited cli/internal/converter/kitchen_sink_roundtrip_test.go | expanded (+37 lines) | ~365 |
+| 22:49 | Edited cli/internal/converter/skills.go | 11→8 lines | ~50 |
+| 22:49 | Edited cli/internal/converter/skills.go | 8→11 lines | ~72 |
+| 22:49 | Edited cli/internal/converter/skills.go | 2→3 lines | ~27 |
+| 22:49 | Edited cli/internal/converter/skills.go | 3→2 lines | ~41 |
+
+## Session: 2026-04-21 22:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:54 | Edited cli/cmd/syllago/coverage_test.go | removed 26 lines | ~11 |
+| 22:55 | Edited cli/cmd/syllago/coverage_test.go | removed 11 lines | ~13 |
+| 22:55 | Edited cli/cmd/syllago/coverage_test.go | removed 10 lines | ~15 |
+| 22:55 | Edited cli/cmd/syllago/coverage_test.go | removed 20 lines | ~12 |
+| 22:57 | Edited cli/internal/tui/gallery_test.go | modified TestGoldenGallery_80x30() | ~319 |
+| 22:57 | Edited cli/internal/tui/gallery_test.go | modified TestGoldenGallery_120x40() | ~408 |
+| 22:57 | Edited cli/internal/tui/app_test.go | expanded (+10 lines) | ~216 |
+| 22:57 | Edited cli/internal/tui/golden_triage_test.go | modified assertTriageRender() | ~382 |
+| 22:58 | Edited cli/internal/tui/topbar.go | 4→4 lines | ~41 |
+| 22:58 | Edited cli/internal/tui/topbar.go | 4→4 lines | ~43 |
+| 22:58 | Edited cli/internal/tui/add_wizard_view.go | 8→7 lines | ~41 |
+| 22:59 | Edited cli/internal/tui/add_wizard_view.go | 7→8 lines | ~33 |
+| 23:01 | Edited cli/internal/capmon/extract_typescript/extract_typescript_test.go | modified TestTypeScriptExtractor_EnumWithNumbers() | ~333 |
+| 23:01 | Edited cli/internal/capmon/extract_test.go | modified TestFixtures_WindsurfLLMSTxt() | ~523 |
+| 23:01 | Edited cli/internal/capmon/extract_yaml/extract_yaml.go | 11→12 lines | ~78 |
+| 23:02 | Edited cli/internal/capmon/extract_yaml/extract_yaml.go | 12→11 lines | ~75 |
+| 23:02 | Edited cli/internal/capmon/extract_typescript/extract_typescript.go | 3→4 lines | ~32 |
+| 23:02 | Edited cli/internal/capmon/extract_typescript/extract_typescript.go | 4→3 lines | ~18 |
+| 23:04 | Edited cli/internal/capmon/extract_markdown/extract_markdown_test.go | modified TestMarkdownExtractor_AnchorMissing() | ~2305 |
+| 23:04 | Edited cli/internal/capmon/extract_markdown/extract_markdown.go | 5→6 lines | ~54 |
+| 23:05 | Edited cli/internal/capmon/extract_markdown/extract_markdown.go | 6→5 lines | ~46 |
+| 23:05 | Edited cli/internal/capmon/extract_markdown/extract_markdown.go | 9→10 lines | ~74 |
+| 23:05 | Edited cli/internal/capmon/extract_markdown/extract_markdown.go | 10→9 lines | ~67 |
+| 23:06 | Edited cli/internal/updater/updater_test.go | modified TestUpdate_FullFlow() | ~1031 |
+| 23:07 | Edited cli/internal/updater/updater.go | 2→7 lines | ~107 |
+| 23:07 | Edited cli/internal/updater/updater.go | Executable() → osExecutable() | ~63 |
+| 23:08 | Edited cli/internal/updater/updater_test.go | modified TestUpdate_FullFlow() | ~1088 |
+
+## Session: 2026-04-21 23:10
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:10 | Edited cli/internal/updater/updater.go | modified EqualFold() | ~39 |
+| 23:10 | Edited cli/internal/updater/updater.go | modified EqualFold() | ~39 |
+| 23:15 | Edited cli/internal/sandbox/coverage_test.go | modified Contains() | ~72 |
+| 23:15 | Edited cli/internal/moat/sigstore_verify_test.go | Logf() → Errorf() | ~84 |
+| 23:15 | Edited cli/internal/moat/item_verify_shard_index_test.go | modified Contains() | ~174 |
+| 23:15 | Edited cli/internal/loadout/integration_test.go | modified Is() | ~147 |
+| 23:16 | Edited cli/internal/sandbox/runner.go | "pre-flight check failed:\" → "system requirements not m" | ~28 |
+| 23:16 | Edited cli/internal/sandbox/runner.go | "system requirements not m" → "pre-flight check failed:\" | ~27 |
+| 23:17 | Edited cli/internal/sandbox/coverage_test.go | 9→7 lines | ~53 |
+| 23:17 | Edited cli/internal/sandbox/coverage_test.go | 7→9 lines | ~65 |
+| 23:18 | Edited cli/internal/moat/sigstore_spike_test.go | 3→3 lines | ~24 |
+| 23:18 | Edited cli/internal/moat/sigstore_spike_test.go | 3→3 lines | ~28 |
+| 23:18 | Edited cli/internal/moat/item_verify_shard_index_test.go | "index" → "xyzqq" | ~21 |
+| 23:18 | Edited cli/internal/moat/item_verify_shard_index_test.go | "xyzqq" → "index" | ~39 |
+| 23:19 | Edited cli/internal/loadout/apply.go | reduced (-7 lines) | ~15 |
+| 23:19 | Edited cli/internal/loadout/apply.go | 2→3 lines | ~51 |
+| 23:19 | Edited cli/internal/loadout/apply.go | expanded (+8 lines) | ~121 |
+| 23:19 | Edited cli/internal/loadout/apply.go | expanded (+6 lines) | ~85 |
+| 23:19 | Edited cli/internal/loadout/apply.go | reduced (-8 lines) | ~54 |
+| 23:22 | Edited cli/internal/provider/cline.go | modified ClineMCPSettingsPath() | ~329 |
+| 23:22 | Edited cli/internal/provider/cline_test.go | modified TestClineMCPSettingsPath() | ~1024 |
+| 23:22 | Edited cli/internal/provider/cline_test.go | 7→8 lines | ~32 |
+| 23:22 | Edited cli/internal/provider/cline.go | 5→3 lines | ~40 |
+| 23:22 | Edited cli/internal/provider/cline.go | 3→5 lines | ~46 |
+| 07:26 | Edited cli/internal/telemetry/telemetry_test.go | modified setupEnrichTestServer() | ~1604 |
+| 07:26 | Edited cli/internal/telemetry/telemetry.go | 8→6 lines | ~56 |
+
+## Session: 2026-04-21 07:28
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:29 | Edited cli/internal/telemetry/telemetry.go | 6→8 lines | ~55 |
+| 07:29 | Edited cli/internal/telemetry/telemetry.go | 8→8 lines | ~68 |
+| 07:29 | Edited cli/internal/telemetry/telemetry.go | 8→8 lines | ~55 |
+| 07:29 | Edited cli/internal/telemetry/telemetry.go | modified ResetEnrichment() | ~30 |
+| 07:29 | Edited cli/internal/telemetry/telemetry.go | modified ResetEnrichment() | ~26 |
+| 07:32 | Edited cli/internal/installer/mcp.go | expanded (+11 lines) | ~222 |
+| 07:32 | Edited cli/internal/installer/mcp_test.go | modified TestMCPConfigPath_ProjectScoped() | ~1481 |
+| 07:33 | Edited cli/internal/installer/mcp.go | reduced (-10 lines) | ~43 |
+| 07:33 | Edited cli/internal/installer/mcp.go | expanded (+10 lines) | ~202 |
+| 07:34 | Edited cli/internal/snapshot/snapshot.go | modified Restore() | ~379 |
+| 07:35 | Edited cli/internal/snapshot/snapshot.go | modified restoreToFile() | ~215 |
+| 07:35 | Edited cli/internal/snapshot/snapshot_test.go | modified TestRestore_TargetReplacedWithSymlink_Refuses() | ~987 |
+| 07:36 | Edited cli/internal/snapshot/snapshot.go | restoreToFile() → copyFile() | ~51 |
+| 07:36 | Edited cli/internal/snapshot/snapshot.go | copyFile() → restoreToFile() | ~31 |
+| 07:37 | Edited cli/internal/snapshot/snapshot.go | 13→15 lines | ~51 |
+| 07:37 | Edited cli/internal/snapshot/snapshot.go | expanded (+9 lines) | ~315 |
+| 07:37 | Edited cli/internal/snapshot/snapshot.go | modified Is() | ~246 |
+| 07:38 | Edited cli/internal/snapshot/snapshot.go | 9→10 lines | ~72 |
+| 07:38 | Edited cli/internal/snapshot/snapshot.go | modified hashFile() | ~316 |
+| 07:38 | Edited cli/internal/snapshot/snapshot.go | expanded (+14 lines) | ~233 |
+| 07:39 | Edited cli/internal/snapshot/snapshot_test.go | modified TestRestore_TruncatedBackupFile_Refuses() | ~862 |
+| 07:40 | Edited cli/internal/snapshot/snapshot.go | 9→9 lines | ~82 |
+| 07:40 | Edited cli/internal/snapshot/snapshot.go | reduced (-7 lines) | ~27 |
+| 07:41 | Edited cli/internal/snapshot/snapshot.go | expanded (+7 lines) | ~82 |
+| 07:43 | Edited cli/internal/moat/sigstore_verify_test.go | expanded (+18 lines) | ~277 |
+| 07:43 | Edited cli/internal/moat/sigstore_verify_test.go | modified loadTrustedRoot() | ~521 |
+| 07:44 | Edited cli/internal/moat/sigstore_verify_test.go | 2→3 lines | ~54 |
+| 07:44 | Edited cli/internal/moat/sigstore_verify_test.go | 3→2 lines | ~35 |
+| 07:44 | Edited cli/internal/moat/sigstore_verify_test.go | modified TestTrustedRootFixture_FreshnessWindow() | ~120 |
+
+## Session: 2026-04-21 07:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 07:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 07:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 07:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 07:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 07:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:07 | Edited cli/internal/provmon/checker.go | expanded (+11 lines) | ~200 |
+| 08:07 | Edited cli/internal/provmon/checker.go | modified CheckVersion() | ~181 |
+| 08:07 | Edited cli/internal/provmon/checker_test.go | 9→10 lines | ~27 |
+| 08:08 | Edited cli/internal/provmon/checker_test.go | modified TestCheckVersion_UnimplementedMethods() | ~642 |
+
+## Session: 2026-04-21 08:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:08 | Edited cli/internal/provmon/checker.go | 8→6 lines | ~37 |
+| 08:08 | Edited cli/internal/provmon/checker.go | 6→8 lines | ~72 |
+| 08:08 | Edited cli/internal/provmon/checker.go | "%w: %s" → "not implemented: %s" | ~20 |
+| 08:09 | Edited cli/internal/provmon/checker.go | "not implemented: %s" → "%w: %s" | ~25 |
+| 08:09 | Edited cli/internal/provmon/checker.go | 5→3 lines | ~29 |
+| 08:09 | Edited cli/internal/provmon/checker.go | 6→8 lines | ~72 |
+| 08:11 | Edited cli/internal/audit/audit_test.go | expanded (+17 lines) | ~209 |
+| 08:11 | Edited cli/internal/audit/audit_test.go | modified TestNewLogger_ParentPathIsFile() | ~1280 |
+| 08:12 | Edited cli/internal/audit/audit.go | 3→3 lines | ~23 |
+| 08:12 | Edited cli/internal/audit/audit.go | 3→3 lines | ~35 |
+| 08:12 | Edited cli/internal/audit/audit.go | 4→4 lines | ~30 |
+| 08:12 | Edited cli/internal/audit/audit.go | 4→4 lines | ~39 |
+| 08:12 | Edited cli/internal/audit/audit.go | 5→5 lines | ~23 |
+| 08:12 | Edited cli/internal/audit/audit.go | 5→5 lines | ~24 |
+| 08:13 | Session end: 14 writes across 3 files (checker.go, audit_test.go, audit.go) | 10 reads | ~7516 tok |
+| 08:13 | Session end: 14 writes across 3 files (checker.go, audit_test.go, audit.go) | 10 reads | ~7516 tok |
+
+## Session: 2026-04-21 08:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:16 | Edited cli/internal/analyzer/detector_content_signal_test.go | added error handling | ~1771 |
+| 08:16 | Edited cli/internal/analyzer/detector_content_signal_test.go | modified floatsEqual() | ~156 |
+| 08:16 | Edited cli/internal/analyzer/detector_content_signal_test.go | modified floatsEqual() | ~83 |
+| 08:16 | Edited cli/internal/analyzer/detector_content_signal_test.go | modified floatsEqual() | ~59 |
+| 08:16 | Edited cli/internal/analyzer/detector_content_signal.go | 0.40 → 0.35 | ~8 |
+| 08:17 | Edited cli/internal/analyzer/detector_content_signal.go | 0.35 → 0.40 | ~8 |
+| 08:17 | Edited cli/internal/analyzer/detector_content_signal.go | 0.70 → 0.85 | ~8 |
+| 08:17 | Edited cli/internal/analyzer/detector_content_signal.go | 0.85 → 0.70 | ~8 |
+| 08:17 | Edited cli/internal/analyzer/detector_content_signal.go | 0.55 → 0.45 | ~9 |
+| 08:17 | Edited cli/internal/analyzer/detector_content_signal.go | 0.45 → 0.55 | ~9 |
+
+## Session: 2026-04-21 08:20
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:26 | Created cli/internal/tui/responsive_test.go | — | ~1897 |
+| 08:26 | Edited cli/internal/tui/responsive_test.go | 7→6 lines | ~19 |
+| 08:26 | Edited cli/internal/tui/responsive_test.go | — | ~0 |
+| 08:27 | Session end: 3 writes across 1 files (responsive_test.go) | 21 reads | ~31261 tok |
+| 08:31 | Created docs/research/2026-04-21-loadout-safety-concerns.md | — | ~4200 |
+| 08:31 | Session end: 4 writes across 2 files (responsive_test.go, 2026-04-21-loadout-safety-concerns.md) | 21 reads | ~35761 tok |
+
+## Session: 2026-04-21 08:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:37 | Edited cli/internal/tui/responsive_test.go | modified TestResponsive_FramedLinesNeverExceedTerminal() | ~512 |
+| 08:38 | Edited cli/internal/tui/table.go | 10→10 lines | ~53 |
+| 08:38 | Edited cli/internal/tui/table.go | 10→10 lines | ~42 |
+| 08:38 | Edited cli/internal/tui/table.go | 9→9 lines | ~48 |
+| 08:39 | Edited cli/internal/tui/table.go | 9→9 lines | ~38 |
+| 08:39 | Edited cli/internal/tui/table.go | 2→2 lines | ~22 |
+| 08:39 | Edited cli/internal/tui/table.go | 2→2 lines | ~16 |
+| 08:39 | Edited cli/internal/tui/table.go | 4→4 lines | ~61 |
+| 08:39 | Edited cli/internal/tui/table.go | 4→4 lines | ~50 |
+| 08:40 | Edited cli/internal/tui/table.go | 7→4 lines | ~71 |
+| 08:41 | Edited cli/internal/tui/library.go | 8→8 lines | ~83 |
+| 08:41 | Edited cli/internal/tui/library.go | 8→8 lines | ~83 |
+| 08:41 | Edited cli/internal/tui/table.go | 4→7 lines | ~67 |
+
+## Session: 2026-04-21 08:48
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:48 | Created docs/plans/2026-04-21-provmon-drift-detection-design.md | — | ~2234 |
+| 08:49 | Session end: 1 writes across 1 files (2026-04-21-provmon-drift-detection-design.md) | 8 reads | ~37944 tok |
+| 08:54 | Created cli/internal/tui/cross_model_transitions_test.go | — | ~2362 |
+| 08:54 | Edited cli/internal/tui/app.go | modified isLibraryTab() | ~54 |
+| 08:54 | Edited cli/internal/tui/app.go | modified isLibraryTab() | ~36 |
+| 08:54 | Edited cli/internal/tui/app_update.go | 9→11 lines | ~87 |
+| 08:54 | Edited cli/internal/tui/app_update.go | 11→9 lines | ~63 |
+| 08:55 | Edited cli/internal/tui/app.go | 5→7 lines | ~62 |
+| 08:55 | Edited cli/internal/tui/app.go | 7→8 lines | ~63 |
+| 08:55 | Edited cli/internal/tui/app.go | 8→5 lines | ~36 |
+| 09:01 | Session end: 9 writes across 4 files (2026-04-21-provmon-drift-detection-design.md, cross_model_transitions_test.go, app.go, app_update.go) | 22 reads | ~60404 tok |
+
+## Session: 2026-04-21 09:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-21 09:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:06 | Created cli/internal/tui/install_mouse_test.go | — | ~4526 |
+| 09:06 | Edited cli/internal/tui/install_mouse_test.go | 12→13 lines | ~83 |
+| 09:06 | Edited cli/internal/tui/install_mouse_test.go | modified makeTestFile() | ~148 |
+| 09:07 | Edited cli/internal/tui/install_mouse_test.go | modified IsZero() | ~33 |
+| 09:09 | Edited cli/internal/tui/install_mouse_test.go | modified scanZones() | ~202 |
+| 09:09 | Edited cli/internal/tui/install_mouse_test.go | inline fix | ~6 |
+| 09:09 | Edited cli/internal/tui/install_mouse_test.go | reduced (-8 lines) | ~32 |
+| 09:10 | Edited cli/internal/tui/install_update.go | modified InBounds() | ~33 |
+| 09:10 | Edited cli/internal/tui/install_update.go | modified InBounds() | ~46 |
+| 09:10 | Edited cli/internal/tui/install_update.go | modified InBounds() | ~67 |
+| 09:10 | Edited cli/internal/tui/install_update.go | modified InBounds() | ~60 |
+| 09:12 | Created cli/internal/tui/add_wizard_mouse_test.go | — | ~3345 |
+
+## Session: 2026-04-21 09:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:16 | Edited cli/internal/tui/add_wizard_mouse_test.go | modified TestAddWizardMouse_SourcePathInputClickable() | ~210 |
+| 09:17 | Edited cli/internal/tui/add_wizard_mouse_test.go | modified TestAddWizardMouse_NavBackRoutesToEsc() | ~243 |
+| 09:17 | Edited cli/internal/tui/add_wizard_update.go | 9→6 lines | ~29 |
+| 09:17 | Edited cli/internal/tui/add_wizard_update.go | 6→9 lines | ~47 |
+| 09:17 | Edited cli/internal/tui/add_wizard_update.go | modified InBounds() | ~27 |
+| 09:18 | Edited cli/internal/tui/add_wizard_update.go | modified InBounds() | ~33 |
+| 09:18 | Session end: 6 writes across 2 files (add_wizard_mouse_test.go, add_wizard_update.go) | 3 reads | ~12424 tok |
+| 09:20 | Created cli/internal/tui/gallery_mouse_test.go | — | ~2277 |
+| 09:20 | Edited cli/internal/tui/gallery.go | modified InBounds() | ~44 |
+| 09:21 | Edited cli/internal/tui/gallery.go | modified InBounds() | ~120 |
+| 09:21 | Edited cli/internal/tui/gallery.go | modified InBounds() | ~20 |
+| 09:21 | Edited cli/internal/tui/gallery.go | modified InBounds() | ~32 |
+| 09:25 | Edited cli/internal/tui/checkbox_list_test.go | 8→9 lines | ~35 |
+| 09:25 | Edited cli/internal/tui/checkbox_list_test.go | modified TestCheckboxList_HandleClickNoPrefix() | ~703 |
+| 09:25 | Edited cli/internal/tui/checkbox_list.go | modified InBounds() | ~41 |
+| 09:25 | Edited cli/internal/tui/checkbox_list.go | modified InBounds() | ~35 |
+| 09:26 | Edited cli/internal/tui/gallery_test.go | modified TestContentsSidebar_NilCard() | ~414 |
+| 09:29 | Edited cli/internal/tui/checkbox_list_test.go | modified TestCheckboxList_HandleClickNoPrefix() | ~116 |
+| 09:29 | Edited cli/internal/tui/checkbox_list_test.go | modified TestCheckboxList_HandleClickFindsRow() | ~26 |
+| 09:29 | Edited cli/internal/tui/checkbox_list_test.go | modified TestCheckboxList_HandleClickOutOfBounds() | ~31 |
+| 09:31 | Session end: 19 writes across 7 files (add_wizard_mouse_test.go, add_wizard_update.go, gallery_mouse_test.go, gallery.go, checkbox_list_test.go) | 13 reads | ~24830 tok |
+| 09:37 | Edited .claude/rules/tui-testing.md | expanded (+11 lines) | ~152 |
+| 09:38 | Session end: 20 writes across 8 files (add_wizard_mouse_test.go, add_wizard_update.go, gallery_mouse_test.go, gallery.go, checkbox_list_test.go) | 13 reads | ~24993 tok |
+
+## Session: 2026-04-21 09:50
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
