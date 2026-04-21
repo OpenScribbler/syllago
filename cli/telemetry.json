@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-18T03:48:20Z",
+  "generatedAt": "2026-04-20T22:23:54Z",
   "syllagoVersion": "0.9.0",
   "events": [
     {
@@ -149,6 +149,24 @@
           "example": 2,
           "commands": [
             "registry_sync"
+          ]
+        },
+        {
+          "name": "moat_tier",
+          "type": "string",
+          "description": "Resolved MOAT trust tier for the item (UNSIGNED, SIGNED, DUAL-ATTESTED)",
+          "example": "SIGNED",
+          "commands": [
+            "install"
+          ]
+        },
+        {
+          "name": "moat_gated",
+          "type": "string",
+          "description": "MOAT install-gate outcome (proceed, hard-block, publisher-warn, private-prompt, tier-below-policy)",
+          "example": "proceed",
+          "commands": [
+            "install"
           ]
         }
       ]

@@ -107,16 +107,43 @@ func TestTypeScriptExtractor_BareEnumMembers(t *testing.T) {
 }
 
 func TestTypeScriptExtractor_EnumWithNumbers(t *testing.T) {
-	// Enum members with numeric values
+	// Enum members with numeric values — the extractor must stringify each
+	// numeric literal and preserve the enum-member-to-value mapping so that
+	// a regression that swapped, dropped, or truncated values would fail.
 	raw := []byte(`export enum Status { OK = 200, NotFound = 404, Error = 500 }`)
 	cfg := capmon.SelectorConfig{}
 	result, err := capmon.Extract(context.Background(), "typescript", raw, cfg)
 	if err != nil {
 		t.Fatalf("Extract: %v", err)
 	}
-	// Should have extracted something from the enum
-	if len(result.Fields) == 0 {
-		t.Error("expected fields from numeric enum, got none")
+
+	// Enum name surfaces as a landmark.
+	foundLandmark := false
+	for _, l := range result.Landmarks {
+		if l == "Status" {
+			foundLandmark = true
+			break
+		}
+	}
+	if !foundLandmark {
+		t.Errorf("expected 'Status' landmark, got %v", result.Landmarks)
+	}
+
+	// Each member must stringify to its numeric value, keyed <enum>.<member>.
+	wantFields := map[string]string{
+		"Status.OK":       "200",
+		"Status.NotFound": "404",
+		"Status.Error":    "500",
+	}
+	for key, wantValue := range wantFields {
+		fv, ok := result.Fields[key]
+		if !ok {
+			t.Errorf("expected field %q, not found in %v", key, result.Fields)
+			continue
+		}
+		if fv.Value != wantValue {
+			t.Errorf("field %q: value = %q, want %q", key, fv.Value, wantValue)
+		}
 	}
 }
 

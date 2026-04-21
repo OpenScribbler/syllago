@@ -367,6 +367,314 @@ func TestKeepRoundTrip_ApplyStatusRemove(t *testing.T) {
 	}
 }
 
+// TestApply_MultiItemRollback_HookFailureRevertsSymlinks exercises the full
+// rollback path: a multi-item loadout where one item fails mid-apply must leave
+// the filesystem in exactly the pre-apply state — no orphaned symlinks, no
+// partial JSON merges, no leftover snapshot.
+//
+// This is the regression test for the audit finding that integration_test.go:398
+// contained a hollow `t.Logf` about rollback ("may indicate rollback") with no
+// actual assertion.
+//
+// Scenario: 2 rules (symlinks) + 1 hook with an empty "event" field. The rules
+// produce "create-symlink" actions; the hook produces "merge-hook". Hook merge
+// fails in applyHook (event == "" check). Because map iteration over
+// RefsByType is non-deterministic, the rules may run before OR after the hook —
+// but the rollback must unconditionally remove all planned symlinks via the
+// symlinkRecords loop, so the post-state is the same regardless.
+func TestApply_MultiItemRollback_HookFailureRevertsSymlinks(t *testing.T) {
+	t.Parallel()
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+
+	// Add a second rule so we have two symlinks that must all be rolled back
+	ruleBDir := filepath.Join(projectRoot, "content", "rules", "claude-code", "int-rule-b")
+	os.MkdirAll(ruleBDir, 0755)
+	os.WriteFile(filepath.Join(ruleBDir, "rule.md"), []byte("# Rule B"), 0644)
+	cat.Items = append(cat.Items, catalog.ContentItem{
+		Name: "int-rule-b", Type: catalog.Rules, Provider: "claude-code", Path: ruleBDir,
+	})
+	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-b"})
+
+	// Replace the good hook with a broken one (missing event field triggers
+	// applyHook's "hook file missing 'event' field" error).
+	brokenHookDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "int-hook")
+	os.WriteFile(filepath.Join(brokenHookDir, "hook.json"), []byte(`{"matcher":".*","hooks":[{"type":"command","command":"echo oops"}]}`), 0644)
+
+	settingsPath := filepath.Join(homeDir, ".claude", "settings.json")
+	originalSettings, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("reading original settings: %v", err)
+	}
+
+	opts := ApplyOptions{
+		Mode:        "keep",
+		ProjectRoot: projectRoot,
+		HomeDir:     homeDir,
+		RepoRoot:    projectRoot,
+	}
+
+	_, err = Apply(manifest, cat, prov, opts)
+	if err == nil {
+		t.Fatal("expected Apply to fail on broken hook, got nil")
+	}
+	// The rollback message prefix is part of the contract — callers match on it.
+	if !containsAll(err.Error(), "rolled back", "event") {
+		t.Errorf("error should mention rollback and the underlying cause; got: %v", err)
+	}
+
+	// Both rule symlinks must be absent. If either is present, rollback failed
+	// to clean up a partially-applied item.
+	for _, name := range []string{"int-rule", "int-rule-b"} {
+		symlinkPath := filepath.Join(homeDir, ".claude", "rules", name)
+		if _, statErr := os.Lstat(symlinkPath); !os.IsNotExist(statErr) {
+			t.Errorf("symlink %s should not exist after rollback; got err=%v", name, statErr)
+		}
+	}
+
+	// settings.json must be byte-exact identical to pre-apply. If the broken
+	// hook ran before any successful merge this is trivially true, but if
+	// rollback ran after any non-hook item succeeded this proves snapshot
+	// restore + symlink cleanup worked.
+	got, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("reading settings.json after rollback: %v", err)
+	}
+	if string(got) != string(originalSettings) {
+		t.Errorf("settings.json mutated after rollback\ngot:  %s\nwant: %s", got, originalSettings)
+	}
+
+	// installed.json must not exist (applyActions never reached SaveInstalled)
+	// or must be empty.
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("loading installed.json: %v", err)
+	}
+	if len(inst.Symlinks) != 0 || len(inst.Hooks) != 0 || len(inst.MCP) != 0 {
+		t.Errorf("installed.json should be empty after rollback; got symlinks=%d hooks=%d mcp=%d",
+			len(inst.Symlinks), len(inst.Hooks), len(inst.MCP))
+	}
+
+	// The snapshot created pre-apply must have been deleted by the rollback.
+	if _, _, loadErr := snapshot.Load(projectRoot); !errors.Is(loadErr, snapshot.ErrNoSnapshot) {
+		t.Errorf("snapshot should be gone after rollback; got: %v", loadErr)
+	}
+}
+
+// TestApply_PartialHookMergeRollback_RestoresSettingsJson is the deterministic
+// "partial merge is reverted" test. Unlike the previous test, this one
+// guarantees the first hook WAS applied before the second one fails — proving
+// rollback restores settings.json from snapshot rather than just leaving
+// whatever the first hook merged in place.
+//
+// Two hooks of the same type iterate in slice order (manifest.Hooks preserves
+// order), so we can reliably arrange "good hook succeeds, next hook fails."
+func TestApply_PartialHookMergeRollback_RestoresSettingsJson(t *testing.T) {
+	t.Parallel()
+	homeDir, projectRoot, _, cat, prov := setupIntegrationEnv(t)
+
+	// Keep int-hook (the pre-built good hook). Add a second hook whose
+	// directory has NO json files — findHookFile returns "" and applyHook
+	// fails with "no hook JSON file found in ...".
+	brokenHookDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "int-hook-broken")
+	os.MkdirAll(brokenHookDir, 0755)
+	// Intentionally write a non-json file so the dir exists but findHookFile
+	// cannot locate a hook source.
+	os.WriteFile(filepath.Join(brokenHookDir, "README.md"), []byte("no hook here"), 0644)
+
+	cat.Items = append(cat.Items, catalog.ContentItem{
+		Name: "int-hook-broken", Type: catalog.Hooks, Provider: "claude-code", Path: brokenHookDir,
+	})
+
+	// Hooks-only manifest so slice order is deterministic. No rules = no
+	// cross-type map randomness; good hook MUST run before broken hook.
+	manifest := &Manifest{
+		Kind:     "loadout",
+		Version:  1,
+		Provider: "claude-code",
+		Name:     "integration-test",
+		Hooks: []ItemRef{
+			{Name: "int-hook"},        // merges PostToolUse into settings.json
+			{Name: "int-hook-broken"}, // fails, triggers rollback
+		},
+	}
+
+	settingsPath := filepath.Join(homeDir, ".claude", "settings.json")
+	originalSettings, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("reading original settings: %v", err)
+	}
+
+	opts := ApplyOptions{
+		Mode:        "keep",
+		ProjectRoot: projectRoot,
+		HomeDir:     homeDir,
+		RepoRoot:    projectRoot,
+	}
+
+	_, err = Apply(manifest, cat, prov, opts)
+	if err == nil {
+		t.Fatal("expected Apply to fail on hook with no JSON file, got nil")
+	}
+	if !containsAll(err.Error(), "rolled back") {
+		t.Errorf("error should mention rollback; got: %v", err)
+	}
+
+	// Core assertion: settings.json must be byte-exact pre-apply content.
+	// The good hook's PostToolUse entry was merged before the second hook
+	// failed — if rollback didn't call snapshot.Restore, that merged entry
+	// would still be visible here.
+	got, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("reading settings.json after rollback: %v", err)
+	}
+	if string(got) != string(originalSettings) {
+		t.Errorf("settings.json not restored to pre-apply state\ngot:  %s\nwant: %s", got, originalSettings)
+	}
+
+	// Belt-and-suspenders: confirm the loadout's PostToolUse hook is NOT in
+	// the post-rollback settings. If this fails but the byte-compare above
+	// passed, the fixture is broken — investigate, don't just update.
+	postApply := gjson.GetBytes(got, "hooks.PostToolUse")
+	if postApply.Exists() {
+		t.Errorf("hooks.PostToolUse should not exist after rollback; got: %s", postApply.Raw)
+	}
+
+	// installed.json must show no hook entries (SaveInstalled never ran).
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("loading installed.json: %v", err)
+	}
+	if len(inst.Hooks) != 0 {
+		t.Errorf("installed.json should have no hooks after rollback; got %d", len(inst.Hooks))
+	}
+
+	if _, _, loadErr := snapshot.Load(projectRoot); !errors.Is(loadErr, snapshot.ErrNoSnapshot) {
+		t.Errorf("snapshot should be gone after rollback; got: %v", loadErr)
+	}
+}
+
+// TestApply_MidBundleFailure_LaterItemsNeverApplied proves that when the Nth
+// item in a deterministic sequence fails, items N+1..end never mutate state.
+// This is the third rollback property: early items are reverted, later items
+// never applied.
+//
+// Sequence: 3 hooks where hooks[0] and hooks[2] merge a unique matcher string,
+// and hooks[1] fails (missing event field). After Apply fails, neither the
+// hooks[0] marker nor the hooks[2] marker can be present in settings.json —
+// the former because rollback restored, the latter because it never ran.
+func TestApply_MidBundleFailure_LaterItemsNeverApplied(t *testing.T) {
+	t.Parallel()
+	homeDir, projectRoot, _, cat, prov := setupIntegrationEnv(t)
+
+	writeHook := func(name, contents string) {
+		dir := filepath.Join(projectRoot, "content", "hooks", "claude-code", name)
+		os.MkdirAll(dir, 0755)
+		os.WriteFile(filepath.Join(dir, "hook.json"), []byte(contents), 0644)
+		cat.Items = append(cat.Items, catalog.ContentItem{
+			Name: name, Type: catalog.Hooks, Provider: "claude-code", Path: dir,
+		})
+	}
+
+	// hooks[0]: good hook with a marker matcher we can grep for
+	writeHook("int-hook-first", `{
+  "event": "PostToolUse",
+  "matcher": "FIRST_MARKER",
+  "hooks": [{"type": "command", "command": "echo first"}]
+}`)
+	// hooks[1]: broken hook, missing event field — triggers mid-bundle failure
+	writeHook("int-hook-broken", `{
+  "matcher": "SHOULD_NEVER_APPEAR",
+  "hooks": [{"type": "command", "command": "echo broken"}]
+}`)
+	// hooks[2]: good hook that MUST never be applied because hooks[1] aborts
+	// the loop first. Distinct marker so we can assert its absence.
+	writeHook("int-hook-third", `{
+  "event": "PreToolUse",
+  "matcher": "THIRD_MARKER",
+  "hooks": [{"type": "command", "command": "echo third"}]
+}`)
+
+	manifest := &Manifest{
+		Kind:     "loadout",
+		Version:  1,
+		Provider: "claude-code",
+		Name:     "integration-test",
+		Hooks: []ItemRef{
+			{Name: "int-hook-first"},
+			{Name: "int-hook-broken"},
+			{Name: "int-hook-third"},
+		},
+	}
+
+	settingsPath := filepath.Join(homeDir, ".claude", "settings.json")
+	originalSettings, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("reading original settings: %v", err)
+	}
+
+	opts := ApplyOptions{
+		Mode:        "keep",
+		ProjectRoot: projectRoot,
+		HomeDir:     homeDir,
+		RepoRoot:    projectRoot,
+	}
+
+	_, err = Apply(manifest, cat, prov, opts)
+	if err == nil {
+		t.Fatal("expected Apply to fail on mid-bundle broken hook, got nil")
+	}
+	// Guard against a false-pass where Resolve/Validate fails before the
+	// apply loop runs — those failures don't exercise rollback at all.
+	if !containsAll(err.Error(), "rolled back") {
+		t.Fatalf("expected rollback path to run; got: %v", err)
+	}
+
+	got, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("reading settings.json: %v", err)
+	}
+
+	// Pre-apply state must be restored.
+	if string(got) != string(originalSettings) {
+		t.Errorf("settings.json not restored after mid-bundle failure\ngot:  %s\nwant: %s", got, originalSettings)
+	}
+
+	// Explicit marker checks — both markers must be absent. FIRST_MARKER would
+	// indicate rollback failed to restore; THIRD_MARKER would indicate the
+	// loop kept going past the failure.
+	gotStr := string(got)
+	if containsString(gotStr, "FIRST_MARKER") {
+		t.Error("FIRST_MARKER present in settings.json — rollback did not restore pre-apply content")
+	}
+	if containsString(gotStr, "THIRD_MARKER") {
+		t.Error("THIRD_MARKER present in settings.json — items after the failure kept being applied")
+	}
+
+	if _, _, loadErr := snapshot.Load(projectRoot); !errors.Is(loadErr, snapshot.ErrNoSnapshot) {
+		t.Errorf("snapshot should be gone after rollback; got: %v", loadErr)
+	}
+}
+
+// containsAll reports whether s contains every substring in subs.
+// Local helper kept small to avoid importing strings for a single use.
+func containsAll(s string, subs ...string) bool {
+	for _, sub := range subs {
+		if !containsString(s, sub) {
+			return false
+		}
+	}
+	return true
+}
+
+func containsString(s, sub string) bool {
+	for i := 0; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub {
+			return true
+		}
+	}
+	return false
+}
+
 // TestApplyConflict_ItemAlreadyInstalled tests that apply correctly detects
 // when a symlink target already exists pointing to a different source.
 func TestApplyConflict_ItemAlreadyInstalled(t *testing.T) {
@@ -394,13 +702,12 @@ func TestApplyConflict_ItemAlreadyInstalled(t *testing.T) {
 		t.Fatal("expected error for conflict (regular file at target)")
 	}
 
-	// Verify no snapshot was left behind (conflict should abort before snapshot,
-	// or rollback should clean up)
+	// Verify no snapshot was left behind. The current implementation catches
+	// conflicts before snapshot creation, so Load must return ErrNoSnapshot.
+	// If a snapshot is present, rollback either failed to clean it up or the
+	// conflict-detection path moved after snapshot creation — both are bugs.
 	_, _, loadErr := snapshot.Load(projectRoot)
 	if !errors.Is(loadErr, snapshot.ErrNoSnapshot) {
-		// If a snapshot was created and not cleaned up, that's a problem.
-		// But the current implementation catches conflicts before snapshot creation,
-		// so this should pass.
-		t.Logf("note: snapshot exists after conflict abort (may indicate rollback): %v", loadErr)
+		t.Errorf("snapshot should not exist after conflict abort (either conflict-detect order regressed, or rollback failed to clean up); got: %v", loadErr)
 	}
 }

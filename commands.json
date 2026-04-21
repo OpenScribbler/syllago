@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-20T16:33:07Z",
+  "generatedAt": "2026-04-20T20:45:33Z",
   "syllagoVersion": "0.9.0",
   "commands": [
     {
@@ -100,6 +100,14 @@
           "default": null,
           "required": false,
           "description": "Source registry visibility (public, private, unknown)"
+        },
+        {
+          "name": "--trusted-root",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Path to Sigstore trusted_root.json (overrides registry config and the bundled default)"
         }
       ],
       "inheritedFlags": [
@@ -3463,7 +3471,7 @@
       "parent": null,
       "synopsis": "syllago moat",
       "description": "Manage MOAT registry trust and verification",
-      "longDescription": "Inspect and manage the MOAT (MOAT Of Attested Trust) subsystem.\n\nSlice 1 surface: trusted-root lifecycle via `moat trust status`.\nLater slices will add manifest verification, tier policy, and revocation.",
+      "longDescription": "Inspect and manage the MOAT (Model for Origin Attestation and Trust) subsystem.\n\nSlice 1 surface: trusted-root lifecycle via `moat trust status`.\nLater slices will add manifest verification, tier policy, and revocation.",
       "aliases": [],
       "flags": [],
       "inheritedFlags": [
@@ -4052,11 +4060,20 @@
       "displayName": "Registry Sync",
       "slug": "registry-sync",
       "parent": "registry",
-      "synopsis": "syllago registry sync [name]",
+      "synopsis": "syllago registry sync [name] [flags]",
       "description": "Pull latest content from one or all registries",
       "longDescription": "Runs git pull on registry clones to fetch the latest content.\n\nSync updates the local clone only — it does not modify your library or\ninstalled provider content. Use \"syllago registry items\" to see what changed,\nand \"syllago install\" to activate updated content.",
       "aliases": [],
-      "flags": [],
+      "flags": [
+        {
+          "name": "--yes",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Auto-accept TOFU (trust-on-first-use) for MOAT registries with no pinned signing profile"
+        }
+      ],
       "inheritedFlags": [
         {
           "name": "--json",

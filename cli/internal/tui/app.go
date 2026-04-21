@@ -3,12 +3,14 @@ package tui
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
@@ -53,6 +55,14 @@ type App struct {
 	wizardMode    wizardKind
 	installWizard *installWizardModel // nil when not active
 	addWizard     *addWizardModel     // nil when not active
+
+	// Publisher-warn install gate: when the wizard emits an install for a
+	// publisher-revoked item, we stash the pending result here and open the
+	// shared confirmModal. On confirm, handleConfirmResult dispatches the
+	// stashed install; on cancel, it is cleared. Exactly one of pendingInstall
+	// / pendingInstallAll is non-nil at a time.
+	pendingInstall    *installResultMsg
+	pendingInstallAll *installAllResultMsg
 
 	// Dimensions
 	width, height int
@@ -225,7 +235,14 @@ func (a *App) rescanCatalog() tea.Cmd {
 	}
 	a.registrySources = regSources
 
-	cat, err := catalog.ScanWithGlobalAndRegistries(root, projectRoot, regSources)
+	// MOAT enrichment inputs. GlobalDirPath resolves ~/.syllago (the cache
+	// root — the producer appends `moat/registries/<name>/` beneath it).
+	// Lockfile load returns a fresh empty lockfile when the file is absent,
+	// so first-run projects still enrich correctly.
+	cacheDir, _ := config.GlobalDirPath()
+	lf, _ := moat.LoadLockfile(moat.LockfilePath(projectRoot))
+
+	cat, err := moat.ScanAndEnrich(merged, root, projectRoot, regSources, lf, cacheDir, time.Now())
 	if err != nil {
 		return a.toast.Push("Refresh failed: "+err.Error(), toastError)
 	}

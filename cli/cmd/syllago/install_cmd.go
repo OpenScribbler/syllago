@@ -65,6 +65,11 @@ type installedItem struct {
 	Method   string   `json:"method"`
 	Path     string   `json:"path"`
 	Warnings []string `json:"warnings,omitempty"` // portability warnings
+	// Trust is the MOAT trust tier drill-down description, e.g. "Verified
+	// (registry-attested)". Empty when the item was not sourced from a MOAT
+	// manifest — absent key rather than empty string so JSON consumers can
+	// distinguish "no trust data" from "empty trust data."
+	Trust string `json:"trust,omitempty"`
 }
 
 type skippedItem struct {
@@ -184,6 +189,27 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	resolver := config.NewResolver(mergedCfg, baseDir)
 	if err := resolver.ExpandPaths(); err != nil {
 		return output.NewStructuredErrorDetail(output.ErrConfigPath, "expanding paths", "Check path overrides in config", err.Error())
+	}
+
+	// Registry-sourced install dispatch: `syllago install <registry>/<item>`
+	// routes through the MOAT flow (sync + manifest lookup in this slice).
+	// Library install uses the plain `syllago install <item>` form and falls
+	// through to the globalDir scan below. See install_moat.go for the full
+	// rationale and what this slice intentionally defers.
+	if len(args) == 1 {
+		if regName, itemName, ok := parseRegistryItemSyntax(args[0]); ok {
+			return runInstallFromRegistry(
+				cmd.Context(),
+				output.Writer,
+				output.ErrWriter,
+				mergedCfg,
+				projectRoot,
+				regName,
+				itemName,
+				dryRun,
+				moatInstallNow(),
+			)
+		}
 	}
 
 	// Warn if the target provider is not detected on disk.
@@ -324,12 +350,23 @@ func installToProvider(
 			}
 		}
 
+		trustText := catalog.TrustDescription(item.TrustTier, item.Recalled, item.RecallReason)
+		if trustText != "" && !output.JSON && !output.Quiet {
+			badge := catalog.UserFacingBadge(item.TrustTier, item.Recalled)
+			glyph := badge.Glyph()
+			if glyph != "" {
+				glyph += " "
+			}
+			fmt.Fprintf(output.Writer, "  %s%s — %s\n", glyph, item.Name, trustText)
+		}
+
 		result.Installed = append(result.Installed, installedItem{
 			Name:     item.Name,
 			Type:     string(item.Type),
 			Method:   string(method),
 			Path:     desc,
 			Warnings: warnings,
+			Trust:    trustText,
 		})
 
 		// Audit log (best-effort).

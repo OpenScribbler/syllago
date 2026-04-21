@@ -1090,6 +1090,210 @@ func TestResolveContentFileFallbackToJSON(t *testing.T) {
 	assertContains(t, path, "config.json")
 }
 
+// --- Gemini CLI and OpenCode canonicalize (syllago-v4x2f) ---------------
+//
+// Both providers fall through to canonicalizeMarkdownRule: Gemini CLI hits
+// the default branch in Canonicalize(), OpenCode has an explicit case that
+// calls the same function. Rules from these providers live in GEMINI.md
+// and AGENTS.md respectively — plain markdown by default, occasionally with
+// YAML frontmatter from hand-authored content or upstream edits.
+//
+// Prior to this test set the entire canonicalizeMarkdownRule path was
+// covered only by TestPlainMarkdownCanonicalize using the sentinel
+// "generic" source. A provider-specific edge case (frontmatter whose
+// fields are all empty, alternative heading levels, unicode in the body,
+// CRLF line endings) would not surface because no test drove input
+// tagged as "gemini-cli" or "opencode" through this code path.
+
+// TestGeminiCLIRuleCanonicalize_PlainMarkdown covers the happy path: a
+// typical GEMINI.md file with no frontmatter. The canonical output must
+// default to alwaysApply:true (scope applies globally unless overridden),
+// preserve body content verbatim, and emit the "rule.md" filename.
+func TestGeminiCLIRuleCanonicalize_PlainMarkdown(t *testing.T) {
+	input := []byte("# Go Conventions\n\nUse strict typing. Prefer functional patterns.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Canonicalize(input, "gemini-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+	assertEqual(t, "rule.md", result.Filename)
+
+	meta, body, err := parseCanonical(result.Content)
+	if err != nil {
+		t.Fatalf("parseCanonical: %v", err)
+	}
+	if !meta.AlwaysApply {
+		t.Error("expected alwaysApply:true for plain GEMINI.md (no frontmatter)")
+	}
+	assertContains(t, body, "Go Conventions")
+	assertContains(t, body, "Use strict typing. Prefer functional patterns.")
+}
+
+// TestGeminiCLIRuleCanonicalize_WithFrontmatter exercises the seldom-used
+// path where a GEMINI.md carries YAML frontmatter (hand-authored or ported
+// from another provider). canonicalizeMarkdownRule MUST parse the
+// frontmatter via parseCanonical and respect explicit fields — if it
+// blanket-defaulted alwaysApply to true, user-authored scope would be
+// silently lost on round-trip.
+func TestGeminiCLIRuleCanonicalize_WithFrontmatter(t *testing.T) {
+	input := []byte("---\ndescription: \"Python-only rule\"\nalwaysApply: false\nglobs:\n  - \"*.py\"\n---\n\nUse type hints.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Canonicalize(input, "gemini-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	meta, body, err := parseCanonical(result.Content)
+	if err != nil {
+		t.Fatalf("parseCanonical: %v", err)
+	}
+	if meta.AlwaysApply {
+		t.Error("alwaysApply must remain false when frontmatter says so — default flip would clobber scope")
+	}
+	if meta.Description != "Python-only rule" {
+		t.Errorf("Description = %q, want %q", meta.Description, "Python-only rule")
+	}
+	if len(meta.Globs) != 1 || meta.Globs[0] != "*.py" {
+		t.Errorf("Globs = %v, want [*.py]", meta.Globs)
+	}
+	assertContains(t, body, "Use type hints.")
+}
+
+// TestGeminiCLIRuleCanonicalize_EmptyFrontmatterTriggersAlwaysApplyDefault
+// pins the defensive fallback inside canonicalizeMarkdownRule: if
+// frontmatter is present but every field is zero (no description, no
+// globs, no explicit alwaysApply), the function sets alwaysApply:true.
+// Without this defaulting, a bare `---\n---\n` block would produce a rule
+// with no scope at all — meaning the downstream renderers would embed the
+// misleading "**Scope:** Apply only when explicitly asked." warning
+// despite the author providing no such directive.
+func TestGeminiCLIRuleCanonicalize_EmptyFrontmatterTriggersAlwaysApplyDefault(t *testing.T) {
+	input := []byte("---\n---\n\n## Subsection heading only\n\nBody text.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Canonicalize(input, "gemini-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	meta, body, err := parseCanonical(result.Content)
+	if err != nil {
+		t.Fatalf("parseCanonical: %v", err)
+	}
+	if !meta.AlwaysApply {
+		t.Error("expected alwaysApply:true when frontmatter has no explicit fields — defensive default lost")
+	}
+	// Body must survive the round-trip unaltered. Alternative heading levels
+	// (## instead of #) are a real-world pattern; the canonicalizer must
+	// not re-normalize them.
+	assertContains(t, body, "## Subsection heading only")
+	assertContains(t, body, "Body text.")
+}
+
+// TestGeminiCLIRuleCanonicalize_CRLFLineEndings covers Windows-authored
+// content hitting the parser. parseCanonical normalizes CRLF → LF, so the
+// canonical output must contain only LF terminators and the body must be
+// intact. A regression that forgot to normalize line endings would leave
+// \r\n inside the YAML frontmatter, breaking downstream yaml.Unmarshal.
+func TestGeminiCLIRuleCanonicalize_CRLFLineEndings(t *testing.T) {
+	input := []byte("---\r\ndescription: \"Windows rule\"\r\nalwaysApply: true\r\n---\r\n\r\n# Heading\r\n\r\nBody.\r\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Canonicalize(input, "gemini-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	if strings.Contains(string(result.Content), "\r\n") {
+		t.Error("canonical output contains CRLF; expected LF only after normalization")
+	}
+	meta, _, err := parseCanonical(result.Content)
+	if err != nil {
+		t.Fatalf("parseCanonical: %v", err)
+	}
+	if meta.Description != "Windows rule" {
+		t.Errorf("Description = %q; CRLF normalization likely failed mid-parse", meta.Description)
+	}
+}
+
+// TestOpenCodeRuleCanonicalize_PlainMarkdown covers the typical AGENTS.md
+// case: plain markdown, no frontmatter, no scope hints. The canonical
+// output must default to alwaysApply:true because OpenCode rules are
+// globally active when present.
+func TestOpenCodeRuleCanonicalize_PlainMarkdown(t *testing.T) {
+	input := []byte("# Team Conventions\n\nPrefer immutable data structures.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Canonicalize(input, "opencode")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+	assertEqual(t, "rule.md", result.Filename)
+
+	meta, body, err := parseCanonical(result.Content)
+	if err != nil {
+		t.Fatalf("parseCanonical: %v", err)
+	}
+	if !meta.AlwaysApply {
+		t.Error("expected alwaysApply:true for plain AGENTS.md")
+	}
+	assertContains(t, body, "Team Conventions")
+	assertContains(t, body, "Prefer immutable data structures.")
+}
+
+// TestOpenCodeRuleCanonicalize_UnicodeBody pins the unicode-preservation
+// contract. Rule bodies routinely carry non-ASCII characters (identifier
+// examples in non-English repos, decorative symbols, emoji in comments).
+// parseCanonical must hand those bytes through unchanged — if a future
+// rewrite used a byte-lossy encoder, identifiers like "café" would become
+// mojibake in the canonical form and silently corrupt downstream renders.
+func TestOpenCodeRuleCanonicalize_UnicodeBody(t *testing.T) {
+	input := []byte("# Naming café café\n\nDo not rename variables containing 日本語 identifiers. Use → for flow.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Canonicalize(input, "opencode")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	_, body, err := parseCanonical(result.Content)
+	if err != nil {
+		t.Fatalf("parseCanonical: %v", err)
+	}
+	for _, needle := range []string{"café", "日本語", "→"} {
+		assertContains(t, body, needle)
+	}
+}
+
+// TestOpenCodeRuleCanonicalize_UnclosedFrontmatterFallback pins the
+// graceful-degradation path inside parseCanonical: a rule that starts with
+// `---\n` but never closes it is malformed, yet the canonicalizer must
+// treat the whole input as plain markdown rather than returning an error.
+// This behavior prevents a single broken AGENTS.md from failing an
+// entire catalog scan.
+func TestOpenCodeRuleCanonicalize_UnclosedFrontmatterFallback(t *testing.T) {
+	input := []byte("---\ndescription: never closed\n\nActual body content here.\n")
+
+	conv := &RulesConverter{}
+	result, err := conv.Canonicalize(input, "opencode")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v (unclosed frontmatter must not error)", err)
+	}
+
+	meta, body, err := parseCanonical(result.Content)
+	if err != nil {
+		t.Fatalf("parseCanonical: %v", err)
+	}
+	if !meta.AlwaysApply {
+		t.Error("expected alwaysApply:true when frontmatter is unclosed (whole-input fallback)")
+	}
+	// The entire input — including the unclosed "---" line — becomes body.
+	assertContains(t, body, "description: never closed")
+	assertContains(t, body, "Actual body content here.")
+}
+
 // --- Helpers ---
 
 func assertContains(t *testing.T, haystack, needle string) {

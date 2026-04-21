@@ -24,11 +24,30 @@ package moat
 //     RepositoryID / RepositoryOwnerID. Closes the repo-transfer forgery
 //     vector. See manifest_verify.go for the OID correction history.
 //
-// Unknown `_version` values in the canonical payload are rejected implicitly:
-// CanonicalPayloadFor hard-codes `_version:1`, so a publisher who signed a
-// payload with `_version:2` would produce a different data.hash.value and
-// step 2 would fail. The spec requires this rejection (§Ordering: Content
-// Hash Before _version) and syllago inherits it for free.
+// Verification ordering (ADR 0007 G-14, spec §Ordering):
+//
+//   1. content_hash first — the sha256 comparison at step 2 below is anchored
+//      on CanonicalPayloadFor(item.ContentHash), where item.ContentHash is a
+//      client-controlled input (the manifest entry the client already decided
+//      to install). The canonical payload is reconstructed deterministically;
+//      nothing is read from the attestation payload on the wire.
+//   2. `_version` second — CanonicalPayloadFor uses CurrentPayloadVersion;
+//      during a future grace period, a dispatcher would iterate
+//      SupportedPayloadVersions via CanonicalPayloadForVersion. The set of
+//      versions tried is pre-approved by the spec and the current syllago
+//      build — never an attacker-supplied field.
+//   3. Cert identity third — once Rekor's hash.value matches our reconstructed
+//      payload, the signature on that payload is known to cover the right
+//      bytes; only then do we demand the cert match the pinned profile.
+//
+// Checking `_version` first would create a TOCTOU window: a verifier that
+// accepts the wire's `_version` field before anchoring on content_hash could
+// be tricked into applying an old canonical-payload format to content that
+// was attested under a newer one. Syllago's architecture makes this impossible
+// by never reading `_version` from the wire. Unknown `_version` values are
+// rejected implicitly: a publisher who signed a payload with `_version:99`
+// would produce a different data.hash.value than CanonicalPayloadFor(hash)
+// computes, and step 2 would fail.
 //
 // Revocation is NOT checked here — that lands with G-8. VerificationResult
 // carries RevocationChecked=false so callers cannot collapse the result to

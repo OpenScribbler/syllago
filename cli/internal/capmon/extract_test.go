@@ -74,6 +74,34 @@ func TestFixtures_WindsurfLLMSTxt(t *testing.T) {
 			t.Errorf("landmark %q not found in %v", want, result.Landmarks)
 		}
 	}
+
+	// Field-value assertions — the extractor must preserve both the nested
+	// key path and the scalar value for every leaf. A regression that
+	// flattened keys incorrectly, mapped values to wrong events, or
+	// stringified booleans as something other than "true"/"false" would
+	// fail these checks even if len(result.Fields) stayed non-zero.
+	wantFields := map[string]string{
+		"hooks.PreToolUse.description":  "Fires before any tool use",
+		"hooks.PreToolUse.blocking":     "true",
+		"hooks.PostToolUse.description": "Fires after any tool use",
+		"hooks.PostToolUse.blocking":    "false",
+		"hooks.Stop.description":        "Fires when generation stops",
+		"hooks.Stop.blocking":           "false",
+		"tools.shell.native":            "BashTool",
+		"tools.file_read.native":        "ReadTool",
+		"tools.file_write.native":       "WriteTool",
+		"tools.file_edit.native":        "EditTool",
+	}
+	for key, wantValue := range wantFields {
+		fv, ok := result.Fields[key]
+		if !ok {
+			t.Errorf("expected field %q, not found in %v", key, result.Fields)
+			continue
+		}
+		if fv.Value != wantValue {
+			t.Errorf("field %q: value = %q, want %q", key, fv.Value, wantValue)
+		}
+	}
 }
 
 func TestFixtures_LiveNetwork(t *testing.T) {

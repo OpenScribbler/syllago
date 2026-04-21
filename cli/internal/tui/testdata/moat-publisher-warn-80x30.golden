@@ -1,0 +1,30 @@
+╭──syllago────────────────────────────────────────────────────────────────[?]──╮
+│               [1] Collections      [2] Content      [3] Config               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│   Library     Registries     Loadouts                                        │
+│                                                            [a] Add content   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ private-skill                             Type: Skill     Files: 1           │
+│ Scope: project   Registry: moat-registry                                     │
+│                                                                   [e] Edit   │
+│ Trust: Veri╭────────────────────────────────────────────────────╮            │
+├────────────│ Install recalled item "recalled-skill"?            │────────────┤
+│   Name ▲   │                                                    │            │
+│ > ✓P privat│ The publisher has revoked this item.               │            │
+│   R  recall│                                                    │            │
+│      vanill│ Reason: key compromise                             │            │
+│   ✓  verifi│ Issued by: ops@example.com                         │            │
+│            │ Details: https://example.com/recall/123            │            │
+│            │                                                    │            │
+│            │ Installing anyway will proceed with the current co │            │
+│            │                                                    │            │
+│            │                       Cancel      Install anyway   │            │
+│            ╰────────────────────────────────────────────────────╯            │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+1/2/3 groups · tab items · ↑/↓ navigate · enter preview     syllago v0.0.0-test
+/ search · s sort · i install · e edit · d remove · x uninstall · R refresh · a add · ? help · q quit

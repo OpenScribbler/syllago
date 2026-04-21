@@ -23,6 +23,11 @@ import (
 // githubAPIURL is a var so tests can override it with an httptest server URL.
 var githubAPIURL = "https://api.github.com/repos/OpenScribbler/syllago/releases/latest"
 
+// osExecutable is a test seam. Production code uses os.Executable; tests can
+// override it to point at a throwaway file so Update()'s final Rename step
+// doesn't clobber the running test binary.
+var osExecutable = os.Executable
+
 // httpClient is a shared client with a 15-second timeout. GitHub is generally
 // fast; we don't want to hang the TUI or CLI waiting on a slow network.
 var httpClient = &http.Client{Timeout: 15 * time.Second}
@@ -180,7 +185,7 @@ func Update(currentVersion string, progress func(string)) error {
 
 	// Resolve the path to the currently running binary (follow symlinks so we
 	// replace the real file, not the symlink).
-	currentBin, err := os.Executable()
+	currentBin, err := osExecutable()
 	if err != nil {
 		return fmt.Errorf("finding current executable: %w", err)
 	}

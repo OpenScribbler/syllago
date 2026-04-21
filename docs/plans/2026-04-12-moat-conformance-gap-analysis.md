@@ -664,14 +664,20 @@ Every error a user can encounter needs to be actionable:
 
 ### AD-9: Non-Interactive Behavior
 
-Every interactive prompt has a defined non-interactive fallback for CI/CD:
+MOAT v0.6.0 §Revocation Mechanism defines four conditions under which a conforming non-interactive client MUST exit non-zero with a machine-distinguishable error signal. The spec leaves the signal mechanism open (stderr prefix, structured JSON, or distinct exit codes) — Syllago uses **distinct exit codes** in a reserved 10–13 band so pipelines can branch on `$?` directly.
 
-| Operation | Interactive | Non-Interactive (`--non-interactive` or no TTY) |
-|-----------|------------|------------------------------------------------|
-| TOFU signing profile | Prompt Y/n | Accept on first add (TOFU semantics); reject on change (exit 1) |
-| Signing profile change | Prompt with old/new identity | Exit 1 with message: "signing identity changed, re-approve with `syllago registry approve [name]`" |
-| Publisher revocation | Prompt Y/n per item | Exit 1 with revocation details on stderr |
-| Staleness exceeded | Warning + auto-sync | Warning on stderr + auto-sync attempt; if network fails, exit 1 |
+| Spec condition (verbatim) | Syllago exit code | Non-interactive behavior |
+|--------------------------|-------------------|--------------------------|
+| TOFU signing profile acceptance required (first registry add) | `10` (`ExitMoatTOFUAcceptance`) | Exit non-zero — a trust decision that requires human judgment MUST NOT be made silently by a pipeline. Interactive recovery: `syllago registry add <name>` with a TTY. |
+| `registry_signing_profile` change detected | `11` (`ExitMoatSigningProfileChange`) | Exit non-zero — a signing profile change could indicate registry-key compromise. Interactive recovery: `syllago registry approve <name>`. |
+| Publisher revocation encountered | `12` (`ExitMoatPublisherRevocation`) | Exit non-zero — non-interactive clients MUST NOT proceed past revocation warnings. No recovery; operator review required. |
+| Manifest staleness exceeded (72h, G-9) | `13` (`ExitMoatManifestStale`) | Exit non-zero — the pipeline is operating on potentially outdated trust data. Interactive recovery: `syllago registry sync`. |
+
+Codes 0–2 are reserved for shell/cobra conventions (success, general error, usage error). Code `3` is `ExitDrift` (drift command). MOAT non-interactive failures land in 10–13 to keep the failure class unambiguous and leave room for future general exit codes.
+
+Pre-approval mechanism (so operators can authorize registries and signing-profile changes out-of-band) is deferred upstream (MOAT ROADMAP Issue 11). Syllago matches that deferral — a conforming non-interactive client MUST NOT auto-accept any of these four conditions.
+
+Primitives landed in `cli/internal/moat/noninteractive.go` (`NonInteractiveFailure`, `ExitCodeFor`, `Message`) — Phase 2 merge (syllago-dsqjz) wires them into the registry-sync and install paths.
 
 ### AD-10: Security Contract Per Phase
 

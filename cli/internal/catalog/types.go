@@ -73,6 +73,28 @@ type ContentItem struct {
 	Library     bool           // true if item lives in the global content library (~/.syllago/content/)
 	Registry    string         // non-empty if item came from a git registry (value is the registry name)
 	Source      string         // "project", "global", "library", or registry name
+
+	// MOAT trust state. TrustTier is the normative internal classification
+	// (Dual-Attested / Signed / Unsigned / Unknown); Recalled flips on when
+	// the publisher or registry has revoked this content hash (G-8). These
+	// fields stay zero for items not sourced from a MOAT manifest — a git
+	// registry item is indistinguishable from "trust question not asked."
+	// See AD-7 and UserFacingBadge for the collapse rules.
+	//
+	// The drill-down fields below (PrivateRepo, RecallSource, RecallDetailsURL,
+	// RecallIssuer) are populated by moat.EnrichCatalog. Publisher-controlled
+	// strings (RecallReason, RecallDetailsURL, RecallIssuer) are pre-sanitized
+	// at the enrich boundary via moat.SanitizeForDisplay — consumers treat
+	// the values as trusted for display. Field naming note: PrivateRepo
+	// matches moat.ContentEntry.PrivateRepo (the source field) rather than
+	// using an Is-prefix, which is reserved for methods in Go.
+	TrustTier        TrustTier
+	Recalled         bool
+	RecallReason     string // sanitized; populated when Recalled
+	PrivateRepo      bool   // mirrors moat.ContentEntry.PrivateRepo (G-10)
+	RecallSource     string // "registry" or "publisher" when Recalled; empty otherwise
+	RecallDetailsURL string // sanitized URL when Recalled; may be empty
+	RecallIssuer     string // sanitized revoker identity; empty when not Recalled
 }
 
 // IsExample returns true if this item is tagged as example content.

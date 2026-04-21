@@ -529,3 +529,183 @@ func TestEndToEnd_FullLifecycle(t *testing.T) {
 		t.Errorf("event after Reset() used old ID %q, want %q", lastEvent.DistinctID, newID)
 	}
 }
+
+// setupEnrichTestServer spins up an httptest server that records every
+// PostHog payload it receives, plus enables telemetry with a valid apiKey,
+// creates a temp home dir, and points the endpoint at the server. It
+// returns the received-events slice + its mutex so tests can assert on the
+// live payloads. All cleanup (reset, etc.) is registered via t.Cleanup.
+func setupEnrichTestServer(t *testing.T) (*[]postHogPayload, *sync.Mutex) {
+	t.Helper()
+	var received []postHogPayload
+	var mu sync.Mutex
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var p postHogPayload
+		if err := json.Unmarshal(body, &p); err != nil {
+			t.Errorf("invalid JSON payload: %v", err)
+		}
+		mu.Lock()
+		received = append(received, p)
+		mu.Unlock()
+		w.WriteHeader(200)
+	}))
+	t.Cleanup(srv.Close)
+
+	origKey := apiKey
+	apiKey = "phc_enrich_test"
+	t.Cleanup(func() {
+		apiKey = origKey
+		resetState()
+		ResetEnrichment()
+	})
+
+	overrideHome(t, t.TempDir())
+	var notice strings.Builder
+	NoticeWriter = &notice
+	t.Cleanup(func() { NoticeWriter = os.Stderr })
+
+	Init()
+	state.mu.Lock()
+	state.endpoint = srv.URL
+	state.mu.Unlock()
+
+	return &received, &mu
+}
+
+// TestEnrich_PropertiesReachPayload is the integration contract for Enrich +
+// TrackCommand: every property set via Enrich() must appear in the outgoing
+// PostHog event payload with its exact value, alongside the "command" key
+// TrackCommand injects. Without this test, a regression that silently dropped
+// enrichedProps during merge would slip through the drift-detection test
+// (which only checks catalog vs. Enrich() call sites, not the payload path).
+func TestEnrich_PropertiesReachPayload(t *testing.T) {
+	received, mu := setupEnrichTestServer(t)
+
+	Enrich("provider", "claude-code")
+	Enrich("content_type", "rules")
+	Enrich("content_count", 3)
+	Enrich("dry_run", true)
+	TrackCommand("install")
+	Shutdown()
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(*received) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(*received))
+	}
+	ev := (*received)[0]
+
+	if ev.Event != "command_executed" {
+		t.Errorf("event name: got %q, want %q", ev.Event, "command_executed")
+	}
+	want := map[string]any{
+		"command":       "install",
+		"provider":      "claude-code",
+		"content_type":  "rules",
+		"content_count": float64(3), // JSON numbers decode to float64
+		"dry_run":       true,
+	}
+	for k, v := range want {
+		got, ok := ev.Properties[k]
+		if !ok {
+			t.Errorf("payload missing property %q (got properties: %v)", k, ev.Properties)
+			continue
+		}
+		if got != v {
+			t.Errorf("property %q: got %v (%T), want %v (%T)", k, got, got, v, v)
+		}
+	}
+}
+
+// TestEnrich_ScopeIsolation pins the critical invariant that enriched
+// properties DO NOT leak between commands. When TrackCommand fires, it
+// must clear enrichedProps so the next command only sees its own context.
+// Without this, cross-command telemetry would include stale state that's
+// both misleading for analysis and a potential privacy leak.
+func TestEnrich_ScopeIsolation(t *testing.T) {
+	received, mu := setupEnrichTestServer(t)
+
+	// Command 1: enriched with provider=claude-code.
+	Enrich("provider", "claude-code")
+	Enrich("content_count", 5)
+	TrackCommand("install")
+
+	// Command 2: only enriches content_type. Previous provider/content_count
+	// must be absent — TrackCommand #1 must have cleared enrichedProps.
+	Enrich("content_type", "loadouts")
+	TrackCommand("list")
+
+	Shutdown()
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(*received) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(*received))
+	}
+
+	// Find each event by command name (goroutine delivery order isn't guaranteed).
+	var installEv, listEv *postHogPayload
+	for i := range *received {
+		switch (*received)[i].Properties["command"] {
+		case "install":
+			installEv = &(*received)[i]
+		case "list":
+			listEv = &(*received)[i]
+		}
+	}
+	if installEv == nil || listEv == nil {
+		t.Fatalf("did not find both events; received=%+v", *received)
+	}
+
+	// Install event must have its own enriched props.
+	if installEv.Properties["provider"] != "claude-code" {
+		t.Errorf("install event missing provider=claude-code: %v", installEv.Properties)
+	}
+	if installEv.Properties["content_count"] != float64(5) {
+		t.Errorf("install event missing content_count=5: %v", installEv.Properties)
+	}
+
+	// List event must NOT have install's enriched props.
+	if _, leaked := listEv.Properties["provider"]; leaked {
+		t.Errorf("SCOPE LEAK: list event carries provider from install event: %v", listEv.Properties)
+	}
+	if _, leaked := listEv.Properties["content_count"]; leaked {
+		t.Errorf("SCOPE LEAK: list event carries content_count from install event: %v", listEv.Properties)
+	}
+	// List event must have its own content_type.
+	if listEv.Properties["content_type"] != "loadouts" {
+		t.Errorf("list event missing content_type=loadouts: %v", listEv.Properties)
+	}
+}
+
+// TestResetEnrichment_ClearsPending pins that ResetEnrichment() drops any
+// pending enriched props without firing an event. Used in tests and in
+// early-exit command paths.
+func TestResetEnrichment_ClearsPending(t *testing.T) {
+	received, mu := setupEnrichTestServer(t)
+
+	Enrich("provider", "should-be-dropped")
+	Enrich("content_count", 99)
+	ResetEnrichment()
+
+	// Now fire a command with no enrichment — event must carry only "command".
+	TrackCommand("version")
+	Shutdown()
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(*received) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(*received))
+	}
+	ev := (*received)[0]
+	if _, leaked := ev.Properties["provider"]; leaked {
+		t.Errorf("ResetEnrichment did not clear provider; got: %v", ev.Properties)
+	}
+	if _, leaked := ev.Properties["content_count"]; leaked {
+		t.Errorf("ResetEnrichment did not clear content_count; got: %v", ev.Properties)
+	}
+	if ev.Properties["command"] != "version" {
+		t.Errorf("expected command=version, got: %v", ev.Properties["command"])
+	}
+}

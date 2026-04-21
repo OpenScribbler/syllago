@@ -372,7 +372,23 @@ func TestUpdate_NoAssetForPlatform(t *testing.T) {
 	}
 }
 
-// TestUpdate_FullFlow exercises the download + checksum verification flow.
+// TestUpdate_FullFlow exercises the full download + checksum verification
+// + rename flow end-to-end. It uses the osExecutable test seam to point
+// the final Rename at a throwaway file in t.TempDir() so the update
+// doesn't clobber the running test binary.
+//
+// The test asserts positively that the checksum step ran:
+//   - "Verifying checksum..." progress message (emitted only AFTER
+//     downloadFile returns and BEFORE the hash comparison — its
+//     presence proves download succeeded).
+//   - Final "Updated to v99.0.0..." message (only emitted if os.Rename
+//     succeeds, which only happens if the checksum matched).
+//
+// Previously the test was conditional: it accepted either nil (silently
+// clobbering the test binary on Linux, where Rename succeeds against
+// the running executable) or a rename error. Neither branch actually
+// pinned that the checksum step had executed. The osExecutable seam
+// makes both Rename safe and the success path deterministic.
 func TestUpdate_FullFlow(t *testing.T) {
 	// Create a fake binary and compute its checksum.
 	binaryContent := []byte("fake syllago binary for update test")
@@ -408,29 +424,55 @@ func TestUpdate_FullFlow(t *testing.T) {
 	githubAPIURL = srv.URL + "/api/release"
 	defer func() { githubAPIURL = origURL }()
 
-	// Create a fake "current binary" that Update will try to replace.
-	// We need os.Executable() to point to something we control.
-	// Since we can't override os.Executable(), the Update function will try
-	// to replace the actual test binary. Instead, we test the pieces that
-	// Update calls: downloadFile + checksum verification.
-	// The full Update flow will fail at os.Rename (permission or cross-device),
-	// but we can verify it gets past the checksum step.
+	// Point osExecutable at a throwaway file — Rename will overwrite this
+	// instead of the real test binary.
+	fakeBinary := filepath.Join(t.TempDir(), "fake-syllago-for-update")
+	if err := os.WriteFile(fakeBinary, []byte("old binary"), 0755); err != nil {
+		t.Fatalf("create fake binary: %v", err)
+	}
+	origExec := osExecutable
+	osExecutable = func() (string, error) { return fakeBinary, nil }
+	defer func() { osExecutable = origExec }()
+
 	var messages []string
 	err := Update("0.1.0", func(msg string) { messages = append(messages, msg) })
 
-	// We expect either success (unlikely in test) or a "replacing binary" error
-	// which means it got through download + checksum verification successfully.
+	// Success is now deterministic — checksum matches and the rename
+	// target is a disposable file, so the whole flow must complete.
 	if err != nil {
-		// The error should be about replacing the binary, not about download or checksum.
-		errStr := err.Error()
-		if !contains(errStr, "replacing binary") && !contains(errStr, "rename") {
-			t.Fatalf("unexpected error (expected download/checksum to pass): %v", err)
+		t.Fatalf("Update failed — checksum flow did not complete: %v", err)
+	}
+
+	// Positively verify each step of the pipeline emitted its progress
+	// message. "Verifying checksum..." is the anchor for the checksum
+	// step specifically (updater.go:170). The final "Updated to ..."
+	// message only fires if os.Rename succeeded, which in turn only
+	// fires if the checksum matched (updater.go:176-178 gates on it).
+	wantMsgs := []string{
+		"Downloading syllago v99.0.0...",                              // download started
+		"Verifying checksum...",                                       // checksum step entered
+		"Updated to v99.0.0. Restart syllago to use the new version.", // full flow completed
+	}
+	for _, want := range wantMsgs {
+		found := false
+		for _, got := range messages {
+			if got == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("missing progress message %q — flow did not reach this step. Got: %v", want, messages)
 		}
 	}
 
-	// Verify progress messages were emitted for download and checksum steps.
-	if len(messages) < 2 {
-		t.Fatalf("expected at least 2 progress messages, got %d: %v", len(messages), messages)
+	// The fake binary should now contain the new content, proving Rename ran.
+	got, err := os.ReadFile(fakeBinary)
+	if err != nil {
+		t.Fatalf("reading updated fake binary: %v", err)
+	}
+	if string(got) != string(binaryContent) {
+		t.Errorf("fake binary content = %q, want %q (Rename did not replace it)", got, binaryContent)
 	}
 }
 
@@ -481,6 +523,135 @@ func contains(s, substr string) bool {
 }
 
 // TestParseVersion tests the version parsing helper directly.
+// TestUpdate_NoSigningKey_EmitsConservativeWarningEndToEnd verifies that when
+// SigningPublicKey is empty (dev build, pre-signing release), the full Update
+// flow emits a visible "no signing key" warning through the caller's progress
+// callback — not just internally inside verifyChecksumSignature.
+//
+// This is the regression test for the audit finding that the unit test only
+// covers the warning being produced INSIDE verifyChecksumSignature but does
+// not prove it bubbles up to Update's caller. A refactor that swapped the
+// progress callback, swallowed the warning, or removed it entirely would be
+// caught here but not by the existing unit test alone.
+func TestUpdate_NoSigningKey_EmitsConservativeWarningEndToEnd(t *testing.T) {
+	// Explicitly force the empty-key path — don't rely on the process default.
+	origKey := SigningPublicKey
+	SigningPublicKey = ""
+	defer func() { SigningPublicKey = origKey }()
+
+	binaryContent := []byte("fake syllago binary for no-signing-key test")
+	h := sha256.Sum256(binaryContent)
+	checksum := hex.EncodeToString(h[:])
+	wantAsset := assetName()
+	checksumContent := fmt.Sprintf("%s  %s\n", checksum, wantAsset)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/release":
+			fakeRelease := map[string]interface{}{
+				"tag_name": "v99.0.0",
+				"body":     "new release",
+				"assets": []map[string]interface{}{
+					{"name": wantAsset, "browser_download_url": "http://" + r.Host + "/binary"},
+					{"name": "checksums.txt", "browser_download_url": "http://" + r.Host + "/checksums"},
+					// Intentionally NO checksums.txt.sig asset — mirrors the
+					// "pre-signing release" shape the empty-key path exists for.
+				},
+			}
+			json.NewEncoder(w).Encode(fakeRelease)
+		case "/binary":
+			w.Write(binaryContent)
+		case "/checksums":
+			w.Write([]byte(checksumContent))
+		default:
+			http.Error(w, "not found", 404)
+		}
+	}))
+	defer srv.Close()
+
+	origURL := githubAPIURL
+	githubAPIURL = srv.URL + "/api/release"
+	defer func() { githubAPIURL = origURL }()
+
+	var messages []string
+	// Update will fail at os.Rename (replacing the test binary), but that's
+	// after signature + checksum verification, so we'll still have collected
+	// the relevant progress messages.
+	_ = Update("0.1.0", func(msg string) { messages = append(messages, msg) })
+
+	// Core assertion: the empty-key warning MUST be visible in the caller's
+	// progress stream. A regression that silently skipped signature check
+	// would not emit this.
+	var foundWarning, foundVerified bool
+	for _, m := range messages {
+		if strings.Contains(m, "no signing key") && strings.Contains(m, "not verified") {
+			foundWarning = true
+		}
+		if strings.Contains(m, "Signature verified") {
+			foundVerified = true
+		}
+	}
+	if !foundWarning {
+		t.Errorf("expected 'no signing key ... not verified' warning in progress messages; got: %v", messages)
+	}
+	// Can't have it both ways — if we're in the empty-key path we must NOT
+	// also have claimed signature verification.
+	if foundVerified {
+		t.Errorf("'Signature verified' message must not appear when SigningPublicKey is empty; got: %v", messages)
+	}
+}
+
+// TestUpdate_NoSigningKey_ChecksumStillEnforced is belt-and-suspenders: when
+// SigningPublicKey is empty, the signature check is skipped, but SHA-256
+// checksum verification is the only remaining protection — it must still be
+// enforced. A regression that conflated "no signing key → skip signature"
+// with "no signing key → skip all integrity checks" would be caught here.
+func TestUpdate_NoSigningKey_ChecksumStillEnforced(t *testing.T) {
+	origKey := SigningPublicKey
+	SigningPublicKey = ""
+	defer func() { SigningPublicKey = origKey }()
+
+	realBinary := []byte("real binary bytes")
+	// Checksum claims a value that will never match the served bytes.
+	wrongChecksum := "deadbeef00000000000000000000000000000000000000000000000000000000"
+	wantAsset := assetName()
+	checksumContent := fmt.Sprintf("%s  %s\n", wrongChecksum, wantAsset)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/release":
+			fakeRelease := map[string]interface{}{
+				"tag_name": "v99.0.0",
+				"body":     "new release",
+				"assets": []map[string]interface{}{
+					{"name": wantAsset, "browser_download_url": "http://" + r.Host + "/binary"},
+					{"name": "checksums.txt", "browser_download_url": "http://" + r.Host + "/checksums"},
+				},
+			}
+			json.NewEncoder(w).Encode(fakeRelease)
+		case "/binary":
+			w.Write(realBinary)
+		case "/checksums":
+			w.Write([]byte(checksumContent))
+		default:
+			http.Error(w, "not found", 404)
+		}
+	}))
+	defer srv.Close()
+
+	origURL := githubAPIURL
+	githubAPIURL = srv.URL + "/api/release"
+	defer func() { githubAPIURL = origURL }()
+
+	err := Update("0.1.0", func(string) {})
+	if err == nil {
+		t.Fatal("Update should refuse a checksum mismatch even when SigningPublicKey is empty")
+	}
+	if !strings.Contains(err.Error(), "checksum mismatch") {
+		t.Errorf("expected 'checksum mismatch' error, got: %v", err)
+	}
+}
+
 func TestParseVersion(t *testing.T) {
 	cases := []struct {
 		input string

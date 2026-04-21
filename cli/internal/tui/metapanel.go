@@ -49,12 +49,48 @@ func computeMetaPanelData(item catalog.ContentItem, providers []provider.Provide
 	}
 }
 
-// renderMetaPanel renders the 3-line metadata content for any content item.
-// This is a shared component used by both the library table and explorer views.
+// metaBarLinesFor reports how many lines renderMetaPanel will emit for the
+// given item. Returns metaBarLinesBase (3) for non-MOAT items so existing
+// layouts stay unchanged. MOAT items with any trust surface (Verified,
+// Unsigned, Recalled, or PrivateRepo) gain Line 4 (chip row); Recalled
+// items additionally gain Line 5 (revocation banner). Callers use this to
+// size the metadata region in viewBrowse/viewDetail/viewStacked.
+//
+// Nil-item case returns metaBarLinesBase — the "no selection" placeholder
+// renders blank lines matching the baseline so height math is stable.
+func metaBarLinesFor(item *catalog.ContentItem) int {
+	if item == nil {
+		return metaBarLinesBase
+	}
+	extra := 0
+	if item.TrustTier != catalog.TrustTierUnknown || item.PrivateRepo || item.Recalled {
+		extra++ // Line 4: trust + visibility chips
+	}
+	if item.Recalled {
+		extra++ // Line 5: revocation banner
+	}
+	return metaBarLinesBase + extra
+}
+
+// renderMetaPanel renders the variable-height metadata content for a content
+// item. Emits 3 lines for non-MOAT items, 4 lines for MOAT items with a
+// trust surface, and 5 lines when the item is Recalled (adds a revocation
+// banner). Height contract: lipgloss.Height(result) always equals
+// metaBarLinesFor(item) — callers rely on this for layout math.
 func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) string {
 	if item == nil {
 		blank := strings.Repeat(" ", width)
 		return blank + "\n" + blank + "\n" + blank
+	}
+
+	// pad clamps a line to width. Shared by all line builders below so the
+	// returned string's Height matches metaBarLinesFor(item) exactly.
+	pad := func(s string) string {
+		s = lipgloss.NewStyle().MaxWidth(width).Render(s)
+		if g := width - lipgloss.Width(s); g > 0 {
+			s += strings.Repeat(" ", g)
+		}
+		return s
 	}
 
 	chip := func(key, val string, w int) string {
@@ -160,12 +196,62 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 	btnGap := max(1, width-line3W-btnRowW)
 	line3 += strings.Repeat(" ", btnGap) + btnRow
 
-	pad := func(s string) string {
-		s = lipgloss.NewStyle().MaxWidth(width).Render(s)
-		if g := width - lipgloss.Width(s); g > 0 {
-			s += strings.Repeat(" ", g)
+	out := pad(line1) + "\n" + pad(line2) + "\n" + pad(line3)
+
+	// --- Line 4: trust + visibility chips (MOAT items only) ---
+	// Rendered when the item has any trust surface: a known TrustTier, a
+	// Recalled flag, or PrivateRepo. Zero-value items (git registries,
+	// local content) skip this line per AD-7 "absence is not a negative
+	// signal" — their layout stays at 3 lines.
+	showChips := item.TrustTier != catalog.TrustTierUnknown || item.PrivateRepo || item.Recalled
+	if showChips {
+		line4 := " "
+		desc := catalog.TrustDescription(item.TrustTier, item.Recalled, item.RecallReason)
+		if desc != "" {
+			// Trust label uses semantic color per state: recalled→danger,
+			// verified→success, unsigned→muted. Pre-composed styles avoid
+			// lipgloss allocation inside the hot render path.
+			var labelStyle lipgloss.Style
+			badge := catalog.UserFacingBadge(item.TrustTier, item.Recalled)
+			switch badge {
+			case catalog.TrustBadgeRecalled:
+				labelStyle = trustRecalledStyle
+			case catalog.TrustBadgeVerified:
+				labelStyle = trustVerifiedStyle
+			default:
+				labelStyle = mutedStyle
+			}
+			line4 += boldStyle.Render("Trust: ") + labelStyle.Render(sanitizeLine(desc))
 		}
-		return s
+		if item.PrivateRepo {
+			if len(line4) > 1 {
+				line4 += gap
+			}
+			line4 += boldStyle.Render("Visibility: ") + privateIndicatorStyle.Render("Private")
+		}
+		out += "\n" + pad(line4)
 	}
-	return pad(line1) + "\n" + pad(line2) + "\n" + pad(line3)
+
+	// --- Line 5: revocation banner (Recalled items only) ---
+	// Format: "RECALLED (<source>) — <reason>. Issued by <issuer>. <details_url>"
+	// Optional pieces collapse gracefully when absent; reason is pre-sanitized
+	// at enrich boundary, so we only strip ANSI/bidi here defensively.
+	if item.Recalled {
+		banner := "RECALLED"
+		if item.RecallSource != "" {
+			banner += " (" + sanitizeLine(item.RecallSource) + ")"
+		}
+		if item.RecallReason != "" {
+			banner += " — " + sanitizeLine(item.RecallReason)
+		}
+		if item.RecallIssuer != "" {
+			banner += ". Issued by " + sanitizeLine(item.RecallIssuer)
+		}
+		if item.RecallDetailsURL != "" {
+			banner += ". " + sanitizeLine(item.RecallDetailsURL)
+		}
+		out += "\n" + pad(" "+revocationBannerStyle.Render(banner))
+	}
+
+	return out
 }

@@ -404,9 +404,27 @@ and "syllago install" to activate updated content.`,
 			return nil
 		}
 
+		yes, _ := cmd.Flags().GetBool("yes")
+
 		// Single registry sync
 		if len(args) == 1 {
 			name := args[0]
+			reg := findRegistryByName(cfg, name)
+			if reg == nil {
+				return output.NewStructuredError(output.ErrRegistryNotFound, fmt.Sprintf("registry %q not found in config", name), "Run 'syllago registry list' to see configured registries")
+			}
+			if reg.IsMOAT() {
+				fmt.Fprintf(output.Writer, "Syncing %s (moat)...\n", name)
+				code, err := syncMOATRegistry(cmd.Context(), output.Writer, output.ErrWriter, cfg, reg, root, time.Now(), yes)
+				if err != nil {
+					return err
+				}
+				if code != 0 {
+					moatSyncExit(code)
+					return nil
+				}
+				return nil
+			}
 			if !registry.IsCloned(name) {
 				return output.NewStructuredError(output.ErrRegistryNotCloned, fmt.Sprintf("registry %q is not cloned locally", name), "Run 'syllago registry add' first")
 			}
@@ -424,22 +442,52 @@ and "syllago install" to activate updated content.`,
 			return nil
 		}
 
-		// Sync all
-		names := make([]string, len(cfg.Registries))
-		for i, r := range cfg.Registries {
-			names[i] = r.Name
+		// Sync all. MOAT registries run through the dispatcher one at a time
+		// so each can update its own lockfile row; git registries go through
+		// the existing SyncAll fan-out. A MOAT gate on any single registry
+		// trips the exit code for the whole command — if operators need to
+		// isolate which one, they sync by name.
+		var moatGateExit int
+		for i := range cfg.Registries {
+			r := &cfg.Registries[i]
+			if !r.IsMOAT() {
+				continue
+			}
+			fmt.Fprintf(output.Writer, "Syncing %s (moat)...\n", r.Name)
+			code, err := syncMOATRegistry(cmd.Context(), output.Writer, output.ErrWriter, cfg, r, root, time.Now(), yes)
+			if err != nil {
+				return err
+			}
+			if code != 0 && moatGateExit == 0 {
+				moatGateExit = code
+			}
 		}
 
-		results := registry.SyncAll(names)
-		hasErrors := false
-		for _, res := range results {
-			if res.Err != nil {
-				fmt.Fprintf(output.ErrWriter, "Error syncing %s: %s\n", res.Name, res.Err)
-				hasErrors = true
-			} else {
-				reprobeRegistryVisibility(cfg, res.Name, root)
-				fmt.Fprintf(output.Writer, "Synced: %s\n", res.Name)
+		var gitNames []string
+		for _, r := range cfg.Registries {
+			if r.IsMOAT() {
+				continue
 			}
+			gitNames = append(gitNames, r.Name)
+		}
+
+		hasErrors := false
+		if len(gitNames) > 0 {
+			results := registry.SyncAll(gitNames)
+			for _, res := range results {
+				if res.Err != nil {
+					fmt.Fprintf(output.ErrWriter, "Error syncing %s: %s\n", res.Name, res.Err)
+					hasErrors = true
+				} else {
+					reprobeRegistryVisibility(cfg, res.Name, root)
+					fmt.Fprintf(output.Writer, "Synced: %s\n", res.Name)
+				}
+			}
+		}
+
+		if moatGateExit != 0 {
+			moatSyncExit(moatGateExit)
+			return nil
 		}
 		if hasErrors {
 			return output.NewStructuredError(output.ErrRegistrySyncFailed, "one or more registry syncs failed", "Check error messages above and retry")
@@ -447,6 +495,24 @@ and "syllago install" to activate updated content.`,
 		return nil
 	},
 }
+
+// findRegistryByName returns a pointer into cfg.Registries (so callers can
+// mutate persisted trust state) or nil when no entry matches. Linear scan;
+// config registries are typically O(10).
+func findRegistryByName(cfg *config.Config, name string) *config.Registry {
+	for i := range cfg.Registries {
+		if cfg.Registries[i].Name == name {
+			return &cfg.Registries[i]
+		}
+	}
+	return nil
+}
+
+// moatSyncExit is a package-level seam so tests can observe the exit code
+// instead of terminating the test process. Production path calls os.Exit
+// directly — cobra's RunE only maps to exit 1, so the G-18 codes (10/11/13)
+// must bypass it.
+var moatSyncExit = os.Exit
 
 var registryItemsCmd = &cobra.Command{
 	Use:   "items [name]",
@@ -695,6 +761,7 @@ func init() {
 	registryAddCmd.Flags().String("signing-repository-id", "", "GitHub numeric repository ID (required for GitHub Actions issuer)")
 	registryAddCmd.Flags().String("signing-repository-owner-id", "", "GitHub numeric repository-owner ID (required for GitHub Actions issuer)")
 	registryItemsCmd.Flags().String("type", "", "Filter by content type (skills, rules, hooks, etc.)")
+	registrySyncCmd.Flags().Bool("yes", false, "Auto-accept TOFU (trust-on-first-use) for MOAT registries with no pinned signing profile")
 
 	registryCreateCmd.Flags().String("new", "", "Scaffold an empty registry directory with this name")
 	registryCreateCmd.Flags().Bool("from-native", false, "Index provider-native content in the current repo")
