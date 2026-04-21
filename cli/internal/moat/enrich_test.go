@@ -8,6 +8,7 @@ package moat
 // one via the TrustTier fixtures below.
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -564,5 +565,277 @@ func TestEnrichCatalog_NonRecalledItemHasZeroDrillDownFields(t *testing.T) {
 	if item.RecallSource != "" || item.RecallDetailsURL != "" || item.RecallIssuer != "" {
 		t.Errorf("drill-down fields leaked onto non-recalled item: source=%q url=%q issuer=%q",
 			item.RecallSource, item.RecallDetailsURL, item.RecallIssuer)
+	}
+}
+
+// --- End-to-end pipeline: JSON bytes → ParseManifest → EnrichCatalog → display
+//
+// Every other test in this file hand-builds *Manifest structs in memory.
+// That coverage pins EnrichCatalog's internal logic but leaves the
+// ParseManifest → enrich → catalog display chain uncovered: if a future
+// JSON-tag rename or unmarshal regression silently dropped
+// attestation_hash_mismatch, rekor_log_index, or signing_profile on the
+// way in, every hand-built-struct test would still pass while production
+// shipped items with the wrong trust badge.
+//
+// This test is the glue layer. One JSON fixture covers the full display
+// matrix (Dual-Attested / Signed / Unsigned / G-13 mismatch / Recalled /
+// missing-entry) and asserts the downstream display helpers
+// (catalog.UserFacingBadge, TrustDescription, Glyph, Label) produce the
+// expected strings for each permutation.
+//
+// Audit follow-up: syllago-f27t4.
+func TestEnrichCatalog_E2E_ParseManifestThroughDisplay(t *testing.T) {
+	t.Parallel()
+
+	// Drive hashes through the shared pad64 helper so the fixture can never
+	// drift from what ParseContentHash expects (64-hex-char minimum body).
+	hashAlpha := "sha256:" + pad64("aa")
+	hashBeta := "sha256:" + pad64("bb")
+	hashGamma := "sha256:" + pad64("cc")
+	hashDelta := "sha256:" + pad64("dd")
+
+	manifestJSON := fmt.Sprintf(`{
+  "schema_version": 1,
+  "manifest_uri": "https://reg.example/manifest.json",
+  "name": "test-registry",
+  "operator": "Example Registry",
+  "updated_at": "2026-04-20T00:00:00Z",
+  "registry_signing_profile": {"issuer": "https://iss.example", "subject": "ops@example.com"},
+  "content": [
+    {
+      "name": "alpha-skill",
+      "display_name": "Alpha Skill",
+      "type": "skill",
+      "content_hash": "%s",
+      "source_uri": "https://src.example/alpha",
+      "attested_at": "2026-04-19T00:00:00Z",
+      "rekor_log_index": 1001,
+      "signing_profile": {"issuer": "https://token.example", "subject": "pub@alpha.example"}
+    },
+    {
+      "name": "beta-rules",
+      "display_name": "Beta Rules",
+      "type": "rules",
+      "content_hash": "%s",
+      "source_uri": "https://src.example/beta",
+      "attested_at": "2026-04-19T00:00:00Z",
+      "rekor_log_index": 1002
+    },
+    {
+      "name": "gamma-agent",
+      "display_name": "Gamma Agent",
+      "type": "agent",
+      "content_hash": "%s",
+      "source_uri": "https://src.example/gamma",
+      "attested_at": "2026-04-19T00:00:00Z"
+    },
+    {
+      "name": "delta-skill",
+      "display_name": "Delta Skill",
+      "type": "skill",
+      "content_hash": "%s",
+      "source_uri": "https://src.example/delta",
+      "attested_at": "2026-04-19T00:00:00Z",
+      "rekor_log_index": 1004,
+      "signing_profile": {"issuer": "https://token.example", "subject": "pub@delta.example"},
+      "attestation_hash_mismatch": true
+    }
+  ],
+  "revocations": [
+    {
+      "content_hash": "%s",
+      "reason": "malicious",
+      "details_url": "https://reg.example/revs/beta"
+    }
+  ]
+}`, hashAlpha, hashBeta, hashGamma, hashDelta, hashBeta)
+
+	m, err := ParseManifest([]byte(manifestJSON))
+	if err != nil {
+		t.Fatalf("ParseManifest: %v", err)
+	}
+
+	// Simulate a catalog scan: names that match the manifest plus one
+	// "stranger" the registry clone carried but the manifest does not list.
+	// Enrich must leave the stranger entirely at zero values (no spurious
+	// tier, no accidental Recalled) so the badge never fires.
+	cat := &catalog.Catalog{Items: []catalog.ContentItem{
+		{Name: "alpha-skill", Registry: "test-registry", Type: catalog.Skills},
+		{Name: "beta-rules", Registry: "test-registry", Type: catalog.Rules},
+		{Name: "gamma-agent", Registry: "test-registry", Type: catalog.Agents},
+		{Name: "delta-skill", Registry: "test-registry", Type: catalog.Skills},
+		{Name: "stranger", Registry: "test-registry", Type: catalog.Skills},
+	}}
+
+	EnrichCatalog(cat, "test-registry", m)
+
+	cases := []struct {
+		name         string
+		wantTier     catalog.TrustTier
+		wantRecalled bool
+		wantBadge    catalog.TrustBadge
+		wantGlyph    string
+		wantLabel    string
+		wantDesc     string
+	}{
+		{
+			name:      "alpha-skill",
+			wantTier:  catalog.TrustTierDualAttested,
+			wantBadge: catalog.TrustBadgeVerified,
+			wantGlyph: "✓",
+			wantLabel: "Verified",
+			wantDesc:  "Verified (dual-attested by publisher and registry)",
+		},
+		{
+			// Revocation from JSON → Recalled dominates the badge per AD-7
+			// collapse rule. Tier stays Signed so drill-down can still show
+			// the revoked tier if future UI requires it.
+			name:         "beta-rules",
+			wantTier:     catalog.TrustTierSigned,
+			wantRecalled: true,
+			wantBadge:    catalog.TrustBadgeRecalled,
+			wantGlyph:    "R",
+			wantLabel:    "Recalled",
+			wantDesc:     "Recalled — malicious",
+		},
+		{
+			// No rekor_log_index → Unsigned → no badge ("absence is not a
+			// negative signal" per AD-7), but drill-down phrasing still
+			// populates so a metadata panel can explain why.
+			name:      "gamma-agent",
+			wantTier:  catalog.TrustTierUnsigned,
+			wantBadge: catalog.TrustBadgeNone,
+			wantGlyph: "",
+			wantLabel: "",
+			wantDesc:  "Unsigned (registry declares no attestation)",
+		},
+		{
+			// G-13 defensive downgrade: signing_profile is present in the
+			// JSON but attestation_hash_mismatch=true forces Signed. If
+			// JSON unmarshal silently dropped the flag, this case would
+			// flip to Dual-Attested and the test would fail — exactly the
+			// regression signal we want.
+			name:      "delta-skill",
+			wantTier:  catalog.TrustTierSigned,
+			wantBadge: catalog.TrustBadgeVerified,
+			wantGlyph: "✓",
+			wantLabel: "Verified",
+			wantDesc:  "Verified (registry-attested)",
+		},
+		{
+			// Not in manifest → enrich leaves zero values → no trust
+			// surface. This guards against an enrich bug that mistakenly
+			// blanket-applies a default tier to every scanned item.
+			name:      "stranger",
+			wantTier:  catalog.TrustTierUnknown,
+			wantBadge: catalog.TrustBadgeNone,
+			wantGlyph: "",
+			wantLabel: "",
+			wantDesc:  "",
+		},
+	}
+
+	byName := make(map[string]*catalog.ContentItem, len(cat.Items))
+	for i := range cat.Items {
+		byName[cat.Items[i].Name] = &cat.Items[i]
+	}
+
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			item := byName[c.name]
+			if item == nil {
+				t.Fatalf("item %q missing from catalog after enrich", c.name)
+			}
+			if item.TrustTier != c.wantTier {
+				t.Errorf("TrustTier = %v, want %v", item.TrustTier, c.wantTier)
+			}
+			if item.Recalled != c.wantRecalled {
+				t.Errorf("Recalled = %v, want %v", item.Recalled, c.wantRecalled)
+			}
+			gotBadge := catalog.UserFacingBadge(item.TrustTier, item.Recalled)
+			if gotBadge != c.wantBadge {
+				t.Errorf("UserFacingBadge = %v, want %v", gotBadge, c.wantBadge)
+			}
+			if got := gotBadge.Glyph(); got != c.wantGlyph {
+				t.Errorf("Glyph = %q, want %q", got, c.wantGlyph)
+			}
+			if got := gotBadge.Label(); got != c.wantLabel {
+				t.Errorf("Label = %q, want %q", got, c.wantLabel)
+			}
+			gotDesc := catalog.TrustDescription(item.TrustTier, item.Recalled, item.RecallReason)
+			if gotDesc != c.wantDesc {
+				t.Errorf("TrustDescription = %q, want %q", gotDesc, c.wantDesc)
+			}
+		})
+	}
+}
+
+// TestEnrichCatalog_E2E_HashMismatchDowngradesThroughJSON is a tight
+// regression pin for the exact bug the audit flagged: a manifest whose
+// attestation_hash_mismatch flag is set — meaning the publisher's per-item
+// attestation does NOT cover the current content hash — must never surface
+// as Dual-Attested on the catalog side.
+//
+// Driven through ParseManifest rather than a hand-built struct so this test
+// is the one that breaks if JSON unmarshal ever stops carrying the flag.
+// syllago-f27t4.
+func TestEnrichCatalog_E2E_HashMismatchDowngradesThroughJSON(t *testing.T) {
+	t.Parallel()
+
+	hash := "sha256:" + pad64("ab")
+	manifestJSON := fmt.Sprintf(`{
+  "schema_version": 1,
+  "manifest_uri": "https://reg.example/manifest.json",
+  "name": "test-registry",
+  "operator": "Example Registry",
+  "updated_at": "2026-04-20T00:00:00Z",
+  "registry_signing_profile": {"issuer": "https://iss.example", "subject": "ops@example.com"},
+  "content": [{
+    "name": "mismatched",
+    "display_name": "Mismatched Skill",
+    "type": "skill",
+    "content_hash": "%s",
+    "source_uri": "https://src.example/mismatched",
+    "attested_at": "2026-04-19T00:00:00Z",
+    "rekor_log_index": 2001,
+    "signing_profile": {"issuer": "https://token.example", "subject": "pub@example.com"},
+    "attestation_hash_mismatch": true
+  }],
+  "revocations": []
+}`, hash)
+
+	m, err := ParseManifest([]byte(manifestJSON))
+	if err != nil {
+		t.Fatalf("ParseManifest: %v", err)
+	}
+
+	// Sanity: the flag survived unmarshal. If this ever starts failing, the
+	// bug is on the parse side, not the enrich side — the assertion below
+	// would also fail but the message would mis-locate the fault.
+	if !m.Content[0].AttestationHashMismatch {
+		t.Fatal("AttestationHashMismatch did not round-trip through JSON unmarshal")
+	}
+
+	cat := &catalog.Catalog{Items: []catalog.ContentItem{
+		{Name: "mismatched", Registry: "test-registry", Type: catalog.Skills},
+	}}
+	EnrichCatalog(cat, "test-registry", m)
+
+	if got := cat.Items[0].TrustTier; got != catalog.TrustTierSigned {
+		t.Errorf("TrustTier after enrich = %v; want Signed (G-13 downgrade). "+
+			"A result of DualAttested means the mismatch flag did not apply — "+
+			"either ContentEntry.TrustTier() stopped checking it or enrich.go "+
+			"bypasses the moat-side tier method.", got)
+	}
+	// Display-layer corollary: the collapsed badge must still read Verified
+	// (Signed collapses to Verified) but the drill-down description must say
+	// "registry-attested", NOT "dual-attested by publisher and registry".
+	gotDesc := catalog.TrustDescription(cat.Items[0].TrustTier, cat.Items[0].Recalled, cat.Items[0].RecallReason)
+	if gotDesc != "Verified (registry-attested)" {
+		t.Errorf("Drill-down description = %q; want %q (publisher claim must not appear on mismatched content)",
+			gotDesc, "Verified (registry-attested)")
 	}
 }
