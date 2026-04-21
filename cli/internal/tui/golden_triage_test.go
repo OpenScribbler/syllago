@@ -89,14 +89,39 @@ func snapshotWizard(t *testing.T, m *addWizardModel) string {
 	return normalizeSnapshot(m.View())
 }
 
+// assertTriageRender checks the semantic properties of a triage-step render:
+// step label, all item names present, and correct checkbox state for the
+// pre-checked items. These assertions must hold no matter what golden file
+// exists — they catch regressions that would otherwise be silently blessed
+// by a -update-golden run.
+func assertTriageRender(t *testing.T, view string) {
+	t.Helper()
+	assertContains(t, view, "Triage: detected content") // wizard step label
+	// All five items rendered (80x30 column truncates to "experimental-l...").
+	assertContains(t, view, "security-scanner")
+	assertContains(t, view, "code-style-guide")
+	assertContains(t, view, "user-custom-agent")
+	assertContains(t, view, "api-docs-helper")
+	// Checked marker (✓) precedes pre-selected items.
+	assertContains(t, view, "✓ security-scanner")
+	assertContains(t, view, "✓ user-custom-agent")
+	// Unchecked items must NOT render the check glyph.
+	assertNotContains(t, view, "✓ code-style-guide")
+	assertNotContains(t, view, "✓ api-docs-helper")
+}
+
 func TestGolden_Triage_80x30(t *testing.T) {
 	t.Parallel()
 	m := setupTriageWizard(t, 80, 30)
+	view := m.View()
+	assertTriageRender(t, view)
 	requireGolden(t, "triage-80x30", snapshotWizard(t, m))
 }
 
 func TestGolden_Triage_120x40(t *testing.T) {
 	t.Parallel()
 	m := setupTriageWizard(t, 120, 40)
+	view := m.View()
+	assertTriageRender(t, view)
 	requireGolden(t, "triage-120x40", snapshotWizard(t, m))
 }
