@@ -1,6 +1,10 @@
 package catalog
 
-import "github.com/OpenScribbler/syllago/cli/internal/metadata"
+import (
+	"time"
+
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+)
 
 // ContentType represents a category of content in the repo.
 type ContentType string
@@ -123,12 +127,49 @@ func (ci *ContentItem) IsBuiltin() bool {
 	return false
 }
 
+// RegistryTrust is the per-registry trust aggregate populated by
+// moat.EnrichFromMOATManifests. Lives on Catalog so the TUI gallery and
+// Trust Inspector can render registry-level trust surfaces (card glyph,
+// preview panel Trust section, inspector fields) without re-parsing the
+// manifest or re-walking the lockfile. Only populated for MOAT-type
+// registries — non-MOAT registries (git, local) leave the map entry absent,
+// which callers treat as "no trust claim made."
+//
+// Tier reflects the display-facing state:
+//   - Signed when the registry is Fresh and has a valid registry_signing_profile.
+//   - Unsigned when Staleness != Fresh (per MOAT spec, stale caches disable
+//     trust decisions — the manifest claim is stale, not absent, so we
+//     downgrade rather than dropping the entry).
+//
+// Staleness strings: "Fresh", "Stale", "Expired", "Missing". Missing fills
+// in when the cache file is absent (never synced or deleted since).
+type RegistryTrust struct {
+	Name          string
+	Tier          TrustTier
+	Issuer        string
+	Subject       string
+	Operator      string
+	ManifestURI   string
+	FetchedAt     time.Time
+	Staleness     string
+	TotalItems    int
+	VerifiedItems int
+	RecalledItems int
+	PrivateItems  int
+}
+
 // Catalog holds all discovered content items and the repo root they came from.
 type Catalog struct {
 	Items      []ContentItem
 	Overridden []ContentItem // lower-precedence items shadowed by higher-precedence ones
 	Warnings   []string      // non-fatal scan warnings (collected instead of printing to stderr)
 	RepoRoot   string
+
+	// RegistryTrusts aggregates MOAT trust state per registry name. Keyed by
+	// catalog registry name (matches ContentItem.Registry). Populated only
+	// for MOAT-type registries; absence means "no MOAT trust claim for this
+	// registry." See moat.EnrichFromMOATManifests for the producer.
+	RegistryTrusts map[string]*RegistryTrust
 }
 
 // ByType returns all items of a given type.

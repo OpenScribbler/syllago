@@ -1,9 +1,11 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
@@ -19,10 +21,17 @@ type contentsSidebarModel struct {
 	cardName string
 	cardDesc string
 	groups   []contentGroup
-	offset   int
-	width    int
-	height   int
-	focused  bool
+	// trust is the MOAT aggregate for the currently-selected registry
+	// card. Non-nil triggers the Trust section block; nil hides it. The
+	// section is the sole mouse click target for opening the Trust
+	// Inspector from the registries tab — the card glyph is intentionally
+	// not clickable per the bead's separation of "indicator" from
+	// "interaction."
+	trust   *catalog.RegistryTrust
+	offset  int
+	width   int
+	height  int
+	focused bool
 }
 
 func newContentsSidebarModel() contentsSidebarModel {
@@ -41,12 +50,14 @@ func (m *contentsSidebarModel) SetCard(card *cardData) {
 	m.groups = nil
 	m.cardName = ""
 	m.cardDesc = ""
+	m.trust = nil
 	if card == nil {
 		return
 	}
 
 	m.cardName = card.name
 	m.cardDesc = card.desc
+	m.trust = card.trust
 
 	if len(card.items) == 0 {
 		return
@@ -77,9 +88,11 @@ func (m *contentsSidebarModel) SetGroups(card *cardData, groups []contentGroup) 
 	m.groups = groups
 	m.cardName = ""
 	m.cardDesc = ""
+	m.trust = nil
 	if card != nil {
 		m.cardName = card.name
 		m.cardDesc = card.desc
+		m.trust = card.trust
 	}
 }
 
@@ -101,6 +114,7 @@ func (m *contentsSidebarModel) ScrollDown() {
 // totalLines returns the total number of rendered lines.
 func (m contentsSidebarModel) totalLines() int {
 	n := m.headerLines()
+	n += m.trustLines()
 	for _, g := range m.groups {
 		n++ // type header
 		n += len(g.items)
@@ -125,6 +139,19 @@ func (m contentsSidebarModel) headerLines() int {
 	return n
 }
 
+// trustLines returns the number of lines the Trust section will render.
+// Keeps View() and scroll math in sync — both call this helper so adding
+// or removing a field in renderTrustSection updates height accounting
+// automatically.
+func (m contentsSidebarModel) trustLines() int {
+	if m.trust == nil {
+		return 0
+	}
+	// Header + 4 data lines + items breakdown + [t] hint + trailing blank.
+	// The exact field list is defined in renderTrustSection — keep in sync.
+	return 7
+}
+
 // descLines returns how many lines the description wraps to.
 func (m contentsSidebarModel) descLines() int {
 	if m.cardDesc == "" {
@@ -132,6 +159,79 @@ func (m contentsSidebarModel) descLines() int {
 	}
 	maxW := max(10, m.width-2)
 	return len(wordWrap(sanitizeLine(m.cardDesc), maxW))
+}
+
+// renderTrustSection renders the registry-scoped Trust block. Must produce
+// exactly trustLines() rows so scroll math stays correct. Keep the block
+// as a single zone-marked region so clicks anywhere inside it (label,
+// value, items breakdown) open the Trust Inspector — users don't have to
+// hunt for a specific hitbox.
+//
+// Layout (7 lines):
+//
+//	Trust                           <- section title, bold
+//	Tier: <tier label>              <- status-colored
+//	Issuer: <subject or operator>   <- truncated at width
+//	Status: <staleness label>       <- danger-colored when Stale/Expired
+//	Items: N total · V verified     <- summary counts
+//	[t] Inspect trust               <- discoverable affordance
+//	<blank spacer>
+func (m contentsSidebarModel) renderTrustSection() []string {
+	rt := m.trust
+	title := boldStyle.Render("Trust")
+
+	tierLabel := rt.Tier.String()
+	if tierLabel == "" {
+		tierLabel = "Unknown"
+	}
+	tierStyle := mutedStyle
+	switch rt.Tier {
+	case catalog.TrustTierSigned, catalog.TrustTierDualAttested:
+		tierStyle = lipgloss.NewStyle().Foreground(successColor).Bold(true)
+	case catalog.TrustTierUnsigned:
+		tierStyle = lipgloss.NewStyle().Foreground(warningColor)
+	}
+	tierLine := boldStyle.Render("Tier: ") + tierStyle.Render(tierLabel)
+
+	issuerText := rt.Operator
+	if issuerText == "" {
+		issuerText = rt.Subject
+	}
+	if issuerText == "" {
+		issuerText = "—"
+	}
+	issuerLine := boldStyle.Render("Issuer: ") + mutedStyle.Render(truncate(sanitizeLine(issuerText), max(0, m.width-9)))
+
+	staleLabel := rt.Staleness
+	if staleLabel == "" {
+		staleLabel = "Unknown"
+	}
+	staleStyle := mutedStyle
+	if staleLabel != "Fresh" {
+		staleStyle = lipgloss.NewStyle().Foreground(dangerColor).Bold(true)
+	}
+	statusLine := boldStyle.Render("Status: ") + staleStyle.Render(staleLabel)
+
+	itemsSummary := fmt.Sprintf("%d total · %d verified · %d recalled",
+		rt.TotalItems, rt.VerifiedItems, rt.RecalledItems)
+	itemsLine := boldStyle.Render("Items: ") + mutedStyle.Render(itemsSummary)
+
+	hint := mutedStyle.Render("[t] Inspect trust")
+
+	// Zone-marking every line individually lets click-detection work even
+	// when scroll clips the top/bottom of the section. All share the same
+	// "registry-trust" id so any hit opens the inspector.
+	mark := func(s string) string { return zone.Mark("registry-trust", s) }
+
+	return []string{
+		mark(title),
+		mark(tierLine),
+		mark(issuerLine),
+		mark(statusLine),
+		mark(itemsLine),
+		mark(hint),
+		"", // trailing spacer separates Trust from Contents groupings
+	}
 }
 
 // View renders the contents sidebar.
@@ -169,6 +269,15 @@ func (m contentsSidebarModel) View() string {
 	if m.cardName != "" || m.cardDesc != "" {
 		allLines = append(allLines, "")
 		allLines = append(allLines, boldStyle.Render("Contents"))
+	}
+
+	// Trust section — only for MOAT-type registries. Rendered between
+	// Contents and the items list so the trust claim is visible on first
+	// render, not hidden behind scrolling. The whole block is zone-marked
+	// as a single click target ("registry-trust") that opens the Trust
+	// Inspector.
+	if m.trust != nil {
+		allLines = append(allLines, m.renderTrustSection()...)
 	}
 
 	// Grouped items

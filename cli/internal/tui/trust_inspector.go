@@ -41,6 +41,36 @@ type RegistryTrustSummary struct {
 	PrivateItems  int
 }
 
+// registryTrustSummaryFrom narrows a catalog.RegistryTrust (the producer
+// aggregate populated by moat.EnrichFromMOATManifests) into the primitives
+// this package displays. Keeps the tui package insulated from catalog's
+// time.Time field — the inspector only needs a formatted timestamp string.
+// Returns a zero-valued summary for a nil pointer so callers can skip the
+// nil check at the call site.
+func registryTrustSummaryFrom(rt *catalog.RegistryTrust) RegistryTrustSummary {
+	if rt == nil {
+		return RegistryTrustSummary{}
+	}
+	var fetched string
+	if !rt.FetchedAt.IsZero() {
+		fetched = rt.FetchedAt.UTC().Format("2006-01-02 15:04 UTC")
+	}
+	return RegistryTrustSummary{
+		Name:          rt.Name,
+		Tier:          rt.Tier,
+		Issuer:        rt.Issuer,
+		Subject:       rt.Subject,
+		Operator:      rt.Operator,
+		ManifestURI:   rt.ManifestURI,
+		FetchedAt:     fetched,
+		Staleness:     rt.Staleness,
+		TotalItems:    rt.TotalItems,
+		VerifiedItems: rt.VerifiedItems,
+		RecalledItems: rt.RecalledItems,
+		PrivateItems:  rt.PrivateItems,
+	}
+}
+
 // trustField is one row in the inspector's detail list. `danger` flips the
 // value color to dangerColor (used for recall rows).
 type trustField struct {

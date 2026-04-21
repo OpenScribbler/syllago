@@ -3,6 +3,8 @@
 > Chronological action log. Hooks and AI append to this file automatically.
 > Old sessions are consolidated by the daemon weekly.
 
+| 16:06 | Phase B analysis for provmon-drift-detection plan (28 tasks) | docs/plans/2026-04-21-provmon-drift-detection-implementation.md, .develop/provmon-drift-detection-phase-b.md | Critical blocker found + fixed: capmon.ValidateSourceURL call in checkOneSource blocks http:// test servers. Plan edited to remove call. 3 advisory issues noted. | ~8k tokens |
+
 | 18:21 | parity validation: CLI provider extension followups plan vs design doc (D1/D5/D9/D10/D13/D14/D16) | .develop/cli-provider-extension-followups-validation-report.md | PASSED — no gaps, 0 placeholders, D14 overlap verified against bd show syllago-jtafb | ~8000 |
 
 ## Session: 2026-04-14 13:27
@@ -3138,3 +3140,64 @@
 | 15:34 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | modified newHashedServer() | ~245 |
 | 15:34 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | removed 29 lines | ~12 |
 | 15:34 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | 7→7 lines | ~59 |
+| 15:34 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | modified Contains() | ~83 |
+| 15:35 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | fails() → undefined() | ~95 |
+| 15:35 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | fails() → undefined() | ~48 |
+| 15:35 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | FAIL() → state() | ~70 |
+| 15:35 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | 7→7 lines | ~62 |
+| 15:35 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | 3→3 lines | ~107 |
+| 15:35 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | 10→11 lines | ~37 |
+| 15:35 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | 1→3 lines | ~60 |
+| 15:35 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | modified sanitizeSourceID() | ~87 |
+| 15:36 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | 11→13 lines | ~155 |
+| 15:36 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | "t exist in that exact pat" → "docs/adding-a-provider.md" | ~24 |
+| 15:36 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | inline fix | ~126 |
+| 15:36 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | expanded (+10 lines) | ~163 |
+| 15:37 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | 10→11 lines | ~215 |
+| 15:37 | Edited cli/internal/catalog/types.go | 3→7 lines | ~26 |
+| 15:37 | Edited cli/internal/catalog/types.go | expanded (+37 lines) | ~509 |
+| 15:38 | Created .develop/provmon-drift-detection-quality-report.md | — | ~1110 |
+| 15:38 | Created .develop/provmon-drift-detection.json | — | ~338 |
+| 15:38 | Edited cli/internal/moat/producer.go | modified attachRegistryTrust() | ~638 |
+| 15:38 | Session end: 24 writes across 6 files (golden_moat_test.go, 2026-04-21-provmon-drift-detection-implementation.md, types.go, provmon-drift-detection-quality-report.md, provmon-drift-detection.json) | 15 reads | ~52335 tok |
+| 15:39 | Edited cli/internal/tui/cards.go | expanded (+6 lines) | ~221 |
+| 15:39 | Edited cli/internal/tui/cards.go | modified buildRegistryCards() | ~648 |
+| 15:39 | Edited cli/internal/tui/cards.go | expanded (+12 lines) | ~186 |
+| 15:39 | Edited cli/internal/tui/contents.go | expanded (+9 lines) | ~251 |
+| 15:39 | Edited cli/internal/tui/contents.go | modified SetCard() | ~94 |
+| 15:40 | Edited cli/internal/tui/contents.go | modified SetGroups() | ~92 |
+| 15:40 | Edited cli/internal/tui/contents.go | expanded (+14 lines) | ~292 |
+| 15:40 | Edited cli/internal/tui/contents.go | expanded (+9 lines) | ~230 |
+| 15:40 | Edited cli/internal/tui/contents.go | modified Layout() | ~730 |
+
+## Session: 2026-04-21 15:42
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:48 | Edited .develop/provmon-drift-detection.json | expanded (+16 lines) | ~282 |
+| 15:48 | Session end: 1 writes across 1 files (provmon-drift-detection.json) | 0 reads | ~282 tok |
+| 15:55 | Edited cli/internal/tui/gallery.go | expanded (+8 lines) | ~115 |
+| 15:55 | Edited cli/internal/tui/gallery.go | expanded (+11 lines) | ~174 |
+| 15:55 | Edited cli/internal/tui/gallery.go | modified InBounds() | ~167 |
+| 15:55 | Edited cli/internal/tui/app_update.go | expanded (+6 lines) | ~79 |
+| 15:56 | Edited cli/internal/tui/trust_inspector.go | modified registryTrustSummaryFrom() | ~322 |
+| 15:58 | Created cli/internal/tui/gallery_trust_test.go | — | ~2425 |
+| 15:58 | Edited cli/internal/tui/gallery_trust_test.go | modified TestGalleryMouse_TrustZoneOpensInspector() | ~182 |
+| 16:00 | Created cli/internal/tui/trust_debug_test.go | — | ~344 |
+| 16:00 | Edited cli/internal/tui/trust_debug_test.go | 6→10 lines | ~79 |
+| 16:00 | Edited cli/internal/tui/trust_debug_test.go | 2→2 lines | ~31 |
+| 16:01 | Edited cli/internal/tui/trust_debug_test.go | 9→10 lines | ~48 |
+| 16:01 | Edited cli/internal/tui/gallery_trust_test.go | modified TestGalleryMouse_TrustZoneOpensInspector() | ~237 |
+| 16:01 | Edited cli/internal/tui/gallery_trust_test.go | 10→15 lines | ~128 |
+| 16:03 | Edited cli/internal/tui/gallery_trust_test.go | modified TestGolden_MOAT_RegistriesGallery_60x20() | ~570 |
+| 16:03 | Edited docs/plans/2026-04-21-provmon-drift-detection-implementation.md | 9→6 lines | ~110 |
+| 16:05 | Edited ../../../.claude/skills/bead-chain/SKILL.md | modified 0() | ~437 |
+| 16:05 | Edited ../../../.claude/skills/bead-chain/SKILL.md | 1→2 lines | ~76 |
+| 16:06 | Created .develop/provmon-drift-detection-phase-b.md | — | ~8265 |
+| 16:07 | Edited .develop/provmon-drift-detection.json | expanded (+8 lines) | ~96 |
+| 16:07 | Session end: 20 writes across 9 files (provmon-drift-detection.json, gallery.go, app_update.go, trust_inspector.go, gallery_trust_test.go) | 23 reads | ~78929 tok |
+
+## Session: 2026-04-21 16:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

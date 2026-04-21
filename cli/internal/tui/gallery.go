@@ -27,6 +27,14 @@ type cardDrillMsg struct {
 	card *cardData
 }
 
+// registryTrustInspectMsg opens the Trust Inspector scoped to a registry. The
+// payload is the pointer already attached to the card, so app_update.go can
+// convert catalog.RegistryTrust → tui.RegistryTrustSummary at the boundary
+// without re-walking enrichment state.
+type registryTrustInspectMsg struct {
+	card *cardData
+}
+
 // galleryModel orchestrates the card grid + contents sidebar within a bordered frame.
 type galleryModel struct {
 	grid     cardGridModel
@@ -150,6 +158,17 @@ func (g galleryModel) updateKeys(msg tea.KeyMsg) (galleryModel, tea.Cmd) {
 			}
 		}
 		return g, nil
+
+	case keyTrust:
+		// [t] opens the Trust Inspector for the focused registry card. Works
+		// from either pane — user can trigger from the grid or while reading
+		// the Trust section in the sidebar. Non-MOAT cards (no trust pointer)
+		// are a no-op: the inspector is meaningless without aggregate data.
+		card := g.grid.Selected()
+		if card != nil && card.trust != nil {
+			return g, func() tea.Msg { return registryTrustInspectMsg{card: card} }
+		}
+		return g, nil
 	}
 
 	switch g.focus {
@@ -263,6 +282,17 @@ func (g galleryModel) updateMouse(msg tea.MouseMsg) (galleryModel, tea.Cmd) {
 		}
 		if zone.Get("meta-sync").InBounds(msg) {
 			return g, func() tea.Msg { return actionPressedMsg{action: "sync"} }
+		}
+
+		// Click anywhere inside the Trust section in the sidebar opens the
+		// Trust Inspector scoped to the selected registry. Every row of the
+		// section shares the "registry-trust" id (see contents.go
+		// renderTrustSection) so users don't have to hunt for a hitbox.
+		if zone.Get("registry-trust").InBounds(msg) {
+			card := g.grid.Selected()
+			if card != nil && card.trust != nil {
+				return g, func() tea.Msg { return registryTrustInspectMsg{card: card} }
+			}
 		}
 
 		for i := range g.grid.cards {
