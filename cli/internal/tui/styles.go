@@ -104,7 +104,6 @@ var (
 	trustVerifiedStyle    = lipgloss.NewStyle().Foreground(successColor).Bold(true)
 	trustRecalledStyle    = lipgloss.NewStyle().Foreground(dangerColor).Bold(true)
 	privateIndicatorStyle = lipgloss.NewStyle().Foreground(mutedColor)
-	revocationBannerStyle = lipgloss.NewStyle().Foreground(dangerColor).Bold(true)
 )
 
 // itoa converts int to string without importing strconv.
