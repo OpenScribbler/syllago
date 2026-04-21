@@ -106,6 +106,17 @@ func mcpConfigPathImpl(prov provider.Provider, repoRoot string) (string, error) 
 		return p, nil
 	case "roo-code":
 		return filepath.Join(repoRoot, ".roo", "mcp.json"), nil
+	case "cursor":
+		// Cursor supports both ~/.cursor/mcp.json (global) and .cursor/mcp.json
+		// (project) per https://cursor.com/docs/context/mcp. We install to the
+		// project-local path for parity with the other per-repo providers
+		// (copilot-cli, kiro, opencode, roo-code) and with cursor.go's
+		// DiscoveryPaths, which treats the project file as the primary source.
+		return filepath.Join(repoRoot, ".cursor", "mcp.json"), nil
+	case "windsurf":
+		// Windsurf only documents a global MCP config path; no project-local
+		// alternative exists per https://docs.windsurf.com/windsurf/cascade/mcp.
+		return filepath.Join(home, ".codeium", "windsurf", "mcp_config.json"), nil
 	}
 	return "", fmt.Errorf("MCP config path not defined for %s", prov.Name)
 }
