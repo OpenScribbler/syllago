@@ -3,12 +3,23 @@ package provmon
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
 	"time"
 )
+
+// ErrUnimplementedDetectionMethod is returned by CheckVersion when a manifest
+// declares a change-detection method that has no implementation in this
+// package. Today that covers "content-hash" (used by windsurf, kiro, cursor)
+// and "github-commits" (used by amp, copilot-cli). Returning an explicit
+// sentinel rather than (nil, nil) is what lets callers and tests tell "no
+// drift was detected" apart from "we never even tried to detect drift." See
+// syllago-5gthn for the follow-up feature bead that will replace this with
+// real detection.
+var ErrUnimplementedDetectionMethod = errors.New("change detection method not implemented")
 
 // httpClient is overridable for tests.
 var httpClient = &http.Client{Timeout: 15 * time.Second}
@@ -98,10 +109,18 @@ func checkOneURL(ctx context.Context, url string) URLResult {
 	return URLResult{URL: url, StatusCode: resp.StatusCode}
 }
 
-// CheckVersion queries the GitHub Releases API to detect version drift.
-// Only works for github-releases change detection method.
+// CheckVersion queries the provider's change-detection endpoint to detect
+// drift. Only the "github-releases" method is implemented; the other method
+// values documented in manifest.go (content-hash, github-commits) return
+// ErrUnimplementedDetectionMethod so callers can distinguish "no drift"
+// from "unsupported method."
 func CheckVersion(ctx context.Context, m *Manifest) (*VersionDrift, error) {
-	if m.ChangeDetection.Method != "github-releases" {
+	switch m.ChangeDetection.Method {
+	case "github-releases":
+		// fall through to the implementation below
+	case "content-hash", "github-commits":
+		return nil, fmt.Errorf("%w: %s", ErrUnimplementedDetectionMethod, m.ChangeDetection.Method)
+	default:
 		return nil, nil
 	}
 
