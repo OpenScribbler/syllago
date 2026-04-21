@@ -358,3 +358,211 @@ func TestEnrichCatalog_MixedCatalog(t *testing.T) {
 		t.Errorf("other-registry beta mutated: tier=%v", cat.Items[3].TrustTier)
 	}
 }
+
+// --- Phase 2c: new drill-down fields ----------------------------------
+//
+// PrivateRepo, RecallSource, RecallDetailsURL, RecallIssuer were added in
+// MOAT Phase 2c (bead syllago-lqas0). Each test below pins down one field
+// end-to-end: how it is populated, how sanitization runs, and what the
+// zero-value semantics look like on a non-Recalled or non-MOAT item.
+
+// TestEnrichCatalog_PrivateRepoPopulated confirms the G-10 per-item private
+// declaration propagates even when no revocation is present. The registry-
+// level visibility probe is irrelevant here — ContentEntry.PrivateRepo is
+// a publisher declaration and wins.
+func TestEnrichCatalog_PrivateRepoPopulated(t *testing.T) {
+	t.Parallel()
+	privEntry := signedEntry("private-skill", hashA())
+	privEntry.PrivateRepo = true
+	pubEntry := signedEntry("public-skill", hashB())
+	m := &Manifest{Content: []ContentEntry{privEntry, pubEntry}}
+	cat := &catalog.Catalog{Items: []catalog.ContentItem{
+		{Name: "private-skill", Registry: "reg"},
+		{Name: "public-skill", Registry: "reg"},
+	}}
+
+	EnrichCatalog(cat, "reg", m)
+
+	if !cat.Items[0].PrivateRepo {
+		t.Error("PrivateRepo=true not propagated for private entry")
+	}
+	if cat.Items[1].PrivateRepo {
+		t.Error("PrivateRepo set on public entry")
+	}
+}
+
+// TestEnrichCatalog_RecallSourceDefaultsRegistry exercises the MOAT spec
+// default: a Revocation with empty source is treated as registry-source.
+// EffectiveSource() owns the default; enrich must preserve it.
+func TestEnrichCatalog_RecallSourceDefaultsRegistry(t *testing.T) {
+	t.Parallel()
+	m := &Manifest{
+		Name:                   "example-registry",
+		Operator:               "Example Inc",
+		RegistrySigningProfile: SigningProfile{Issuer: "https://iss", Subject: "ops@example.com"},
+		Content:                []ContentEntry{signedEntry("x", hashA())},
+		Revocations: []Revocation{{
+			ContentHash: hashA(),
+			Reason:      RevocationReasonCompromised,
+			// Source intentionally empty — MOAT default is "registry".
+		}},
+	}
+	cat := &catalog.Catalog{Items: []catalog.ContentItem{{Name: "x", Registry: "reg"}}}
+
+	EnrichCatalog(cat, "reg", m)
+
+	if got := cat.Items[0].RecallSource; got != RevocationSourceRegistry {
+		t.Errorf("RecallSource = %q, want %q", got, RevocationSourceRegistry)
+	}
+	// Registry-source issuer uses Operator when present.
+	if got := cat.Items[0].RecallIssuer; got != "Example Inc" {
+		t.Errorf("RecallIssuer = %q, want %q", got, "Example Inc")
+	}
+}
+
+// TestEnrichCatalog_RecallSourcePublisher proves the publisher branch
+// reports the right source + uses the per-entry signing profile subject.
+func TestEnrichCatalog_RecallSourcePublisher(t *testing.T) {
+	t.Parallel()
+	entry := dualAttestedEntry("x", hashA())
+	// dualAttestedEntry sets SigningProfile with subject "pub@example.com".
+	m := &Manifest{
+		Content: []ContentEntry{entry},
+		Revocations: []Revocation{{
+			ContentHash: hashA(),
+			Source:      RevocationSourcePublisher,
+			Reason:      RevocationReasonDeprecated,
+		}},
+	}
+	cat := &catalog.Catalog{Items: []catalog.ContentItem{{Name: "x", Registry: "reg"}}}
+
+	EnrichCatalog(cat, "reg", m)
+
+	if got := cat.Items[0].RecallSource; got != RevocationSourcePublisher {
+		t.Errorf("RecallSource = %q, want %q", got, RevocationSourcePublisher)
+	}
+	if got := cat.Items[0].RecallIssuer; got != "pub@example.com" {
+		t.Errorf("RecallIssuer = %q, want %q", got, "pub@example.com")
+	}
+}
+
+// TestEnrichCatalog_RecallIssuerRegistryFallback: if Manifest.Operator is
+// empty, the resolver falls back to RegistrySigningProfile.Subject. The
+// manifest validator guarantees Subject is non-empty, so this path is
+// always safe at runtime; we exercise it explicitly.
+func TestEnrichCatalog_RecallIssuerRegistryFallback(t *testing.T) {
+	t.Parallel()
+	m := &Manifest{
+		// No Operator.
+		RegistrySigningProfile: SigningProfile{Issuer: "https://iss", Subject: "ops@example.com"},
+		Content:                []ContentEntry{signedEntry("x", hashA())},
+		Revocations: []Revocation{{
+			ContentHash: hashA(),
+			Source:      RevocationSourceRegistry,
+			Reason:      RevocationReasonMalicious,
+		}},
+	}
+	cat := &catalog.Catalog{Items: []catalog.ContentItem{{Name: "x", Registry: "reg"}}}
+
+	EnrichCatalog(cat, "reg", m)
+
+	if got := cat.Items[0].RecallIssuer; got != "ops@example.com" {
+		t.Errorf("RecallIssuer fallback = %q, want RegistrySigningProfile.Subject", got)
+	}
+}
+
+// TestEnrichCatalog_RecallIssuerPublisherFallback: when a publisher-source
+// revocation lands on an entry with no SigningProfile, the resolver must
+// still produce non-empty text so the drill-down banner has something to
+// render. The sentinel is a committed contract — tests in the TUI rely on
+// exactly this string.
+func TestEnrichCatalog_RecallIssuerPublisherFallback(t *testing.T) {
+	t.Parallel()
+	m := &Manifest{
+		Content: []ContentEntry{signedEntry("x", hashA())}, // no SigningProfile
+		Revocations: []Revocation{{
+			ContentHash: hashA(),
+			Source:      RevocationSourcePublisher,
+			Reason:      RevocationReasonDeprecated,
+		}},
+	}
+	cat := &catalog.Catalog{Items: []catalog.ContentItem{{Name: "x", Registry: "reg"}}}
+
+	EnrichCatalog(cat, "reg", m)
+
+	want := "(publisher — identity not provided)"
+	if got := cat.Items[0].RecallIssuer; got != want {
+		t.Errorf("RecallIssuer sentinel = %q, want %q", got, want)
+	}
+}
+
+// TestEnrichCatalog_SanitizesPublisherStrings pins down the enrich-boundary
+// security contract: every publisher-controlled display string runs through
+// SanitizeForDisplay before it lands on ContentItem. A malicious manifest
+// cannot place terminal control bytes or bidi overrides on a user's TUI.
+func TestEnrichCatalog_SanitizesPublisherStrings(t *testing.T) {
+	t.Parallel()
+	// Reason: ANSI SGR wrapping plus a bidi override.
+	hostileReason := "\x1b[31mMalicious\x1b[0m\u202E content"
+	// DetailsURL: null-byte injection attempt.
+	hostileURL := "https://example.com/revs/\x00../../etc/passwd"
+	// Per-entry signing profile subject: colored text + trailing newline.
+	hostileSubject := "\x1b[32mpub@evil.com\x1b[0m\n"
+
+	entry := dualAttestedEntry("x", hashA())
+	entry.SigningProfile.Subject = hostileSubject
+
+	m := &Manifest{
+		Content: []ContentEntry{entry},
+		Revocations: []Revocation{{
+			ContentHash: hashA(),
+			Source:      RevocationSourcePublisher,
+			Reason:      hostileReason,
+			DetailsURL:  hostileURL,
+		}},
+	}
+	cat := &catalog.Catalog{Items: []catalog.ContentItem{{Name: "x", Registry: "reg"}}}
+
+	EnrichCatalog(cat, "reg", m)
+
+	if got := cat.Items[0].RecallReason; got != "Malicious content" {
+		t.Errorf("RecallReason = %q; want sanitized %q", got, "Malicious content")
+	}
+	if got := cat.Items[0].RecallDetailsURL; got != "https://example.com/revs/../../etc/passwd" {
+		t.Errorf("RecallDetailsURL = %q; null byte not stripped", got)
+	}
+	if got := cat.Items[0].RecallIssuer; got != "pub@evil.com" {
+		t.Errorf("RecallIssuer = %q; want sanitized %q", got, "pub@evil.com")
+	}
+}
+
+// TestEnrichCatalog_NonRecalledItemHasZeroDrillDownFields documents the
+// contract that drill-down fields stay zero on a verified-but-not-recalled
+// item. Consumers rely on this to branch purely on `Recalled` without
+// worrying about stale RecallSource / RecallIssuer data from a prior run.
+func TestEnrichCatalog_NonRecalledItemHasZeroDrillDownFields(t *testing.T) {
+	t.Parallel()
+	m := &Manifest{
+		Name:                   "reg",
+		Operator:               "Example",
+		RegistrySigningProfile: SigningProfile{Issuer: "https://iss", Subject: "s"},
+		Content:                []ContentEntry{signedEntry("ok", hashA())},
+		Revocations: []Revocation{{
+			ContentHash: hashB(), // different hash — no match
+			Reason:      RevocationReasonDeprecated,
+			DetailsURL:  "https://example.com/revs/other",
+		}},
+	}
+	cat := &catalog.Catalog{Items: []catalog.ContentItem{{Name: "ok", Registry: "reg"}}}
+
+	EnrichCatalog(cat, "reg", m)
+
+	item := cat.Items[0]
+	if item.Recalled {
+		t.Fatalf("Recalled set on non-matching item")
+	}
+	if item.RecallSource != "" || item.RecallDetailsURL != "" || item.RecallIssuer != "" {
+		t.Errorf("drill-down fields leaked onto non-recalled item: source=%q url=%q issuer=%q",
+			item.RecallSource, item.RecallDetailsURL, item.RecallIssuer)
+	}
+}

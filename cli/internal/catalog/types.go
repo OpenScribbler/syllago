@@ -80,9 +80,21 @@ type ContentItem struct {
 	// fields stay zero for items not sourced from a MOAT manifest — a git
 	// registry item is indistinguishable from "trust question not asked."
 	// See AD-7 and UserFacingBadge for the collapse rules.
-	TrustTier    TrustTier
-	Recalled     bool
-	RecallReason string // populated when Recalled; consumed by TrustDescription
+	//
+	// The drill-down fields below (PrivateRepo, RecallSource, RecallDetailsURL,
+	// RecallIssuer) are populated by moat.EnrichCatalog. Publisher-controlled
+	// strings (RecallReason, RecallDetailsURL, RecallIssuer) are pre-sanitized
+	// at the enrich boundary via moat.SanitizeForDisplay — consumers treat
+	// the values as trusted for display. Field naming note: PrivateRepo
+	// matches moat.ContentEntry.PrivateRepo (the source field) rather than
+	// using an Is-prefix, which is reserved for methods in Go.
+	TrustTier        TrustTier
+	Recalled         bool
+	RecallReason     string // sanitized; populated when Recalled
+	PrivateRepo      bool   // mirrors moat.ContentEntry.PrivateRepo (G-10)
+	RecallSource     string // "registry" or "publisher" when Recalled; empty otherwise
+	RecallDetailsURL string // sanitized URL when Recalled; may be empty
+	RecallIssuer     string // sanitized revoker identity; empty when not Recalled
 }
 
 // IsExample returns true if this item is tagged as example content.

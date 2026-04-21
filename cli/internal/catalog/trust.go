@@ -74,14 +74,21 @@ func (b TrustBadge) Label() string {
 }
 
 // Glyph returns a single-character visual indicator sized to render beside
-// a name in a list row. Uses Unicode symbols (not emojis) so output stays
-// terminal-safe and the in-repo "no emojis" convention holds.
+// a name in a list row. Uses ASCII / Unicode symbols (not emojis) so output
+// stays terminal-safe and the in-repo "no emojis" convention holds.
+//
+// Recalled renders as the ASCII letter "R" (rendered in dangerColor by
+// callers) rather than "✗", because Unicode ✗ reads as "unsupported" in
+// other parts of the codebase (converter compat matrix, capmon validate
+// output). Using "R" keeps the recall semantics distinct at a glance and
+// avoids cross-context glyph overloading. The bare-letter form (no brackets)
+// is intentional — brackets are reserved for hotkey labels like [1]/[a]/[n].
 func (b TrustBadge) Glyph() string {
 	switch b {
 	case TrustBadgeVerified:
 		return "\u2713" // ✓
 	case TrustBadgeRecalled:
-		return "\u2717" // ✗
+		return "R"
 	}
 	return ""
 }

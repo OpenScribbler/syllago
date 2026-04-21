@@ -70,7 +70,7 @@ func TestTrustBadge_LabelAndGlyph(t *testing.T) {
 	}{
 		{TrustBadgeNone, "", ""},
 		{TrustBadgeVerified, "Verified", "\u2713"},
-		{TrustBadgeRecalled, "Recalled", "\u2717"},
+		{TrustBadgeRecalled, "Recalled", "R"},
 	} {
 		if got := tc.badge.Label(); got != tc.wantLabel {
 			t.Errorf("Badge(%d).Label() = %q; want %q", tc.badge, got, tc.wantLabel)
@@ -139,5 +139,22 @@ func TestContentItem_TrustFields(t *testing.T) {
 	}
 	if TrustDescription(ci.TrustTier, ci.Recalled, ci.RecallReason) != "" {
 		t.Error("zero-value ContentItem must produce empty trust description")
+	}
+
+	// The drill-down fields added in MOAT Phase 2c must also stay at their
+	// Go zero values for a non-MOAT item. The AD-7 collapse rule plus the
+	// enrich-boundary contract together require that consumers never see
+	// stale drill-down data on items the producer never enriched.
+	if ci.PrivateRepo {
+		t.Error("zero-value PrivateRepo must be false")
+	}
+	if ci.RecallSource != "" {
+		t.Errorf("zero-value RecallSource = %q; want empty", ci.RecallSource)
+	}
+	if ci.RecallDetailsURL != "" {
+		t.Errorf("zero-value RecallDetailsURL = %q; want empty", ci.RecallDetailsURL)
+	}
+	if ci.RecallIssuer != "" {
+		t.Errorf("zero-value RecallIssuer = %q; want empty", ci.RecallIssuer)
 	}
 }
