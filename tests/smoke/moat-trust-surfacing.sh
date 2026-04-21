@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # moat-trust-surfacing.sh — Manual smoke fixture for MOAT TUI trust surfacing
-# (ADR 0007 Phase 2c: syllago-hf5am + syllago-0kbbx).
+# (ADR 0007 Phase 2c: syllago-hf5am + syllago-0kbbx + syllago-6qspt +
+# syllago-jc3s7).
 #
 # Human-driven. This script sets up a sandboxed HOME with synthetic MOAT
 # registry content and launches the TUI so you can visually verify:
@@ -8,6 +9,11 @@
 #   - recalled-skill   → R glyph + red revocation banner + publisher-warn
 #                        modal on install attempt
 #   - private-skill    → P glyph + "Visibility: Private" metapanel chip
+#   - Trust Inspector  → opens via [t] hotkey or click on metapanel Trust
+#                        field (library) / preview-panel Trust section
+#                        (registries tab); header identifies subject
+#   - Registry card    → aggregate glyph reflects registry health
+#                        (R because our fixture has a recall)
 #
 # The fixture is fully sandboxed: HOME is redirected to a fresh temp dir and
 # nothing in your real ~/.syllago is touched.
@@ -205,16 +211,30 @@ cat <<EOF
 Manual verification checklist — run through these in the TUI:
 
  Library row glyphs (Collections > Library tab, default landing page):
+   [ ] Glyphs render on FIRST launch — no R (rescan) required
    [ ] verified-skill row shows a ✓ glyph
    [ ] recalled-skill row shows an R glyph
    [ ] private-skill  row shows a P glyph
+   [ ] Trust column is aligned across all three rows (no ragged edges)
 
  Metapanel drill-down (cursor onto each row with ↑/↓):
+   [ ] Trust field is present on EVERY row (even if "Unsigned" or "Unknown")
+   [ ] Visibility field is present on EVERY row (Public or Private)
    [ ] verified-skill metapanel: "Trust: Verified (registry-attested)"
        (or DUAL-ATTESTED tier text)
    [ ] recalled-skill metapanel: red "RECALLED (publisher) — compromised"
        banner with issuer + details URL
    [ ] private-skill  metapanel: "Visibility: Private" chip with lock glyph
+
+ Trust Inspector from library (cursor on any MOAT-signed row):
+   [ ] Press [t] — Trust Inspector modal opens
+   [ ] Modal header identifies the subject by name (e.g., "Trust: verified-skill"
+       — NOT a generic "Trust Inspector" heading)
+   [ ] Fields shown: Tier, Detail, Visibility (always present)
+   [ ] For recalled-skill: additional Status/Source/Reason/Issuer/Details rows
+   [ ] Esc or Enter closes the modal; focus returns to the library row
+   [ ] Click the Trust field in the metapanel — same modal opens
+   [ ] Click outside the modal body — modal dismisses (click-away rule)
 
  Publisher-warn install modal (cursor on recalled-skill, press [i]):
    [ ] Install wizard opens normally (scope pick, etc.)
@@ -230,10 +250,28 @@ Manual verification checklist — run through these in the TUI:
    [ ] Click the Install anyway button with the mouse — works
    [ ] Esc dismisses the modal
 
+ Registries sub-tab (Collections > press Tab until "Registries" is active):
+   [ ] smoke-moat card shows an R aggregate glyph (our fixture contains a
+       recalled item, so the registry-level rollup is recalled)
+   [ ] Card title + item count render cleanly, no truncation at 80x30+
+   [ ] Preview panel (right side when a card is focused) shows a Trust
+       section with: Tier, Issuer, Subject, Operator, Manifest, Fetched,
+       Status (Fresh), Items breakdown (N total · V verified · R recalled)
+
+ Trust Inspector from registries:
+   [ ] Focus the smoke-moat card with arrow keys, press [t] — Trust
+       Inspector opens, scoped to the REGISTRY (not an item)
+   [ ] Header reads "Registry Trust: smoke-moat" (subject-scoped)
+   [ ] Field list includes Tier, Issuer, Subject, Operator, Manifest,
+       Fetched, Status, Items breakdown
+   [ ] Click the Trust section in the preview panel — same modal opens
+   [ ] Esc or Enter closes; focus returns to the registry card
+
  Responsive layout (resize the terminal while the TUI is open):
    [ ] At 60x20 or smaller: "Terminal too small — minimum 80x20"
    [ ] At 80x30: all glyphs + banners render cleanly
-   [ ] At 120x40: no truncation artifacts on any row or banner
+   [ ] At 120x40: no truncation artifacts on any row, card, or banner
+   [ ] Trust Inspector modal renders cleanly at all three sizes
 
 Launching TUI now.  Press q from the Library tab to quit when done.
 Cleanup when finished:  rm -rf ${SMOKE_HOME}
